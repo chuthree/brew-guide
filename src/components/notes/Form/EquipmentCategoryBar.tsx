@@ -4,11 +4,13 @@ import React, { useRef } from 'react';
 import { type CustomEquipment } from '@/lib/core/config';
 import { useEquipmentList } from '@/lib/equipment/useEquipmentList';
 import { useScrollToSelected } from '@/lib/equipment/useScrollToSelected';
+import { type SettingsOptions } from '@/components/settings/Settings';
 
 interface EquipmentCategoryBarProps {
   selectedEquipment: string | null;
   customEquipments: CustomEquipment[];
   onEquipmentSelect: (equipmentId: string) => void;
+  settings?: SettingsOptions;
 }
 
 // TabButton 组件 - 与导航栏样式完全一致
@@ -53,11 +55,15 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
   selectedEquipment,
   customEquipments,
   onEquipmentSelect,
+  settings,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // 使用自定义Hook管理器具列表
-  const { allEquipments } = useEquipmentList({ customEquipments });
+  const { allEquipments } = useEquipmentList({
+    customEquipments,
+    settings,
+  });
 
   // 使用自定义Hook管理滚动
   useScrollToSelected({

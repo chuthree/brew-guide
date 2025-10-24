@@ -455,6 +455,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
             selectedEquipment={selectedEquipment}
             customEquipments={customEquipments}
             onEquipmentSelect={handleEquipmentSelect}
+            settings={settings}
           />
           {/* 方案选择 */}
           {selectedEquipment && (

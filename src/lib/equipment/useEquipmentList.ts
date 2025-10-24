@@ -9,9 +9,11 @@ import {
   type CustomEquipment,
   type Equipment,
 } from '@/lib/core/config';
+import { type SettingsOptions } from '@/components/settings/Settings';
 
 export interface UseEquipmentListOptions {
   customEquipments: CustomEquipment[];
+  settings?: SettingsOptions;
   transformItems?: <T extends { id: string; name: string; isCustom?: boolean }>(
     items: T[]
   ) => T[];
@@ -37,6 +39,7 @@ export function useEquipmentList<
     | CustomEquipment,
 >({
   customEquipments,
+  settings,
   transformItems,
 }: UseEquipmentListOptions): UseEquipmentListReturn<T> {
   const [allEquipments, setAllEquipments] = useState<T[]>([]);
@@ -60,10 +63,19 @@ export function useEquipmentList<
         equipmentOrder
       );
 
+      // 过滤隐藏的器具
+      let filteredEquipments = sortedEquipments;
+      if (settings) {
+        const { filterHiddenEquipments } = await import(
+          '@/lib/managers/hiddenEquipments'
+        );
+        filteredEquipments = filterHiddenEquipments(sortedEquipments, settings);
+      }
+
       // 应用转换函数（如果提供）
       const finalEquipments = transformItems
-        ? transformItems(sortedEquipments)
-        : sortedEquipments;
+        ? transformItems(filteredEquipments)
+        : filteredEquipments;
 
       setAllEquipments(finalEquipments as T[]);
     } catch (err) {
@@ -84,7 +96,7 @@ export function useEquipmentList<
     } finally {
       setIsLoading(false);
     }
-  }, [customEquipments, transformItems]);
+  }, [customEquipments, settings, transformItems]);
 
   // 处理器具排序更新事件
   const handleEquipmentOrderUpdate = useCallback(async () => {
@@ -100,16 +112,25 @@ export function useEquipmentList<
         equipmentOrder
       );
 
+      // 过滤隐藏的器具
+      let filteredEquipments = sortedEquipments;
+      if (settings) {
+        const { filterHiddenEquipments } = await import(
+          '@/lib/managers/hiddenEquipments'
+        );
+        filteredEquipments = filterHiddenEquipments(sortedEquipments, settings);
+      }
+
       const finalEquipments = transformItems
-        ? transformItems(sortedEquipments)
-        : sortedEquipments;
+        ? transformItems(filteredEquipments)
+        : filteredEquipments;
 
       setAllEquipments(finalEquipments as T[]);
     } catch (err) {
       console.error('更新器具排序失败:', err);
       setError(err instanceof Error ? err.message : '更新失败');
     }
-  }, [customEquipments, transformItems]);
+  }, [customEquipments, settings, transformItems]);
 
   // 初始化加载
   useEffect(() => {

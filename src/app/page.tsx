@@ -46,6 +46,7 @@ import RandomCoffeeBeanSettings from '@/components/settings/RandomCoffeeBeanSett
 import SearchSortSettings from '@/components/settings/SearchSortSettings';
 import FlavorDimensionSettings from '@/components/settings/FlavorDimensionSettings';
 import HiddenMethodsSettings from '@/components/settings/HiddenMethodsSettings';
+import HiddenEquipmentsSettings from '@/components/settings/HiddenEquipmentsSettings';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
 import Onboarding from '@/components/onboarding/Onboarding';
@@ -232,6 +233,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     useState(false);
   const [showHiddenMethodsSettings, setShowHiddenMethodsSettings] =
     useState(false);
+  const [showHiddenEquipmentsSettings, setShowHiddenEquipmentsSettings] =
+    useState(false);
 
   // 计算是否有任何子设置页面打开
   const hasSubSettingsOpen =
@@ -245,7 +248,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showRandomCoffeeBeanSettings ||
     showSearchSortSettings ||
     showFlavorDimensionSettings ||
-    showHiddenMethodsSettings;
+    showHiddenMethodsSettings ||
+    showHiddenEquipmentsSettings;
 
   const [settings, setSettings] = useState<SettingsOptions>(() => {
     // 使用默认设置作为初始值，稍后在 useEffect 中异步加载
@@ -3047,6 +3051,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onOpenFlavorDimensionSettings: () =>
             setShowFlavorDimensionSettings(true),
           onOpenHiddenMethodsSettings: () => setShowHiddenMethodsSettings(true),
+          onOpenHiddenEquipmentsSettings: () =>
+            setShowHiddenEquipmentsSettings(true),
         }}
       />
 
@@ -3238,6 +3244,26 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           settings={settings}
           customEquipments={customEquipments}
           onClose={() => setShowHiddenMethodsSettings(false)}
+          onChange={async (newSettings: SettingsOptions) => {
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
+            // 触发重新加载以更新显示
+            window.dispatchEvent(new CustomEvent('settingsChanged'));
+          }}
+        />
+      )}
+
+      {showHiddenEquipmentsSettings && (
+        <HiddenEquipmentsSettings
+          settings={settings}
+          customEquipments={customEquipments}
+          onClose={() => setShowHiddenEquipmentsSettings(false)}
           onChange={async (newSettings: SettingsOptions) => {
             setSettings(newSettings);
             const { Storage } = await import('@/lib/core/storage');

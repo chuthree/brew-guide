@@ -37,7 +37,10 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // 使用自定义Hook管理器具列表
-  const { allEquipments } = useEquipmentList({ customEquipments });
+  const { allEquipments } = useEquipmentList({
+    customEquipments,
+    settings,
+  });
 
   // 使用自定义Hook管理滚动
   useScrollToSelected({

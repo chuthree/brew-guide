@@ -463,10 +463,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         const customEquips = await loadCustomEquipments();
 
         // 合并所有器具
-        const allEquipments = [
+        let allEquipments = [
           ...equipmentList.map(eq => ({ ...eq, isCustom: false })),
           ...customEquips,
         ];
+
+        // 过滤隐藏的器具
+        if (settings) {
+          const { filterHiddenEquipments } = await import(
+            '@/lib/managers/hiddenEquipments'
+          );
+          allEquipments = filterHiddenEquipments(allEquipments, settings);
+        }
+
         setAvailableEquipments(allEquipments);
 
         // 加载自定义方案

@@ -110,6 +110,8 @@ export interface SettingsOptions {
   hiddenCommonMethods?: {
     [equipmentId: string]: string[]; // 器具ID -> 隐藏的方案ID列表
   };
+  // 隐藏的器具设置
+  hiddenEquipments?: string[]; // 隐藏的器具ID列表
 }
 
 // 默认设置
@@ -189,6 +191,8 @@ export const defaultSettings: SettingsOptions = {
   showBeanInfoDivider: true, // 默认显示基础信息和产地信息之间的分割线
   // 隐藏的通用方案默认值
   hiddenCommonMethods: {}, // 默认没有隐藏的方案
+  // 隐藏的器具默认值
+  hiddenEquipments: [], // 默认没有隐藏的器具
 };
 
 // 子设置页面的打开/关闭函数接口
@@ -204,6 +208,7 @@ export interface SubSettingsHandlers {
   onOpenSearchSortSettings: () => void;
   onOpenFlavorDimensionSettings: () => void;
   onOpenHiddenMethodsSettings: () => void;
+  onOpenHiddenEquipmentsSettings: () => void;
 }
 
 interface SettingsProps {
@@ -305,6 +310,17 @@ const Settings: React.FC<SettingsProps> = ({
   const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(
     null
   );
+
+  // 计算是否有隐藏的方案和器具
+  const hasHiddenMethods = React.useMemo(() => {
+    const hiddenMethods = settings.hiddenCommonMethods || {};
+    return Object.values(hiddenMethods).some(methods => methods.length > 0);
+  }, [settings.hiddenCommonMethods]);
+
+  const hasHiddenEquipments = React.useMemo(() => {
+    const hiddenEquipments = settings.hiddenEquipments || [];
+    return hiddenEquipments.length > 0;
+  }, [settings.hiddenEquipments]);
 
   // S3同步相关状态（仅用于同步按钮）
   const [s3Status, setS3Status] = useState<
@@ -955,16 +971,30 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>
-          <button
-            onClick={subSettingsHandlers.onOpenHiddenMethodsSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <EyeOff className="h-4 w-4 text-neutral-500" />
-              <span>隐藏的通用方案</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
+          {hasHiddenMethods && (
+            <button
+              onClick={subSettingsHandlers.onOpenHiddenMethodsSettings}
+              className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            >
+              <div className="flex items-center space-x-3">
+                <EyeOff className="h-4 w-4 text-neutral-500" />
+                <span>隐藏的预设方案</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-neutral-400" />
+            </button>
+          )}
+          {hasHiddenEquipments && (
+            <button
+              onClick={subSettingsHandlers.onOpenHiddenEquipmentsSettings}
+              className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            >
+              <div className="flex items-center space-x-3">
+                <EyeOff className="h-4 w-4 text-neutral-500" />
+                <span>隐藏的预设器具</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-neutral-400" />
+            </button>
+          )}
         </div>
 
         <div className="space-y-4 px-6 py-4">
