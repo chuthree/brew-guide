@@ -74,7 +74,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       {/* 半透明背景 */}
-      <div className="absolute inset-0 bg-neutral-900/30 dark:bg-neutral-950/50" />
+      <div className="absolute inset-0 bg-black/50" />
 
       {/* 设置内容卡片 */}
       <div className="pb-safe-bottom relative w-full rounded-t-2xl bg-neutral-50 dark:bg-neutral-900">
