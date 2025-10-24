@@ -6,6 +6,7 @@ import { type CustomEquipment, type Method } from '@/lib/core/config';
 import { Capacitor } from '@capacitor/core';
 import { FilePicker } from '@capawesome/capacitor-file-picker';
 import { showToast } from '../../common/feedback/LightToast';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface EquipmentImportModalProps {
   showForm: boolean;
@@ -28,6 +29,9 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isNative = Capacitor.isNativePlatform();
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: showForm });
 
   // 关闭并清除输入
   const handleClose = useCallback(() => {

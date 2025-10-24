@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { APP_VERSION, sponsorsList } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
+import { restoreDefaultThemeColor } from '@/lib/hooks/useThemeColor';
 
 import { useTheme } from 'next-themes';
 import { LayoutSettings } from '../brewing/Timer/Settings';
@@ -231,7 +232,7 @@ const Settings: React.FC<SettingsProps> = ({
   hasSubSettingsOpen,
 }) => {
   // 获取主题相关方法
-  const { theme } = useTheme();
+  const { theme, systemTheme } = useTheme();
 
   // 控制动画状态
   const [shouldRender, setShouldRender] = useState(false);
@@ -463,66 +464,22 @@ const Settings: React.FC<SettingsProps> = ({
     // 确保只在客户端执行
     if (typeof window === 'undefined') return;
 
-    const updateThemeColor = () => {
-      const themeColorMeta = document.querySelectorAll(
-        'meta[name="theme-color"]'
-      );
-
-      // 如果没有找到 meta 标签，创建它们
-      if (themeColorMeta.length === 0) {
-        const lightMeta = document.createElement('meta');
-        lightMeta.name = 'theme-color';
-        lightMeta.content = '#fafafa';
-        lightMeta.media = '(prefers-color-scheme: light)';
-        document.head.appendChild(lightMeta);
-
-        const darkMeta = document.createElement('meta');
-        darkMeta.name = 'theme-color';
-        darkMeta.content = '#171717';
-        darkMeta.media = '(prefers-color-scheme: dark)';
-        document.head.appendChild(darkMeta);
-      }
-
-      if (theme === 'system') {
-        // 对于系统模式，重新创建两个 meta 标签
-        themeColorMeta.forEach(meta => meta.remove());
-
-        const lightMeta = document.createElement('meta');
-        lightMeta.name = 'theme-color';
-        lightMeta.content = '#fafafa';
-        lightMeta.media = '(prefers-color-scheme: light)';
-        document.head.appendChild(lightMeta);
-
-        const darkMeta = document.createElement('meta');
-        darkMeta.name = 'theme-color';
-        darkMeta.content = '#171717';
-        darkMeta.media = '(prefers-color-scheme: dark)';
-        document.head.appendChild(darkMeta);
-      } else {
-        // 对于明确的主题选择，使用单个 meta 标签
-        themeColorMeta.forEach(meta => meta.remove());
-        const meta = document.createElement('meta');
-        meta.name = 'theme-color';
-        meta.content = theme === 'light' ? '#fafafa' : '#171717';
-        document.head.appendChild(meta);
-      }
-    };
-
-    updateThemeColor();
+    // 使用统一的工具函数恢复默认 theme-color
+    restoreDefaultThemeColor(theme, systemTheme);
 
     // 如果是系统模式，添加系统主题变化的监听
     let mediaQuery: MediaQueryList | null = null;
     if (theme === 'system') {
       mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = () => {
-        updateThemeColor();
+        restoreDefaultThemeColor(theme, systemTheme);
       };
       mediaQuery.addEventListener('change', handleChange);
       return () => {
         mediaQuery?.removeEventListener('change', handleChange);
       };
     }
-  }, [theme]);
+  }, [theme, systemTheme]);
 
   // 历史栈管理 - 支持多层嵌套设置页面
   useEffect(() => {

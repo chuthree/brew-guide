@@ -7,6 +7,7 @@ import { type CustomEquipment } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useEquipmentList } from '@/lib/equipment/useEquipmentList';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface EquipmentManagementDrawerProps {
   isOpen: boolean;
@@ -67,6 +68,9 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
   // 动画状态管理
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: isOpen });
 
   // 使用自定义Hook管理器具列表
   const { allEquipments: baseEquipments } = useEquipmentList({

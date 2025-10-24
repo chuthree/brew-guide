@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Method, CustomEquipment } from '@/lib/core/config';
 import { copyMethodToClipboard } from '@/lib/managers/customMethods';
 import { showToast } from '../../common/feedback/LightToast';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface MethodShareModalProps {
   isOpen: boolean;
@@ -18,6 +19,9 @@ const MethodShareModal: React.FC<MethodShareModalProps> = ({
   customEquipment,
 }) => {
   const [isSharing, setIsSharing] = useState(false);
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: isOpen });
 
   // 处理文字分享
   const handleTextShare = async () => {

@@ -5,6 +5,7 @@ import CustomEquipmentForm, {
   CustomEquipmentFormHandle,
 } from './CustomEquipmentForm';
 import { exportEquipment, copyToClipboard } from '@/lib/utils/exportUtils';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface CustomEquipmentFormModalProps {
   showForm: boolean;
@@ -22,6 +23,9 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
   onImport,
 }) => {
   const formRef = useRef<CustomEquipmentFormHandle | null>(null);
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: showForm });
 
   // 历史栈管理 - 支持多步骤表单的硬件返回键和浏览器返回按钮
   useEffect(() => {

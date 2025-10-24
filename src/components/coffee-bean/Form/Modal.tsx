@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { ExtendedCoffeeBean } from './types';
 import CoffeeBeanForm from './index';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface CoffeeBeanFormModalProps {
   showForm: boolean;
@@ -20,6 +21,9 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
 }) => {
   // 添加平台检测
   const [isIOS, setIsIOS] = useState(false);
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: showForm });
 
   // 添加对模态框的引用
   const modalRef = useRef<HTMLDivElement>(null);

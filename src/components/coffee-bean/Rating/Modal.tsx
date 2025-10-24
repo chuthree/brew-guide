@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { CoffeeBean } from '@/types/app';
 import StarRating from '../ui/StarRating';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface CoffeeBeanRatingModalProps {
   showModal: boolean;
@@ -23,6 +24,9 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
   const [beanType, setBeanType] = useState<'espresso' | 'filter'>('filter');
   const [overallRating, setOverallRating] = useState<number>(0);
   const [ratingNotes, setRatingNotes] = useState<string>('');
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: showModal });
 
   // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
   useEffect(() => {

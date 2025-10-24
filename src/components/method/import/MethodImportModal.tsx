@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface MethodImportModalProps {
   showForm: boolean;
@@ -21,6 +22,9 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
   // 动画状态管理
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: showForm });
 
   // 导入数据的状态
   const [importData, setImportData] = useState('');

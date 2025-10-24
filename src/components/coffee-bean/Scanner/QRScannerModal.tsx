@@ -9,6 +9,7 @@ import {
   deserializeBeanFromQRCode,
 } from '@/lib/utils/beanQRCodeUtils';
 import type { CoffeeBean } from '@/types/app';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface QRScannerModalProps {
   isOpen: boolean;
@@ -24,6 +25,9 @@ const QRScannerModal: React.FC<QRScannerModalProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: isOpen });
 
   // 在关闭时重置状态
   React.useEffect(() => {

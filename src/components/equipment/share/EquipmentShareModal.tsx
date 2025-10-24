@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { showToast } from '../../common/feedback/LightToast';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface EquipmentShareModalProps {
   isOpen: boolean;
@@ -24,6 +25,9 @@ const EquipmentShareModal: React.FC<EquipmentShareModalProps> = ({
   const [selectedMethods, setSelectedMethods] = useState<string[]>([]);
   const [isSharing, setIsSharing] = useState(false);
   const isNative = Capacitor.isNativePlatform();
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: isOpen });
 
   // Reset selected methods when modal opens - 默认选择所有方案
   useEffect(() => {

@@ -6,6 +6,7 @@ import ChangeRecordEditForm from './ChangeRecordEditForm';
 import { BrewingNote } from '@/lib/core/config';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { Calendar } from '@/components/common/ui/Calendar';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface ChangeRecordEditModalProps {
   showModal: boolean;
@@ -35,6 +36,9 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
 
   // 内部动画状态
   const [isClosing, setIsClosing] = useState(false);
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: showModal });
 
   // 重置时间戳当初始数据变化时
   useEffect(() => {

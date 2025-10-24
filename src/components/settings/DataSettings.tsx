@@ -10,6 +10,7 @@ import { Share } from '@capacitor/share';
 import { SettingsOptions } from './Settings';
 import { ButtonGroup } from '../ui/ButtonGroup';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 // 使用新版本的 S3 同步管理器
 import S3SyncManager from '@/lib/s3/syncManagerV2';
@@ -526,6 +527,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
+
+  // 同步顶部安全区颜色（仅在冲突弹窗显示时）
+  useThemeColor({ useOverlay: true, enabled: showConflictModal });
+
   const [conflictRemoteMetadata, setConflictRemoteMetadata] =
     useState<SyncMetadata | null>(null);
   const [isSyncNeeded, setIsSyncNeeded] = useState(false);
@@ -1591,7 +1596,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       {/* 冲突解决模态框 - 半屏 */}
       {showConflictModal && (
         <div
-          className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/40 dark:bg-black/60"
+          className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/50"
           onClick={() => setShowConflictModal(false)}
         >
           <div

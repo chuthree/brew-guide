@@ -6,6 +6,7 @@ import {
   defaultSettings,
 } from '@/components/settings/Settings';
 import fontZoomUtils from '@/lib/utils/fontZoomUtils';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 // 设置页面界面属性
 interface OnboardingProps {
@@ -22,6 +23,9 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [settings, setSettings] = useState<SettingsOptions>(defaultSettings);
   // 检查字体缩放功能是否可用
   const [isFontZoomEnabled, setIsFontZoomEnabled] = useState(false);
+
+  // 使用半透明叠加层颜色同步顶部安全区
+  useThemeColor({ useOverlay: true, enabled: true });
 
   // 初始化
   useEffect(() => {

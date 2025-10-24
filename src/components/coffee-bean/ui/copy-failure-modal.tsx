@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils/classNameUtils';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface CopyFailureModalProps {
   isOpen: boolean;
@@ -19,6 +20,9 @@ const CopyFailureModal: React.FC<CopyFailureModalProps> = ({
   title = '复制失败',
   className,
 }) => {
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: isOpen });
+
   return (
     <AnimatePresence>
       {isOpen && (

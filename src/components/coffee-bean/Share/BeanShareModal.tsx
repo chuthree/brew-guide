@@ -7,6 +7,7 @@ import { Download, Share2, X, FileText } from 'lucide-react';
 import { CoffeeBean } from '@/types/app';
 import { serializeBeanForQRCode } from '@/lib/utils/beanQRCodeUtils';
 import { Capacitor } from '@capacitor/core';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface BeanShareModalProps {
   isOpen: boolean;
@@ -28,6 +29,9 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
   const [isSharing, setIsSharing] = useState(false);
   const [showBeanName, setShowBeanName] = useState(false);
   const qrContainerRef = useRef<HTMLDivElement>(null);
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: isOpen });
 
   // 生成二维码数据
   useEffect(() => {
