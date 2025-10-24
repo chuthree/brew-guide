@@ -401,7 +401,7 @@ const NoteSteppedFormModal = forwardRef<
     return (
       <div
         ref={modalRef}
-        className={`pt-safe-top pb-safe-bottom fixed inset-0 z-50 mx-auto max-w-[500px] bg-neutral-50 px-6 transition-opacity duration-200 dark:bg-neutral-900 ${showForm ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'} flex flex-col overflow-hidden`}
+        className={`pt-safe-top pb-safe-bottom fixed inset-0 mx-auto max-w-[500px] bg-neutral-50 px-6 transition-opacity duration-200 dark:bg-neutral-900 ${showForm ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'} flex flex-col overflow-hidden`}
       >
         {/* 顶部导航栏 */}
         <div className="mb-6 flex items-center justify-between">
