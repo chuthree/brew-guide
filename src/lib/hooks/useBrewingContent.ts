@@ -7,6 +7,7 @@ import {
 import { Content } from './useBrewingState';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { loadCustomMethodsForEquipment } from '@/lib/managers/customMethods';
+import { filterHiddenMethods } from '@/lib/managers/hiddenMethods';
 import { Stage } from '@/components/method/forms/components/types';
 
 // 增强 Content.注水.steps 接口以支持 pourType
@@ -45,7 +46,7 @@ export function useBrewingContent({
   methodType,
   customMethods, // 不再忽略customMethods参数
   selectedMethod,
-  settings: _settings,
+  settings,
   customEquipments = [], // 设置默认值为空数组
 }: UseBrewingContentProps) {
   const initialContent: Content = {
@@ -250,8 +251,18 @@ export function useBrewingContent({
           };
         });
 
-        // 通用方案列表
-        const commonMethodSteps = commonMethodsForEquipment.map(
+        // 通用方案列表 - 过滤掉被隐藏的通用方案
+        let filteredCommonMethods = commonMethodsForEquipment;
+
+        if (selectedEquipment && settings && settings.hiddenCommonMethods) {
+          filteredCommonMethods = filterHiddenMethods(
+            commonMethodsForEquipment,
+            selectedEquipment,
+            settings
+          );
+        }
+
+        const commonMethodSteps = filteredCommonMethods.map(
           (method, methodIndex) => {
             // 检查是否是意式咖啡方案
             const isEspressoMethod = method.params.stages.some(
@@ -344,6 +355,7 @@ export function useBrewingContent({
     methodType,
     customEquipments,
     currentEquipmentCustomMethods, // 添加依赖，确保currentEquipmentCustomMethods变化时更新content
+    settings, // 添加settings依赖，当隐藏设置变化时重新计算
   ]);
 
   // 更新注水步骤内容

@@ -6,11 +6,13 @@ import {
   type CustomEquipment,
   brewingMethods,
 } from '@/lib/core/config';
+import { SettingsOptions } from '@/components/settings/Settings';
 
 interface UseMethodManagementProps {
   selectedEquipment: string;
   initialMethod?: string;
   customEquipments: CustomEquipment[];
+  settings?: SettingsOptions;
 }
 
 interface UseMethodManagementResult {
@@ -27,6 +29,7 @@ export function useMethodManagement({
   selectedEquipment,
   initialMethod,
   customEquipments,
+  settings,
 }: UseMethodManagementProps): UseMethodManagementResult {
   const [methodType, setMethodType] = useState<'common' | 'custom'>('common');
   const [selectedMethod, setSelectedMethod] = useState<string>(
@@ -46,6 +49,8 @@ export function useMethodManagement({
     const isCustomEquipment = !!customEquipment;
     const isCustomPresetEquipment =
       isCustomEquipment && customEquipment.animationType === 'custom';
+
+    let methods: Method[] = [];
 
     if (methodType === 'common') {
       if (isCustomPresetEquipment) {
@@ -70,18 +75,37 @@ export function useMethodManagement({
               baseEquipmentId = 'V60';
           }
         }
-        return brewingMethods[baseEquipmentId] || [];
+        methods = brewingMethods[baseEquipmentId] || [];
       } else {
         // 预定义器具
-        return brewingMethods[selectedEquipment] || [];
+        methods = brewingMethods[selectedEquipment] || [];
       }
+
+      // 过滤掉隐藏的通用方案
+      if (settings && settings.hiddenCommonMethods) {
+        const hiddenIds = settings.hiddenCommonMethods[selectedEquipment] || [];
+        if (hiddenIds.length > 0) {
+          methods = methods.filter(method => {
+            const methodId = method.id || method.name;
+            return !hiddenIds.includes(methodId);
+          });
+        }
+      }
+
+      return methods;
     } else if (methodType === 'custom') {
       // 对于自定义方案，直接使用已加载的当前设备的自定义方案列表
       return customMethods;
     }
 
     return [];
-  }, [selectedEquipment, methodType, customEquipments, customMethods]);
+  }, [
+    selectedEquipment,
+    methodType,
+    customEquipments,
+    customMethods,
+    settings,
+  ]);
 
   // 加载自定义方案
   useEffect(() => {

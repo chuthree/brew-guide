@@ -74,26 +74,40 @@ const DEFAULT_METHOD_PARAMS = {
 // 工具函数：获取器具对应的通用方案
 const getCommonMethodsForEquipment = (
   equipmentId: string,
-  availableEquipments: ((typeof equipmentList)[0] | CustomEquipment)[]
+  availableEquipments: ((typeof equipmentList)[0] | CustomEquipment)[],
+  settings?: SettingsOptions
 ): Method[] => {
   // 先检查是否是预定义器具
+  let methods: Method[] = [];
+
   if (commonMethods[equipmentId]) {
-    return commonMethods[equipmentId];
+    methods = commonMethods[equipmentId];
+  } else {
+    // 检查是否是自定义器具
+    const customEquipment = availableEquipments.find(
+      eq => eq.id === equipmentId && 'isCustom' in eq && eq.isCustom
+    ) as CustomEquipment | undefined;
+
+    if (customEquipment?.animationType) {
+      const baseEquipmentId =
+        ANIMATION_TYPE_MAPPING[customEquipment.animationType.toLowerCase()] ||
+        'V60';
+      methods = commonMethods[baseEquipmentId] || [];
+    }
   }
 
-  // 检查是否是自定义器具
-  const customEquipment = availableEquipments.find(
-    eq => eq.id === equipmentId && 'isCustom' in eq && eq.isCustom
-  ) as CustomEquipment | undefined;
-
-  if (customEquipment?.animationType) {
-    const baseEquipmentId =
-      ANIMATION_TYPE_MAPPING[customEquipment.animationType.toLowerCase()] ||
-      'V60';
-    return commonMethods[baseEquipmentId] || [];
+  // 如果有settings，过滤掉隐藏的方案
+  if (settings && settings.hiddenCommonMethods) {
+    const hiddenIds = settings.hiddenCommonMethods[equipmentId] || [];
+    if (hiddenIds.length > 0) {
+      methods = methods.filter(method => {
+        const methodId = method.id || method.name;
+        return !hiddenIds.includes(methodId);
+      });
+    }
   }
 
-  return [];
+  return methods;
 };
 
 // 工具函数：获取参数的默认值
@@ -472,7 +486,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           const equipmentMethods = customMethods[equipmentId] || [];
           const commonEquipmentMethods = getCommonMethodsForEquipment(
             equipmentId,
-            allEquipments
+            allEquipments,
+            settings
           );
           setAvailableMethods([...equipmentMethods, ...commonEquipmentMethods]);
         }
@@ -485,7 +500,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     };
 
     loadEquipmentsAndMethods();
-  }, [initialData.equipment]);
+  }, [initialData.equipment, settings]);
 
   // 事件监听
   useEffect(() => {
@@ -771,7 +786,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 使用新的辅助函数获取通用方案
         const commonEquipmentMethods = getCommonMethodsForEquipment(
           equipmentId,
-          availableEquipments
+          availableEquipments,
+          settings
         );
         const allMethods = [...equipmentMethods, ...commonEquipmentMethods];
         setAvailableMethods(allMethods);
@@ -791,7 +807,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
       }
     },
-    [customMethods, updateMethodParams, availableEquipments]
+    [customMethods, updateMethodParams, availableEquipments, settings]
   );
 
   // 处理方案选择

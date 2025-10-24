@@ -25,6 +25,7 @@ import {
   Upload,
   Download,
   ArrowUpDown as ArrowUpDownIcon,
+  EyeOff,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -105,6 +106,10 @@ export interface SettingsOptions {
   showBeanRating?: boolean; // 是否显示咖啡豆评分区域（默认false，只显示有内容的）
   // 详情页显示设置
   showBeanInfoDivider?: boolean; // 是否显示基础信息和产地信息之间的分割线（默认true）
+  // 隐藏的通用方案设置
+  hiddenCommonMethods?: {
+    [equipmentId: string]: string[]; // 器具ID -> 隐藏的方案ID列表
+  };
 }
 
 // 默认设置
@@ -182,6 +187,8 @@ export const defaultSettings: SettingsOptions = {
   showBeanRating: false, // 默认不显示评分区域（只显示有内容的）
   // 详情页显示设置默认值
   showBeanInfoDivider: true, // 默认显示基础信息和产地信息之间的分割线
+  // 隐藏的通用方案默认值
+  hiddenCommonMethods: {}, // 默认没有隐藏的方案
 };
 
 // 子设置页面的打开/关闭函数接口
@@ -196,6 +203,7 @@ export interface SubSettingsHandlers {
   onOpenRandomCoffeeBeanSettings: () => void;
   onOpenSearchSortSettings: () => void;
   onOpenFlavorDimensionSettings: () => void;
+  onOpenHiddenMethodsSettings: () => void;
 }
 
 interface SettingsProps {
@@ -944,6 +952,16 @@ const Settings: React.FC<SettingsProps> = ({
             <div className="flex items-center space-x-3">
               <Shuffle className="h-4 w-4 text-neutral-500" />
               <span>随机咖啡豆设置</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-neutral-400" />
+          </button>
+          <button
+            onClick={subSettingsHandlers.onOpenHiddenMethodsSettings}
+            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            <div className="flex items-center space-x-3">
+              <EyeOff className="h-4 w-4 text-neutral-500" />
+              <span>隐藏的通用方案</span>
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>

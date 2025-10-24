@@ -266,7 +266,7 @@ const StageItem: React.FC<StageItemProps> = React.memo(
       if (onDelete) {
         items.push({
           id: 'delete',
-          label: '删除',
+          label: step.isCommonMethod ? '隐藏' : '删除',
           onClick: onDelete,
         });
       }
@@ -280,7 +280,7 @@ const StageItem: React.FC<StageItemProps> = React.memo(
       }
 
       return items;
-    }, [onEdit, onDelete, onShare]);
+    }, [onEdit, onDelete, onShare, step.isCommonMethod]);
 
     // 渲染阶段内容
     const renderStageContent = () => {

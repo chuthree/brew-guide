@@ -45,6 +45,7 @@ import NotificationSettings from '@/components/settings/NotificationSettings';
 import RandomCoffeeBeanSettings from '@/components/settings/RandomCoffeeBeanSettings';
 import SearchSortSettings from '@/components/settings/SearchSortSettings';
 import FlavorDimensionSettings from '@/components/settings/FlavorDimensionSettings';
+import HiddenMethodsSettings from '@/components/settings/HiddenMethodsSettings';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
 import Onboarding from '@/components/onboarding/Onboarding';
@@ -229,6 +230,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [showSearchSortSettings, setShowSearchSortSettings] = useState(false);
   const [showFlavorDimensionSettings, setShowFlavorDimensionSettings] =
     useState(false);
+  const [showHiddenMethodsSettings, setShowHiddenMethodsSettings] =
+    useState(false);
 
   // 计算是否有任何子设置页面打开
   const hasSubSettingsOpen =
@@ -241,7 +244,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showNotificationSettings ||
     showRandomCoffeeBeanSettings ||
     showSearchSortSettings ||
-    showFlavorDimensionSettings;
+    showFlavorDimensionSettings ||
+    showHiddenMethodsSettings;
 
   const [settings, setSettings] = useState<SettingsOptions>(() => {
     // 使用默认设置作为初始值，稍后在 useEffect 中异步加载
@@ -334,6 +338,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     handleSaveCustomMethod,
     handleEditCustomMethod,
     handleDeleteCustomMethod,
+    handleHideMethod,
     navigateToStep,
   } = brewingState;
 
@@ -601,6 +606,26 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 延迟检查，确保应用完全加载
     const timer = setTimeout(checkBackupReminder, 3000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // 监听设置变化事件，重新加载设置以更新界面
+  useEffect(() => {
+    const handleSettingsChanged = async () => {
+      try {
+        const { Storage } = await import('@/lib/core/storage');
+        const savedSettings = await Storage.get('brewGuideSettings');
+        if (savedSettings && typeof savedSettings === 'string') {
+          const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
+          setSettings(parsedSettings);
+        }
+      } catch (error) {
+        console.error('重新加载设置失败:', error);
+      }
+    };
+
+    window.addEventListener('settingsChanged', handleSettingsChanged);
+    return () =>
+      window.removeEventListener('settingsChanged', handleSettingsChanged);
   }, []);
 
   const [hasCoffeeBeans, setHasCoffeeBeans] = useState(initialHasBeans);
@@ -2644,6 +2669,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               onCoffeeBeanSelect={handleCoffeeBeanSelect}
               onEditMethod={handleEditCustomMethod}
               onDeleteMethod={handleDeleteCustomMethod}
+              onHideMethod={handleHideMethod}
               setActiveMainTab={setActiveMainTab}
               resetBrewingState={resetBrewingState}
               customEquipments={customEquipments}
@@ -3020,6 +3046,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onOpenSearchSortSettings: () => setShowSearchSortSettings(true),
           onOpenFlavorDimensionSettings: () =>
             setShowFlavorDimensionSettings(true),
+          onOpenHiddenMethodsSettings: () => setShowHiddenMethodsSettings(true),
         }}
       />
 
@@ -3202,6 +3229,26 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 detail: { key: 'brewGuideSettings' },
               })
             );
+          }}
+        />
+      )}
+
+      {showHiddenMethodsSettings && (
+        <HiddenMethodsSettings
+          settings={settings}
+          customEquipments={customEquipments}
+          onClose={() => setShowHiddenMethodsSettings(false)}
+          onChange={async (newSettings: SettingsOptions) => {
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
+            // 触发重新加载以更新显示
+            window.dispatchEvent(new CustomEvent('settingsChanged'));
           }}
         />
       )}

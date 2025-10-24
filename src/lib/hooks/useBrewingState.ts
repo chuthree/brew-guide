@@ -467,6 +467,58 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     [selectedEquipment, customMethods, selectedMethod]
   );
 
+  // 隐藏通用方案
+  const handleHideMethod = useCallback(
+    async (method: Method) => {
+      if (!selectedEquipment) return;
+
+      if (
+        !window.confirm(
+          `确定要隐藏方案"${method.name}"吗？\n\n隐藏的方案可以在设置中恢复。`
+        )
+      )
+        return;
+
+      try {
+        const { hideCommonMethod } = await import(
+          '@/lib/managers/hiddenMethods'
+        );
+        const { Storage } = await import('@/lib/core/storage');
+        const { defaultSettings } = await import(
+          '@/components/settings/Settings'
+        );
+
+        // 读取当前设置
+        const settingsStr = await Storage.get('brewGuideSettings');
+        let currentSettings = defaultSettings;
+        if (settingsStr) {
+          currentSettings = JSON.parse(settingsStr);
+        }
+
+        // 隐藏方案
+        const methodId = method.id || method.name;
+        await hideCommonMethod(selectedEquipment, methodId, currentSettings);
+
+        // 显示提示
+        const { showToast } = await import(
+          '@/components/common/feedback/LightToast'
+        );
+        showToast({
+          type: 'success',
+          title: '已隐藏方案',
+          duration: 2000,
+        });
+
+        // 触发重新加载以更新显示
+        window.dispatchEvent(new CustomEvent('settingsChanged'));
+      } catch (error) {
+        console.error('隐藏方案失败:', error);
+        alert('隐藏方案失败，请重试');
+      }
+    },
+    [selectedEquipment]
+  );
+
   // 简化咖啡豆选择处理
   const handleCoffeeBeanSelect = useCallback(
     (beanId: string | null, bean: CoffeeBean | null) => {
@@ -620,6 +672,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     handleSaveCustomMethod,
     handleEditCustomMethod,
     handleDeleteCustomMethod,
+    handleHideMethod,
     navigateToStep,
   };
 }

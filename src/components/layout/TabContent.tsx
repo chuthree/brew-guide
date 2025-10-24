@@ -92,6 +92,7 @@ interface TabContentProps {
   onCoffeeBeanSelect?: (beanId: string | null, bean: CoffeeBean | null) => void;
   onEditMethod: (method: Method) => void;
   onDeleteMethod: (method: Method) => void;
+  onHideMethod?: (method: Method) => Promise<void>; // 新增隐藏方案的回调
   setActiveMainTab?: (tab: MainTabType) => void;
   resetBrewingState?: (shouldReset: boolean) => void;
   setIsNoteSaved?: (saved: boolean) => void;
@@ -138,6 +139,7 @@ const TabContent: React.FC<TabContentProps> = ({
   onCoffeeBeanSelect,
   onEditMethod,
   onDeleteMethod,
+  onHideMethod,
   setActiveMainTab,
   resetBrewingState,
   setIsNoteSaved,
@@ -965,21 +967,38 @@ const TabContent: React.FC<TabContentProps> = ({
                 editHandler = getEditEquipmentHandler(step);
               }
 
-              // 计算删除方案的处理函数
+              // 计算删除/隐藏方案的处理函数
               let deleteHandler;
-              if (
-                activeTab === '方案' &&
-                step.isCustom &&
-                customMethods[selectedEquipment!]
-              ) {
-                const methodIndex = customMethods[selectedEquipment!].findIndex(
-                  m => m.id === step.methodId || m.name === step.title
-                );
-                if (methodIndex !== -1) {
-                  deleteHandler = () =>
-                    onDeleteMethod(
-                      customMethods[selectedEquipment!][methodIndex]
+              if (activeTab === '方案') {
+                if (step.isCustom && customMethods[selectedEquipment!]) {
+                  // 自定义方案：可以删除
+                  const methodIndex = customMethods[
+                    selectedEquipment!
+                  ].findIndex(
+                    m => m.id === step.methodId || m.name === step.title
+                  );
+                  if (methodIndex !== -1) {
+                    deleteHandler = () =>
+                      onDeleteMethod(
+                        customMethods[selectedEquipment!][methodIndex]
+                      );
+                  }
+                } else if (
+                  step.isCommonMethod &&
+                  selectedEquipment &&
+                  onHideMethod
+                ) {
+                  // 通用方案：改为隐藏
+                  const methodId = step.methodId || step.title;
+                  const commonMethodsList = commonMethods[selectedEquipment];
+                  if (commonMethodsList) {
+                    const method = commonMethodsList.find(
+                      m => (m.id || m.name) === methodId
                     );
+                    if (method) {
+                      deleteHandler = () => onHideMethod(method);
+                    }
+                  }
                 }
               } else if (step.isCustom) {
                 deleteHandler = getDeleteEquipmentHandler(step);

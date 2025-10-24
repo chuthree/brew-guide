@@ -79,6 +79,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     selectedEquipment,
     initialMethod: initialNote?.method,
     customEquipments,
+    settings,
   });
 
   // 处理关闭 - 保持器具选择状态，只重置其他状态
