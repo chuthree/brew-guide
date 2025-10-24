@@ -127,6 +127,21 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
     );
   }
 
+  // 计算输入框宽度：中文字符按2倍计算，英文字符按1倍计算
+  const calculateInputSize = (str: string) => {
+    let width = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      // 检测中文字符（包括中文标点）
+      if (/[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/.test(char)) {
+        width += 2;
+      } else {
+        width += 1;
+      }
+    }
+    return Math.max(width || 1, 2);
+  };
+
   return (
     <span
       className={`group relative inline-flex min-w-0 cursor-pointer items-center border-b border-dashed border-neutral-300 pb-0.5 dark:border-neutral-600 ${className}`}
@@ -142,7 +157,7 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
           onBlur={handleSubmit}
           onKeyDown={handleKeyDown}
           className="max-w-none min-w-0 bg-transparent text-center text-xs outline-hidden"
-          size={Math.max(tempValue.length || 1, 2)}
+          size={calculateInputSize(tempValue)}
         />
       ) : (
         <span className="inline-flex items-center whitespace-nowrap">
