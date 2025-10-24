@@ -273,11 +273,19 @@ function convertBrew(
 
 /**
  * 计算咖啡豆的剩余量
+ * @param bean 咖啡豆数据
+ * @param brews 冲煮记录列表
+ * @returns 剩余量（克）
  */
 function calculateRemainingCapacity(
   bean: BeanconquerorBean,
   brews: BeanconquerorBrew[]
 ): number {
+  // 如果咖啡豆已归档（finished: true），剩余量为 0
+  if (bean.finished) {
+    return 0;
+  }
+
   // 如果没有总量，返回 0
   if (!bean.weight) return 0;
 
