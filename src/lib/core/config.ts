@@ -265,6 +265,45 @@ export const brewingMethods: BrewingMethods = {
       },
     },
     {
+      name: '队长无差别冲煮法',
+      params: {
+        coffee: '15g',
+        water: '225g',
+        ratio: '1:15',
+        grindSize: '中细偏粗',
+        temp: '92°C',
+        videoUrl: '',
+        roastLevel: '中浅烘焙',
+        stages: [
+          {
+            time: 30,
+            pourTime: 30,
+            label: '绕圈注水',
+            water: '30g',
+            detail: '（1:2）中心向外绕圈，确保均匀萃取',
+            pourType: 'circle',
+          },
+          {
+            time: 60,
+            pourTime: 30,
+            label: '绕圈注水',
+            water: '120g',
+            detail: '（1:6）中心向外缓慢画圈注水，均匀萃取咖啡风味',
+            pourType: 'circle',
+          },
+          {
+            time: 100,
+            pourTime: 30,
+            label: '中心注水',
+            water: '225g',
+            detail:
+              '（1:X）中心定点注水，初始X值建议5(1:5)，可根据风味调整：过淡用4(1:4)，过浓用6(1:6)',
+            pourType: 'center',
+          },
+        ],
+      },
+    },
+    {
       name: '温水细粉慢冲LtFS',
       params: {
         coffee: '12g',
