@@ -277,7 +277,7 @@ export const brewingMethods: BrewingMethods = {
         stages: [
           {
             time: 30,
-            pourTime: 30,
+            pourTime: 10,
             label: '绕圈注水',
             water: '30g',
             detail: '（1:2）中心向外绕圈，确保均匀萃取',

@@ -262,60 +262,65 @@ export function useBrewingContent({
           );
         }
 
-        const commonMethodSteps = filteredCommonMethods.map(
-          (method, methodIndex) => {
-            // 检查是否是意式咖啡方案
-            const isEspressoMethod = method.params.stages.some(
-              stage =>
-                stage.pourType === 'extraction' || stage.pourType === 'beverage'
+        const commonMethodSteps = filteredCommonMethods.map(method => {
+          // 找到该方案在原始数组中的索引
+          const originalMethodIndex = commonMethodsForEquipment.findIndex(m => {
+            // 预设方案通常没有 id，只有 name
+            const matchById = method.id && m.id === method.id;
+            const matchByName = m.name === method.name;
+            return matchById || matchByName;
+          });
+
+          // 检查是否是意式咖啡方案
+          const isEspressoMethod = method.params.stages.some(
+            stage =>
+              stage.pourType === 'extraction' || stage.pourType === 'beverage'
+          );
+
+          // 计算总时长
+          let totalTime = 0;
+          if (isEspressoMethod) {
+            // 对于意式咖啡，只计算萃取步骤的时间
+            const extractionStage = method.params.stages.find(
+              stage => stage.pourType === 'extraction'
             );
-
-            // 计算总时长
-            let totalTime = 0;
-            if (isEspressoMethod) {
-              // 对于意式咖啡，只计算萃取步骤的时间
-              const extractionStage = method.params.stages.find(
-                stage => stage.pourType === 'extraction'
-              );
-              totalTime = extractionStage?.time || 0;
-            } else {
-              // 对于常规方法，使用最后一个步骤的时间
-              totalTime =
-                method.params.stages[method.params.stages.length - 1]?.time ||
-                0;
-            }
-
-            // 针对不同类型的方案显示不同的信息
-            let items: string[] = [];
-            if (isEspressoMethod) {
-              // 意式咖啡方案显示: 粉量、液重、萃取时间
-              const extractionStage = method.params.stages.find(
-                stage => stage.pourType === 'extraction'
-              );
-              items = [
-                `粉量 ${method.params.coffee}`,
-                `液重 ${extractionStage?.water || method.params.water}`,
-                `萃取时间 ${formatTime(totalTime, true)}`,
-              ];
-            } else {
-              // 传统方案显示: 水粉比、总时长、研磨度
-              items = [
-                `水粉比 ${method.params.ratio}`,
-                `总时长 ${formatTime(totalTime, true)}`,
-                `研磨度 ${method.params.grindSize}`,
-              ];
-            }
-
-            return {
-              title: method.name,
-              methodId: method.id,
-              isCommonMethod: true, // 标记为通用方案
-              methodIndex: methodIndex,
-              items: items,
-              note: '',
-            };
+            totalTime = extractionStage?.time || 0;
+          } else {
+            // 对于常规方法，使用最后一个步骤的时间
+            totalTime =
+              method.params.stages[method.params.stages.length - 1]?.time || 0;
           }
-        );
+
+          // 针对不同类型的方案显示不同的信息
+          let items: string[] = [];
+          if (isEspressoMethod) {
+            // 意式咖啡方案显示: 粉量、液重、萃取时间
+            const extractionStage = method.params.stages.find(
+              stage => stage.pourType === 'extraction'
+            );
+            items = [
+              `粉量 ${method.params.coffee}`,
+              `液重 ${extractionStage?.water || method.params.water}`,
+              `萃取时间 ${formatTime(totalTime, true)}`,
+            ];
+          } else {
+            // 传统方案显示: 水粉比、总时长、研磨度
+            items = [
+              `水粉比 ${method.params.ratio}`,
+              `总时长 ${formatTime(totalTime, true)}`,
+              `研磨度 ${method.params.grindSize}`,
+            ];
+          }
+
+          return {
+            title: method.name,
+            methodId: method.id,
+            isCommonMethod: true, // 标记为通用方案
+            methodIndex: originalMethodIndex, // 使用原始数组中的索引
+            items: items,
+            note: '',
+          };
+        });
 
         // 合并所有步骤：自定义方案 + 分隔符 + 通用方案
         const dividerStep =
