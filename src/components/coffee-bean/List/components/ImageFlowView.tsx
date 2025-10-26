@@ -47,12 +47,12 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({ filteredBeans }) => {
 
   return (
     <div className="scroll-with-bottom-bar h-full w-full overflow-y-auto">
-      <div className="min-h-full px-6 pb-20">
+      <div className="min-h-full px-3 pb-20">
         <div className="flex flex-col gap-8 pt-8">
           {rows.map((row, rowIndex) => (
             <div key={rowIndex} className="relative">
               {/* 架子容器 - 包含图片和架子 */}
-              <div className="relative px-4">
+              <div className="relative px-3">
                 {/* 咖啡豆图片 - 使用 grid 布局 */}
                 <div className="relative grid grid-cols-3 items-end gap-4">
                   {row.map(bean => (
