@@ -8,7 +8,7 @@ import S3Client, { S3Config } from './s3Client';
 import { Storage } from '@/lib/core/storage';
 import { MetadataManager } from './metadataManager';
 import { SyncPlanner } from './syncPlanner';
-import { createFilesMetadataFromData, generateDeviceId } from './utils';
+import { createFilesMetadataFromData, generateDeviceId, safeJsonParse } from './utils';
 
 import type {
   SyncResult,
@@ -354,7 +354,7 @@ export class S3SyncManager {
       // 使用 DataManager 导出完整数据
       const { DataManager } = await import('@/lib/core/dataManager');
       const fullExportString = await DataManager.exportAllData();
-      const exportDataObj = JSON.parse(fullExportString);
+      const exportDataObj = safeJsonParse(fullExportString, {});
 
       // 构建数据映射
       const dataMap: Record<string, unknown> = {

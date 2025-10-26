@@ -11,9 +11,6 @@ project(':capacitor-community-safe-area').projectDir = new File('../node_modules
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.2/node_modules/@capacitor/app/android')
 
-include ':capacitor-browser'
-project(':capacitor-browser').projectDir = new File('../node_modules/.pnpm/@capacitor+browser@7.0.1_@capacitor+core@7.4.2/node_modules/@capacitor/browser/android')
-
 include ':capacitor-camera'
 project(':capacitor-camera').projectDir = new File('../node_modules/.pnpm/@capacitor+camera@7.0.1_@capacitor+core@7.4.2/node_modules/@capacitor/camera/android')
 
@@ -40,9 +37,6 @@ project(':capacitor-splash-screen').projectDir = new File('../node_modules/.pnpm
 
 include ':capacitor-status-bar'
 project(':capacitor-status-bar').projectDir = new File('../node_modules/.pnpm/@capacitor+status-bar@7.0.1_@capacitor+core@7.4.2/node_modules/@capacitor/status-bar/android')
-
-include ':capacitor-text-zoom'
-project(':capacitor-text-zoom').projectDir = new File('../node_modules/.pnpm/@capacitor+text-zoom@7.0.1_@capacitor+core@7.4.2/node_modules/@capacitor/text-zoom/android')
 
 include ':capawesome-capacitor-file-picker'
 project(':capawesome-capacitor-file-picker').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.2.0_@capacitor+core@7.4.2/node_modules/@capawesome/capacitor-file-picker/android')

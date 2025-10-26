@@ -11,6 +11,7 @@ import type {
   SyncMetadataV2,
   FileMetadata,
 } from './types';
+import { safeJsonParse } from './utils';
 
 const METADATA_KEY = 's3-sync-metadata';
 const METADATA_REMOTE_KEY = 'sync-metadata.json';
@@ -29,7 +30,8 @@ export class MetadataManager {
       const stored = await Storage.get(METADATA_KEY);
       if (!stored) return null;
 
-      const metadata = JSON.parse(stored) as SyncMetadata;
+      const metadata = safeJsonParse<SyncMetadata | null>(stored, null);
+      if (!metadata) return null;
 
       // 如果是旧版本，迁移到新版本
       if (this.isV1Metadata(metadata)) {
@@ -53,7 +55,8 @@ export class MetadataManager {
       const content = await this.client.downloadFile(METADATA_REMOTE_KEY);
       if (!content) return null;
 
-      const metadata = JSON.parse(content) as SyncMetadata;
+      const metadata = safeJsonParse<SyncMetadata | null>(content, null);
+      if (!metadata) return null;
 
       // 🔍 临时启用详细日志用于调试
       console.warn('📥 远程元数据详情:', {

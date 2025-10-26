@@ -12,6 +12,7 @@ import type {
 } from './types';
 
 import { ConflictStrategy, FileChangeType } from './types';
+import { areFilesEqual } from './utils';
 
 export class SyncPlanner {
   /**
@@ -384,13 +385,7 @@ export class SyncPlanner {
    * 判断两个文件是否相同
    */
   private isSameFile(file1: FileMetadata, file2: FileMetadata): boolean {
-    // 优先比较哈希值
-    if (file1.hash && file2.hash && file1.hash !== '' && file2.hash !== '') {
-      return file1.hash === file2.hash;
-    }
-
-    // 否则比较大小和修改时间
-    return file1.size === file2.size && file1.mtimeCli === file2.mtimeCli;
+    return areFilesEqual(file1, file2);
   }
 
   /**
