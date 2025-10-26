@@ -256,12 +256,20 @@ body[data-scroll-locked] {
   box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-/* 计时器字体 */
+/* 计时器字体 - 用于时间显示，保证数字对齐 */
 .timer-font {
   font-family: var(--font-timer);
   font-feature-settings:
     'tnum' on,
-    'lnum' on;
+    'lnum' on; /* 等宽数字 + 衬线数字 */
+  font-variant-numeric: tabular-nums lining-nums; /* 现代写法 */
+  letter-spacing: 0.02em; /* 轻微字间距提升可读性 */
+}
+
+/* 数字字体 - 用于价格、统计等需要对齐的数字 */
+.numeric-font {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums; /* 等宽数字 */
 }
 
 /* 动画效果 */

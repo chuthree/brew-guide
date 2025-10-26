@@ -5,9 +5,7 @@ import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import { Analytics } from '@vercel/analytics/next';
 import Script from 'next/script';
-import { Inter } from 'next/font/google';
-import { Noto_Sans_SC } from 'next/font/google';
-import { GeistMono } from 'geist/font';
+import localFont from 'next/font/local';
 import { LightToast } from '@/components/common/feedback/LightToast';
 import { ExitToast } from '@/components/common/feedback/ExitToast';
 import '@/styles/base/globals.css';
@@ -19,19 +17,17 @@ import '@/lib/chunk-error-handler';
 
 import { BaiduAnalytics } from '@/components/common/BaiduAnalytics';
 
-// 配置 Inter 字体
-const inter = Inter({
-  subsets: ['latin'],
+// 只加载需要的 GeistMono 字重（用于计时器）
+const geistMono = localFont({
+  src: [
+    {
+      path: '../styles/fonts/GeistMonoVF.woff2',
+      weight: '100 900',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-geist-mono',
   display: 'swap',
-  variable: '--font-inter',
-});
-
-// 配置 Noto Sans SC 字体
-const notoSansSC = Noto_Sans_SC({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  display: 'swap',
-  variable: '--font-noto-sans-sc',
 });
 
 // SEO constants
@@ -154,11 +150,16 @@ export default function RootLayout({
     <html
       lang="zh"
       suppressHydrationWarning
-      className={`${inter.variable} ${notoSansSC.variable}`}
+      className={geistMono.variable}
       style={
         {
-          '--font-sans': `var(--font-noto-sans-sc), var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif`,
-          '--font-timer': GeistMono.style.fontFamily,
+          // 正文字体：优先使用系统 UI 字体
+          '--font-sans': `-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif`,
+          // 计时器/数字字体：等宽字体保证对齐
+          '--font-timer':
+            'var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          // 系统数字字体（可选）：用于表格、价格等
+          '--font-numeric': 'ui-rounded, "SF Pro Rounded", system-ui',
         } as React.CSSProperties
       }
     >
@@ -211,9 +212,7 @@ export default function RootLayout({
           </>
         )}
       </head>
-      <body
-        className={`${inter.className} fixed inset-0 overflow-hidden bg-neutral-50 dark:bg-neutral-900`}
-      >
+      <body className="fixed inset-0 overflow-hidden bg-neutral-50 dark:bg-neutral-900">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
