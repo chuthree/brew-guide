@@ -688,13 +688,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
               willChange: 'opacity, filter, transform',
             }}
           >
-            <div className="relative max-w-full overflow-hidden px-2">
-              <h2 className="text-center text-sm font-medium whitespace-nowrap text-neutral-800 dark:text-neutral-100">
-                {bean?.name || '未命名'}
-              </h2>
-              {/* 右侧渐变阴影 */}
-              <div className="pointer-events-none absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-neutral-50 to-transparent dark:from-neutral-900" />
-            </div>
+            <h2 className="max-w-full truncate px-2 text-center text-sm font-medium text-neutral-800 dark:text-neutral-100">
+              {bean?.name || '未命名'}
+            </h2>
           </div>
 
           {/* 右侧操作按钮 */}
