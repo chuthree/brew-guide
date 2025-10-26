@@ -101,6 +101,8 @@ export interface FilterTabsProps {
   onToggleDateImageFlowMode?: () => void;
   // 智能切换图片流模式（用于双击"全部"）
   onSmartToggleImageFlow?: () => void;
+  // 是否有图片笔记（用于禁用/启用图片流按钮）
+  hasImageNotes?: boolean;
   // 新增设置参数（用于搜索排序功能）
   settings?: import('@/components/settings/Settings').SettingsOptions;
   // 搜索结果中是否包含萃取时间数据

@@ -56,14 +56,6 @@ const GalleryView: React.FC<GalleryViewProps> = ({
     }
   };
 
-  if (notesWithImages.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-20 text-sm text-neutral-500 dark:text-neutral-400">
-        暂无包含图片的笔记
-      </div>
-    );
-  }
-
   return (
     <div className="pb-20">
       {/* 图片数量统计 */}

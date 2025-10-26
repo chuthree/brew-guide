@@ -96,6 +96,7 @@ interface FilterButtonProps {
   onClick: () => void;
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }
 
 const FilterButton: React.FC<FilterButtonProps> = ({
@@ -103,14 +104,16 @@ const FilterButton: React.FC<FilterButtonProps> = ({
   onClick,
   children,
   className = '',
+  disabled = false,
 }) => (
   <button
     onClick={onClick}
+    disabled={disabled}
     className={`px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
       isActive
         ? 'bg-neutral-300/30 text-neutral-800 dark:bg-neutral-600/50 dark:text-neutral-200'
         : 'bg-neutral-200/30 text-neutral-400 dark:bg-neutral-800/50 dark:text-neutral-400'
-    } ${className}`}
+    } ${disabled ? 'cursor-not-allowed opacity-40' : ''} ${className}`}
   >
     {children}
   </button>
@@ -300,6 +303,7 @@ interface ViewSwitcherProps {
   // 新增图片流模式相关props
   isImageFlowMode?: boolean;
   onToggleImageFlowMode?: () => void;
+  hasImageBeans?: boolean;
   // 新增分类相关props
   filterMode?: BeanFilterMode;
   onFilterModeChange?: (mode: BeanFilterMode) => void;
@@ -357,6 +361,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   bloggerBeansCount,
   isImageFlowMode = false,
   onToggleImageFlowMode,
+  hasImageBeans = true,
   // 新增分类相关参数
   filterMode = 'variety',
   onFilterModeChange,
@@ -1219,7 +1224,12 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             {onToggleImageFlowMode && (
                               <FilterButton
                                 isActive={isImageFlowMode}
-                                onClick={() => onToggleImageFlowMode()}
+                                onClick={() => {
+                                  // 如果没有图片咖啡豆，不允许切换
+                                  if (!hasImageBeans) return;
+                                  onToggleImageFlowMode();
+                                }}
+                                disabled={!hasImageBeans}
                               >
                                 图片流
                               </FilterButton>

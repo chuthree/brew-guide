@@ -419,6 +419,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     globalCache.isImageFlowMode
   );
 
+  // 计算是否有图片咖啡豆（用于禁用/启用图片流按钮）
+  const hasImageBeans = useMemo(() => {
+    return beans.some(bean => bean.image && bean.image.trim() !== '');
+  }, [beans]);
+
   // 切换图片流模式
   const handleToggleImageFlowMode = () => {
     const newMode = !isImageFlowMode;
@@ -427,6 +432,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     globalCache.isImageFlowMode = newMode;
     saveImageFlowModePreference(newMode);
   };
+
+  // 当没有图片咖啡豆时，自动关闭图片流模式
+  useEffect(() => {
+    if (isImageFlowMode && !hasImageBeans) {
+      setIsImageFlowMode(false);
+      globalCache.isImageFlowMode = false;
+      saveImageFlowModePreference(false);
+    }
+  }, [isImageFlowMode, hasImageBeans]);
 
   // 加载已评分的咖啡豆
   const loadRatedBeans = React.useCallback(async () => {
@@ -1569,6 +1583,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         bloggerBeansCount={bloggerBeansCount}
         isImageFlowMode={isImageFlowMode}
         onToggleImageFlowMode={handleToggleImageFlowMode}
+        hasImageBeans={hasImageBeans}
         // 新增分类相关属性
         filterMode={filterMode}
         onFilterModeChange={handleFilterModeChange}

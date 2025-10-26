@@ -160,6 +160,7 @@ interface FilterButtonProps {
   onClick: () => void;
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }
 
 const FilterButton: React.FC<FilterButtonProps> = ({
@@ -167,14 +168,16 @@ const FilterButton: React.FC<FilterButtonProps> = ({
   onClick,
   children,
   className = '',
+  disabled = false,
 }) => (
   <button
     onClick={onClick}
+    disabled={disabled}
     className={`px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
       isActive
         ? 'bg-neutral-300/30 text-neutral-800 dark:bg-neutral-600/50 dark:text-neutral-200'
         : 'bg-neutral-200/30 text-neutral-400 dark:bg-neutral-800/50 dark:text-neutral-400'
-    } ${className}`}
+    } ${disabled ? 'cursor-not-allowed opacity-40' : ''} ${className}`}
   >
     {children}
   </button>
@@ -313,6 +316,7 @@ interface ViewModeSectionProps {
   onToggleImageFlowMode?: () => void;
   isDateImageFlowMode?: boolean;
   onToggleDateImageFlowMode?: () => void;
+  hasImageNotes?: boolean;
 }
 
 const ViewModeSection: React.FC<ViewModeSectionProps> = ({
@@ -322,6 +326,7 @@ const ViewModeSection: React.FC<ViewModeSectionProps> = ({
   onToggleImageFlowMode,
   isDateImageFlowMode = false,
   onToggleDateImageFlowMode,
+  hasImageNotes = true,
 }) => {
   return (
     <div>
@@ -349,11 +354,14 @@ const ViewModeSection: React.FC<ViewModeSectionProps> = ({
             viewMode === 'gallery' && isImageFlowMode && !isDateImageFlowMode
           }
           onClick={() => {
+            // 如果没有图片笔记，不允许切换
+            if (!hasImageNotes) return;
             // 如果当前不是普通图片流模式，则激活它
             if (!isImageFlowMode || isDateImageFlowMode) {
               onToggleImageFlowMode?.();
             }
           }}
+          disabled={!hasImageNotes}
         >
           图片流
         </FilterButton>
@@ -362,11 +370,14 @@ const ViewModeSection: React.FC<ViewModeSectionProps> = ({
             viewMode === 'gallery' && isDateImageFlowMode && !isImageFlowMode
           }
           onClick={() => {
+            // 如果没有图片笔记，不允许切换
+            if (!hasImageNotes) return;
             // 如果当前不是带日期图片流模式，则激活它
             if (!isDateImageFlowMode || isImageFlowMode) {
               onToggleDateImageFlowMode?.();
             }
           }}
+          disabled={!hasImageNotes}
         >
           带日期图片流
         </FilterButton>
@@ -727,6 +738,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   isDateImageFlowMode = false,
   onToggleDateImageFlowMode,
   onSmartToggleImageFlow,
+  hasImageNotes = true,
   settings,
   hasExtractionTimeData = false,
   searchSortOption,
@@ -1168,6 +1180,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                         onToggleImageFlowMode={onToggleImageFlowMode}
                         isDateImageFlowMode={isDateImageFlowMode}
                         onToggleDateImageFlowMode={onToggleDateImageFlowMode}
+                        hasImageNotes={hasImageNotes}
                       />
                     )}
 

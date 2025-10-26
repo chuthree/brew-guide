@@ -122,14 +122,6 @@ const DateImageFlowView: React.FC<DateImageFlowViewProps> = ({
     }
   };
 
-  if (notesWithImages.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-20 text-sm text-neutral-500 dark:text-neutral-400">
-        暂无包含图片的笔记
-      </div>
-    );
-  }
-
   return (
     <div className="pb-20">
       {Object.entries(groupedNotes).map(([date, dateNotes]) => (

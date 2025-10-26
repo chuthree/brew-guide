@@ -1181,6 +1181,15 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     filteredNotes,
   ]);
 
+  // 计算是否有图片笔记（用于禁用/启用图片流按钮）
+  const hasImageNotes = useMemo(() => {
+    // 基于所有原始笔记数据检查是否有图片
+    const allOriginalNotes = globalCache.notes;
+    return allOriginalNotes.some(
+      note => note.image && note.image.trim() !== ''
+    );
+  }, [notes]); // 依赖notes以便在笔记数据变化时重新计算
+
   // 计算图片流模式下的可用设备和豆子列表
   const imageFlowAvailableOptions = useMemo(() => {
     if (!isImageFlowMode && !isDateImageFlowMode) {
@@ -1268,6 +1277,15 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     handleBeanClick,
   ]);
 
+  // 当没有图片笔记时，自动关闭图片流模式并切换回列表模式
+  useEffect(() => {
+    if (imageFlowStats && imageFlowStats.count === 0) {
+      // 关闭所有图片流模式
+      setImageFlowMode(false, false, false);
+      updateViewMode('list');
+    }
+  }, [imageFlowStats, setImageFlowMode, updateViewMode]);
+
   if (!isOpen) return null;
 
   return (
@@ -1332,6 +1350,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           isDateImageFlowMode={isDateImageFlowMode}
           onToggleDateImageFlowMode={handleToggleDateImageFlowMode}
           onSmartToggleImageFlow={handleSmartToggleImageFlow}
+          hasImageNotes={hasImageNotes}
           settings={settings}
           hasExtractionTimeData={hasExtractionTimeData}
           searchSortOption={searchSortOption || undefined}
