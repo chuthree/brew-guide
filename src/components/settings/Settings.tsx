@@ -127,6 +127,7 @@ export const defaultSettings: SettingsOptions = {
     alwaysShowTimerInfo: true, // 默认显示计时器信息
     showStageDivider: true, // 默认显示阶段分隔线
     compactMode: false, // 默认不启用简洁模式
+    dataFontSize: '2xl', // 默认字体大小为标准
   },
   showFlowRate: false, // 默认不显示流速
   username: '', // 默认用户名为空

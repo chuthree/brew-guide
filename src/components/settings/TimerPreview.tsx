@@ -96,6 +96,14 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
   const showStageDivider = layoutSettings.showStageDivider ?? false;
   const progressBarHeight = layoutSettings.progressBarHeight ?? 4;
 
+  // 获取字体大小类名 - 使用明确的类名以确保 Tailwind 包含这些样式
+  const fontSizeClass =
+    layoutSettings.dataFontSize === '3xl'
+      ? 'text-3xl'
+      : layoutSettings.dataFontSize === '4xl'
+        ? 'text-4xl'
+        : 'text-2xl';
+
   return (
     <div className="relative mb-8 min-h-12 overflow-hidden bg-neutral-50 dark:bg-neutral-900">
       {/* 预览标识 */}
@@ -352,7 +360,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                   时间
                 </span>
                 <div
-                  className={`timer-font min-w-[3ch] text-xl font-light tracking-widest text-neutral-800 dark:text-neutral-100 ${
+                  className={`timer-font min-w-[3ch] ${fontSizeClass} font-light tracking-widest text-neutral-800 dark:text-neutral-100 ${
                     controlsReversed ? 'text-right' : 'text-left'
                   }`}
                 >
@@ -370,7 +378,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                   水量
                 </span>
                 <div
-                  className={`timer-font min-w-[3ch] text-xl font-light tracking-widest text-neutral-800 dark:text-neutral-100 ${
+                  className={`timer-font min-w-[3ch] ${fontSizeClass} font-light tracking-widest text-neutral-800 dark:text-neutral-100 ${
                     controlsReversed ? 'text-right' : 'text-left'
                   }`}
                 >
@@ -392,7 +400,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                     流速
                   </span>
                   <div
-                    className={`timer-font min-w-[2.5ch] text-xl font-light tracking-widest text-neutral-800 dark:text-neutral-100 ${
+                    className={`timer-font min-w-[2.5ch] ${fontSizeClass} font-light tracking-widest text-neutral-800 dark:text-neutral-100 ${
                       controlsReversed ? 'text-right' : 'text-left'
                     }`}
                   >

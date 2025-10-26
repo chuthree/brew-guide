@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ButtonGroup } from '@/components/ui/ButtonGroup';
 
 // 布局设置接口
 export interface LayoutSettings {
@@ -9,6 +10,7 @@ export interface LayoutSettings {
   alwaysShowTimerInfo?: boolean; // 是否始终显示计时器信息区域
   showStageDivider?: boolean; // 是否显示阶段分隔线
   compactMode?: boolean; // 是否启用简洁模式
+  dataFontSize?: '2xl' | '3xl' | '4xl'; // 数据显示字体大小
 }
 
 interface BrewingTimerSettingsProps {
@@ -271,6 +273,27 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                     handleLayoutChange(newSettings);
                   }}
                   className="h-1 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                  数据显示字体大小
+                </span>
+                <ButtonGroup
+                  value={localLayoutSettings?.dataFontSize || '2xl'}
+                  options={[
+                    { value: '2xl', label: '标准' },
+                    { value: '3xl', label: '大' },
+                    { value: '4xl', label: '特大' },
+                  ]}
+                  onChange={value => {
+                    const newSettings = {
+                      ...localLayoutSettings,
+                      dataFontSize: value as '2xl' | '3xl' | '4xl',
+                    };
+                    handleLayoutChange(newSettings);
+                  }}
                 />
               </div>
             </div>

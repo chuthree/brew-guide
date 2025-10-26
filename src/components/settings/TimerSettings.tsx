@@ -4,6 +4,7 @@ import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { SettingsOptions } from './Settings';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import { ButtonGroup } from '@/components/ui/ButtonGroup';
 
 import TimerPreview from './TimerPreview';
 
@@ -79,7 +80,7 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
           <ChevronLeft className="h-5 w-5" />
         </button>
         <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
-          计时器布局
+          计时器设置
         </h2>
       </div>
 
@@ -216,6 +217,28 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
                 <span>细</span>
                 <span>粗</span>
               </div>
+            </div>
+
+            {/* 数据显示字体大小 */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                数据显示字体大小
+              </div>
+              <ButtonGroup
+                value={settings.layoutSettings?.dataFontSize || '2xl'}
+                options={[
+                  { value: '2xl', label: '标准' },
+                  { value: '3xl', label: '大' },
+                  { value: '4xl', label: '特大' },
+                ]}
+                onChange={value => {
+                  const newLayoutSettings = {
+                    ...settings.layoutSettings,
+                    dataFontSize: value as '2xl' | '3xl' | '4xl',
+                  };
+                  handleChange('layoutSettings', newLayoutSettings);
+                }}
+              />
             </div>
           </div>
 

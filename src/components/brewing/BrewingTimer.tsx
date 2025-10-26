@@ -1189,6 +1189,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   // 直接使用计算好的流速值
   const displayFlowRate = currentFlowRateValue;
 
+  // 获取字体大小类名 - 使用明确的类名以确保 Tailwind 包含这些样式
+  const fontSizeClass =
+    localLayoutSettings.dataFontSize === '3xl'
+      ? 'text-3xl'
+      : localLayoutSettings.dataFontSize === '4xl'
+        ? 'text-4xl'
+        : 'text-2xl';
+
   return (
     <>
       <div className="pb-safe-bottom sticky bottom-0 bg-neutral-50 px-6 pt-6 dark:bg-neutral-900">
@@ -1718,7 +1726,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               <span className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
                 时间
               </span>
-              <div className="relative text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
+              <div
+                className={`relative ${fontSizeClass} font-light tracking-widest text-neutral-800 dark:text-neutral-100`}
+              >
                 <AnimatePresence mode="wait">
                   {countdownTime !== null ? (
                     <motion.div
@@ -1777,7 +1787,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               <span className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
                 水量
               </span>
-              <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
+              <div
+                className={`${fontSizeClass} font-light tracking-widest text-neutral-800 dark:text-neutral-100`}
+              >
                 <motion.div
                   className={`timer-font min-w-[3ch] ${
                     localLayoutSettings.controlsReversed
@@ -1818,7 +1830,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 <span className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
                   流速
                 </span>
-                <div className="text-2xl font-light tracking-widest text-neutral-800 sm:text-3xl dark:text-neutral-100">
+                <div
+                  className={`${fontSizeClass} font-light tracking-widest text-neutral-800 dark:text-neutral-100`}
+                >
                   <motion.div
                     className={`timer-font min-w-[2.5ch] ${
                       localLayoutSettings.controlsReversed
