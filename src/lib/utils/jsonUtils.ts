@@ -311,7 +311,6 @@ export function parseMethodFromJson(jsonString: string): Method | null {
         ratio: parsedData.params?.ratio || '1:15',
         grindSize: parsedData.params?.grindSize || '中细',
         temp: parsedData.params?.temp || '93°C',
-        videoUrl: parsedData.params?.videoUrl || '',
         stages: [],
       },
     };
@@ -1032,7 +1031,6 @@ function parseMethodText(
       ratio: '',
       grindSize: '',
       temp: '',
-      videoUrl: '',
       stages: [],
     },
   };

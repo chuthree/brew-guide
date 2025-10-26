@@ -24,26 +24,5 @@ export interface Stage extends BaseStage {
   pourType?: RegularPourType | EspressoPourTypeValues;
 }
 
-// 修改 Method 接口以使用新的 Stage 类型
-export interface MethodWithStages extends Omit<Method, 'params'> {
-  params: {
-    coffee: string;
-    water: string;
-    ratio: string;
-    grindSize: string;
-    temp: string;
-    videoUrl: string;
-    roastLevel?: string;
-    stages: Stage[];
-    // 意式机特有参数
-    extractionTime?: number;
-    liquidWeight?: string;
-  };
-}
-
-// 表单步骤接口
-export interface Step {
-  name: string;
-  component: React.ReactNode;
-  id?: string;
-}
+// MethodWithStages 已移至 @/lib/types/method 统一管理
+// 请从 @/lib/types/method 导入使用

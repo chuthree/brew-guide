@@ -20,6 +20,7 @@ import {
   saveMainTabPreference,
 } from '@/lib/navigation/navigationCache';
 import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
+import { MethodType } from '@/lib/types/method';
 
 // 器具选择缓存
 const MODULE_NAME = 'brewing-equipment';
@@ -117,7 +118,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
   const [showComplete, setShowComplete] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
 
-  const [methodType, setMethodType] = useState<'common' | 'custom'>('common');
+  const [methodType, setMethodType] = useState<MethodType>('common');
 
   const [countdownTime, setCountdownTime] = useState<number | null>(null);
   const [isPourVisualizerPreloaded] = useState(false);

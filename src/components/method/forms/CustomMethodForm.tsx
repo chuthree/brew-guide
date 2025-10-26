@@ -20,10 +20,10 @@ import {
   ParamsStep,
   StagesStep,
   CompleteStep,
-  MethodWithStages,
   Stage,
 } from './components';
 import type { Step } from './components';
+import { MethodWithStages } from '@/lib/types/method';
 
 // 数据规范化辅助函数
 const normalizeMethodData = (
@@ -39,7 +39,6 @@ const normalizeMethodData = (
       ratio: '',
       grindSize: '',
       temp: '',
-      videoUrl: '',
       stages: [],
     };
   } else {
@@ -163,7 +162,6 @@ const CustomMethodForm = React.forwardRef<
           ratio: '1:15',
           grindSize: '中细',
           temp: '92°C',
-          videoUrl: '',
           stages: [],
         },
       };
@@ -179,7 +177,6 @@ const CustomMethodForm = React.forwardRef<
           ratio: '1:2',
           grindSize: '细',
           temp: '93°C',
-          videoUrl: '',
           stages: [
             {
               time: 25,
@@ -217,7 +214,6 @@ const CustomMethodForm = React.forwardRef<
         ratio: '1:15',
         grindSize: '中细',
         temp: '92°C',
-        videoUrl: '',
         stages: [initialStage],
       },
     };

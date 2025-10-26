@@ -29,6 +29,7 @@ import { useBrewingParameters } from '@/lib/hooks/useBrewingParameters';
 import { useBrewingContent } from '@/lib/hooks/useBrewingContent';
 import { useMethodSelector } from '@/lib/hooks/useMethodSelector';
 import { EditableParams } from '@/lib/hooks/useBrewingParameters';
+import { MethodType, MethodStepConfig } from '@/lib/types/method';
 import CustomMethodFormModal from '@/components/method/forms/CustomMethodFormModal';
 import NavigationBar from '@/components/layout/NavigationBar';
 import Settings, {
@@ -101,9 +102,10 @@ declare global {
   }
 }
 
-// 扩展Step类型，添加explicitMethodType属性
+// 扩展Step类型，添加方案相关字段
 interface ExtendedStep extends Step {
-  explicitMethodType?: 'common' | 'custom';
+  explicitMethodType?: MethodType;
+  customParams?: Record<string, string>;
 }
 
 interface BlendComponent {

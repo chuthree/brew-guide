@@ -17,8 +17,6 @@ export interface MethodParams {
   ratio: string;
   grindSize: string;
   temp: string;
-  videoUrl: string;
-  roastLevel?: string;
   stages: Stage[];
 }
 
@@ -150,8 +148,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:15',
         grindSize: '中细',
         temp: '92°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 25,
@@ -180,8 +176,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:15',
         grindSize: '中细',
         temp: '92°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 25,
@@ -218,8 +212,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:15',
         grindSize: '中细偏粗',
         temp: '96°C',
-        videoUrl: 'https://youtu.be/OFLaCs99lWY?si=aFJ3KtBXZtAZMbtN',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 45,
@@ -272,8 +264,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:15',
         grindSize: '中细偏粗',
         temp: '92°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 30,
@@ -311,8 +301,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:16.7',
         grindSize: '细（摩卡壶研磨度）',
         temp: '45°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 90,
@@ -351,8 +339,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:15',
         grindSize: '中细',
         temp: '92°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 25,
@@ -397,8 +383,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:10',
         grindSize: '中细',
         temp: '96°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 40,
@@ -435,8 +419,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:0',
         grindSize: '(略)',
         temp: '0°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 0,
@@ -459,8 +441,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:15',
         grindSize: '中细',
         temp: '97°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 180,
@@ -491,8 +471,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:0',
         grindSize: '(略)',
         temp: '0°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 0,
@@ -516,8 +494,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:15',
         grindSize: '中细',
         temp: '92°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 30,
@@ -554,8 +530,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:16.7',
         grindSize: '细（摩卡壶研磨度）',
         temp: '45°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 90,
@@ -594,8 +568,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:0',
         grindSize: '(略)',
         temp: '0°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 0,
@@ -618,8 +590,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:15',
         grindSize: '中细',
         temp: '92°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 30,
@@ -656,8 +626,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:16.7',
         grindSize: '细（摩卡壶研磨度）',
         temp: '45°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 90,
@@ -696,8 +664,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:0',
         grindSize: '(略)',
         temp: '0°C',
-        videoUrl: '',
-        roastLevel: '中浅烘焙',
         stages: [
           {
             time: 0,
@@ -720,8 +686,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:2',
         grindSize: '意式',
         temp: '93°C',
-        videoUrl: '',
-        roastLevel: '深度烘焙',
         stages: [
           {
             time: 25,
@@ -741,8 +705,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:2',
         grindSize: '意式',
         temp: '93°C',
-        videoUrl: '',
-        roastLevel: '深度烘焙',
         stages: [
           {
             time: 25,
@@ -774,8 +736,6 @@ export const brewingMethods: BrewingMethods = {
         ratio: '1:2',
         grindSize: '意式',
         temp: '93°C',
-        videoUrl: '',
-        roastLevel: '深度烘焙',
         stages: [
           {
             time: 25,

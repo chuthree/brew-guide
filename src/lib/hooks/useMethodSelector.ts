@@ -3,6 +3,7 @@ import { Method, Stage, commonMethods } from '@/lib/core/config';
 import { EditableParams } from './useBrewingParameters';
 import { getEquipmentNameById } from '@/lib/utils/equipmentUtils';
 import { TabType, BrewingStep } from './useBrewingState';
+import { MethodStepConfig, MethodType } from '@/lib/types/method';
 
 export interface UseMethodSelectorProps {
   selectedEquipment: string | null;
@@ -20,13 +21,30 @@ export interface UseMethodSelectorProps {
   updateBrewingSteps: (stages: Stage[]) => void;
 }
 
-// 添加StepWithCustomParams类型定义
-interface StepWithCustomParams {
-  methodIndex?: number;
-  isCommonMethod?: boolean;
-  customParams?: Record<string, string>;
-  title?: string;
-  explicitMethodType?: string;
+/**
+ * 根据自定义器具的动画类型获取基础器具ID
+ */
+function getBaseEquipmentId(animationType: string): string {
+  const mapping: Record<string, string> = {
+    v60: 'V60',
+    clever: 'CleverDripper',
+    espresso: 'Espresso',
+    kalita: 'Kalita',
+    origami: 'Origami',
+  };
+  return mapping[animationType.toLowerCase()] || 'V60';
+}
+
+/**
+ * 从器具ID推断基础器具类型（兼容旧版本）
+ */
+function inferEquipmentTypeFromId(equipmentId: string): string {
+  if (equipmentId.includes('-v60-')) return 'V60';
+  if (equipmentId.includes('-clever-')) return 'CleverDripper';
+  if (equipmentId.includes('-kalita-')) return 'Kalita';
+  if (equipmentId.includes('-origami-')) return 'Origami';
+  if (equipmentId.includes('-espresso-')) return 'Espresso';
+  return 'V60'; // 默认
 }
 
 export function useMethodSelector({
@@ -101,99 +119,64 @@ export function useMethodSelector({
       selectedEquipment: string,
       methodIndex: number,
       methodType: string,
-      step?: StepWithCustomParams
+      step?: MethodStepConfig
     ): Promise<Method | null> => {
-      if (!selectedEquipment || selectedEquipment.trim() === '') {
+      if (!selectedEquipment?.trim()) {
         return null;
       }
 
       let method: Method | null = null;
 
-      // 简化方法获取逻辑
+      // 获取方法：自定义方案
       if (methodType === 'predefined' || methodType === 'custom') {
-        if (customMethods?.[selectedEquipment]?.[methodIndex]) {
-          method = customMethods[selectedEquipment][methodIndex];
-        }
-      } else if (methodType === 'common') {
-        // 对于自定义器具，需要找到对应的基础器具ID
+        method = customMethods?.[selectedEquipment]?.[methodIndex] || null;
+      }
+      // 获取方法：通用方案
+      else if (methodType === 'common') {
         let targetEquipmentId = selectedEquipment;
 
-        // 检查是否是自定义器具（通过ID或名称）
+        // 检查是否是自定义器具
         const { equipmentList } = await import('@/lib/core/config');
-        const customEquipmentById = equipmentList.find(
-          e => e.id === selectedEquipment && 'animationType' in e
+        const customEquipment = equipmentList.find(
+          e =>
+            (e.id === selectedEquipment || e.name === selectedEquipment) &&
+            'animationType' in e
         );
-        const customEquipmentByName = !customEquipmentById
-          ? equipmentList.find(
-              e => e.name === selectedEquipment && 'animationType' in e
-            )
-          : null;
-        const customEquipment = customEquipmentById || customEquipmentByName;
 
         if (customEquipment && 'animationType' in customEquipment) {
-          // 这是自定义器具，需要找到基础器具ID
-          const animationType = (
-            customEquipment as { animationType?: string }
-          ).animationType?.toLowerCase();
-          switch (animationType) {
-            case 'v60':
-              targetEquipmentId = 'V60';
-              break;
-            case 'clever':
-              targetEquipmentId = 'CleverDripper';
-              break;
-            case 'espresso':
-              targetEquipmentId = 'Espresso';
-              break;
-            case 'kalita':
-              targetEquipmentId = 'Kalita';
-              break;
-            case 'origami':
-              targetEquipmentId = 'Origami';
-              break;
-            case 'custom':
-              // 自定义预设器具不使用通用方案
-              targetEquipmentId = '';
-              break;
-            default:
-              targetEquipmentId = 'V60';
+          const animationType = (customEquipment as { animationType?: string })
+            .animationType;
+          if (animationType === 'custom') {
+            // 自定义预设器具不使用通用方案
+            targetEquipmentId = '';
+          } else if (animationType) {
+            targetEquipmentId = getBaseEquipmentId(animationType);
           }
         } else if (selectedEquipment.startsWith('custom-')) {
-          // 通过ID推断器具类型的逻辑（兼容旧版本）
-          if (selectedEquipment.includes('-v60-')) {
-            targetEquipmentId = 'V60';
-          } else if (selectedEquipment.includes('-clever-')) {
-            targetEquipmentId = 'CleverDripper';
-          } else if (selectedEquipment.includes('-kalita-')) {
-            targetEquipmentId = 'Kalita';
-          } else if (selectedEquipment.includes('-origami-')) {
-            targetEquipmentId = 'Origami';
-          } else if (selectedEquipment.includes('-espresso-')) {
-            targetEquipmentId = 'Espresso';
-          } else {
-            targetEquipmentId = 'V60'; // 默认
-          }
+          // 兼容旧版本：从ID推断器具类型
+          targetEquipmentId = inferEquipmentTypeFromId(selectedEquipment);
         }
 
-        if (
-          targetEquipmentId &&
-          commonMethods?.[targetEquipmentId]?.[methodIndex]
-        ) {
-          method = commonMethods[targetEquipmentId][methodIndex];
-        }
+        method =
+          targetEquipmentId && commonMethods?.[targetEquipmentId]?.[methodIndex]
+            ? commonMethods[targetEquipmentId][methodIndex]
+            : null;
       }
 
       if (method) {
         // 应用自定义参数（如果有）
         if (step?.customParams) {
-          const methodCopy = { ...method, params: { ...method.params } };
-          Object.entries(step.customParams).forEach(([key, value]) => {
-            if (key !== 'stages' && key in methodCopy.params) {
-              (methodCopy.params as Record<string, unknown>)[key] =
-                String(value);
-            }
-          });
-          method = methodCopy;
+          method = {
+            ...method,
+            params: {
+              ...method.params,
+              ...Object.fromEntries(
+                Object.entries(step.customParams)
+                  .filter(([key]) => key !== 'stages' && key in method!.params)
+                  .map(([key, value]) => [key, String(value)])
+              ),
+            },
+          };
         }
 
         await processSelectedMethod(method);

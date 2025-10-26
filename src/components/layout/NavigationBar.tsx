@@ -351,7 +351,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             name: selectedMethod.name,
             params: {
               ...selectedMethod.params,
-              videoUrl: '',
             },
           }
         : null;

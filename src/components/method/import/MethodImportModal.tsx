@@ -250,7 +250,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
               ratio: method.params.ratio || '1:15',
               grindSize: method.params.grindSize || '中细',
               temp: method.params.temp || '92°C',
-              videoUrl: method.params.videoUrl || '',
               stages: method.params.stages,
             },
           };

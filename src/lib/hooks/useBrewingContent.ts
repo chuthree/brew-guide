@@ -9,6 +9,7 @@ import { SettingsOptions } from '@/components/settings/Settings';
 import { loadCustomMethodsForEquipment } from '@/lib/managers/customMethods';
 import { filterHiddenMethods } from '@/lib/managers/hiddenMethods';
 import { Stage } from '@/components/method/forms/components/types';
+import { MethodType } from '@/lib/types/method';
 
 // 增强 Content.注水.steps 接口以支持 pourType
 declare module './useBrewingState' {
@@ -34,7 +35,7 @@ export const formatTime = (seconds: number, compact: boolean = false) => {
 
 export interface UseBrewingContentProps {
   selectedEquipment: string | null;
-  methodType: 'common' | 'custom';
+  methodType: MethodType;
   customMethods: Record<string, Method[]>;
   selectedMethod: Method | null;
   settings: SettingsOptions;

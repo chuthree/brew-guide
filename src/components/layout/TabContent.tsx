@@ -23,6 +23,7 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
+import { MethodStepConfig } from '@/lib/types/method';
 
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -37,7 +38,7 @@ const CoffeeBeanRandomPicker = dynamic(
   }
 );
 
-// 扩展Step类型，增加固定方案所需的字段
+// 扩展Step类型，增加方案相关字段
 interface Step extends BaseStep {
   customParams?: Record<string, string | number | boolean>;
   icon?: string;
@@ -45,6 +46,8 @@ interface Step extends BaseStep {
   isDivider?: boolean;
   dividerText?: string;
   explicitMethodType?: 'common' | 'custom';
+  methodIndex?: number;
+  isCommonMethod?: boolean;
 }
 
 // 动态导入客户端组件
@@ -448,7 +451,6 @@ const TabContent: React.FC<TabContentProps> = ({
             ratio: '1:15',
             grindSize: '中细',
             temp: '92°C',
-            videoUrl: '',
             stages: [],
           },
           totalTime:
