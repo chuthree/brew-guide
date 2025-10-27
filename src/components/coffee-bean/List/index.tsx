@@ -434,13 +434,20 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   };
 
   // 当没有图片咖啡豆时，自动关闭图片流模式
+  // 但只在数据已经加载完成后才执行此检查，避免初始化时误判
   useEffect(() => {
-    if (isImageFlowMode && !hasImageBeans) {
+    // 只有当数据已经初始化且确实没有图片豆子时才关闭
+    if (
+      globalCache.initialized &&
+      isImageFlowMode &&
+      !hasImageBeans &&
+      beans.length > 0
+    ) {
       setIsImageFlowMode(false);
       globalCache.isImageFlowMode = false;
       saveImageFlowModePreference(false);
     }
-  }, [isImageFlowMode, hasImageBeans]);
+  }, [isImageFlowMode, hasImageBeans, beans.length]);
 
   // 加载已评分的咖啡豆
   const loadRatedBeans = React.useCallback(async () => {

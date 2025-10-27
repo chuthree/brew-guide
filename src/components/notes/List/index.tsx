@@ -1278,13 +1278,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   ]);
 
   // 当没有图片笔记时，自动关闭图片流模式并切换回列表模式
+  // 但只在数据已经加载完成后才执行此检查，避免初始化时误判
   useEffect(() => {
-    if (imageFlowStats && imageFlowStats.count === 0) {
+    // 只有当数据已经初始化且确实没有图片笔记时才关闭
+    if (
+      globalCache.initialized &&
+      imageFlowStats &&
+      imageFlowStats.count === 0 &&
+      notes.length > 0
+    ) {
       // 关闭所有图片流模式
       setImageFlowMode(false, false, false);
       updateViewMode('list');
     }
-  }, [imageFlowStats, setImageFlowMode, updateViewMode]);
+  }, [imageFlowStats, setImageFlowMode, updateViewMode, notes.length]);
 
   if (!isOpen) return null;
 

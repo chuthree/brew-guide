@@ -408,29 +408,31 @@ if (typeof window !== 'undefined') {
     globalCache.filteredBeans = [];
     globalCache.bloggerBeans = { 2023: [], 2024: [], 2025: [] };
     globalCache.varieties = [];
-    globalCache.selectedVariety = null;
-    globalCache.selectedBeanType = 'all';
-    // 重置新增的分类相关状态
-    globalCache.filterMode = 'variety';
-    globalCache.selectedOrigin = null;
-    globalCache.selectedFlavorPeriod = null;
-    globalCache.selectedRoaster = null;
     globalCache.availableOrigins = [];
     globalCache.availableFlavorPeriods = [];
     globalCache.availableRoasters = [];
-    globalCache.showEmptyBeans = false;
-    globalCache.isImageFlowMode = false;
-    globalCache.viewMode = 'inventory';
-    globalCache.sortOption = 'remaining_days_asc';
-    globalCache.inventorySortOption = 'remaining_days_asc';
-    globalCache.rankingSortOption = 'rating_desc';
-    globalCache.bloggerSortOption = 'original';
-    globalCache.rankingBeanType = 'all';
-    globalCache.rankingEditMode = false;
-    globalCache.bloggerYear = 2025;
     globalCache.initialized = false;
 
-    console.warn('咖啡豆全局缓存已重置');
+    // 重新从 localStorage 加载所有持久化的偏好设置
+    globalCache.selectedVariety = getSelectedVarietyPreference();
+    globalCache.selectedBeanType = getSelectedBeanTypePreference();
+    globalCache.showEmptyBeans = getShowEmptyBeansPreference();
+    globalCache.isImageFlowMode = getImageFlowModePreference();
+    globalCache.viewMode = getViewModePreference();
+    globalCache.sortOption = getSortOptionPreference();
+    globalCache.inventorySortOption = getInventorySortOptionPreference();
+    globalCache.rankingSortOption = getRankingSortOptionPreference();
+    globalCache.bloggerSortOption = getBloggerSortOptionPreference();
+    globalCache.rankingBeanType = getRankingBeanTypePreference();
+    globalCache.rankingEditMode = getRankingEditModePreference();
+    globalCache.bloggerYear = getBloggerYearPreference();
+    globalCache.bloggerType = getBloggerTypePreference();
+    globalCache.filterMode = getFilterModePreference();
+    globalCache.selectedOrigin = getSelectedOriginPreference();
+    globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
+    globalCache.selectedRoaster = getSelectedRoasterPreference();
+
+    console.warn('咖啡豆全局缓存已重置并重新加载偏好设置');
   });
 }
 
