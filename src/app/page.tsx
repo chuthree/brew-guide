@@ -3315,8 +3315,41 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             console.error('删除咖啡豆失败:', error);
           }
         }}
-        onShare={_bean => {
-          // 分享功能由 BeanDetailModal 内部处理
+        onShare={async bean => {
+          // 处理文本分享 - 复制到剪贴板
+          try {
+            const { beanToReadableText } = await import(
+              '@/lib/utils/jsonUtils'
+            );
+            const { copyToClipboard } = await import('@/lib/utils/exportUtils');
+            const { showToast } = await import(
+              '@/components/common/feedback/LightToast'
+            );
+
+            const text = beanToReadableText(bean);
+            const result = await copyToClipboard(text);
+
+            if (result.success) {
+              showToast({
+                type: 'success',
+                title: '已复制到剪贴板',
+                duration: 2000,
+              });
+
+              // 触发震动反馈
+              if (settings.hapticFeedback) {
+                hapticsUtils.light();
+              }
+            } else {
+              showToast({
+                type: 'error',
+                title: '复制失败',
+                duration: 2000,
+              });
+            }
+          } catch (error) {
+            console.error('复制失败:', error);
+          }
         }}
         onRate={bean => {
           setBeanDetailOpen(false);

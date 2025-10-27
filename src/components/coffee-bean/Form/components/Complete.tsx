@@ -45,66 +45,123 @@ const Complete: React.FC<CompleteProps> = ({
             {bean.name}
           </span>
         </div>
-        <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
-          <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-            类型
-          </span>
-          <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-            {blendComponents.length > 1 ? '拼配' : '单品'}
-          </span>
-        </div>
-        <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
-          <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-            用途
-          </span>
-          <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-            {bean.beanType === 'filter' ? '手冲' : '意式'}
-          </span>
-        </div>
-        <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
-          <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-            总容量
-          </span>
-          <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-            {bean.capacity}g
-          </span>
-        </div>
-        <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
-          <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-            烘焙度
-          </span>
-          <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-            {bean.roastLevel}
-          </span>
-        </div>
-        {/* 单品豆信息从 blendComponents 获取 */}
-        {blendComponents.length === 1 && blendComponents[0].origin && (
+        {!!bean.capacity && (
           <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-              产地
+              库存量
             </span>
             <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-              {blendComponents[0].origin}
+              {bean.remaining || bean.capacity}g / {bean.capacity}g
             </span>
           </div>
         )}
-        {blendComponents.length === 1 && blendComponents[0].process && (
+        {!!bean.price && (
           <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-              处理法
+              价格
             </span>
             <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-              {blendComponents[0].process}
+              ¥{bean.price}
             </span>
           </div>
         )}
-        {blendComponents.length === 1 && blendComponents[0].variety && (
+        {!!bean.roastLevel && (
           <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-              品种
+              烘焙度
             </span>
             <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-              {blendComponents[0].variety}
+              {bean.roastLevel}
+            </span>
+          </div>
+        )}
+        {!!bean.roastDate && !bean.isInTransit && (
+          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+            <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
+              烘焙日期
+            </span>
+            <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
+              {bean.roastDate}
+            </span>
+          </div>
+        )}
+        {!!bean.isInTransit && (
+          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+            <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
+              状态
+            </span>
+            <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
+              在途中
+            </span>
+          </div>
+        )}
+        {!!bean.beanType && (
+          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+            <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
+              咖啡豆类型
+            </span>
+            <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
+              {bean.beanType === 'filter'
+                ? '手冲'
+                : bean.beanType === 'espresso'
+                  ? '意式'
+                  : bean.beanType === 'omni'
+                    ? '全能'
+                    : bean.beanType}
+            </span>
+          </div>
+        )}
+        {blendComponents && blendComponents.length > 0 && (
+          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+            <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
+              咖啡豆成分
+            </span>
+            <div className="ml-4 flex max-w-[60%] flex-col items-end gap-1 text-right text-sm font-medium">
+              {blendComponents.map((comp, index) => {
+                // 构建成分文本：产地 · 处理法 · 品种
+                const componentParts = [
+                  comp.origin,
+                  comp.process,
+                  comp.variety,
+                ].filter(Boolean);
+                const componentText =
+                  componentParts.length > 0 ? componentParts.join(' · ') : '—';
+
+                return (
+                  <span key={index} className="flex items-center gap-2">
+                    <span className="truncate">{componentText}</span>
+                    {blendComponents.length > 1 &&
+                      comp.percentage !== undefined && (
+                        <span className="shrink-0 text-neutral-500 dark:text-neutral-400">
+                          {comp.percentage}%
+                        </span>
+                      )}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {!bean.isInTransit &&
+          !bean.isFrozen &&
+          !!bean.startDay &&
+          !!bean.endDay && (
+            <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+              <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
+                赏味期
+              </span>
+              <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
+                {bean.startDay}-{bean.endDay}天
+              </span>
+            </div>
+          )}
+        {!!bean.isFrozen && (
+          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+            <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
+              状态
+            </span>
+            <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
+              冷冻中
             </span>
           </div>
         )}
@@ -118,61 +175,14 @@ const Complete: React.FC<CompleteProps> = ({
             </span>
           </div>
         )}
-        <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
-          <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-            赏味期
-          </span>
-          <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-            {bean.startDay}-{bean.endDay}天
-          </span>
-        </div>
-        {blendComponents.length > 0 && (
-          <div className="flex flex-col border-b border-neutral-200 py-2 dark:border-neutral-700">
-            <div className="mb-2 flex justify-between">
-              <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-                咖啡豆成分
-              </span>
-              <span className="shrink-0 text-xs text-neutral-500 dark:text-neutral-400">
-                {blendComponents.length > 1 &&
-                blendComponents.some(comp => comp.percentage !== undefined)
-                  ? '比例'
-                  : ''}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {blendComponents.map((comp, index) => (
-                <div key={index} className="text-left">
-                  <div className="flex items-center justify-between">
-                    <span className="max-w-[70%] truncate text-sm font-medium">
-                      成分 #{index + 1}
-                    </span>
-                    {blendComponents.length > 1 &&
-                      comp.percentage !== undefined && (
-                        <span className="shrink-0 text-sm font-medium">
-                          {comp.percentage}%
-                        </span>
-                      )}
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {comp.origin && (
-                      <span className="inline-block max-w-[90%] truncate rounded-full bg-neutral-100 px-2 py-0.5 text-xs dark:bg-neutral-800">
-                        {comp.origin}
-                      </span>
-                    )}
-                    {comp.process && (
-                      <span className="inline-block max-w-[90%] truncate rounded-full bg-neutral-100 px-2 py-0.5 text-xs dark:bg-neutral-800">
-                        {comp.process}
-                      </span>
-                    )}
-                    {comp.variety && (
-                      <span className="inline-block max-w-[90%] truncate rounded-full bg-neutral-100 px-2 py-0.5 text-xs dark:bg-neutral-800">
-                        {comp.variety}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+        {bean.notes && bean.notes.trim() && (
+          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+            <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
+              备注
+            </span>
+            <span className="ml-4 max-w-[60%] text-right text-sm font-medium">
+              {bean.notes}
+            </span>
           </div>
         )}
       </div>

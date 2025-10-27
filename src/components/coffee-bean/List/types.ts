@@ -167,7 +167,7 @@ export const generateBeanTitle = (
 };
 
 export type BloggerBeansYear = 2023 | 2024 | 2025;
-export type BeanType = 'all' | 'espresso' | 'filter';
+export type BeanType = 'all' | 'espresso' | 'filter' | 'omni';
 export type BloggerType = 'peter' | 'fenix';
 
 // 博主显示名称

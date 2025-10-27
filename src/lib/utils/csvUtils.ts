@@ -532,7 +532,7 @@ function parseFenixCSVContent(
 }
 
 export async function getBloggerBeans(
-  type: 'all' | 'espresso' | 'filter' = 'all',
+  type: 'all' | 'espresso' | 'filter' | 'omni' = 'all',
   year: 2023 | 2024 | 2025 = 2025,
   blogger: BloggerType = 'peter'
 ): Promise<BloggerBean[]> {
@@ -583,7 +583,7 @@ export async function getBloggerBeans(
 
 // 为了向后兼容，提供一个同步版本（返回空数组，但会触发异步加载）
 export function getBloggerBeansSync(
-  type: 'all' | 'espresso' | 'filter' = 'all',
+  type: 'all' | 'espresso' | 'filter' | 'omni' = 'all',
   year: 2023 | 2024 | 2025 = 2025,
   blogger: BloggerType = 'peter'
 ): BloggerBean[] {

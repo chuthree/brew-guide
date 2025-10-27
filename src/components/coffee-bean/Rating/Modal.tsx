@@ -21,7 +21,9 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
   onSave,
   onAfterSave,
 }) => {
-  const [beanType, setBeanType] = useState<'espresso' | 'filter'>('filter');
+  const [beanType, setBeanType] = useState<'espresso' | 'filter' | 'omni'>(
+    'filter'
+  );
   const [overallRating, setOverallRating] = useState<number>(0);
   const [ratingNotes, setRatingNotes] = useState<string>('');
 

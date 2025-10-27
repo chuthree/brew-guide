@@ -24,6 +24,7 @@ export interface StatsData {
   beanTypeCount: {
     espresso: number;
     filter: number;
+    omni: number;
     other: number;
   };
   originCount: Record<string, number>;
@@ -51,6 +52,18 @@ export interface StatsData {
     todayCost: number;
   };
   filterStats: {
+    totalBeans: number;
+    activeBeans: number;
+    totalWeight: number;
+    remainingWeight: number;
+    consumedWeight: number;
+    totalCost: number;
+    averageBeanPrice: number;
+    averageGramPrice: number;
+    todayConsumption: number;
+    todayCost: number;
+  };
+  omniStats: {
     totalBeans: number;
     activeBeans: number;
     totalWeight: number;
@@ -94,6 +107,8 @@ export interface TodayConsumptionData {
   espressoCost: number;
   filterConsumption: number;
   filterCost: number;
+  omniConsumption: number;
+  omniCost: number;
 }
 
 export interface StatsSummaryProps {

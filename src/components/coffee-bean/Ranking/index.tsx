@@ -101,19 +101,18 @@ export const SORT_LABELS: Record<RankingSortOption, string> = {
 };
 
 interface CoffeeBeanRankingProps {
-  isOpen: boolean;
-  onShowRatingForm: (bean: CoffeeBean, onRatingSaved?: () => void) => void;
+  onClose?: () => void;
+  onShowRatingForm?: (bean: CoffeeBean, onRatingSaved?: () => void) => void;
   sortOption?: RankingSortOption;
   hideFilters?: boolean;
-  beanType?: 'all' | 'espresso' | 'filter';
+  beanType?: 'all' | 'espresso' | 'filter' | 'omni';
+  isOpen: boolean;
   editMode?: boolean;
   viewMode?: 'personal' | 'blogger';
   year?: 2023 | 2024 | 2025;
-  blogger?: BloggerType;
-  // 搜索相关props
+  blogger?: 'peter' | 'fenix';
   isSearching?: boolean;
   searchQuery?: string;
-  // 外部滚动容器（Virtuoso 使用）
   scrollParentRef?: HTMLElement;
 }
 
@@ -136,9 +135,9 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     []
   );
   const [unratedBeans, setUnratedBeans] = useState<CoffeeBean[]>([]);
-  const [beanType, setBeanType] = useState<'all' | 'espresso' | 'filter'>(
-    externalBeanType || 'all'
-  );
+  const [beanType, setBeanType] = useState<
+    'all' | 'espresso' | 'filter' | 'omni'
+  >(externalBeanType || 'all');
   const [editMode, setEditMode] = useState(externalEditMode || false);
   const [showUnrated, setShowUnrated] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -486,7 +485,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
 
   const handleRateBeanClick = (bean: CoffeeBean) => {
     // 将回调函数传递给评分表单
-    onShowRatingForm(bean, handleRatingSaved);
+    onShowRatingForm?.(bean, handleRatingSaved);
   };
 
   // 切换编辑模式
@@ -627,10 +626,14 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                         } else {
                           // 豆子类型 - 只有在"全部豆子"视图下显示
                           if (beanType === 'all') {
+                            const currentBeanType = (bean as CoffeeBean)
+                              .beanType;
                             infoArray.push(
-                              (bean as CoffeeBean).beanType === 'espresso'
+                              currentBeanType === 'espresso'
                                 ? '意式豆'
-                                : '手冲豆'
+                                : currentBeanType === 'filter'
+                                  ? '手冲豆'
+                                  : '全能豆'
                             );
                           }
                         }
@@ -906,7 +909,9 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                               infoArray.push(
                                 bean.beanType === 'espresso'
                                   ? '意式豆'
-                                  : '手冲豆'
+                                  : bean.beanType === 'filter'
+                                    ? '手冲豆'
+                                    : '全能豆'
                               );
                             }
 

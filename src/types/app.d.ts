@@ -38,7 +38,7 @@ export interface CoffeeBean {
   isInTransit?: boolean; // 是否在途状态
 
   // 分类标签
-  beanType?: 'espresso' | 'filter'; // 豆子类型：意式/手冲
+  beanType?: 'espresso' | 'filter' | 'omni'; // 豆子类型：意式/手冲/全能
   brand?: string; // 品牌
 
   // 评分相关字段 (榜单功能使用)

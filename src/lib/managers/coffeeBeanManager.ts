@@ -490,12 +490,12 @@ export const CoffeeBeanManager = {
   },
 
   /**
-   * 获取特定类型的已评分咖啡豆（意式或手冲）
-   * @param type 豆子类型：'espresso' 或 'filter'
+   * 获取特定类型的已评分咖啡豆（意式、手冲或全能）
+   * @param type 豆子类型：'espresso'、'filter' 或 'omni'
    * @returns 特定类型的已评分咖啡豆数组
    */
   async getRatedBeansByType(
-    type: 'espresso' | 'filter'
+    type: 'espresso' | 'filter' | 'omni'
   ): Promise<CoffeeBean[]> {
     // 修复排序问题：每次获取数据时都清除缓存，确保获取最新数据
     beanCache.delete(`${BEANS_BY_TYPE_PREFIX}${type}`);

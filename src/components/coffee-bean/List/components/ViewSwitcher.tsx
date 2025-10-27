@@ -218,6 +218,12 @@ const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
       >
         {showAll ? '手冲' : '手冲豆'}
       </FilterButton>
+      <FilterButton
+        isActive={selectedBeanType === 'omni'}
+        onClick={() => onBeanTypeChange?.('omni')}
+      >
+        {showAll ? '全能' : '全能豆'}
+      </FilterButton>
     </div>
   </div>
 );
@@ -300,6 +306,14 @@ interface ViewSwitcherProps {
   onSearchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   rankingBeansCount?: number;
   bloggerBeansCount?: number;
+  // 榜单各类型豆子数量
+  rankingEspressoCount?: number;
+  rankingFilterCount?: number;
+  rankingOmniCount?: number;
+  // 博主榜单各类型豆子数量
+  bloggerEspressoCount?: number;
+  bloggerFilterCount?: number;
+  bloggerOmniCount?: number;
   // 新增图片流模式相关props
   isImageFlowMode?: boolean;
   onToggleImageFlowMode?: () => void;
@@ -359,6 +373,14 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   onSearchChange,
   rankingBeansCount,
   bloggerBeansCount,
+  // 榜单各类型豆子数量参数
+  rankingEspressoCount = 0,
+  rankingFilterCount = 0,
+  rankingOmniCount = 0,
+  // 博主榜单各类型豆子数量参数
+  bloggerEspressoCount = 0,
+  bloggerFilterCount = 0,
+  bloggerOmniCount = 0,
   isImageFlowMode = false,
   onToggleImageFlowMode,
   hasImageBeans = true,
@@ -776,42 +798,67 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         }
                       `}</style>
 
-                      <TabButton
-                        isActive={rankingBeanType === 'espresso'}
-                        onClick={() => onRankingBeanTypeChange?.('espresso')}
-                        className="mr-3"
-                        dataTab="espresso"
-                      >
-                        意式豆
-                      </TabButton>
-                      <TabButton
-                        isActive={rankingBeanType === 'filter'}
-                        onClick={() => {
-                          // 如果是矮人博主，不允许切换到手冲豆
-                          if (
+                      {/* 意式豆 - 仅在有数据时显示 */}
+                      {(viewMode === VIEW_OPTIONS.RANKING
+                        ? rankingEspressoCount > 0
+                        : bloggerEspressoCount > 0) && (
+                        <TabButton
+                          isActive={rankingBeanType === 'espresso'}
+                          onClick={() => onRankingBeanTypeChange?.('espresso')}
+                          className="mr-3"
+                          dataTab="espresso"
+                        >
+                          意式豆
+                        </TabButton>
+                      )}
+
+                      {/* 手冲豆 - 仅在有数据时显示 */}
+                      {(viewMode === VIEW_OPTIONS.RANKING
+                        ? rankingFilterCount > 0
+                        : bloggerFilterCount > 0) && (
+                        <TabButton
+                          isActive={rankingBeanType === 'filter'}
+                          onClick={() => {
+                            // 如果是矮人博主，不允许切换到手冲豆
+                            if (
+                              viewMode === VIEW_OPTIONS.BLOGGER &&
+                              bloggerType === 'fenix'
+                            ) {
+                              return;
+                            }
+                            onRankingBeanTypeChange?.('filter');
+                          }}
+                          className={`mr-3 ${
                             viewMode === VIEW_OPTIONS.BLOGGER &&
                             bloggerType === 'fenix'
-                          ) {
-                            return;
+                              ? 'cursor-not-allowed opacity-50'
+                              : ''
+                          }`}
+                          dataTab="filter"
+                          title={
+                            viewMode === VIEW_OPTIONS.BLOGGER &&
+                            bloggerType === 'fenix'
+                              ? '矮人博主暂无手冲豆数据'
+                              : undefined
                           }
-                          onRankingBeanTypeChange?.('filter');
-                        }}
-                        className={`mr-3 ${
-                          viewMode === VIEW_OPTIONS.BLOGGER &&
-                          bloggerType === 'fenix'
-                            ? 'cursor-not-allowed opacity-50'
-                            : ''
-                        }`}
-                        dataTab="filter"
-                        title={
-                          viewMode === VIEW_OPTIONS.BLOGGER &&
-                          bloggerType === 'fenix'
-                            ? '矮人博主暂无手冲豆数据'
-                            : undefined
-                        }
-                      >
-                        手冲豆
-                      </TabButton>
+                        >
+                          手冲豆
+                        </TabButton>
+                      )}
+
+                      {/* 全能豆 - 仅在有数据时显示 */}
+                      {(viewMode === VIEW_OPTIONS.RANKING
+                        ? rankingOmniCount > 0
+                        : bloggerOmniCount > 0) && (
+                        <TabButton
+                          isActive={rankingBeanType === 'omni'}
+                          onClick={() => onRankingBeanTypeChange?.('omni')}
+                          className="mr-3"
+                          dataTab="omni"
+                        >
+                          全能豆
+                        </TabButton>
+                      )}
                     </div>
                   </div>
 

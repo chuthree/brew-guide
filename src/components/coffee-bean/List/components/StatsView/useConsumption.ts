@@ -11,6 +11,8 @@ export const useConsumption = (
   const [todayEspressoCost, setTodayEspressoCost] = useState(0);
   const [todayFilterConsumption, setTodayFilterConsumption] = useState(0);
   const [todayFilterCost, setTodayFilterCost] = useState(0);
+  const [todayOmniConsumption, setTodayOmniConsumption] = useState(0);
+  const [todayOmniCost, setTodayOmniCost] = useState(0);
 
   // 加载今日消耗数据
   useEffect(() => {
@@ -42,6 +44,8 @@ export const useConsumption = (
         let espressoCost = 0;
         let filterConsumption = 0;
         let filterCost = 0;
+        let omniConsumption = 0;
+        let omniCost = 0;
 
         todayNotes.forEach(note => {
           // 只排除容量调整记录，快捷扣除记录需要计入统计
@@ -62,12 +66,15 @@ export const useConsumption = (
 
               const isEspresso = bean?.beanType === 'espresso';
               const isFilter = bean?.beanType === 'filter';
+              const isOmni = bean?.beanType === 'omni';
 
               // 分别统计手冲和意式消耗
               if (isEspresso) {
                 espressoConsumption += coffeeAmount;
               } else if (isFilter) {
                 filterConsumption += coffeeAmount;
+              } else if (isOmni) {
+                omniConsumption += coffeeAmount;
               }
 
               // 计算花费
@@ -93,6 +100,8 @@ export const useConsumption = (
                       espressoCost += noteCost;
                     } else if (isFilter) {
                       filterCost += noteCost;
+                    } else if (isOmni) {
+                      omniCost += noteCost;
                     }
                   }
                 }
@@ -114,12 +123,15 @@ export const useConsumption = (
 
                 const isEspresso = bean?.beanType === 'espresso';
                 const isFilter = bean?.beanType === 'filter';
+                const isOmni = bean?.beanType === 'omni';
 
                 // 分别统计手冲和意式消耗
                 if (isEspresso) {
                   espressoConsumption += coffeeAmount;
                 } else if (isFilter) {
                   filterConsumption += coffeeAmount;
+                } else if (isOmni) {
+                  omniConsumption += coffeeAmount;
                 }
 
                 // 计算花费
@@ -145,6 +157,8 @@ export const useConsumption = (
                         espressoCost += noteCost;
                       } else if (isFilter) {
                         filterCost += noteCost;
+                      } else if (isOmni) {
+                        omniCost += noteCost;
                       }
                     }
                   }
@@ -160,6 +174,8 @@ export const useConsumption = (
         setTodayEspressoCost(espressoCost);
         setTodayFilterConsumption(filterConsumption);
         setTodayFilterCost(filterCost);
+        setTodayOmniConsumption(omniConsumption);
+        setTodayOmniCost(omniCost);
       } catch (err) {
         console.error('加载今日消耗数据失败:', err);
       }
@@ -202,5 +218,7 @@ export const useConsumption = (
     espressoCost: todayEspressoCost,
     filterConsumption: todayFilterConsumption,
     filterCost: todayFilterCost,
+    omniConsumption: todayOmniConsumption,
+    omniCost: todayOmniCost,
   };
 };

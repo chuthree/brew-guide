@@ -140,6 +140,9 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
             const filterTotal = beans.filter(
               bean => bean.beanType === 'filter'
             ).length;
+            const omniTotal = beans.filter(
+              bean => bean.beanType === 'omni'
+            ).length;
 
             return (
               <>
@@ -194,6 +197,18 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
                         bean => bean.beanType === 'filter' && !isBeanEmpty(bean)
                       ).length;
                       return `${active}/${filterTotal}`;
+                    })()}
+                    unit="个"
+                  />
+                )}
+                {omniTotal > 0 && (
+                  <StatItem
+                    label="全能豆"
+                    value={(() => {
+                      const active = beans.filter(
+                        bean => bean.beanType === 'omni' && !isBeanEmpty(bean)
+                      ).length;
+                      return `${active}/${omniTotal}`;
                     })()}
                     unit="个"
                   />
@@ -407,6 +422,66 @@ const StatsCategories: React.FC<StatsCategoriesProps> = ({
             <StatItem
               label="今日花费"
               value={`${formatNumber(stats.filterStats.todayCost)}`}
+              unit="元"
+            />
+          </StatCategory>
+        )}
+
+        {/* 编号13 - 全能咖啡统计 */}
+        {stats.omniStats.totalBeans > 0 && (
+          <StatCategory
+            number={getNextNumber()}
+            title="全能咖啡"
+            animStyle={styles.statsAnimStyle(4)}
+          >
+            <StatItem
+              label="全能豆总数"
+              value={`${stats.omniStats.totalBeans}`}
+              unit="个"
+            />
+            <StatItem
+              label="正在使用"
+              value={`${stats.omniStats.activeBeans}`}
+              unit="个"
+            />
+            <StatItem
+              label="总重量"
+              value={`${formatNumber(stats.omniStats.totalWeight)}`}
+              unit="克"
+            />
+            <StatItem
+              label="剩余重量"
+              value={`${formatNumber(stats.omniStats.remainingWeight)}`}
+              unit="克"
+            />
+            <StatItem
+              label="已消耗重量"
+              value={`${formatNumber(stats.omniStats.consumedWeight)}`}
+              unit="克"
+            />
+            <StatItem
+              label="总花费"
+              value={`${formatNumber(stats.omniStats.totalCost)}`}
+              unit="元"
+            />
+            <StatItem
+              label="平均每包价格"
+              value={`${formatNumber(stats.omniStats.averageBeanPrice)}`}
+              unit="元"
+            />
+            <StatItem
+              label="每克平均价格"
+              value={`${formatNumber(stats.omniStats.averageGramPrice)}`}
+              unit="元/克"
+            />
+            <StatItem
+              label="今日消耗"
+              value={`${formatNumber(stats.omniStats.todayConsumption)}`}
+              unit="克"
+            />
+            <StatItem
+              label="今日花费"
+              value={`${formatNumber(stats.omniStats.todayCost)}`}
               unit="元"
             />
           </StatCategory>

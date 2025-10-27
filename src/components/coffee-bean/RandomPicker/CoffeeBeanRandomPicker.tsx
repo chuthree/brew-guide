@@ -88,12 +88,17 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
     () => beans.filter(bean => bean.beanType === 'filter'),
     [beans]
   );
+  const omniBeans = useMemo(
+    () => beans.filter(bean => bean.beanType === 'omni'),
+    [beans]
+  );
 
   // 根据是否长按决定咖啡豆类型，然后过滤
   const { beanType: targetBeanType } = randomSettings?.enableLongPressRandomType
     ? selector.selectRandomBeanByPressType(
         espressoBeans,
         filterBeans,
+        omniBeans,
         isLongPress
       )
     : { beanType: undefined };
@@ -104,11 +109,14 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
       ? selector.filterAvailableBeans(espressoBeans, targetBeanType)
       : targetBeanType === 'filter'
         ? selector.filterAvailableBeans(filterBeans, targetBeanType)
-        : [
-            ...selector.filterAvailableBeans(espressoBeans),
-            ...selector.filterAvailableBeans(filterBeans),
-          ];
-  }, [selector, espressoBeans, filterBeans, targetBeanType]);
+        : targetBeanType === 'omni'
+          ? selector.filterAvailableBeans(omniBeans, targetBeanType)
+          : [
+              ...selector.filterAvailableBeans(espressoBeans),
+              ...selector.filterAvailableBeans(filterBeans),
+              ...selector.filterAvailableBeans(omniBeans),
+            ];
+  }, [selector, espressoBeans, filterBeans, omniBeans, targetBeanType]);
 
   // 检查是否只有一款咖啡豆
   const isSingleBean = validBeans.length === 1;

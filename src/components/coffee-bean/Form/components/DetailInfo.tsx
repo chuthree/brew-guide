@@ -29,6 +29,7 @@ interface DetailInfoProps {
 const BEAN_TYPES = [
   { value: 'filter', label: '手冲' },
   { value: 'espresso', label: '意式' },
+  { value: 'omni', label: '全能' },
 ];
 
 const DetailInfo: React.FC<DetailInfoProps> = ({
@@ -58,7 +59,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
             {BEAN_TYPES.map(type => (
               <div
                 key={type.value}
-                className="relative w-1/2 py-2"
+                className="relative flex-1 py-2"
                 onClick={() => onBeanChange('beanType')(type.value)}
               >
                 <button

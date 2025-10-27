@@ -414,6 +414,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [rankingBeansCount, setRankingBeansCount] = useState<number>(0);
   const [bloggerBeansCount, setBloggerBeansCount] = useState<number>(0);
 
+  // 榜单各类型豆子数量
+  const [rankingEspressoCount, setRankingEspressoCount] = useState<number>(0);
+  const [rankingFilterCount, setRankingFilterCount] = useState<number>(0);
+  const [rankingOmniCount, setRankingOmniCount] = useState<number>(0);
+
+  // 博主榜单各类型豆子数量
+  const [bloggerEspressoCount, setBloggerEspressoCount] = useState<number>(0);
+  const [bloggerFilterCount, setBloggerFilterCount] = useState<number>(0);
+  const [bloggerOmniCount, setBloggerOmniCount] = useState<number>(0);
+
   // 添加图片流模式状态 - 从globalCache读取持久化状态
   const [isImageFlowMode, setIsImageFlowMode] = useState<boolean>(
     globalCache.isImageFlowMode
@@ -468,6 +478,37 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       setRatedBeans(filteredRatedBeans);
       // 更新榜单豆子数量
       setRankingBeansCount(filteredRatedBeans.length);
+
+      // 统计各类型豆子数量
+      const espresso = ratedBeansData.filter(
+        bean => bean.beanType === 'espresso'
+      ).length;
+      const filter = ratedBeansData.filter(
+        bean => bean.beanType === 'filter'
+      ).length;
+      const omni = ratedBeansData.filter(
+        bean => bean.beanType === 'omni'
+      ).length;
+
+      setRankingEspressoCount(espresso);
+      setRankingFilterCount(filter);
+      setRankingOmniCount(omni);
+
+      // 如果当前选中的类型没有数据，自动切换到"全部"
+      if (rankingBeanType !== 'all') {
+        if (
+          (rankingBeanType === 'espresso' && espresso === 0) ||
+          (rankingBeanType === 'filter' && filter === 0) ||
+          (rankingBeanType === 'omni' && omni === 0)
+        ) {
+          setRankingBeanType('all');
+          globalCache.rankingBeanType = 'all';
+          saveRankingBeanTypePreference('all');
+          // 需要重新加载"全部"类型的数据
+          return;
+        }
+      }
+
       globalCache.ratedBeans = filteredRatedBeans;
     } catch (error) {
       console.error('加载评分咖啡豆失败:', error);
@@ -479,7 +520,44 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     if (viewMode !== VIEW_OPTIONS.BLOGGER) return;
 
     try {
-      // 直接调用csvUtils中的函数，传入选定的年份和博主类型
+      // 加载所有类型的博主榜单数据以统计数量
+      const allBloggerBeansData = await getBloggerBeans(
+        'all',
+        bloggerYear,
+        bloggerType
+      );
+
+      // 统计各类型豆子数量
+      const espresso = allBloggerBeansData.filter(
+        bean => bean.beanType === 'espresso'
+      ).length;
+      const filter = allBloggerBeansData.filter(
+        bean => bean.beanType === 'filter'
+      ).length;
+      const omni = allBloggerBeansData.filter(
+        bean => bean.beanType === 'omni'
+      ).length;
+
+      setBloggerEspressoCount(espresso);
+      setBloggerFilterCount(filter);
+      setBloggerOmniCount(omni);
+
+      // 如果当前选中的类型没有数据，自动切换到"全部"
+      if (rankingBeanType !== 'all') {
+        if (
+          (rankingBeanType === 'espresso' && espresso === 0) ||
+          (rankingBeanType === 'filter' && filter === 0) ||
+          (rankingBeanType === 'omni' && omni === 0)
+        ) {
+          setRankingBeanType('all');
+          globalCache.rankingBeanType = 'all';
+          saveRankingBeanTypePreference('all');
+          // 需要重新加载"全部"类型的数据
+          return;
+        }
+      }
+
+      // 加载当前选中类型的数据
       const bloggerBeansData = await getBloggerBeans(
         rankingBeanType,
         bloggerYear,
@@ -1588,6 +1666,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         setSearchQuery={setSearchQuery}
         rankingBeansCount={rankingBeansCount}
         bloggerBeansCount={bloggerBeansCount}
+        // 榜单各类型豆子数量
+        rankingEspressoCount={rankingEspressoCount}
+        rankingFilterCount={rankingFilterCount}
+        rankingOmniCount={rankingOmniCount}
+        // 博主榜单各类型豆子数量
+        bloggerEspressoCount={bloggerEspressoCount}
+        bloggerFilterCount={bloggerFilterCount}
+        bloggerOmniCount={bloggerOmniCount}
         isImageFlowMode={isImageFlowMode}
         onToggleImageFlowMode={handleToggleImageFlowMode}
         hasImageBeans={hasImageBeans}

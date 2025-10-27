@@ -46,6 +46,8 @@ export const calculateStats = (
     espressoCost: number;
     filterConsumption: number;
     filterCost: number;
+    omniConsumption: number;
+    omniCost: number;
   }
 ): StatsData => {
   // 计算咖啡豆总数
@@ -117,10 +119,13 @@ export const calculateStats = (
   const beanTypeCount = {
     espresso: filteredBeans.filter(bean => bean.beanType === 'espresso').length,
     filter: filteredBeans.filter(bean => bean.beanType === 'filter').length,
+    omni: filteredBeans.filter(bean => bean.beanType === 'omni').length,
     other: filteredBeans.filter(
       bean =>
         !bean.beanType ||
-        (bean.beanType !== 'espresso' && bean.beanType !== 'filter')
+        (bean.beanType !== 'espresso' &&
+          bean.beanType !== 'filter' &&
+          bean.beanType !== 'omni')
     ).length,
   };
 
@@ -317,6 +322,33 @@ export const calculateStats = (
   const espressoAverageGramPrice =
     espressoTotalWeight > 0 ? espressoTotalCost / espressoTotalWeight : 0;
 
+  // 计算全能豆统计
+  const omniBeans = beans.filter(bean => bean.beanType === 'omni');
+  const activeOmniBeans = omniBeans.filter(bean => !isBeanEmpty(bean));
+  const omniTotalWeight = omniBeans.reduce((sum, bean) => {
+    const capacity = bean.capacity
+      ? parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    return sum + (isNaN(capacity) ? 0 : capacity);
+  }, 0);
+  const omniRemainingWeight = omniBeans.reduce((sum, bean) => {
+    const remaining = bean.remaining
+      ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    return sum + (isNaN(remaining) ? 0 : remaining);
+  }, 0);
+  const omniConsumedWeight = omniTotalWeight - omniRemainingWeight;
+  const omniTotalCost = omniBeans.reduce((sum, bean) => {
+    const price = bean.price
+      ? parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    return sum + (isNaN(price) ? 0 : price);
+  }, 0);
+  const omniAverageBeanPrice =
+    omniBeans.length > 0 ? omniTotalCost / omniBeans.length : 0;
+  const omniAverageGramPrice =
+    omniTotalWeight > 0 ? omniTotalCost / omniTotalWeight : 0;
+
   return {
     totalBeans,
     emptyBeans,
@@ -359,6 +391,18 @@ export const calculateStats = (
       averageGramPrice: filterAverageGramPrice,
       todayConsumption: todayConsumption.filterConsumption,
       todayCost: todayConsumption.filterCost,
+    },
+    omniStats: {
+      totalBeans: omniBeans.length,
+      activeBeans: activeOmniBeans.length,
+      totalWeight: omniTotalWeight,
+      remainingWeight: omniRemainingWeight,
+      consumedWeight: omniConsumedWeight,
+      totalCost: omniTotalCost,
+      averageBeanPrice: omniAverageBeanPrice,
+      averageGramPrice: omniAverageGramPrice,
+      todayConsumption: todayConsumption.omniConsumption,
+      todayCost: todayConsumption.omniCost,
     },
   };
 };

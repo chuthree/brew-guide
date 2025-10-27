@@ -8,7 +8,7 @@ import { SettingsOptions } from '@/components/settings/Settings';
 /**
  * 咖啡豆类型
  */
-export type BeanType = 'espresso' | 'filter';
+export type BeanType = 'espresso' | 'filter' | 'omni';
 
 /**
  * 随机咖啡豆选择器类
@@ -90,22 +90,31 @@ export class RandomCoffeeBeanSelector {
    * 随机选择一个咖啡豆
    * @param espressoBeans 意式咖啡豆数组
    * @param filterBeans 手冲咖啡豆数组
+   * @param omniBeans 全能咖啡豆数组
    * @param targetType 指定的咖啡豆类型（可选）
    * @returns 随机选中的咖啡豆和类型，如果没有可用咖啡豆则返回null
    */
   selectRandomBean(
     espressoBeans: CoffeeBean[],
     filterBeans: CoffeeBean[],
+    omniBeans: CoffeeBean[] = [],
     targetType?: BeanType
   ): { bean: CoffeeBean; beanType: BeanType } | null {
     if (targetType) {
-      // 如果指定了类型，只从该类型中选择
-      const beansToSelect =
-        targetType === 'espresso' ? espressoBeans : filterBeans;
-      const availableBeans = this.filterAvailableBeans(
-        beansToSelect,
-        targetType
-      );
+      // 如果指定了类型，从该类型中选择，并且全能豆总是包含在意式和手冲中
+      let beansToSelect: CoffeeBean[] = [];
+
+      if (targetType === 'espresso') {
+        beansToSelect = [...espressoBeans, ...omniBeans];
+      } else if (targetType === 'filter') {
+        beansToSelect = [...filterBeans, ...omniBeans];
+      } else {
+        // targetType === 'omni'
+        beansToSelect = omniBeans;
+      }
+
+      // 不传入 beanType 参数，避免过滤掉全能豆
+      const availableBeans = this.filterAvailableBeans(beansToSelect);
 
       if (availableBeans.length === 0) {
         return null;
@@ -113,9 +122,12 @@ export class RandomCoffeeBeanSelector {
 
       // Math.random() is safe here: used for UI random selection, not cryptography // NOSONAR
       const randomIndex = Math.floor(Math.random() * availableBeans.length); // NOSONAR
+      const selectedBean = availableBeans[randomIndex];
+
+      // 返回豆子的实际类型
       return {
-        bean: availableBeans[randomIndex],
-        beanType: targetType,
+        bean: selectedBean,
+        beanType: selectedBean.beanType || targetType,
       };
     }
 
@@ -125,6 +137,7 @@ export class RandomCoffeeBeanSelector {
       'espresso'
     );
     const availableFilter = this.filterAvailableBeans(filterBeans, 'filter');
+    const availableOmni = this.filterAvailableBeans(omniBeans, 'omni');
 
     const allAvailable = [
       ...availableEspresso.map(bean => ({
@@ -134,6 +147,10 @@ export class RandomCoffeeBeanSelector {
       ...availableFilter.map(bean => ({
         bean,
         beanType: 'filter' as BeanType,
+      })),
+      ...availableOmni.map(bean => ({
+        bean,
+        beanType: 'omni' as BeanType,
       })),
     ];
 
@@ -150,12 +167,14 @@ export class RandomCoffeeBeanSelector {
    * 根据是否长按选择不同类型的咖啡豆
    * @param espressoBeans 意式咖啡豆数组
    * @param filterBeans 手冲咖啡豆数组
+   * @param omniBeans 全能咖啡豆数组
    * @param isLongPress 是否为长按操作
    * @returns 选中的咖啡豆类型和咖啡豆
    */
   selectRandomBeanByPressType(
     espressoBeans: CoffeeBean[],
     filterBeans: CoffeeBean[],
+    omniBeans: CoffeeBean[] = [],
     isLongPress: boolean = false
   ): { beanType: BeanType; bean: CoffeeBean | null } {
     // 如果启用了长按随机类型功能
@@ -171,17 +190,18 @@ export class RandomCoffeeBeanSelector {
       const result = this.selectRandomBean(
         espressoBeans,
         filterBeans,
+        omniBeans,
         targetType
       );
 
       return {
-        beanType: targetType,
+        beanType: result?.beanType || targetType,
         bean: result?.bean || null,
       };
     }
 
     // 如果没有启用长按随机类型，随机所有类型的咖啡豆
-    const result = this.selectRandomBean(espressoBeans, filterBeans);
+    const result = this.selectRandomBean(espressoBeans, filterBeans, omniBeans);
 
     return {
       beanType: result?.beanType || 'filter',
@@ -193,15 +213,18 @@ export class RandomCoffeeBeanSelector {
    * 获取可用咖啡豆数量统计
    * @param espressoBeans 意式咖啡豆数组
    * @param filterBeans 手冲咖啡豆数组
+   * @param omniBeans 全能咖啡豆数组
    * @returns 按类型分组的可用咖啡豆数量统计
    */
   getAvailableBeansStats(
     espressoBeans: CoffeeBean[],
-    filterBeans: CoffeeBean[]
+    filterBeans: CoffeeBean[],
+    omniBeans: CoffeeBean[] = []
   ): {
     total: number;
     espresso: number;
     filter: number;
+    omni: number;
     byFlavorPeriod: Record<FlavorPeriodStatus, number>;
   } {
     const availableEspresso = this.filterAvailableBeans(
@@ -209,12 +232,18 @@ export class RandomCoffeeBeanSelector {
       'espresso'
     );
     const availableFilter = this.filterAvailableBeans(filterBeans, 'filter');
-    const allAvailable = [...availableEspresso, ...availableFilter];
+    const availableOmni = this.filterAvailableBeans(omniBeans, 'omni');
+    const allAvailable = [
+      ...availableEspresso,
+      ...availableFilter,
+      ...availableOmni,
+    ];
 
     const stats = {
       total: allAvailable.length,
       espresso: availableEspresso.length,
       filter: availableFilter.length,
+      omni: availableOmni.length,
       byFlavorPeriod: {
         [FlavorPeriodStatus.AGING]: 0,
         [FlavorPeriodStatus.OPTIMAL]: 0,

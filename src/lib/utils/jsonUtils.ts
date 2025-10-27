@@ -535,9 +535,17 @@ export function beanToReadableText(bean: CoffeeBean): string {
     Array.isArray(bean.blendComponents) &&
     bean.blendComponents.length > 1;
 
-  // 如果有beanType字段（手冲/意式），添加用途信息
+  // 如果有beanType字段（手冲/意式/全能），添加用途信息
   if (bean.beanType) {
-    text += `用途: ${bean.beanType === 'filter' ? '手冲' : '意式'}\n`;
+    text += `用途: ${
+      bean.beanType === 'filter'
+        ? '手冲'
+        : bean.beanType === 'espresso'
+          ? '意式'
+          : bean.beanType === 'omni'
+            ? '全能'
+            : '未知'
+    }\n`;
   }
 
   // 原始咖啡豆属性
@@ -893,6 +901,8 @@ function parseCoffeeBeanText(text: string): Partial<CoffeeBean> | null {
       bean.beanType = 'filter';
     } else if (usageMatch[1].includes('意式')) {
       bean.beanType = 'espresso';
+    } else if (usageMatch[1].includes('全能')) {
+      bean.beanType = 'omni';
     }
   }
 

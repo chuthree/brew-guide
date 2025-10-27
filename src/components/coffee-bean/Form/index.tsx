@@ -661,10 +661,12 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       }
 
       if (currentStep === 'detail') {
-        // 确保有选择beanType(手冲/意式)
+        // 确保有选择beanType(手冲/意式/全能)
         return (
           typeof bean.beanType === 'string' &&
-          (bean.beanType === 'filter' || bean.beanType === 'espresso')
+          (bean.beanType === 'filter' ||
+            bean.beanType === 'espresso' ||
+            bean.beanType === 'omni')
         );
       }
 
