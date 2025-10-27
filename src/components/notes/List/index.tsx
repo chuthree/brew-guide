@@ -216,10 +216,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     viewMode,
   ]); // 添加所有依赖项
 
-  // 本地状态管理笔记数据 - 需要在Hook之前声明
-  const [notes, setNotes] = useState<BrewingNote[]>([]);
+  // 🔥 使用缓存初始化笔记数据,避免闪烁
+  const [notes, setNotes] = useState<BrewingNote[]>(globalCache.notes || []);
   const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>(
-    {}
+    globalCache.equipmentNames || {}
   );
   const [customEquipments, setCustomEquipments] = useState<
     import('@/lib/core/config').CustomEquipment[]
@@ -364,47 +364,100 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 计算总咖啡消耗量
   const totalCoffeeConsumption = useRef(0);
 
-  // 简化的数据加载函数 - 直接加载并更新状态
+  // 🔥 使用 ref 跟踪组件挂载状态，防止在卸载后更新状态
+  const isMountedRef = useRef(false);
+  const isLoadingRef = useRef(false); // 使用 ref 而不是 globalCache 来控制并发
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // 简化的数据加载函数 - 参考咖啡豆的实现
   const loadNotesData = useCallback(async () => {
+    // 防止并发加载
+    if (isLoadingRef.current) return;
+
     try {
+      // 如果缓存已初始化且有数据，直接使用
+      if (globalCache.initialized && globalCache.notes.length > 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📦 使用缓存的笔记数据');
+        }
+        setNotes(globalCache.notes);
+        setEquipmentNames(globalCache.equipmentNames);
+        totalCoffeeConsumption.current = globalCache.totalConsumption;
+        return;
+      }
+
+      isLoadingRef.current = true;
+
       const { Storage } = await import('@/lib/core/storage');
       const savedNotes = await Storage.get('brewingNotes');
       const parsedNotes: BrewingNote[] = savedNotes
         ? JSON.parse(savedNotes)
         : [];
 
-      // 直接更新本地状态
+      // 检查组件是否仍然挂载
+      if (!isMountedRef.current) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('组件已卸载，跳过状态更新');
+        }
+        return;
+      }
+
+      // 更新全局缓存
+      globalCache.notes = parsedNotes;
+      globalCache.lastUpdated = Date.now();
+      globalCache.initialized = true;
+      globalCache.totalConsumption =
+        calculateTotalCoffeeConsumption(parsedNotes);
+
+      // 更新笔记数据
       setNotes(parsedNotes);
 
-      // 获取设备名称映射和自定义器具列表
-      const { equipmentList } = await import('@/lib/core/config');
-      const { loadCustomEquipments } = await import(
-        '@/lib/managers/customEquipments'
-      );
-      const customEquips = await loadCustomEquipments();
+      // 异步加载设备名称映射
+      const loadEquipmentData = async () => {
+        if (!isMountedRef.current) return;
 
-      // 🔥 保存到状态以便传递给Hook
-      setCustomEquipments(customEquips);
+        const { equipmentList } = await import('@/lib/core/config');
+        const { loadCustomEquipments } = await import(
+          '@/lib/managers/customEquipments'
+        );
+        const customEquips = await loadCustomEquipments();
 
-      const namesMap: Record<string, string> = {};
-      equipmentList.forEach(equipment => {
-        namesMap[equipment.id] = equipment.name;
-      });
-      customEquips.forEach(equipment => {
-        namesMap[equipment.id] = equipment.name;
-      });
+        if (!isMountedRef.current) return;
 
-      setEquipmentNames(namesMap);
+        setCustomEquipments(customEquips);
 
-      // 更新总消耗量引用
-      totalCoffeeConsumption.current =
-        calculateTotalCoffeeConsumption(parsedNotes);
+        const namesMap: Record<string, string> = {};
+        equipmentList.forEach(equipment => {
+          namesMap[equipment.id] = equipment.name;
+        });
+        customEquips.forEach(equipment => {
+          namesMap[equipment.id] = equipment.name;
+        });
+
+        // 更新缓存中的设备名称
+        globalCache.equipmentNames = namesMap;
+        setEquipmentNames(namesMap);
+
+        // 更新总消耗量引用
+        totalCoffeeConsumption.current = globalCache.totalConsumption;
+      };
+
+      // 立即加载设备数据
+      loadEquipmentData();
     } catch (error) {
       console.error('加载笔记数据失败:', error);
+    } finally {
+      isLoadingRef.current = false;
     }
   }, []);
 
-  // 简化初始化 - 直接加载数据
+  // 监听 isOpen 变化，打开时加载数据（参考咖啡豆实现）
   useEffect(() => {
     if (isOpen) {
       loadNotesData();
@@ -412,28 +465,98 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   }, [isOpen, loadNotesData]);
 
   // 简化存储监听 - 只监听关键的数据变化事件
+  // 🔥 修复事件监听器泄漏：使用 useCallback 确保引用稳定，正确移除监听器
+  const debouncedLoadRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 🔥 使用 useCallback 创建稳定的事件处理函数引用
+  const handleStorageChange = useCallback(
+    (e: Event) => {
+      const event = e as CustomEvent;
+      if (event.detail?.key === 'brewingNotes') {
+        // 🔥 清除缓存,强制重新加载
+        globalCache.lastUpdated = 0;
+        globalCache.initialized = false;
+
+        // 清除之前的防抖定时器
+        if (debouncedLoadRef.current) {
+          clearTimeout(debouncedLoadRef.current);
+        }
+
+        // 使用防抖延迟加载，避免连续保存时的重复刷新
+        debouncedLoadRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            loadNotesData();
+          }
+        }, 150); // 150ms 防抖延迟
+      }
+    },
+    [loadNotesData]
+  );
+
+  const handleBrewingNotesUpdate = useCallback(() => {
+    // 🔥 清除缓存,强制重新加载
+    globalCache.lastUpdated = 0;
+    globalCache.initialized = false;
+
+    // 清除之前的防抖定时器
+    if (debouncedLoadRef.current) {
+      clearTimeout(debouncedLoadRef.current);
+    }
+
+    // 使用防抖延迟加载
+    debouncedLoadRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        loadNotesData();
+      }
+    }, 150);
+  }, [loadNotesData]);
+
+  // 🔥 监听笔记数据立即更新事件 - 类似咖啡豆的实现，无延迟
+  useEffect(() => {
+    const handleBrewingNotesDataChanged = () => {
+      // 直接使用缓存数据更新UI，因为缓存已经在保存时同步更新
+      if (globalCache.initialized && globalCache.notes.length >= 0) {
+        setNotes(globalCache.notes);
+        setEquipmentNames(globalCache.equipmentNames);
+        totalCoffeeConsumption.current = globalCache.totalConsumption;
+      }
+    };
+
+    window.addEventListener(
+      'brewingNotesDataChanged',
+      handleBrewingNotesDataChanged
+    );
+
+    return () => {
+      window.removeEventListener(
+        'brewingNotesDataChanged',
+        handleBrewingNotesDataChanged
+      );
+    };
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleDataChange = () => {
-      loadNotesData();
-    };
-
-    // 监听笔记数据变化事件
-    window.addEventListener('storage:changed', e => {
-      const event = e as CustomEvent;
-      if (event.detail?.key === 'brewingNotes') {
-        handleDataChange();
-      }
-    });
-
-    window.addEventListener('brewingNotesUpdated', handleDataChange);
+    // 🔥 使用稳定的函数引用，确保能正确移除
+    window.addEventListener('storage:changed', handleStorageChange);
+    window.addEventListener('brewingNotesUpdated', handleBrewingNotesUpdate);
 
     return () => {
-      window.removeEventListener('storage:changed', handleDataChange);
-      window.removeEventListener('brewingNotesUpdated', handleDataChange);
+      // 清理防抖定时器
+      if (debouncedLoadRef.current) {
+        clearTimeout(debouncedLoadRef.current);
+        debouncedLoadRef.current = null;
+      }
+
+      // 🔥 移除事件监听器 - 使用相同的函数引用
+      window.removeEventListener('storage:changed', handleStorageChange);
+      window.removeEventListener(
+        'brewingNotesUpdated',
+        handleBrewingNotesUpdate
+      );
     };
-  }, [isOpen, loadNotesData]);
+  }, [isOpen, handleStorageChange, handleBrewingNotesUpdate]);
 
   // 显示消息提示 - 使用 LightToast
   const showToastMessage = (
@@ -539,18 +662,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       // 删除笔记
       const updatedNotes = notes.filter(note => note.id !== noteId);
 
+      // 更新全局缓存并触发事件
+      const { updateBrewingNotesCache } = await import(
+        '@/components/notes/List/globalCache'
+      );
+      await updateBrewingNotesCache(updatedNotes);
+
       // 直接更新本地状态
       setNotes(updatedNotes);
 
       // 更新总消耗量
-      totalCoffeeConsumption.current =
-        calculateTotalCoffeeConsumption(updatedNotes);
-
-      // 保存到存储 - Storage.set() 会自动触发事件
-      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-
-      // 主动刷新数据，确保UI立即更新
-      await loadNotesData();
+      totalCoffeeConsumption.current = globalCache.totalConsumption;
 
       showToastMessage('笔记已删除', 'success');
     } catch (error) {
@@ -863,18 +985,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         });
       }
 
+      // 更新全局缓存并触发事件
+      const { updateBrewingNotesCache } = await import(
+        '@/components/notes/List/globalCache'
+      );
+      await updateBrewingNotesCache(parsedNotes);
+
       // 直接更新本地状态
       setNotes(parsedNotes);
 
       // 更新总消耗量
-      totalCoffeeConsumption.current =
-        calculateTotalCoffeeConsumption(parsedNotes);
-
-      // 保存更新后的笔记 - Storage.set() 会自动触发事件
-      await Storage.set('brewingNotes', JSON.stringify(parsedNotes));
-
-      // 主动刷新数据，确保UI立即更新
-      await loadNotesData();
+      totalCoffeeConsumption.current = globalCache.totalConsumption;
 
       // 关闭模态和编辑状态
       setEditingChangeRecord(null);

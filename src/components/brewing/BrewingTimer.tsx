@@ -666,18 +666,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         updatedNotes = [noteData, ...existingNotes];
       }
 
-      // 立即同步更新全局缓存，避免竞态条件
-      globalCache.notes = updatedNotes;
-
-      // 重新计算总消耗量
-      const { calculateTotalCoffeeConsumption } = await import(
+      // 更新全局缓存并触发事件
+      const { updateBrewingNotesCache } = await import(
         '@/components/notes/List/globalCache'
       );
-      globalCache.totalConsumption =
-        calculateTotalCoffeeConsumption(updatedNotes);
-
-      // 存储更新后的笔记列表 - Storage.set() 会自动触发事件
-      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+      await updateBrewingNotesCache(updatedNotes);
 
       // 设置笔记已保存标记
       localStorage.setItem('brewingNoteInProgress', 'false');

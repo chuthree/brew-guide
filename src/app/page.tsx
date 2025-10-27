@@ -2042,15 +2042,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         updatedNotes = [newNote, ...existingNotes];
       }
 
-      globalCache.notes = updatedNotes;
-
-      const { calculateTotalCoffeeConsumption } = await import(
+      // 更新全局缓存并触发事件
+      const { updateBrewingNotesCache } = await import(
         '@/components/notes/List/globalCache'
       );
-      globalCache.totalConsumption =
-        calculateTotalCoffeeConsumption(updatedNotes);
-
-      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+      await updateBrewingNotesCache(updatedNotes);
 
       setShowNoteFormModal(false);
       setCurrentEditingNote({});
@@ -2119,15 +2115,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         });
       }
 
-      globalCache.notes = updatedNotes;
-
-      const { calculateTotalCoffeeConsumption } = await import(
+      // 更新全局缓存并触发事件
+      const { updateBrewingNotesCache } = await import(
         '@/components/notes/List/globalCache'
       );
-      globalCache.totalConsumption =
-        calculateTotalCoffeeConsumption(updatedNotes);
-
-      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+      await updateBrewingNotesCache(updatedNotes);
 
       setBrewingNoteEditOpen(false);
       setBrewingNoteEditData(null);

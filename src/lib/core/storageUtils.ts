@@ -438,13 +438,12 @@ export const StorageUtils = {
           await db.brewingNotes.clear();
           await db.brewingNotes.bulkPut(notes);
 
-          // 触发自定义事件通知数据变更
+          // 同步触发事件，确保数据一致性
           const storageEvent = new CustomEvent('storage:changed', {
             detail: { key, source: 'internal' },
           });
           window.dispatchEvent(storageEvent);
 
-          // 同时触发 customStorageChange 事件，以确保所有组件都能收到通知
           const customEvent = new CustomEvent('customStorageChange', {
             detail: { key },
           });
@@ -460,13 +459,12 @@ export const StorageUtils = {
           await db.coffeeBeans.clear();
           await db.coffeeBeans.bulkPut(beans);
 
-          // 触发自定义事件通知数据变更
+          // 同步触发事件，确保数据一致性
           const storageEvent = new CustomEvent('storage:changed', {
             detail: { key, source: 'internal' },
           });
           window.dispatchEvent(storageEvent);
 
-          // 同时触发 customStorageChange 事件，以确保所有组件都能收到通知
           const customEvent = new CustomEvent('customStorageChange', {
             detail: { key },
           });
@@ -495,13 +493,12 @@ export const StorageUtils = {
             localStorage.setItem(key, value);
           }
 
-          // 触发自定义事件
+          // 同步触发事件，确保数据一致性
           const storageEvent = new CustomEvent('storage:changed', {
             detail: { key, source: 'internal' },
           });
           window.dispatchEvent(storageEvent);
 
-          // 同时触发 customStorageChange 事件，以确保所有组件都能收到通知
           const customEvent = new CustomEvent('customStorageChange', {
             detail: { key },
           });

@@ -1,16 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { NoteItemProps } from '../types';
 import { formatDate, formatRating } from '../utils';
-import {
-  SettingsOptions,
-  defaultSettings,
-} from '@/components/settings/Settings';
-import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(
@@ -32,18 +27,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
   isSelected = false,
   onToggleSelect,
   isLast = false,
+  getValidTasteRatings,
 }) => {
-  // 添加用户设置状态
-  const [_settings, setSettings] = useState<SettingsOptions>(defaultSettings);
   // 图片查看器状态和错误状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // 使用风味维度hook
-  const { getValidTasteRatings } = useFlavorDimensions();
-
   // 预先计算一些条件，避免在JSX中重复计算
-  const validTasteRatings = getValidTasteRatings(note.taste);
+  const validTasteRatings = getValidTasteRatings ? getValidTasteRatings(note.taste) : [];
   const hasTasteRatings = validTasteRatings.length > 0;
   const hasNotes = Boolean(note.notes);
   const equipmentName =
@@ -52,24 +43,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
       : '未知器具';
   const beanName = note.coffeeBeanInfo?.name;
   const beanUnitPrice = beanName ? unitPriceCache[beanName] || 0 : 0;
-
-  // 获取用户设置
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const { Storage } = await import('@/lib/core/storage');
-        const settingsStr = await Storage.get('brewGuideSettings');
-        if (settingsStr) {
-          const parsedSettings = JSON.parse(settingsStr) as SettingsOptions;
-          setSettings(parsedSettings);
-        }
-      } catch (error) {
-        console.error('加载用户设置失败', error);
-      }
-    };
-
-    loadSettings();
-  }, []);
 
   // 处理笔记点击事件
   const handleNoteClick = () => {
@@ -112,8 +85,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
                   style={{ width: '100%', height: '100%' }}
                   className="object-cover"
                   sizes="48px"
-                  priority={true}
-                  loading="eager"
+                  priority={false}
+                  loading="lazy"
                   onError={() => setImageError(true)}
                 />
               )}
@@ -309,4 +282,27 @@ const NoteItem: React.FC<NoteItemProps> = ({
   );
 };
 
-export default NoteItem;
+// 🔥 使用 React.memo 优化组件，避免不必要的重新渲染
+// 只有当 props 真正变化时才重新渲染
+export default React.memo(NoteItem, (prevProps, nextProps) => {
+  // 快速检查：如果笔记ID和时间戳都相同，且UI状态相同，则不需要重新渲染
+  if (
+    prevProps.note.id === nextProps.note.id &&
+    prevProps.note.timestamp === nextProps.note.timestamp &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isShareMode === nextProps.isShareMode &&
+    prevProps.isLast === nextProps.isLast
+  ) {
+    // 只检查当前笔记使用的设备名称是否变化
+    const prevEquipmentName = prevProps.note.equipment
+      ? prevProps.equipmentNames[prevProps.note.equipment]
+      : undefined;
+    const nextEquipmentName = nextProps.note.equipment
+      ? nextProps.equipmentNames[nextProps.note.equipment]
+      : undefined;
+
+    return prevEquipmentName === nextEquipmentName;
+  }
+
+  return false;
+});

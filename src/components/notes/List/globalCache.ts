@@ -54,6 +54,7 @@ export const globalCache: {
   initialized: boolean;
   totalConsumption: number;
   isLoading: boolean;
+  lastUpdated: number; // 🔥 添加最后更新时间戳
 } = {
   notes: [],
   filteredNotes: [],
@@ -71,6 +72,7 @@ export const globalCache: {
   initialized: false,
   totalConsumption: 0,
   isLoading: false,
+  lastUpdated: 0, // 🔥 初始化为0
 };
 
 // 从localStorage读取选中的设备ID
@@ -289,6 +291,31 @@ globalCache.filterMode = getFilterModePreference();
 globalCache.sortOption = getSortOptionPreference();
 
 // 移除复杂的全局事件监听系统
+
+/**
+ * 更新笔记缓存并触发更新事件的通用函数
+ * 用于在保存笔记后统一更新缓存和触发事件
+ */
+export const updateBrewingNotesCache = async (
+  updatedNotes: BrewingNote[]
+): Promise<void> => {
+  try {
+    // 更新全局缓存
+    globalCache.notes = updatedNotes;
+    globalCache.lastUpdated = Date.now();
+    globalCache.totalConsumption = calculateConsumption(updatedNotes);
+
+    // 保存到存储
+    const { Storage } = await import('@/lib/core/storage');
+    await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+
+    // 触发立即更新事件，让笔记列表无延迟刷新
+    window.dispatchEvent(new Event('brewingNotesDataChanged'));
+  } catch (error) {
+    console.error('更新笔记缓存失败:', error);
+    throw error;
+  }
+};
 
 // 导出主utils文件的函数，保持兼容性
 export const calculateTotalCoffeeConsumption = calculateConsumption;

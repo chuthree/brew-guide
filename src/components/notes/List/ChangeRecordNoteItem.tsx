@@ -152,4 +152,12 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
   );
 };
 
-export default ChangeRecordNoteItem;
+// 🔥 使用 React.memo 优化组件
+export default React.memo(ChangeRecordNoteItem, (prevProps, nextProps) => {
+  return (
+    prevProps.note.id === nextProps.note.id &&
+    prevProps.note.timestamp === nextProps.note.timestamp &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isShareMode === nextProps.isShareMode
+  );
+});

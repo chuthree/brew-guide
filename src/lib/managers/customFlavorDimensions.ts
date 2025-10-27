@@ -24,37 +24,56 @@ export const DEFAULT_FLAVOR_DIMENSIONS: FlavorDimension[] = [
 const STORAGE_KEY = 'customFlavorDimensions';
 const HISTORICAL_LABELS_KEY = 'flavorDimensionHistoricalLabels';
 
+// 🔥 添加内存缓存以避免重复读取存储
+let dimensionsCache: FlavorDimension[] | null = null;
+let historicalLabelsCache: Record<string, string> | null = null;
+
 /**
  * 自定义风味维度管理器
  */
 export const CustomFlavorDimensionsManager = {
   /**
-   * 获取所有风味维度
+   * 获取所有风味维度（带缓存）
    */
   async getFlavorDimensions(): Promise<FlavorDimension[]> {
+    // 🔥 如果缓存存在，直接返回
+    if (dimensionsCache !== null) {
+      return dimensionsCache;
+    }
+
     try {
       const stored = await Storage.get(STORAGE_KEY);
       if (stored) {
         const dimensions = JSON.parse(stored) as FlavorDimension[];
         // 按order排序
-        return dimensions.sort((a, b) => a.order - b.order);
+        dimensionsCache = dimensions.sort((a, b) => a.order - b.order);
+        return dimensionsCache;
       }
-      return DEFAULT_FLAVOR_DIMENSIONS;
+      dimensionsCache = DEFAULT_FLAVOR_DIMENSIONS;
+      return dimensionsCache;
     } catch (error) {
       console.error('获取风味维度失败:', error);
-      return DEFAULT_FLAVOR_DIMENSIONS;
+      dimensionsCache = DEFAULT_FLAVOR_DIMENSIONS;
+      return dimensionsCache;
     }
   },
 
   /**
-   * 获取历史维度标签映射
+   * 获取历史维度标签映射（带缓存）
    */
   async getHistoricalLabels(): Promise<Record<string, string>> {
+    // 🔥 如果缓存存在，直接返回
+    if (historicalLabelsCache !== null) {
+      return { ...historicalLabelsCache }; // 返回副本以防止外部修改
+    }
+
     try {
       const stored = await Storage.get(HISTORICAL_LABELS_KEY);
-      return stored ? JSON.parse(stored) : {};
+      historicalLabelsCache = stored ? JSON.parse(stored) : {};
+      return { ...historicalLabelsCache };
     } catch (error) {
       console.error('获取历史维度标签失败:', error);
+      historicalLabelsCache = {};
       return {};
     }
   },
@@ -65,6 +84,8 @@ export const CustomFlavorDimensionsManager = {
   async saveHistoricalLabels(labels: Record<string, string>): Promise<void> {
     try {
       await Storage.set(HISTORICAL_LABELS_KEY, JSON.stringify(labels));
+      // 🔥 清除缓存，下次读取时会重新加载
+      historicalLabelsCache = null;
     } catch (error) {
       console.error('保存历史维度标签失败:', error);
     }
@@ -83,6 +104,9 @@ export const CustomFlavorDimensionsManager = {
       await this.saveHistoricalLabels(historicalLabels);
 
       await Storage.set(STORAGE_KEY, JSON.stringify(dimensions));
+      
+      // 🔥 清除缓存，下次读取时会重新加载
+      dimensionsCache = null;
 
       // 触发自定义事件通知其他组件
       window.dispatchEvent(
@@ -245,5 +269,13 @@ export const CustomFlavorDimensionsManager = {
     });
 
     return newRatings;
+  },
+
+  /**
+   * 清除缓存（用于强制重新加载数据）
+   */
+  clearCache(): void {
+    dimensionsCache = null;
+    historicalLabelsCache = null;
   },
 };

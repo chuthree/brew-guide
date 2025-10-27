@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useTransition } from 'react';
+import React, { useState, useEffect, useCallback, useTransition, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { BrewingNote } from '@/lib/core/config';
 import NoteItem from './NoteItem';
 import ChangeRecordNoteItem from './ChangeRecordNoteItem';
 import GalleryView from './GalleryView';
 import DateImageFlowView from './DateImageFlowView';
+import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 
 // 定义组件属性接口
 interface NotesListViewProps {
@@ -55,12 +56,31 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   const [unitPriceCache] = useState<Record<string, number>>(beanPrices);
   const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false);
 
-  // 判断笔记是否为变动记录（快捷扣除或容量调整）
-  const isChangeRecord = useCallback((note: BrewingNote) => {
+  // 使用风味维度hook - 在父组件中调用一次，然后传递给所有子组件
+  const { getValidTasteRatings } = useFlavorDimensions();
+
+  // 判断笔记是否为变动记录 - 纯函数，不需要缓存
+  const isChangeRecord = (note: BrewingNote) => {
     return (
       note.source === 'quick-decrement' || note.source === 'capacity-adjustment'
     );
-  }, []);
+  };
+
+  // 🔥 使用 useMemo 缓存分离后的笔记,避免重复计算
+  const { regularNotes, changeRecordNotes } = useMemo(() => {
+    const regular: BrewingNote[] = [];
+    const changeRecords: BrewingNote[] = [];
+    
+    notes.forEach(note => {
+      if (isChangeRecord(note)) {
+        changeRecords.push(note);
+      } else {
+        regular.push(note);
+      }
+    });
+    
+    return { regularNotes: regular, changeRecordNotes: changeRecords };
+  }, [notes]);
 
   // 直接响应preFilteredNotes的变化
   useEffect(() => {
@@ -95,9 +115,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
       </div>
     );
   }
-
-  const regularNotes = notes.filter(note => !isChangeRecord(note));
-  const changeRecordNotes = notes.filter(note => isChangeRecord(note));
 
   // 图片流模式 - 使用完整的笔记数据，不受分页限制
   if (viewMode === 'gallery') {
@@ -135,6 +152,9 @@ const NotesListView: React.FC<NotesListViewProps> = ({
       <Virtuoso
         data={regularNotes}
         customScrollParent={scrollParentRef}
+        // 🔥 性能优化配置
+        overscan={200}
+        increaseViewportBy={{ top: 200, bottom: 200 }}
         components={{
           Footer: () => (
             <div className="mt-2">
@@ -198,6 +218,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             isSelected={selectedNotes.includes(note.id)}
             onToggleSelect={handleToggleSelect}
             isLast={index === regularNotes.length - 1}
+            getValidTasteRatings={getValidTasteRatings}
           />
         )}
       />
