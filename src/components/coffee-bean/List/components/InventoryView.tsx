@@ -152,7 +152,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
             : selectedVariety
               ? `[ 没有${selectedVariety}品种的咖啡豆 ]`
               : selectedBeanType !== 'all'
-                ? `[ 没有${selectedBeanType === 'espresso' ? '意式' : '手冲'}咖啡豆 ]`
+                ? `[ 没有${selectedBeanType === 'espresso' ? '意式' : selectedBeanType === 'filter' ? '手冲' : '全能'}咖啡豆 ]`
                 : beans.length > 0
                   ? showEmptyBeans
                     ? '[ 暂无咖啡豆，请点击下方按钮添加 ]'

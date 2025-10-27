@@ -302,7 +302,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   });
 
   // 计算每种类型的咖啡豆数量（用于类型筛选显示）
-  const { espressoCount, filterCount } = useMemo(() => {
+  const { espressoCount, filterCount, omniCount } = useMemo(() => {
     // 根据当前的筛选条件计算不同类型的豆子数量
     let beansToCount = beans;
 
@@ -350,8 +350,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const filter = beansToCount.filter(
       bean => bean.beanType === 'filter'
     ).length;
+    const omni = beansToCount.filter(bean => bean.beanType === 'omni').length;
 
-    return { espressoCount: espresso, filterCount: filter };
+    return { espressoCount: espresso, filterCount: filter, omniCount: omni };
   }, [
     beans,
     showEmptyBeans,
@@ -1695,6 +1696,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 新增类型统计属性
         espressoCount={espressoCount}
         filterCount={filterCount}
+        omniCount={omniCount}
         // 新增搜索历史属性
         searchHistory={searchHistory}
         onSearchHistoryClick={handleSearchHistoryClick}

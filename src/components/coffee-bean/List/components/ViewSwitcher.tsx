@@ -182,6 +182,7 @@ interface BeanTypeFilterProps {
   showAll?: boolean;
   espressoCount?: number;
   filterCount?: number;
+  omniCount?: number;
 }
 
 const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
@@ -190,6 +191,7 @@ const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
   showAll = true,
   espressoCount = 0,
   filterCount = 0,
+  omniCount = 0,
 }) => (
   <div>
     <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
@@ -220,7 +222,8 @@ const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
       </FilterButton>
       <FilterButton
         isActive={selectedBeanType === 'omni'}
-        onClick={() => onBeanTypeChange?.('omni')}
+        onClick={() => omniCount > 0 && onBeanTypeChange?.('omni')}
+        className={omniCount === 0 ? 'cursor-not-allowed opacity-30' : ''}
       >
         {showAll ? '全能' : '全能豆'}
       </FilterButton>
@@ -335,6 +338,7 @@ interface ViewSwitcherProps {
   // 新增类型统计props
   espressoCount?: number;
   filterCount?: number;
+  omniCount?: number;
   // 新增搜索历史相关props
   searchHistory?: string[];
   onSearchHistoryClick?: (query: string) => void;
@@ -401,6 +405,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   // 新增类型统计参数
   espressoCount = 0,
   filterCount = 0,
+  omniCount = 0,
   // 新增搜索历史参数
   searchHistory = [],
   onSearchHistoryClick,
@@ -1254,6 +1259,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           showAll={true}
                           espressoCount={espressoCount}
                           filterCount={filterCount}
+                          omniCount={omniCount}
                         />
 
                         {/* 显示选项区域 */}
