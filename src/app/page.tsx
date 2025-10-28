@@ -1568,9 +1568,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         '@/lib/managers/coffeeBeanManager'
       );
       const currentBeans = await CoffeeBeanManager.getAllBeans();
-      const isFirstBean = !editingBean && currentBeans.length === 0;
+      const isFirstBean = !editingBean?.id && currentBeans.length === 0;
 
-      if (editingBean) {
+      if (editingBean?.id) {
         await CoffeeBeanManager.updateBean(editingBean.id, bean);
       } else {
         await CoffeeBeanManager.addBean(bean);
@@ -1582,7 +1582,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       window.dispatchEvent(
         new CustomEvent('coffeeBeanDataChanged', {
           detail: {
-            action: editingBean ? 'update' : 'add',
+            action: editingBean?.id ? 'update' : 'add',
             beanId: editingBean?.id,
             isFirstBean: isFirstBean,
           },
@@ -3347,6 +3347,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           setBeanDetailOpen(false);
           setEditingBean(bean);
           setShowBeanForm(true);
+        }}
+        onRepurchase={async bean => {
+          setBeanDetailOpen(false);
+          try {
+            const { createRepurchaseBean } = await import(
+              '@/lib/utils/beanRepurchaseUtils'
+            );
+            const newBeanData = await createRepurchaseBean(bean);
+            // 直接传入新数据作为 initialBean，因为没有 id，会被当作新建
+            setEditingBean(newBeanData as ExtendedCoffeeBean);
+            setShowBeanForm(true);
+          } catch (error) {
+            console.error('续购失败:', error);
+          }
         }}
       />
 

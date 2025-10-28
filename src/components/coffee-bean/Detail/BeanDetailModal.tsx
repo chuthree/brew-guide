@@ -89,6 +89,7 @@ interface BeanDetailModalProps {
   onDelete?: (bean: CoffeeBean) => void;
   onShare?: (bean: CoffeeBean) => void;
   onRate?: (bean: CoffeeBean) => void;
+  onRepurchase?: (bean: CoffeeBean) => void;
 }
 
 const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
@@ -100,6 +101,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onDelete,
   onShare,
   onRate,
+  onRepurchase,
 }) => {
   // 使用 Zustand Store 获取实时更新的咖啡豆数据
   // 性能优化：只在当前咖啡豆的 ID 匹配时订阅，避免不必要的重新渲染
@@ -754,6 +756,19 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           id: 'share',
                           label: '分享',
                           onClick: () => setShareModalOpen(true),
+                          color: 'default' as const,
+                        },
+                      ]
+                    : []),
+                  ...(onRepurchase
+                    ? [
+                        {
+                          id: 'repurchase',
+                          label: '续购',
+                          onClick: () => {
+                            onRepurchase(bean);
+                            onClose();
+                          },
                           color: 'default' as const,
                         },
                       ]
