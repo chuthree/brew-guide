@@ -135,12 +135,12 @@ export const defaultSettings: SettingsOptions = {
   enableAllDecrementOption: false, // 默认关闭ALL扣除选项
   enableCustomDecrementInput: true, // 默认启用自定义输入扣除
   showOnlyBeanName: true, // 默认简化咖啡豆名称
-  dateDisplayMode: 'date', // 默认显示烘焙日期
+  dateDisplayMode: 'agingDays', // 默认显示养豆天数
   showFlavorInfo: false, // 默认不显示风味信息
   limitNotesLines: true, // 默认限制备注显示行数
-  notesMaxLines: 1, // 默认最大显示1行
+  notesMaxLines: 3, // 默认最大显示3行
   showTotalPrice: false, // 默认显示单价
-  showStatusDots: true, // 默认显示状态点
+  showStatusDots: false, // 默认不显示状态点
 
   safeAreaMargins: {
     top: 38, // 默认顶部边距 42px
