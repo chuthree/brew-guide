@@ -760,19 +760,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         },
                       ]
                     : []),
-                  ...(onRepurchase
-                    ? [
-                        {
-                          id: 'repurchase',
-                          label: '续购',
-                          onClick: () => {
-                            onRepurchase(bean);
-                            onClose();
-                          },
-                          color: 'default' as const,
-                        },
-                      ]
-                    : []),
                   ...(onEdit
                     ? [
                         {

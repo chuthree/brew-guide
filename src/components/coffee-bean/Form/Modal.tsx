@@ -11,6 +11,7 @@ interface CoffeeBeanFormModalProps {
   initialBean?: ExtendedCoffeeBean | null;
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
   onClose: () => void;
+  onRepurchase?: () => void;
 }
 
 const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
@@ -18,6 +19,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   initialBean,
   onSave,
   onClose,
+  onRepurchase,
 }) => {
   // 添加平台检测
   const [isIOS, setIsIOS] = useState(false);
@@ -140,6 +142,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
               onSave={onSave}
               onCancel={handleClose}
               initialBean={initialBean || undefined}
+              onRepurchase={onRepurchase}
             />
           )}
         </div>

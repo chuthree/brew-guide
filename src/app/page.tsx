@@ -3282,6 +3282,28 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           setShowBeanForm(false);
           setEditingBean(null);
         }}
+        onRepurchase={
+          editingBean
+            ? async () => {
+                try {
+                  const { createRepurchaseBean } = await import(
+                    '@/lib/utils/beanRepurchaseUtils'
+                  );
+                  const newBeanData = await createRepurchaseBean(editingBean);
+                  // 关闭当前表单
+                  setShowBeanForm(false);
+                  setEditingBean(null);
+                  // 打开新的表单用于续购
+                  setTimeout(() => {
+                    setEditingBean(newBeanData as ExtendedCoffeeBean);
+                    setShowBeanForm(true);
+                  }, 300);
+                } catch (error) {
+                  console.error('续购失败:', error);
+                }
+              }
+            : undefined
+        }
       />
 
       {/* 咖啡豆详情独立渲染，与 Settings 同级 */}

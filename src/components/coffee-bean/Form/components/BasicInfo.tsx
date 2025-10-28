@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Camera, Image as ImageIcon, X } from 'lucide-react';
+import { Camera, Image as ImageIcon, X, CornerDownRight } from 'lucide-react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
@@ -26,6 +26,7 @@ interface BasicInfoProps {
   handleCapacityBlur?: () => void;
   toggleInTransitState: () => void;
   isEdit?: boolean;
+  onRepurchase?: () => void;
 }
 
 const BasicInfo: React.FC<BasicInfoProps> = ({
@@ -37,6 +38,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   handleCapacityBlur,
   toggleInTransitState,
   isEdit = false,
+  onRepurchase,
 }) => {
   // 处理容量和剩余容量的状态
   const [capacityValue, setCapacityValue] = useState('');
@@ -243,6 +245,19 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
               />
             </div>
           </div>
+
+          {/* 续购按钮 - 只在编辑模式下显示 */}
+          {isEdit && onRepurchase && (
+            <button
+              type="button"
+              onClick={onRepurchase}
+              className="mt-1 flex items-center text-xs text-neutral-500 transition-colors hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+              title="续购"
+            >
+              <CornerDownRight className="mr-1 h-3 w-3" />
+              续购
+            </button>
+          )}
         </div>
 
         <div className="space-y-2">

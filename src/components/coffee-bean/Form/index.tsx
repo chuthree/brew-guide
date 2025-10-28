@@ -32,6 +32,7 @@ interface CoffeeBeanFormProps {
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
   onCancel: () => void;
   initialBean?: ExtendedCoffeeBean;
+  onRepurchase?: () => void;
 }
 
 // 暴露给父组件的方法
@@ -47,7 +48,7 @@ const steps: StepConfig[] = [
 ];
 
 const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
-  ({ onSave, onCancel, initialBean }, ref) => {
+  ({ onSave, onCancel, initialBean, onRepurchase }, ref) => {
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('basic');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -702,6 +703,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
               handleCapacityBlur={handleCapacityBlur}
               toggleInTransitState={toggleInTransitState}
               isEdit={!!initialBean}
+              onRepurchase={onRepurchase}
             />
           );
 
