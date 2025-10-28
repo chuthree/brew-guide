@@ -34,8 +34,15 @@ const eslintConfig = [
       }],
       // 重新启用 any 类型检查，但设为警告而不是错误
       "@typescript-eslint/no-explicit-any": "warn",
-      // 重新启用 React Hooks 依赖检查，设为警告以便逐步修复
+      // 🔥 性能优化规则
+      // React Hooks 依赖检查 - 防止闭包陷阱和内存泄漏
       "react-hooks/exhaustive-deps": "warn",
+      // 禁止在 JSX 中使用内联函数（性能杀手）
+      "react/jsx-no-bind": ["warn", {
+        "allowArrowFunctions": false,
+        "allowBind": false,
+        "ignoreRefs": true
+      }],
       // 添加其他有用的规则（不需要类型信息的）
       "@typescript-eslint/no-unused-expressions": ["error", {
         "allowShortCircuit": true,

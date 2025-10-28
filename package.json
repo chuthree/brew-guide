@@ -19,6 +19,8 @@
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
     "build:desktop": "./build-desktop.sh",
+    "perf:check": "./scripts/perf-check.sh",
+    "perf:analyze": "ANALYZE=true pnpm build",
     "version": "1.3.12-beta.7"
   },
   "dependencies": {
