@@ -314,37 +314,36 @@ const TabContent: React.FC<TabContentProps> = ({
   // 简化的保存笔记处理 - 统一数据流避免竞态条件
   const handleSaveNote = async (note: BrewingNoteData) => {
     try {
-      const Storage = (await import('@/lib/core/storage')).Storage;
-      const existingNotesStr = await Storage.get('brewingNotes');
-      const existingNotes = existingNotesStr
-        ? JSON.parse(existingNotesStr)
-        : [];
+      // 🔥 使用 Zustand store 保存笔记
+      const { useBrewingNoteStore } = await import(
+        '@/lib/stores/brewingNoteStore'
+      );
 
-      const isExistingNote =
-        note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
-      const noteData = {
+      const noteData: any = {
         ...note,
         id: note.id || Date.now().toString(),
-        timestamp: isExistingNote
-          ? existingNotes.find((n: BrewingNoteData) => n.id === note.id)
-              ?.timestamp || Date.now()
-          : Date.now(),
+        timestamp: note.timestamp || Date.now(),
+        equipment: note.equipment || '',
+        method: note.method || '',
+        params: note.params || {
+          coffee: '',
+          water: '',
+          ratio: '',
+          grindSize: '',
+          temp: '',
+        },
       };
 
-      const updatedNotes = isExistingNote
-        ? existingNotes.map((n: BrewingNoteData) =>
-            n.id === noteData.id ? noteData : n
-          )
-        : [noteData, ...existingNotes];
+      // 判断是新笔记还是更新
+      const currentNotes = useBrewingNoteStore.getState().notes;
+      const isExistingNote = !!noteData.id && currentNotes.some((n: any) => n.id === noteData.id);
 
-      // 更新全局缓存并触发事件
-      try {
-        const { updateBrewingNotesCache } = await import(
-          '@/components/notes/List/globalCache'
-        );
-        await updateBrewingNotesCache(updatedNotes);
-      } catch (error) {
-        console.error('更新全局缓存失败:', error);
+      if (isExistingNote) {
+        // 更新现有笔记
+        await useBrewingNoteStore.getState().updateNote(noteData.id, noteData);
+      } else {
+        // 添加新笔记
+        await useBrewingNoteStore.getState().addNote(noteData);
       }
 
       setNoteSaved(true);
@@ -428,7 +427,6 @@ const TabContent: React.FC<TabContentProps> = ({
     return (
       <BrewingNoteForm
         id={undefined}
-        isOpen={true}
         onClose={handleCloseNoteForm}
         onSave={handleSaveNote}
         inBrewPage={true}

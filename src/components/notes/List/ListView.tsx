@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useTransition, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { BrewingNote } from '@/lib/core/config';
 import NoteItem from './NoteItem';
@@ -51,13 +51,14 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   equipmentNames = {},
   beanPrices = {},
 }) => {
-  const [_isPending, startTransition] = useTransition();
-  const [notes, setNotes] = useState<BrewingNote[]>([]); // 初始化为空数组，完全依赖props
   const [unitPriceCache] = useState<Record<string, number>>(beanPrices);
   const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false);
 
   // 使用风味维度hook - 在父组件中调用一次，然后传递给所有子组件
   const { getValidTasteRatings } = useFlavorDimensions();
+
+  // 🔥 直接使用 preFilteredNotes，不需要内部 state
+  const notes = preFilteredNotes || [];
 
   // 判断笔记是否为变动记录 - 纯函数，不需要缓存
   const isChangeRecord = (note: BrewingNote) => {
@@ -81,15 +82,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     
     return { regularNotes: regular, changeRecordNotes: changeRecords };
   }, [notes]);
-
-  // 直接响应preFilteredNotes的变化
-  useEffect(() => {
-    if (preFilteredNotes) {
-      startTransition(() => {
-        setNotes(preFilteredNotes);
-      });
-    }
-  }, [preFilteredNotes]);
 
   const handleToggleSelect = useCallback(
     (noteId: string, enterShareMode?: boolean) => {

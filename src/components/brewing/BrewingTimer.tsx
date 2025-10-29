@@ -623,31 +623,25 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   // 修改保存笔记函数，统一数据流避免竞态条件
   const handleSaveNote = useCallback(async (note: BrewingNoteData) => {
     try {
-      // 动态导入全局缓存，避免循环依赖
-      const { globalCache } = await import(
-        '@/components/notes/List/globalCache'
+      // 🔥 使用 Zustand store 保存笔记
+      const { useBrewingNoteStore } = await import(
+        '@/lib/stores/brewingNoteStore'
       );
-
-      // 从Storage获取现有笔记
-      const { Storage } = await import('@/lib/core/storage');
-      const existingNotesStr = await Storage.get('brewingNotes');
-      const existingNotes = existingNotesStr
-        ? JSON.parse(existingNotesStr)
-        : [];
-
-      // 检查是否是现有笔记
-      const isExistingNote =
-        note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
-
+      
       // 创建笔记数据 - 确保不保存完整的coffeeBean对象
-      const noteData = {
+      const noteData: any = {
         ...note,
         id: note.id || Date.now().toString(),
-        // 编辑现有笔记时保留原始时间戳，新建笔记时使用当前时间
-        timestamp: isExistingNote
-          ? existingNotes.find((n: BrewingNoteData) => n.id === note.id)
-              ?.timestamp || Date.now()
-          : Date.now(),
+        timestamp: note.timestamp || Date.now(),
+        equipment: note.equipment || '',
+        method: note.method || '',
+        params: note.params || {
+          coffee: '',
+          water: '',
+          ratio: '',
+          grindSize: '',
+          temp: '',
+        },
       };
 
       // 如果存在coffeeBean字段，移除它
@@ -655,22 +649,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         delete noteData.coffeeBean;
       }
 
-      let updatedNotes;
+      // 判断是新笔记还是更新
+      const currentNotes = useBrewingNoteStore.getState().notes;
+      const isExistingNote = !!noteData.id && currentNotes.some(n => n.id === noteData.id);
+
       if (isExistingNote) {
         // 更新现有笔记
-        updatedNotes = existingNotes.map((n: BrewingNoteData) =>
-          n.id === noteData.id ? noteData : n
-        );
+        await useBrewingNoteStore.getState().updateNote(noteData.id, noteData);
       } else {
-        // 将新笔记添加到列表开头
-        updatedNotes = [noteData, ...existingNotes];
+        // 添加新笔记
+        await useBrewingNoteStore.getState().addNote(noteData);
       }
-
-      // 更新全局缓存并触发事件
-      const { updateBrewingNotesCache } = await import(
-        '@/components/notes/List/globalCache'
-      );
-      await updateBrewingNotesCache(updatedNotes);
 
       // 设置笔记已保存标记
       localStorage.setItem('brewingNoteInProgress', 'false');
@@ -1976,7 +1965,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         >
           <BrewingNoteForm
             id="brewingNoteForm"
-            isOpen={showNoteForm}
             onClose={() => {
               setShowNoteForm(false);
               // 注意：这里不清除brewingNoteInProgress，保留未完成状态

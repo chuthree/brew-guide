@@ -154,10 +154,50 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
 
 // 🔥 使用 React.memo 优化组件
 export default React.memo(ChangeRecordNoteItem, (prevProps, nextProps) => {
-  return (
-    prevProps.note.id === nextProps.note.id &&
-    prevProps.note.timestamp === nextProps.note.timestamp &&
-    prevProps.isSelected === nextProps.isSelected &&
-    prevProps.isShareMode === nextProps.isShareMode
-  );
+  // UI 状态检查
+  if (
+    prevProps.isSelected !== nextProps.isSelected ||
+    prevProps.isShareMode !== nextProps.isShareMode
+  ) {
+    return false; // props 变化，需要重新渲染
+  }
+
+  // 笔记 ID 检查
+  if (prevProps.note.id !== nextProps.note.id) {
+    return false; // 不同的笔记，需要重新渲染
+  }
+
+  // 🔥 检查笔记内容是否变化
+  const prevNote = prevProps.note;
+  const nextNote = nextProps.note;
+
+  // 检查可能变化的字段
+  if (
+    prevNote.timestamp !== nextNote.timestamp ||
+    prevNote.notes !== nextNote.notes ||
+    prevNote.quickDecrementAmount !== nextNote.quickDecrementAmount
+  ) {
+    return false;
+  }
+
+  // 检查咖啡豆信息
+  if (
+    prevNote.coffeeBeanInfo?.name !== nextNote.coffeeBeanInfo?.name ||
+    prevNote.coffeeBeanInfo?.roastLevel !== nextNote.coffeeBeanInfo?.roastLevel
+  ) {
+    return false;
+  }
+
+  // 检查变动记录详情
+  if (
+    prevNote.changeRecord?.capacityAdjustment?.changeAmount !==
+    nextNote.changeRecord?.capacityAdjustment?.changeAmount ||
+    prevNote.changeRecord?.capacityAdjustment?.changeType !==
+    nextNote.changeRecord?.capacityAdjustment?.changeType
+  ) {
+    return false;
+  }
+
+  // 所有检查都通过，不需要重新渲染
+  return true;
 });

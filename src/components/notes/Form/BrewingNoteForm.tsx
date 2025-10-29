@@ -148,7 +148,6 @@ interface FormData {
 
 interface BrewingNoteFormProps {
   id?: string;
-  isOpen: boolean;
   onClose: () => void;
   onSave: (data: BrewingNoteData) => void;
   initialData: Partial<BrewingNoteData> & {
@@ -205,7 +204,6 @@ const validateNumericInput = (value: string): boolean => {
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   id,
-  isOpen,
   onClose: _onClose,
   onSave,
   initialData,
@@ -327,7 +325,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       step: number = 1
     ) => ({
       onTouchStart: (value: number) => (e: React.TouchEvent) => {
-        e.preventDefault();
+        // 移除 e.preventDefault() - 避免 passive event listener 警告
+        // 滑块组件本身会处理触摸事件，不需要在这里阻止默认行为
         e.stopPropagation();
         setCurrentSliderValue(value);
       },
@@ -1066,8 +1065,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       alert('保存笔记时出错，请重试');
     }
   };
-
-  if (!isOpen) return null;
 
   const containerClassName =
     'relative flex flex-col h-full overflow-y-auto overscroll-contain';

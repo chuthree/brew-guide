@@ -285,24 +285,85 @@ const NoteItem: React.FC<NoteItemProps> = ({
 // 🔥 使用 React.memo 优化组件，避免不必要的重新渲染
 // 只有当 props 真正变化时才重新渲染
 export default React.memo(NoteItem, (prevProps, nextProps) => {
-  // 快速检查：如果笔记ID和时间戳都相同，且UI状态相同，则不需要重新渲染
+  // UI 状态检查
   if (
-    prevProps.note.id === nextProps.note.id &&
-    prevProps.note.timestamp === nextProps.note.timestamp &&
-    prevProps.isSelected === nextProps.isSelected &&
-    prevProps.isShareMode === nextProps.isShareMode &&
-    prevProps.isLast === nextProps.isLast
+    prevProps.isSelected !== nextProps.isSelected ||
+    prevProps.isShareMode !== nextProps.isShareMode ||
+    prevProps.isLast !== nextProps.isLast
   ) {
-    // 只检查当前笔记使用的设备名称是否变化
-    const prevEquipmentName = prevProps.note.equipment
-      ? prevProps.equipmentNames[prevProps.note.equipment]
-      : undefined;
-    const nextEquipmentName = nextProps.note.equipment
-      ? nextProps.equipmentNames[nextProps.note.equipment]
-      : undefined;
-
-    return prevEquipmentName === nextEquipmentName;
+    return false; // props 变化，需要重新渲染
   }
 
-  return false;
+  // 笔记 ID 检查
+  if (prevProps.note.id !== nextProps.note.id) {
+    return false; // 不同的笔记，需要重新渲染
+  }
+
+  // 🔥 关键修复：检查笔记内容是否变化（深度比较）
+  // 这样可以捕获笔记编辑后的内容变化
+  const prevNote = prevProps.note;
+  const nextNote = nextProps.note;
+
+  // 检查可能变化的字段
+  if (
+    prevNote.timestamp !== nextNote.timestamp ||
+    prevNote.rating !== nextNote.rating ||
+    prevNote.notes !== nextNote.notes ||
+    prevNote.equipment !== nextNote.equipment ||
+    prevNote.method !== nextNote.method ||
+    prevNote.image !== nextNote.image ||
+    prevNote.totalTime !== nextNote.totalTime
+  ) {
+    return false; // 笔记内容变化，需要重新渲染
+  }
+
+  // 检查咖啡豆信息
+  if (
+    prevNote.coffeeBeanInfo?.name !== nextNote.coffeeBeanInfo?.name ||
+    prevNote.coffeeBeanInfo?.roastLevel !== nextNote.coffeeBeanInfo?.roastLevel
+  ) {
+    return false;
+  }
+
+  // 检查参数
+  if (
+    prevNote.params?.coffee !== nextNote.params?.coffee ||
+    prevNote.params?.water !== nextNote.params?.water ||
+    prevNote.params?.ratio !== nextNote.params?.ratio ||
+    prevNote.params?.grindSize !== nextNote.params?.grindSize ||
+    prevNote.params?.temp !== nextNote.params?.temp
+  ) {
+    return false;
+  }
+
+  // 检查口感 - 🔥 修复：检查所有风味维度（包括自定义维度）
+  const prevTasteKeys = Object.keys(prevNote.taste || {});
+  const nextTasteKeys = Object.keys(nextNote.taste || {});
+  
+  // 检查风味维度数量是否变化
+  if (prevTasteKeys.length !== nextTasteKeys.length) {
+    return false;
+  }
+  
+  // 检查每个风味维度的值是否变化
+  for (const key of nextTasteKeys) {
+    if (prevNote.taste?.[key] !== nextNote.taste?.[key]) {
+      return false;
+    }
+  }
+
+  // 检查设备名称映射
+  const prevEquipmentName = prevNote.equipment
+    ? prevProps.equipmentNames[prevNote.equipment]
+    : undefined;
+  const nextEquipmentName = nextNote.equipment
+    ? nextProps.equipmentNames[nextNote.equipment]
+    : undefined;
+
+  if (prevEquipmentName !== nextEquipmentName) {
+    return false;
+  }
+
+  // 所有检查都通过，不需要重新渲染
+  return true;
 });

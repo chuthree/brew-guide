@@ -54,8 +54,9 @@ import {
 import ListView from './ListView';
 import { SortOption, DateGroupingMode } from '../types';
 import { exportSelectedNotes } from '../Share/NotesExporter';
-import { useEnhancedNotesFiltering } from './hooks/useEnhancedNotesFiltering';
 import { extractExtractionTime, sortNotes } from '../utils';
+import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
+import { isSameEquipment, getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   isOpen,
@@ -216,10 +217,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     viewMode,
   ]); // 添加所有依赖项
 
-  // 🔥 使用缓存初始化笔记数据,避免闪烁
-  const [notes, setNotes] = useState<BrewingNote[]>(globalCache.notes || []);
+  // 🔥 从 Zustand Store 订阅笔记数据
+  const notes = useBrewingNoteStore(state => state.notes);
+  const loadNotes = useBrewingNoteStore(state => state.loadNotes);
+  const deleteNote = useBrewingNoteStore(state => state.deleteNote);
+  const updateNote = useBrewingNoteStore(state => state.updateNote);
+  
   const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>(
-    globalCache.equipmentNames || {}
+    {}
   );
   const [customEquipments, setCustomEquipments] = useState<
     import('@/lib/core/config').CustomEquipment[]
@@ -228,28 +233,88 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 预览容器引用
   const notesContainerRef = useRef<HTMLDivElement>(null);
 
-  // 🔥 使用增强的笔记筛选Hook（传入customEquipments用于兼容性比较）
-  const {
-    filteredNotes,
-    totalCount,
-    totalConsumption,
-    availableEquipments,
-    availableBeans,
-    availableDates,
-    debouncedUpdateFilters,
-  } = useEnhancedNotesFiltering({
-    notes: notes,
-    sortOption,
-    filterMode,
-    selectedEquipment,
-    selectedBean,
-    selectedDate,
-    dateGroupingMode,
-    searchQuery,
-    isSearching,
-    preFilteredNotes: undefined, // 暂时不使用，我们需要重新组织逻辑
-    customEquipments, // 🔥 传入自定义器具列表用于兼容性比较
-  });
+  //  简化：直接用 useMemo 筛选和排序，不需要复杂的 hook
+  const filteredNotes = useMemo(() => {
+    if (!notes || notes.length === 0) return [];
+
+    // 1. 先排序
+    const sortedNotes = sortNotes(notes, sortOption);
+
+    // 2. 再筛选
+    if (filterMode === 'equipment' && selectedEquipment) {
+      return sortedNotes.filter((note: BrewingNote) => {
+        return isSameEquipment(note.equipment, selectedEquipment, customEquipments);
+      });
+    } else if (filterMode === 'bean' && selectedBean) {
+      return sortedNotes.filter(
+        (note: BrewingNote) => note.coffeeBeanInfo?.name === selectedBean
+      );
+    } else if (filterMode === 'date' && selectedDate) {
+      return sortedNotes.filter((note: BrewingNote) => {
+        if (!note.timestamp) return false;
+        const date = new Date(note.timestamp);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        
+        let noteDate = '';
+        if (dateGroupingMode === 'year') noteDate = `${year}`;
+        else if (dateGroupingMode === 'month') noteDate = `${year}-${month}`;
+        else noteDate = `${year}-${month}-${day}`;
+        
+        return noteDate === selectedDate;
+      });
+    }
+
+    return sortedNotes;
+  }, [notes, sortOption, filterMode, selectedEquipment, selectedBean, selectedDate, dateGroupingMode, customEquipments]);
+
+  // � 计算可用的设备、豆子、日期列表
+  const availableEquipments = useMemo(() => {
+    const equipmentSet = new Set<string>();
+    notes.forEach((note: BrewingNote) => {
+      if (note.equipment) {
+        const normalizedId = getEquipmentIdByName(note.equipment, customEquipments);
+        equipmentSet.add(normalizedId);
+      }
+    });
+    return Array.from(equipmentSet).sort();
+  }, [notes, customEquipments]);
+
+  const availableBeans = useMemo(() => {
+    const beanSet = new Set<string>();
+    notes.forEach((note: BrewingNote) => {
+      if (note.coffeeBeanInfo?.name) {
+        beanSet.add(note.coffeeBeanInfo.name);
+      }
+    });
+    return Array.from(beanSet).sort();
+  }, [notes]);
+
+  const availableDates = useMemo(() => {
+    const dateSet = new Set<string>();
+    notes.forEach((note: BrewingNote) => {
+      if (note.timestamp) {
+        const date = new Date(note.timestamp);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        
+        let dateStr = '';
+        if (dateGroupingMode === 'year') dateStr = `${year}`;
+        else if (dateGroupingMode === 'month') dateStr = `${year}-${month}`;
+        else dateStr = `${year}-${month}-${day}`;
+        
+        dateSet.add(dateStr);
+      }
+    });
+    return Array.from(dateSet).sort((a, b) => b.localeCompare(a));
+  }, [notes, dateGroupingMode]);
+
+  const totalCount = filteredNotes.length;
+  const totalConsumption = useMemo(() => {
+    return calculateTotalCoffeeConsumption(filteredNotes);
+  }, [filteredNotes]);
 
   // 搜索过滤逻辑 - 在Hook之后定义以避免循环依赖
   const searchFilteredNotes = useMemo(() => {
@@ -364,199 +429,37 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 计算总咖啡消耗量
   const totalCoffeeConsumption = useRef(0);
 
-  // 🔥 使用 ref 跟踪组件挂载状态，防止在卸载后更新状态
-  const isMountedRef = useRef(false);
-  const isLoadingRef = useRef(false); // 使用 ref 而不是 globalCache 来控制并发
-
+    // 🔥 组件挂载时加载笔记数据和器具名称（不依赖 isOpen）
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // 简化的数据加载函数 - 参考咖啡豆的实现
-  const loadNotesData = useCallback(async () => {
-    // 防止并发加载
-    if (isLoadingRef.current) return;
-
-    try {
-      // 如果缓存已初始化且有数据，直接使用
-      if (globalCache.initialized && globalCache.notes.length > 0) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('📦 使用缓存的笔记数据');
-        }
-        setNotes(globalCache.notes);
-        setEquipmentNames(globalCache.equipmentNames);
-        totalCoffeeConsumption.current = globalCache.totalConsumption;
-        return;
-      }
-
-      isLoadingRef.current = true;
-
-      const { Storage } = await import('@/lib/core/storage');
-      const savedNotes = await Storage.get('brewingNotes');
-      const parsedNotes: BrewingNote[] = savedNotes
-        ? JSON.parse(savedNotes)
-        : [];
-
-      // 检查组件是否仍然挂载
-      if (!isMountedRef.current) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('组件已卸载，跳过状态更新');
-        }
-        return;
-      }
-
-      // 更新全局缓存
-      globalCache.notes = parsedNotes;
-      globalCache.lastUpdated = Date.now();
-      globalCache.initialized = true;
-      globalCache.totalConsumption =
-        calculateTotalCoffeeConsumption(parsedNotes);
-
-      // 更新笔记数据
-      setNotes(parsedNotes);
-
-      // 异步加载设备名称映射
-      const loadEquipmentData = async () => {
-        if (!isMountedRef.current) return;
-
-        const { equipmentList } = await import('@/lib/core/config');
-        const { loadCustomEquipments } = await import(
-          '@/lib/managers/customEquipments'
-        );
-        const customEquips = await loadCustomEquipments();
-
-        if (!isMountedRef.current) return;
-
-        setCustomEquipments(customEquips);
-
-        const namesMap: Record<string, string> = {};
-        equipmentList.forEach(equipment => {
-          namesMap[equipment.id] = equipment.name;
-        });
-        customEquips.forEach(equipment => {
-          namesMap[equipment.id] = equipment.name;
-        });
-
-        // 更新缓存中的设备名称
-        globalCache.equipmentNames = namesMap;
-        setEquipmentNames(namesMap);
-
-        // 更新总消耗量引用
-        totalCoffeeConsumption.current = globalCache.totalConsumption;
-      };
-
-      // 立即加载设备数据
-      loadEquipmentData();
-    } catch (error) {
-      console.error('加载笔记数据失败:', error);
-    } finally {
-      isLoadingRef.current = false;
-    }
-  }, []);
-
-  // 监听 isOpen 变化，打开时加载数据（参考咖啡豆实现）
-  useEffect(() => {
-    if (isOpen) {
-      loadNotesData();
-    }
-  }, [isOpen, loadNotesData]);
-
-  // 简化存储监听 - 只监听关键的数据变化事件
-  // 🔥 修复事件监听器泄漏：使用 useCallback 确保引用稳定，正确移除监听器
-  const debouncedLoadRef = useRef<NodeJS.Timeout | null>(null);
-
-  // 🔥 使用 useCallback 创建稳定的事件处理函数引用
-  const handleStorageChange = useCallback(
-    (e: Event) => {
-      const event = e as CustomEvent;
-      if (event.detail?.key === 'brewingNotes') {
-        // 🔥 清除缓存,强制重新加载
-        globalCache.lastUpdated = 0;
-        globalCache.initialized = false;
-
-        // 清除之前的防抖定时器
-        if (debouncedLoadRef.current) {
-          clearTimeout(debouncedLoadRef.current);
-        }
-
-        // 使用防抖延迟加载，避免连续保存时的重复刷新
-        debouncedLoadRef.current = setTimeout(() => {
-          if (isMountedRef.current) {
-            loadNotesData();
-          }
-        }, 150); // 150ms 防抖延迟
-      }
-    },
-    [loadNotesData]
-  );
-
-  const handleBrewingNotesUpdate = useCallback(() => {
-    // 🔥 清除缓存,强制重新加载
-    globalCache.lastUpdated = 0;
-    globalCache.initialized = false;
-
-    // 清除之前的防抖定时器
-    if (debouncedLoadRef.current) {
-      clearTimeout(debouncedLoadRef.current);
-    }
-
-    // 使用防抖延迟加载
-    debouncedLoadRef.current = setTimeout(() => {
-      if (isMountedRef.current) {
-        loadNotesData();
-      }
-    }, 150);
-  }, [loadNotesData]);
-
-  // 🔥 监听笔记数据立即更新事件 - 类似咖啡豆的实现，无延迟
-  useEffect(() => {
-    const handleBrewingNotesDataChanged = () => {
-      // 直接使用缓存数据更新UI，因为缓存已经在保存时同步更新
-      if (globalCache.initialized && globalCache.notes.length >= 0) {
-        setNotes(globalCache.notes);
-        setEquipmentNames(globalCache.equipmentNames);
-        totalCoffeeConsumption.current = globalCache.totalConsumption;
-      }
-    };
-
-    window.addEventListener(
-      'brewingNotesDataChanged',
-      handleBrewingNotesDataChanged
-    );
-
-    return () => {
-      window.removeEventListener(
-        'brewingNotesDataChanged',
-        handleBrewingNotesDataChanged
+    // 初始化加载笔记
+    loadNotes();
+    
+    // 加载器具名称
+    const loadEquipmentData = async () => {
+      const { equipmentList } = await import('@/lib/core/config');
+      const { loadCustomEquipments } = await import(
+        '@/lib/managers/customEquipments'
       );
-    };
-  }, []);
+      const customEquips = await loadCustomEquipments();
+      setCustomEquipments(customEquips);
 
+      const namesMap: Record<string, string> = {};
+      equipmentList.forEach(equipment => {
+        namesMap[equipment.id] = equipment.name;
+      });
+      customEquips.forEach(equipment => {
+        namesMap[equipment.id] = equipment.name;
+      });
+      setEquipmentNames(namesMap);
+    };
+
+    loadEquipmentData();
+  }, [loadNotes]); // 只在组件挂载时执行一次
+
+  // 计算总消耗量
   useEffect(() => {
-    if (!isOpen) return;
-
-    // 🔥 使用稳定的函数引用，确保能正确移除
-    window.addEventListener('storage:changed', handleStorageChange);
-    window.addEventListener('brewingNotesUpdated', handleBrewingNotesUpdate);
-
-    return () => {
-      // 清理防抖定时器
-      if (debouncedLoadRef.current) {
-        clearTimeout(debouncedLoadRef.current);
-        debouncedLoadRef.current = null;
-      }
-
-      // 🔥 移除事件监听器 - 使用相同的函数引用
-      window.removeEventListener('storage:changed', handleStorageChange);
-      window.removeEventListener(
-        'brewingNotesUpdated',
-        handleBrewingNotesUpdate
-      );
-    };
-  }, [isOpen, handleStorageChange, handleBrewingNotesUpdate]);
+    totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(notes);
+  }, [notes]);
 
   // 显示消息提示 - 使用 LightToast
   const showToastMessage = (
@@ -659,20 +562,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         // 容量恢复失败不应阻止笔记删除，但需要记录错误
       }
 
-      // 删除笔记
-      const updatedNotes = notes.filter(note => note.id !== noteId);
-
-      // 更新全局缓存并触发事件
-      const { updateBrewingNotesCache } = await import(
-        '@/components/notes/List/globalCache'
-      );
-      await updateBrewingNotesCache(updatedNotes);
-
-      // 直接更新本地状态
-      setNotes(updatedNotes);
-
-      // 更新总消耗量
-      totalCoffeeConsumption.current = globalCache.totalConsumption;
+      // 删除笔记 - 使用 Zustand store
+      deleteNote(noteId);
 
       showToastMessage('笔记已删除', 'success');
     } catch (error) {
@@ -973,29 +864,15 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
       // 检查记录是否已存在
       if (isNewRecord) {
-        // 添加新记录
-        parsedNotes = [updatedRecord, ...parsedNotes];
+        // 添加新记录 - 使用 Zustand store 的 addNote 方法（会自动触发事件）
+        const { useBrewingNoteStore } = await import(
+          '@/lib/stores/brewingNoteStore'
+        );
+        await useBrewingNoteStore.getState().addNote(updatedRecord);
       } else {
-        // 更新现有记录
-        parsedNotes = parsedNotes.map(note => {
-          if (note.id === updatedRecord.id) {
-            return updatedRecord;
-          }
-          return note;
-        });
+        // 更新现有记录 - 使用 Zustand store 的 updateNote 方法（会自动触发事件）
+        updateNote(updatedRecord.id, updatedRecord);
       }
-
-      // 更新全局缓存并触发事件
-      const { updateBrewingNotesCache } = await import(
-        '@/components/notes/List/globalCache'
-      );
-      await updateBrewingNotesCache(parsedNotes);
-
-      // 直接更新本地状态
-      setNotes(parsedNotes);
-
-      // 更新总消耗量
-      totalCoffeeConsumption.current = globalCache.totalConsumption;
 
       // 关闭模态和编辑状态
       setEditingChangeRecord(null);
@@ -1023,9 +900,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const handleSortChange = (option: typeof sortOption) => {
     setSortOption(option);
     saveSortOptionPreference(option);
-    // 已保存到本地存储
-    // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
-    debouncedUpdateFilters({ sortOption: option });
   };
 
   // 处理搜索排序选项变化 - 独立于普通排序
@@ -1105,67 +979,35 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     globalCache.selectedEquipment = null;
     globalCache.selectedBean = null;
     globalCache.selectedDate = null;
-    // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
-    debouncedUpdateFilters({
-      filterMode: mode,
-      selectedEquipment: null,
-      selectedBean: null,
-      selectedDate: null,
-    });
   };
 
   // 处理设备选择变化
-  const handleEquipmentClick = useCallback(
-    (equipment: string | null) => {
-      setSelectedEquipment(equipment);
-      saveSelectedEquipmentPreference(equipment);
-      // 已保存到本地存储
-      // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
-      debouncedUpdateFilters({ selectedEquipment: equipment });
-    },
-    [debouncedUpdateFilters]
-  );
+  const handleEquipmentClick = useCallback((equipment: string | null) => {
+    setSelectedEquipment(equipment);
+    saveSelectedEquipmentPreference(equipment);
+  }, []);
 
   // 处理咖啡豆选择变化
-  const handleBeanClick = useCallback(
-    (bean: string | null) => {
-      setSelectedBean(bean);
-      saveSelectedBeanPreference(bean);
-      // 已保存到本地存储
-      // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
-      debouncedUpdateFilters({ selectedBean: bean });
-    },
-    [debouncedUpdateFilters]
-  );
+  const handleBeanClick = useCallback((bean: string | null) => {
+    setSelectedBean(bean);
+    saveSelectedBeanPreference(bean);
+  }, []);
 
   // 处理日期选择变化
-  const handleDateClick = useCallback(
-    (date: string | null) => {
-      setSelectedDate(date);
-      saveSelectedDatePreference(date);
-      // 已保存到本地存储
-      // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
-      debouncedUpdateFilters({ selectedDate: date });
-    },
-    [debouncedUpdateFilters]
-  );
+  const handleDateClick = useCallback((date: string | null) => {
+    setSelectedDate(date);
+    saveSelectedDatePreference(date);
+  }, []);
 
   // 处理日期分组模式变化
-  const handleDateGroupingModeChange = useCallback(
-    (mode: DateGroupingMode) => {
-      setDateGroupingMode(mode);
-      saveDateGroupingModePreference(mode);
-      // 已保存到本地存储
-      // 切换粒度时清空选择的日期，因为格式会改变
-      setSelectedDate(null);
-      saveSelectedDatePreference(null);
-      globalCache.dateGroupingMode = mode;
-      globalCache.selectedDate = null;
-      // 数据筛选由 useEnhancedNotesFiltering Hook 自动处理
-      debouncedUpdateFilters({ dateGroupingMode: mode, selectedDate: null });
-    },
-    [debouncedUpdateFilters]
-  );
+  const handleDateGroupingModeChange = useCallback((mode: DateGroupingMode) => {
+    setDateGroupingMode(mode);
+    saveDateGroupingModePreference(mode);
+    setSelectedDate(null);
+    saveSelectedDatePreference(null);
+    globalCache.dateGroupingMode = mode;
+    globalCache.selectedDate = null;
+  }, []);
 
   // 处理笔记选择/取消选择
   const handleToggleSelect = (noteId: string, enterShareMode = false) => {
@@ -1305,8 +1147,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 计算是否有图片笔记（用于禁用/启用图片流按钮）
   const hasImageNotes = useMemo(() => {
     // 基于所有原始笔记数据检查是否有图片
-    const allOriginalNotes = globalCache.notes;
-    return allOriginalNotes.some(
+    return notes.some(
       note => note.image && note.image.trim() !== ''
     );
   }, [notes]); // 依赖notes以便在笔记数据变化时重新计算
@@ -1322,13 +1163,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
     // 基于原始的所有笔记数据来计算有图片的分类选项
     // 这样确保即使选择了某个分类，其他分类选项仍然可见
-    const allOriginalNotes = globalCache.notes; // 使用原始的、未经筛选的笔记数据
 
     // 如果是搜索模式，基于搜索结果；否则基于所有原始笔记
     const baseNotes =
       isSearching && searchQuery.trim()
         ? searchFilteredNotes
-        : allOriginalNotes;
+        : notes;
 
     // 过滤出有图片的记录
     const allNotesWithImages = baseNotes.filter(
@@ -1401,12 +1241,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 当没有图片笔记时，自动关闭图片流模式并切换回列表模式
   // 但只在数据已经加载完成后才执行此检查，避免初始化时误判
   useEffect(() => {
-    // 只有当数据已经初始化且确实没有图片笔记时才关闭
+    // 只有当确实没有图片笔记时才关闭
     if (
-      globalCache.initialized &&
+      notes.length > 0 &&
       imageFlowStats &&
-      imageFlowStats.count === 0 &&
-      notes.length > 0
+      imageFlowStats.count === 0
     ) {
       // 关闭所有图片流模式
       setImageFlowMode(false, false, false);

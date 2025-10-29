@@ -241,7 +241,6 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
         {initialData && (
           <BrewingNoteForm
             id={initialData.id}
-            isOpen={true}
             onClose={handleClose}
             onSave={handleSave}
             initialData={initialData}

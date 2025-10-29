@@ -304,6 +304,7 @@ export const updateBrewingNotesCache = async (
     globalCache.notes = updatedNotes;
     globalCache.lastUpdated = Date.now();
     globalCache.totalConsumption = calculateConsumption(updatedNotes);
+    globalCache.initialized = true; // 🔥 标记缓存已初始化
 
     // 保存到存储
     const { Storage } = await import('@/lib/core/storage');

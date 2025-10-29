@@ -307,34 +307,27 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         const notes = notesStr ? JSON.parse(notesStr) : [];
 
         const stages = selectedMethod?.params.stages || [];
-        const newNote = {
+        const newNote: any = {
           ...data,
           id: Date.now().toString(),
           timestamp: Date.now(),
+          equipment: data.equipment || '',
+          method: data.method || '',
+          params: data.params || {
+            coffee: '',
+            water: '',
+            ratio: '',
+            grindSize: '',
+            temp: '',
+          },
           stages,
         };
 
-        const updatedNotes = [newNote, ...notes];
-
-        // 立即同步更新全局缓存，避免竞态条件
-        try {
-          const { globalCache } = await import(
-            '@/components/notes/List/globalCache'
-          );
-          globalCache.notes = updatedNotes;
-
-          // 重新计算总消耗量
-          const { calculateTotalCoffeeConsumption } = await import(
-            '@/components/notes/List/globalCache'
-          );
-          globalCache.totalConsumption =
-            calculateTotalCoffeeConsumption(updatedNotes);
-        } catch (error) {
-          console.error('更新全局缓存失败:', error);
-        }
-
-        // 保存到存储 - Storage.set() 会自动触发事件
-        await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+        // 🔥 使用 Zustand store 保存笔记
+        const { useBrewingNoteStore } = await import(
+          '@/lib/stores/brewingNoteStore'
+        );
+        await useBrewingNoteStore.getState().addNote(newNote);
 
         // 扣减咖啡豆用量
         if (selectedCoffeeBean && currentBrewingMethod?.params.coffee) {

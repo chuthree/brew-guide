@@ -478,7 +478,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       content: (
         <BrewingNoteForm
           id={initialNote?.id}
-          isOpen={true}
           onClose={() => {}} // 不提供关闭功能，由模态框控制
           onSave={handleSaveNote}
           initialData={getDefaultNote()}

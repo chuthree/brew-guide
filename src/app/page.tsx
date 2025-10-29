@@ -15,6 +15,7 @@ import {
   commonMethods,
   CustomEquipment,
   type Method,
+  type BrewingNote,
 } from '@/lib/core/config';
 import { initCapacitor } from '@/lib/app/capacitor';
 // 只导入需要的类型
@@ -2008,52 +2009,48 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   const handleSaveBrewingNote = async (note: BrewingNoteData) => {
     try {
-      const { globalCache } = await import(
-        '@/components/notes/List/globalCache'
+      // 使用 Zustand store 保存笔记
+      const { useBrewingNoteStore } = await import(
+        '@/lib/stores/brewingNoteStore'
       );
-      const { Storage } = await import('@/lib/core/storage');
-      const existingNotesStr = await Storage.get('brewingNotes');
-      const existingNotes = existingNotesStr
-        ? JSON.parse(existingNotesStr)
-        : [];
-
-      let updatedNotes;
+      
       const newNoteId = note.id || Date.now().toString();
-      const isExistingNote =
-        note.id && existingNotes.some((n: BrewingNoteData) => n.id === note.id);
+      const timestamp = note.timestamp || Date.now();
+      
+      // 🔥 修复：检查笔记是否真的存在于 store 中，而不是仅判断是否有 ID
+      const currentNotes = useBrewingNoteStore.getState().notes;
+      const isExistingNote = !!note.id && currentNotes.some(n => n.id === note.id);
+
+      const noteToSave = {
+        ...note,
+        id: newNoteId,
+        timestamp,
+        equipment: note.equipment || '',
+        method: note.method || '',
+        params: note.params || {
+          coffee: '',
+          water: '',
+          ratio: '',
+          grindSize: '',
+          temp: '',
+        },
+      } as BrewingNote;
 
       if (isExistingNote) {
-        updatedNotes = existingNotes.map((n: BrewingNoteData) => {
-          if (n.id === note.id) {
-            return {
-              ...note,
-              timestamp: n.timestamp,
-            };
-          }
-          return n;
-        });
+        // 更新现有笔记
+        await useBrewingNoteStore.getState().updateNote(newNoteId, noteToSave);
       } else {
-        const newNote = {
-          ...note,
-          id: newNoteId,
-          timestamp: note.timestamp || Date.now(),
-        };
-
-        updatedNotes = [newNote, ...existingNotes];
+        // 添加新笔记
+        await useBrewingNoteStore.getState().addNote(noteToSave);
       }
-
-      // 更新全局缓存并触发事件
-      const { updateBrewingNotesCache } = await import(
-        '@/components/notes/List/globalCache'
-      );
-      await updateBrewingNotesCache(updatedNotes);
 
       setShowNoteFormModal(false);
       setCurrentEditingNote({});
 
+      // 事件触发已在 store 中自动完成
       saveMainTabPreference('笔记');
       setActiveMainTab('笔记');
-    } catch (_error) {
+    } catch (error) {
       // 保存冲煮笔记失败
       alert('保存失败，请重试');
     }
@@ -2062,28 +2059,34 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 处理笔记编辑模态框的保存
   const handleSaveBrewingNoteEdit = async (note: BrewingNoteData) => {
     try {
-      const { globalCache } = await import(
-        '@/components/notes/List/globalCache'
+      // 使用 Zustand store 保存笔记
+      const { useBrewingNoteStore } = await import(
+        '@/lib/stores/brewingNoteStore'
       );
-      const { Storage } = await import('@/lib/core/storage');
-      const existingNotesStr = await Storage.get('brewingNotes');
-      const existingNotes = existingNotesStr
-        ? JSON.parse(existingNotesStr)
-        : [];
+      
+      const noteToSave = {
+        ...note,
+        id: note.id || Date.now().toString(),
+        timestamp: note.timestamp || Date.now(),
+        equipment: note.equipment || '',
+        method: note.method || '',
+        params: note.params || {
+          coffee: '',
+          water: '',
+          ratio: '',
+          grindSize: '',
+          temp: '',
+        },
+      } as BrewingNote;
+      
+      // 🔥 修复：复制操作应该被视为新笔记，即使它有 id
+      const isNewNote = isBrewingNoteCopy || !note.id;
 
-      // 检查笔记是否已存在于数据库中
-      const existingNoteIndex = existingNotes.findIndex(
-        (n: BrewingNoteData) => n.id === note.id
-      );
-      const isNewNote = existingNoteIndex === -1;
-
-      let updatedNotes;
       if (isNewNote) {
         // 添加新笔记
-        updatedNotes = [note, ...existingNotes];
+        await useBrewingNoteStore.getState().addNote(noteToSave);
 
         // 如果是复制操作，需要扣除咖啡豆剩余量
-        // （因为 BrewingNoteForm 对于复制的笔记不会扣除，只会计算差值）
         if (isBrewingNoteCopy && note.beanId && note.params?.coffee) {
           try {
             const { CoffeeBeanManager } = await import(
@@ -2107,25 +2110,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
       } else {
         // 更新现有笔记
-        updatedNotes = existingNotes.map((n: BrewingNoteData) => {
-          if (n.id === note.id) {
-            return note;
-          }
-          return n;
-        });
+        await useBrewingNoteStore.getState().updateNote(noteToSave.id, noteToSave);
       }
-
-      // 更新全局缓存并触发事件
-      const { updateBrewingNotesCache } = await import(
-        '@/components/notes/List/globalCache'
-      );
-      await updateBrewingNotesCache(updatedNotes);
 
       setBrewingNoteEditOpen(false);
       setBrewingNoteEditData(null);
       setIsBrewingNoteCopy(false);
 
-      // 显示成功提示
+      // 显示成功提示（事件触发已在 store 中自动完成）
       const { showToast } = await import(
         '@/components/common/feedback/LightToast'
       );
@@ -2134,7 +2126,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         type: 'success',
       });
     } catch (error) {
-      console.error('保存笔记失败:', error);
       alert('保存失败，请重试');
     }
   };
