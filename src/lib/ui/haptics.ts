@@ -140,7 +140,7 @@ export const selectionEnd = async (): Promise<void> => {
 /**
  * 为了兼容现有代码，提供与旧函数名对应的别名
  */
-export const hapticFeedback = impactFeedback;
+const hapticFeedback = impactFeedback;
 
 // 导出所有函数作为默认导出
 const hapticsUtils = {

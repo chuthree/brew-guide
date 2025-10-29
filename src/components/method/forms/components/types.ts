@@ -1,7 +1,7 @@
 import { Method } from '@/lib/core/config';
 
 // 定义注水方式基本类型，普通器具和意式机共用的基础接口
-export type BasePourType = string;
+type BasePourType = string;
 
 // 定义意式机特有的注水方式值，与config.ts中保持一致
 export type EspressoPourTypeValues = 'extraction' | 'beverage' | 'other';

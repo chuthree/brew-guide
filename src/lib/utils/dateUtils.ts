@@ -67,7 +67,7 @@ export function parseDateToTimestamp(dateStr: string): number {
  * @param dateStr 日期字符串
  * @returns 格式化后的日期字符串，例如 "2023-05-01"
  */
-export function formatDate(dateStr: string): string {
+function formatDate(dateStr: string): string {
   if (!dateStr) return '';
 
   try {
@@ -94,7 +94,7 @@ export function formatDate(dateStr: string): string {
  * @param dateStr2 第二个日期字符串（默认为今天）
  * @returns 天数差（正整数）
  */
-export function daysBetween(dateStr1: string, dateStr2?: string): number {
+function daysBetween(dateStr1: string, dateStr2?: string): number {
   if (!dateStr1) return 0;
 
   const timestamp1 = parseDateToTimestamp(dateStr1);

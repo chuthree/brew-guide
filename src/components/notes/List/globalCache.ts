@@ -273,7 +273,7 @@ export const initializeGlobalCache = async (): Promise<void> => {
 };
 
 // 强制重新初始化全局缓存 - 用于手动刷新
-export const forceReinitializeGlobalCache = async (): Promise<void> => {
+const forceReinitializeGlobalCache = async (): Promise<void> => {
   globalCache.initialized = false;
   globalCache.isLoading = false;
   await initializeGlobalCache();
@@ -296,7 +296,7 @@ globalCache.sortOption = getSortOptionPreference();
  * 更新笔记缓存并触发更新事件的通用函数
  * 用于在保存笔记后统一更新缓存和触发事件
  */
-export const updateBrewingNotesCache = async (
+const updateBrewingNotesCache = async (
   updatedNotes: BrewingNote[]
 ): Promise<void> => {
   try {
@@ -357,7 +357,7 @@ export const addSearchHistory = (query: string): void => {
 };
 
 // 从历史中移除单条记录
-export const removeSearchHistoryItem = (query: string): void => {
+const removeSearchHistoryItem = (query: string): void => {
   const history = getSearchHistoryPreference();
   const newHistory = history.filter(item => item !== query);
   saveSearchHistoryPreference(newHistory);

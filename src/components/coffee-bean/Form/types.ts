@@ -8,7 +8,7 @@ export type { CoffeeBean, BlendComponent };
 export type ExtendedCoffeeBean = CoffeeBean;
 
 // 表单属性接口
-export interface CoffeeBeanFormProps {
+interface CoffeeBeanFormProps {
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
   onCancel: () => void;
   initialBean?: ExtendedCoffeeBean;

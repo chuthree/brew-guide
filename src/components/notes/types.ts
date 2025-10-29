@@ -25,7 +25,7 @@ export const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
 };
 
 // 排序选项的显示名称
-export const SORT_LABELS: Record<SortOption, string> = {
+const SORT_LABELS: Record<SortOption, string> = {
   [SORT_OPTIONS.TIME_DESC]: '时间',
   [SORT_OPTIONS.TIME_ASC]: '时间',
   [SORT_OPTIONS.RATING_DESC]: '评分',
@@ -35,7 +35,7 @@ export const SORT_LABELS: Record<SortOption, string> = {
 };
 
 // 消息提示状态接口
-export interface ToastState {
+interface ToastState {
   visible: boolean;
   message: string;
   type: 'success' | 'error' | 'info';
@@ -123,7 +123,7 @@ export interface AddNoteButtonProps {
 }
 
 // 分享笔记按钮属性
-export interface ShareButtonsProps {
+interface ShareButtonsProps {
   selectedNotes: BrewingNote[];
   onCancel: () => void;
   onSave: () => void;
@@ -137,6 +137,6 @@ export interface ToastProps {
 }
 
 // 编辑笔记数据类型
-export interface EditingNoteData extends Partial<BrewingNoteData> {
+interface EditingNoteData extends Partial<BrewingNoteData> {
   coffeeBean?: CoffeeBean | null;
 }

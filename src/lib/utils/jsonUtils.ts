@@ -207,14 +207,14 @@ export function extractJsonFromText(
 
       if (
         !equipment.animationType ||
-        !['v60', 'kalita', 'origami', 'clever', 'custom'].includes(
+        !['v60', 'kalita', 'origami', 'clever', 'custom', 'espresso'].includes(
           equipment.animationType
         )
       ) {
         throw new Error('无效的器具动画类型');
       }
 
-      // 验证自定义SVG（如果是自定义类型）
+      // 验证自定义SVG（如果是自定义类型且不是意式机）
       if (equipment.animationType === 'custom' && !equipment.customShapeSvg) {
         throw new Error('自定义器具缺少形状SVG');
       }
@@ -413,7 +413,7 @@ export function parseMethodFromJson(jsonString: string): Method | null {
 /**
  * 获取示例JSON
  */
-export function getExampleJson() {
+function getExampleJson() {
   return `{
   "equipment": "V60",
   "method": "改良分段式一刀流",
@@ -463,7 +463,7 @@ export function getExampleJson() {
 /**
  * 将Method对象转换为JSON字符串，用于分享
  */
-export function methodToJson(method: Method): string {
+function methodToJson(method: Method): string {
   // 检查是否是意式咖啡方案
   const isEspresso = method.params.stages.some(
     stage => stage.pourType === 'extraction' || stage.pourType === 'beverage'
@@ -499,7 +499,7 @@ export function methodToJson(method: Method): string {
  * 生成咖啡豆识别模板JSON
  * 用于生成AI识别咖啡豆图片的提示词
  */
-export function generateBeanTemplateJson() {
+function generateBeanTemplateJson() {
   return `{
   "name": "",
   "image": "",
@@ -780,7 +780,7 @@ export function methodToReadableText(
  * @param note 冲煮记录对象
  * @returns 格式化的可读文本
  */
-export function brewingNoteToReadableText(note: BrewingNote): string {
+function brewingNoteToReadableText(note: BrewingNote): string {
   const { equipment, method, params, coffeeBeanInfo, rating, taste, notes } =
     note;
 

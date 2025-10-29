@@ -192,7 +192,7 @@ export async function generateDeviceId(): Promise<string> {
 /**
  * 格式化文件大小
  */
-export function formatFileSize(bytes: number): string {
+function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B';
 
   const k = 1024;
@@ -205,7 +205,7 @@ export function formatFileSize(bytes: number): string {
 /**
  * 格式化时间差
  */
-export function formatTimeDiff(timestamp: number): string {
+function formatTimeDiff(timestamp: number): string {
   const now = Date.now();
   const diff = now - timestamp;
 
@@ -257,7 +257,7 @@ export function deepClone<T>(obj: T): T {
 /**
  * 防抖函数
  */
-export function debounce<T extends (...args: unknown[]) => unknown>(
+function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -279,7 +279,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 /**
  * 节流函数
  */
-export function throttle<T extends (...args: unknown[]) => unknown>(
+function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {

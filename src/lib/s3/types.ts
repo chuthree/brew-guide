@@ -74,7 +74,7 @@ export interface SyncPlan {
 /**
  * 同步方向
  */
-export type SyncDirection = 'upload' | 'download' | 'none' | 'conflict';
+type SyncDirection = 'upload' | 'download' | 'none' | 'conflict';
 
 /**
  * 冲突解决策略
@@ -205,7 +205,7 @@ export interface FileChange {
 /**
  * 同步状态
  */
-export interface SyncStatus {
+interface SyncStatus {
   /** 是否正在同步 */
   inProgress: boolean;
   /** 最后同步时间 */

@@ -19,7 +19,7 @@ export type ExpandedStage = {
 };
 
 // 计时器组件属性接口
-export interface BrewingTimerProps {
+interface BrewingTimerProps {
   currentBrewingMethod: Method | null;
   onTimerComplete?: () => void;
   onStatusChange?: (status: { isRunning: boolean }) => void;
@@ -38,6 +38,6 @@ export interface BrewingTimerProps {
 }
 
 // 笔记表单初始数据类型
-export type NoteFormInitialData = Partial<BrewingNoteData> & {
+type NoteFormInitialData = Partial<BrewingNoteData> & {
   coffeeBean?: CoffeeBean | null;
 };

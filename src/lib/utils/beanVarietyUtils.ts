@@ -81,7 +81,7 @@ export const getBeanVarieties = (bean: CoffeeBean): string[] => {
  * @param bean 咖啡豆对象
  * @returns 主要品种名称，如果没有则返回null
  */
-export const getBeanPrimaryVariety = (
+const getBeanPrimaryVariety = (
   bean: ExtendedCoffeeBean
 ): string | null => {
   const varieties = getBeanVarieties(bean);
@@ -108,7 +108,7 @@ export const beanHasVariety = (
  * @param bean 咖啡豆对象
  * @returns 品种显示文本或null
  */
-export const getBeanVarietyDisplay = (
+const getBeanVarietyDisplay = (
   bean: ExtendedCoffeeBean
 ): string | null => {
   const varieties = getBeanVarieties(bean);
@@ -186,7 +186,7 @@ export const extractUniqueOrigins = (beans: CoffeeBean[]): string[] => {
  * @param beans 咖啡豆数组
  * @returns 排序后的唯一处理法数组
  */
-export const extractUniqueProcesses = (beans: CoffeeBean[]): string[] => {
+const extractUniqueProcesses = (beans: CoffeeBean[]): string[] => {
   const processesSet = new Set<string>();
 
   beans.forEach(bean => {
@@ -214,7 +214,7 @@ export const beanHasOrigin = (bean: CoffeeBean, origin: string): boolean => {
  * @param process 要检查的处理法名称
  * @returns 是否包含该处理法
  */
-export const beanHasProcess = (
+const beanHasProcess = (
   bean: ExtendedCoffeeBean,
   process: string
 ): boolean => {

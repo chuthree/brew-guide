@@ -241,7 +241,7 @@ function captureImageWithHtmlInput(
 /**
  * 检查是否支持相机功能
  */
-export function isCameraSupported(): boolean {
+function isCameraSupported(): boolean {
   if (Capacitor.isNativePlatform()) {
     return true;
   }
@@ -253,7 +253,7 @@ export function isCameraSupported(): boolean {
 /**
  * 请求相机权限（仅在原生平台有效）
  */
-export async function requestCameraPermissions(): Promise<boolean> {
+async function requestCameraPermissions(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     return true; // 网页端不需要显式权限
   }

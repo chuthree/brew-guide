@@ -169,7 +169,7 @@ export const useCoffeeBeanData = () => {
 /**
  * 清除全局缓存（用于测试或特殊情况）
  */
-export const clearGlobalBeanCache = () => {
+const clearGlobalBeanCache = () => {
   globalBeanCache.beans = [];
   globalBeanCache.initialized = false;
   globalBeanCache.isLoading = false;

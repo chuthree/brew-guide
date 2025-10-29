@@ -49,7 +49,7 @@ export interface TimerEventCallbacks {
 /**
  * 创建初始计时管理器状态
  */
-export const createInitialTimerManagerState = (): TimerManagerState => ({
+const createInitialTimerManagerState = (): TimerManagerState => ({
   mainTimerId: null,
   currentTime: 0,
   isRunning: false,
@@ -79,7 +79,7 @@ export const stopMainTimer = (timerId: NodeJS.Timeout | null): void => {
  * @param callbacks 回调函数
  * @returns 更新后的状态
  */
-export const startTimer = (
+const startTimer = (
   state: TimerManagerState,
   expandedStages: ExpandedStage[],
   audioState: AudioState,
@@ -303,7 +303,7 @@ export const startTimer = (
  * @param callbacks 回调函数
  * @returns 更新后的状态
  */
-export const pauseTimer = (
+const pauseTimer = (
   state: TimerManagerState,
   callbacks: TimerEventCallbacks
 ): TimerManagerState => {
@@ -423,7 +423,7 @@ export const resetTimer = (
  * @param callbacks 回调函数
  * @returns 更新后的状态
  */
-export const skipCurrentStage = (
+const skipCurrentStage = (
   state: TimerManagerState,
   expandedStages: ExpandedStage[],
   callbacks: TimerEventCallbacks
@@ -488,7 +488,7 @@ export const skipCurrentStage = (
  * @param updates 要更新的字段
  * @returns 更新后的状态
  */
-export const updateTimerState = (
+const updateTimerState = (
   state: TimerManagerState,
   updates: Partial<TimerManagerState>
 ): TimerManagerState => {

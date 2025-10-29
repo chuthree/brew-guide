@@ -51,7 +51,7 @@ export type RankingSortOption =
   (typeof SORT_OPTIONS)[keyof typeof SORT_OPTIONS];
 
 // 排序选项的显示名称（导出给其他组件使用）
-export const SORT_LABELS: Record<RankingSortOption, string> = {
+const SORT_LABELS: Record<RankingSortOption, string> = {
   [SORT_OPTIONS.ORIGINAL]: '原始',
   [SORT_OPTIONS.RATING_DESC]: '评分 (高→低)',
   [SORT_OPTIONS.RATING_ASC]: '评分 (低→高)',

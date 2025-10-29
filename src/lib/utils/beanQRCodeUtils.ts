@@ -151,7 +151,7 @@ export function deserializeBeanFromQRCode(
 /**
  * 估算二维码数据大小（字节）
  */
-export function estimateQRCodeSize(bean: CoffeeBean): number {
+function estimateQRCodeSize(bean: CoffeeBean): number {
   const serialized = serializeBeanForQRCode(bean);
   return new Blob([serialized]).size;
 }

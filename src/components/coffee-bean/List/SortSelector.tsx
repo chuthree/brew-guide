@@ -330,7 +330,7 @@ export const convertToRankingSortOption = (
 };
 
 // 排序选项的显示名称
-export const SORT_LABELS: Record<SortOption, string> = {
+const SORT_LABELS: Record<SortOption, string> = {
   [SORT_OPTIONS.REMAINING_DAYS_ASC]: '赏味期',
   [SORT_OPTIONS.REMAINING_DAYS_DESC]: '赏味期',
   [SORT_OPTIONS.NAME_ASC]: '名称',
@@ -654,7 +654,7 @@ interface SortSelectorProps {
   showSelector?: boolean;
 }
 
-export const SortSelector: React.FC<SortSelectorProps> = ({
+const SortSelector: React.FC<SortSelectorProps> = ({
   viewMode,
   sortOption,
   onSortChange,

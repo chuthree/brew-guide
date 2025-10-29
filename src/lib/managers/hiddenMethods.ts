@@ -81,7 +81,7 @@ export async function unhideCommonMethod(
  * @param settings 当前设置
  * @returns 是否被隐藏
  */
-export function isMethodHidden(
+function isMethodHidden(
   equipmentId: string,
   methodId: string,
   settings: SettingsOptions
@@ -159,7 +159,7 @@ async function saveSettings(settings: SettingsOptions): Promise<void> {
  * @param settings 当前设置
  * @returns 更新后的设置
  */
-export async function unhideAllMethodsForEquipment(
+async function unhideAllMethodsForEquipment(
   equipmentId: string,
   settings: SettingsOptions
 ): Promise<SettingsOptions> {
@@ -180,7 +180,7 @@ export async function unhideAllMethodsForEquipment(
  * @param settings 当前设置
  * @returns 更新后的设置
  */
-export async function clearAllHiddenMethods(
+async function clearAllHiddenMethods(
   settings: SettingsOptions
 ): Promise<SettingsOptions> {
   const updatedSettings = {

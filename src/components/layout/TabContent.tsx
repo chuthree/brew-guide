@@ -336,7 +336,8 @@ const TabContent: React.FC<TabContentProps> = ({
 
       // 判断是新笔记还是更新
       const currentNotes = useBrewingNoteStore.getState().notes;
-      const isExistingNote = !!noteData.id && currentNotes.some((n: any) => n.id === noteData.id);
+      const isExistingNote =
+        !!noteData.id && currentNotes.some((n: any) => n.id === noteData.id);
 
       if (isExistingNote) {
         // 更新现有笔记
@@ -652,13 +653,13 @@ const TabContent: React.FC<TabContentProps> = ({
         await copyEquipmentToClipboard(equipment, methods);
         showToast({
           type: 'success',
-          title: '已复制到剪贴板',
+          title: '器具配置已导出',
           duration: 2000,
         });
       } catch (_error) {
         showToast({
           type: 'error',
-          title: '复制失败，请重试',
+          title: '导出失败，请重试',
           duration: 2000,
         });
       }

@@ -140,9 +140,9 @@ export const getFullPresets = (
 };
 
 // 导出合并后的预设（向后兼容）
-export const ORIGINS = getFullPresets('origins');
-export const PROCESSES = getFullPresets('processes');
-export const VARIETIES = getFullPresets('varieties');
+const ORIGINS = getFullPresets('origins');
+const PROCESSES = getFullPresets('processes');
+const VARIETIES = getFullPresets('varieties');
 
 // 预设风味标签
 export const FLAVOR_TAGS = [

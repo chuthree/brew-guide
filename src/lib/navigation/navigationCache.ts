@@ -40,7 +40,7 @@ export const saveMainTabPreference = (tab: MainTabType): void => {
 /**
  * 清除导航状态缓存
  */
-export const clearNavigationCache = (): void => {
+const clearNavigationCache = (): void => {
   if (typeof window !== 'undefined') {
     try {
       localStorage.removeItem('brew-guide:navigation:activeMainTab');

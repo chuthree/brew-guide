@@ -102,7 +102,7 @@ export const resetConfigToDefault = (): PrintConfig => {
 /**
  * 更新特定配置字段并保存
  */
-export const updateConfigField = <K extends keyof PrintConfig>(
+const updateConfigField = <K extends keyof PrintConfig>(
   currentConfig: PrintConfig,
   field: K,
   value: PrintConfig[K]

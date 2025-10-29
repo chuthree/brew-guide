@@ -2013,13 +2013,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       const { useBrewingNoteStore } = await import(
         '@/lib/stores/brewingNoteStore'
       );
-      
+
       const newNoteId = note.id || Date.now().toString();
       const timestamp = note.timestamp || Date.now();
-      
+
       // 🔥 修复：检查笔记是否真的存在于 store 中，而不是仅判断是否有 ID
       const currentNotes = useBrewingNoteStore.getState().notes;
-      const isExistingNote = !!note.id && currentNotes.some(n => n.id === note.id);
+      const isExistingNote =
+        !!note.id && currentNotes.some(n => n.id === note.id);
 
       const noteToSave = {
         ...note,
@@ -2063,7 +2064,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       const { useBrewingNoteStore } = await import(
         '@/lib/stores/brewingNoteStore'
       );
-      
+
       const noteToSave = {
         ...note,
         id: note.id || Date.now().toString(),
@@ -2078,7 +2079,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           temp: '',
         },
       } as BrewingNote;
-      
+
       // 🔥 修复：复制操作应该被视为新笔记，即使它有 id
       const isNewNote = isBrewingNoteCopy || !note.id;
 
@@ -2110,7 +2111,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
       } else {
         // 更新现有笔记
-        await useBrewingNoteStore.getState().updateNote(noteToSave.id, noteToSave);
+        await useBrewingNoteStore
+          .getState()
+          .updateNote(noteToSave.id, noteToSave);
       }
 
       setBrewingNoteEditOpen(false);
@@ -2179,23 +2182,23 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   const handleShareEquipment = async (equipment: CustomEquipment) => {
     try {
-      const shareData = { equipment };
-      const shareText = JSON.stringify(shareData, null, 2);
-
-      if (navigator.share) {
-        await navigator.share({
-          title: `分享器具：${equipment.name}`,
-          text: shareText,
-        });
-      } else {
-        await navigator.clipboard.writeText(shareText);
-        showToast({
-          title: '器具数据已复制到剪贴板',
-          type: 'success',
-        });
-      }
+      const methods = customMethods[equipment.id || equipment.name] || [];
+      const { copyEquipmentToClipboard } = await import(
+        '@/lib/managers/customMethods'
+      );
+      await copyEquipmentToClipboard(equipment, methods);
+      showToast({
+        type: 'success',
+        title: '器具配置已导出',
+        duration: 2000,
+      });
     } catch (error) {
-      console.error('分享器具失败:', error);
+      console.error('导出器具失败:', error);
+      showToast({
+        type: 'error',
+        title: '导出失败，请重试',
+        duration: 2000,
+      });
     }
   };
 
@@ -2605,27 +2608,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setShowEquipmentForm(true);
           }}
           onDeleteEquipment={handleDeleteEquipment}
-          onShareEquipment={async equipment => {
-            try {
-              const methods =
-                customMethods[equipment.id || equipment.name] || [];
-              const { copyEquipmentToClipboard } = await import(
-                '@/lib/managers/customMethods'
-              );
-              await copyEquipmentToClipboard(equipment, methods);
-              showToast({
-                type: 'success',
-                title: '已复制到剪贴板',
-                duration: 2000,
-              });
-            } catch (_error) {
-              showToast({
-                type: 'error',
-                title: '复制失败，请重试',
-                duration: 2000,
-              });
-            }
-          }}
+          onShareEquipment={handleShareEquipment}
           onBackClick={handleBackClick}
           onToggleEquipmentManagement={() =>
             setShowEquipmentManagement(!showEquipmentManagement)

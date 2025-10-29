@@ -23,7 +23,7 @@ export function exportEquipment(equipment: CustomEquipment): string {
  * @param method 要导出的方案
  * @returns 格式化的JSON字符串
  */
-export function exportMethod(method: Method): string {
+function exportMethod(method: Method): string {
   // 创建一个副本以避免修改原始对象
   const exportData = { ...method };
 

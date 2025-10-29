@@ -219,7 +219,7 @@ export const getBloggerYearPreference = (): BloggerBeansYear => {
 };
 
 // 保存博主榜单年份到localStorage
-export const saveBloggerYearPreference = (value: BloggerBeansYear): void => {
+const saveBloggerYearPreference = (value: BloggerBeansYear): void => {
   saveNumberState(MODULE_NAME, 'bloggerYear', value);
 };
 
@@ -369,12 +369,12 @@ export const addSearchHistory = (query: string): void => {
 };
 
 // 清除搜索历史
-export const clearSearchHistory = (): void => {
+const clearSearchHistory = (): void => {
   saveSearchHistoryPreference([]);
 };
 
 // 删除单条搜索历史
-export const removeSearchHistoryItem = (query: string): void => {
+const removeSearchHistoryItem = (query: string): void => {
   const history = getSearchHistoryPreference();
   const newHistory = history.filter(item => item !== query);
   saveSearchHistoryPreference(newHistory);
@@ -461,7 +461,7 @@ export const isBeanEmpty = (bean: ExtendedCoffeeBean): boolean => {
 import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
 
 // 获取咖啡豆的赏味期信息
-export const getFlavorInfo = (
+const getFlavorInfo = (
   bean: ExtendedCoffeeBean
 ): { phase: string; remainingDays: number } => {
   const flavorInfo = calculateFlavorInfo(bean);

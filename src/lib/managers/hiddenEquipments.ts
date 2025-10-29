@@ -67,7 +67,7 @@ export async function unhideEquipment(
  * @param settings 当前设置
  * @returns 是否被隐藏
  */
-export function isEquipmentHidden(
+function isEquipmentHidden(
   equipmentId: string,
   settings: SettingsOptions
 ): boolean {
@@ -122,7 +122,7 @@ async function saveSettings(settings: SettingsOptions): Promise<void> {
  * @param settings 当前设置
  * @returns 更新后的设置
  */
-export async function clearAllHiddenEquipments(
+async function clearAllHiddenEquipments(
   settings: SettingsOptions
 ): Promise<SettingsOptions> {
   const updatedSettings = {

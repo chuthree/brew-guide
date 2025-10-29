@@ -7,7 +7,7 @@ export { default as CompleteStep } from './CompleteStep';
 // 导出Stage等类型，但MethodWithStages从统一类型文件导入
 export type {
   Stage,
-  BasePourType,
+  //   BasePourType,
   RegularPourType,
   EspressoPourTypeValues,
 } from './types';

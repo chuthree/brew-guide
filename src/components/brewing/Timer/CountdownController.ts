@@ -112,7 +112,7 @@ export const stopCountdown = (timerId: NodeJS.Timeout | null): void => {
  * @param state 要更新的倒计时状态
  * @returns 重置后的倒计时状态
  */
-export const resetCountdownState = (state: CountdownState): CountdownState => {
+const resetCountdownState = (state: CountdownState): CountdownState => {
   // 先清除定时器
   if (state.timerId) {
     clearInterval(state.timerId);
@@ -133,7 +133,7 @@ export const resetCountdownState = (state: CountdownState): CountdownState => {
  * @param updates 要更新的字段
  * @returns 更新后的状态
  */
-export const updateCountdownState = (
+const updateCountdownState = (
   state: CountdownState,
   updates: Partial<CountdownState>
 ): CountdownState => {

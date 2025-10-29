@@ -108,7 +108,7 @@ export const resumeAudioContext = (audioState: AudioState): void => {
 /**
  * 清理音频系统
  */
-export const cleanupAudioSystem = (
+const cleanupAudioSystem = (
   audioState: AudioState,
   immediate: boolean = false
 ): void => {

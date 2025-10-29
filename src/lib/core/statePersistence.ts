@@ -190,7 +190,7 @@ export const getObjectState = <T>(
  * 清除特定模块的所有状态
  * @param module 模块名称
  */
-export const clearModuleState = (module: string): void => {
+const clearModuleState = (module: string): void => {
   if (!isLocalStorageAvailable()) {
     return;
   }
@@ -212,7 +212,7 @@ export const clearModuleState = (module: string): void => {
  * @param module 模块名称
  * @param key 状态键名
  */
-export const clearState = (module: string, key: string): void => {
+const clearState = (module: string, key: string): void => {
   if (!isLocalStorageAvailable()) {
     return;
   }

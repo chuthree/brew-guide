@@ -188,7 +188,7 @@ export const calculateNoteCost = async (note: BrewingNote): Promise<number> => {
 };
 
 // 计算总花费的函数
-export const calculateTotalCost = async (
+const calculateTotalCost = async (
   notes: BrewingNote[]
 ): Promise<number> => {
   let totalCost = 0;
@@ -340,7 +340,7 @@ export const sortNotes = (
 };
 
 // 异步过滤器辅助函数
-export const asyncFilter = async <T>(
+const asyncFilter = async <T>(
   array: T[],
   predicate: (item: T) => Promise<boolean>
 ): Promise<T[]> => {

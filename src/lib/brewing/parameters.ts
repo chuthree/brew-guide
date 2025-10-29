@@ -40,7 +40,7 @@ export const getEquipmentName = (
  * @param method 方案
  * @returns 参数对象
  */
-export const createParamsFromMethod = (
+const createParamsFromMethod = (
   method: Method | null
 ): ParameterInfo['params'] => {
   if (!method) return null;

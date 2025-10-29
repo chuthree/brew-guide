@@ -28,7 +28,7 @@ export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
  * 同步从存储加载自定义方案（用于初始化）
  * @returns 自定义方案对象
  */
-export function loadCustomMethodsSync(): Record<string, Method[]> {
+function loadCustomMethodsSync(): Record<string, Method[]> {
   // 这个函数已经不再使用，因为我们不能在同步函数中使用动态导入
   // 返回空对象，让调用方使用异步版本
   console.warn(
@@ -330,7 +330,7 @@ export async function copyMethodToClipboard(
 }
 
 /**
- * 复制器具配置到剪贴板
+ * 导出器具配置为 JSON 文件
  * @param equipment 器具对象
  * @param methods 相关的自定义方案（可选）
  */
@@ -361,18 +361,16 @@ export async function copyEquipmentToClipboard(
     // 转换为JSON格式
     const jsonData = JSON.stringify(exportData, null, 2);
 
-    // 尝试使用现代API
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(jsonData);
-    } else {
-      // 降级方案
-      const textarea = document.createElement('textarea');
-      textarea.value = jsonData;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    }
+    // 创建 Blob 并下载为文件
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${equipment.name}_器具配置.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   } catch (err) {
     throw err;
   }

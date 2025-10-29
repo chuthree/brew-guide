@@ -288,7 +288,7 @@ export async function saveCustomEquipment(
  * @param id 器具ID
  * @param equipment 更新的器具数据
  */
-export async function updateCustomEquipment(
+async function updateCustomEquipment(
   id: string,
   equipment: CustomEquipment
 ): Promise<void> {
@@ -402,6 +402,6 @@ export async function isEquipmentNameAvailable(
 }
 
 // 组件卸载时清理缓存，释放内存
-export function teardownCache(): void {
+function teardownCache(): void {
   equipmentsCache.teardown();
 }

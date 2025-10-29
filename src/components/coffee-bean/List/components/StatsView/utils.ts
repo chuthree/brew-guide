@@ -24,7 +24,7 @@ export const formatNumber2Digits = (num: number): string => {
 };
 
 // 从数组生成统计行数据
-export const sortStatsData = (
+const sortStatsData = (
   dataArr: [string, number][]
 ): [string, number][] => {
   return [...dataArr].sort((a, b) => b[1] - a[1]);

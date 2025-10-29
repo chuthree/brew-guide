@@ -87,7 +87,7 @@ export function getParentPageStyle(
 /**
  * 生成子页面的CSS类名
  */
-export function getChildPageClassName(): string {
+function getChildPageClassName(): string {
   const baseClasses = `
     fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
     will-change-transform
@@ -126,7 +126,7 @@ export function getChildPageStyle(
 /**
  * Hook: 监听是否有模态框打开
  */
-export function useModalState(): boolean {
+function useModalState(): boolean {
   const [hasModal, setHasModal] = useState(false);
 
   useEffect(() => {

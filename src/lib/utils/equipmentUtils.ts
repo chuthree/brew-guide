@@ -129,7 +129,7 @@ export const getPourTypeName = (pourType?: string): string => {
  * @param customEquipment 自定义设备对象
  * @returns 是否有阀门
  */
-export const hasValve = (customEquipment: CustomEquipment): boolean => {
+const hasValve = (customEquipment: CustomEquipment): boolean => {
   return !!customEquipment.hasValve;
 };
 

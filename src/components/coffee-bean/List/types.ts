@@ -30,7 +30,7 @@ export const VIEW_LABELS: Record<ViewOption, string> = {
 export type BeanFilterMode = 'variety' | 'origin' | 'flavorPeriod' | 'roaster';
 
 // 分类模式显示名称
-export const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
+const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
   variety: '按品种',
   origin: '按产地',
   flavorPeriod: '按赏味期',

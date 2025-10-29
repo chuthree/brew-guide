@@ -30,7 +30,7 @@ export const getCustomFlavorPeriodSettings = async () => {
 };
 
 // 根据烘焙度获取默认赏味期参数
-export const getDefaultFlavorPeriodByRoastLevel = async (
+const getDefaultFlavorPeriodByRoastLevel = async (
   roastLevel: string
 ) => {
   const customFlavorPeriod = await getCustomFlavorPeriodSettings();

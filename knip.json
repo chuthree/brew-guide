@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "ignore": ["eslint.config.mjs"],
+  "ignoreDependencies": ["eslint-config-next"],
+  "next": {
+    "entry": [
+      "src/app/**/page.tsx",
+      "src/app/**/layout.tsx",
+      "src/app/**/not-found.tsx",
+      "capacitor.config.ts",
+      "next.config.mjs",
+      "server.js"
+    ]
+  }
+}

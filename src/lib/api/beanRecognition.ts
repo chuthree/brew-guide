@@ -69,7 +69,7 @@ export async function recognizeBeanImage(imageFile: File): Promise<any> {
 }
 
 // 健康检查
-export async function checkAPIHealth(): Promise<boolean> {
+async function checkAPIHealth(): Promise<boolean> {
   try {
     const response = await fetch(`${API_CONFIG.baseURL}/health`, {
       method: 'GET',

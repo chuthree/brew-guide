@@ -13,7 +13,7 @@ export type MethodType = 'common' | 'custom';
 /**
  * 扩展的方案接口，包含额外的元数据
  */
-export interface ExtendedMethod extends Method {
+interface ExtendedMethod extends Method {
   /** 是否来自通用方案（用于标识转换来的方案） */
   _isFromCommonMethod?: boolean;
   /** 方案类型 */
@@ -73,7 +73,7 @@ export interface MethodStepConfig {
  * 冲泡步骤接口
  * 包含完整的冲泡阶段信息
  */
-export interface BrewingStepData extends Stage {
+interface BrewingStepData extends Stage {
   /** 阶段在数组中的原始索引 */
   originalIndex?: number;
   /** 步骤类型：注水或等待 */
@@ -87,7 +87,7 @@ export interface BrewingStepData extends Stage {
 /**
  * 方案选择回调参数
  */
-export interface MethodSelectParams {
+interface MethodSelectParams {
   /** 选中的器具ID */
   equipmentId: string;
   /** 方案索引 */
