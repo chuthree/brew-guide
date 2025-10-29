@@ -71,8 +71,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const {
     methodType: _methodType,
     selectedMethod,
-    availableMethods,
+    availableMethods: _availableMethods,
     customMethods,
+    commonMethodsOnly,
     handleMethodTypeChange: _handleMethodTypeChange,
     setSelectedMethod,
   } = useMethodManagement({
@@ -263,7 +264,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const getCoffeeAmount = () => {
     if (selectedMethod) {
       // 合并所有方案列表以确保查找全面
-      const allMethods = [...availableMethods, ...customMethods];
+      const allMethods = [...commonMethodsOnly, ...customMethods];
 
       // 同时检查ID和名称匹配
       const method = allMethods.find(
@@ -282,7 +283,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const getMethodParams = () => {
     if (selectedEquipment && selectedMethod) {
       // 合并所有方案列表以确保查找全面
-      const allMethods = [...availableMethods, ...customMethods];
+      const allMethods = [...commonMethodsOnly, ...customMethods];
 
       // 同时检查ID和名称匹配
       const methodObj = allMethods.find(
@@ -360,7 +361,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
     if (selectedMethod) {
       // 合并所有方案以便查找
-      const allMethods = [...availableMethods, ...customMethods];
+      const allMethods = [...commonMethodsOnly, ...customMethods];
 
       // 在所有方案中查找匹配的方案
       const methodObj = allMethods.find(
@@ -463,7 +464,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
               selectedEquipment={selectedEquipment}
               selectedMethod={selectedMethod}
               customMethods={customMethods}
-              commonMethods={availableMethods}
+              commonMethods={commonMethodsOnly}
               onMethodSelect={setSelectedMethod}
               onParamsChange={_handleMethodParamsChange}
             />

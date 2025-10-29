@@ -20,6 +20,7 @@ interface UseMethodManagementResult {
   selectedMethod: string;
   availableMethods: Method[];
   customMethods: Method[];
+  commonMethodsOnly: Method[]; // 新增：仅返回通用方案，不受 methodType 影响
   handleMethodTypeChange: (type: 'common' | 'custom') => void;
   setSelectedMethod: (method: string) => void;
   initMethodParams: (method: Method) => void;
@@ -106,6 +107,65 @@ export function useMethodManagement({
     customMethods,
     settings,
   ]);
+
+  // 计算通用方案（不受 methodType 影响，专门用于同时显示自定义和通用方案的场景）
+  const commonMethodsOnly = useMemo(() => {
+    if (!selectedEquipment) {
+      return [];
+    }
+
+    const customEquipment = customEquipments.find(
+      e => e.id === selectedEquipment || e.name === selectedEquipment
+    );
+    const isCustomEquipment = !!customEquipment;
+    const isCustomPresetEquipment =
+      isCustomEquipment && customEquipment.animationType === 'custom';
+
+    // 如果是自定义预设器具，不返回任何通用方案
+    if (isCustomPresetEquipment) {
+      return [];
+    }
+
+    let methods: Method[] = [];
+
+    if (isCustomEquipment) {
+      // 基于预设的自定义器具
+      let baseEquipmentId = '';
+      if (customEquipment) {
+        const animationType = customEquipment.animationType.toLowerCase();
+        switch (animationType) {
+          case 'v60':
+            baseEquipmentId = 'V60';
+            break;
+          case 'clever':
+            baseEquipmentId = 'CleverDripper';
+            break;
+          case 'espresso':
+            baseEquipmentId = 'Espresso';
+            break;
+          default:
+            baseEquipmentId = 'V60';
+        }
+      }
+      methods = brewingMethods[baseEquipmentId] || [];
+    } else {
+      // 预定义器具
+      methods = brewingMethods[selectedEquipment] || [];
+    }
+
+    // 过滤掉隐藏的通用方案
+    if (settings && settings.hiddenCommonMethods) {
+      const hiddenIds = settings.hiddenCommonMethods[selectedEquipment] || [];
+      if (hiddenIds.length > 0) {
+        methods = methods.filter(method => {
+          const methodId = method.id || method.name;
+          return !hiddenIds.includes(methodId);
+        });
+      }
+    }
+
+    return methods;
+  }, [selectedEquipment, customEquipments, settings]);
 
   // 加载自定义方案
   useEffect(() => {
@@ -357,6 +417,7 @@ export function useMethodManagement({
     selectedMethod,
     availableMethods,
     customMethods,
+    commonMethodsOnly,
     handleMethodTypeChange,
     setSelectedMethod,
     initMethodParams,

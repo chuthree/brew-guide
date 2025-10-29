@@ -89,6 +89,11 @@ const getCommonMethodsForEquipment = (
     ) as CustomEquipment | undefined;
 
     if (customEquipment?.animationType) {
+      // 如果是自定义预设器具（animationType === 'custom'），不返回任何通用方案
+      if (customEquipment.animationType.toLowerCase() === 'custom') {
+        return [];
+      }
+
       const baseEquipmentId =
         ANIMATION_TYPE_MAPPING[customEquipment.animationType.toLowerCase()] ||
         'V60';
