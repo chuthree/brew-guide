@@ -880,9 +880,9 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
       <div className="border-b border-neutral-200 dark:border-neutral-800">
         <div className="relative px-6">
           {!isSearching ? (
-            <div className="relative flex">
+            <div className="relative flex items-center">
               {/* 固定在左侧的"全部"和筛选按钮 */}
-              <div className="relative z-10 flex flex-shrink-0 items-center bg-neutral-50 pr-1 dark:bg-neutral-900">
+              <div className="relative z-10 flex flex-shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
                 <TabButton
                   isActive={
                     (filterMode === 'equipment' &&
@@ -917,28 +917,32 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                   <AlignLeft size={12} color="currentColor" />
                 </button>
 
-                {/* 左侧阴影 - 使用与右侧相同的伪元素实现 */}
-                {showLeftShadow && (
-                  <div className="pointer-events-none absolute top-0 right-[-20px] bottom-0 w-5 bg-linear-to-r from-neutral-50 to-transparent dark:from-neutral-900"></div>
-                )}
+                {/* 左侧固定按钮的右侧渐变遮罩 */}
+                <div className="pointer-events-none absolute top-0 right-0 bottom-0 w-5 bg-gradient-to-r from-transparent to-neutral-50 dark:to-neutral-900"></div>
               </div>
 
-              {/* 可滚动的标签区域 - 添加左边距 */}
-              <div
-                ref={scrollContainerRef}
-                className="ml-0 flex flex-1 overflow-x-auto pr-16"
-                style={{
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
-                  WebkitOverflowScrolling: 'touch',
-                }}
-                onScroll={handleScroll}
-              >
-                <style jsx>{`
-                  div::-webkit-scrollbar {
-                    display: none;
-                  }
-                `}</style>
+              {/* 中间滚动区域 */}
+              <div className="relative flex-1 overflow-hidden">
+                {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
+                {showLeftShadow && (
+                  <div className="pointer-events-none absolute top-0 left-0 bottom-0 z-10 w-6 bg-gradient-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                )}
+
+                <div
+                  ref={scrollContainerRef}
+                  className="flex overflow-x-auto"
+                  style={{
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    WebkitOverflowScrolling: 'touch',
+                  }}
+                  onScroll={handleScroll}
+                >
+                  <style jsx>{`
+                    div::-webkit-scrollbar {
+                      display: none;
+                    }
+                  `}</style>
 
                 {/* 动态筛选按钮 */}
                 {filterMode === 'equipment' ? (
@@ -1073,11 +1077,30 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                       ))}
                   </>
                 )}
+                </div>
+
+                {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
+                <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-6 bg-gradient-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+              </div>
+
+              {/* 固定在右侧的搜索按钮 */}
+              <div className="relative z-10 flex flex-shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
+                {/* 竖直分割线 */}
+                <div className="mr-3 mb-1.5 h-3 w-px bg-neutral-200 dark:bg-neutral-800"></div>
+                <button
+                  onClick={handleSearchClick}
+                  className="flex items-center pb-1.5 text-xs font-medium whitespace-nowrap text-neutral-600 dark:text-neutral-400"
+                >
+                  <span className="relative">搜索</span>
+                </button>
+
+                {/* 右侧固定按钮的左侧渐变遮罩 */}
+                <div className="pointer-events-none absolute top-0 left-0 bottom-0 w-5 bg-gradient-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
               </div>
             </div>
           ) : (
             /* 搜索框 - 替换整个分类栏 */
-            <div className="relative flex min-h-[22px] items-center pb-1.5">
+            <div className="relative flex items-center pb-1.5">
               <div className="relative flex flex-1 items-center">
                 <input
                   ref={searchInputRef}
@@ -1095,20 +1118,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                 className="ml-1 flex items-center text-neutral-500 dark:text-neutral-400"
               >
                 <X size={14} color="currentColor" />
-              </button>
-            </div>
-          )}
-
-          {/* 操作按钮 - 右侧固定 */}
-          {!isSearching && (
-            <div className="absolute top-0 right-6 bottom-0 flex items-center bg-neutral-50 pl-3 before:pointer-events-none before:absolute before:top-0 before:bottom-0 before:left-[-20px] before:w-5 before:bg-linear-to-r before:from-transparent before:to-neutral-50 before:content-[''] dark:bg-neutral-900 dark:before:to-neutral-900">
-              {/* 竖直分割线 */}
-              <div className="mr-3 mb-1.5 h-3 w-px bg-neutral-200 dark:bg-neutral-800"></div>
-              <button
-                onClick={handleSearchClick}
-                className="flex items-center pb-1.5 text-xs font-medium whitespace-nowrap text-neutral-600 dark:text-neutral-400"
-              >
-                <span className="relative">搜索</span>
               </button>
             </div>
           )}

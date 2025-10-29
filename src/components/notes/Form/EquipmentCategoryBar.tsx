@@ -113,7 +113,7 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
 
         {/* 右侧渐变效果 - 当器具过多时显示 */}
         {allItems.length > 3 && (
-          <div className="pointer-events-none absolute top-0 right-0 h-full w-6 bg-gradient-to-l from-white/95 to-transparent dark:from-neutral-900/95" />
+          <div className="pointer-events-none absolute top-0 right-0 h-full w-5 bg-gradient-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95" />
         )}
       </div>
     </div>
