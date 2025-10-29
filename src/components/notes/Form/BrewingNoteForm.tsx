@@ -813,7 +813,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         } else {
           setSelectedMethod('');
         }
-        setShowEquipmentMethodSelector(false);
+        // 不再在这里关闭选择界面，等待用户选择方案后再关闭
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.error('选择器具失败:', error);
