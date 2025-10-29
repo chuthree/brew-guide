@@ -20,9 +20,6 @@ project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@c
 include ':capacitor-haptics'
 project(':capacitor-haptics').projectDir = new File('../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/haptics/android')
 
-include ':capacitor-inappbrowser'
-project(':capacitor-inappbrowser').projectDir = new File('../node_modules/.pnpm/@capacitor+inappbrowser@2.5.1_@capacitor+core@7.4.4/node_modules/@capacitor/inappbrowser/android')
-
 include ':capacitor-keyboard'
 project(':capacitor-keyboard').projectDir = new File('../node_modules/.pnpm/@capacitor+keyboard@7.0.3_@capacitor+core@7.4.4/node_modules/@capacitor/keyboard/android')
 

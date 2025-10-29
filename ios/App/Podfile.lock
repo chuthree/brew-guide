@@ -15,9 +15,6 @@ PODS:
     - IONFilesystemLib (~> 1.0.1)
   - CapacitorHaptics (7.0.2):
     - Capacitor
-  - CapacitorInappbrowser (2.5.1):
-    - Capacitor
-    - OSInAppBrowserLib (~> 2.3.1)
   - CapacitorKeyboard (7.0.3):
     - Capacitor
   - CapacitorPreferences (7.0.2):
@@ -31,7 +28,6 @@ PODS:
   - CapawesomeCapacitorFilePicker (7.2.0):
     - Capacitor
   - IONFilesystemLib (1.0.1)
-  - OSInAppBrowserLib (2.3.1)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.4.4_@capacitor+core@7.4.4/node_modules/@capacitor/ios`)"
@@ -42,7 +38,6 @@ DEPENDENCIES:
   - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@7.4.4_@capacitor+core@7.4.4/node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@7.1.4_@capacitor+core@7.4.4/node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/haptics`)"
-  - "CapacitorInappbrowser (from `../../node_modules/.pnpm/@capacitor+inappbrowser@2.5.1_@capacitor+core@7.4.4/node_modules/@capacitor/inappbrowser`)"
   - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@7.0.3_@capacitor+core@7.4.4/node_modules/@capacitor/keyboard`)"
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/preferences`)"
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/share`)"
@@ -53,7 +48,6 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - IONFilesystemLib
-    - OSInAppBrowserLib
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -72,8 +66,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+filesystem@7.1.4_@capacitor+core@7.4.4/node_modules/@capacitor/filesystem"
   CapacitorHaptics:
     :path: "../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/haptics"
-  CapacitorInappbrowser:
-    :path: "../../node_modules/.pnpm/@capacitor+inappbrowser@2.5.1_@capacitor+core@7.4.4/node_modules/@capacitor/inappbrowser"
   CapacitorKeyboard:
     :path: "../../node_modules/.pnpm/@capacitor+keyboard@7.0.3_@capacitor+core@7.4.4/node_modules/@capacitor/keyboard"
   CapacitorPreferences:
@@ -96,7 +88,6 @@ SPEC CHECKSUMS:
   CapacitorCordova: bf648a636f3c153f652d312ae145fb508b6ffced
   CapacitorFilesystem: f9bd850c41e048180e5dc0cbb90f2033ede9d2cc
   CapacitorHaptics: b3fb2869e72c4466e18ce9ccbeb60a3d8723b3d4
-  CapacitorInappbrowser: e3bd7457f6ed4b9780d38f3deb7c953a4790e3ad
   CapacitorKeyboard: 62f36104f26d53d8b3a2a43f2a69fe714f1777d5
   CapacitorPreferences: 65107ed7437d96ee72583df5763985e3c0ff2bc2
   CapacitorShare: be166411fa995ead2d39b104aa0aae56d8615c66
@@ -104,8 +95,7 @@ SPEC CHECKSUMS:
   CapacitorStatusBar: 0659ddc7b1713764a05831463d215b177a15d054
   CapawesomeCapacitorFilePicker: 0f4a913a00e39dd77213449f0d917e92f35a5ca9
   IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
-  OSInAppBrowserLib: bf7cdcc072394ae827f8cfe3f5f9c807691834c0
 
-PODFILE CHECKSUM: 0649b8275660138134ad2cb4890106ef1bbc8167
+PODFILE CHECKSUM: 6570f876eaf25842efcb544c5c9c67f4e8e36ddf
 
 COCOAPODS: 1.16.2

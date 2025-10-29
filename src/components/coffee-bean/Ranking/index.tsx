@@ -17,53 +17,14 @@ const isMobileApp =
   !!(window as Window & { Capacitor?: { isNative?: boolean } }).Capacitor
     ?.isNative;
 
-// 移动浏览器检测已移除（未使用）
 
 // 处理链接打开的工具函数
 const openLink = async (url: string) => {
   if (!url) return;
 
   try {
-    // 仅在 Capacitor 原生应用环境中尝试使用 InAppBrowser
-    if (isMobileApp) {
-      try {
-        // 动态导入 Capacitor InAppBrowser 插件
-
-        const { InAppBrowser } = await import('@capacitor/inappbrowser');
-
-        // 使用系统浏览器打开链接（iOS上是SFSafariViewController，Android上是Custom Tabs）
-        // 创建选项对象，避免类型检查问题
-        const browserOptions = {
-          android: {
-            showTitle: false,
-            hideToolbarOnScroll: false,
-            viewStyle: 'FULLSCREEN',
-            startAnimation: 'SLIDE_IN_RIGHT',
-            exitAnimation: 'SLIDE_OUT_LEFT',
-          },
-          iOS: {
-            closeButtonText: 'Done',
-            viewStyle: 'FULLSCREEN',
-            animationEffect: 'FLIP_HORIZONTAL',
-            enableBarsCollapsing: false,
-            enableReadersMode: false,
-          },
-        };
-
-        await InAppBrowser.openInSystemBrowser({
-          url,
-          options: browserOptions as unknown as Parameters<
-            typeof InAppBrowser.openInSystemBrowser
-          >[0]['options'],
-        });
-        return; // 成功打开链接后退出函数
-      } catch (capacitorError) {
-        console.error('Capacitor InAppBrowser 错误:', capacitorError);
-        // 出错时继续执行到后面的普通链接打开逻辑
-      }
-    }
-
-    // 在非原生应用环境或Capacitor插件失败时使用普通窗口打开
+    // 直接使用 window.open 在所有平台都能工作
+    // Capacitor 会自动处理在原生应用中打开外部浏览器
     window.open(url, '_blank');
   } catch (error) {
     console.error('打开链接出错:', error);

@@ -35,9 +35,6 @@ importers:
       '@capacitor/haptics':
         specifier: ^7.0.2
         version: 7.0.2(@capacitor/core@7.4.4)
-      '@capacitor/inappbrowser':
-        specifier: ^2.5.1
-        version: 2.5.1(@capacitor/core@7.4.4)
       '@capacitor/ios':
         specifier: ^7.4.4
         version: 7.4.4(@capacitor/core@7.4.4)
@@ -739,11 +736,6 @@ packages:
 
   '@capacitor/haptics@7.0.2':
     resolution: {integrity: sha512-vqfeEM6s2zMgLjpITCTUIy7P/hadq/Gr5E/RClFgMJPB41Y5FsqOKD+j85/uwh8N2cf/aWaPeXUmjnTzJbEB2g==}
-    peerDependencies:
-      '@capacitor/core': '>=7.0.0'
-
-  '@capacitor/inappbrowser@2.5.1':
-    resolution: {integrity: sha512-5X5vi4SBlNi/Eo7SHd+5Z43XbMtuPLuavV30HrbIHo42F91nthTBglOOGBQAps1fCuPZ9hrzgIX/WTRQxzWKIQ==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -4369,10 +4361,6 @@ snapshots:
       '@capacitor/synapse': 1.0.4
 
   '@capacitor/haptics@7.0.2(@capacitor/core@7.4.4)':
-    dependencies:
-      '@capacitor/core': 7.4.4
-
-  '@capacitor/inappbrowser@2.5.1(@capacitor/core@7.4.4)':
     dependencies:
       '@capacitor/core': 7.4.4
 
