@@ -75,6 +75,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
   // 使用自定义Hook管理器具列表
   const { allEquipments: baseEquipments } = useEquipmentList({
     customEquipments,
+    settings, // 传入设置以过滤隐藏的器具
   });
 
   // 本地状态管理器具的操作显示状态
