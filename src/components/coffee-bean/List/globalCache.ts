@@ -87,7 +87,7 @@ export const globalCache: {
   // 为每个视图模式设置默认排序选项
   inventorySortOption: 'remaining_days_asc',
   rankingSortOption: 'rating_desc',
-  bloggerSortOption: 'original',
+  bloggerSortOption: 'rating_desc',
   rankingBeanType: 'all',
   rankingEditMode: false,
   bloggerYear: 2025, // 保留用于向后兼容
@@ -182,7 +182,7 @@ export const saveRankingSortOptionPreference = (value: SortOption): void => {
 
 // 从localStorage读取博主榜单视图排序选项
 export const getBloggerSortOptionPreference = (): SortOption => {
-  const value = getStringState(MODULE_NAME, 'bloggerSortOption', 'original');
+  const value = getStringState(MODULE_NAME, 'bloggerSortOption', 'rating_desc');
   return value as SortOption;
 };
 

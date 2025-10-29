@@ -938,7 +938,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                   )
                 }
               >
-                数据来自于 Peter 咖啡豆评测榜单 ( 同步时间：2025 / 9 / 19 )
+                数据来自于 Peter 咖啡豆评测榜单 ( 同步时间：2025 / 10 / 29 )
               </span>
             )}
           </div>

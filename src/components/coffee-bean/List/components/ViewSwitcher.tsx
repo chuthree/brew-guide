@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ViewOption,
   VIEW_OPTIONS,
@@ -426,6 +427,13 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     width: number;
   } | null>(null);
   const yearButtonRef = useRef<HTMLSpanElement>(null);
+
+  // 检查是否在浏览器环境（用于 Portal）
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // 年份点击处理
   const handleYearClick = () => {
@@ -1309,171 +1317,176 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       ) : null}
 
       {/* 年份下拉选择菜单 - 参考StatsView风格 */}
-      <AnimatePresence>
-        {showYearDropdown && (
-          <>
-            {/* 背景模糊层 */}
-            <motion.div
-              initial={{
-                opacity: 0,
-                backdropFilter: 'blur(0px)',
-              }}
-              animate={{
-                opacity: 1,
-                backdropFilter: 'blur(20px)',
-                transition: {
-                  opacity: {
-                    duration: 0.2,
-                    ease: [0.25, 0.46, 0.45, 0.94],
-                  },
-                  backdropFilter: {
-                    duration: 0.3,
-                    ease: [0.25, 0.46, 0.45, 0.94],
-                  },
-                },
-              }}
-              exit={{
-                opacity: 0,
-                backdropFilter: 'blur(0px)',
-                transition: {
-                  opacity: {
-                    duration: 0.15,
-                    ease: [0.4, 0.0, 1, 1],
-                  },
-                  backdropFilter: {
-                    duration: 0.2,
-                    ease: [0.4, 0.0, 1, 1],
-                  },
-                },
-              }}
-              className="fixed z-[60]"
-              style={{
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: '100vw',
-                height: '100vh',
-                backgroundColor:
-                  'color-mix(in srgb, var(--background) 40%, transparent)',
-                WebkitBackdropFilter: 'blur(4px)',
-              }}
-              onClick={() => setShowYearDropdown(false)}
-            />
-
-            {/* 当前选中的年份选项 */}
-            {yearButtonPosition && (
-              <motion.div
-                initial={{ opacity: 1, scale: 1 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{
-                  opacity: 0,
-                  scale: 0.98,
-                  transition: {
-                    duration: 0.12,
-                    ease: [0.4, 0.0, 1, 1],
-                  },
-                }}
-                className="fixed z-[80]"
-                style={{
-                  top: `${yearButtonPosition.top}px`,
-                  left: `${yearButtonPosition.left}px`,
-                  minWidth: `${yearButtonPosition.width}px`,
-                }}
-                data-year-selector
-              >
-                <motion.button
-                  initial={{ opacity: 1 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 1 }}
+      {isMounted &&
+        createPortal(
+          <AnimatePresence>
+            {showYearDropdown && (
+              <>
+                {/* 背景模糊层 */}
+                <motion.div
+                  initial={{
+                    opacity: 0,
+                    backdropFilter: 'blur(0px)',
+                  }}
+                  animate={{
+                    opacity: 1,
+                    backdropFilter: 'blur(20px)',
+                    transition: {
+                      opacity: {
+                        duration: 0.2,
+                        ease: [0.25, 0.46, 0.45, 0.94],
+                      },
+                      backdropFilter: {
+                        duration: 0.3,
+                        ease: [0.25, 0.46, 0.45, 0.94],
+                      },
+                    },
+                  }}
+                  exit={{
+                    opacity: 0,
+                    backdropFilter: 'blur(0px)',
+                    transition: {
+                      opacity: {
+                        duration: 0.15,
+                        ease: [0.4, 0.0, 1, 1],
+                      },
+                      backdropFilter: {
+                        duration: 0.2,
+                        ease: [0.4, 0.0, 1, 1],
+                      },
+                    },
+                  }}
+                  className="fixed inset-0 z-[60]"
+                  style={{
+                    backgroundColor:
+                      'color-mix(in srgb, var(--background) 40%, transparent)',
+                    WebkitBackdropFilter: 'blur(4px)',
+                  }}
                   onClick={() => setShowYearDropdown(false)}
-                  className="flex cursor-pointer items-center text-left text-xs font-medium tracking-wide break-words whitespace-nowrap text-neutral-800 transition-colors dark:text-neutral-100"
-                >
-                  <span className="relative inline-block">{bloggerYear}</span>
-                </motion.button>
-              </motion.div>
-            )}
+                />
 
-            {/* 其他年份选项 */}
-            {yearButtonPosition && (
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: -8,
-                  scale: 0.96,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                  transition: {
-                    duration: 0.25,
-                    ease: [0.25, 0.46, 0.45, 0.94],
-                  },
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -6,
-                  scale: 0.98,
-                  transition: {
-                    duration: 0.15,
-                    ease: [0.4, 0.0, 1, 1],
-                  },
-                }}
-                className="fixed z-[80]"
-                style={{
-                  top: `${yearButtonPosition.top + 30}px`,
-                  left: `${yearButtonPosition.left}px`,
-                  minWidth: `${yearButtonPosition.width}px`,
-                }}
-                data-year-selector
-              >
-                <div className="flex flex-col">
-                  {(bloggerType === 'peter' ? [2025, 2024] : [2025, 2024, 2023])
-                    .filter(year => year !== bloggerYear)
-                    .map((year, index) => (
-                      <motion.button
-                        key={year}
-                        initial={{
-                          opacity: 0,
-                          y: -6,
-                          scale: 0.98,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          scale: 1,
-                          transition: {
-                            delay: index * 0.04,
-                            duration: 0.2,
-                            ease: [0.25, 0.46, 0.45, 0.94],
-                          },
-                        }}
-                        exit={{
-                          opacity: 0,
-                          y: -4,
-                          scale: 0.98,
-                          transition: {
-                            delay: (1 - index) * 0.02,
-                            duration: 0.12,
-                            ease: [0.4, 0.0, 1, 1],
-                          },
-                        }}
-                        onClick={() =>
-                          handleYearChange(year as BloggerBeansYear)
-                        }
-                        className="flex items-center pb-3 text-left text-xs font-medium tracking-wide break-words whitespace-nowrap text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                        style={{ paddingBottom: '12px' }}
-                      >
-                        <span className="relative inline-block">{year}</span>
-                      </motion.button>
-                    ))}
-                </div>
-              </motion.div>
+                {/* 当前选中的年份选项 */}
+                {yearButtonPosition && (
+                  <motion.div
+                    initial={{ opacity: 1, scale: 1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{
+                      opacity: 0,
+                      scale: 0.98,
+                      transition: {
+                        duration: 0.12,
+                        ease: [0.4, 0.0, 1, 1],
+                      },
+                    }}
+                    className="fixed z-[80]"
+                    style={{
+                      top: `${yearButtonPosition.top}px`,
+                      left: `${yearButtonPosition.left}px`,
+                      minWidth: `${yearButtonPosition.width}px`,
+                    }}
+                    data-year-selector
+                  >
+                    <motion.button
+                      initial={{ opacity: 1 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 1 }}
+                      onClick={() => setShowYearDropdown(false)}
+                      className="flex cursor-pointer items-center text-left text-xs font-medium tracking-wide break-words whitespace-nowrap text-neutral-800 transition-colors dark:text-neutral-100"
+                    >
+                      <span className="relative inline-block">
+                        {bloggerYear}
+                      </span>
+                    </motion.button>
+                  </motion.div>
+                )}
+
+                {/* 其他年份选项 */}
+                {yearButtonPosition && (
+                  <motion.div
+                    initial={{
+                      opacity: 0,
+                      y: -8,
+                      scale: 0.96,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                      transition: {
+                        duration: 0.25,
+                        ease: [0.25, 0.46, 0.45, 0.94],
+                      },
+                    }}
+                    exit={{
+                      opacity: 0,
+                      y: -6,
+                      scale: 0.98,
+                      transition: {
+                        duration: 0.15,
+                        ease: [0.4, 0.0, 1, 1],
+                      },
+                    }}
+                    className="fixed z-[80]"
+                    style={{
+                      top: `${yearButtonPosition.top + 30}px`,
+                      left: `${yearButtonPosition.left}px`,
+                      minWidth: `${yearButtonPosition.width}px`,
+                    }}
+                    data-year-selector
+                  >
+                    <div className="flex flex-col">
+                      {(bloggerType === 'peter'
+                        ? [2025, 2024]
+                        : [2025, 2024, 2023]
+                      )
+                        .filter(year => year !== bloggerYear)
+                        .map((year, index) => (
+                          <motion.button
+                            key={year}
+                            initial={{
+                              opacity: 0,
+                              y: -6,
+                              scale: 0.98,
+                            }}
+                            animate={{
+                              opacity: 1,
+                              y: 0,
+                              scale: 1,
+                              transition: {
+                                delay: index * 0.04,
+                                duration: 0.2,
+                                ease: [0.25, 0.46, 0.45, 0.94],
+                              },
+                            }}
+                            exit={{
+                              opacity: 0,
+                              y: -4,
+                              scale: 0.98,
+                              transition: {
+                                delay: (1 - index) * 0.02,
+                                duration: 0.12,
+                                ease: [0.4, 0.0, 1, 1],
+                              },
+                            }}
+                            onClick={() =>
+                              handleYearChange(year as BloggerBeansYear)
+                            }
+                            className="flex items-center pb-3 text-left text-xs font-medium tracking-wide break-words whitespace-nowrap text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                            style={{ paddingBottom: '12px' }}
+                          >
+                            <span className="relative inline-block">
+                              {year}
+                            </span>
+                          </motion.button>
+                        ))}
+                    </div>
+                  </motion.div>
+                )}
+              </>
             )}
-          </>
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 };
