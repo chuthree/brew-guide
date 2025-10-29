@@ -63,8 +63,8 @@ export const globalCache: {
   selectedEquipment: null,
   selectedBean: null,
   selectedDate: null,
-  filterMode: 'equipment',
-  dateGroupingMode: 'month', // 默认按月分组
+  filterMode: 'date',
+  dateGroupingMode: 'day', // 默认按日分组
   sortOption: SORT_OPTIONS.TIME_DESC,
   availableEquipments: [],
   availableBeans: [],
@@ -110,7 +110,7 @@ export const saveSelectedDatePreference = (value: string | null): void => {
 
 // 从localStorage读取过滤模式
 export const getFilterModePreference = (): 'equipment' | 'bean' | 'date' => {
-  const value = getStringState(MODULE_NAME, 'filterMode', 'equipment');
+  const value = getStringState(MODULE_NAME, 'filterMode', 'date');
   return value as 'equipment' | 'bean' | 'date';
 };
 
@@ -138,7 +138,7 @@ export const saveSortOptionPreference = (value: SortOption): void => {
 
 // 从localStorage读取日期分组模式
 export const getDateGroupingModePreference = (): DateGroupingMode => {
-  const value = getStringState(MODULE_NAME, 'dateGroupingMode', 'month');
+  const value = getStringState(MODULE_NAME, 'dateGroupingMode', 'day');
   return value as DateGroupingMode;
 };
 
