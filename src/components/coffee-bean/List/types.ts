@@ -34,7 +34,7 @@ export const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
   variety: '按品种',
   origin: '按产地',
   flavorPeriod: '按赏味期',
-  roaster: '按烘焙商 BETA',
+  roaster: '按烘焙商',
 };
 
 export interface CoffeeBeansProps {

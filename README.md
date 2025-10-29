@@ -1,6 +1,6 @@
 # 咖啡冲煮指南 (Brew Guide)
 
-![版本](https://img.shields.io/badge/版本-1.3.12--beta.7-blue)
+![版本](https://img.shields.io/badge/版本-1.3.12-blue)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/chu3/brew-guide)
 
 一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。

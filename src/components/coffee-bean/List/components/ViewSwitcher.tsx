@@ -269,7 +269,7 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
           isActive={filterMode === 'roaster'}
           onClick={() => onFilterModeChange('roaster')}
         >
-          按烘焙商 BETA
+          按烘焙商
         </FilterButton>
       </div>
     </div>
