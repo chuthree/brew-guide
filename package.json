@@ -10,6 +10,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "npx serve@latest out --single --no-request-logging",
+    "start:https": "node https-server.js",
+    "cert:generate": "bash scripts/generate-cert.sh",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
@@ -86,6 +88,7 @@
     "postcss-load-config": "^6.0.1",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
+    "serve-handler": "^6.1.6",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3"
   },
