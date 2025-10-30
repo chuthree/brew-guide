@@ -17,6 +17,19 @@ export default function StorageInit() {
           const { Storage } = await import('@/lib/core/storage');
           await Storage.initialize();
 
+          // 🔥 关键修复：初始化 Zustand store，提前加载笔记数据
+          try {
+            const { useBrewingNoteStore } = await import(
+              '@/lib/stores/brewingNoteStore'
+            );
+            // 应用启动时立即加载笔记数据到内存
+            await useBrewingNoteStore.getState().loadNotes();
+            console.warn('✅ 笔记数据已预加载到内存');
+          } catch (storeError) {
+            console.error('⚠️ 预加载笔记数据失败:', storeError);
+            // 不阻止应用启动
+          }
+
           // 初始化完成后清理过期的临时文件
           try {
             const { TempFileManager } = await import(
