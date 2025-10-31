@@ -1,23 +1,11 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { ChevronLeft } from 'lucide-react';
-import { DataManager as DataManagerUtil } from '@/lib/core/dataManager';
-import { compressBase64Image } from '@/lib/utils/imageCapture';
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SettingsOptions } from './Settings';
 import { ButtonGroup } from '../ui/ButtonGroup';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
-
-// 使用新版本的 S3 同步管理器
-import S3SyncManager from '@/lib/s3/syncManagerV2';
-import type {
-  SyncResult,
-  SyncMetadataV2 as SyncMetadata,
-} from '@/lib/s3/types';
 import {
   BackupReminderSettings,
   BackupReminderUtils,
@@ -25,8 +13,15 @@ import {
   BackupReminderInterval,
 } from '@/lib/utils/backupReminderUtils';
 import hapticsUtils from '@/lib/ui/haptics';
+import {
+  S3SyncSection,
+  WebDAVSyncSection,
+  DataManagementSection,
+  ToolsSection,
+} from './data-settings';
 
 type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>;
+type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
 
 const normalizeS3Settings = (
   incoming?: SettingsOptions['s3Sync'] | null
@@ -62,6 +57,29 @@ const normalizeS3Settings = (
   };
 };
 
+const normalizeWebDAVSettings = (
+  incoming?: SettingsOptions['webdavSync'] | null
+): WebDAVSyncSettings => {
+  const defaults = {
+    enabled: false,
+    url: '',
+    username: '',
+    password: '',
+    remotePath: 'brew-guide-data/',
+    syncMode: 'manual' as const,
+  };
+
+  if (!incoming) {
+    return { ...defaults };
+  }
+
+  return {
+    ...defaults,
+    ...incoming,
+    syncMode: 'manual',
+  };
+};
+
 interface DataSettingsProps {
   settings: SettingsOptions;
   onClose: () => void;
@@ -78,470 +96,55 @@ const DataSettings: React.FC<DataSettingsProps> = ({
   handleChange,
   onDataChange,
 }) => {
-  // 历史栈管理
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  useEffect(() => {
-    window.history.pushState({ modal: 'data-settings' }, '');
+  // 动画状态
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
-    const handlePopState = () => onCloseRef.current();
-    window.addEventListener('popstate', handlePopState);
+  // 冲突弹窗
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [conflictRemoteTime, setConflictRemoteTime] = useState<number | null>(
+    null
+  );
+  useThemeColor({ useOverlay: true, enabled: showConflictModal });
 
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []); // 空依赖数组，确保只在挂载时执行一次
+  // 云同步设置
+  const [s3Settings, setS3Settings] = useState<S3SyncSettings>(() =>
+    normalizeS3Settings(settings.s3Sync)
+  );
+  const [webdavSettings, setWebDAVSettings] = useState<WebDAVSyncSettings>(() =>
+    normalizeWebDAVSettings(settings.webdavSync)
+  );
 
-  // 关闭处理
-  const handleClose = () => {
-    // 立即触发退出动画
-    setIsVisible2(false);
-
-    // 立即通知父组件子设置正在关闭
-    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
-
-    // 等待动画完成后再真正关闭
-    setTimeout(() => {
-      if (window.history.state?.modal === 'data-settings') {
-        window.history.back();
-      } else {
-        onClose();
-      }
-    }, 350); // 与 IOS_TRANSITION_CONFIG.duration 一致
-  };
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<{
-    type: 'success' | 'error' | 'info' | null;
-    message: string;
-  }>({
-    type: null,
-    message: '',
-  });
-  const [showConfirmReset, setShowConfirmReset] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false);
-  const [compressionProgress, setCompressionProgress] = useState({
-    current: 0,
-    total: 0,
-  });
-  const isNative = Capacitor.isNativePlatform();
-
-  // 压缩图片功能
-  const getBase64ImageSize = (base64: string): number => {
-    if (!base64 || !base64.includes(',')) return 0;
-    const base64Data = base64.split(',')[1];
-    return Math.floor(base64Data.length * 0.75); // base64 to bytes conversion
-  };
-
-  // 压缩咖啡豆图片
-  const handleCompressImages = async () => {
-    try {
-      setIsCompressing(true);
-      setStatus({ type: 'info', message: '正在检测需要压缩的图片...' });
-
-      // 动态导入Storage
-      const { Storage } = await import('@/lib/core/storage');
-
-      // 获取所有咖啡豆数据
-      const coffeeBeansData = await Storage.get('coffeeBeans');
-      if (!coffeeBeansData) {
-        setStatus({ type: 'info', message: '没有找到咖啡豆数据' });
-        return;
-      }
-
-      const coffeeBeans = JSON.parse(coffeeBeansData);
-      if (!Array.isArray(coffeeBeans)) {
-        setStatus({ type: 'error', message: '咖啡豆数据格式错误' });
-        return;
-      }
-
-      // 找出需要压缩的图片（大于200KB）
-      const beansNeedCompression = coffeeBeans.filter(
-        (bean: { id: string; name: string; image?: string }) => {
-          if (!bean.image) return false;
-          const imageSize = getBase64ImageSize(bean.image);
-          return imageSize > 200 * 1024; // 200KB
-        }
-      );
-
-      if (beansNeedCompression.length === 0) {
-        setStatus({
-          type: 'success',
-          message: '所有图片都已经是压缩状态，无需处理',
-        });
-        return;
-      }
-
-      setCompressionProgress({
-        current: 0,
-        total: beansNeedCompression.length,
-      });
-      setStatus({
-        type: 'info',
-        message: `发现 ${beansNeedCompression.length} 张图片需要压缩，正在处理...`,
-      });
-
-      // 逐个压缩图片
-      for (let i = 0; i < beansNeedCompression.length; i++) {
-        const bean = beansNeedCompression[i];
-        setCompressionProgress({
-          current: i + 1,
-          total: beansNeedCompression.length,
-        });
-        setStatus({
-          type: 'info',
-          message: `正在压缩第 ${i + 1}/${beansNeedCompression.length} 张图片: ${bean.name}`,
-        });
-
-        try {
-          // 压缩图片
-          const compressedImage = await compressBase64Image(bean.image!);
-
-          // 更新咖啡豆数组中的图片
-          const beanIndex = coffeeBeans.findIndex(
-            (b: { id: string }) => b.id === bean.id
-          );
-          if (beanIndex !== -1) {
-            coffeeBeans[beanIndex].image = compressedImage;
-          }
-
-          // 短暂延迟，避免UI阻塞
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          console.error(`压缩图片失败: ${bean.name}`, error);
-          // 继续处理下一张图片
-        }
-      }
-
-      // 保存更新后的咖啡豆数据
-      await Storage.set('coffeeBeans', JSON.stringify(coffeeBeans));
-
-      setStatus({
-        type: 'success',
-        message: `图片压缩完成！已处理 ${beansNeedCompression.length} 张图片`,
-      });
-
-      // 通知父组件数据已更改
-      if (onDataChange) {
-        onDataChange();
-      }
-    } catch (error) {
-      console.error('图片压缩失败:', error);
-      setStatus({
-        type: 'error',
-        message: `图片压缩失败: ${(error as Error).message}`,
-      });
-    } finally {
-      setIsCompressing(false);
-      setCompressionProgress({ current: 0, total: 0 });
-    }
-  };
-
-  // 数据导出功能
-  const handleExport = async () => {
-    try {
-      const getLocalDateString = (date: Date) => {
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
-      const jsonData = await DataManagerUtil.exportAllData();
-      const fileName = `brew-guide-data-${getLocalDateString(new Date())}.json`;
-
-      if (isNative) {
-        try {
-          // 先将文件写入临时目录
-          await Filesystem.writeFile({
-            path: fileName,
-            data: jsonData,
-            directory: Directory.Cache,
-            encoding: Encoding.UTF8,
-          });
-
-          // 获取临时文件的URI
-          const uriResult = await Filesystem.getUri({
-            path: fileName,
-            directory: Directory.Cache,
-          });
-
-          // 使用分享功能让用户选择保存位置
-          await Share.share({
-            title: '导出数据',
-            text: '请选择保存位置',
-            url: uriResult.uri,
-            dialogTitle: '导出数据',
-          });
-
-          // 清理临时文件
-          await Filesystem.deleteFile({
-            path: fileName,
-            directory: Directory.Cache,
-          });
-
-          setStatus({
-            type: 'success',
-            message: '数据已成功导出',
-          });
-
-          // 标记备份完成
-          try {
-            await BackupReminderUtils.markBackupCompleted();
-          } catch (error) {
-            console.error('标记备份完成失败:', error);
-          }
-        } catch (error) {
-          throw new Error(`保存文件失败: ${(error as Error).message}`);
-        }
-      } else {
-        // Web平台的处理保持不变
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-
-        // 清理
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 100);
-
-        setStatus({ type: 'success', message: '数据导出成功，文件已下载' });
-
-        // 标记备份完成
-        try {
-          await BackupReminderUtils.markBackupCompleted();
-        } catch (error) {
-          console.error('标记备份完成失败:', error);
-        }
-      }
-    } catch (_error) {
-      setStatus({
-        type: 'error',
-        message: `导出失败: ${(_error as Error).message}`,
-      });
-    }
-  };
-
-  // 数据导入功能
-  const handleImportClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async event => {
-        try {
-          const jsonString = event.target?.result as string;
-
-          // 动态导入 Beanconqueror 导入器
-          const { isBeanconquerorData, importBeanconquerorData } = await import(
-            '@/lib/utils/beanconquerorImporter'
-          );
-
-          // 检测数据类型
-          if (isBeanconquerorData(jsonString)) {
-            // 处理 Beanconqueror 数据
-            setStatus({
-              type: 'info',
-              message: '检测到 Beanconqueror 数据，正在转换...',
-            });
-
-            const importResult = await importBeanconquerorData(jsonString);
-
-            if (importResult.success && importResult.data) {
-              const { Storage } = await import('@/lib/core/storage');
-              const { db } = await import('@/lib/core/db');
-
-              // 清空现有的咖啡豆数据
-              await Storage.set('coffeeBeans', JSON.stringify([]));
-              await db.coffeeBeans.clear();
-
-              // 清空现有的冲煮记录数据
-              await Storage.set('brewingNotes', JSON.stringify([]));
-              await db.brewingNotes.clear();
-
-              // 导入咖啡豆数据
-              const { CoffeeBeanManager } = await import(
-                '@/lib/managers/coffeeBeanManager'
-              );
-              CoffeeBeanManager.clearCache(); // 清除缓存
-
-              // 批量添加咖啡豆
-              CoffeeBeanManager.startBatchOperation();
-              try {
-                for (const bean of importResult.data.coffeeBeans) {
-                  // 移除 id 和 timestamp，让 addBean 自动生成
-                  const { id: _id, timestamp: _timestamp, ...beanData } = bean;
-                  await CoffeeBeanManager.addBean(beanData);
-                }
-                CoffeeBeanManager.endBatchOperation();
-              } catch (error) {
-                CoffeeBeanManager.endBatchOperation();
-                throw error;
-              }
-
-              // 导入冲煮记录数据
-              if (importResult.data.brewingNotes.length > 0) {
-                // 直接替换为导入的笔记
-                await Storage.set(
-                  'brewingNotes',
-                  JSON.stringify(importResult.data.brewingNotes)
-                );
-
-                // 更新全局缓存
-                try {
-                  const { globalCache, calculateTotalCoffeeConsumption } =
-                    await import('@/components/notes/List/globalCache');
-                  // BrewingNoteData 与 BrewingNote 结构兼容，可以安全转换
-                  type BrewingNote = import('@/lib/core/config').BrewingNote;
-                  globalCache.notes = importResult.data
-                    .brewingNotes as unknown as BrewingNote[];
-                  globalCache.totalConsumption =
-                    calculateTotalCoffeeConsumption(
-                      importResult.data.brewingNotes as unknown as BrewingNote[]
-                    );
-                } catch (cacheError) {
-                  console.error('更新笔记缓存失败:', cacheError);
-                }
-              }
-              setStatus({
-                type: 'success',
-                message: `成功从 Beanconqueror 导入 ${importResult.stats?.beansCount || 0} 个咖啡豆${importResult.stats?.brewsCount ? `和 ${importResult.stats.brewsCount} 条冲煮记录` : ''}`,
-              });
-
-              if (onDataChange) {
-                onDataChange();
-              }
-            } else {
-              setStatus({ type: 'error', message: importResult.message });
-            }
-          } else {
-            // 处理 brew-guide 数据
-            const result = await DataManagerUtil.importAllData(jsonString);
-
-            if (result.success) {
-              setStatus({ type: 'success', message: result.message });
-              if (onDataChange) {
-                onDataChange();
-              }
-
-              // 触发笔记全局缓存的重新初始化
-              try {
-                // 触发全局缓存重置事件
-                window.dispatchEvent(new CustomEvent('globalCacheReset'));
-
-                // 异步重新初始化全局缓存，不阻塞UI
-                import('@/components/notes/List/globalCache')
-                  .then(({ initializeGlobalCache }) => initializeGlobalCache())
-                  .catch(err => console.error('重新初始化笔记缓存失败:', err));
-              } catch (cacheError) {
-                console.error('重置笔记缓存事件失败:', cacheError);
-              }
-            } else {
-              setStatus({ type: 'error', message: result.message });
-            }
-          }
-        } catch (_error) {
-          setStatus({
-            type: 'error',
-            message: `导入失败: ${(_error as Error).message}`,
-          });
-        } finally {
-          // 重置文件输入，以便可以重新选择同一个文件
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        }
-      };
-
-      reader.onerror = () => {
-        setStatus({ type: 'error', message: '读取文件失败' });
-      };
-
-      reader.readAsText(file);
-    } catch (_error) {
-      setStatus({
-        type: 'error',
-        message: `导入失败: ${(_error as Error).message}`,
-      });
-    }
-  };
-
-  // 重置数据功能
-  const handleReset = async () => {
-    try {
-      const result = await DataManagerUtil.resetAllData(true);
-
-      if (result.success) {
-        setStatus({ type: 'success', message: result.message });
-        if (onDataChange) {
-          onDataChange();
-        }
-
-        // 重置时只需触发事件，页面刷新会重新初始化
-        window.dispatchEvent(new CustomEvent('globalCacheReset'));
-
-        // 设置一个短暂延迟后刷新页面
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000); // 延迟1秒，让用户能看到成功消息
-      } else {
-        setStatus({ type: 'error', message: result.message });
-      }
-    } catch (_error) {
-      setStatus({
-        type: 'error',
-        message: `重置失败: ${(_error as Error).message}`,
-      });
-    } finally {
-      setShowConfirmReset(false);
-    }
-  };
-
-  // 备份提醒相关状态
+  // 备份提醒设置
   const [backupReminderSettings, setBackupReminderSettings] =
     useState<BackupReminderSettings | null>(null);
   const [nextReminderText, setNextReminderText] = useState('');
 
-  // S3同步相关状态
-  const [s3Settings, setS3Settings] = useState<S3SyncSettings>(() =>
-    normalizeS3Settings(settings.s3Sync)
-  );
-  const [s3Status, setS3Status] = useState<
-    'disconnected' | 'connecting' | 'connected' | 'error'
-  >('disconnected');
-  const [s3Error, setS3Error] = useState<string>('');
-  const [showS3SecretKey, setShowS3SecretKey] = useState(false);
-  const [s3Expanded, setS3Expanded] = useState(false);
-  const [syncManager, setSyncManager] = useState<S3SyncManager | null>(null);
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [showConflictModal, setShowConflictModal] = useState(false);
+  // 云同步类型选择
+  const [showSyncTypeDropdown, setShowSyncTypeDropdown] = useState(false);
+  const syncType = s3Settings.enabled
+    ? 's3'
+    : webdavSettings.enabled
+      ? 'webdav'
+      : 'none';
 
-  // 同步顶部安全区颜色（仅在冲突弹窗显示时）
-  useThemeColor({ useOverlay: true, enabled: showConflictModal });
+  // 历史栈管理
+  useEffect(() => {
+    window.history.pushState({ modal: 'data-settings' }, '');
+    const handlePopState = () => onCloseRef.current();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
-  const [conflictRemoteMetadata, setConflictRemoteMetadata] =
-    useState<SyncMetadata | null>(null);
-  const [isSyncNeeded, setIsSyncNeeded] = useState(false);
-  const [syncDirection, setSyncDirection] = useState<
-    'upload' | 'download' | 'both' | null
-  >(null);
-  const [syncProgress, setSyncProgress] = useState<{
-    phase: string;
-    message: string;
-    percentage: number;
-  } | null>(null);
+  // 动画初始化
+  useEffect(() => {
+    setShouldRender(true);
+    const timer = setTimeout(() => setIsVisible(true), 10);
+    return () => clearTimeout(timer);
+  }, []);
 
   // 加载备份提醒设置
   useEffect(() => {
@@ -549,98 +152,42 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       try {
         const reminderSettings = await BackupReminderUtils.getSettings();
         setBackupReminderSettings(reminderSettings);
-
         const nextText = await BackupReminderUtils.getNextReminderText();
         setNextReminderText(nextText);
       } catch (error) {
         console.error('加载备份提醒设置失败:', error);
       }
     };
-
     loadBackupReminderSettings();
   }, []);
 
-  // 当settings.s3Sync发生变化时更新s3Settings状态
+  // 同步设置到父组件
   useEffect(() => {
     if (settings.s3Sync) {
-      const normalized = normalizeS3Settings(settings.s3Sync);
-      setS3Settings(normalized);
-
-      if (
-        normalized.enabled &&
-        normalized.lastConnectionSuccess &&
-        normalized.accessKeyId &&
-        normalized.secretAccessKey &&
-        normalized.bucketName
-      ) {
-        const autoConnect = async () => {
-          const manager = new S3SyncManager();
-          const connected = await manager.initialize({
-            region: normalized.region,
-            accessKeyId: normalized.accessKeyId,
-            secretAccessKey: normalized.secretAccessKey,
-            bucketName: normalized.bucketName,
-            prefix: normalized.prefix,
-            endpoint: normalized.endpoint || undefined,
-          });
-
-          if (connected) {
-            setS3Status('connected');
-            setSyncManager(manager);
-            const lastSync = await manager.getLastSyncTime();
-            setLastSyncTime(lastSync);
-            setS3Expanded(false);
-            const needsSync = await manager.needsSync();
-            setIsSyncNeeded(needsSync);
-          } else {
-            setS3Status('error');
-            setS3Error('自动连接失败，请检查配置');
-          }
-        };
-        autoConnect();
-      }
+      setS3Settings(normalizeS3Settings(settings.s3Sync));
     }
   }, [settings.s3Sync]);
 
-  // 处理备份提醒设置变更
-  const handleBackupReminderChange = async (enabled: boolean) => {
-    try {
-      await BackupReminderUtils.setEnabled(enabled);
-      const updatedSettings = await BackupReminderUtils.getSettings();
-      setBackupReminderSettings(updatedSettings);
-
-      const nextText = await BackupReminderUtils.getNextReminderText();
-      setNextReminderText(nextText);
-
-      if (settings.hapticFeedback) {
-        hapticsUtils.light();
-      }
-    } catch (error) {
-      console.error('更新备份提醒设置失败:', error);
+  useEffect(() => {
+    if (settings.webdavSync) {
+      setWebDAVSettings(normalizeWebDAVSettings(settings.webdavSync));
     }
+  }, [settings.webdavSync]);
+
+  // 关闭处理
+  const handleClose = () => {
+    setIsVisible(false);
+    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
+    setTimeout(() => {
+      if (window.history.state?.modal === 'data-settings') {
+        window.history.back();
+      } else {
+        onClose();
+      }
+    }, 350);
   };
 
-  // 处理备份提醒间隔变更
-  const handleBackupIntervalChange = async (
-    interval: BackupReminderInterval
-  ) => {
-    try {
-      await BackupReminderUtils.updateInterval(interval);
-      const updatedSettings = await BackupReminderUtils.getSettings();
-      setBackupReminderSettings(updatedSettings);
-
-      const nextText = await BackupReminderUtils.getNextReminderText();
-      setNextReminderText(nextText);
-
-      if (settings.hapticFeedback) {
-        hapticsUtils.light();
-      }
-    } catch (error) {
-      console.error('更新备份提醒间隔失败:', error);
-    }
-  };
-
-  // 处理S3设置变更
+  // S3 设置变更处理
   const handleS3SettingChange = <K extends keyof S3SyncSettings>(
     key: K,
     value: S3SyncSettings[K]
@@ -648,259 +195,82 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     const newS3Settings = normalizeS3Settings({
       ...s3Settings,
       [key]: value,
-      lastConnectionSuccess: false,
+      // 只有当修改配置参数时才清除连接状态，改变 enabled 或 lastConnectionSuccess 本身时保持原值
+      lastConnectionSuccess:
+        key === 'enabled' || key === 'lastConnectionSuccess'
+          ? key === 'lastConnectionSuccess'
+            ? value
+            : s3Settings.lastConnectionSuccess
+          : false,
     } as S3SyncSettings);
     setS3Settings(newS3Settings);
     handleChange('s3Sync', newS3Settings);
   };
 
-  // 执行同步
-  const performSync = useCallback(
-    async (direction: 'auto' | 'upload' | 'download' = 'auto') => {
-      if (!syncManager) {
-        setS3Error('请先测试连接');
-        return;
-      }
+  // WebDAV 设置变更处理
+  const handleWebDAVSettingChange = <K extends keyof WebDAVSyncSettings>(
+    key: K,
+    value: WebDAVSyncSettings[K]
+  ) => {
+    const newWebDAVSettings = normalizeWebDAVSettings({
+      ...webdavSettings,
+      [key]: value,
+      // 只有当修改配置参数时才清除连接状态，改变 enabled 或 lastConnectionSuccess 本身时保持原值
+      lastConnectionSuccess:
+        key === 'enabled' || key === 'lastConnectionSuccess'
+          ? key === 'lastConnectionSuccess'
+            ? value
+            : webdavSettings.lastConnectionSuccess
+          : false,
+    } as WebDAVSyncSettings);
+    setWebDAVSettings(newWebDAVSettings);
+    handleChange('webdavSync', newWebDAVSettings);
+  };
 
-      if (isSyncing) {
-        setS3Error('同步正在进行中');
-        return;
-      }
+  // 备份提醒设置变更
+  const handleBackupReminderChange = async (enabled: boolean) => {
+    try {
+      await BackupReminderUtils.setEnabled(enabled);
+      const updatedSettings = await BackupReminderUtils.getSettings();
+      setBackupReminderSettings(updatedSettings);
+      const nextText = await BackupReminderUtils.getNextReminderText();
+      setNextReminderText(nextText);
+      if (settings.hapticFeedback) hapticsUtils.light();
+    } catch (error) {
+      console.error('更新备份提醒设置失败:', error);
+    }
+  };
 
-      setIsSyncing(true);
-      setS3Error('');
-      setSyncProgress(null);
-      setSyncDirection(null);
+  const handleBackupIntervalChange = async (
+    interval: BackupReminderInterval
+  ) => {
+    try {
+      await BackupReminderUtils.updateInterval(interval);
+      const updatedSettings = await BackupReminderUtils.getSettings();
+      setBackupReminderSettings(updatedSettings);
+      const nextText = await BackupReminderUtils.getNextReminderText();
+      setNextReminderText(nextText);
+      if (settings.hapticFeedback) hapticsUtils.light();
+    } catch (error) {
+      console.error('更新备份提醒间隔失败:', error);
+    }
+  };
 
-      try {
-        // 使用新的 SyncOptions 格式
-        const result: SyncResult = await syncManager.sync({
-          preferredDirection: direction,
-          onProgress: progress => {
-            setSyncProgress({
-              phase: progress.phase,
-              message: progress.message,
-              percentage: progress.percentage,
-            });
-          },
-        });
-
-        if (result.conflict) {
-          const metadata = result.remoteMetadata;
-          // 确保元数据是 V2 格式
-          if (
-            metadata &&
-            'version' in metadata &&
-            metadata.version === '2.0.0'
-          ) {
-            setConflictRemoteMetadata(metadata as SyncMetadata);
-          }
-          setShowConflictModal(true);
-          setS3Error('数据冲突：本地和云端数据都已更改。');
-          setSyncDirection(null);
-          return;
-        }
-
-        if (result.success) {
-          const lastSync = await syncManager.getLastSyncTime();
-          setLastSyncTime(lastSync);
-          setIsSyncNeeded(false);
-
-          // 同步完成后，已经是最新状态，清除方向图标
-          setSyncDirection(null);
-
-          // 显示同步结果提示
-          const { showToast } = await import(
-            '@/components/common/feedback/LightToast'
-          );
-
-          if (result.uploadedFiles > 0 && result.downloadedFiles > 0) {
-            // 双向同步
-            showToast({
-              type: 'success',
-              title: `同步完成：上传 ${result.uploadedFiles} 项，下载 ${result.downloadedFiles} 项，即将重启...`,
-              duration: 3000,
-            });
-
-            // 双向同步包含下载，刷新页面以加载新数据
-            setTimeout(() => {
-              window.location.reload();
-            }, 3000);
-          } else if (result.uploadedFiles > 0) {
-            // 仅上传
-            showToast({
-              type: 'success',
-              title: `已上传 ${result.uploadedFiles} 项到云端`,
-              duration: 2500,
-            });
-          } else if (result.downloadedFiles > 0) {
-            // 仅下载
-            showToast({
-              type: 'success',
-              title: `已从云端下载 ${result.downloadedFiles} 项，即将重启...`,
-              duration: 2500,
-            });
-
-            // 下载完成后刷新页面以加载新数据
-            setTimeout(() => {
-              window.location.reload();
-            }, 2500);
-          } else {
-            // 无变化
-            showToast({
-              type: 'info',
-              title: '数据已是最新，无需同步',
-              duration: 2000,
-            });
-          }
-
-          if (settings.hapticFeedback) {
-            hapticsUtils.medium();
-          }
-
-          onDataChange?.();
-        } else {
-          setS3Error(result.message || '同步失败');
-          setSyncDirection(null);
-
-          // 显示同步失败提示
-          const { showToast } = await import(
-            '@/components/common/feedback/LightToast'
-          );
-          showToast({
-            type: 'error',
-            title: result.message || '同步失败',
-            duration: 3000,
-          });
-        }
-      } catch (error) {
-        console.error('同步失败:', error);
-        setS3Error(
-          `同步失败: ${error instanceof Error ? error.message : '未知错误'}`
-        );
-        setSyncDirection(null);
-
-        // 显示错误提示
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
-        showToast({
-          type: 'error',
-          title: `同步失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          duration: 3000,
-        });
-      } finally {
-        setIsSyncing(false);
-        setSyncProgress(null);
-      }
-    },
-    [syncManager, isSyncing, settings.hapticFeedback, onDataChange]
-  );
-
+  // 冲突解决
   const handleConflictResolution = async (direction: 'upload' | 'download') => {
     setShowConflictModal(false);
-    await performSync(direction);
-  };
-
-  // 测试S3连接
-  const testS3Connection = async () => {
-    if (
-      !s3Settings.accessKeyId ||
-      !s3Settings.secretAccessKey ||
-      !s3Settings.bucketName
-    ) {
-      setS3Error('请填写完整的S3配置信息');
-      setS3Status('error');
-      return;
-    }
-
-    setS3Status('connecting');
-    setS3Error('');
-
-    try {
-      const manager = new S3SyncManager();
-      const connected = await manager.initialize({
-        region: s3Settings.region,
-        accessKeyId: s3Settings.accessKeyId,
-        secretAccessKey: s3Settings.secretAccessKey,
-        bucketName: s3Settings.bucketName,
-        prefix: s3Settings.prefix,
-        endpoint: s3Settings.endpoint || undefined,
-      });
-
-      if (connected) {
-        setS3Status('connected');
-        setSyncManager(manager);
-        setS3Expanded(true);
-
-        const newS3Settings = { ...s3Settings, lastConnectionSuccess: true };
-        handleChange('s3Sync', newS3Settings);
-
-        const lastSync = await manager.getLastSyncTime();
-        setLastSyncTime(lastSync);
-
-        const needsSync = await manager.needsSync();
-        setIsSyncNeeded(needsSync);
-
-        if (settings.hapticFeedback) {
-          hapticsUtils.light();
-        }
-      } else {
-        setS3Status('error');
-        setS3Error('连接失败，请检查S3配置信息');
-      }
-    } catch (error) {
-      setS3Status('error');
-      setS3Error(
-        `连接失败: ${error instanceof Error ? error.message : '未知错误'}`
-      );
-    }
-  };
-
-  // 控制动画状态
-  const [shouldRender2, setShouldRender2] = useState(false);
-  const [isVisible2, setIsVisible2] = useState(false);
-
-  // 处理显示/隐藏动画
-  useEffect(() => {
-    setShouldRender2(true);
-    const timer = setTimeout(() => setIsVisible2(true), 10);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 广播 S3 同步状态到其他组件（如 Settings 页面）
-  useEffect(() => {
+    // 这里需要触发S3组件的同步
     window.dispatchEvent(
-      new CustomEvent('s3StatusChange', {
-        detail: {
-          status: s3Status,
-          syncing: isSyncing,
-          needsSync: isSyncNeeded,
-          syncDirection: syncDirection,
-        },
-      })
+      new CustomEvent('s3ConflictResolved', { detail: { direction } })
     );
-  }, [s3Status, isSyncing, isSyncNeeded, syncDirection]);
+  };
 
-  // 监听来自其他组件的同步请求
-  useEffect(() => {
-    const handleSyncRequest = () => {
-      if (s3Status === 'connected' && syncManager) {
-        performSync();
-      }
-    };
-
-    window.addEventListener('s3SyncRequested', handleSyncRequest);
-    return () =>
-      window.removeEventListener('s3SyncRequested', handleSyncRequest);
-  }, [s3Status, syncManager, performSync]);
-
-  if (!shouldRender2) return null;
+  if (!shouldRender) return null;
 
   return (
     <div
       className="fixed inset-0 mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
-      style={getChildPageStyle(isVisible2)}
+      style={getChildPageStyle(isVisible)}
     >
       {/* 头部导航栏 */}
       <div className="pt-safe-top relative flex items-center justify-center py-4">
@@ -926,420 +296,112 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             云同步
           </h3>
 
-          <div className="space-y-5">
-            {/* S3主开关 */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  S3 云同步
+          <div className="space-y-3">
+            {/* 云同步类型选择 */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSyncTypeDropdown(!showSyncTypeDropdown)}
+                className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              >
+                <span>同步服务</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {syncType === 's3'
+                      ? 'S3 对象存储'
+                      : syncType === 'webdav'
+                        ? 'WebDAV'
+                        : '不使用'}
+                  </span>
+                  <ChevronRight
+                    className={`h-4 w-4 text-neutral-400 transition-transform ${showSyncTypeDropdown ? 'rotate-90' : ''}`}
+                  />
                 </div>
-                {/* 连接状态指示器 */}
-                <div
-                  className={`h-2 w-2 rounded-full ${
-                    s3Status === 'connected'
-                      ? 'bg-green-500'
-                      : s3Status === 'connecting'
-                        ? 'animate-pulse bg-yellow-500'
-                        : s3Status === 'error'
-                          ? 'bg-red-500'
-                          : 'bg-neutral-300 dark:bg-neutral-600'
-                  }`}
-                />
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={s3Settings.enabled}
-                  onChange={e =>
-                    handleS3SettingChange('enabled', e.target.checked)
-                  }
-                  className="peer sr-only"
-                />
-                <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-              </label>
+              </button>
+
+              {/* 下拉选项 */}
+              {showSyncTypeDropdown && (
+                <div className="mt-2 space-y-2 rounded bg-neutral-100 p-2 dark:bg-neutral-800">
+                  <button
+                    onClick={() => {
+                      handleS3SettingChange('enabled', false);
+                      handleWebDAVSettingChange('enabled', false);
+                      setShowSyncTypeDropdown(false);
+                      if (settings.hapticFeedback) hapticsUtils.light();
+                    }}
+                    className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
+                      syncType === 'none'
+                        ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
+                        : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
+                    }`}
+                  >
+                    不使用
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleS3SettingChange('enabled', true);
+                      handleWebDAVSettingChange('enabled', false);
+                      setShowSyncTypeDropdown(false);
+                      if (settings.hapticFeedback) hapticsUtils.light();
+                    }}
+                    className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
+                      syncType === 's3'
+                        ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
+                        : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
+                    }`}
+                  >
+                    S3 对象存储
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleWebDAVSettingChange('enabled', true);
+                      handleS3SettingChange('enabled', false);
+                      setShowSyncTypeDropdown(false);
+                      if (settings.hapticFeedback) hapticsUtils.light();
+                    }}
+                    className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
+                      syncType === 'webdav'
+                        ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
+                        : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
+                    }`}
+                  >
+                    WebDAV
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* S3详细设置 - 仅在启用时显示 */}
+            {/* S3 详细设置 */}
             {s3Settings.enabled && (
-              <div className="ml-0 space-y-4">
-                {/* 展开/收起按钮 */}
-                <button
-                  onClick={() => setS3Expanded(!s3Expanded)}
-                  className="flex w-full items-center justify-between py-2 text-sm font-medium text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100"
-                >
-                  <span>S3配置</span>
-                  <svg
-                    className={`h-4 w-4 transition-transform ${s3Expanded ? 'rotate-180' : ''}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
+              <S3SyncSection
+                settings={s3Settings}
+                enabled={s3Settings.enabled}
+                hapticFeedback={settings.hapticFeedback}
+                onSettingChange={handleS3SettingChange}
+                onSyncComplete={onDataChange}
+                onConflict={time => {
+                  setConflictRemoteTime(time);
+                  setShowConflictModal(true);
+                }}
+                onEnable={() => {
+                  handleS3SettingChange('enabled', true);
+                  handleWebDAVSettingChange('enabled', false);
+                }}
+              />
+            )}
 
-                {s3Expanded && (
-                  <div className="space-y-3">
-                    {/* 区域 */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                        区域 (Region)
-                      </label>
-                      <input
-                        type="text"
-                        value={s3Settings.region}
-                        onChange={e =>
-                          handleS3SettingChange('region', e.target.value)
-                        }
-                        placeholder="cn-south-1"
-                        className="w-full rounded-md border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                      />
-                    </div>
-
-                    {/* 自定义端点 */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                        自定义端点 (可选)
-                      </label>
-                      <input
-                        type="url"
-                        value={s3Settings.endpoint || ''}
-                        onChange={e =>
-                          handleS3SettingChange('endpoint', e.target.value)
-                        }
-                        placeholder="https://bucket-name.s3.cn-south-1.qiniucs.com"
-                        className="w-full rounded-md border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                      />
-                      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                        七牛云等兼容S3服务的端点，留空使用AWS标准端点
-                      </p>
-                    </div>
-
-                    {/* Bucket名称 */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                        Bucket名称
-                      </label>
-                      <input
-                        type="text"
-                        value={s3Settings.bucketName}
-                        onChange={e =>
-                          handleS3SettingChange('bucketName', e.target.value)
-                        }
-                        placeholder="my-bucket-name"
-                        className="w-full rounded-md border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                      />
-                    </div>
-
-                    {/* Access Key ID */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                        Access Key ID
-                      </label>
-                      <input
-                        type="text"
-                        value={s3Settings.accessKeyId}
-                        onChange={e =>
-                          handleS3SettingChange('accessKeyId', e.target.value)
-                        }
-                        placeholder="AKIA..."
-                        className="w-full rounded-md border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                      />
-                    </div>
-
-                    {/* Secret Access Key */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                        Secret Access Key
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showS3SecretKey ? 'text' : 'password'}
-                          value={s3Settings.secretAccessKey}
-                          onChange={e =>
-                            handleS3SettingChange(
-                              'secretAccessKey',
-                              e.target.value
-                            )
-                          }
-                          placeholder="密钥"
-                          className="w-full rounded-md border border-neutral-200 bg-neutral-100 px-3 py-2 pr-10 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowS3SecretKey(!showS3SecretKey)}
-                          className="absolute top-1/2 right-2 -translate-y-1/2 transform p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
-                        >
-                          <svg
-                            className="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            {showS3SecretKey ? (
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1.5}
-                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464m1.414 1.414L8.464 8.464m5.656 5.656L15.536 15.536m-1.414-1.414L15.536 15.536"
-                              />
-                            ) : (
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1.5}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            )}
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 前缀 */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                        文件前缀
-                      </label>
-                      <input
-                        type="text"
-                        value={s3Settings.prefix}
-                        onChange={e =>
-                          handleS3SettingChange('prefix', e.target.value)
-                        }
-                        placeholder="brew-guide-data/"
-                        className="w-full rounded-md border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                      />
-                    </div>
-
-                    {/* 测试连接按钮 */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={testS3Connection}
-                        disabled={s3Status === 'connecting'}
-                        className="flex-1 rounded-md bg-neutral-700 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:bg-neutral-400"
-                      >
-                        {s3Status === 'connecting' ? '连接中...' : '测试连接'}
-                      </button>
-                    </div>
-
-                    {/* 导入导出配置 */}
-                    <div className="border-t border-neutral-200 pt-3 dark:border-neutral-700">
-                      <div className="mb-2 text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                        配置管理
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={async () => {
-                            try {
-                              const config = {
-                                region: s3Settings.region,
-                                accessKeyId: s3Settings.accessKeyId,
-                                secretAccessKey: s3Settings.secretAccessKey,
-                                bucketName: s3Settings.bucketName,
-                                prefix: s3Settings.prefix,
-                                endpoint: s3Settings.endpoint,
-                              };
-                              const configText = JSON.stringify(
-                                config,
-                                null,
-                                2
-                              );
-
-                              if (navigator.clipboard) {
-                                await navigator.clipboard.writeText(configText);
-                                setStatus({
-                                  type: 'success',
-                                  message: '配置已复制到剪贴板',
-                                });
-                                if (settings.hapticFeedback) {
-                                  hapticsUtils.light();
-                                }
-                              } else {
-                                // 备用方案：显示配置文本让用户手动复制
-                                alert(`请复制以下配置:\n\n${configText}`);
-                              }
-                            } catch (error) {
-                              console.error('复制配置失败:', error);
-                              setStatus({ type: 'error', message: '复制失败' });
-                            }
-                          }}
-                          className="flex-1 rounded-md border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                        >
-                          📋 导出配置
-                        </button>
-                        <button
-                          onClick={async () => {
-                            try {
-                              let configText = '';
-
-                              if (navigator.clipboard) {
-                                configText =
-                                  await navigator.clipboard.readText();
-                              } else {
-                                // 备用方案：让用户粘贴配置
-                                configText = prompt('请粘贴配置文本:') || '';
-                              }
-
-                              if (!configText.trim()) {
-                                setStatus({
-                                  type: 'error',
-                                  message: '剪贴板为空',
-                                });
-                                return;
-                              }
-
-                              const config = JSON.parse(configText);
-
-                              // 验证必需字段
-                              if (
-                                !config.region ||
-                                !config.accessKeyId ||
-                                !config.secretAccessKey ||
-                                !config.bucketName
-                              ) {
-                                setStatus({
-                                  type: 'error',
-                                  message: '配置格式不完整',
-                                });
-                                return;
-                              }
-
-                              // 导入配置
-                              const newS3Settings = normalizeS3Settings({
-                                ...s3Settings,
-                                region: config.region,
-                                accessKeyId: config.accessKeyId,
-                                secretAccessKey: config.secretAccessKey,
-                                bucketName: config.bucketName,
-                                prefix: config.prefix || 'brew-guide-data/',
-                                endpoint: config.endpoint || '',
-                                lastConnectionSuccess: false,
-                              });
-
-                              setS3Settings(newS3Settings);
-                              handleChange('s3Sync', newS3Settings);
-
-                              setStatus({
-                                type: 'success',
-                                message: '配置已导入，请测试连接',
-                              });
-                              if (settings.hapticFeedback) {
-                                hapticsUtils.light();
-                              }
-                            } catch (error) {
-                              console.error('导入配置失败:', error);
-                              setStatus({
-                                type: 'error',
-                                message:
-                                  error instanceof SyntaxError
-                                    ? '配置格式错误'
-                                    : '导入失败',
-                              });
-                            }
-                          }}
-                          className="flex-1 rounded-md border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                        >
-                          📥 导入配置
-                        </button>
-                      </div>
-                      <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                        💡 可通过复制粘贴在设备间共享配置
-                      </p>
-                    </div>
-
-                    {/* 错误信息 */}
-                    {s3Error && (
-                      <div className="rounded-md bg-red-50 p-3 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                        {s3Error}
-                      </div>
-                    )}
-
-                    {/* 同步模式说明 */}
-                    {s3Status === 'connected' && (
-                      <div className="space-y-3 border-t border-neutral-200 pt-3 dark:border-neutral-700">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                            同步模式
-                          </div>
-                          <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                            完全手动
-                          </span>
-                        </div>
-
-                        <div className="rounded bg-neutral-100/60 p-2 text-xs leading-relaxed text-neutral-500 dark:bg-neutral-800/60 dark:text-neutral-400">
-                          不会自动同步，请在需要时手动点击下方按钮触发同步。
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 状态简要说明 */}
-                {!s3Expanded && (
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    {s3Status === 'connected'
-                      ? '已连接，手动同步模式'
-                      : s3Status === 'error'
-                        ? '连接失败，请检查配置'
-                        : '未配置，点击展开设置'}
-                  </p>
-                )}
-
-                {/* 同步按钮 */}
-                {s3Status === 'connected' && (
-                  <div className="mt-4 space-y-3">
-                    <button
-                      onClick={() => performSync('auto')}
-                      disabled={isSyncing}
-                      className="w-full rounded-md bg-neutral-700 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:bg-neutral-400"
-                    >
-                      {isSyncing ? (
-                        syncProgress ? (
-                          <div className="flex flex-col items-center gap-1">
-                            <span>{syncProgress.message}</span>
-                            <div className="h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
-                              <div
-                                className="h-1.5 rounded-full bg-neutral-600 transition-all duration-300 dark:bg-neutral-400"
-                                style={{ width: `${syncProgress.percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          '同步中...'
-                        )
-                      ) : isSyncNeeded ? (
-                        '需要同步'
-                      ) : (
-                        '立即同步'
-                      )}
-                    </button>
-                    <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                      {isSyncNeeded && (
-                        <div className="text-orange-500 dark:text-orange-400">
-                          检测到数据变更，建议同步
-                        </div>
-                      )}
-                      {lastSyncTime && (
-                        <div>
-                          最后同步：
-                          {lastSyncTime.toLocaleString('zh-CN', {
-                            month: 'numeric',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+            {/* WebDAV 详细设置 */}
+            {webdavSettings.enabled && (
+              <WebDAVSyncSection
+                settings={webdavSettings}
+                enabled={webdavSettings.enabled}
+                hapticFeedback={settings.hapticFeedback}
+                onSettingChange={handleWebDAVSettingChange}
+                onSyncComplete={onDataChange}
+                onEnable={() => {
+                  handleWebDAVSettingChange('enabled', true);
+                  handleS3SettingChange('enabled', false);
+                }}
+              />
             )}
           </div>
         </div>
@@ -1348,12 +410,12 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         {backupReminderSettings && (
           <div className="px-6 py-4">
             <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-              数据备份提醒
+              备份提醒
             </h3>
 
-            <div className="space-y-5">
+            <div className="space-y-3">
               {/* 备份提醒开关 */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
                 <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                   备份提醒
                 </div>
@@ -1361,23 +423,25 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                   <input
                     type="checkbox"
                     checked={backupReminderSettings.enabled}
-                    onChange={e => handleBackupReminderChange(e.target.checked)}
+                    onChange={e => {
+                      handleBackupReminderChange(e.target.checked);
+                    }}
                     className="peer sr-only"
                   />
                   <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                 </label>
               </div>
 
-              {/* 提醒间隔设置 */}
+              {/* 展开的频率设置 */}
               {backupReminderSettings.enabled && (
-                <div>
-                  <div className="mb-3 flex items-center justify-between">
+                <div className="space-y-2 rounded bg-neutral-100 p-4 dark:bg-neutral-800">
+                  <div className="flex items-center justify-between">
                     <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                       提醒频率
                     </div>
                     {nextReminderText && (
-                      <div className="text-xs text-neutral-400 dark:text-neutral-500">
-                        下次：{nextReminderText}
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {nextReminderText}
                       </div>
                     )}
                   </div>
@@ -1411,189 +475,13 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         )}
 
         {/* 数据管理设置组 */}
-        <div className="px-6 py-4">
-          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-            数据管理
-          </h3>
-
-          {status.type && (
-            <div
-              className={`mb-4 rounded-md p-3 text-sm ${
-                status.type === 'success'
-                  ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                  : status.type === 'error'
-                    ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                    : 'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-              }`}
-            >
-              {status.message}
-            </div>
-          )}
-
-          <div className="space-y-5">
-            {/* 导出按钮 */}
-            <div>
-              <button
-                onClick={handleExport}
-                className="w-full rounded bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
-              >
-                导出数据
-              </button>
-              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                {isNative ? '将数据导出到文档目录' : '将数据下载为 JSON 文件'}
-              </p>
-            </div>
-
-            {/* 导入按钮 */}
-            <div>
-              <button
-                onClick={handleImportClick}
-                className="w-full rounded bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
-              >
-                导入数据（替换）
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                导入数据将替换所有现有数据
-              </p>
-            </div>
-
-            {/* 重置按钮 */}
-            <div>
-              {!showConfirmReset ? (
-                <button
-                  onClick={() => setShowConfirmReset(true)}
-                  className="w-full rounded bg-red-100 px-4 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
-                >
-                  重置数据
-                </button>
-              ) : (
-                <div className="space-y-3">
-                  <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-                    <div className="mb-3 flex items-center space-x-2">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-red-600 dark:text-red-400"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
-                        确认重置数据
-                      </h3>
-                    </div>
-                    <p className="mb-3 text-xs text-red-600 dark:text-red-400">
-                      此操作无法撤销，数据将被删除。建议在重置前先导出备份。
-                    </p>
-                    <p className="mb-4 text-xs text-red-600 dark:text-red-400">
-                      将彻底重置数据，包括自定义器具、应用设置和导航状态。
-                    </p>
-                    <div className="flex justify-end space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmReset(false)}
-                        className="rounded-md bg-neutral-100 px-3 py-1.5 text-xs text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-600"
-                      >
-                        取消
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleReset}
-                        className="rounded-md bg-red-600 px-3 py-1.5 text-xs text-neutral-100 transition-colors hover:bg-red-700"
-                      >
-                        确认重置
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                完全删除数据并恢复到初始状态，包括设置和缓存
-              </p>
-            </div>
-          </div>
-        </div>
+        <DataManagementSection onDataChange={onDataChange} />
 
         {/* 工具设置组 */}
-        <div className="px-6 py-4">
-          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-            工具
-          </h3>
-
-          <div className="space-y-5">
-            {/* 图片压缩功能 */}
-            <div>
-              <button
-                onClick={handleCompressImages}
-                disabled={isCompressing}
-                className="w-full rounded bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
-              >
-                {isCompressing ? (
-                  <span className="flex items-center justify-center">
-                    <svg
-                      className="mr-2 -ml-1 h-4 w-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    压缩中...
-                  </span>
-                ) : (
-                  '图片补压'
-                )}
-              </button>
-              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                压缩大于 200KB
-                的图片，降低存储占用。适用于之前未自动压缩的图片。（仅咖啡豆图片）
-              </p>
-              {isCompressing && compressionProgress.total > 0 && (
-                <div className="mt-3">
-                  <div className="mb-1 flex justify-between text-xs text-neutral-500 dark:text-neutral-400">
-                    <span>进度</span>
-                    <span>
-                      {compressionProgress.current}/{compressionProgress.total}
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
-                    <div
-                      className="h-1.5 rounded-full bg-orange-600 transition-all duration-300"
-                      style={{
-                        width: `${(compressionProgress.current / compressionProgress.total) * 100}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <ToolsSection onDataChange={onDataChange} />
       </div>
 
-      {/* 冲突解决模态框 - 半屏 */}
+      {/* 冲突解决模态框 */}
       {showConflictModal && (
         <div
           className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/50"
@@ -1610,12 +498,11 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
                 本地和云端都有数据，请选择保留哪一方
               </p>
-              {conflictRemoteMetadata &&
-                !conflictRemoteMetadata.lastSyncTime && (
-                  <p className="mt-2 rounded bg-orange-50 px-3 py-2 text-xs text-orange-600 dark:bg-orange-900/20 dark:text-orange-400">
-                    💡 首次同步：通常建议下载云端数据
-                  </p>
-                )}
+              {!conflictRemoteTime && (
+                <p className="mt-2 rounded bg-orange-50 px-3 py-2 text-xs text-orange-600 dark:bg-orange-900/20 dark:text-orange-400">
+                  💡 首次同步：通常建议下载云端数据
+                </p>
+              )}
             </div>
 
             <div className="mb-4 space-y-3">
@@ -1624,15 +511,16 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                   📥 云端数据
                 </p>
                 <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
-                  {conflictRemoteMetadata && conflictRemoteMetadata.lastSyncTime
-                    ? `最后更新：${new Date(
-                        conflictRemoteMetadata.lastSyncTime
-                      ).toLocaleString('zh-CN', {
-                        month: 'numeric',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}`
+                  {conflictRemoteTime
+                    ? `最后更新：${new Date(conflictRemoteTime).toLocaleString(
+                        'zh-CN',
+                        {
+                          month: 'numeric',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }
+                      )}`
                     : '云端有数据'}
                 </p>
               </div>

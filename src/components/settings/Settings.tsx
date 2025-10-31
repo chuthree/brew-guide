@@ -80,6 +80,16 @@ export interface SettingsOptions {
     syncMode: 'manual';
     lastConnectionSuccess?: boolean;
   };
+  // WebDAV同步设置
+  webdavSync?: {
+    enabled: boolean;
+    url: string;
+    username: string;
+    password: string;
+    remotePath: string;
+    syncMode: 'manual';
+    lastConnectionSuccess?: boolean;
+  };
   // 随机咖啡豆设置
   randomCoffeeBeans?: {
     enableLongPressRandomType: boolean; // 长按随机不同类型咖啡豆
@@ -334,131 +344,121 @@ const Settings: React.FC<SettingsProps> = ({
     'upload' | 'download' | 'both' | null
   >(null);
 
-  // 通过 DataSettings 组件获取 S3 同步状态
+  // 检测云同步状态的函数（同时支持S3和WebDAV）
+  const checkCloudSyncStatus = async () => {
+    try {
+      // 检查哪个云同步服务已启用
+      const s3Enabled =
+        settings.s3Sync?.enabled && settings.s3Sync?.lastConnectionSuccess;
+      const webdavEnabled =
+        settings.webdavSync?.enabled &&
+        settings.webdavSync?.lastConnectionSuccess;
+
+      if (!s3Enabled && !webdavEnabled) {
+        setS3Status('disconnected');
+        return;
+      }
+
+      setS3Status('connecting');
+
+      // 优先检查已启用的服务
+      if (s3Enabled) {
+        const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+        const s3Config = settings.s3Sync!;
+
+        if (
+          s3Config.accessKeyId &&
+          s3Config.secretAccessKey &&
+          s3Config.bucketName
+        ) {
+          const manager = new S3SyncManager();
+          const connected = await manager.initialize({
+            region: s3Config.region,
+            accessKeyId: s3Config.accessKeyId,
+            secretAccessKey: s3Config.secretAccessKey,
+            bucketName: s3Config.bucketName,
+            prefix: s3Config.prefix,
+            endpoint: s3Config.endpoint || undefined,
+          });
+
+          if (connected) {
+            setS3Status('connected');
+            const needsSync = await manager.needsSync();
+            setIsSyncNeeded(needsSync);
+
+            if (needsSync) {
+              const syncInfo = await manager.getSyncDirection();
+              setSyncDirection(syncInfo.direction);
+            } else {
+              setSyncDirection(null);
+            }
+            return;
+          }
+        }
+      } else if (webdavEnabled) {
+        const WebDAVSyncManager = (await import('@/lib/webdav/syncManager'))
+          .default;
+        const webdavConfig = settings.webdavSync!;
+
+        if (
+          webdavConfig.url &&
+          webdavConfig.username &&
+          webdavConfig.password
+        ) {
+          const manager = new WebDAVSyncManager();
+          const connected = await manager.initialize({
+            url: webdavConfig.url,
+            username: webdavConfig.username,
+            password: webdavConfig.password,
+            remotePath: webdavConfig.remotePath,
+          });
+
+          if (connected) {
+            setS3Status('connected');
+            const needsSync = await manager.needsSync();
+            setIsSyncNeeded(needsSync);
+
+            if (needsSync) {
+              const syncInfo = await manager.getSyncDirection();
+              setSyncDirection(syncInfo.direction);
+            } else {
+              setSyncDirection(null);
+            }
+            return;
+          }
+        }
+      }
+
+      setS3Status('error');
+    } catch (error) {
+      console.error('检测云同步状态失败:', error);
+      setS3Status('error');
+    }
+  };
+
+  // 监听云同步状态变更
   useEffect(() => {
-    const handleS3StatusChange = (event: CustomEvent) => {
-      const {
-        status,
-        syncing,
-        needsSync,
-        syncDirection: direction,
-      } = event.detail;
-      setS3Status(status);
-      setIsSyncing(syncing);
-      setIsSyncNeeded(needsSync);
-      setSyncDirection(direction || null);
+    const handleCloudSyncStatusChange = () => {
+      checkCloudSyncStatus();
     };
 
-    // 监听来自 DataSettings 组件的状态更新事件
     window.addEventListener(
-      's3StatusChange',
-      handleS3StatusChange as EventListener
+      'cloudSyncStatusChange',
+      handleCloudSyncStatusChange
     );
 
     return () => {
       window.removeEventListener(
-        's3StatusChange',
-        handleS3StatusChange as EventListener
+        'cloudSyncStatusChange',
+        handleCloudSyncStatusChange
       );
     };
-  }, []); // 在 Settings 打开时主动检测 S3 同步状态
+  }, [settings.s3Sync, settings.webdavSync]);
+
   useEffect(() => {
     if (!isOpen) return;
-
-    const checkS3Status = async () => {
-      try {
-        // 动态导入 S3SyncManager
-        const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
-
-        // 检查是否已配置并启用 S3 同步
-        const s3Config = settings.s3Sync;
-        if (
-          !s3Config?.enabled ||
-          !s3Config.lastConnectionSuccess ||
-          !s3Config.accessKeyId ||
-          !s3Config.secretAccessKey ||
-          !s3Config.bucketName
-        ) {
-          setS3Status('disconnected');
-          return;
-        }
-
-        // 尝试初始化连接
-        setS3Status('connecting');
-        const manager = new S3SyncManager();
-        const connected = await manager.initialize({
-          region: s3Config.region,
-          accessKeyId: s3Config.accessKeyId,
-          secretAccessKey: s3Config.secretAccessKey,
-          bucketName: s3Config.bucketName,
-          prefix: s3Config.prefix,
-          endpoint: s3Config.endpoint || undefined,
-        });
-
-        if (connected) {
-          setS3Status('connected');
-          // 检查是否需要同步
-          const needsSync = await manager.needsSync();
-          setIsSyncNeeded(needsSync);
-
-          // 如果需要同步，尝试获取同步方向
-          if (needsSync) {
-            try {
-              // 获取同步计划来确定方向
-              const { SyncPlanner } = await import('@/lib/s3/syncPlanner');
-              const { MetadataManager } = await import(
-                '@/lib/s3/metadataManager'
-              );
-
-              const planner = new SyncPlanner();
-              const metadataManager = new MetadataManager(
-                manager['client'],
-                manager['deviceId']
-              );
-
-              // 获取本地、远程和基准元数据
-              const localData = await manager['getLocalFilesMetadata']();
-              const remoteMetadata = await metadataManager.getRemoteMetadata();
-              const baseMetadata = await metadataManager.getLocalMetadata();
-
-              // 计算同步计划
-              const plan = planner.calculateSyncPlan(
-                localData,
-                remoteMetadata,
-                baseMetadata
-              );
-
-              // 根据计划确定同步方向
-              const hasUploads = plan.upload.length > 0;
-              const hasDownloads = plan.download.length > 0;
-
-              if (hasUploads && hasDownloads) {
-                setSyncDirection('both');
-              } else if (hasUploads) {
-                setSyncDirection('upload');
-              } else if (hasDownloads) {
-                setSyncDirection('download');
-              } else {
-                setSyncDirection(null);
-              }
-            } catch (error) {
-              console.error('无法获取同步方向:', error);
-              setSyncDirection(null);
-            }
-          } else {
-            setSyncDirection(null);
-          }
-        } else {
-          setS3Status('error');
-        }
-      } catch (error) {
-        console.error('检测 S3 状态失败:', error);
-        setS3Status('error');
-      }
-    };
-
-    checkS3Status();
-  }, [isOpen, settings.s3Sync]);
+    checkCloudSyncStatus();
+  }, [isOpen, settings.s3Sync, settings.webdavSync]);
 
   // 添加主题颜色更新的 Effect
   useEffect(() => {
@@ -542,41 +542,71 @@ const Settings: React.FC<SettingsProps> = ({
   const performSync = useCallback(async () => {
     // 如果 DataSettings 组件已打开，通过事件触发（优先使用 DataSettings 的逻辑）
     if (hasSubSettingsOpen) {
-      window.dispatchEvent(new CustomEvent('s3SyncRequested'));
+      window.dispatchEvent(new CustomEvent('cloudSyncRequested'));
       if (settings.hapticFeedback) {
         hapticsUtils.light();
       }
       return;
     }
 
-    // 如果 DataSettings 未打开，直接在这里执行同步
-    if (isSyncing || s3Status !== 'connected') {
+    // 防止重复同步
+    if (isSyncing) {
+      console.warn('⚠️ 同步正在进行中，请勿重复操作');
+      return;
+    }
+
+    // 检查连接状态
+    if (s3Status !== 'connected') {
+      console.warn('⚠️ 云同步未连接，无法执行同步');
       return;
     }
 
     try {
       setIsSyncing(true);
 
-      // 动态导入 S3SyncManager
-      const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+      // 确定使用哪个同步服务
+      const s3Enabled =
+        settings.s3Sync?.enabled && settings.s3Sync?.lastConnectionSuccess;
+      const webdavEnabled =
+        settings.webdavSync?.enabled &&
+        settings.webdavSync?.lastConnectionSuccess;
 
-      const s3Config = settings.s3Sync;
-      if (!s3Config) return;
+      if (!s3Enabled && !webdavEnabled) {
+        throw new Error('没有可用的云同步服务');
+      }
 
-      // 初始化管理器
-      const manager = new S3SyncManager();
-      const connected = await manager.initialize({
-        region: s3Config.region,
-        accessKeyId: s3Config.accessKeyId,
-        secretAccessKey: s3Config.secretAccessKey,
-        bucketName: s3Config.bucketName,
-        prefix: s3Config.prefix,
-        endpoint: s3Config.endpoint || undefined,
-      });
+      let manager: any;
+      let connected = false;
 
-      if (!connected) {
-        console.error('S3 连接失败');
-        return;
+      if (s3Enabled) {
+        const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+        const s3Config = settings.s3Sync!;
+
+        manager = new S3SyncManager();
+        connected = await manager.initialize({
+          region: s3Config.region,
+          accessKeyId: s3Config.accessKeyId,
+          secretAccessKey: s3Config.secretAccessKey,
+          bucketName: s3Config.bucketName,
+          prefix: s3Config.prefix,
+          endpoint: s3Config.endpoint || undefined,
+        });
+      } else if (webdavEnabled) {
+        const WebDAVSyncManager = (await import('@/lib/webdav/syncManager'))
+          .default;
+        const webdavConfig = settings.webdavSync!;
+
+        manager = new WebDAVSyncManager();
+        connected = await manager.initialize({
+          url: webdavConfig.url,
+          username: webdavConfig.username,
+          password: webdavConfig.password,
+          remotePath: webdavConfig.remotePath,
+        });
+      }
+
+      if (!connected || !manager) {
+        throw new Error('云同步连接失败，请检查配置');
       }
 
       // 执行同步
