@@ -16,6 +16,8 @@ const pwaConfig = {
 // 创建基础配置
 const nextConfig = {
   reactStrictMode: true,
+  // 启用 React Compiler
+  reactCompiler: true,
   // 为 Capacitor 启用静态导出模式
   output: 'export',
   // 图像配置
