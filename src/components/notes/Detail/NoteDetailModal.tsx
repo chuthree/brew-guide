@@ -414,7 +414,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   </div>
                 </div>
 
-                <div className="h-10 w-px border-l border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
 
                 {/* 方案 */}
                 <div className="flex flex-1 flex-col">
@@ -429,7 +429,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
               {/* 参数信息 - 一排四个 */}
               {note.params && (
-                <div className="flex items-center gap-3 border-t border-dashed border-neutral-200/70 pt-4 dark:border-neutral-800/70">
+                <div className="flex items-center gap-3 border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
                   {/* 粉量 */}
                   <div className="flex flex-1 flex-col">
                     <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -445,7 +445,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                     )}
                   </div>
 
-                  <div className="h-10 w-px border-l border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                  <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
 
                   {/* 粉水比 */}
                   <div className="flex flex-1 flex-col">
@@ -457,7 +457,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="h-10 w-px border-l border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                  <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
 
                   {/* 研磨度 */}
                   <div className="flex flex-1 flex-col">
@@ -469,7 +469,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="h-10 w-px border-l border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                  <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
 
                   {/* 水温 */}
                   <div className="flex flex-1 flex-col">
@@ -485,12 +485,12 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
               {/* 风味评分 - 一排四个 */}
               {hasTasteRatings && (
-                <div className="border-t border-dashed border-neutral-200/70 pt-4 dark:border-neutral-800/70">
+                <div className="border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
                   <div className="flex items-center gap-3">
                     {validTasteRatings.map((rating, index) => (
                       <React.Fragment key={rating.id}>
                         {index > 0 && (
-                          <div className="h-10 w-px border-l border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                          <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
                         )}
                         <div className="flex flex-1 flex-col">
                           <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -507,7 +507,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                       Array.from({ length: 4 - validTasteRatings.length }).map(
                         (_, i) => (
                           <React.Fragment key={`empty-${i}`}>
-                            <div className="h-10 w-px border-l border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                            <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
                             <div className="flex-1"></div>
                           </React.Fragment>
                         )
@@ -518,7 +518,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
               {/* 总体评分和时间 - 两格布局 */}
               {(note.rating > 0 || hasTasteRatings) && (
-                <div className="border-t border-dashed border-neutral-200/70 pt-4 dark:border-neutral-800/70">
+                <div className="border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
                   <div className="flex items-center gap-3">
                     {note.rating > 0 ? (
                       <>
@@ -530,7 +530,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             {formatRating(note.rating)}
                           </div>
                         </div>
-                        <div className="h-10 w-px border-l border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                        <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
                         <div className="flex flex-1 flex-col">
                           <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             时间
@@ -556,7 +556,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
               {/* 备注信息 */}
               {note.notes && note.notes.trim() && (
-                <div className="border-t border-dashed border-neutral-200/70 pt-4 dark:border-neutral-800/70">
+                <div className="border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
                   <div className="text-xs font-medium whitespace-pre-line text-neutral-800 dark:text-neutral-100">
                     {note.notes}
                   </div>
