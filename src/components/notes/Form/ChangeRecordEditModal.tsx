@@ -245,10 +245,10 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
                 </div>
               </div>
 
-              {/* 底部按钮区域 - 悬浮固定 */}
-              <div className="pb-safe-bottom fixed bottom-6 left-1/2 z-10 -translate-x-1/2 transform">
+              {/* 底部按钮区域 - 使用与其他模态框一致的布局 */}
+              <div className="modal-bottom-button flex items-center justify-center">
                 <div className="flex items-center gap-3">
-                  {/* 转为普通笔记按钮 - 只显示图标，保持与保存按钮一致的大小 */}
+                  {/* 转为普通笔记按钮 - 只显示图标,保持与保存按钮一致的大小 */}
                   {onConvertToNormalNote && (
                     <button
                       type="button"
