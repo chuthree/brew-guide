@@ -56,7 +56,10 @@ import { SortOption, DateGroupingMode } from '../types';
 import { exportSelectedNotes } from '../Share/NotesExporter';
 import { extractExtractionTime, sortNotes } from '../utils';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
-import { isSameEquipment, getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
+import {
+  isSameEquipment,
+  getEquipmentIdByName,
+} from '@/lib/utils/equipmentUtils';
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   isOpen,
@@ -222,7 +225,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const loadNotes = useBrewingNoteStore(state => state.loadNotes);
   const deleteNote = useBrewingNoteStore(state => state.deleteNote);
   const updateNote = useBrewingNoteStore(state => state.updateNote);
-  
+
   const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>(
     {}
   );
@@ -243,7 +246,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     // 2. 再筛选
     if (filterMode === 'equipment' && selectedEquipment) {
       return sortedNotes.filter((note: BrewingNote) => {
-        return isSameEquipment(note.equipment, selectedEquipment, customEquipments);
+        return isSameEquipment(
+          note.equipment,
+          selectedEquipment,
+          customEquipments
+        );
       });
     } else if (filterMode === 'bean' && selectedBean) {
       return sortedNotes.filter(
@@ -256,25 +263,37 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        
+
         let noteDate = '';
         if (dateGroupingMode === 'year') noteDate = `${year}`;
         else if (dateGroupingMode === 'month') noteDate = `${year}-${month}`;
         else noteDate = `${year}-${month}-${day}`;
-        
+
         return noteDate === selectedDate;
       });
     }
 
     return sortedNotes;
-  }, [notes, sortOption, filterMode, selectedEquipment, selectedBean, selectedDate, dateGroupingMode, customEquipments]);
+  }, [
+    notes,
+    sortOption,
+    filterMode,
+    selectedEquipment,
+    selectedBean,
+    selectedDate,
+    dateGroupingMode,
+    customEquipments,
+  ]);
 
   // � 计算可用的设备、豆子、日期列表
   const availableEquipments = useMemo(() => {
     const equipmentSet = new Set<string>();
     notes.forEach((note: BrewingNote) => {
       if (note.equipment) {
-        const normalizedId = getEquipmentIdByName(note.equipment, customEquipments);
+        const normalizedId = getEquipmentIdByName(
+          note.equipment,
+          customEquipments
+        );
         equipmentSet.add(normalizedId);
       }
     });
@@ -299,12 +318,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        
+
         let dateStr = '';
         if (dateGroupingMode === 'year') dateStr = `${year}`;
         else if (dateGroupingMode === 'month') dateStr = `${year}-${month}`;
         else dateStr = `${year}-${month}-${day}`;
-        
+
         dateSet.add(dateStr);
       }
     });
@@ -429,11 +448,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 计算总咖啡消耗量
   const totalCoffeeConsumption = useRef(0);
 
-    // 🔥 组件挂载时加载笔记数据和器具名称（不依赖 isOpen）
+  // 🔥 组件挂载时加载笔记数据和器具名称（不依赖 isOpen）
   useEffect(() => {
     // 初始化加载笔记
     loadNotes();
-    
+
     // 加载器具名称
     const loadEquipmentData = async () => {
       const { equipmentList } = await import('@/lib/core/config');
@@ -695,7 +714,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     setShowChangeRecordEditModal(false);
 
     // 🔥 解构排除变动记录的特有字段，确保干净的数据转换
-    const { source, quickDecrementAmount, changeRecord, ...cleanNote } = convertedNote as any;
+    const { source, quickDecrementAmount, changeRecord, ...cleanNote } =
+      convertedNote as any;
 
     // 准备普通笔记数据
     const noteToEdit = {
@@ -1147,9 +1167,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 计算是否有图片笔记（用于禁用/启用图片流按钮）
   const hasImageNotes = useMemo(() => {
     // 基于所有原始笔记数据检查是否有图片
-    return notes.some(
-      note => note.image && note.image.trim() !== ''
-    );
+    return notes.some(note => note.image && note.image.trim() !== '');
   }, [notes]); // 依赖notes以便在笔记数据变化时重新计算
 
   // 计算图片流模式下的可用设备和豆子列表
@@ -1166,9 +1184,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
     // 如果是搜索模式，基于搜索结果；否则基于所有原始笔记
     const baseNotes =
-      isSearching && searchQuery.trim()
-        ? searchFilteredNotes
-        : notes;
+      isSearching && searchQuery.trim() ? searchFilteredNotes : notes;
 
     // 过滤出有图片的记录
     const allNotesWithImages = baseNotes.filter(
@@ -1242,11 +1258,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 但只在数据已经加载完成后才执行此检查，避免初始化时误判
   useEffect(() => {
     // 只有当确实没有图片笔记时才关闭
-    if (
-      notes.length > 0 &&
-      imageFlowStats &&
-      imageFlowStats.count === 0
-    ) {
+    if (notes.length > 0 && imageFlowStats && imageFlowStats.count === 0) {
       // 关闭所有图片流模式
       setImageFlowMode(false, false, false);
       updateViewMode('list');
