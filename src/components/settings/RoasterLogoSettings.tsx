@@ -327,7 +327,9 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                     <span className="mt-0.5 text-neutral-400 dark:text-neutral-500">
                       •
                     </span>
-                    <span>当咖啡豆未设置图片时，会自动显示对应烘焙商的图标</span>
+                    <span>
+                      当咖啡豆未设置图片时，会自动显示对应烘焙商的图标
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-0.5 text-neutral-400 dark:text-neutral-500">
