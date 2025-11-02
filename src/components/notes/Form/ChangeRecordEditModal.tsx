@@ -253,32 +253,10 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        // 直接调用转换函数
+                        // 🔥 使用最新的时间戳，并传递给转换处理函数
                         const convertedNote = {
                           ...initialData,
                           timestamp: timestamp.getTime(),
-                          // 移除变动记录特有的字段
-                          source: undefined,
-                          quickDecrementAmount: undefined,
-                          changeRecord: undefined,
-                          // 设置默认的普通笔记字段
-                          equipment: initialData.equipment || '',
-                          method: initialData.method || '',
-                          params: {
-                            coffee: initialData.params?.coffee || '',
-                            water: '',
-                            ratio: '',
-                            grindSize: '',
-                            temp: '',
-                          },
-                          rating: initialData.rating ?? 0,
-                          taste: initialData.taste || {
-                            acidity: 0,
-                            sweetness: 0,
-                            bitterness: 0,
-                            body: 0,
-                          },
-                          totalTime: initialData.totalTime || 0,
                         };
                         onConvertToNormalNote(convertedNote);
                       }}

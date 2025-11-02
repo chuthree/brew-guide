@@ -2065,13 +2065,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         '@/lib/stores/brewingNoteStore'
       );
 
+      // 🔥 解构排除变动记录的特有字段，确保转换后的笔记不会被识别为变动记录
+      const { source, quickDecrementAmount, changeRecord, ...cleanNote } = note as any;
+
       const noteToSave = {
-        ...note,
-        id: note.id || Date.now().toString(),
-        timestamp: note.timestamp || Date.now(),
-        equipment: note.equipment || '',
-        method: note.method || '',
-        params: note.params || {
+        ...cleanNote,
+        id: cleanNote.id || Date.now().toString(),
+        timestamp: cleanNote.timestamp || Date.now(),
+        equipment: cleanNote.equipment || '',
+        method: cleanNote.method || '',
+        params: cleanNote.params || {
           coffee: '',
           water: '',
           ratio: '',
@@ -2110,10 +2113,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           }
         }
       } else {
-        // 更新现有笔记
-        await useBrewingNoteStore
-          .getState()
-          .updateNote(noteToSave.id, noteToSave);
+        // 🔥 更新现有笔记 - 使用完全替换策略确保删除变动记录字段
+        // 先获取当前所有笔记
+        const { Storage } = await import('@/lib/core/storage');
+        const savedNotes = await Storage.get('brewingNotes');
+        const allNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
+        
+        // 找到并完全替换目标笔记
+        const noteIndex = allNotes.findIndex(n => n.id === noteToSave.id);
+        if (noteIndex !== -1) {
+          allNotes[noteIndex] = noteToSave; // 完全替换，不是合并
+          await Storage.set('brewingNotes', JSON.stringify(allNotes));
+          
+          // 更新 Zustand store
+          useBrewingNoteStore.setState({ notes: allNotes });
+        }
       }
 
       setBrewingNoteEditOpen(false);

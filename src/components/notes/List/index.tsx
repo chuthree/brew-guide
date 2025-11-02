@@ -694,34 +694,34 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     setEditingChangeRecord(null);
     setShowChangeRecordEditModal(false);
 
+    // 🔥 解构排除变动记录的特有字段，确保干净的数据转换
+    const { source, quickDecrementAmount, changeRecord, ...cleanNote } = convertedNote as any;
+
     // 准备普通笔记数据
     const noteToEdit = {
-      id: convertedNote.id,
-      timestamp: convertedNote.timestamp,
-      equipment: convertedNote.equipment || '',
-      method: convertedNote.method || '',
-      params: convertedNote.params || {
+      ...cleanNote,
+      equipment: cleanNote.equipment || '',
+      method: cleanNote.method || '',
+      params: cleanNote.params || {
         coffee: '',
         water: '',
         ratio: '',
         grindSize: '',
         temp: '',
       },
-      coffeeBeanInfo: convertedNote.coffeeBeanInfo || {
+      coffeeBeanInfo: cleanNote.coffeeBeanInfo || {
         name: '',
         roastLevel: '',
       },
-      image: convertedNote.image,
-      rating: convertedNote.rating ?? 0,
-      taste: convertedNote.taste || {
+      rating: cleanNote.rating ?? 0,
+      taste: cleanNote.taste || {
         acidity: 0,
         sweetness: 0,
         bitterness: 0,
         body: 0,
       },
-      notes: convertedNote.notes || '',
-      totalTime: convertedNote.totalTime || 0,
-      beanId: convertedNote.beanId,
+      notes: cleanNote.notes || '',
+      totalTime: cleanNote.totalTime || 0,
     };
 
     // 通过事件打开普通笔记编辑模态
