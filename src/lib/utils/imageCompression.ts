@@ -8,6 +8,7 @@ export interface CompressionOptions {
   maxHeight?: number; // 最大高度，默认 1920
   quality?: number; // 图片质量 0-1，默认 0.8
   mimeType?: string; // 输出格式，默认 'image/jpeg'
+  maxSizeMB?: number; // 最大文件大小（MB），如果指定则会循环压缩直到达到目标
 }
 
 /**
@@ -25,6 +26,7 @@ export async function compressImage(
     maxHeight = 1920,
     quality = 0.8,
     mimeType = 'image/jpeg',
+    maxSizeMB,
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -54,32 +56,74 @@ export async function compressImage(
           return;
         }
 
+        // 设置高质量渲染
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
         // 绘制图片
         ctx.drawImage(img, 0, 0, width, height);
 
-        // 转换为 Blob
-        canvas.toBlob(
-          blob => {
-            if (!blob) {
-              reject(new Error('图片压缩失败'));
-              return;
-            }
+        // 如果指定了最大文件大小，则循环压缩
+        if (maxSizeMB) {
+          const targetSize = maxSizeMB * 1024 * 1024;
+          let currentQuality = quality;
 
-            // 创建新的 File 对象
-            const compressedFile = new File([blob], file.name, {
-              type: mimeType,
-              lastModified: Date.now(),
-            });
+          const tryCompress = () => {
+            canvas.toBlob(
+              blob => {
+                if (!blob) {
+                  reject(new Error('图片压缩失败'));
+                  return;
+                }
 
-            console.log(
-              `📦 图片压缩完成: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB (${Math.round((1 - compressedFile.size / file.size) * 100)}% 压缩率)`
+                // 达到目标大小或质量已经很低了
+                if (blob.size <= targetSize || currentQuality <= 0.1) {
+                  const compressedFile = new File([blob], file.name, {
+                    type: mimeType,
+                    lastModified: Date.now(),
+                  });
+
+                  console.log(
+                    `📦 图片压缩完成: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB (${Math.round((1 - compressedFile.size / file.size) * 100)}% 压缩率, 质量: ${Math.round(currentQuality * 100)}%)`
+                  );
+
+                  resolve(compressedFile);
+                } else {
+                  // 降低质量继续压缩
+                  currentQuality = Math.max(0.1, currentQuality - 0.1);
+                  tryCompress();
+                }
+              },
+              mimeType,
+              currentQuality
             );
+          };
 
-            resolve(compressedFile);
-          },
-          mimeType,
-          quality
-        );
+          tryCompress();
+        } else {
+          // 不限制文件大小，直接压缩一次
+          canvas.toBlob(
+            blob => {
+              if (!blob) {
+                reject(new Error('图片压缩失败'));
+                return;
+              }
+
+              const compressedFile = new File([blob], file.name, {
+                type: mimeType,
+                lastModified: Date.now(),
+              });
+
+              console.log(
+                `📦 图片压缩完成: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB (${Math.round((1 - compressedFile.size / file.size) * 100)}% 压缩率)`
+              );
+
+              resolve(compressedFile);
+            },
+            mimeType,
+            quality
+          );
+        }
       };
 
       img.onerror = () => {

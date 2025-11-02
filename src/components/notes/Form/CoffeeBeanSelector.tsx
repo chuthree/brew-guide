@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import Image from 'next/image';
 import type { CoffeeBean } from '@/types/app';
 import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
+import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
+import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 
 interface CoffeeBeanSelectorProps {
   coffeeBeans: CoffeeBean[];
@@ -18,6 +20,59 @@ interface CoffeeBeanSelectorProps {
 
 // 定义列表项类型
 type VirtuosoItem = { __type: 'none' } | { __type: 'bean'; bean: CoffeeBean };
+
+// 咖啡豆图片组件（支持烘焙商图标）
+const BeanImage: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
+  const [imageError, setImageError] = useState(false);
+  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadRoasterLogo = async () => {
+      if (!bean.name || bean.image) {
+        // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
+        return;
+      }
+
+      const roasterName = extractRoasterFromName(bean.name);
+      if (roasterName && roasterName !== '未知烘焙商') {
+        const logo = await RoasterLogoManager.getLogoByRoaster(roasterName);
+        setRoasterLogo(logo);
+      }
+    };
+
+    loadRoasterLogo();
+  }, [bean.name, bean.image]);
+
+  return (
+    <>
+      {bean.image && !imageError ? (
+        <Image
+          src={bean.image}
+          alt={bean.name || '咖啡豆图片'}
+          width={56}
+          height={56}
+          className="h-full w-full object-cover"
+          onError={() => setImageError(true)}
+          unoptimized
+        />
+      ) : roasterLogo && !imageError ? (
+        <Image
+          src={roasterLogo}
+          alt={extractRoasterFromName(bean.name) || '烘焙商图标'}
+          width={56}
+          height={56}
+          className="h-full w-full object-cover"
+          onError={() => setImageError(true)}
+          unoptimized
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
+          {bean.name ? bean.name.charAt(0) : '豆'}
+        </div>
+      )}
+    </>
+  );
+};
 
 // 计算咖啡豆的赏味期阶段和剩余天数
 const getFlavorInfo = (bean: CoffeeBean) => {
@@ -320,23 +375,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                         {/* 左侧图片区域 - 固定显示，缩小尺寸 */}
                         <div className="relative self-start">
                           <div className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
-                            {bean.image ? (
-                              <Image
-                                src={bean.image}
-                                alt={bean.name || '咖啡豆图片'}
-                                width={56}
-                                height={56}
-                                className="h-full w-full object-cover"
-                                onError={e => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
-                                {bean.name ? bean.name.charAt(0) : '豆'}
-                              </div>
-                            )}
+                            <BeanImage bean={bean} />
                           </div>
 
                           {/* 状态圆点 - 右下角，边框超出图片边界 - 只有当有赏味期数据时才显示 */}

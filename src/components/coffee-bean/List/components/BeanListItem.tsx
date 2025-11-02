@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 // import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-menu' // 移除操作菜单
@@ -12,6 +12,8 @@ import {
   calculateFlavorInfo,
   getDefaultFlavorPeriodByRoastLevelSync,
 } from '@/lib/utils/flavorPeriodUtils';
+import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
+import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(
@@ -56,12 +58,31 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [internalNotesExpanded, setInternalNotesExpanded] = useState(false);
+  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
   // 使用外部状态或内部状态
   const isNotesExpanded =
     externalNotesExpanded !== undefined
       ? externalNotesExpanded
       : internalNotesExpanded;
+
+  // 加载烘焙商图标
+  useEffect(() => {
+    const loadRoasterLogo = async () => {
+      if (!bean.name || bean.image) {
+        // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
+        return;
+      }
+
+      const roasterName = extractRoasterFromName(bean.name);
+      if (roasterName && roasterName !== '未知烘焙商') {
+        const logo = await RoasterLogoManager.getLogoByRoaster(roasterName);
+        setRoasterLogo(logo);
+      }
+    };
+
+    loadRoasterLogo();
+  }, [bean.name, bean.image]);
 
   // 设置默认值
   const showOnlyBeanName = settings?.showOnlyBeanName ?? true;
@@ -318,7 +339,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
           <div
             className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
             onClick={() =>
-              bean.image && !imageError && setImageViewerOpen(true)
+              (bean.image || roasterLogo) &&
+              !imageError &&
+              setImageViewerOpen(true)
             }
             data-click-area="image"
           >
@@ -338,7 +361,23 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 placeholder="blur"
                 blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
               />
+            ) : roasterLogo && !imageError ? (
+              // 显示烘焙商图标
+              <Image
+                src={roasterLogo}
+                alt={extractRoasterFromName(bean.name) || '烘焙商图标'}
+                height={48}
+                width={48}
+                unoptimized
+                style={{ width: '100%', height: '100%' }}
+                className="object-cover"
+                sizes="48px"
+                priority={true}
+                loading="eager"
+                onError={() => setImageError(true)}
+              />
             ) : (
+              // 默认显示首字符
               <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
                 {bean.name ? bean.name.charAt(0) : '豆'}
               </div>
@@ -354,11 +393,15 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             )}
         </div>
 
-        {bean.image && !imageError && imageViewerOpen && (
+        {(bean.image || roasterLogo) && !imageError && imageViewerOpen && (
           <ImageViewer
             isOpen={imageViewerOpen}
-            imageUrl={bean.image}
-            alt={bean.name || '咖啡豆图片'}
+            imageUrl={bean.image || roasterLogo || ''}
+            alt={
+              bean.image
+                ? bean.name || '咖啡豆图片'
+                : extractRoasterFromName(bean.name) + ' 烘焙商图标'
+            }
             onClose={() => setImageViewerOpen(false)}
           />
         )}

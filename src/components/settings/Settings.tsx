@@ -27,6 +27,7 @@ import {
   Download,
   ArrowUpDown as ArrowUpDownIcon,
   EyeOff,
+  ImagePlus,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -221,6 +222,7 @@ export interface SubSettingsHandlers {
   onOpenFlavorDimensionSettings: () => void;
   onOpenHiddenMethodsSettings: () => void;
   onOpenHiddenEquipmentsSettings: () => void;
+  onOpenRoasterLogoSettings: () => void;
 }
 
 interface SettingsProps {
@@ -1015,6 +1017,17 @@ const Settings: React.FC<SettingsProps> = ({
             <div className="flex items-center space-x-3">
               <CalendarDays className="h-4 w-4 text-neutral-500" />
               <span>赏味期设置</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-neutral-400" />
+          </button>
+
+          <button
+            onClick={subSettingsHandlers.onOpenRoasterLogoSettings}
+            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            <div className="flex items-center space-x-3">
+              <ImagePlus className="h-4 w-4 text-neutral-500" />
+              <span>烘焙商图标设置</span>
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>
