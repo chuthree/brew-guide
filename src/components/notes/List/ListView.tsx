@@ -30,6 +30,8 @@ interface NotesListViewProps {
   // 设备名称映射和价格缓存
   equipmentNames?: Record<string, string>;
   beanPrices?: Record<string, number>;
+  // 咖啡豆列表
+  coffeeBeans?: import('@/types/app').CoffeeBean[];
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
@@ -50,6 +52,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   scrollParentRef,
   equipmentNames = {},
   beanPrices = {},
+  coffeeBeans = [],
 }) => {
   const [unitPriceCache] = useState<Record<string, number>>(beanPrices);
   const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false);
@@ -71,7 +74,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   const { regularNotes, changeRecordNotes } = useMemo(() => {
     const regular: BrewingNote[] = [];
     const changeRecords: BrewingNote[] = [];
-    
+
     notes.forEach(note => {
       if (isChangeRecord(note)) {
         changeRecords.push(note);
@@ -79,7 +82,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         regular.push(note);
       }
     });
-    
+
     return { regularNotes: regular, changeRecordNotes: changeRecords };
   }, [notes]);
 
@@ -211,6 +214,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             onToggleSelect={handleToggleSelect}
             isLast={index === regularNotes.length - 1}
             getValidTasteRatings={getValidTasteRatings}
+            coffeeBeans={coffeeBeans}
           />
         )}
       />

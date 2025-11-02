@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { NoteItemProps } from '../types';
 import { formatDate, formatRating } from '../utils';
 
@@ -28,13 +27,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
   onToggleSelect,
   isLast = false,
   getValidTasteRatings,
+  coffeeBeans = [],
 }) => {
   // 图片查看器状态和错误状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
-  const [imageError, setImageError] = useState(false);
-
-  // 预先计算一些条件，避免在JSX中重复计算
-  const validTasteRatings = getValidTasteRatings ? getValidTasteRatings(note.taste) : [];
+  const [imageError, setImageError] = useState(false); // 预先计算一些条件，避免在JSX中重复计算
+  const validTasteRatings = getValidTasteRatings
+    ? getValidTasteRatings(note.taste)
+    : [];
   const hasTasteRatings = validTasteRatings.length > 0;
   const hasNotes = Boolean(note.notes);
   const equipmentName =
@@ -44,19 +44,34 @@ const NoteItem: React.FC<NoteItemProps> = ({
   const beanName = note.coffeeBeanInfo?.name;
   const beanUnitPrice = beanName ? unitPriceCache[beanName] || 0 : 0;
 
+  // 获取完整的咖啡豆信息（包括图片）
+  const beanInfo = note.beanId
+    ? coffeeBeans.find(bean => bean.id === note.beanId)
+    : null;
+
   // 处理笔记点击事件
   const handleNoteClick = () => {
     if (isShareMode && onToggleSelect) {
       onToggleSelect(note.id);
-    } else if (onEdit) {
-      onEdit(note);
+    } else {
+      // 非分享模式下，触发打开详情事件
+      window.dispatchEvent(
+        new CustomEvent('noteDetailOpened', {
+          detail: {
+            note,
+            equipmentName,
+            beanUnitPrice,
+            beanInfo, // 传递完整的咖啡豆信息
+          },
+        })
+      );
     }
   };
 
   return (
     <div
-      className={`group space-y-3 px-6 py-5 ${!isLast ? 'border-b border-neutral-200 dark:border-neutral-800' : ''} ${isShareMode ? 'cursor-pointer' : ''} note-item`}
-      onClick={isShareMode ? handleNoteClick : undefined}
+      className={`group space-y-3 px-6 py-5 ${!isLast ? 'border-b border-neutral-200 dark:border-neutral-800' : ''} ${!isShareMode ? 'cursor-pointer' : 'cursor-pointer'} note-item`}
+      onClick={handleNoteClick}
       data-note-id={note.id}
     >
       <div className="flex flex-col space-y-3">
@@ -182,8 +197,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
                   </div>
                 )}
               </div>
-              <div className="relative ml-1 h-[16.5px] shrink-0">
-                {isShareMode ? (
+              {isShareMode && (
+                <div className="relative ml-1 h-[16.5px] shrink-0">
                   <input
                     type="checkbox"
                     checked={isSelected}
@@ -194,38 +209,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     onClick={e => e.stopPropagation()}
                     className="relative h-4 w-4 appearance-none rounded-sm border border-neutral-300 text-xs checked:bg-neutral-800 checked:after:absolute checked:after:top-1/2 checked:after:left-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:text-white checked:after:content-['✓'] dark:border-neutral-700 dark:checked:bg-neutral-200 dark:checked:after:text-black"
                   />
-                ) : (
-                  <ActionMenu
-                    items={[
-                      {
-                        id: 'edit',
-                        label: '编辑',
-                        onClick: () => onEdit(note),
-                      },
-                      {
-                        id: 'copy',
-                        label: '复制',
-                        onClick: () => onCopy?.(note.id),
-                      },
-                      {
-                        id: 'delete',
-                        label: '删除',
-                        onClick: () => onDelete(note.id),
-                        color: 'danger',
-                      },
-                      {
-                        id: 'share',
-                        label: '分享',
-                        onClick: () => {
-                          if (onToggleSelect) {
-                            onToggleSelect(note.id, true);
-                          }
-                        },
-                      },
-                    ]}
-                  />
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -339,12 +324,12 @@ export default React.memo(NoteItem, (prevProps, nextProps) => {
   // 检查口感 - 🔥 修复：检查所有风味维度（包括自定义维度）
   const prevTasteKeys = Object.keys(prevNote.taste || {});
   const nextTasteKeys = Object.keys(nextNote.taste || {});
-  
+
   // 检查风味维度数量是否变化
   if (prevTasteKeys.length !== nextTasteKeys.length) {
     return false;
   }
-  
+
   // 检查每个风味维度的值是否变化
   for (const key of nextTasteKeys) {
     if (prevNote.taste?.[key] !== nextNote.taste?.[key]) {

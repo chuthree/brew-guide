@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { formatDate } from '../utils';
-import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { BrewingNote } from '@/lib/core/config';
 
 interface ChangeRecordNoteItemProps {
@@ -102,9 +101,9 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
           </div>
         </div>
 
-        {/* 右侧操作区域 */}
-        <div className="ml-2 shrink-0">
-          {isShareMode ? (
+        {/* 右侧操作区域 - 只在分享模式显示复选框 */}
+        {isShareMode && (
+          <div className="ml-2 shrink-0">
             <input
               type="checkbox"
               checked={isSelected}
@@ -115,38 +114,8 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
               onClick={e => e.stopPropagation()}
               className="relative h-4 w-4 appearance-none rounded-sm border border-neutral-300 text-xs checked:bg-neutral-800 checked:after:absolute checked:after:top-1/2 checked:after:left-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:text-white checked:after:content-['✓'] dark:border-neutral-700 dark:checked:bg-neutral-200 dark:checked:after:text-black"
             />
-          ) : (
-            <ActionMenu
-              items={[
-                {
-                  id: 'edit',
-                  label: '编辑',
-                  onClick: () => onEdit && onEdit(note),
-                },
-                {
-                  id: 'copy',
-                  label: '复制',
-                  onClick: () => onCopy && onCopy(note.id),
-                },
-                {
-                  id: 'delete',
-                  label: '删除',
-                  onClick: () => onDelete && onDelete(note.id),
-                  color: 'danger',
-                },
-                {
-                  id: 'share',
-                  label: '分享',
-                  onClick: () => {
-                    if (onToggleSelect) {
-                      onToggleSelect(note.id, true);
-                    }
-                  },
-                },
-              ]}
-            />
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -191,9 +160,9 @@ export default React.memo(ChangeRecordNoteItem, (prevProps, nextProps) => {
   // 检查变动记录详情
   if (
     prevNote.changeRecord?.capacityAdjustment?.changeAmount !==
-    nextNote.changeRecord?.capacityAdjustment?.changeAmount ||
+      nextNote.changeRecord?.capacityAdjustment?.changeAmount ||
     prevNote.changeRecord?.capacityAdjustment?.changeType !==
-    nextNote.changeRecord?.capacityAdjustment?.changeType
+      nextNote.changeRecord?.capacityAdjustment?.changeType
   ) {
     return false;
   }

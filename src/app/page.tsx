@@ -95,6 +95,7 @@ import {
 } from '@/lib/navigation/pageTransition';
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
 import BrewingNoteEditModal from '@/components/notes/Form/BrewingNoteEditModal';
+import NoteDetailModal from '@/components/notes/Detail/NoteDetailModal';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -279,14 +280,24 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     useState<BrewingNoteData | null>(null);
   const [isBrewingNoteCopy, setIsBrewingNoteCopy] = useState(false); // 标记是否是复制操作
 
-  // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、添加咖啡豆 或 笔记编辑）
+  // 笔记详情状态
+  const [noteDetailOpen, setNoteDetailOpen] = useState(false);
+  const [noteDetailData, setNoteDetailData] = useState<{
+    note: BrewingNote;
+    equipmentName: string;
+    beanUnitPrice: number;
+    beanInfo?: CoffeeBean | null;
+  } | null>(null);
+
+  // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、添加咖啡豆、笔记详情 或 笔记编辑）
   // 注意：咖啡豆表单是抽屉式组件，不需要触发主页面转场动画
   const hasAnyModalOpen =
     isSettingsOpen ||
     hasSubSettingsOpen ||
     beanDetailOpen ||
     showImportBeanForm ||
-    brewingNoteEditOpen;
+    brewingNoteEditOpen ||
+    noteDetailOpen;
 
   // 统一管理 pageStackManager 的状态
   React.useEffect(() => {
@@ -2507,6 +2518,48 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
   }, []);
 
+  // 监听笔记详情的打开/关闭事件
+  React.useEffect(() => {
+    const handleNoteDetailOpened = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        note: BrewingNote;
+        equipmentName: string;
+        beanUnitPrice: number;
+        beanInfo?: CoffeeBean | null;
+      }>;
+      // 安全检查
+      if (!customEvent.detail || !customEvent.detail.note) {
+        console.error('NoteDetailModal: 打开事件缺少必要数据');
+        return;
+      }
+      setNoteDetailData({
+        note: customEvent.detail.note,
+        equipmentName: customEvent.detail.equipmentName,
+        beanUnitPrice: customEvent.detail.beanUnitPrice,
+        beanInfo: customEvent.detail.beanInfo,
+      });
+      setNoteDetailOpen(true);
+    };
+
+    const handleNoteDetailClosing = () => {
+      setNoteDetailOpen(false);
+    };
+
+    window.addEventListener(
+      'noteDetailOpened',
+      handleNoteDetailOpened as EventListener
+    );
+    window.addEventListener('noteDetailClosing', handleNoteDetailClosing);
+
+    return () => {
+      window.removeEventListener(
+        'noteDetailOpened',
+        handleNoteDetailOpened as EventListener
+      );
+      window.removeEventListener('noteDetailClosing', handleNoteDetailClosing);
+    };
+  }, []);
+
   // 监听添加咖啡豆模态框的打开/关闭事件
   React.useEffect(() => {
     const handleBeanImportOpened = () => {
@@ -3397,6 +3450,69 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         settings={settings}
         isCopy={isBrewingNoteCopy}
       />
+
+      {/* 笔记详情模态框独立渲染，与 Settings 同级 */}
+      {noteDetailData && (
+        <NoteDetailModal
+          isOpen={noteDetailOpen}
+          note={noteDetailData.note}
+          onClose={() => setNoteDetailOpen(false)}
+          equipmentName={noteDetailData.equipmentName}
+          beanUnitPrice={noteDetailData.beanUnitPrice}
+          beanInfo={noteDetailData.beanInfo}
+          onEdit={async note => {
+            setNoteDetailOpen(false);
+            // 加载完整的笔记数据用于编辑
+            const { Storage } = await import('@/lib/core/storage');
+            const notesStr = await Storage.get('brewingNotes');
+            if (notesStr) {
+              const allNotes: BrewingNote[] = JSON.parse(notesStr);
+              const fullNote = allNotes.find(n => n.id === note.id);
+              if (fullNote) {
+                setBrewingNoteEditData(fullNote as BrewingNoteData);
+                setBrewingNoteEditOpen(true);
+              }
+            }
+          }}
+          onDelete={async noteId => {
+            setNoteDetailOpen(false);
+            try {
+              const { useBrewingNoteStore } = await import(
+                '@/lib/stores/brewingNoteStore'
+              );
+              const deleteNote = useBrewingNoteStore.getState().deleteNote;
+              await deleteNote(noteId);
+            } catch (error) {
+              console.error('删除笔记失败:', error);
+            }
+          }}
+          onCopy={async noteId => {
+            setNoteDetailOpen(false);
+            // 加载完整的笔记数据用于复制
+            const { Storage } = await import('@/lib/core/storage');
+            const notesStr = await Storage.get('brewingNotes');
+            if (notesStr) {
+              const allNotes: BrewingNote[] = JSON.parse(notesStr);
+              const fullNote = allNotes.find(n => n.id === noteId);
+              if (fullNote) {
+                setBrewingNoteEditData(fullNote as BrewingNoteData);
+                setIsBrewingNoteCopy(true);
+                setBrewingNoteEditOpen(true);
+              }
+            }
+          }}
+          onShare={noteId => {
+            // 关闭详情模态框
+            setNoteDetailOpen(false);
+            // 触发分享模式 - 通过自定义事件通知笔记列表组件
+            window.dispatchEvent(
+              new CustomEvent('noteShareTriggered', {
+                detail: { noteId },
+              })
+            );
+          }}
+        />
+      )}
 
       {/* 器具管理抽屉独立渲染，与 Settings 同级 */}
       <EquipmentManagementDrawer

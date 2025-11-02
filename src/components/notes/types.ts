@@ -65,7 +65,11 @@ export interface NoteItemProps {
   // 是否为列表中的最后一项（用于虚拟化下控制分割线）
   isLast?: boolean;
   // 风味维度评分处理函数（从父组件传入，避免每个子组件重复调用）
-  getValidTasteRatings?: (taste: Record<string, number>) => Array<{ id: string; label: string; value: number }>;
+  getValidTasteRatings?: (
+    taste: Record<string, number>
+  ) => Array<{ id: string; label: string; value: number }>;
+  // 咖啡豆列表（用于获取完整的咖啡豆信息，包括图片）
+  coffeeBeans?: CoffeeBean[];
 }
 
 // 筛选标签页属性

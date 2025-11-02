@@ -115,6 +115,27 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     setSearchHistory(getSearchHistoryPreference());
   }, []);
 
+  // 监听分享事件 - 从笔记详情触发的分享
+  useEffect(() => {
+    const handleNoteShareTriggered = (e: Event) => {
+      const customEvent = e as CustomEvent<{ noteId: string }>;
+      if (customEvent.detail?.noteId) {
+        // 进入分享模式并选中该笔记
+        setIsShareMode(true);
+        setSelectedNotes([customEvent.detail.noteId]);
+      }
+    };
+
+    window.addEventListener('noteShareTriggered', handleNoteShareTriggered);
+
+    return () => {
+      window.removeEventListener(
+        'noteShareTriggered',
+        handleNoteShareTriggered
+      );
+    };
+  }, []);
+
   // 显示模式状态（持久化记忆 - 使用 localStorage 存储 UI 偏好设置）
   const [viewMode, setViewMode] = useState<'list' | 'gallery'>(() => {
     if (typeof window !== 'undefined') {
@@ -231,6 +252,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   );
   const [customEquipments, setCustomEquipments] = useState<
     import('@/lib/core/config').CustomEquipment[]
+  >([]);
+
+  // 咖啡豆数据状态
+  const [coffeeBeans, setCoffeeBeans] = useState<
+    import('@/types/app').CoffeeBean[]
   >([]);
 
   // 预览容器引用
@@ -472,13 +498,43 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       setEquipmentNames(namesMap);
     };
 
+    // 加载咖啡豆数据
+    const loadCoffeeBeanData = async () => {
+      const { CoffeeBeanManager } = await import(
+        '@/lib/managers/coffeeBeanManager'
+      );
+      const beans = await CoffeeBeanManager.getAllBeans();
+      setCoffeeBeans(beans);
+    };
+
     loadEquipmentData();
+    loadCoffeeBeanData();
   }, [loadNotes]); // 只在组件挂载时执行一次
 
   // 计算总消耗量
   useEffect(() => {
     totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(notes);
   }, [notes]);
+
+  // 监听咖啡豆数据更新
+  useEffect(() => {
+    const handleCoffeeBeansUpdated = async () => {
+      const { CoffeeBeanManager } = await import(
+        '@/lib/managers/coffeeBeanManager'
+      );
+      const beans = await CoffeeBeanManager.getAllBeans();
+      setCoffeeBeans(beans);
+    };
+
+    window.addEventListener('coffeeBeansUpdated', handleCoffeeBeansUpdated);
+
+    return () => {
+      window.removeEventListener(
+        'coffeeBeansUpdated',
+        handleCoffeeBeansUpdated
+      );
+    };
+  }, []);
 
   // 显示消息提示 - 使用 LightToast
   const showToastMessage = (
@@ -1366,6 +1422,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           scrollParentRef={notesContainerRef.current || undefined}
           equipmentNames={equipmentNames}
           beanPrices={{}}
+          coffeeBeans={coffeeBeans}
         />
       </div>
 

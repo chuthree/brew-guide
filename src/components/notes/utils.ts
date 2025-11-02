@@ -188,9 +188,7 @@ export const calculateNoteCost = async (note: BrewingNote): Promise<number> => {
 };
 
 // 计算总花费的函数
-const calculateTotalCost = async (
-  notes: BrewingNote[]
-): Promise<number> => {
+const calculateTotalCost = async (notes: BrewingNote[]): Promise<number> => {
   let totalCost = 0;
 
   for (const note of notes) {
