@@ -103,17 +103,17 @@ class RoasterLogoManager {
 
   /**
    * 上传并设置烘焙商图标
-   * 使用统一的图片压缩工具压缩为正方形图标，限制文件大小
+   * 使用统一的图片压缩工具压缩为正方形图标,限制文件大小
    */
   async uploadLogo(roasterName: string, file: File): Promise<boolean> {
     try {
-      // 使用统一的压缩工具压缩图片（正方形 200x200，限制 50KB 以内）
+      // 使用统一的压缩工具压缩图片(正方形 800x800,限制 50KB 以内)
       const compressedFile = await compressImage(file, {
-        maxWidth: 200,
-        maxHeight: 200,
+        maxWidth: 800,
+        maxHeight: 800,
         quality: 0.85,
         mimeType: 'image/jpeg',
-        maxSizeMB: 0.05, // 限制 50KB，适合图标
+        maxSizeMB: 0.05, // 限制 50KB,适合图标
       });
 
       // 转换为 Base64
