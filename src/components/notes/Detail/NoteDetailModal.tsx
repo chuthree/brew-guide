@@ -517,42 +517,34 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               )}
 
               {/* 总体评分和时间 - 两格布局 */}
-              {(note.rating > 0 || hasTasteRatings) && (
-                <div className="border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
-                  <div className="flex items-center gap-3">
-                    {note.rating > 0 ? (
-                      <>
-                        <div className="flex flex-1 flex-col">
-                          <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                            总体评分
-                          </div>
-                          <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                            {formatRating(note.rating)}
-                          </div>
-                        </div>
-                        <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-                        <div className="flex flex-1 flex-col">
-                          <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                            时间
-                          </div>
-                          <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                            {formatDate(note.timestamp)}
-                          </div>
-                        </div>
-                      </>
-                    ) : (
+              <div className="border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
+                <div className="flex items-center gap-3">
+                  {/* 时间 */}
+                  <div className="flex flex-1 flex-col">
+                    <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                      时间
+                    </div>
+                    <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                      {formatDate(note.timestamp)}
+                    </div>
+                  </div>
+
+                  {/* 总体评分 */}
+                  {note.rating > 0 && (
+                    <>
+                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
                       <div className="flex flex-1 flex-col">
                         <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          时间
+                          总体评分
                         </div>
                         <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {formatDate(note.timestamp)}
+                          {formatRating(note.rating)}
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* 备注信息 */}
               {note.notes && note.notes.trim() && (
