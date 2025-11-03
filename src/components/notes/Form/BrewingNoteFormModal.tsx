@@ -260,25 +260,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     [setSelectedMethod]
   );
 
-  // 计算咖啡粉量
-  const getCoffeeAmount = () => {
-    if (selectedMethod) {
-      // 合并所有方案列表以确保查找全面
-      const allMethods = [...commonMethodsOnly, ...customMethods];
-
-      // 同时检查ID和名称匹配
-      const method = allMethods.find(
-        m => m.id === selectedMethod || m.name === selectedMethod
-      );
-
-      if (method?.params?.coffee) {
-        const match = method.params.coffee.match(/(\d+(\.\d+)?)/);
-        return match ? parseFloat(match[0]) : 0;
-      }
-    }
-    return 0;
-  };
-
   // 获取方案参数
   const getMethodParams = () => {
     if (selectedEquipment && selectedMethod) {
@@ -396,17 +377,23 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         roastDate: selectedCoffeeBean.roastDate || '',
       };
 
-      // 减少咖啡豆剩余量
-      const coffeeAmount = getCoffeeAmount();
-      if (coffeeAmount > 0) {
-        import('@/lib/managers/coffeeBeanManager')
-          .then(({ CoffeeBeanManager }) =>
-            CoffeeBeanManager.updateBeanRemaining(
-              selectedCoffeeBean.id,
-              coffeeAmount
-            )
-          )
-          .catch(error => console.error('减少咖啡豆剩余量失败:', error));
+      // 🎯 减少咖啡豆剩余量 - 使用笔记中保存的参数值,而不是方案的原始值
+      // 这样才能正确处理用户修改参数的情况
+      if (completeNote.params?.coffee) {
+        const match = completeNote.params.coffee.match(/(\d+(\.\d+)?)/);
+        if (match) {
+          const coffeeAmount = parseFloat(match[0]);
+          if (coffeeAmount > 0) {
+            import('@/lib/managers/coffeeBeanManager')
+              .then(({ CoffeeBeanManager }) =>
+                CoffeeBeanManager.updateBeanRemaining(
+                  selectedCoffeeBean.id,
+                  coffeeAmount
+                )
+              )
+              .catch(error => console.error('减少咖啡豆剩余量失败:', error));
+          }
+        }
       }
     }
 

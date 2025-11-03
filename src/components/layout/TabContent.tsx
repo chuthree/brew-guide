@@ -350,17 +350,21 @@ const TabContent: React.FC<TabContentProps> = ({
       setNoteSaved(true);
       setIsNoteSaved?.(true);
 
-      // 扣减咖啡豆用量
-      if (selectedCoffeeBean && currentBrewingMethod?.params.coffee) {
-        const coffeeAmount = parseFloat(currentBrewingMethod.params.coffee);
-        if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-          const { CoffeeBeanManager } = await import(
-            '@/lib/managers/coffeeBeanManager'
-          );
-          await CoffeeBeanManager.updateBeanRemaining(
-            selectedCoffeeBean,
-            coffeeAmount
-          );
+      // 🎯 扣减咖啡豆用量 - 使用笔记中保存的参数值,而不是冲煮步骤的原始值
+      // 这样才能正确处理用户在笔记步骤中修改参数的情况
+      if (selectedCoffeeBean && noteData.params?.coffee) {
+        const coffeeMatch = noteData.params.coffee.match(/(\d+(?:\.\d+)?)/);
+        if (coffeeMatch) {
+          const coffeeAmount = parseFloat(coffeeMatch[0]);
+          if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+            const { CoffeeBeanManager } = await import(
+              '@/lib/managers/coffeeBeanManager'
+            );
+            await CoffeeBeanManager.updateBeanRemaining(
+              selectedCoffeeBean,
+              coffeeAmount
+            );
+          }
         }
       }
 

@@ -329,9 +329,10 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         );
         await useBrewingNoteStore.getState().addNote(newNote);
 
-        // 扣减咖啡豆用量
-        if (selectedCoffeeBean && currentBrewingMethod?.params.coffee) {
-          const match = currentBrewingMethod.params.coffee.match(/(\d+\.?\d*)/);
+        // 🎯 扣减咖啡豆用量 - 使用笔记中保存的参数值,而不是冲煮步骤的原始值
+        // 这样才能正确处理用户在笔记步骤中修改参数的情况
+        if (selectedCoffeeBean && newNote.params?.coffee) {
+          const match = newNote.params.coffee.match(/(\d+\.?\d*)/);
           if (match) {
             const coffeeAmount = parseFloat(match[1]);
             if (!isNaN(coffeeAmount) && coffeeAmount > 0) {

@@ -132,14 +132,25 @@ export const useCoffeeBeanData = () => {
 
     // 监听全局咖啡豆数据变更事件
     if (typeof window !== 'undefined') {
+      // 监听两个事件以确保数据同步
+      // coffeeBeanDataChanged: 咖啡豆列表手动触发的事件
+      // coffeeBeansUpdated: CoffeeBeanManager.updateBean 触发的事件
       window.addEventListener(
         'coffeeBeanDataChanged',
+        handleCoffeeBeanDataChanged
+      );
+      window.addEventListener(
+        'coffeeBeansUpdated',
         handleCoffeeBeanDataChanged
       );
 
       return () => {
         window.removeEventListener(
           'coffeeBeanDataChanged',
+          handleCoffeeBeanDataChanged
+        );
+        window.removeEventListener(
+          'coffeeBeansUpdated',
           handleCoffeeBeanDataChanged
         );
       };
