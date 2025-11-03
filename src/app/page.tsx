@@ -2083,10 +2083,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       const { source, quickDecrementAmount, changeRecord, ...cleanNote } =
         note as any;
 
+      // 🔥 修复：复制操作应该被视为新笔记，即使它有 id
+      const isNewNote = isBrewingNoteCopy || !note.id;
+
       const noteToSave = {
         ...cleanNote,
-        id: cleanNote.id || Date.now().toString(),
-        timestamp: cleanNote.timestamp || Date.now(),
+        // 🔥 关键修复：复制模式下强制生成新 ID 和新时间戳
+        id: isNewNote ? Date.now().toString() : cleanNote.id,
+        timestamp: isNewNote ? Date.now() : (cleanNote.timestamp || Date.now()),
         equipment: cleanNote.equipment || '',
         method: cleanNote.method || '',
         params: cleanNote.params || {
@@ -2097,9 +2101,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           temp: '',
         },
       } as BrewingNote;
-
-      // 🔥 修复：复制操作应该被视为新笔记，即使它有 id
-      const isNewNote = isBrewingNoteCopy || !note.id;
 
       if (isNewNote) {
         // 添加新笔记
@@ -3489,6 +3490,92 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onDelete={async noteId => {
             setNoteDetailOpen(false);
             try {
+              const { Storage } = await import('@/lib/core/storage');
+              const savedNotes = await Storage.get('brewingNotes');
+              if (!savedNotes) return;
+
+              const notes: BrewingNote[] = JSON.parse(savedNotes);
+
+              // 找到要删除的笔记
+              const noteToDelete = notes.find(note => note.id === noteId);
+              if (!noteToDelete) {
+                console.warn('未找到要删除的笔记:', noteId);
+                return;
+              }
+
+              // 恢复咖啡豆容量（根据笔记类型采用不同的恢复策略）
+              try {
+                if (noteToDelete.source === 'capacity-adjustment') {
+                  // 处理容量调整记录的恢复
+                  const beanId = noteToDelete.beanId;
+                  const capacityAdjustment =
+                    noteToDelete.changeRecord?.capacityAdjustment;
+
+                  if (beanId && capacityAdjustment) {
+                    const changeAmount = capacityAdjustment.changeAmount;
+                    if (
+                      typeof changeAmount === 'number' &&
+                      !isNaN(changeAmount) &&
+                      changeAmount !== 0
+                    ) {
+                      const { CoffeeBeanManager } = await import(
+                        '@/lib/managers/coffeeBeanManager'
+                      );
+
+                      // 获取当前咖啡豆信息
+                      const currentBean =
+                        await CoffeeBeanManager.getBeanById(beanId);
+                      if (currentBean) {
+                        const currentRemaining = parseFloat(
+                          currentBean.remaining || '0'
+                        );
+                        const restoredRemaining = currentRemaining - changeAmount; // 反向操作
+                        let finalRemaining = Math.max(0, restoredRemaining);
+
+                        // 确保不超过总容量
+                        if (currentBean.capacity) {
+                          const totalCapacity = parseFloat(
+                            currentBean.capacity
+                          );
+                          if (!isNaN(totalCapacity) && totalCapacity > 0) {
+                            finalRemaining = Math.min(
+                              finalRemaining,
+                              totalCapacity
+                            );
+                          }
+                        }
+
+                        const formattedRemaining =
+                          CoffeeBeanManager.formatNumber(finalRemaining);
+                        await CoffeeBeanManager.updateBean(beanId, {
+                          remaining: formattedRemaining,
+                        });
+                      }
+                    }
+                  }
+                } else {
+                  // 处理快捷扣除记录和普通笔记的恢复
+                  const { extractCoffeeAmountFromNote, getNoteAssociatedBeanId } =
+                    await import('@/components/notes/utils');
+                  const coffeeAmount = extractCoffeeAmountFromNote(noteToDelete);
+                  const beanId = getNoteAssociatedBeanId(noteToDelete);
+
+                  if (beanId && coffeeAmount > 0) {
+                    const { CoffeeBeanManager } = await import(
+                      '@/lib/managers/coffeeBeanManager'
+                    );
+                    await CoffeeBeanManager.increaseBeanRemaining(
+                      beanId,
+                      coffeeAmount
+                    );
+                  }
+                }
+              } catch (error) {
+                console.error('恢复咖啡豆容量失败:', error);
+                // 容量恢复失败不应阻止笔记删除，但需要记录错误
+              }
+
+              // 删除笔记 - 使用 Zustand store
               const { useBrewingNoteStore } = await import(
                 '@/lib/stores/brewingNoteStore'
               );
