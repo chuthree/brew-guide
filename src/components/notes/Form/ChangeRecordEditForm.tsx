@@ -81,7 +81,9 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
 
     // 解析变化量,空字符串视为0
     const changeAmountValue = parseFloat(formData.changeAmount) || 0;
-    const finalChangeAmount = isIncrease ? changeAmountValue : -changeAmountValue;
+    const finalChangeAmount = isIncrease
+      ? changeAmountValue
+      : -changeAmountValue;
 
     // 构建更新后的变动记录数据
     const updatedRecord: BrewingNote = {
@@ -112,8 +114,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
                 : finalChangeAmount < 0
                   ? 'decrease'
                   : 'set',
-            newAmount:
-              originalAdjustment.originalAmount + finalChangeAmount,
+            newAmount: originalAdjustment.originalAmount + finalChangeAmount,
           },
         };
         updatedRecord.changeRecord = newChangeRecord;
