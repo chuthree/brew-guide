@@ -2090,7 +2090,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         ...cleanNote,
         // 🔥 关键修复：复制模式下强制生成新 ID 和新时间戳
         id: isNewNote ? Date.now().toString() : cleanNote.id,
-        timestamp: isNewNote ? Date.now() : (cleanNote.timestamp || Date.now()),
+        timestamp: isNewNote ? Date.now() : cleanNote.timestamp || Date.now(),
         equipment: cleanNote.equipment || '',
         method: cleanNote.method || '',
         params: cleanNote.params || {
@@ -3529,7 +3529,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         const currentRemaining = parseFloat(
                           currentBean.remaining || '0'
                         );
-                        const restoredRemaining = currentRemaining - changeAmount; // 反向操作
+                        const restoredRemaining =
+                          currentRemaining - changeAmount; // 反向操作
                         let finalRemaining = Math.max(0, restoredRemaining);
 
                         // 确保不超过总容量
@@ -3555,9 +3556,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   }
                 } else {
                   // 处理快捷扣除记录和普通笔记的恢复
-                  const { extractCoffeeAmountFromNote, getNoteAssociatedBeanId } =
-                    await import('@/components/notes/utils');
-                  const coffeeAmount = extractCoffeeAmountFromNote(noteToDelete);
+                  const {
+                    extractCoffeeAmountFromNote,
+                    getNoteAssociatedBeanId,
+                  } = await import('@/components/notes/utils');
+                  const coffeeAmount =
+                    extractCoffeeAmountFromNote(noteToDelete);
                   const beanId = getNoteAssociatedBeanId(noteToDelete);
 
                   if (beanId && coffeeAmount > 0) {
