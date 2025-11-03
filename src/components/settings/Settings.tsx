@@ -1109,7 +1109,27 @@ const Settings: React.FC<SettingsProps> = ({
                 if (!isAEnglish && isBEnglish) return 1;
                 return a.localeCompare(b, 'zh-CN');
               })
-              .join('、')}
+              .map(name => {
+                // 检测是否为纯 emoji（检查字符串长度和是否包含普通字符）
+                const hasOnlyEmoji =
+                  name.length <= 2 && !/[a-zA-Z0-9\u4e00-\u9fa5]/.test(name);
+                if (hasOnlyEmoji) {
+                  // 给纯 emoji 添加样式
+                  return (
+                    <span
+                      key={name}
+                      style={{ opacity: 0.5, filter: 'grayscale(0.4)' }}
+                    >
+                      {name}
+                    </span>
+                  );
+                }
+                return name;
+              })
+              .reduce((acc, curr, idx) => {
+                if (idx === 0) return [curr];
+                return [...acc, '、', curr];
+              }, [] as React.ReactNode[])}
             、and You
           </p>
           <p className="mt-12">
