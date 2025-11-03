@@ -11,7 +11,7 @@ interface ChangeRecordFormData {
     roastLevel: string;
     roastDate?: string;
   };
-  changeAmount: number; // 变化量，支持正负值
+  changeAmount: string; // 变化量输入值(字符串形式)
   notes: string; // 备注
 }
 
@@ -58,7 +58,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
       roastLevel: initialData.coffeeBeanInfo?.roastLevel || '',
       roastDate: initialData.coffeeBeanInfo?.roastDate,
     },
-    changeAmount: getInitialChangeAmount(),
+    changeAmount: String(Math.abs(getInitialChangeAmount())),
     notes: initialData.notes || '',
   });
 
@@ -79,6 +79,10 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 解析变化量,空字符串视为0
+    const changeAmountValue = parseFloat(formData.changeAmount) || 0;
+    const finalChangeAmount = isIncrease ? changeAmountValue : -changeAmountValue;
+
     // 构建更新后的变动记录数据
     const updatedRecord: BrewingNote = {
       ...initialData,
@@ -89,11 +93,11 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
 
     // 根据记录类型更新相应字段
     if (initialData.source === 'quick-decrement') {
-      updatedRecord.quickDecrementAmount = Math.abs(formData.changeAmount);
+      updatedRecord.quickDecrementAmount = Math.abs(finalChangeAmount);
       // 更新params.coffee字段以保持一致性
       updatedRecord.params = {
         ...updatedRecord.params,
-        coffee: `${Math.abs(formData.changeAmount)}g`,
+        coffee: `${Math.abs(finalChangeAmount)}g`,
       };
     } else if (initialData.source === 'capacity-adjustment') {
       const originalAdjustment = initialData.changeRecord?.capacityAdjustment;
@@ -101,22 +105,22 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
         const newChangeRecord: ChangeRecordDetails = {
           capacityAdjustment: {
             ...originalAdjustment,
-            changeAmount: formData.changeAmount,
+            changeAmount: finalChangeAmount,
             changeType:
-              formData.changeAmount > 0
+              finalChangeAmount > 0
                 ? 'increase'
-                : formData.changeAmount < 0
+                : finalChangeAmount < 0
                   ? 'decrease'
                   : 'set',
             newAmount:
-              originalAdjustment.originalAmount + formData.changeAmount,
+              originalAdjustment.originalAmount + finalChangeAmount,
           },
         };
         updatedRecord.changeRecord = newChangeRecord;
         // 更新params.coffee字段
         updatedRecord.params = {
           ...updatedRecord.params,
-          coffee: `${Math.abs(formData.changeAmount)}g`,
+          coffee: `${Math.abs(finalChangeAmount)}g`,
         };
       }
     }
@@ -161,12 +165,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
             <button
               type="button"
               onClick={() => {
-                const currentAmount = Math.abs(formData.changeAmount);
                 setIsIncrease(!isIncrease);
-                setFormData({
-                  ...formData,
-                  changeAmount: !isIncrease ? currentAmount : -currentAmount,
-                });
               }}
               className="flex cursor-pointer items-center border-b border-neutral-200 bg-transparent py-2 text-sm font-medium text-neutral-800 transition-colors outline-none hover:border-neutral-400 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-neutral-600 dark:focus:border-neutral-600"
             >
@@ -189,12 +188,11 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
               type="number"
               step="0.1"
               min="0"
-              value={Math.abs(formData.changeAmount)}
+              value={formData.changeAmount}
               onChange={e => {
-                const amount = parseFloat(e.target.value) || 0;
                 setFormData({
                   ...formData,
-                  changeAmount: isIncrease ? amount : -amount,
+                  changeAmount: e.target.value,
                 });
               }}
               className="flex-1 border-b border-neutral-200 bg-transparent py-2 text-sm font-medium text-neutral-800 outline-none focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:focus:border-neutral-600"
