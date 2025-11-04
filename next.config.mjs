@@ -3,10 +3,11 @@ import nextPWA from '@ducanh2912/next-pwa';
 // 检查当前环境
 const isDev = process.env.NODE_ENV === 'development';
 
-// 极简PWA配置 - 让Workbox处理默认缓存策略
+// PWA配置 - 使用Workbox生成Service Worker
+// register: false 因为我们在客户端手动控制注册时机（最佳实践）
 const pwaConfig = {
   dest: 'public',
-  register: true,
+  register: false, // 手动注册，更好的控制时机
   skipWaiting: true,
   disable: isDev,
   cleanupOutdatedCaches: true,

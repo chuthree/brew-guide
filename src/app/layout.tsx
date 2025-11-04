@@ -204,12 +204,32 @@ export default function RootLayout({
             />
             <meta httpEquiv="Pragma" content="no-cache" />
             <meta httpEquiv="Expires" content="0" />
-            <Script
-              src="/sw-dev-unregister.js"
-              strategy="afterInteractive"
-              id="sw-unregister"
-            />
           </>
+        )}
+        {!isDevelopment && (
+          <Script id="sw-register" strategy="afterInteractive">
+            {`
+              // PWA Service Worker 注册 - 遵循 Google 最佳实践
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker
+                    .register('/sw.js', { scope: '/' })
+                    .then(function(registration) {
+                      console.log('✅ Service Worker registered:', registration.scope);
+                      
+                      // 检查更新
+                      registration.addEventListener('updatefound', function() {
+                        const newWorker = registration.installing;
+                        console.log('🔄 Service Worker update found');
+                      });
+                    })
+                    .catch(function(error) {
+                      console.error('❌ Service Worker registration failed:', error);
+                    });
+                });
+              }
+            `}
+          </Script>
         )}
       </head>
       <body className="fixed inset-0 overflow-hidden bg-neutral-50 dark:bg-neutral-900">
