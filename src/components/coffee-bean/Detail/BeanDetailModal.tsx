@@ -12,7 +12,7 @@ import HighlightText from '@/components/common/ui/HighlightText';
 import { getEquipmentName } from '@/components/notes/utils';
 import { formatDate, formatRating } from '@/components/notes/utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft } from 'lucide-react';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
@@ -662,19 +662,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             onClick={handleClose}
             className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
           >
-            <svg
-              className="h-4 w-4 text-neutral-600 dark:text-neutral-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <ChevronLeft className="-ml-px h-4.5 w-4.5 text-neutral-600 dark:text-neutral-400" />
           </button>
 
           {/* 居中标题 - 当原标题不可见时显示，占据剩余空间 */}
