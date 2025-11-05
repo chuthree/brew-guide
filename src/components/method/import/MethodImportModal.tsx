@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
@@ -21,7 +22,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 }) => {
   // 动画状态管理
   const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
 
   // 同步顶部安全区颜色
   useThemeColor({ useOverlay: true, enabled: showForm });
@@ -30,6 +30,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
   const [importData, setImportData] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showPrompt, setShowPrompt] = useState(false);
 
   // 清除所有状态消息
   const clearMessages = () => {
@@ -41,10 +42,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
   useEffect(() => {
     if (showForm) {
       setShouldRender(true);
-      const timer = setTimeout(() => setIsVisible(true), 10);
-      return () => clearTimeout(timer);
     } else {
-      setIsVisible(false);
       const timer = setTimeout(() => setShouldRender(false), 300);
       return () => clearTimeout(timer);
     }
@@ -274,165 +272,180 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
     }
   };
 
-  // 渲染上传部分
-  const renderUploadSection = () => (
-    <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-800">
-      <div className="space-y-4 py-1">
-        <div className="rounded-lg bg-neutral-100 p-4 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-          <ol className="list-decimal space-y-1 pl-5 text-[11px]">
-            <li>准备好咖啡冲煮方案说明或截图</li>
-            <li>
-              发送至
-              <a
-                href="https://doubao.com/bot/duJYQEFd"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative pb-1.5 text-[11px] text-neutral-600 dark:text-neutral-400"
-              >
-                <span className="relative ml-1 underline decoration-sky-600 underline-offset-2">
-                  豆包定制智能体
-                </span>
-                <svg
-                  viewBox="0 0 24 24"
-                  className="ml-1 inline-block h-3 w-3"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  stroke="currentColor"
-                >
-                  <path
-                    d="M7 17L17 7M17 7H7M17 7V17"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </a>
-            </li>
-            <li>将返回的 JSON 数据粘贴到下方文本框</li>
-          </ol>
-
-          <details className="mt-3 rounded-md border border-neutral-200 bg-neutral-50 p-2 text-[10px] dark:border-neutral-700 dark:bg-neutral-900/60">
-            <summary className="cursor-pointer text-neutral-500 dark:text-neutral-400">
-              提示词（点击展开）
-            </summary>
-            <textarea
-              readOnly
-              value={_templatePrompt}
-              className="mt-2 h-20 w-full overflow-auto rounded-md border border-neutral-200 bg-neutral-50 p-2 text-[10px] text-neutral-700 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300"
-              onFocus={e => e.target.select()}
-            />
-            <div className="mt-1 flex justify-end">
+  // 渲染提示词部分
+  const renderPromptSection = () => (
+    <div className="space-y-3">
+      <button
+        onClick={() => setShowPrompt(!showPrompt)}
+        className="flex w-full items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400"
+      >
+        <svg
+          className={`h-3.5 w-3.5 transition-transform ${showPrompt ? 'rotate-90' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
+        <span>使用提示词生成方案</span>
+      </button>
+      <AnimatePresence>
+        {showPrompt && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-100/60 p-3 dark:border-neutral-700 dark:bg-neutral-800/30">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                将此提示词和你的冲煮方案一起发给 ChatGPT、Claude 等 AI
+              </p>
+              <textarea
+                readOnly
+                value={_templatePrompt}
+                className="h-24 w-full resize-none rounded border border-neutral-200 bg-white/60 p-2 text-[10px] leading-relaxed text-neutral-600 focus:outline-none dark:border-neutral-600 dark:bg-neutral-900/60 dark:text-neutral-400"
+                onFocus={e => e.target.select()}
+              />
               <button
                 onClick={() => {
                   clearMessages();
                   _copyTextToClipboard(_templatePrompt);
                 }}
-                className="rounded-sm bg-neutral-200/80 px-2 py-0.5 text-[10px] text-neutral-500 transition-colors hover:bg-neutral-300 dark:bg-neutral-800/80 dark:text-neutral-400 dark:hover:bg-neutral-700"
+                className="w-full rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-white transition-opacity hover:opacity-80 dark:bg-neutral-200 dark:text-neutral-800"
               >
-                复制
+                复制提示词
               </button>
             </div>
-          </details>
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 
   if (!shouldRender) return null;
 
   return (
-    <div
-      data-modal={showForm ? 'method-import' : undefined}
-      className={`fixed inset-0 z-50 transition-all duration-300 ${
-        showForm
-          ? 'pointer-events-auto bg-black/50 opacity-100'
-          : 'pointer-events-none opacity-0'
-      } `}
-    >
-      <div
-        className={`absolute inset-x-0 bottom-0 mx-auto max-h-[90vh] max-w-[500px] overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl transition-transform duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'} `}
-      >
-        {/* 拖动条 */}
-        <div className="sticky top-0 z-10 flex justify-center bg-neutral-50 py-2 dark:bg-neutral-900">
-          <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
-        </div>
-
-        {/* 表单内容 */}
-        <div
-          className={`pb-safe-bottom max-h-[calc(90vh-40px)] overflow-auto px-6 transition-all duration-300 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'} `}
+    <AnimatePresence>
+      {showForm && (
+        <motion.div
+          data-modal={showForm ? 'method-import' : undefined}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.265 }}
+          className="fixed inset-0 z-50 bg-black/50"
         >
-          <div className="flex flex-col">
-            {/* 顶部标题 */}
-            <div className="mt-3 mb-6 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="-m-3 rounded-full p-3"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-neutral-800 dark:text-neutral-200"
-                >
-                  <path
-                    d="M19 12H5M5 12L12 19M5 12L12 5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-              <h3 className="text-base font-medium">导入冲煮方案</h3>
-              <div className="w-8"></div>
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{
+              type: 'tween',
+              ease: [0.33, 1, 0.68, 1],
+              duration: 0.265,
+            }}
+            style={{ willChange: 'transform' }}
+            className="absolute inset-x-0 bottom-0 mx-auto max-h-[90vh] max-w-[500px] overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl dark:bg-neutral-900"
+          >
+            {/* 拖动条 */}
+            <div className="sticky top-0 z-10 flex justify-center bg-neutral-50 py-2 dark:bg-neutral-900">
+              <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
             </div>
 
             {/* 表单内容 */}
-            <div className="mt-2 space-y-4">
-              {renderUploadSection()}
-              <div className="mb-1 flex items-center">
-                <p className="flex-1 text-xs text-neutral-500 dark:text-neutral-400">
-                  JSON 数据
-                </p>
-              </div>
-              <textarea
-                className="h-40 w-full rounded-md border border-neutral-300 bg-transparent p-3 text-neutral-800 focus:border-neutral-800 focus:outline-hidden dark:border-neutral-700 dark:text-neutral-200 dark:focus:border-neutral-400"
-                placeholder='支持粘贴分享的文本或各种JSON格式，如{"name":"改良分段式一刀流",...} 或带有代码块的JSON'
-                value={importData}
-                onChange={e => setImportData(e.target.value)}
-              />
-              {error && (
-                <div className="text-sm text-red-500 dark:text-red-400">
-                  {error}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                type: 'tween',
+                ease: 'easeOut',
+                duration: 0.265,
+                delay: 0.05,
+              }}
+              style={{ willChange: 'opacity, transform' }}
+              className="pb-safe-bottom max-h-[calc(90vh-40px)] overflow-auto px-6"
+            >
+              <div className="flex flex-col">
+                {/* 顶部标题 */}
+                <div className="mb-4 flex items-center justify-between py-4">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M19 12H5M5 12L12 19M5 12L12 5"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  <h3 className="text-base font-medium text-neutral-900 dark:text-neutral-100">
+                    导入冲煮方案
+                  </h3>
+                  <div className="w-8"></div>
                 </div>
-              )}
-              {success && (
-                <div className="text-sm text-green-500 dark:text-green-400">
-                  {success}
+
+                {/* 表单内容 */}
+                <div className="space-y-4 pb-4">
+                  <textarea
+                    className="h-48 w-full resize-none rounded-lg border border-neutral-200 bg-neutral-100/60 p-3 text-sm text-neutral-800 placeholder-neutral-500 transition-colors focus:border-neutral-800 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800/30 dark:text-neutral-200 dark:placeholder-neutral-400 dark:focus:border-neutral-200"
+                    placeholder="粘贴方案数据或朋友分享的 JSON"
+                    value={importData}
+                    onChange={e => setImportData(e.target.value)}
+                  />
+
+                  {renderPromptSection()}
+
+                  {error && (
+                    <div className="rounded-lg bg-red-100/60 p-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                      {error}
+                    </div>
+                  )}
+                  {success && (
+                    <div className="rounded-lg bg-green-100/60 p-3 text-sm text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                      {success}
+                    </div>
+                  )}
+
+                  {/* 导入按钮 - 固定位置，根据输入内容改变透明度和模糊度 */}
+                  <motion.button
+                    initial={{
+                      opacity: 0,
+                    }}
+                    animate={{
+                      opacity: importData.trim() ? 1 : 0,
+                    }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    onClick={handleImport}
+                    disabled={!importData.trim()}
+                    className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-neutral-100 transition-opacity hover:opacity-80 disabled:pointer-events-none dark:bg-neutral-200 dark:text-neutral-800"
+                  >
+                    导入
+                  </motion.button>
                 </div>
-              )}
-              <div className="my-4 flex justify-end space-x-3">
-                <button
-                  onClick={handleClose}
-                  className="rounded-md border border-neutral-300 px-4 py-2 text-sm text-neutral-800 dark:border-neutral-700 dark:text-neutral-200"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={handleImport}
-                  className="rounded-md bg-neutral-800 px-4 py-2 text-sm text-neutral-100 dark:bg-neutral-200 dark:text-neutral-800"
-                >
-                  导入
-                </button>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
