@@ -46,26 +46,6 @@
 - 墨水屏优化
 - 多平台支持（Web、iOS、Android、桌面）
 
-## 咖啡豆数据库
-
-应用支持从开源数据库快速添加咖啡豆：
-
-**数据来源**：[https://gitee.com/chu3/brew-guide-bean-data](https://gitee.com/chu3/brew-guide-bean-data)
-
-**使用方法**：
-
-1. 应用内进入"快速添加"功能
-2. 点击"搜索咖啡豆"
-3. 输入关键词搜索（支持名称、品牌、产区、风味、处理法、品种）
-4. 选择并一键导入到库存
-
-**数据维护**：
-
-- 问题反馈：chuthree@163.com
-- Issue 提交：[数据库仓库](https://gitee.com/chu3/brew-guide-bean-data/issues)
-
-> 数据来源于网络公开资源，仅供学习使用，实际信息以商家为准
-
 ## 开发
 
 **环境要求**：推荐使用 pnpm
@@ -109,7 +89,6 @@ pnpm cap:android
 - 代码规范：[项目开发规范](docs/project_develop.md)
 - 项目结构：[项目结构规范](docs/project_struct.md)
 - UI 设计：[设计系统](docs/design_system.md)
-- 咖啡豆数据：[数据库仓库](https://gitee.com/chu3/brew-guide-bean-data)
 
 ## 许可
 
