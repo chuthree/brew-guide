@@ -170,7 +170,7 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.265 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-black/50"
+            className="fixed inset-0 z-[200] bg-black/50"
           />
 
           {/* 模态框内容 */}
@@ -184,7 +184,7 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
               duration: 0.265,
             }}
             style={{ willChange: 'transform' }}
-            className="fixed inset-x-0 bottom-0 mx-auto max-h-[85vh] max-w-[500px] overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl dark:bg-neutral-900"
+            className="fixed inset-x-0 bottom-0 z-[200] mx-auto max-h-[85vh] max-w-[500px] overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl dark:bg-neutral-900"
           >
             {/* 拖动条 */}
             <div className="sticky top-0 flex justify-center bg-neutral-50 py-2 dark:bg-neutral-900">

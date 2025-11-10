@@ -99,7 +99,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] transition-all duration-300 ${
+      className={`fixed inset-0 z-[200] transition-all duration-300 ${
         showModal
           ? 'pointer-events-auto bg-black/50 opacity-100'
           : 'pointer-events-none opacity-0'

@@ -42,6 +42,14 @@ const BeanShareModal = dynamic(
   }
 );
 
+// 动态导入 BeanRatingModal 组件
+const BeanRatingModal = dynamic(
+  () => import('@/components/coffee-bean/Rating/Modal'),
+  {
+    ssr: false,
+  }
+);
+
 // 信息项类型定义
 interface InfoItem {
   key: string;
@@ -136,6 +144,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 分享状态
   const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  // 评分状态
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
 
   // 标题可见性状态
   const [isTitleVisible, setIsTitleVisible] = useState(true);
@@ -277,8 +288,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     // 监听返回事件
     const handlePopState = () => {
-      // 如果分享模态框打开，先关闭分享模态框
-      if (shareModalOpen) {
+      // 如果评分模态框打开，先关闭评分模态框
+      if (ratingModalOpen) {
+        setRatingModalOpen(false);
+      } else if (shareModalOpen) {
+        // 如果分享模态框打开，先关闭分享模态框
         setShareModalOpen(false);
       } else {
         // 否则关闭详情模态框
@@ -291,7 +305,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [isOpen, shareModalOpen, onClose]);
+  }, [isOpen, ratingModalOpen, shareModalOpen, onClose]);
 
   // 重置图片错误状态
   useEffect(() => {
@@ -652,7 +666,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 mx-auto flex max-w-[500px] flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900"
+        className="fixed inset-0 z-[100] mx-auto flex max-w-[500px] flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900"
         style={getChildPageStyle(isVisible)}
       >
         {/* 顶部按钮栏 */}
@@ -967,9 +981,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     <div
                       className="cursor-pointer space-y-3"
                       onClick={() => {
-                        if (onRate && bean) {
-                          onRate(bean);
-                        }
+                        setRatingModalOpen(true);
                       }}
                     >
                       {/* 评分 */}
@@ -1002,9 +1014,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       </div>
                       <button
                         onClick={() => {
-                          if (onRate && bean) {
-                            onRate(bean);
-                          }
+                          setRatingModalOpen(true);
                         }}
                         className="ml-4 text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
                       >
@@ -1369,6 +1379,33 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           if (onShare) {
             onShare(bean);
           }
+        }}
+      />
+
+      {/* 评分模态框 */}
+      <BeanRatingModal
+        showModal={ratingModalOpen}
+        coffeeBean={bean}
+        onClose={() => setRatingModalOpen(false)}
+        onSave={async (id: string, ratings: Partial<CoffeeBean>) => {
+          try {
+            // 导入 CoffeeBeanManager
+            const { CoffeeBeanManager } = await import(
+              '@/lib/managers/coffeeBeanManager'
+            );
+            // 更新评分
+            await CoffeeBeanManager.updateBean(id, ratings);
+            // 触发数据更新事件
+            window.dispatchEvent(new CustomEvent('coffeeBeanDataChanged'));
+          } catch (error) {
+            console.error('保存评分失败:', error);
+          }
+        }}
+        onAfterSave={() => {
+          // 关闭评分模态框
+          setRatingModalOpen(false);
+          // 关闭详情页
+          handleClose();
         }}
       />
     </>

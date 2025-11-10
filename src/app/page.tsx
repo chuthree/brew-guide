@@ -3422,11 +3422,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             console.error('复制失败:', error);
           }
         }}
-        onRate={bean => {
-          setBeanDetailOpen(false);
-          setEditingBean(bean);
-          setShowBeanForm(true);
-        }}
         onRepurchase={async bean => {
           setBeanDetailOpen(false);
           try {

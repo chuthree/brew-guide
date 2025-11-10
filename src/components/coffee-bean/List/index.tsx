@@ -1592,6 +1592,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           loadRatedBeans();
           // 关闭评分模态框
           setShowRatingModal(false);
+          // 关闭咖啡豆详情页（如果打开的话）
+          window.dispatchEvent(new CustomEvent('beanDetailClosing'));
           // 调用存储的回调函数
           if (ratingSavedCallback) {
             ratingSavedCallback();
