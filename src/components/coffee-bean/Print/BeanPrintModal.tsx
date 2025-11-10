@@ -51,6 +51,31 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     return initialConfig;
   });
 
+  // 统一样式常量
+  const INPUT_CLASS =
+    'w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800';
+  const LABEL_CLASS =
+    'mb-1 block text-xs text-neutral-500 dark:text-neutral-400';
+
+  // 提取 bean 组件信息的通用函数
+  const extractBeanComponentInfo = (
+    bean: CoffeeBean | null,
+    field: 'origin' | 'process' | 'variety'
+  ): string => {
+    if (!bean?.blendComponents || bean.blendComponents.length === 0) return '';
+    const values = Array.from(
+      new Set(
+        bean.blendComponents
+          .map(comp => comp[field])
+          .filter(
+            (value): value is string =>
+              typeof value === 'string' && value.trim() !== ''
+          )
+      )
+    );
+    return values.join(', ');
+  };
+
   // 从咖啡豆名称中提取品牌名（空格前的部分）
   const extractBrandName = (): string => {
     if (!editableContent.name) return config.brandName || '';
@@ -165,61 +190,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   // 初始化编辑内容
   useEffect(() => {
     if (bean) {
-      const originInfo = (() => {
-        if (!bean.blendComponents || bean.blendComponents.length === 0)
-          return '';
-        const origins = Array.from(
-          new Set(
-            bean.blendComponents
-              .map(comp => comp.origin)
-              .filter(
-                (value): value is string =>
-                  typeof value === 'string' && value.trim() !== ''
-              )
-          )
-        );
-        return origins.join(', ');
-      })();
-
-      const processInfo = (() => {
-        if (!bean.blendComponents || bean.blendComponents.length === 0)
-          return '';
-        const processes = Array.from(
-          new Set(
-            bean.blendComponents
-              .map(comp => comp.process)
-              .filter(
-                (value): value is string =>
-                  typeof value === 'string' && value.trim() !== ''
-              )
-          )
-        );
-        return processes.join(', ');
-      })();
-
-      const varietyInfo = (() => {
-        if (!bean.blendComponents || bean.blendComponents.length === 0)
-          return '';
-        const varieties = Array.from(
-          new Set(
-            bean.blendComponents
-              .map(comp => comp.variety)
-              .filter(
-                (value): value is string =>
-                  typeof value === 'string' && value.trim() !== ''
-              )
-          )
-        );
-        return varieties.join(', ');
-      })();
-
       setEditableContent({
         name: bean.name || '',
-        origin: originInfo,
+        origin: extractBeanComponentInfo(bean, 'origin'),
         roastLevel: bean.roastLevel || '',
         roastDate: bean.roastDate || '',
-        process: processInfo,
-        variety: varietyInfo,
+        process: extractBeanComponentInfo(bean, 'process'),
+        variety: extractBeanComponentInfo(bean, 'variety'),
         flavor: bean.flavor || [],
         notes: bean.notes || '',
         weight: '',
@@ -385,67 +362,107 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   // 重置编辑内容为原始数据
   const resetEditableContent = () => {
     if (bean) {
-      const originInfo = (() => {
-        if (!bean.blendComponents || bean.blendComponents.length === 0)
-          return '';
-        const origins = Array.from(
-          new Set(
-            bean.blendComponents
-              .map(comp => comp.origin)
-              .filter(
-                (value): value is string =>
-                  typeof value === 'string' && value.trim() !== ''
-              )
-          )
-        );
-        return origins.join(', ');
-      })();
-
-      const processInfo = (() => {
-        if (!bean.blendComponents || bean.blendComponents.length === 0)
-          return '';
-        const processes = Array.from(
-          new Set(
-            bean.blendComponents
-              .map(comp => comp.process)
-              .filter(
-                (value): value is string =>
-                  typeof value === 'string' && value.trim() !== ''
-              )
-          )
-        );
-        return processes.join(', ');
-      })();
-
-      const varietyInfo = (() => {
-        if (!bean.blendComponents || bean.blendComponents.length === 0)
-          return '';
-        const varieties = Array.from(
-          new Set(
-            bean.blendComponents
-              .map(comp => comp.variety)
-              .filter(
-                (value): value is string =>
-                  typeof value === 'string' && value.trim() !== ''
-              )
-          )
-        );
-        return varieties.join(', ');
-      })();
-
       setEditableContent({
         name: bean.name || '',
-        origin: originInfo,
+        origin: extractBeanComponentInfo(bean, 'origin'),
         roastLevel: bean.roastLevel || '',
         roastDate: bean.roastDate || '',
-        process: processInfo,
-        variety: varietyInfo,
+        process: extractBeanComponentInfo(bean, 'process'),
+        variety: extractBeanComponentInfo(bean, 'variety'),
         flavor: bean.flavor || [],
         notes: bean.notes || '',
         weight: '',
       });
     }
   };
+
+  // 渲染风味编辑器（复用逻辑）
+  const renderFlavorEditor = () => (
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <label className={LABEL_CLASS}>风味</label>
+        <button
+          onClick={addFlavorTag}
+          className="flex h-5 w-5 items-center justify-center rounded bg-neutral-200 transition-colors hover:bg-neutral-300 dark:bg-neutral-700 dark:hover:bg-neutral-600"
+        >
+          <Plus className="h-3 w-3" />
+        </button>
+      </div>
+      <div className="space-y-2">
+        {editableContent.flavor.map((flavor, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={flavor}
+              onChange={e => {
+                const value = e.target.value;
+                setEditableContent(prev => {
+                  const newFlavor = [...prev.flavor];
+                  newFlavor[index] = value;
+                  return { ...prev, flavor: newFlavor };
+                });
+              }}
+              className={INPUT_CLASS}
+              placeholder="风味描述"
+            />
+            <button
+              onClick={() => removeFlavorTag(index)}
+              className="flex h-5 w-5 items-center justify-center rounded bg-red-100 transition-colors hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
+            >
+              <Minus className="h-3 w-3 text-red-600 dark:text-red-400" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // 渲染通用文本输入框
+  const renderTextInput = (
+    label: string,
+    field: keyof EditableContent,
+    placeholder: string
+  ) => (
+    <div>
+      <label className={LABEL_CLASS}>{label}</label>
+      <input
+        type="text"
+        value={editableContent[field] as string}
+        onChange={e => {
+          const value = e.target.value;
+          setEditableContent(prev => ({ ...prev, [field]: value }));
+        }}
+        className={INPUT_CLASS}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+
+  // 渲染烘焙日期选择器
+  const renderDatePicker = () => (
+    <div>
+      <label className={LABEL_CLASS}>烘焙日期</label>
+      <div className="text-xs">
+        <DatePicker
+          date={
+            editableContent.roastDate
+              ? new Date(editableContent.roastDate)
+              : undefined
+          }
+          onDateChange={date => {
+            const formattedDate = date.toISOString().split('T')[0];
+            setEditableContent(prev => ({
+              ...prev,
+              roastDate: formattedDate,
+            }));
+          }}
+          placeholder="选择烘焙日期"
+          locale="zh-CN"
+          className=""
+        />
+      </div>
+    </div>
+  );
 
   if (!shouldRender || !bean) return null;
 
@@ -834,7 +851,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                     <>
                       {/* 品牌名称编辑 */}
                       <div>
-                        <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
+                        <label className={LABEL_CLASS}>
                           品牌名称（可选，留空则自动从名称中提取）
                         </label>
                         <input
@@ -847,251 +864,39 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                             );
                             setConfig(newConfig);
                           }}
-                          className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                          className={INPUT_CLASS}
                           placeholder={`自动提取: ${extractBrandName() || '名称空格前的部分'}`}
                         />
                       </div>
 
-                      {/* 名称编辑 */}
-                      <div>
-                        <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                          名称
-                        </label>
-                        <input
-                          type="text"
-                          value={editableContent.name}
-                          onChange={e => {
-                            const value = e.target.value;
-                            setEditableContent(prev => ({
-                              ...prev,
-                              name: value,
-                            }));
-                          }}
-                          className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                          placeholder="例如：辛鹿 野草莓"
-                        />
-                      </div>
-
-                      {/* 风味编辑 */}
-                      <div>
-                        <div className="mb-1 flex items-center justify-between">
-                          <label className="text-xs text-neutral-500 dark:text-neutral-400">
-                            风味
-                          </label>
-                          <button
-                            onClick={addFlavorTag}
-                            className="flex h-5 w-5 items-center justify-center rounded bg-neutral-200 transition-colors hover:bg-neutral-300 dark:bg-neutral-700 dark:hover:bg-neutral-600"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <div className="space-y-2">
-                          {editableContent.flavor.map((flavor, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2"
-                            >
-                              <input
-                                type="text"
-                                value={flavor}
-                                onChange={e => {
-                                  const value = e.target.value;
-                                  setEditableContent(prev => {
-                                    const newFlavor = [...prev.flavor];
-                                    newFlavor[index] = value;
-                                    return {
-                                      ...prev,
-                                      flavor: newFlavor,
-                                    };
-                                  });
-                                }}
-                                className="flex-1 rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                                placeholder="风味描述"
-                              />
-                              {editableContent.flavor.length > 1 && (
-                                <button
-                                  onClick={() => removeFlavorTag(index)}
-                                  className="flex h-5 w-5 items-center justify-center rounded bg-red-100 transition-colors hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
-                                >
-                                  <Minus className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          {editableContent.flavor.length === 0 && (
-                            <div className="space-y-2">
-                              <button
-                                onClick={addFlavorTag}
-                                className="w-full rounded border border-dashed border-neutral-300 px-2 py-2 text-xs text-neutral-500 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800/50"
-                              >
-                                点击添加风味标签
-                              </button>
-
-                              {/* 常用风味快捷添加 */}
-                              <div className="flex flex-wrap gap-1">
-                                {[
-                                  '花香',
-                                  '果香',
-                                  '巧克力',
-                                  '坚果',
-                                  '焦糖',
-                                  '柑橘',
-                                ].map(flavor => (
-                                  <button
-                                    key={flavor}
-                                    onClick={() => {
-                                      setEditableContent(prev => ({
-                                        ...prev,
-                                        flavor: [...prev.flavor, flavor],
-                                      }));
-                                    }}
-                                    className="rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-600 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
-                                  >
-                                    {flavor}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      {renderTextInput('名称', 'name', '例如：辛鹿 野草莓')}
+                      {renderFlavorEditor()}
 
                       {/* 分隔线 */}
                       <div className="my-2 border-t border-neutral-200 dark:border-neutral-700"></div>
 
-                      {/* 克数编辑 */}
-                      <div>
-                        <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                          克数
-                        </label>
-                        <input
-                          type="text"
-                          value={editableContent.weight}
-                          onChange={e => {
-                            const value = e.target.value;
-                            setEditableContent(prev => ({
-                              ...prev,
-                              weight: value,
-                            }));
-                          }}
-                          className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                          placeholder="例如：250"
-                        />
-                      </div>
-
-                      {/* 烘焙日期编辑 */}
-                      <div>
-                        <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                          烘焙日期
-                        </label>
-                        <div className="text-xs">
-                          <DatePicker
-                            date={
-                              editableContent.roastDate
-                                ? new Date(editableContent.roastDate)
-                                : undefined
-                            }
-                            onDateChange={date => {
-                              const formattedDate = date
-                                .toISOString()
-                                .split('T')[0];
-                              setEditableContent(prev => ({
-                                ...prev,
-                                roastDate: formattedDate,
-                              }));
-                            }}
-                            placeholder="选择烘焙日期"
-                            locale="zh-CN"
-                            className=""
-                          />
-                        </div>
-                      </div>
-
-                      {/* 处理法编辑 */}
-                      <div>
-                        <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                          处理法（可选）
-                        </label>
-                        <input
-                          type="text"
-                          value={editableContent.process}
-                          onChange={e => {
-                            const value = e.target.value;
-                            setEditableContent(prev => ({
-                              ...prev,
-                              process: value,
-                            }));
-                          }}
-                          className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                          placeholder="例如：水洗、日晒"
-                        />
-                      </div>
-
-                      {/* 品种编辑 */}
-                      <div>
-                        <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                          品种（可选）
-                        </label>
-                        <input
-                          type="text"
-                          value={editableContent.variety}
-                          onChange={e => {
-                            const value = e.target.value;
-                            setEditableContent(prev => ({
-                              ...prev,
-                              variety: value,
-                            }));
-                          }}
-                          className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                          placeholder="例如：卡杜拉、瑰夏"
-                        />
-                      </div>
-
-                      {/* 产地编辑 */}
-                      <div>
-                        <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                          产地（可选）
-                        </label>
-                        <input
-                          type="text"
-                          value={editableContent.origin}
-                          onChange={e => {
-                            const value = e.target.value;
-                            setEditableContent(prev => ({
-                              ...prev,
-                              origin: value,
-                            }));
-                          }}
-                          className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                          placeholder="产地信息"
-                        />
-                      </div>
-
-                      {/* 烘焙度编辑 */}
-                      <div>
-                        <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                          烘焙度（可选）
-                        </label>
-                        <input
-                          type="text"
-                          value={editableContent.roastLevel}
-                          onChange={e => {
-                            const value = e.target.value;
-                            setEditableContent(prev => ({
-                              ...prev,
-                              roastLevel: value,
-                            }));
-                          }}
-                          className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                          placeholder="烘焙度"
-                        />
-                      </div>
+                      {renderTextInput('克数', 'weight', '例如：250')}
+                      {renderDatePicker()}
+                      {renderTextInput(
+                        '处理法（可选）',
+                        'process',
+                        '例如：水洗、日晒'
+                      )}
+                      {renderTextInput(
+                        '品种（可选）',
+                        'variety',
+                        '例如：卡杜拉、瑰夏'
+                      )}
+                      {renderTextInput('产地（可选）', 'origin', '产地信息')}
+                      {renderTextInput(
+                        '烘焙度（可选）',
+                        'roastLevel',
+                        '烘焙度'
+                      )}
 
                       {/* 备注编辑 */}
                       <div>
-                        <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                          备注（可选）
-                        </label>
+                        <label className={LABEL_CLASS}>备注（可选）</label>
                         <textarea
                           value={editableContent.notes}
                           onChange={e => {
@@ -1101,7 +906,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                               notes: value,
                             }));
                           }}
-                          className="w-full resize-none rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                          className={INPUT_CLASS + ' resize-none'}
                           placeholder="其他备注信息"
                           rows={2}
                         />
@@ -1110,238 +915,23 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                   ) : (
                     // 详细模板编辑区 - 显示所有字段
                     <>
-                      {/* 名称编辑 */}
-                      {config.fields.name && (
-                        <div>
-                          <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                            名称
-                          </label>
-                          <input
-                            type="text"
-                            value={editableContent.name}
-                            onChange={e => {
-                              const value = e.target.value;
-                              setEditableContent(prev => ({
-                                ...prev,
-                                name: value,
-                              }));
-                            }}
-                            className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                            placeholder="咖啡豆名称"
-                          />
-                        </div>
-                      )}
-
-                      {/* 产地编辑 */}
-                      {config.fields.origin && (
-                        <div>
-                          <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                            产地
-                          </label>
-                          <input
-                            type="text"
-                            value={editableContent.origin}
-                            onChange={e => {
-                              const value = e.target.value;
-                              setEditableContent(prev => ({
-                                ...prev,
-                                origin: value,
-                              }));
-                            }}
-                            className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                            placeholder="产地信息"
-                          />
-                        </div>
-                      )}
-
-                      {/* 烘焙度编辑 */}
-                      {config.fields.roastLevel && (
-                        <div>
-                          <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                            烘焙度
-                          </label>
-                          <input
-                            type="text"
-                            value={editableContent.roastLevel}
-                            onChange={e => {
-                              const value = e.target.value;
-                              setEditableContent(prev => ({
-                                ...prev,
-                                roastLevel: value,
-                              }));
-                            }}
-                            className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                            placeholder="烘焙度"
-                          />
-                        </div>
-                      )}
-
-                      {/* 烘焙日期编辑 */}
-                      {config.fields.roastDate && (
-                        <div>
-                          <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                            烘焙日期
-                          </label>
-                          <div className="text-xs">
-                            <DatePicker
-                              date={
-                                editableContent.roastDate
-                                  ? new Date(editableContent.roastDate)
-                                  : undefined
-                              }
-                              onDateChange={date => {
-                                const formattedDate = date
-                                  .toISOString()
-                                  .split('T')[0];
-                                setEditableContent(prev => ({
-                                  ...prev,
-                                  roastDate: formattedDate,
-                                }));
-                              }}
-                              placeholder="选择烘焙日期"
-                              locale="zh-CN"
-                              className=""
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 处理法编辑 */}
-                      {config.fields.process && (
-                        <div>
-                          <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                            处理法
-                          </label>
-                          <input
-                            type="text"
-                            value={editableContent.process}
-                            onChange={e => {
-                              const value = e.target.value;
-                              setEditableContent(prev => ({
-                                ...prev,
-                                process: value,
-                              }));
-                            }}
-                            className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                            placeholder="处理法"
-                          />
-                        </div>
-                      )}
-
-                      {/* 品种编辑 */}
-                      {config.fields.variety && (
-                        <div>
-                          <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                            品种
-                          </label>
-                          <input
-                            type="text"
-                            value={editableContent.variety}
-                            onChange={e => {
-                              const value = e.target.value;
-                              setEditableContent(prev => ({
-                                ...prev,
-                                variety: value,
-                              }));
-                            }}
-                            className="w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                            placeholder="咖啡品种"
-                          />
-                        </div>
-                      )}
-
-                      {/* 风味编辑 */}
-                      {config.fields.flavor && (
-                        <div>
-                          <div className="mb-1 flex items-center justify-between">
-                            <label className="text-xs text-neutral-500 dark:text-neutral-400">
-                              风味
-                            </label>
-                            <button
-                              onClick={addFlavorTag}
-                              className="flex h-5 w-5 items-center justify-center rounded bg-neutral-200 transition-colors hover:bg-neutral-300 dark:bg-neutral-700 dark:hover:bg-neutral-600"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <div className="space-y-2">
-                            {editableContent.flavor.map((flavor, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2"
-                              >
-                                <input
-                                  type="text"
-                                  value={flavor}
-                                  onChange={e => {
-                                    const value = e.target.value;
-                                    setEditableContent(prev => {
-                                      const newFlavor = [...prev.flavor];
-                                      newFlavor[index] = value;
-                                      return {
-                                        ...prev,
-                                        flavor: newFlavor,
-                                      };
-                                    });
-                                  }}
-                                  className="flex-1 rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                                  placeholder="风味描述"
-                                />
-                                {editableContent.flavor.length > 1 && (
-                                  <button
-                                    onClick={() => removeFlavorTag(index)}
-                                    className="flex h-5 w-5 items-center justify-center rounded bg-red-100 transition-colors hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
-                                  >
-                                    <Minus className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                            {editableContent.flavor.length === 0 && (
-                              <div className="space-y-2">
-                                <button
-                                  onClick={addFlavorTag}
-                                  className="w-full rounded border border-dashed border-neutral-300 px-2 py-2 text-xs text-neutral-500 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800/50"
-                                >
-                                  点击添加风味标签
-                                </button>
-
-                                {/* 常用风味快捷添加 */}
-                                <div className="flex flex-wrap gap-1">
-                                  {[
-                                    '花香',
-                                    '果香',
-                                    '巧克力',
-                                    '坚果',
-                                    '焦糖',
-                                    '柑橘',
-                                  ].map(flavor => (
-                                    <button
-                                      key={flavor}
-                                      onClick={() => {
-                                        setEditableContent(prev => ({
-                                          ...prev,
-                                          flavor: [...prev.flavor, flavor],
-                                        }));
-                                      }}
-                                      className="rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-600 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
-                                    >
-                                      {flavor}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                      {config.fields.name &&
+                        renderTextInput('名称', 'name', '咖啡豆名称')}
+                      {config.fields.origin &&
+                        renderTextInput('产地', 'origin', '产地信息')}
+                      {config.fields.roastLevel &&
+                        renderTextInput('烘焙度', 'roastLevel', '烘焙度')}
+                      {config.fields.roastDate && renderDatePicker()}
+                      {config.fields.process &&
+                        renderTextInput('处理法', 'process', '处理法')}
+                      {config.fields.variety &&
+                        renderTextInput('品种', 'variety', '咖啡品种')}
+                      {config.fields.flavor && renderFlavorEditor()}
 
                       {/* 备注编辑 */}
                       {config.fields.notes && (
                         <div>
-                          <label className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                            备注
-                          </label>
+                          <label className={LABEL_CLASS}>备注</label>
                           <textarea
                             value={editableContent.notes}
                             onChange={e => {
@@ -1351,7 +941,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                                 notes: value,
                               }));
                             }}
-                            className="w-full resize-none rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                            className={INPUT_CLASS + ' resize-none'}
                             placeholder="备注信息"
                             rows={2}
                           />
