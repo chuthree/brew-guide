@@ -41,13 +41,15 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
     }
   }, [bean, isOpen, shareMode]);
 
-  // 历史栈管理 - 作为子模态框，不添加新的历史记录
+  // 历史栈管理
   useEffect(() => {
     if (!isOpen) return;
 
-    // 监听返回事件，但不添加新的历史记录
+    // 添加分享模态框的历史记录
+    window.history.pushState({ modal: 'bean-share' }, '');
+
+    // 监听返回事件
     const handlePopState = () => {
-      // 当用户点击返回时，关闭当前模态框
       onClose();
     };
 
@@ -58,9 +60,15 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  // 处理关闭 - 直接关闭，不操作历史记录
+  // 处理关闭
   const handleClose = () => {
-    onClose();
+    // 如果历史栈中有我们添加的条目，触发返回
+    if (window.history.state?.modal === 'bean-share') {
+      window.history.back();
+    } else {
+      // 否则直接关闭
+      onClose();
+    }
   };
 
   // 下载二维码图片

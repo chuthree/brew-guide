@@ -68,15 +68,12 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
     };
 
     try {
-      // 先保存数据
+      // 保存数据
       await onSave(coffeeBean.id, ratings);
 
-      // 保存成功后再调用回调函数
+      // 保存成功后调用回调函数
       if (onAfterSave) {
-        // 延迟50ms确保数据已更新
-        setTimeout(() => {
-          onAfterSave();
-        }, 50);
+        onAfterSave();
       }
     } catch (error) {
       console.error('保存评分失败:', error);

@@ -288,12 +288,14 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     // 监听返回事件
     const handlePopState = () => {
-      // 如果评分模态框打开，先关闭评分模态框
+      // 如果评分模态框打开，先关闭评分模态框，并重新添加详情页的历史记录
       if (ratingModalOpen) {
         setRatingModalOpen(false);
+        window.history.pushState({ modal: 'bean-detail' }, '');
       } else if (shareModalOpen) {
-        // 如果分享模态框打开，先关闭分享模态框
+        // 如果分享模态框打开，先关闭分享模态框，并重新添加详情页的历史记录
         setShareModalOpen(false);
+        window.history.pushState({ modal: 'bean-detail' }, '');
       } else {
         // 否则关闭详情模态框
         onClose();
@@ -575,18 +577,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 处理关闭
   const handleClose = () => {
-    setIsVisible(false); // 触发退出动画
     window.dispatchEvent(new CustomEvent('beanDetailClosing')); // 通知父组件
 
-    setTimeout(() => {
-      // 如果历史栈中有我们添加的条目，触发返回
-      if (window.history.state?.modal === 'bean-detail') {
-        window.history.back();
-      } else {
-        // 否则直接关闭
-        onClose();
-      }
-    }, 350); // 等待动画完成
+    // 如果历史栈中有我们添加的条目，触发返回
+    if (window.history.state?.modal === 'bean-detail') {
+      window.history.back();
+    } else {
+      // 否则直接关闭
+      onClose();
+    }
   };
 
   // 处理去冲煮功能
@@ -1375,7 +1374,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         isOpen={shareModalOpen}
         bean={bean}
         onClose={() => setShareModalOpen(false)}
-        onTextShare={bean => {
+        onTextShare={(bean: CoffeeBean) => {
           if (onShare) {
             onShare(bean);
           }
@@ -1393,19 +1392,20 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             const { CoffeeBeanManager } = await import(
               '@/lib/managers/coffeeBeanManager'
             );
-            // 更新评分
-            await CoffeeBeanManager.updateBean(id, ratings);
-            // 触发数据更新事件
-            window.dispatchEvent(new CustomEvent('coffeeBeanDataChanged'));
+            // 更新评分 - 使用 updateBeanRatings 方法以清除评分缓存
+            await CoffeeBeanManager.updateBeanRatings(id, ratings);
+            // 触发数据更新事件，包含详细信息
+            window.dispatchEvent(
+              new CustomEvent('coffeeBeanDataChanged', {
+                detail: {
+                  action: 'update',
+                  beanId: id,
+                },
+              })
+            );
           } catch (error) {
             console.error('保存评分失败:', error);
           }
-        }}
-        onAfterSave={() => {
-          // 关闭评分模态框
-          setRatingModalOpen(false);
-          // 关闭详情页
-          handleClose();
         }}
       />
     </>
