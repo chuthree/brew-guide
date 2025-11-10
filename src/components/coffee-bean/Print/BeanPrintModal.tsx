@@ -18,7 +18,6 @@ import {
   updateConfigMargin,
   updateConfigFontSize,
   updateConfigFontWeight,
-  updateConfigFontFamily,
   updateConfigTemplate,
   updateConfigBrandName,
   setPresetSize,

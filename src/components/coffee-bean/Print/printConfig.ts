@@ -27,13 +27,6 @@ export interface PrintConfig {
   fontSize: number; // px
   titleFontSize: number; // px
   fontWeight: number; // 字体粗细 (100-900)
-  fontFamily:
-    | 'default'
-    | 'fangsong'
-    | 'kaiti'
-    | 'songti'
-    | 'handwriting'
-    | 'artistic'; // 字体选择
   template: 'detailed' | 'minimal'; // 模板样式
   brandName: string; // 品牌名称
 }
@@ -57,7 +50,6 @@ export const defaultConfig: PrintConfig = {
   fontSize: 13, // 增大字体以适应低精度打印
   titleFontSize: 17, // 相应增大标题字体
   fontWeight: 500, // 默认字体粗细，中等粗细适合大多数打印机
-  fontFamily: 'default', // 默认字体
   template: 'detailed', // 默认详细模板
   brandName: '', // 默认无品牌名
 };
@@ -196,18 +188,6 @@ export const updateConfigFontWeight = (
   fontWeight: number
 ): PrintConfig => {
   const newConfig = { ...currentConfig, fontWeight };
-  savePrintConfigPreference(newConfig);
-  return newConfig;
-};
-
-/**
- * 更新字体样式并保存
- */
-export const updateConfigFontFamily = (
-  currentConfig: PrintConfig,
-  fontFamily: PrintConfig['fontFamily']
-): PrintConfig => {
-  const newConfig = { ...currentConfig, fontFamily };
   savePrintConfigPreference(newConfig);
   return newConfig;
 };
