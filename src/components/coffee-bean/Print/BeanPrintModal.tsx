@@ -52,31 +52,6 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     return initialConfig;
   });
 
-  // 获取字体样式 - 优先使用本地定义的字体，降级到系统字体
-  const getFontFamily = (fontFamily: PrintConfig['fontFamily']): string => {
-    switch (fontFamily) {
-      case 'fangsong':
-        // 使用思源宋体替代仿宋
-        return '"Noto Serif SC Print", "Noto Serif SC", "FangSong", "STFangsong", "仿宋", serif';
-      case 'kaiti':
-        // 楷体 - 降级到系统楷体
-        return '"KaiTi", "STKaiti", "楷体", "华文楷体", "Noto Serif SC Print", serif';
-      case 'songti':
-        // 使用思源宋体
-        return '"Noto Serif SC Print", "Noto Serif SC", "SimSun", "STSong", "宋体", serif';
-      case 'handwriting':
-        // 手写体风格 - 降级到楷体
-        return '"KaiTi", "STKaiti", "楷体", "Noto Serif SC Print", cursive';
-      case 'artistic':
-        // 艺术字体 - 降级到楷体
-        return '"KaiTi", "STKaiti", "楷体", "Noto Serif SC Print", fantasy';
-      case 'default':
-      default:
-        // 使用思源黑体（无衬线）
-        return '"Noto Sans SC Print", "Noto Sans SC", "Microsoft YaHei", "SimHei", "PingFang SC", Arial, sans-serif';
-    }
-  };
-
   // 从咖啡豆名称中提取品牌名（空格前的部分）
   const extractBrandName = (): string => {
     if (!editableContent.name) return config.brandName || '';
@@ -682,29 +657,6 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                 >
                   {config.orientation === 'landscape' ? '横向 ↔' : '纵向 ↕'}
                 </button>
-              </div>
-
-              {/* 字体选择 */}
-              <div>
-                <div className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
-                  字体
-                </div>
-                <select
-                  value={config.fontFamily}
-                  onChange={e => {
-                    const newConfig = updateConfigFontFamily(
-                      config,
-                      e.target.value as PrintConfig['fontFamily']
-                    );
-                    setConfig(newConfig);
-                  }}
-                  className="w-full cursor-pointer rounded bg-neutral-100 px-3 py-2 text-xs font-medium transition-all hover:bg-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:bg-neutral-800 dark:hover:bg-neutral-700"
-                >
-                  <option value="default">默认 (黑体)</option>
-                  <option value="songti">宋体</option>
-                  <option value="fangsong">仿宋</option>
-                  <option value="kaiti">楷体</option>
-                </select>
               </div>
 
               {/* 模板选择 */}
@@ -1434,7 +1386,8 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                     backgroundColor: '#ffffff',
                     color: '#000000',
                     lineHeight: '1.4', // 增加行距提高可读性
-                    fontFamily: getFontFamily(config.fontFamily), // 使用选择的字体
+                    fontFamily:
+                      '"Noto Sans SC Print", "Noto Sans SC", "Microsoft YaHei", "SimHei", "PingFang SC", Arial, sans-serif', // 使用默认字体
                     fontWeight: config.fontWeight, // 使用用户设置的字体粗细
                     letterSpacing: '0.02em', // 稍微增加字符间距
                   }}
