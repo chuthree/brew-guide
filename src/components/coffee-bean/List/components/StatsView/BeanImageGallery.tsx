@@ -69,7 +69,7 @@ const BeanImageGallery: React.FC<BeanImageGalleryProps> = ({
           return (
             <div
               key={`bean-card-${bean.id}`}
-              className="absolute h-20 w-14 -translate-x-1/2 -translate-y-1/2 transform overflow-hidden rounded-sm border border-white/90 shadow-xs transition-all duration-500 dark:border-neutral-700/90"
+              className="absolute h-20 w-14 -translate-x-1/2 -translate-y-1/2 transform overflow-hidden rounded-sm border border-white/90 shadow-xs transition-all duration-500 dark:border-neutral-800/90"
               style={{
                 left: `calc(50% + ${position.x}px + 28px)`,
                 top: `calc(100% + ${position.y}px - -80px)`, // y 在顶部时为负，因此整体下移
@@ -90,7 +90,6 @@ const BeanImageGallery: React.FC<BeanImageGalleryProps> = ({
                 priority={true} // 设置为高优先级加载
                 loading="eager" // 使用即时加载而不是懒加载
               />
-              <div className="absolute inset-0 rounded-sm border-2 border-white/30 dark:border-neutral-700/30"></div>
             </div>
           );
         })}
