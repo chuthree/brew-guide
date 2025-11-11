@@ -699,7 +699,10 @@ const Settings: React.FC<SettingsProps> = ({
         </h2>
         {/* 云同步快捷按钮 */}
         {s3Status === 'connected' && (
-          <div className="absolute right-4 flex items-center gap-2" data-sync-menu>
+          <div
+            className="absolute right-4 flex items-center gap-2"
+            data-sync-menu
+          >
             {/* 上传按钮 - 从右侧滑入 */}
             <button
               onClick={() => performQuickSync('upload')}
