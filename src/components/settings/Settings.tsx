@@ -10,8 +10,6 @@ import { LayoutSettings } from '../brewing/Timer/Settings';
 import {
   ChevronLeft,
   ChevronRight,
-  RefreshCw,
-  Loader,
   Monitor,
   Archive,
   List,
@@ -23,11 +21,12 @@ import {
   Shuffle,
   ArrowUpDown,
   Palette,
-  Upload,
-  Download,
-  ArrowUpDown as ArrowUpDownIcon,
   EyeOff,
   ImagePlus,
+  Cloud,
+  Upload,
+  Download,
+  X,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -340,13 +339,10 @@ const Settings: React.FC<SettingsProps> = ({
   const [s3Status, setS3Status] = useState<
     'disconnected' | 'connecting' | 'connected' | 'error'
   >('disconnected');
+  const [showSyncMenu, setShowSyncMenu] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isSyncNeeded, setIsSyncNeeded] = useState(false);
-  const [syncDirection, setSyncDirection] = useState<
-    'upload' | 'download' | 'both' | null
-  >(null);
 
-  // 检测云同步状态的函数（同时支持S3和WebDAV）
+  // 检测云同步连接状态的函数（同时支持S3和WebDAV）
   const checkCloudSyncStatus = async () => {
     try {
       // 检查哪个云同步服务已启用
@@ -385,15 +381,6 @@ const Settings: React.FC<SettingsProps> = ({
 
           if (connected) {
             setS3Status('connected');
-            const needsSync = await manager.needsSync();
-            setIsSyncNeeded(needsSync);
-
-            if (needsSync) {
-              const syncInfo = await manager.getSyncDirection();
-              setSyncDirection(syncInfo.direction);
-            } else {
-              setSyncDirection(null);
-            }
             return;
           }
         }
@@ -417,15 +404,6 @@ const Settings: React.FC<SettingsProps> = ({
 
           if (connected) {
             setS3Status('connected');
-            const needsSync = await manager.needsSync();
-            setIsSyncNeeded(needsSync);
-
-            if (needsSync) {
-              const syncInfo = await manager.getSyncDirection();
-              setSyncDirection(syncInfo.direction);
-            } else {
-              setSyncDirection(null);
-            }
             return;
           }
         }
@@ -435,6 +413,133 @@ const Settings: React.FC<SettingsProps> = ({
     } catch (error) {
       console.error('检测云同步状态失败:', error);
       setS3Status('error');
+    }
+  };
+
+  // 执行云同步
+  const performQuickSync = async (direction: 'upload' | 'download') => {
+    setShowSyncMenu(false);
+
+    if (isSyncing) {
+      return;
+    }
+
+    if (s3Status !== 'connected') {
+      const { showToast } = await import(
+        '@/components/common/feedback/LightToast'
+      );
+      showToast({
+        type: 'error',
+        title: '云同步未连接',
+        duration: 2000,
+      });
+      return;
+    }
+
+    try {
+      setIsSyncing(true);
+
+      const s3Enabled =
+        settings.s3Sync?.enabled && settings.s3Sync?.lastConnectionSuccess;
+      const webdavEnabled =
+        settings.webdavSync?.enabled &&
+        settings.webdavSync?.lastConnectionSuccess;
+
+      let manager: any;
+      let connected = false;
+
+      if (s3Enabled) {
+        const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+        const s3Config = settings.s3Sync!;
+
+        manager = new S3SyncManager();
+        connected = await manager.initialize({
+          region: s3Config.region,
+          accessKeyId: s3Config.accessKeyId,
+          secretAccessKey: s3Config.secretAccessKey,
+          bucketName: s3Config.bucketName,
+          prefix: s3Config.prefix,
+          endpoint: s3Config.endpoint || undefined,
+        });
+      } else if (webdavEnabled) {
+        const WebDAVSyncManager = (await import('@/lib/webdav/syncManager'))
+          .default;
+        const webdavConfig = settings.webdavSync!;
+
+        manager = new WebDAVSyncManager();
+        connected = await manager.initialize({
+          url: webdavConfig.url,
+          username: webdavConfig.username,
+          password: webdavConfig.password,
+          remotePath: webdavConfig.remotePath,
+        });
+      }
+
+      if (!connected || !manager) {
+        throw new Error('云同步连接失败');
+      }
+
+      const result = await manager.sync({
+        preferredDirection: direction,
+      });
+
+      if (result.success) {
+        const { showToast } = await import(
+          '@/components/common/feedback/LightToast'
+        );
+
+        if (result.uploadedFiles > 0 && result.downloadedFiles > 0) {
+          showToast({
+            type: 'success',
+            title: `同步完成：上传 ${result.uploadedFiles} 项，下载 ${result.downloadedFiles} 项，即将重启...`,
+            duration: 3000,
+          });
+          setTimeout(() => window.location.reload(), 3000);
+        } else if (result.uploadedFiles > 0) {
+          showToast({
+            type: 'success',
+            title: `已上传 ${result.uploadedFiles} 项到云端`,
+            duration: 2500,
+          });
+        } else if (result.downloadedFiles > 0) {
+          showToast({
+            type: 'success',
+            title: `已从云端下载 ${result.downloadedFiles} 项，即将重启...`,
+            duration: 2500,
+          });
+          setTimeout(() => window.location.reload(), 2500);
+        } else {
+          showToast({
+            type: 'info',
+            title: '数据已是最新',
+            duration: 2000,
+          });
+        }
+
+        if (settings.hapticFeedback) {
+          hapticsUtils.medium();
+        }
+      } else {
+        const { showToast } = await import(
+          '@/components/common/feedback/LightToast'
+        );
+        showToast({
+          type: 'error',
+          title: result.message || '同步失败',
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      const { showToast } = await import(
+        '@/components/common/feedback/LightToast'
+      );
+      showToast({
+        type: 'error',
+        title: `同步失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        duration: 3000,
+      });
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -461,6 +566,21 @@ const Settings: React.FC<SettingsProps> = ({
     if (!isOpen) return;
     checkCloudSyncStatus();
   }, [isOpen, settings.s3Sync, settings.webdavSync]);
+
+  // 点击外部关闭同步菜单
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showSyncMenu) {
+        const target = e.target as HTMLElement;
+        if (!target.closest('[data-sync-menu]')) {
+          setShowSyncMenu(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSyncMenu]);
 
   // 添加主题颜色更新的 Effect
   useEffect(() => {
@@ -540,175 +660,6 @@ const Settings: React.FC<SettingsProps> = ({
     );
   };
 
-  // 执行同步 - 直接调用 S3SyncManager 的同步功能
-  const performSync = useCallback(async () => {
-    // 如果 DataSettings 组件已打开，通过事件触发（优先使用 DataSettings 的逻辑）
-    if (hasSubSettingsOpen) {
-      window.dispatchEvent(new CustomEvent('cloudSyncRequested'));
-      if (settings.hapticFeedback) {
-        hapticsUtils.light();
-      }
-      return;
-    }
-
-    // 防止重复同步
-    if (isSyncing) {
-      console.warn('⚠️ 同步正在进行中，请勿重复操作');
-      return;
-    }
-
-    // 检查连接状态
-    if (s3Status !== 'connected') {
-      console.warn('⚠️ 云同步未连接，无法执行同步');
-      return;
-    }
-
-    try {
-      setIsSyncing(true);
-
-      // 确定使用哪个同步服务
-      const s3Enabled =
-        settings.s3Sync?.enabled && settings.s3Sync?.lastConnectionSuccess;
-      const webdavEnabled =
-        settings.webdavSync?.enabled &&
-        settings.webdavSync?.lastConnectionSuccess;
-
-      if (!s3Enabled && !webdavEnabled) {
-        throw new Error('没有可用的云同步服务');
-      }
-
-      let manager: any;
-      let connected = false;
-
-      if (s3Enabled) {
-        const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
-        const s3Config = settings.s3Sync!;
-
-        manager = new S3SyncManager();
-        connected = await manager.initialize({
-          region: s3Config.region,
-          accessKeyId: s3Config.accessKeyId,
-          secretAccessKey: s3Config.secretAccessKey,
-          bucketName: s3Config.bucketName,
-          prefix: s3Config.prefix,
-          endpoint: s3Config.endpoint || undefined,
-        });
-      } else if (webdavEnabled) {
-        const WebDAVSyncManager = (await import('@/lib/webdav/syncManager'))
-          .default;
-        const webdavConfig = settings.webdavSync!;
-
-        manager = new WebDAVSyncManager();
-        connected = await manager.initialize({
-          url: webdavConfig.url,
-          username: webdavConfig.username,
-          password: webdavConfig.password,
-          remotePath: webdavConfig.remotePath,
-        });
-      }
-
-      if (!connected || !manager) {
-        throw new Error('云同步连接失败，请检查配置');
-      }
-
-      // 执行同步
-      const result = await manager.sync({
-        preferredDirection: 'auto',
-      });
-
-      if (result.success) {
-        // 同步完成后，已经是最新状态，不需要显示方向图标
-        setIsSyncNeeded(false);
-        setSyncDirection(null);
-
-        // 显示同步结果提示
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
-
-        if (result.uploadedFiles > 0 && result.downloadedFiles > 0) {
-          // 双向同步
-          showToast({
-            type: 'success',
-            title: `同步完成：上传 ${result.uploadedFiles} 项，下载 ${result.downloadedFiles} 项，即将重启...`,
-            duration: 3000,
-          });
-
-          // 双向同步包含下载，刷新页面以加载新数据
-          setTimeout(() => {
-            window.location.reload();
-          }, 3000);
-        } else if (result.uploadedFiles > 0) {
-          // 仅上传
-          showToast({
-            type: 'success',
-            title: `已上传 ${result.uploadedFiles} 项到云端`,
-            duration: 2500,
-          });
-        } else if (result.downloadedFiles > 0) {
-          // 仅下载
-          showToast({
-            type: 'success',
-            title: `已从云端下载 ${result.downloadedFiles} 项，即将重启...`,
-            duration: 2500,
-          });
-
-          // 下载完成后刷新页面以加载新数据
-          setTimeout(() => {
-            window.location.reload();
-          }, 2500);
-        } else {
-          // 无变化
-          showToast({
-            type: 'info',
-            title: '数据已是最新，无需同步',
-            duration: 2000,
-          });
-        }
-
-        if (settings.hapticFeedback) {
-          hapticsUtils.medium();
-        }
-
-        // 触发数据变化事件
-        window.dispatchEvent(
-          new CustomEvent('storageChange', {
-            detail: { key: 'all' },
-          })
-        );
-      } else {
-        // 同步失败
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
-        showToast({
-          type: 'error',
-          title: result.message || '同步失败',
-          duration: 3000,
-        });
-      }
-    } catch (error) {
-      console.error('同步失败:', error);
-      // 显示错误提示
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
-      showToast({
-        type: 'error',
-        title: `同步失败: ${error instanceof Error ? error.message : '未知错误'}`,
-        duration: 3000,
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [
-    settings.hapticFeedback,
-    settings.s3Sync,
-    isSyncing,
-    s3Status,
-    hasSubSettingsOpen,
-  ]);
-
   // 如果shouldRender为false，不渲染任何内容
   if (!shouldRender) return null;
 
@@ -746,28 +697,48 @@ const Settings: React.FC<SettingsProps> = ({
         <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
           设置
         </h2>
-        {/* 同步按钮 */}
+        {/* 云同步快捷按钮 */}
         {s3Status === 'connected' && (
-          <button
-            onClick={performSync}
-            disabled={isSyncing}
-            className="absolute right-4 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-colors hover:bg-neutral-200 active:scale-95 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-          >
-            {isSyncing ? (
-              <Loader className="h-5 w-5 animate-spin" />
-            ) : syncDirection === 'upload' ? (
+          <div className="absolute right-4 flex items-center gap-2" data-sync-menu>
+            {/* 上传按钮 - 从右侧滑入 */}
+            <button
+              onClick={() => performQuickSync('upload')}
+              disabled={isSyncing}
+              className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+                showSyncMenu
+                  ? 'translate-x-0 opacity-100'
+                  : 'pointer-events-none translate-x-4 opacity-0'
+              }`}
+              style={{ transitionDuration: '200ms' }}
+            >
               <Upload className="h-5 w-5" />
-            ) : syncDirection === 'download' ? (
+            </button>
+            {/* 下载按钮 - 从右侧滑入 */}
+            <button
+              onClick={() => performQuickSync('download')}
+              disabled={isSyncing}
+              className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+                showSyncMenu
+                  ? 'translate-x-0 opacity-100'
+                  : 'pointer-events-none translate-x-4 opacity-0'
+              }`}
+              style={{ transitionDuration: '250ms' }}
+            >
               <Download className="h-5 w-5" />
-            ) : syncDirection === 'both' ? (
-              <ArrowUpDownIcon className="h-5 w-5" />
-            ) : (
-              <RefreshCw className="h-5 w-5" />
-            )}
-            {isSyncNeeded && !isSyncing && (
-              <span className="absolute top-1.5 right-1.5 block h-2.5 w-2.5 rounded-full border-2 border-neutral-100 bg-blue-500 dark:border-neutral-800"></span>
-            )}
-          </button>
+            </button>
+            {/* 云图标/叉号切换按钮 */}
+            <button
+              onClick={() => setShowSyncMenu(!showSyncMenu)}
+              disabled={isSyncing}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+            >
+              {showSyncMenu ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Cloud className="h-5 w-5" />
+              )}
+            </button>
+          </div>
         )}
       </div>
 

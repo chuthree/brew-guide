@@ -5,6 +5,7 @@ import WebDAVSyncManager from '@/lib/webdav/syncManager';
 import type { SyncResult as WebDAVSyncResult } from '@/lib/webdav/types';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '../Settings';
+import { Upload, Download } from 'lucide-react';
 
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
 
@@ -37,9 +38,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
   const [syncManager, setSyncManager] = useState<WebDAVSyncManager | null>(
     null
   );
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncNeeded, setSyncNeeded] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{
     phase: string;
     message: string;
@@ -67,10 +66,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         if (connected) {
           setStatus('connected');
           setSyncManager(manager);
-          const lastSync = await manager.getLastSyncTime();
-          setLastSyncTime(lastSync);
-          const needsSync = await manager.needsSync();
-          setSyncNeeded(needsSync);
         } else {
           setStatus('error');
           setError('自动连接失败，请检查配置');
@@ -105,11 +100,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         setSyncManager(manager);
         onSettingChange('lastConnectionSuccess', true);
 
-        const lastSync = await manager.getLastSyncTime();
-        setLastSyncTime(lastSync);
-        const needsSync = await manager.needsSync();
-        setSyncNeeded(needsSync);
-
         // 通知 Settings 页面更新云同步状态
         window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
 
@@ -128,9 +118,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
   };
 
   // 执行同步
-  const performSync = async (
-    direction: 'auto' | 'upload' | 'download' = 'auto'
-  ) => {
+  const performSync = async (direction: 'upload' | 'download') => {
     if (!syncManager) {
       setError('请先测试连接');
       return;
@@ -158,11 +146,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       });
 
       if (result.success) {
-        const lastSync = await syncManager.getLastSyncTime();
-        setLastSyncTime(lastSync);
-        const needsSync = await syncManager.needsSync();
-        setSyncNeeded(needsSync);
-
         const { showToast } = await import(
           '@/components/common/feedback/LightToast'
         );
@@ -412,57 +395,52 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
 
       {/* 同步按钮 */}
       {enabled && status === 'connected' && (
-        <div className="space-y-3">
-          {/* 同步信息卡片 */}
-          <div className="rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
-            <div className="space-y-2">
-              {/* 同步状态 */}
-              {syncNeeded && (
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-2 w-2 rounded-full bg-orange-500"></div>
-                  <span className="font-medium text-orange-600 dark:text-orange-400">
-                    检测到数据变更
-                  </span>
-                </div>
-              )}
-
-              {/* 最后同步时间 */}
-              {lastSyncTime && (
-                <div className="text-sm text-neutral-600 dark:text-neutral-400">
-                  最后同步：
-                  {lastSyncTime.toLocaleString('zh-CN', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 同步按钮 */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* 上传按钮 */}
           <button
-            onClick={() => performSync('auto')}
+            onClick={() => performSync('upload')}
             disabled={isSyncing}
-            className="w-full rounded bg-neutral-800 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-900 disabled:bg-neutral-400 dark:bg-neutral-700 dark:hover:bg-neutral-600"
+            className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
-            {isSyncing ? (
-              syncProgress ? (
-                <div className="flex flex-col items-center gap-1">
-                  <span>{syncProgress.message}</span>
-                  <div className="h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-600">
-                    <div
-                      className="h-1.5 rounded-full bg-white transition-all duration-300"
-                      style={{ width: `${syncProgress.percentage}%` }}
-                    />
-                  </div>
+            {isSyncing && syncProgress?.phase === 'uploading' ? (
+              <div className="flex flex-col items-center gap-1">
+                <span>{syncProgress.message}</span>
+                <div className="h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-600">
+                  <div
+                    className="h-1.5 rounded-full bg-neutral-400 transition-all duration-300 dark:bg-neutral-500"
+                    style={{ width: `${syncProgress.percentage}%` }}
+                  />
                 </div>
-              ) : (
-                '同步中...'
-              )
+              </div>
             ) : (
-              '立即同步'
+              <>
+                <Upload className="h-4 w-4" />
+                <span>上传</span>
+              </>
+            )}
+          </button>
+
+          {/* 下载按钮 */}
+          <button
+            onClick={() => performSync('download')}
+            disabled={isSyncing}
+            className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            {isSyncing && syncProgress?.phase === 'downloading' ? (
+              <div className="flex flex-col items-center gap-1">
+                <span>{syncProgress.message}</span>
+                <div className="h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-600">
+                  <div
+                    className="h-1.5 rounded-full bg-neutral-400 transition-all duration-300 dark:bg-neutral-500"
+                    style={{ width: `${syncProgress.percentage}%` }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                <span>下载</span>
+              </>
             )}
           </button>
         </div>
