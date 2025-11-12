@@ -1,19 +1,15 @@
 # 咖啡冲煮指南 (Brew Guide)
 
 ![版本](https://img.shields.io/badge/版本-1.5.0-blue)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/chu3/brew-guide)
 
 一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。
 
-<img width="800" alt="应用截图" src="https://github.com/user-attachments/assets/f1c6d047-3682-4d90-8748-16995456f092" />
+![应用截图](https://pic1.imgdb.cn/item/6913fbc43203f7be00f6dedd.png)
 
-## 应用访问
+## 网页版访问
 
-- **国内访问**：[https://coffee.chu3.top/](http://coffee.chu3.top/)
-- **海外访问**：[https://brew-guide.vercel.app/](https://brew-guide.vercel.app/)
-- **移动应用下载**：
-  - 国内用户：[123912 网盘](https://www.123912.com/s/prGKTd-HpJWA)
-  - 海外用户：[GitHub Releases](https://github.com/chu3/brew-guide/releases)
+- **国内**：[https://coffee.chu3.top/](http://coffee.chu3.top/)
+- **海外**：[https://brew-guide.vercel.app/](https://brew-guide.vercel.app/)
 
 ## 主要功能
 
