@@ -1108,12 +1108,12 @@ const Settings: React.FC<SettingsProps> = ({
           </p>
           <p className="mt-12">
             <a
-              href="https://github.com/chu3/brew-guide"
+              href="https://gitee.com/chu3/brew-guide"
               target="_blank"
               rel="noopener noreferrer"
               className="underline"
             >
-              GitHub
+              Gitee
             </a>
           </p>
         </div>
