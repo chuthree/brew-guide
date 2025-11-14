@@ -925,4 +925,6 @@ export const sponsorsList = [
   'Gilonblue',
   '志文',
   'Z先生',
+  'D',
+  'Lemueno',
 ];
