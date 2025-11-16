@@ -1,7 +1,7 @@
 import { Metadata, Viewport } from 'next';
 import { ThemeProvider } from 'next-themes';
 // 导入polyfill库以增强浏览器兼容性
-import 'core-js/stable';
+// import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import { Analytics } from '@vercel/analytics/next';
 import localFont from 'next/font/local';
