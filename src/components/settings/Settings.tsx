@@ -850,14 +850,14 @@ const Settings: React.FC<SettingsProps> = ({
                   <div className="flex flex-col items-center">
                     <div className="relative aspect-square w-full overflow-hidden rounded">
                       <Image
-                        src="https://coffee.chu3.top/images/content/group-code.jpg"
-                        alt="交流群"
+                        src="https://coffee.chu3.top/images/content/chu-code.jpg"
+                        alt="chu 的微信二维码"
                         fill
                         className="object-cover"
                       />
                     </div>
                     <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                      交流群（实时更新，随时可用）
+                      加 chu 的微信拉你进群～
                     </p>
                   </div>
                 </>
