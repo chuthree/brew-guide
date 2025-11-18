@@ -1,7 +1,5 @@
 # 咖啡冲煮指南 (Brew Guide)
 
-![版本](https://img.shields.io/badge/版本-1.5.0-blue)
-
 一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。
 
 ![应用截图](https://pic1.imgdb.cn/item/6913fbc43203f7be00f6dedd.png)
