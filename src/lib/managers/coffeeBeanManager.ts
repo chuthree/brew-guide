@@ -452,11 +452,6 @@ export const CoffeeBeanManager = {
       // 更新咖啡豆
       const updatedBean = await this.updateBean(id, ratings);
 
-      // 更新后清除已评分豆子相关的缓存
-      beanCache.delete(RATED_BEANS_CACHE_KEY);
-      beanCache.delete(`${BEANS_BY_TYPE_PREFIX}espresso`);
-      beanCache.delete(`${BEANS_BY_TYPE_PREFIX}filter`);
-
       return updatedBean;
     } catch (error) {
       console.error('更新咖啡豆评分失败:', error);
@@ -469,9 +464,6 @@ export const CoffeeBeanManager = {
    * @returns 已评分的咖啡豆数组
    */
   async getRatedBeans(): Promise<CoffeeBean[]> {
-    // 修复排序问题：每次获取数据时都清除缓存，确保获取最新数据
-    beanCache.delete(RATED_BEANS_CACHE_KEY);
-
     return beanCache.resolve(
       RATED_BEANS_CACHE_KEY,
       async () => {
@@ -497,9 +489,6 @@ export const CoffeeBeanManager = {
   async getRatedBeansByType(
     type: 'espresso' | 'filter' | 'omni'
   ): Promise<CoffeeBean[]> {
-    // 修复排序问题：每次获取数据时都清除缓存，确保获取最新数据
-    beanCache.delete(`${BEANS_BY_TYPE_PREFIX}${type}`);
-
     return beanCache.resolve(
       `${BEANS_BY_TYPE_PREFIX}${type}`,
       async () => {
@@ -637,5 +626,6 @@ export const CoffeeBeanManager = {
     beanCache.delete(RATED_BEANS_CACHE_KEY);
     beanCache.delete(`${BEANS_BY_TYPE_PREFIX}espresso`);
     beanCache.delete(`${BEANS_BY_TYPE_PREFIX}filter`);
+    beanCache.delete(`${BEANS_BY_TYPE_PREFIX}omni`);
   },
 };
