@@ -529,14 +529,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         const allNotes: BrewingNote[] = JSON.parse(notesStr);
 
         // 过滤出与当前咖啡豆相关的记录
-        // 优先使用 beanId 匹配，只有在笔记没有 beanId 时才使用名称匹配（向后兼容旧数据）
+        // 严格按 beanId 匹配，避免同名豆子的笔记混淆问题
         const beanNotes = allNotes.filter(note => {
-          // 如果笔记有 beanId，严格按 beanId 匹配
-          if (note.beanId) {
-            return note.beanId === bean.id;
-          }
-          // 如果笔记没有 beanId（旧数据），使用名称匹配
-          return note.coffeeBeanInfo?.name === bean.name;
+          return note.beanId === bean.id;
         });
 
         // 按时间倒序排列，显示所有记录

@@ -575,17 +575,13 @@ export const CoffeeBeanManager = {
           };
           [key: string]: unknown;
         }) => {
-          // 通过 beanId 或者旧的咖啡豆名称匹配
-          const isRelatedNote =
-            note.beanId === beanId ||
-            note.coffeeBeanInfo?.name === originalBean.name;
+          // 只通过 beanId 匹配，不使用 name 匹配（避免同名豆子误匹配）
+          const isRelatedNote = note.beanId === beanId;
 
           if (isRelatedNote) {
             hasUpdates = true;
             return {
               ...note,
-              // 确保 beanId 存在
-              beanId: beanId,
               // 更新咖啡豆信息
               coffeeBeanInfo: {
                 ...note.coffeeBeanInfo,
