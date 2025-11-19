@@ -7,6 +7,7 @@ import { CoffeeBean as _CoffeeBean, BlendComponent } from '@/types/app';
 import { APP_VERSION } from '@/lib/core/config';
 import { SettingsOptions as _SettingsOptions } from '@/components/settings/Settings';
 import { LayoutSettings as _LayoutSettings } from '@/components/brewing/Timer/Settings';
+import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
 import { db } from '@/lib/core/db';
 
 // 检查是否在浏览器环境中
@@ -208,6 +209,16 @@ export const DataManager = {
         // 错误处理：即使自定义预设导出失败，也继续导出其他数据
       }
 
+      // 导出烘焙商图标
+      try {
+        const roasterLogos = await RoasterLogoManager.getAllLogos();
+        if (roasterLogos.length > 0) {
+          exportData.data['roaster-logos'] = roasterLogos;
+        }
+      } catch (error) {
+        console.error('导出烘焙商图标失败:', error);
+      }
+
       return JSON.stringify(exportData, null, 2);
     } catch {
       throw new Error('导出数据失败');
@@ -327,6 +338,16 @@ export const DataManager = {
             }
           }
         }
+      }
+
+      // 导入烘焙商图标
+      if (
+        importData.data['roaster-logos'] &&
+        Array.isArray(importData.data['roaster-logos'])
+      ) {
+        await RoasterLogoManager.importLogos(
+          JSON.stringify(importData.data['roaster-logos'])
+        );
       }
 
       // 清理缓存，确保导入的数据能立即生效
@@ -454,6 +475,9 @@ export const DataManager = {
           for (const key of CUSTOM_PRESETS_KEYS) {
             localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
           }
+
+          // 清除烘焙商图标
+          localStorage.removeItem('roaster-logos');
 
           // 清除所有状态持久化数据（brew-guide: 前缀的键）
           const localStorageKeys = Object.keys(localStorage);
