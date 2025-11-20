@@ -19,6 +19,112 @@ export class TempFileManager {
   private static readonly TEMP_FILE_PREFIX = 'brew-guide-temp-';
 
   /**
+   * 保存图片到相册
+   * @param imageData base64格式的图片数据（支持带 data:image/png;base64, 前缀或纯 base64）
+   * @returns Promise<void>
+   */
+  static async saveImageToGallery(imageData: string): Promise<void> {
+    // Web 平台直接下载
+    if (!Capacitor.isNativePlatform()) {
+      const link = document.createElement('a');
+      link.download = `brew-guide-${new Date().getTime()}.png`;
+      link.href = imageData;
+      link.click();
+      return;
+    }
+
+    const timestamp = new Date().getTime();
+    const tempFileName = `${this.TEMP_FILE_PREFIX}save-${timestamp}.png`;
+
+    try {
+      // 确保正确处理base64数据（去掉 data:image/png;base64, 前缀）
+      const base64Data = imageData.includes(',')
+        ? imageData.split(',')[1]
+        : imageData;
+
+      // 步骤1: 先将 base64 保存为临时文件
+      await Filesystem.writeFile({
+        path: tempFileName,
+        data: base64Data,
+        directory: Directory.Cache,
+        recursive: true,
+      });
+
+      // 步骤2: 获取文件的完整路径
+      const fileUri = await Filesystem.getUri({
+        path: tempFileName,
+        directory: Directory.Cache,
+      });
+
+      // 步骤3: 使用 Media 插件保存到相册
+      const { Media } = await import('@capacitor-community/media');
+      const platform = Capacitor.getPlatform();
+
+      if (platform === 'android') {
+        // Android: 先获取相册列表，找到可用的相册 identifier
+        try {
+          const albums = await Media.getAlbums();
+
+          // 查找是否已有 BrewGuide 相册
+          let albumId = albums.albums?.find(
+            (a: any) => a.name === 'BrewGuide'
+          )?.identifier;
+
+          if (!albumId) {
+            // 创建新相册
+            const result: any = await Media.createAlbum({ name: 'BrewGuide' });
+            albumId = result?.identifier;
+          }
+
+          // 如果还是没有 albumId，使用第一个可用相册
+          if (!albumId && albums.albums && albums.albums.length > 0) {
+            albumId = albums.albums[0].identifier;
+          }
+
+          // 保存照片
+          if (albumId) {
+            await Media.savePhoto({
+              path: fileUri.uri,
+              albumIdentifier: albumId,
+            });
+          } else {
+            // 最后尝试：不指定相册直接保存（可能保存到默认位置）
+            throw new Error('无法找到或创建相册，尝试其他方式');
+          }
+        } catch (error) {
+          console.error('Android 相册保存失败:', error);
+          throw error; // 抛出错误让外层处理
+        }
+      } else {
+        // iOS: 尝试保存到自定义相册，如果失败则保存到系统相册
+        try {
+          await Media.savePhoto({
+            path: fileUri.uri,
+            albumIdentifier: 'BrewGuide',
+          });
+        } catch (albumError) {
+          // 相册不存在，保存到系统相册
+          await Media.savePhoto({
+            path: fileUri.uri,
+          });
+        }
+      }
+
+      // 步骤4: 清理临时文件
+      await this.cleanupTempFile(tempFileName);
+    } catch (error) {
+      // 即使失败也要尝试清理临时文件
+      try {
+        await this.cleanupTempFile(tempFileName);
+      } catch (cleanupError) {
+        console.warn('清理临时文件失败:', cleanupError);
+      }
+      console.error('保存到相册失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 创建临时图片文件并分享
    * @param imageData base64格式的图片数据
    * @param fileName 文件名（不包含扩展名）

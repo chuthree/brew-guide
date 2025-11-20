@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^7.1.0",
+    "@capacitor-community/media": "^8.0.1",
     "@capacitor-community/safe-area": "7.0.0-alpha.1",
     "@capacitor/android": "^7.4.4",
     "@capacitor/app": "^7.1.0",

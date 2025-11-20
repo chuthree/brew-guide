@@ -11,6 +11,9 @@ importers:
       '@capacitor-community/keep-awake':
         specifier: ^7.1.0
         version: 7.1.0(@capacitor/core@7.4.4)
+      '@capacitor-community/media':
+        specifier: ^8.0.1
+        version: 8.0.1(@capacitor/core@7.4.4)
       '@capacitor-community/safe-area':
         specifier: 7.0.0-alpha.1
         version: 7.0.0-alpha.1(@capacitor/core@7.4.4)
@@ -742,6 +745,11 @@ packages:
 
   '@capacitor-community/keep-awake@7.1.0':
     resolution: {integrity: sha512-4Hj6OKnBd/DAOeiMnqBy74tg1rwC+qLYWQbWJmysMZm2e2nptz43hxaKu22Xlyyw5O71CwwskLCM0skDFMPpQQ==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
+  '@capacitor-community/media@8.0.1':
+    resolution: {integrity: sha512-u4+f7iVQV6BdsDi0MeQigJpwRztfuzsRTskwp1YS6nAS+6Gg5zLFOW/vnQgnpPIJQBO54plb4UZQYE9Wv/1Yxw==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -5154,6 +5162,10 @@ snapshots:
       '@babel/helper-validator-identifier': 7.28.5
 
   '@capacitor-community/keep-awake@7.1.0(@capacitor/core@7.4.4)':
+    dependencies:
+      '@capacitor/core': 7.4.4
+
+  '@capacitor-community/media@8.0.1(@capacitor/core@7.4.4)':
     dependencies:
       '@capacitor/core': 7.4.4
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CoffeeBean } from '@/types/app';
-import { X, Download, RotateCcw, Edit, Check, Plus, Minus } from 'lucide-react';
+import { X, Save, RotateCcw, Edit, Check, Plus, Minus } from 'lucide-react';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import { DatePicker } from '@/components/common/ui/DatePicker';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
@@ -263,8 +263,8 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     }
   };
 
-  // 保存为图片处理
-  const handleSaveAsImage = async () => {
+  // 保存图片（优先保存到相册，降级到分享）
+  const handleSaveImage = async () => {
     try {
       const previewElement = document.getElementById('print-preview');
       if (!previewElement) {
@@ -282,19 +282,50 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
         quality: 0.95,
       });
 
-      // 使用统一的文件管理器进行跨平台兼容的图片分享/下载
-      const fileName = `${bean?.name || '咖啡豆标签'}-${
-        new Date().toISOString().split('T')[0]
-      }`;
+      // 原生平台：优先保存到相册
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await TempFileManager.saveImageToGallery(dataUrl);
+          const { showToast } = await import(
+            '@/components/common/feedback/LightToast'
+          );
+          showToast({ type: 'success', title: '已保存到相册' });
+          return;
+        } catch (error) {
+          console.error('保存到相册失败:', error);
+          const { showToast } = await import(
+            '@/components/common/feedback/LightToast'
+          );
+          showToast({
+            type: 'error',
+            title: `保存失败: ${error instanceof Error ? error.message : '未知错误'}`,
+          });
+          // 降级到分享方式
+          const fileName = `${bean?.name || '咖啡豆标签'}-${
+            new Date().toISOString().split('T')[0]
+          }`;
+          await TempFileManager.shareImageFile(dataUrl, fileName, {
+            title: '咖啡豆标签',
+            text: `${bean?.name || '咖啡豆'}标签图片`,
+            dialogTitle: '保存标签图片',
+          });
+          return;
+        }
+      }
 
-      await TempFileManager.shareImageFile(dataUrl, fileName, {
-        title: '咖啡豆标签',
-        text: `${bean?.name || '咖啡豆'}标签图片`,
-        dialogTitle: '保存标签图片',
-      });
+      // Web 平台：直接下载
+      await TempFileManager.saveImageToGallery(dataUrl);
+      const { showToast } = await import(
+        '@/components/common/feedback/LightToast'
+      );
+      showToast({ type: 'success', title: '图片已保存' });
     } catch (error) {
       console.error('保存图片失败:', error);
-      alert('保存图片失败，请重试');
+      const { showToast } = await import(
+        '@/components/common/feedback/LightToast'
+      );
+      showToast({ type: 'error', title: '保存图片失败，请重试' });
     }
   };
 
@@ -484,14 +515,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
             打印标签
           </h2>
 
-          <div className="flex gap-2">
-            <button
-              onClick={handleSaveAsImage}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 transition-colors hover:bg-neutral-700 dark:bg-neutral-700 dark:hover:bg-neutral-600"
-            >
-              <Download className="h-4 w-4 text-white" />
-            </button>
-          </div>
+          <button
+            onClick={handleSaveImage}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 transition-colors hover:bg-neutral-700 dark:bg-neutral-700 dark:hover:bg-neutral-600"
+            title="保存图片"
+          >
+            <Save className="h-4 w-4 text-white" />
+          </button>
         </div>
 
         {/* 内容区域 */}
