@@ -457,16 +457,3 @@ export const isBeanEmpty = (bean: ExtendedCoffeeBean): boolean => {
   // 当数值为0或接近0时视为空（浮点数比较）
   return !isNaN(remainingValue) && remainingValue < 0.001;
 };
-
-import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
-
-// 获取咖啡豆的赏味期信息
-const getFlavorInfo = (
-  bean: ExtendedCoffeeBean
-): { phase: string; remainingDays: number } => {
-  const flavorInfo = calculateFlavorInfo(bean);
-  return {
-    phase: flavorInfo.phase,
-    remainingDays: flavorInfo.remainingDays,
-  };
-};

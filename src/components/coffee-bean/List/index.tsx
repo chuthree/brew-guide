@@ -720,39 +720,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     } else if (viewMode === VIEW_OPTIONS.INVENTORY) {
       // 在切换到库存视图时，应用当前的排序选项重新排序
       if (beans.length > 0) {
-        const compatibleBeans = beans.map(bean => ({
-          id: bean.id,
-          name: bean.name,
-          roastDate: bean.roastDate,
-          startDay: bean.startDay,
-          endDay: bean.endDay,
-          roastLevel: bean.roastLevel,
-          capacity: bean.capacity,
-          remaining: bean.remaining,
-          timestamp: bean.timestamp,
-          overallRating: bean.overallRating,
-          // variety 现在在 blendComponents 中
-          price: bean.price,
-        }));
-
-        const sortedBeans = sortBeans(compatibleBeans, sortOption);
-
-        // 创建一个新的数组来存放排序后的原始豆子
-        const resultBeans: ExtendedCoffeeBean[] = [];
-
-        // 按照排序后的顺序收集原始beans数组中的豆子
-        for (let i = 0; i < sortedBeans.length; i++) {
-          const sortedBean = sortedBeans[i];
-          const originalBean = beans.find(b => b.id === sortedBean.id);
-          if (originalBean) {
-            resultBeans.push(originalBean);
-          }
-        }
-
-        // 确保长度一致后更新
-        if (resultBeans.length === beans.length) {
-          updateFilteredBeansAndCategories(resultBeans);
-        }
+        // 使用完整的 beans 对象，不需要映射
+        const sortedBeans = sortBeans(beans, sortOption);
+        updateFilteredBeansAndCategories(sortedBeans);
       }
     }
   }, [
@@ -838,47 +808,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   // 当排序选项改变时更新数据 - 优化防抖动
   useEffect(() => {
     if (viewMode === VIEW_OPTIONS.INVENTORY && beans.length > 0) {
-      // 库存视图：直接使用本地排序
-      const compatibleBeans = beans.map(bean => ({
-        id: bean.id,
-        name: bean.name,
-        roastDate: bean.roastDate,
-        startDay: bean.startDay,
-        endDay: bean.endDay,
-        roastLevel: bean.roastLevel,
-        capacity: bean.capacity,
-        remaining: bean.remaining,
-        timestamp: bean.timestamp,
-        overallRating: bean.overallRating,
-        // variety 现在在 blendComponents 中
-        price: bean.price,
-      }));
-
-      const sortedBeans = sortBeans(compatibleBeans, sortOption);
-
-      // 创建一个新的数组来存放排序后的原始豆子
-      const resultBeans: ExtendedCoffeeBean[] = [];
-
-      // 按照排序后的顺序收集原始beans数组中的豆子
-      for (let i = 0; i < sortedBeans.length; i++) {
-        const sortedBean = sortedBeans[i];
-        const originalBean = beans.find(b => b.id === sortedBean.id);
-        if (originalBean) {
-          resultBeans.push(originalBean);
-        }
-      }
-
-      // 确保长度一致
-      if (resultBeans.length === beans.length) {
-        updateFilteredBeansAndCategories(resultBeans);
-      } else {
-        console.error(
-          '排序后的豆子数量与原始豆子数量不一致',
-          resultBeans.length,
-          beans.length
-        );
-        updateFilteredBeansAndCategories(beans);
-      }
+      // 库存视图：使用完整的 beans 对象进行排序
+      const sortedBeans = sortBeans(beans, sortOption);
+      updateFilteredBeansAndCategories(sortedBeans);
     }
   }, [sortOption, viewMode, beans, updateFilteredBeansAndCategories]);
 

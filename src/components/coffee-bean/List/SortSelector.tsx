@@ -8,6 +8,10 @@ import {
   SORT_OPTIONS as RANKING_SORT_OPTIONS,
   RankingSortOption,
 } from '../Ranking';
+import {
+  sortBeansByFlavorPeriod,
+  sortBeansByFlavorPeriodReverse,
+} from '@/lib/utils/beanSortUtils';
 
 // 自定义SelectItem，移除右侧指示器
 const CustomSelectItem = React.forwardRef<
@@ -48,32 +52,6 @@ export const SORT_OPTIONS = {
 
 export type SortOption = (typeof SORT_OPTIONS)[keyof typeof SORT_OPTIONS];
 
-// 获取阶段数值用于排序
-const getPhaseValue = (phase: string): number => {
-  switch (phase) {
-    case '赏味期':
-      return 0;
-    case '养豆期':
-      return 1;
-    case '衰退期':
-    default:
-      return 2;
-  }
-};
-
-import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
-
-// 获取咖啡豆的赏味期信息
-const getFlavorInfo = (
-  bean: CoffeeBean
-): { phase: string; remainingDays: number } => {
-  const flavorInfo = calculateFlavorInfo(bean);
-  return {
-    phase: flavorInfo.phase,
-    remainingDays: flavorInfo.remainingDays,
-  };
-};
-
 // 计算咖啡豆的每克价格
 const calculatePricePerGram = (bean: CoffeeBean): number => {
   if (!bean.price || !bean.capacity) return 0;
@@ -110,61 +88,11 @@ export const sortBeans = (
         return a.timestamp - b.timestamp;
       });
     case SORT_OPTIONS.REMAINING_DAYS_ASC:
-      return sorted.sort((a, b) => {
-        const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
-        const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
-
-        // 首先按照阶段排序（赏味期 > 养豆期 > 衰退期）
-        if (phaseA !== phaseB) {
-          // 将阶段转换为数字进行比较
-          const phaseValueA = getPhaseValue(phaseA);
-          const phaseValueB = getPhaseValue(phaseB);
-          return phaseValueA - phaseValueB;
-        }
-
-        // 如果阶段相同，根据不同阶段有不同的排序逻辑
-        if (phaseA === '赏味期') {
-          // 赏味期内，剩余天数少的排在前面
-          return daysA - daysB;
-        } else if (phaseA === '养豆期') {
-          // 养豆期内，剩余天数少的排在前面（离赏味期近的优先）
-          return daysA - daysB;
-        } else {
-          // 衰退期按烘焙日期新的在前
-          if (!a.roastDate || !b.roastDate) return 0;
-          return (
-            new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime()
-          );
-        }
-      });
+      // 使用统一的排序函数
+      return sortBeansByFlavorPeriod(sorted);
     case SORT_OPTIONS.REMAINING_DAYS_DESC:
-      return sorted.sort((a, b) => {
-        const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
-        const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
-
-        // 首先按照阶段排序（赏味期 > 养豆期 > 衰退期），但顺序相反
-        if (phaseA !== phaseB) {
-          // 将阶段转换为数字进行比较
-          const phaseValueA = getPhaseValue(phaseA);
-          const phaseValueB = getPhaseValue(phaseB);
-          return phaseValueB - phaseValueA; // 注意这里是相反的顺序
-        }
-
-        // 如果阶段相同，根据不同阶段有不同的排序逻辑
-        if (phaseA === '赏味期') {
-          // 赏味期内，剩余天数多的排在前面
-          return daysB - daysA;
-        } else if (phaseA === '养豆期') {
-          // 养豆期内，剩余天数多的排在前面
-          return daysB - daysA;
-        } else {
-          // 衰退期按烘焙日期旧的在前
-          if (!a.roastDate || !b.roastDate) return 0;
-          return (
-            new Date(a.roastDate).getTime() - new Date(b.roastDate).getTime()
-          );
-        }
-      });
+      // 使用统一的反向排序函数
+      return sortBeansByFlavorPeriodReverse(sorted);
     case SORT_OPTIONS.NAME_ASC:
       return sorted.sort((a, b) => {
         // 安全地进行字符串比较（A → Z）

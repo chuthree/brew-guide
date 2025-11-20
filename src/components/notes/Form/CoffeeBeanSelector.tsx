@@ -4,9 +4,12 @@ import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import Image from 'next/image';
 import type { CoffeeBean } from '@/types/app';
-import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
 import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import {
+  getFlavorInfo,
+  sortBeansByFlavorPeriod,
+} from '@/lib/utils/beanSortUtils';
 
 interface CoffeeBeanSelectorProps {
   coffeeBeans: CoffeeBean[];
@@ -74,32 +77,6 @@ const BeanImage: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
   );
 };
 
-// 计算咖啡豆的赏味期阶段和剩余天数
-const getFlavorInfo = (bean: CoffeeBean) => {
-  const flavorInfo = calculateFlavorInfo(bean);
-  return {
-    phase: flavorInfo.phase,
-    remainingDays: flavorInfo.remainingDays,
-  };
-};
-
-// 获取阶段数值用于排序
-const getPhaseValue = (phase: string): number => {
-  switch (phase) {
-    case '在途':
-      return -1; // 在途状态优先级最高
-    case '冷冻':
-      return 0; // 冷冻状态与赏味期同等优先级
-    case '赏味期':
-      return 0;
-    case '养豆期':
-      return 1;
-    case '衰退期':
-    default:
-      return 2;
-  }
-};
-
 const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   coffeeBeans,
   selectedCoffeeBean: _selectedCoffeeBean,
@@ -138,13 +115,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
 
   // 过滤出未用完的咖啡豆，并按赏味期排序
   const availableBeans = useMemo(() => {
-    // 首先过滤掉剩余量为0(且设置了容量)的咖啡豆和在途状态的咖啡豆
+    // 首先过滤掉剩余量为0(且设置了容量)的咖啡豆，但保留在途状态的咖啡豆
     const filteredBeans = coffeeBeans.filter(bean => {
-      // 过滤掉在途状态的咖啡豆
-      if (bean.isInTransit) {
-        return false;
-      }
-
       // 如果没有设置容量，则直接显示
       if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
         return true;
@@ -160,33 +132,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
       return remaining > 0;
     });
 
-    // 然后按照赏味期等进行排序（与冲煮-咖啡豆列表保持一致）
-    return [...filteredBeans].sort((a, b) => {
-      const { phase: phaseA, remainingDays: daysA } = getFlavorInfo(a);
-      const { phase: phaseB, remainingDays: daysB } = getFlavorInfo(b);
-
-      // 首先按照阶段排序：赏味期 > 养豆期 > 衰退期
-      if (phaseA !== phaseB) {
-        const phaseValueA = getPhaseValue(phaseA);
-        const phaseValueB = getPhaseValue(phaseB);
-        return phaseValueA - phaseValueB;
-      }
-
-      // 如果阶段相同，根据不同阶段有不同的排序逻辑
-      if (phaseA === '赏味期') {
-        // 赏味期内，剩余天数少的排在前面
-        return daysA - daysB;
-      } else if (phaseA === '养豆期') {
-        // 养豆期内，剩余天数少的排在前面（离赏味期近的优先）
-        return daysA - daysB;
-      } else {
-        // 衰退期按烘焙日期新的在前
-        if (!a.roastDate || !b.roastDate) return 0;
-        return (
-          new Date(b.roastDate).getTime() - new Date(a.roastDate).getTime()
-        );
-      }
-    });
+    // 使用统一的排序函数
+    return sortBeansByFlavorPeriod(filteredBeans);
   }, [coffeeBeans]);
 
   // 搜索过滤

@@ -116,6 +116,8 @@ export const useEnhancedBeanFiltering = ({
         timestamp: bean.timestamp,
         overallRating: bean.overallRating,
         price: bean.price,
+        isInTransit: bean.isInTransit,
+        isFrozen: bean.isFrozen,
       }));
 
       const sortedBeans = sortBeans(compatibleBeans, sortOption);
