@@ -97,6 +97,7 @@ import {
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
 import BrewingNoteEditModal from '@/components/notes/Form/BrewingNoteEditModal';
 import NoteDetailModal from '@/components/notes/Detail/NoteDetailModal';
+import ImageViewer from '@/components/common/ui/ImageViewer';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -290,6 +291,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     equipmentName: string;
     beanUnitPrice: number;
     beanInfo?: CoffeeBean | null;
+  } | null>(null);
+
+  // ImageViewer 状态
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageViewerData, setImageViewerData] = useState<{
+    url: string;
+    alt: string;
   } | null>(null);
 
   // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、添加咖啡豆、笔记详情 或 笔记编辑）
@@ -647,6 +655,26 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     window.addEventListener('settingsChanged', handleSettingsChanged);
     return () =>
       window.removeEventListener('settingsChanged', handleSettingsChanged);
+  }, []);
+
+  // 监听 ImageViewer 打开事件
+  useEffect(() => {
+    const handleImageViewerOpen = (
+      e: CustomEvent<{ url: string; alt: string }>
+    ) => {
+      setImageViewerData({ url: e.detail.url, alt: e.detail.alt });
+      setImageViewerOpen(true);
+    };
+
+    window.addEventListener(
+      'imageViewerOpen',
+      handleImageViewerOpen as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        'imageViewerOpen',
+        handleImageViewerOpen as EventListener
+      );
   }, []);
 
   const [hasCoffeeBeans, setHasCoffeeBeans] = useState(initialHasBeans);
@@ -3624,6 +3652,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         onReorderEquipments={handleReorderEquipments}
         settings={settings}
       />
+
+      {/* ImageViewer 独立渲染在最外层，避免受到父组件透明度影响 */}
+      {imageViewerOpen && imageViewerData && (
+        <ImageViewer
+          isOpen={imageViewerOpen}
+          imageUrl={imageViewerData.url}
+          alt={imageViewerData.alt}
+          onClose={() => {
+            setImageViewerOpen(false);
+            setImageViewerData(null);
+          }}
+        />
+      )}
     </>
   );
 };

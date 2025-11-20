@@ -15,14 +15,6 @@ import {
 import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 
-// 动态导入 ImageViewer 组件 - 移除加载占位符
-const ImageViewer = dynamic(
-  () => import('@/components/common/ui/ImageViewer'),
-  {
-    ssr: false,
-  }
-);
-
 interface BeanListItemProps {
   bean: ExtendedCoffeeBean;
   title?: string;
@@ -55,7 +47,6 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   settings,
 }) => {
   // 状态管理
-  const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [internalNotesExpanded, setInternalNotesExpanded] = useState(false);
   const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
@@ -338,11 +329,20 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         <div className="relative self-start">
           <div
             className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
-            onClick={() =>
-              (bean.image || roasterLogo) &&
-              !imageError &&
-              setImageViewerOpen(true)
-            }
+            onClick={() => {
+              if ((bean.image || roasterLogo) && !imageError) {
+                window.dispatchEvent(
+                  new CustomEvent('imageViewerOpen', {
+                    detail: {
+                      url: bean.image || roasterLogo || '',
+                      alt: bean.image
+                        ? bean.name || '咖啡豆图片'
+                        : extractRoasterFromName(bean.name) + ' 烘焙商图标',
+                    },
+                  })
+                );
+              }
+            }}
             data-click-area="image"
           >
             {bean.image && !imageError ? (
@@ -392,19 +392,6 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
               />
             )}
         </div>
-
-        {(bean.image || roasterLogo) && !imageError && imageViewerOpen && (
-          <ImageViewer
-            isOpen={imageViewerOpen}
-            imageUrl={bean.image || roasterLogo || ''}
-            alt={
-              bean.image
-                ? bean.name || '咖啡豆图片'
-                : extractRoasterFromName(bean.name) + ' 烘焙商图标'
-            }
-            onClose={() => setImageViewerOpen(false)}
-          />
-        )}
 
         <div
           className={`flex min-w-0 flex-1 flex-col gap-y-2 ${shouldShowNotes() ? '' : 'justify-center'}`}
