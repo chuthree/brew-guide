@@ -15,6 +15,7 @@ import BeanSearchModal from './BeanSearchModal';
 import QRScannerModal from '@/components/coffee-bean/Scanner/QRScannerModal';
 import type { CoffeeBean } from '@/types/app';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import { showToast } from '@/components/common/feedback/LightToast';
 
 interface BeanImportModalProps {
   showForm: boolean;
@@ -28,6 +29,23 @@ interface ImportedBean {
   price?: number | string | null;
   [key: string]: unknown;
 }
+
+// 咖啡豆识别提示词
+const BEAN_RECOGNITION_PROMPT = `提取图片中的咖啡豆信息,直接返回JSON(单豆返回对象{},多豆返回数组[])。
+
+必填: name (品牌+豆名,如"西可 洪都拉斯水洗瑰夏")
+
+可选(图片有明确信息才填):
+- capacity/remaining/price: 纯数字
+- roastDate: YYYY-MM-DD
+- roastLevel: 极浅烘焙|浅度烘焙|中浅烘焙|中度烘焙|中深烘焙|深度烘焙
+- beanType: espresso|filter|omni
+- flavor: 风味数组["橘子","荔枝"]
+- startDay/endDay: 养豆天数
+- blendComponents: 产地/处理法/品种 [{origin:"埃塞俄比亚",process:"日晒",variety:"原生种"}]
+- notes: 庄园/处理站/海拔 (产地信息放blendComponents,这里只放补充信息)
+
+规则: 数值不带单位/不编造/不确定不填/直接返回JSON`;
 
 const BeanImportModal: React.FC<BeanImportModalProps> = ({
   showForm,
@@ -313,6 +331,45 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     input.click();
   }, [handleImageUpload]);
 
+  // 复制提示词 - 使用兼容性更好的方法
+  const handleCopyPrompt = useCallback(async () => {
+    try {
+      // 首先尝试使用现代API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(BEAN_RECOGNITION_PROMPT);
+        showToast({ type: 'success', title: '复制成功' });
+        return;
+      }
+
+      // 回退方法：创建临时textarea元素
+      const textArea = document.createElement('textarea');
+      textArea.value = BEAN_RECOGNITION_PROMPT;
+
+      // 设置样式使其不可见
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+
+      // 选择文本并复制
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand('copy');
+      if (successful) {
+        showToast({ type: 'success', title: '复制成功' });
+      } else {
+        showToast({ type: 'error', title: '复制失败' });
+      }
+
+      // 清理临时元素
+      document.body.removeChild(textArea);
+    } catch (error) {
+      console.error('复制提示词失败:', error);
+      showToast({ type: 'error', title: '复制失败' });
+    }
+  }, []);
+
   // 处理输入JSON
   const handleInputJSON = useCallback(() => {
     clearMessages();
@@ -375,17 +432,17 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 >
                   {currentMode === 'buttons' ? (
                     <>
-                      <span>将包含咖啡豆信息的图片发送至</span>
-                      <a
-                        href="https://doubao.com/bot/duJYQEFd"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-1 inline-flex items-center gap-1 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-white"
+                      <span>将咖啡豆图片和</span>
+                      <button
+                        onClick={handleCopyPrompt}
+                        className="mx-1 inline-flex items-center gap-1 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-white"
                       >
-                        豆包定制智能体
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                      <span>，并复制返回的 JSON 数据后点击下方按钮。</span>
+                        提示词
+                      </button>
+                      <span>
+                        发送给 DeepSeek、ChatGPT 等 AI，复制返回的 JSON
+                        数据后点击下方按钮。
+                      </span>
                     </>
                   ) : (
                     <>

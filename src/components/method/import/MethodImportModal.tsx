@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { showToast } from '@/components/common/feedback/LightToast';
 
 interface MethodImportModalProps {
   showForm: boolean;
@@ -29,13 +30,11 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
   // 导入数据的状态
   const [importData, setImportData] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
 
   // 清除所有状态消息
   const clearMessages = () => {
     setError(null);
-    setSuccess(null);
   };
 
   // 处理显示/隐藏动画
@@ -137,8 +136,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       // 首先尝试使用现代API
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
-        setSuccess('复制成功');
-        setTimeout(() => setSuccess(null), 2000);
+        showToast({ type: 'success', title: '复制成功' });
         return;
       }
 
@@ -158,15 +156,12 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
       const successful = document.execCommand('copy');
       if (successful) {
-        setSuccess('复制成功');
-        setTimeout(() => setSuccess(null), 2000);
+        showToast({ type: 'success', title: '复制成功' });
       } else {
-        setError('复制失败');
-        setTimeout(() => setError(null), 2000);
+        showToast({ type: 'error', title: '复制失败' });
       }
     } catch (_err) {
-      setError('复制失败');
-      setTimeout(() => setError(null), 2000);
+      showToast({ type: 'error', title: '复制失败' });
     } finally {
       if (document.querySelector('textarea[style*="-999999px"]')) {
         document.body.removeChild(
@@ -416,11 +411,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                   {error && (
                     <div className="rounded-lg bg-red-100/60 p-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-400">
                       {error}
-                    </div>
-                  )}
-                  {success && (
-                    <div className="rounded-lg bg-green-100/60 p-3 text-sm text-green-600 dark:bg-green-900/30 dark:text-green-400">
-                      {success}
                     </div>
                   )}
 
