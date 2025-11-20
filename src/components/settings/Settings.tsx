@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { APP_VERSION, sponsorsList } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
 import { restoreDefaultThemeColor } from '@/lib/hooks/useThemeColor';
+import { checkForUpdates, saveCheckTime } from '@/lib/utils/versionCheck';
+import UpdateDrawer from './UpdateDrawer';
 
 import { useTheme } from 'next-themes';
 import { LayoutSettings } from '../brewing/Timer/Settings';
@@ -323,6 +325,15 @@ const Settings: React.FC<SettingsProps> = ({
   const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(
     null
   );
+
+  // 版本更新检测状态
+  const [showUpdateDrawer, setShowUpdateDrawer] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<{
+    latestVersion: string;
+    downloadUrl: string;
+    releaseNotes?: string;
+  } | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
 
   // 计算是否有隐藏的方案和器具
   const hasHiddenMethods = React.useMemo(() => {
@@ -1068,7 +1079,60 @@ const Settings: React.FC<SettingsProps> = ({
         {/* 版本信息 */}
         <div className="px-6 pt-12 text-center text-xs text-neutral-400 dark:text-neutral-600">
           <p>[版本号]</p>
-          <p>v{APP_VERSION}</p>
+          <button
+            onClick={async () => {
+              if (isCheckingUpdate) return;
+
+              setIsCheckingUpdate(true);
+              try {
+                const result = await checkForUpdates();
+                await saveCheckTime();
+
+                if (
+                  result.hasUpdate &&
+                  result.latestVersion &&
+                  result.downloadUrl
+                ) {
+                  setUpdateInfo({
+                    latestVersion: result.latestVersion,
+                    downloadUrl: result.downloadUrl,
+                    releaseNotes: result.releaseNotes,
+                  });
+                  setShowUpdateDrawer(true);
+                } else {
+                  const { showToast } = await import(
+                    '@/components/common/feedback/LightToast'
+                  );
+                  showToast({
+                    type: 'info',
+                    title: '已是最新版本',
+                    duration: 2000,
+                  });
+                }
+
+                if (settings.hapticFeedback) {
+                  hapticsUtils.light();
+                }
+              } catch (error) {
+                console.error('检查更新失败:', error);
+                const { showToast } = await import(
+                  '@/components/common/feedback/LightToast'
+                );
+                showToast({
+                  type: 'error',
+                  title: '检查更新失败，请检查网络连接',
+                  duration: 2500,
+                });
+              } finally {
+                setIsCheckingUpdate(false);
+              }
+            }}
+            disabled={isCheckingUpdate}
+            className="underline transition-colors hover:text-neutral-500 active:text-neutral-600 disabled:opacity-50 dark:hover:text-neutral-500 dark:active:text-neutral-400"
+            title="点击检查更新"
+          >
+            {isCheckingUpdate ? '检测中...' : `v${APP_VERSION}`}
+          </button>
 
           <p className="mt-12">[感谢]</p>
 
@@ -1118,6 +1182,18 @@ const Settings: React.FC<SettingsProps> = ({
           </p>
         </div>
       </div>
+
+      {/* 版本更新抽屉 */}
+      {updateInfo && (
+        <UpdateDrawer
+          isOpen={showUpdateDrawer}
+          onClose={() => setShowUpdateDrawer(false)}
+          currentVersion={APP_VERSION}
+          latestVersion={updateInfo.latestVersion}
+          downloadUrl={updateInfo.downloadUrl}
+          releaseNotes={updateInfo.releaseNotes}
+        />
+      )}
     </div>
   );
 };
