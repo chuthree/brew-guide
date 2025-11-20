@@ -213,13 +213,31 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         isArray ? '正在批量添加咖啡豆数据...' : '正在添加咖啡豆数据...'
       );
       await onImport(JSON.stringify(processedBeans));
-      handleClose();
+
+      // 先触发退出动画，但延迟真正的关闭
+      // 这样可以避免与父组件的编辑模态框打开逻辑冲突
+      setIsVisible(false);
+      window.dispatchEvent(new CustomEvent('beanImportClosing'));
+
+      // 等待足够长的时间，确保父组件的 setTimeout(300ms) 先执行完
+      // 这样编辑模态框就能正常打开而不会被 onClose 打断
+      setTimeout(() => {
+        resetAllStates();
+
+        // 如果历史栈中有我们添加的模态框记录，先返回一步
+        if (window.history.state?.modal === 'bean-import') {
+          window.history.back();
+        } else {
+          // 否则直接调用 onClose
+          onClose();
+        }
+      }, 450); // 450ms > 父组件的 300ms 延迟，确保编辑模态框先打开
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
       setError(`添加失败: ${errorMessage}`);
       setSuccess(null);
     }
-  }, [importData, ensureStringFields, onImport, handleClose]);
+  }, [importData, ensureStringFields, onImport, onClose, resetAllStates]);
 
   // 从搜索组件选择咖啡豆
   const handleSelectFromSearch = useCallback((bean: CoffeeBean) => {
