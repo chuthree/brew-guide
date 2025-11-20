@@ -9,7 +9,7 @@ import { formatDate, formatRating } from '@/components/notes/utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Pen } from 'lucide-react';
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(
@@ -207,77 +207,84 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
           {/* 右侧操作按钮 */}
           {note && (onEdit || onDelete || onCopy || onShare) && (
-            <div className="flex flex-shrink-0 items-center gap-3">
-              <ActionMenu
-                items={[
-                  ...(onDelete
-                    ? [
-                        {
-                          id: 'delete',
-                          label: '删除',
-                          onClick: () => {
-                            // 添加确认对话框
-                            let noteName = '此笔记';
-                            if (note.source === 'quick-decrement') {
-                              noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`;
-                            } else if (note.source === 'capacity-adjustment') {
-                              noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的容量调整记录`;
-                            } else {
-                              noteName = note.method || '此笔记';
-                            }
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {/* 编辑按钮 */}
+              {onEdit && (
+                <button
+                  onClick={() => {
+                    onEdit(note);
+                    onClose();
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                >
+                  <Pen className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
+                </button>
+              )}
 
-                            if (window.confirm(`确认要删除"${noteName}"吗？`)) {
-                              onDelete(note.id);
+              {/* 更多操作菜单 */}
+              {(onDelete || onCopy || onShare) && (
+                <ActionMenu
+                  items={[
+                    ...(onDelete
+                      ? [
+                          {
+                            id: 'delete',
+                            label: '删除',
+                            onClick: () => {
+                              // 添加确认对话框
+                              let noteName = '此笔记';
+                              if (note.source === 'quick-decrement') {
+                                noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`;
+                              } else if (
+                                note.source === 'capacity-adjustment'
+                              ) {
+                                noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的容量调整记录`;
+                              } else {
+                                noteName = note.method || '此笔记';
+                              }
+
+                              if (
+                                window.confirm(`确认要删除"${noteName}"吗？`)
+                              ) {
+                                onDelete(note.id);
+                                onClose();
+                              }
+                            },
+                            color: 'danger' as const,
+                          },
+                        ]
+                      : []),
+                    ...(onShare
+                      ? [
+                          {
+                            id: 'share',
+                            label: '分享',
+                            onClick: () => {
+                              onShare(note.id);
                               onClose();
-                            }
+                            },
+                            color: 'default' as const,
                           },
-                          color: 'danger' as const,
-                        },
-                      ]
-                    : []),
-                  ...(onShare
-                    ? [
-                        {
-                          id: 'share',
-                          label: '分享',
-                          onClick: () => {
-                            onShare(note.id);
-                            onClose();
+                        ]
+                      : []),
+                    ...(onCopy
+                      ? [
+                          {
+                            id: 'copy',
+                            label: '复制',
+                            onClick: () => {
+                              onCopy(note.id);
+                              onClose();
+                            },
+                            color: 'default' as const,
                           },
-                          color: 'default' as const,
-                        },
-                      ]
-                    : []),
-                  ...(onCopy
-                    ? [
-                        {
-                          id: 'copy',
-                          label: '复制',
-                          onClick: () => {
-                            onCopy(note.id);
-                            onClose();
-                          },
-                          color: 'default' as const,
-                        },
-                      ]
-                    : []),
-                  ...(onEdit
-                    ? [
-                        {
-                          id: 'edit',
-                          label: '编辑',
-                          onClick: () => {
-                            onEdit(note);
-                            onClose();
-                          },
-                          color: 'default' as const,
-                        },
-                      ]
-                    : []),
-                ].filter(item => item)}
-                useMorphingAnimation={true}
-                triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-              />
+                        ]
+                      : []),
+                  ].filter(item => item)}
+                  useMorphingAnimation={true}
+                  triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                />
+              )}
             </div>
           )}
         </div>
