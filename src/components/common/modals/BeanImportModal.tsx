@@ -320,12 +320,20 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         const { smartCompress } = await import('@/lib/utils/imageCompression');
         const compressedFile = await smartCompress(file);
 
-        // 识别图片
+        // 识别图片 - 使用流式回调
         const { recognizeBeanImage } = await import(
           '@/lib/api/beanRecognition'
         );
-        const beanData = await recognizeBeanImage(compressedFile);
 
+        const beanData = await recognizeBeanImage(
+          compressedFile,
+          progressData => {
+            // 实时更新显示的内容
+            setImportData(progressData);
+          }
+        );
+
+        // 最终格式化显示
         setImportData(JSON.stringify(beanData, null, 2));
         setSuccess('✨ 图片识别成功，请检查信息是否正确');
         setIsRecognizing(false);

@@ -149,37 +149,16 @@ export async function compressImage(
 export async function smartCompress(file: File): Promise<File> {
   const fileSizeKB = file.size / 1024;
 
-  // 小于 500KB，不压缩
-  if (fileSizeKB < 500) {
-    console.log('📸 图片较小，无需压缩');
-    return file;
-  }
+  // AI 识别专用：强力压缩到 100KB 以内，提升识别速度
+  console.log(
+    `📸 原始图片大小: ${fileSizeKB.toFixed(1)}KB，开始压缩以加速 AI 识别...`
+  );
 
-  // 500KB - 2MB，轻度压缩
-  if (fileSizeKB < 2048) {
-    console.log('📸 图片中等大小，轻度压缩...');
-    return compressImage(file, {
-      maxWidth: 1920,
-      maxHeight: 1920,
-      quality: 0.85,
-    });
-  }
-
-  // 2MB - 5MB，中度压缩
-  if (fileSizeKB < 5120) {
-    console.log('📸 图片较大，中度压缩...');
-    return compressImage(file, {
-      maxWidth: 1600,
-      maxHeight: 1600,
-      quality: 0.75,
-    });
-  }
-
-  // 大于 5MB，强力压缩
-  console.log('📸 图片很大，强力压缩...');
+  // 所有图片都压缩，目标是 80-100KB
   return compressImage(file, {
-    maxWidth: 1200,
-    maxHeight: 1200,
-    quality: 0.7,
+    maxWidth: 1024,
+    maxHeight: 1024,
+    quality: 0.75,
+    maxSizeMB: 0.1, // 限制在 100KB 以内
   });
 }
