@@ -51,6 +51,7 @@ export const APP_DATA_KEYS = [
   'onboardingCompleted', // 引导完成标记
   'customFlavorDimensions', // 自定义风味维度
   'flavorDimensionHistoricalLabels', // 风味维度历史标签
+  'backupReminderSettings', // 备份提醒设置
 ];
 
 /**
