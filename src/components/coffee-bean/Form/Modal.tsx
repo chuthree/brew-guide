@@ -21,6 +21,10 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   onClose,
   onRepurchase,
 }) => {
+  // 动画状态管理
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
   // 添加平台检测
   const [isIOS, setIsIOS] = useState(false);
 
@@ -33,18 +37,26 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   // 表单引用，用于调用表单的返回方法
   const formRef = useRef<{ handleBackStep: () => boolean } | null>(null);
 
+  // 处理显示/隐藏动画
+  useEffect(() => {
+    if (showForm) {
+      setShouldRender(true);
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+      // 不立即卸载 shouldRender，等动画完成后再卸载
+      const timer = setTimeout(() => setShouldRender(false), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [showForm]);
+
   // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
   useEffect(() => {
     if (!showForm) return;
 
-    // 如果历史栈中有 bean-detail 记录，用 replaceState 替换它
-    // 注意：侧滑时可能仍会短暂看到详情页，这是浏览器机制限制
-    if (window.history.state?.modal === 'bean-detail') {
-      window.history.replaceState({ modal: 'bean-form' }, '');
-    } else {
-      // 添加表单的历史记录
-      window.history.pushState({ modal: 'bean-form' }, '');
-    }
+    // 添加表单的历史记录
+    window.history.pushState({ modal: 'bean-form' }, '');
 
     // 监听返回事件
     const handlePopState = () => {
@@ -75,7 +87,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
 
   // 监听输入框聚焦，确保在iOS上输入框可见
   useEffect(() => {
-    if (!showForm) return;
+    if (!shouldRender) return;
 
     const modalElement = modalRef.current;
     if (!modalElement) return;
@@ -109,45 +121,35 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     return () => {
       modalElement.removeEventListener('focusin', handleInputFocus);
     };
-  }, [showForm, isIOS]);
+  }, [shouldRender, isIOS]);
 
-  // 处理关闭
-  const handleClose = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'bean-form') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      onClose();
-    }
-  };
+  if (!shouldRender) return null;
 
   return (
-    <div
-      className={`fixed inset-0 transition-all duration-300 ${
-        showForm
-          ? 'pointer-events-auto bg-black/50 opacity-100'
-          : 'pointer-events-none opacity-0'
-      } `}
-    >
+    <>
+      {/* 背景遮罩 */}
+      <div
+        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-[400ms] ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        onClick={onClose}
+      />
+
+      {/* 抽屉内容 */}
       <div
         ref={modalRef}
-        className={`absolute inset-x-0 bottom-0 mx-auto max-h-[85vh] max-w-[500px] overflow-auto rounded-t-2xl bg-neutral-50 shadow-xl transition-transform duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] dark:bg-neutral-900 ${showForm ? 'translate-y-0' : 'translate-y-full'} `}
+        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[85vh] max-w-[500px] overflow-auto rounded-t-2xl bg-neutral-50 shadow-xl transition-transform duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="pb-safe-bottom modal-form-container max-h-[calc(85vh-40px)] overflow-auto px-6">
-          {showForm && (
-            <CoffeeBeanForm
-              key={`bean-form-${initialBean?.id || 'new'}-${Date.now()}`}
-              ref={formRef}
-              onSave={onSave}
-              onCancel={handleClose}
-              initialBean={initialBean || undefined}
-              onRepurchase={onRepurchase}
-            />
-          )}
+          <CoffeeBeanForm
+            key={`bean-form-${initialBean?.id || 'new'}`}
+            ref={formRef}
+            onSave={onSave}
+            onCancel={onClose}
+            initialBean={initialBean || undefined}
+            onRepurchase={onRepurchase}
+          />
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
