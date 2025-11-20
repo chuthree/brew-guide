@@ -796,7 +796,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   <div className="relative flex-1 overflow-hidden">
                     {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
                     {showRankingLeftShadow && (
-                      <div className="pointer-events-none absolute top-0 left-0 bottom-0 z-10 w-6 bg-gradient-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                      <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-gradient-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
                     )}
 
                     <div
@@ -938,7 +938,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       )}
 
                     {/* 右侧固定按钮的左侧渐变遮罩 */}
-                    <div className="pointer-events-none absolute top-0 left-0 bottom-0 w-5 bg-gradient-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
+                    <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-gradient-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
                   </div>
                 </div>
               ) : (
@@ -958,7 +958,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   </div>
                   <button
                     onClick={handleCloseSearch}
-                    className="ml-1 flex items-center text-neutral-500 dark:text-neutral-400"
+                    className="-m-2 ml-1 flex items-center p-2 text-neutral-500 dark:text-neutral-400"
                   >
                     <X size={14} color="currentColor" />
                   </button>
@@ -1093,7 +1093,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   <div className="relative flex-1 overflow-hidden">
                     {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
                     {showLeftShadow && (
-                      <div className="pointer-events-none absolute top-0 left-0 bottom-0 z-10 w-6 bg-gradient-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                      <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-gradient-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
                     )}
 
                     <div
@@ -1196,7 +1196,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </button>
 
                     {/* 右侧固定按钮的左侧渐变遮罩 */}
-                    <div className="pointer-events-none absolute top-0 left-0 bottom-0 w-5 bg-gradient-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
+                    <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-gradient-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
                   </div>
                 </div>
               ) : (
@@ -1215,7 +1215,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   </div>
                   <button
                     onClick={handleCloseSearch}
-                    className="ml-1 flex items-center text-neutral-500 dark:text-neutral-400"
+                    className="-m-2 ml-1 flex items-center p-2 text-neutral-500 dark:text-neutral-400"
                   >
                     <X size={14} color="currentColor" />
                   </button>

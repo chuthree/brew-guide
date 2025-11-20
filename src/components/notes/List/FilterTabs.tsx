@@ -925,7 +925,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
               <div className="relative flex-1 overflow-hidden">
                 {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
                 {showLeftShadow && (
-                  <div className="pointer-events-none absolute top-0 left-0 bottom-0 z-10 w-6 bg-gradient-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                  <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-gradient-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
                 )}
 
                 <div
@@ -944,139 +944,143 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                     }
                   `}</style>
 
-                {/* 动态筛选按钮 */}
-                {filterMode === 'equipment' ? (
-                  availableEquipments.map(equipment => (
-                    <TabButton
-                      key={equipment}
-                      isActive={selectedEquipment === equipment}
-                      onClick={() =>
-                        selectedEquipment !== equipment &&
-                        onEquipmentClick(equipment)
-                      }
-                      className="mr-3"
-                      dataTab={equipment}
-                    >
-                      {equipmentNames[equipment] || equipment}
-                    </TabButton>
-                  ))
-                ) : filterMode === 'bean' ? (
-                  availableBeans.map(bean => (
-                    <TabButton
-                      key={bean}
-                      isActive={selectedBean === bean}
-                      onClick={() => selectedBean !== bean && onBeanClick(bean)}
-                      className="mr-3"
-                      dataTab={bean}
-                    >
-                      {bean}
-                    </TabButton>
-                  ))
-                ) : (
-                  <>
-                    {/* 按日模式下，始终显示"今天"、"昨天"、"前天"快捷选项 */}
-                    {dateGroupingMode === 'day' &&
-                      (() => {
-                        const todayStr = getTodayDateString('day');
-                        const now = new Date();
+                  {/* 动态筛选按钮 */}
+                  {filterMode === 'equipment' ? (
+                    availableEquipments.map(equipment => (
+                      <TabButton
+                        key={equipment}
+                        isActive={selectedEquipment === equipment}
+                        onClick={() =>
+                          selectedEquipment !== equipment &&
+                          onEquipmentClick(equipment)
+                        }
+                        className="mr-3"
+                        dataTab={equipment}
+                      >
+                        {equipmentNames[equipment] || equipment}
+                      </TabButton>
+                    ))
+                  ) : filterMode === 'bean' ? (
+                    availableBeans.map(bean => (
+                      <TabButton
+                        key={bean}
+                        isActive={selectedBean === bean}
+                        onClick={() =>
+                          selectedBean !== bean && onBeanClick(bean)
+                        }
+                        className="mr-3"
+                        dataTab={bean}
+                      >
+                        {bean}
+                      </TabButton>
+                    ))
+                  ) : (
+                    <>
+                      {/* 按日模式下，始终显示"今天"、"昨天"、"前天"快捷选项 */}
+                      {dateGroupingMode === 'day' &&
+                        (() => {
+                          const todayStr = getTodayDateString('day');
+                          const now = new Date();
 
-                        // 计算昨天
-                        const yesterday = new Date(now);
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                          // 计算昨天
+                          const yesterday = new Date(now);
+                          yesterday.setDate(yesterday.getDate() - 1);
+                          const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
-                        // 计算前天
-                        const dayBeforeYesterday = new Date(now);
-                        dayBeforeYesterday.setDate(
-                          dayBeforeYesterday.getDate() - 2
-                        );
-                        const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
+                          // 计算前天
+                          const dayBeforeYesterday = new Date(now);
+                          dayBeforeYesterday.setDate(
+                            dayBeforeYesterday.getDate() - 2
+                          );
+                          const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
 
-                        return (
-                          <>
-                            {/* 今天 - 始终显示 */}
-                            <TabButton
-                              key="today-shortcut"
-                              isActive={selectedDate === todayStr}
-                              onClick={() =>
-                                selectedDate !== todayStr &&
-                                onDateClick(todayStr)
-                              }
-                              className="mr-3"
-                              dataTab={todayStr}
-                            >
-                              今天
-                            </TabButton>
+                          return (
+                            <>
+                              {/* 今天 - 始终显示 */}
+                              <TabButton
+                                key="today-shortcut"
+                                isActive={selectedDate === todayStr}
+                                onClick={() =>
+                                  selectedDate !== todayStr &&
+                                  onDateClick(todayStr)
+                                }
+                                className="mr-3"
+                                dataTab={todayStr}
+                              >
+                                今天
+                              </TabButton>
 
-                            {/* 昨天 - 始终显示 */}
-                            <TabButton
-                              key="yesterday-shortcut"
-                              isActive={selectedDate === yesterdayStr}
-                              onClick={() =>
-                                selectedDate !== yesterdayStr &&
-                                onDateClick(yesterdayStr)
-                              }
-                              className="mr-3"
-                              dataTab={yesterdayStr}
-                            >
-                              昨天
-                            </TabButton>
+                              {/* 昨天 - 始终显示 */}
+                              <TabButton
+                                key="yesterday-shortcut"
+                                isActive={selectedDate === yesterdayStr}
+                                onClick={() =>
+                                  selectedDate !== yesterdayStr &&
+                                  onDateClick(yesterdayStr)
+                                }
+                                className="mr-3"
+                                dataTab={yesterdayStr}
+                              >
+                                昨天
+                              </TabButton>
 
-                            {/* 前天 - 始终显示 */}
-                            <TabButton
-                              key="day-before-yesterday-shortcut"
-                              isActive={selectedDate === dayBeforeYesterdayStr}
-                              onClick={() =>
-                                selectedDate !== dayBeforeYesterdayStr &&
-                                onDateClick(dayBeforeYesterdayStr)
-                              }
-                              className="mr-3"
-                              dataTab={dayBeforeYesterdayStr}
-                            >
-                              前天
-                            </TabButton>
-                          </>
-                        );
-                      })()}
+                              {/* 前天 - 始终显示 */}
+                              <TabButton
+                                key="day-before-yesterday-shortcut"
+                                isActive={
+                                  selectedDate === dayBeforeYesterdayStr
+                                }
+                                onClick={() =>
+                                  selectedDate !== dayBeforeYesterdayStr &&
+                                  onDateClick(dayBeforeYesterdayStr)
+                                }
+                                className="mr-3"
+                                dataTab={dayBeforeYesterdayStr}
+                              >
+                                前天
+                              </TabButton>
+                            </>
+                          );
+                        })()}
 
-                    {/* 其他日期 - 过滤掉今天、昨天、前天（避免重复） */}
-                    {availableDates
-                      .filter(date => {
-                        if (dateGroupingMode !== 'day') return true;
-                        const todayStr = getTodayDateString('day');
-                        const now = new Date();
+                      {/* 其他日期 - 过滤掉今天、昨天、前天（避免重复） */}
+                      {availableDates
+                        .filter(date => {
+                          if (dateGroupingMode !== 'day') return true;
+                          const todayStr = getTodayDateString('day');
+                          const now = new Date();
 
-                        const yesterday = new Date(now);
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                          const yesterday = new Date(now);
+                          yesterday.setDate(yesterday.getDate() - 1);
+                          const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
-                        const dayBeforeYesterday = new Date(now);
-                        dayBeforeYesterday.setDate(
-                          dayBeforeYesterday.getDate() - 2
-                        );
-                        const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
+                          const dayBeforeYesterday = new Date(now);
+                          dayBeforeYesterday.setDate(
+                            dayBeforeYesterday.getDate() - 2
+                          );
+                          const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
 
-                        return (
-                          date !== todayStr &&
-                          date !== yesterdayStr &&
-                          date !== dayBeforeYesterdayStr
-                        );
-                      })
-                      .map(date => (
-                        <TabButton
-                          key={date}
-                          isActive={selectedDate === date}
-                          onClick={() =>
-                            selectedDate !== date && onDateClick(date)
-                          }
-                          className="mr-3"
-                          dataTab={date}
-                        >
-                          {formatDateLabel(date, dateGroupingMode)}
-                        </TabButton>
-                      ))}
-                  </>
-                )}
+                          return (
+                            date !== todayStr &&
+                            date !== yesterdayStr &&
+                            date !== dayBeforeYesterdayStr
+                          );
+                        })
+                        .map(date => (
+                          <TabButton
+                            key={date}
+                            isActive={selectedDate === date}
+                            onClick={() =>
+                              selectedDate !== date && onDateClick(date)
+                            }
+                            className="mr-3"
+                            dataTab={date}
+                          >
+                            {formatDateLabel(date, dateGroupingMode)}
+                          </TabButton>
+                        ))}
+                    </>
+                  )}
                 </div>
 
                 {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
@@ -1095,7 +1099,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                 </button>
 
                 {/* 右侧固定按钮的左侧渐变遮罩 */}
-                <div className="pointer-events-none absolute top-0 left-0 bottom-0 w-5 bg-gradient-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
+                <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-gradient-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
               </div>
             </div>
           ) : (
@@ -1115,7 +1119,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
               </div>
               <button
                 onClick={handleSearchClick}
-                className="ml-1 flex items-center text-neutral-500 dark:text-neutral-400"
+                className="-m-2 ml-1 flex items-center p-2 text-neutral-500 dark:text-neutral-400"
               >
                 <X size={14} color="currentColor" />
               </button>
