@@ -284,6 +284,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   // 使用增强的筛选Hook
   const {
     filteredBeans,
+    emptyBeans,
     availableVarieties,
     availableOrigins,
     availableFlavorPeriods,
@@ -1714,6 +1715,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           >
             <InventoryView
               filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
+              emptyBeans={isSearching ? [] : emptyBeans}
               selectedVariety={selectedVariety}
               showEmptyBeans={showEmptyBeans}
               selectedBeanType={selectedBeanType}

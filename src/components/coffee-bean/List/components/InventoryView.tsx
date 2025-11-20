@@ -11,6 +11,7 @@ import RemainingEditor from './RemainingEditor';
 
 interface InventoryViewProps {
   filteredBeans: ExtendedCoffeeBean[];
+  emptyBeans: ExtendedCoffeeBean[]; // 已用完的豆子
   selectedVariety: string | null;
   showEmptyBeans: boolean;
   selectedBeanType: BeanType;
@@ -50,6 +51,7 @@ interface InventoryViewProps {
 
 const InventoryView: React.FC<InventoryViewProps> = ({
   filteredBeans,
+  emptyBeans,
   selectedVariety,
   showEmptyBeans,
   selectedBeanType,
@@ -143,9 +145,36 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     );
   }
 
+  // 构建虚拟列表的数据结构
+  // 包含正常豆子、分割线（如果有已用完的豆子）、已用完的豆子
+  const virtuosoData = React.useMemo(() => {
+    const items: Array<
+      { type: 'bean'; bean: ExtendedCoffeeBean } | { type: 'divider' }
+    > = [];
+
+    // 添加正常豆子
+    filteredBeans.forEach(bean => {
+      items.push({ type: 'bean', bean });
+    });
+
+    // 只有在同时存在正常豆子和已用完的豆子时才显示分割线
+    if (showEmptyBeans && emptyBeans.length > 0 && filteredBeans.length > 0) {
+      items.push({ type: 'divider' });
+    }
+
+    // 添加已用完的豆子
+    if (showEmptyBeans && emptyBeans.length > 0) {
+      emptyBeans.forEach(bean => {
+        items.push({ type: 'bean', bean });
+      });
+    }
+
+    return items;
+  }, [filteredBeans, emptyBeans, showEmptyBeans]);
+
   return (
     <div className="inventory-view-container relative h-full w-full">
-      {filteredBeans.length === 0 ? (
+      {filteredBeans.length === 0 && emptyBeans.length === 0 ? (
         <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
           {searchQuery.trim()
             ? `[ 没有找到匹配"${searchQuery.trim()}"的咖啡豆 ]`
@@ -179,25 +208,42 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
             return (
               <Virtuoso
-                data={filteredBeans}
+                data={virtuosoData}
                 customScrollParent={scrollParentRef}
                 components={{
                   List: VirtuosoList,
                   Header: () => <div className="h-5" />,
                 }}
-                itemContent={(_index, bean) => (
-                  <BeanListItem
-                    key={bean.id}
-                    bean={bean}
-                    isLast={false}
-                    onRemainingClick={handleRemainingClick}
-                    onDetailClick={handleDetailClick}
-                    searchQuery={isSearching ? searchQuery : ''}
-                    isNotesExpanded={expandedNotes[bean.id]}
-                    onNotesExpandToggle={onNotesExpandToggle}
-                    settings={settings}
-                  />
-                )}
+                itemContent={(_index, item) => {
+                  if (item.type === 'divider') {
+                    // 渲染分割线
+                    return (
+                      <div className="relative -mx-6 flex items-center justify-center">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-neutral-200 dark:border-neutral-800"></div>
+                        </div>
+                        <div className="relative bg-neutral-50 px-4 text-xs font-medium text-neutral-400 dark:bg-neutral-900 dark:text-neutral-700">
+                          用完的咖啡豆
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    // 渲染豆子项
+                    return (
+                      <BeanListItem
+                        key={item.bean.id}
+                        bean={item.bean}
+                        isLast={false}
+                        onRemainingClick={handleRemainingClick}
+                        onDetailClick={handleDetailClick}
+                        searchQuery={isSearching ? searchQuery : ''}
+                        isNotesExpanded={expandedNotes[item.bean.id]}
+                        onNotesExpandToggle={onNotesExpandToggle}
+                        settings={settings}
+                      />
+                    );
+                  }
+                }}
               />
             );
           })()}

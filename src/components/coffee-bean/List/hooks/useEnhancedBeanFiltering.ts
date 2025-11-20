@@ -29,6 +29,7 @@ interface UseEnhancedBeanFilteringProps {
 
 interface UseEnhancedBeanFilteringReturn {
   filteredBeans: ExtendedCoffeeBean[];
+  emptyBeans: ExtendedCoffeeBean[]; // 已用完的豆子
   availableVarieties: string[];
   availableOrigins: string[];
   availableFlavorPeriods: FlavorPeriodStatus[];
@@ -53,93 +54,105 @@ export const useEnhancedBeanFiltering = ({
   showEmptyBeans,
   sortOption,
 }: UseEnhancedBeanFilteringProps): UseEnhancedBeanFilteringReturn => {
-  // 使用useMemo缓存筛选后的豆子，只在依赖项变化时重新计算
-  const filteredBeans = useMemo(() => {
-    if (!beans || beans.length === 0) return [];
+  // 提取通用的筛选和排序逻辑
+  const filterAndSortBeans = useCallback(
+    (beanList: ExtendedCoffeeBean[], isEmptyFilter: boolean) => {
+      if (!beanList || beanList.length === 0) return [];
 
-    let filtered = beans;
+      let filtered = beanList;
 
-    // 1. 按豆子类型筛选
-    if (selectedBeanType && selectedBeanType !== 'all') {
-      filtered = filtered.filter(bean => bean.beanType === selectedBeanType);
-    }
-
-    // 2. 按是否显示空豆子筛选
-    if (!showEmptyBeans) {
-      filtered = filtered.filter(bean => !isBeanEmpty(bean));
-    }
-
-    // 3. 根据当前分类模式进行筛选
-    switch (filterMode) {
-      case 'variety':
-        if (selectedVariety) {
-          filtered = filtered.filter(bean =>
-            beanHasVariety(bean, selectedVariety)
-          );
-        }
-        break;
-      case 'origin':
-        if (selectedOrigin) {
-          filtered = filtered.filter(bean =>
-            beanHasOrigin(bean, selectedOrigin)
-          );
-        }
-        break;
-      case 'flavorPeriod':
-        if (selectedFlavorPeriod) {
-          filtered = filtered.filter(bean =>
-            beanHasFlavorPeriodStatus(bean, selectedFlavorPeriod)
-          );
-        }
-        break;
-      case 'roaster':
-        if (selectedRoaster) {
-          filtered = filtered.filter(bean =>
-            beanHasRoaster(bean, selectedRoaster)
-          );
-        }
-        break;
-    }
-
-    // 4. 排序
-    const compatibleBeans = filtered.map(bean => ({
-      id: bean.id,
-      name: bean.name,
-      roastDate: bean.roastDate,
-      startDay: bean.startDay,
-      endDay: bean.endDay,
-      roastLevel: bean.roastLevel,
-      capacity: bean.capacity,
-      remaining: bean.remaining,
-      timestamp: bean.timestamp,
-      overallRating: bean.overallRating,
-      // variety 现在在 blendComponents 中
-      price: bean.price,
-    }));
-
-    const sortedBeans = sortBeans(compatibleBeans, sortOption);
-
-    // 按照排序后的顺序收集原始豆子
-    const resultBeans: ExtendedCoffeeBean[] = [];
-    for (const sortedBean of sortedBeans) {
-      const originalBean = filtered.find(b => b.id === sortedBean.id);
-      if (originalBean) {
-        resultBeans.push(originalBean);
+      // 1. 按豆子类型筛选
+      if (selectedBeanType && selectedBeanType !== 'all') {
+        filtered = filtered.filter(bean => bean.beanType === selectedBeanType);
       }
-    }
 
-    return resultBeans;
-  }, [
-    beans,
-    filterMode,
-    selectedVariety,
-    selectedOrigin,
-    selectedFlavorPeriod,
-    selectedRoaster,
-    selectedBeanType,
-    showEmptyBeans,
-    sortOption,
-  ]);
+      // 2. 按是否用完筛选
+      filtered = filtered.filter(bean =>
+        isEmptyFilter ? isBeanEmpty(bean) : !isBeanEmpty(bean)
+      );
+
+      // 3. 根据当前分类模式进行筛选
+      switch (filterMode) {
+        case 'variety':
+          if (selectedVariety) {
+            filtered = filtered.filter(bean =>
+              beanHasVariety(bean, selectedVariety)
+            );
+          }
+          break;
+        case 'origin':
+          if (selectedOrigin) {
+            filtered = filtered.filter(bean =>
+              beanHasOrigin(bean, selectedOrigin)
+            );
+          }
+          break;
+        case 'flavorPeriod':
+          if (selectedFlavorPeriod) {
+            filtered = filtered.filter(bean =>
+              beanHasFlavorPeriodStatus(bean, selectedFlavorPeriod)
+            );
+          }
+          break;
+        case 'roaster':
+          if (selectedRoaster) {
+            filtered = filtered.filter(bean =>
+              beanHasRoaster(bean, selectedRoaster)
+            );
+          }
+          break;
+      }
+
+      // 4. 排序
+      const compatibleBeans = filtered.map(bean => ({
+        id: bean.id,
+        name: bean.name,
+        roastDate: bean.roastDate,
+        startDay: bean.startDay,
+        endDay: bean.endDay,
+        roastLevel: bean.roastLevel,
+        capacity: bean.capacity,
+        remaining: bean.remaining,
+        timestamp: bean.timestamp,
+        overallRating: bean.overallRating,
+        price: bean.price,
+      }));
+
+      const sortedBeans = sortBeans(compatibleBeans, sortOption);
+
+      // 按照排序后的顺序收集原始豆子
+      const resultBeans: ExtendedCoffeeBean[] = [];
+      for (const sortedBean of sortedBeans) {
+        const originalBean = filtered.find(b => b.id === sortedBean.id);
+        if (originalBean) {
+          resultBeans.push(originalBean);
+        }
+      }
+
+      return resultBeans;
+    },
+    [
+      filterMode,
+      selectedVariety,
+      selectedOrigin,
+      selectedFlavorPeriod,
+      selectedRoaster,
+      selectedBeanType,
+      sortOption,
+    ]
+  );
+
+  // 使用useMemo缓存筛选后的正常豆子
+  const filteredBeans = useMemo(
+    () => filterAndSortBeans(beans, false),
+    [beans, filterAndSortBeans]
+  );
+
+  // 使用useMemo缓存已用完的豆子列表
+  const emptyBeans = useMemo(() => {
+    if (!showEmptyBeans) return [];
+    return filterAndSortBeans(beans, true);
+  }, [beans, showEmptyBeans, filterAndSortBeans]);
 
   // 获取基础筛选后的豆子（用于计算可用分类选项）
   const baseFilteredBeans = useMemo(() => {
@@ -196,6 +209,7 @@ export const useEnhancedBeanFiltering = ({
 
   return {
     filteredBeans,
+    emptyBeans,
     availableVarieties,
     availableOrigins,
     availableFlavorPeriods,

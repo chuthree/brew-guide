@@ -416,12 +416,6 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
               ) : (
                 displayTitle
               )}
-              {isEmpty && (
-                <span className="text-neutral-500 dark:text-neutral-400">
-                  {' '}
-                  - 已用完
-                </span>
-              )}
             </div>
 
             <div
