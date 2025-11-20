@@ -917,8 +917,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   );
 
   // 计算可用容量和总重量
-  const calculateTotalWeight = () => {
-    const totalWeight = filteredBeans
+  const calculateTotalWeight = (beansList?: ExtendedCoffeeBean[]) => {
+    const beansToUse = beansList || filteredBeans;
+    const totalWeight = beansToUse
       .filter(bean => bean.remaining && parseFloat(bean.remaining) > 0)
       .reduce((sum, bean) => sum + parseFloat(bean.remaining || '0'), 0);
 
@@ -930,8 +931,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   };
 
   // 计算原始总重量（包括已用完的豆子）
-  const calculateOriginalTotalWeight = () => {
-    const totalWeight = beans.reduce((sum, bean) => {
+  const calculateOriginalTotalWeight = (beansList?: ExtendedCoffeeBean[]) => {
+    const beansToUse = beansList || beans;
+    const totalWeight = beansToUse.reduce((sum, bean) => {
       const capacity = bean.capacity ? parseFloat(bean.capacity) : 0;
       return sum + (isNaN(capacity) ? 0 : capacity);
     }, 0);
@@ -1544,7 +1546,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           isSearching ? searchFilteredBeans.length : filteredBeans.length
         }
         totalBeans={beans.length}
-        totalWeight={calculateTotalWeight()}
+        totalWeight={calculateTotalWeight(
+          isSearching ? searchFilteredBeans : filteredBeans
+        )}
         rankingBeanType={rankingBeanType}
         onRankingBeanTypeChange={newType => {
           setRankingBeanType(newType);
@@ -1625,7 +1629,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         availableOrigins={availableOrigins}
         availableFlavorPeriods={availableFlavorPeriods}
         availableRoasters={availableRoasters}
-        originalTotalWeight={calculateOriginalTotalWeight()}
+        originalTotalWeight={calculateOriginalTotalWeight(
+          isSearching ? searchFilteredBeans : filteredBeans
+        )}
         // 新增导出相关属性
         onExportPreview={handleExportPreview}
         // 新增类型统计属性
