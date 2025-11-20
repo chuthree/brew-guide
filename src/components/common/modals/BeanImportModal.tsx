@@ -446,7 +446,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -5 }}
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
-                  className="text-sm text-neutral-600 dark:text-neutral-400"
+                  className="text-sm font-medium text-neutral-600 dark:text-neutral-400"
                 >
                   {currentMode === 'buttons' ? (
                     <>
