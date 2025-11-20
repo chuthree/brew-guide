@@ -927,4 +927,5 @@ export const sponsorsList = [
   'Z先生',
   'D',
   'Lemueno',
+  '匿名',
 ];
