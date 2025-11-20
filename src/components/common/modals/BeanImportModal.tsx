@@ -68,6 +68,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   const [showQRScannerModal, setShowQRScannerModal] = useState(false);
   // 图片识别加载状态
   const [isRecognizing, setIsRecognizing] = useState(false);
+  // 图片输入 ref
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // 转场动画状态
   const [shouldRender, setShouldRender] = useState(false);
@@ -350,12 +352,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
   // 触发图片选择
   const handleUploadImageClick = useCallback(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = e => handleImageUpload(e as any);
-    input.click();
-  }, [handleImageUpload]);
+    fileInputRef.current?.click();
+  }, []);
 
   // 复制提示词 - 使用兼容性更好的方法
   const handleCopyPrompt = useCallback(async () => {
@@ -659,6 +657,15 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         isOpen={showQRScannerModal}
         onClose={() => setShowQRScannerModal(false)}
         onScanSuccess={handleScanSuccess}
+      />
+
+      {/* 隐藏的文件输入 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageUpload}
       />
     </>
   );
