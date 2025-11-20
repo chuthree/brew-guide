@@ -3,16 +3,23 @@
 import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { ExtendedCoffeeBean } from '../types';
+import { isBeanEmpty } from '../globalCache';
 
 interface ImageFlowViewProps {
   filteredBeans: ExtendedCoffeeBean[];
+  emptyBeans: ExtendedCoffeeBean[];
+  showEmptyBeans: boolean;
   onEdit?: (bean: ExtendedCoffeeBean) => void;
   onDelete?: (bean: ExtendedCoffeeBean) => void;
   onShare?: (bean: ExtendedCoffeeBean) => void;
   onRate?: (bean: ExtendedCoffeeBean) => void;
 }
 
-const ImageFlowView: React.FC<ImageFlowViewProps> = ({ filteredBeans }) => {
+const ImageFlowView: React.FC<ImageFlowViewProps> = ({ 
+  filteredBeans, 
+  emptyBeans,
+  showEmptyBeans 
+}) => {
   // 处理详情点击 - 通过事件打开
   const handleDetailClick = (bean: ExtendedCoffeeBean) => {
     window.dispatchEvent(
@@ -22,11 +29,23 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({ filteredBeans }) => {
     );
   };
 
-  // 过滤出有图片的咖啡豆 - 使用 useMemo 避免每次渲染都创建新数组
-  const beansWithImages = useMemo(
-    () => filteredBeans.filter(bean => bean.image && bean.image.trim() !== ''),
-    [filteredBeans]
-  );
+  // 合并正常豆子和用完的豆子（如果显示），然后过滤出有图片的
+  const beansWithImages = useMemo(() => {
+    const normalBeans = filteredBeans.filter(
+      bean => bean.image && bean.image.trim() !== ''
+    );
+    
+    if (!showEmptyBeans) {
+      return normalBeans;
+    }
+    
+    const emptyBeansWithImages = emptyBeans.filter(
+      bean => bean.image && bean.image.trim() !== ''
+    );
+    
+    // 正常豆子在前，用完的豆子在后
+    return [...normalBeans, ...emptyBeansWithImages];
+  }, [filteredBeans, emptyBeans, showEmptyBeans]);
 
   // 将咖啡豆分组，每排3个
   const rows = useMemo(() => {
@@ -55,34 +74,39 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({ filteredBeans }) => {
               <div className="relative px-3">
                 {/* 咖啡豆图片 - 使用 grid 布局 */}
                 <div className="relative grid grid-cols-3 items-end gap-4">
-                  {row.map(bean => (
-                    <div key={bean.id} className="relative pb-0.5">
-                      <Image
-                        src={bean.image!}
-                        alt={bean.name || '咖啡豆图片'}
-                        width={0}
-                        height={0}
-                        className="w-full cursor-pointer rounded-t-xs border border-b-0 border-neutral-200 dark:border-neutral-800"
-                        style={{
-                          height: 'auto',
-                        }}
-                        sizes="33vw"
-                        priority={false}
-                        loading="lazy"
-                        unoptimized
-                        onClick={() => handleDetailClick(bean)}
-                        onKeyDown={(e: React.KeyboardEvent) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleDetailClick(bean);
-                          }
-                        }}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={`查看 ${bean.name || '咖啡豆'} 详情`}
-                      />
-                    </div>
-                  ))}
+                  {row.map(bean => {
+                    const isEmpty = isBeanEmpty(bean);
+                    return (
+                      <div key={bean.id} className="relative pb-0.5">
+                        <Image
+                          src={bean.image!}
+                          alt={bean.name || '咖啡豆图片'}
+                          width={0}
+                          height={0}
+                          className={`w-full cursor-pointer rounded-t-xs border border-b-0 border-neutral-200 dark:border-neutral-800 transition-opacity ${
+                            isEmpty ? 'opacity-40' : ''
+                          }`}
+                          style={{
+                            height: 'auto',
+                          }}
+                          sizes="33vw"
+                          priority={false}
+                          loading="lazy"
+                          unoptimized
+                          onClick={() => handleDetailClick(bean)}
+                          onKeyDown={(e: React.KeyboardEvent) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleDetailClick(bean);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`查看 ${bean.name || '咖啡豆'} 详情`}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* 架子 - 3D透视效果，向后向上延伸 */}

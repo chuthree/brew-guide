@@ -132,19 +132,6 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   // 兼容之前编辑剩余量时的就地更新
   // 虚拟列表场景下直接依赖 filteredBeans 的外部更新即可
 
-  // 如果是图片流模式，直接返回图片流视图
-  if (isImageFlowMode) {
-    return (
-      <ImageFlowView
-        filteredBeans={filteredBeans}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onShare={onShare}
-        onRate={onRate}
-      />
-    );
-  }
-
   // 构建虚拟列表的数据结构
   // 包含正常豆子、分割线（如果有已用完的豆子）、已用完的豆子
   const virtuosoData = React.useMemo(() => {
@@ -172,7 +159,20 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     return items;
   }, [filteredBeans, emptyBeans, showEmptyBeans]);
 
-  return (
+  // 如果是图片流模式，直接返回图片流视图
+  if (isImageFlowMode) {
+    return (
+      <ImageFlowView
+        filteredBeans={filteredBeans}
+        emptyBeans={emptyBeans}
+        showEmptyBeans={showEmptyBeans}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onShare={onShare}
+        onRate={onRate}
+      />
+    );
+  }  return (
     <div className="inventory-view-container relative h-full w-full">
       {filteredBeans.length === 0 && emptyBeans.length === 0 ? (
         <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
