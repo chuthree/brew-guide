@@ -207,7 +207,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
           {/* 右侧操作按钮 */}
           {note && (onEdit || onDelete || onCopy || onShare) && (
-            <div className="flex flex-shrink-0 items-center gap-2">
+            <div className="flex flex-shrink-0 items-center gap-3">
               {/* 编辑按钮 */}
               {onEdit && (
                 <button
