@@ -172,7 +172,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         onRate={onRate}
       />
     );
-  }  return (
+  }
+  return (
     <div className="inventory-view-container relative h-full w-full">
       {filteredBeans.length === 0 && emptyBeans.length === 0 ? (
         <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">

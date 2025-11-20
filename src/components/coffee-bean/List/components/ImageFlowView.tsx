@@ -15,10 +15,10 @@ interface ImageFlowViewProps {
   onRate?: (bean: ExtendedCoffeeBean) => void;
 }
 
-const ImageFlowView: React.FC<ImageFlowViewProps> = ({ 
-  filteredBeans, 
+const ImageFlowView: React.FC<ImageFlowViewProps> = ({
+  filteredBeans,
   emptyBeans,
-  showEmptyBeans 
+  showEmptyBeans,
 }) => {
   // 处理详情点击 - 通过事件打开
   const handleDetailClick = (bean: ExtendedCoffeeBean) => {
@@ -34,15 +34,15 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
     const normalBeans = filteredBeans.filter(
       bean => bean.image && bean.image.trim() !== ''
     );
-    
+
     if (!showEmptyBeans) {
       return normalBeans;
     }
-    
+
     const emptyBeansWithImages = emptyBeans.filter(
       bean => bean.image && bean.image.trim() !== ''
     );
-    
+
     // 正常豆子在前，用完的豆子在后
     return [...normalBeans, ...emptyBeansWithImages];
   }, [filteredBeans, emptyBeans, showEmptyBeans]);
@@ -83,7 +83,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                           alt={bean.name || '咖啡豆图片'}
                           width={0}
                           height={0}
-                          className={`w-full cursor-pointer rounded-t-xs border border-b-0 border-neutral-200 dark:border-neutral-800 transition-opacity ${
+                          className={`w-full cursor-pointer rounded-t-xs border border-b-0 border-neutral-200 transition-opacity dark:border-neutral-800 ${
                             isEmpty ? 'opacity-40' : ''
                           }`}
                           style={{
