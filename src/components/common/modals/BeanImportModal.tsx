@@ -432,7 +432,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 >
                   {currentMode === 'buttons' ? (
                     <>
-                      <span>将咖啡豆图片和</span>
+                      <span>将包含咖啡豆信息的图片和</span>
                       <button
                         onClick={handleCopyPrompt}
                         className="mx-1 inline-flex items-center gap-1 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-white"
@@ -440,8 +440,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                         提示词
                       </button>
                       <span>
-                        发送给 DeepSeek、ChatGPT 等 AI，复制返回的 JSON
-                        数据后点击下方按钮。
+                        发送至 DeepSeek 等 AI 平台，复制返回的 JSON
+                        数据后，点击下方按钮。
                       </span>
                     </>
                   ) : (
