@@ -222,7 +222,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               )}
 
               {/* 更多操作菜单 */}
-              {(onDelete || onCopy || onShare) && (
+              {(onEdit || onDelete || onCopy || onShare) && (
                 <ActionMenu
                   items={[
                     ...(onDelete
@@ -274,6 +274,19 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             label: '复制',
                             onClick: () => {
                               onCopy(note.id);
+                              onClose();
+                            },
+                            color: 'default' as const,
+                          },
+                        ]
+                      : []),
+                    ...(onEdit
+                      ? [
+                          {
+                            id: 'edit',
+                            label: '编辑',
+                            onClick: () => {
+                              onEdit(note);
                               onClose();
                             },
                             color: 'default' as const,
