@@ -178,7 +178,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                         (tempGrindSizeRef.current[grinder.id] = e.target.value)
                       }
                       onBlur={() => handleGrindSizeBlur(grinder.id)}
-                      placeholder="刻度"
+                      placeholder="当前刻度"
                       autoFocus
                       className="flex-1 appearance-none bg-transparent text-sm font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
                     />
@@ -275,7 +275,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                     setNewGrindSize('');
                   }
                 }}
-                placeholder="输入刻度"
+                placeholder="输入当前刻度"
                 autoFocus
                 className="flex-1 appearance-none bg-transparent text-sm font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
               />
