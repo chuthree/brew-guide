@@ -29,6 +29,7 @@ import {
   Upload,
   Download,
   X,
+  Settings2,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -125,6 +126,12 @@ export interface SettingsOptions {
   };
   // 隐藏的器具设置
   hiddenEquipments?: string[]; // 隐藏的器具ID列表
+  // 磨豆机设置
+  grinders?: {
+    id: string;
+    name: string;
+    currentGrindSize?: string;
+  }[];
 }
 
 // 默认设置
@@ -207,6 +214,8 @@ export const defaultSettings: SettingsOptions = {
   hiddenCommonMethods: {}, // 默认没有隐藏的方案
   // 隐藏的器具默认值
   hiddenEquipments: [], // 默认没有隐藏的器具
+  // 磨豆机默认值
+  grinders: [], // 默认没有磨豆机
 };
 
 // 子设置页面的打开/关闭函数接口
@@ -224,6 +233,7 @@ export interface SubSettingsHandlers {
   onOpenHiddenMethodsSettings: () => void;
   onOpenHiddenEquipmentsSettings: () => void;
   onOpenRoasterLogoSettings: () => void;
+  onOpenGrinderSettings: () => void;
 }
 
 interface SettingsProps {
@@ -933,6 +943,16 @@ const Settings: React.FC<SettingsProps> = ({
             <div className="flex items-center space-x-3">
               <Timer className="h-4 w-4 text-neutral-500" />
               <span>计时器设置</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-neutral-400" />
+          </button>
+          <button
+            onClick={subSettingsHandlers.onOpenGrinderSettings}
+            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            <div className="flex items-center space-x-3">
+              <Settings2 className="h-4 w-4 text-neutral-500" />
+              <span>磨豆机设置</span>
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>

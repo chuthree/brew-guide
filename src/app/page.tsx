@@ -50,6 +50,7 @@ import FlavorDimensionSettings from '@/components/settings/FlavorDimensionSettin
 import HiddenMethodsSettings from '@/components/settings/HiddenMethodsSettings';
 import HiddenEquipmentsSettings from '@/components/settings/HiddenEquipmentsSettings';
 import RoasterLogoSettings from '@/components/settings/RoasterLogoSettings';
+import GrinderSettings from '@/components/settings/GrinderSettings';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
 import Onboarding from '@/components/onboarding/Onboarding';
@@ -242,6 +243,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [showHiddenEquipmentsSettings, setShowHiddenEquipmentsSettings] =
     useState(false);
   const [showRoasterLogoSettings, setShowRoasterLogoSettings] = useState(false);
+  const [showGrinderSettings, setShowGrinderSettings] = useState(false);
 
   // 计算是否有任何子设置页面打开
   const hasSubSettingsOpen =
@@ -257,7 +259,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showFlavorDimensionSettings ||
     showHiddenMethodsSettings ||
     showHiddenEquipmentsSettings ||
-    showRoasterLogoSettings;
+    showRoasterLogoSettings ||
+    showGrinderSettings;
 
   const [settings, setSettings] = useState<SettingsOptions>(() => {
     // 使用默认设置作为初始值，稍后在 useEffect 中异步加载
@@ -3124,6 +3127,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onOpenHiddenEquipmentsSettings: () =>
             setShowHiddenEquipmentsSettings(true),
           onOpenRoasterLogoSettings: () => setShowRoasterLogoSettings(true),
+          onOpenGrinderSettings: () => setShowGrinderSettings(true),
         }}
       />
 
@@ -3355,6 +3359,24 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           isOpen={showRoasterLogoSettings}
           onClose={() => setShowRoasterLogoSettings(false)}
           hapticFeedback={settings.hapticFeedback}
+        />
+      )}
+
+      {showGrinderSettings && (
+        <GrinderSettings
+          settings={settings}
+          onClose={() => setShowGrinderSettings(false)}
+          handleChange={async (key, value) => {
+            const newSettings = { ...settings, [key]: value };
+            setSettings(newSettings);
+            const { Storage } = await import('@/lib/core/storage');
+            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+            window.dispatchEvent(
+              new CustomEvent('storageChange', {
+                detail: { key: 'brewGuideSettings' },
+              })
+            );
+          }}
         />
       )}
 

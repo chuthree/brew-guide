@@ -101,3 +101,10 @@ export interface BrewingNoteData {
 
   [key: string]: unknown; // 使用 unknown 代替 any
 }
+
+// 磨豆机数据模型
+export interface Grinder {
+  id: string; // 唯一标识
+  name: string; // 磨豆机名称
+  currentGrindSize?: string; // 当前刻度
+}
