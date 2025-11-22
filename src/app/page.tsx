@@ -655,9 +655,28 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       }
     };
 
+    const handleStorageChanged = async (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.key === 'brewGuideSettings') {
+        try {
+          const { Storage } = await import('@/lib/core/storage');
+          const savedSettings = await Storage.get('brewGuideSettings');
+          if (savedSettings && typeof savedSettings === 'string') {
+            const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
+            setSettings(parsedSettings);
+          }
+        } catch (error) {
+          console.error('重新加载设置失败:', error);
+        }
+      }
+    };
+
     window.addEventListener('settingsChanged', handleSettingsChanged);
-    return () =>
+    window.addEventListener('storageChange', handleStorageChanged);
+    return () => {
       window.removeEventListener('settingsChanged', handleSettingsChanged);
+      window.removeEventListener('storageChange', handleStorageChanged);
+    };
   }, []);
 
   // 监听 ImageViewer 打开事件

@@ -141,20 +141,46 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   }, [settings.showFlowRate]);
 
   // 处理布局设置变化
-  const handleLayoutChange = useCallback((newSettings: LayoutSettings) => {
-    // 首先更新本地状态
-    setLocalLayoutSettings(newSettings);
+  const handleLayoutChange = useCallback(
+    async (newSettings: LayoutSettings) => {
+      // 首先更新本地状态
+      setLocalLayoutSettings(newSettings);
 
-    // 记录日志
-    // 发送布局设置变更
+      // 更新全局设置并保存到 Storage
+      try {
+        const { Storage } = await import('@/lib/core/storage');
+        const currentSettingsStr = await Storage.get('brewGuideSettings');
+        if (currentSettingsStr) {
+          const currentSettings = JSON.parse(currentSettingsStr);
+          const updatedSettings = {
+            ...currentSettings,
+            layoutSettings: newSettings,
+          };
+          await Storage.set(
+            'brewGuideSettings',
+            JSON.stringify(updatedSettings)
+          );
 
-    // 然后派发事件，通知其他组件
-    window.dispatchEvent(
-      new CustomEvent('brewing:layoutChange', {
-        detail: { layoutSettings: newSettings },
-      })
-    );
-  }, []);
+          // 触发 storageChange 事件，通知其他组件设置已更改
+          window.dispatchEvent(
+            new CustomEvent('storageChange', {
+              detail: { key: 'brewGuideSettings' },
+            })
+          );
+        }
+      } catch (error) {
+        console.error('保存布局设置失败', error);
+      }
+
+      // 然后派发事件，通知其他组件
+      window.dispatchEvent(
+        new CustomEvent('brewing:layoutChange', {
+          detail: { layoutSettings: newSettings },
+        })
+      );
+    },
+    []
+  );
 
   // 处理流速显示设置变化
   const handleFlowRateSettingChange = useCallback((showFlowRate: boolean) => {
@@ -627,7 +653,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       const { useBrewingNoteStore } = await import(
         '@/lib/stores/brewingNoteStore'
       );
-      
+
       // 创建笔记数据 - 确保不保存完整的coffeeBean对象
       const noteData: any = {
         ...note,
@@ -651,7 +677,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
       // 判断是新笔记还是更新
       const currentNotes = useBrewingNoteStore.getState().notes;
-      const isExistingNote = !!noteData.id && currentNotes.some(n => n.id === noteData.id);
+      const isExistingNote =
+        !!noteData.id && currentNotes.some(n => n.id === noteData.id);
 
       if (isExistingNote) {
         // 更新现有笔记
