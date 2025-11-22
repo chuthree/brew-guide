@@ -21,8 +21,6 @@ const pageVariants = {
 };
 
 const pageTransition = {
-
-  
   duration: 0.26,
 };
 

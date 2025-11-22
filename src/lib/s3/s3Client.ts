@@ -721,7 +721,7 @@ export class S3Client {
     data: string
   ): Promise<ArrayBuffer> {
     let keyBuffer: ArrayBuffer;
-    
+
     if (typeof key === 'string') {
       keyBuffer = new TextEncoder().encode(key).buffer as ArrayBuffer;
     } else if (key instanceof Uint8Array) {
