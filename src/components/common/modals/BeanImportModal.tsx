@@ -93,18 +93,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   // 关闭处理
   const handleClose = useCallback(() => {
     setIsVisible(false); // 触发退出动画
-    window.dispatchEvent(new CustomEvent('beanImportClosing')); // 通知父组件
-
     setTimeout(() => {
       resetAllStates();
-
-      // 如果历史栈中有我们添加的模态框记录，先返回一步
-      if (window.history.state?.modal === 'bean-import') {
-        window.history.back();
-      } else {
-        // 否则直接调用 onClose
-        onClose();
-      }
+      onClose();
     }, 350); // 350ms 后真正关闭
   }, [resetAllStates, onClose]);
 
@@ -135,14 +126,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     window.history.pushState({ modal: 'bean-import' }, '');
 
     // 监听返回事件
-    const handlePopState = (event: PopStateEvent) => {
-      // 检查是否是我们的模态框状态
-      if (event.state?.modal !== 'bean-import') {
-        // 如果当前还显示模态框，说明用户按了返回键，关闭模态框
-        if (showForm) {
-          handleClose();
-        }
-      }
+    const handlePopState = () => {
+      // 用户按了返回键，关闭模态框
+      onClose();
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -150,7 +136,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [showForm, handleClose]);
+  }, [showForm, onClose]);
 
   // 表单关闭时重置状态
   useEffect(() => {
@@ -216,23 +202,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       );
       await onImport(JSON.stringify(processedBeans));
 
-      // 先触发退出动画，但延迟真正的关闭
-      // 这样可以避免与父组件的编辑模态框打开逻辑冲突
+      // 先触发退出动画
       setIsVisible(false);
-      window.dispatchEvent(new CustomEvent('beanImportClosing'));
 
-      // 等待足够长的时间，确保父组件的 setTimeout(300ms) 先执行完
-      // 这样编辑模态框就能正常打开而不会被 onClose 打断
+      // 等待动画完成后关闭
       setTimeout(() => {
         resetAllStates();
-
-        // 如果历史栈中有我们添加的模态框记录，先返回一步
-        if (window.history.state?.modal === 'bean-import') {
-          window.history.back();
-        } else {
-          // 否则直接调用 onClose
-          onClose();
-        }
+        onClose();
       }, 450); // 450ms > 父组件的 300ms 延迟，确保编辑模态框先打开
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
