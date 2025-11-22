@@ -138,7 +138,7 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              type: 'tween',
+              
               ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
               duration: 0.265,
             }}
@@ -158,8 +158,8 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                type: 'tween',
-                ease: 'easeOut',
+                
+                
                 duration: 0.265,
                 delay: 0.05,
               }}

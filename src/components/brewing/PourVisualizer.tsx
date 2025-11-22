@@ -95,7 +95,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
       ],
       transition: {
         duration: 1.5,
-        ease: 'easeInOut',
         times: [0, 0.2, 0.4, 0.6, 1],
       },
     },

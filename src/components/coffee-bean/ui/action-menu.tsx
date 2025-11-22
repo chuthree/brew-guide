@@ -205,7 +205,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
             }}
             transition={{
               duration: 0.15,
-              ease: 'easeOut',
+              
             }}
             style={{
               pointerEvents: open ? 'none' : 'auto',
@@ -224,7 +224,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
             transition={{
               duration: 0.2,
               delay: open ? 0.1 : 0,
-              ease: 'easeOut',
+              
             }}
             style={{
               pointerEvents: open ? 'auto' : 'none',
@@ -246,7 +246,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
                 transition={{
                   duration: 0.2,
                   delay: open ? 0.12 + index * 0.03 : 0,
-                  ease: 'easeOut',
+                  
                 }}
               >
                 {item.renderContent || item.label}
@@ -269,7 +269,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.26, ease: 'easeOut' }}
+            transition={{ duration: 0.26 }}
             onClick={handleTriggerClick}
             className={cn(
               'flex h-7 w-7 items-center justify-center text-xs text-neutral-500 dark:text-neutral-400',
@@ -286,7 +286,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
               initial={{ opacity: 0, scale: 0.9, x: 10 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.26, ease: 'easeOut' }}
+              transition={{ duration: 0.26 }}
               className={cn(
                 'absolute top-6 right-0 z-50 min-w-[100px] overflow-hidden rounded-lg border border-neutral-200/70 bg-white/95 shadow-lg backdrop-blur-xs dark:border-neutral-800/70 dark:bg-neutral-900/95',
                 menuClassName

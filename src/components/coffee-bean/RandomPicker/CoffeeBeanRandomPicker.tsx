@@ -235,7 +235,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
         transition: {
           duration: 3.6, // 稍微缩短动画时间
           ease: [0.2, 0.4, 0.2, 0.98], // 更简单的缓动函数
-          type: 'tween', // 使用tween而不是spring可能更流畅
+           // 使用tween而不是spring可能更流畅
         },
       });
 

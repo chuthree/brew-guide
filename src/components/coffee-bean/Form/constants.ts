@@ -560,7 +560,5 @@ export const pageVariants = {
 };
 
 export const pageTransition = {
-  type: 'tween',
-  ease: 'easeInOut',
   duration: 0.2,
 };

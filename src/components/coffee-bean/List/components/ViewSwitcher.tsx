@@ -46,12 +46,9 @@ const FILTER_ANIMATION = {
     y: -10,
   },
   transition: {
-    type: 'tween',
-    ease: [0.33, 1, 0.68, 1], // Apple的easeOutCubic曲线
     duration: 0.35,
     opacity: {
       duration: 0.25,
-      ease: [0.33, 1, 0.68, 1],
     },
   },
 };

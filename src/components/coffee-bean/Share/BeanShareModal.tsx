@@ -187,7 +187,7 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              type: 'tween',
+              
               ease: [0.33, 1, 0.68, 1],
               duration: 0.265,
             }}

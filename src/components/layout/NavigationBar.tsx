@@ -523,7 +523,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
           ? 'border-transparent'
           : 'border-neutral-200 dark:border-neutral-800'
       }`}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
+      transition={{ duration: 0.3 }}
     >
       {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 */}
       <div className="relative min-h-[30px] w-full">
@@ -537,7 +537,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              transition={{ duration: 0.2 }}
             >
               {alternativeHeader}
             </motion.div>
@@ -549,7 +549,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
               initial={{ opacity: shouldHideHeader ? 0 : 1 }}
               animate={{ opacity: shouldHideHeader ? 0 : 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              transition={{ duration: 0.2 }}
               style={{ pointerEvents: shouldHideHeader ? 'none' : 'auto' }}
             >
               <div className="flex items-start justify-between">
@@ -729,7 +729,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
               exit={{ height: 0, opacity: 0 }}
               transition={{
                 duration: 0.25,
-                ease: 'easeOut',
+                
                 opacity: { duration: 0.15 },
               }}
             >

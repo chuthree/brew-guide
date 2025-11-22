@@ -295,7 +295,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
             <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-100/60 p-3 dark:border-neutral-700 dark:bg-neutral-800/30">
@@ -342,7 +342,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              type: 'tween',
+              
               ease: [0.33, 1, 0.68, 1],
               duration: 0.265,
             }}
@@ -359,8 +359,8 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                type: 'tween',
-                ease: 'easeOut',
+                
+                
                 duration: 0.265,
                 delay: 0.05,
               }}
@@ -422,7 +422,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                     animate={{
                       opacity: importData.trim() ? 1 : 0,
                     }}
-                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    transition={{ duration: 0.2 }}
                     onClick={handleImport}
                     disabled={!importData.trim()}
                     className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-neutral-100 transition-opacity hover:opacity-80 disabled:pointer-events-none dark:bg-neutral-200 dark:text-neutral-800"

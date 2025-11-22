@@ -720,12 +720,15 @@ export class S3Client {
     key: ArrayBuffer | Uint8Array | string,
     data: string
   ): Promise<ArrayBuffer> {
-    const keyBuffer =
-      typeof key === 'string'
-        ? new TextEncoder().encode(key)
-        : key instanceof Uint8Array
-          ? key
-          : new Uint8Array(key);
+    let keyBuffer: ArrayBuffer;
+    
+    if (typeof key === 'string') {
+      keyBuffer = new TextEncoder().encode(key).buffer as ArrayBuffer;
+    } else if (key instanceof Uint8Array) {
+      keyBuffer = key.buffer as ArrayBuffer;
+    } else {
+      keyBuffer = key;
+    }
 
     const cryptoKey = await this.getSubtleCrypto().importKey(
       'raw',

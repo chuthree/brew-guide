@@ -322,7 +322,7 @@ const StageItem: React.FC<StageItemProps> = React.memo(
               className={`absolute top-0 -left-px h-full w-px ${isWaitingStage ? 'bg-neutral-600 dark:bg-neutral-400' : 'bg-neutral-800 dark:bg-white'}`}
               initial={{ scaleY: 0, transformOrigin: 'top' }}
               animate={{ scaleY: 1 }}
-              transition={{ duration: 0.26, ease: 'linear' }}
+              transition={{ duration: 0.26 }}
             />
           )}
           <div

@@ -451,7 +451,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                   initial={{ opacity: 0, x: 5 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -5 }}
-                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  transition={{ duration: 0.2 }}
                   className="text-sm font-medium text-neutral-600 dark:text-neutral-400"
                 >
                   {currentMode === 'buttons' ? (
@@ -492,7 +492,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                   initial={{ opacity: 0, x: 8 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  transition={{ duration: 0.25 }}
                   className="space-y-3"
                 >
                   {/* 识别剪切板 */}
@@ -562,7 +562,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                   initial={{ opacity: 0, x: 8 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  transition={{ duration: 0.25 }}
                   className="space-y-3"
                 >
                   {/* 返回按钮 */}
