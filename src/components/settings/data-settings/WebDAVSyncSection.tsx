@@ -129,6 +129,8 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       return;
     }
 
+    console.log(`🔄 [WebDAV] 开始同步，方向: ${direction}`);
+
     setIsSyncing(true);
     setError('');
     setSyncProgress(null);
@@ -137,6 +139,9 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       const result: WebDAVSyncResult = await syncManager.sync({
         preferredDirection: direction,
         onProgress: progress => {
+          console.log(
+            `📊 [WebDAV] 同步进度: ${progress.phase} - ${progress.message} (${progress.percentage}%)`
+          );
           setSyncProgress({
             phase: progress.phase,
             message: progress.message,
@@ -284,30 +289,30 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
           {/* URL */}
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              WebDAV 服务器地址
+              服务器地址
             </label>
             <input
               type="url"
               value={settings.url}
               onChange={e => onSettingChange('url', e.target.value)}
-              placeholder="https://your-server.com/remote.php/dav/files/username/"
+              placeholder="https://dav.jianguoyun.com/dav/"
               className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Nextcloud: https://your-domain/remote.php/dav/files/username/
+              坚果云: https://dav.jianguoyun.com/dav/
             </p>
           </div>
 
-          {/* 用户名 */}
+          {/* 账号 */}
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              用户名
+              账号
             </label>
             <input
               type="text"
               value={settings.username}
               onChange={e => onSettingChange('username', e.target.value)}
-              placeholder="username"
+              placeholder="邮箱或手机号"
               autoComplete="username"
               className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
@@ -356,9 +361,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
                 </svg>
               </button>
             </div>
-            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Nextcloud 建议使用应用专用密码
-            </p>
           </div>
 
           {/* 远程路径 */}
@@ -402,22 +404,10 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
             disabled={isSyncing}
             className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
-            {isSyncing && syncProgress?.phase === 'uploading' ? (
-              <div className="flex flex-col items-center gap-1">
-                <span>{syncProgress.message}</span>
-                <div className="h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-600">
-                  <div
-                    className="h-1.5 rounded-full bg-neutral-400 transition-all duration-300 dark:bg-neutral-500"
-                    style={{ width: `${syncProgress.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <>
-                <Upload className="h-4 w-4" />
-                <span>上传</span>
-              </>
-            )}
+            <Upload
+              className={`h-4 w-4 ${isSyncing && syncProgress?.phase === 'uploading' ? 'animate-pulse' : ''}`}
+            />
+            <span>上传</span>
           </button>
 
           {/* 下载按钮 */}
@@ -426,22 +416,10 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
             disabled={isSyncing}
             className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
-            {isSyncing && syncProgress?.phase === 'downloading' ? (
-              <div className="flex flex-col items-center gap-1">
-                <span>{syncProgress.message}</span>
-                <div className="h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-600">
-                  <div
-                    className="h-1.5 rounded-full bg-neutral-400 transition-all duration-300 dark:bg-neutral-500"
-                    style={{ width: `${syncProgress.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                <span>下载</span>
-              </>
-            )}
+            <Download
+              className={`h-4 w-4 ${isSyncing && syncProgress?.phase === 'downloading' ? 'animate-pulse' : ''}`}
+            />
+            <span>下载</span>
           </button>
         </div>
       )}

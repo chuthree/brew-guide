@@ -353,7 +353,10 @@ export abstract class BaseSyncManager {
 
       // 4. 如果指定了同步方向，直接执行
       if (options.preferredDirection === 'upload') {
-        await this.uploadAllFiles(localFilesMetadata, result);
+        console.log(
+          `⬆️ [${this.getServiceName()}] 执行强制上传，文件数: ${Object.keys(localFilesMetadata).length}`
+        );
+        await this.uploadAllFiles(localFilesMetadata, result, options);
         await this.updateMetadataAfterSync(localFilesMetadata);
         result.message = `已上传 ${result.uploadedFiles} 个文件`;
         result.success = result.errors.length === 0;
@@ -361,11 +364,22 @@ export abstract class BaseSyncManager {
       }
 
       if (options.preferredDirection === 'download') {
+        console.log(`⬇️ [${this.getServiceName()}] 执行强制下载`);
         if (remoteMetadata) {
-          await this.downloadAllFiles(remoteMetadata.files, result);
+          console.log(
+            `⬇️ [${this.getServiceName()}] 远程文件数: ${Object.keys(remoteMetadata.files).length}`
+          );
+          await this.downloadAllFiles(remoteMetadata.files, result, options);
           await this.updateMetadataAfterSync(remoteMetadata.files);
           result.message = `已下载 ${result.downloadedFiles} 个文件`;
           result.success = result.errors.length === 0;
+          return result;
+        } else {
+          console.warn(
+            `⚠️ [${this.getServiceName()}] 下载失败：没有远程元数据`
+          );
+          result.message = '下载失败：云端没有数据';
+          result.success = false;
           return result;
         }
       }
@@ -504,31 +518,50 @@ export abstract class BaseSyncManager {
    */
   protected async uploadAllFiles(
     localFiles: Record<string, FileMetadata>,
-    result: SyncResult
+    result: SyncResult,
+    options: SyncOptions = {}
   ): Promise<void> {
     if (!this.client) {
       result.errors.push('客户端未初始化');
       return;
     }
 
-    for (const [key, metadata] of Object.entries(localFiles)) {
+    const files = Object.entries(localFiles);
+    const totalFiles = files.length;
+    let completedFiles = 0;
+
+    for (const [key, metadata] of files) {
       try {
         const content = await this.getFileContent(key);
         if (!content) {
           result.errors.push(`获取 ${key} 内容失败`);
+          completedFiles++;
           continue;
         }
+
+        options.onProgress?.({
+          phase: 'uploading',
+          completed: completedFiles,
+          total: totalFiles,
+          percentage: Math.round((completedFiles / totalFiles) * 100),
+          message: `正在上传数据...`,
+        });
 
         const success = await this.client.uploadFile(key, content);
         if (success) {
           result.uploadedFiles = (result.uploadedFiles || 0) + 1;
+          console.log(`✅ [${this.getServiceName()}] 上传成功: ${key}`);
         } else {
           result.errors.push(`上传 ${key} 失败`);
+          console.error(`❌ [${this.getServiceName()}] 上传失败: ${key}`);
         }
+
+        completedFiles++;
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         result.errors.push(`上传 ${key} 时出错: ${errorMsg}`);
         console.error(`❌ [${this.getServiceName()}] 上传 ${key} 失败:`, error);
+        completedFiles++;
       }
     }
   }
@@ -539,27 +572,46 @@ export abstract class BaseSyncManager {
    */
   protected async downloadAllFiles(
     remoteFiles: Record<string, FileMetadata>,
-    result: SyncResult
+    result: SyncResult,
+    options: SyncOptions = {}
   ): Promise<void> {
     if (!this.client) {
       result.errors.push('客户端未初始化');
       return;
     }
 
-    for (const [key, metadata] of Object.entries(remoteFiles)) {
+    const files = Object.entries(remoteFiles);
+    const totalFiles = files.length;
+    let completedFiles = 0;
+
+    for (const [key, metadata] of files) {
       try {
+        options.onProgress?.({
+          phase: 'downloading',
+          completed: completedFiles,
+          total: totalFiles,
+          percentage: Math.round((completedFiles / totalFiles) * 100),
+          message: `正在下载数据...`,
+        });
+
         const content = await this.client.downloadFile(key);
         if (!content) {
           result.errors.push(`下载 ${key} 失败`);
+          console.error(`❌ [${this.getServiceName()}] 下载失败: ${key}`);
+          completedFiles++;
           continue;
         }
 
         await this.saveFileContent(key, content);
         result.downloadedFiles = (result.downloadedFiles || 0) + 1;
+        console.log(`✅ [${this.getServiceName()}] 下载成功: ${key}`);
+
+        completedFiles++;
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         result.errors.push(`下载 ${key} 时出错: ${errorMsg}`);
         console.error(`❌ [${this.getServiceName()}] 下载 ${key} 失败:`, error);
+        completedFiles++;
       }
     }
   }

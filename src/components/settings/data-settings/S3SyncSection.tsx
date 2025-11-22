@@ -302,7 +302,24 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
       {/* 配置表单 - 折叠区域 */}
       {enabled && expanded && (
         <div className="space-y-3 rounded bg-neutral-100 p-4 dark:bg-neutral-800">
-          {/* 区域 */}
+          {/* 服务地址 (Endpoint) */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
+              服务地址 (Endpoint)
+            </label>
+            <input
+              type="url"
+              value={settings.endpoint || ''}
+              onChange={e => onSettingChange('endpoint', e.target.value)}
+              placeholder="http(s)://bucket-name.s3.cn-south-1.qiniucs.com"
+              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+            />
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              七牛云示例: http(s)://bucket-name.s3.cn-south-1.qiniucs.com
+            </p>
+          </div>
+
+          {/* 区域 (Region) */}
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
               区域 (Region)
@@ -314,37 +331,9 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
               placeholder="cn-south-1"
               className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
-          </div>
-
-          {/* 自定义端点 */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              自定义端点 (可选)
-            </label>
-            <input
-              type="url"
-              value={settings.endpoint || ''}
-              onChange={e => onSettingChange('endpoint', e.target.value)}
-              placeholder="https://bucket-name.s3.cn-south-1.qiniucs.com"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-            />
             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              七牛云等兼容S3服务的端点，留空使用AWS标准端点
+              如不确定可填写: us-east-1 或 cn-south-1
             </p>
-          </div>
-
-          {/* Bucket名称 */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              Bucket名称
-            </label>
-            <input
-              type="text"
-              value={settings.bucketName}
-              onChange={e => onSettingChange('bucketName', e.target.value)}
-              placeholder="my-bucket-name"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-            />
           </div>
 
           {/* Access Key ID */}
@@ -407,10 +396,24 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
             </div>
           </div>
 
-          {/* 前缀 */}
+          {/* 存储桶 (Bucket) */}
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              文件前缀
+              存储桶 (Bucket)
+            </label>
+            <input
+              type="text"
+              value={settings.bucketName}
+              onChange={e => onSettingChange('bucketName', e.target.value)}
+              placeholder="bucket-name"
+              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+            />
+          </div>
+
+          {/* 文件前缀 */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
+              文件前缀（可选）
             </label>
             <input
               type="text"
@@ -448,22 +451,10 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
             disabled={isSyncing}
             className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
-            {isSyncing && syncProgress?.phase === 'uploading' ? (
-              <div className="flex flex-col items-center gap-1">
-                <span>{syncProgress.message}</span>
-                <div className="h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-600">
-                  <div
-                    className="h-1.5 rounded-full bg-neutral-400 transition-all duration-300 dark:bg-neutral-500"
-                    style={{ width: `${syncProgress.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <>
-                <Upload className="h-4 w-4" />
-                <span>上传</span>
-              </>
-            )}
+            <Upload
+              className={`h-4 w-4 ${isSyncing && syncProgress?.phase === 'uploading' ? 'animate-pulse' : ''}`}
+            />
+            <span>上传</span>
           </button>
 
           {/* 下载按钮 */}
@@ -472,22 +463,10 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
             disabled={isSyncing}
             className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
-            {isSyncing && syncProgress?.phase === 'downloading' ? (
-              <div className="flex flex-col items-center gap-1">
-                <span>{syncProgress.message}</span>
-                <div className="h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-600">
-                  <div
-                    className="h-1.5 rounded-full bg-neutral-400 transition-all duration-300 dark:bg-neutral-500"
-                    style={{ width: `${syncProgress.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                <span>下载</span>
-              </>
-            )}
+            <Download
+              className={`h-4 w-4 ${isSyncing && syncProgress?.phase === 'downloading' ? 'animate-pulse' : ''}`}
+            />
+            <span>下载</span>
           </button>
         </div>
       )}

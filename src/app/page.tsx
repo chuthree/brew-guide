@@ -1758,7 +1758,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }
 
     setSelectedMethod(null);
-    alert('数据已更新，应用将重新加载数据');
   };
 
   // 简化的历史记录导航事件处理
