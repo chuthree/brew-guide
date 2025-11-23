@@ -33,13 +33,9 @@
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
-                    <imageView
+                    <view
 						key="view"
-						userInteractionEnabled="NO"
-						contentMode="scaleAspectFill"
-						horizontalHuggingPriority="251"
-						verticalHuggingPriority="251"
-						image="Splash"
+						contentMode="scaleToFill"
 						id="snD-IY-ifK"
 					>
                         <rect
@@ -49,12 +45,16 @@
 							width="375"
 							height="667"
 						/>
-                        <autoresizingMask key="autoresizingMask" />
+                        <autoresizingMask
+							key="autoresizingMask"
+							widthSizable="YES"
+							heightSizable="YES"
+						/>
                         <color
 							key="backgroundColor"
 							systemColor="systemBackgroundColor"
 						/>
-                    </imageView>
+                    </view>
                 </viewController>
                 <placeholder
 					placeholderIdentifier="IBFirstResponder"
@@ -67,7 +67,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="Splash" width="1366" height="1366" />
         <systemColor name="systemBackgroundColor">
             <color
 				white="1"
