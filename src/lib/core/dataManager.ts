@@ -118,7 +118,15 @@ export const DataManager = {
         if (value) {
           try {
             // 尝试解析JSON
-            exportData.data[key] = JSON.parse(value);
+            let parsedValue = JSON.parse(value);
+
+            // 如果是 brewGuideSettings，检查是否被 Zustand persist 包装
+            if (key === 'brewGuideSettings' && parsedValue?.state?.settings) {
+              // 解包 Zustand persist 的数据结构
+              parsedValue = parsedValue.state.settings;
+            }
+
+            exportData.data[key] = parsedValue;
 
             // 如果是冲煮笔记数据，清理冗余的咖啡豆信息
             if (key === 'brewingNotes' && Array.isArray(exportData.data[key])) {
@@ -268,11 +276,27 @@ export const DataManager = {
 
       for (const key of APP_DATA_KEYS) {
         if (importData.data[key] !== undefined) {
+          let valueToSave = importData.data[key];
+
+          // 如果是 brewGuideSettings，需要包装为 Zustand persist 格式
+          if (key === 'brewGuideSettings' && typeof valueToSave === 'object') {
+            // 检查是否已经是包装格式
+            if (!(valueToSave as any)?.state?.settings) {
+              // 包装为 Zustand persist 格式
+              valueToSave = {
+                state: {
+                  settings: valueToSave,
+                },
+                version: 0,
+              };
+            }
+          }
+
           // 保存到Storage
           const value =
-            typeof importData.data[key] === 'object'
-              ? JSON.stringify(importData.data[key])
-              : String(importData.data[key]);
+            typeof valueToSave === 'object'
+              ? JSON.stringify(valueToSave)
+              : String(valueToSave);
           await storage.set(key, value);
 
           // 同步到IndexedDB（如果需要）

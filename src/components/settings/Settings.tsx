@@ -30,10 +30,15 @@ import {
   Download,
   X,
   Settings2,
+  Layout,
 } from 'lucide-react';
 
 import Image from 'next/image';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import {
+  ViewOption,
+  VIEW_OPTIONS,
+} from '@/components/coffee-bean/List/constants';
 
 // 定义设置选项接口
 export interface SettingsOptions {
@@ -57,6 +62,18 @@ export interface SettingsOptions {
   safeAreaMargins?: {
     top: number; // 顶部边距
     bottom: number; // 底部边距
+  };
+  // 导航栏设置
+  navigationSettings?: {
+    visibleTabs: {
+      brewing: boolean;
+      coffeeBean: boolean;
+      notes: boolean;
+    };
+    coffeeBeanViews: {
+      [key in ViewOption]?: boolean;
+    };
+    pinnedViews: ViewOption[];
   };
   // 自定义赏味期设置
   customFlavorPeriod?: {
@@ -165,6 +182,21 @@ export const defaultSettings: SettingsOptions = {
     top: 38, // 默认顶部边距 42px
     bottom: 38, // 默认底部边距 42px
   },
+  // 导航栏设置默认值
+  navigationSettings: {
+    visibleTabs: {
+      brewing: true,
+      coffeeBean: true,
+      notes: true,
+    },
+    coffeeBeanViews: {
+      [VIEW_OPTIONS.INVENTORY]: true,
+      [VIEW_OPTIONS.RANKING]: true,
+      [VIEW_OPTIONS.BLOGGER]: true,
+      [VIEW_OPTIONS.STATS]: true,
+    },
+    pinnedViews: [],
+  },
   // 默认自定义赏味期设置 - 初始为空，使用预设值
   customFlavorPeriod: {
     light: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆7天，赏味期60天
@@ -221,6 +253,7 @@ export const defaultSettings: SettingsOptions = {
 // 子设置页面的打开/关闭函数接口
 export interface SubSettingsHandlers {
   onOpenDisplaySettings: () => void;
+  onOpenNavigationSettings: () => void;
   onOpenStockSettings: () => void;
   onOpenBeanSettings: () => void;
   onOpenFlavorPeriodSettings: () => void;
@@ -921,6 +954,16 @@ const Settings: React.FC<SettingsProps> = ({
             <div className="flex items-center space-x-3">
               <Monitor className="h-4 w-4 text-neutral-500" />
               <span>显示设置</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-neutral-400" />
+          </button>
+          <button
+            onClick={subSettingsHandlers.onOpenNavigationSettings}
+            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            <div className="flex items-center space-x-3">
+              <Layout className="h-4 w-4 text-neutral-500" />
+              <span>导航栏设置</span>
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>

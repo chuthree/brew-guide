@@ -4,27 +4,13 @@ import {
   getBeanProcesses,
   getBeanVarieties,
 } from '@/lib/utils/beanVarietyUtils';
+import { VIEW_OPTIONS, VIEW_LABELS, type ViewOption } from './constants';
 
 // ExtendedCoffeeBean 已移除，直接使用 CoffeeBean
 export type ExtendedCoffeeBean = CoffeeBean;
 
-// 视图模式定义
-export const VIEW_OPTIONS = {
-  INVENTORY: 'inventory',
-  RANKING: 'ranking',
-  BLOGGER: 'blogger', // 新增博主榜单视图
-  STATS: 'stats', // 新增统计视图
-} as const;
-
-export type ViewOption = (typeof VIEW_OPTIONS)[keyof typeof VIEW_OPTIONS];
-
-// 视图选项的显示名称
-export const VIEW_LABELS: Record<ViewOption, string> = {
-  [VIEW_OPTIONS.INVENTORY]: '咖啡豆库存',
-  [VIEW_OPTIONS.RANKING]: '个人榜单',
-  [VIEW_OPTIONS.BLOGGER]: '博主榜单',
-  [VIEW_OPTIONS.STATS]: '统计视图',
-};
+// Re-export constants for backward compatibility
+export { VIEW_OPTIONS, VIEW_LABELS, type ViewOption };
 
 // 咖啡豆分类模式
 export type BeanFilterMode = 'variety' | 'origin' | 'flavorPeriod' | 'roaster';

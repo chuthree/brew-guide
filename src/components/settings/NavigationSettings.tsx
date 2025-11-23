@@ -1,0 +1,362 @@
+'use client';
+
+import React from 'react';
+import { ChevronLeft } from 'lucide-react';
+import { SettingsOptions } from './Settings';
+import hapticsUtils from '@/lib/ui/haptics';
+import { showToast } from '@/components/common/feedback/LightToast';
+import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import {
+  ViewOption,
+  VIEW_LABELS,
+  VIEW_OPTIONS,
+} from '@/components/coffee-bean/List/constants';
+
+interface NavigationSettingsProps {
+  settings: SettingsOptions;
+  onClose: () => void;
+  handleChange: <K extends keyof SettingsOptions>(
+    key: K,
+    value: SettingsOptions[K]
+  ) => void | Promise<void>;
+}
+
+const NavigationSettings: React.FC<NavigationSettingsProps> = ({
+  settings,
+  onClose,
+  handleChange,
+}) => {
+  // 历史栈管理 - 使用 ref 确保只执行一次
+  const onCloseRef = React.useRef(onClose);
+  onCloseRef.current = onClose;
+
+  React.useEffect(() => {
+    window.history.pushState({ modal: 'navigation-settings' }, '');
+
+    const handlePopState = (_event: PopStateEvent) => {
+      onCloseRef.current();
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // 关闭处理
+  const handleClose = () => {
+    setIsVisible(false);
+    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
+    setTimeout(() => {
+      if (window.history.state?.modal === 'navigation-settings') {
+        window.history.back();
+      } else {
+        onClose();
+      }
+    }, 350);
+  };
+
+  // 控制动画状态
+  const [shouldRender, setShouldRender] = React.useState(false);
+  const [isVisible, setIsVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    setShouldRender(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+    });
+  }, []);
+
+  // 处理主导航显示切换
+  const handleMainTabToggle = (tab: 'brewing' | 'coffeeBean' | 'notes') => {
+    const current = settings.navigationSettings || {
+      visibleTabs: {
+        brewing: true,
+        coffeeBean: true,
+        notes: true,
+      },
+      coffeeBeanViews: {
+        [VIEW_OPTIONS.INVENTORY]: true,
+        [VIEW_OPTIONS.RANKING]: true,
+        [VIEW_OPTIONS.BLOGGER]: true,
+        [VIEW_OPTIONS.STATS]: true,
+      },
+      pinnedViews: [],
+    };
+
+    const currentVisibleTabs = current.visibleTabs;
+
+    // 至少保留一个标签页
+    const activeCount =
+      Object.values(currentVisibleTabs).filter(Boolean).length;
+    if (currentVisibleTabs[tab] && activeCount <= 1) {
+      showToast({ type: 'error', title: '至少保留一个标签页' });
+      return;
+    }
+
+    const newVisibleTabs = {
+      ...currentVisibleTabs,
+      [tab]: !currentVisibleTabs[tab],
+    };
+    handleChange('navigationSettings', {
+      ...current,
+      visibleTabs: newVisibleTabs,
+    });
+
+    if (settings.hapticFeedback) {
+      hapticsUtils.light();
+    }
+  };
+
+  // 处理咖啡豆视图显示切换
+  const handleBeanViewToggle = (view: ViewOption) => {
+    const current = settings.navigationSettings || {
+      visibleTabs: {
+        brewing: true,
+        coffeeBean: true,
+        notes: true,
+      },
+      coffeeBeanViews: {
+        [VIEW_OPTIONS.INVENTORY]: true,
+        [VIEW_OPTIONS.RANKING]: true,
+        [VIEW_OPTIONS.BLOGGER]: true,
+        [VIEW_OPTIONS.STATS]: true,
+      },
+      pinnedViews: [],
+    };
+
+    const currentBeanViews = current.coffeeBeanViews;
+
+    // 至少保留一个视图
+    const activeCount = Object.values(currentBeanViews).filter(Boolean).length;
+    if (currentBeanViews[view] && activeCount <= 1) {
+      showToast({ type: 'error', title: '至少保留一个视图' });
+      return;
+    }
+
+    const newBeanViews = {
+      ...currentBeanViews,
+      [view]: !currentBeanViews[view],
+    };
+    handleChange('navigationSettings', {
+      ...current,
+      coffeeBeanViews: newBeanViews,
+    });
+
+    if (settings.hapticFeedback) {
+      hapticsUtils.light();
+    }
+  };
+
+  // 处理视图固定切换
+  const handlePinViewToggle = (view: ViewOption) => {
+    const current = settings.navigationSettings || {
+      visibleTabs: {
+        brewing: true,
+        coffeeBean: true,
+        notes: true,
+      },
+      coffeeBeanViews: {
+        [VIEW_OPTIONS.INVENTORY]: true,
+        [VIEW_OPTIONS.RANKING]: true,
+        [VIEW_OPTIONS.BLOGGER]: true,
+        [VIEW_OPTIONS.STATS]: true,
+      },
+      pinnedViews: [],
+    };
+
+    const currentPinned = current.pinnedViews;
+    let newPinned: ViewOption[];
+    const isPinning = !currentPinned.includes(view); // 判断是固定还是取消固定
+
+    if (currentPinned.includes(view)) {
+      newPinned = currentPinned.filter(v => v !== view);
+    } else {
+      newPinned = [...currentPinned, view];
+    }
+
+    handleChange('navigationSettings', {
+      ...current,
+      pinnedViews: newPinned,
+    });
+
+    // 如果正在固定视图，触发事件通知需要切换当前视图
+    if (isPinning) {
+      window.dispatchEvent(
+        new CustomEvent('viewPinned', {
+          detail: { pinnedView: view },
+        })
+      );
+    }
+
+    if (settings.hapticFeedback) {
+      hapticsUtils.light();
+    }
+  };
+
+  if (!shouldRender) {
+    return null;
+  }
+
+  const visibleTabs = settings.navigationSettings?.visibleTabs || {
+    brewing: true,
+    coffeeBean: true,
+    notes: true,
+  };
+
+  const coffeeBeanViews = settings.navigationSettings?.coffeeBeanViews || {
+    [VIEW_OPTIONS.INVENTORY]: true,
+    [VIEW_OPTIONS.RANKING]: true,
+    [VIEW_OPTIONS.BLOGGER]: true,
+    [VIEW_OPTIONS.STATS]: true,
+  };
+
+  const pinnedViews = settings.navigationSettings?.pinnedViews || [];
+
+  // 计算未被固定的视图中，有多少是被启用的
+  const availableUnpinnedViewsCount = Object.values(VIEW_OPTIONS).filter(
+    view => {
+      if (pinnedViews.includes(view)) return false;
+      return coffeeBeanViews[view] !== false;
+    }
+  ).length;
+
+  // 开关组件
+  const Switch = ({
+    checked,
+    onChange,
+  }: {
+    checked: boolean;
+    onChange: () => void;
+  }) => (
+    <label className="relative inline-flex cursor-pointer items-center">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="peer sr-only"
+      />
+      <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+    </label>
+  );
+
+  return (
+    <div
+      className="fixed inset-0 mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
+      style={getChildPageStyle(isVisible)}
+    >
+      {/* 头部导航栏 */}
+      <div className="pt-safe-top relative flex items-center justify-center py-4">
+        <button
+          onClick={handleClose}
+          className="absolute left-4 flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
+          导航栏设置
+        </h2>
+      </div>
+
+      {/* 滚动内容区域 */}
+      <div className="pb-safe-bottom relative flex-1 overflow-y-auto">
+        <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
+
+        {/* 主导航显示设置 */}
+        <div className="-mt-4 px-6 py-4">
+          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+            主导航显示
+          </h3>
+          <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                冲煮
+              </span>
+              <Switch
+                checked={visibleTabs.brewing}
+                onChange={() => handleMainTabToggle('brewing')}
+              />
+            </div>
+            {availableUnpinnedViewsCount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                  咖啡豆库存
+                </span>
+                <Switch
+                  checked={visibleTabs.coffeeBean}
+                  onChange={() => handleMainTabToggle('coffeeBean')}
+                />
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                笔记
+              </span>
+              <Switch
+                checked={visibleTabs.notes}
+                onChange={() => handleMainTabToggle('notes')}
+              />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            至少需要保留一个主导航标签页
+          </p>
+        </div>
+
+        {/* 咖啡豆视图显示设置 */}
+        {visibleTabs.coffeeBean && availableUnpinnedViewsCount > 0 && (
+          <div className="px-6 py-4">
+            <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+              咖啡豆视图显示
+            </h3>
+            <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
+              {Object.values(VIEW_OPTIONS)
+                .filter(view => !pinnedViews.includes(view))
+                .map(view => (
+                  <div key={view} className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                      {VIEW_LABELS[view]}
+                    </span>
+                    <Switch
+                      checked={coffeeBeanViews[view] ?? true}
+                      onChange={() => handleBeanViewToggle(view)}
+                    />
+                  </div>
+                ))}
+            </div>
+            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+              控制在咖啡豆页面下拉菜单中显示的视图选项
+            </p>
+          </div>
+        )}
+
+        {/* 视图固定设置 */}
+        <div className="px-6 py-4">
+          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+            固定视图到导航栏
+          </h3>
+          <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
+            {Object.values(VIEW_OPTIONS).map(view => (
+              <div key={view} className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                  {VIEW_LABELS[view]}
+                </span>
+                <Switch
+                  checked={pinnedViews.includes(view)}
+                  onChange={() => handlePinViewToggle(view)}
+                />
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            开启后，该视图将作为独立标签页显示在主导航栏右侧
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default NavigationSettings;

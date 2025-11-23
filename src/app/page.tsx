@@ -62,7 +62,7 @@ import {
   ViewOption,
   VIEW_OPTIONS,
   VIEW_LABELS,
-} from '@/components/coffee-bean/List/types';
+} from '@/components/coffee-bean/List/constants';
 import { getStringState, saveStringState } from '@/lib/core/statePersistence';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronsUpDown } from 'lucide-react';
@@ -99,6 +99,8 @@ import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
 import BrewingNoteEditModal from '@/components/notes/Form/BrewingNoteEditModal';
 import NoteDetailModal from '@/components/notes/Detail/NoteDetailModal';
 import ImageViewer from '@/components/common/ui/ImageViewer';
+import NavigationSettings from '@/components/settings/NavigationSettings';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -225,6 +227,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 子设置页面的状态
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
+  const [showNavigationSettings, setShowNavigationSettings] = useState(false);
   const [showStockSettings, setShowStockSettings] = useState(false);
   const [showBeanSettings, setShowBeanSettings] = useState(false);
   const [showFlavorPeriodSettings, setShowFlavorPeriodSettings] =
@@ -248,6 +251,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 计算是否有任何子设置页面打开
   const hasSubSettingsOpen =
     showDisplaySettings ||
+    showNavigationSettings ||
     showStockSettings ||
     showBeanSettings ||
     showFlavorPeriodSettings ||
@@ -262,10 +266,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showRoasterLogoSettings ||
     showGrinderSettings;
 
-  const [settings, setSettings] = useState<SettingsOptions>(() => {
-    // 使用默认设置作为初始值，稍后在 useEffect 中异步加载
-    return defaultSettings;
-  });
+  const { settings, setSettings, updateSettings } = useSettingsStore();
 
   // 咖啡豆表单状态
   const [showBeanForm, setShowBeanForm] = useState(false);
@@ -533,53 +534,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           // 继续初始化，不阻止应用启动
         }
 
-        // 1. 加载设置
-        try {
-          const { Storage } = await import('@/lib/core/storage');
-          const savedSettings = await Storage.get('brewGuideSettings');
-          if (savedSettings && typeof savedSettings === 'string' && isMounted) {
-            try {
-              const parsedSettings = JSON.parse(savedSettings) as Record<
-                string,
-                unknown
-              >;
-
-              // 迁移旧的showFlavorPeriod设置到新的dateDisplayMode
-              if (
-                parsedSettings.showFlavorPeriod !== undefined &&
-                parsedSettings.dateDisplayMode === undefined
-              ) {
-                parsedSettings.dateDisplayMode = parsedSettings.showFlavorPeriod
-                  ? 'flavorPeriod'
-                  : 'date';
-                delete parsedSettings.showFlavorPeriod;
-
-                // 保存迁移后的设置
-                try {
-                  await Storage.set(
-                    'brewGuideSettings',
-                    JSON.stringify(parsedSettings)
-                  );
-                } catch {
-                  // 静默处理保存错误
-                }
-              }
-
-              setSettings(parsedSettings as unknown as SettingsOptions);
-
-              // 应用字体缩放级别
-              if (
-                parsedSettings.textZoomLevel &&
-                typeof parsedSettings.textZoomLevel === 'number'
-              ) {
-                fontZoomUtils.set(parsedSettings.textZoomLevel);
-              }
-            } catch {
-              // JSON解析失败，使用默认设置
-            }
-          }
-        } catch {
-          // 静默处理错误
+        // 1. 应用字体缩放
+        if (settings.textZoomLevel) {
+          fontZoomUtils.set(settings.textZoomLevel);
         }
 
         // 2. 检查是否首次使用
@@ -713,6 +670,49 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       return VIEW_OPTIONS.INVENTORY;
     }
   });
+
+  // 监听视图固定事件，当固定当前视图时自动切换到其他可用视图
+  useEffect(() => {
+    const handleViewPinned = (e: Event) => {
+      const customEvent = e as CustomEvent<{ pinnedView: ViewOption }>;
+      const pinnedView = customEvent.detail.pinnedView;
+
+      // 如果固定的是当前正在查看的视图
+      if (pinnedView === currentBeanView) {
+        // 获取最新的导航设置
+        const { navigationSettings } = settings;
+        const pinnedViews = navigationSettings?.pinnedViews || [];
+        const coffeeBeanViews = navigationSettings?.coffeeBeanViews || {
+          [VIEW_OPTIONS.INVENTORY]: true,
+          [VIEW_OPTIONS.RANKING]: true,
+          [VIEW_OPTIONS.BLOGGER]: true,
+          [VIEW_OPTIONS.STATS]: true,
+        };
+
+        // 查找第一个未被固定且启用的视图
+        const availableView = Object.values(VIEW_OPTIONS).find(view => {
+          // 排除刚刚被固定的视图
+          if ([...pinnedViews, pinnedView].includes(view)) return false;
+          // 必须是启用的视图
+          return coffeeBeanViews[view] !== false;
+        });
+
+        // 如果找到可用视图，切换过去
+        if (availableView) {
+          setCurrentBeanView(availableView);
+          saveStringState('coffee-beans', 'viewMode', availableView);
+        }
+      }
+    };
+
+    window.addEventListener('viewPinned', handleViewPinned as EventListener);
+    return () => {
+      window.removeEventListener(
+        'viewPinned',
+        handleViewPinned as EventListener
+      );
+    };
+  }, [currentBeanView, settings]);
 
   // 视图下拉菜单状态
   const [showViewDropdown, setShowViewDropdown] = useState(false);
@@ -961,18 +961,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handleSettingsChange = useCallback(
     async (newSettings: SettingsOptions) => {
       setSettings(newSettings);
-      try {
-        const { Storage } = await import('@/lib/core/storage');
-        await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-
-        if (newSettings.textZoomLevel) {
-          fontZoomUtils.set(newSettings.textZoomLevel);
-        }
-      } catch {
-        // 静默处理错误
+      if (newSettings.textZoomLevel) {
+        fontZoomUtils.set(newSettings.textZoomLevel);
       }
     },
     [setSettings]
+  );
+
+  const handleSubSettingChange = useCallback(
+    (key: string, value: any) => {
+      updateSettings(key as keyof SettingsOptions, value);
+    },
+    [updateSettings]
   );
 
   const handleLayoutChange = useCallback(
@@ -1858,6 +1858,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             ratio: method.params.ratio,
             grindSize: method.params.grindSize,
             temp: method.params.temp,
+            stages: method.params.stages.map(stage => ({
+              label: stage.label,
+              time: stage.time || 0,
+              water: stage.water,
+              detail: stage.detail,
+              pourType: stage.pourType,
+            })),
           },
         }));
         handleMethodSelectWrapper(methodIndex);
@@ -2731,6 +2738,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           currentBeanView={currentBeanView}
           showViewDropdown={showViewDropdown}
           onToggleViewDropdown={handleToggleViewDropdown}
+          onBeanViewChange={handleBeanViewChange}
           customEquipments={customEquipments}
           onEquipmentSelect={handleEquipmentSelectWithName}
           onAddEquipment={() => setShowEquipmentForm(true)}
@@ -2998,7 +3006,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   },
                 },
               }}
-              className="fixed inset-0 z-[60]"
+              className="fixed inset-0 z-60"
               style={{
                 backgroundColor:
                   'color-mix(in srgb, var(--background) 40%, transparent)',
@@ -3019,7 +3027,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     ease: [0.4, 0.0, 1, 1],
                   },
                 }}
-                className="fixed z-[80]"
+                className="fixed z-80"
                 style={{
                   top: `${beanButtonPosition.top}px`,
                   left: `${beanButtonPosition.left}px`,
@@ -3072,7 +3080,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     ease: [0.4, 0.0, 1, 1],
                   },
                 }}
-                className="fixed z-[80]"
+                className="fixed z-80"
                 style={{
                   top: `${beanButtonPosition.top + 30}px`,
                   left: `${beanButtonPosition.left}px`,
@@ -3082,7 +3090,24 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               >
                 <div className="flex flex-col">
                   {Object.entries(VIEW_LABELS)
-                    .filter(([key]) => key !== currentBeanView)
+                    .filter(([key]) => {
+                      const viewKey = key as ViewOption;
+                      if (viewKey === currentBeanView) return false;
+
+                      // 如果已经被固定到导航栏，不显示在下拉菜单中
+                      const isPinned =
+                        settings.navigationSettings?.pinnedViews?.includes(
+                          viewKey
+                        );
+                      if (isPinned) return false;
+
+                      // Check visibility setting
+                      const isVisible =
+                        settings.navigationSettings?.coffeeBeanViews?.[
+                          viewKey
+                        ] ?? true;
+                      return isVisible;
+                    })
                     .map(([key, label], index) => (
                       <motion.button
                         key={key}
@@ -3138,6 +3163,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         hasSubSettingsOpen={hasSubSettingsOpen}
         subSettingsHandlers={{
           onOpenDisplaySettings: () => setShowDisplaySettings(true),
+          onOpenNavigationSettings: () => setShowNavigationSettings(true),
           onOpenStockSettings: () => setShowStockSettings(true),
           onOpenBeanSettings: () => setShowBeanSettings(true),
           onOpenFlavorPeriodSettings: () => setShowFlavorPeriodSettings(true),
@@ -3162,17 +3188,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <DisplaySettings
           settings={settings}
           onClose={() => setShowDisplaySettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
+        />
+      )}
+
+      {showNavigationSettings && (
+        <NavigationSettings
+          settings={settings}
+          onClose={() => setShowNavigationSettings(false)}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3180,18 +3204,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <StockSettings
           settings={settings}
           onClose={() => setShowStockSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            // 触发自定义事件通知其他组件设置已更改
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3199,17 +3212,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <BeanSettings
           settings={settings}
           onClose={() => setShowBeanSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3217,17 +3220,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <FlavorPeriodSettings
           settings={settings}
           onClose={() => setShowFlavorPeriodSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3235,17 +3228,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <TimerSettings
           settings={settings}
           onClose={() => setShowTimerSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3253,17 +3236,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <DataSettings
           settings={settings}
           onClose={() => setShowDataSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
           onDataChange={handleDataChange}
         />
       )}
@@ -3272,17 +3245,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <NotificationSettings
           settings={settings}
           onClose={() => setShowNotificationSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3290,17 +3253,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <RandomCoffeeBeanSettings
           settings={settings}
           onClose={() => setShowRandomCoffeeBeanSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3308,17 +3261,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <SearchSortSettings
           settings={settings}
           onClose={() => setShowSearchSortSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3326,17 +3269,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <FlavorDimensionSettings
           settings={settings}
           onClose={() => setShowFlavorDimensionSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3345,18 +3278,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           settings={settings}
           customEquipments={customEquipments}
           onClose={() => setShowHiddenMethodsSettings(false)}
-          onChange={async (newSettings: SettingsOptions) => {
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-            // 触发重新加载以更新显示
-            window.dispatchEvent(new CustomEvent('settingsChanged'));
-          }}
+          onChange={handleSettingsChange}
         />
       )}
 
@@ -3365,18 +3287,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           settings={settings}
           customEquipments={customEquipments}
           onClose={() => setShowHiddenEquipmentsSettings(false)}
-          onChange={async (newSettings: SettingsOptions) => {
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-            // 触发重新加载以更新显示
-            window.dispatchEvent(new CustomEvent('settingsChanged'));
-          }}
+          onChange={handleSettingsChange}
         />
       )}
 
@@ -3392,17 +3303,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <GrinderSettings
           settings={settings}
           onClose={() => setShowGrinderSettings(false)}
-          handleChange={async (key, value) => {
-            const newSettings = { ...settings, [key]: value };
-            setSettings(newSettings);
-            const { Storage } = await import('@/lib/core/storage');
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            window.dispatchEvent(
-              new CustomEvent('storageChange', {
-                detail: { key: 'brewGuideSettings' },
-              })
-            );
-          }}
+          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -3624,6 +3525,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         });
                       }
                     }
+                  } else {
+                    // 检测到无效的 beanId 或 capacityAdjustment，记录警告
+                    console.warn('无效的 beanId 或 capacityAdjustment:', {
+                      beanId,
+                      capacityAdjustment,
+                    });
                   }
                 } else {
                   // 处理快捷扣除记录和普通笔记的恢复
