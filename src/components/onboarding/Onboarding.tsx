@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SettingsOptions,
   defaultSettings,
@@ -8,6 +8,12 @@ import {
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { Lock, Layers, Share2 } from 'lucide-react';
 import Image from 'next/image';
+import { Capacitor } from '@capacitor/core';
+import PersistentStorageManager, {
+  isPersistentStorageSupported,
+  isPWAMode,
+  type StorageEstimate,
+} from '@/lib/utils/persistentStorage';
 
 // 设置页面界面属性
 interface OnboardingProps {
@@ -23,9 +29,53 @@ const Onboarding: React.FC<OnboardingProps> = ({
   // 使用半透明叠加层颜色同步顶部安全区
   useThemeColor({ useOverlay: true, enabled: true });
 
+  // 持久化存储状态
+  const [isNativePlatform, setIsNativePlatform] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
+  const [isPersisted, setIsPersisted] = useState(false);
+  const [canRequestPersist, setCanRequestPersist] = useState(false);
+
+  // 检测平台和持久化存储状态
+  useEffect(() => {
+    const checkPlatform = async () => {
+      const isNative = Capacitor.isNativePlatform();
+      setIsNativePlatform(isNative);
+
+      if (!isNative) {
+        const pwaMode = isPWAMode();
+        setIsPWA(pwaMode);
+
+        if (pwaMode && isPersistentStorageSupported()) {
+          setCanRequestPersist(true);
+          try {
+            const persisted = await PersistentStorageManager.checkPersisted();
+            setIsPersisted(persisted);
+          } catch (error) {
+            console.error('检查持久化状态失败:', error);
+          }
+        }
+      } else {
+        // 原生应用默认已持久化
+        setIsPersisted(true);
+      }
+    };
+
+    checkPlatform();
+  }, []);
+
   // 处理完成按钮点击
   const handleComplete = async () => {
     try {
+      // 如果是 PWA 模式且支持持久化存储，先尝试请求
+      if (canRequestPersist && !isPersisted) {
+        try {
+          await PersistentStorageManager.requestPersist();
+        } catch (error) {
+          console.error('请求持久化存储失败:', error);
+          // 即使失败也继续完成引导流程
+        }
+      }
+
       // 动态导入 Storage
       const { Storage } = await import('@/lib/core/storage');
       // 标记引导已完成

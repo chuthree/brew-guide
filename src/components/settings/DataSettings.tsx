@@ -19,6 +19,12 @@ import {
   DataManagementSection,
   ToolsSection,
 } from './data-settings';
+import { Capacitor } from '@capacitor/core';
+import PersistentStorageManager, {
+  isPersistentStorageSupported,
+  isPWAMode,
+  type StorageEstimate,
+} from '@/lib/utils/persistentStorage';
 
 type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>;
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
@@ -123,6 +129,15 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     useState<BackupReminderSettings | null>(null);
   const [nextReminderText, setNextReminderText] = useState('');
 
+  // 持久化存储状态
+  const [isPersisted, setIsPersisted] = useState<boolean>(false);
+  const [storageEstimate, setStorageEstimate] =
+    useState<StorageEstimate | null>(null);
+  const [isRequestingPersist, setIsRequestingPersist] = useState(false);
+  const [isNativePlatform, setIsNativePlatform] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
+  const [showStorageDetails, setShowStorageDetails] = useState(false);
+
   // 云同步类型选择
   const [showSyncTypeDropdown, setShowSyncTypeDropdown] = useState(false);
   const syncType = s3Settings.enabled
@@ -145,6 +160,54 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     const timer = setTimeout(() => setIsVisible(true), 10);
     return () => clearTimeout(timer);
   }, []);
+
+  // 检测平台
+  useEffect(() => {
+    const isNative = Capacitor.isNativePlatform();
+    setIsNativePlatform(isNative);
+
+    // 检测是否为 PWA 模式
+    if (!isNative) {
+      setIsPWA(isPWAMode());
+    }
+  }, []);
+
+  // 加载持久化存储状态
+  useEffect(() => {
+    const loadStorageStatus = async () => {
+      if (isNativePlatform) {
+        // Capacitor 原生平台，设置为已持久化状态并加载存储信息
+        setIsPersisted(true);
+
+        // 原生平台也可以获取存储估算
+        try {
+          const estimate = await PersistentStorageManager.getEstimate();
+          setStorageEstimate(estimate);
+        } catch (error) {
+          console.error('加载存储信息失败:', error);
+        }
+        return;
+      }
+
+      // Web 环境
+      if (!isPWA) {
+        // 非 PWA 模式，不加载持久化状态
+        return;
+      }
+
+      try {
+        const persisted = await PersistentStorageManager.checkPersisted();
+        setIsPersisted(persisted);
+
+        const estimate = await PersistentStorageManager.getEstimate();
+        setStorageEstimate(estimate);
+      } catch (error) {
+        console.error('加载存储状态失败:', error);
+      }
+    };
+
+    loadStorageStatus();
+  }, [isNativePlatform, isPWA]);
 
   // 加载备份提醒设置
   useEffect(() => {
@@ -263,6 +326,52 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     window.dispatchEvent(
       new CustomEvent('s3ConflictResolved', { detail: { direction } })
     );
+  };
+
+  // 请求持久化存储
+  const handleRequestPersist = async () => {
+    if (isNativePlatform || !isPWA || !isPersistentStorageSupported()) {
+      return;
+    }
+
+    setIsRequestingPersist(true);
+    try {
+      const granted = await PersistentStorageManager.requestPersist();
+      setIsPersisted(granted);
+
+      if (settings.hapticFeedback) {
+        hapticsUtils.light();
+      }
+
+      // 刷新存储估算
+      const estimate = await PersistentStorageManager.getEstimate(true);
+      setStorageEstimate(estimate);
+    } catch (error) {
+      console.error('请求持久化存储失败:', error);
+    } finally {
+      setIsRequestingPersist(false);
+    }
+  };
+
+  // 刷新存储信息
+  const handleRefreshStorage = async () => {
+    if (!isNativePlatform && !isPWA) return;
+
+    try {
+      if (!isNativePlatform && isPWA) {
+        const persisted = await PersistentStorageManager.checkPersisted(true);
+        setIsPersisted(persisted);
+      }
+
+      const estimate = await PersistentStorageManager.getEstimate(true);
+      setStorageEstimate(estimate);
+
+      if (settings.hapticFeedback) {
+        hapticsUtils.light();
+      }
+    } catch (error) {
+      console.error('刷新存储信息失败:', error);
+    }
   };
 
   if (!shouldRender) return null;
@@ -406,6 +515,157 @@ const DataSettings: React.FC<DataSettingsProps> = ({
           </div>
         </div>
 
+        {/* 持久化存储设置组 */}
+        <div className="px-6 py-4">
+          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+            数据持久化
+          </h3>
+
+          <div className="space-y-3">
+            {!isPWA && !isNativePlatform ? (
+              // 浏览器访问但非 PWA - 显示开关
+              <div className="rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                    持久化存储
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      disabled={true}
+                      className="peer sr-only"
+                    />
+                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] dark:bg-neutral-700"></div>
+                  </label>
+                </div>
+
+                {/* 分割线 */}
+                <div className="my-3 border-t border-neutral-200 dark:border-neutral-700"></div>
+
+                <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                  <p>
+                    请将本应用添加到主屏幕以启用 PWA
+                    模式，即可使用持久化存储功能。
+                  </p>
+                </div>
+              </div>
+            ) : isPersisted ? (
+              // 已启用（包括原生应用和 PWA 已开启）- 显示为按钮样式
+              <div className="relative">
+                <button
+                  onClick={() => setShowStorageDetails(!showStorageDetails)}
+                  className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                >
+                  <span>持久化存储</span>
+                  <div className="flex items-center gap-2">
+                    {storageEstimate && (
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                        已使用 {storageEstimate.usageFormatted} /{' '}
+                        {storageEstimate.quotaFormatted}
+                      </span>
+                    )}
+                    <ChevronRight
+                      className={`h-4 w-4 text-neutral-400 transition-transform ${showStorageDetails ? 'rotate-90' : ''}`}
+                    />
+                  </div>
+                </button>
+
+                {/* 展开的详情 */}
+                {showStorageDetails && storageEstimate && (
+                  <div className="mt-2 space-y-2 rounded bg-neutral-100 p-4 dark:bg-neutral-800">
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                        存储使用详情
+                      </span>
+                      <button
+                        onClick={handleRefreshStorage}
+                        className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                      >
+                        刷新
+                      </button>
+                    </div>
+
+                    {/* 进度条 */}
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                      <div
+                        className={`h-full transition-all ${
+                          storageEstimate.usagePercent < 70
+                            ? 'bg-green-500'
+                            : storageEstimate.usagePercent < 90
+                              ? 'bg-orange-500'
+                              : 'bg-red-500'
+                        }`}
+                        style={{
+                          width: `${Math.min(storageEstimate.usagePercent, 100)}%`,
+                        }}
+                      />
+                    </div>
+
+                    {/* 存储详情 */}
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between text-neutral-600 dark:text-neutral-400">
+                        <span>可用空间</span>
+                        <span className="font-medium text-neutral-800 dark:text-neutral-200">
+                          {storageEstimate.availableFormatted}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-neutral-600 dark:text-neutral-400">
+                        <span>已使用</span>
+                        <span className="font-medium text-neutral-800 dark:text-neutral-200">
+                          {storageEstimate.usageFormatted}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t border-neutral-200 pt-1 dark:border-neutral-700">
+                        <span className="text-neutral-500 dark:text-neutral-500">
+                          使用率
+                        </span>
+                        <span className="font-medium text-neutral-800 dark:text-neutral-200">
+                          {storageEstimate.usagePercent.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // PWA 但未启用 - 显示开关
+              <div className="rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                    持久化存储
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      checked={isPersisted}
+                      onChange={handleRequestPersist}
+                      disabled={isRequestingPersist}
+                      className="peer sr-only"
+                    />
+                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                  </label>
+                </div>
+
+                {/* 分割线 */}
+                <div className="my-3 border-t border-neutral-200 dark:border-neutral-700"></div>
+
+                <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                  <p>
+                    开启后可保护应用数据不被浏览器自动清理。建议经常使用本应用的用户开启此功能，以确保数据安全。
+                  </p>
+                  {storageEstimate && (
+                    <p className="mt-2">
+                      当前已使用 {storageEstimate.usageFormatted} /{' '}
+                      {storageEstimate.quotaFormatted}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* 备份提醒设置组 */}
         {backupReminderSettings && (
           <div className="px-6 py-4">
@@ -428,7 +688,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                     }}
                     className="peer sr-only"
                   />
-                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                 </label>
               </div>
 
@@ -484,7 +744,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       {/* 冲突解决模态框 */}
       {showConflictModal && (
         <div
-          className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/50"
+          className="fixed inset-0 z-100 flex flex-col justify-end bg-black/50"
           onClick={() => setShowConflictModal(false)}
         >
           <div
