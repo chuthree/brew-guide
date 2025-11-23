@@ -295,6 +295,27 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         else if (dateGroupingMode === 'month') noteDate = `${year}-${month}`;
         else noteDate = `${year}-${month}-${day}`;
 
+        // 处理相对日期
+        if (selectedDate === 'today') {
+          const now = new Date();
+          const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          return noteDate === todayStr;
+        }
+        if (selectedDate === 'yesterday') {
+          const now = new Date();
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+          return noteDate === yesterdayStr;
+        }
+        if (selectedDate === 'dayBeforeYesterday') {
+          const now = new Date();
+          const dayBeforeYesterday = new Date(now);
+          dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+          const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
+          return noteDate === dayBeforeYesterdayStr;
+        }
+
         return noteDate === selectedDate;
       });
     }

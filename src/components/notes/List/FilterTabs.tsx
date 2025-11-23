@@ -767,13 +767,32 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   const scrollToSelected = useCallback(() => {
     if (!scrollContainerRef.current) return;
 
-    const selectedId =
+    let selectedId =
       filterMode === 'equipment'
         ? selectedEquipment
         : filterMode === 'bean'
           ? selectedBean
           : selectedDate;
     if (!selectedId) return;
+
+    // 特殊处理日期模式下的快捷选项，确保能滚动到对应的快捷按钮
+    if (filterMode === 'date' && dateGroupingMode === 'day') {
+      const todayStr = getTodayDateString('day');
+      const now = new Date();
+
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+      const dayBeforeYesterday = new Date(now);
+      dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+      const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
+
+      if (selectedId === todayStr) selectedId = 'today';
+      else if (selectedId === yesterdayStr) selectedId = 'yesterday';
+      else if (selectedId === dayBeforeYesterdayStr)
+        selectedId = 'dayBeforeYesterday';
+    }
 
     const selectedElement = scrollContainerRef.current.querySelector(
       `[data-tab="${selectedId}"]`
@@ -798,7 +817,13 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
       left: Math.max(0, targetScrollLeft),
       behavior: 'smooth',
     });
-  }, [filterMode, selectedEquipment, selectedBean, selectedDate]);
+  }, [
+    filterMode,
+    selectedEquipment,
+    selectedBean,
+    selectedDate,
+    dateGroupingMode,
+  ]);
 
   // 当选中项变化时滚动到选中项
   useEffect(() => {
@@ -996,13 +1021,16 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                               {/* 今天 - 始终显示 */}
                               <TabButton
                                 key="today-shortcut"
-                                isActive={selectedDate === todayStr}
+                                isActive={
+                                  selectedDate === 'today' ||
+                                  selectedDate === todayStr
+                                }
                                 onClick={() =>
-                                  selectedDate !== todayStr &&
-                                  onDateClick(todayStr)
+                                  selectedDate !== 'today' &&
+                                  onDateClick('today')
                                 }
                                 className="mr-3"
-                                dataTab={todayStr}
+                                dataTab="today"
                               >
                                 今天
                               </TabButton>
@@ -1010,13 +1038,16 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                               {/* 昨天 - 始终显示 */}
                               <TabButton
                                 key="yesterday-shortcut"
-                                isActive={selectedDate === yesterdayStr}
+                                isActive={
+                                  selectedDate === 'yesterday' ||
+                                  selectedDate === yesterdayStr
+                                }
                                 onClick={() =>
-                                  selectedDate !== yesterdayStr &&
-                                  onDateClick(yesterdayStr)
+                                  selectedDate !== 'yesterday' &&
+                                  onDateClick('yesterday')
                                 }
                                 className="mr-3"
-                                dataTab={yesterdayStr}
+                                dataTab="yesterday"
                               >
                                 昨天
                               </TabButton>
@@ -1025,14 +1056,15 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                               <TabButton
                                 key="day-before-yesterday-shortcut"
                                 isActive={
+                                  selectedDate === 'dayBeforeYesterday' ||
                                   selectedDate === dayBeforeYesterdayStr
                                 }
                                 onClick={() =>
-                                  selectedDate !== dayBeforeYesterdayStr &&
-                                  onDateClick(dayBeforeYesterdayStr)
+                                  selectedDate !== 'dayBeforeYesterday' &&
+                                  onDateClick('dayBeforeYesterday')
                                 }
                                 className="mr-3"
-                                dataTab={dayBeforeYesterdayStr}
+                                dataTab="dayBeforeYesterday"
                               >
                                 前天
                               </TabButton>
