@@ -316,6 +316,31 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     initialData.method || ''
   );
 
+  // 判断是否是意式器具
+  const isEspresso = useMemo(() => {
+    if (!selectedEquipment) return false;
+    const equipment = availableEquipments.find(e => e.id === selectedEquipment);
+    const name = equipment?.name || '';
+    return (
+      selectedEquipment.toLowerCase().includes('espresso') ||
+      selectedEquipment.toLowerCase().includes('意式') ||
+      name.toLowerCase().includes('espresso') ||
+      name.toLowerCase().includes('意式')
+    );
+  }, [selectedEquipment, availableEquipments]);
+
+  // 添加时间状态
+  const [totalTimeStr, setTotalTimeStr] = useState(() =>
+    initialData.totalTime ? String(initialData.totalTime) : ''
+  );
+
+  // 监听initialData.totalTime的变化
+  useEffect(() => {
+    if (initialData.totalTime) {
+      setTotalTimeStr(String(initialData.totalTime));
+    }
+  }, [initialData.totalTime]);
+
   const formRef = useRef<HTMLFormElement>(null);
   const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(
     null
@@ -529,6 +554,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           grindSize: params.grindSize || prev.grindSize,
           temp: params.temp || prev.temp,
         }));
+
+        // 同步时间
+        if (params.stages && params.stages.length > 0) {
+          const totalTime = params.stages.reduce(
+            (acc: number, stage: any) => acc + (stage.time || 0),
+            0
+          );
+          if (totalTime > 0) {
+            setTotalTimeStr(String(totalTime));
+          }
+        }
       }
     };
 
@@ -645,6 +681,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         getParamValue(params.ratio, 'ratio').split(':')[1]
       ),
     });
+
+    // 如果方案包含阶段信息，尝试提取总时间
+    if (params.stages && params.stages.length > 0) {
+      // 计算所有阶段的时间总和
+      const totalTime = params.stages.reduce(
+        (acc, stage) => acc + (stage.time || 0),
+        0
+      );
+      if (totalTime > 0) {
+        setTotalTimeStr(String(totalTime));
+      }
+    }
   }, []);
 
   // 简化的数据更新逻辑
@@ -757,7 +805,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   // 通用数值输入处理
   const createNumericHandler = useCallback(
     (
-      field: 'coffee' | 'ratio' | 'temp',
+      field: 'coffee' | 'ratio' | 'temp' | 'water',
       formatter: (value: string) => string
     ) =>
       (value: string) => {
@@ -768,7 +816,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         const formattedValue = formatter(value);
         setMethodParams(prev => {
           const newParams = { ...prev, [field]: formattedValue };
-          if (field === 'coffee' || field === 'ratio') {
+          if (!isEspresso && (field === 'coffee' || field === 'ratio')) {
             newParams.water = calculateWater(
               field === 'coffee' ? formattedValue : prev.coffee,
               field === 'ratio' ? formattedValue : prev.ratio
@@ -777,7 +825,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           return newParams;
         });
       },
-    [calculateWater]
+    [calculateWater, isEspresso]
   );
 
   const handleCoffeeChange = createNumericHandler('coffee', value =>
@@ -788,6 +836,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   );
   const handleTempChange = createNumericHandler('temp', value =>
     value ? `${value}°C` : ''
+  );
+
+  const handleWaterChange = createNumericHandler('water', value =>
+    value ? `${value}g` : ''
   );
 
   // 处理器具选择
@@ -1035,7 +1087,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         grindSize: methodParams.grindSize,
         temp: methodParams.temp,
       },
-      totalTime: initialData.totalTime,
+      totalTime: isEspresso
+        ? parseFloat(totalTimeStr) || 0
+        : initialData.totalTime,
       // 使用当前选中的咖啡豆ID
       beanId: selectedCoffeeBean?.id,
       // 保留容量调整记录的特殊属性
@@ -1387,54 +1441,108 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                   g
                 </span>
               </div>
-              <div className="relative overflow-hidden">
-                <div className="flex items-center">
-                  <span className="mr-1 flex-shrink-0 text-xs text-neutral-400 dark:text-neutral-500">
-                    1:
-                  </span>
-                  <input
-                    id="coffee-ratio"
-                    name="coffeeRatio"
-                    type="text"
-                    inputMode="decimal"
-                    value={numericValues.ratio}
-                    onChange={e => handleRatioChange(e.target.value)}
-                    className="min-w-0 flex-1 rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                    placeholder="15"
-                  />
-                </div>
-              </div>
-              <div>
-                <input
-                  id="grind-size"
-                  name="grindSize"
-                  type="text"
-                  value={methodParams.grindSize}
-                  onChange={e =>
-                    setMethodParams({
-                      ...methodParams,
-                      grindSize: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                  placeholder="中细"
-                />
-              </div>
-              <div className="relative">
-                <input
-                  id="water-temperature"
-                  name="waterTemperature"
-                  type="text"
-                  inputMode="decimal"
-                  value={numericValues.temp}
-                  onChange={e => handleTempChange(e.target.value)}
-                  className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 pr-8 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                  placeholder="92"
-                />
-                <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
-                  °C
-                </span>
-              </div>
+
+              {isEspresso ? (
+                <>
+                  <div>
+                    <input
+                      id="grind-size"
+                      name="grindSize"
+                      type="text"
+                      value={methodParams.grindSize}
+                      onChange={e =>
+                        setMethodParams({
+                          ...methodParams,
+                          grindSize: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      placeholder="中细"
+                    />
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="total-time"
+                      name="totalTime"
+                      type="text"
+                      inputMode="decimal"
+                      value={totalTimeStr}
+                      onChange={e => setTotalTimeStr(e.target.value)}
+                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      placeholder="25"
+                    />
+                    <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
+                      s
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="water-amount"
+                      name="waterAmount"
+                      type="text"
+                      inputMode="decimal"
+                      value={numericValues.water}
+                      onChange={e => handleWaterChange(e.target.value)}
+                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      placeholder="30"
+                    />
+                    <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
+                      g
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="relative overflow-hidden">
+                    <div className="flex items-center">
+                      <span className="mr-1 shrink-0 text-xs text-neutral-400 dark:text-neutral-500">
+                        1:
+                      </span>
+                      <input
+                        id="coffee-ratio"
+                        name="coffeeRatio"
+                        type="text"
+                        inputMode="decimal"
+                        value={numericValues.ratio}
+                        onChange={e => handleRatioChange(e.target.value)}
+                        className="min-w-0 flex-1 rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                        placeholder="15"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <input
+                      id="grind-size"
+                      name="grindSize"
+                      type="text"
+                      value={methodParams.grindSize}
+                      onChange={e =>
+                        setMethodParams({
+                          ...methodParams,
+                          grindSize: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      placeholder="中细"
+                    />
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="water-temperature"
+                      name="waterTemperature"
+                      type="text"
+                      inputMode="decimal"
+                      value={numericValues.temp}
+                      onChange={e => handleTempChange(e.target.value)}
+                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 pr-8 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      placeholder="92"
+                    />
+                    <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
+                      °C
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

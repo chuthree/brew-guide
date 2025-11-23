@@ -295,6 +295,21 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     const params = getMethodParams();
     const isNewNote = !initialNote?.id;
 
+    // 计算总时间
+    let totalTime = initialNote?.totalTime || 0;
+    if (selectedMethod && !totalTime) {
+      const allMethods = [...commonMethodsOnly, ...customMethods];
+      const methodObj = allMethods.find(
+        m => m.id === selectedMethod || m.name === selectedMethod
+      );
+      if (methodObj && methodObj.params.stages) {
+        totalTime = methodObj.params.stages.reduce(
+          (acc, stage) => acc + (stage.time || 0),
+          0
+        );
+      }
+    }
+
     return {
       equipment: selectedEquipment,
       method: selectedMethod || '', // 如果没有选择方案，使用空字符串
@@ -311,6 +326,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
             roastDate: initialNote?.coffeeBeanInfo?.roastDate || '',
           },
       params: initialNote?.params || params,
+      totalTime: totalTime,
       rating: initialNote?.rating ?? 0,
       taste: initialNote?.taste || {
         acidity: 0,

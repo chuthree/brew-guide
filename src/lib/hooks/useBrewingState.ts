@@ -278,6 +278,15 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
       setActiveTab('方案');
       setActiveBrewingStep('method');
 
+      // 显式更新参数栏为 method 状态（清空参数）
+      updateParameterInfo(
+        'method',
+        equipment,
+        null,
+        equipmentList,
+        customEquipments
+      );
+
       return equipmentName;
     },
     [activeMainTab, showComplete, resetBrewingState, customEquipments]

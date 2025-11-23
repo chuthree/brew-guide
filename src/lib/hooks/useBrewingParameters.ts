@@ -11,6 +11,7 @@ export interface ParameterInfo {
     ratio?: string | null;
     grindSize?: string | null;
     temp?: string | null;
+    time?: string | null;
   } | null;
 }
 
@@ -21,6 +22,7 @@ export interface EditableParams {
   ratio: string;
   grindSize: string;
   temp: string;
+  time?: string;
 }
 
 // 提取数字工具函数
@@ -196,6 +198,37 @@ export function useBrewingParameters() {
               ...currentBrewingMethod.params,
               ratio: `1:${newRatio}`,
               water: `${calculatedWater}g`,
+              stages: updatedStages,
+            },
+          };
+          setCurrentBrewingMethod(updatedMethod);
+          break;
+        }
+        case 'water': {
+          const newWater = parsedValue;
+          // 计算新的 ratio
+          const newRatio = currentCoffee > 0 ? newWater / currentCoffee : 0;
+
+          newParams = {
+            ...editableParams,
+            water: `${newWater}g`,
+            ratio: `1:${formatRatio(newRatio)}`,
+          };
+
+          const oldWater = extractNumber(selectedMethod.params.water);
+          const waterRatio = oldWater > 0 ? newWater / oldWater : 1;
+
+          const updatedStages = selectedMethod.params.stages.map(stage => ({
+            ...stage,
+            water: `${Math.round(extractNumber(stage.water) * waterRatio)}g`,
+          }));
+          updateBrewingSteps(updatedStages);
+          const updatedMethod = {
+            ...currentBrewingMethod,
+            params: {
+              ...currentBrewingMethod.params,
+              ratio: `1:${formatRatio(newRatio)}`,
+              water: `${newWater}g`,
               stages: updatedStages,
             },
           };

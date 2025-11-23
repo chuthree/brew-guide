@@ -27,7 +27,38 @@ interface EditableParams {
   ratio: string;
   grindSize: string;
   temp: string;
+  time?: string;
 }
+
+// 意式咖啡相关工具函数
+const espressoUtils = {
+  isEspresso: (
+    method: {
+      params?: {
+        stages?: Array<{ pourType?: string; [key: string]: unknown }>;
+      };
+    } | null
+  ) =>
+    method?.params?.stages?.some(stage =>
+      ['extraction', 'beverage'].includes(stage.pourType || '')
+    ) || false,
+
+  getExtractionTime: (
+    method: {
+      params?: {
+        stages?: Array<{
+          pourType?: string;
+          time?: number;
+          [key: string]: unknown;
+        }>;
+      };
+    } | null
+  ) =>
+    method?.params?.stages?.find(stage => stage.pourType === 'extraction')
+      ?.time || 0,
+
+  formatTime: (seconds: number) => `${seconds}`,
+};
 
 // 优化的 TabButton 组件 - 使用更简洁的条件渲染和样式计算
 interface TabButtonProps {
@@ -193,6 +224,7 @@ interface NavigationBarProps {
         time: number;
         water: string;
         detail: string;
+        pourType?: string;
       }>;
     };
   } | null;
@@ -404,7 +436,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
       // 获取当前显示值（优先使用叠加层，否则使用原始值）
       const getCurrentDisplayValue = (key: keyof EditableParams) => {
-        return displayOverlay?.[key] || editableParams[key];
+        return displayOverlay?.[key] || editableParams[key] || '';
       };
 
       const currentCoffeeNum = parseFloat(
@@ -729,7 +761,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
               exit={{ height: 0, opacity: 0 }}
               transition={{
                 duration: 0.25,
-                
+
                 opacity: { duration: 0.15 },
               }}
             >
@@ -766,8 +798,103 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
                         {/* 右侧：参数区域 - 固定不压缩 */}
                         {parameterInfo.params && (
-                          <div className="flex flex-shrink-0 items-center">
-                            {editableParams ? (
+                          <div className="flex shrink-0 items-center">
+                            {espressoUtils.isEspresso(selectedMethod) ? (
+                              // 意式参数显示
+                              editableParams ? (
+                                <div className="flex items-center space-x-1 sm:space-x-2">
+                                  <EditableParameter
+                                    value={(
+                                      displayOverlay?.coffee ||
+                                      editableParams.coffee
+                                    ).replace('g', '')}
+                                    onChange={v =>
+                                      handleParamChange('coffee', v)
+                                    }
+                                    unit="g"
+                                  />
+                                  <span className="shrink-0">·</span>
+                                  <EditableParameter
+                                    value={
+                                      displayOverlay?.grindSize ||
+                                      editableParams.grindSize
+                                    }
+                                    onChange={v =>
+                                      handleParamChange('grindSize', v)
+                                    }
+                                    unit=""
+                                  />
+                                  <span className="shrink-0">·</span>
+                                  <EditableParameter
+                                    value={
+                                      displayOverlay?.time ||
+                                      editableParams.time ||
+                                      espressoUtils.formatTime(
+                                        espressoUtils.getExtractionTime(
+                                          selectedMethod
+                                        )
+                                      )
+                                    }
+                                    onChange={v => _handleTimeChange(v)}
+                                    unit="s"
+                                  />
+                                  <span className="shrink-0">·</span>
+                                  <EditableParameter
+                                    value={(
+                                      displayOverlay?.water ||
+                                      editableParams.water
+                                    ).replace('g', '')}
+                                    onChange={v =>
+                                      handleParamChange('water', v)
+                                    }
+                                    unit="g"
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className="flex cursor-pointer items-center space-x-1 transition-colors hover:text-neutral-700 sm:space-x-2 dark:hover:text-neutral-300"
+                                  onClick={() => {
+                                    if (selectedMethod && !isTimerRunning) {
+                                      setEditableParams({
+                                        coffee: selectedMethod.params.coffee,
+                                        water: selectedMethod.params.water,
+                                        ratio: selectedMethod.params.ratio,
+                                        grindSize:
+                                          selectedMethod.params.grindSize,
+                                        temp: selectedMethod.params.temp,
+                                        time: espressoUtils.formatTime(
+                                          espressoUtils.getExtractionTime(
+                                            selectedMethod
+                                          )
+                                        ),
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <span className="whitespace-nowrap">
+                                    {parameterInfo.params.coffee}
+                                  </span>
+                                  <span className="shrink-0">·</span>
+                                  <span className="whitespace-nowrap">
+                                    {parameterInfo.params.grindSize || ''}
+                                  </span>
+                                  <span className="shrink-0">·</span>
+                                  <span className="whitespace-nowrap">
+                                    {espressoUtils.formatTime(
+                                      espressoUtils.getExtractionTime(
+                                        selectedMethod
+                                      )
+                                    )}
+                                    s
+                                  </span>
+                                  <span className="shrink-0">·</span>
+                                  <span className="whitespace-nowrap">
+                                    {parameterInfo.params.water}
+                                  </span>
+                                </div>
+                              )
+                            ) : // 原有参数显示
+                            editableParams ? (
                               <div className="flex items-center space-x-1 sm:space-x-2">
                                 <EditableParameter
                                   value={(

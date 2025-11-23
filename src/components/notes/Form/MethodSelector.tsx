@@ -42,11 +42,18 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   onMethodSelect,
   onParamsChange,
 }) => {
+  // 判断是否是意式器具
+  const isEspresso =
+    selectedEquipment.toLowerCase().includes('espresso') ||
+    selectedEquipment.includes('意式');
+
   // 使用状态来存储当前编辑的值，确保输入框可以响应变化
   const [editingValues, setEditingValues] = useState<{
     coffee: string;
     ratio: string;
     grindSize: string;
+    water?: string;
+    time?: string;
   } | null>(null);
 
   // 获取当前选中的方案
@@ -72,13 +79,15 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         coffee: extractNumber(method.params.coffee),
         ratio: extractRatioNumber(method.params.ratio),
         grindSize: method.params.grindSize,
+        water: extractNumber(method.params.water),
+        time: method.params.stages?.[0]?.time?.toString() || '0',
       });
     }
   }, [selectedMethod, customMethods, commonMethods]);
 
   // 统一的参数更新处理
   const updateParam = (
-    key: 'coffee' | 'ratio' | 'grindSize',
+    key: 'coffee' | 'ratio' | 'grindSize' | 'water' | 'time',
     value: string
   ) => {
     const method = getSelectedMethod();
@@ -90,18 +99,34 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     // 直接更新方法参数
     if (key === 'coffee') {
       method.params.coffee = `${value}g`;
-      const ratio =
-        editingValues?.ratio || extractRatioNumber(method.params.ratio);
-      const water = calculateWater(value, ratio);
-      if (water) method.params.water = water;
+      if (!isEspresso) {
+        const ratio =
+          editingValues?.ratio || extractRatioNumber(method.params.ratio);
+        const water = calculateWater(value, ratio);
+        if (water) method.params.water = water;
+      }
     } else if (key === 'ratio') {
       method.params.ratio = `1:${value}`;
       const coffee =
         editingValues?.coffee || extractNumber(method.params.coffee);
       const water = calculateWater(coffee, value);
       if (water) method.params.water = water;
-    } else {
+    } else if (key === 'grindSize') {
       method.params.grindSize = value;
+    } else if (key === 'water') {
+      method.params.water = `${value}g`;
+    } else if (key === 'time') {
+      if (!method.params.stages) method.params.stages = [];
+      if (method.params.stages.length === 0) {
+        method.params.stages.push({
+          time: 0,
+          label: '萃取',
+          water: method.params.water,
+          detail: '',
+          pourType: 'extraction',
+        });
+      }
+      method.params.stages[0].time = parseFloat(value) || 0;
     }
 
     onParamsChange(method);
@@ -183,9 +208,22 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
           {!isSelected ? (
             <div className="mt-1.5 space-y-0.5 text-neutral-500 dark:text-neutral-400">
               {renderParamDisplay('咖啡粉', method.params.coffee)}
-              {renderParamDisplay('水量', method.params.water)}
-              {renderParamDisplay('粉水比', method.params.ratio)}
-              {renderParamDisplay('研磨度', method.params.grindSize)}
+              {isEspresso ? (
+                <>
+                  {renderParamDisplay('研磨度', method.params.grindSize)}
+                  {renderParamDisplay(
+                    '萃取时长',
+                    (method.params.stages?.[0]?.time || 0) + 's'
+                  )}
+                  {renderParamDisplay('液重', method.params.water)}
+                </>
+              ) : (
+                <>
+                  {renderParamDisplay('水量', method.params.water)}
+                  {renderParamDisplay('粉水比', method.params.ratio)}
+                  {renderParamDisplay('研磨度', method.params.grindSize)}
+                </>
+              )}
             </div>
           ) : (
             <div
@@ -199,33 +237,63 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                   value => updateParam('coffee', value),
                   'g'
                 )}
-                <div className="flex items-center">
-                  <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    水量:
-                  </label>
-                  <div className="flex w-20 justify-end">
-                    <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      {method.params.water}
-                    </span>
-                  </div>
-                </div>
-                {renderParamInput(
-                  '粉水比',
-                  editingValues?.ratio ||
-                    extractRatioNumber(method.params.ratio),
-                  value => updateParam('ratio', value),
-                  undefined,
-                  'w-10',
-                  '1:'
-                )}
-                {renderParamInput(
-                  '研磨度',
-                  editingValues?.grindSize || method.params.grindSize,
-                  value => updateParam('grindSize', value),
-                  undefined,
-                  'w-16',
-                  undefined,
-                  false
+                {isEspresso ? (
+                  <>
+                    {renderParamInput(
+                      '研磨度',
+                      editingValues?.grindSize || method.params.grindSize,
+                      value => updateParam('grindSize', value),
+                      undefined,
+                      'w-16',
+                      undefined,
+                      false
+                    )}
+                    {renderParamInput(
+                      '萃取时长',
+                      editingValues?.time ||
+                        (method.params.stages?.[0]?.time || 0).toString(),
+                      value => updateParam('time', value),
+                      's'
+                    )}
+                    {renderParamInput(
+                      '液重',
+                      editingValues?.water ||
+                        extractNumber(method.params.water),
+                      value => updateParam('water', value),
+                      'g'
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center">
+                      <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                        水量:
+                      </label>
+                      <div className="flex w-20 justify-end">
+                        <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          {method.params.water}
+                        </span>
+                      </div>
+                    </div>
+                    {renderParamInput(
+                      '粉水比',
+                      editingValues?.ratio ||
+                        extractRatioNumber(method.params.ratio),
+                      value => updateParam('ratio', value),
+                      undefined,
+                      'w-10',
+                      '1:'
+                    )}
+                    {renderParamInput(
+                      '研磨度',
+                      editingValues?.grindSize || method.params.grindSize,
+                      value => updateParam('grindSize', value),
+                      undefined,
+                      'w-16',
+                      undefined,
+                      false
+                    )}
+                  </>
                 )}
               </div>
             </div>

@@ -837,10 +837,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   };
 
   const handleExtractionTimeChange = (time: number) => {
-    if (!selectedMethod || !selectedMethod.params.stages) return;
+    // 优先使用 currentBrewingMethod，因为它包含了用户已修改的其他参数（如粉量、液重）
+    // 如果只使用 selectedMethod，会丢失这些修改，导致参数重置
+    const baseMethod =
+      activeBrewingStep === 'brewing' && currentBrewingMethod
+        ? currentBrewingMethod
+        : selectedMethod;
+
+    if (!baseMethod || !baseMethod.params.stages) return;
 
     // 只处理意式咖啡，查找萃取步骤
-    const isEspresso = selectedMethod.params.stages.some(
+    const isEspresso = baseMethod.params.stages.some(
       stage => stage.pourType === 'extraction' || stage.pourType === 'beverage'
     );
 
@@ -848,10 +855,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     // 创建新的方法对象
     const updatedMethod = {
-      ...selectedMethod,
+      ...baseMethod,
       params: {
-        ...selectedMethod.params,
-        stages: selectedMethod.params.stages.map(stage => {
+        ...baseMethod.params,
+        stages: baseMethod.params.stages.map(stage => {
           // 只更新萃取类型的步骤时间
           if (stage.pourType === 'extraction') {
             return { ...stage, time };
@@ -2707,6 +2714,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                       time: stage.time || 0,
                       water: stage.water,
                       detail: stage.detail,
+                      pourType: stage.pourType,
                     })),
                   },
                 }

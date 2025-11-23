@@ -171,6 +171,20 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     return beanName || '未命名';
   };
 
+  // 判断是否为意式咖啡笔记
+  const isEspresso = React.useMemo(() => {
+    if (!note) return false;
+    // 检查器具ID (兼容自定义意式器具ID格式，通常包含 espresso)
+    if (
+      note.equipment &&
+      (note.equipment.toLowerCase().includes('espresso') ||
+        note.equipment.includes('意式'))
+    ) {
+      return true;
+    }
+    return false;
+  }, [note]);
+
   return (
     <>
       <div
@@ -439,56 +453,115 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               {/* 参数信息 - 一排四个 */}
               {note.params && (
                 <div className="flex items-center gap-3 border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
-                  {/* 粉量 */}
-                  <div className="flex flex-1 flex-col">
-                    <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      粉量
-                    </div>
-                    <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                      {note.params.coffee}
-                    </div>
-                    {beanName && beanUnitPrice > 0 && (
-                      <div className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">
-                        {beanUnitPrice.toFixed(2)}元/克
+                  {isEspresso ? (
+                    // 意式参数：粉量 · 研磨度 · 时间 · 液重
+                    <>
+                      {/* 粉量 */}
+                      <div className="flex flex-1 flex-col">
+                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          粉量
+                        </div>
+                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          {note.params.coffee}
+                        </div>
+                        {beanName && beanUnitPrice > 0 && (
+                          <div className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">
+                            {beanUnitPrice.toFixed(2)}元/克
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
+                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
 
-                  {/* 粉水比 */}
-                  <div className="flex flex-1 flex-col">
-                    <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      粉水比
-                    </div>
-                    <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                      {note.params.ratio}
-                    </div>
-                  </div>
+                      {/* 研磨度 */}
+                      <div className="flex flex-1 flex-col">
+                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          研磨度
+                        </div>
+                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          {note.params.grindSize || '-'}
+                        </div>
+                      </div>
 
-                  <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
+                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
 
-                  {/* 研磨度 */}
-                  <div className="flex flex-1 flex-col">
-                    <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      研磨度
-                    </div>
-                    <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                      {note.params.grindSize || '-'}
-                    </div>
-                  </div>
+                      {/* 时间 */}
+                      <div className="flex flex-1 flex-col">
+                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          时间
+                        </div>
+                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          {note.totalTime ? `${note.totalTime}s` : '-'}
+                        </div>
+                      </div>
 
-                  <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
+                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
 
-                  {/* 水温 */}
-                  <div className="flex flex-1 flex-col">
-                    <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      水温
-                    </div>
-                    <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                      {note.params.temp || '-'}
-                    </div>
-                  </div>
+                      {/* 液重 */}
+                      <div className="flex flex-1 flex-col">
+                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          液重
+                        </div>
+                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          {note.params.water}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    // 手冲参数：粉量 · 粉水比 · 研磨度 · 水温
+                    <>
+                      {/* 粉量 */}
+                      <div className="flex flex-1 flex-col">
+                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          粉量
+                        </div>
+                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          {note.params.coffee}
+                        </div>
+                        {beanName && beanUnitPrice > 0 && (
+                          <div className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">
+                            {beanUnitPrice.toFixed(2)}元/克
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
+
+                      {/* 粉水比 */}
+                      <div className="flex flex-1 flex-col">
+                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          粉水比
+                        </div>
+                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          {note.params.ratio}
+                        </div>
+                      </div>
+
+                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
+
+                      {/* 研磨度 */}
+                      <div className="flex flex-1 flex-col">
+                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          研磨度
+                        </div>
+                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          {note.params.grindSize || '-'}
+                        </div>
+                      </div>
+
+                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
+
+                      {/* 水温 */}
+                      <div className="flex flex-1 flex-col">
+                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          水温
+                        </div>
+                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          {note.params.temp || '-'}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
