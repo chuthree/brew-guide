@@ -39,9 +39,8 @@ export const StatCategory: React.FC<StatCategoryProps> = ({
   number,
   title,
   children,
-  animStyle,
 }) => (
-  <div className="flex" style={animStyle}>
+  <div className="flex">
     <div className="mr-3 text-[11px] font-medium text-neutral-800 dark:text-neutral-100">
       {formatNumber2Digits(number)}
     </div>

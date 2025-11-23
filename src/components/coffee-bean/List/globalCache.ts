@@ -18,6 +18,10 @@ import {
 } from '@/lib/core/statePersistence';
 import { SortOption } from './SortSelector';
 import { FlavorPeriodStatus } from '@/lib/utils/beanVarietyUtils';
+import {
+  DateGroupingMode,
+  CalculationMode,
+} from './components/StatsView/types';
 
 // 模块名称
 const MODULE_NAME = 'coffee-beans';
@@ -50,6 +54,9 @@ export const globalCache: {
   isImageFlowMode: boolean;
   viewMode: ViewOption;
   sortOption: SortOption;
+  // 统计视图相关状态
+  dateGroupingMode: DateGroupingMode;
+  calculationMode: CalculationMode;
   // 为每个视图模式添加独立的排序选项
   inventorySortOption: SortOption;
   rankingSortOption: SortOption;
@@ -84,6 +91,9 @@ export const globalCache: {
   isImageFlowMode: false,
   viewMode: 'inventory',
   sortOption: 'remaining_days_asc',
+  // 统计视图相关状态初始值
+  dateGroupingMode: 'month',
+  calculationMode: 'coffee',
   // 为每个视图模式设置默认排序选项
   inventorySortOption: 'remaining_days_asc',
   rankingSortOption: 'rating_desc',
@@ -336,6 +346,30 @@ export const saveImageFlowModePreference = (value: boolean): void => {
   saveBooleanState(MODULE_NAME, 'isImageFlowMode', value);
 };
 
+// 从localStorage读取统计视图时间分组模式
+export const getDateGroupingModePreference = (): DateGroupingMode => {
+  const value = getStringState(MODULE_NAME, 'dateGroupingMode', 'month');
+  return value as DateGroupingMode;
+};
+
+// 保存统计视图时间分组模式到localStorage
+export const saveDateGroupingModePreference = (
+  value: DateGroupingMode
+): void => {
+  saveStringState(MODULE_NAME, 'dateGroupingMode', value);
+};
+
+// 从localStorage读取统计视图计算方式
+export const getCalculationModePreference = (): CalculationMode => {
+  const value = getStringState(MODULE_NAME, 'calculationMode', 'coffee');
+  return value as CalculationMode;
+};
+
+// 保存统计视图计算方式到localStorage
+export const saveCalculationModePreference = (value: CalculationMode): void => {
+  saveStringState(MODULE_NAME, 'calculationMode', value);
+};
+
 // ==================== 搜索历史管理 ====================
 
 // 从localStorage读取搜索历史
@@ -398,6 +432,8 @@ globalCache.filterMode = getFilterModePreference();
 globalCache.selectedOrigin = getSelectedOriginPreference();
 globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
 globalCache.selectedRoaster = getSelectedRoasterPreference();
+globalCache.dateGroupingMode = getDateGroupingModePreference();
+globalCache.calculationMode = getCalculationModePreference();
 
 // 监听全局缓存重置事件
 if (typeof window !== 'undefined') {
@@ -431,6 +467,8 @@ if (typeof window !== 'undefined') {
     globalCache.selectedOrigin = getSelectedOriginPreference();
     globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
     globalCache.selectedRoaster = getSelectedRoasterPreference();
+    globalCache.dateGroupingMode = getDateGroupingModePreference();
+    globalCache.calculationMode = getCalculationModePreference();
 
     console.warn('咖啡豆全局缓存已重置并重新加载偏好设置');
   });

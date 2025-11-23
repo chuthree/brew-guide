@@ -3,7 +3,6 @@ import { ExtendedCoffeeBean } from '../../types';
 export interface StatsViewProps {
   beans: ExtendedCoffeeBean[];
   showEmptyBeans: boolean;
-  onStatsShare?: () => void;
 }
 
 export interface StatsData {
@@ -88,18 +87,6 @@ export interface StatSectionProps {
   children: React.ReactNode;
 }
 
-export interface AnimationStyles {
-  titleAnimStyle: React.CSSProperties;
-  usernameAnimStyle: React.CSSProperties;
-  infoAnimStyle: React.CSSProperties;
-  statsAnimStyle: (index: number) => React.CSSProperties;
-}
-
-export interface BeanImageGalleryProps {
-  beansWithImages: ExtendedCoffeeBean[];
-  imagesLoaded: boolean;
-}
-
 export interface TodayConsumptionData {
   consumption: number;
   cost: number;
@@ -111,23 +98,39 @@ export interface TodayConsumptionData {
   omniCost: number;
 }
 
-export interface StatsSummaryProps {
-  stats: StatsData;
-  todayConsumption: number;
-  // 时间区间切换相关props
-  selectedTimeRange?: string;
-  onToggleTimeRangeDropdown?: () => void;
-  showTimeRangeDropdown?: boolean;
-  // 计算方式切换相关props
-  calculationMode?: string;
-  onToggleCalculationMode?: () => void;
-  // 天数信息
-  actualDays?: number;
-}
-
 export interface StatCategoryProps {
   number: number;
   title: string;
   children: React.ReactNode;
-  animStyle: React.CSSProperties;
+}
+
+// 时间分组模式
+export type DateGroupingMode = 'year' | 'month' | 'day';
+
+// 计算方式选项
+export type CalculationMode = 'natural' | 'coffee';
+
+export interface RatedBean {
+  name: string;
+  rating: number;
+}
+
+export interface FunStatsData {
+  totalBrews: number;
+  earliestBrewTime: string;
+  latestBrewTime: string;
+  mostActiveTimePeriod: string;
+  favoriteMethod: string;
+  topRatedBeans: RatedBean[];
+  highestRatedBeanName: string;
+  lowestRatedBeans: RatedBean[];
+  longestStreak: number;
+}
+
+export interface StatsCategoriesProps {
+  stats: StatsData;
+  funStats?: FunStatsData;
+  beans: ExtendedCoffeeBean[];
+  todayConsumption: number;
+  todayCost: number;
 }

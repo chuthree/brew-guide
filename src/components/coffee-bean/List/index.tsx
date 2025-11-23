@@ -70,7 +70,6 @@ import InventoryView from './components/InventoryView';
 import StatsView from './components/StatsView';
 import { toPng } from 'html-to-image';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { exportStatsView } from './components/StatsView/StatsExporter';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { exportListPreview } from './components/ListExporter';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
@@ -1357,57 +1356,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     }
   };
 
-  // 添加统计数据分享状态
-  const [isExportingStats, setIsExportingStats] = useState(false);
   const [isExportingPreview, setIsExportingPreview] = useState(false);
-
-  // 处理统计数据分享
-  const handleStatsShare = async () => {
-    if (isExportingStats) return;
-
-    // 找到统计数据容器
-    const statsContainer = document.querySelector(
-      '.coffee-bean-stats-container'
-    );
-    if (!statsContainer) {
-      showToast({
-        type: 'error',
-        title: '无法找到统计数据容器',
-      });
-      return;
-    }
-
-    setIsExportingStats(true);
-
-    try {
-      // 使用StatsExporter处理导出
-      await exportStatsView({
-        statsContainerRef: { current: statsContainer as HTMLDivElement },
-        onSuccess: message => {
-          showToast({
-            type: 'success',
-            title: message,
-          });
-        },
-        onError: message => {
-          showToast({
-            type: 'error',
-            title: message,
-          });
-        },
-        onComplete: () => {
-          setIsExportingStats(false);
-        },
-      });
-    } catch (error) {
-      console.error('导出统计数据时出错:', error);
-      showToast({
-        type: 'error',
-        title: '生成图片失败',
-      });
-      setIsExportingStats(false);
-    }
-  };
 
   // 处理预览图导出
   const handleExportPreview = async () => {
@@ -1676,11 +1625,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         {/* 添加统计视图 */}
         {viewMode === VIEW_OPTIONS.STATS && (
           <div className="scroll-with-bottom-bar h-full w-full overflow-y-auto">
-            <StatsView
-              beans={beans}
-              showEmptyBeans={showEmptyBeans}
-              onStatsShare={handleStatsShare}
-            />
+            <StatsView beans={beans} showEmptyBeans={showEmptyBeans} />
           </div>
         )}
         {/* 添加榜单和博主榜单视图 */}

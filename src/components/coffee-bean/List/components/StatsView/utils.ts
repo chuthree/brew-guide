@@ -4,7 +4,8 @@ import {
   beanHasVarietyInfo,
 } from '@/lib/utils/beanVarietyUtils';
 import { isBeanEmpty } from '../../globalCache';
-import { StatsData } from './types';
+import { StatsData, FunStatsData } from './types';
+import { BrewingNote } from '@/lib/core/config';
 
 // 格式化数字，保留2位小数，处理浮点数精度问题
 export const formatNumber = (num: number): string => {
@@ -24,17 +25,173 @@ export const formatNumber2Digits = (num: number): string => {
 };
 
 // 从数组生成统计行数据
-const sortStatsData = (
-  dataArr: [string, number][]
-): [string, number][] => {
+const sortStatsData = (dataArr: [string, number][]): [string, number][] => {
   return [...dataArr].sort((a, b) => b[1] - a[1]);
 };
 
-// 自定义字体样式
-export const stardomFontStyle = {
-  fontFamily: "'Stardom', sans-serif",
-  fontWeight: 'normal',
-  letterSpacing: '0.05em',
+// 计算趣味统计数据
+export const calculateFunStats = (notes: BrewingNote[]): FunStatsData => {
+  // 过滤掉无效笔记（如容量调整）
+  // 注意：quick-decrement 类型的笔记通常只有时间戳和减少的量，没有风味、评分等信息
+  // 但它们可以用于计算时间相关的统计（最早/最晚冲煮、活跃时段、连续打卡）
+  const validNotes = notes.filter(
+    note => note.source !== 'capacity-adjustment'
+  );
+
+  // 1. 最早和最晚冲煮时间
+  let earliestBrewTime = '-';
+  let latestBrewTime = '-';
+
+  if (validNotes.length > 0) {
+    // 将凌晨4点作为一天的分界线
+    // 4:00 之前的记录会被视为"深夜"（即上一天的延续），在比较时加上24小时
+    const DAY_START_HOUR = 4;
+    let minMinutes = 48 * 60; // 初始化为一个足够大的值
+    let maxMinutes = -1;
+
+    validNotes.forEach(note => {
+      if (!note.timestamp) return;
+      const date = new Date(note.timestamp);
+      const hour = date.getHours();
+      const minute = date.getMinutes();
+
+      // 计算分钟数
+      let minutes = hour * 60 + minute;
+
+      // 如果是凌晨0-4点，加上24小时（1440分钟），使其排在深夜之后
+      if (hour < DAY_START_HOUR) {
+        minutes += 24 * 60;
+      }
+
+      if (minutes < minMinutes) {
+        minMinutes = minutes;
+        earliestBrewTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      }
+
+      if (minutes > maxMinutes) {
+        maxMinutes = minutes;
+        latestBrewTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      }
+    });
+  }
+
+  // 2. 最活跃时段
+  const timePeriods = {
+    '清晨 (5:00-9:00)': 0,
+    '上午 (9:00-12:00)': 0,
+    '中午 (12:00-14:00)': 0,
+    '下午 (14:00-18:00)': 0,
+    '傍晚 (18:00-22:00)': 0,
+    '深夜 (22:00-5:00)': 0,
+  };
+
+  validNotes.forEach(note => {
+    if (!note.timestamp) return;
+    const hour = new Date(note.timestamp).getHours();
+    if (hour >= 5 && hour < 9) timePeriods['清晨 (5:00-9:00)']++;
+    else if (hour >= 9 && hour < 12) timePeriods['上午 (9:00-12:00)']++;
+    else if (hour >= 12 && hour < 14) timePeriods['中午 (12:00-14:00)']++;
+    else if (hour >= 14 && hour < 18) timePeriods['下午 (14:00-18:00)']++;
+    else if (hour >= 18 && hour < 22) timePeriods['傍晚 (18:00-22:00)']++;
+    else timePeriods['深夜 (22:00-5:00)']++;
+  });
+
+  let mostActiveTimePeriod = '-';
+  let maxCount = 0;
+  Object.entries(timePeriods).forEach(([period, count]) => {
+    if (count > maxCount) {
+      maxCount = count;
+      mostActiveTimePeriod = period.split(' ')[0]; // 只取名称，不取时间段
+    }
+  });
+
+  let favoriteMethod = '-';
+  maxCount = 0;
+
+  // 4. 评分统计 (Top 3 & Bottom 3)
+  const beanRatings: Record<string, { total: number; count: number }> = {};
+
+  // 只需要有评分的笔记
+  const ratedNotes = validNotes.filter(note => note.rating && note.rating > 0);
+
+  ratedNotes.forEach(note => {
+    const name = note.coffeeBeanInfo?.name;
+    if (name) {
+      if (!beanRatings[name]) {
+        beanRatings[name] = { total: 0, count: 0 };
+      }
+      beanRatings[name].total += note.rating;
+      beanRatings[name].count += 1;
+    }
+  });
+
+  const beanAverageRatings = Object.entries(beanRatings).map(
+    ([name, data]) => ({
+      name,
+      rating: data.total / data.count,
+    })
+  );
+
+  // Sort for Top 3
+  const topRatedBeans = [...beanAverageRatings]
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 3)
+    .map(b => ({ name: b.name, rating: Number(b.rating.toFixed(1)) }));
+
+  const highestRatedBeanName =
+    topRatedBeans.length > 0 ? topRatedBeans[0].name : '-';
+
+  // Sort for Bottom 3
+  const lowestRatedBeans = [...beanAverageRatings]
+    .sort((a, b) => a.rating - b.rating)
+    .slice(0, 3)
+    .map(b => ({ name: b.name, rating: Number(b.rating.toFixed(1)) }));
+
+  // 5. 最长连续打卡天数
+  const dates = validNotes
+    .filter(note => note.timestamp)
+    .map(note => {
+      const d = new Date(note.timestamp);
+      return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    })
+    .filter((value, index, self) => self.indexOf(value) === index) // 去重
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime()); // 排序
+
+  let longestStreak = 0;
+  let currentStreak = 0;
+  let lastDate: Date | null = null;
+
+  dates.forEach(dateStr => {
+    const currentDate = new Date(dateStr);
+    if (!lastDate) {
+      currentStreak = 1;
+    } else {
+      const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        currentStreak++;
+      } else {
+        currentStreak = 1;
+      }
+    }
+    if (currentStreak > longestStreak) {
+      longestStreak = currentStreak;
+    }
+    lastDate = currentDate;
+  });
+
+  return {
+    totalBrews: validNotes.length,
+    earliestBrewTime,
+    latestBrewTime,
+    mostActiveTimePeriod,
+    favoriteMethod,
+    topRatedBeans,
+    highestRatedBeanName,
+    lowestRatedBeans,
+    longestStreak,
+  };
 };
 
 // 计算统计数据
@@ -405,4 +562,112 @@ export const calculateStats = (
       todayCost: todayConsumption.omniCost,
     },
   };
+};
+
+// 计算预计消耗完的时间 - 兼容版本（保持向后兼容）
+export const calculateEstimatedFinishDate = (
+  stats: StatsData,
+  dailyConsumption: number,
+  options?: {
+    considerSeasonality?: boolean;
+    separateByType?: boolean;
+    includeConfidenceLevel?: boolean;
+    beans?: ExtendedCoffeeBean[];
+  }
+): string => {
+  const result = calculateEstimatedFinishDateAdvanced(
+    stats,
+    dailyConsumption,
+    options
+  );
+  return typeof result === 'string' ? result : result.date;
+};
+
+// 计算预计消耗完的时间 - 简化优化版
+export const calculateEstimatedFinishDateAdvanced = (
+  stats: StatsData,
+  dailyConsumption: number,
+  options: {
+    considerSeasonality?: boolean;
+    separateByType?: boolean;
+    includeConfidenceLevel?: boolean;
+    beans?: ExtendedCoffeeBean[];
+  } = {}
+) => {
+  const { includeConfidenceLevel = false } = options;
+
+  // 如果没有剩余或平均消耗为0，返回未知
+  if (stats.remainingWeight <= 0 || dailyConsumption <= 0) {
+    return includeConfidenceLevel ? { date: '-', confidence: 0 } : '-';
+  }
+
+  // 使用传入的日消耗量直接计算
+  const adjustedDailyConsumption = Math.max(1, dailyConsumption); // 确保至少1克/天
+
+  // 计算剩余天数
+  const daysRemaining = Math.ceil(
+    stats.remainingWeight / adjustedDailyConsumption
+  );
+
+  // 计算预计结束日期
+  const finishDate = new Date();
+  finishDate.setDate(finishDate.getDate() + daysRemaining);
+
+  // 处理跨年情况
+  const now = new Date();
+  const isNextYear = finishDate.getFullYear() > now.getFullYear();
+
+  // 格式化日期
+  let dateString: string;
+  if (isNextYear) {
+    // 跨年显示年份
+    const year = finishDate.getFullYear().toString().slice(-2);
+    const month = formatNumber2Digits(finishDate.getMonth() + 1);
+    const day = formatNumber2Digits(finishDate.getDate());
+    dateString = `${year}/${month}-${day}`;
+  } else {
+    // 同年只显示月日
+    const month = formatNumber2Digits(finishDate.getMonth() + 1);
+    const day = formatNumber2Digits(finishDate.getDate());
+    dateString = `${month}-${day}`;
+  }
+
+  // 添加时间范围提示
+  const today = new Date();
+
+  // 计算本周末（周日）
+  const dayOfWeek = today.getDay(); // 0=周日, 1=周一, ..., 6=周六
+  const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek; // 如果今天是周日，就是0天
+  const thisWeekEnd = new Date(today);
+  thisWeekEnd.setDate(today.getDate() + daysUntilSunday);
+  thisWeekEnd.setHours(23, 59, 59, 999); // 设置为当天最后一刻
+
+  // 计算本月末
+  const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  thisMonthEnd.setHours(23, 59, 59, 999); // 设置为当天最后一刻
+
+  // 判断预计完成日期是否在本周内或本月内
+  if (finishDate <= thisWeekEnd) {
+    dateString += ' (本周内)';
+  } else if (finishDate <= thisMonthEnd) {
+    dateString += ' (本月内)';
+  } else if (daysRemaining > 365) {
+    dateString = '1年以上';
+  }
+
+  if (includeConfidenceLevel) {
+    // 简化的置信度计算
+    const confidence = Math.min(
+      90,
+      Math.max(50, 80 - Math.abs(daysRemaining - 30))
+    ); // 30天左右置信度最高
+    return {
+      date: dateString,
+      confidence,
+      daysRemaining,
+      adjustedConsumption: adjustedDailyConsumption,
+    };
+  }
+
+  return dateString;
 };
