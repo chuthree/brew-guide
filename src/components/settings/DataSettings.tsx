@@ -32,7 +32,7 @@ type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
 const normalizeS3Settings = (
   incoming?: SettingsOptions['s3Sync'] | null
 ): S3SyncSettings => {
-  const defaults = {
+  const defaults: S3SyncSettings = {
     enabled: false,
     accessKeyId: '',
     secretAccessKey: '',
@@ -51,22 +51,22 @@ const normalizeS3Settings = (
   delete sanitizedRecord.autoSync;
   delete sanitizedRecord.syncInterval;
 
-  const withDefaults: S3SyncSettings = {
+  const result: S3SyncSettings = {
     ...defaults,
     ...(sanitizedRecord as Partial<S3SyncSettings>),
-    syncMode: 'manual',
   };
 
-  return {
-    ...withDefaults,
-    endpoint: withDefaults.endpoint || '',
-  };
+  // 确保某些字段不会是 undefined
+  result.endpoint = result.endpoint || '';
+  result.syncMode = 'manual';
+
+  return result;
 };
 
 const normalizeWebDAVSettings = (
   incoming?: SettingsOptions['webdavSync'] | null
 ): WebDAVSyncSettings => {
-  const defaults = {
+  const defaults: WebDAVSyncSettings = {
     enabled: false,
     url: '',
     username: '',
@@ -79,11 +79,15 @@ const normalizeWebDAVSettings = (
     return { ...defaults };
   }
 
-  return {
+  const result: WebDAVSyncSettings = {
     ...defaults,
     ...incoming,
-    syncMode: 'manual',
   };
+
+  // 确保 syncMode 始终为 manual
+  result.syncMode = 'manual';
+
+  return result;
 };
 
 interface DataSettingsProps {
@@ -224,18 +228,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     loadBackupReminderSettings();
   }, []);
 
-  // 同步设置到父组件
-  useEffect(() => {
-    if (settings.s3Sync) {
-      setS3Settings(normalizeS3Settings(settings.s3Sync));
-    }
-  }, [settings.s3Sync]);
-
-  useEffect(() => {
-    if (settings.webdavSync) {
-      setWebDAVSettings(normalizeWebDAVSettings(settings.webdavSync));
-    }
-  }, [settings.webdavSync]);
+  // 仅在组件首次加载时从 settings 中读取配置
+  // 之后的更新都通过本地状态管理，避免被 settings 覆盖
 
   // 关闭处理
   const handleClose = () => {
@@ -255,17 +249,16 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     key: K,
     value: S3SyncSettings[K]
   ) => {
-    const newS3Settings = normalizeS3Settings({
+    const newS3Settings: S3SyncSettings = {
       ...s3Settings,
       [key]: value,
-      // 只有当修改配置参数时才清除连接状态，改变 enabled 或 lastConnectionSuccess 本身时保持原值
-      lastConnectionSuccess:
-        key === 'enabled' || key === 'lastConnectionSuccess'
-          ? key === 'lastConnectionSuccess'
-            ? value
-            : s3Settings.lastConnectionSuccess
-          : false,
-    } as S3SyncSettings);
+    };
+
+    // 只有当修改配置参数（非 enabled 和 lastConnectionSuccess）时才清除连接状态
+    if (key !== 'enabled' && key !== 'lastConnectionSuccess') {
+      newS3Settings.lastConnectionSuccess = false;
+    }
+
     setS3Settings(newS3Settings);
     handleChange('s3Sync', newS3Settings);
   };
@@ -275,17 +268,16 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     key: K,
     value: WebDAVSyncSettings[K]
   ) => {
-    const newWebDAVSettings = normalizeWebDAVSettings({
+    const newWebDAVSettings: WebDAVSyncSettings = {
       ...webdavSettings,
       [key]: value,
-      // 只有当修改配置参数时才清除连接状态，改变 enabled 或 lastConnectionSuccess 本身时保持原值
-      lastConnectionSuccess:
-        key === 'enabled' || key === 'lastConnectionSuccess'
-          ? key === 'lastConnectionSuccess'
-            ? value
-            : webdavSettings.lastConnectionSuccess
-          : false,
-    } as WebDAVSyncSettings);
+    };
+
+    // 只有当修改配置参数（非 enabled 和 lastConnectionSuccess）时才清除连接状态
+    if (key !== 'enabled' && key !== 'lastConnectionSuccess') {
+      newWebDAVSettings.lastConnectionSuccess = false;
+    }
+
     setWebDAVSettings(newWebDAVSettings);
     handleChange('webdavSync', newWebDAVSettings);
   };

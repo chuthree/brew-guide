@@ -50,36 +50,54 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
 
   // 自动连接
   useEffect(() => {
-    if (
-      enabled &&
-      settings.lastConnectionSuccess &&
+    if (!enabled) {
+      // 如果被禁用，重置状态
+      setStatus('disconnected');
+      setSyncManager(null);
+      setError('');
+      return;
+    }
+
+    // 检查配置是否完整
+    const isConfigComplete =
       settings.accessKeyId &&
       settings.secretAccessKey &&
-      settings.bucketName
-    ) {
-      const autoConnect = async () => {
-        const manager = new S3SyncManager();
-        const connected = await manager.initialize({
-          region: settings.region,
-          accessKeyId: settings.accessKeyId,
-          secretAccessKey: settings.secretAccessKey,
-          bucketName: settings.bucketName,
-          prefix: settings.prefix,
-          endpoint: settings.endpoint || undefined,
-        });
+      settings.bucketName;
 
-        if (connected) {
-          setStatus('connected');
-          setSyncManager(manager);
-          setExpanded(false);
-        } else {
-          setStatus('error');
-          setError('自动连接失败，请检查配置');
-        }
-      };
-      autoConnect();
+    if (!isConfigComplete) {
+      setStatus('disconnected');
+      return;
     }
-  }, [enabled, settings]);
+
+    // 如果配置完整，尝试自动连接
+    const autoConnect = async () => {
+      setStatus('connecting');
+      const manager = new S3SyncManager();
+      const connected = await manager.initialize({
+        region: settings.region,
+        accessKeyId: settings.accessKeyId,
+        secretAccessKey: settings.secretAccessKey,
+        bucketName: settings.bucketName,
+        prefix: settings.prefix,
+        endpoint: settings.endpoint || undefined,
+      });
+
+      if (connected) {
+        setStatus('connected');
+        setSyncManager(manager);
+        // 标记为连接成功
+        onSettingChange('lastConnectionSuccess', true);
+        // 通知 Settings 页面更新云同步状态
+        window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
+      } else {
+        setStatus('error');
+        setError('自动连接失败，请检查配置');
+        onSettingChange('lastConnectionSuccess', false);
+      }
+    };
+    autoConnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
 
   // 测试连接
   const testConnection = async () => {
@@ -110,7 +128,6 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
       if (connected) {
         setStatus('connected');
         setSyncManager(manager);
-        setExpanded(true);
         onSettingChange('lastConnectionSuccess', true);
 
         // 通知 Settings 页面更新云同步状态

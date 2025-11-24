@@ -47,33 +47,52 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
 
   // 自动连接
   useEffect(() => {
-    if (
-      enabled &&
-      settings.lastConnectionSuccess &&
+    if (!enabled) {
+      // 如果被禁用，重置状态
+      setStatus('disconnected');
+      setSyncManager(null);
+      setError('');
+      return;
+    }
+
+    // 检查配置是否完整
+    const isConfigComplete =
       settings.url &&
       settings.username &&
-      settings.password
-    ) {
-      const autoConnect = async () => {
-        const manager = new WebDAVSyncManager();
-        const connected = await manager.initialize({
-          url: settings.url,
-          username: settings.username,
-          password: settings.password,
-          remotePath: settings.remotePath,
-        });
+      settings.password;
 
-        if (connected) {
-          setStatus('connected');
-          setSyncManager(manager);
-        } else {
-          setStatus('error');
-          setError('自动连接失败，请检查配置');
-        }
-      };
-      autoConnect();
+    if (!isConfigComplete) {
+      setStatus('disconnected');
+      return;
     }
-  }, [enabled, settings]);
+
+    // 如果配置完整，尝试自动连接
+    const autoConnect = async () => {
+      setStatus('connecting');
+      const manager = new WebDAVSyncManager();
+      const connected = await manager.initialize({
+        url: settings.url,
+        username: settings.username,
+        password: settings.password,
+        remotePath: settings.remotePath,
+      });
+
+      if (connected) {
+        setStatus('connected');
+        setSyncManager(manager);
+        // 标记为连接成功
+        onSettingChange('lastConnectionSuccess', true);
+        // 通知 Settings 页面更新云同步状态
+        window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
+      } else {
+        setStatus('error');
+        setError('自动连接失败，请检查配置');
+        onSettingChange('lastConnectionSuccess', false);
+      }
+    };
+    autoConnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
 
   // 测试连接
   const testConnection = async () => {
