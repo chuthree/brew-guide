@@ -59,7 +59,7 @@ const ConsumptionTrendChart: React.FC<ConsumptionTrendChartProps> = ({
         <span>{title}</span>
         {isHovering && (
           <span className="ml-1">
-            · {displayData.date} · {formatNumber(displayData.value)}克
+            · {displayData.date} · {formatNumber(displayData.value)} 克
           </span>
         )}
       </div>
