@@ -23,6 +23,8 @@ import {
   saveSelectedDatePreference,
 } from '../../globalCache';
 import StatsFilterBar, { CALCULATION_MODE_LABELS } from './StatsFilterBar';
+import { useConsumptionTrend } from './useConsumptionTrend';
+import ConsumptionTrendChart from './ConsumptionTrendChart';
 
 const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
   const statsContainerRef = useRef<HTMLDivElement>(null);
@@ -140,6 +142,26 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
   // 获取今日消耗数据（保持原有逻辑用于"今日"显示）
   const todayConsumptionData = useConsumption(filteredBeans);
   const { consumption: todayConsumption } = todayConsumptionData;
+
+  // 获取消耗趋势数据
+  const { trendData } = useConsumptionTrend(
+    beans,
+    dateGroupingMode,
+    selectedDate
+  );
+
+  // 决定是否显示趋势图
+  const showTrendChart = useMemo(() => {
+    // 如果选中了具体日期（day模式），则不显示
+    if (dateGroupingMode === 'day' && selectedDate) {
+      return false;
+    }
+    // 如果没有数据，也不显示
+    if (trendData.length === 0) {
+      return false;
+    }
+    return true;
+  }, [dateGroupingMode, selectedDate, trendData]);
 
   // 获取统计数据 - 修复今日消耗显示问题
   const stats = useMemo(() => {
@@ -553,7 +575,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
   const renderBeanTypeCard = (
     title: string,
     statsData: typeof stats.espressoStats,
-    finishDate: string
+    finishDate: string,
+    chart?: React.ReactNode,
+    customLastItem?: { label: string; value: string }
   ) => {
     if (statsData.totalBeans === 0) return null;
 
@@ -566,6 +590,13 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
+          {/* 趋势图 */}
+          {chart && (
+            <div className="col-span-2 flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
+              {chart}
+            </div>
+          )}
+
           {/* 消耗 */}
           <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
             <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -596,13 +627,13 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
             </div>
           </div>
 
-          {/* 预计用完 */}
+          {/* 预计用完 / 自定义项 */}
           <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
             <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              预计用完
+              {customLastItem ? customLastItem.label : '预计用完'}
             </div>
             <div className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-              {finishDate || '-'}
+              {customLastItem ? customLastItem.value : finishDate || '-'}
             </div>
           </div>
         </div>
@@ -694,7 +725,14 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       todayCost: 0,
                       activeBeans: stats.activeBeans,
                     } as any,
-                    totalFinishDate
+                    totalFinishDate,
+                    showTrendChart ? (
+                      <ConsumptionTrendChart data={trendData} />
+                    ) : undefined,
+                    {
+                      label: '日均消耗',
+                      value: `${formatNumber(totalAverageConsumption)}克`,
+                    }
                   )}
 
                   {hasEspresso &&
@@ -766,7 +804,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                           {/* 评分红榜 Top 3 */}
                           {funStats.topRatedBeans.length > 0 && (
                             <div className="col-span-2 flex flex-col rounded bg-neutral-100 p-3 dark:bg-neutral-800">
-                              <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                              <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                 评分红榜 (Top 3)
                               </div>
                               <div className="space-y-1.5">
@@ -788,7 +826,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                           {/* 评分黑榜 Bottom 3 */}
                           {funStats.lowestRatedBeans.length > 0 && (
                             <div className="col-span-2 flex flex-col rounded bg-neutral-100 p-3 dark:bg-neutral-800">
-                              <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                              <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                 评分黑榜 (Bottom 3)
                               </div>
                               <div className="space-y-1.5">
