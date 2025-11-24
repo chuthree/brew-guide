@@ -14,6 +14,7 @@ interface ExportListViewProps {
     notesMaxLines?: number;
     showTotalPrice?: boolean;
     showStatusDots?: boolean;
+    simplifiedViewLabels?: boolean;
   };
   // 简化的概要信息
   summaryText?: string;
@@ -103,7 +104,7 @@ const ExportListView: React.FC<ExportListViewProps> = ({
               display: 'inline-block',
             }}
           >
-            咖啡豆库存
+            {settings?.simplifiedViewLabels ? '库存' : '咖啡豆库存'}
             {/* 精细的活跃状态下划线 */}
             <div
               style={{

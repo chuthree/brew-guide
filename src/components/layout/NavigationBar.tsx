@@ -18,6 +18,7 @@ import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import {
   ViewOption,
   VIEW_LABELS,
+  SIMPLIFIED_VIEW_LABELS,
   VIEW_OPTIONS,
 } from '@/components/coffee-bean/List/constants';
 
@@ -482,11 +483,15 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   // 获取当前视图的显示名称
   const getCurrentViewLabel = () => {
+    const labels = settings.simplifiedViewLabels
+      ? SIMPLIFIED_VIEW_LABELS
+      : VIEW_LABELS;
+
     // 如果当前视图被固定，显示最后一次选中的非固定视图
     if (isCurrentViewPinned) {
       return lastUnpinnedViewRef.current
-        ? VIEW_LABELS[lastUnpinnedViewRef.current]
-        : VIEW_LABELS[getFirstAvailableView()];
+        ? labels[lastUnpinnedViewRef.current]
+        : labels[getFirstAvailableView()];
     }
 
     // 检查 currentBeanView 是否有效（未被固定且启用）
@@ -496,13 +501,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       coffeeBeanViews[currentBeanView] !== false;
 
     if (isCurrentValid) {
-      return VIEW_LABELS[currentBeanView];
+      return labels[currentBeanView];
     } else {
       // 如果当前视图无效，显示第一个可用视图的名称
       // 注意：这里只是显示上的修正，实际状态切换由 useEffect 处理
       // 这样可以解决视觉上的延迟
       const fallbackView = getFirstAvailableView();
-      return VIEW_LABELS[fallbackView];
+      return labels[fallbackView];
     }
   };
 
@@ -894,7 +899,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   {pinnedViews.map(view => (
                     <div key={view} style={navItemStyle}>
                       <TabButton
-                        tab={VIEW_LABELS[view]}
+                        tab={
+                          settings.simplifiedViewLabels
+                            ? SIMPLIFIED_VIEW_LABELS[view]
+                            : VIEW_LABELS[view]
+                        }
                         isActive={
                           activeMainTab === '咖啡豆' && currentBeanView === view
                         }

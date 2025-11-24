@@ -9,6 +9,7 @@ import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import {
   ViewOption,
   VIEW_LABELS,
+  SIMPLIFIED_VIEW_LABELS,
   VIEW_OPTIONS,
 } from '@/components/coffee-bean/List/constants';
 
@@ -245,6 +246,12 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
     </label>
   );
 
+  const getLabel = (view: ViewOption) => {
+    return settings.simplifiedViewLabels
+      ? SIMPLIFIED_VIEW_LABELS[view]
+      : VIEW_LABELS[view];
+  };
+
   return (
     <div
       className="fixed inset-0 mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
@@ -267,8 +274,34 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
       <div className="pb-safe-bottom relative flex-1 overflow-y-auto">
         <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
 
-        {/* 主导航显示设置 */}
+        {/* 通用设置 */}
         <div className="-mt-4 px-6 py-4">
+          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+            通用
+          </h3>
+          <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                简化标签名称
+              </span>
+              <Switch
+                checked={settings.simplifiedViewLabels ?? false}
+                onChange={() =>
+                  handleChange(
+                    'simplifiedViewLabels',
+                    !settings.simplifiedViewLabels
+                  )
+                }
+              />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            开启后，导航栏标签将使用更简洁的名称（如“库存”代替“咖啡豆库存”）
+          </p>
+        </div>
+
+        {/* 主导航显示设置 */}
+        <div className="px-6 py-4">
           <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
             主导航显示
           </h3>
@@ -285,7 +318,7 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
             {availableUnpinnedViewsCount > 0 && (
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  咖啡豆库存
+                  {settings.simplifiedViewLabels ? '库存' : '咖啡豆库存'}
                 </span>
                 <Switch
                   checked={visibleTabs.coffeeBean}
@@ -312,7 +345,7 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
         {visibleTabs.coffeeBean && availableUnpinnedViewsCount > 0 && (
           <div className="px-6 py-4">
             <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-              咖啡豆视图显示
+              视图显示
             </h3>
             <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
               {Object.values(VIEW_OPTIONS)
@@ -320,7 +353,7 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
                 .map(view => (
                   <div key={view} className="flex items-center justify-between">
                     <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                      {VIEW_LABELS[view]}
+                      {getLabel(view)}
                     </span>
                     <Switch
                       checked={coffeeBeanViews[view] ?? true}
@@ -338,13 +371,13 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
         {/* 视图固定设置 */}
         <div className="px-6 py-4">
           <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-            固定视图到导航栏
+            固定视图
           </h3>
           <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
             {Object.values(VIEW_OPTIONS).map(view => (
               <div key={view} className="flex items-center justify-between">
                 <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  {VIEW_LABELS[view]}
+                  {getLabel(view)}
                 </span>
                 <Switch
                   checked={pinnedViews.includes(view)}

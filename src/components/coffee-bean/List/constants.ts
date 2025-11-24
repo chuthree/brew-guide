@@ -15,3 +15,11 @@ export const VIEW_LABELS: Record<ViewOption, string> = {
   [VIEW_OPTIONS.BLOGGER]: '博主榜单',
   [VIEW_OPTIONS.STATS]: '统计视图',
 };
+
+// 简化版视图选项显示名称
+export const SIMPLIFIED_VIEW_LABELS: Record<ViewOption, string> = {
+  [VIEW_OPTIONS.INVENTORY]: '库存',
+  [VIEW_OPTIONS.RANKING]: '榜单',
+  [VIEW_OPTIONS.BLOGGER]: '推荐',
+  [VIEW_OPTIONS.STATS]: '统计',
+};

@@ -62,6 +62,7 @@ import {
   ViewOption,
   VIEW_OPTIONS,
   VIEW_LABELS,
+  SIMPLIFIED_VIEW_LABELS,
 } from '@/components/coffee-bean/List/constants';
 import { getStringState, saveStringState } from '@/lib/core/statePersistence';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -3138,7 +3139,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   style={{ paddingBottom: '12px' }}
                 >
                   <span className="relative inline-block">
-                    {VIEW_LABELS[currentBeanView]}
+                    {settings.simplifiedViewLabels
+                      ? SIMPLIFIED_VIEW_LABELS[currentBeanView]
+                      : VIEW_LABELS[currentBeanView]}
                   </span>
                   <ChevronsUpDown
                     size={12}
@@ -3202,44 +3205,51 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         ] ?? true;
                       return isVisible;
                     })
-                    .map(([key, label], index) => (
-                      <motion.button
-                        key={key}
-                        initial={{
-                          opacity: 0,
-                          y: -6,
-                          scale: 0.98,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          scale: 1,
-                          transition: {
-                            delay: index * 0.04,
-                            duration: 0.2,
-                            ease: [0.25, 0.46, 0.45, 0.94],
-                          },
-                        }}
-                        exit={{
-                          opacity: 0,
-                          y: -4,
-                          scale: 0.98,
-                          transition: {
-                            delay:
-                              (Object.keys(VIEW_LABELS).length - index - 1) *
-                              0.02,
-                            duration: 0.12,
-                            ease: [0.4, 0.0, 1, 1],
-                          },
-                        }}
-                        onClick={() => handleBeanViewChange(key as ViewOption)}
-                        className="flex items-center pb-3 text-left text-xs font-medium tracking-widest whitespace-nowrap text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                        style={{ paddingBottom: '12px' }}
-                      >
-                        <span className="relative inline-block">{label}</span>
-                        <span className="ml-1 h-3 w-3" />
-                      </motion.button>
-                    ))}
+                    .map(([key], index) => {
+                      const label = settings.simplifiedViewLabels
+                        ? SIMPLIFIED_VIEW_LABELS[key as ViewOption]
+                        : VIEW_LABELS[key as ViewOption];
+                      return (
+                        <motion.button
+                          key={key}
+                          initial={{
+                            opacity: 0,
+                            y: -6,
+                            scale: 0.98,
+                          }}
+                          animate={{
+                            opacity: 1,
+                            y: 0,
+                            scale: 1,
+                            transition: {
+                              delay: index * 0.04,
+                              duration: 0.2,
+                              ease: [0.25, 0.46, 0.45, 0.94],
+                            },
+                          }}
+                          exit={{
+                            opacity: 0,
+                            y: -4,
+                            scale: 0.98,
+                            transition: {
+                              delay:
+                                (Object.keys(VIEW_LABELS).length - index - 1) *
+                                0.02,
+                              duration: 0.12,
+                              ease: [0.4, 0.0, 1, 1],
+                            },
+                          }}
+                          onClick={() =>
+                            handleBeanViewChange(key as ViewOption)
+                          }
+                          className="flex items-center pb-3 text-left text-xs font-medium tracking-widest whitespace-nowrap text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                          style={{ paddingBottom: '12px' }}
+                        >
+                          <span className="relative inline-block">{label}</span>
+                          <span className="ml-1 h-3 w-3" />
+                        </motion.button>
+                      );
+                    })}
                 </div>
               </motion.div>
             )}

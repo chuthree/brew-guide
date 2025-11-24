@@ -44,6 +44,7 @@ interface InventoryViewProps {
     notesMaxLines?: number;
     showTotalPrice?: boolean;
     showStatusDots?: boolean;
+    simplifiedViewLabels?: boolean;
   };
   // 外部滚动容器（Virtuoso 使用）
   scrollParentRef?: HTMLElement;

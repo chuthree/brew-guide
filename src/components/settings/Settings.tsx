@@ -52,6 +52,7 @@ export interface SettingsOptions {
   enableAllDecrementOption: boolean; // 是否启用ALL扣除选项（扣除剩余库存）
   enableCustomDecrementInput: boolean; // 是否启用用户自定义输入扣除数量
   showOnlyBeanName: boolean; // 是否只显示咖啡豆名称
+  simplifiedViewLabels: boolean; // 是否使用简化的视图标签名称
   dateDisplayMode: 'date' | 'flavorPeriod' | 'agingDays'; // 日期显示模式：日期/赏味期/养豆天数
   showFlavorInfo: boolean; // 是否在备注中显示风味信息
   limitNotesLines: boolean; // 是否限制备注显示行数
@@ -171,6 +172,7 @@ export const defaultSettings: SettingsOptions = {
   enableAllDecrementOption: false, // 默认关闭ALL扣除选项
   enableCustomDecrementInput: true, // 默认启用自定义输入扣除
   showOnlyBeanName: true, // 默认简化咖啡豆名称
+  simplifiedViewLabels: false, // 默认不使用简化视图标签名称
   dateDisplayMode: 'agingDays', // 默认显示养豆天数
   showFlavorInfo: false, // 默认不显示风味信息
   limitNotesLines: true, // 默认限制备注显示行数
