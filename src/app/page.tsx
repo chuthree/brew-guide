@@ -100,7 +100,6 @@ import BrewingNoteEditModal from '@/components/notes/Form/BrewingNoteEditModal';
 import NoteDetailModal from '@/components/notes/Detail/NoteDetailModal';
 import ImageViewer from '@/components/common/ui/ImageViewer';
 import NavigationSettings from '@/components/settings/NavigationSettings';
-import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -266,7 +265,81 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showRoasterLogoSettings ||
     showGrinderSettings;
 
-  const { settings, setSettings, updateSettings } = useSettingsStore();
+  const [settings, setSettings] = useState<SettingsOptions>(() => {
+    // 使用默认设置作为初始值，稍后在 useEffect 中异步加载
+    return defaultSettings;
+  });
+
+  // 初始化加载设置
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSettings = async () => {
+      try {
+        const { Storage } = await import('@/lib/core/storage');
+        const savedSettings = await Storage.get('brewGuideSettings');
+
+        if (savedSettings && typeof savedSettings === 'string' && isMounted) {
+          try {
+            let parsedSettings = JSON.parse(savedSettings) as Record<
+              string,
+              unknown
+            >;
+
+            // 检查是否是 Zustand persist 格式，如果是则解包
+            if (
+              parsedSettings.state &&
+              typeof parsedSettings.state === 'object' &&
+              (parsedSettings.state as any).settings
+            ) {
+              parsedSettings = (parsedSettings.state as any).settings;
+            }
+
+            // 迁移旧的showFlavorPeriod设置到新的dateDisplayMode
+            if (
+              parsedSettings.showFlavorPeriod !== undefined &&
+              parsedSettings.dateDisplayMode === undefined
+            ) {
+              parsedSettings.dateDisplayMode = parsedSettings.showFlavorPeriod
+                ? 'flavorPeriod'
+                : 'date';
+              delete parsedSettings.showFlavorPeriod;
+
+              // 保存迁移后的设置
+              try {
+                await Storage.set(
+                  'brewGuideSettings',
+                  JSON.stringify(parsedSettings)
+                );
+              } catch {
+                // 静默处理保存错误
+              }
+            }
+
+            setSettings(parsedSettings as unknown as SettingsOptions);
+
+            // 应用字体缩放级别
+            if (
+              parsedSettings.textZoomLevel &&
+              typeof parsedSettings.textZoomLevel === 'number'
+            ) {
+              fontZoomUtils.set(parsedSettings.textZoomLevel);
+            }
+          } catch {
+            // JSON解析失败，使用默认设置
+          }
+        }
+      } catch {
+        // 静默处理错误
+      }
+    };
+
+    loadSettings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // 咖啡豆表单状态
   const [showBeanForm, setShowBeanForm] = useState(false);
@@ -961,18 +1034,39 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handleSettingsChange = useCallback(
     async (newSettings: SettingsOptions) => {
       setSettings(newSettings);
-      if (newSettings.textZoomLevel) {
-        fontZoomUtils.set(newSettings.textZoomLevel);
+      try {
+        const { Storage } = await import('@/lib/core/storage');
+        await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+
+        if (newSettings.textZoomLevel) {
+          fontZoomUtils.set(newSettings.textZoomLevel);
+        }
+      } catch {
+        // 静默处理错误
       }
     },
     [setSettings]
   );
 
   const handleSubSettingChange = useCallback(
-    (key: string, value: any) => {
-      updateSettings(key as keyof SettingsOptions, value);
+    async (key: string, value: any) => {
+      const newSettings = { ...settings, [key]: value };
+      setSettings(newSettings);
+      try {
+        const { Storage } = await import('@/lib/core/storage');
+        await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+
+        // 触发自定义事件通知其他组件设置已更改
+        window.dispatchEvent(
+          new CustomEvent('storageChange', {
+            detail: { key: 'brewGuideSettings' },
+          })
+        );
+      } catch {
+        // 静默处理错误
+      }
     },
-    [updateSettings]
+    [settings]
   );
 
   const handleLayoutChange = useCallback(

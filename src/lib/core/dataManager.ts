@@ -278,17 +278,11 @@ export const DataManager = {
         if (importData.data[key] !== undefined) {
           let valueToSave = importData.data[key];
 
-          // 如果是 brewGuideSettings，需要包装为 Zustand persist 格式
+          // 如果是 brewGuideSettings，检查是否被 Zustand persist 包装
+          // 如果导入的数据是 Zustand 格式（包含 state.settings），则解包
           if (key === 'brewGuideSettings' && typeof valueToSave === 'object') {
-            // 检查是否已经是包装格式
-            if (!(valueToSave as any)?.state?.settings) {
-              // 包装为 Zustand persist 格式
-              valueToSave = {
-                state: {
-                  settings: valueToSave,
-                },
-                version: 0,
-              };
+            if ((valueToSave as any)?.state?.settings) {
+              valueToSave = (valueToSave as any).state.settings;
             }
           }
 
