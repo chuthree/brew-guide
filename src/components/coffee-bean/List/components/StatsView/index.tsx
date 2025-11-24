@@ -25,6 +25,48 @@ import {
 import StatsFilterBar, { CALCULATION_MODE_LABELS } from './StatsFilterBar';
 import { useConsumptionTrend } from './useConsumptionTrend';
 import ConsumptionTrendChart from './ConsumptionTrendChart';
+import { ExtendedCoffeeBean } from '../../types';
+
+// 辅助函数：获取可用日期列表
+const getAvailableDates = (
+  beans: ExtendedCoffeeBean[],
+  mode: DateGroupingMode
+) => {
+  const dates = new Set<string>();
+  beans.forEach(bean => {
+    if (!bean.timestamp) return;
+    const date = new Date(bean.timestamp);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+
+    if (mode === 'year') {
+      dates.add(`${year}`);
+    } else if (mode === 'month') {
+      dates.add(`${year}-${month}`);
+    } else {
+      dates.add(`${year}-${month}-${day}`);
+    }
+  });
+
+  return Array.from(dates).sort((a, b) => {
+    // 降序排列
+    if (mode === 'year') {
+      return parseInt(b) - parseInt(a);
+    } else if (mode === 'month') {
+      const [yA, mA] = a.split('-').map(Number);
+      const [yB, mB] = b.split('-').map(Number);
+      if (yA !== yB) return yB - yA;
+      return mB - mA;
+    } else {
+      const [yA, mA, dA] = a.split('-').map(Number);
+      const [yB, mB, dB] = b.split('-').map(Number);
+      if (yA !== yB) return yB - yA;
+      if (mA !== mB) return mB - mA;
+      return dB - dA;
+    }
+  });
+};
 
 const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
   const statsContainerRef = useRef<HTMLDivElement>(null);
@@ -57,8 +99,12 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
     setDateGroupingMode(mode);
     globalCache.dateGroupingMode = mode;
     saveDateGroupingModePreference(mode);
-    // 切换分组模式时重置选中的日期
-    setSelectedDate(null);
+
+    // 切换分组模式时，自动选中最新的日期
+    const newAvailableDates = getAvailableDates(beans, mode);
+    const newSelectedDate =
+      newAvailableDates.length > 0 ? newAvailableDates[0] : null;
+    setSelectedDate(newSelectedDate);
   };
 
   // 监听 selectedDate 变化并保存
@@ -79,40 +125,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
 
   // 生成可用日期列表
   const availableDates = useMemo(() => {
-    const dates = new Set<string>();
-    beans.forEach(bean => {
-      if (!bean.timestamp) return;
-      const date = new Date(bean.timestamp);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-      const day = date.getDate();
-
-      if (dateGroupingMode === 'year') {
-        dates.add(`${year}`);
-      } else if (dateGroupingMode === 'month') {
-        dates.add(`${year}-${month}`);
-      } else {
-        dates.add(`${year}-${month}-${day}`);
-      }
-    });
-
-    return Array.from(dates).sort((a, b) => {
-      // 降序排列
-      if (dateGroupingMode === 'year') {
-        return parseInt(b) - parseInt(a);
-      } else if (dateGroupingMode === 'month') {
-        const [yA, mA] = a.split('-').map(Number);
-        const [yB, mB] = b.split('-').map(Number);
-        if (yA !== yB) return yB - yA;
-        return mB - mA;
-      } else {
-        const [yA, mA, dA] = a.split('-').map(Number);
-        const [yB, mB, dB] = b.split('-').map(Number);
-        if (yA !== yB) return yB - yA;
-        if (mA !== mB) return mB - mA;
-        return dB - dA;
-      }
-    });
+    return getAvailableDates(beans, dateGroupingMode);
   }, [beans, dateGroupingMode]);
 
   // 根据时间区间过滤咖啡豆数据

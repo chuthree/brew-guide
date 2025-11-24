@@ -68,6 +68,7 @@ const ConsumptionTrendChart: React.FC<ConsumptionTrendChartProps> = ({
         ref={containerRef}
         style={{ height }}
         className="relative w-full touch-none select-none"
+        onPointerDown={handlePointerMove}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
       >
