@@ -608,8 +608,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           // 继续初始化，不阻止应用启动
         }
 
-        // 1. 应用字体缩放
-        if (settings.textZoomLevel) {
+        // 1. 应用字体缩放（如果设置中有值，确保同步）
+        // 注意：初始值已在 layout.tsx 的 head 脚本中同步应用，避免闪烁
+        if (settings.textZoomLevel && settings.textZoomLevel !== 1.0) {
           fontZoomUtils.set(settings.textZoomLevel);
         }
 
@@ -624,13 +625,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           // 静默处理错误
         }
 
-        // 3. 初始化字体缩放
-        fontZoomUtils.init();
-
-        // 4. 初始化 Capacitor
+        // 3. 初始化 Capacitor
         initCapacitor();
 
-        // 5. 初始化备份提醒
+        // 4. 初始化备份提醒
         try {
           await BackupReminderUtils.initializeFirstUse();
         } catch {

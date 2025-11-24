@@ -195,6 +195,26 @@ export default function RootLayout({
         />
         {/* 百度统计代码 */}
         <BaiduAnalytics />
+        {/* 字体缩放初始化脚本 - 必须在页面渲染前执行，避免字体闪烁 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const savedZoom = localStorage.getItem('fontZoomLevel');
+                  if (savedZoom) {
+                    const zoomLevel = parseFloat(savedZoom);
+                    if (!isNaN(zoomLevel) && zoomLevel >= 0.8 && zoomLevel <= 1.4) {
+                      document.documentElement.style.setProperty('--font-scale', zoomLevel.toString());
+                    }
+                  }
+                } catch (e) {
+                  // 静默处理错误
+                }
+              })();
+            `,
+          }}
+        />
         {isDevelopment && (
           <>
             <meta
