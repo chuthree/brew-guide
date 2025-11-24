@@ -13,7 +13,6 @@ import {
   calculateFunStats,
   calculateEstimatedFinishDate,
 } from './utils';
-import StatsCategories from './StatsCategories';
 import { useConsumption } from './useConsumption';
 import type { BrewingNote } from '@/lib/core/config';
 import {
@@ -26,6 +25,51 @@ import StatsFilterBar, { CALCULATION_MODE_LABELS } from './StatsFilterBar';
 import { useConsumptionTrend } from './useConsumptionTrend';
 import ConsumptionTrendChart from './ConsumptionTrendChart';
 import { ExtendedCoffeeBean } from '../../types';
+import { isBeanEmpty } from '../../globalCache';
+
+// 辅助组件：单个统计块
+const StatsBlock: React.FC<{
+  title: string;
+  value: string | number;
+  className?: string;
+}> = ({ title, value, className }) => (
+  <div
+    className={`flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800 ${className}`}
+  >
+    <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+      {title}
+    </div>
+    <div className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+      {value}
+    </div>
+  </div>
+);
+
+// 辅助组件：列表统计块
+const StatsListBlock: React.FC<{
+  title: string;
+  items: Array<{ label: string; value: string | number }>;
+  className?: string;
+}> = ({ title, items, className }) => (
+  <div
+    className={`flex flex-col rounded bg-neutral-100 p-3 dark:bg-neutral-800 ${className}`}
+  >
+    <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+      {title}
+    </div>
+    <div className="space-y-1.5">
+      {items.map((item, index) => (
+        <div
+          key={index}
+          className="flex items-center justify-between text-sm font-medium text-neutral-900 dark:text-neutral-100"
+        >
+          <span className="mr-2 flex-1 truncate">{item.label}</span>
+          <span>{item.value}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 // 辅助函数：获取可用日期列表
 const getAvailableDates = (
@@ -66,6 +110,97 @@ const getAvailableDates = (
       return dB - dA;
     }
   });
+};
+
+interface BeanTypeCardProps {
+  title: string;
+  statsData: any;
+  finishDate: string;
+  chart?: React.ReactNode;
+  customLastItem?: { label: string; value: string };
+  moreDetails?: React.ReactNode;
+}
+
+const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
+  title,
+  statsData,
+  finishDate,
+  chart,
+  customLastItem,
+  moreDetails,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const detailsRef = useRef<HTMLDivElement>(null);
+
+  if (statsData.totalBeans === 0) return null;
+
+  const handleCardClick = () => {
+    if (moreDetails) {
+      setIsExpanded(!isExpanded);
+    }
+  };
+
+  return (
+    <div className="w-full">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
+          {title}
+        </h3>
+      </div>
+
+      <div
+        onClick={handleCardClick}
+        className={`${moreDetails ? 'cursor-pointer transition-opacity hover:opacity-80' : ''}`}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          {/* 趋势图 */}
+          {chart && (
+            <div className="col-span-2 flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
+              {chart}
+            </div>
+          )}
+
+          {/* 消耗 */}
+          <StatsBlock
+            title="消耗"
+            value={`${formatNumber(statsData.consumedWeight)}克`}
+          />
+
+          {/* 剩余 */}
+          <StatsBlock
+            title="剩余"
+            value={`${formatNumber(statsData.remainingWeight)}克`}
+          />
+
+          {/* 花费 */}
+          <StatsBlock
+            title="花费"
+            value={`${formatNumber(statsData.totalCost)}元`}
+          />
+
+          {/* 预计用完 / 自定义项 */}
+          <StatsBlock
+            title={customLastItem ? customLastItem.label : '预计用完'}
+            value={customLastItem ? customLastItem.value : finishDate || '-'}
+          />
+        </div>
+
+        {moreDetails && (
+          <div
+            ref={detailsRef}
+            className="overflow-hidden transition-all duration-300 ease-in-out"
+            style={{
+              maxHeight: isExpanded
+                ? `${detailsRef.current?.scrollHeight}px`
+                : '0px',
+            }}
+          >
+            <div className="mt-3">{moreDetails}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
@@ -584,76 +719,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
     );
   }
 
-  // 渲染单个类型的统计卡片
-  const renderBeanTypeCard = (
-    title: string,
-    statsData: typeof stats.espressoStats,
-    finishDate: string,
-    chart?: React.ReactNode,
-    customLastItem?: { label: string; value: string }
-  ) => {
-    if (statsData.totalBeans === 0) return null;
-
-    return (
-      <div className="w-full">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
-            {title}
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {/* 趋势图 */}
-          {chart && (
-            <div className="col-span-2 flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
-              {chart}
-            </div>
-          )}
-
-          {/* 消耗 */}
-          <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
-            <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              消耗
-            </div>
-            <div className="flex items-baseline text-sm font-medium text-neutral-900 dark:text-neutral-100">
-              {formatNumber(statsData.consumedWeight)}克
-            </div>
-          </div>
-
-          {/* 剩余 */}
-          <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
-            <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              剩余
-            </div>
-            <div className="flex items-baseline text-sm font-medium text-neutral-900 dark:text-neutral-100">
-              {formatNumber(statsData.remainingWeight)}克
-            </div>
-          </div>
-
-          {/* 花费 */}
-          <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
-            <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              花费
-            </div>
-            <div className="flex items-baseline text-sm font-medium text-neutral-900 dark:text-neutral-100">
-              ¥{formatNumber(statsData.totalCost)}元
-            </div>
-          </div>
-
-          {/* 预计用完 / 自定义项 */}
-          <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
-            <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              {customLastItem ? customLastItem.label : '预计用完'}
-            </div>
-            <div className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-              {customLastItem ? customLastItem.value : finishDate || '-'}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="coffee-bean-stats-container bg-neutral-50 dark:bg-neutral-900">
       <div className="sticky top-0 z-10 bg-neutral-50 dark:bg-neutral-900">
@@ -727,45 +792,142 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                 totalAverageConsumption
               );
 
+              // 概览详情
+              const overviewDetails = (
+                <div className="grid grid-cols-2 gap-3">
+                  <StatsBlock
+                    title="今日消耗"
+                    value={`${formatNumber(todayConsumptionData.consumption)}克`}
+                  />
+                  <StatsBlock
+                    title="今日花费"
+                    value={`${formatNumber(todayConsumptionData.cost)}元`}
+                  />
+                  <StatsBlock
+                    title="平均每克"
+                    value={`${formatNumber(stats.averageGramPrice)}元`}
+                  />
+                  <StatsBlock
+                    title="日均消耗"
+                    value={`${formatNumber(totalAverageConsumption)}克`}
+                  />
+                </div>
+              );
+
+              // 意式详情
+              const espressoDetails = (
+                <div className="grid grid-cols-2 gap-3">
+                  <StatsBlock
+                    title="今日消耗"
+                    value={`${formatNumber(stats.espressoStats.todayConsumption)}克`}
+                  />
+                  <StatsBlock
+                    title="今日花费"
+                    value={`${formatNumber(stats.espressoStats.todayCost)}元`}
+                  />
+                  <StatsBlock
+                    title="平均每克"
+                    value={`${formatNumber(stats.espressoStats.averageGramPrice)}元`}
+                  />
+                  <StatsBlock
+                    title="日均消耗"
+                    value={`${formatNumber(espressoAverageConsumption)}克`}
+                  />
+                </div>
+              );
+
+              // 手冲详情
+              const filterDetails = (
+                <div className="grid grid-cols-2 gap-3">
+                  <StatsBlock
+                    title="今日消耗"
+                    value={`${formatNumber(stats.filterStats.todayConsumption)}克`}
+                  />
+                  <StatsBlock
+                    title="今日花费"
+                    value={`${formatNumber(stats.filterStats.todayCost)}元`}
+                  />
+                  <StatsBlock
+                    title="平均每克"
+                    value={`${formatNumber(stats.filterStats.averageGramPrice)}元`}
+                  />
+                  <StatsBlock
+                    title="日均消耗"
+                    value={`${formatNumber(filterAverageConsumption)}克`}
+                  />
+                </div>
+              );
+
+              // 全能详情
+              const omniDetails = (
+                <div className="grid grid-cols-2 gap-3">
+                  <StatsBlock
+                    title="今日消耗"
+                    value={`${formatNumber(stats.omniStats.todayConsumption)}克`}
+                  />
+                  <StatsBlock
+                    title="今日花费"
+                    value={`${formatNumber(stats.omniStats.todayCost)}元`}
+                  />
+                  <StatsBlock
+                    title="平均每克"
+                    value={`${formatNumber(stats.omniStats.averageGramPrice)}元`}
+                  />
+                  <StatsBlock
+                    title="日均消耗"
+                    value={`${formatNumber(omniAverageConsumption)}克`}
+                  />
+                </div>
+              );
+
               return (
                 <>
                   {/* 总览卡片 */}
-                  {renderBeanTypeCard(
-                    '概览',
-                    {
+                  <BeanTypeCard
+                    title="概览"
+                    statsData={{
                       ...stats,
                       todayConsumption: 0,
                       todayCost: 0,
                       activeBeans: stats.activeBeans,
-                    } as any,
-                    totalFinishDate,
-                    showTrendChart ? (
-                      <ConsumptionTrendChart data={trendData} />
-                    ) : undefined,
-                    {
+                    }}
+                    finishDate={totalFinishDate}
+                    chart={
+                      showTrendChart ? (
+                        <ConsumptionTrendChart data={trendData} />
+                      ) : undefined
+                    }
+                    customLastItem={{
                       label: '日均消耗',
                       value: `${formatNumber(totalAverageConsumption)}克`,
-                    }
-                  )}
+                    }}
+                    moreDetails={overviewDetails}
+                  />
 
-                  {hasEspresso &&
-                    renderBeanTypeCard(
-                      '意式豆',
-                      stats.espressoStats,
-                      espressoFinishDate
-                    )}
-                  {hasFilter &&
-                    renderBeanTypeCard(
-                      '手冲豆',
-                      stats.filterStats,
-                      filterFinishDate
-                    )}
-                  {hasOmni &&
-                    renderBeanTypeCard(
-                      '全能豆',
-                      stats.omniStats,
-                      omniFinishDate
-                    )}
+                  {hasEspresso && (
+                    <BeanTypeCard
+                      title="意式豆"
+                      statsData={stats.espressoStats}
+                      finishDate={espressoFinishDate}
+                      moreDetails={espressoDetails}
+                    />
+                  )}
+                  {hasFilter && (
+                    <BeanTypeCard
+                      title="手冲豆"
+                      statsData={stats.filterStats}
+                      finishDate={filterFinishDate}
+                      moreDetails={filterDetails}
+                    />
+                  )}
+                  {hasOmni && (
+                    <BeanTypeCard
+                      title="全能豆"
+                      statsData={stats.omniStats}
+                      finishDate={omniFinishDate}
+                      moreDetails={omniDetails}
+                    />
+                  )}
 
                   {/* 趣味统计 */}
                   {funStats && (
@@ -859,25 +1021,183 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                               </div>
                             </div>
                           )}
+
+                          <div className="col-span-2 my-3 border-t border-neutral-200 dark:border-neutral-800" />
+
+                          {/* 咖啡豆画像 (原 Profile 数据) */}
+                          {Object.keys(stats.roastLevelCount).length > 0 && (
+                            <StatsListBlock
+                              title="烘焙度"
+                              items={Object.entries(stats.roastLevelCount).map(
+                                ([label, value]) => ({
+                                  label,
+                                  value: `${value}个`,
+                                })
+                              )}
+                              className="col-span-2"
+                            />
+                          )}
+
+                          {Object.keys(stats.originCount).length > 0 && (
+                            <StatsListBlock
+                              title="产地"
+                              items={Object.entries(stats.originCount).map(
+                                ([label, value]) => ({
+                                  label,
+                                  value: `${value}个`,
+                                })
+                              )}
+                              className="col-span-2"
+                            />
+                          )}
+
+                          {Object.keys(stats.processCount).length > 0 && (
+                            <StatsListBlock
+                              title="处理法"
+                              items={Object.entries(stats.processCount).map(
+                                ([label, value]) => ({
+                                  label,
+                                  value: `${value}个`,
+                                })
+                              )}
+                              className="col-span-2"
+                            />
+                          )}
+
+                          {Object.keys(stats.varietyCount).length > 0 && (
+                            <StatsListBlock
+                              title="品种"
+                              items={Object.entries(stats.varietyCount).map(
+                                ([label, value]) => ({
+                                  label,
+                                  value: `${value}个`,
+                                })
+                              )}
+                              className="col-span-2"
+                            />
+                          )}
+
+                          {stats.topFlavors.length > 0 && (
+                            <StatsListBlock
+                              title="风味"
+                              items={stats.topFlavors.map(([label, value]) => ({
+                                label,
+                                value: `${value}次`,
+                              }))}
+                              className="col-span-2"
+                            />
+                          )}
+
+                          {/* 分类统计 */}
+                          {(() => {
+                            const singleTotal = beans.filter(
+                              b =>
+                                !b.blendComponents ||
+                                b.blendComponents.length <= 1
+                            ).length;
+                            const blendTotal = beans.filter(
+                              b =>
+                                b.blendComponents &&
+                                b.blendComponents.length > 1
+                            ).length;
+                            const espressoTotal = beans.filter(
+                              b => b.beanType === 'espresso'
+                            ).length;
+                            const filterTotal = beans.filter(
+                              b => b.beanType === 'filter'
+                            ).length;
+                            const omniTotal = beans.filter(
+                              b => b.beanType === 'omni'
+                            ).length;
+
+                            const items = [];
+                            if (singleTotal > 0) {
+                              items.push({
+                                label: '单品豆',
+                                value: `${beans.filter(b => (!b.blendComponents || b.blendComponents.length <= 1) && !isBeanEmpty(b)).length}/${singleTotal}`,
+                              });
+                            }
+                            if (blendTotal > 0) {
+                              items.push({
+                                label: '拼配豆',
+                                value: `${beans.filter(b => b.blendComponents && b.blendComponents.length > 1 && !isBeanEmpty(b)).length}/${blendTotal}`,
+                              });
+                            }
+                            if (espressoTotal > 0) {
+                              items.push({
+                                label: '意式豆',
+                                value: `${beans.filter(b => b.beanType === 'espresso' && !isBeanEmpty(b)).length}/${espressoTotal}`,
+                              });
+                            }
+                            if (filterTotal > 0) {
+                              items.push({
+                                label: '手冲豆',
+                                value: `${beans.filter(b => b.beanType === 'filter' && !isBeanEmpty(b)).length}/${filterTotal}`,
+                              });
+                            }
+                            if (omniTotal > 0) {
+                              items.push({
+                                label: '全能豆',
+                                value: `${beans.filter(b => b.beanType === 'omni' && !isBeanEmpty(b)).length}/${omniTotal}`,
+                              });
+                            }
+
+                            if (items.length > 0) {
+                              return (
+                                <StatsListBlock
+                                  title="分类统计 (使用中/总数)"
+                                  items={items}
+                                  className="col-span-2"
+                                />
+                              );
+                            }
+                            return null;
+                          })()}
+
+                          {/* 赏味期 */}
+                          {stats.flavorPeriodStatus.inPeriod +
+                            stats.flavorPeriodStatus.beforePeriod +
+                            stats.flavorPeriodStatus.afterPeriod >
+                            0 && (
+                            <StatsListBlock
+                              title="赏味期"
+                              items={[
+                                ...(stats.flavorPeriodStatus.inPeriod > 0
+                                  ? [
+                                      {
+                                        label: '在赏味期内',
+                                        value: `${stats.flavorPeriodStatus.inPeriod}个`,
+                                      },
+                                    ]
+                                  : []),
+                                ...(stats.flavorPeriodStatus.beforePeriod > 0
+                                  ? [
+                                      {
+                                        label: '尚未进入',
+                                        value: `${stats.flavorPeriodStatus.beforePeriod}个`,
+                                      },
+                                    ]
+                                  : []),
+                                ...(stats.flavorPeriodStatus.afterPeriod > 0
+                                  ? [
+                                      {
+                                        label: '已过赏味期',
+                                        value: `${stats.flavorPeriodStatus.afterPeriod}个`,
+                                      },
+                                    ]
+                                  : []),
+                              ]}
+                              className="col-span-2"
+                            />
+                          )}
                         </div>
                       </div>
-
-                      <div className="my-6 border-t border-neutral-200 dark:border-neutral-800" />
                     </>
                   )}
                 </>
               );
             })()}
           </div>
-        </div>
-
-        <div className="mx-auto">
-          <StatsCategories
-            stats={stats}
-            beans={filteredBeans}
-            todayConsumption={todayConsumptionData.consumption}
-            todayCost={todayConsumptionData.cost}
-          />
         </div>
       </div>
     </div>

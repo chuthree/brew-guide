@@ -43,9 +43,9 @@ export const calculateFunStats = (notes: BrewingNote[]): FunStatsData => {
   let latestBrewTime = '-';
 
   if (validNotes.length > 0) {
-    // 将凌晨4点作为一天的分界线
-    // 4:00 之前的记录会被视为"深夜"（即上一天的延续），在比较时加上24小时
-    const DAY_START_HOUR = 4;
+    // 将凌晨6点作为一天的分界线
+    // 6:00 之前的记录会被视为"深夜"（即上一天的延续），在比较时加上24小时
+    const DAY_START_HOUR = 6;
     let minMinutes = 48 * 60; // 初始化为一个足够大的值
     let maxMinutes = -1;
 
@@ -58,7 +58,7 @@ export const calculateFunStats = (notes: BrewingNote[]): FunStatsData => {
       // 计算分钟数
       let minutes = hour * 60 + minute;
 
-      // 如果是凌晨0-4点，加上24小时（1440分钟），使其排在深夜之后
+      // 如果是凌晨0-6点，加上24小时（1440分钟），使其排在深夜之后
       if (hour < DAY_START_HOUR) {
         minutes += 24 * 60;
       }
