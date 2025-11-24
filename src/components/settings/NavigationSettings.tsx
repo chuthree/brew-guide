@@ -184,11 +184,14 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
 
     // 如果正在固定视图，触发事件通知需要切换当前视图
     if (isPinning) {
-      window.dispatchEvent(
-        new CustomEvent('viewPinned', {
-          detail: { pinnedView: view },
-        })
-      );
+      // 使用 setTimeout 确保在状态更新后触发事件，避免主界面使用旧的 settings 计算可用视图
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('viewPinned', {
+            detail: { pinnedView: view },
+          })
+        );
+      }, 0);
     }
 
     if (settings.hapticFeedback) {
