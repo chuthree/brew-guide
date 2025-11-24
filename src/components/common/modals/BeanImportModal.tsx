@@ -92,14 +92,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
   // 关闭处理
   const handleClose = useCallback(() => {
-    setIsVisible(false); // 触发退出动画
-    window.dispatchEvent(new CustomEvent('beanImportClosing')); // 通知父组件
-
-    setTimeout(() => {
-      resetAllStates();
-      onClose();
-    }, 350); // 350ms 后真正关闭
-  }, [resetAllStates, onClose]);
+    // 立即通知父组件关闭，让父组件通过 showForm prop 控制动画
+    window.dispatchEvent(new CustomEvent('beanImportClosing'));
+    onClose(); // 立即调用，让父组件设置 showForm=false，触发 useEffect 处理动画
+  }, [onClose]);
 
   // 处理显示/隐藏动画
   useEffect(() => {
@@ -204,15 +200,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       );
       await onImport(JSON.stringify(processedBeans));
 
-      // 先触发退出动画
-      setIsVisible(false);
-      window.dispatchEvent(new CustomEvent('beanImportClosing')); // 通知父组件
-
-      // 等待动画完成后关闭
-      setTimeout(() => {
-        resetAllStates();
-        onClose();
-      }, 450); // 450ms > 父组件的 300ms 延迟，确保编辑模态框先打开
+      // 通知父组件关闭，让父组件通过 showForm prop 控制动画
+      window.dispatchEvent(new CustomEvent('beanImportClosing'));
+      onClose(); // 立即调用，让父组件设置 showForm=false，触发 useEffect 处理动画
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
       setError(`添加失败: ${errorMessage}`);
