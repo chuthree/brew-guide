@@ -57,9 +57,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
 
     // 检查配置是否完整
     const isConfigComplete =
-      settings.url &&
-      settings.username &&
-      settings.password;
+      settings.url && settings.username && settings.password;
 
     if (!isConfigComplete) {
       setStatus('disconnected');

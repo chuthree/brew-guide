@@ -60,9 +60,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
 
     // 检查配置是否完整
     const isConfigComplete =
-      settings.accessKeyId &&
-      settings.secretAccessKey &&
-      settings.bucketName;
+      settings.accessKeyId && settings.secretAccessKey && settings.bucketName;
 
     if (!isConfigComplete) {
       setStatus('disconnected');
