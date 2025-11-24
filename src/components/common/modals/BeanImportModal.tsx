@@ -93,6 +93,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   // 关闭处理
   const handleClose = useCallback(() => {
     setIsVisible(false); // 触发退出动画
+    window.dispatchEvent(new CustomEvent('beanImportClosing')); // 通知父组件
+
     setTimeout(() => {
       resetAllStates();
       onClose();
@@ -204,6 +206,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
       // 先触发退出动画
       setIsVisible(false);
+      window.dispatchEvent(new CustomEvent('beanImportClosing')); // 通知父组件
 
       // 等待动画完成后关闭
       setTimeout(() => {
