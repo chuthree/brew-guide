@@ -54,6 +54,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     grindSize: string;
     water?: string;
     time?: string;
+    temp?: string;
   } | null>(null);
 
   // 获取当前选中的方案
@@ -81,13 +82,14 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         grindSize: method.params.grindSize,
         water: extractNumber(method.params.water),
         time: method.params.stages?.[0]?.time?.toString() || '0',
+        temp: extractNumber(method.params.temp || ''),
       });
     }
   }, [selectedMethod, customMethods, commonMethods]);
 
   // 统一的参数更新处理
   const updateParam = (
-    key: 'coffee' | 'ratio' | 'grindSize' | 'water' | 'time',
+    key: 'coffee' | 'ratio' | 'grindSize' | 'water' | 'time' | 'temp',
     value: string
   ) => {
     const method = getSelectedMethod();
@@ -127,6 +129,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         });
       }
       method.params.stages[0].time = parseFloat(value) || 0;
+    } else if (key === 'temp') {
+      method.params.temp = `${value}°C`;
     }
 
     onParamsChange(method);
@@ -219,9 +223,9 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                 </>
               ) : (
                 <>
-                  {renderParamDisplay('水量', method.params.water)}
                   {renderParamDisplay('粉水比', method.params.ratio)}
                   {renderParamDisplay('研磨度', method.params.grindSize)}
+                  {renderParamDisplay('水温', method.params.temp || '-')}
                 </>
               )}
             </div>
@@ -265,16 +269,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center">
-                      <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        水量:
-                      </label>
-                      <div className="flex w-20 justify-end">
-                        <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          {method.params.water}
-                        </span>
-                      </div>
-                    </div>
                     {renderParamInput(
                       '粉水比',
                       editingValues?.ratio ||
@@ -292,6 +286,13 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       'w-16',
                       undefined,
                       false
+                    )}
+                    {renderParamInput(
+                      '水温',
+                      editingValues?.temp ||
+                        extractNumber(method.params.temp || ''),
+                      value => updateParam('temp', value),
+                      '°C'
                     )}
                   </>
                 )}
