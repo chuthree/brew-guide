@@ -71,45 +71,41 @@ const StatsListBlock: React.FC<{
   </div>
 );
 
-// 辅助函数：获取可用日期列表
-const getAvailableDates = (
-  beans: ExtendedCoffeeBean[],
+// 辅助函数：从笔记数据获取可用日期列表
+const getAvailableDatesFromNotes = async (
   mode: DateGroupingMode
-) => {
-  const dates = new Set<string>();
-  beans.forEach(bean => {
-    if (!bean.timestamp) return;
-    const date = new Date(bean.timestamp);
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
+): Promise<string[]> => {
+  try {
+    const { Storage } = await import('@/lib/core/storage');
+    const notesStr = await Storage.get('brewingNotes');
+    if (!notesStr) return [];
 
-    if (mode === 'year') {
-      dates.add(`${year}`);
-    } else if (mode === 'month') {
-      dates.add(`${year}-${month}`);
-    } else {
-      dates.add(`${year}-${month}-${day}`);
-    }
-  });
+    const notes: BrewingNote[] = JSON.parse(notesStr);
+    if (!Array.isArray(notes)) return [];
 
-  return Array.from(dates).sort((a, b) => {
-    // 降序排列
-    if (mode === 'year') {
-      return parseInt(b) - parseInt(a);
-    } else if (mode === 'month') {
-      const [yA, mA] = a.split('-').map(Number);
-      const [yB, mB] = b.split('-').map(Number);
-      if (yA !== yB) return yB - yA;
-      return mB - mA;
-    } else {
-      const [yA, mA, dA] = a.split('-').map(Number);
-      const [yB, mB, dB] = b.split('-').map(Number);
-      if (yA !== yB) return yB - yA;
-      if (mA !== mB) return mB - mA;
-      return dB - dA;
-    }
-  });
+    const dates = new Set<string>();
+    notes.forEach(note => {
+      if (!note.timestamp) return;
+      const date = new Date(note.timestamp);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+
+      if (mode === 'year') {
+        dates.add(`${year}`);
+      } else if (mode === 'month') {
+        dates.add(`${year}-${month}`);
+      } else {
+        dates.add(`${year}-${month}-${day}`);
+      }
+    });
+
+    // 使用 localeCompare 进行降序排列
+    return Array.from(dates).sort((a, b) => b.localeCompare(a));
+  } catch (error) {
+    console.error('获取可用日期失败:', error);
+    return [];
+  }
 };
 
 interface BeanTypeCardProps {
@@ -255,13 +251,14 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
   );
 
   // 处理分组模式变更
-  const handleDateGroupingModeChange = (mode: DateGroupingMode) => {
+  const handleDateGroupingModeChange = async (mode: DateGroupingMode) => {
     setDateGroupingMode(mode);
     globalCache.dateGroupingMode = mode;
     saveDateGroupingModePreference(mode);
 
     // 切换分组模式时，自动选中最新的日期
-    const newAvailableDates = getAvailableDates(beans, mode);
+    const newAvailableDates = await getAvailableDatesFromNotes(mode);
+    setAvailableDates(newAvailableDates);
     const newSelectedDate =
       newAvailableDates.length > 0 ? newAvailableDates[0] : null;
     setSelectedDate(newSelectedDate);
@@ -283,37 +280,85 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
   // 实际天数状态
   const [actualDays, setActualDays] = useState<number>(1);
 
-  // 生成可用日期列表
-  const availableDates = useMemo(() => {
-    return getAvailableDates(beans, dateGroupingMode);
-  }, [beans, dateGroupingMode]);
+  // 可用日期列表状态
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
 
-  // 根据时间区间过滤咖啡豆数据
-  const filteredBeans = useMemo(() => {
-    if (!selectedDate) {
-      return beans;
-    }
+  // 异步获取可用日期列表
+  useEffect(() => {
+    const fetchAvailableDates = async () => {
+      const dates = await getAvailableDatesFromNotes(dateGroupingMode);
+      setAvailableDates(dates);
+    };
+    fetchAvailableDates();
+  }, [dateGroupingMode]);
 
-    return beans.filter(bean => {
-      if (!bean.timestamp) return false;
+  // 使用 state 管理过滤后的豆子列表（基于笔记使用记录）
+  const [actualFilteredBeans, setActualFilteredBeans] =
+    useState<ExtendedCoffeeBean[]>(beans);
 
-      const date = new Date(bean.timestamp);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-      const day = date.getDate();
-
-      if (dateGroupingMode === 'year') {
-        return `${year}` === selectedDate;
-      } else if (dateGroupingMode === 'month') {
-        return `${year}-${month}` === selectedDate;
-      } else {
-        return `${year}-${month}-${day}` === selectedDate;
+  // 异步过滤咖啡豆 - 根据笔记使用记录而不是豆子添加时间
+  useEffect(() => {
+    const filterBeansByNotes = async () => {
+      if (!selectedDate) {
+        setActualFilteredBeans(beans);
+        return;
       }
-    });
+
+      try {
+        const { Storage } = await import('@/lib/core/storage');
+        const notesStr = await Storage.get('brewingNotes');
+        if (!notesStr) {
+          setActualFilteredBeans(beans);
+          return;
+        }
+
+        const notes: BrewingNote[] = JSON.parse(notesStr);
+        if (!Array.isArray(notes)) {
+          setActualFilteredBeans(beans);
+          return;
+        }
+
+        // 过滤出在选定时间范围内的笔记
+        const filteredNotes = notes.filter(note => {
+          if (!note.timestamp) return false;
+
+          const date = new Date(note.timestamp);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+
+          if (dateGroupingMode === 'year') {
+            return `${year}` === selectedDate;
+          } else if (dateGroupingMode === 'month') {
+            return `${year}-${month}` === selectedDate;
+          } else {
+            return `${year}-${month}-${day}` === selectedDate;
+          }
+        });
+
+        // 获取这些笔记中使用的豆子名称
+        const usedBeanNames = new Set<string>();
+        filteredNotes.forEach(note => {
+          if (note.coffeeBeanInfo?.name) {
+            usedBeanNames.add(note.coffeeBeanInfo.name);
+          }
+        });
+
+        // 过滤出被使用过的豆子
+        const filtered = beans.filter(bean => usedBeanNames.has(bean.name));
+
+        setActualFilteredBeans(filtered);
+      } catch (error) {
+        console.error('过滤咖啡豆失败:', error);
+        setActualFilteredBeans(beans);
+      }
+    };
+
+    filterBeansByNotes();
   }, [beans, selectedDate, dateGroupingMode]);
 
   // 获取今日消耗数据（保持原有逻辑用于"今日"显示）
-  const todayConsumptionData = useConsumption(filteredBeans);
+  const todayConsumptionData = useConsumption(actualFilteredBeans);
   const { consumption: todayConsumption } = todayConsumptionData;
 
   // 获取消耗趋势数据
@@ -349,11 +394,11 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
     };
 
     return calculateStats(
-      filteredBeans,
+      actualFilteredBeans,
       showEmptyBeans,
       todayConsumptionForStats
     );
-  }, [filteredBeans, showEmptyBeans, todayConsumptionData]);
+  }, [actualFilteredBeans, showEmptyBeans, todayConsumptionData]);
 
   // 获取时间范围的时间戳
   const getTimeRange = (dateStr: string | null, mode: DateGroupingMode) => {
@@ -457,7 +502,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
         return 1;
       }
     };
-  }, [filteredBeans, selectedDate, dateGroupingMode, calculationMode]);
+  }, [actualFilteredBeans, selectedDate, dateGroupingMode, calculationMode]);
 
   // 平均消耗计算函数 - 基于时间区间和冲煮记录
   const calculateAverageConsumption = useMemo(() => {
@@ -481,7 +526,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
           dateGroupingMode
         );
 
-        const beanNames = filteredBeans
+        const beanNames = actualFilteredBeans
           .filter(bean => bean.beanType === beanType)
           .map(bean => bean.name);
 
@@ -560,7 +605,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
         return 0;
       }
     };
-  }, [filteredBeans, selectedDate, dateGroupingMode, calculationMode]);
+  }, [actualFilteredBeans, selectedDate, dateGroupingMode, calculationMode]);
 
   // 获取具有图片的咖啡豆，用于渲染半圆图片
   const beansWithImages = useMemo(() => {
@@ -824,6 +869,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                 totalAverageConsumption
               );
 
+              // 判断是否为历史时间查询（非"目前为止"）
+              const isHistoricalView = selectedDate !== null;
+
               // 概览详情
               const overviewDetails = (
                 <div className="grid grid-cols-2 gap-3">
@@ -868,7 +916,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                   ? stats.espressoStats.consumedWeight / actualDays
                   : 0;
 
-              const espressoDetails = (
+              const espressoDetails = isHistoricalView ? null : (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
                     title="日均消耗"
@@ -911,7 +959,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                   ? stats.filterStats.consumedWeight / actualDays
                   : 0;
 
-              const filterDetails = (
+              const filterDetails = isHistoricalView ? null : (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
                     title="日均消耗"
@@ -954,7 +1002,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                   ? stats.omniStats.consumedWeight / actualDays
                   : 0;
 
-              const omniDetails = (
+              const omniDetails = isHistoricalView ? null : (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
                     title="日均消耗"
@@ -1008,38 +1056,73 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                         <ConsumptionTrendChart data={trendData} />
                       ) : undefined
                     }
-                    customStats={[
-                      {
-                        title: '今日消耗',
-                        value:
-                          todayConsumptionData.consumption > 0
-                            ? `${formatNumber(todayConsumptionData.consumption)}克`
-                            : '-',
-                      },
-                      {
-                        title: '今日花费',
-                        value:
-                          todayConsumptionData.cost > 0
-                            ? `${formatNumber(todayConsumptionData.cost)}元`
-                            : '-',
-                      },
-                      {
-                        title: '剩余',
-                        value:
-                          stats.remainingWeight > 0
-                            ? `${formatNumber(stats.remainingWeight)}克`
-                            : '-',
-                      },
-                      {
-                        title: '剩余价值',
-                        value:
-                          stats.remainingWeight > 0 &&
-                          stats.averageGramPrice > 0
-                            ? `${formatNumber(stats.remainingWeight * stats.averageGramPrice)}元`
-                            : '-',
-                      },
-                    ]}
-                    moreDetails={overviewDetails}
+                    customStats={
+                      isHistoricalView
+                        ? [
+                            // 历史视图：只显示该时间段的统计数据
+                            {
+                              title: '消耗',
+                              value:
+                                stats.consumedWeight > 0
+                                  ? `${formatNumber(stats.consumedWeight)}克`
+                                  : '-',
+                            },
+                            {
+                              title: '花费',
+                              value:
+                                stats.totalCost > 0
+                                  ? `${formatNumber(stats.totalCost)}元`
+                                  : '-',
+                            },
+                            {
+                              title: '日均消耗',
+                              value:
+                                totalAverageConsumption > 0
+                                  ? `${formatNumber(totalAverageConsumption)}克`
+                                  : '-',
+                            },
+                            {
+                              title: '平均每克',
+                              value:
+                                stats.averageGramPrice > 0
+                                  ? `${formatNumber(stats.averageGramPrice)}元`
+                                  : '-',
+                            },
+                          ]
+                        : [
+                            // 实时视图：显示今日数据和剩余数据
+                            {
+                              title: '今日消耗',
+                              value:
+                                todayConsumptionData.consumption > 0
+                                  ? `${formatNumber(todayConsumptionData.consumption)}克`
+                                  : '-',
+                            },
+                            {
+                              title: '今日花费',
+                              value:
+                                todayConsumptionData.cost > 0
+                                  ? `${formatNumber(todayConsumptionData.cost)}元`
+                                  : '-',
+                            },
+                            {
+                              title: '剩余',
+                              value:
+                                stats.remainingWeight > 0
+                                  ? `${formatNumber(stats.remainingWeight)}克`
+                                  : '-',
+                            },
+                            {
+                              title: '剩余价值',
+                              value:
+                                stats.remainingWeight > 0 &&
+                                stats.averageGramPrice > 0
+                                  ? `${formatNumber(stats.remainingWeight * stats.averageGramPrice)}元`
+                                  : '-',
+                            },
+                          ]
+                    }
+                    moreDetails={isHistoricalView ? null : overviewDetails}
                   />
 
                   {hasEspresso && (
@@ -1047,6 +1130,40 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       title="意式豆"
                       statsData={stats.espressoStats}
                       finishDate={espressoFinishDate}
+                      customStats={
+                        isHistoricalView
+                          ? [
+                              {
+                                title: '消耗',
+                                value:
+                                  stats.espressoStats.consumedWeight > 0
+                                    ? `${formatNumber(stats.espressoStats.consumedWeight)}克`
+                                    : '-',
+                              },
+                              {
+                                title: '花费',
+                                value:
+                                  stats.espressoStats.totalCost > 0
+                                    ? `${formatNumber(stats.espressoStats.totalCost)}元`
+                                    : '-',
+                              },
+                              {
+                                title: '日均消耗',
+                                value:
+                                  espressoAverageConsumptionFixed > 0
+                                    ? `${formatNumber(espressoAverageConsumptionFixed)}克`
+                                    : '-',
+                              },
+                              {
+                                title: '平均每克',
+                                value:
+                                  stats.espressoStats.averageGramPrice > 0
+                                    ? `${formatNumber(stats.espressoStats.averageGramPrice)}元`
+                                    : '-',
+                              },
+                            ]
+                          : undefined
+                      }
                       moreDetails={espressoDetails}
                     />
                   )}
@@ -1055,6 +1172,40 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       title="手冲豆"
                       statsData={stats.filterStats}
                       finishDate={filterFinishDate}
+                      customStats={
+                        isHistoricalView
+                          ? [
+                              {
+                                title: '消耗',
+                                value:
+                                  stats.filterStats.consumedWeight > 0
+                                    ? `${formatNumber(stats.filterStats.consumedWeight)}克`
+                                    : '-',
+                              },
+                              {
+                                title: '花费',
+                                value:
+                                  stats.filterStats.totalCost > 0
+                                    ? `${formatNumber(stats.filterStats.totalCost)}元`
+                                    : '-',
+                              },
+                              {
+                                title: '日均消耗',
+                                value:
+                                  filterAverageConsumptionFixed > 0
+                                    ? `${formatNumber(filterAverageConsumptionFixed)}克`
+                                    : '-',
+                              },
+                              {
+                                title: '平均每克',
+                                value:
+                                  stats.filterStats.averageGramPrice > 0
+                                    ? `${formatNumber(stats.filterStats.averageGramPrice)}元`
+                                    : '-',
+                              },
+                            ]
+                          : undefined
+                      }
                       moreDetails={filterDetails}
                     />
                   )}
@@ -1063,6 +1214,40 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       title="全能豆"
                       statsData={stats.omniStats}
                       finishDate={omniFinishDate}
+                      customStats={
+                        isHistoricalView
+                          ? [
+                              {
+                                title: '消耗',
+                                value:
+                                  stats.omniStats.consumedWeight > 0
+                                    ? `${formatNumber(stats.omniStats.consumedWeight)}克`
+                                    : '-',
+                              },
+                              {
+                                title: '花费',
+                                value:
+                                  stats.omniStats.totalCost > 0
+                                    ? `${formatNumber(stats.omniStats.totalCost)}元`
+                                    : '-',
+                              },
+                              {
+                                title: '日均消耗',
+                                value:
+                                  omniAverageConsumptionFixed > 0
+                                    ? `${formatNumber(omniAverageConsumptionFixed)}克`
+                                    : '-',
+                              },
+                              {
+                                title: '平均每克',
+                                value:
+                                  stats.omniStats.averageGramPrice > 0
+                                    ? `${formatNumber(stats.omniStats.averageGramPrice)}元`
+                                    : '-',
+                              },
+                            ]
+                          : undefined
+                      }
                       moreDetails={omniDetails}
                     />
                   )}
