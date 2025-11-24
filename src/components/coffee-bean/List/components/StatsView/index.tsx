@@ -163,19 +163,31 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
           {/* 消耗 */}
           <StatsBlock
             title="消耗"
-            value={`${formatNumber(statsData.consumedWeight)}克`}
+            value={
+              statsData.consumedWeight > 0
+                ? `${formatNumber(statsData.consumedWeight)}克`
+                : '-'
+            }
           />
 
           {/* 剩余 */}
           <StatsBlock
             title="剩余"
-            value={`${formatNumber(statsData.remainingWeight)}克`}
+            value={
+              statsData.remainingWeight > 0
+                ? `${formatNumber(statsData.remainingWeight)}克`
+                : '-'
+            }
           />
 
           {/* 花费 */}
           <StatsBlock
             title="花费"
-            value={`${formatNumber(statsData.totalCost)}元`}
+            value={
+              statsData.totalCost > 0
+                ? `${formatNumber(statsData.totalCost)}元`
+                : '-'
+            }
           />
 
           {/* 预计用完 / 自定义项 */}
@@ -796,20 +808,36 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               const overviewDetails = (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
-                    title="今日消耗"
-                    value={`${formatNumber(todayConsumptionData.consumption)}克`}
-                  />
-                  <StatsBlock
-                    title="今日花费"
-                    value={`${formatNumber(todayConsumptionData.cost)}元`}
-                  />
-                  <StatsBlock
                     title="平均每克"
-                    value={`${formatNumber(stats.averageGramPrice)}元`}
+                    value={
+                      stats.averageGramPrice > 0
+                        ? `${formatNumber(stats.averageGramPrice)}元`
+                        : '-'
+                    }
                   />
                   <StatsBlock
                     title="日均消耗"
-                    value={`${formatNumber(totalAverageConsumption)}克`}
+                    value={
+                      totalAverageConsumption > 0
+                        ? `${formatNumber(totalAverageConsumption)}克`
+                        : '-'
+                    }
+                  />
+                  <StatsBlock
+                    title="今日消耗"
+                    value={
+                      todayConsumptionData.consumption > 0
+                        ? `${formatNumber(todayConsumptionData.consumption)}克`
+                        : '-'
+                    }
+                  />
+                  <StatsBlock
+                    title="今日花费"
+                    value={
+                      todayConsumptionData.cost > 0
+                        ? `${formatNumber(todayConsumptionData.cost)}元`
+                        : '-'
+                    }
                   />
                 </div>
               );
@@ -818,20 +846,36 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               const espressoDetails = (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
-                    title="今日消耗"
-                    value={`${formatNumber(stats.espressoStats.todayConsumption)}克`}
-                  />
-                  <StatsBlock
-                    title="今日花费"
-                    value={`${formatNumber(stats.espressoStats.todayCost)}元`}
-                  />
-                  <StatsBlock
                     title="平均每克"
-                    value={`${formatNumber(stats.espressoStats.averageGramPrice)}元`}
+                    value={
+                      stats.espressoStats.averageGramPrice > 0
+                        ? `${formatNumber(stats.espressoStats.averageGramPrice)}元`
+                        : '-'
+                    }
                   />
                   <StatsBlock
                     title="日均消耗"
-                    value={`${formatNumber(espressoAverageConsumption)}克`}
+                    value={
+                      espressoAverageConsumption > 0
+                        ? `${formatNumber(espressoAverageConsumption)}克`
+                        : '-'
+                    }
+                  />
+                  <StatsBlock
+                    title="今日消耗"
+                    value={
+                      stats.espressoStats.todayConsumption > 0
+                        ? `${formatNumber(stats.espressoStats.todayConsumption)}克`
+                        : '-'
+                    }
+                  />
+                  <StatsBlock
+                    title="今日花费"
+                    value={
+                      stats.espressoStats.todayCost > 0
+                        ? `${formatNumber(stats.espressoStats.todayCost)}元`
+                        : '-'
+                    }
                   />
                 </div>
               );
@@ -840,20 +884,36 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               const filterDetails = (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
-                    title="今日消耗"
-                    value={`${formatNumber(stats.filterStats.todayConsumption)}克`}
-                  />
-                  <StatsBlock
-                    title="今日花费"
-                    value={`${formatNumber(stats.filterStats.todayCost)}元`}
-                  />
-                  <StatsBlock
                     title="平均每克"
-                    value={`${formatNumber(stats.filterStats.averageGramPrice)}元`}
+                    value={
+                      stats.filterStats.averageGramPrice > 0
+                        ? `${formatNumber(stats.filterStats.averageGramPrice)}元`
+                        : '-'
+                    }
                   />
                   <StatsBlock
                     title="日均消耗"
-                    value={`${formatNumber(filterAverageConsumption)}克`}
+                    value={
+                      filterAverageConsumption > 0
+                        ? `${formatNumber(filterAverageConsumption)}克`
+                        : '-'
+                    }
+                  />
+                  <StatsBlock
+                    title="今日消耗"
+                    value={
+                      stats.filterStats.todayConsumption > 0
+                        ? `${formatNumber(stats.filterStats.todayConsumption)}克`
+                        : '-'
+                    }
+                  />
+                  <StatsBlock
+                    title="今日花费"
+                    value={
+                      stats.filterStats.todayCost > 0
+                        ? `${formatNumber(stats.filterStats.todayCost)}元`
+                        : '-'
+                    }
                   />
                 </div>
               );
@@ -862,20 +922,36 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               const omniDetails = (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
-                    title="今日消耗"
-                    value={`${formatNumber(stats.omniStats.todayConsumption)}克`}
-                  />
-                  <StatsBlock
-                    title="今日花费"
-                    value={`${formatNumber(stats.omniStats.todayCost)}元`}
-                  />
-                  <StatsBlock
                     title="平均每克"
-                    value={`${formatNumber(stats.omniStats.averageGramPrice)}元`}
+                    value={
+                      stats.omniStats.averageGramPrice > 0
+                        ? `${formatNumber(stats.omniStats.averageGramPrice)}元`
+                        : '-'
+                    }
                   />
                   <StatsBlock
                     title="日均消耗"
-                    value={`${formatNumber(omniAverageConsumption)}克`}
+                    value={
+                      omniAverageConsumption > 0
+                        ? `${formatNumber(omniAverageConsumption)}克`
+                        : '-'
+                    }
+                  />
+                  <StatsBlock
+                    title="今日消耗"
+                    value={
+                      stats.omniStats.todayConsumption > 0
+                        ? `${formatNumber(stats.omniStats.todayConsumption)}克`
+                        : '-'
+                    }
+                  />
+                  <StatsBlock
+                    title="今日花费"
+                    value={
+                      stats.omniStats.todayCost > 0
+                        ? `${formatNumber(stats.omniStats.todayCost)}元`
+                        : '-'
+                    }
                   />
                 </div>
               );
@@ -899,7 +975,10 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                     }
                     customLastItem={{
                       label: '日均消耗',
-                      value: `${formatNumber(totalAverageConsumption)}克`,
+                      value:
+                        totalAverageConsumption > 0
+                          ? `${formatNumber(totalAverageConsumption)}克`
+                          : '-',
                     }}
                     moreDetails={overviewDetails}
                   />

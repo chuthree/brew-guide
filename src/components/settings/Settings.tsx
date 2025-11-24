@@ -991,7 +991,7 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>
-          <button
+          {/* <button
             onClick={subSettingsHandlers.onOpenGrinderSettings}
             className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
@@ -1000,7 +1000,7 @@ const Settings: React.FC<SettingsProps> = ({
               <span>磨豆机设置（Beta）</span>
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
+          </button> */}
           <button
             onClick={subSettingsHandlers.onOpenRandomCoffeeBeanSettings}
             className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
