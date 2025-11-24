@@ -20,6 +20,7 @@ import {
   globalCache,
   saveDateGroupingModePreference,
   saveCalculationModePreference,
+  saveSelectedDatePreference,
 } from '../../globalCache';
 import StatsFilterBar, { CALCULATION_MODE_LABELS } from './StatsFilterBar';
 
@@ -40,7 +41,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
   const [dateGroupingMode, setDateGroupingMode] = useState<DateGroupingMode>(
     globalCache.dateGroupingMode
   );
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(
+    globalCache.selectedDate
+  );
 
   // 计算方式状态
   const [calculationMode, setCalculationMode] = useState<CalculationMode>(
@@ -52,7 +55,15 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
     setDateGroupingMode(mode);
     globalCache.dateGroupingMode = mode;
     saveDateGroupingModePreference(mode);
+    // 切换分组模式时重置选中的日期
+    setSelectedDate(null);
   };
+
+  // 监听 selectedDate 变化并保存
+  useEffect(() => {
+    globalCache.selectedDate = selectedDate;
+    saveSelectedDatePreference(selectedDate);
+  }, [selectedDate]);
 
   // 处理计算方式变更
   const handleCalculationModeChange = (mode: CalculationMode) => {
@@ -101,11 +112,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
       }
     });
   }, [beans, dateGroupingMode]);
-
-  // 当分组模式改变时，重置选中的日期
-  useEffect(() => {
-    setSelectedDate(null);
-  }, [dateGroupingMode]);
 
   // 根据时间区间过滤咖啡豆数据
   const filteredBeans = useMemo(() => {

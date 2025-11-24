@@ -56,6 +56,7 @@ export const globalCache: {
   sortOption: SortOption;
   // 统计视图相关状态
   dateGroupingMode: DateGroupingMode;
+  selectedDate: string | null;
   calculationMode: CalculationMode;
   // 为每个视图模式添加独立的排序选项
   inventorySortOption: SortOption;
@@ -93,6 +94,7 @@ export const globalCache: {
   sortOption: 'remaining_days_asc',
   // 统计视图相关状态初始值
   dateGroupingMode: 'month',
+  selectedDate: null,
   calculationMode: 'coffee',
   // 为每个视图模式设置默认排序选项
   inventorySortOption: 'remaining_days_asc',
@@ -359,6 +361,17 @@ export const saveDateGroupingModePreference = (
   saveStringState(MODULE_NAME, 'dateGroupingMode', value);
 };
 
+// 从localStorage读取统计视图选中的日期
+export const getSelectedDatePreference = (): string | null => {
+  const value = getStringState(MODULE_NAME, 'selectedDate', '');
+  return value === '' ? null : value;
+};
+
+// 保存统计视图选中的日期到localStorage
+export const saveSelectedDatePreference = (value: string | null): void => {
+  saveStringState(MODULE_NAME, 'selectedDate', value || '');
+};
+
 // 从localStorage读取统计视图计算方式
 export const getCalculationModePreference = (): CalculationMode => {
   const value = getStringState(MODULE_NAME, 'calculationMode', 'coffee');
@@ -433,6 +446,7 @@ globalCache.selectedOrigin = getSelectedOriginPreference();
 globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
 globalCache.selectedRoaster = getSelectedRoasterPreference();
 globalCache.dateGroupingMode = getDateGroupingModePreference();
+globalCache.selectedDate = getSelectedDatePreference();
 globalCache.calculationMode = getCalculationModePreference();
 
 // 监听全局缓存重置事件
@@ -468,6 +482,7 @@ if (typeof window !== 'undefined') {
     globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
     globalCache.selectedRoaster = getSelectedRoasterPreference();
     globalCache.dateGroupingMode = getDateGroupingModePreference();
+    globalCache.selectedDate = getSelectedDatePreference();
     globalCache.calculationMode = getCalculationModePreference();
 
     console.warn('咖啡豆全局缓存已重置并重新加载偏好设置');
