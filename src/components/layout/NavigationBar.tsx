@@ -453,6 +453,16 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     else if (!lastUnpinnedViewRef.current) {
       lastUnpinnedViewRef.current = getFirstAvailableView();
     }
+
+    // 检查记录的视图是否变得无效（被固定或被禁用）
+    // 这在 settings 异步加载完成后特别重要
+    if (
+      lastUnpinnedViewRef.current &&
+      (pinnedViews.includes(lastUnpinnedViewRef.current) ||
+        coffeeBeanViews[lastUnpinnedViewRef.current] === false)
+    ) {
+      lastUnpinnedViewRef.current = getFirstAvailableView();
+    }
   }, [currentBeanView, pinnedViews, coffeeBeanViews, getFirstAvailableView]);
 
   const navItemStyle = {
