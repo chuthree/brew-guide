@@ -587,14 +587,49 @@ const TabContent: React.FC<TabContentProps> = ({
     return 'V60'; // 默认
   };
 
+  // 根据自定义器具的 animationType 获取基础器具ID
+  const getBaseEquipmentIdByAnimationType = (animationType: string): string => {
+    switch (animationType.toLowerCase()) {
+      case 'v60':
+        return 'V60';
+      case 'kalita':
+        return 'Kalita';
+      case 'origami':
+        return 'Origami';
+      case 'clever':
+        return 'CleverDripper';
+      case 'espresso':
+        return 'Espresso';
+      case 'custom':
+        return ''; // 自定义预设器具没有通用方案
+      default:
+        return 'V60';
+    }
+  };
+
   // 编辑通用方案 - 创建临时副本进入编辑模式，不立即保存 - 使用 useCallback 优化
   const editCommonMethod = useCallback(
     (step: Step, selectedEquipment: string) => {
       let commonMethodsList = commonMethods[selectedEquipment];
 
-      if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
-        const baseEquipmentId = getBaseEquipmentId(selectedEquipment);
-        commonMethodsList = commonMethods[baseEquipmentId];
+      // 检查是否是自定义器具
+      if (!commonMethodsList) {
+        const customEquipment = customEquipments.find(
+          e => e.id === selectedEquipment || e.name === selectedEquipment
+        );
+        if (customEquipment) {
+          // 根据 animationType 获取对应的基础器具ID
+          const baseEquipmentId = getBaseEquipmentIdByAnimationType(
+            customEquipment.animationType
+          );
+          if (baseEquipmentId) {
+            commonMethodsList = commonMethods[baseEquipmentId];
+          }
+        } else if (selectedEquipment.startsWith('custom-')) {
+          // 向后兼容旧的ID格式
+          const baseEquipmentId = getBaseEquipmentId(selectedEquipment);
+          commonMethodsList = commonMethods[baseEquipmentId];
+        }
       }
 
       if (!commonMethodsList) return;
@@ -620,7 +655,7 @@ const TabContent: React.FC<TabContentProps> = ({
         onEditMethod(methodWithFlag);
       }
     },
-    [onEditMethod]
+    [onEditMethod, customEquipments]
   );
 
   // 简化的分享处理函数 - 直接复制到剪贴板 - 使用 useCallback 优化
@@ -985,7 +1020,26 @@ const TabContent: React.FC<TabContentProps> = ({
                 ) {
                   // 通用方案：改为隐藏
                   const methodId = step.methodId || step.title;
-                  const commonMethodsList = commonMethods[selectedEquipment];
+                  let commonMethodsList = commonMethods[selectedEquipment];
+
+                  // 检查是否是自定义器具
+                  if (!commonMethodsList) {
+                    const customEquipment = customEquipments.find(
+                      e =>
+                        e.id === selectedEquipment ||
+                        e.name === selectedEquipment
+                    );
+                    if (customEquipment) {
+                      // 根据 animationType 获取对应的基础器具ID
+                      const baseEquipmentId = getBaseEquipmentIdByAnimationType(
+                        customEquipment.animationType
+                      );
+                      if (baseEquipmentId) {
+                        commonMethodsList = commonMethods[baseEquipmentId];
+                      }
+                    }
+                  }
+
                   if (commonMethodsList) {
                     const method = commonMethodsList.find(
                       m => (m.id || m.name) === methodId
