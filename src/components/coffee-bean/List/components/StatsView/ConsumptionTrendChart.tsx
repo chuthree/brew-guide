@@ -98,7 +98,7 @@ const ConsumptionTrendChart: React.FC<ConsumptionTrendChartProps> = ({
                   className={`transition-all duration-200 ${
                     isActive
                       ? 'fill-neutral-800 dark:fill-neutral-200'
-                      : 'fill-neutral-200 dark:fill-neutral-800'
+                      : 'fill-neutral-200 dark:fill-neutral-700'
                   }`}
                 />
               </g>

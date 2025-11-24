@@ -118,6 +118,7 @@ interface BeanTypeCardProps {
   finishDate: string;
   chart?: React.ReactNode;
   customLastItem?: { label: string; value: string };
+  customStats?: Array<{ title: string; value: string }>;
   moreDetails?: React.ReactNode;
 }
 
@@ -127,6 +128,7 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
   finishDate,
   chart,
   customLastItem,
+  customStats,
   moreDetails,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -160,41 +162,52 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
             </div>
           )}
 
-          {/* 消耗 */}
-          <StatsBlock
-            title="消耗"
-            value={
-              statsData.consumedWeight > 0
-                ? `${formatNumber(statsData.consumedWeight)}克`
-                : '-'
-            }
-          />
+          {/* 使用自定义统计块或默认统计块 */}
+          {customStats ? (
+            customStats.map((stat, index) => (
+              <StatsBlock key={index} title={stat.title} value={stat.value} />
+            ))
+          ) : (
+            <>
+              {/* 消耗 */}
+              <StatsBlock
+                title="消耗"
+                value={
+                  statsData.consumedWeight > 0
+                    ? `${formatNumber(statsData.consumedWeight)}克`
+                    : '-'
+                }
+              />
 
-          {/* 剩余 */}
-          <StatsBlock
-            title="剩余"
-            value={
-              statsData.remainingWeight > 0
-                ? `${formatNumber(statsData.remainingWeight)}克`
-                : '-'
-            }
-          />
+              {/* 剩余 */}
+              <StatsBlock
+                title="剩余"
+                value={
+                  statsData.remainingWeight > 0
+                    ? `${formatNumber(statsData.remainingWeight)}克`
+                    : '-'
+                }
+              />
 
-          {/* 花费 */}
-          <StatsBlock
-            title="花费"
-            value={
-              statsData.totalCost > 0
-                ? `${formatNumber(statsData.totalCost)}元`
-                : '-'
-            }
-          />
+              {/* 花费 */}
+              <StatsBlock
+                title="花费"
+                value={
+                  statsData.totalCost > 0
+                    ? `${formatNumber(statsData.totalCost)}元`
+                    : '-'
+                }
+              />
 
-          {/* 预计用完 / 自定义项 */}
-          <StatsBlock
-            title={customLastItem ? customLastItem.label : '预计用完'}
-            value={customLastItem ? customLastItem.value : finishDate || '-'}
-          />
+              {/* 预计用完 / 自定义项 */}
+              <StatsBlock
+                title={customLastItem ? customLastItem.label : '预计用完'}
+                value={
+                  customLastItem ? customLastItem.value : finishDate || '-'
+                }
+              />
+            </>
+          )}
         </div>
 
         {moreDetails && (
@@ -384,19 +397,13 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
           dateGroupingMode
         );
 
-        // 获取所有咖啡豆名称列表
-        const beanNames = filteredBeans.map(bean => bean.name);
-        if (beanNames.length === 0) return 1;
-
-        // 筛选出相关的笔记记录
+        // 筛选出相关的笔记记录（不过滤豆子名称，统计所有记录）
         let relevantNotes = notes.filter(note => {
           if (note.source === 'capacity-adjustment') {
             return false;
           }
-          return (
-            note.coffeeBeanInfo?.name &&
-            beanNames.includes(note.coffeeBeanInfo.name)
-          );
+          // 不过滤豆子名称，统计所有有效的冲煮记录
+          return true;
         });
 
         // 根据时间区间过滤
@@ -757,6 +764,11 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                 stats.filterStats && stats.filterStats.totalBeans > 0;
               const hasOmni = stats.omniStats && stats.omniStats.totalBeans > 0;
 
+              const espressoAverageConsumptionForFinish =
+                actualDays > 0
+                  ? stats.espressoStats.consumedWeight / actualDays
+                  : 0;
+
               const espressoFinishDate = hasEspresso
                 ? calculateEstimatedFinishDate(
                     {
@@ -765,9 +777,14 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       consumedWeight: stats.espressoStats.consumedWeight,
                       totalWeight: stats.espressoStats.totalWeight,
                     },
-                    espressoAverageConsumption
+                    espressoAverageConsumptionForFinish
                   )
                 : '';
+
+              const filterAverageConsumptionForFinish =
+                actualDays > 0
+                  ? stats.filterStats.consumedWeight / actualDays
+                  : 0;
 
               const filterFinishDate = hasFilter
                 ? calculateEstimatedFinishDate(
@@ -777,9 +794,14 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       consumedWeight: stats.filterStats.consumedWeight,
                       totalWeight: stats.filterStats.totalWeight,
                     },
-                    filterAverageConsumption
+                    filterAverageConsumptionForFinish
                   )
                 : '';
+
+              const omniAverageConsumptionForFinish =
+                actualDays > 0
+                  ? stats.omniStats.consumedWeight / actualDays
+                  : 0;
 
               const omniFinishDate = hasOmni
                 ? calculateEstimatedFinishDate(
@@ -789,15 +811,13 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       consumedWeight: stats.omniStats.consumedWeight,
                       totalWeight: stats.omniStats.totalWeight,
                     },
-                    omniAverageConsumption
+                    omniAverageConsumptionForFinish
                   )
                 : '';
 
               // 计算总览数据
               const totalAverageConsumption =
-                espressoAverageConsumption +
-                filterAverageConsumption +
-                omniAverageConsumption;
+                actualDays > 0 ? stats.consumedWeight / actualDays : 0;
 
               const totalFinishDate = calculateEstimatedFinishDate(
                 stats,
@@ -808,10 +828,18 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               const overviewDetails = (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
-                    title="平均每克"
+                    title="消耗"
                     value={
-                      stats.averageGramPrice > 0
-                        ? `${formatNumber(stats.averageGramPrice)}元`
+                      stats.consumedWeight > 0
+                        ? `${formatNumber(stats.consumedWeight)}克`
+                        : '-'
+                    }
+                  />
+                  <StatsBlock
+                    title="花费"
+                    value={
+                      stats.totalCost > 0
+                        ? `${formatNumber(stats.totalCost)}元`
                         : '-'
                     }
                   />
@@ -824,18 +852,10 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                     }
                   />
                   <StatsBlock
-                    title="今日消耗"
+                    title="平均每克"
                     value={
-                      todayConsumptionData.consumption > 0
-                        ? `${formatNumber(todayConsumptionData.consumption)}克`
-                        : '-'
-                    }
-                  />
-                  <StatsBlock
-                    title="今日花费"
-                    value={
-                      todayConsumptionData.cost > 0
-                        ? `${formatNumber(todayConsumptionData.cost)}元`
+                      stats.averageGramPrice > 0
+                        ? `${formatNumber(stats.averageGramPrice)}元`
                         : '-'
                     }
                   />
@@ -843,21 +863,26 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               );
 
               // 意式详情
+              const espressoAverageConsumptionFixed =
+                actualDays > 0
+                  ? stats.espressoStats.consumedWeight / actualDays
+                  : 0;
+
               const espressoDetails = (
                 <div className="grid grid-cols-2 gap-3">
+                  <StatsBlock
+                    title="日均消耗"
+                    value={
+                      espressoAverageConsumptionFixed > 0
+                        ? `${formatNumber(espressoAverageConsumptionFixed)}克`
+                        : '-'
+                    }
+                  />
                   <StatsBlock
                     title="平均每克"
                     value={
                       stats.espressoStats.averageGramPrice > 0
                         ? `${formatNumber(stats.espressoStats.averageGramPrice)}元`
-                        : '-'
-                    }
-                  />
-                  <StatsBlock
-                    title="日均消耗"
-                    value={
-                      espressoAverageConsumption > 0
-                        ? `${formatNumber(espressoAverageConsumption)}克`
                         : '-'
                     }
                   />
@@ -881,21 +906,26 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               );
 
               // 手冲详情
+              const filterAverageConsumptionFixed =
+                actualDays > 0
+                  ? stats.filterStats.consumedWeight / actualDays
+                  : 0;
+
               const filterDetails = (
                 <div className="grid grid-cols-2 gap-3">
+                  <StatsBlock
+                    title="日均消耗"
+                    value={
+                      filterAverageConsumptionFixed > 0
+                        ? `${formatNumber(filterAverageConsumptionFixed)}克`
+                        : '-'
+                    }
+                  />
                   <StatsBlock
                     title="平均每克"
                     value={
                       stats.filterStats.averageGramPrice > 0
                         ? `${formatNumber(stats.filterStats.averageGramPrice)}元`
-                        : '-'
-                    }
-                  />
-                  <StatsBlock
-                    title="日均消耗"
-                    value={
-                      filterAverageConsumption > 0
-                        ? `${formatNumber(filterAverageConsumption)}克`
                         : '-'
                     }
                   />
@@ -919,21 +949,26 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               );
 
               // 全能详情
+              const omniAverageConsumptionFixed =
+                actualDays > 0
+                  ? stats.omniStats.consumedWeight / actualDays
+                  : 0;
+
               const omniDetails = (
                 <div className="grid grid-cols-2 gap-3">
+                  <StatsBlock
+                    title="日均消耗"
+                    value={
+                      omniAverageConsumptionFixed > 0
+                        ? `${formatNumber(omniAverageConsumptionFixed)}克`
+                        : '-'
+                    }
+                  />
                   <StatsBlock
                     title="平均每克"
                     value={
                       stats.omniStats.averageGramPrice > 0
                         ? `${formatNumber(stats.omniStats.averageGramPrice)}元`
-                        : '-'
-                    }
-                  />
-                  <StatsBlock
-                    title="日均消耗"
-                    value={
-                      omniAverageConsumption > 0
-                        ? `${formatNumber(omniAverageConsumption)}克`
                         : '-'
                     }
                   />
@@ -973,13 +1008,37 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                         <ConsumptionTrendChart data={trendData} />
                       ) : undefined
                     }
-                    customLastItem={{
-                      label: '日均消耗',
-                      value:
-                        totalAverageConsumption > 0
-                          ? `${formatNumber(totalAverageConsumption)}克`
-                          : '-',
-                    }}
+                    customStats={[
+                      {
+                        title: '今日消耗',
+                        value:
+                          todayConsumptionData.consumption > 0
+                            ? `${formatNumber(todayConsumptionData.consumption)}克`
+                            : '-',
+                      },
+                      {
+                        title: '今日花费',
+                        value:
+                          todayConsumptionData.cost > 0
+                            ? `${formatNumber(todayConsumptionData.cost)}元`
+                            : '-',
+                      },
+                      {
+                        title: '剩余',
+                        value:
+                          stats.remainingWeight > 0
+                            ? `${formatNumber(stats.remainingWeight)}克`
+                            : '-',
+                      },
+                      {
+                        title: '剩余价值',
+                        value:
+                          stats.remainingWeight > 0 &&
+                          stats.averageGramPrice > 0
+                            ? `${formatNumber(stats.remainingWeight * stats.averageGramPrice)}元`
+                            : '-',
+                      },
+                    ]}
                     moreDetails={overviewDetails}
                   />
 
