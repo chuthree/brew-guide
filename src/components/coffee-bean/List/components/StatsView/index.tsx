@@ -34,7 +34,7 @@ const StatsBlock: React.FC<{
   className?: string;
 }> = ({ title, value, className }) => (
   <div
-    className={`flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800 ${className}`}
+    className={`flex flex-col justify-between rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${className}`}
   >
     <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
       {title}
@@ -153,7 +153,7 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
         <div className="grid grid-cols-2 gap-3">
           {/* 趋势图 */}
           {chart && (
-            <div className="col-span-2 flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
+            <div className="col-span-2 flex flex-col justify-between rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
               {chart}
             </div>
           )}
@@ -1260,7 +1260,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       <div className="w-full">
                         <div className="grid grid-cols-2 gap-3">
                           {/* 最早冲煮 */}
-                          <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
+                          <div className="flex flex-col justify-between rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
                             <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                               最早冲煮
                             </div>
@@ -1270,7 +1270,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                           </div>
 
                           {/* 最晚冲煮 */}
-                          <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
+                          <div className="flex flex-col justify-between rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
                             <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                               最晚冲煮
                             </div>
@@ -1280,7 +1280,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                           </div>
 
                           {/* 最活跃时段 */}
-                          <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
+                          <div className="flex flex-col justify-between rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
                             <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                               最活跃时段
                             </div>
@@ -1290,7 +1290,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                           </div>
 
                           {/* 最长连续打卡 */}
-                          <div className="flex flex-col justify-between rounded bg-neutral-100 p-3 dark:bg-neutral-800">
+                          <div className="flex flex-col justify-between rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
                             <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                               最长连续打卡
                             </div>
