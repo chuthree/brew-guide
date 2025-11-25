@@ -55,6 +55,7 @@ export interface SettingsOptions {
   simplifiedViewLabels: boolean; // 是否使用简化的视图标签名称
   dateDisplayMode: 'date' | 'flavorPeriod' | 'agingDays'; // 日期显示模式：日期/赏味期/养豆天数
   showFlavorInfo: boolean; // 是否在备注中显示风味信息
+  showBeanNotes: boolean; // 是否显示备注区域
   limitNotesLines: boolean; // 是否限制备注显示行数
   notesMaxLines: number; // 备注最大显示行数
   showTotalPrice: boolean; // 是否显示总价格而不是单价
@@ -178,6 +179,7 @@ export const defaultSettings: SettingsOptions = {
   simplifiedViewLabels: false, // 默认不使用简化视图标签名称
   dateDisplayMode: 'agingDays', // 默认显示养豆天数
   showFlavorInfo: false, // 默认不显示风味信息
+  showBeanNotes: true, // 默认显示备注区域
   limitNotesLines: true, // 默认限制备注显示行数
   notesMaxLines: 3, // 默认最大显示3行
   showTotalPrice: false, // 默认显示单价

@@ -610,8 +610,9 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
       );
       const flavorInfo = calculateFlavorInfo(bean);
       const shouldShowNotes =
-        ((userSettings.showFlavorInfo as boolean) && bean.flavor?.length) ||
-        bean.notes;
+        userSettings.showBeanNotes !== false &&
+        (((userSettings.showFlavorInfo as boolean) && bean.flavor?.length) ||
+          bean.notes);
 
       return (
         <div

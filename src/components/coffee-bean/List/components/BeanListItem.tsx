@@ -29,6 +29,7 @@ interface BeanListItemProps {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
     showOnlyBeanName?: boolean;
     showFlavorInfo?: boolean;
+    showBeanNotes?: boolean;
     limitNotesLines?: boolean;
     notesMaxLines?: number;
     showTotalPrice?: boolean;
@@ -79,6 +80,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   const showOnlyBeanName = settings?.showOnlyBeanName ?? true;
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
   const showFlavorInfo = settings?.showFlavorInfo ?? false;
+  const showBeanNotes = settings?.showBeanNotes !== false;
   const limitNotesLines = settings?.limitNotesLines ?? true;
   const notesMaxLines = settings?.notesMaxLines ?? 3;
   const showTotalPrice = settings?.showTotalPrice ?? false;
@@ -292,7 +294,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   };
 
   const shouldShowNotes = () =>
-    (showFlavorInfo && bean.flavor?.length) || bean.notes;
+    showBeanNotes && ((showFlavorInfo && bean.flavor?.length) || bean.notes);
 
   const handleNotesClick = (e: React.MouseEvent) => {
     e.stopPropagation();

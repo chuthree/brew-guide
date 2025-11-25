@@ -139,6 +139,7 @@ const BeanPreviewItem: React.FC<{
   const showOnlyBeanName = settings?.showOnlyBeanName ?? true;
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
   const showFlavorInfo = settings?.showFlavorInfo ?? false;
+  const showBeanNotes = settings?.showBeanNotes !== false;
   const limitNotesLines = settings?.limitNotesLines ?? true;
   const notesMaxLines = settings?.notesMaxLines ?? 3;
   const showTotalPrice = settings?.showTotalPrice ?? false;
@@ -252,7 +253,7 @@ const BeanPreviewItem: React.FC<{
   };
 
   const shouldShowNotes = () =>
-    (showFlavorInfo && bean.flavor?.length) || bean.notes;
+    showBeanNotes && ((showFlavorInfo && bean.flavor?.length) || bean.notes);
 
   const getFullNotesContent = () => {
     if (showFlavorInfo && bean.flavor?.length) {
@@ -291,7 +292,7 @@ const BeanPreviewItem: React.FC<{
         )}
       </div>
 
-      <div className="flex flex-col gap-y-2">
+      <div className="flex w-full flex-col gap-y-2">
         <div className={`flex flex-col justify-center gap-y-1.5`}>
           <div className="line-clamp-2 pr-2 text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
             {displayTitle}
