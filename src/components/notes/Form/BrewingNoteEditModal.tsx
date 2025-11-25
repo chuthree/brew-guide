@@ -87,12 +87,22 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   // 点击外部关闭日期选择器
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        datePickerRef.current &&
-        !datePickerRef.current.contains(event.target as Node)
-      ) {
-        setShowDatePicker(false);
+      const target = event.target as Node;
+
+      // 检查是否点击在日期选择器容器内
+      if (datePickerRef.current && datePickerRef.current.contains(target)) {
+        return;
       }
+
+      // 检查是否点击在 Radix Popover 内容中（年份/月份选择器通过 Portal 渲染）
+      const popoverContent = (target as Element).closest?.(
+        '[data-radix-popper-content-wrapper]'
+      );
+      if (popoverContent) {
+        return;
+      }
+
+      setShowDatePicker(false);
     };
 
     if (showDatePicker) {
@@ -186,7 +196,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
   return (
     <div
-      className="pt-safe-top pb-safe-bottom fixed inset-0 z-[60] mx-auto max-w-[500px] overflow-auto bg-neutral-50 px-6 dark:bg-neutral-900"
+      className="pt-safe-top pb-safe-bottom fixed inset-0 mx-auto max-w-[500px] overflow-auto bg-neutral-50 px-6 dark:bg-neutral-900"
       style={getChildPageStyle(isVisible)}
     >
       {/* 顶部标题栏 */}

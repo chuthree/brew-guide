@@ -34,12 +34,22 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
   // 点击外部关闭日期选择器
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        datePickerRef.current &&
-        !datePickerRef.current.contains(event.target as Node)
-      ) {
-        setShowDatePicker(false);
+      const target = event.target as Node;
+
+      // 检查是否点击在日期选择器容器内
+      if (datePickerRef.current && datePickerRef.current.contains(target)) {
+        return;
       }
+
+      // 检查是否点击在 Radix Popover 内容中（年份/月份选择器通过 Portal 渲染）
+      const popoverContent = (target as Element).closest?.(
+        '[data-radix-popper-content-wrapper]'
+      );
+      if (popoverContent) {
+        return;
+      }
+
+      setShowDatePicker(false);
     };
 
     if (showDatePicker) {
