@@ -150,6 +150,9 @@ export interface SettingsOptions {
     name: string;
     currentGrindSize?: string;
   }[];
+  // 每日提醒设置
+  dailyReminder: boolean;
+  dailyReminderTime: string;
 }
 
 // 默认设置
@@ -250,6 +253,9 @@ export const defaultSettings: SettingsOptions = {
   hiddenEquipments: [], // 默认没有隐藏的器具
   // 磨豆机默认值
   grinders: [], // 默认没有磨豆机
+  // 每日提醒默认值
+  dailyReminder: false,
+  dailyReminderTime: '20:00',
 };
 
 // 子设置页面的打开/关闭函数接口
