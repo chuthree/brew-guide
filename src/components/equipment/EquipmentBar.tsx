@@ -3,7 +3,6 @@
 import React, { useCallback, useRef } from 'react';
 import { type CustomEquipment } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
-import { saveStringState } from '@/lib/core/statePersistence';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useEquipmentList } from '@/lib/equipment/useEquipmentList';
 import {
@@ -57,7 +56,6 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
   const handleEquipmentSelect = async (equipmentId: string) => {
     await triggerHaptic();
     onEquipmentSelect(equipmentId);
-    saveStringState('brewing-equipment', 'selectedEquipment', equipmentId);
   };
 
   const handleToggleManagement = async () => {

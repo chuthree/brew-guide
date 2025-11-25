@@ -21,6 +21,7 @@ import {
 } from '@/lib/navigation/navigationCache';
 import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 import { MethodType } from '@/lib/types/method';
+import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 
 // 器具选择缓存
 const MODULE_NAME = 'brewing-equipment';
@@ -32,7 +33,8 @@ export const getSelectedEquipmentPreference = (): string => {
 
 export const saveSelectedEquipmentPreference = (equipmentId: string): void => {
   saveStringState(MODULE_NAME, 'selectedEquipment', equipmentId);
-  // 移除不必要的事件分发
+  // 同步更新 Zustand store，实现跨组件实时同步
+  useEquipmentStore.getState().setSelectedEquipment(equipmentId);
 };
 
 // 定义标签类型
@@ -108,6 +110,17 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
   const [selectedEquipment, setSelectedEquipment] = useState<string | null>(
     getSelectedEquipmentPreference()
   );
+
+  // 🎯 订阅 Zustand store，实现与笔记表单的双向同步
+  const equipmentFromStore = useEquipmentStore(state => state.selectedEquipment);
+  
+  // 当 store 中的器具变化时，同步到本地状态
+  useEffect(() => {
+    if (equipmentFromStore && equipmentFromStore !== selectedEquipment) {
+      setSelectedEquipment(equipmentFromStore);
+    }
+  }, [equipmentFromStore]);
+
   const [selectedMethod, setSelectedMethod] = useState<Method | null>(null);
   const [currentBrewingMethod, setCurrentBrewingMethod] =
     useState<Method | null>(null);

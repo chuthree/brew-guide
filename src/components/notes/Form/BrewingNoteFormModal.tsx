@@ -14,10 +14,7 @@ import NoteSteppedFormModal, {
 } from './NoteSteppedFormModal';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
 import { loadCustomEquipments } from '@/lib/managers/customEquipments';
-import {
-  getSelectedEquipmentPreference,
-  saveSelectedEquipmentPreference,
-} from '@/lib/hooks/useBrewingState';
+import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 // 导入随机选择器组件
 import CoffeeBeanRandomPicker from '@/components/coffee-bean/RandomPicker/CoffeeBeanRandomPicker';
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData';
@@ -45,14 +42,17 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   // 使用优化的咖啡豆数据Hook
   const { beans: coffeeBeans } = useCoffeeBeanData();
 
+  // 🎯 直接使用 Zustand store 作为单一数据源
+  const selectedEquipment = useEquipmentStore(state => state.selectedEquipment);
+  const setSelectedEquipment = useEquipmentStore(
+    state => state.setSelectedEquipment
+  );
+
   // 咖啡豆状态
   const [selectedCoffeeBean, setSelectedCoffeeBean] =
     useState<CoffeeBean | null>(initialNote?.coffeeBean || null);
 
-  // 器具状态 - 使用缓存逻辑，优先使用初始笔记的器具，否则使用缓存中的器具
-  const [selectedEquipment, setSelectedEquipment] = useState<string>(
-    initialNote?.equipment || getSelectedEquipmentPreference()
-  );
+  // 自定义器具列表
   const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>(
     []
   );
@@ -183,44 +183,13 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }
   }, [showForm]);
 
-  // 监听器具缓存变化，实现与冲煮界面的实时同步
-  useEffect(() => {
-    const handleEquipmentCacheChange = (
-      e: CustomEvent<{ equipmentId: string }>
-    ) => {
-      const newEquipment = e.detail.equipmentId;
-      // 只有当缓存中的值与当前状态不同时才更新
-      if (newEquipment !== selectedEquipment) {
-        setSelectedEquipment(newEquipment);
-      }
-    };
-
-    // 监听自定义事件
-    window.addEventListener(
-      'equipmentCacheChanged',
-      handleEquipmentCacheChange as EventListener
-    );
-
-    return () => {
-      window.removeEventListener(
-        'equipmentCacheChanged',
-        handleEquipmentCacheChange as EventListener
-      );
-    };
-  }, [selectedEquipment]);
-
-  // 处理器具选择 - 移除selectedEquipment依赖以避免频繁重新创建
-  const handleEquipmentSelect = useCallback((equipmentId: string) => {
-    setSelectedEquipment(prev => {
-      if (equipmentId === prev) return prev;
-      // 延迟保存器具选择到缓存，避免在渲染期间触发其他组件更新
-      setTimeout(() => {
-        saveSelectedEquipmentPreference(equipmentId);
-      }, 0);
-      return equipmentId;
-    });
-    // 在笔记模态框中，选择器具只更新方案列表，不自动跳转
-  }, []);
+  // 处理器具选择 - 直接使用 Zustand store
+  const handleEquipmentSelect = useCallback(
+    (equipmentId: string) => {
+      setSelectedEquipment(equipmentId);
+    },
+    [setSelectedEquipment]
+  );
 
   // 处理咖啡豆选择 - 使用函数式更新避免依赖currentStep
   const handleCoffeeBeanSelect = useCallback((bean: CoffeeBean | null) => {
