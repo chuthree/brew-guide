@@ -128,18 +128,17 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
         {/* 顶部渐变阴影 */}
         <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
 
-        {/* 显示设置组 */}
+        {/* 外观设置组 */}
         <div className="-mt-4 px-6 py-4">
           <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-            显示
+            外观
           </h3>
-
-          <div className="space-y-5">
+          <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
             {/* 外观模式 */}
             <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                 外观模式
-              </div>
+              </span>
               <ButtonGroup
                 value={theme || 'system'}
                 options={[
@@ -149,7 +148,6 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                 ]}
                 onChange={(value: string) => {
                   setTheme(value);
-
                   if (settings.hapticFeedback) {
                     hapticsUtils.light();
                   }
@@ -159,38 +157,42 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
 
             {/* 字体缩放设置 */}
             {isFontZoomEnabled && (
-              <div className="mb-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    字体大小
+              <>
+                <div className="border-t border-neutral-200 pt-4 dark:border-neutral-700">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                      字体大小
+                    </span>
+                    <span className="text-sm text-neutral-400 dark:text-neutral-500">
+                      {zoomLevel.toFixed(1)}×
+                    </span>
                   </div>
-                  <div className="text-sm text-neutral-400 dark:text-neutral-500">
-                    {zoomLevel.toFixed(1)}×
+                  <div className="px-1">
+                    <input
+                      type="range"
+                      min="0.8"
+                      max="1.4"
+                      step="0.1"
+                      value={zoomLevel}
+                      onChange={e =>
+                        handleFontZoomChange(parseFloat(e.target.value))
+                      }
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-600"
+                    />
+                    <div className="mt-1 flex justify-between text-xs text-neutral-500">
+                      <span>小</span>
+                      <span>大</span>
+                    </div>
                   </div>
                 </div>
-                <div className="px-1">
-                  <input
-                    type="range"
-                    min="0.8"
-                    max="1.4"
-                    step="0.1"
-                    value={zoomLevel}
-                    onChange={e =>
-                      handleFontZoomChange(parseFloat(e.target.value))
-                    }
-                    className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
-                  />
-                  <div className="mt-1 flex justify-between text-xs text-neutral-500">
-                    <span>小</span>
-                    <span>大</span>
-                  </div>
-                </div>
-                <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                  调整应用的字体大小，设置会自动保存
-                </p>
-              </div>
+              </>
             )}
           </div>
+          {isFontZoomEnabled && (
+            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+              调整应用的字体大小，设置会自动保存
+            </p>
+          )}
         </div>
 
         {/* 安全区域边距设置组 */}
@@ -210,22 +212,19 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                   hapticsUtils.light();
                 }
               }}
-              className="rounded-md px-2 py-1 text-xs text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              className="rounded-md px-2 py-1 text-xs text-neutral-600 transition-colors hover:bg-neutral-200 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
             >
               还原默认
             </button>
           </div>
-          <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
-            调整应用界面的上下边距，影响导航栏和内容区域的间距
-          </p>
 
-          <div className="space-y-4">
+          <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
             {/* 顶部边距 */}
             <div>
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                   顶部边距
-                </div>
+                </span>
                 <button
                   onClick={() => {
                     const currentMargins = settings.safeAreaMargins || {
@@ -241,7 +240,7 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                       hapticsUtils.light();
                     }
                   }}
-                  className="rounded px-1 py-0.5 text-sm text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                  className="rounded px-1.5 py-0.5 text-sm text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
                   title="点击重置为默认值"
                 >
                   {settings.safeAreaMargins?.top || 38}px
@@ -265,21 +264,21 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                     };
                     handleChange('safeAreaMargins', newMargins);
                   }}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-600"
                 />
                 <div className="mt-1 flex justify-between text-xs text-neutral-500">
-                  <span>20px</span>
-                  <span>80px</span>
+                  <span>12px</span>
+                  <span>84px</span>
                 </div>
               </div>
             </div>
 
             {/* 底部边距 */}
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+            <div className="border-t border-neutral-200 pt-4 dark:border-neutral-700">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                   底部边距
-                </div>
+                </span>
                 <button
                   onClick={() => {
                     const currentMargins = settings.safeAreaMargins || {
@@ -295,7 +294,7 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                       hapticsUtils.light();
                     }
                   }}
-                  className="rounded px-1 py-0.5 text-sm text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                  className="rounded px-1.5 py-0.5 text-sm text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
                   title="点击重置为默认值"
                 >
                   {settings.safeAreaMargins?.bottom || 38}px
@@ -319,7 +318,7 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                     };
                     handleChange('safeAreaMargins', newMargins);
                   }}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-600"
                 />
                 <div className="mt-1 flex justify-between text-xs text-neutral-500">
                   <span>20px</span>
@@ -328,6 +327,9 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
               </div>
             </div>
           </div>
+          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            调整应用界面的上下边距，影响导航栏和内容区域的间距
+          </p>
         </div>
       </div>
     </div>

@@ -17,14 +17,14 @@ export function ButtonGroup<T extends string>({
 }: ButtonGroupProps<T>) {
   return (
     <div
-      className={`inline-flex rounded bg-neutral-100/60 p-0.5 dark:bg-neutral-800/60 ${className}`}
+      className={`inline-flex rounded bg-neutral-200/80 p-0.5 dark:bg-neutral-700/80 ${className}`}
     >
       {options.map(option => (
         <button
           key={option.value}
           className={`rounded px-2.5 py-1 text-xs font-medium transition-all ${
             value === option.value
-              ? 'bg-white text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
+              ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-600 dark:text-white'
               : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
           }`}
           onClick={() => {
