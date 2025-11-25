@@ -112,8 +112,10 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
   );
 
   // 🎯 订阅 Zustand store，实现与笔记表单的双向同步
-  const equipmentFromStore = useEquipmentStore(state => state.selectedEquipment);
-  
+  const equipmentFromStore = useEquipmentStore(
+    state => state.selectedEquipment
+  );
+
   // 当 store 中的器具变化时，同步到本地状态
   useEffect(() => {
     if (equipmentFromStore && equipmentFromStore !== selectedEquipment) {
