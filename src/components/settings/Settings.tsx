@@ -31,6 +31,7 @@ import {
   X,
   Settings2,
   Layout,
+  CircleHelp,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -1130,11 +1131,26 @@ const Settings: React.FC<SettingsProps> = ({
           </button>
         </div>
 
-        {/* 意见反馈组 */}
-        <div className="px-6 py-4">
+        {/* 帮助与反馈 */}
+        <div className="space-y-4 px-6 py-4">
           <button
             onClick={() => {
-              window.open('https://wj.qq.com/s2/19403076/7f02/', '_blank');
+              window.open('https://help.chu3.top/docs', '_blank');
+              if (settings.hapticFeedback) {
+                hapticsUtils.light();
+              }
+            }}
+            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            <div className="flex items-center space-x-3">
+              <CircleHelp className="h-4 w-4 text-neutral-500" />
+              <span>帮助文档</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-neutral-400" />
+          </button>
+          <button
+            onClick={() => {
+              window.open('https://help.chu3.top/docs/contact', '_blank');
               if (settings.hapticFeedback) {
                 hapticsUtils.light();
               }
