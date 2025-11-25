@@ -5,11 +5,52 @@ export const API_CONFIG = {
   timeout: 120000, // 120秒超时
 };
 
+// 文件上传安全配置
+const UPLOAD_CONFIG = {
+  // 允许的图片类型
+  allowedTypes: [
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+  ],
+  // 最大文件大小：5MB
+  maxSize: 5 * 1024 * 1024,
+};
+
+// 验证图片文件
+function validateImageFile(file: File): void {
+  // 验证文件类型
+  if (!UPLOAD_CONFIG.allowedTypes.includes(file.type)) {
+    throw new Error('不支持的文件类型，请上传 JPG、PNG、GIF 或 WebP 图片');
+  }
+
+  // 验证文件大小
+  if (file.size > UPLOAD_CONFIG.maxSize) {
+    const maxSizeMB = UPLOAD_CONFIG.maxSize / (1024 * 1024);
+    throw new Error(`文件过大，请上传不超过 ${maxSizeMB}MB 的图片`);
+  }
+
+  // 验证文件名（防止路径遍历攻击）
+  if (
+    file.name.includes('..') ||
+    file.name.includes('/') ||
+    file.name.includes('\\')
+  ) {
+    throw new Error('文件名包含非法字符');
+  }
+}
+
 // 识别咖啡豆图片（流式版本）
 export async function recognizeBeanImage(
   imageFile: File,
   onProgress?: (chunk: string) => void
 ): Promise<any> {
+  // 验证文件安全性
+  validateImageFile(imageFile);
+
   console.log(
     '📤 准备上传图片:',
     imageFile.name,
