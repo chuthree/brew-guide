@@ -284,50 +284,6 @@ export async function saveCustomEquipment(
 }
 
 /**
- * 更新自定义器具
- * @param id 器具ID
- * @param equipment 更新的器具数据
- */
-async function updateCustomEquipment(
-  id: string,
-  equipment: CustomEquipment
-): Promise<void> {
-  try {
-    // 获取当前器具列表
-    const equipments = await loadCustomEquipments();
-    const index = equipments.findIndex(e => e.id === id);
-
-    if (index === -1) {
-      throw new CustomEquipmentError(`未找到ID为${id}的器具`);
-    }
-
-    // 准备更新的器具数据
-    const updatedEquipment = { ...equipment, id, isCustom: true as const };
-
-    // 更新内存中数组的相应项
-    equipments[index] = updatedEquipment;
-
-    // 更新IndexedDB
-    await db.customEquipments.put(updatedEquipment);
-    console.warn(`[updateCustomEquipment] 更新了IndexedDB中的器具: ${id}`);
-
-    // 同时更新localStorage作为备份
-    const storage = await getStorage();
-    await storage.set(STORAGE_KEY, JSON.stringify(equipments));
-    console.warn(`[updateCustomEquipment] 同时更新了localStorage作为备份`);
-
-    // 使缓存失效
-    invalidateEquipmentsCache();
-  } catch (error) {
-    console.error('[updateCustomEquipment] 更新器具失败:', error);
-    throw new CustomEquipmentError(
-      `更新自定义器具失败: ${equipment.name}`,
-      error
-    );
-  }
-}
-
-/**
  * 删除自定义器具
  * @param id 要删除的器具ID
  */
@@ -346,36 +302,43 @@ export async function deleteCustomEquipment(id: string): Promise<void> {
 
     // 从IndexedDB删除
     await db.customEquipments.delete(id);
-    console.warn(`[deleteCustomEquipment] 从IndexedDB删除了器具: ${id}`);
 
     // 同时更新localStorage作为备份
     const storage = await getStorage();
     await storage.set(STORAGE_KEY, JSON.stringify(filteredEquipments));
-    console.warn(`[deleteCustomEquipment] 同时更新了localStorage作为备份`);
 
     // 使缓存失效
     invalidateEquipmentsCache();
 
-    // 尝试清理相关方案
+    // 清理相关方案数据
     try {
-      // 检查是否有对应的方案数据
       const methodsKey = `customMethods_${id}`;
       await storage.remove(methodsKey);
-      console.warn(
-        `[deleteCustomEquipment] 尝试清理相关方案数据: ${methodsKey}`
-      );
-
-      // 从IndexedDB中删除方案
       await db.customMethods.delete(id);
-      console.warn(
-        `[deleteCustomEquipment] 从IndexedDB删除了器具相关方案: ${id}`
-      );
-    } catch (methodError) {
-      console.warn(
-        `[deleteCustomEquipment] 清理器具相关方案失败:`,
-        methodError
-      );
-      // 不阻止器具删除流程
+    } catch {
+      // 清理失败不阻止器具删除流程
+    }
+
+    // 清理该器具的隐藏方案配置
+    try {
+      const settingsStr = await storage.get('brewGuideSettings');
+      if (settingsStr) {
+        const settings = JSON.parse(settingsStr);
+
+        if (settings.hiddenCommonMethods?.[id]) {
+          delete settings.hiddenCommonMethods[id];
+          await storage.set('brewGuideSettings', JSON.stringify(settings));
+
+          // 触发设置变更事件，通知UI更新
+          window.dispatchEvent(
+            new CustomEvent('storageChange', {
+              detail: { key: 'brewGuideSettings' },
+            })
+          );
+        }
+      }
+    } catch {
+      // 清理失败不阻止器具删除流程
     }
   } catch (error) {
     console.error('[deleteCustomEquipment] 删除器具失败:', error);
@@ -399,9 +362,4 @@ export async function isEquipmentNameAvailable(
   } catch (error) {
     throw new CustomEquipmentError(`验证器具名称是否可用失败: ${name}`, error);
   }
-}
-
-// 组件卸载时清理缓存，释放内存
-function teardownCache(): void {
-  equipmentsCache.teardown();
 }
