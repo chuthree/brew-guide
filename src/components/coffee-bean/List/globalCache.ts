@@ -63,7 +63,6 @@ export const globalCache: {
   rankingSortOption: SortOption;
   bloggerSortOption: SortOption;
   rankingBeanType: BeanType;
-  rankingEditMode: boolean;
   bloggerYear: BloggerBeansYear; // 保留用于向后兼容
   bloggerType: BloggerType;
   // 每个博主的年份记忆
@@ -101,7 +100,6 @@ export const globalCache: {
   rankingSortOption: 'rating_desc',
   bloggerSortOption: 'rating_desc',
   rankingBeanType: 'all',
-  rankingEditMode: false,
   bloggerYear: 2025, // 保留用于向后兼容
   bloggerType: 'peter',
   // 每个博主的默认年份
@@ -214,17 +212,7 @@ export const saveRankingBeanTypePreference = (value: BeanType): void => {
   saveStringState(MODULE_NAME, 'rankingBeanType', value);
 };
 
-// 从localStorage读取榜单编辑模式
-export const getRankingEditModePreference = (): boolean => {
-  return getBooleanState(MODULE_NAME, 'rankingEditMode', false);
-};
-
-// 保存榜单编辑模式到localStorage
-export const saveRankingEditModePreference = (value: boolean): void => {
-  saveBooleanState(MODULE_NAME, 'rankingEditMode', value);
-};
-
-// 从localStorage读取博主榜单年份
+// 从 localStorage读取博主榜单年份
 export const getBloggerYearPreference = (): BloggerBeansYear => {
   const value = getNumberState(MODULE_NAME, 'bloggerYear', 2025);
   return value as BloggerBeansYear;
@@ -438,7 +426,6 @@ globalCache.inventorySortOption = getInventorySortOptionPreference();
 globalCache.rankingSortOption = getRankingSortOptionPreference();
 globalCache.bloggerSortOption = getBloggerSortOptionPreference();
 globalCache.rankingBeanType = getRankingBeanTypePreference();
-globalCache.rankingEditMode = getRankingEditModePreference();
 globalCache.bloggerYear = getBloggerYearPreference();
 // 初始化新增的分类相关状态
 globalCache.filterMode = getFilterModePreference();
@@ -474,7 +461,6 @@ if (typeof window !== 'undefined') {
     globalCache.rankingSortOption = getRankingSortOptionPreference();
     globalCache.bloggerSortOption = getBloggerSortOptionPreference();
     globalCache.rankingBeanType = getRankingBeanTypePreference();
-    globalCache.rankingEditMode = getRankingEditModePreference();
     globalCache.bloggerYear = getBloggerYearPreference();
     globalCache.bloggerType = getBloggerTypePreference();
     globalCache.filterMode = getFilterModePreference();

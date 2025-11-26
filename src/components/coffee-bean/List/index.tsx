@@ -42,7 +42,6 @@ import {
   saveRankingSortOptionPreference,
   saveBloggerSortOptionPreference,
   saveRankingBeanTypePreference,
-  saveRankingEditModePreference,
   saveBloggerTypePreference,
   getBloggerYearMemory,
   saveBloggerYearMemory,
@@ -167,9 +166,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   // 榜单视图状态
   const [rankingBeanType, setRankingBeanType] = useState<BeanType>(
     globalCache.rankingBeanType
-  );
-  const [rankingEditMode, setRankingEditMode] = useState<boolean>(
-    globalCache.rankingEditMode
   );
   const [bloggerType, setBloggerType] = useState<BloggerType>(
     initialBloggerType || globalCache.bloggerType
@@ -1534,13 +1530,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           // 调用外部传入的博主类型变更回调
           onBloggerTypeChange?.(newType);
         }}
-        rankingEditMode={rankingEditMode}
-        onRankingEditModeChange={newMode => {
-          setRankingEditMode(newMode);
-          // 保存到本地存储
-          globalCache.rankingEditMode = newMode;
-          saveRankingEditModePreference(newMode);
-        }}
         onRankingShare={handleRankingShare}
         selectedBeanType={selectedBeanType}
         onBeanTypeChange={handleBeanTypeChange}
@@ -1644,7 +1633,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               sortOption={convertToRankingSortOption(sortOption, viewMode)}
               hideFilters={true}
               beanType={rankingBeanType}
-              editMode={rankingEditMode}
               viewMode={
                 viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'
               }

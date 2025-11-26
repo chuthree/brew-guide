@@ -288,8 +288,6 @@ interface ViewSwitcherProps {
   onBloggerYearChange?: (year: BloggerBeansYear) => void;
   bloggerType?: BloggerType;
   onBloggerTypeChange?: (type: BloggerType) => void;
-  rankingEditMode?: boolean;
-  onRankingEditModeChange?: (edit: boolean) => void;
   onRankingShare?: () => void;
   selectedBeanType?: BeanType;
   onBeanTypeChange?: (type: BeanType) => void;
@@ -356,8 +354,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   onBloggerYearChange,
   bloggerType = 'peter',
   onBloggerTypeChange,
-  rankingEditMode = false,
-  onRankingEditModeChange,
   onRankingShare,
   selectedBeanType,
   onBeanTypeChange,
@@ -882,22 +878,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   {/* 固定在右侧的操作按钮 */}
                   <div className="relative z-10 flex flex-shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
                     {/* 年份选择器已移至标题中 */}
-
-                    {/* 编辑按钮 - 仅在个人榜单视图中显示且有评分咖啡豆数据时 */}
-                    {viewMode === VIEW_OPTIONS.RANKING &&
-                      onRankingEditModeChange &&
-                      rankingBeansCount &&
-                      rankingBeansCount > 0 && (
-                        <TabButton
-                          isActive={rankingEditMode}
-                          onClick={() =>
-                            onRankingEditModeChange(!rankingEditMode)
-                          }
-                          className="mr-3"
-                        >
-                          {rankingEditMode ? '完成' : '编辑'}
-                        </TabButton>
-                      )}
 
                     {/* 分享按钮 - 仅在个人榜单视图中显示且有评分咖啡豆数据时 */}
                     {viewMode === VIEW_OPTIONS.RANKING &&

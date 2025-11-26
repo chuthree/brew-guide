@@ -17,7 +17,6 @@ const isMobileApp =
   !!(window as Window & { Capacitor?: { isNative?: boolean } }).Capacitor
     ?.isNative;
 
-
 // 处理链接打开的工具函数
 const openLink = async (url: string) => {
   if (!url) return;
@@ -68,7 +67,6 @@ interface CoffeeBeanRankingProps {
   hideFilters?: boolean;
   beanType?: 'all' | 'espresso' | 'filter' | 'omni';
   isOpen: boolean;
-  editMode?: boolean;
   viewMode?: 'personal' | 'blogger';
   year?: 2023 | 2024 | 2025;
   blogger?: 'peter' | 'fenix';
@@ -83,7 +81,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
   sortOption = SORT_OPTIONS.RATING_DESC,
   hideFilters = false,
   beanType: externalBeanType,
-  editMode: externalEditMode,
   viewMode = 'personal',
   year: externalYear,
   blogger: externalBlogger = 'peter',
@@ -99,7 +96,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
   const [beanType, setBeanType] = useState<
     'all' | 'espresso' | 'filter' | 'omni'
   >(externalBeanType || 'all');
-  const [editMode, setEditMode] = useState(externalEditMode || false);
   const [showUnrated, setShowUnrated] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [year, setYear] = useState<2023 | 2024 | 2025>(externalYear || 2025);
@@ -111,13 +107,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
       setBeanType(externalBeanType);
     }
   }, [externalBeanType]);
-
-  // 监听外部传入的编辑模式变化
-  useEffect(() => {
-    if (externalEditMode !== undefined) {
-      setEditMode(externalEditMode);
-    }
-  }, [externalEditMode]);
 
   // 监听外部传入的年份变化
   useEffect(() => {
@@ -449,11 +438,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     onShowRatingForm?.(bean, handleRatingSaved);
   };
 
-  // 切换编辑模式
-  const toggleEditMode = () => {
-    setEditMode(prev => !prev);
-  };
-
   // 切换显示未评分咖啡豆
   const toggleShowUnrated = () => {
     setShowUnrated(prev => !prev);
@@ -497,19 +481,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                 )}
               </button>
             </div>
-
-            {/* 编辑按钮 - 仅在个人视图下显示 */}
-            {viewMode === 'personal' && (
-              <button
-                onClick={toggleEditMode}
-                className={`relative px-3 pb-1.5 text-xs ${editMode ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
-              >
-                <span className="relative">{editMode ? '完成' : '编辑'}</span>
-                {editMode && (
-                  <span className="absolute bottom-0 left-0 h-px w-full bg-neutral-800 dark:bg-white"></span>
-                )}
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -553,7 +524,14 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                   </div>
 
                   {/* 咖啡豆信息 */}
-                  <div className="min-w-0 flex-1 cursor-pointer">
+                  <div
+                    className={`min-w-0 flex-1 ${viewMode !== 'blogger' ? 'cursor-pointer' : ''}`}
+                    onClick={
+                      viewMode !== 'blogger'
+                        ? () => handleRateBeanClick(bean as CoffeeBean)
+                        : undefined
+                    }
+                  >
                     <div className="flex items-center leading-none">
                       <div className="truncate text-xs font-medium text-neutral-800 dark:text-neutral-100">
                         {bean.name}
@@ -773,7 +751,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                       );
                     })() && (
                       <div className="mt-2">
-                        <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium tracking-widest text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
+                        <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium tracking-widest whitespace-pre-wrap text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
                           {(bean as CoffeeBean).ratingNotes as string}
                         </div>
                       </div>
@@ -789,22 +767,12 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                       );
                     })() && (
                       <div className="mt-2">
-                        <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium tracking-widest text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
+                        <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium tracking-widest whitespace-pre-wrap text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
                           {(bean as CoffeeBean).ratingNotes as string}
                         </div>
                       </div>
                     )}
                   </div>
-
-                  {/* 操作按钮 - 仅在编辑模式下显示 */}
-                  {editMode && (
-                    <button
-                      onClick={() => handleRateBeanClick(bean as CoffeeBean)}
-                      className="text-xs leading-none text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
-                    >
-                      编辑
-                    </button>
-                  )}
                 </div>
               </div>
             )}
