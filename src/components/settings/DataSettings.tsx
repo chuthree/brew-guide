@@ -531,9 +531,15 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                     }
                     onChange={e => {
                       if (s3Settings.enabled) {
-                        handleS3SettingChange('enablePullToSync', e.target.checked);
+                        handleS3SettingChange(
+                          'enablePullToSync',
+                          e.target.checked
+                        );
                       } else if (webdavSettings.enabled) {
-                        handleWebDAVSettingChange('enablePullToSync', e.target.checked);
+                        handleWebDAVSettingChange(
+                          'enablePullToSync',
+                          e.target.checked
+                        );
                       }
                       if (settings.hapticFeedback) hapticsUtils.light();
                     }}
