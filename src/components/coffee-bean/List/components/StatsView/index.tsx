@@ -52,7 +52,7 @@ const StatsListBlock: React.FC<{
   className?: string;
 }> = ({ title, items, className }) => (
   <div
-    className={`flex flex-col rounded bg-neutral-100 p-3 dark:bg-neutral-800 ${className}`}
+    className={`flex flex-col rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${className}`}
   >
     <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
       {title}
@@ -1313,7 +1313,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
 
                           {/* 评分红榜 Top 3 */}
                           {funStats.topRatedBeans.length > 0 && (
-                            <div className="col-span-2 flex flex-col rounded bg-neutral-100 p-3 dark:bg-neutral-800">
+                            <div className="col-span-2 flex flex-col rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
                               <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                 评分红榜 (Top 3)
                               </div>
@@ -1335,7 +1335,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
 
                           {/* 评分黑榜 Bottom 3 */}
                           {funStats.lowestRatedBeans.length > 0 && (
-                            <div className="col-span-2 flex flex-col rounded bg-neutral-100 p-3 dark:bg-neutral-800">
+                            <div className="col-span-2 flex flex-col rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
                               <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                 评分黑榜 (Bottom 3)
                               </div>
