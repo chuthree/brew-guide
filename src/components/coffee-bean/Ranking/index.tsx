@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Virtuoso } from 'react-virtuoso';
 import { CoffeeBean } from '@/types/app';
 import {
@@ -9,6 +10,14 @@ import {
   BloggerType,
   getVideoUrlFromEpisode,
 } from '@/lib/utils/csvUtils';
+
+// 下划线动画配置
+const UNDERLINE_TRANSITION = {
+  type: 'spring' as const,
+  stiffness: 500,
+  damping: 35,
+  mass: 1,
+};
 
 // 用于检测当前运行环境
 const isMobileApp =
@@ -459,7 +468,11 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
               >
                 <span className="relative">全部豆子</span>
                 {beanType === 'all' && (
-                  <span className="absolute bottom-0 left-0 h-px w-full bg-neutral-800 dark:bg-white"></span>
+                  <motion.span
+                    layoutId="ranking-internal-underline"
+                    className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
+                    transition={UNDERLINE_TRANSITION}
+                  />
                 )}
               </button>
               <button
@@ -468,7 +481,11 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
               >
                 <span className="relative">意式豆</span>
                 {beanType === 'espresso' && (
-                  <span className="absolute bottom-0 left-0 h-px w-full bg-neutral-800 dark:bg-white"></span>
+                  <motion.span
+                    layoutId="ranking-internal-underline"
+                    className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
+                    transition={UNDERLINE_TRANSITION}
+                  />
                 )}
               </button>
               <button
@@ -477,7 +494,11 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
               >
                 <span className="relative">手冲豆</span>
                 {beanType === 'filter' && (
-                  <span className="absolute bottom-0 left-0 h-px w-full bg-neutral-800 dark:bg-white"></span>
+                  <motion.span
+                    layoutId="ranking-internal-underline"
+                    className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
+                    transition={UNDERLINE_TRANSITION}
+                  />
                 )}
               </button>
             </div>

@@ -93,6 +93,14 @@ const formatDateLabel = (
   }
 };
 
+// 下划线动画配置 - 使用 spring 动画实现丝滑效果
+const UNDERLINE_TRANSITION = {
+  type: 'spring' as const,
+  stiffness: 500,
+  damping: 35,
+  mass: 1,
+};
+
 // 可复用的标签按钮组件
 interface TabButtonProps {
   isActive: boolean;
@@ -100,6 +108,7 @@ interface TabButtonProps {
   children: React.ReactNode;
   className?: string;
   dataTab?: string;
+  layoutId?: string;
 }
 
 const TabButton: React.FC<TabButtonProps> = ({
@@ -108,6 +117,7 @@ const TabButton: React.FC<TabButtonProps> = ({
   children,
   className = '',
   dataTab,
+  layoutId = 'stats-tab-underline',
 }) => (
   <button
     onClick={onClick}
@@ -120,7 +130,11 @@ const TabButton: React.FC<TabButtonProps> = ({
   >
     <span className="relative">{children}</span>
     {isActive && (
-      <span className="absolute bottom-0 left-0 h-px w-full bg-neutral-800 dark:bg-white"></span>
+      <motion.span
+        layoutId={layoutId}
+        className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
+        transition={UNDERLINE_TRANSITION}
+      />
     )}
   </button>
 );

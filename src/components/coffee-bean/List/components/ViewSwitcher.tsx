@@ -53,7 +53,15 @@ const FILTER_ANIMATION = {
   },
 };
 
-// 可复用的标签按钮组件
+// 下划线动画配置 - 使用 spring 动画实现丝滑效果
+const UNDERLINE_TRANSITION = {
+  type: 'spring' as const,
+  stiffness: 500,
+  damping: 35,
+  mass: 1,
+};
+
+// 可复用的标签按钮组件 - 支持 layoutId 实现跨按钮下划线动画
 interface TabButtonProps {
   isActive: boolean;
   onClick: () => void;
@@ -61,6 +69,7 @@ interface TabButtonProps {
   className?: string;
   dataTab?: string;
   title?: string;
+  layoutId?: string; // 用于区分不同的 tab 组，相同 layoutId 的下划线会产生滑动动画
 }
 
 const TabButton: React.FC<TabButtonProps> = ({
@@ -70,6 +79,7 @@ const TabButton: React.FC<TabButtonProps> = ({
   className = '',
   dataTab,
   title,
+  layoutId = 'tab-underline',
 }) => (
   <button
     onClick={onClick}
@@ -83,7 +93,11 @@ const TabButton: React.FC<TabButtonProps> = ({
   >
     <span className="relative">{children}</span>
     {isActive && (
-      <span className="absolute bottom-0 left-0 h-px w-full bg-neutral-800 dark:bg-white"></span>
+      <motion.span
+        layoutId={layoutId}
+        className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
+        transition={UNDERLINE_TRANSITION}
+      />
     )}
   </button>
 );
@@ -769,6 +783,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       onClick={() => onRankingBeanTypeChange?.('all')}
                       className="mr-1"
                       dataTab="all"
+                      layoutId="ranking-tab-underline"
                     >
                       全部
                     </TabButton>
@@ -817,6 +832,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           onClick={() => onRankingBeanTypeChange?.('espresso')}
                           className="mr-3"
                           dataTab="espresso"
+                          layoutId="ranking-tab-underline"
                         >
                           意式豆
                         </TabButton>
@@ -851,6 +867,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                               ? '矮人博主暂无手冲豆数据'
                               : undefined
                           }
+                          layoutId="ranking-tab-underline"
                         >
                           手冲豆
                         </TabButton>
@@ -865,6 +882,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           onClick={() => onRankingBeanTypeChange?.('omni')}
                           className="mr-3"
                           dataTab="omni"
+                          layoutId="ranking-tab-underline"
                         >
                           全能豆
                         </TabButton>
@@ -1047,6 +1065,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       }}
                       className="mr-1"
                       dataTab="all"
+                      layoutId={`inventory-${filterMode}-underline`}
                     >
                       <span onDoubleClick={() => onToggleImageFlowMode?.()}>
                         全部
@@ -1101,6 +1120,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             }
                             className="mr-3"
                             dataTab={variety}
+                            layoutId="inventory-variety-underline"
                           >
                             {variety}
                           </TabButton>
@@ -1117,6 +1137,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             }
                             className="mr-3"
                             dataTab={origin}
+                            layoutId="inventory-origin-underline"
                           >
                             {origin}
                           </TabButton>
@@ -1134,6 +1155,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                               }
                               className="mr-3"
                               dataTab={status}
+                              layoutId="inventory-flavorPeriod-underline"
                             >
                               {FLAVOR_PERIOD_LABELS[status]}
                             </TabButton>
@@ -1151,6 +1173,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             }
                             className="mr-3"
                             dataTab={roaster}
+                            layoutId="inventory-roaster-underline"
                           >
                             {roaster}
                           </TabButton>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { type CustomEquipment } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '@/components/settings/Settings';
@@ -9,6 +10,14 @@ import {
   useScrollToSelected,
   useScrollBorder,
 } from '@/lib/equipment/useScrollToSelected';
+
+// 下划线动画配置
+const UNDERLINE_TRANSITION = {
+  type: 'spring' as const,
+  stiffness: 500,
+  damping: 35,
+  mass: 1,
+};
 
 const useHapticFeedback = (settings: { hapticFeedback?: boolean }) =>
   useCallback(async () => {
@@ -109,7 +118,11 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
                     {equipment.name}
                   </span>
                   {selectedEquipment === equipment.id && (
-                    <span className="absolute bottom-0 left-0 h-px w-full bg-neutral-800 dark:bg-neutral-100"></span>
+                    <motion.span
+                      layoutId="equipment-tab-underline"
+                      className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-neutral-100"
+                      transition={UNDERLINE_TRANSITION}
+                    />
                   )}
                 </div>
               </div>

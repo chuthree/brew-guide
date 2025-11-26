@@ -119,6 +119,14 @@ const getTodayDateString = (groupingMode: DateGroupingMode): string => {
   }
 };
 
+// 下划线动画配置 - 使用 spring 动画实现丝滑效果
+const UNDERLINE_TRANSITION = {
+  type: 'spring' as const,
+  stiffness: 500,
+  damping: 35,
+  mass: 1,
+};
+
 // 可复用的标签按钮组件
 interface TabButtonProps {
   isActive: boolean;
@@ -126,6 +134,7 @@ interface TabButtonProps {
   children: React.ReactNode;
   className?: string;
   dataTab?: string;
+  layoutId?: string;
 }
 
 const TabButton: React.FC<TabButtonProps> = ({
@@ -134,6 +143,7 @@ const TabButton: React.FC<TabButtonProps> = ({
   children,
   className = '',
   dataTab,
+  layoutId = 'notes-tab-underline',
 }) => (
   <button
     onClick={onClick}
@@ -146,7 +156,11 @@ const TabButton: React.FC<TabButtonProps> = ({
   >
     <span className="relative">{children}</span>
     {isActive && (
-      <span className="absolute bottom-0 left-0 h-px w-full bg-neutral-800 dark:bg-white"></span>
+      <motion.span
+        layoutId={layoutId}
+        className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
+        transition={UNDERLINE_TRANSITION}
+      />
     )}
   </button>
 );
@@ -923,6 +937,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                   }}
                   className="mr-1"
                   dataTab="all"
+                  layoutId={`notes-${filterMode}-underline`}
                 >
                   <span onDoubleClick={() => onSmartToggleImageFlow?.()}>
                     全部
@@ -978,6 +993,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                         }
                         className="mr-3"
                         dataTab={equipment}
+                        layoutId="notes-equipment-underline"
                       >
                         {equipmentNames[equipment] || equipment}
                       </TabButton>
@@ -992,6 +1008,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                         }
                         className="mr-3"
                         dataTab={bean}
+                        layoutId="notes-bean-underline"
                       >
                         {bean}
                       </TabButton>
@@ -1031,6 +1048,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 }
                                 className="mr-3"
                                 dataTab="today"
+                                layoutId="notes-date-underline"
                               >
                                 今天
                               </TabButton>
@@ -1048,6 +1066,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 }
                                 className="mr-3"
                                 dataTab="yesterday"
+                                layoutId="notes-date-underline"
                               >
                                 昨天
                               </TabButton>
@@ -1065,6 +1084,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 }
                                 className="mr-3"
                                 dataTab="dayBeforeYesterday"
+                                layoutId="notes-date-underline"
                               >
                                 前天
                               </TabButton>
@@ -1104,6 +1124,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                             }
                             className="mr-3"
                             dataTab={date}
+                            layoutId="notes-date-underline"
                           >
                             {formatDateLabel(date, dateGroupingMode)}
                           </TabButton>
