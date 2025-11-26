@@ -112,6 +112,7 @@ interface BeanTypeCardProps {
   title: string;
   statsData: any;
   finishDate: string;
+  dailyConsumption?: string;
   chart?: React.ReactNode;
   customLastItem?: { label: string; value: string };
   customStats?: Array<{ title: string; value: string }>;
@@ -122,6 +123,7 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
   title,
   statsData,
   finishDate,
+  dailyConsumption,
   chart,
   customLastItem,
   customStats,
@@ -165,16 +167,6 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
             ))
           ) : (
             <>
-              {/* 消耗 */}
-              <StatsBlock
-                title="消耗"
-                value={
-                  statsData.consumedWeight > 0
-                    ? `${formatNumber(statsData.consumedWeight)}克`
-                    : '-'
-                }
-              />
-
               {/* 剩余 */}
               <StatsBlock
                 title="剩余"
@@ -182,6 +174,14 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
                   statsData.remainingWeight > 0
                     ? `${formatNumber(statsData.remainingWeight)}克`
                     : '-'
+                }
+              />
+
+              {/* 日均消耗 */}
+              <StatsBlock
+                title={customLastItem ? customLastItem.label : '日均消耗'}
+                value={
+                  customLastItem ? customLastItem.value : dailyConsumption || '-'
                 }
               />
 
@@ -195,12 +195,10 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
                 }
               />
 
-              {/* 预计用完 / 自定义项 */}
+              {/* 预计用完 */}
               <StatsBlock
-                title={customLastItem ? customLastItem.label : '预计用完'}
-                value={
-                  customLastItem ? customLastItem.value : finishDate || '-'
-                }
+                title="预计用完"
+                value={finishDate || '-'}
               />
             </>
           )}
@@ -919,10 +917,10 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               const espressoDetails = isHistoricalView ? null : (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
-                    title="日均消耗"
+                    title="消耗"
                     value={
-                      espressoAverageConsumptionFixed > 0
-                        ? `${formatNumber(espressoAverageConsumptionFixed)}克`
+                      stats.espressoStats.consumedWeight > 0
+                        ? `${formatNumber(stats.espressoStats.consumedWeight)}克`
                         : '-'
                     }
                   />
@@ -962,10 +960,10 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               const filterDetails = isHistoricalView ? null : (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
-                    title="日均消耗"
+                    title="消耗"
                     value={
-                      filterAverageConsumptionFixed > 0
-                        ? `${formatNumber(filterAverageConsumptionFixed)}克`
+                      stats.filterStats.consumedWeight > 0
+                        ? `${formatNumber(stats.filterStats.consumedWeight)}克`
                         : '-'
                     }
                   />
@@ -1005,10 +1003,10 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
               const omniDetails = isHistoricalView ? null : (
                 <div className="grid grid-cols-2 gap-3">
                   <StatsBlock
-                    title="日均消耗"
+                    title="消耗"
                     value={
-                      omniAverageConsumptionFixed > 0
-                        ? `${formatNumber(omniAverageConsumptionFixed)}克`
+                      stats.omniStats.consumedWeight > 0
+                        ? `${formatNumber(stats.omniStats.consumedWeight)}克`
                         : '-'
                     }
                   />
@@ -1130,6 +1128,11 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       title="意式豆"
                       statsData={stats.espressoStats}
                       finishDate={espressoFinishDate}
+                      dailyConsumption={
+                        espressoAverageConsumptionFixed > 0
+                          ? `${formatNumber(espressoAverageConsumptionFixed)}克`
+                          : '-'
+                      }
                       customStats={
                         isHistoricalView
                           ? [
@@ -1172,6 +1175,11 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       title="手冲豆"
                       statsData={stats.filterStats}
                       finishDate={filterFinishDate}
+                      dailyConsumption={
+                        filterAverageConsumptionFixed > 0
+                          ? `${formatNumber(filterAverageConsumptionFixed)}克`
+                          : '-'
+                      }
                       customStats={
                         isHistoricalView
                           ? [
@@ -1214,6 +1222,11 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                       title="全能豆"
                       statsData={stats.omniStats}
                       finishDate={omniFinishDate}
+                      dailyConsumption={
+                        omniAverageConsumptionFixed > 0
+                          ? `${formatNumber(omniAverageConsumptionFixed)}克`
+                          : '-'
+                      }
                       customStats={
                         isHistoricalView
                           ? [
