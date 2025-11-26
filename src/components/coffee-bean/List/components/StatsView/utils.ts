@@ -243,6 +243,25 @@ export const calculateStats = (
     return sum + (isNaN(price) ? 0 : price);
   }, 0);
 
+  // 计算已消耗花费（元）- 基于每个豆子的消耗量和单价计算
+  const consumedCost = beans.reduce((sum, bean) => {
+    const price = bean.price
+      ? parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    const capacity = bean.capacity
+      ? parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    const remaining = bean.remaining
+      ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    
+    if (isNaN(price) || isNaN(capacity) || capacity <= 0) return sum;
+    
+    const consumed = capacity - (isNaN(remaining) ? 0 : remaining);
+    const gramPrice = price / capacity;
+    return sum + (consumed * gramPrice);
+  }, 0);
+
   // 计算平均每豆价格（元）
   const averageBeanPrice = totalBeans > 0 ? totalCost / totalBeans : 0;
 
@@ -447,6 +466,20 @@ export const calculateStats = (
       : 0;
     return sum + (isNaN(price) ? 0 : price);
   }, 0);
+  const filterConsumedCost = filterBeans.reduce((sum, bean) => {
+    const price = bean.price
+      ? parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    const capacity = bean.capacity
+      ? parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    const remaining = bean.remaining
+      ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    if (isNaN(price) || isNaN(capacity) || capacity <= 0) return sum;
+    const consumed = capacity - (isNaN(remaining) ? 0 : remaining);
+    return sum + (consumed * price / capacity);
+  }, 0);
   const filterAverageBeanPrice =
     filterBeans.length > 0 ? filterTotalCost / filterBeans.length : 0;
   const filterAverageGramPrice =
@@ -473,6 +506,20 @@ export const calculateStats = (
       ? parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
       : 0;
     return sum + (isNaN(price) ? 0 : price);
+  }, 0);
+  const espressoConsumedCost = espressoBeans.reduce((sum, bean) => {
+    const price = bean.price
+      ? parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    const capacity = bean.capacity
+      ? parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    const remaining = bean.remaining
+      ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    if (isNaN(price) || isNaN(capacity) || capacity <= 0) return sum;
+    const consumed = capacity - (isNaN(remaining) ? 0 : remaining);
+    return sum + (consumed * price / capacity);
   }, 0);
   const espressoAverageBeanPrice =
     espressoBeans.length > 0 ? espressoTotalCost / espressoBeans.length : 0;
@@ -501,6 +548,20 @@ export const calculateStats = (
       : 0;
     return sum + (isNaN(price) ? 0 : price);
   }, 0);
+  const omniConsumedCost = omniBeans.reduce((sum, bean) => {
+    const price = bean.price
+      ? parseFloat(bean.price.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    const capacity = bean.capacity
+      ? parseFloat(bean.capacity.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    const remaining = bean.remaining
+      ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, ''))
+      : 0;
+    if (isNaN(price) || isNaN(capacity) || capacity <= 0) return sum;
+    const consumed = capacity - (isNaN(remaining) ? 0 : remaining);
+    return sum + (consumed * price / capacity);
+  }, 0);
   const omniAverageBeanPrice =
     omniBeans.length > 0 ? omniTotalCost / omniBeans.length : 0;
   const omniAverageGramPrice =
@@ -514,6 +575,7 @@ export const calculateStats = (
     remainingWeight,
     consumedWeight,
     totalCost,
+    consumedCost,
     averageBeanPrice,
     averageGramPrice,
     roastLevelCount,
@@ -532,6 +594,7 @@ export const calculateStats = (
       remainingWeight: espressoRemainingWeight,
       consumedWeight: espressoConsumedWeight,
       totalCost: espressoTotalCost,
+      consumedCost: espressoConsumedCost,
       averageBeanPrice: espressoAverageBeanPrice,
       averageGramPrice: espressoAverageGramPrice,
       todayConsumption: todayConsumption.espressoConsumption,
@@ -544,6 +607,7 @@ export const calculateStats = (
       remainingWeight: filterRemainingWeight,
       consumedWeight: filterConsumedWeight,
       totalCost: filterTotalCost,
+      consumedCost: filterConsumedCost,
       averageBeanPrice: filterAverageBeanPrice,
       averageGramPrice: filterAverageGramPrice,
       todayConsumption: todayConsumption.filterConsumption,
@@ -556,6 +620,7 @@ export const calculateStats = (
       remainingWeight: omniRemainingWeight,
       consumedWeight: omniConsumedWeight,
       totalCost: omniTotalCost,
+      consumedCost: omniConsumedCost,
       averageBeanPrice: omniAverageBeanPrice,
       averageGramPrice: omniAverageGramPrice,
       todayConsumption: todayConsumption.omniConsumption,

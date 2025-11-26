@@ -191,8 +191,8 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
               <StatsBlock
                 title="花费"
                 value={
-                  statsData.totalCost > 0
-                    ? `${formatNumber(statsData.totalCost)}元`
+                  statsData.consumedCost > 0
+                    ? `${formatNumber(statsData.consumedCost)}元`
                     : '-'
                 }
               />
@@ -883,8 +883,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                   <StatsBlock
                     title="花费"
                     value={
-                      stats.totalCost > 0
-                        ? `${formatNumber(stats.totalCost)}元`
+                      stats.consumedCost > 0
+                        ? `${formatNumber(stats.consumedCost)}元`
                         : '-'
                     }
                   />
@@ -1067,8 +1067,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                             {
                               title: '花费',
                               value:
-                                stats.totalCost > 0
-                                  ? `${formatNumber(stats.totalCost)}元`
+                                stats.consumedCost > 0
+                                  ? `${formatNumber(stats.consumedCost)}元`
                                   : '-',
                             },
                             {
@@ -1145,8 +1145,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                               {
                                 title: '花费',
                                 value:
-                                  stats.espressoStats.totalCost > 0
-                                    ? `${formatNumber(stats.espressoStats.totalCost)}元`
+                                  stats.espressoStats.consumedCost > 0
+                                    ? `${formatNumber(stats.espressoStats.consumedCost)}元`
                                     : '-',
                               },
                               {
@@ -1192,8 +1192,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                               {
                                 title: '花费',
                                 value:
-                                  stats.filterStats.totalCost > 0
-                                    ? `${formatNumber(stats.filterStats.totalCost)}元`
+                                  stats.filterStats.consumedCost > 0
+                                    ? `${formatNumber(stats.filterStats.consumedCost)}元`
                                     : '-',
                               },
                               {
@@ -1239,8 +1239,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans }) => {
                               {
                                 title: '花费',
                                 value:
-                                  stats.omniStats.totalCost > 0
-                                    ? `${formatNumber(stats.omniStats.totalCost)}元`
+                                  stats.omniStats.consumedCost > 0
+                                    ? `${formatNumber(stats.omniStats.consumedCost)}元`
                                     : '-',
                               },
                               {

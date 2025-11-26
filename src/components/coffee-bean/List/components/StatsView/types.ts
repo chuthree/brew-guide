@@ -13,6 +13,7 @@ export interface StatsData {
   remainingWeight: number;
   consumedWeight: number;
   totalCost: number;
+  consumedCost: number;
   averageBeanPrice: number;
   averageGramPrice: number;
   roastLevelCount: Record<string, number>;
@@ -45,6 +46,7 @@ export interface StatsData {
     remainingWeight: number;
     consumedWeight: number;
     totalCost: number;
+    consumedCost: number;
     averageBeanPrice: number;
     averageGramPrice: number;
     todayConsumption: number;
@@ -57,6 +59,7 @@ export interface StatsData {
     remainingWeight: number;
     consumedWeight: number;
     totalCost: number;
+    consumedCost: number;
     averageBeanPrice: number;
     averageGramPrice: number;
     todayConsumption: number;
@@ -69,6 +72,7 @@ export interface StatsData {
     remainingWeight: number;
     consumedWeight: number;
     totalCost: number;
+    consumedCost: number;
     averageBeanPrice: number;
     averageGramPrice: number;
     todayConsumption: number;
