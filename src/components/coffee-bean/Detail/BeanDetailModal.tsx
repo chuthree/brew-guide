@@ -926,7 +926,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       备注
                     </div>
-                    <div className="ml-4 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                    <div className="ml-4 text-xs font-medium whitespace-pre-wrap text-neutral-800 dark:text-neutral-100">
                       {searchQuery ? (
                         <HighlightText
                           text={bean.notes}
