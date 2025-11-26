@@ -254,12 +254,12 @@ export const calculateStats = (
     const remaining = bean.remaining
       ? parseFloat(bean.remaining.toString().replace(/[^\d.]/g, ''))
       : 0;
-    
+
     if (isNaN(price) || isNaN(capacity) || capacity <= 0) return sum;
-    
+
     const consumed = capacity - (isNaN(remaining) ? 0 : remaining);
     const gramPrice = price / capacity;
-    return sum + (consumed * gramPrice);
+    return sum + consumed * gramPrice;
   }, 0);
 
   // 计算平均每豆价格（元）
@@ -478,7 +478,7 @@ export const calculateStats = (
       : 0;
     if (isNaN(price) || isNaN(capacity) || capacity <= 0) return sum;
     const consumed = capacity - (isNaN(remaining) ? 0 : remaining);
-    return sum + (consumed * price / capacity);
+    return sum + (consumed * price) / capacity;
   }, 0);
   const filterAverageBeanPrice =
     filterBeans.length > 0 ? filterTotalCost / filterBeans.length : 0;
@@ -519,7 +519,7 @@ export const calculateStats = (
       : 0;
     if (isNaN(price) || isNaN(capacity) || capacity <= 0) return sum;
     const consumed = capacity - (isNaN(remaining) ? 0 : remaining);
-    return sum + (consumed * price / capacity);
+    return sum + (consumed * price) / capacity;
   }, 0);
   const espressoAverageBeanPrice =
     espressoBeans.length > 0 ? espressoTotalCost / espressoBeans.length : 0;
@@ -560,7 +560,7 @@ export const calculateStats = (
       : 0;
     if (isNaN(price) || isNaN(capacity) || capacity <= 0) return sum;
     const consumed = capacity - (isNaN(remaining) ? 0 : remaining);
-    return sum + (consumed * price / capacity);
+    return sum + (consumed * price) / capacity;
   }, 0);
   const omniAverageBeanPrice =
     omniBeans.length > 0 ? omniTotalCost / omniBeans.length : 0;
