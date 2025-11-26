@@ -139,7 +139,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
       >
         <div className="pb-safe-bottom modal-form-container max-h-[calc(85vh-40px)] overflow-auto px-6">
           <CoffeeBeanForm
-            key={`bean-form-${initialBean?.id || 'new'}`}
+            key={`bean-form-${initialBean?.id || 'new'}-${initialBean?.name || ''}`}
             ref={formRef}
             onSave={onSave}
             onCancel={onClose}

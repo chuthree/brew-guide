@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import CustomMethodForm, {
-  CustomMethodFormHandle,
-} from '@/components/method/forms/CustomMethodForm';
+import React, { useState, useEffect, useCallback } from 'react';
+import CustomMethodForm from '@/components/method/forms/CustomMethodForm';
+import {
+  useMultiStepModalHistory,
+  useModalHistory,
+  modalHistory,
+} from '@/lib/hooks/useModalHistory';
 import MethodImportModal from '@/components/method/import/MethodImportModal';
 import { Method, CustomEquipment } from '@/lib/core/config';
 import { loadCustomEquipments } from '@/lib/managers/customEquipments';
@@ -36,6 +39,30 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
   );
   const [currentCustomEquipment, setCurrentCustomEquipment] =
     useState<CustomEquipment | null>(null);
+
+  // 多步骤表单的当前步骤状态
+  const [currentFormStep, setCurrentFormStep] = useState(1);
+
+  // 步骤变化回调 - 用于浏览器返回时
+  const handleStepChange = useCallback((step: number) => {
+    setCurrentFormStep(step);
+  }, []);
+
+  // 使用新的多步骤历史栈管理
+  useMultiStepModalHistory({
+    id: 'custom-method-form',
+    isOpen: showCustomForm && !!currentCustomEquipment,
+    step: currentFormStep,
+    onStepChange: handleStepChange,
+    onClose: onCloseCustomForm,
+  });
+
+  // 导入表单使用单个模态框历史栈管理
+  useModalHistory({
+    id: 'method-import-form',
+    isOpen: showImportForm,
+    onClose: onCloseImportForm,
+  });
 
   // 加载自定义器具 - 优化为仅在首次挂载和选择新器具时加载
   useEffect(() => {
@@ -140,102 +167,22 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     }
   };
 
-  // 创建表单引用，用于调用表单的返回方法
-  const formRef = React.useRef<CustomMethodFormHandle | null>(null);
-
-  // 自定义方案表单历史栈管理 - 支持硬件返回键和浏览器返回按钮
+  // 重置表单步骤当表单关闭时
   useEffect(() => {
     if (!showCustomForm) {
-      // 模态框关闭时，确保清理历史栈中的模态框状态
-      if (window.history.state?.modal === 'custom-method-form') {
-        window.history.replaceState(null, '');
-      }
-      return;
+      setCurrentFormStep(1);
     }
+  }, [showCustomForm]);
 
-    // 添加表单的历史记录
-    window.history.pushState({ modal: 'custom-method-form' }, '');
+  // 处理自定义方案表单关闭（使用新的历史栈系统）
+  const handleCloseCustomForm = useCallback(() => {
+    modalHistory.back();
+  }, []);
 
-    // 监听返回事件
-    const handlePopState = () => {
-      // 设置全局标识，表示模态框正在处理返回事件
-      window.__modalHandlingBack = true;
-
-      // 询问表单是否还有上一步
-      const canGoBack = formRef.current?.handleBackStep();
-      if (canGoBack) {
-        // 表单内部处理了返回（返回上一步），重新添加历史记录
-        window.history.pushState({ modal: 'custom-method-form' }, '');
-      } else {
-        // 表单已经在第一步，直接调用父组件关闭回调（避免双重历史栈操作）
-        // 这里直接调用父组件传入的 onCloseCustomForm，而不是 handleCloseCustomForm
-        onCloseCustomForm();
-      }
-
-      // 清除标识（延迟清除，确保其他事件处理器能看到）
-      setTimeout(() => {
-        window.__modalHandlingBack = false;
-      }, 50);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [showCustomForm, onCloseCustomForm]);
-
-  // 导入方案模态框历史栈管理
-  useEffect(() => {
-    if (!showImportForm) {
-      // 模态框关闭时，确保清理历史栈中的模态框状态
-      if (window.history.state?.modal === 'method-import-form') {
-        window.history.replaceState(null, '');
-      }
-      return;
-    }
-
-    // 如果历史栈中有自定义方案表单记录，用 replaceState 替换它
-    if (window.history.state?.modal === 'custom-method-form') {
-      window.history.replaceState({ modal: 'method-import-form' }, '');
-    } else {
-      // 添加导入表单的历史记录
-      window.history.pushState({ modal: 'method-import-form' }, '');
-    }
-
-    const handlePopState = () => {
-      window.__modalHandlingBack = true;
-      onCloseImportForm();
-      setTimeout(() => {
-        window.__modalHandlingBack = false;
-      }, 50);
-    };
-    window.addEventListener('popstate', handlePopState);
-
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [showImportForm, onCloseImportForm]);
-
-  // 处理自定义方案表单关闭
-  const handleCloseCustomForm = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'custom-method-form') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      onCloseCustomForm();
-    }
-  };
-
-  // 处理导入表单关闭
-  const handleCloseImportForm = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'method-import-form') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      onCloseImportForm();
-    }
-  };
+  // 处理导入表单关闭（使用新的历史栈系统）
+  const handleCloseImportForm = useCallback(() => {
+    modalHistory.back();
+  }, []);
 
   return (
     <>
@@ -246,11 +193,12 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
           className="pt-safe-top pb-safe-bottom fixed inset-0 inset-x-0 bottom-0 z-50 mx-auto flex h-full max-w-[500px] flex-col overflow-hidden bg-neutral-50 px-6 dark:bg-neutral-900"
         >
           <CustomMethodForm
-            ref={formRef}
             onSave={handleSaveMethod}
             onBack={handleCloseCustomForm}
             initialMethod={editingMethod}
             customEquipment={currentCustomEquipment}
+            currentStep={currentFormStep}
+            onStepChange={setCurrentFormStep}
           />
         </div>
       )}

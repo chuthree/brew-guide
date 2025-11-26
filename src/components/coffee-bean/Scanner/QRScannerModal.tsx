@@ -10,6 +10,7 @@ import {
 } from '@/lib/utils/beanQRCodeUtils';
 import type { CoffeeBean } from '@/types/app';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface QRScannerModalProps {
   isOpen: boolean;
@@ -38,31 +39,17 @@ const QRScannerModal: React.FC<QRScannerModalProps> = ({
     }
   }, [isOpen]);
 
-  // 历史栈管理
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    window.history.pushState({ modal: 'qr-scanner' }, '');
-
-    const handlePopState = () => {
-      onClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isOpen, onClose]);
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'qr-scanner',
+    isOpen,
+    onClose,
+  });
 
   // 处理关闭
   const handleClose = useCallback(() => {
-    if (window.history.state?.modal === 'qr-scanner') {
-      window.history.back();
-    } else {
-      onClose();
-    }
-  }, [onClose]);
+    modalHistory.back();
+  }, []);
 
   // 处理扫描结果
   const handleScanResult = useCallback(
@@ -147,7 +134,6 @@ const QRScannerModal: React.FC<QRScannerModalProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              
               ease: [0.33, 1, 0.68, 1],
               duration: 0.265,
             }}

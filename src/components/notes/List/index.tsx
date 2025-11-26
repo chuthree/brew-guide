@@ -786,9 +786,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
   // 处理变动记录转换为普通笔记
   const handleConvertToNormalNote = (convertedNote: BrewingNote) => {
-    // 关闭变动记录编辑模态
-    setEditingChangeRecord(null);
-    setShowChangeRecordEditModal(false);
+    // 注意：关闭变动记录编辑模态的操作已经由 modalHistory.back() 触发的 onClose 回调处理
+    // 这里只负责准备数据并打开普通笔记编辑模态
 
     // 🔥 解构排除变动记录的特有字段，确保干净的数据转换
     const { source, quickDecrementAmount, changeRecord, ...cleanNote } =
@@ -971,9 +970,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         updateNote(updatedRecord.id, updatedRecord);
       }
 
-      // 关闭模态和编辑状态
-      setEditingChangeRecord(null);
-      setShowChangeRecordEditModal(false);
+      // 注意：关闭模态和编辑状态已由 ChangeRecordEditModal 内部的 modalHistory.back() 触发的 onClose 回调处理
 
       // 显示成功提示
       showToastMessage(
@@ -1487,8 +1484,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           onSave={handleSaveChangeRecord}
           onConvertToNormalNote={handleConvertToNormalNote}
           onClose={() => {
-            setEditingChangeRecord(null);
+            // 先设置 showModal=false 让退出动画播放
             setShowChangeRecordEditModal(false);
+            // 延迟清理数据，等待动画完成
+            setTimeout(() => {
+              setEditingChangeRecord(null);
+            }, 300);
           }}
           settings={settings}
         />

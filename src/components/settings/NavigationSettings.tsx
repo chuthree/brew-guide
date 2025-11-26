@@ -12,6 +12,7 @@ import {
   SIMPLIFIED_VIEW_LABELS,
   VIEW_OPTIONS,
 } from '@/components/coffee-bean/List/constants';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface NavigationSettingsProps {
   settings: SettingsOptions;
@@ -27,42 +28,37 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
   onClose,
   handleChange,
 }) => {
-  // 历史栈管理 - 使用 ref 确保只执行一次
+  // 控制动画状态
+  const [shouldRender, setShouldRender] = React.useState(true);
+  const [isVisible, setIsVisible] = React.useState(false);
+
+  // 用于保存最新的 onClose 引用
   const onCloseRef = React.useRef(onClose);
   onCloseRef.current = onClose;
 
-  React.useEffect(() => {
-    window.history.pushState({ modal: 'navigation-settings' }, '');
-
-    const handlePopState = (_event: PopStateEvent) => {
-      onCloseRef.current();
-    };
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, []);
-
-  // 关闭处理
-  const handleClose = () => {
+  // 关闭处理函数（带动画）
+  const handleCloseWithAnimation = React.useCallback(() => {
     setIsVisible(false);
     window.dispatchEvent(new CustomEvent('subSettingsClosing'));
     setTimeout(() => {
-      if (window.history.state?.modal === 'navigation-settings') {
-        window.history.back();
-      } else {
-        onClose();
-      }
+      onCloseRef.current();
     }, 350);
+  }, []);
+
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'navigation-settings',
+    isOpen: true,
+    onClose: handleCloseWithAnimation,
+  });
+
+  // UI 返回按钮点击处理
+  const handleClose = () => {
+    modalHistory.back();
   };
 
-  // 控制动画状态
-  const [shouldRender, setShouldRender] = React.useState(false);
-  const [isVisible, setIsVisible] = React.useState(false);
-
+  // 处理显示/隐藏动画（入场动画）
   React.useEffect(() => {
-    setShouldRender(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setIsVisible(true);

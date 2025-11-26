@@ -14,6 +14,7 @@ import {
   RandomCoffeeBeanSelector,
   getRandomCoffeeBeanSettings,
 } from '@/lib/utils/randomCoffeeBeanUtils';
+import { useModalHistory } from '@/lib/hooks/useModalHistory';
 
 interface CoffeeBeanRandomPickerProps {
   beans: CoffeeBean[];
@@ -30,6 +31,13 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   onSelect,
   isLongPress = false,
 }) => {
+  // 历史栈管理
+  useModalHistory({
+    id: 'random-picker',
+    isOpen,
+    onClose,
+  });
+
   // 动画状态
   const [animationState, setAnimationState] = useState<
     'initial' | 'selecting' | 'selected'
@@ -235,7 +243,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
         transition: {
           duration: 3.6, // 稍微缩短动画时间
           ease: [0.2, 0.4, 0.2, 0.98], // 更简单的缓动函数
-           // 使用tween而不是spring可能更流畅
+          // 使用tween而不是spring可能更流畅
         },
       });
 
@@ -265,8 +273,13 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   // 确认选择当前豆子
   const handleConfirm = useCallback(() => {
     if (selectedBean) {
-      onSelect(selectedBean);
+      // 先关闭 picker（触发历史栈清理），再调用 onSelect
+      // 这样确保 picker 的历史条目在父组件可能推入新历史之前被清理
       onClose();
+      // 延迟调用 onSelect，确保历史栈清理完成
+      setTimeout(() => {
+        onSelect(selectedBean);
+      }, 60);
     }
   }, [selectedBean, onSelect, onClose]);
 

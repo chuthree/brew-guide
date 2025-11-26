@@ -8,6 +8,7 @@ import fontZoomUtils from '@/lib/utils/fontZoomUtils';
 import hapticsUtils from '@/lib/ui/haptics';
 import { ButtonGroup } from '@/components/ui/ButtonGroup';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface DisplaySettingsProps {
   settings: SettingsOptions;
@@ -29,48 +30,44 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
   );
   const [isFontZoomEnabled, setIsFontZoomEnabled] = React.useState(false);
 
-  // 历史栈管理 - 使用 ref 确保只执行一次
+  // 控制动画状态
+  const [shouldRender, setShouldRender] = React.useState(true);
+  const [isVisible, setIsVisible] = React.useState(false);
+
+  // 用于保存最新的 onClose 引用
   const onCloseRef = React.useRef(onClose);
   onCloseRef.current = onClose;
 
-  React.useEffect(() => {
-    window.history.pushState({ modal: 'display-settings' }, '');
-
-    const handlePopState = (_event: PopStateEvent) => {
-      onCloseRef.current();
-    };
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, []); // 空依赖数组，确保只在挂载时执行一次
-
-  // 关闭处理
-  const handleClose = () => {
+  // 关闭处理函数（带动画）
+  const handleCloseWithAnimation = React.useCallback(() => {
     // 立即触发退出动画
     setIsVisible(false);
 
     // 立即通知父组件子设置正在关闭（用于同步 Settings 的恢复动画）
     window.dispatchEvent(new CustomEvent('subSettingsClosing'));
 
-    // 等待动画完成后再真正卸载组件
+    // 等待动画完成后真正关闭
     setTimeout(() => {
-      if (window.history.state?.modal === 'display-settings') {
-        window.history.back();
-      } else {
-        onClose();
-      }
+      onCloseRef.current();
     }, 350); // 与 IOS_TRANSITION_CONFIG.duration 一致
+  }, []);
+
+  // 使用统一的历史栈管理系统
+  // 注意：onClose 回调会在 popstate 时触发，我们需要在这里处理动画
+  useModalHistory({
+    id: 'display-settings',
+    isOpen: true, // 子设置页面挂载即为打开状态
+    onClose: handleCloseWithAnimation, // 使用带动画的关闭函数
+  });
+
+  // UI 返回按钮点击处理
+  const handleClose = () => {
+    // 调用 modalHistory.back() 会触发 popstate，进而调用 handleCloseWithAnimation
+    modalHistory.back();
   };
 
-  // 控制动画状态
-  const [shouldRender, setShouldRender] = React.useState(false);
-  const [isVisible, setIsVisible] = React.useState(false);
-
-  // 处理显示/隐藏动画
+  // 处理显示/隐藏动画（入场动画）
   React.useEffect(() => {
-    setShouldRender(true);
     // 使用 requestAnimationFrame 确保 DOM 已渲染，比 setTimeout 更快更流畅
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {

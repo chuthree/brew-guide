@@ -9,6 +9,7 @@ import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
 import hapticsUtils from '@/lib/ui/haptics';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface RoasterLogoSettingsProps {
   isOpen: boolean;
@@ -28,27 +29,35 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
-  // 历史栈管理
+  // 用于保存最新的 onClose 引用
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  useEffect(() => {
-    if (!isOpen) return;
+  // 关闭处理函数（带动画）
+  const handleCloseWithAnimation = React.useCallback(() => {
+    setIsVisible(false);
+    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
+    setTimeout(() => {
+      onCloseRef.current();
+    }, 350);
+  }, []);
 
-    window.history.pushState({ modal: 'roasterLogoSettings' }, '');
-
-    const handlePopState = () => onCloseRef.current();
-    window.addEventListener('popstate', handlePopState);
-
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [isOpen]);
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'roaster-logo-settings',
+    isOpen,
+    onClose: handleCloseWithAnimation,
+  });
 
   // 处理显示/隐藏动画
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
-      const timer = setTimeout(() => setIsVisible(true), 10);
-      return () => clearTimeout(timer);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
     } else {
       setIsVisible(false);
       const timer = setTimeout(() => setShouldRender(false), 350);
@@ -91,20 +100,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
   };
 
   const handleClose = () => {
-    // 立即触发退出动画
-    setIsVisible(false);
-
-    // 立即通知父组件子设置正在关闭
-    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
-
-    // 等待动画完成后再真正关闭
-    setTimeout(() => {
-      if (window.history.state?.modal === 'roasterLogoSettings') {
-        window.history.back();
-      } else {
-        onClose();
-      }
-    }, 350); // 与 IOS_TRANSITION_CONFIG.duration 一致
+    modalHistory.back();
   };
 
   const handleFileSelect = async (roasterName: string, file: File) => {

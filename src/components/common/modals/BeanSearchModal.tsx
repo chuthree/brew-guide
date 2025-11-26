@@ -9,6 +9,7 @@ import {
 } from '@/lib/utils/flavorPeriodUtils';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import type { CoffeeBean } from '@/types/app';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 // 常量定义，避免在每次渲染时重新创建
 const CACHE_DURATION = 30 * 60 * 1000; // 30分钟缓存
@@ -61,30 +62,12 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
     showStatusDots: true,
   });
 
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // 添加搜索模态框历史记录
-    window.history.pushState({ modal: 'bean-search' }, '');
-
-    // 监听返回事件
-    const handlePopState = (event: PopStateEvent) => {
-      // 检查是否是我们的模态框状态
-      if (event.state?.modal !== 'bean-search') {
-        // 如果当前还显示模态框，说明用户按了返回键，关闭模态框
-        if (isOpen) {
-          onClose();
-        }
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isOpen, onClose]);
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'bean-search',
+    isOpen,
+    onClose,
+  });
 
   useEffect(() => {
     const loadUserSettings = async () => {
@@ -434,15 +417,8 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
   // 关闭处理
   const handleClose = useCallback(() => {
     resetSearch();
-
-    // 如果历史栈中有我们添加的模态框记录，先返回一步
-    if (window.history.state?.modal === 'bean-search') {
-      window.history.back();
-    } else {
-      // 否则直接调用 onClose
-      onClose();
-    }
-  }, [resetSearch, onClose]);
+    modalHistory.back();
+  }, [resetSearch]);
 
   // 表单关闭时重置状态
   useEffect(() => {

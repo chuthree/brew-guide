@@ -2259,6 +2259,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
           // 更新 Zustand store
           useBrewingNoteStore.setState({ notes: allNotes });
+
+          // 🔥 更新笔记详情页的数据，使其与编辑后的数据同步
+          if (noteDetailData && noteDetailData.note.id === noteToSave.id) {
+            setNoteDetailData({
+              ...noteDetailData,
+              note: noteToSave,
+            });
+          }
         }
       }
 
@@ -3356,6 +3364,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   // 关闭当前表单
                   setShowBeanForm(false);
                   setEditingBean(null);
+                  // 如果详情页打开着，也关闭它（续购是新豆子，不应该停留在旧豆子详情页）
+                  setBeanDetailOpen(false);
                   // 打开新的表单用于续购
                   setTimeout(() => {
                     setEditingBean(newBeanData as ExtendedCoffeeBean);
@@ -3475,7 +3485,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           beanUnitPrice={noteDetailData.beanUnitPrice}
           beanInfo={noteDetailData.beanInfo}
           onEdit={async note => {
-            setNoteDetailOpen(false);
+            // 不关闭详情页，让编辑表单叠加在上面
             // 加载完整的笔记数据用于编辑
             const { Storage } = await import('@/lib/core/storage');
             const notesStr = await Storage.get('brewingNotes');

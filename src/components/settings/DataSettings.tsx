@@ -25,6 +25,7 @@ import PersistentStorageManager, {
   isPWAMode,
   type StorageEstimate,
 } from '@/lib/utils/persistentStorage';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>;
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
@@ -110,7 +111,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
   onCloseRef.current = onClose;
 
   // 动画状态
-  const [shouldRender, setShouldRender] = useState(false);
+  const [shouldRender, setShouldRender] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 
   // 冲突弹窗
@@ -150,19 +151,29 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       ? 'webdav'
       : 'none';
 
-  // 历史栈管理
-  useEffect(() => {
-    window.history.pushState({ modal: 'data-settings' }, '');
-    const handlePopState = () => onCloseRef.current();
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+  // 关闭处理函数（带动画）
+  const handleCloseWithAnimation = React.useCallback(() => {
+    setIsVisible(false);
+    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
+    setTimeout(() => {
+      onCloseRef.current();
+    }, 350);
   }, []);
 
-  // 动画初始化
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'data-settings',
+    isOpen: true, // 子设置页面挂载即为打开状态
+    onClose: handleCloseWithAnimation,
+  });
+
+  // 动画初始化（入场动画）
   useEffect(() => {
-    setShouldRender(true);
-    const timer = setTimeout(() => setIsVisible(true), 10);
-    return () => clearTimeout(timer);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+    });
   }, []);
 
   // 检测平台
@@ -233,15 +244,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   // 关闭处理
   const handleClose = () => {
-    setIsVisible(false);
-    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
-    setTimeout(() => {
-      if (window.history.state?.modal === 'data-settings') {
-        window.history.back();
-      } else {
-        onClose();
-      }
-    }, 350);
+    modalHistory.back();
   };
 
   // S3 设置变更处理

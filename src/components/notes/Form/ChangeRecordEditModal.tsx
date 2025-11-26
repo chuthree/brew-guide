@@ -7,6 +7,7 @@ import { BrewingNote } from '@/lib/core/config';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { Calendar } from '@/components/common/ui/Calendar';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface ChangeRecordEditModalProps {
   showModal: boolean;
@@ -34,11 +35,15 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
 
-  // 内部动画状态
-  const [isClosing, setIsClosing] = useState(false);
-
   // 同步顶部安全区颜色
   useThemeColor({ useOverlay: true, enabled: showModal });
+
+  // 使用统一的历史栈管理
+  useModalHistory({
+    id: 'change-record-edit',
+    isOpen: showModal,
+    onClose,
+  });
 
   // 重置时间戳当初始数据变化时
   useEffect(() => {
@@ -93,21 +98,21 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
         ...updatedData,
         timestamp: timestamp.getTime(),
       };
-      onSave(finalData);
+      // 先清理历史栈并触发关闭
+      modalHistory.back();
+      // 延迟执行保存，确保历史栈清理完成
+      setTimeout(() => {
+        onSave(finalData);
+      }, 50);
     },
     [onSave, timestamp]
   );
 
-  // 处理关闭 - 先触发退出动画，然后调用父组件关闭
+  // 处理关闭 - 使用统一的历史栈管理器
   const handleClose = useCallback(() => {
-    if (!isClosing) {
-      setIsClosing(true);
-      // 等待退出动画完成后再调用父组件的关闭回调
-      setTimeout(() => {
-        onClose();
-      }, 265); // 与动画持续时间一致
-    }
-  }, [isClosing, onClose]);
+    // 动画由 showModal 状态变化触发，无需手动设置 isVisible
+    modalHistory.back();
+  }, []);
 
   // 处理保存按钮点击
   const handleSaveClick = useCallback(() => {
@@ -124,7 +129,7 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
 
   return (
     <AnimatePresence>
-      {showModal && !isClosing && (
+      {showModal && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -138,7 +143,6 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              
               ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
               duration: 0.265,
             }}
@@ -158,8 +162,6 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                
-                
                 duration: 0.265,
                 delay: 0.05,
               }}
@@ -253,12 +255,17 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        // 🔥 使用最新的时间戳，并传递给转换处理函数
+                        // 🔥 使用最新的时间戳，构建转换后的笔记数据
                         const convertedNote = {
                           ...initialData,
                           timestamp: timestamp.getTime(),
                         };
-                        onConvertToNormalNote(convertedNote);
+                        // 先通过 modalHistory.back() 清理历史栈并触发关闭
+                        // 然后延迟执行转换回调，确保历史栈清理完成后再打开新模态框
+                        modalHistory.back();
+                        setTimeout(() => {
+                          onConvertToNormalNote(convertedNote);
+                        }, 100);
                       }}
                       className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
                       title="转为普通笔记"

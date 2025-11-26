@@ -1,12 +1,6 @@
 'use client';
 
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useImperativeHandle,
-} from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { CustomEquipment } from '@/lib/core/config';
 import {
@@ -114,22 +108,48 @@ interface CustomMethodFormProps {
   customEquipment: CustomEquipment;
   onSave: (method: MethodWithStages) => void;
   onBack: () => void;
-}
-
-// 暴露给父组件的方法
-export interface CustomMethodFormHandle {
-  handleBackStep: () => boolean;
+  /** 当前步骤，由父组件控制（用于历史栈管理） */
+  currentStep?: number;
+  /** 步骤变化回调，通知父组件步骤变化 */
+  onStepChange?: (step: number) => void;
 }
 
 /**
  * 自定义冲泡方案表单组件
  */
-const CustomMethodForm = React.forwardRef<
-  CustomMethodFormHandle,
-  CustomMethodFormProps
->(({ initialMethod, customEquipment, onSave, onBack }, ref) => {
+const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
+  initialMethod,
+  customEquipment,
+  onSave,
+  onBack,
+  currentStep: externalStep,
+  onStepChange,
+}) => {
   // ===== 状态管理 =====
-  const [currentStep, setCurrentStep] = useState<Step>('name');
+  // 内部步骤状态（当没有外部控制时使用）
+  const [internalStep, setInternalStep] = useState<Step>('name');
+
+  // 步骤映射：数字步骤 <-> 字符串步骤
+  const stepOrder: Step[] = ['name', 'params', 'stages', 'complete'];
+
+  // 根据外部步骤号获取实际步骤
+  const currentStep: Step = externalStep
+    ? stepOrder[externalStep - 1] || 'name'
+    : internalStep;
+
+  // 设置步骤的函数（同时通知父组件）
+  const setCurrentStep = useCallback(
+    (step: Step) => {
+      if (onStepChange) {
+        const stepIndex = stepOrder.indexOf(step);
+        onStepChange(stepIndex + 1);
+      } else {
+        setInternalStep(step);
+      }
+    },
+    [onStepChange]
+  );
+
   const [editingCumulativeTime, setEditingCumulativeTime] = useState<{
     index: number;
     value: string;
@@ -249,31 +269,12 @@ const CustomMethodForm = React.forwardRef<
     }
   };
 
+  // UI 返回按钮处理 - 始终调用 onBack（即 modalHistory.back()）
+  // 这样可以保证浏览器历史栈和内部状态同步
+  // modalHistory 会通过 popstate 事件触发 onStepChange 来更新步骤状态
   const handleBack = () => {
-    const currentIndex = getCurrentStepIndex();
-    if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1].id);
-    } else {
-      onBack();
-    }
+    onBack();
   };
-
-  // 暴露给父组件的方法
-  useImperativeHandle(
-    ref,
-    () => ({
-      // 返回 true 表示处理了返回（返回上一步），false 表示已在第一步
-      handleBackStep: () => {
-        const currentIndex = getCurrentStepIndex();
-        if (currentIndex > 0) {
-          setCurrentStep(steps[currentIndex - 1].id);
-          return true; // 处理了返回
-        }
-        return false; // 已经在第一步，无法再返回
-      },
-    }),
-    [getCurrentStepIndex, steps]
-  );
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -1516,8 +1517,6 @@ const CustomMethodForm = React.forwardRef<
       {renderNextButton()}
     </>
   );
-});
-
-CustomMethodForm.displayName = 'CustomMethodForm';
+};
 
 export default CustomMethodForm;

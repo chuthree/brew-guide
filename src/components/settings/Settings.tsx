@@ -6,6 +6,7 @@ import hapticsUtils from '@/lib/ui/haptics';
 import { restoreDefaultThemeColor } from '@/lib/hooks/useThemeColor';
 import { checkForUpdates, saveCheckTime } from '@/lib/utils/versionCheck';
 import UpdateDrawer from './UpdateDrawer';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 import { useTheme } from 'next-themes';
 import { LayoutSettings } from '../brewing/Timer/Settings';
@@ -332,13 +333,9 @@ const Settings: React.FC<SettingsProps> = ({
     // 立即通知父组件 Settings 正在关闭
     window.dispatchEvent(new CustomEvent('settingsClosing'));
 
-    // 等待动画完成后再真正关闭
+    // 等待动画完成后调用 modalHistory.back()
     setTimeout(() => {
-      if (window.history.state?.modal === 'settings') {
-        window.history.back();
-      } else {
-        onClose();
-      }
+      modalHistory.back();
     }, 350); // 与 IOS_TRANSITION_CONFIG.duration 一致
   };
 
@@ -669,42 +666,12 @@ const Settings: React.FC<SettingsProps> = ({
     }
   }, [theme, systemTheme]);
 
-  // 历史栈管理 - 支持多层嵌套设置页面
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // 检查是否已经有设置相关的历史记录
-    const hasSettingsHistory =
-      window.history.state?.modal?.includes('-settings') ||
-      window.history.state?.modal === 'settings';
-
-    if (hasSettingsHistory) {
-      // 如果已经有设置历史记录，替换它
-      window.history.replaceState({ modal: 'settings' }, '');
-    } else {
-      // 添加新的历史记录
-      window.history.pushState({ modal: 'settings' }, '');
-    }
-
-    const handlePopState = (_event: PopStateEvent) => {
-      // 子设置页面的状态现在由父组件管理
-      // 这里只需要处理主设置页面的关闭
-      if (hasSubSettingsOpen) {
-        // 如果有子设置页面打开，不关闭主设置，只是重新添加历史记录
-        // 实际的子页面关闭由父组件通过监听 popstate 事件处理
-        window.history.pushState({ modal: 'settings' }, '');
-      } else {
-        // 没有子页面打开，关闭主设置
-        onClose();
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isOpen, onClose, hasSubSettingsOpen]);
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'settings',
+    isOpen,
+    onClose,
+  });
 
   // 处理设置变更
   const handleChange = async <K extends keyof SettingsOptions>(

@@ -7,6 +7,7 @@ import { BrewingNoteData } from '@/types/app';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { Calendar } from '@/components/common/ui/Calendar';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface BrewingNoteEditModalProps {
   showModal: boolean;
@@ -127,34 +128,22 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     [onSave, timestamp]
   );
 
-  // 处理关闭 - 先触发退出动画，然后调用父组件关闭
+  // 使用统一的历史栈管理
+  useModalHistory({
+    id: 'brewing-note-edit',
+    isOpen: showModal,
+    onClose: () => {
+      // 通知父组件编辑页正在关闭
+      window.dispatchEvent(new CustomEvent('brewingNoteEditClosing'));
+      onClose();
+    },
+  });
+
+  // 处理关闭 - 使用统一的历史栈管理器
   const handleClose = useCallback(() => {
-    setIsVisible(false); // 触发退出动画
-    window.dispatchEvent(new CustomEvent('brewingNoteEditClosing')); // 通知父组件
-
-    setTimeout(() => {
-      onClose(); // 350ms 后真正关闭
-    }, 350);
-  }, [onClose]);
-
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  useEffect(() => {
-    if (!showModal) return;
-
-    // 添加模态框历史记录
-    window.history.pushState({ modal: 'brewing-note-edit' }, '');
-
-    // 监听返回事件
-    const handlePopState = () => {
-      handleClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [showModal, handleClose]);
+    // 动画由 showModal 状态变化触发，无需手动设置 isVisible
+    modalHistory.back();
+  }, []);
 
   // 移动端优化：防止背景滚动
   useEffect(() => {
@@ -196,7 +185,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
   return (
     <div
-      className="pt-safe-top pb-safe-bottom fixed inset-0 mx-auto max-w-[500px] overflow-auto bg-neutral-50 px-6 dark:bg-neutral-900"
+      className="pt-safe-top pb-safe-bottom fixed inset-0 z-10 mx-auto max-w-[500px] overflow-auto bg-neutral-50 px-6 dark:bg-neutral-900"
       style={getChildPageStyle(isVisible)}
     >
       {/* 顶部标题栏 */}

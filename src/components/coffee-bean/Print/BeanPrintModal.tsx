@@ -22,6 +22,7 @@ import {
   updateConfigBrandName,
   setPresetSize,
 } from './printConfig';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface BeanPrintModalProps {
   isOpen: boolean;
@@ -208,8 +209,11 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
-      const timer = setTimeout(() => setIsVisible(true), 10);
-      return () => clearTimeout(timer);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
     } else {
       setIsVisible(false);
       const timer = setTimeout(() => setShouldRender(false), 350);
@@ -217,37 +221,18 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     }
   }, [isOpen]);
 
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // 添加模态框历史记录
-    window.history.pushState({ modal: 'bean-print' }, '');
-
-    // 监听返回事件
-    const handlePopState = () => {
-      onClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isOpen, onClose]);
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'bean-print',
+    isOpen,
+    onClose,
+  });
 
   // 关闭处理
   const handleClose = () => {
     // 重置编辑模式
     setIsEditMode(false);
-
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'bean-print') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      onClose();
-    }
+    modalHistory.back();
   };
 
   // 格式化日期

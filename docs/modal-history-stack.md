@@ -62,6 +62,14 @@ useMultiStepModalHistory({
 - `BeanRatingModal` - 使用 `useModalHistory`
 - `BeanShareModal` - 使用 `useModalHistory`
 - `CoffeeBeanFormModal` - 使用 `useMultiStepModalHistory`（4 步表单）
+- `BeanImportModal` - 使用 `useModalHistory`
+  - 咖啡豆导入页面，支持剪贴板识别、JSON输入、二维码扫描、图片识别
+- `BeanSearchModal` - 使用 `useModalHistory`
+  - 咖啡豆搜索页面，从远程数据库搜索咖啡豆信息
+- `BeanPrintModal` - 使用 `useModalHistory`
+  - 咖啡豆打印标签页面，支持多种模板和尺寸设置
+- `QRScannerModal` - 使用 `useModalHistory`
+  - 二维码扫描模态框，用于扫描咖啡豆分享二维码
 
 ### 冲煮流程
 
@@ -92,21 +100,84 @@ useMultiStepModalHistory({
 - `EquipmentImportModal` - 使用 `useModalHistory`
   - 导入成功后数据回填到表单，而非直接保存
 
-## 待迁移组件
+### 冲煮方案编辑
 
-以下组件仍使用旧的 `window.history.pushState` + `popstate` 监听：
+- `CustomMethodFormModal` - 使用 `useMultiStepModalHistory`（4 步表单）
+  - 由父组件控制步骤状态，通过 `currentStep` 和 `onStepChange` 传递给子组件
+  - 保存成功后调用 `modalHistory.closeAllByPrefix()` 清理所有步骤历史
+- `CustomMethodForm` - 接受父组件传入的步骤控制
+  - 内部维护步骤映射：`['name', 'params', 'stages', 'complete']`
+  - 支持外部控制模式和内部控制模式
+- `MethodImportModal` - 使用 `useModalHistory`
+  - 导入成功后关闭模态框
 
-```
-src/components/settings/Settings.tsx
-src/components/settings/DisplaySettings.tsx
-src/components/settings/BeanSettings.tsx
-src/components/settings/DataSettings.tsx
-src/components/settings/TimerSettings.tsx
-src/components/method/MethodFormModal.tsx
-src/components/notes/NoteFormModal.tsx
-```
+### 笔记相关
 
-搜索关键词：`pushState`、`popstate`、`__modalHandlingBack`
+- `NoteDetailModal` - 使用 `useModalHistory`
+  - 笔记详情页，支持查看、编辑、删除等操作
+  - 关闭时先触发退出动画，延迟后调用 `modalHistory.back()`
+  - 编辑笔记时不关闭详情页（叠加式打开编辑模态框）
+- `BrewingNoteEditModal` - 使用 `useModalHistory`
+  - 笔记编辑页，支持编辑笔记内容和时间戳
+  - 关闭时先触发退出动画，延迟后调用 `modalHistory.back()`
+- `BrewingNoteFormModal` - 使用 `useMultiStepModalHistory`（4 步表单）
+  - 新建笔记的多步骤表单：器具选择 → 方案选择 → 咖啡豆选择 → 笔记详情
+  - 由父组件 `BrewingNoteFormModal` 控制步骤状态，通过 `currentStep` 和 `setCurrentStep` 传递给 `NoteSteppedFormModal`
+  - `NoteSteppedFormModal` 的返回按钮始终调用 `onClose()`，由历史栈系统统一处理返回逻辑
+- `ChangeRecordEditModal` - 使用 `useModalHistory`
+  - 变动记录编辑模态框（快捷扣除、容量调整等）
+  - 动画由 `shouldRender` 和 `isVisible` 状态控制
+  - 关闭时调用 `modalHistory.back()`
+
+### 咖啡豆随机选择
+
+- `CoffeeBeanRandomPicker` - 使用 `useModalHistory`
+  - 随机咖啡豆选择器，支持滚轮式动画选择
+  - 在两处使用：冲煮界面（TabContent）和手动添加笔记模态框（BrewingNoteFormModal）的咖啡豆选择步骤
+  - 使用 `AnimatePresence` 控制进出动画
+
+### 设置相关
+
+- `Settings` - 使用 `useModalHistory`
+  - 主设置页面，子设置页面状态由父组件管理
+  - 关闭时先触发退出动画，延迟后调用 `modalHistory.back()`
+- `DisplaySettings` - 使用 `useModalHistory`
+  - 显示设置页面，作为子页面挂载即为打开状态
+  - 关闭时派发 `subSettingsClosing` 事件通知父组件
+- `BeanSettings` - 使用 `useModalHistory`
+  - 豆仓列表显示设置页面
+- `DataSettings` - 使用 `useModalHistory`
+  - 数据管理设置页面，包含云同步、备份提醒等功能
+- `TimerSettings` - 使用 `useModalHistory`
+  - 计时器设置页面
+- `NotificationSettings` - 使用 `useModalHistory`
+  - 通知设置页面，包含触觉反馈、通知时机等设置
+- `NavigationSettings` - 使用 `useModalHistory`
+  - 导航设置页面，包含首页Tab配置等
+- `StockSettings` - 使用 `useModalHistory`
+  - 库存设置页面，包含库存预警等功能
+- `FlavorPeriodSettings` - 使用 `useModalHistory`
+  - 赏味期设置页面，配置咖啡豆的赏味期限规则
+- `FlavorDimensionSettings` - 使用 `useModalHistory`
+  - 风味维度设置页面，自定义风味评价维度
+- `RandomCoffeeBeanSettings` - 使用 `useModalHistory`
+  - 随机咖啡豆设置页面，配置随机选择的规则和范围
+- `SearchSortSettings` - 使用 `useModalHistory`
+  - 搜索排序设置页面，配置咖啡豆列表的默认排序方式
+- `HiddenMethodsSettings` - 使用 `useModalHistory`
+  - 隐藏方案管理页面，恢复被隐藏的预设冲煮方案
+- `HiddenEquipmentsSettings` - 使用 `useModalHistory`
+  - 隐藏器具管理页面，恢复被隐藏的预设器具
+- `RoasterLogoSettings` - 使用 `useModalHistory`
+  - 烘焙商图标设置页面，管理烘焙商Logo上传
+- `GrinderSettings` - 使用 `useModalHistory`
+  - 磨豆机设置页面，管理磨豆机及其刻度
+
+## 迁移完成
+
+所有组件已迁移至统一历史栈管理系统。
+
+搜索关键词（用于验证迁移）：`useModalHistory`、`modalHistory.back()`
 
 ## 使用模式
 

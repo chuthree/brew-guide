@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface MethodImportModalProps {
   showForm: boolean;
@@ -55,43 +56,19 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
     }
   }, [showForm]);
 
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  React.useEffect(() => {
-    if (!showForm) {
-      // 模态框关闭时，确保清理历史栈中的模态框状态
-      if (window.history.state?.modal === 'method-import') {
-        window.history.replaceState(null, '');
-      }
-      return;
-    }
+  // 使用新的历史栈管理系统
+  useModalHistory({
+    id: 'method-import',
+    isOpen: showForm,
+    onClose,
+  });
 
-    // 添加模态框历史记录
-    window.history.pushState({ modal: 'method-import' }, '');
-
-    const handlePopState = () => {
-      window.__modalHandlingBack = true;
-      onClose();
-      setTimeout(() => {
-        window.__modalHandlingBack = false;
-      }, 50);
-    };
-    window.addEventListener('popstate', handlePopState);
-
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [showForm, onClose]);
-
-  // 关闭并清除输入
-  const handleClose = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'method-import') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      setImportData('');
-      clearMessages();
-      onClose();
-    }
-  };
+  // 关闭并清除输入（使用新的历史栈系统）
+  const handleClose = useCallback(() => {
+    setImportData('');
+    clearMessages();
+    modalHistory.back();
+  }, []);
 
   // 生成模板提示词
   const _templatePrompt = (() => {
@@ -342,7 +319,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              
               ease: [0.33, 1, 0.68, 1],
               duration: 0.265,
             }}
@@ -359,8 +335,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                
-                
                 duration: 0.265,
                 delay: 0.05,
               }}

@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react';
 import { SettingsOptions } from './Settings';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import { ButtonGroup } from '../ui/ButtonGroup';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 import BeanPreview from './BeanPreview';
 
@@ -22,46 +23,47 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
   onClose,
   handleChange,
 }) => {
-  // 历史栈管理
+  // 控制动画状态
+  const [shouldRender, setShouldRender] = React.useState(true);
+  const [isVisible, setIsVisible] = React.useState(false);
+
+  // 用于保存最新的 onClose 引用
   const onCloseRef = React.useRef(onClose);
   onCloseRef.current = onClose;
 
-  React.useEffect(() => {
-    window.history.pushState({ modal: 'bean-settings' }, '');
-
-    const handlePopState = () => onCloseRef.current();
-    window.addEventListener('popstate', handlePopState);
-
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []); // 空依赖数组，确保只在挂载时执行一次
-
-  // 关闭处理
-  const handleClose = () => {
+  // 关闭处理函数（带动画）
+  const handleCloseWithAnimation = React.useCallback(() => {
     // 立即触发退出动画
     setIsVisible(false);
 
     // 立即通知父组件子设置正在关闭
     window.dispatchEvent(new CustomEvent('subSettingsClosing'));
 
-    // 等待动画完成后再真正关闭
+    // 等待动画完成后真正关闭
     setTimeout(() => {
-      if (window.history.state?.modal === 'bean-settings') {
-        window.history.back();
-      } else {
-        onClose();
-      }
+      onCloseRef.current();
     }, 350); // 与 IOS_TRANSITION_CONFIG.duration 一致
+  }, []);
+
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'bean-settings',
+    isOpen: true, // 子设置页面挂载即为打开状态
+    onClose: handleCloseWithAnimation,
+  });
+
+  // UI 返回按钮点击处理
+  const handleClose = () => {
+    modalHistory.back();
   };
 
-  // 控制动画状态
-  const [shouldRender, setShouldRender] = React.useState(false);
-  const [isVisible, setIsVisible] = React.useState(false);
-
-  // 处理显示/隐藏动画
+  // 处理显示/隐藏动画（入场动画）
   React.useEffect(() => {
-    setShouldRender(true);
-    const timer = setTimeout(() => setIsVisible(true), 10);
-    return () => clearTimeout(timer);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+    });
   }, []);
 
   if (!shouldRender) return null;

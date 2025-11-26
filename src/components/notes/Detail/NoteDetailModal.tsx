@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { BrewingNote } from '@/lib/core/config';
@@ -10,6 +10,7 @@ import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import { ChevronLeft, Pen } from 'lucide-react';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(
@@ -127,36 +128,22 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     };
   }, [isOpen, isVisible]);
 
-  // 历史栈管理
-  useEffect(() => {
-    if (!isOpen) return;
-
-    window.history.pushState({ modal: 'note-detail' }, '');
-
-    const handlePopState = () => {
+  // 使用统一的历史栈管理
+  useModalHistory({
+    id: 'note-detail',
+    isOpen,
+    onClose: () => {
+      // 通知父组件详情页正在关闭，以便同步动画
+      window.dispatchEvent(new CustomEvent('noteDetailClosing'));
       onClose();
-    };
+    },
+  });
 
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isOpen, onClose]);
-
-  // 处理关闭
-  const handleClose = () => {
-    setIsVisible(false); // 触发退出动画
-    window.dispatchEvent(new CustomEvent('noteDetailClosing')); // 通知父组件
-
-    setTimeout(() => {
-      if (window.history.state?.modal === 'note-detail') {
-        window.history.back();
-      } else {
-        onClose();
-      }
-    }, 350); // 等待动画完成
-  };
+  // 处理关闭 - 使用统一的历史栈管理器
+  const handleClose = useCallback(() => {
+    // 动画由 isOpen 状态变化触发，无需手动设置 isVisible
+    modalHistory.back();
+  }, []);
 
   // 只在需要时渲染DOM
   if (!shouldRender) return null;
@@ -227,7 +214,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                 <button
                   onClick={() => {
                     onEdit(note);
-                    onClose();
+                    // 不关闭详情页，让编辑表单叠加在上面
                   }}
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                 >
@@ -301,7 +288,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             label: '编辑',
                             onClick: () => {
                               onEdit(note);
-                              onClose();
+                              // 不关闭详情页，让编辑表单叠加在上面
                             },
                             color: 'default' as const,
                           },

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import BrewingNoteForm from './BrewingNoteForm';
 import { MethodSelector, CoffeeBeanSelector } from '@/components/notes/Form';
 import EquipmentCategoryBar from './EquipmentCategoryBar';
@@ -8,16 +8,17 @@ import { useMethodManagement } from '@/components/notes/Form/hooks/useMethodMana
 import type { BrewingNoteData, CoffeeBean } from '@/types/app';
 import { SettingsOptions } from '@/components/settings/Settings';
 
-import NoteSteppedFormModal, {
-  Step,
-  NoteSteppedFormHandle,
-} from './NoteSteppedFormModal';
+import NoteSteppedFormModal, { Step } from './NoteSteppedFormModal';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
 import { loadCustomEquipments } from '@/lib/managers/customEquipments';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 // 导入随机选择器组件
 import CoffeeBeanRandomPicker from '@/components/coffee-bean/RandomPicker/CoffeeBeanRandomPicker';
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData';
+import {
+  useMultiStepModalHistory,
+  modalHistory,
+} from '@/lib/hooks/useModalHistory';
 
 interface BrewingNoteFormModalProps {
   showForm: boolean;
@@ -64,8 +65,23 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const [isRandomPickerOpen, setIsRandomPickerOpen] = useState(false);
   const [isLongPressRandom, setIsLongPressRandom] = useState(false);
 
-  // 表单引用，用于调用表单的返回方法
-  const formRef = useRef<NoteSteppedFormHandle | null>(null);
+  // 使用新的多步骤历史栈管理
+  // 步骤从 1 开始，但内部 currentStep 从 0 开始，所以需要 +1
+  useMultiStepModalHistory({
+    id: 'note-stepped-form',
+    isOpen: showForm,
+    step: currentStep + 1, // 内部是0开始，历史栈是1开始
+    onStepChange: step => {
+      // 历史栈返回时更新步骤
+      setCurrentStep(step - 1); // 历史栈是1开始，内部是0开始
+    },
+    onClose: () => {
+      // 关闭时重置状态
+      setSelectedCoffeeBean(null);
+      setSelectedMethod('');
+      onClose();
+    },
+  });
 
   // 使用方法管理Hook
   const {
@@ -83,48 +99,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     settings,
   });
 
-  // 处理关闭 - 保持器具选择状态，只重置其他状态
-  const handleClose = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'note-stepped-form') {
-      window.history.back();
-    } else {
-      // 否则直接关闭并重置状态
-      setSelectedCoffeeBean(null);
-      // 不重置器具选择，保持用户的选择状态
-      // setSelectedEquipment('') // 移除这行
-      setSelectedMethod('');
-      onClose();
-    }
-  };
-
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  useEffect(() => {
-    if (!showForm) return;
-
-    // 添加模态框历史记录
-    window.history.pushState({ modal: 'note-stepped-form' }, '');
-
-    // 监听返回事件
-    const handlePopState = () => {
-      // 询问表单是否还有上一步
-      if (formRef.current?.handleBackStep()) {
-        // 表单内部处理了返回（返回上一步），重新添加历史记录
-        window.history.pushState({ modal: 'note-stepped-form' }, '');
-      } else {
-        // 表单已经在第一步，关闭模态框
-        setSelectedCoffeeBean(null);
-        setSelectedMethod('');
-        onClose();
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [showForm, onClose, setSelectedMethod]);
+  // 处理关闭 - 使用新的历史栈系统
+  const handleClose = useCallback(() => {
+    modalHistory.back();
+  }, []);
 
   // 处理初始笔记的咖啡豆匹配
   useEffect(() => {
@@ -208,6 +186,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const handleRandomBeanSelect = useCallback((bean: CoffeeBean) => {
     setSelectedCoffeeBean(bean);
     // 选择随机咖啡豆后自动前进到下一步
+    // 注意：picker 已经在调用 onSelect 之前关闭并清理了历史栈
     setCurrentStep(prev => prev + 1);
   }, []);
 
@@ -467,7 +446,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   return (
     <>
       <NoteSteppedFormModal
-        ref={formRef}
         showForm={showForm}
         onClose={handleClose}
         onComplete={handleStepComplete}

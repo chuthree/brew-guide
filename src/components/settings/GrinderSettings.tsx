@@ -5,6 +5,7 @@ import { ChevronLeft, Plus } from 'lucide-react';
 import { SettingsOptions } from './Settings';
 import hapticsUtils from '@/lib/ui/haptics';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface Grinder {
   id: string;
@@ -26,27 +27,42 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
   onClose,
   handleChange,
 }) => {
-  // 历史栈管理
+  // 控制动画状态
+  const [shouldRender, setShouldRender] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // 用于保存最新的 onClose 引用
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  useEffect(() => {
-    window.history.pushState({ modal: 'grinder-settings' }, '');
-
-    const handlePopState = () => onCloseRef.current();
-    window.addEventListener('popstate', handlePopState);
-
-    return () => window.removeEventListener('popstate', handlePopState);
+  // 关闭处理函数（带动画）
+  const handleCloseWithAnimation = useCallback(() => {
+    setIsVisible(false);
+    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
+    setTimeout(() => {
+      onCloseRef.current();
+    }, 350);
   }, []);
 
-  // 控制动画状态
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'grinder-settings',
+    isOpen: true,
+    onClose: handleCloseWithAnimation,
+  });
 
+  // UI 返回按钮点击处理
+  const handleClose = () => {
+    modalHistory.back();
+  };
+
+  // 处理显示/隐藏动画（入场动画）
   useEffect(() => {
-    setShouldRender(true);
-    const timer = setTimeout(() => setIsVisible(true), 10);
-    return () => clearTimeout(timer);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+    });
   }, []);
 
   // 编辑状态
@@ -61,16 +77,6 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
   // 临时输入值存储
   const tempGrindSizeRef = useRef<{ [key: string]: string }>({});
   const grinders = settings.grinders || [];
-
-  const handleClose = () => {
-    setIsVisible(false);
-    window.dispatchEvent(new CustomEvent('subSettingsClosing'));
-    setTimeout(() => {
-      window.history.state?.modal === 'grinder-settings'
-        ? window.history.back()
-        : onClose();
-    }, 350);
-  };
 
   const handleAddGrinder = () => {
     if (!newGrinderName.trim() || !newGrindSize.trim()) return;

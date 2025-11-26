@@ -867,7 +867,10 @@ const TabContent: React.FC<TabContentProps> = ({
         <CoffeeBeanRandomPicker
           beans={allBeans}
           isOpen={showRandomPicker}
-          onClose={() => setShowRandomPicker(false)}
+          onClose={() => {
+            setShowRandomPicker(false);
+            setIsLongPressRandom(false);
+          }}
           onSelect={bean => {
             if (onCoffeeBeanSelect) {
               onCoffeeBeanSelect(bean.id, bean);
@@ -875,8 +878,7 @@ const TabContent: React.FC<TabContentProps> = ({
               // 4秒后清除高亮
               setTimeout(() => setHighlightedBeanId(null), 4000);
             }
-            setShowRandomPicker(false);
-            setIsLongPressRandom(false); // 重置长按状态
+            // 注意：不需要在这里关闭 picker，组件内部 handleConfirm 会调用 onClose
           }}
           isLongPress={isLongPressRandom}
         />

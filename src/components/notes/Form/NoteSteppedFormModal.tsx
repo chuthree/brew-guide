@@ -141,22 +141,15 @@ const NoteSteppedFormModal = forwardRef<
       );
     };
 
-    // 处理上一步/返回
+    // 处理上一步/返回 - 始终调用 onClose() 让历史栈系统处理导航
     const handleBack = () => {
-      if (currentStepIndex > 0) {
-        const newIndex = currentStepIndex - 1;
-        setCurrentStepIndex(newIndex);
-        if (onStepChange) {
-          onStepChange(newIndex);
-        }
-        // 重置搜索状态
-        setIsSearching(false);
-        setSearchQuery('');
-        // 重置高亮状态
-        setHighlightedBeanId(null);
-      } else {
-        onClose();
-      }
+      // 重置搜索状态
+      setIsSearching(false);
+      setSearchQuery('');
+      // 重置高亮状态
+      setHighlightedBeanId(null);
+      // 让历史栈系统处理返回逻辑
+      onClose();
     };
 
     // 处理下一步

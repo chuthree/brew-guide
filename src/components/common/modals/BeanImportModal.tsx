@@ -16,6 +16,7 @@ import QRScannerModal from '@/components/coffee-bean/Scanner/QRScannerModal';
 import type { CoffeeBean } from '@/types/app';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface BeanImportModalProps {
   showForm: boolean;
@@ -94,8 +95,15 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   const handleClose = useCallback(() => {
     // 立即通知父组件关闭，让父组件通过 showForm prop 控制动画
     window.dispatchEvent(new CustomEvent('beanImportClosing'));
-    onClose(); // 立即调用，让父组件设置 showForm=false，触发 useEffect 处理动画
-  }, [onClose]);
+    modalHistory.back();
+  }, []);
+
+  // 使用统一的历史栈管理系统
+  useModalHistory({
+    id: 'bean-import',
+    isOpen: showForm,
+    onClose,
+  });
 
   // 处理显示/隐藏动画
   useEffect(() => {
@@ -115,26 +123,6 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       return () => clearTimeout(timer);
     }
   }, [showForm]);
-
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  useEffect(() => {
-    if (!showForm) return;
-
-    // 添加模态框历史记录
-    window.history.pushState({ modal: 'bean-import' }, '');
-
-    // 监听返回事件
-    const handlePopState = () => {
-      // 用户按了返回键，关闭模态框
-      onClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [showForm, onClose]);
 
   // 表单关闭时重置状态
   useEffect(() => {
