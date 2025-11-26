@@ -355,9 +355,7 @@ export abstract class BaseSyncManager {
       if (options.preferredDirection === 'upload') {
         // 验证本地数据是否有效
         if (Object.keys(localFilesMetadata).length === 0) {
-          console.error(
-            `❌ [${this.getServiceName()}] 本地没有可上传的数据`
-          );
+          console.error(`❌ [${this.getServiceName()}] 本地没有可上传的数据`);
           result.success = false;
           result.message = '上传失败：本地没有可上传的数据';
           result.errors.push('获取本地数据失败，请检查应用存储状态');
