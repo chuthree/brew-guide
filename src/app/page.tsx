@@ -1888,6 +1888,96 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     setSelectedMethod(null);
   };
 
+  // ==================== 云同步相关状态和处理 ====================
+  // 检查云同步是否已启用且连接成功，并且开启了下拉上传功能
+  const isCloudSyncEnabled = useCallback(() => {
+    const s3Enabled =
+      settings.s3Sync?.enabled &&
+      settings.s3Sync?.lastConnectionSuccess &&
+      settings.s3Sync?.enablePullToSync !== false;
+    const webdavEnabled =
+      settings.webdavSync?.enabled &&
+      settings.webdavSync?.lastConnectionSuccess &&
+      settings.webdavSync?.enablePullToSync !== false;
+    return s3Enabled || webdavEnabled;
+  }, [settings.s3Sync, settings.webdavSync]);
+
+  // 下拉上传处理函数
+  const handlePullToSync = useCallback(async (): Promise<{
+    success: boolean;
+    message?: string;
+  }> => {
+    try {
+      const s3Enabled =
+        settings.s3Sync?.enabled && settings.s3Sync?.lastConnectionSuccess;
+      const webdavEnabled =
+        settings.webdavSync?.enabled &&
+        settings.webdavSync?.lastConnectionSuccess;
+
+      if (!s3Enabled && !webdavEnabled) {
+        return { success: false, message: '云同步未配置' };
+      }
+
+      let manager: any;
+      let connected = false;
+
+      if (s3Enabled) {
+        const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+        const s3Config = settings.s3Sync!;
+
+        manager = new S3SyncManager();
+        connected = await manager.initialize({
+          region: s3Config.region,
+          accessKeyId: s3Config.accessKeyId,
+          secretAccessKey: s3Config.secretAccessKey,
+          bucketName: s3Config.bucketName,
+          prefix: s3Config.prefix,
+          endpoint: s3Config.endpoint || undefined,
+        });
+      } else if (webdavEnabled) {
+        const WebDAVSyncManager = (await import('@/lib/webdav/syncManager'))
+          .default;
+        const webdavConfig = settings.webdavSync!;
+
+        manager = new WebDAVSyncManager();
+        connected = await manager.initialize({
+          url: webdavConfig.url,
+          username: webdavConfig.username,
+          password: webdavConfig.password,
+          remotePath: webdavConfig.remotePath,
+        });
+      }
+
+      if (!connected || !manager) {
+        return { success: false, message: '云同步连接失败' };
+      }
+
+      const result = await manager.sync({
+        preferredDirection: 'upload',
+      });
+
+      if (result.success) {
+        if (result.uploadedFiles > 0) {
+          return {
+            success: true,
+            message: `已上传 ${result.uploadedFiles} 项`,
+          };
+        } else {
+          return { success: true, message: '数据已是最新' };
+        }
+      } else {
+        return { success: false, message: result.message || '上传失败' };
+      }
+    } catch (error) {
+      console.error('下拉上传失败:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : '上传失败',
+      };
+    }
+  }, [settings.s3Sync, settings.webdavSync]);
+  // ==================== 云同步相关状态和处理结束 ====================
+
   // 简化的历史记录导航事件处理
   useEffect(() => {
     // 主标签导航
@@ -2797,6 +2887,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onToggleEquipmentManagement={() =>
             setShowEquipmentManagement(!showEquipmentManagement)
           }
+          cloudSyncEnabled={isCloudSyncEnabled()}
+          onPullToSync={handlePullToSync}
         />
 
         {activeMainTab === '冲煮' && (

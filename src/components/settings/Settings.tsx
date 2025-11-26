@@ -103,6 +103,7 @@ export interface SettingsOptions {
     endpoint?: string; // 自定义端点，用于七牛云等S3兼容服务
     syncMode: 'manual';
     lastConnectionSuccess?: boolean;
+    enablePullToSync?: boolean; // 是否启用下拉上传功能
   };
   // WebDAV同步设置
   webdavSync?: {
@@ -113,6 +114,7 @@ export interface SettingsOptions {
     remotePath: string;
     syncMode: 'manual';
     lastConnectionSuccess?: boolean;
+    enablePullToSync?: boolean; // 是否启用下拉上传功能
   };
   // 随机咖啡豆设置
   randomCoffeeBeans?: {
@@ -224,6 +226,7 @@ export const defaultSettings: SettingsOptions = {
     prefix: 'brew-guide-data/',
     endpoint: '', // 自定义端点
     syncMode: 'manual',
+    enablePullToSync: true, // 默认启用下拉上传
   },
   // 随机咖啡豆设置默认值
   randomCoffeeBeans: {

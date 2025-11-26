@@ -13,7 +13,7 @@ import {
 } from '@/lib/brewing/parameters';
 import EquipmentBar from '@/components/equipment/EquipmentBar';
 
-import { Equal, ArrowLeft, ChevronsUpDown } from 'lucide-react';
+import { Equal, ArrowLeft, ChevronsUpDown, Upload } from 'lucide-react';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import {
   ViewOption,
@@ -205,6 +205,18 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
   );
 };
 
+// 下拉上传的同步状态类型
+type PullSyncStatus =
+  | 'idle'
+  | 'pulling'
+  | 'ready'
+  | 'syncing'
+  | 'success'
+  | 'error';
+
+// 下拉触发阈值（需要下拉更多距离才能触发，避免误触）
+const PULL_THRESHOLD = 100;
+
 interface NavigationBarProps {
   activeMainTab: MainTabType;
   setActiveMainTab: (tab: MainTabType) => void;
@@ -253,6 +265,9 @@ interface NavigationBarProps {
   onShareEquipment?: (equipment: CustomEquipment) => void;
   onToggleEquipmentManagement?: () => void;
   onBackClick?: () => void;
+  // 下拉上传相关 props
+  cloudSyncEnabled?: boolean;
+  onPullToSync?: () => Promise<{ success: boolean; message?: string }>;
 }
 
 // 意式咖啡相关工具函数 - 优化为更简洁的实现
@@ -336,6 +351,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   onShareEquipment: _onShareEquipment,
   onToggleEquipmentManagement,
   onBackClick,
+  cloudSyncEnabled = false,
+  onPullToSync,
 }) => {
   const { canGoBack } = useNavigation(
     activeBrewingStep,
@@ -485,6 +502,190 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   // 🎯 笔记步骤中参数显示的叠加层状态（仅用于UI显示，不影响实际数据）
   const [displayOverlay, setDisplayOverlay] =
     useState<Partial<EditableParams> | null>(null);
+
+  // ==================== 下拉上传状态和逻辑 ====================
+  const [pullDistance, setPullDistance] = useState(0);
+  const [pullSyncStatus, setPullSyncStatus] = useState<PullSyncStatus>('idle');
+  const [pullSyncMessage, setPullSyncMessage] = useState('');
+  const touchStartY = useRef<number>(0);
+  const isTrackingPull = useRef(false);
+
+  // 重置下拉状态
+  const resetPullState = useCallback(() => {
+    setPullDistance(0);
+    setPullSyncStatus('idle');
+    setPullSyncMessage('');
+    isTrackingPull.current = false;
+  }, []);
+
+  // 执行同步
+  const performPullSync = useCallback(async () => {
+    if (pullSyncStatus === 'syncing' || !onPullToSync) return;
+
+    setPullSyncStatus('syncing');
+
+    if (settings.hapticFeedback) {
+      hapticsUtils.medium();
+    }
+
+    try {
+      const result = await onPullToSync();
+
+      // 使用 Toast 提示结果
+      const { showToast } = await import(
+        '@/components/common/feedback/LightToast'
+      );
+
+      if (result.success) {
+        if (settings.hapticFeedback) {
+          hapticsUtils.success();
+        }
+        showToast({
+          type: 'success',
+          title: result.message || '上传成功',
+          duration: 2000,
+        });
+      } else {
+        if (settings.hapticFeedback) {
+          hapticsUtils.error();
+        }
+        showToast({
+          type: 'error',
+          title: result.message || '上传失败',
+          duration: 2500,
+        });
+      }
+
+      // 立即重置状态
+      resetPullState();
+    } catch (error) {
+      if (settings.hapticFeedback) {
+        hapticsUtils.error();
+      }
+
+      const { showToast } = await import(
+        '@/components/common/feedback/LightToast'
+      );
+      showToast({
+        type: 'error',
+        title: error instanceof Error ? error.message : '上传失败',
+        duration: 2500,
+      });
+
+      resetPullState();
+    }
+  }, [pullSyncStatus, onPullToSync, settings.hapticFeedback, resetPullState]);
+
+  // 下拉触摸开始
+  const handlePullTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (!cloudSyncEnabled || !onPullToSync || pullSyncStatus === 'syncing')
+        return;
+
+      touchStartY.current = e.touches[0].clientY;
+      isTrackingPull.current = true;
+    },
+    [cloudSyncEnabled, onPullToSync, pullSyncStatus]
+  );
+
+  // 下拉触摸移动
+  const handlePullTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (
+        !cloudSyncEnabled ||
+        !isTrackingPull.current ||
+        pullSyncStatus === 'syncing'
+      )
+        return;
+
+      const currentY = e.touches[0].clientY;
+      const deltaY = currentY - touchStartY.current;
+
+      // 只在下拉时响应
+      if (deltaY > 0) {
+        // 阻尼效果
+        const distance = Math.min(deltaY * 0.5, PULL_THRESHOLD * 1.5);
+        setPullDistance(distance);
+
+        if (distance >= PULL_THRESHOLD) {
+          if (pullSyncStatus !== 'ready') {
+            setPullSyncStatus('ready');
+            if (settings.hapticFeedback) {
+              hapticsUtils.light();
+            }
+          }
+        } else {
+          if (pullSyncStatus !== 'pulling' && pullSyncStatus !== 'idle') {
+            setPullSyncStatus('pulling');
+          }
+        }
+      }
+    },
+    [cloudSyncEnabled, pullSyncStatus, settings.hapticFeedback]
+  );
+
+  // 下拉触摸结束
+  const handlePullTouchEnd = useCallback(() => {
+    if (!cloudSyncEnabled || pullSyncStatus === 'syncing') return;
+
+    if (pullSyncStatus === 'ready' && pullDistance >= PULL_THRESHOLD) {
+      // 触发同步
+      performPullSync();
+    } else {
+      // 重置
+      resetPullState();
+    }
+
+    isTrackingPull.current = false;
+  }, [
+    cloudSyncEnabled,
+    pullSyncStatus,
+    pullDistance,
+    performPullSync,
+    resetPullState,
+  ]);
+
+  // 获取下拉指示器颜色
+  const getPullIndicatorColor = () => {
+    switch (pullSyncStatus) {
+      case 'syncing':
+        return 'text-neutral-600 dark:text-neutral-300';
+      case 'ready':
+        return 'text-neutral-700 dark:text-neutral-200';
+      default:
+        return 'text-neutral-400 dark:text-neutral-500';
+    }
+  };
+
+  // 获取下拉指示器图标
+  const getPullIndicatorIcon = () => {
+    if (pullSyncStatus === 'syncing') {
+      return (
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      );
+    }
+    // 上传图标默认朝上，不需要旋转
+    return <Upload className="h-4 w-4" />;
+  };
+
+  // 获取下拉显示文本
+  const getPullDisplayText = () => {
+    switch (pullSyncStatus) {
+      case 'ready':
+        return '松开上传';
+      case 'syncing':
+        return '正在上传...';
+      default:
+        return '下拉上传';
+    }
+  };
+
+  // 是否显示下拉指示器
+  const showPullIndicator =
+    cloudSyncEnabled &&
+    onPullToSync &&
+    (pullDistance > 0 || pullSyncStatus === 'syncing');
+  // ==================== 下拉上传状态和逻辑结束 ====================
 
   // 处理抽屉开关
   const handleToggleManagementDrawer = () => {
@@ -727,6 +928,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     return getEquipmentName(selectedEquipment, equipmentList, customEquipments);
   };
 
+  // 计算下拉时的额外高度
+  const pullExtraHeight = showPullIndicator
+    ? pullSyncStatus === 'syncing'
+      ? 40
+      : Math.min(pullDistance, PULL_THRESHOLD * 1.2)
+    : 0;
+
   return (
     <motion.div
       className={`pt-safe-top sticky top-0 border-b transition-colors duration-300 ease-in-out ${
@@ -735,7 +943,43 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
           : 'border-neutral-200 dark:border-neutral-800'
       }`}
       transition={{ duration: 0.3 }}
+      onTouchStart={handlePullTouchStart}
+      onTouchMove={handlePullTouchMove}
+      onTouchEnd={handlePullTouchEnd}
     >
+      {/* 下拉上传指示器 - 绝对定位，在整个导航栏（安全区域 + 下拉区域 + 标签区域）内居中 */}
+      {showPullIndicator && (
+        <div
+          className="absolute inset-x-0 top-0 z-50 flex items-center justify-center"
+          style={{
+            // 总高度 = 安全区域 + 下拉区域 + 导航栏标签高度(约30px)
+            height: `calc(env(safe-area-inset-top) + ${pullExtraHeight}px + 30px)`,
+            opacity: Math.min(1, pullDistance / (PULL_THRESHOLD * 0.6)),
+            transition:
+              pullSyncStatus === 'syncing' ? 'opacity 0.3s ease-out' : 'none',
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            className={`flex items-center gap-2 text-xs font-medium ${getPullIndicatorColor()}`}
+          >
+            {getPullIndicatorIcon()}
+            <span>{getPullDisplayText()}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 下拉上传指示器区域 - 占位用，撑开高度 */}
+      <div
+        style={{
+          height: `${pullExtraHeight}px`,
+          transition:
+            pullSyncStatus === 'syncing' || pullDistance === 0
+              ? 'height 0.3s ease-out'
+              : 'none',
+        }}
+      />
+
       {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 */}
       <div className="relative min-h-[30px] w-full">
         {/* 修改：将AnimatePresence用于透明度变化而非高度变化 */}

@@ -42,6 +42,7 @@ const normalizeS3Settings = (
     prefix: 'brew-guide-data/',
     endpoint: '',
     syncMode: 'manual' as const,
+    enablePullToSync: true,
   };
 
   if (!incoming) {
@@ -74,6 +75,7 @@ const normalizeWebDAVSettings = (
     password: '',
     remotePath: 'brew-guide-data/',
     syncMode: 'manual' as const,
+    enablePullToSync: true,
   };
 
   if (!incoming) {
@@ -506,6 +508,40 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                   handleS3SettingChange('enabled', false);
                 }}
               />
+            )}
+
+            {/* 下拉上传开关 - 仅在启用云同步时显示 */}
+            {(s3Settings.enabled || webdavSettings.enabled) && (
+              <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+                <div>
+                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                    下拉上传
+                  </div>
+                  <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                    在导航栏下拉可快速上传数据
+                  </div>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={
+                      s3Settings.enabled
+                        ? s3Settings.enablePullToSync !== false
+                        : webdavSettings.enablePullToSync !== false
+                    }
+                    onChange={e => {
+                      if (s3Settings.enabled) {
+                        handleS3SettingChange('enablePullToSync', e.target.checked);
+                      } else if (webdavSettings.enabled) {
+                        handleWebDAVSettingChange('enablePullToSync', e.target.checked);
+                      }
+                      if (settings.hapticFeedback) hapticsUtils.light();
+                    }}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                </label>
+              </div>
             )}
           </div>
         </div>
