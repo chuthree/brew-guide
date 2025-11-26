@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { TrendDataPoint } from './useConsumptionTrend';
+import { TrendDataPoint } from './useStatsData';
 import { formatNumber } from './utils';
 
 interface ConsumptionTrendChartProps {

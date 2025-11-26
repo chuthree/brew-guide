@@ -3,17 +3,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { DateGroupingMode, CalculationMode } from './types';
+import { DateGroupingMode } from './types';
 
 export const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
   year: '按年',
   month: '按月',
   day: '按日',
-};
-
-export const CALCULATION_MODE_LABELS: Record<CalculationMode, string> = {
-  natural: '按照自然日',
-  coffee: '按照咖啡日',
 };
 
 // Apple风格动画配置
@@ -174,8 +169,6 @@ interface StatsFilterBarProps {
   selectedDate: string | null;
   onDateClick: (date: string | null) => void;
   availableDates: string[];
-  calculationMode: CalculationMode;
-  onCalculationModeChange: (mode: CalculationMode) => void;
   dateRangeLabel?: string;
 }
 
@@ -185,8 +178,6 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   selectedDate,
   onDateClick,
   availableDates,
-  calculationMode,
-  onCalculationModeChange,
   dateRangeLabel,
 }) => {
   // 筛选展开栏状态
@@ -338,53 +329,30 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                 style={{ willChange: 'height, opacity, transform' }}
               >
                 <div className="px-6 py-4">
-                  <div className="space-y-4">
-                    {/* 时间分组 */}
-                    <div>
-                      <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                        时间分组
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <FilterButton
-                          isActive={dateGroupingMode === 'year'}
-                          onClick={() => onDateGroupingModeChange('year')}
-                        >
-                          {DATE_GROUPING_LABELS.year}
-                        </FilterButton>
-                        <FilterButton
-                          isActive={dateGroupingMode === 'month'}
-                          onClick={() => onDateGroupingModeChange('month')}
-                        >
-                          {DATE_GROUPING_LABELS.month}
-                        </FilterButton>
-                        <FilterButton
-                          isActive={dateGroupingMode === 'day'}
-                          onClick={() => onDateGroupingModeChange('day')}
-                        >
-                          {DATE_GROUPING_LABELS.day}
-                        </FilterButton>
-                      </div>
+                  {/* 时间分组 */}
+                  <div>
+                    <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                      时间分组
                     </div>
-
-                    {/* 计算方式 */}
-                    <div>
-                      <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                        计算方式
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <FilterButton
-                          isActive={calculationMode === 'natural'}
-                          onClick={() => onCalculationModeChange('natural')}
-                        >
-                          {CALCULATION_MODE_LABELS.natural}
-                        </FilterButton>
-                        <FilterButton
-                          isActive={calculationMode === 'coffee'}
-                          onClick={() => onCalculationModeChange('coffee')}
-                        >
-                          {CALCULATION_MODE_LABELS.coffee}
-                        </FilterButton>
-                      </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FilterButton
+                        isActive={dateGroupingMode === 'year'}
+                        onClick={() => onDateGroupingModeChange('year')}
+                      >
+                        {DATE_GROUPING_LABELS.year}
+                      </FilterButton>
+                      <FilterButton
+                        isActive={dateGroupingMode === 'month'}
+                        onClick={() => onDateGroupingModeChange('month')}
+                      >
+                        {DATE_GROUPING_LABELS.month}
+                      </FilterButton>
+                      <FilterButton
+                        isActive={dateGroupingMode === 'day'}
+                        onClick={() => onDateGroupingModeChange('day')}
+                      >
+                        {DATE_GROUPING_LABELS.day}
+                      </FilterButton>
                     </div>
                   </div>
                 </div>

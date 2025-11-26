@@ -5,136 +5,53 @@ export interface StatsViewProps {
   showEmptyBeans: boolean;
 }
 
-export interface StatsData {
-  totalBeans: number;
-  emptyBeans: number;
-  activeBeans: number;
-  totalWeight: number;
-  remainingWeight: number;
-  consumedWeight: number;
-  totalCost: number;
-  consumedCost: number;
-  averageBeanPrice: number;
-  averageGramPrice: number;
-  roastLevelCount: Record<string, number>;
-  typeCount: {
-    单品: number;
-    拼配: number;
-  };
-  beanTypeCount: {
-    espresso: number;
-    filter: number;
-    omni: number;
-    other: number;
-  };
-  originCount: Record<string, number>;
-  processCount: Record<string, number>;
-  varietyCount: Record<string, number>;
-  topFlavors: [string, number][];
-  totalFlavorTags: number;
-  flavorPeriodStatus: {
-    inPeriod: number;
-    beforePeriod: number;
-    afterPeriod: number;
-    unknown: number;
-  };
-  // 新增：手冲和意式分别统计
-  espressoStats: {
-    totalBeans: number;
-    activeBeans: number;
-    totalWeight: number;
-    remainingWeight: number;
-    consumedWeight: number;
-    totalCost: number;
-    consumedCost: number;
-    averageBeanPrice: number;
-    averageGramPrice: number;
-    todayConsumption: number;
-    todayCost: number;
-  };
-  filterStats: {
-    totalBeans: number;
-    activeBeans: number;
-    totalWeight: number;
-    remainingWeight: number;
-    consumedWeight: number;
-    totalCost: number;
-    consumedCost: number;
-    averageBeanPrice: number;
-    averageGramPrice: number;
-    todayConsumption: number;
-    todayCost: number;
-  };
-  omniStats: {
-    totalBeans: number;
-    activeBeans: number;
-    totalWeight: number;
-    remainingWeight: number;
-    consumedWeight: number;
-    totalCost: number;
-    consumedCost: number;
-    averageBeanPrice: number;
-    averageGramPrice: number;
-    todayConsumption: number;
-    todayCost: number;
-  };
-}
-
-export interface StatItemProps {
-  label: string;
-  value: string;
-  unit?: string;
-}
-
-export interface StatSectionProps {
-  title: string;
-  children: React.ReactNode;
-}
-
-export interface TodayConsumptionData {
-  consumption: number;
-  cost: number;
-  espressoConsumption: number;
-  espressoCost: number;
-  filterConsumption: number;
-  filterCost: number;
-  omniConsumption: number;
-  omniCost: number;
-}
-
-export interface StatCategoryProps {
-  number: number;
-  title: string;
-  children: React.ReactNode;
-}
-
 // 时间分组模式
 export type DateGroupingMode = 'year' | 'month' | 'day';
 
-// 计算方式选项
-export type CalculationMode = 'natural' | 'coffee';
+// 豆子类型
+export type BeanType = 'espresso' | 'filter' | 'omni';
 
-export interface RatedBean {
-  name: string;
-  rating: number;
+// 统一的消耗数据结构（适用于概览和各类型）
+export interface ConsumptionStats {
+  consumption: number; // 消耗量（克）
+  cost: number; // 花费（元）
+  percentage?: number; // 占比（百分比，仅类型统计使用）
 }
 
-export interface FunStatsData {
-  totalBrews: number;
-  earliestBrewTime: string;
-  latestBrewTime: string;
-  mostActiveTimePeriod: string;
-  favoriteMethod: string;
-  topRatedBeans: RatedBean[];
-  highestRatedBeanName: string;
-  lowestRatedBeans: RatedBean[];
-  longestStreak: number;
+// 库存数据（仅实时视图使用）
+export interface InventoryStats {
+  remaining: number; // 剩余量（克）
+  remainingValue: number; // 剩余价值（元）
+  estimatedDays: number; // 预计可用天数
 }
 
-export interface StatsCategoriesProps {
-  stats: StatsData;
-  funStats?: FunStatsData;
-  beans: ExtendedCoffeeBean[];
-  todayConsumption: number;
-  todayCost: number;
+// 按类型分类的消耗统计
+export interface TypeConsumptionStats {
+  espresso: ConsumptionStats;
+  filter: ConsumptionStats;
+  omni: ConsumptionStats;
+}
+
+// 按类型分类的库存预测
+export interface TypeInventoryStats {
+  type: BeanType;
+  label: string;
+  remaining: number; // 剩余量（克）
+  dailyConsumption: number; // 日均消耗（克）
+  estimatedDays: number; // 预计可用天数
+}
+
+// 统一的统计数据结构
+export interface UnifiedStatsData {
+  // 概览：总消耗数据
+  overview: ConsumptionStats & {
+    dailyConsumption: number; // 日均消耗
+    dailyCost: number; // 日均花费
+  };
+  // 按类型分类
+  byType: TypeConsumptionStats;
+  // 库存数据（仅实时视图有效）
+  inventory: InventoryStats | null;
+  // 按类型分类的库存预测（仅实时视图有效）
+  inventoryByType: TypeInventoryStats[] | null;
 }
