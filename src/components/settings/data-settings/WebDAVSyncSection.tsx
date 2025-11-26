@@ -84,7 +84,12 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
       } else {
         setStatus('error');
-        setError('自动连接失败，请检查配置');
+        // 根据配置情况给出更具体的提示
+        if (settings.remotePath) {
+          setError('连接失败：无法创建远程目录，请检查路径和权限');
+        } else {
+          setError('连接失败：请检查服务器地址和认证信息');
+        }
         onSettingChange('lastConnectionSuccess', false);
       }
     };
@@ -125,7 +130,12 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         }
       } else {
         setStatus('error');
-        setError('连接失败，请检查WebDAV配置信息');
+        // 根据配置情况给出更具体的提示
+        if (settings.remotePath) {
+          setError('连接失败：无法创建远程目录，请检查路径和权限');
+        } else {
+          setError('连接失败：请检查服务器地址、账号或密码');
+        }
       }
     } catch (err) {
       setStatus('error');

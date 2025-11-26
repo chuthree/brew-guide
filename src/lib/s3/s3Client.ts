@@ -65,16 +65,45 @@ export class S3Client {
       const metadataExists = response.ok;
       const reachable = metadataExists || response.status === 404;
 
+      if (!reachable) {
+        this.logSummary('test-connection', {
+          service: 'qiniu',
+          ok: false,
+          method: 'head-object',
+          status: response.status,
+          error: '无法访问存储桶',
+        });
+        return false;
+      }
+
+      // 验证写入权限：尝试上传测试文件
+      const testKey = '.brew-guide-connection-test';
+      const testContent = JSON.stringify({ timestamp: Date.now() });
+      const canWrite = await this.uploadFile(testKey, testContent);
+
+      if (!canWrite) {
+        this.logSummary('test-connection', {
+          service: 'qiniu',
+          ok: false,
+          method: 'write-test',
+          error: '无写入权限，请检查 AccessKey 配置',
+        });
+        return false;
+      }
+
+      // 清理测试文件（忽略删除失败）
+      await this.deleteFile(testKey).catch(() => {});
+
       this.logSummary('test-connection', {
         service: 'qiniu',
-        ok: reachable,
-        method: 'head-object',
+        ok: true,
+        method: 'write-test',
         metadataExists,
         status: response.status,
         presigned: response.url !== baseUrl,
       });
 
-      return reachable;
+      return true;
     } catch (error) {
       console.error('七牛云连接测试失败:', error);
       this.logSummary('test-connection', {

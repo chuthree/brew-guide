@@ -89,7 +89,12 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
       } else {
         setStatus('error');
-        setError('自动连接失败，请检查配置');
+        // 根据配置情况给出更具体的提示
+        if (!settings.endpoint) {
+          setError('连接失败：请检查服务地址和认证信息');
+        } else {
+          setError('连接失败：无法访问存储桶或缺少写入权限');
+        }
         onSettingChange('lastConnectionSuccess', false);
       }
     };
@@ -136,7 +141,12 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         }
       } else {
         setStatus('error');
-        setError('连接失败，请检查S3配置信息');
+        // 根据配置情况给出更具体的提示
+        if (!settings.endpoint) {
+          setError('连接失败：请检查 Bucket 名称和 Region 是否正确');
+        } else {
+          setError('连接失败：无法访问存储桶或缺少写入权限');
+        }
       }
     } catch (err) {
       setStatus('error');

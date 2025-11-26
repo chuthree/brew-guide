@@ -353,6 +353,17 @@ export abstract class BaseSyncManager {
 
       // 4. 如果指定了同步方向，直接执行
       if (options.preferredDirection === 'upload') {
+        // 验证本地数据是否有效
+        if (Object.keys(localFilesMetadata).length === 0) {
+          console.error(
+            `❌ [${this.getServiceName()}] 本地没有可上传的数据`
+          );
+          result.success = false;
+          result.message = '上传失败：本地没有可上传的数据';
+          result.errors.push('获取本地数据失败，请检查应用存储状态');
+          return result;
+        }
+
         console.log(
           `⬆️ [${this.getServiceName()}] 执行强制上传，文件数: ${Object.keys(localFilesMetadata).length}`
         );

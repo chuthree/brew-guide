@@ -58,9 +58,16 @@ export class WebDAVClient {
         const dirCreated = await this.ensureDirectoryExists(remotePath);
 
         if (!dirCreated) {
-          console.warn(
-            `[WebDAV] 创建远程路径失败，但将继续尝试: ${remotePath}`
+          console.error(
+            `[WebDAV] 创建远程路径失败: ${remotePath}，可能没有写入权限`
           );
+          this.logSummary('test-connection', {
+            url: baseUrl,
+            remotePath: this.config.remotePath,
+            ok: false,
+            error: '无法创建远程目录，请检查权限设置',
+          });
+          return false;
         }
       }
 
