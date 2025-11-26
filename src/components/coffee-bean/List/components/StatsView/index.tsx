@@ -121,6 +121,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
   const {
     availableDates,
     stats,
+    todayStats,
     trendData,
     isHistoricalView,
     effectiveDateRange,
@@ -207,6 +208,15 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
         { title: '日均花费', value: fmtCost(stats.overview.dailyCost) },
       ];
 
+  // 今日统计（仅在非按日模式且有数据时显示）
+  const hasTodayData = todayStats && todayStats.consumption > 0;
+  const todayStatsDisplay = hasTodayData
+    ? [
+        { title: '今日消耗', value: fmtWeight(todayStats.consumption) },
+        { title: '今日花费', value: fmtCost(todayStats.cost) },
+      ]
+    : [];
+
   // 库存统计（仅实时视图显示）
   const inventoryStats = stats.inventory
     ? [
@@ -241,6 +251,11 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
               }
               stats={overviewStats}
             />
+
+            {/* 今日（仅在非按日模式且有数据时显示） */}
+            {todayStatsDisplay.length > 0 && (
+              <StatsCard title="今日" stats={todayStatsDisplay} />
+            )}
 
             {/* 库存预测（仅实时视图） */}
             {!isHistoricalView &&

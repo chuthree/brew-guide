@@ -22,6 +22,8 @@ interface UseStatsDataResult {
   availableDates: string[];
   // 统一的统计数据
   stats: UnifiedStatsData;
+  // 今日统计数据
+  todayStats: { consumption: number; cost: number } | null;
   // 趋势数据
   trendData: TrendDataPoint[];
   // 实际天数
@@ -499,9 +501,29 @@ export const useStatsData = (
     return result;
   }, [notes, dateGroupingMode, selectedDate]);
 
+  // 7. 今日统计（仅在非按日模式下计算）
+  const todayStats = useMemo(() => {
+    if (dateGroupingMode === 'day') return null;
+
+    const now = new Date();
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    ).getTime();
+    const todayEnd = todayStart + 24 * 60 * 60 * 1000;
+
+    const todayData = calculateConsumption(notes, beans, todayStart, todayEnd);
+    return {
+      consumption: todayData.total.consumption,
+      cost: todayData.total.cost,
+    };
+  }, [notes, beans, dateGroupingMode]);
+
   return {
     availableDates,
     stats,
+    todayStats,
     trendData,
     actualDays,
     isHistoricalView,
