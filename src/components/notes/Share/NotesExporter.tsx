@@ -43,8 +43,6 @@ export async function exportSelectedNotes({
 
     // 设置样式
     tempContainer.style.backgroundColor = backgroundColor;
-    tempContainer.style.maxWidth = '100%';
-    tempContainer.style.width = '360px';
     tempContainer.style.fontFamily =
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
@@ -204,44 +202,36 @@ export async function exportSelectedNotes({
     await waitForImages(tempContainer);
 
     // 获取用户名
-    // const { Storage } = await import('@/lib/core/storage');
-    // const settingsStr = await Storage.get('brewGuideSettings');
-    // let username = '';
-    // if (settingsStr) {
-    //   try {
-    //     const settings = JSON.parse(settingsStr);
-    //     username = settings.username?.trim() || '';
-    //   } catch (e) {
-    //     console.error('解析用户设置失败', e);
-    //   }
-    // }
+    const { Storage } = await import('@/lib/core/storage');
+    const settingsStr = await Storage.get('brewGuideSettings');
+    let username = '';
+    if (settingsStr) {
+      try {
+        const settings = JSON.parse(settingsStr);
+        username = settings.username?.trim() || '';
+      } catch (e) {
+        console.error('解析用户设置失败', e);
+      }
+    }
 
     // 添加底部标记
-    // const footer = document.createElement('p');
-    // footer.style.textAlign = 'left';
-    // footer.style.marginTop = '16px';
-    // footer.style.fontSize = '12px';
-    // footer.style.color = isDarkMode ? '#a3a3a3' : '#525252';
-    // footer.style.display = 'flex';
-    // footer.style.justifyContent = 'center';
-    // footer.style.padding = '0 24px 24px 24px';
+    const footer = document.createElement('div');
+    footer.style.display = 'flex';
+    footer.style.alignItems = 'center';
+    footer.style.justifyContent = 'center';
+    footer.style.padding = '16px 24px 24px 24px';
+    footer.style.fontSize = '11px';
+    footer.style.fontWeight = '400';
+    footer.style.letterSpacing = '0.025em';
+    footer.style.color = isDarkMode ? '#737373' : '#a3a3a3';
 
-    // if (username) {
-    //   // 如果有用户名，将用户名放在左边，Brew Guide放在右边
-    //   const usernameSpan = document.createElement('span');
-    //   usernameSpan.innerText = `@${username} `;
+    // 签名：(@用户名 · Brew Guide App)
+    const signatureText = username
+      ? `(@${username} · Brew Guide App)`
+      : '(Brew Guide App)';
+    footer.innerText = signatureText;
 
-    //   const appNameSpan = document.createElement('span');
-    //   appNameSpan.innerText = ' —— Brew Guide';
-
-    //   footer.appendChild(usernameSpan);
-    //   footer.appendChild(appNameSpan);
-    // } else {
-    //   // 如果没有用户名，保持原样
-    //   footer.innerText = '—— Brew Guide';
-    // }
-
-    // tempContainer.appendChild(footer);
+    tempContainer.appendChild(footer);
 
     // 添加到文档以便能够导出
     document.body.appendChild(tempContainer);
