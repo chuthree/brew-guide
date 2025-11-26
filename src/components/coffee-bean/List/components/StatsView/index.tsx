@@ -181,7 +181,9 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
               <StatsBlock
                 title={customLastItem ? customLastItem.label : '日均消耗'}
                 value={
-                  customLastItem ? customLastItem.value : dailyConsumption || '-'
+                  customLastItem
+                    ? customLastItem.value
+                    : dailyConsumption || '-'
                 }
               />
 
@@ -196,10 +198,7 @@ const BeanTypeCard: React.FC<BeanTypeCardProps> = ({
               />
 
               {/* 预计用完 */}
-              <StatsBlock
-                title="预计用完"
-                value={finishDate || '-'}
-              />
+              <StatsBlock title="预计用完" value={finishDate || '-'} />
             </>
           )}
         </div>
