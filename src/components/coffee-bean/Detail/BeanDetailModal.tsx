@@ -17,6 +17,7 @@ import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(
@@ -279,35 +280,16 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     };
   }, [isOpen, isVisible]);
 
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // 添加模态框历史记录
-    window.history.pushState({ modal: 'bean-detail' }, '');
-
-    // 监听返回事件
-    const handlePopState = () => {
-      // 如果评分模态框打开，先关闭评分模态框，并重新添加详情页的历史记录
-      if (ratingModalOpen) {
-        setRatingModalOpen(false);
-        window.history.pushState({ modal: 'bean-detail' }, '');
-      } else if (shareModalOpen) {
-        // 如果分享模态框打开，先关闭分享模态框，并重新添加详情页的历史记录
-        setShareModalOpen(false);
-        window.history.pushState({ modal: 'bean-detail' }, '');
-      } else {
-        // 否则关闭详情模态框
-        onClose();
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isOpen, ratingModalOpen, shareModalOpen, onClose]);
+  // 使用统一的历史栈管理
+  useModalHistory({
+    id: 'bean-detail',
+    isOpen,
+    onClose: () => {
+      // 通知父组件详情页正在关闭，以便同步动画
+      window.dispatchEvent(new CustomEvent('beanDetailClosing'));
+      onClose();
+    },
+  });
 
   // 重置图片错误状态
   useEffect(() => {
@@ -570,17 +552,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     loadRelatedNotes();
   }, [bean?.id, bean?.name, isOpen]);
 
-  // 处理关闭
+  // 处理关闭 - 使用统一的历史栈管理器
   const handleClose = () => {
-    window.dispatchEvent(new CustomEvent('beanDetailClosing')); // 通知父组件
-
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'bean-detail') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      onClose();
-    }
+    // 事件通知已移到 beforeClose 中，确保无论是 UI 返回还是浏览器返回都能触发
+    modalHistory.back();
   };
 
   // 处理去冲煮功能
@@ -763,7 +738,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           label: '编辑',
                           onClick: () => {
                             onEdit(bean);
-                            onClose();
+                            // 不再关闭详情页，让编辑表单叠加在上面
                           },
                           color: 'default' as const,
                         },

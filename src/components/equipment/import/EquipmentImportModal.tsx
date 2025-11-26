@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { FilePicker } from '@capawesome/capacitor-file-picker';
 import { showToast } from '../../common/feedback/LightToast';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface EquipmentImportModalProps {
   showForm: boolean;
@@ -33,43 +34,19 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
   // 同步顶部安全区颜色
   useThemeColor({ useOverlay: true, enabled: showForm });
 
-  // 关闭并清除输入
+  // 使用统一的历史栈管理
+  useModalHistory({
+    id: 'equipment-import',
+    isOpen: showForm,
+    onClose,
+  });
+
+  // 关闭并清除输入 - 使用统一历史栈
   const handleClose = useCallback(() => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'equipment-import') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      setImportData('');
-      setError(null);
-      onClose();
-    }
-  }, [onClose, setImportData, setError]);
-
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  useEffect(() => {
-    if (!showForm) {
-      // 模态框关闭时，确保清理历史栈中的模态框状态
-      if (window.history.state?.modal === 'equipment-import') {
-        window.history.replaceState(null, '');
-      }
-      return;
-    }
-
-    // 添加模态框历史记录
-    window.history.pushState({ modal: 'equipment-import' }, '');
-
-    const handlePopState = () => {
-      window.__modalHandlingBack = true;
-      onClose();
-      setTimeout(() => {
-        window.__modalHandlingBack = false;
-      }, 50);
-    };
-    window.addEventListener('popstate', handlePopState);
-
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [showForm, onClose]);
+    setImportData('');
+    setError(null);
+    modalHistory.back();
+  }, []);
 
   // 处理导入数据
   const processImportData = useCallback(
@@ -316,14 +293,13 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.265 }}
-          className="fixed inset-0 z-50 bg-black/50"
+          className="fixed inset-0 z-20 bg-black/50"
         >
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              
               ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
               duration: 0.265,
             }}
@@ -342,8 +318,6 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                
-                
                 duration: 0.265,
                 delay: 0.05,
               }}

@@ -8,6 +8,7 @@ import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useEquipmentList } from '@/lib/equipment/useEquipmentList';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface EquipmentManagementDrawerProps {
   isOpen: boolean;
@@ -218,53 +219,17 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
     onAddEquipment();
   };
 
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  React.useEffect(() => {
-    if (!isOpen) {
-      // 模态框关闭时，确保清理历史栈中的模态框状态
-      if (window.history.state?.modal === 'equipment-management') {
-        window.history.replaceState(null, '');
-      }
-      return;
-    }
+  // 使用统一的历史栈管理
+  useModalHistory({
+    id: 'equipment-management',
+    isOpen,
+    onClose,
+  });
 
-    window.history.pushState({ modal: 'equipment-management' }, '');
-
-    const handlePopState = () => {
-      window.__modalHandlingBack = true;
-      onClose();
-      setTimeout(() => {
-        window.__modalHandlingBack = false;
-      }, 50);
-    };
-
-    const handleCloseEquipmentManagement = () => {
-      onClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    window.addEventListener(
-      'closeEquipmentManagement',
-      handleCloseEquipmentManagement
-    );
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener(
-        'closeEquipmentManagement',
-        handleCloseEquipmentManagement
-      );
-    };
-  }, [isOpen, onClose]);
-
-  // 处理关闭
+  // 处理关闭 - 使用统一历史栈
   const handleClose = React.useCallback(() => {
-    if (window.history.state?.modal === 'equipment-management') {
-      window.history.back();
-    } else {
-      onClose();
-    }
-  }, [onClose]);
+    modalHistory.back();
+  }, []);
 
   if (!shouldRender) return null;
 
@@ -273,13 +238,13 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
       {/* 背景遮罩 */}
       <div
         data-modal={isOpen ? 'equipment-management' : undefined}
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'} `}
+        className={`fixed inset-0 bg-black/50 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'} `}
         onClick={handleClose}
       />
 
       {/* 抽屉内容 */}
       <div
-        className={`fixed right-0 bottom-0 left-0 z-50 mx-auto max-w-[500px] rounded-t-3xl bg-neutral-50 backdrop-blur-xl transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'} `}
+        className={`fixed right-0 bottom-0 left-0 mx-auto max-w-[500px] rounded-t-3xl bg-neutral-50 backdrop-blur-xl transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'} `}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-center pt-3 pb-2">

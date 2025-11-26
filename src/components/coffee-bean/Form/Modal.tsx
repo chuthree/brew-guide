@@ -5,6 +5,10 @@ import { Capacitor } from '@capacitor/core';
 import { ExtendedCoffeeBean } from './types';
 import CoffeeBeanForm from './index';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import {
+  useMultiStepModalHistory,
+  modalHistory,
+} from '@/lib/hooks/useModalHistory';
 
 interface CoffeeBeanFormModalProps {
   showForm: boolean;
@@ -35,12 +39,20 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
 
   // 表单引用，用于调用表单的返回方法
-  const formRef = useRef<{ handleBackStep: () => boolean } | null>(null);
+  const formRef = useRef<{
+    handleBackStep: () => boolean;
+    goToStep: (step: number) => void;
+    getCurrentStep: () => number;
+  } | null>(null);
+
+  // 当前步骤状态 - 用于历史栈管理
+  const [currentStep, setCurrentStep] = useState(1);
 
   // 处理显示/隐藏动画
   useEffect(() => {
     if (showForm) {
       setShouldRender(true);
+      setCurrentStep(1); // 重置步骤
       const timer = setTimeout(() => setIsVisible(true), 10);
       return () => clearTimeout(timer);
     } else {
@@ -51,31 +63,18 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     }
   }, [showForm]);
 
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  useEffect(() => {
-    if (!showForm) return;
-
-    // 添加表单的历史记录
-    window.history.pushState({ modal: 'bean-form' }, '');
-
-    // 监听返回事件
-    const handlePopState = () => {
-      // 询问表单是否还有上一步
-      if (formRef.current?.handleBackStep()) {
-        // 表单内部处理了返回（返回上一步），重新添加历史记录
-        window.history.pushState({ modal: 'bean-form' }, '');
-      } else {
-        // 表单已经在第一步，关闭模态框
-        onClose();
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [showForm, onClose]);
+  // 使用多步骤历史栈管理
+  useMultiStepModalHistory({
+    id: 'bean-form',
+    isOpen: showForm,
+    step: currentStep,
+    onStepChange: step => {
+      setCurrentStep(step);
+      // 同步表单内部步骤
+      formRef.current?.goToStep(step);
+    },
+    onClose,
+  });
 
   // 检测平台
   useEffect(() => {
@@ -146,6 +145,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
             onCancel={onClose}
             initialBean={initialBean || undefined}
             onRepurchase={onRepurchase}
+            onStepChange={setCurrentStep}
           />
         </div>
       </div>

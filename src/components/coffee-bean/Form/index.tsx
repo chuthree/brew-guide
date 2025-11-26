@@ -27,17 +27,22 @@ import {
 } from '@/components/settings/Settings';
 import { compressBase64Image } from '@/lib/utils/imageCapture';
 import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
+import { modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface CoffeeBeanFormProps {
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
   onCancel: () => void;
   initialBean?: ExtendedCoffeeBean;
   onRepurchase?: () => void;
+  /** 步骤变化回调，用于同步历史栈 */
+  onStepChange?: (step: number) => void;
 }
 
 // 暴露给父组件的方法
 export interface CoffeeBeanFormHandle {
   handleBackStep: () => boolean;
+  goToStep: (step: number) => void;
+  getCurrentStep: () => number;
 }
 
 const steps: StepConfig[] = [
@@ -48,7 +53,7 @@ const steps: StepConfig[] = [
 ];
 
 const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
-  ({ onSave, onCancel, initialBean, onRepurchase }, ref) => {
+  ({ onSave, onCancel, initialBean, onRepurchase, onStepChange }, ref) => {
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('basic');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -232,6 +237,16 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         }
         return false; // 已经在第一步，无法再返回
       },
+      // 直接跳转到指定步骤
+      goToStep: (step: number) => {
+        if (step >= 1 && step <= steps.length) {
+          setCurrentStep(steps[step - 1].id);
+        }
+      },
+      // 获取当前步骤号（1-based）
+      getCurrentStep: () => {
+        return getCurrentStepIndex() + 1;
+      },
     }));
 
     // 下一步
@@ -240,22 +255,20 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
       const currentIndex = getCurrentStepIndex();
       if (currentIndex < steps.length - 1) {
+        const nextStep = currentIndex + 2; // 步骤号从 1 开始
         setCurrentStep(steps[currentIndex + 1].id);
+        // 通知父组件步骤变化，让它推入新历史
+        onStepChange?.(nextStep);
       } else {
         handleSubmit();
       }
     };
 
-    // 上一步/返回
+    // 上一步/返回 - 通过历史栈管理
     const handleBack = () => {
       validateRemaining();
-
-      const currentIndex = getCurrentStepIndex();
-      if (currentIndex > 0) {
-        setCurrentStep(steps[currentIndex - 1].id);
-      } else {
-        onCancel();
-      }
+      // 使用历史栈的 back()，这会触发 onStepChange 或 onClose
+      modalHistory.back();
     };
 
     // 添加风味标签
@@ -548,7 +561,10 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         }
       }
 
-      // 统一使用成分属性
+      // 先清理历史栈（关闭所有 bean-form 相关的历史记录）
+      modalHistory.closeAllByPrefix('bean-form');
+
+      // 然后调用保存回调
       onSave({
         ...bean,
         blendComponents: blendComponents,

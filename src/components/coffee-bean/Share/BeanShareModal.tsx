@@ -8,6 +8,7 @@ import { CoffeeBean } from '@/types/app';
 import { serializeBeanForQRCode } from '@/lib/utils/beanQRCodeUtils';
 import { Capacitor } from '@capacitor/core';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface BeanShareModalProps {
   isOpen: boolean;
@@ -41,34 +42,16 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
     }
   }, [bean, isOpen, shareMode]);
 
-  // 历史栈管理
-  useEffect(() => {
-    if (!isOpen) return;
+  // 使用统一的历史栈管理
+  useModalHistory({
+    id: 'bean-share',
+    isOpen,
+    onClose,
+  });
 
-    // 添加分享模态框的历史记录
-    window.history.pushState({ modal: 'bean-share' }, '');
-
-    // 监听返回事件
-    const handlePopState = () => {
-      onClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isOpen, onClose]);
-
-  // 处理关闭
+  // 处理关闭 - 使用统一的历史栈管理器
   const handleClose = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'bean-share') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      onClose();
-    }
+    modalHistory.back();
   };
 
   // 下载二维码图片
@@ -187,7 +170,6 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              
               ease: [0.33, 1, 0.68, 1],
               duration: 0.265,
             }}

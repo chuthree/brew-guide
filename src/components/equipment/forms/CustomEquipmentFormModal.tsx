@@ -1,18 +1,24 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CustomEquipment } from '@/lib/core/config';
-import CustomEquipmentForm, {
-  CustomEquipmentFormHandle,
-} from './CustomEquipmentForm';
+import { CustomEquipment, Method } from '@/lib/core/config';
+import CustomEquipmentForm from './CustomEquipmentForm';
 import { exportEquipment, copyToClipboard } from '@/lib/utils/exportUtils';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface CustomEquipmentFormModalProps {
   showForm: boolean;
   onClose: () => void;
-  onSave: (equipment: CustomEquipment) => void;
+  onSave: (equipment: CustomEquipment, methods?: Method[]) => void;
   editingEquipment?: CustomEquipment;
   onImport?: () => void;
+  /** 从导入模态框回填的数据 */
+  pendingImportData?: {
+    equipment: CustomEquipment;
+    methods?: Method[];
+  } | null;
+  /** 清除待回填数据的回调 */
+  onClearPendingImport?: () => void;
 }
 
 const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
@@ -21,52 +27,57 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
   onSave,
   editingEquipment,
   onImport,
+  pendingImportData,
+  onClearPendingImport,
 }) => {
-  const formRef = useRef<CustomEquipmentFormHandle | null>(null);
+  // 用于回填的器具数据（来自导入或编辑）
+  const [currentEquipment, setCurrentEquipment] = useState<
+    CustomEquipment | undefined
+  >(editingEquipment);
+  // 待保存的方案数据（来自导入）
+  const [pendingMethods, setPendingMethods] = useState<Method[] | undefined>(
+    undefined
+  );
 
   // 同步顶部安全区颜色
   useThemeColor({ useOverlay: true, enabled: showForm });
 
-  // 历史栈管理 - 支持多步骤表单的硬件返回键和浏览器返回按钮
+  // 处理导入数据回填
+  useEffect(() => {
+    if (pendingImportData && showForm) {
+      setCurrentEquipment(pendingImportData.equipment);
+      setPendingMethods(pendingImportData.methods);
+      onClearPendingImport?.();
+    }
+  }, [pendingImportData, showForm, onClearPendingImport]);
+
+  // 当 editingEquipment 变化时同步
+  useEffect(() => {
+    if (editingEquipment) {
+      setCurrentEquipment(editingEquipment);
+      setPendingMethods(undefined);
+    }
+  }, [editingEquipment]);
+
+  // 当模态框关闭时重置状态
   useEffect(() => {
     if (!showForm) {
-      // 模态框关闭时，确保清理历史栈中的模态框状态
-      if (window.history.state?.modal === 'equipment-form') {
-        window.history.replaceState(null, '');
-      }
-      return;
+      setCurrentEquipment(undefined);
+      setPendingMethods(undefined);
     }
+  }, [showForm]);
 
-    window.history.pushState({ modal: 'equipment-form' }, '');
+  // 使用统一的历史栈管理
+  // 子页面（绘制杯型、阀门、动画）在 CustomEquipmentForm 内部自己注册历史条目
+  useModalHistory({
+    id: 'equipment-form',
+    isOpen: showForm,
+    onClose: onClose,
+  });
 
-    // 监听返回事件
-    const handlePopState = () => {
-      // 询问表单是否还有上一步
-      if (formRef.current?.handleBackStep()) {
-        // 表单内部处理了返回（返回上一步），重新添加历史记录
-        window.history.pushState({ modal: 'equipment-form' }, '');
-      } else {
-        // 表单已经在第一步，关闭表单
-        onClose();
-
-        // 不再自动关闭器具列表，让用户手动控制返回到器具列表
-        // 移除这些逻辑可以让用户从添加器具表单返回时回到器具列表，而不是直接退出整个器具管理
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [showForm, onClose]);
-
-  // 处理关闭
+  // 处理关闭 - 使用统一历史栈
   const handleClose = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'equipment-form') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      onClose();
-    }
+    modalHistory.back();
   };
 
   const _handleExport = async (equipment: CustomEquipment) => {
@@ -92,14 +103,13 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.265 }}
-          className="fixed inset-0 z-50 bg-black/50"
+          className="fixed inset-0 z-10 bg-black/50"
         >
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              
               ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
               duration: 0.265,
             }}
@@ -118,8 +128,6 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                
-                
                 duration: 0.265,
                 delay: 0.05,
               }}
@@ -154,22 +162,22 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                     </svg>
                   </button>
                   <h3 className="ml-6 text-base font-medium">
-                    {editingEquipment ? '编辑器具' : '添加器具'}
+                    {currentEquipment ? '编辑器具' : '添加器具'}
                   </h3>
-                  {/* 导入按钮 */}
-                  {!editingEquipment && onImport && (
+                  {/* 导入按钮 - 不再关闭当前模态框 */}
+                  {!currentEquipment && onImport && (
                     <button
                       type="button"
                       onClick={() => {
                         onImport();
-                        handleClose(); // 关闭当前添加器具模态框
+                        // 不再关闭当前模态框，保持层级结构
                       }}
                       className="px-3 py-1.5 text-sm text-neutral-600 transition-colors hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
                     >
                       导入
                     </button>
                   )}
-                  {(editingEquipment || !onImport) && (
+                  {(currentEquipment || !onImport) && (
                     <div className="w-8"></div>
                   )}
                 </div>
@@ -178,16 +186,15 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
                 <div className="mt-2">
                   {showForm && (
                     <CustomEquipmentForm
-                      key={`equipment-form-${editingEquipment?.id || 'new'}-${Date.now()}`}
-                      ref={formRef}
+                      key={`equipment-form-${currentEquipment?.id || 'new'}-${pendingImportData ? 'imported' : 'manual'}`}
                       onSave={equipment => {
-                        onSave(equipment);
-                        // 保存成功后直接关闭，不通过历史栈返回
-                        // 避免触发 popstate 事件导致表单返回上一步
-                        onClose();
+                        // 保存时传递待保存的方案
+                        onSave(equipment, pendingMethods);
+                        // 关闭模态框（会自动清理历史）
+                        modalHistory.back();
                       }}
                       onCancel={handleClose}
-                      initialEquipment={editingEquipment}
+                      initialEquipment={currentEquipment}
                     />
                   )}
                 </div>

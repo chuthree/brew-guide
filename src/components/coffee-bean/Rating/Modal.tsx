@@ -5,6 +5,7 @@ import { CoffeeBean } from '@/types/app';
 import StarRating from '../ui/StarRating';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 interface CoffeeBeanRatingModalProps {
   showModal: boolean;
@@ -30,24 +31,12 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
   // 同步顶部安全区颜色
   useThemeColor({ useOverlay: true, enabled: showModal });
 
-  // 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-  useEffect(() => {
-    if (!showModal) return;
-
-    // 添加模态框历史记录
-    window.history.pushState({ modal: 'bean-rating' }, '');
-
-    // 监听返回事件
-    const handlePopState = () => {
-      onClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [showModal, onClose]);
+  // 使用统一的历史栈管理
+  useModalHistory({
+    id: 'bean-rating',
+    isOpen: showModal,
+    onClose,
+  });
 
   // 当咖啡豆数据加载时，初始化表单状态
   useEffect(() => {
@@ -80,15 +69,9 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
     }
   };
 
-  // 处理关闭
+  // 处理关闭 - 使用统一的历史栈管理器
   const handleClose = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'bean-rating') {
-      window.history.back();
-    } else {
-      // 否则直接关闭
-      onClose();
-    }
+    modalHistory.back();
   };
 
   // 当没有咖啡豆数据时不渲染

@@ -1,358 +1,259 @@
-# 模态框历史栈管理规范
+# 统一历史栈管理系统
 
 ## 概述
 
-支持硬件返回键和浏览器返回按钮关闭模态框，支持多步骤表单。使用 Tailwind CSS 替代 framer-motion 实现动画，更轻量且功能完整。
+基于 History API 的统一模态框/导航历史栈管理系统，解决 SPA 中浏览器返回键、硬件返回键、iOS 侧滑返回的交互问题。
 
-## 核心原则
+## 核心文件
 
-1. **简单直接**：每次模态框打开都添加历史记录，不做复杂的状态检查
-2. **正确的退出动画**：确保 CSS transition 的 exit 效果能够完整执行
-3. **状态重置**：防止表单状态在不同操作间保留
-4. **iOS 体验**：滑入动画需要手动实现，滑出动画由系统提供
-
-## 实现方案
-
-### 单层模态框（全屏滑入）
-
-```typescript
-// 控制动画状态
-const [shouldRender, setShouldRender] = useState(false)
-const [isVisible, setIsVisible] = useState(false)
-
-// 处理显示/隐藏动画
-useEffect(() => {
-    if (isOpen) {
-        setShouldRender(true)
-        // 短暂延迟确保DOM渲染，然后触发滑入动画
-        const timer = setTimeout(() => setIsVisible(true), 10)
-        return () => clearTimeout(timer)
-    } else {
-        setIsVisible(false)
-        // 等待动画完成后移除DOM
-        const timer = setTimeout(() => setShouldRender(false), 350)
-        return () => clearTimeout(timer)
-    }
-}, [isOpen])
-
-// 历史栈管理
-useEffect(() => {
-    if (!isOpen) return
-
-    window.history.pushState({ modal: 'bean-detail' }, '')
-
-    const handlePopState = () => onClose()
-    window.addEventListener('popstate', handlePopState)
-
-    return () => window.removeEventListener('popstate', handlePopState)
-}, [isOpen, onClose])
-
-// 关闭处理
-const handleClose = () => {
-    if (window.history.state?.modal === 'bean-detail') {
-        window.history.back()
-    } else {
-        onClose()
-    }
-}
-
-// 渲染
-if (!shouldRender) return null
-
-return (
-    <div
-        className={`
-            fixed inset-0 z-50 max-w-[500px] mx-auto overflow-hidden
-            bg-neutral-50 dark:bg-neutral-900 flex flex-col
-            transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
-            ${isVisible ? 'translate-x-0' : 'translate-x-full'}
-        `}
-    >
-        {/* 内容 */}
-    </div>
-)
+```
+src/lib/navigation/modalHistory.ts    # 核心管理器（单例）
+src/lib/hooks/useModalHistory.ts      # React Hooks
+src/providers/ModalHistoryProvider.tsx # 初始化 Provider
 ```
 
-### 多步骤表单模态框（底部弹出）
+## 设计理念
 
-**Modal 组件**：
+1. **单一 popstate 监听器**：由 `ModalHistoryManager` 统一处理所有 popstate 事件
+2. **内部栈与浏览器历史同步**：每个模态框/步骤对应一条 `pushState` 记录
+3. **主动关闭检测**：区分「popstate 触发的关闭」vs「代码主动关闭」，避免双重处理
+4. **动画由组件控制**：历史栈管理器只负责调用 `onClose`，动画由组件自行管理
 
-```typescript
-const formRef = useRef<{ handleBackStep: () => boolean } | null>(null)
+## API 概览
 
-// 历史栈管理 - 支持硬件返回键和浏览器返回按钮
-useEffect(() => {
-    if (!showForm) return
+### modalHistory 单例方法
 
-    // 如果历史栈中有 bean-detail 记录，用 replaceState 替换它
-    // 注意：侧滑时可能仍会短暂看到详情页，这是浏览器机制限制
-    if (window.history.state?.modal === 'bean-detail') {
-        window.history.replaceState({ modal: 'bean-form' }, '')
-    } else {
-        // 添加表单的历史记录
-        window.history.pushState({ modal: 'bean-form' }, '')
-    }
+| 方法                                            | 用途                                             |
+| ----------------------------------------------- | ------------------------------------------------ |
+| `register(entry)`                               | 注册单个模态框                                   |
+| `pushStep(baseId, step, onStepChange, onClose)` | 推入多步骤表单的一个步骤                         |
+| `back()`                                        | 返回上一层（触发 history.back）                  |
+| `close(id)`                                     | 主动关闭指定模态框并清理历史                     |
+| `closeAllByPrefix(prefix)`                      | 关闭所有以前缀开头的模态框（多步骤表单完成时用） |
+| `clearAndNavigate()`                            | 清空所有历史并返回根页面（页面跳转时用）         |
+| `isOpen(id)`                                    | 检查模态框是否打开                               |
 
-    // 监听返回事件
-    const handlePopState = () => {
-        // 询问表单是否还有上一步
-        if (formRef.current?.handleBackStep()) {
-            // 表单内部处理了返回（返回上一步），重新添加历史记录
-            window.history.pushState({ modal: 'bean-form' }, '')
-        } else {
-            // 表单已经在第一步，关闭模态框
-            onClose()
-        }
-    }
-
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-}, [showForm, onClose])
-
-// 处理关闭
-const handleClose = () => {
-    // 如果历史栈中有我们添加的条目，触发返回
-    if (window.history.state?.modal === 'bean-form') {
-        window.history.back()
-    } else {
-        // 否则直接关闭
-        onClose()
-    }
-}
-
-// 渲染 - 使用条件渲染和动态key确保表单状态重置
-return (
-    <div
-        className={`
-            fixed inset-0 z-50 transition-all duration-300
-            ${showForm
-                ? 'opacity-100 pointer-events-auto bg-black/50'
-                : 'opacity-0 pointer-events-none'
-            }
-        `}
-    >
-        <div
-            className={`
-                absolute inset-x-0 bottom-0 max-w-[500px] mx-auto max-h-[85vh]
-                overflow-auto rounded-t-2xl bg-neutral-50 dark:bg-neutral-900 shadow-xl
-                transition-transform duration-300 ease-[cubic-bezier(0.33,1,0.68,1)]
-                ${showForm ? 'translate-y-0' : 'translate-y-full'}
-            `}
-        >
-            <div className="px-6 pb-safe-bottom overflow-auto max-h-[calc(85vh-40px)] modal-form-container">
-                {showForm && (
-                    <CoffeeBeanForm
-                        key={`bean-form-${initialBean?.id || 'new'}-${Date.now()}`}
-                        ref={formRef}
-                        onSave={onSave}
-                        onCancel={handleClose}
-                        initialBean={initialBean || undefined}
-                    />
-                )}
-            </div>
-        </div>
-    </div>
-)
-```
-
-**Form 组件**：
+### React Hooks
 
 ```typescript
-export interface FormHandle {
-  handleBackStep: () => boolean;
-}
-
-const Form = forwardRef<FormHandle, FormProps>((props, ref) => {
-  useImperativeHandle(ref, () => ({
-    handleBackStep: () => {
-      if (currentStep > 0) {
-        setCurrentStep(currentStep - 1);
-        return true; // 处理了返回
-      }
-      return false; // 已在第一步
-    },
-  }));
-
-  // ... 表单逻辑
+// 单个模态框
+useModalHistory({
+  id: 'bean-detail',
+  isOpen,
+  onClose,
+  replace?: boolean  // 替换栈顶而非入栈
 });
 
-Form.displayName = 'Form';
+// 多步骤表单/流程
+useMultiStepModalHistory({
+  id: 'bean-form',
+  isOpen,
+  step,           // 当前步骤号，从 1 开始
+  onStepChange,   // 浏览器返回时的步骤变化回调
+  onClose,        // 第一步返回时的关闭回调
+});
 ```
 
-## 关键实现要点
+## 已迁移组件
 
-### 1. 动画与DOM管理
+### 咖啡豆相关
 
-- **底部弹出模态框**：可以直接使用 `showForm` 状态控制CSS类，简单高效
-- **全屏滑入模态框**：需要双重状态控制（`shouldRender` + `isVisible`）确保滑入动画正确执行
+- `BeanDetailModal` - 使用 `useModalHistory`
+- `BeanRatingModal` - 使用 `useModalHistory`
+- `BeanShareModal` - 使用 `useModalHistory`
+- `CoffeeBeanFormModal` - 使用 `useMultiStepModalHistory`（4 步表单）
 
-### 2. 表单状态重置
+### 冲煮流程
 
-**问题**：移除 framer-motion 后，组件不再自动卸载，表单状态会保留
-**解决**：使用条件渲染 + 动态key强制重新创建表单组件
+- `page.tsx` 冲煮步骤 - 使用 `useMultiStepModalHistory`
+  - 有豆：coffeeBean(0) → method(1) → brewing(2) → notes(3)
+  - 无豆：method(0) → brewing(1) → notes(2)
+- `useBrewingState.ts` - 保存笔记后调用 `clearAndNavigate()`
 
-```typescript
-{showForm && (
-    <Form key={`form-${id}-${Date.now()}`} />
-)}
+### 器具管理（嵌套层级 + 子页面独立注册）
+
+支持多层嵌套且不关闭上层的历史栈管理：
+
+```
+器具管理抽屉 (equipment-management)
+    ↓ 点击"添加器具"（不关闭抽屉）
+添加器具表单 (equipment-form)
+    ↓ 进入子页面
+绘制杯型 (equipment-form-drawing) / 绘制阀门 (equipment-form-valve) / 编辑动画 (equipment-form-animation)
+    ↓ 保存或返回
+返回到器具表单
 ```
 
-### 3. 历史栈管理
+- `EquipmentManagementDrawer` - 使用 `useModalHistory`
+- `CustomEquipmentFormModal` - 使用 `useModalHistory`（单层）
+- `CustomEquipmentForm` - 子页面使用 `modalHistory.register()` 独立注册
+  - 子页面在 `useEffect` 中动态注册历史条目
+  - 保存和返回都使用 `modalHistory.back()` 清理历史栈
+- `EquipmentImportModal` - 使用 `useModalHistory`
+  - 导入成功后数据回填到表单，而非直接保存
 
-**核心原则**：保持简单，每次都 `pushState`，不做复杂检查
-**特殊处理**：从详情页进入编辑时，用 `replaceState` 替换详情页记录
+## 待迁移组件
 
-### 4. iOS 动画体验
+以下组件仍使用旧的 `window.history.pushState` + `popstate` 监听：
 
-- **滑入**：需要手动实现CSS动画（系统不提供）
-- **滑出**：iOS系统自动提供统一的返回动画效果
-
-## 动画配置
-
-### 底部弹出（easeOutCubic）
-
-```css
-transition-transform duration-300 ease-[cubic-bezier(0.33,1,0.68,1)]
+```
+src/components/settings/Settings.tsx
+src/components/settings/DisplaySettings.tsx
+src/components/settings/BeanSettings.tsx
+src/components/settings/DataSettings.tsx
+src/components/settings/TimerSettings.tsx
+src/components/method/MethodFormModal.tsx
+src/components/notes/NoteFormModal.tsx
 ```
 
-### 全屏滑入（自定义缓动）
+搜索关键词：`pushState`、`popstate`、`__modalHandlingBack`
 
-```css
-transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
-```
+## 使用模式
 
-## 常见问题解决
+### 单个模态框
 
-### Q: 多次点击按钮后模态框无法显示
+```tsx
+function MyModal({ isOpen, onClose }) {
+  // 动画状态（组件自行管理）
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
-**A**: 历史栈状态污染，添加组件key或优化历史栈管理
+  // 历史栈管理
+  useModalHistory({ id: 'my-modal', isOpen, onClose });
 
-### Q: 表单内容在不同操作间保留
-
-**A**: 使用条件渲染 + 动态key确保组件重新创建
-
-### Q: iOS上没有滑入动画
-
-**A**: 实现双重状态控制，确保从初始状态到最终状态的完整过渡
-
-### Q: 退出动画不完整
-
-**A**: 确保CSS有 exit 过渡效果，给足够时间让动画完成后再移除DOM
-
-### 多层嵌套设置页面（设置界面特殊处理）
-
-设置界面是一个复杂的多层嵌套结构，包含主设置页面和多个子设置页面。需要特殊的历史栈管理策略：
-
-**主设置组件**：
-
-```typescript
-// 历史栈管理 - 支持多层嵌套设置页面
-useEffect(() => {
-  if (!isOpen) return;
-
-  // 检查是否已经有设置相关的历史记录
-  const hasSettingsHistory =
-    window.history.state?.modal?.includes('-settings') ||
-    window.history.state?.modal === 'settings';
-
-  if (hasSettingsHistory) {
-    // 如果已经有设置历史记录，替换它
-    window.history.replaceState({ modal: 'settings' }, '');
-  } else {
-    // 添加新的历史记录
-    window.history.pushState({ modal: 'settings' }, '');
-  }
-
-  const handlePopState = () => {
-    // 检查是否有子设置页面打开
-    const hasSubSettingsOpen =
-      showDisplaySettings ||
-      showBeanSettings ||
-      showTimerSettings ||
-      showDataSettings;
-
-    if (hasSubSettingsOpen) {
-      // 如果有子设置页面打开，关闭它们
-      setShowDisplaySettings(false);
-      // ... 关闭所有子设置页面
-      // 重新添加主设置的历史记录
-      window.history.pushState({ modal: 'settings' }, '');
+  // 动画控制
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      setTimeout(() => setIsVisible(true), 10);
     } else {
-      // 没有子页面打开，关闭主设置
-      onClose();
+      setIsVisible(false);
+      setTimeout(() => setShouldRender(false), 350);
     }
-  };
+  }, [isOpen]);
 
-  window.addEventListener('popstate', handlePopState);
-
-  return () => window.removeEventListener('popstate', handlePopState);
-}, [isOpen, onClose, showDisplaySettings /* ... 所有子设置状态 */]);
-```
-
-**子设置组件**：
-
-```typescript
-// 子设置页面的历史栈管理
-React.useEffect(() => {
-    window.history.pushState({ modal: 'display-settings' }, '')
-
-    const handlePopState = () => onClose()
-    window.addEventListener('popstate', handlePopState)
-
-    return () => window.removeEventListener('popstate', handlePopState)
-}, [onClose])
-
-// 关闭处理
-const handleClose = () => {
-    if (window.history.state?.modal === 'display-settings') {
-        window.history.back()
-    } else {
-        onClose()
-    }
+  if (!shouldRender) return null;
+  return (
+    <div className={isVisible ? 'translate-x-0' : 'translate-x-full'}>...</div>
+  );
 }
-
-// 控制动画状态
-const [shouldRender, setShouldRender] = React.useState(false)
-const [isVisible, setIsVisible] = React.useState(false)
-
-// 处理显示/隐藏动画
-React.useEffect(() => {
-    setShouldRender(true)
-    // 短暂延迟确保DOM渲染，然后触发滑入动画
-    const timer = setTimeout(() => setIsVisible(true), 10)
-    return () => clearTimeout(timer)
-}, [])
-
-// 渲染
-if (!shouldRender) return null
-
-return (
-    <div
-        className={`
-            fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
-            transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)]
-            ${isVisible ? 'translate-x-0' : 'translate-x-full'}
-        `}
-    >
-        {/* 内容 */}
-    </div>
-)
 ```
 
-**关键实现要点**：
+### 多步骤表单
 
-1. **智能历史记录管理**：主设置页面检测是否已有设置相关历史记录，避免重复添加
-2. **多层返回处理**：从子设置页面返回时，主设置页面不关闭，而是重新添加自己的历史记录
-3. **统一命名规范**：所有设置相关的 modal 标识都包含 'settings'，便于识别和管理
-4. **完整状态追踪**：主设置组件监听所有子设置页面的状态，确保准确判断当前层级
+```tsx
+function MultiStepForm({ isOpen, onClose }) {
+  const [step, setStep] = useState(1);
 
-## 已知限制
+  useMultiStepModalHistory({
+    id: 'my-form',
+    isOpen,
+    step,
+    onStepChange: setStep,
+    onClose,
+  });
 
-**侧滑预览闪烁**：PWA/网页侧滑返回时可能短暂看到父模态框，这是浏览器机制限制，无法完全避免。硬件返回键和浏览器按钮工作正常。
+  const handleSubmit = () => {
+    // 表单完成时，清理所有步骤历史
+    modalHistory.closeAllByPrefix('my-form');
+    onSave();
+  };
+}
+```
 
-## 示例参考
+### 页面跳转时清理
 
-- **全屏滑入**：`src/components/coffee-bean/Detail/BeanDetailModal.tsx`
-- **底部弹出多步骤**：`src/components/coffee-bean/Form/Modal.tsx` + `index.tsx`
-- **底部弹出简单**：参考笔记表单的实现模式
-- **多层嵌套设置**：`src/components/settings/Settings.tsx` + 各子设置组件
+```typescript
+// 保存笔记后跳转到笔记页面
+modalHistory.clearAndNavigate();
+setActiveMainTab('笔记');
+```
+
+### 嵌套模态框（不关闭上层）
+
+```tsx
+// 父级 page.tsx - 状态管理
+const [showEquipmentManagement, setShowEquipmentManagement] = useState(false);
+const [showEquipmentForm, setShowEquipmentForm] = useState(false);
+const [showEquipmentImportForm, setShowEquipmentImportForm] = useState(false);
+
+// 点击添加器具 - 不关闭管理抽屉
+const handleAddEquipment = () => {
+  setShowEquipmentForm(true);
+  // 不再: setShowEquipmentManagement(false)
+};
+```
+
+### 子页面独立注册历史（动态注册模式）
+
+适用于表单内多个可选子页面，每个子页面独立注册历史条目：
+
+```tsx
+// CustomEquipmentForm.tsx 内部
+
+// 子页面状态
+const [showDrawingCanvas, setShowDrawingCanvas] = useState(false);
+
+// 动态注册历史条目
+useEffect(() => {
+  if (showDrawingCanvas) {
+    return modalHistory.register({
+      id: 'equipment-form-drawing',
+      onClose: () => setShowDrawingCanvas(false),
+    });
+  }
+}, [showDrawingCanvas]);
+
+// 保存按钮 - 必须用 modalHistory.back() 清理历史栈
+const handleSaveDrawing = () => {
+  const svgString = canvasRef.current.save();
+  handleDrawingComplete(svgString);
+  modalHistory.back(); // 不能只用 setShowDrawingCanvas(false)
+};
+
+// 返回按钮 - 同样用 modalHistory.back()
+const handleBackToForm = () => {
+  modalHistory.back();
+};
+```
+
+## 关键实现细节
+
+### isClosingProgrammatically 标志
+
+防止主动关闭时 popstate 重复处理：
+
+```typescript
+close(id) {
+  // ...
+  this.state.isClosingProgrammatically = true;
+  window.history.go(-closeCount);
+  setTimeout(() => {
+    this.state.isClosingProgrammatically = false;
+  }, 50);
+}
+```
+
+### Hook 中的 closedByPopstateRef
+
+区分关闭来源，避免 `isOpen=false` 时重复调用 `modalHistory.close()`：
+
+```typescript
+useEffect(() => {
+  if (isOpen) {
+    closedByPopstateRef.current = false;
+    // 注册时，onClose 中标记 closedByPopstateRef = true
+  } else if (wasOpenRef.current && !closedByPopstateRef.current) {
+    // 主动关闭，需要清理浏览器历史
+    modalHistory.close(id);
+  }
+}, [isOpen]);
+```
+
+## 注意事项
+
+1. **动画时长**：历史栈管理器不处理动画，组件需自行控制 `shouldRender`/`isVisible`
+2. **步骤号从 1 开始**：`useMultiStepModalHistory` 的 `step` 参数从 1 开始，0 表示不注册历史
+3. **iOS 侧滑限制**：侧滑返回时可能短暂看到父页面，这是浏览器机制限制
+4. **表单内按钮需指定 type="button"**：`<form>` 内的按钮默认 `type="submit"`，会触发表单提交。返回/保存按钮必须显式设置 `type="button"`
+5. **子页面保存也要用 modalHistory.back()**：关闭子页面时必须用 `modalHistory.back()` 清理历史栈，不能只 `setState(false)`

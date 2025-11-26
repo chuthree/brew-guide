@@ -59,6 +59,10 @@ import ImportModal from '@/components/common/modals/BeanImportModal';
 import fontZoomUtils from '@/lib/utils/fontZoomUtils';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import {
+  useMultiStepModalHistory,
+  modalHistory,
+} from '@/lib/hooks/useModalHistory';
+import {
   ViewOption,
   VIEW_OPTIONS,
   VIEW_LABELS,
@@ -466,6 +470,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     CustomEquipment | undefined
   >(undefined);
   const [showEquipmentImportForm, setShowEquipmentImportForm] = useState(false);
+  // 用于导入器具后回填数据到添加器具表单
+  const [pendingImportEquipment, setPendingImportEquipment] = useState<{
+    equipment: CustomEquipment;
+    methods?: Method[];
+  } | null>(null);
   const [showEquipmentManagement, setShowEquipmentManagement] = useState(false);
   const [showDataMigration, setShowDataMigration] = useState(false);
   const [migrationData, setMigrationData] = useState<{
@@ -2052,106 +2061,55 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     setParameterInfo,
   ]);
 
-  // 冲煮页面历史栈管理 - 参考多步骤表单模态框的实现模式
-  useEffect(() => {
-    // 只在冲煮页面才管理历史栈
-    if (activeMainTab !== '冲煮') {
-      // 清理非冲煮页面的历史记录
-      if (window.history.state?.brewingStep) {
-        window.history.replaceState(null, '');
-      }
-      return;
-    }
+  // 冲煮页面历史栈管理 - 使用统一的多步骤历史栈系统
+  // 将冲煮步骤映射为数字步骤（根据是否有咖啡豆调整）：
+  // 有豆时：coffeeBean=0(起点), method=1, brewing=2, notes=3
+  // 无豆时：method=0(起点), brewing=1, notes=2
+  const getBrewingStepNumber = (): number => {
+    if (activeMainTab !== '冲煮') return 0;
 
-    // 判断是否为第一步
-    const isFirstStep =
-      activeBrewingStep === 'coffeeBean' ||
-      (activeBrewingStep === 'method' && !hasCoffeeBeans);
-
-    // 监听返回事件
-    const handlePopState = () => {
-      // 使用微任务队列确保DOM状态检查在其他事件处理后执行
-      setTimeout(() => {
-        // 方法0：检查是否有模态框正在处理返回事件
-        if (window.__modalHandlingBack) {
-          return;
-        }
-
-        // 检查当前是否有活动的模态框，如果有则不处理冲煮界面的返回
-        const currentState = window.history.state;
-
-        // 方法1：通过历史栈状态检查
-        if (currentState?.modal) {
-          return;
-        }
-
-        // 方法2：通过DOM检查是否有模态框组件处于活动状态
-        const activeModals = document.querySelectorAll(
-          [
-            '[data-modal="custom-method-form"]',
-            '[data-modal="method-import"]',
-            '[data-modal="equipment-form"]',
-            '[data-modal="equipment-import"]',
-            '[data-modal="equipment-management"]',
-          ].join(',')
-        );
-
-        if (activeModals.length > 0) {
-          return;
-        }
-
-        // 如果没有模态框，执行冲煮界面的返回逻辑
-        executeBrewingBack();
-      }, 0);
-    };
-
-    // 提取冲煮界面返回逻辑
-    const executeBrewingBack = () => {
-      // 询问是否可以返回上一步
-      const BACK_STEPS: Record<BrewingStep, BrewingStep | null> = {
-        brewing: 'method',
-        method: hasCoffeeBeans ? 'coffeeBean' : null,
-        coffeeBean: null,
-        notes: 'brewing',
-      };
-
-      const backStep = BACK_STEPS[activeBrewingStep];
-      if (backStep) {
-        // 有上一步，执行返回逻辑，但不重新添加历史记录
-        handleBackClick();
-      }
-      // 如果没有上一步（第一步），什么都不做，浏览器会自然停留
-    };
-
-    if (isFirstStep) {
-      // 第一步时，清理历史记录，并且不监听 popstate
-      if (window.history.state?.brewingStep) {
-        window.history.replaceState(null, '');
+    if (hasCoffeeBeans) {
+      // 有咖啡豆的流程
+      switch (activeBrewingStep) {
+        case 'coffeeBean':
+          return 0; // 起点，不添加历史
+        case 'method':
+          return 1;
+        case 'brewing':
+          return 2;
+        case 'notes':
+          return 3;
+        default:
+          return 0;
       }
     } else {
-      // 非第一步时，添加历史记录并监听返回事件
-      const currentState = window.history.state;
-
-      // 关键修复：确保只在步骤真正改变时才添加历史记录
-      // 避免在无咖啡豆情况下，method 步骤被重复添加到历史栈
-      const shouldAddHistory =
-        !currentState?.brewingStep ||
-        currentState.brewingStep !== activeBrewingStep;
-
-      if (shouldAddHistory) {
-        // 使用 pushState 为每个非第一步添加历史记录
-        window.history.pushState({ brewingStep: activeBrewingStep }, '');
+      // 无咖啡豆的流程
+      switch (activeBrewingStep) {
+        case 'method':
+          return 0; // 起点，不添加历史
+        case 'brewing':
+          return 1;
+        case 'notes':
+          return 2;
+        default:
+          return 0;
       }
-
-      // 添加监听器
-      window.addEventListener('popstate', handlePopState);
     }
+  };
 
-    return () => {
-      // 清理监听器
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [activeMainTab, activeBrewingStep, hasCoffeeBeans, handleBackClick]);
+  const brewingStep = getBrewingStepNumber();
+  const isInBrewingFlow = activeMainTab === '冲煮' && brewingStep > 0;
+
+  useMultiStepModalHistory({
+    id: 'brewing',
+    isOpen: isInBrewingFlow,
+    step: brewingStep || 1, // 确保最小为 1
+    onStepChange: () => {
+      // 浏览器返回时，调用 handleBackClick 处理步骤导航
+      handleBackClick();
+    },
+    onClose: handleBackClick,
+  });
 
   const [showNoteFormModal, setShowNoteFormModal] = useState(false);
   const [currentEditingNote, setCurrentEditingNote] = useState<
@@ -2358,14 +2316,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 器具管理抽屉相关处理函数
   const handleAddEquipment = () => {
     setEditingEquipment(undefined);
+    setPendingImportEquipment(null); // 清除待回填数据
     setShowEquipmentForm(true);
-    setShowEquipmentManagement(false);
+    // 不再关闭器具管理抽屉，保持层级结构
   };
 
   const handleEditEquipment = (equipment: CustomEquipment) => {
     setEditingEquipment(equipment);
+    setPendingImportEquipment(null); // 清除待回填数据
     setShowEquipmentForm(true);
-    setShowEquipmentManagement(false);
+    // 不再关闭器具管理抽屉，保持层级结构
   };
 
   const handleShareEquipment = async (equipment: CustomEquipment) => {
@@ -2435,35 +2395,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }
   }, [selectedEquipment, customEquipments, methodType, setMethodType]);
 
-  const handleImportEquipment = async (
+  // 处理从导入模态框回填数据到添加器具表单
+  const handleImportEquipmentToForm = (
     equipment: CustomEquipment,
     methods?: Method[]
   ) => {
-    try {
-      const originalId = equipment.id;
-      // 导入器具原始ID
-
-      // 传递methods参数给handleSaveEquipment
-      await handleSaveEquipment(equipment, methods);
-
-      // 导入完成后，直接选择该设备
-      if (originalId) {
-        // 导入完成，设置选定器具ID
-        // 直接使用ID选择设备
-        handleEquipmentSelect(originalId);
-
-        // 如果是自定义预设器具，强制设置方法类型为'custom'
-        if (equipment.animationType === 'custom') {
-          setMethodType('custom');
-        }
-      }
-
-      setShowEquipmentImportForm(false);
-    } catch (error) {
-      // Log error in development only
-      if (process.env.NODE_ENV === 'development') {
-        console.error('导入器具失败:', error);
-      }
+    // 存储导入的数据，等待回填到表单
+    setPendingImportEquipment({ equipment, methods });
+    // 注意：不要在这里设置 setShowEquipmentImportForm(false)
+    // 让 EquipmentImportModal 自己通过 modalHistory.back() 关闭
+    // 这样可以避免双重关闭导致的历史栈问题
+    // 确保添加器具表单是打开的
+    if (!showEquipmentForm) {
+      setShowEquipmentForm(true);
     }
   };
 
@@ -3021,24 +2965,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           settings={settings}
         />
 
-        <CustomEquipmentFormModal
-          showForm={showEquipmentForm}
-          onClose={() => {
-            setShowEquipmentForm(false);
-            setEditingEquipment(undefined);
-          }}
-          onSave={handleSaveEquipment}
-          editingEquipment={editingEquipment}
-          onImport={() => setShowEquipmentImportForm(true)}
-        />
-
-        <EquipmentImportModal
-          showForm={showEquipmentImportForm}
-          onImport={handleImportEquipment}
-          onClose={() => setShowEquipmentImportForm(false)}
-          existingEquipments={customEquipments}
-        />
-
         {migrationData && (
           <DataMigrationModal
             isOpen={showDataMigration}
@@ -3450,7 +3376,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         onClose={() => setBeanDetailOpen(false)}
         searchQuery={beanDetailSearchQuery}
         onEdit={bean => {
-          setBeanDetailOpen(false);
+          // 不关闭详情页，让编辑表单叠加在上面
           setEditingBean(bean);
           setShowBeanForm(true);
         }}
@@ -3698,7 +3624,28 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         />
       )}
 
-      {/* 器具管理抽屉独立渲染，与 Settings 同级 */}
+      {/* 器具相关模态框独立渲染，与 Settings 同级 */}
+      <CustomEquipmentFormModal
+        showForm={showEquipmentForm}
+        onClose={() => {
+          setShowEquipmentForm(false);
+          setEditingEquipment(undefined);
+          setPendingImportEquipment(null);
+        }}
+        onSave={handleSaveEquipment}
+        editingEquipment={editingEquipment}
+        onImport={() => setShowEquipmentImportForm(true)}
+        pendingImportData={pendingImportEquipment}
+        onClearPendingImport={() => setPendingImportEquipment(null)}
+      />
+
+      <EquipmentImportModal
+        showForm={showEquipmentImportForm}
+        onImport={handleImportEquipmentToForm}
+        onClose={() => setShowEquipmentImportForm(false)}
+        existingEquipments={customEquipments}
+      />
+
       <EquipmentManagementDrawer
         isOpen={showEquipmentManagement}
         onClose={() => setShowEquipmentManagement(false)}

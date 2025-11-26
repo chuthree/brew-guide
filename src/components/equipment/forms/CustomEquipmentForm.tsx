@@ -4,8 +4,6 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
-  forwardRef,
-  useImperativeHandle,
 } from 'react';
 import { CustomEquipment } from '@/lib/core/config';
 import { isEquipmentNameAvailable } from '@/lib/managers/customEquipments';
@@ -17,6 +15,7 @@ import AnimationEditor, {
 import hapticsUtils from '@/lib/ui/haptics';
 import { AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { modalHistory } from '@/lib/hooks/useModalHistory';
 
 // 从CustomEquipment类型中提取PourAnimation类型
 type CustomPourAnimation = NonNullable<
@@ -56,11 +55,6 @@ interface CustomEquipmentFormProps {
   onSave: (equipment: CustomEquipment) => void;
   onCancel: () => void;
   initialEquipment?: CustomEquipment;
-}
-
-// 定义组件ref接口
-export interface CustomEquipmentFormHandle {
-  handleBackStep: () => boolean;
 }
 
 // 预设方案选项 - 简化为三种基本类型
@@ -174,7 +168,7 @@ const TopNav: React.FC<TopNavProps> = ({
   saveDisabled = false,
 }) => (
   <div className="fixed top-0 right-0 left-0 z-10 flex items-center justify-between bg-neutral-50 px-4 py-3 dark:bg-neutral-900">
-    <button onClick={onBack} className="rounded-full p-2 pl-0">
+    <button type="button" onClick={onBack} className="rounded-full p-2 pl-0">
       <svg
         width="18"
         height="18"
@@ -196,6 +190,7 @@ const TopNav: React.FC<TopNavProps> = ({
     </h3>
     {onSave ? (
       <button
+        type="button"
         onClick={onSave}
         disabled={saveDisabled}
         className={`rounded-full p-2 ${saveDisabled ? 'text-neutral-400 dark:text-neutral-600' : 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}
@@ -222,10 +217,11 @@ const TopNav: React.FC<TopNavProps> = ({
   </div>
 );
 
-const CustomEquipmentForm = forwardRef<
-  CustomEquipmentFormHandle,
-  CustomEquipmentFormProps
->(({ onSave, onCancel, initialEquipment }, ref) => {
+const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
+  onSave,
+  onCancel,
+  initialEquipment,
+}) => {
   const windowSize = useWindowSize();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState(300);
@@ -427,6 +423,41 @@ const CustomEquipmentForm = forwardRef<
   const [currentEditingAnimation, setCurrentEditingAnimation] =
     useState<CustomPourAnimation | null>(null);
 
+  // 为子页面注册独立的历史条目
+  // 绘制杯型子页面
+  useEffect(() => {
+    if (showDrawingCanvas) {
+      return modalHistory.register({
+        id: 'equipment-form-drawing',
+        onClose: () => setShowDrawingCanvas(false),
+      });
+    }
+  }, [showDrawingCanvas]);
+
+  // 绘制阀门子页面
+  useEffect(() => {
+    if (showValveDrawingCanvas) {
+      return modalHistory.register({
+        id: 'equipment-form-valve',
+        onClose: () => setShowValveDrawingCanvas(false),
+      });
+    }
+  }, [showValveDrawingCanvas]);
+
+  // 编辑注水动画子页面
+  useEffect(() => {
+    if (showPourAnimationCanvas) {
+      return modalHistory.register({
+        id: 'equipment-form-animation',
+        onClose: () => {
+          setShowPourAnimationCanvas(false);
+          setCurrentEditingAnimation(null);
+          setIsPlaying(false);
+        },
+      });
+    }
+  }, [showPourAnimationCanvas]);
+
   // 监听预设方案变化
   useEffect(() => {
     if (selectedPreset === 'v60') {
@@ -449,28 +480,6 @@ const CustomEquipmentForm = forwardRef<
       // 自定义预设不自动设置阀门，保持当前值
     }
   }, [selectedPreset]);
-
-  // 暴露给父组件的方法
-  useImperativeHandle(ref, () => ({
-    handleBackStep: () => {
-      // 检查当前是否在子界面，如果是则返回到主界面
-      if (showPourAnimationCanvas) {
-        setShowPourAnimationCanvas(false);
-        setCurrentEditingAnimation(null);
-        setIsPlaying(false);
-        return true; // 已处理返回
-      }
-      if (showDrawingCanvas) {
-        setShowDrawingCanvas(false);
-        return true; // 已处理返回
-      }
-      if (showValveDrawingCanvas) {
-        setShowValveDrawingCanvas(false);
-        return true; // 已处理返回
-      }
-      return false; // 已在主界面，无法再返回
-    },
-  }));
 
   // 计算画布尺寸
   useEffect(() => {
@@ -662,7 +671,8 @@ const CustomEquipmentForm = forwardRef<
       try {
         const svgString = canvasRef.current.save();
         handleDrawingComplete(svgString);
-        setShowDrawingCanvas(false);
+        // 使用 modalHistory.back() 正确清理历史栈条目
+        modalHistory.back();
       } catch (error) {
         // Log error in development only
         if (process.env.NODE_ENV === 'development') {
@@ -680,7 +690,8 @@ const CustomEquipmentForm = forwardRef<
       try {
         const svgString = canvasRef.current.save();
         handleValveDrawingComplete(svgString);
-        setShowValveDrawingCanvas(false);
+        // 使用 modalHistory.back() 正确清理历史栈条目
+        modalHistory.back();
       } catch (error) {
         // Log error in development only
         if (process.env.NODE_ENV === 'development') {
@@ -690,10 +701,9 @@ const CustomEquipmentForm = forwardRef<
     }
   };
 
-  // 返回表单界面
+  // 返回表单界面 - 通过历史栈返回
   const handleBackToForm = () => {
-    setShowDrawingCanvas(false);
-    setShowValveDrawingCanvas(false);
+    modalHistory.back();
   };
 
   // 切换到绘图界面
@@ -818,8 +828,9 @@ const CustomEquipmentForm = forwardRef<
             [updatedAnimation.id]: 1,
           }));
 
-          setShowPourAnimationCanvas(false);
-          setCurrentEditingAnimation(null);
+          // 使用 modalHistory.back() 正确清理历史栈条目
+          // 这会触发 onClose 回调，自动执行 setShowPourAnimationCanvas(false) 和 setCurrentEditingAnimation(null)
+          modalHistory.back();
         }
       } catch (error) {
         // Log error in development only
@@ -950,8 +961,7 @@ const CustomEquipmentForm = forwardRef<
                 : '添加注水动画'
           }
           onBack={() => {
-            setShowPourAnimationCanvas(false);
-            setIsPlaying(false);
+            modalHistory.back();
           }}
           onSave={handleSavePourAnimation}
           saveDisabled={!canSave}
@@ -2127,8 +2137,6 @@ const CustomEquipmentForm = forwardRef<
       </AnimatePresence>
     </form>
   );
-});
-
-CustomEquipmentForm.displayName = 'CustomEquipmentForm';
+};
 
 export default CustomEquipmentForm;

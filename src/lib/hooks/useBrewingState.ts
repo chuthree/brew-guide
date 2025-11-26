@@ -22,6 +22,7 @@ import {
 import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 import { MethodType } from '@/lib/types/method';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
+import { modalHistory } from '@/lib/hooks/useModalHistory';
 
 // 器具选择缓存
 const MODULE_NAME = 'brewing-equipment';
@@ -372,7 +373,9 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
           }
         }
 
-        // 跳转到笔记页面
+        // 跳转到笔记页面前，清空历史栈并清理浏览器历史
+        modalHistory.clearAndNavigate();
+
         setActiveMainTab('笔记');
         setShowHistory(true);
         resetBrewingState();
