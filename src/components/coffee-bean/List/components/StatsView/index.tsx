@@ -12,6 +12,7 @@ import {
   globalCache,
   saveDateGroupingModePreference,
   saveSelectedDatePreference,
+  saveSelectedDateByModePreference,
 } from '../../globalCache';
 import StatsFilterBar from './StatsFilterBar';
 import ConsumptionTrendChart from './ConsumptionTrendChart';
@@ -397,17 +398,49 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
 
   // 处理分组模式变更
   const handleDateGroupingModeChange = (mode: DateGroupingMode) => {
+    // 保存当前模式下的选择到记忆
+    globalCache.selectedDates[dateGroupingMode] = selectedDate;
+    saveSelectedDateByModePreference(dateGroupingMode, selectedDate);
+
+    // 切换到新模式
     setDateGroupingMode(mode);
-    setSelectedDate(null); // 切换模式时重置选择
     globalCache.dateGroupingMode = mode;
     saveDateGroupingModePreference(mode);
+
+    // 恢复新模式之前的选择（如果有的话）
+    const previousSelection = globalCache.selectedDates[mode];
+    setSelectedDate(previousSelection);
+    globalCache.selectedDate = previousSelection;
+    saveSelectedDatePreference(previousSelection);
   };
+
+  // 当只有一年数据时，自动从按年统计切换到按月统计
+  useEffect(() => {
+    if (dateGroupingMode === 'year' && availableDates.length <= 1) {
+      // 只有一年或没有数据，自动切换到按月统计
+      handleDateGroupingModeChange('month');
+    }
+  }, [dateGroupingMode, availableDates.length]);
 
   // 监听 selectedDate 变化并保存
   useEffect(() => {
     globalCache.selectedDate = selectedDate;
     saveSelectedDatePreference(selectedDate);
-  }, [selectedDate]);
+    // 同时保存到当前模式的记忆
+    globalCache.selectedDates[dateGroupingMode] = selectedDate;
+    saveSelectedDateByModePreference(dateGroupingMode, selectedDate);
+  }, [selectedDate, dateGroupingMode]);
+
+  // 验证 selectedDate 是否在可用日期列表中，如果不在则重置
+  useEffect(() => {
+    if (
+      selectedDate !== null &&
+      availableDates.length > 0 &&
+      !availableDates.includes(selectedDate)
+    ) {
+      setSelectedDate(null);
+    }
+  }, [availableDates, selectedDate]);
 
   // 生成日期范围标签（基于实际数据范围）
   const dateRangeLabel = useMemo(() => {
@@ -438,9 +471,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
     if (isSameDay) return formatFull(startDate);
 
     if (startDate.getFullYear() !== endDate.getFullYear()) {
-      return `数据周期 ${formatFull(startDate)} - ${formatFull(endDate)}`;
+      return `${formatFull(startDate)} - ${formatFull(endDate)}`;
     }
-    return `数据周期 ${formatFull(startDate)} - ${formatShort(endDate)}`;
+    return `${formatFull(startDate)} - ${formatShort(endDate)}`;
   }, [effectiveDateRange]);
 
   // 空状态

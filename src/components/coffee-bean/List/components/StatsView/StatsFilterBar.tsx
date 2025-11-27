@@ -6,6 +6,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { DateGroupingMode } from './types';
 
 export const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
+  year: '按年统计',
+  month: '按月统计',
+  day: '按日统计',
+};
+
+// 短标签用于筛选按钮
+const DATE_GROUPING_SHORT_LABELS: Record<DateGroupingMode, string> = {
   year: '按年',
   month: '按月',
   day: '按日',
@@ -35,6 +42,9 @@ const FILTER_ANIMATION = {
     },
   },
 };
+
+// 时间分组模式循环顺序
+const DATE_GROUPING_ORDER: DateGroupingMode[] = ['month', 'day', 'year'];
 
 // 日期格式化函数
 const formatDateLabel = (
@@ -119,7 +129,7 @@ const TabButton: React.FC<TabButtonProps> = ({
     className={`relative pb-1.5 text-xs font-medium whitespace-nowrap ${
       isActive
         ? 'text-neutral-800 dark:text-neutral-100'
-        : 'text-neutral-600 hover:opacity-80 dark:text-neutral-400'
+        : 'text-neutral-600 dark:text-neutral-400'
     } ${className}`}
     data-tab={dataTab}
   >
@@ -154,14 +164,51 @@ const FilterButton: React.FC<FilterButtonProps> = ({
     onClick={onClick}
     disabled={disabled}
     className={`px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
-      isActive
-        ? 'bg-neutral-300/30 text-neutral-800 dark:bg-neutral-600/50 dark:text-neutral-200'
-        : 'bg-neutral-200/30 text-neutral-400 dark:bg-neutral-800/50 dark:text-neutral-400'
-    } ${disabled ? 'cursor-not-allowed opacity-40' : ''} ${className}`}
+      disabled
+        ? 'cursor-not-allowed bg-neutral-200/30 text-neutral-400 opacity-30 dark:bg-neutral-800/50 dark:text-neutral-400'
+        : isActive
+          ? 'bg-neutral-300/30 text-neutral-800 dark:bg-neutral-600/50 dark:text-neutral-200'
+          : 'bg-neutral-200/30 text-neutral-400 dark:bg-neutral-800/50 dark:text-neutral-400'
+    } ${className}`}
   >
     {children}
   </button>
 );
+
+// 获取可用的时间分组模式（如果只有一年数据，则排除按年统计）
+const getAvailableGroupingModes = (
+  availableDates: string[],
+  currentMode: DateGroupingMode
+): DateGroupingMode[] => {
+  // 从 availableDates 提取所有唯一年份
+  const years = new Set<string>();
+  for (const date of availableDates) {
+    // 支持 year: "2024", month: "2024-01", day: "2024-01-01" 格式
+    const yearPart = date.substring(0, 4);
+    if (/^\d{4}$/.test(yearPart)) {
+      years.add(yearPart);
+    }
+  }
+
+  // 如果只有一年数据，则不提供按年统计模式
+  if (years.size <= 1) {
+    return DATE_GROUPING_ORDER.filter(mode => mode !== 'year');
+  }
+
+  return DATE_GROUPING_ORDER;
+};
+
+// 检查是否只有一年数据（用于禁用按年按钮）
+const hasOnlyOneYear = (availableDates: string[]): boolean => {
+  const years = new Set<string>();
+  for (const date of availableDates) {
+    const yearPart = date.substring(0, 4);
+    if (/^\d{4}$/.test(yearPart)) {
+      years.add(yearPart);
+    }
+  }
+  return years.size <= 1;
+};
 
 interface StatsFilterBarProps {
   dateGroupingMode: DateGroupingMode;
@@ -234,12 +281,28 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
 
   return (
     <div className="relative pt-6" ref={filterExpandRef}>
-      {/* 时间范围文案 */}
+      {/* 时间范围文案 - 可点击切换时间分组 */}
       {dateRangeLabel && (
         <div className="mb-6 flex items-center justify-between px-6">
-          <div className="text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
-            {dateRangeLabel}
-          </div>
+          <button
+            onClick={() => {
+              const availableModes = getAvailableGroupingModes(
+                availableDates,
+                dateGroupingMode
+              );
+              const currentIndex = availableModes.indexOf(dateGroupingMode);
+              const nextIndex = (currentIndex + 1) % availableModes.length;
+              onDateGroupingModeChange(availableModes[nextIndex]);
+            }}
+            className="text-left"
+          >
+            <span className="text-xs font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600">
+              {DATE_GROUPING_LABELS[dateGroupingMode]}
+            </span>
+            <span className="text-xs font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+              ，数据周期 {dateRangeLabel}
+            </span>
+          </button>
         </div>
       )}
 
@@ -338,20 +401,21 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                       <FilterButton
                         isActive={dateGroupingMode === 'year'}
                         onClick={() => onDateGroupingModeChange('year')}
+                        disabled={hasOnlyOneYear(availableDates)}
                       >
-                        {DATE_GROUPING_LABELS.year}
+                        {DATE_GROUPING_SHORT_LABELS.year}
                       </FilterButton>
                       <FilterButton
                         isActive={dateGroupingMode === 'month'}
                         onClick={() => onDateGroupingModeChange('month')}
                       >
-                        {DATE_GROUPING_LABELS.month}
+                        {DATE_GROUPING_SHORT_LABELS.month}
                       </FilterButton>
                       <FilterButton
                         isActive={dateGroupingMode === 'day'}
                         onClick={() => onDateGroupingModeChange('day')}
                       >
-                        {DATE_GROUPING_LABELS.day}
+                        {DATE_GROUPING_SHORT_LABELS.day}
                       </FilterButton>
                     </div>
                   </div>

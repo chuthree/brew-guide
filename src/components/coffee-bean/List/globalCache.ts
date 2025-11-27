@@ -54,6 +54,12 @@ export const globalCache: {
   // 统计视图相关状态
   dateGroupingMode: DateGroupingMode;
   selectedDate: string | null;
+  // 每个时间分组模式的日期记忆
+  selectedDates: {
+    year: string | null;
+    month: string | null;
+    day: string | null;
+  };
   // 为每个视图模式添加独立的排序选项
   inventorySortOption: SortOption;
   rankingSortOption: SortOption;
@@ -90,6 +96,12 @@ export const globalCache: {
   // 统计视图相关状态初始值
   dateGroupingMode: 'month',
   selectedDate: null,
+  // 每个时间分组模式的日期记忆初始值
+  selectedDates: {
+    year: null,
+    month: null,
+    day: null,
+  },
   // 为每个视图模式设置默认排序选项
   inventorySortOption: 'remaining_days_asc',
   rankingSortOption: 'rating_desc',
@@ -355,6 +367,24 @@ export const saveSelectedDatePreference = (value: string | null): void => {
   saveStringState(MODULE_NAME, 'selectedDate', value || '');
 };
 
+// 从localStorage读取特定时间分组模式的日期记忆
+export const getSelectedDateByModePreference = (
+  mode: DateGroupingMode
+): string | null => {
+  const key = `selectedDate_${mode}`;
+  const value = getStringState(MODULE_NAME, key, '');
+  return value === '' ? null : value;
+};
+
+// 保存特定时间分组模式的日期记忆到localStorage
+export const saveSelectedDateByModePreference = (
+  mode: DateGroupingMode,
+  value: string | null
+): void => {
+  const key = `selectedDate_${mode}`;
+  saveStringState(MODULE_NAME, key, value || '');
+};
+
 // ==================== 搜索历史管理 ====================
 
 // 从localStorage读取搜索历史
@@ -418,6 +448,12 @@ globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
 globalCache.selectedRoaster = getSelectedRoasterPreference();
 globalCache.dateGroupingMode = getDateGroupingModePreference();
 globalCache.selectedDate = getSelectedDatePreference();
+// 初始化每个时间分组模式的日期记忆
+globalCache.selectedDates = {
+  year: getSelectedDateByModePreference('year'),
+  month: getSelectedDateByModePreference('month'),
+  day: getSelectedDateByModePreference('day'),
+};
 
 // 监听全局缓存重置事件
 if (typeof window !== 'undefined') {
@@ -452,6 +488,12 @@ if (typeof window !== 'undefined') {
     globalCache.selectedRoaster = getSelectedRoasterPreference();
     globalCache.dateGroupingMode = getDateGroupingModePreference();
     globalCache.selectedDate = getSelectedDatePreference();
+    // 重新加载每个时间分组模式的日期记忆
+    globalCache.selectedDates = {
+      year: getSelectedDateByModePreference('year'),
+      month: getSelectedDateByModePreference('month'),
+      day: getSelectedDateByModePreference('day'),
+    };
 
     console.warn('咖啡豆全局缓存已重置并重新加载偏好设置');
   });
