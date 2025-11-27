@@ -315,6 +315,16 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
   displayMode = 'list',
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState<number>(0);
+
+  // 测量内容实际高度
+  useEffect(() => {
+    if (contentRef.current) {
+      // 获取实际滚动高度
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, [data, isExpanded]);
 
   if (data.length === 0) return null;
 
@@ -325,6 +335,12 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
       setIsExpanded(!isExpanded);
     }
   };
+
+  // 标签模式：收起时的初始高度
+  const tagsCollapsedHeight = 120;
+  // 列表模式：每行高度约 26px (包含 1.5 的 space-y)
+  const listItemHeight = 26;
+  const listCollapsedHeight = initialLimit * listItemHeight;
 
   // 标签模式
   if (displayMode === 'tags') {
@@ -339,11 +355,12 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
         </div>
         {/* 标签容器 */}
         <div
-          className="flex flex-wrap gap-2.5 transition-all duration-300 ease-out"
+          ref={contentRef}
+          className="flex flex-wrap gap-2.5 overflow-hidden transition-[max-height] duration-300 ease-out"
           style={{
             maxHeight: isExpanded
-              ? `${Math.ceil(data.length / 3) * 40}px`
-              : '120px',
+              ? `${contentHeight}px`
+              : `${tagsCollapsedHeight}px`,
           }}
         >
           {data.map(([label, count]) => (
@@ -381,11 +398,12 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
       </div>
       {/* 数据行容器 - 添加动画 */}
       <div
-        className="space-y-1.5 transition-all duration-300 ease-out"
+        ref={contentRef}
+        className="space-y-1.5 overflow-hidden transition-[max-height] duration-300 ease-out"
         style={{
           maxHeight: isExpanded
-            ? `${data.length * 28}px`
-            : `${initialLimit * 28}px`,
+            ? `${contentHeight}px`
+            : `${listCollapsedHeight}px`,
         }}
       >
         {data.map(([label, count]) => (
@@ -987,16 +1005,20 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
                 />
               )}
 
-            {/* 分割线 */}
-            <div className="mb-5 border-t border-neutral-200/40 dark:border-neutral-700/30" />
+            {/* 咖啡豆属性统计（单日视图不显示） */}
+            {!isSingleDayView && (
+              <>
+                {/* 分割线 */}
+                <div className="mb-5 border-t border-neutral-200/40 dark:border-neutral-700/30" />
 
-            {/* 咖啡豆属性统计 */}
-            <BeanAttributeStats
-              beans={beans}
-              selectedDate={selectedDate}
-              dateGroupingMode={dateGroupingMode}
-              onExplain={handleExplain}
-            />
+                <BeanAttributeStats
+                  beans={beans}
+                  selectedDate={selectedDate}
+                  dateGroupingMode={dateGroupingMode}
+                  onExplain={handleExplain}
+                />
+              </>
+            )}
           </div>
         </div>
       </div>

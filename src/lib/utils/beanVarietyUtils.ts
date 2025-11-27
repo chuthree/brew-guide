@@ -6,42 +6,13 @@
 import type { CoffeeBean } from '@/types/app';
 import { calculateFlavorInfo } from './flavorPeriodUtils';
 
-// 占位符文本列表 - 这些不应该被当作真实数据
-const PLACEHOLDER_TEXTS = [
-  '产地',
-  'origin',
-  'Origin',
-  '处理法',
-  'process',
-  'Process',
-  '水洗',
-  '日晒',
-  '蜜处理',
-  '品种',
-  'variety',
-  'Variety',
-  '烘焙度',
-  'roast',
-  'Roast',
-  '',
-  ' ',
-  '  ',
-  '   ', // 空字符串和空格
-];
-
 /**
- * 检查文本是否为占位符或无效值
+ * 检查文本是否为有效值
  * @param text 要检查的文本
- * @returns 是否为有效的真实数据
+ * @returns 是否为有效的真实数据（非空、非undefined、非null）
  */
 const isValidText = (text: string | undefined | null): boolean => {
-  if (!text || typeof text !== 'string') return false;
-
-  const trimmed = text.trim();
-  if (trimmed === '') return false;
-
-  // 检查是否为占位符文本
-  return !PLACEHOLDER_TEXTS.includes(trimmed);
+  return Boolean(text && typeof text === 'string' && text.trim() !== '');
 };
 
 // 扩展咖啡豆类型，包含blendComponents
