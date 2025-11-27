@@ -92,6 +92,26 @@ export const getTimeRange = (
   return { startTime, endTime };
 };
 
+// 根据笔记查找对应的咖啡豆
+// 优先使用 beanId 匹配（更可靠），其次使用名称匹配（兼容旧数据）
+const findBeanForNote = (
+  note: BrewingNote,
+  beans: ExtendedCoffeeBean[]
+): ExtendedCoffeeBean | null => {
+  // 1. 优先通过 beanId 匹配（最可靠）
+  if (note.beanId) {
+    const beanById = beans.find(b => b.id === note.beanId);
+    if (beanById) return beanById;
+  }
+
+  // 2. 降级：通过名称匹配（兼容旧数据，但可能因名称修改而失效）
+  if (note.coffeeBeanInfo?.name) {
+    return beans.find(b => b.name === note.coffeeBeanInfo?.name) || null;
+  }
+
+  return null;
+};
+
 // 计算指定时间范围内的消耗数据
 const calculateConsumption = (
   notes: BrewingNote[],
@@ -121,9 +141,8 @@ const calculateConsumption = (
 
       result.total.consumption += amount;
 
-      const bean = note.coffeeBeanInfo?.name
-        ? beans.find(b => b.name === note.coffeeBeanInfo?.name)
-        : null;
+      // 使用改进的匹配逻辑
+      const bean = findBeanForNote(note, beans);
 
       // 计算花费
       let noteCost = 0;
