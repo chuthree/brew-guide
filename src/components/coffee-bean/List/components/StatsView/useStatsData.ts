@@ -438,9 +438,9 @@ export const useStatsData = (
       }
     }
 
-    // 计算有价格信息的咖啡豆数量
+    // 计算有价格信息的咖啡豆数量（统计所有咖啡豆，而非仅被使用的）
     const beansWithPrice = beans.filter(
-      b => beansUsed.has(b.id) && b.price && parseNum(b.price) > 0
+      b => b.price && parseNum(b.price) > 0
     ).length;
 
     // 计算实际数据范围
@@ -566,10 +566,10 @@ export const useStatsData = (
       validNotes: computedData.validNotesCount,
       actualDays: computedData.actualDays,
       beansWithPrice: computedData.beansWithPrice,
-      beansTotal: computedData.beansUsedCount,
+      beansTotal: beans.length, // 使用所有咖啡豆的总数，而非仅被使用的
       todayNotes: computedData.todayNotesCount,
     };
-  }, [computedData]);
+  }, [computedData, beans.length]);
 
   return {
     availableDates,
