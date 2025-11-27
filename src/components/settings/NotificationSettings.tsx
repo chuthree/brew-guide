@@ -283,18 +283,20 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
               />
             </div>
 
-            {/* 震动反馈 */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                震动反馈
-              </span>
-              <Switch
-                checked={settings.hapticFeedback}
-                onChange={() =>
-                  handleChange('hapticFeedback', !settings.hapticFeedback)
-                }
-              />
-            </div>
+            {/* 震动反馈 - 仅在原生应用中显示 */}
+            {isNativeApp && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                  震动反馈
+                </span>
+                <Switch
+                  checked={settings.hapticFeedback}
+                  onChange={() =>
+                    handleChange('hapticFeedback', !settings.hapticFeedback)
+                  }
+                />
+              </div>
+            )}
           </div>
         </div>
 
