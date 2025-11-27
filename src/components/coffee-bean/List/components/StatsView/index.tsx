@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StatsViewProps, DateGroupingMode, TypeInventoryStats } from './types';
+import { StatsViewProps, DateGroupingMode, TypeInventoryStats, BrewingDetailItem } from './types';
 import { formatNumber } from './utils';
 import {
   globalCache,
@@ -216,6 +216,45 @@ const InventoryForecast: React.FC<{ data: TypeInventoryStats[] }> = ({
   );
 };
 
+// 冲煮明细组件（单日视图使用）
+const BrewingDetails: React.FC<{ data: BrewingDetailItem[] }> = ({ data }) => {
+  if (data.length === 0) return null;
+
+  // 格式化时间为 HH:mm
+  const formatTime = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  return (
+    <div className="rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
+      {/* 表头 */}
+      <div className="mb-2 grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+        <div>咖啡豆</div>
+        <div className="text-right">用量</div>
+        <div className="text-right">花费</div>
+        <div className="text-right">时间</div>
+      </div>
+      {/* 数据行 */}
+      <div className="space-y-1.5">
+        {data.map(item => (
+          <div
+            key={item.id}
+            className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100"
+          >
+            <div className="truncate">{item.beanName}</div>
+            <div className="text-right">{fmtWeight(item.amount)}</div>
+            <div className="text-right">{fmtCost(item.cost)}</div>
+            <div className="text-right">{formatTime(item.timestamp)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // 统计卡片组件（支持可点击的统计块）
 interface StatsCardProps {
   title: string;
@@ -287,6 +326,8 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
     isHistoricalView,
     effectiveDateRange,
     metadata,
+    brewingDetails,
+    todayBrewingDetails,
   } = useStatsData(beans, dateGroupingMode, selectedDate);
 
   // 处理点击解释
@@ -510,6 +551,16 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
                 ) : undefined
               }
               stats={overviewStats}
+              extra={
+                isSingleDayView && brewingDetails.length > 0 ? (
+                  <div className="mt-1">
+                    <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                      明细
+                    </div>
+                    <BrewingDetails data={brewingDetails} />
+                  </div>
+                ) : undefined
+              }
               onExplain={handleExplain}
             />
 
@@ -518,6 +569,16 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
               <StatsCard
                 title="今日"
                 stats={todayStatsDisplay}
+                extra={
+                  todayBrewingDetails.length > 0 ? (
+                    <div className="mt-1">
+                      <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                        明细
+                      </div>
+                      <BrewingDetails data={todayBrewingDetails} />
+                    </div>
+                  ) : undefined
+                }
                 onExplain={handleExplain}
               />
             )}

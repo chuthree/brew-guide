@@ -7,6 +7,7 @@ import {
   InventoryStats,
   TypeInventoryStats,
   BeanType,
+  BrewingDetailItem,
 } from './types';
 
 // ============================================================================
@@ -38,6 +39,8 @@ interface UseStatsDataResult {
   effectiveDateRange: { start: number; end: number } | null;
   isLoading: boolean;
   metadata: StatsMetadata; // 新增：数据来源元信息
+  brewingDetails: BrewingDetailItem[]; // 冲煮明细（单日视图使用）
+  todayBrewingDetails: BrewingDetailItem[]; // 今日冲煮明细（全部视图使用）
 }
 
 // ============================================================================
@@ -343,6 +346,13 @@ export const useStatsData = (
     let todayNotesCount = 0; // 今日记录数
     const beansUsed = new Set<string>(); // 参与计算的咖啡豆
 
+    // 冲煮明细（仅单日视图需要）
+    const isSingleDayView = dateGroupingMode === 'day' && selectedDate !== null;
+    const brewingDetails: BrewingDetailItem[] = [];
+
+    // 今日冲煮明细（全部视图需要）
+    const todayBrewingDetails: BrewingDetailItem[] = [];
+
     // 按类型统计消耗
     const typeConsumption: Record<BeanType, number> = {
       espresso: 0,
@@ -378,6 +388,17 @@ export const useStatsData = (
           beansUsed.add(bean.id);
         }
 
+        // 收集冲煮明细（单日视图）
+        if (isSingleDayView) {
+          brewingDetails.push({
+            id: note.id,
+            timestamp: ts,
+            beanName: bean?.name || note.coffeeBeanInfo?.name || '未知咖啡豆',
+            amount,
+            cost,
+          });
+        }
+
         // 记录时间边界
         if (ts < firstNoteTime) firstNoteTime = ts;
         if (ts > lastNoteTime) lastNoteTime = ts;
@@ -400,9 +421,19 @@ export const useStatsData = (
         const amount = parseNoteConsumption(note);
         if (amount > 0) {
           const bean = findBeanForNote(note, beans);
+          const cost = calculateNoteCost(amount, bean);
           todayConsumption += amount;
-          todayCost += calculateNoteCost(amount, bean);
+          todayCost += cost;
           todayNotesCount++;
+
+          // 收集今日冲煮明细
+          todayBrewingDetails.push({
+            id: note.id,
+            timestamp: ts,
+            beanName: bean?.name || note.coffeeBeanInfo?.name || '未知咖啡豆',
+            amount,
+            cost,
+          });
         }
       }
     }
@@ -457,6 +488,10 @@ export const useStatsData = (
       }
     }
 
+    // 按时间倒序排列冲煮明细
+    brewingDetails.sort((a, b) => b.timestamp - a.timestamp);
+    todayBrewingDetails.sort((a, b) => b.timestamp - a.timestamp);
+
     return {
       totalConsumption,
       totalCost,
@@ -466,6 +501,8 @@ export const useStatsData = (
       actualDays,
       effectiveDateRange,
       trendData,
+      brewingDetails,
+      todayBrewingDetails,
       // 元数据
       validNotesCount,
       todayNotesCount,
@@ -543,5 +580,7 @@ export const useStatsData = (
     effectiveDateRange: computedData.effectiveDateRange,
     isLoading,
     metadata,
+    brewingDetails: computedData.brewingDetails,
+    todayBrewingDetails: computedData.todayBrewingDetails,
   };
 };

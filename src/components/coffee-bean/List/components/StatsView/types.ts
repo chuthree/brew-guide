@@ -41,6 +41,15 @@ export interface TypeInventoryStats {
   estimatedDays: number; // 预计可用天数
 }
 
+// 冲煮明细记录（用于单日视图）
+export interface BrewingDetailItem {
+  id: string;
+  timestamp: number; // 冲煮时间戳
+  beanName: string; // 咖啡豆名称
+  amount: number; // 用量（克）
+  cost: number; // 花费（元）
+}
+
 // 统一的统计数据结构
 export interface UnifiedStatsData {
   // 概览：总消耗数据
