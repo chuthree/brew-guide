@@ -18,6 +18,13 @@ import StatsFilterBar from './StatsFilterBar';
 import ConsumptionTrendChart from './ConsumptionTrendChart';
 import { useStatsData, StatsMetadata } from './useStatsData';
 import StatsExplainer, { StatsExplanation } from './StatsExplainer';
+import {
+  extractUniqueOrigins,
+  extractUniqueVarieties,
+  getBeanProcesses,
+  getBeanFlavors,
+} from '@/lib/utils/beanVarietyUtils';
+import { ExtendedCoffeeBean } from '../../types';
 
 // 格式化辅助函数
 const fmtWeight = (v: number) => (v > 0 ? `${formatNumber(v)}g` : '-');
@@ -33,7 +40,8 @@ type StatsKey =
   | 'todayConsumption'
   | 'todayCost'
   | 'remaining'
-  | 'remainingValue';
+  | 'remainingValue'
+  | 'beanCount';
 
 // 生成解释内容的工厂函数
 const createExplanation = (
@@ -41,7 +49,8 @@ const createExplanation = (
   value: string,
   stats: ReturnType<typeof useStatsData>['stats'],
   metadata: StatsMetadata,
-  isHistoricalView: boolean
+  isHistoricalView: boolean,
+  dateRangeLabel?: string
 ): StatsExplanation | null => {
   const { validNotes, actualDays, beansWithPrice, beansTotal, todayNotes } =
     metadata;
@@ -147,6 +156,20 @@ const createExplanation = (
           beansWithPrice < beansTotal
             ? '部分咖啡豆缺少价格信息，未计入价值'
             : undefined,
+      };
+
+    case 'beanCount':
+      return {
+        title: '咖啡豆数量',
+        value,
+        formula: '未用完 / 总数',
+        dataSource: [
+          { label: '总数', value: '拥有的咖啡豆总数量' },
+          { label: '未用完', value: '剩余量 > 0 的咖啡豆数量' },
+        ],
+        note: dateRangeLabel
+          ? `基于咖啡豆添加日期的筛选范围进行统计`
+          : '基于咖啡豆添加日期的筛选范围进行统计',
       };
 
     default:
@@ -261,6 +284,349 @@ const BrewingDetails: React.FC<{ data: BrewingDetailItem[] }> = ({ data }) => {
   );
 };
 
+// 咖啡豆属性统计项组件
+interface BeanAttributeItemProps {
+  label: string;
+  count: number;
+}
+
+const BeanAttributeItem: React.FC<BeanAttributeItemProps> = ({
+  label,
+  count,
+}) => (
+  <div className="grid grid-cols-[1fr_auto] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+    <div className="truncate">{label}</div>
+    <div className="text-right">{count}</div>
+  </div>
+);
+
+// 单个属性统计卡片组件（支持展开/收起）
+interface AttributeCardProps {
+  title: string;
+  data: [string, number][];
+  initialLimit?: number;
+  displayMode?: 'list' | 'tags'; // 新增：显示模式
+}
+
+const AttributeCard: React.FC<AttributeCardProps> = ({
+  title,
+  data,
+  initialLimit = 5,
+  displayMode = 'list',
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (data.length === 0) return null;
+
+  const hasMore = data.length > initialLimit;
+
+  const handleToggle = () => {
+    if (hasMore) {
+      setIsExpanded(!isExpanded);
+    }
+  };
+
+  // 标签模式
+  if (displayMode === 'tags') {
+    return (
+      <div
+        className={`relative overflow-hidden rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
+        onClick={handleToggle}
+      >
+        {/* 表头 */}
+        <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+          {title}
+        </div>
+        {/* 标签容器 */}
+        <div
+          className="flex flex-wrap gap-2.5 transition-all duration-300 ease-out"
+          style={{
+            maxHeight: isExpanded
+              ? `${Math.ceil(data.length / 3) * 40}px`
+              : '120px',
+          }}
+        >
+          {data.map(([label, count]) => (
+            <div
+              key={label}
+              className="inline-flex items-center gap-1.5 rounded-full bg-neutral-300/40 px-3 py-1.5 dark:bg-neutral-700/40"
+            >
+              <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
+                {label}
+              </span>
+              <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                {count}
+              </span>
+            </div>
+          ))}
+        </div>
+        {/* 渐变遮罩 */}
+        {hasMore && !isExpanded && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b bg-linear-to-t from-[#F4F4F4] via-[#F4F4F4]/80 to-transparent pt-12 pb-3 dark:from-[#1D1D1D] dark:via-[#1D1D1D]/80" />
+        )}
+      </div>
+    );
+  }
+
+  // 列表模式
+  return (
+    <div
+      className={`relative overflow-hidden rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
+      onClick={handleToggle}
+    >
+      {/* 表头 */}
+      <div className="mb-2 grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+        <div>{title}</div>
+        <div className="text-right">数量</div>
+      </div>
+      {/* 数据行容器 - 添加动画 */}
+      <div
+        className="space-y-1.5 transition-all duration-300 ease-out"
+        style={{
+          maxHeight: isExpanded
+            ? `${data.length * 28}px`
+            : `${initialLimit * 28}px`,
+        }}
+      >
+        {data.map(([label, count]) => (
+          <BeanAttributeItem key={label} label={label} count={count} />
+        ))}
+      </div>
+      {/* 渐变遮罩 */}
+      {hasMore && !isExpanded && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b bg-linear-to-t from-[#F4F4F4] via-[#F4F4F4]/80 to-transparent pt-12 pb-3 dark:from-[#1D1D1D] dark:via-[#1D1D1D]/80" />
+      )}
+    </div>
+  );
+};
+
+// 咖啡豆数量统计组件
+interface BeanCountStatsProps {
+  beans: ExtendedCoffeeBean[];
+  onExplain: (key: StatsKey, rect: DOMRect) => void;
+}
+
+const BeanCountStats: React.FC<BeanCountStatsProps> = ({
+  beans,
+  onExplain,
+}) => {
+  // 按类型统计数量和未用完数量
+  const countByType = useMemo(() => {
+    const counts = {
+      espresso: { total: 0, remaining: 0 },
+      filter: { total: 0, remaining: 0 },
+      omni: { total: 0, remaining: 0 },
+    };
+
+    beans.forEach(bean => {
+      if (bean.beanType && bean.beanType in counts) {
+        const type = bean.beanType as keyof typeof counts;
+        counts[type].total++;
+
+        // 判断是否还有剩余（剩余量大于0）
+        const remaining = parseFloat(
+          bean.remaining?.toString().replace(/[^\d.]/g, '') || '0'
+        );
+        if (remaining > 0) {
+          counts[type].remaining++;
+        }
+      }
+    });
+
+    return counts;
+  }, [beans]);
+
+  const total =
+    countByType.espresso.total +
+    countByType.filter.total +
+    countByType.omni.total;
+  const totalRemaining =
+    countByType.espresso.remaining +
+    countByType.filter.remaining +
+    countByType.omni.remaining;
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    onExplain('beanCount', rect);
+  };
+
+  if (total === 0) return null;
+
+  return (
+    <div
+      data-stats-block
+      onClick={handleClick}
+      className="cursor-pointer rounded bg-neutral-200/30 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
+    >
+      {/* 表头 */}
+      <div className="mb-2 grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+        <div>咖啡豆</div>
+        <div className="text-right">未用完 / 总数</div>
+      </div>
+      {/* 数据行 */}
+      <div className="space-y-1.5">
+        {countByType.espresso.total > 0 && (
+          <div className="grid grid-cols-[1fr_auto] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            <div>意式豆</div>
+            <div className="text-right">
+              {countByType.espresso.remaining} / {countByType.espresso.total}
+            </div>
+          </div>
+        )}
+        {countByType.filter.total > 0 && (
+          <div className="grid grid-cols-[1fr_auto] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            <div>手冲豆</div>
+            <div className="text-right">
+              {countByType.filter.remaining} / {countByType.filter.total}
+            </div>
+          </div>
+        )}
+        {countByType.omni.total > 0 && (
+          <div className="grid grid-cols-[1fr_auto] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            <div>全能豆</div>
+            <div className="text-right">
+              {countByType.omni.remaining} / {countByType.omni.total}
+            </div>
+          </div>
+        )}
+        {/* 总计 */}
+        <div className="grid grid-cols-[1fr_auto] gap-2 border-t border-neutral-300/40 pt-1.5 text-sm font-medium text-neutral-900 dark:border-neutral-600/40 dark:text-neutral-100">
+          <div>总计</div>
+          <div className="text-right">
+            {totalRemaining} / {total}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 咖啡豆属性统计组件
+interface BeanAttributeStatsProps {
+  beans: ExtendedCoffeeBean[];
+  selectedDate: string | null;
+  dateGroupingMode: DateGroupingMode;
+  onExplain: (key: StatsKey, rect: DOMRect) => void;
+}
+
+const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
+  beans,
+  selectedDate,
+  dateGroupingMode,
+  onExplain,
+}) => {
+  // 根据日期范围过滤咖啡豆（基于添加时间）
+  const filteredBeans = useMemo(() => {
+    if (!selectedDate) {
+      // 全部视图：不过滤
+      return beans;
+    }
+
+    // 计算时间范围
+    let startTime: number;
+    let endTime: number;
+
+    if (dateGroupingMode === 'year') {
+      const year = parseInt(selectedDate);
+      startTime = new Date(year, 0, 1).getTime();
+      endTime = new Date(year + 1, 0, 1).getTime();
+    } else if (dateGroupingMode === 'month') {
+      const [year, month] = selectedDate.split('-').map(Number);
+      startTime = new Date(year, month - 1, 1).getTime();
+      endTime = new Date(year, month, 1).getTime();
+    } else {
+      // day
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      startTime = new Date(year, month - 1, day).getTime();
+      endTime = new Date(year, month - 1, day + 1).getTime();
+    }
+
+    // 过滤咖啡豆
+    return beans.filter(bean => {
+      const beanTime = bean.timestamp;
+      return beanTime >= startTime && beanTime < endTime;
+    });
+  }, [beans, selectedDate, dateGroupingMode]);
+  // 计算产地统计
+  const originStats = useMemo(() => {
+    const originCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const origins = extractUniqueOrigins([bean]);
+      origins.forEach(origin => {
+        originCount.set(origin, (originCount.get(origin) || 0) + 1);
+      });
+    });
+    return Array.from(originCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 计算品种统计
+  const varietyStats = useMemo(() => {
+    const varietyCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const varieties = extractUniqueVarieties([bean]);
+      varieties.forEach(variety => {
+        varietyCount.set(variety, (varietyCount.get(variety) || 0) + 1);
+      });
+    });
+    return Array.from(varietyCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 计算处理法统计
+  const processStats = useMemo(() => {
+    const processCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const processes = getBeanProcesses(bean);
+      processes.forEach(process => {
+        processCount.set(process, (processCount.get(process) || 0) + 1);
+      });
+    });
+    return Array.from(processCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 计算风味统计
+  const flavorStats = useMemo(() => {
+    const flavorCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const flavors = getBeanFlavors(bean);
+      flavors.forEach(flavor => {
+        flavorCount.set(flavor, (flavorCount.get(flavor) || 0) + 1);
+      });
+    });
+    return Array.from(flavorCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 如果所有统计都为空，不显示
+  if (
+    originStats.length === 0 &&
+    varietyStats.length === 0 &&
+    processStats.length === 0 &&
+    flavorStats.length === 0
+  ) {
+    return null;
+  }
+
+  return (
+    <div className="w-full">
+      <div className="space-y-3">
+        {/* 咖啡豆数量统计 */}
+        <BeanCountStats beans={filteredBeans} onExplain={onExplain} />
+
+        {/* 产地 */}
+        <AttributeCard title="产地" data={originStats} />
+
+        {/* 品种 */}
+        <AttributeCard title="品种" data={varietyStats} />
+
+        {/* 处理法 */}
+        <AttributeCard title="处理法" data={processStats} />
+
+        {/* 风味 */}
+        <AttributeCard title="风味" data={flavorStats} displayMode="tags" />
+      </div>
+    </div>
+  );
+};
+
 // 统计卡片组件（支持可点击的统计块）
 interface StatsCardProps {
   title: string;
@@ -335,6 +701,40 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
     brewingDetails,
   } = useStatsData(beans, dateGroupingMode, selectedDate);
 
+  // 生成日期范围标签（基于实际数据范围）
+  const dateRangeLabel = useMemo(() => {
+    if (!effectiveDateRange) return '';
+
+    const formatFull = (date: Date) => {
+      const y = date.getFullYear();
+      const m = (date.getMonth() + 1).toString().padStart(2, '0');
+      const d = date.getDate().toString().padStart(2, '0');
+      return `${y}.${m}.${d}`;
+    };
+
+    const formatShort = (date: Date) => {
+      const m = (date.getMonth() + 1).toString().padStart(2, '0');
+      const d = date.getDate().toString().padStart(2, '0');
+      return `${m}.${d}`;
+    };
+
+    const startDate = new Date(effectiveDateRange.start);
+    // end 是开区间边界，需要减1ms获取实际最后一天
+    const endDate = new Date(effectiveDateRange.end - 1);
+
+    const isSameDay =
+      startDate.getFullYear() === endDate.getFullYear() &&
+      startDate.getMonth() === endDate.getMonth() &&
+      startDate.getDate() === endDate.getDate();
+
+    if (isSameDay) return formatFull(startDate);
+
+    if (startDate.getFullYear() !== endDate.getFullYear()) {
+      return `${formatFull(startDate)} - ${formatFull(endDate)}`;
+    }
+    return `${formatFull(startDate)} - ${formatShort(endDate)}`;
+  }, [effectiveDateRange]);
+
   // 处理点击解释
   const handleExplain = useCallback(
     (key: StatsKey, rect: DOMRect) => {
@@ -373,6 +773,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
         case 'remainingValue':
           value = fmtCost(stats.inventory?.remainingValue || 0);
           break;
+        case 'beanCount':
+          value = ''; // 咖啡豆数量不需要单独的值
+          break;
       }
 
       const exp = createExplanation(
@@ -380,13 +783,14 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
         value,
         stats,
         metadata,
-        isHistoricalView
+        isHistoricalView,
+        dateRangeLabel
       );
       setExplanation(exp);
       setAnchorRect(rect);
       setActiveKey(key);
     },
-    [stats, todayStats, metadata, isHistoricalView, activeKey]
+    [stats, todayStats, metadata, isHistoricalView, activeKey, dateRangeLabel]
   );
 
   // 关闭解释弹窗
@@ -441,40 +845,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
       setSelectedDate(null);
     }
   }, [availableDates, selectedDate]);
-
-  // 生成日期范围标签（基于实际数据范围）
-  const dateRangeLabel = useMemo(() => {
-    if (!effectiveDateRange) return '';
-
-    const formatFull = (date: Date) => {
-      const y = date.getFullYear();
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${y}.${m}.${d}`;
-    };
-
-    const formatShort = (date: Date) => {
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${m}.${d}`;
-    };
-
-    const startDate = new Date(effectiveDateRange.start);
-    // end 是开区间边界，需要减1ms获取实际最后一天
-    const endDate = new Date(effectiveDateRange.end - 1);
-
-    const isSameDay =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth() &&
-      startDate.getDate() === endDate.getDate();
-
-    if (isSameDay) return formatFull(startDate);
-
-    if (startDate.getFullYear() !== endDate.getFullYear()) {
-      return `${formatFull(startDate)} - ${formatFull(endDate)}`;
-    }
-    return `${formatFull(startDate)} - ${formatShort(endDate)}`;
-  }, [effectiveDateRange]);
 
   // 空状态
   if (beans.length === 0) {
@@ -616,6 +986,17 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
                   onExplain={handleExplain}
                 />
               )}
+
+            {/* 分割线 */}
+            <div className="mb-5 border-t border-neutral-200/40 dark:border-neutral-700/30" />
+
+            {/* 咖啡豆属性统计 */}
+            <BeanAttributeStats
+              beans={beans}
+              selectedDate={selectedDate}
+              dateGroupingMode={dateGroupingMode}
+              onExplain={handleExplain}
+            />
           </div>
         </div>
       </div>

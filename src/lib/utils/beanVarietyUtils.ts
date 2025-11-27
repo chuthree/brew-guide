@@ -81,9 +81,7 @@ export const getBeanVarieties = (bean: CoffeeBean): string[] => {
  * @param bean 咖啡豆对象
  * @returns 主要品种名称，如果没有则返回null
  */
-const getBeanPrimaryVariety = (
-  bean: ExtendedCoffeeBean
-): string | null => {
+const getBeanPrimaryVariety = (bean: ExtendedCoffeeBean): string | null => {
   const varieties = getBeanVarieties(bean);
   return varieties.length > 0 ? varieties[0] : null;
 };
@@ -108,9 +106,7 @@ export const beanHasVariety = (
  * @param bean 咖啡豆对象
  * @returns 品种显示文本或null
  */
-const getBeanVarietyDisplay = (
-  bean: ExtendedCoffeeBean
-): string | null => {
+const getBeanVarietyDisplay = (bean: ExtendedCoffeeBean): string | null => {
   const varieties = getBeanVarieties(bean);
   return varieties.length > 0 ? varieties.join('、') : null;
 };
@@ -214,10 +210,7 @@ export const beanHasOrigin = (bean: CoffeeBean, origin: string): boolean => {
  * @param process 要检查的处理法名称
  * @returns 是否包含该处理法
  */
-const beanHasProcess = (
-  bean: ExtendedCoffeeBean,
-  process: string
-): boolean => {
+const beanHasProcess = (bean: ExtendedCoffeeBean, process: string): boolean => {
   const processes = getBeanProcesses(bean);
   return processes.includes(process);
 };
@@ -273,6 +266,27 @@ export const getBeanProcesses = (bean: CoffeeBean): string[] => {
 
   // 去重并返回
   return Array.from(new Set(processes));
+};
+
+/**
+ * 获取咖啡豆的风味标签
+ * @param bean 咖啡豆对象
+ * @returns 风味标签数组
+ */
+export const getBeanFlavors = (bean: CoffeeBean): string[] => {
+  const flavors: string[] = [];
+
+  // 从flavor字段获取风味信息
+  if (bean.flavor && Array.isArray(bean.flavor)) {
+    bean.flavor.forEach(flavor => {
+      if (isValidText(flavor)) {
+        flavors.push(flavor.trim());
+      }
+    });
+  }
+
+  // 去重并返回
+  return Array.from(new Set(flavors));
 };
 
 // 旧格式转换函数已移除，因为已经统一使用 blendComponents 结构
