@@ -332,7 +332,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
     effectiveDateRange,
     metadata,
     brewingDetails,
-    todayBrewingDetails,
   } = useStatsData(beans, dateGroupingMode, selectedDate);
 
   // 处理点击解释
@@ -569,11 +568,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
               <StatsCard
                 title="今日"
                 stats={todayStatsDisplay}
-                extra={
-                  todayBrewingDetails.length > 0 ? (
-                    <BrewingDetails data={todayBrewingDetails} />
-                  ) : undefined
-                }
                 onExplain={handleExplain}
               />
             )}
