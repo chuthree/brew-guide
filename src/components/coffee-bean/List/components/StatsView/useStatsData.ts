@@ -19,6 +19,16 @@ export interface TrendDataPoint {
   value: number;
 }
 
+// 统计数据的元信息（用于解释数据来源）
+export interface StatsMetadata {
+  totalNotes: number; // 总记录数
+  validNotes: number; // 有效记录数（排除容量调整等）
+  actualDays: number; // 实际统计天数
+  beansWithPrice: number; // 有价格信息的咖啡豆数量
+  beansTotal: number; // 参与计算的咖啡豆总数
+  todayNotes: number; // 今日记录数
+}
+
 interface UseStatsDataResult {
   availableDates: string[];
   stats: UnifiedStatsData;
@@ -27,6 +37,7 @@ interface UseStatsDataResult {
   isHistoricalView: boolean;
   effectiveDateRange: { start: number; end: number } | null;
   isLoading: boolean;
+  metadata: StatsMetadata; // 新增：数据来源元信息
 }
 
 // ============================================================================
@@ -328,6 +339,9 @@ export const useStatsData = (
     let todayCost = 0;
     let firstNoteTime = Infinity;
     let lastNoteTime = 0;
+    let validNotesCount = 0; // 有效记录数
+    let todayNotesCount = 0; // 今日记录数
+    const beansUsed = new Set<string>(); // 参与计算的咖啡豆
 
     // 按类型统计消耗
     const typeConsumption: Record<BeanType, number> = {
@@ -357,6 +371,12 @@ export const useStatsData = (
 
         totalConsumption += amount;
         totalCost += cost;
+        validNotesCount++;
+
+        // 记录参与计算的咖啡豆
+        if (bean) {
+          beansUsed.add(bean.id);
+        }
 
         // 记录时间边界
         if (ts < firstNoteTime) firstNoteTime = ts;
@@ -382,9 +402,15 @@ export const useStatsData = (
           const bean = findBeanForNote(note, beans);
           todayConsumption += amount;
           todayCost += calculateNoteCost(amount, bean);
+          todayNotesCount++;
         }
       }
     }
+
+    // 计算有价格信息的咖啡豆数量
+    const beansWithPrice = beans.filter(
+      b => beansUsed.has(b.id) && b.price && parseNum(b.price) > 0
+    ).length;
 
     // 计算实际数据范围
     let effectiveDateRange: { start: number; end: number } | null = null;
@@ -438,6 +464,12 @@ export const useStatsData = (
       actualDays,
       effectiveDateRange,
       trendData,
+      // 元数据
+      validNotesCount,
+      todayNotesCount,
+      beansUsedCount: beansUsed.size,
+      beansWithPrice,
+      totalNotesCount: notes.length,
     };
   }, [notes, beans, selectedDate, dateGroupingMode, isHistoricalView]);
 
@@ -488,6 +520,18 @@ export const useStatsData = (
     return { consumption: todayConsumption, cost: todayCost };
   }, [computedData, isHistoricalView]);
 
+  // 组装元数据
+  const metadata = useMemo((): StatsMetadata => {
+    return {
+      totalNotes: computedData.totalNotesCount,
+      validNotes: computedData.validNotesCount,
+      actualDays: computedData.actualDays,
+      beansWithPrice: computedData.beansWithPrice,
+      beansTotal: computedData.beansUsedCount,
+      todayNotes: computedData.todayNotesCount,
+    };
+  }, [computedData]);
+
   return {
     availableDates,
     stats,
@@ -496,5 +540,6 @@ export const useStatsData = (
     isHistoricalView,
     effectiveDateRange: computedData.effectiveDateRange,
     isLoading,
+    metadata,
   };
 };
