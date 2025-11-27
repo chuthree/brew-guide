@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StatsViewProps, DateGroupingMode, TypeInventoryStats, BrewingDetailItem } from './types';
+import {
+  StatsViewProps,
+  DateGroupingMode,
+  TypeInventoryStats,
+  BrewingDetailItem,
+} from './types';
 import { formatNumber } from './utils';
 import {
   globalCache,
