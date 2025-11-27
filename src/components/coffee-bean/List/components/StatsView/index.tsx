@@ -558,12 +558,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
               stats={overviewStats}
               extra={
                 isSingleDayView && brewingDetails.length > 0 ? (
-                  <div className="mt-1">
-                    <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      明细
-                    </div>
-                    <BrewingDetails data={brewingDetails} />
-                  </div>
+                  <BrewingDetails data={brewingDetails} />
                 ) : undefined
               }
               onExplain={handleExplain}
@@ -576,12 +571,7 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
                 stats={todayStatsDisplay}
                 extra={
                   todayBrewingDetails.length > 0 ? (
-                    <div className="mt-1">
-                      <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        明细
-                      </div>
-                      <BrewingDetails data={todayBrewingDetails} />
-                    </div>
+                    <BrewingDetails data={todayBrewingDetails} />
                   ) : undefined
                 }
                 onExplain={handleExplain}
