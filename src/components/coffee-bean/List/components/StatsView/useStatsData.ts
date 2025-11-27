@@ -417,9 +417,11 @@ export const useStatsData = (
     if (firstNoteTime !== Infinity) {
       if (selectedDate) {
         // 历史视图：从第一条记录到范围结束或现在（取较早者）
+        // 注意：endTime 是开区间（如月份的下个月1号），需要 -1 得到实际最后时刻
+        const rangeEnd = endTime - 1;
         effectiveDateRange = {
           start: Math.max(startTime, firstNoteTime),
-          end: Math.min(endTime, now),
+          end: Math.min(rangeEnd, now),
         };
       } else {
         // 全部视图：从第一条记录到现在
