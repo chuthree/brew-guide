@@ -28,6 +28,7 @@ export interface StatsMetadata {
   beansWithPrice: number; // 有价格信息的咖啡豆数量
   beansTotal: number; // 参与计算的咖啡豆总数
   todayNotes: number; // 今日记录数
+  useFallbackStats: boolean; // 是否使用备选统计（基于咖啡豆容量变化）
 }
 
 interface UseStatsDataResult {
@@ -504,14 +505,75 @@ export const useStatsData = (
     brewingDetails.sort((a, b) => b.timestamp - a.timestamp);
     todayBrewingDetails.sort((a, b) => b.timestamp - a.timestamp);
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // 备选统计：当没有足够的笔记数据时，使用咖啡豆的容量变化计算消耗
+    // 仅在全部视图（非历史视图）且没有有效笔记时使用
+    // ─────────────────────────────────────────────────────────────────────────
+    let useFallbackStats = false;
+    let fallbackConsumption = 0;
+    let fallbackCost = 0;
+    let fallbackActualDays = 1;
+    let fallbackDateRange: { start: number; end: number } | null = null;
+    const fallbackTypeConsumption: Record<BeanType, number> = {
+      espresso: 0,
+      filter: 0,
+      omni: 0,
+    };
+
+    // 条件：全部视图（非历史视图）且没有有效笔记
+    if (!selectedDate && validNotesCount === 0 && beans.length > 0) {
+      useFallbackStats = true;
+      let earliestBeanTime = Infinity;
+
+      for (const bean of beans) {
+        const capacity = parseNum(bean.capacity);
+        const remaining = parseNum(bean.remaining);
+        const consumed = capacity - remaining;
+
+        if (consumed > 0) {
+          fallbackConsumption += consumed;
+
+          // 计算花费
+          const price = parseNum(bean.price);
+          if (capacity > 0 && price > 0) {
+            fallbackCost += (consumed * price) / capacity;
+          }
+
+          // 按类型统计
+          const beanType = bean.beanType;
+          if (beanType && beanType in fallbackTypeConsumption) {
+            fallbackTypeConsumption[beanType] += consumed;
+          }
+        }
+
+        // 找到最早的咖啡豆创建时间
+        if (bean.timestamp && bean.timestamp < earliestBeanTime) {
+          earliestBeanTime = bean.timestamp;
+        }
+      }
+
+      // 计算日期范围（从最早的咖啡豆到现在）
+      if (earliestBeanTime !== Infinity && fallbackConsumption > 0) {
+        fallbackDateRange = { start: earliestBeanTime, end: now };
+        fallbackActualDays = calculateDaysBetween(earliestBeanTime, now);
+      }
+    }
+
+    // 根据是否使用备选统计返回数据
+    const finalConsumption = useFallbackStats ? fallbackConsumption : totalConsumption;
+    const finalCost = useFallbackStats ? fallbackCost : totalCost;
+    const finalActualDays = useFallbackStats ? fallbackActualDays : actualDays;
+    const finalDateRange = useFallbackStats ? fallbackDateRange : effectiveDateRange;
+    const finalTypeConsumption = useFallbackStats ? fallbackTypeConsumption : typeConsumption;
+
     return {
-      totalConsumption,
-      totalCost,
+      totalConsumption: finalConsumption,
+      totalCost: finalCost,
       todayConsumption,
       todayCost,
-      typeConsumption,
-      actualDays,
-      effectiveDateRange,
+      typeConsumption: finalTypeConsumption,
+      actualDays: finalActualDays,
+      effectiveDateRange: finalDateRange,
       trendData,
       brewingDetails,
       todayBrewingDetails,
@@ -521,6 +583,7 @@ export const useStatsData = (
       beansUsedCount: beansUsed.size,
       beansWithPrice,
       totalNotesCount: notes.length,
+      useFallbackStats,
     };
   }, [notes, beans, selectedDate, dateGroupingMode, isHistoricalView]);
 
@@ -580,6 +643,7 @@ export const useStatsData = (
       beansWithPrice: computedData.beansWithPrice,
       beansTotal: beans.length, // 使用所有咖啡豆的总数，而非仅被使用的
       todayNotes: computedData.todayNotesCount,
+      useFallbackStats: computedData.useFallbackStats,
     };
   }, [computedData, beans.length]);
 
