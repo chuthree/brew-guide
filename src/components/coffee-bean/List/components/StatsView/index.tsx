@@ -54,8 +54,14 @@ const createExplanation = (
   isHistoricalView: boolean,
   dateRangeLabel?: string
 ): StatsExplanation | null => {
-  const { validNotes, actualDays, beansWithPrice, beansTotal, todayNotes, useFallbackStats } =
-    metadata;
+  const {
+    validNotes,
+    actualDays,
+    beansWithPrice,
+    beansTotal,
+    todayNotes,
+    useFallbackStats,
+  } = metadata;
 
   // 备选统计模式下的特殊说明
   const fallbackNote = useFallbackStats
@@ -79,7 +85,9 @@ const createExplanation = (
               { label: '有效冲煮记录', value: `${validNotes} 条` },
               { label: '统计天数', value: `${actualDays} 天` },
             ],
-        note: fallbackNote || (validNotes < 5 ? '记录较少，数据仅供参考' : undefined),
+        note:
+          fallbackNote ||
+          (validNotes < 5 ? '记录较少，数据仅供参考' : undefined),
       };
 
     case 'totalCost':
@@ -115,14 +123,14 @@ const createExplanation = (
       return {
         title: '日均消耗',
         value,
-        formula: useFallbackStats
-          ? '总消耗 ÷ 统计天数'
-          : '总消耗 ÷ 统计天数',
+        formula: useFallbackStats ? '总消耗 ÷ 统计天数' : '总消耗 ÷ 统计天数',
         dataSource: [
           { label: '总消耗', value: fmtWeight(stats.overview.consumption) },
           { label: '统计天数', value: `${actualDays} 天` },
         ],
-        note: fallbackNote || (actualDays < 7 ? '统计周期较短，日均值可能波动较大' : undefined),
+        note:
+          fallbackNote ||
+          (actualDays < 7 ? '统计周期较短，日均值可能波动较大' : undefined),
       };
 
     case 'dailyCost':

@@ -560,11 +560,17 @@ export const useStatsData = (
     }
 
     // 根据是否使用备选统计返回数据
-    const finalConsumption = useFallbackStats ? fallbackConsumption : totalConsumption;
+    const finalConsumption = useFallbackStats
+      ? fallbackConsumption
+      : totalConsumption;
     const finalCost = useFallbackStats ? fallbackCost : totalCost;
     const finalActualDays = useFallbackStats ? fallbackActualDays : actualDays;
-    const finalDateRange = useFallbackStats ? fallbackDateRange : effectiveDateRange;
-    const finalTypeConsumption = useFallbackStats ? fallbackTypeConsumption : typeConsumption;
+    const finalDateRange = useFallbackStats
+      ? fallbackDateRange
+      : effectiveDateRange;
+    const finalTypeConsumption = useFallbackStats
+      ? fallbackTypeConsumption
+      : typeConsumption;
 
     return {
       totalConsumption: finalConsumption,
