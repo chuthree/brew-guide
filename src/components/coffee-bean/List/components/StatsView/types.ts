@@ -23,6 +23,8 @@ export interface InventoryStats {
   remaining: number; // 剩余量（克）
   remainingValue: number; // 剩余价值（元）
   estimatedDays: number; // 预计可用天数
+  totalCapacity: number; // 库存总量（克）= 所有咖啡豆的 capacity 总和
+  totalValue: number; // 总价值（元）= 所有咖啡豆的 price 总和
 }
 
 // 按类型分类的消耗统计

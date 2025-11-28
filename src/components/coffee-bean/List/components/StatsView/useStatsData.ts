@@ -195,14 +195,24 @@ const calculateInventory = (
 ): InventoryStats => {
   let remaining = 0;
   let remainingValue = 0;
+  let totalCapacity = 0;
+  let totalValue = 0;
 
   for (const bean of beans) {
     const beanRemaining = parseNum(bean.remaining);
     remaining += beanRemaining;
 
     const capacity = parseNum(bean.capacity);
+    const price = parseNum(bean.price);
+
+    // 累加库存总量（所有咖啡豆的 capacity 总和）
+    totalCapacity += capacity;
+
+    // 累加总价值（所有咖啡豆的 price 总和）
+    totalValue += price;
+
     if (capacity > 0) {
-      remainingValue += (beanRemaining * parseNum(bean.price)) / capacity;
+      remainingValue += (beanRemaining * price) / capacity;
     }
   }
 
@@ -211,6 +221,8 @@ const calculateInventory = (
     remainingValue,
     estimatedDays:
       dailyConsumption > 0 ? Math.ceil(remaining / dailyConsumption) : 0,
+    totalCapacity,
+    totalValue,
   };
 };
 

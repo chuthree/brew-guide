@@ -41,6 +41,8 @@ type StatsKey =
   | 'todayCost'
   | 'remaining'
   | 'remainingValue'
+  | 'totalCapacity'
+  | 'totalValue'
   | 'beanCount';
 
 // 生成解释内容的工厂函数
@@ -158,6 +160,30 @@ const createExplanation = (
             : undefined,
       };
 
+    case 'totalCapacity':
+      return {
+        title: '库存总量',
+        value,
+        formula: '∑ 每款咖啡豆的购买容量',
+        dataSource: [{ label: '咖啡豆数量', value: `${beansTotal} 款` }],
+        note: '所有咖啡豆购买时的容量总和',
+      };
+
+    case 'totalValue':
+      return {
+        title: '总价值',
+        value,
+        formula: '∑ 每款咖啡豆的购买价格',
+        dataSource: [
+          { label: '咖啡豆数量', value: `${beansTotal} 款` },
+          { label: '有价格信息', value: `${beansWithPrice} 款` },
+        ],
+        note:
+          beansWithPrice < beansTotal
+            ? '部分咖啡豆缺少价格信息，未计入总价值'
+            : '所有咖啡豆购买时的价格总和',
+      };
+
     case 'beanCount':
       return {
         title: '咖啡豆数量',
@@ -200,7 +226,7 @@ const ClickableStatsBlock: React.FC<ClickableStatsBlockProps> = ({
     <div
       data-stats-block
       onClick={handleClick}
-      className="flex cursor-pointer flex-col justify-between rounded bg-neutral-200/30 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
+      className="flex cursor-pointer flex-col justify-between rounded-md bg-neutral-200/30 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
     >
       <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         {title}
@@ -219,7 +245,7 @@ const InventoryForecast: React.FC<{ data: TypeInventoryStats[] }> = ({
   if (data.length === 0) return null;
 
   return (
-    <div className="rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
+    <div className="rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
       {/* 表头 */}
       <div className="mb-2 grid grid-cols-4 gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         <div>类型</div>
@@ -258,7 +284,7 @@ const BrewingDetails: React.FC<{ data: BrewingDetailItem[] }> = ({ data }) => {
   };
 
   return (
-    <div className="rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
+    <div className="rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
       {/* 表头 */}
       <div className="mb-2 grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         <div>咖啡豆</div>
@@ -346,7 +372,7 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
   if (displayMode === 'tags') {
     return (
       <div
-        className={`relative overflow-hidden rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
+        className={`relative overflow-hidden rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
         onClick={handleToggle}
       >
         {/* 表头 */}
@@ -388,7 +414,7 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
   // 列表模式
   return (
     <div
-      className={`relative overflow-hidden rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
+      className={`relative overflow-hidden rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
       onClick={handleToggle}
     >
       {/* 表头 */}
@@ -474,7 +500,7 @@ const BeanCountStats: React.FC<BeanCountStatsProps> = ({
     <div
       data-stats-block
       onClick={handleClick}
-      className="cursor-pointer rounded bg-neutral-200/30 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
+      className="cursor-pointer rounded-md bg-neutral-200/30 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
     >
       {/* 表头 */}
       <div className="mb-2 grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -673,7 +699,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           {chart && (
-            <div className="col-span-2 flex flex-col justify-between rounded bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
+            <div className="col-span-2 flex flex-col justify-between rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
               {chart}
             </div>
           )}
@@ -791,6 +817,12 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
         case 'remainingValue':
           value = fmtCost(stats.inventory?.remainingValue || 0);
           break;
+        case 'totalCapacity':
+          value = fmtWeight(stats.inventory?.totalCapacity || 0);
+          break;
+        case 'totalValue':
+          value = fmtCost(stats.inventory?.totalValue || 0);
+          break;
         case 'beanCount':
           value = ''; // 咖啡豆数量不需要单独的值
           break;
@@ -896,6 +928,22 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
         },
       ]
     : [
+        // 第一行：购买数据
+        ...(stats.inventory
+          ? [
+              {
+                title: '库存总量',
+                value: fmtWeight(stats.inventory.totalCapacity),
+                key: 'totalCapacity' as StatsKey,
+              },
+              {
+                title: '总价值',
+                value: fmtCost(stats.inventory.totalValue),
+                key: 'totalValue' as StatsKey,
+              },
+            ]
+          : []),
+        // 第二行：消耗数据
         {
           title: '总消耗',
           value: fmtWeight(stats.overview.consumption),
@@ -905,16 +953,6 @@ const StatsView: React.FC<StatsViewProps> = ({ beans }) => {
           title: '总花费',
           value: fmtCost(stats.overview.cost),
           key: 'totalCost' as StatsKey,
-        },
-        {
-          title: '日均消耗',
-          value: fmtWeight(stats.overview.dailyConsumption),
-          key: 'dailyConsumption' as StatsKey,
-        },
-        {
-          title: '日均花费',
-          value: fmtCost(stats.overview.dailyCost),
-          key: 'dailyCost' as StatsKey,
         },
       ];
 
