@@ -1076,132 +1076,145 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     setSearchHistory(getSearchHistoryPreference());
   }, []);
 
-  // 搜索过滤逻辑
-  const searchFilteredBeans = React.useMemo(() => {
-    if (!searchQuery.trim() || !isSearching) {
-      // 当没有搜索时，返回当前过滤和排序后的豆子列表
-      return filteredBeans;
-    }
+  // 搜索过滤函数 - 可复用于正常豆子和用完的豆子
+  const filterBeansBySearch = React.useCallback(
+    (beansToFilter: ExtendedCoffeeBean[]): ExtendedCoffeeBean[] => {
+      if (!searchQuery.trim() || !isSearching) {
+        return beansToFilter;
+      }
 
-    // 将查询拆分为多个关键词，移除空字符串
-    const queryTerms = searchQuery
-      .toLowerCase()
-      .trim()
-      .split(/\s+/)
-      .filter(term => term.length > 0);
+      // 将查询拆分为多个关键词，移除空字符串
+      const queryTerms = searchQuery
+        .toLowerCase()
+        .trim()
+        .split(/\s+/)
+        .filter(term => term.length > 0);
 
-    // 给每个咖啡豆计算匹配分数
-    const beansWithScores = filteredBeans.map(bean => {
-      // 基本信息搜索
-      const name = bean.name?.toLowerCase() || '';
-      // 从 blendComponents 获取产地和处理法信息（用于向后兼容搜索）
-      const origin =
-        bean.blendComponents
-          ?.map(c => c.origin)
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase() || '';
-      const process =
-        bean.blendComponents
-          ?.map(c => c.process)
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase() || '';
-      const notes = bean.notes?.toLowerCase() || '';
+      // 给每个咖啡豆计算匹配分数
+      const beansWithScores = beansToFilter.map(bean => {
+        // 基本信息搜索
+        const name = bean.name?.toLowerCase() || '';
+        // 从 blendComponents 获取产地和处理法信息（用于向后兼容搜索）
+        const origin =
+          bean.blendComponents
+            ?.map(c => c.origin)
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase() || '';
+        const process =
+          bean.blendComponents
+            ?.map(c => c.process)
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase() || '';
+        const notes = bean.notes?.toLowerCase() || '';
 
-      // 额外信息搜索
-      const roastLevel = bean.roastLevel?.toLowerCase() || '';
-      const roastDate = bean.roastDate?.toLowerCase() || '';
-      const price = bean.price?.toLowerCase() || '';
-      const beanType = bean.beanType?.toLowerCase() || '';
+        // 额外信息搜索
+        const roastLevel = bean.roastLevel?.toLowerCase() || '';
+        const roastDate = bean.roastDate?.toLowerCase() || '';
+        const price = bean.price?.toLowerCase() || '';
+        const beanType = bean.beanType?.toLowerCase() || '';
 
-      // 风味标签搜索 - 将数组转换为字符串进行搜索
-      const flavors = bean.flavor?.join(' ').toLowerCase() || '';
+        // 风味标签搜索 - 将数组转换为字符串进行搜索
+        const flavors = bean.flavor?.join(' ').toLowerCase() || '';
 
-      // 拼配组件搜索 - 包含成分中的品种信息
-      const blendComponentsText =
-        bean.blendComponents
-          ?.map(
-            comp =>
-              `${comp.percentage || ''} ${comp.origin || ''} ${comp.process || ''} ${comp.variety || ''}`
-          )
-          .join(' ')
-          .toLowerCase() || '';
+        // 拼配组件搜索 - 包含成分中的品种信息
+        const blendComponentsText =
+          bean.blendComponents
+            ?.map(
+              comp =>
+                `${comp.percentage || ''} ${comp.origin || ''} ${comp.process || ''} ${comp.variety || ''}`
+            )
+            .join(' ')
+            .toLowerCase() || '';
 
-      // 计量信息搜索
-      const capacity = bean.capacity?.toLowerCase() || '';
-      const remaining = bean.remaining?.toLowerCase() || '';
+        // 计量信息搜索
+        const capacity = bean.capacity?.toLowerCase() || '';
+        const remaining = bean.remaining?.toLowerCase() || '';
 
-      // 赏味期搜索 - 将赏味期信息转换为可搜索的文本
-      const flavorPeriod =
-        `${bean.startDay || ''} ${bean.endDay || ''}`.toLowerCase();
+        // 赏味期搜索 - 将赏味期信息转换为可搜索的文本
+        const flavorPeriod =
+          `${bean.startDay || ''} ${bean.endDay || ''}`.toLowerCase();
 
-      // 组合所有可搜索文本到一个数组，为不同字段分配权重
-      const searchableTexts = [
-        { text: name, weight: 3 }, // 名称权重最高
-        { text: origin, weight: 2 }, // 产地权重较高
-        { text: process, weight: 2 }, // 处理法权重较高
-        { text: notes, weight: 1 }, // 备注权重一般
-        { text: roastLevel, weight: 1 }, // 烘焙度权重一般
-        { text: roastDate, weight: 1 }, // 烘焙日期权重一般
-        { text: price, weight: 1 }, // 价格权重一般
-        { text: beanType, weight: 2 }, // 豆子类型权重较高
-        { text: flavors, weight: 2 }, // 风味标签权重较高
-        { text: blendComponentsText, weight: 2 }, // 拼配组件权重较高
-        { text: capacity, weight: 1 }, // 容量权重一般
-        { text: remaining, weight: 1 }, // 剩余量权重一般
-        { text: flavorPeriod, weight: 1 }, // 赏味期信息权重一般
-      ];
+        // 组合所有可搜索文本到一个数组，为不同字段分配权重
+        const searchableTexts = [
+          { text: name, weight: 3 }, // 名称权重最高
+          { text: origin, weight: 2 }, // 产地权重较高
+          { text: process, weight: 2 }, // 处理法权重较高
+          { text: notes, weight: 1 }, // 备注权重一般
+          { text: roastLevel, weight: 1 }, // 烘焙度权重一般
+          { text: roastDate, weight: 1 }, // 烘焙日期权重一般
+          { text: price, weight: 1 }, // 价格权重一般
+          { text: beanType, weight: 2 }, // 豆子类型权重较高
+          { text: flavors, weight: 2 }, // 风味标签权重较高
+          { text: blendComponentsText, weight: 2 }, // 拼配组件权重较高
+          { text: capacity, weight: 1 }, // 容量权重一般
+          { text: remaining, weight: 1 }, // 剩余量权重一般
+          { text: flavorPeriod, weight: 1 }, // 赏味期信息权重一般
+        ];
 
-      // 计算匹配分数 - 所有匹配关键词的权重总和
-      let score = 0;
-      let allTermsMatch = true;
+        // 计算匹配分数 - 所有匹配关键词的权重总和
+        let score = 0;
+        let allTermsMatch = true;
 
-      for (const term of queryTerms) {
-        // 检查当前关键词是否至少匹配一个字段
-        const termMatches = searchableTexts.some(({ text }) =>
-          text.includes(term)
-        );
+        for (const term of queryTerms) {
+          // 检查当前关键词是否至少匹配一个字段
+          const termMatches = searchableTexts.some(({ text }) =>
+            text.includes(term)
+          );
 
-        if (!termMatches) {
-          allTermsMatch = false;
-          break;
-        }
+          if (!termMatches) {
+            allTermsMatch = false;
+            break;
+          }
 
-        // 累加匹配到的权重
-        for (const { text, weight } of searchableTexts) {
-          if (text.includes(term)) {
-            score += weight;
-
-            // 精确匹配整个字段给予额外加分
-            if (text === term) {
-              score += weight * 2;
-            }
-
-            // 匹配字段开头给予额外加分
-            if (text.startsWith(term)) {
+          // 累加匹配到的权重
+          for (const { text, weight } of searchableTexts) {
+            if (text.includes(term)) {
               score += weight;
+
+              // 精确匹配整个字段给予额外加分
+              if (text === term) {
+                score += weight * 2;
+              }
+
+              // 匹配字段开头给予额外加分
+              if (text.startsWith(term)) {
+                score += weight;
+              }
             }
           }
         }
-      }
 
-      return {
-        bean,
-        score,
-        matches: allTermsMatch,
-      };
-    });
+        return {
+          bean,
+          score,
+          matches: allTermsMatch,
+        };
+      });
 
-    // 过滤掉不匹配所有关键词的豆子
-    const matchingBeans = beansWithScores.filter(item => item.matches);
+      // 过滤掉不匹配所有关键词的豆子
+      const matchingBeans = beansWithScores.filter(item => item.matches);
 
-    // 根据分数排序，分数高的在前面
-    matchingBeans.sort((a, b) => b.score - a.score);
+      // 根据分数排序，分数高的在前面
+      matchingBeans.sort((a, b) => b.score - a.score);
 
-    // 返回排序后的豆子列表
-    return matchingBeans.map(item => item.bean);
-  }, [filteredBeans, searchQuery, isSearching]);
+      // 返回排序后的豆子列表
+      return matchingBeans.map(item => item.bean);
+    },
+    [searchQuery, isSearching]
+  );
+
+  // 搜索过滤后的正常豆子
+  const searchFilteredBeans = React.useMemo(() => {
+    return filterBeansBySearch(filteredBeans);
+  }, [filteredBeans, filterBeansBySearch]);
+
+  // 搜索过滤后的用完的豆子（当showEmptyBeans为true时）
+  const searchFilteredEmptyBeans = React.useMemo(() => {
+    if (!showEmptyBeans) return [];
+    return filterBeansBySearch(emptyBeans);
+  }, [emptyBeans, showEmptyBeans, filterBeansBySearch]);
 
   const [_isExportingRanking, setIsExportingRanking] = useState(false);
 
@@ -1591,7 +1604,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           >
             <InventoryView
               filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
-              emptyBeans={isSearching ? [] : emptyBeans}
+              emptyBeans={isSearching ? searchFilteredEmptyBeans : emptyBeans}
               selectedVariety={selectedVariety}
               showEmptyBeans={showEmptyBeans}
               selectedBeanType={selectedBeanType}
