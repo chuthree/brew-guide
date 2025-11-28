@@ -344,7 +344,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                   显示刻度指示器
                 </span>
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  在冲煮页面显示当前磨豆机刻度，长按可编辑
+                  在冲煮页面显示当前磨豆机刻度，点击可编辑，长按切换磨豆机
                 </span>
               </div>
               <label className="relative inline-flex cursor-pointer items-center">

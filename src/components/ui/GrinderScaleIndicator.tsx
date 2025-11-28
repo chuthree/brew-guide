@@ -45,26 +45,10 @@ const FONT_SIZE_MAP = [
 const getFontSize = (len: number) =>
   FONT_SIZE_MAP[Math.min(len, 5)] || 'text-[8px]';
 
-// 模拟光标组件 - 模仿 iOS 原生光标闪烁效果
-// iOS 光标特点：~1s 周期，使用 ease-in-out 缓动，平滑淡入淡出
-const Cursor = () => (
-  <motion.span
-    initial={{ opacity: 1 }}
-    animate={{ opacity: [1, 1, 0, 0, 1] }}
-    transition={{
-      duration: 1,
-      repeat: Infinity,
-      ease: 'easeInOut',
-      times: [0, 0.5, 0.55, 0.95, 1], // 530ms 可见，淡出 50ms，保持隐藏 400ms，淡入 50ms
-    }}
-    className="pointer-events-none -ml-px h-4 w-0.5 rounded-[1px] bg-[#007AFF] dark:bg-[#0A84FF]"
-  />
-);
-
 /**
  * 磨豆机刻度指示器
- * - 单个磨豆机：长按编辑刻度
- * - 多个磨豆机：点击展开选择列表，长按编辑
+ * - 点击：编辑刻度
+ * - 长按：切换磨豆机（多个磨豆机时展开选择列表）
  */
 const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
   visible = true,
@@ -81,7 +65,6 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
   const [showSelector, setShowSelector] = useState(false);
   const [editingGrinderId, setEditingGrinderId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [hasBeenFocused, setHasBeenFocused] = useState(false);
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
@@ -119,14 +102,6 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
       // 将光标移到末尾
       const len = input.value.length;
       input.setSelectionRange(len, len);
-
-      // 检测是否为触摸设备
-      // 如果是非触摸设备（桌面端），focus 通常会成功显示原生光标，所以直接标记为已聚焦，不显示模拟光标
-      // 如果是触摸设备（iOS/Android），自动 focus 可能不会显示光标/键盘，所以保持 hasBeenFocused 为 false，显示模拟光标
-      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      if (!isTouch) {
-        setHasBeenFocused(true);
-      }
     }
   }, [editingGrinderId]);
 
@@ -145,16 +120,32 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
     [hapticFeedback]
   );
 
-  // 开始长按
+  // 开始长按（主按钮 - 用于展开选择列表）
   const startLongPress = useCallback(
+    (_grinder: Grinder) => {
+      isLongPressRef.current = false;
+      longPressTimerRef.current = setTimeout(() => {
+        isLongPressRef.current = true;
+        haptic('medium');
+        // 长按时展开选择列表（多个磨豆机时）
+        if (grinders.length > 1) {
+          setShowSelector(true);
+        }
+      }, LONG_PRESS_DURATION);
+    },
+    [haptic, grinders.length]
+  );
+
+  // 开始长按（选项列表 - 用于编辑刻度）
+  const startOptionLongPress = useCallback(
     (grinder: Grinder) => {
       isLongPressRef.current = false;
       longPressTimerRef.current = setTimeout(() => {
         isLongPressRef.current = true;
         haptic('medium');
+        // 长按时进入编辑模式
         setEditingGrinderId(grinder.id);
         setEditValue(grinder.currentGrindSize || '');
-        setHasBeenFocused(false);
       }, LONG_PRESS_DURATION);
     },
     [haptic]
@@ -194,11 +185,13 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
       setShowSelector(false);
     } else if (editingGrinderId) {
       closeEdit();
-    } else if (grinders.length > 1) {
+    } else {
+      // 点击时进入编辑模式
       haptic('light');
-      setShowSelector(true);
+      setEditingGrinderId(selectedGrinder?.id ?? null);
+      setEditValue(selectedGrinder?.currentGrindSize || '');
     }
-  }, [showSelector, editingGrinderId, grinders.length, haptic, closeEdit]);
+  }, [showSelector, editingGrinderId, selectedGrinder, haptic, closeEdit]);
 
   // 处理选项点击
   const handleOptionClick = useCallback(
@@ -225,14 +218,12 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
   // 处理输入框点击
   const handleInputClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setHasBeenFocused(true);
   }, []);
 
   // 处理输入变化
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setEditValue(e.target.value);
-      setHasBeenFocused(true);
     },
     []
   );
@@ -273,12 +264,12 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
                   whileTap={isGrinderEditing ? {} : { scale: 0.98 }}
                   transition={SPRING_TRANSITION}
                   onMouseDown={() =>
-                    !isGrinderEditing && startLongPress(grinder)
+                    !isGrinderEditing && startOptionLongPress(grinder)
                   }
                   onMouseUp={endLongPress}
                   onMouseLeave={endLongPress}
                   onTouchStart={() =>
-                    !isGrinderEditing && startLongPress(grinder)
+                    !isGrinderEditing && startOptionLongPress(grinder)
                   }
                   onTouchEnd={endLongPress}
                   onClick={() =>
@@ -299,7 +290,6 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
                         className="min-w-[1ch] bg-transparent text-center outline-none"
                         style={{ width: inputWidth }}
                       />
-                      {!hasBeenFocused && <Cursor />}
                     </div>
                   ) : (
                     <span>{grinder.currentGrindSize || '-'}</span>
@@ -335,7 +325,6 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
                 className="min-w-[1ch] bg-transparent text-center outline-none"
                 style={{ width: inputWidth }}
               />
-              {!hasBeenFocused && <Cursor />}
             </div>
           </motion.div>
         )}
