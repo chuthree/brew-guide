@@ -336,6 +336,35 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
             </details>
           )}
 
+          {/* 刻度指示器显示设置（仅在有磨豆机时显示） */}
+          {grinders.length > 0 && (
+            <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                  显示刻度指示器
+                </span>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                  在冲煮页面显示当前磨豆机刻度，长按可编辑
+                </span>
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.showGrinderScale ?? true}
+                  onChange={() => {
+                    handleChange(
+                      'showGrinderScale',
+                      !(settings.showGrinderScale ?? true)
+                    );
+                    settings.hapticFeedback && hapticsUtils.light();
+                  }}
+                  className="peer sr-only"
+                />
+                <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+              </label>
+            </div>
+          )}
+
           {/* 分割线（仅在有磨豆机时显示） */}
           {grinders.length > 0 && (
             <div className="my-6 h-px bg-neutral-100 dark:bg-neutral-800" />

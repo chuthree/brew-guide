@@ -162,6 +162,8 @@ export interface SettingsOptions {
     manualNote: boolean; // 手动添加笔记
     noteEdit: boolean; // 笔记编辑表单
   };
+  // 磨豆机刻度显示设置
+  showGrinderScale?: boolean; // 是否在冲煮页显示磨豆机刻度指示器
   // 每日提醒设置
   dailyReminder: boolean;
   dailyReminderTime: string;

@@ -24,6 +24,7 @@ import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
 import { MethodStepConfig } from '@/lib/types/method';
+import GrinderScaleIndicator from '@/components/ui/GrinderScaleIndicator';
 
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -780,6 +781,18 @@ const TabContent: React.FC<TabContentProps> = ({
             showStatusDots={settings.showStatusDots}
           />
         </div>
+
+        {/* 磨豆机刻度指示器 - 在随机按钮上方 */}
+        {(settings.showGrinderScale ?? true) && (
+          <div className="pointer-events-none fixed right-0 bottom-[120px] left-0 z-10 mx-auto mb-[var(--safe-area-bottom)] flex max-w-[500px] items-center justify-end p-6">
+            <div className="pointer-events-auto">
+              <GrinderScaleIndicator
+                visible={true}
+                hapticFeedback={settings.hapticFeedback}
+              />
+            </div>
+          </div>
+        )}
 
         {/* 随机选豆按钮 - 单独放置在搜索工具栏上方 */}
         <div className="pointer-events-none fixed right-0 bottom-[60px] left-0 z-10 mx-auto mb-[var(--safe-area-bottom)] flex max-w-[500px] items-center justify-end p-6">
