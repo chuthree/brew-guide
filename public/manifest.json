@@ -1,7 +1,7 @@
 {
   "name": "Brew Guide",
   "short_name": "Brew Guide",
-  "description": "一站式咖啡小工具，支持冲煮记录、豆仓管理与品鉴笔记功能。",
+  "description": "一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

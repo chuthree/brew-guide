@@ -34,25 +34,26 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL('https://coffee.chu3.top/'),
   title: 'Brew Guide - 咖啡小工具',
-  description:
-    '好用的咖啡小工具，包含详细冲煮步骤、参数配置和计时器。记录咖啡豆信息，轻松冲煮完美咖啡。',
+  description: '一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。',
   keywords: [
-    '手冲咖啡冲煮',
+    '手冲咖啡',
     '咖啡计时器',
     'V60',
-    '手冲咖啡',
     '手冲咖啡计时器',
     '手冲咖啡教程',
-    '手冲咖啡配比',
-    '手冲咖啡萃取',
-    'brewguide',
+    '咖啡冲煮',
+    '咖啡萃取',
     'Brew Guide',
     '咖啡小工具',
-    '咖啡豆记录',
-    '咖啡冲煮参数',
+    '咖啡豆管理',
+    '豆仓管理',
+    '咖啡品鉴',
+    '品鉴记录',
     '精品咖啡',
     '咖啡风味',
     '咖啡器材',
+    '意式咖啡',
+    '咖啡笔记',
   ],
   manifest: '/manifest.json',
   alternates: {
@@ -60,8 +61,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Brew Guide - 咖啡小工具',
-    description:
-      '好用的咖啡小工具，包含详细冲煮步骤、参数配置和计时器。记录咖啡豆信息，轻松冲煮完美咖啡。',
+    description: '一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。',
     url: 'https://coffee.chu3.top/',
     siteName: "Brew Guide - Chu3's Coffee Guide",
     locale: 'zh_CN',
@@ -78,8 +78,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Brew Guide - 咖啡小工具',
-    description:
-      '好用的咖啡小工具，包含详细冲煮步骤、参数配置和计时器。记录咖啡豆信息，轻松冲煮完美咖啡。',
+    description: '一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。',
     images: ['https://coffee.chu3.top/images/icons/app/icon-512x512.png'],
     creator: '@chu3',
   },
@@ -164,6 +163,36 @@ export default function RootLayout({
       }
     >
       <head>
+        {/* JSON-LD 结构化数据 */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'SoftwareApplication',
+              name: 'Brew Guide',
+              applicationCategory: 'LifestyleApplication',
+              operatingSystem: 'Web, iOS, Android',
+              description:
+                '一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。',
+              url: 'https://coffee.chu3.top/',
+              author: {
+                '@type': 'Person',
+                name: 'Chu3',
+              },
+              offers: {
+                '@type': 'Offer',
+                price: '0',
+                priceCurrency: 'CNY',
+              },
+              aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: '5',
+                ratingCount: '1',
+              },
+            }),
+          }}
+        />
         <meta name="application-name" content="Brew Guide" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
