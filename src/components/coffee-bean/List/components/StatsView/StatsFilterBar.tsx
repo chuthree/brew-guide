@@ -294,12 +294,12 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
               const nextIndex = (currentIndex + 1) % availableModes.length;
               onDateGroupingModeChange(availableModes[nextIndex]);
             }}
-            className="text-left"
+            className="text-left leading-none"
           >
-            <span className="text-xs font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600">
+            <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600">
               {DATE_GROUPING_LABELS[dateGroupingMode]}
             </span>
-            <span className="text-xs font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+            <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
               ，数据周期 {dateRangeLabel}
             </span>
           </button>
