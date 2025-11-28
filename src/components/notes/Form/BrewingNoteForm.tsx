@@ -42,6 +42,7 @@ import {
 import CoffeeBeanSelector from './CoffeeBeanSelector';
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData';
 import ImagePreview from '@/components/common/ImagePreview';
+import GrindSizeInput from '@/components/ui/GrindSizeInput';
 
 // 常量定义
 const ROAST_LEVELS = [
@@ -1109,6 +1110,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     };
 
     try {
+      // 同步磨豆机刻度到设置
+      if (methodParams.grindSize) {
+        const { syncGrinderToSettings } = await import('@/lib/grinder');
+        await syncGrinderToSettings(methodParams.grindSize);
+      }
+
       // 保存笔记
       onSave(noteData);
 
@@ -1445,19 +1452,21 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               {isEspresso ? (
                 <>
                   <div>
-                    <input
-                      id="grind-size"
-                      name="grindSize"
-                      type="text"
+                    <GrindSizeInput
                       value={methodParams.grindSize}
-                      onChange={e =>
+                      onChange={value =>
                         setMethodParams({
                           ...methodParams,
-                          grindSize: e.target.value,
+                          grindSize: value,
                         })
                       }
-                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
                       placeholder="中细"
+                      inputClassName="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      defaultSyncEnabled={
+                        id
+                          ? (settings?.grinderDefaultSync?.noteEdit ?? false)
+                          : (settings?.grinderDefaultSync?.manualNote ?? true)
+                      }
                     />
                   </div>
                   <div className="relative">
@@ -1511,19 +1520,21 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     </div>
                   </div>
                   <div>
-                    <input
-                      id="grind-size"
-                      name="grindSize"
-                      type="text"
+                    <GrindSizeInput
                       value={methodParams.grindSize}
-                      onChange={e =>
+                      onChange={value =>
                         setMethodParams({
                           ...methodParams,
-                          grindSize: e.target.value,
+                          grindSize: value,
                         })
                       }
-                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
                       placeholder="中细"
+                      inputClassName="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      defaultSyncEnabled={
+                        id
+                          ? (settings?.grinderDefaultSync?.noteEdit ?? false)
+                          : (settings?.grinderDefaultSync?.manualNote ?? true)
+                      }
                     />
                   </div>
                   <div className="relative">

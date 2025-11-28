@@ -155,6 +155,13 @@ export interface SettingsOptions {
     name: string;
     currentGrindSize?: string;
   }[];
+  // 磨豆机默认同步设置
+  grinderDefaultSync?: {
+    navigationBar: boolean; // 导航栏参数栏
+    methodForm: boolean; // 方案表单
+    manualNote: boolean; // 手动添加笔记
+    noteEdit: boolean; // 笔记编辑表单
+  };
   // 每日提醒设置
   dailyReminder: boolean;
   dailyReminderTime: string;
@@ -260,6 +267,13 @@ export const defaultSettings: SettingsOptions = {
   hiddenEquipments: [], // 默认没有隐藏的器具
   // 磨豆机默认值
   grinders: [], // 默认没有磨豆机
+  // 磨豆机默认同步设置
+  grinderDefaultSync: {
+    navigationBar: true, // 导航栏参数栏默认开启
+    methodForm: false, // 方案表单默认关闭
+    manualNote: true, // 手动添加笔记默认开启
+    noteEdit: false, // 笔记编辑表单默认关闭
+  },
   // 每日提醒默认值
   dailyReminder: false,
   dailyReminderTime: '20:00',
@@ -970,7 +984,7 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>
-          {/* <button
+          <button
             onClick={subSettingsHandlers.onOpenGrinderSettings}
             className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
@@ -979,7 +993,7 @@ const Settings: React.FC<SettingsProps> = ({
               <span>磨豆机设置（Beta）</span>
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button> */}
+          </button>
           <button
             onClick={subSettingsHandlers.onOpenRandomCoffeeBeanSettings}
             className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Method } from '@/lib/core/config';
+import GrindSizeInput from '@/components/ui/GrindSizeInput';
 
 interface MethodSelectorProps {
   selectedEquipment: string;
@@ -10,6 +11,8 @@ interface MethodSelectorProps {
   commonMethods: Method[];
   onMethodSelect: (methodId: string) => void;
   onParamsChange: (method: Method) => void;
+  /** 磨豆机同步默认开关状态 */
+  grinderDefaultSyncEnabled?: boolean;
 }
 
 // 工具函数
@@ -41,6 +44,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   commonMethods,
   onMethodSelect,
   onParamsChange,
+  grinderDefaultSyncEnabled = true,
 }) => {
   // 判断是否是意式器具
   const isEspresso =
@@ -243,15 +247,20 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                 )}
                 {isEspresso ? (
                   <>
-                    {renderParamInput(
-                      '研磨度',
-                      editingValues?.grindSize || method.params.grindSize,
-                      value => updateParam('grindSize', value),
-                      undefined,
-                      'w-16',
-                      undefined,
-                      false
-                    )}
+                    <div className="flex items-center">
+                      <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                        研磨度:
+                      </label>
+                      <GrindSizeInput
+                        value={
+                          editingValues?.grindSize || method.params.grindSize
+                        }
+                        onChange={value => updateParam('grindSize', value)}
+                        className="flex w-24 items-center justify-end"
+                        inputClassName="w-20 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                        defaultSyncEnabled={grinderDefaultSyncEnabled}
+                      />
+                    </div>
                     {renderParamInput(
                       '萃取时长',
                       editingValues?.time ||
@@ -278,15 +287,20 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       'w-10',
                       '1:'
                     )}
-                    {renderParamInput(
-                      '研磨度',
-                      editingValues?.grindSize || method.params.grindSize,
-                      value => updateParam('grindSize', value),
-                      undefined,
-                      'w-16',
-                      undefined,
-                      false
-                    )}
+                    <div className="flex items-center">
+                      <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                        研磨度:
+                      </label>
+                      <GrindSizeInput
+                        value={
+                          editingValues?.grindSize || method.params.grindSize
+                        }
+                        onChange={value => updateParam('grindSize', value)}
+                        className="flex w-24 items-center justify-end"
+                        inputClassName="w-20 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                        defaultSyncEnabled={grinderDefaultSyncEnabled}
+                      />
+                    </div>
                     {renderParamInput(
                       '水温',
                       editingValues?.temp ||

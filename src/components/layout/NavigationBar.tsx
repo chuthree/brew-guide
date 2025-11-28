@@ -12,6 +12,7 @@ import {
   getEquipmentName,
 } from '@/lib/brewing/parameters';
 import EquipmentBar from '@/components/equipment/EquipmentBar';
+import GrindSizeInput from '@/components/ui/GrindSizeInput';
 
 import { Equal, ArrowLeft, ChevronsUpDown, Upload } from 'lucide-react';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
@@ -1248,7 +1249,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     unit="g"
                                   />
                                   <span className="shrink-0">·</span>
-                                  <EditableParameter
+                                  <GrindSizeInput
                                     value={
                                       displayOverlay?.grindSize ||
                                       editableParams.grindSize
@@ -1256,7 +1257,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     onChange={v =>
                                       handleParamChange('grindSize', v)
                                     }
-                                    unit=""
+                                    className="inline-flex min-w-0"
+                                    inputClassName="w-auto bg-transparent text-center text-xs outline-hidden border-b border-dashed border-neutral-300 pb-0.5 dark:border-neutral-600"
+                                    autoWidth
+                                    defaultSyncEnabled={
+                                      settings.grinderDefaultSync
+                                        ?.navigationBar ?? true
+                                    }
                                   />
                                   <span className="shrink-0">·</span>
                                   <EditableParameter
@@ -1351,7 +1358,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 {parameterInfo.params?.grindSize && (
                                   <>
                                     <span className="shrink-0">·</span>
-                                    <EditableParameter
+                                    <GrindSizeInput
                                       value={
                                         displayOverlay?.grindSize ||
                                         editableParams.grindSize
@@ -1359,7 +1366,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                       onChange={v =>
                                         handleParamChange('grindSize', v)
                                       }
-                                      unit=""
+                                      className="inline-flex min-w-0"
+                                      inputClassName="w-auto bg-transparent text-center text-xs outline-hidden border-b border-dashed border-neutral-300 pb-0.5 dark:border-neutral-600"
+                                      autoWidth
+                                      defaultSyncEnabled={
+                                        settings.grinderDefaultSync
+                                          ?.navigationBar ?? true
+                                      }
                                     />
                                   </>
                                 )}

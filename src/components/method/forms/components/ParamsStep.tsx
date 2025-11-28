@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CustomEquipment } from '@/lib/core/config';
 import { isEspressoMachine } from '@/lib/utils/equipmentUtils';
+import GrindSizeInput from '@/components/ui/GrindSizeInput';
 
 // 动画变体
 const pageVariants = {
@@ -33,6 +34,8 @@ interface ParamsStepProps {
   onExtractionTimeChange?: (value: number) => void;
   onLiquidWeightChange?: (value: string) => void;
   customEquipment?: CustomEquipment;
+  /** 磨豆机同步默认开关状态 */
+  grinderDefaultSyncEnabled?: boolean;
 }
 
 const ParamsStep: React.FC<ParamsStepProps> = ({
@@ -44,6 +47,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
   onExtractionTimeChange,
   onLiquidWeightChange,
   customEquipment,
+  grinderDefaultSyncEnabled = false,
 }) => {
   // 检查是否是意式机
   const isEspresso = customEquipment
@@ -166,15 +170,14 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
           <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
             研磨度
           </label>
-          <input
-            type="text"
+          <GrindSizeInput
             value={params.grindSize || ''}
-            onChange={e => onGrindSizeChange(e.target.value)}
-            onFocus={e => e.target.select()}
+            onChange={onGrindSizeChange}
             placeholder={
               isEspresso ? '例如：特细、浓缩咖啡级' : '例如：中细、特细、中粗等'
             }
-            className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+            inputClassName="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+            defaultSyncEnabled={grinderDefaultSyncEnabled}
           />
         </div>
 

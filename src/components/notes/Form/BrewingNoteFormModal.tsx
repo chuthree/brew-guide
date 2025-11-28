@@ -418,6 +418,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
               commonMethods={commonMethodsOnly}
               onMethodSelect={setSelectedMethod}
               onParamsChange={_handleMethodParamsChange}
+              grinderDefaultSyncEnabled={
+                settings?.grinderDefaultSync?.manualNote ?? true
+              }
             />
           )}
         </div>

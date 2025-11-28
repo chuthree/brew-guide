@@ -21,6 +21,8 @@ interface CustomMethodFormModalProps {
   onSaveCustomMethod: (method: Method) => void;
   onCloseCustomForm: () => void;
   onCloseImportForm: () => void;
+  /** 磨豆机同步默认开关状态 */
+  grinderDefaultSyncEnabled?: boolean;
 }
 
 const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
@@ -32,6 +34,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
   onSaveCustomMethod,
   onCloseCustomForm,
   onCloseImportForm,
+  grinderDefaultSyncEnabled = false,
 }) => {
   const [_validationError, setValidationError] = useState<string | null>(null);
   const [_customEquipments, setCustomEquipments] = useState<CustomEquipment[]>(
@@ -199,6 +202,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
             customEquipment={currentCustomEquipment}
             currentStep={currentFormStep}
             onStepChange={setCurrentFormStep}
+            grinderDefaultSyncEnabled={grinderDefaultSyncEnabled}
           />
         </div>
       )}

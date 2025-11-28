@@ -112,6 +112,8 @@ interface CustomMethodFormProps {
   currentStep?: number;
   /** 步骤变化回调，通知父组件步骤变化 */
   onStepChange?: (step: number) => void;
+  /** 磨豆机同步默认开关状态 */
+  grinderDefaultSyncEnabled?: boolean;
 }
 
 /**
@@ -124,6 +126,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   onBack,
   currentStep: externalStep,
   onStepChange,
+  grinderDefaultSyncEnabled = false,
 }) => {
   // ===== 状态管理 =====
   // 内部步骤状态（当没有外部控制时使用）
@@ -688,7 +691,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // 创建一个方法的深拷贝，以便修改
     const finalMethod = JSON.parse(JSON.stringify(method)) as MethodWithStages;
 
@@ -752,6 +755,12 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     }
 
     try {
+      // 同步磨豆机刻度到设置
+      if (finalMethod.params.grindSize) {
+        const { syncGrinderToSettings } = await import('@/lib/grinder');
+        await syncGrinderToSettings(finalMethod.params.grindSize);
+      }
+
       // 保存方法
       onSave(finalMethod);
     } catch {
@@ -1308,6 +1317,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
                 : undefined
             }
             customEquipment={customEquipment}
+            grinderDefaultSyncEnabled={grinderDefaultSyncEnabled}
           />
         );
 
