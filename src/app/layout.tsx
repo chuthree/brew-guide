@@ -284,6 +284,52 @@ export default function RootLayout({
         )}
       </head>
       <body className="fixed inset-0 overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+        {/* SEO: 为不支持 JavaScript 的搜索引擎爬虫提供内容 */}
+        <noscript>
+          <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+            <h1>Brew Guide - 咖啡小工具</h1>
+            <p>一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。</p>
+
+            <h2>冲煮管理</h2>
+            <ul>
+              <li>支持多种器具：V60、聪明杯、蛋糕滤杯、折纸滤杯、意式咖啡机</li>
+              <li>丰富的冲煮方案库，预设和自定义方法</li>
+              <li>精确的计时器，按阶段引导冲煮</li>
+              <li>可视化注水过程</li>
+            </ul>
+
+            <h2>咖啡豆管理</h2>
+            <ul>
+              <li>详细库存记录（产地、处理法、品种、烘焙度等）</li>
+              <li>烘焙日期追踪和新鲜度监控</li>
+              <li>消耗跟踪和剩余量管理</li>
+              <li>智能搜索：支持名称、品牌、产区、风味、处理法、品种筛选</li>
+              <li>在线数据库支持，快速导入咖啡豆信息</li>
+            </ul>
+
+            <h2>冲煮笔记</h2>
+            <ul>
+              <li>详细记录评分、口感和笔记</li>
+              <li>关联器具、方法和豆子数据</li>
+              <li>趋势分析和偏好统计</li>
+            </ul>
+
+            <h2>其他特性</h2>
+            <ul>
+              <li>PWA 支持，可离线使用</li>
+              <li>深色/浅色模式</li>
+              <li>数据导入导出</li>
+              <li>多平台支持（Web、iOS、Android、桌面）</li>
+            </ul>
+
+            <p>
+              <a href="https://coffee.chu3.top/">访问 Brew Guide 网页版</a> |
+              <a href="https://www.123912.com/s/prGKTd-HpJWA">
+                下载 App（123 网盘）
+              </a>
+            </p>
+          </div>
+        </noscript>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
