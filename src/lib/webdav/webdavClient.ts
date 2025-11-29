@@ -48,8 +48,14 @@ export class WebDAVClient {
   /**
    * 检查 WebDAV 错误响应
    * 如坚果云返回: <d:error xmlns:d="DAV:"><s:exception>ObjectNotFound</s:exception>...</d:error>
+   * 注意：OperationNotAllowed 不算真正的错误，只是表示当前位置不支持某些操作
    */
   private checkWebDAVError(responseText: string): string | null {
+    // 🔧 OperationNotAllowed 不是真正的错误，忽略它
+    if (responseText.includes('OperationNotAllowed')) {
+      return null;
+    }
+
     // 检查是否包含 error 标签
     if (
       responseText.includes('<d:error') ||
@@ -120,36 +126,50 @@ export class WebDAVClient {
         return false;
       }
 
-      // 🔧 检查是否为 WebDAV 错误响应（如坚果云的 ObjectNotFound）
-      const webdavError = this.checkWebDAVError(responseText);
-      if (webdavError) {
-        console.log(`[WebDAV] WebDAV 错误: ${webdavError}`);
-        return false;
-      }
-
-      // 检查响应内容是否为有效的 WebDAV 成功响应（必须包含 multistatus）
+      // 🔧 优先检查响应内容是否为有效的 WebDAV 成功响应（必须包含 multistatus）
+      // 如果包含 multistatus，说明连接成功，即使响应中包含一些警告或错误信息也应该认为成功
       const isValidWebDAV = responseText.includes('multistatus');
 
-      // 检查是否有认证错误响应
-      const hasAuthError =
-        responseText.includes('401') ||
-        responseText.includes('403') ||
-        responseText.includes('Unauthorized') ||
-        responseText.includes('Forbidden');
+      // 🔧 坚果云等服务器在根目录返回 OperationNotAllowed 是正常的
+      // 这只是说明根目录不支持某些操作，但认证是成功的
+      const isOperationNotAllowed = responseText.includes('OperationNotAllowed');
 
-      if (hasAuthError) {
-        console.log(`[WebDAV] 错误: 响应包含认证错误`);
-        console.log(`[WebDAV] 响应内容片段: ${responseText.substring(0, 500)}`);
-        return false;
-      }
+      if (isValidWebDAV) {
+        console.log('[WebDAV] 服务器连接成功，响应为有效的 WebDAV 格式');
+      } else if (isOperationNotAllowed) {
+        // 坚果云根目录返回 OperationNotAllowed，但这不代表认证失败
+        // HTTP 200 + OperationNotAllowed = 认证成功，但当前位置不允许操作
+        console.log(
+          '[WebDAV] 根目录返回 OperationNotAllowed，认证成功但需要使用子目录'
+        );
+      } else {
+        // 只有在响应不是有效的 WebDAV 格式且不是 OperationNotAllowed 时，才检查错误
+        // 🔧 检查是否为 WebDAV 错误响应（如坚果云的 ObjectNotFound）
+        const webdavError = this.checkWebDAVError(responseText);
+        if (webdavError) {
+          console.log(`[WebDAV] WebDAV 错误: ${webdavError}`);
+          return false;
+        }
 
-      if (!isValidWebDAV) {
+        // 检查是否有认证错误响应
+        const hasAuthError =
+          responseText.includes('401') ||
+          responseText.includes('403') ||
+          responseText.includes('Unauthorized') ||
+          responseText.includes('Forbidden');
+
+        if (hasAuthError) {
+          console.log(`[WebDAV] 错误: 响应包含认证错误`);
+          console.log(
+            `[WebDAV] 响应内容片段: ${responseText.substring(0, 500)}`
+          );
+          return false;
+        }
+
         console.log(`[WebDAV] 错误: 响应不是有效的 WebDAV 格式`);
         console.log(`[WebDAV] 响应内容片段: ${responseText.substring(0, 500)}`);
         return false;
       }
-
-      console.log('[WebDAV] 服务器连接成功，响应为有效的 WebDAV 格式');
 
       // 然后检查并创建远程路径
       if (this.config.remotePath) {
@@ -499,9 +519,6 @@ export class WebDAVClient {
         return false;
       }
 
-      // 🔧 检查是否为 WebDAV 错误响应（如坚果云的 ObjectNotFound）
-      const webdavError = this.checkWebDAVError(responseText);
-
       // 验证是否为有效的 WebDAV 成功响应（必须包含 multistatus）
       const isValidWebDAV = responseText.includes('multistatus');
 
@@ -511,12 +528,13 @@ export class WebDAVClient {
         return true;
       }
 
-      // 目录不存在（WebDAV 错误或 404）
-      if (
-        webdavError ||
+      // 目录不存在（检查是否有 ObjectNotFound 等错误）
+      const hasNotFoundError =
         responseText.includes('ObjectNotFound') ||
-        responseText.includes('does not exist')
-      ) {
+        responseText.includes('does not exist') ||
+        checkResponse.status === 404;
+
+      if (hasNotFoundError) {
         console.log(`[WebDAV] 目录不存在，开始创建: ${path}`);
 
         // 递归创建父目录
