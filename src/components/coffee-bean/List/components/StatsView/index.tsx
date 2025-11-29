@@ -593,11 +593,16 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
   dateGroupingMode,
   onExplain,
 }) => {
+  // 先过滤掉生豆，只统计熟豆
+  const roastedBeans = useMemo(() => {
+    return beans.filter(bean => (bean.beanState || 'roasted') === 'roasted');
+  }, [beans]);
+
   // 根据日期范围过滤咖啡豆（基于添加时间）
   const filteredBeans = useMemo(() => {
     if (!selectedDate) {
       // 全部视图：不过滤
-      return beans;
+      return roastedBeans;
     }
 
     // 计算时间范围
@@ -619,12 +624,12 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
       endTime = new Date(year, month - 1, day + 1).getTime();
     }
 
-    // 过滤咖啡豆
-    return beans.filter(bean => {
+    // 过滤咖啡豆（基于日期范围）
+    return roastedBeans.filter(bean => {
       const beanTime = bean.timestamp;
       return beanTime >= startTime && beanTime < endTime;
     });
-  }, [beans, selectedDate, dateGroupingMode]);
+  }, [roastedBeans, selectedDate, dateGroupingMode]);
   // 计算产地统计
   const originStats = useMemo(() => {
     const originCount = new Map<string, number>();

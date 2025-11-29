@@ -270,6 +270,11 @@ export const useStatsData = (
 
   const isHistoricalView = selectedDate !== null;
 
+  // 过滤掉生豆，只统计熟豆
+  const roastedBeans = useMemo(() => {
+    return beans.filter(bean => (bean.beanState || 'roasted') === 'roasted');
+  }, [beans]);
+
   // ─────────────────────────────────────────────────────────────────────────
   // Layer 1: 数据加载
   // ─────────────────────────────────────────────────────────────────────────
@@ -380,7 +385,8 @@ export const useStatsData = (
 
     // 一次遍历
     for (const note of notes) {
-      if (!note.timestamp || note.source === 'capacity-adjustment') continue;
+      // 跳过容量调整记录和烘焙记录（烘焙记录属于生豆统计）
+      if (!note.timestamp || note.source === 'capacity-adjustment' || note.source === 'roasting') continue;
 
       const ts = note.timestamp;
 
@@ -389,7 +395,7 @@ export const useStatsData = (
         const amount = parseNoteConsumption(note);
         if (amount <= 0) continue;
 
-        const bean = findBeanForNote(note, beans);
+        const bean = findBeanForNote(note, roastedBeans);
         const cost = calculateNoteCost(amount, bean);
 
         totalConsumption += amount;
@@ -433,7 +439,7 @@ export const useStatsData = (
       if (!isHistoricalView && isToday(ts)) {
         const amount = parseNoteConsumption(note);
         if (amount > 0) {
-          const bean = findBeanForNote(note, beans);
+          const bean = findBeanForNote(note, roastedBeans);
           const cost = calculateNoteCost(amount, bean);
           todayConsumption += amount;
           todayCost += cost;
@@ -451,8 +457,8 @@ export const useStatsData = (
       }
     }
 
-    // 计算有价格信息的咖啡豆数量（统计所有咖啡豆，而非仅被使用的）
-    const beansWithPrice = beans.filter(
+    // 计算有价格信息的咖啡豆数量（统计熟豆，而非所有咖啡豆）
+    const beansWithPrice = roastedBeans.filter(
       b => b.price && parseNum(b.price) > 0
     ).length;
 
@@ -521,11 +527,11 @@ export const useStatsData = (
     };
 
     // 条件：全部视图（非历史视图）且没有有效笔记
-    if (!selectedDate && validNotesCount === 0 && beans.length > 0) {
+    if (!selectedDate && validNotesCount === 0 && roastedBeans.length > 0) {
       useFallbackStats = true;
       let earliestBeanTime = Infinity;
 
-      for (const bean of beans) {
+      for (const bean of roastedBeans) {
         const capacity = parseNum(bean.capacity);
         const remaining = parseNum(bean.remaining);
         const consumed = capacity - remaining;
@@ -591,7 +597,7 @@ export const useStatsData = (
       totalNotesCount: notes.length,
       useFallbackStats,
     };
-  }, [notes, beans, selectedDate, dateGroupingMode, isHistoricalView]);
+  }, [notes, roastedBeans, selectedDate, dateGroupingMode, isHistoricalView]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Layer 4: 组装最终数据
@@ -603,14 +609,14 @@ export const useStatsData = (
     const dailyConsumption = actualDays > 0 ? totalConsumption / actualDays : 0;
     const dailyCost = actualDays > 0 ? totalCost / actualDays : 0;
 
-    // 库存数据（仅全部视图）
+    // 库存数据（仅全部视图）- 只统计熟豆
     const inventory = isHistoricalView
       ? null
-      : calculateInventory(beans, dailyConsumption);
+      : calculateInventory(roastedBeans, dailyConsumption);
 
     const inventoryByType = isHistoricalView
       ? null
-      : calculateInventoryByType(beans, typeConsumption, actualDays);
+      : calculateInventoryByType(roastedBeans, typeConsumption, actualDays);
 
     return {
       overview: {
@@ -631,7 +637,7 @@ export const useStatsData = (
       inventory,
       inventoryByType,
     };
-  }, [computedData, beans, isHistoricalView]);
+  }, [computedData, roastedBeans, isHistoricalView]);
 
   const todayStats = useMemo(() => {
     if (isHistoricalView) return null;
@@ -647,11 +653,11 @@ export const useStatsData = (
       validNotes: computedData.validNotesCount,
       actualDays: computedData.actualDays,
       beansWithPrice: computedData.beansWithPrice,
-      beansTotal: beans.length, // 使用所有咖啡豆的总数，而非仅被使用的
+      beansTotal: roastedBeans.length, // 使用熟豆的总数
       todayNotes: computedData.todayNotesCount,
       useFallbackStats: computedData.useFallbackStats,
     };
-  }, [computedData, beans.length]);
+  }, [computedData, roastedBeans.length]);
 
   return {
     availableDates,
