@@ -791,16 +791,19 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
   const isContentMode = !!contentModeProps;
 
   // 筛选状态 - 内容模式使用外部状态，独立模式使用本地状态
-  const [localDateGroupingMode, setLocalDateGroupingMode] = useState<DateGroupingMode>(
-    globalCache.dateGroupingMode
-  );
+  const [localDateGroupingMode, setLocalDateGroupingMode] =
+    useState<DateGroupingMode>(globalCache.dateGroupingMode);
   const [localSelectedDate, setLocalSelectedDate] = useState<string | null>(
     globalCache.selectedDate
   );
 
   // 根据模式选择状态
-  const dateGroupingMode = isContentMode ? contentModeProps.dateGroupingMode : localDateGroupingMode;
-  const selectedDate = isContentMode ? contentModeProps.selectedDate : localSelectedDate;
+  const dateGroupingMode = isContentMode
+    ? contentModeProps.dateGroupingMode
+    : localDateGroupingMode;
+  const selectedDate = isContentMode
+    ? contentModeProps.selectedDate
+    : localSelectedDate;
 
   // 解释弹窗状态
   const [explanation, setExplanation] = useState<StatsExplanation | null>(null);
@@ -925,13 +928,13 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
   }, []);
 
   // 设置日期分组模式（根据模式选择）
-  const setDateGroupingMode = isContentMode 
-    ? contentModeProps.onDateGroupingModeChange 
+  const setDateGroupingMode = isContentMode
+    ? contentModeProps.onDateGroupingModeChange
     : setLocalDateGroupingMode;
-  
+
   // 设置选中日期（根据模式选择）
-  const setSelectedDate = isContentMode 
-    ? contentModeProps.onSelectedDateChange 
+  const setSelectedDate = isContentMode
+    ? contentModeProps.onSelectedDateChange
     : setLocalSelectedDate;
 
   // 处理分组模式变更
@@ -954,7 +957,11 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
 
   // 当只有一年数据时，自动从按年统计切换到按月统计（仅独立模式）
   useEffect(() => {
-    if (!isContentMode && dateGroupingMode === 'year' && availableDates.length <= 1) {
+    if (
+      !isContentMode &&
+      dateGroupingMode === 'year' &&
+      availableDates.length <= 1
+    ) {
       // 只有一年或没有数据，自动切换到按月统计
       handleDateGroupingModeChange('month');
     }
@@ -1098,7 +1105,7 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
         </div>
       )}
 
-      <div className={isContentMode ? "px-6" : "mt-5 px-6"}>
+      <div className={isContentMode ? 'px-6' : 'mt-5 px-6'}>
         <div className="flex flex-col items-center">
           <div className="w-full space-y-5">
             {/* 概览 */}
@@ -1203,10 +1210,15 @@ const CombinedStatsView: React.FC<CombinedStatsViewProps> = ({
 
   // 使用两个 hook 获取数据（根据当前类型决定使用哪个）
   const roastedStatsData = useStatsData(beans, dateGroupingMode, selectedDate);
-  const greenStatsData = useGreenBeanStatsData(beans, dateGroupingMode, selectedDate);
+  const greenStatsData = useGreenBeanStatsData(
+    beans,
+    dateGroupingMode,
+    selectedDate
+  );
 
   // 根据当前类型选择数据
-  const currentStatsData = beanStateType === 'roasted' ? roastedStatsData : greenStatsData;
+  const currentStatsData =
+    beanStateType === 'roasted' ? roastedStatsData : greenStatsData;
   const { availableDates, effectiveDateRange } = currentStatsData;
 
   // 生成日期范围标签
@@ -1243,32 +1255,38 @@ const CombinedStatsView: React.FC<CombinedStatsViewProps> = ({
   }, [effectiveDateRange]);
 
   // 处理分组模式变更
-  const handleDateGroupingModeChange = useCallback((mode: DateGroupingMode) => {
-    // 保存当前模式下的选择到记忆
-    globalCache.selectedDates[dateGroupingMode] = selectedDate;
-    saveSelectedDateByModePreference(dateGroupingMode, selectedDate);
+  const handleDateGroupingModeChange = useCallback(
+    (mode: DateGroupingMode) => {
+      // 保存当前模式下的选择到记忆
+      globalCache.selectedDates[dateGroupingMode] = selectedDate;
+      saveSelectedDateByModePreference(dateGroupingMode, selectedDate);
 
-    // 切换到新模式
-    setDateGroupingMode(mode);
-    globalCache.dateGroupingMode = mode;
-    saveDateGroupingModePreference(mode);
+      // 切换到新模式
+      setDateGroupingMode(mode);
+      globalCache.dateGroupingMode = mode;
+      saveDateGroupingModePreference(mode);
 
-    // 恢复新模式之前的选择（如果有的话）
-    const previousSelection = globalCache.selectedDates[mode];
-    setSelectedDate(previousSelection);
-    globalCache.selectedDate = previousSelection;
-    saveSelectedDatePreference(previousSelection);
-  }, [dateGroupingMode, selectedDate]);
+      // 恢复新模式之前的选择（如果有的话）
+      const previousSelection = globalCache.selectedDates[mode];
+      setSelectedDate(previousSelection);
+      globalCache.selectedDate = previousSelection;
+      saveSelectedDatePreference(previousSelection);
+    },
+    [dateGroupingMode, selectedDate]
+  );
 
   // 处理日期选择变更
-  const handleSelectedDateChange = useCallback((date: string | null) => {
-    setSelectedDate(date);
-    globalCache.selectedDate = date;
-    saveSelectedDatePreference(date);
-    // 同时保存到当前模式的记忆
-    globalCache.selectedDates[dateGroupingMode] = date;
-    saveSelectedDateByModePreference(dateGroupingMode, date);
-  }, [dateGroupingMode]);
+  const handleSelectedDateChange = useCallback(
+    (date: string | null) => {
+      setSelectedDate(date);
+      globalCache.selectedDate = date;
+      saveSelectedDatePreference(date);
+      // 同时保存到当前模式的记忆
+      globalCache.selectedDates[dateGroupingMode] = date;
+      saveSelectedDateByModePreference(dateGroupingMode, date);
+    },
+    [dateGroupingMode]
+  );
 
   // 当只有一年数据时，自动从按年统计切换到按月统计
   useEffect(() => {
@@ -1289,12 +1307,20 @@ const CombinedStatsView: React.FC<CombinedStatsViewProps> = ({
   }, [availableDates, selectedDate, handleSelectedDateChange]);
 
   // 内容模式 props
-  const contentModeProps = useMemo(() => ({
-    dateGroupingMode,
-    onDateGroupingModeChange: handleDateGroupingModeChange,
-    selectedDate,
-    onSelectedDateChange: handleSelectedDateChange,
-  }), [dateGroupingMode, handleDateGroupingModeChange, selectedDate, handleSelectedDateChange]);
+  const contentModeProps = useMemo(
+    () => ({
+      dateGroupingMode,
+      onDateGroupingModeChange: handleDateGroupingModeChange,
+      selectedDate,
+      onSelectedDateChange: handleSelectedDateChange,
+    }),
+    [
+      dateGroupingMode,
+      handleDateGroupingModeChange,
+      selectedDate,
+      handleSelectedDateChange,
+    ]
+  );
 
   return (
     <div className="coffee-bean-stats-container bg-neutral-50 dark:bg-neutral-900">
@@ -1333,7 +1359,11 @@ const CombinedStatsView: React.FC<CombinedStatsViewProps> = ({
 };
 
 // 主 StatsView 组件 - 包含生豆/熟豆切换
-const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, enableGreenBeanInventory = false }) => {
+const StatsView: React.FC<StatsViewProps> = ({
+  beans,
+  showEmptyBeans,
+  enableGreenBeanInventory = false,
+}) => {
   // 初始化时从缓存读取状态
   const [beanStateType, setBeanStateType] = useState<StatsBeanStateType>(() => {
     // 从 localStorage 读取
@@ -1366,10 +1396,20 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, enableGree
       handleBeanStateChange('roasted');
     } else if (hasGreenBeans && !hasRoastedBeans && beanStateType !== 'green') {
       handleBeanStateChange('green');
-    } else if (hasRoastedBeans && !hasGreenBeans && beanStateType !== 'roasted') {
+    } else if (
+      hasRoastedBeans &&
+      !hasGreenBeans &&
+      beanStateType !== 'roasted'
+    ) {
       handleBeanStateChange('roasted');
     }
-  }, [hasGreenBeans, hasRoastedBeans, beanStateType, handleBeanStateChange, enableGreenBeanInventory]);
+  }, [
+    hasGreenBeans,
+    hasRoastedBeans,
+    beanStateType,
+    handleBeanStateChange,
+    enableGreenBeanInventory,
+  ]);
 
   // 空状态
   if (beans.length === 0) {
@@ -1384,7 +1424,9 @@ const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, enableGree
 
   // 如果生豆库未启用或只有熟豆，直接显示熟豆统计（独立模式）
   if (!enableGreenBeanInventory || !hasGreenBeans) {
-    return <RoastedBeanStatsView beans={beans} showEmptyBeans={showEmptyBeans} />;
+    return (
+      <RoastedBeanStatsView beans={beans} showEmptyBeans={showEmptyBeans} />
+    );
   }
 
   // 如果只有生豆，直接显示生豆统计（独立模式）

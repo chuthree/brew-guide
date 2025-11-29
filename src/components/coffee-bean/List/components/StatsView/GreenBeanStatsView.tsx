@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StatsViewProps, DateGroupingMode, TypeInventoryStats, BeanType } from './types';
+import {
+  StatsViewProps,
+  DateGroupingMode,
+  TypeInventoryStats,
+  BeanType,
+} from './types';
 import { formatNumber } from './utils';
 import {
   globalCache,
@@ -11,7 +16,11 @@ import {
 } from '../../globalCache';
 import StatsFilterBar from './StatsFilterBar';
 import ConsumptionTrendChart from './ConsumptionTrendChart';
-import { useGreenBeanStatsData, GreenBeanStatsMetadata, RoastingDetailItem } from './useGreenBeanStatsData';
+import {
+  useGreenBeanStatsData,
+  GreenBeanStatsMetadata,
+  RoastingDetailItem,
+} from './useGreenBeanStatsData';
 import StatsExplainer, { StatsExplanation } from './StatsExplainer';
 import {
   extractUniqueOrigins,
@@ -49,7 +58,13 @@ const createGreenBeanExplanation = (
   metadata: GreenBeanStatsMetadata,
   isHistoricalView: boolean
 ): StatsExplanation | null => {
-  const { validRoastingRecords, actualDays, beansWithPrice, beansTotal, todayRoastingRecords } = metadata;
+  const {
+    validRoastingRecords,
+    actualDays,
+    beansWithPrice,
+    beansTotal,
+    todayRoastingRecords,
+  } = metadata;
 
   switch (key) {
     case 'totalRoasted':
@@ -71,7 +86,10 @@ const createGreenBeanExplanation = (
         formula: '∑ (烘焙量 × 生豆单价/容量)',
         dataSource: [
           { label: '有效烘焙记录', value: `${validRoastingRecords} 条` },
-          { label: '有价格的生豆', value: `${beansWithPrice}/${beansTotal} 款` },
+          {
+            label: '有价格的生豆',
+            value: `${beansWithPrice}/${beansTotal} 款`,
+          },
         ],
         note:
           beansWithPrice < beansTotal
@@ -107,7 +125,9 @@ const createGreenBeanExplanation = (
         title: '今日烘焙',
         value,
         formula: '∑ 今日烘焙记录的烘焙量',
-        dataSource: [{ label: '今日烘焙记录', value: `${todayRoastingRecords} 条` }],
+        dataSource: [
+          { label: '今日烘焙记录', value: `${todayRoastingRecords} 条` },
+        ],
       };
 
     case 'todayCost':
@@ -117,7 +137,10 @@ const createGreenBeanExplanation = (
         formula: '∑ 今日 (烘焙量 × 生豆单价/容量)',
         dataSource: [
           { label: '今日烘焙记录', value: `${todayRoastingRecords} 条` },
-          { label: '有价格的生豆', value: `${beansWithPrice}/${beansTotal} 款` },
+          {
+            label: '有价格的生豆',
+            value: `${beansWithPrice}/${beansTotal} 款`,
+          },
         ],
       };
 
@@ -167,7 +190,10 @@ const createGreenBeanExplanation = (
         formula: '(已烘焙量 ÷ 总购买量) × 100%',
         dataSource: [
           { label: '已烘焙量', value: fmtWeight(stats.overview.totalRoasted) },
-          { label: '总购买量', value: fmtWeight(stats.inventory?.totalCapacity || 0) },
+          {
+            label: '总购买量',
+            value: fmtWeight(stats.inventory?.totalCapacity || 0),
+          },
         ],
         note: '表示生豆已被烘焙使用的比例',
       };
@@ -224,7 +250,9 @@ const ClickableStatsBlock: React.FC<ClickableStatsBlockProps> = ({
 };
 
 // 库存预测表格组件
-const InventoryForecast: React.FC<{ data: TypeInventoryStats[] }> = ({ data }) => {
+const InventoryForecast: React.FC<{ data: TypeInventoryStats[] }> = ({
+  data,
+}) => {
   if (data.length === 0) return null;
 
   return (
@@ -253,7 +281,9 @@ const InventoryForecast: React.FC<{ data: TypeInventoryStats[] }> = ({ data }) =
 };
 
 // 烘焙明细组件
-const RoastingDetails: React.FC<{ data: RoastingDetailItem[] }> = ({ data }) => {
+const RoastingDetails: React.FC<{ data: RoastingDetailItem[] }> = ({
+  data,
+}) => {
   if (data.length === 0) return null;
 
   const formatTime = (timestamp: number) => {
@@ -292,7 +322,10 @@ interface BeanAttributeItemProps {
   count: number;
 }
 
-const BeanAttributeItem: React.FC<BeanAttributeItemProps> = ({ label, count }) => (
+const BeanAttributeItem: React.FC<BeanAttributeItemProps> = ({
+  label,
+  count,
+}) => (
   <div className="grid grid-cols-[1fr_auto] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
     <div className="truncate">{label}</div>
     <div className="text-right">{count}</div>
@@ -346,7 +379,9 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
         ref={contentRef}
         className="space-y-1.5 overflow-hidden transition-[max-height] duration-300 ease-out"
         style={{
-          maxHeight: isExpanded ? `${contentHeight}px` : `${listCollapsedHeight}px`,
+          maxHeight: isExpanded
+            ? `${contentHeight}px`
+            : `${listCollapsedHeight}px`,
         }}
       >
         {data.map(([label, count]) => (
@@ -366,7 +401,10 @@ interface BeanCountStatsProps {
   onExplain: (key: GreenBeanStatsKey, rect: DOMRect) => void;
 }
 
-const BeanCountStats: React.FC<BeanCountStatsProps> = ({ beans, onExplain }) => {
+const BeanCountStats: React.FC<BeanCountStatsProps> = ({
+  beans,
+  onExplain,
+}) => {
   const countByType = useMemo(() => {
     const counts = {
       espresso: { total: 0, remaining: 0 },
@@ -379,7 +417,9 @@ const BeanCountStats: React.FC<BeanCountStatsProps> = ({ beans, onExplain }) => 
         const type = bean.beanType as keyof typeof counts;
         counts[type].total++;
 
-        const remaining = parseFloat(bean.remaining?.toString().replace(/[^\d.]/g, '') || '0');
+        const remaining = parseFloat(
+          bean.remaining?.toString().replace(/[^\d.]/g, '') || '0'
+        );
         if (remaining > 0) {
           counts[type].remaining++;
         }
@@ -389,9 +429,14 @@ const BeanCountStats: React.FC<BeanCountStatsProps> = ({ beans, onExplain }) => 
     return counts;
   }, [beans]);
 
-  const total = countByType.espresso.total + countByType.filter.total + countByType.omni.total;
+  const total =
+    countByType.espresso.total +
+    countByType.filter.total +
+    countByType.omni.total;
   const totalRemaining =
-    countByType.espresso.remaining + countByType.filter.remaining + countByType.omni.remaining;
+    countByType.espresso.remaining +
+    countByType.filter.remaining +
+    countByType.omni.remaining;
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -557,13 +602,21 @@ interface StatsCardProps {
   onExplain: (key: GreenBeanStatsKey, rect: DOMRect) => void;
 }
 
-const StatsCard: React.FC<StatsCardProps> = ({ title, chart, stats, extra, onExplain }) => {
+const StatsCard: React.FC<StatsCardProps> = ({
+  title,
+  chart,
+  stats,
+  extra,
+  onExplain,
+}) => {
   if (stats.length === 0 && !chart && !extra) return null;
 
   return (
     <div className="w-full">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{title}</h3>
+        <h3 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
+          {title}
+        </h3>
       </div>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
@@ -616,16 +669,19 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
   const isContentMode = !!contentModeProps;
 
   // 筛选状态 - 内容模式使用外部状态，独立模式使用本地状态
-  const [localDateGroupingMode, setLocalDateGroupingMode] = useState<DateGroupingMode>(
-    globalCache.dateGroupingMode
-  );
+  const [localDateGroupingMode, setLocalDateGroupingMode] =
+    useState<DateGroupingMode>(globalCache.dateGroupingMode);
   const [localSelectedDate, setLocalSelectedDate] = useState<string | null>(
     globalCache.selectedDate
   );
 
   // 根据模式选择状态
-  const dateGroupingMode = isContentMode ? contentModeProps.dateGroupingMode : localDateGroupingMode;
-  const selectedDate = isContentMode ? contentModeProps.selectedDate : localSelectedDate;
+  const dateGroupingMode = isContentMode
+    ? contentModeProps.dateGroupingMode
+    : localDateGroupingMode;
+  const selectedDate = isContentMode
+    ? contentModeProps.selectedDate
+    : localSelectedDate;
 
   // 解释弹窗状态
   const [explanation, setExplanation] = useState<StatsExplanation | null>(null);
@@ -727,7 +783,13 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
           break;
       }
 
-      const exp = createGreenBeanExplanation(key, value, stats, metadata, isHistoricalView);
+      const exp = createGreenBeanExplanation(
+        key,
+        value,
+        stats,
+        metadata,
+        isHistoricalView
+      );
       setExplanation(exp);
       setAnchorRect(rect);
       setActiveKey(key);
@@ -742,13 +804,13 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
   }, []);
 
   // 设置日期分组模式（根据模式选择）
-  const setDateGroupingMode = isContentMode 
-    ? contentModeProps.onDateGroupingModeChange 
+  const setDateGroupingMode = isContentMode
+    ? contentModeProps.onDateGroupingModeChange
     : setLocalDateGroupingMode;
-  
+
   // 设置选中日期（根据模式选择）
-  const setSelectedDate = isContentMode 
-    ? contentModeProps.onSelectedDateChange 
+  const setSelectedDate = isContentMode
+    ? contentModeProps.onSelectedDateChange
     : setLocalSelectedDate;
 
   // 处理分组模式变更
@@ -768,7 +830,11 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
 
   // 自动切换模式（仅独立模式）
   useEffect(() => {
-    if (!isContentMode && dateGroupingMode === 'year' && availableDates.length <= 1) {
+    if (
+      !isContentMode &&
+      dateGroupingMode === 'year' &&
+      availableDates.length <= 1
+    ) {
       handleDateGroupingModeChange('month');
     }
   }, [dateGroupingMode, availableDates.length, isContentMode]);
@@ -906,7 +972,7 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
         </div>
       )}
 
-      <div className={isContentMode ? "px-6" : "mt-5 px-6"}>
+      <div className={isContentMode ? 'px-6' : 'mt-5 px-6'}>
         <div className="flex flex-col items-center">
           <div className="w-full space-y-5">
             {/* 概览 */}
@@ -928,7 +994,11 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
 
             {/* 今日 */}
             {todayStatsDisplay.length > 0 && (
-              <StatsCard title="今日" stats={todayStatsDisplay} onExplain={handleExplain} />
+              <StatsCard
+                title="今日"
+                stats={todayStatsDisplay}
+                onExplain={handleExplain}
+              />
             )}
 
             {/* 库存预测 */}

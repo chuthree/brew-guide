@@ -43,7 +43,10 @@ export interface GreenBeanStatsData {
     conversionRate: number; // 转化率（已烘焙/总购买）
   };
   // 按类型分类的烘焙统计
-  byType: Record<BeanType, { roasted: number; cost: number; percentage: number }>;
+  byType: Record<
+    BeanType,
+    { roasted: number; cost: number; percentage: number }
+  >;
   // 库存数据（仅实时视图有效）
   inventory: InventoryStats | null;
   // 按类型分类的库存预测（仅实时视图有效）
@@ -179,7 +182,8 @@ const calculateInventoryByType = (
         label: BEAN_TYPE_LABELS[type],
         remaining,
         dailyConsumption: dailyRoasted,
-        estimatedDays: dailyRoasted > 0 ? Math.ceil(remaining / dailyRoasted) : 0,
+        estimatedDays:
+          dailyRoasted > 0 ? Math.ceil(remaining / dailyRoasted) : 0,
       };
     })
     .filter(item => item.remaining > 0 || item.dailyConsumption > 0);
@@ -232,13 +236,22 @@ export const useGreenBeanStatsData = (
       if (e.detail?.key === 'brewingNotes') loadNotes();
     };
 
-    window.addEventListener('customStorageChange', handleChange as EventListener);
+    window.addEventListener(
+      'customStorageChange',
+      handleChange as EventListener
+    );
     window.addEventListener('storage:changed', handleChange as EventListener);
     window.addEventListener('brewingNotesUpdated', loadNotes);
 
     return () => {
-      window.removeEventListener('customStorageChange', handleChange as EventListener);
-      window.removeEventListener('storage:changed', handleChange as EventListener);
+      window.removeEventListener(
+        'customStorageChange',
+        handleChange as EventListener
+      );
+      window.removeEventListener(
+        'storage:changed',
+        handleChange as EventListener
+      );
       window.removeEventListener('brewingNotesUpdated', loadNotes);
     };
   }, []);
@@ -316,7 +329,9 @@ export const useGreenBeanStatsData = (
       if (roastedAmount <= 0) continue;
 
       // 查找对应的生豆
-      const greenBean = greenBeans.find(b => b.id === roastingRecord.greenBeanId);
+      const greenBean = greenBeans.find(
+        b => b.id === roastingRecord.greenBeanId
+      );
 
       // 计算花费（基于生豆单价）
       let cost = 0;
@@ -405,7 +420,10 @@ export const useGreenBeanStatsData = (
     // 生成趋势数据数组
     let trendData: TrendDataPoint[] = [];
     if (needTrend && selectedDate) {
-      const { startTime: tStart, endTime: tEnd } = getTimeRange(selectedDate, dateGroupingMode);
+      const { startTime: tStart, endTime: tEnd } = getTimeRange(
+        selectedDate,
+        dateGroupingMode
+      );
       const current = new Date(tStart);
       const endDate = new Date(tEnd - 1);
 
@@ -472,13 +490,20 @@ export const useGreenBeanStatsData = (
     }
 
     // 计算总购买量（用于转化率）
-    const totalPurchased = greenBeans.reduce((sum, bean) => sum + parseNum(bean.capacity), 0);
+    const totalPurchased = greenBeans.reduce(
+      (sum, bean) => sum + parseNum(bean.capacity),
+      0
+    );
 
     const finalRoasted = useFallbackStats ? fallbackRoasted : totalRoasted;
     const finalCost = useFallbackStats ? fallbackCost : totalCost;
     const finalActualDays = useFallbackStats ? fallbackActualDays : actualDays;
-    const finalDateRange = useFallbackStats ? fallbackDateRange : effectiveDateRange;
-    const finalTypeRoasted = useFallbackStats ? fallbackTypeRoasted : typeRoasted;
+    const finalDateRange = useFallbackStats
+      ? fallbackDateRange
+      : effectiveDateRange;
+    const finalTypeRoasted = useFallbackStats
+      ? fallbackTypeRoasted
+      : typeRoasted;
 
     return {
       totalRoasted: finalRoasted,
@@ -505,11 +530,13 @@ export const useGreenBeanStatsData = (
   // Layer 4: 组装最终数据
   // ─────────────────────────────────────────────────────────────────────────
   const stats = useMemo((): GreenBeanStatsData => {
-    const { totalRoasted, totalCost, actualDays, typeRoasted, totalPurchased } = computedData;
+    const { totalRoasted, totalCost, actualDays, typeRoasted, totalPurchased } =
+      computedData;
 
     const dailyRoasted = actualDays > 0 ? totalRoasted / actualDays : 0;
     const dailyCost = actualDays > 0 ? totalCost / actualDays : 0;
-    const conversionRate = totalPurchased > 0 ? (totalRoasted / totalPurchased) * 100 : 0;
+    const conversionRate =
+      totalPurchased > 0 ? (totalRoasted / totalPurchased) * 100 : 0;
 
     // 库存数据（仅全部视图）
     const inventory = isHistoricalView
@@ -521,7 +548,10 @@ export const useGreenBeanStatsData = (
       : calculateInventoryByType(greenBeans, typeRoasted, actualDays);
 
     // 计算类型占比
-    const totalTypeRoasted = Object.values(typeRoasted).reduce((a, b) => a + b, 0);
+    const totalTypeRoasted = Object.values(typeRoasted).reduce(
+      (a, b) => a + b,
+      0
+    );
 
     return {
       overview: {
@@ -535,17 +565,26 @@ export const useGreenBeanStatsData = (
         espresso: {
           roasted: typeRoasted.espresso,
           cost: 0,
-          percentage: totalTypeRoasted > 0 ? (typeRoasted.espresso / totalTypeRoasted) * 100 : 0,
+          percentage:
+            totalTypeRoasted > 0
+              ? (typeRoasted.espresso / totalTypeRoasted) * 100
+              : 0,
         },
         filter: {
           roasted: typeRoasted.filter,
           cost: 0,
-          percentage: totalTypeRoasted > 0 ? (typeRoasted.filter / totalTypeRoasted) * 100 : 0,
+          percentage:
+            totalTypeRoasted > 0
+              ? (typeRoasted.filter / totalTypeRoasted) * 100
+              : 0,
         },
         omni: {
           roasted: typeRoasted.omni,
           cost: 0,
-          percentage: totalTypeRoasted > 0 ? (typeRoasted.omni / totalTypeRoasted) * 100 : 0,
+          percentage:
+            totalTypeRoasted > 0
+              ? (typeRoasted.omni / totalTypeRoasted) * 100
+              : 0,
         },
       },
       inventory,

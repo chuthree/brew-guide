@@ -1908,7 +1908,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         {/* 添加统计视图 */}
         {viewMode === VIEW_OPTIONS.STATS && (
           <div className="scroll-with-bottom-bar h-full w-full overflow-y-auto">
-            <StatsView beans={beans} showEmptyBeans={showEmptyBeans} enableGreenBeanInventory={enableGreenBeanInventory} />
+            <StatsView
+              beans={beans}
+              showEmptyBeans={showEmptyBeans}
+              enableGreenBeanInventory={enableGreenBeanInventory}
+            />
           </div>
         )}
         {/* 添加榜单和博主榜单视图 */}
