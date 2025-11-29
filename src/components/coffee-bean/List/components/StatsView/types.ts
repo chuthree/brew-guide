@@ -3,6 +3,7 @@ import { ExtendedCoffeeBean } from '../../types';
 export interface StatsViewProps {
   beans: ExtendedCoffeeBean[];
   showEmptyBeans: boolean;
+  enableGreenBeanInventory?: boolean; // 是否启用生豆库功能
 }
 
 // 时间分组模式

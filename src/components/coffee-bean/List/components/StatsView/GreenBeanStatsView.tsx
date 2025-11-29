@@ -1,142 +1,94 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import {
-  StatsViewProps,
-  DateGroupingMode,
-  TypeInventoryStats,
-  BrewingDetailItem,
-} from './types';
+import { StatsViewProps, DateGroupingMode, TypeInventoryStats, BeanType } from './types';
 import { formatNumber } from './utils';
 import {
   globalCache,
   saveDateGroupingModePreference,
   saveSelectedDatePreference,
   saveSelectedDateByModePreference,
-  saveStatsBeanStatePreference,
-  getStatsBeanStatePreference,
-  StatsBeanStateType,
 } from '../../globalCache';
 import StatsFilterBar from './StatsFilterBar';
 import ConsumptionTrendChart from './ConsumptionTrendChart';
-import { useStatsData, StatsMetadata } from './useStatsData';
-import { useGreenBeanStatsData } from './useGreenBeanStatsData';
+import { useGreenBeanStatsData, GreenBeanStatsMetadata, RoastingDetailItem } from './useGreenBeanStatsData';
 import StatsExplainer, { StatsExplanation } from './StatsExplainer';
 import {
   extractUniqueOrigins,
   extractUniqueVarieties,
   getBeanProcesses,
-  getBeanFlavors,
 } from '@/lib/utils/beanVarietyUtils';
 import { ExtendedCoffeeBean } from '../../types';
-import GreenBeanStatsView from './GreenBeanStatsView';
 
 // 格式化辅助函数
 const fmtWeight = (v: number) => (v > 0 ? `${formatNumber(v)}g` : '-');
 const fmtCost = (v: number) => (v > 0 ? `¥${formatNumber(v)}` : '-');
 const fmtDays = (v: number) => (v > 0 ? `${v}天` : '-');
+const fmtPercent = (v: number) => (v > 0 ? `${formatNumber(v)}%` : '-');
 
-// 统计项的唯一标识
-type StatsKey =
-  | 'totalConsumption'
+// 生豆统计项的唯一标识
+type GreenBeanStatsKey =
+  | 'totalRoasted'
   | 'totalCost'
-  | 'dailyConsumption'
+  | 'dailyRoasted'
   | 'dailyCost'
-  | 'todayConsumption'
+  | 'todayRoasted'
   | 'todayCost'
   | 'remaining'
   | 'remainingValue'
   | 'totalCapacity'
   | 'totalValue'
+  | 'conversionRate'
   | 'beanCount';
 
-// 生成解释内容的工厂函数
-const createExplanation = (
-  key: StatsKey,
+// 生成解释内容
+const createGreenBeanExplanation = (
+  key: GreenBeanStatsKey,
   value: string,
-  stats: ReturnType<typeof useStatsData>['stats'],
-  metadata: StatsMetadata,
-  isHistoricalView: boolean,
-  dateRangeLabel?: string
+  stats: ReturnType<typeof useGreenBeanStatsData>['stats'],
+  metadata: GreenBeanStatsMetadata,
+  isHistoricalView: boolean
 ): StatsExplanation | null => {
-  const {
-    validNotes,
-    actualDays,
-    beansWithPrice,
-    beansTotal,
-    todayNotes,
-    useFallbackStats,
-  } = metadata;
-
-  // 备选统计模式下的特殊说明
-  const fallbackNote = useFallbackStats
-    ? '基于咖啡豆剩余量变化估算，建议使用冲煮记录获得更精准数据'
-    : undefined;
+  const { validRoastingRecords, actualDays, beansWithPrice, beansTotal, todayRoastingRecords } = metadata;
 
   switch (key) {
-    case 'totalConsumption':
+    case 'totalRoasted':
       return {
-        title: isHistoricalView ? '消耗' : '总消耗',
+        title: isHistoricalView ? '烘焙量' : '总烘焙量',
         value,
-        formula: useFallbackStats
-          ? '∑ (购买容量 - 剩余量)'
-          : '∑ 每条冲煮记录的咖啡用量',
-        dataSource: useFallbackStats
-          ? [
-              { label: '咖啡豆数量', value: `${beansTotal} 款` },
-              { label: '统计天数', value: `${actualDays} 天` },
-            ]
-          : [
-              { label: '有效冲煮记录', value: `${validNotes} 条` },
-              { label: '统计天数', value: `${actualDays} 天` },
-            ],
-        note:
-          fallbackNote ||
-          (validNotes < 5 ? '记录较少，数据仅供参考' : undefined),
+        formula: '∑ 每条烘焙记录的烘焙量',
+        dataSource: [
+          { label: '有效烘焙记录', value: `${validRoastingRecords} 条` },
+          { label: '统计天数', value: `${actualDays} 天` },
+        ],
+        note: validRoastingRecords < 3 ? '记录较少，数据仅供参考' : undefined,
       };
 
     case 'totalCost':
       return {
         title: isHistoricalView ? '花费' : '总花费',
         value,
-        formula: useFallbackStats
-          ? '∑ (消耗量 × 单价/容量)'
-          : '∑ (用量 × 单价/容量)',
-        dataSource: useFallbackStats
-          ? [
-              { label: '咖啡豆数量', value: `${beansTotal} 款` },
-              {
-                label: '有价格的咖啡豆',
-                value: `${beansWithPrice}/${beansTotal} 款`,
-              },
-            ]
-          : [
-              { label: '有效冲煮记录', value: `${validNotes} 条` },
-              {
-                label: '有价格的咖啡豆',
-                value: `${beansWithPrice}/${beansTotal} 款`,
-              },
-            ],
-        note:
-          fallbackNote ||
-          (beansWithPrice < beansTotal
-            ? `${beansTotal - beansWithPrice} 款咖啡豆缺少价格信息，未计入花费`
-            : undefined),
-      };
-
-    case 'dailyConsumption':
-      return {
-        title: '日均消耗',
-        value,
-        formula: useFallbackStats ? '总消耗 ÷ 统计天数' : '总消耗 ÷ 统计天数',
+        formula: '∑ (烘焙量 × 生豆单价/容量)',
         dataSource: [
-          { label: '总消耗', value: fmtWeight(stats.overview.consumption) },
-          { label: '统计天数', value: `${actualDays} 天` },
+          { label: '有效烘焙记录', value: `${validRoastingRecords} 条` },
+          { label: '有价格的生豆', value: `${beansWithPrice}/${beansTotal} 款` },
         ],
         note:
-          fallbackNote ||
-          (actualDays < 7 ? '统计周期较短，日均值可能波动较大' : undefined),
+          beansWithPrice < beansTotal
+            ? `${beansTotal - beansWithPrice} 款生豆缺少价格信息，未计入花费`
+            : undefined,
+      };
+
+    case 'dailyRoasted':
+      return {
+        title: '日均烘焙',
+        value,
+        formula: '总烘焙量 ÷ 统计天数',
+        dataSource: [
+          { label: '总烘焙量', value: fmtWeight(stats.overview.totalRoasted) },
+          { label: '统计天数', value: `${actualDays} 天` },
+        ],
+        note: actualDays < 7 ? '统计周期较短，日均值可能波动较大' : undefined,
       };
 
     case 'dailyCost':
@@ -145,35 +97,27 @@ const createExplanation = (
         value,
         formula: '总花费 ÷ 统计天数',
         dataSource: [
-          { label: '总花费', value: fmtCost(stats.overview.cost) },
+          { label: '总花费', value: fmtCost(stats.overview.totalCost) },
           { label: '统计天数', value: `${actualDays} 天` },
         ],
-        note:
-          fallbackNote ||
-          (beansWithPrice < beansTotal
-            ? '部分咖啡豆缺少价格，实际花费可能更高'
-            : undefined),
       };
 
-    case 'todayConsumption':
+    case 'todayRoasted':
       return {
-        title: '今日消耗',
+        title: '今日烘焙',
         value,
-        formula: '∑ 今日冲煮记录的咖啡用量',
-        dataSource: [{ label: '今日冲煮记录', value: `${todayNotes} 条` }],
+        formula: '∑ 今日烘焙记录的烘焙量',
+        dataSource: [{ label: '今日烘焙记录', value: `${todayRoastingRecords} 条` }],
       };
 
     case 'todayCost':
       return {
         title: '今日花费',
         value,
-        formula: '∑ 今日 (用量 × 单价/容量)',
+        formula: '∑ 今日 (烘焙量 × 生豆单价/容量)',
         dataSource: [
-          { label: '今日冲煮记录', value: `${todayNotes} 条` },
-          {
-            label: '有价格的咖啡豆',
-            value: `${beansWithPrice}/${beansTotal} 款`,
-          },
+          { label: '今日烘焙记录', value: `${todayRoastingRecords} 条` },
+          { label: '有价格的生豆', value: `${beansWithPrice}/${beansTotal} 款` },
         ],
       };
 
@@ -181,8 +125,8 @@ const createExplanation = (
       return {
         title: '剩余总量',
         value,
-        formula: '∑ 每款咖啡豆的剩余量',
-        dataSource: [{ label: '咖啡豆数量', value: `${beansTotal} 款` }],
+        formula: '∑ 每款生豆的剩余量',
+        dataSource: [{ label: '生豆数量', value: `${beansTotal} 款` }],
       };
 
     case 'remainingValue':
@@ -191,51 +135,52 @@ const createExplanation = (
         value,
         formula: '∑ (剩余量 × 单价/容量)',
         dataSource: [
-          { label: '咖啡豆数量', value: `${beansTotal} 款` },
+          { label: '生豆数量', value: `${beansTotal} 款` },
           { label: '有价格信息', value: `${beansWithPrice} 款` },
         ],
-        note:
-          beansWithPrice < beansTotal
-            ? '部分咖啡豆缺少价格信息，未计入价值'
-            : undefined,
       };
 
     case 'totalCapacity':
       return {
         title: '库存总量',
         value,
-        formula: '∑ 每款咖啡豆的购买容量',
-        dataSource: [{ label: '咖啡豆数量', value: `${beansTotal} 款` }],
-        note: '所有咖啡豆购买时的容量总和',
+        formula: '∑ 每款生豆的购买容量',
+        dataSource: [{ label: '生豆数量', value: `${beansTotal} 款` }],
+        note: '所有生豆购买时的容量总和',
       };
 
     case 'totalValue':
       return {
         title: '总价值',
         value,
-        formula: '∑ 每款咖啡豆的购买价格',
+        formula: '∑ 每款生豆的购买价格',
         dataSource: [
-          { label: '咖啡豆数量', value: `${beansTotal} 款` },
+          { label: '生豆数量', value: `${beansTotal} 款` },
           { label: '有价格信息', value: `${beansWithPrice} 款` },
         ],
-        note:
-          beansWithPrice < beansTotal
-            ? '部分咖啡豆缺少价格信息，未计入总价值'
-            : '所有咖啡豆购买时的价格总和',
+      };
+
+    case 'conversionRate':
+      return {
+        title: '烘焙转化率',
+        value,
+        formula: '(已烘焙量 ÷ 总购买量) × 100%',
+        dataSource: [
+          { label: '已烘焙量', value: fmtWeight(stats.overview.totalRoasted) },
+          { label: '总购买量', value: fmtWeight(stats.inventory?.totalCapacity || 0) },
+        ],
+        note: '表示生豆已被烘焙使用的比例',
       };
 
     case 'beanCount':
       return {
-        title: '咖啡豆数量',
+        title: '生豆数量',
         value,
         formula: '未用完 / 总数',
         dataSource: [
-          { label: '总数', value: '拥有的咖啡豆总数量' },
-          { label: '未用完', value: '剩余量 > 0 的咖啡豆数量' },
+          { label: '总数', value: '拥有的生豆总数量' },
+          { label: '未用完', value: '剩余量 > 0 的生豆数量' },
         ],
-        note: dateRangeLabel
-          ? `基于咖啡豆添加日期的筛选范围进行统计`
-          : '基于咖啡豆添加日期的筛选范围进行统计',
       };
 
     default:
@@ -247,8 +192,8 @@ const createExplanation = (
 interface ClickableStatsBlockProps {
   title: string;
   value: string;
-  statsKey: StatsKey;
-  onExplain: (key: StatsKey, rect: DOMRect) => void;
+  statsKey: GreenBeanStatsKey;
+  onExplain: (key: GreenBeanStatsKey, rect: DOMRect) => void;
 }
 
 const ClickableStatsBlock: React.FC<ClickableStatsBlockProps> = ({
@@ -279,21 +224,17 @@ const ClickableStatsBlock: React.FC<ClickableStatsBlockProps> = ({
 };
 
 // 库存预测表格组件
-const InventoryForecast: React.FC<{ data: TypeInventoryStats[] }> = ({
-  data,
-}) => {
+const InventoryForecast: React.FC<{ data: TypeInventoryStats[] }> = ({ data }) => {
   if (data.length === 0) return null;
 
   return (
     <div className="rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
-      {/* 表头 */}
       <div className="mb-2 grid grid-cols-4 gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         <div>类型</div>
         <div className="text-right">剩余</div>
-        <div className="text-right">日均</div>
+        <div className="text-right">日均烘焙</div>
         <div className="text-right">预计用完</div>
       </div>
-      {/* 数据行 */}
       <div className="space-y-1.5">
         {data.map(item => (
           <div
@@ -311,11 +252,10 @@ const InventoryForecast: React.FC<{ data: TypeInventoryStats[] }> = ({
   );
 };
 
-// 冲煮明细组件（单日视图使用）
-const BrewingDetails: React.FC<{ data: BrewingDetailItem[] }> = ({ data }) => {
+// 烘焙明细组件
+const RoastingDetails: React.FC<{ data: RoastingDetailItem[] }> = ({ data }) => {
   if (data.length === 0) return null;
 
-  // 格式化时间为 HH:mm
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
     const hours = date.getHours().toString().padStart(2, '0');
@@ -325,23 +265,19 @@ const BrewingDetails: React.FC<{ data: BrewingDetailItem[] }> = ({ data }) => {
 
   return (
     <div className="rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
-      {/* 表头 */}
-      <div className="mb-2 grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-        <div>咖啡豆</div>
-        <div className="text-right">用量</div>
-        <div className="text-right">花费</div>
+      <div className="mb-2 grid grid-cols-[2fr_1fr_1fr] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+        <div>生豆</div>
+        <div className="text-right">烘焙量</div>
         <div className="text-right">时间</div>
       </div>
-      {/* 数据行 */}
       <div className="space-y-1.5">
         {data.map(item => (
           <div
             key={item.id}
-            className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100"
+            className="grid grid-cols-[2fr_1fr_1fr] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100"
           >
-            <div className="truncate">{item.beanName}</div>
-            <div className="text-right">{fmtWeight(item.amount)}</div>
-            <div className="text-right">{fmtCost(item.cost)}</div>
+            <div className="truncate">{item.greenBeanName}</div>
+            <div className="text-right">{fmtWeight(item.roastedAmount)}</div>
             <div className="text-right">{formatTime(item.timestamp)}</div>
           </div>
         ))}
@@ -350,44 +286,37 @@ const BrewingDetails: React.FC<{ data: BrewingDetailItem[] }> = ({ data }) => {
   );
 };
 
-// 咖啡豆属性统计项组件
+// 属性统计项组件
 interface BeanAttributeItemProps {
   label: string;
   count: number;
 }
 
-const BeanAttributeItem: React.FC<BeanAttributeItemProps> = ({
-  label,
-  count,
-}) => (
+const BeanAttributeItem: React.FC<BeanAttributeItemProps> = ({ label, count }) => (
   <div className="grid grid-cols-[1fr_auto] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
     <div className="truncate">{label}</div>
     <div className="text-right">{count}</div>
   </div>
 );
 
-// 单个属性统计卡片组件（支持展开/收起）
+// 属性卡片组件
 interface AttributeCardProps {
   title: string;
   data: [string, number][];
   initialLimit?: number;
-  displayMode?: 'list' | 'tags'; // 新增：显示模式
 }
 
 const AttributeCard: React.FC<AttributeCardProps> = ({
   title,
   data,
   initialLimit = 5,
-  displayMode = 'list',
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number>(0);
 
-  // 测量内容实际高度
   useEffect(() => {
     if (contentRef.current) {
-      // 获取实际滚动高度
       setContentHeight(contentRef.current.scrollHeight);
     }
   }, [data, isExpanded]);
@@ -395,6 +324,8 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
   if (data.length === 0) return null;
 
   const hasMore = data.length > initialLimit;
+  const listItemHeight = 26;
+  const listCollapsedHeight = initialLimit * listItemHeight;
 
   const handleToggle = () => {
     if (hasMore) {
@@ -402,81 +333,26 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
     }
   };
 
-  // 标签模式：收起时的初始高度
-  const tagsCollapsedHeight = 120;
-  // 列表模式：每行高度约 26px (包含 1.5 的 space-y)
-  const listItemHeight = 26;
-  const listCollapsedHeight = initialLimit * listItemHeight;
-
-  // 标签模式
-  if (displayMode === 'tags') {
-    return (
-      <div
-        className={`relative overflow-hidden rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
-        onClick={handleToggle}
-      >
-        {/* 表头 */}
-        <div className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-          {title}
-        </div>
-        {/* 标签容器 */}
-        <div
-          ref={contentRef}
-          className="flex flex-wrap gap-2.5 overflow-hidden transition-[max-height] duration-300 ease-out"
-          style={{
-            maxHeight: isExpanded
-              ? `${contentHeight}px`
-              : `${tagsCollapsedHeight}px`,
-          }}
-        >
-          {data.map(([label, count]) => (
-            <div
-              key={label}
-              className="inline-flex items-center gap-1.5 rounded-full bg-neutral-300/40 px-3 py-1.5 dark:bg-neutral-700/40"
-            >
-              <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
-                {label}
-              </span>
-              <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                {count}
-              </span>
-            </div>
-          ))}
-        </div>
-        {/* 渐变遮罩 */}
-        {hasMore && !isExpanded && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b bg-linear-to-t from-[#F4F4F4] via-[#F4F4F4]/80 to-transparent pt-12 pb-3 dark:from-[#1D1D1D] dark:via-[#1D1D1D]/80" />
-        )}
-      </div>
-    );
-  }
-
-  // 列表模式
   return (
     <div
       className={`relative overflow-hidden rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
       onClick={handleToggle}
     >
-      {/* 表头 */}
       <div className="mb-2 grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         <div>{title}</div>
         <div className="text-right">数量</div>
       </div>
-      {/* 数据行容器 - 添加动画 */}
       <div
         ref={contentRef}
         className="space-y-1.5 overflow-hidden transition-[max-height] duration-300 ease-out"
         style={{
-          maxHeight: isExpanded
-            ? `${contentHeight}px`
-            : `${listCollapsedHeight}px`,
+          maxHeight: isExpanded ? `${contentHeight}px` : `${listCollapsedHeight}px`,
         }}
       >
         {data.map(([label, count]) => (
           <BeanAttributeItem key={label} label={label} count={count} />
         ))}
       </div>
-      {/* 渐变遮罩 */}
       {hasMore && !isExpanded && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b bg-linear-to-t from-[#F4F4F4] via-[#F4F4F4]/80 to-transparent pt-12 pb-3 dark:from-[#1D1D1D] dark:via-[#1D1D1D]/80" />
       )}
@@ -484,17 +360,13 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
   );
 };
 
-// 咖啡豆数量统计组件
+// 生豆数量统计组件
 interface BeanCountStatsProps {
   beans: ExtendedCoffeeBean[];
-  onExplain: (key: StatsKey, rect: DOMRect) => void;
+  onExplain: (key: GreenBeanStatsKey, rect: DOMRect) => void;
 }
 
-const BeanCountStats: React.FC<BeanCountStatsProps> = ({
-  beans,
-  onExplain,
-}) => {
-  // 按类型统计数量和未用完数量
+const BeanCountStats: React.FC<BeanCountStatsProps> = ({ beans, onExplain }) => {
   const countByType = useMemo(() => {
     const counts = {
       espresso: { total: 0, remaining: 0 },
@@ -507,10 +379,7 @@ const BeanCountStats: React.FC<BeanCountStatsProps> = ({
         const type = bean.beanType as keyof typeof counts;
         counts[type].total++;
 
-        // 判断是否还有剩余（剩余量大于0）
-        const remaining = parseFloat(
-          bean.remaining?.toString().replace(/[^\d.]/g, '') || '0'
-        );
+        const remaining = parseFloat(bean.remaining?.toString().replace(/[^\d.]/g, '') || '0');
         if (remaining > 0) {
           counts[type].remaining++;
         }
@@ -520,14 +389,9 @@ const BeanCountStats: React.FC<BeanCountStatsProps> = ({
     return counts;
   }, [beans]);
 
-  const total =
-    countByType.espresso.total +
-    countByType.filter.total +
-    countByType.omni.total;
+  const total = countByType.espresso.total + countByType.filter.total + countByType.omni.total;
   const totalRemaining =
-    countByType.espresso.remaining +
-    countByType.filter.remaining +
-    countByType.omni.remaining;
+    countByType.espresso.remaining + countByType.filter.remaining + countByType.omni.remaining;
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -542,12 +406,10 @@ const BeanCountStats: React.FC<BeanCountStatsProps> = ({
       onClick={handleClick}
       className="cursor-pointer rounded-md bg-neutral-200/30 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
     >
-      {/* 表头 */}
       <div className="mb-2 grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-        <div>咖啡豆</div>
+        <div>生豆</div>
         <div className="text-right">未用完 / 总数</div>
       </div>
-      {/* 数据行 */}
       <div className="space-y-1.5">
         {countByType.espresso.total > 0 && (
           <div className="grid grid-cols-[1fr_auto] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
@@ -573,7 +435,6 @@ const BeanCountStats: React.FC<BeanCountStatsProps> = ({
             </div>
           </div>
         )}
-        {/* 总计 */}
         <div className="grid grid-cols-[1fr_auto] gap-2 border-t border-neutral-300/40 pt-1.5 text-sm font-medium text-neutral-900 dark:border-neutral-600/40 dark:text-neutral-100">
           <div>总计</div>
           <div className="text-right">
@@ -585,33 +446,29 @@ const BeanCountStats: React.FC<BeanCountStatsProps> = ({
   );
 };
 
-// 咖啡豆属性统计组件
-interface BeanAttributeStatsProps {
+// 生豆属性统计组件
+interface GreenBeanAttributeStatsProps {
   beans: ExtendedCoffeeBean[];
   selectedDate: string | null;
   dateGroupingMode: DateGroupingMode;
-  onExplain: (key: StatsKey, rect: DOMRect) => void;
+  onExplain: (key: GreenBeanStatsKey, rect: DOMRect) => void;
 }
 
-const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
+const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
   beans,
   selectedDate,
   dateGroupingMode,
   onExplain,
 }) => {
-  // 先过滤掉生豆，只统计熟豆
-  const roastedBeans = useMemo(() => {
-    return beans.filter(bean => (bean.beanState || 'roasted') === 'roasted');
+  // 过滤生豆
+  const greenBeans = useMemo(() => {
+    return beans.filter(bean => bean.beanState === 'green');
   }, [beans]);
 
-  // 根据日期范围过滤咖啡豆（基于添加时间）
+  // 根据日期范围过滤
   const filteredBeans = useMemo(() => {
-    if (!selectedDate) {
-      // 全部视图：不过滤
-      return roastedBeans;
-    }
+    if (!selectedDate) return greenBeans;
 
-    // 计算时间范围
     let startTime: number;
     let endTime: number;
 
@@ -624,18 +481,17 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
       startTime = new Date(year, month - 1, 1).getTime();
       endTime = new Date(year, month, 1).getTime();
     } else {
-      // day
       const [year, month, day] = selectedDate.split('-').map(Number);
       startTime = new Date(year, month - 1, day).getTime();
       endTime = new Date(year, month - 1, day + 1).getTime();
     }
 
-    // 过滤咖啡豆（基于日期范围）
-    return roastedBeans.filter(bean => {
+    return greenBeans.filter(bean => {
       const beanTime = bean.timestamp;
       return beanTime >= startTime && beanTime < endTime;
     });
-  }, [roastedBeans, selectedDate, dateGroupingMode]);
+  }, [greenBeans, selectedDate, dateGroupingMode]);
+
   // 计算产地统计
   const originStats = useMemo(() => {
     const originCount = new Map<string, number>();
@@ -672,24 +528,10 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     return Array.from(processCount.entries()).sort((a, b) => b[1] - a[1]);
   }, [filteredBeans]);
 
-  // 计算风味统计
-  const flavorStats = useMemo(() => {
-    const flavorCount = new Map<string, number>();
-    filteredBeans.forEach(bean => {
-      const flavors = getBeanFlavors(bean);
-      flavors.forEach(flavor => {
-        flavorCount.set(flavor, (flavorCount.get(flavor) || 0) + 1);
-      });
-    });
-    return Array.from(flavorCount.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredBeans]);
-
-  // 如果所有统计都为空，不显示
   if (
     originStats.length === 0 &&
     varietyStats.length === 0 &&
-    processStats.length === 0 &&
-    flavorStats.length === 0
+    processStats.length === 0
   ) {
     return null;
   }
@@ -697,49 +539,31 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
   return (
     <div className="w-full">
       <div className="space-y-3">
-        {/* 咖啡豆数量统计 */}
         <BeanCountStats beans={filteredBeans} onExplain={onExplain} />
-
-        {/* 产地 */}
         <AttributeCard title="产地" data={originStats} />
-
-        {/* 品种 */}
         <AttributeCard title="品种" data={varietyStats} />
-
-        {/* 处理法 */}
         <AttributeCard title="处理法" data={processStats} />
-
-        {/* 风味 */}
-        <AttributeCard title="风味" data={flavorStats} displayMode="tags" />
       </div>
     </div>
   );
 };
 
-// 统计卡片组件（支持可点击的统计块）
+// 统计卡片组件
 interface StatsCardProps {
   title: string;
   chart?: React.ReactNode;
-  stats: Array<{ title: string; value: string; key: StatsKey }>;
+  stats: Array<{ title: string; value: string; key: GreenBeanStatsKey }>;
   extra?: React.ReactNode;
-  onExplain: (key: StatsKey, rect: DOMRect) => void;
+  onExplain: (key: GreenBeanStatsKey, rect: DOMRect) => void;
 }
 
-const StatsCard: React.FC<StatsCardProps> = ({
-  title,
-  chart,
-  stats,
-  extra,
-  onExplain,
-}) => {
+const StatsCard: React.FC<StatsCardProps> = ({ title, chart, stats, extra, onExplain }) => {
   if (stats.length === 0 && !chart && !extra) return null;
 
   return (
     <div className="w-full">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
-          {title}
-        </h3>
+        <h3 className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{title}</h3>
       </div>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
@@ -764,8 +588,10 @@ const StatsCard: React.FC<StatsCardProps> = ({
   );
 };
 
-// 熟豆统计视图 Props
-interface RoastedBeanStatsViewProps extends StatsViewProps {
+// 主组件 Props
+export interface GreenBeanStatsViewProps {
+  beans: ExtendedCoffeeBean[];
+  embedded?: boolean; // 是否嵌入模式（不渲染外层容器）- 已废弃，保留兼容
   // 生豆/熟豆切换相关
   beanStateType?: 'roasted' | 'green';
   onBeanStateTypeChange?: (type: 'roasted' | 'green') => void;
@@ -779,10 +605,9 @@ interface RoastedBeanStatsViewProps extends StatsViewProps {
   };
 }
 
-// 熟豆统计视图（原 StatsView）
-const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
+const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
   beans,
-  beanStateType = 'roasted',
+  beanStateType = 'green',
   onBeanStateTypeChange,
   showBeanStateSwitch = false,
   contentModeProps,
@@ -805,9 +630,9 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
   // 解释弹窗状态
   const [explanation, setExplanation] = useState<StatsExplanation | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const [activeKey, setActiveKey] = useState<StatsKey | null>(null);
+  const [activeKey, setActiveKey] = useState<GreenBeanStatsKey | null>(null);
 
-  // 使用统一的数据 hook
+  // 使用生豆统计数据 hook
   const {
     availableDates,
     stats,
@@ -816,10 +641,10 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
     isHistoricalView,
     effectiveDateRange,
     metadata,
-    brewingDetails,
-  } = useStatsData(beans, dateGroupingMode, selectedDate);
+    roastingDetails,
+  } = useGreenBeanStatsData(beans, dateGroupingMode, selectedDate);
 
-  // 生成日期范围标签（基于实际数据范围）
+  // 生成日期范围标签
   const dateRangeLabel = useMemo(() => {
     if (!effectiveDateRange) return '';
 
@@ -837,7 +662,6 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
     };
 
     const startDate = new Date(effectiveDateRange.start);
-    // end 是开区间边界，需要减1ms获取实际最后一天
     const endDate = new Date(effectiveDateRange.end - 1);
 
     const isSameDay =
@@ -855,8 +679,7 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
 
   // 处理点击解释
   const handleExplain = useCallback(
-    (key: StatsKey, rect: DOMRect) => {
-      // 如果点击的是当前已展开的同一个卡片，则关闭
+    (key: GreenBeanStatsKey, rect: DOMRect) => {
       if (activeKey === key) {
         setExplanation(null);
         setAnchorRect(null);
@@ -864,23 +687,22 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
         return;
       }
 
-      // 获取对应的值
       let value = '-';
       switch (key) {
-        case 'totalConsumption':
-          value = fmtWeight(stats.overview.consumption);
+        case 'totalRoasted':
+          value = fmtWeight(stats.overview.totalRoasted);
           break;
         case 'totalCost':
-          value = fmtCost(stats.overview.cost);
+          value = fmtCost(stats.overview.totalCost);
           break;
-        case 'dailyConsumption':
-          value = fmtWeight(stats.overview.dailyConsumption);
+        case 'dailyRoasted':
+          value = fmtWeight(stats.overview.dailyRoasted);
           break;
         case 'dailyCost':
           value = fmtCost(stats.overview.dailyCost);
           break;
-        case 'todayConsumption':
-          value = fmtWeight(todayStats?.consumption || 0);
+        case 'todayRoasted':
+          value = fmtWeight(todayStats?.roasted || 0);
           break;
         case 'todayCost':
           value = fmtCost(todayStats?.cost || 0);
@@ -897,27 +719,22 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
         case 'totalValue':
           value = fmtCost(stats.inventory?.totalValue || 0);
           break;
+        case 'conversionRate':
+          value = fmtPercent(stats.overview.conversionRate);
+          break;
         case 'beanCount':
-          value = ''; // 咖啡豆数量不需要单独的值
+          value = '';
           break;
       }
 
-      const exp = createExplanation(
-        key,
-        value,
-        stats,
-        metadata,
-        isHistoricalView,
-        dateRangeLabel
-      );
+      const exp = createGreenBeanExplanation(key, value, stats, metadata, isHistoricalView);
       setExplanation(exp);
       setAnchorRect(rect);
       setActiveKey(key);
     },
-    [stats, todayStats, metadata, isHistoricalView, activeKey, dateRangeLabel]
+    [stats, todayStats, metadata, isHistoricalView, activeKey]
   );
 
-  // 关闭解释弹窗
   const handleCloseExplanation = useCallback(() => {
     setExplanation(null);
     setAnchorRect(null);
@@ -936,42 +753,37 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
 
   // 处理分组模式变更
   const handleDateGroupingModeChange = (mode: DateGroupingMode) => {
-    // 保存当前模式下的选择到记忆
     globalCache.selectedDates[dateGroupingMode] = selectedDate;
     saveSelectedDateByModePreference(dateGroupingMode, selectedDate);
 
-    // 切换到新模式
     setDateGroupingMode(mode);
     globalCache.dateGroupingMode = mode;
     saveDateGroupingModePreference(mode);
 
-    // 恢复新模式之前的选择（如果有的话）
     const previousSelection = globalCache.selectedDates[mode];
     setSelectedDate(previousSelection);
     globalCache.selectedDate = previousSelection;
     saveSelectedDatePreference(previousSelection);
   };
 
-  // 当只有一年数据时，自动从按年统计切换到按月统计（仅独立模式）
+  // 自动切换模式（仅独立模式）
   useEffect(() => {
     if (!isContentMode && dateGroupingMode === 'year' && availableDates.length <= 1) {
-      // 只有一年或没有数据，自动切换到按月统计
       handleDateGroupingModeChange('month');
     }
   }, [dateGroupingMode, availableDates.length, isContentMode]);
 
-  // 监听 selectedDate 变化并保存（仅独立模式）
+  // 保存选中日期（仅独立模式）
   useEffect(() => {
     if (!isContentMode) {
       globalCache.selectedDate = selectedDate;
       saveSelectedDatePreference(selectedDate);
-      // 同时保存到当前模式的记忆
       globalCache.selectedDates[dateGroupingMode] = selectedDate;
       saveSelectedDateByModePreference(dateGroupingMode, selectedDate);
     }
   }, [selectedDate, dateGroupingMode, isContentMode]);
 
-  // 验证 selectedDate 是否在可用日期列表中，如果不在则重置（仅独立模式）
+  // 验证 selectedDate 是否在可用日期列表中（仅独立模式）
   useEffect(() => {
     if (
       !isContentMode &&
@@ -983,97 +795,93 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
     }
   }, [availableDates, selectedDate, isContentMode]);
 
-  // 空状态 - 只检查熟豆
-  const roastedBeans = useMemo(() => {
-    return beans.filter(bean => (bean.beanState || 'roasted') === 'roasted');
+  // 检查是否有生豆
+  const greenBeans = useMemo(() => {
+    return beans.filter(bean => bean.beanState === 'green');
   }, [beans]);
 
-  if (roastedBeans.length === 0) {
+  // 空状态
+  if (greenBeans.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-        [ 有熟豆数据后，再来查看吧～ ]
+        [ 有生豆数据后，再来查看吧～ ]
       </div>
     );
   }
 
-  // 是否显示趋势图
   const showTrendChart = trendData.length > 0;
-
-  // 是否为单日视图（按日筛选且选中了某一天）
   const isSingleDayView = dateGroupingMode === 'day' && selectedDate !== null;
 
-  // 概览统计：单日视图只显示消耗和花费，其他视图显示全部
+  // 概览统计
   const overviewStats = isSingleDayView
     ? [
         {
-          title: '消耗',
-          value: fmtWeight(stats.overview.consumption),
-          key: 'totalConsumption' as StatsKey,
+          title: '烘焙量',
+          value: fmtWeight(stats.overview.totalRoasted),
+          key: 'totalRoasted' as GreenBeanStatsKey,
         },
         {
           title: '花费',
-          value: fmtCost(stats.overview.cost),
-          key: 'totalCost' as StatsKey,
+          value: fmtCost(stats.overview.totalCost),
+          key: 'totalCost' as GreenBeanStatsKey,
         },
       ]
     : [
-        // 第一行：购买数据
         ...(stats.inventory
           ? [
               {
                 title: '库存总量',
                 value: fmtWeight(stats.inventory.totalCapacity),
-                key: 'totalCapacity' as StatsKey,
+                key: 'totalCapacity' as GreenBeanStatsKey,
               },
               {
                 title: '总价值',
                 value: fmtCost(stats.inventory.totalValue),
-                key: 'totalValue' as StatsKey,
+                key: 'totalValue' as GreenBeanStatsKey,
               },
             ]
           : []),
-        // 第二行：消耗数据
         {
-          title: '总消耗',
-          value: fmtWeight(stats.overview.consumption),
-          key: 'totalConsumption' as StatsKey,
+          title: '总烘焙量',
+          value: fmtWeight(stats.overview.totalRoasted),
+          key: 'totalRoasted' as GreenBeanStatsKey,
         },
         {
           title: '总花费',
-          value: fmtCost(stats.overview.cost),
-          key: 'totalCost' as StatsKey,
+          value: fmtCost(stats.overview.totalCost),
+          key: 'totalCost' as GreenBeanStatsKey,
         },
       ];
 
-  // 今日统计（仅在非按日模式且有数据时显示）
-  const hasTodayData = todayStats && todayStats.consumption > 0;
+  // 今日统计
+  const hasTodayData = todayStats && todayStats.roasted > 0;
   const todayStatsDisplay = hasTodayData
     ? [
         {
-          title: '今日消耗',
-          value: fmtWeight(todayStats.consumption),
-          key: 'todayConsumption' as StatsKey,
+          title: '今日烘焙',
+          value: fmtWeight(todayStats.roasted),
+          key: 'todayRoasted' as GreenBeanStatsKey,
         },
         {
           title: '今日花费',
           value: fmtCost(todayStats.cost),
-          key: 'todayCost' as StatsKey,
+          key: 'todayCost' as GreenBeanStatsKey,
         },
       ]
     : [];
 
-  // 库存统计（仅实时视图显示）
+  // 库存统计
   const inventoryStats = stats.inventory
     ? [
         {
           title: '剩余总量',
           value: fmtWeight(stats.inventory.remaining),
-          key: 'remaining' as StatsKey,
+          key: 'remaining' as GreenBeanStatsKey,
         },
         {
           title: '剩余价值',
           value: fmtCost(stats.inventory.remainingValue),
-          key: 'remainingValue' as StatsKey,
+          key: 'remainingValue' as GreenBeanStatsKey,
         },
       ]
     : [];
@@ -1111,23 +919,19 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
               }
               stats={overviewStats}
               extra={
-                isSingleDayView && brewingDetails.length > 0 ? (
-                  <BrewingDetails data={brewingDetails} />
+                isSingleDayView && roastingDetails.length > 0 ? (
+                  <RoastingDetails data={roastingDetails} />
                 ) : undefined
               }
               onExplain={handleExplain}
             />
 
-            {/* 今日（仅在非按日模式且有数据时显示） */}
+            {/* 今日 */}
             {todayStatsDisplay.length > 0 && (
-              <StatsCard
-                title="今日"
-                stats={todayStatsDisplay}
-                onExplain={handleExplain}
-              />
+              <StatsCard title="今日" stats={todayStatsDisplay} onExplain={handleExplain} />
             )}
 
-            {/* 库存预测（仅实时视图） */}
+            {/* 库存预测 */}
             {!isHistoricalView &&
               stats.inventoryByType &&
               stats.inventoryByType.length > 0 && (
@@ -1139,13 +943,11 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
                 />
               )}
 
-            {/* 咖啡豆属性统计（单日视图不显示） */}
+            {/* 属性统计 */}
             {!isSingleDayView && (
               <>
-                {/* 分割线 */}
                 <div className="mb-5 border-t border-neutral-200/40 dark:border-neutral-700/30" />
-
-                <BeanAttributeStats
+                <GreenBeanAttributeStats
                   beans={beans}
                   selectedDate={selectedDate}
                   dateGroupingMode={dateGroupingMode}
@@ -1157,7 +959,6 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
         </div>
       </div>
 
-      {/* 解释弹窗 */}
       <StatsExplainer
         explanation={explanation}
         onClose={handleCloseExplanation}
@@ -1179,228 +980,4 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
   );
 };
 
-// 组合统计视图 - 共享 StatsFilterBar，内容区域平滑切换
-interface CombinedStatsViewProps {
-  beans: ExtendedCoffeeBean[];
-  showEmptyBeans?: boolean;
-  beanStateType: StatsBeanStateType;
-  onBeanStateTypeChange: (state: StatsBeanStateType) => void;
-}
-
-const CombinedStatsView: React.FC<CombinedStatsViewProps> = ({
-  beans,
-  showEmptyBeans,
-  beanStateType,
-  onBeanStateTypeChange,
-}) => {
-  // 共享的日期筛选状态
-  const [dateGroupingMode, setDateGroupingMode] = useState<DateGroupingMode>(
-    globalCache.dateGroupingMode
-  );
-  const [selectedDate, setSelectedDate] = useState<string | null>(
-    globalCache.selectedDate
-  );
-
-  // 使用两个 hook 获取数据（根据当前类型决定使用哪个）
-  const roastedStatsData = useStatsData(beans, dateGroupingMode, selectedDate);
-  const greenStatsData = useGreenBeanStatsData(beans, dateGroupingMode, selectedDate);
-
-  // 根据当前类型选择数据
-  const currentStatsData = beanStateType === 'roasted' ? roastedStatsData : greenStatsData;
-  const { availableDates, effectiveDateRange } = currentStatsData;
-
-  // 生成日期范围标签
-  const dateRangeLabel = useMemo(() => {
-    if (!effectiveDateRange) return '';
-
-    const formatFull = (date: Date) => {
-      const y = date.getFullYear();
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${y}.${m}.${d}`;
-    };
-
-    const formatShort = (date: Date) => {
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${m}.${d}`;
-    };
-
-    const startDate = new Date(effectiveDateRange.start);
-    const endDate = new Date(effectiveDateRange.end - 1);
-
-    const isSameDay =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth() &&
-      startDate.getDate() === endDate.getDate();
-
-    if (isSameDay) return formatFull(startDate);
-
-    if (startDate.getFullYear() !== endDate.getFullYear()) {
-      return `${formatFull(startDate)} - ${formatFull(endDate)}`;
-    }
-    return `${formatFull(startDate)} - ${formatShort(endDate)}`;
-  }, [effectiveDateRange]);
-
-  // 处理分组模式变更
-  const handleDateGroupingModeChange = useCallback((mode: DateGroupingMode) => {
-    // 保存当前模式下的选择到记忆
-    globalCache.selectedDates[dateGroupingMode] = selectedDate;
-    saveSelectedDateByModePreference(dateGroupingMode, selectedDate);
-
-    // 切换到新模式
-    setDateGroupingMode(mode);
-    globalCache.dateGroupingMode = mode;
-    saveDateGroupingModePreference(mode);
-
-    // 恢复新模式之前的选择（如果有的话）
-    const previousSelection = globalCache.selectedDates[mode];
-    setSelectedDate(previousSelection);
-    globalCache.selectedDate = previousSelection;
-    saveSelectedDatePreference(previousSelection);
-  }, [dateGroupingMode, selectedDate]);
-
-  // 处理日期选择变更
-  const handleSelectedDateChange = useCallback((date: string | null) => {
-    setSelectedDate(date);
-    globalCache.selectedDate = date;
-    saveSelectedDatePreference(date);
-    // 同时保存到当前模式的记忆
-    globalCache.selectedDates[dateGroupingMode] = date;
-    saveSelectedDateByModePreference(dateGroupingMode, date);
-  }, [dateGroupingMode]);
-
-  // 当只有一年数据时，自动从按年统计切换到按月统计
-  useEffect(() => {
-    if (dateGroupingMode === 'year' && availableDates.length <= 1) {
-      handleDateGroupingModeChange('month');
-    }
-  }, [dateGroupingMode, availableDates.length, handleDateGroupingModeChange]);
-
-  // 验证 selectedDate 是否在可用日期列表中，如果不在则重置
-  useEffect(() => {
-    if (
-      selectedDate !== null &&
-      availableDates.length > 0 &&
-      !availableDates.includes(selectedDate)
-    ) {
-      handleSelectedDateChange(null);
-    }
-  }, [availableDates, selectedDate, handleSelectedDateChange]);
-
-  // 内容模式 props
-  const contentModeProps = useMemo(() => ({
-    dateGroupingMode,
-    onDateGroupingModeChange: handleDateGroupingModeChange,
-    selectedDate,
-    onSelectedDateChange: handleSelectedDateChange,
-  }), [dateGroupingMode, handleDateGroupingModeChange, selectedDate, handleSelectedDateChange]);
-
-  return (
-    <div className="coffee-bean-stats-container bg-neutral-50 dark:bg-neutral-900">
-      {/* 共享的 StatsFilterBar */}
-      <div className="sticky top-0 z-10 bg-neutral-50 dark:bg-neutral-900">
-        <StatsFilterBar
-          dateGroupingMode={dateGroupingMode}
-          onDateGroupingModeChange={handleDateGroupingModeChange}
-          selectedDate={selectedDate}
-          onDateClick={handleSelectedDateChange}
-          availableDates={availableDates}
-          dateRangeLabel={dateRangeLabel}
-          beanStateType={beanStateType}
-          onBeanStateTypeChange={onBeanStateTypeChange}
-          showBeanStateSwitch
-        />
-      </div>
-
-      {/* 内容区域 */}
-      <div className="mt-5">
-        {beanStateType === 'roasted' ? (
-          <RoastedBeanStatsView
-            beans={beans}
-            showEmptyBeans={showEmptyBeans ?? false}
-            contentModeProps={contentModeProps}
-          />
-        ) : (
-          <GreenBeanStatsView
-            beans={beans}
-            contentModeProps={contentModeProps}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-// 主 StatsView 组件 - 包含生豆/熟豆切换
-const StatsView: React.FC<StatsViewProps> = ({ beans, showEmptyBeans, enableGreenBeanInventory = false }) => {
-  // 初始化时从缓存读取状态
-  const [beanStateType, setBeanStateType] = useState<StatsBeanStateType>(() => {
-    // 从 localStorage 读取
-    const saved = getStatsBeanStatePreference();
-    globalCache.statsBeanState = saved;
-    return saved;
-  });
-
-  // 检查是否有生豆和熟豆（仅当生豆库启用时才检查生豆）
-  const hasGreenBeans = useMemo(() => {
-    if (!enableGreenBeanInventory) return false;
-    return beans.some(bean => bean.beanState === 'green');
-  }, [beans, enableGreenBeanInventory]);
-
-  const hasRoastedBeans = useMemo(() => {
-    return beans.some(bean => (bean.beanState || 'roasted') === 'roasted');
-  }, [beans]);
-
-  // 处理状态切换
-  const handleBeanStateChange = useCallback((state: StatsBeanStateType) => {
-    setBeanStateType(state);
-    globalCache.statsBeanState = state;
-    saveStatsBeanStatePreference(state);
-  }, []);
-
-  // 如果只有一种类型的豆子，自动切换到该类型
-  // 如果生豆库被禁用，强制切换回熟豆
-  useEffect(() => {
-    if (!enableGreenBeanInventory && beanStateType === 'green') {
-      handleBeanStateChange('roasted');
-    } else if (hasGreenBeans && !hasRoastedBeans && beanStateType !== 'green') {
-      handleBeanStateChange('green');
-    } else if (hasRoastedBeans && !hasGreenBeans && beanStateType !== 'roasted') {
-      handleBeanStateChange('roasted');
-    }
-  }, [hasGreenBeans, hasRoastedBeans, beanStateType, handleBeanStateChange, enableGreenBeanInventory]);
-
-  // 空状态
-  if (beans.length === 0) {
-    return (
-      <div className="coffee-bean-stats-container bg-neutral-50 dark:bg-neutral-900">
-        <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-          [ 有咖啡豆数据后，再来查看吧～ ]
-        </div>
-      </div>
-    );
-  }
-
-  // 如果生豆库未启用或只有熟豆，直接显示熟豆统计（独立模式）
-  if (!enableGreenBeanInventory || !hasGreenBeans) {
-    return <RoastedBeanStatsView beans={beans} showEmptyBeans={showEmptyBeans} />;
-  }
-
-  // 如果只有生豆，直接显示生豆统计（独立模式）
-  if (!hasRoastedBeans) {
-    return <GreenBeanStatsView beans={beans} />;
-  }
-
-  // 两种都有，使用组合视图（共享 StatsFilterBar）
-  return (
-    <CombinedStatsView
-      beans={beans}
-      showEmptyBeans={showEmptyBeans}
-      beanStateType={beanStateType}
-      onBeanStateTypeChange={handleBeanStateChange}
-    />
-  );
-};
-
-export default StatsView;
+export default GreenBeanStatsView;

@@ -217,6 +217,10 @@ interface StatsFilterBarProps {
   onDateClick: (date: string | null) => void;
   availableDates: string[];
   dateRangeLabel?: string;
+  // 生豆/熟豆切换相关
+  beanStateType?: 'roasted' | 'green';
+  onBeanStateTypeChange?: (type: 'roasted' | 'green') => void;
+  showBeanStateSwitch?: boolean; // 是否显示切换（当同时有生豆和熟豆时）
 }
 
 const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
@@ -226,6 +230,9 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   onDateClick,
   availableDates,
   dateRangeLabel,
+  beanStateType = 'roasted',
+  onBeanStateTypeChange,
+  showBeanStateSwitch = false,
 }) => {
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
@@ -392,6 +399,29 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                 style={{ willChange: 'height, opacity, transform' }}
               >
                 <div className="px-6 py-4">
+                  {/* 统计类型（生豆/熟豆） */}
+                  {showBeanStateSwitch && onBeanStateTypeChange && (
+                    <div className="mb-4">
+                      <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                        统计类型
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <FilterButton
+                          isActive={beanStateType === 'roasted'}
+                          onClick={() => onBeanStateTypeChange('roasted')}
+                        >
+                          熟豆
+                        </FilterButton>
+                        <FilterButton
+                          isActive={beanStateType === 'green'}
+                          onClick={() => onBeanStateTypeChange('green')}
+                        >
+                          生豆
+                        </FilterButton>
+                      </div>
+                    </div>
+                  )}
+
                   {/* 时间分组 */}
                   <div>
                     <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">

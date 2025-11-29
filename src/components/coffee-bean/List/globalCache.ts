@@ -99,6 +99,8 @@ export const globalCache: {
     month: string | null;
     day: string | null;
   };
+  // 统计视图豆子状态（生豆/熟豆）
+  statsBeanState: 'roasted' | 'green';
   // 为每个视图模式添加独立的排序选项
   inventorySortOption: SortOption;
   // 每个豆子状态的库存排序选项记忆
@@ -184,6 +186,8 @@ export const globalCache: {
     month: null,
     day: null,
   },
+  // 统计视图豆子状态初始值
+  statsBeanState: 'roasted',
   // 为每个视图模式设置默认排序选项
   inventorySortOption: 'remaining_days_asc',
   // 每个豆子状态的库存排序默认值
@@ -652,6 +656,22 @@ export const saveSelectedDateByModePreference = (
 ): void => {
   const key = `selectedDate_${mode}`;
   saveStringState(MODULE_NAME, key, value || '');
+};
+
+// 统计视图豆子状态类型
+export type StatsBeanStateType = 'roasted' | 'green';
+
+// 从localStorage读取统计视图当前选择的豆子状态
+export const getStatsBeanStatePreference = (): StatsBeanStateType => {
+  const value = getStringState(MODULE_NAME, 'statsBeanState', 'roasted');
+  return value as StatsBeanStateType;
+};
+
+// 保存统计视图当前选择的豆子状态到localStorage
+export const saveStatsBeanStatePreference = (
+  value: StatsBeanStateType
+): void => {
+  saveStringState(MODULE_NAME, 'statsBeanState', value);
 };
 
 // ==================== 搜索历史管理 ====================
