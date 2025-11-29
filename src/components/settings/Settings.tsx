@@ -53,6 +53,10 @@ export interface SettingsOptions {
   decrementPresets: number[]; // 添加咖啡豆库存快捷扣除量预设值
   enableAllDecrementOption: boolean; // 是否启用ALL扣除选项（扣除剩余库存）
   enableCustomDecrementInput: boolean; // 是否启用用户自定义输入扣除数量
+  // 生豆烘焙预设值设置（独立于熟豆扣除预设值）
+  greenBeanRoastPresets: number[]; // 生豆快捷烘焙量预设值
+  enableAllGreenBeanRoastOption: boolean; // 是否启用ALL烘焙选项（烘焙剩余库存）
+  enableCustomGreenBeanRoastInput: boolean; // 是否启用用户自定义输入烘焙数量
   showOnlyBeanName: boolean; // 是否只显示咖啡豆名称
   simplifiedViewLabels: boolean; // 是否使用简化的视图标签名称
   dateDisplayMode: 'date' | 'flavorPeriod' | 'agingDays'; // 日期显示模式：日期/赏味期/养豆天数
@@ -190,6 +194,10 @@ export const defaultSettings: SettingsOptions = {
   decrementPresets: [15, 16, 18], // 默认的库存扣除量预设值
   enableAllDecrementOption: false, // 默认关闭ALL扣除选项
   enableCustomDecrementInput: true, // 默认启用自定义输入扣除
+  // 生豆烘焙预设值默认值
+  greenBeanRoastPresets: [50, 100, 200], // 默认的生豆烘焙量预设值
+  enableAllGreenBeanRoastOption: false, // 默认关闭ALL烘焙选项
+  enableCustomGreenBeanRoastInput: true, // 默认启用自定义输入烘焙量
   showOnlyBeanName: true, // 默认简化咖啡豆名称
   simplifiedViewLabels: false, // 默认不使用简化视图标签名称
   dateDisplayMode: 'agingDays', // 默认显示养豆天数
