@@ -168,7 +168,7 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
                     <input
                       type="range"
                       min="0.8"
-                      max="1.4"
+                      max="1.2"
                       step="0.1"
                       value={zoomLevel}
                       onChange={e =>
