@@ -299,6 +299,32 @@ export const getSelectedBeanStatePreference = (): BeanState => {
   return value as BeanState;
 };
 
+// 同步检查生豆库功能是否启用
+export const isGreenBeanInventoryEnabled = (): boolean => {
+  try {
+    if (typeof window !== 'undefined') {
+      const settingsStr = localStorage.getItem('brewGuideSettings');
+      if (settingsStr) {
+        const settings = JSON.parse(settingsStr);
+        return settings.enableGreenBeanInventory === true;
+      }
+    }
+  } catch (error) {
+    console.error('读取生豆库设置失败:', error);
+  }
+  return false; // 默认关闭
+};
+
+// 获取有效的豆子状态（考虑生豆库是否启用）
+export const getValidBeanState = (): BeanState => {
+  const savedState = getSelectedBeanStatePreference();
+  // 如果保存的是生豆状态但功能未启用，返回熟豆
+  if (savedState === 'green' && !isGreenBeanInventoryEnabled()) {
+    return 'roasted';
+  }
+  return savedState;
+};
+
 // 保存选中的豆子状态到localStorage
 export const saveSelectedBeanStatePreference = (value: BeanState): void => {
   saveStringState(MODULE_NAME, 'selectedBeanState', value);

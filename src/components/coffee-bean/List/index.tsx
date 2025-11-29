@@ -44,7 +44,7 @@ import {
   saveSelectedBeanTypeByStatePreference,
   getSelectedBeanTypeByStatePreference,
   saveSelectedBeanStatePreference,
-  getSelectedBeanStatePreference,
+  getValidBeanState,
   saveViewModePreference,
   saveSortOptionPreference,
   saveInventorySortOptionPreference,
@@ -163,9 +163,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     globalCache.selectedBeanType
   );
   const [selectedBeanState, setSelectedBeanState] = useState<BeanState>(() => {
-    const savedState = getSelectedBeanStatePreference();
-    globalCache.selectedBeanState = savedState;
-    return savedState;
+    // 使用 getValidBeanState 确保生豆库未启用时不会返回 green 状态
+    const validState = getValidBeanState();
+    globalCache.selectedBeanState = validState;
+    return validState;
   });
   const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(
     globalCache.showEmptyBeans
@@ -511,7 +512,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         const settingsStr = await Storage.get('brewGuideSettings');
         if (settingsStr) {
           const parsedSettings = JSON.parse(settingsStr);
-          const enabled = parsedSettings.enableGreenBeanInventory !== false;
+          // 生豆库功能默认关闭，只有明确设置为 true 时才启用
+          const enabled = parsedSettings.enableGreenBeanInventory === true;
           setEnableGreenBeanInventory(enabled);
 
           // 如果生豆库被禁用且当前在生豆库视图，切换回熟豆库
