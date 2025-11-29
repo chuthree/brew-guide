@@ -386,7 +386,12 @@ export const useStatsData = (
     // 一次遍历
     for (const note of notes) {
       // 跳过容量调整记录和烘焙记录（烘焙记录属于生豆统计）
-      if (!note.timestamp || note.source === 'capacity-adjustment' || note.source === 'roasting') continue;
+      if (
+        !note.timestamp ||
+        note.source === 'capacity-adjustment' ||
+        note.source === 'roasting'
+      )
+        continue;
 
       const ts = note.timestamp;
 
