@@ -943,8 +943,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       saveSelectedVarietyByStatePreference(currentBeanState, selectedVariety);
       globalCache.selectedOrigins[currentBeanState] = selectedOrigin;
       saveSelectedOriginByStatePreference(currentBeanState, selectedOrigin);
-      globalCache.selectedFlavorPeriods[currentBeanState] = selectedFlavorPeriod;
-      saveSelectedFlavorPeriodByStatePreference(currentBeanState, selectedFlavorPeriod);
+      globalCache.selectedFlavorPeriods[currentBeanState] =
+        selectedFlavorPeriod;
+      saveSelectedFlavorPeriodByStatePreference(
+        currentBeanState,
+        selectedFlavorPeriod
+      );
       globalCache.selectedRoasters[currentBeanState] = selectedRoaster;
       saveSelectedRoasterByStatePreference(currentBeanState, selectedRoaster);
 
