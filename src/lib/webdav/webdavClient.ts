@@ -132,7 +132,9 @@ export class WebDAVClient {
 
       // 🔧 坚果云等服务器在根目录返回 OperationNotAllowed 是正常的
       // 这只是说明根目录不支持某些操作，但认证是成功的
-      const isOperationNotAllowed = responseText.includes('OperationNotAllowed');
+      const isOperationNotAllowed = responseText.includes(
+        'OperationNotAllowed'
+      );
 
       if (isValidWebDAV) {
         console.log('[WebDAV] 服务器连接成功，响应为有效的 WebDAV 格式');
