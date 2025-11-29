@@ -3693,22 +3693,29 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                   const p = preview.preview;
 
-                  // 构建确认消息
-                  const confirmMessage = [
-                    `将「${p.originalBean.name}」转换为生豆？\n`,
-                    `📦 原熟豆：${p.originalBean.capacity}g 总量，${p.originalBean.remaining}g 剩余`,
-                    `\n🌱 生豆：${p.greenBean.capacity}g 总量，${p.greenBean.remaining}g 剩余`,
-                    `🔥 烘焙量：${p.roastingAmount}g`,
-                    `☕ 新熟豆：${p.newRoastedBean.capacity}g 总量，${p.newRoastedBean.remaining}g 剩余`,
-                    p.brewingNotesCount > 0
-                      ? `\n📝 将迁移 ${p.brewingNotesCount} 条冲煮记录（共 ${p.noteUsageTotal}g）`
-                      : '',
-                    p.recordsToDeleteCount > 0
-                      ? `🗑️ 将删除 ${p.recordsToDeleteCount} 条变动记录`
-                      : '',
-                  ]
-                    .filter(Boolean)
-                    .join('\n');
+                  // 构建确认消息（根据是否直接转换显示不同内容）
+                  const confirmMessage = p.directConvert
+                    ? [
+                        `将「${p.originalBean.name}」转换为生豆？\n`,
+                        `📦 原熟豆：${p.originalBean.capacity}g（未使用）`,
+                        `\n🌱 转换后：${p.greenBean.capacity}g 生豆`,
+                        `\n此豆尚未使用，将直接转为生豆。`,
+                      ].join('\n')
+                    : [
+                        `将「${p.originalBean.name}」转换为生豆？\n`,
+                        `📦 原熟豆：${p.originalBean.capacity}g 总量，${p.originalBean.remaining}g 剩余`,
+                        `\n🌱 生豆：${p.greenBean.capacity}g 总量，${p.greenBean.remaining}g 剩余`,
+                        `🔥 烘焙量：${p.roastingAmount}g`,
+                        `☕ 新熟豆：${p.newRoastedBean.capacity}g 总量，${p.newRoastedBean.remaining}g 剩余`,
+                        p.brewingNotesCount > 0
+                          ? `\n📝 将迁移 ${p.brewingNotesCount} 条冲煮记录（共 ${p.noteUsageTotal}g）`
+                          : '',
+                        p.recordsToDeleteCount > 0
+                          ? `🗑️ 将删除 ${p.recordsToDeleteCount} 条变动记录`
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join('\n');
 
                   // 显示确认对话框
                   if (!window.confirm(confirmMessage)) {

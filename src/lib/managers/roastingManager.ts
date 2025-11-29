@@ -603,18 +603,66 @@ export const RoastingManager = {
       const remaining = parseFloat(originalBean.remaining || '0');
       const roastedAmount = capacity - remaining; // 已使用量 = 已烘焙量
 
-      // 边界检查：如果没有使用过，则无需转换
-      if (roastedAmount <= 0) {
-        return {
-          success: false,
-          error: '该咖啡豆尚未使用，无需转换（容量等于剩余量）',
-        };
-      }
-
       // 计算新熟豆的剩余量
       const newRoastedRemaining = Math.max(0, roastedAmount - noteUsageTotal);
 
-      // 5. 创建生豆
+      // 5. 如果熟豆未使用（roastedAmount <= 0），直接转为生豆
+      if (roastedAmount <= 0) {
+        // 直接创建生豆，不需要烘焙记录和新熟豆
+        const greenBeanData: Omit<CoffeeBean, 'id' | 'timestamp'> = {
+          name: originalBean.name,
+          beanState: 'green',
+          beanType: originalBean.beanType,
+          capacity: originalBean.capacity,
+          remaining: originalBean.remaining,
+          image: originalBean.image,
+          roastLevel: originalBean.roastLevel,
+          flavor: originalBean.flavor,
+          notes: originalBean.notes,
+          brand: originalBean.brand,
+          price: originalBean.price,
+          blendComponents: originalBean.blendComponents,
+          purchaseDate: originalBean.roastDate,
+        };
+
+        const greenBean = await CoffeeBeanManager.addBean(greenBeanData);
+
+        // 删除原熟豆关联的所有变动记录（虽然未使用通常没有，但保险起见）
+        if (recordNotes.length > 0) {
+          const recordIdsToDelete = new Set(recordNotes.map(n => n.id));
+          const updatedNotes = allNotes.filter(
+            n => !recordIdsToDelete.has(n.id)
+          );
+          await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+        }
+
+        // 删除原熟豆
+        const beans = await CoffeeBeanManager.getAllBeans();
+        const filteredBeans = beans.filter(bean => bean.id !== roastedBeanId);
+        await Storage.set('coffeeBeans', JSON.stringify(filteredBeans));
+
+        const { db } = await import('@/lib/core/db');
+        await db.coffeeBeans.delete(roastedBeanId);
+
+        CoffeeBeanManager.clearCache();
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
+          window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+        }
+
+        return {
+          success: true,
+          greenBean,
+          // 未使用的熟豆转换不会产生新熟豆和烘焙记录
+          newRoastedBean: undefined,
+          roastingNote: undefined,
+          migratedNotesCount: 0,
+          deletedRecordsCount: recordNotes.length,
+        };
+      }
+
+      // 6. 创建生豆（有使用记录的情况）
       const greenBeanData: Omit<CoffeeBean, 'id' | 'timestamp'> = {
         name: originalBean.name,
         beanState: 'green',
@@ -784,6 +832,7 @@ export const RoastingManager = {
       brewingNotesCount: number;
       noteUsageTotal: number;
       recordsToDeleteCount: number;
+      directConvert?: boolean; // 标记是否直接转换（未使用的熟豆）
     };
     error?: string;
   }> {
@@ -843,14 +892,35 @@ export const RoastingManager = {
       const remaining = parseFloat(originalBean.remaining || '0');
       const roastingAmount = capacity - remaining;
 
+      const newRoastedRemaining = Math.max(0, roastingAmount - noteUsageTotal);
+
+      // 如果未使用，直接转为生豆（不会产生烘焙记录和新熟豆）
       if (roastingAmount <= 0) {
         return {
-          success: false,
-          error: '该咖啡豆尚未使用，无需转换（容量等于剩余量）',
+          success: true,
+          preview: {
+            originalBean: {
+              name: originalBean.name,
+              capacity,
+              remaining,
+            },
+            greenBean: {
+              capacity,
+              remaining,
+            },
+            roastingAmount: 0,
+            newRoastedBean: {
+              capacity: 0,
+              remaining: 0,
+            },
+            brewingNotesCount: 0,
+            noteUsageTotal: 0,
+            recordsToDeleteCount,
+            // 标记这是直接转换模式
+            directConvert: true,
+          },
         };
       }
-
-      const newRoastedRemaining = Math.max(0, roastingAmount - noteUsageTotal);
 
       return {
         success: true,
