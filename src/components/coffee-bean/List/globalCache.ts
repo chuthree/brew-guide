@@ -56,6 +56,23 @@ export const globalCache: {
   selectedOrigin: string | null;
   selectedFlavorPeriod: FlavorPeriodStatus | null;
   selectedRoaster: string | null;
+  // 每个豆子状态的筛选值记忆
+  selectedVarieties: {
+    green: string | null;
+    roasted: string | null;
+  };
+  selectedOrigins: {
+    green: string | null;
+    roasted: string | null;
+  };
+  selectedFlavorPeriods: {
+    green: FlavorPeriodStatus | null;
+    roasted: FlavorPeriodStatus | null;
+  };
+  selectedRoasters: {
+    green: string | null;
+    roasted: string | null;
+  };
   availableOrigins: string[];
   availableFlavorPeriods: FlavorPeriodStatus[];
   availableRoasters: string[];
@@ -124,6 +141,23 @@ export const globalCache: {
   selectedOrigin: null,
   selectedFlavorPeriod: null,
   selectedRoaster: null,
+  // 每个豆子状态的筛选值初始值
+  selectedVarieties: {
+    green: null,
+    roasted: null,
+  },
+  selectedOrigins: {
+    green: null,
+    roasted: null,
+  },
+  selectedFlavorPeriods: {
+    green: null,
+    roasted: null,
+  },
+  selectedRoasters: {
+    green: null,
+    roasted: null,
+  },
   availableOrigins: [],
   availableFlavorPeriods: [],
   availableRoasters: [],
@@ -206,6 +240,24 @@ export const getSelectedVarietyPreference = (): string | null => {
 // 保存选中的品种到localStorage
 export const saveSelectedVarietyPreference = (value: string | null): void => {
   saveStringState(MODULE_NAME, 'selectedVariety', value || '');
+};
+
+// 按 beanState 读取选中的品种
+export const getSelectedVarietyByStatePreference = (
+  beanState: BeanState
+): string | null => {
+  const key = `selectedVariety_${beanState}`;
+  const value = getStringState(MODULE_NAME, key, '');
+  return value === '' ? null : value;
+};
+
+// 按 beanState 保存选中的品种
+export const saveSelectedVarietyByStatePreference = (
+  beanState: BeanState,
+  value: string | null
+): void => {
+  const key = `selectedVariety_${beanState}`;
+  saveStringState(MODULE_NAME, key, value || '');
 };
 
 // 从localStorage读取选中的豆子类型
@@ -454,6 +506,24 @@ export const saveSelectedOriginPreference = (value: string | null): void => {
   saveStringState(MODULE_NAME, 'selectedOrigin', value || '');
 };
 
+// 按 beanState 读取选中的产地
+export const getSelectedOriginByStatePreference = (
+  beanState: BeanState
+): string | null => {
+  const key = `selectedOrigin_${beanState}`;
+  const value = getStringState(MODULE_NAME, key, '');
+  return value === '' ? null : value;
+};
+
+// 按 beanState 保存选中的产地
+export const saveSelectedOriginByStatePreference = (
+  beanState: BeanState,
+  value: string | null
+): void => {
+  const key = `selectedOrigin_${beanState}`;
+  saveStringState(MODULE_NAME, key, value || '');
+};
+
 // 从localStorage读取选中的赏味期状态
 export const getSelectedFlavorPeriodPreference =
   (): FlavorPeriodStatus | null => {
@@ -468,6 +538,24 @@ export const saveSelectedFlavorPeriodPreference = (
   saveStringState(MODULE_NAME, 'selectedFlavorPeriod', value || '');
 };
 
+// 按 beanState 读取选中的赏味期状态
+export const getSelectedFlavorPeriodByStatePreference = (
+  beanState: BeanState
+): FlavorPeriodStatus | null => {
+  const key = `selectedFlavorPeriod_${beanState}`;
+  const value = getStringState(MODULE_NAME, key, '');
+  return value === '' ? null : (value as FlavorPeriodStatus);
+};
+
+// 按 beanState 保存选中的赏味期状态
+export const saveSelectedFlavorPeriodByStatePreference = (
+  beanState: BeanState,
+  value: FlavorPeriodStatus | null
+): void => {
+  const key = `selectedFlavorPeriod_${beanState}`;
+  saveStringState(MODULE_NAME, key, value || '');
+};
+
 // 从localStorage读取选中的烘焙商
 export const getSelectedRoasterPreference = (): string | null => {
   const value = getStringState(MODULE_NAME, 'selectedRoaster', '');
@@ -477,6 +565,24 @@ export const getSelectedRoasterPreference = (): string | null => {
 // 保存选中的烘焙商到localStorage
 export const saveSelectedRoasterPreference = (value: string | null): void => {
   saveStringState(MODULE_NAME, 'selectedRoaster', value || '');
+};
+
+// 按 beanState 读取选中的烘焙商
+export const getSelectedRoasterByStatePreference = (
+  beanState: BeanState
+): string | null => {
+  const key = `selectedRoaster_${beanState}`;
+  const value = getStringState(MODULE_NAME, key, '');
+  return value === '' ? null : value;
+};
+
+// 按 beanState 保存选中的烘焙商
+export const saveSelectedRoasterByStatePreference = (
+  beanState: BeanState,
+  value: string | null
+): void => {
+  const key = `selectedRoaster_${beanState}`;
+  saveStringState(MODULE_NAME, key, value || '');
 };
 
 // 从localStorage读取图片流模式
@@ -634,6 +740,23 @@ globalCache.filterModes = {
 globalCache.selectedOrigin = getSelectedOriginPreference();
 globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
 globalCache.selectedRoaster = getSelectedRoasterPreference();
+// 初始化每个 beanState 的筛选值记忆
+globalCache.selectedVarieties = {
+  green: getSelectedVarietyByStatePreference('green'),
+  roasted: getSelectedVarietyByStatePreference('roasted'),
+};
+globalCache.selectedOrigins = {
+  green: getSelectedOriginByStatePreference('green'),
+  roasted: getSelectedOriginByStatePreference('roasted'),
+};
+globalCache.selectedFlavorPeriods = {
+  green: getSelectedFlavorPeriodByStatePreference('green'),
+  roasted: getSelectedFlavorPeriodByStatePreference('roasted'),
+};
+globalCache.selectedRoasters = {
+  green: getSelectedRoasterByStatePreference('green'),
+  roasted: getSelectedRoasterByStatePreference('roasted'),
+};
 globalCache.dateGroupingMode = getDateGroupingModePreference();
 globalCache.selectedDate = getSelectedDatePreference();
 // 初始化每个时间分组模式的日期记忆

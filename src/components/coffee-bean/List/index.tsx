@@ -38,6 +38,8 @@ import {
   saveShowEmptyBeansByStatePreference,
   getShowEmptyBeansByStatePreference,
   saveSelectedVarietyPreference,
+  saveSelectedVarietyByStatePreference,
+  getSelectedVarietyByStatePreference,
   saveSelectedBeanTypePreference,
   saveSelectedBeanTypeByStatePreference,
   getSelectedBeanTypeByStatePreference,
@@ -59,8 +61,14 @@ import {
   saveFilterModeByStatePreference,
   getFilterModeByStatePreference,
   saveSelectedOriginPreference,
+  saveSelectedOriginByStatePreference,
+  getSelectedOriginByStatePreference,
   saveSelectedFlavorPeriodPreference,
+  saveSelectedFlavorPeriodByStatePreference,
+  getSelectedFlavorPeriodByStatePreference,
   saveSelectedRoasterPreference,
+  saveSelectedRoasterByStatePreference,
+  getSelectedRoasterByStatePreference,
   saveImageFlowModePreference,
   saveImageFlowModeByStatePreference,
   getImageFlowModeByStatePreference,
@@ -880,13 +888,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const handleVarietyClick = useCallback(
     (variety: string | null) => {
       setSelectedVariety(variety);
-      // 更新全局缓存并保存到本地存储
+      // 更新全局缓存并保存到本地存储（同时保存到全局和按状态的存储）
       globalCache.selectedVariety = variety;
+      globalCache.selectedVarieties[selectedBeanState] = variety;
       saveSelectedVarietyPreference(variety);
+      saveSelectedVarietyByStatePreference(selectedBeanState, variety);
       // 使用防抖更新筛选
       debouncedUpdateFilters({ selectedVariety: variety });
     },
-    [debouncedUpdateFilters]
+    [debouncedUpdateFilters, selectedBeanState]
   );
 
   // 处理豆子类型点击 - 简化版本，优化的Hook会自动处理筛选
@@ -928,6 +938,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       // 保存当前 beanState 的图片流模式
       globalCache.isImageFlowModes[currentBeanState] = isImageFlowMode;
       saveImageFlowModeByStatePreference(currentBeanState, isImageFlowMode);
+      // 保存当前 beanState 的分类筛选值
+      globalCache.selectedVarieties[currentBeanState] = selectedVariety;
+      saveSelectedVarietyByStatePreference(currentBeanState, selectedVariety);
+      globalCache.selectedOrigins[currentBeanState] = selectedOrigin;
+      saveSelectedOriginByStatePreference(currentBeanState, selectedOrigin);
+      globalCache.selectedFlavorPeriods[currentBeanState] = selectedFlavorPeriod;
+      saveSelectedFlavorPeriodByStatePreference(currentBeanState, selectedFlavorPeriod);
+      globalCache.selectedRoasters[currentBeanState] = selectedRoaster;
+      saveSelectedRoasterByStatePreference(currentBeanState, selectedRoaster);
 
       // 切换 beanState
       setSelectedBeanState(beanState);
@@ -974,6 +993,35 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.isImageFlowMode = targetImageFlowMode;
       saveImageFlowModePreference(targetImageFlowMode);
 
+      // 加载目标 beanState 的分类筛选值
+      const targetVariety =
+        globalCache.selectedVarieties[beanState] ??
+        getSelectedVarietyByStatePreference(beanState);
+      setSelectedVariety(targetVariety);
+      globalCache.selectedVariety = targetVariety;
+      saveSelectedVarietyPreference(targetVariety);
+
+      const targetOrigin =
+        globalCache.selectedOrigins[beanState] ??
+        getSelectedOriginByStatePreference(beanState);
+      setSelectedOrigin(targetOrigin);
+      globalCache.selectedOrigin = targetOrigin;
+      saveSelectedOriginPreference(targetOrigin);
+
+      const targetFlavorPeriod =
+        globalCache.selectedFlavorPeriods[beanState] ??
+        getSelectedFlavorPeriodByStatePreference(beanState);
+      setSelectedFlavorPeriod(targetFlavorPeriod);
+      globalCache.selectedFlavorPeriod = targetFlavorPeriod;
+      saveSelectedFlavorPeriodPreference(targetFlavorPeriod);
+
+      const targetRoaster =
+        globalCache.selectedRoasters[beanState] ??
+        getSelectedRoasterByStatePreference(beanState);
+      setSelectedRoaster(targetRoaster);
+      globalCache.selectedRoaster = targetRoaster;
+      saveSelectedRoasterPreference(targetRoaster);
+
       // 使用防抖更新筛选
       debouncedUpdateFilters({
         selectedBeanState: beanState,
@@ -981,6 +1029,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         sortOption: targetSortOption,
         selectedBeanType: targetBeanType,
         showEmptyBeans: targetShowEmptyBeans,
+        selectedVariety: targetVariety,
+        selectedOrigin: targetOrigin,
+        selectedFlavorPeriod: targetFlavorPeriod,
+        selectedRoaster: targetRoaster,
       });
     },
     [
@@ -991,6 +1043,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       selectedBeanType,
       showEmptyBeans,
       isImageFlowMode,
+      selectedVariety,
+      selectedOrigin,
+      selectedFlavorPeriod,
+      selectedRoaster,
     ]
   );
 
@@ -1141,39 +1197,45 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const handleOriginClick = useCallback(
     (origin: string | null) => {
       setSelectedOrigin(origin);
-      // 更新全局缓存并保存到本地存储
+      // 更新全局缓存并保存到本地存储（同时保存到全局和按状态的存储）
       globalCache.selectedOrigin = origin;
+      globalCache.selectedOrigins[selectedBeanState] = origin;
       saveSelectedOriginPreference(origin);
+      saveSelectedOriginByStatePreference(selectedBeanState, origin);
       // 防抖更新筛选
       debouncedUpdateFilters({ selectedOrigin: origin });
     },
-    [debouncedUpdateFilters]
+    [debouncedUpdateFilters, selectedBeanState]
   );
 
   // 处理赏味期状态点击
   const handleFlavorPeriodClick = useCallback(
     (status: FlavorPeriodStatus | null) => {
       setSelectedFlavorPeriod(status);
-      // 更新全局缓存并保存到本地存储
+      // 更新全局缓存并保存到本地存储（同时保存到全局和按状态的存储）
       globalCache.selectedFlavorPeriod = status;
+      globalCache.selectedFlavorPeriods[selectedBeanState] = status;
       saveSelectedFlavorPeriodPreference(status);
+      saveSelectedFlavorPeriodByStatePreference(selectedBeanState, status);
       // 防抖更新筛选
       debouncedUpdateFilters({ selectedFlavorPeriod: status });
     },
-    [debouncedUpdateFilters]
+    [debouncedUpdateFilters, selectedBeanState]
   );
 
   // 处理烘焙商点击
   const handleRoasterClick = useCallback(
     (roaster: string | null) => {
       setSelectedRoaster(roaster);
-      // 更新全局缓存并保存到本地存储
+      // 更新全局缓存并保存到本地存储（同时保存到全局和按状态的存储）
       globalCache.selectedRoaster = roaster;
+      globalCache.selectedRoasters[selectedBeanState] = roaster;
       saveSelectedRoasterPreference(roaster);
+      saveSelectedRoasterByStatePreference(selectedBeanState, roaster);
       // 防抖更新筛选
       debouncedUpdateFilters({ selectedRoaster: roaster });
     },
-    [debouncedUpdateFilters]
+    [debouncedUpdateFilters, selectedBeanState]
   );
 
   // 当榜单豆子类型变更时更新数据
