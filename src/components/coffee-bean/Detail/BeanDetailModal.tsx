@@ -297,6 +297,31 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     },
   });
 
+  // 获取 store 的 refreshBeans 方法
+  const refreshBeans = useCoffeeBeanStore(state => state.refreshBeans);
+
+  // 监听咖啡豆数据变化事件，刷新 store 数据以保持详情页同步
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleCoffeeBeanDataChanged = () => {
+      // 刷新 store 数据，这样详情页的 storeBean 就会自动更新
+      refreshBeans();
+    };
+
+    window.addEventListener(
+      'coffeeBeanDataChanged',
+      handleCoffeeBeanDataChanged as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        'coffeeBeanDataChanged',
+        handleCoffeeBeanDataChanged as EventListener
+      );
+    };
+  }, [isOpen, refreshBeans]);
+
   // 重置图片错误状态
   useEffect(() => {
     if (bean?.image) {
