@@ -13,7 +13,6 @@ import { Suspense } from 'react';
 import CapacitorInit from '@/providers/CapacitorProvider';
 import StorageInit from '@/providers/StorageProvider';
 import ModalHistoryInit from '@/providers/ModalHistoryProvider';
-import '@/lib/chunk-error-handler';
 
 import { BaiduAnalytics } from '@/components/common/BaiduAnalytics';
 

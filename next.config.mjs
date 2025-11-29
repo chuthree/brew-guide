@@ -1,20 +1,6 @@
-import nextPWA from '@ducanh2912/next-pwa';
+// Next.js 配置
+// PWA Service Worker 由 scripts/generate-sw.mjs 在构建后生成（使用 Google Workbox）
 
-// 检查当前环境
-const isDev = process.env.NODE_ENV === 'development';
-
-// PWA配置 - 使用Workbox生成Service Worker
-// register: false 因为我们在客户端手动控制注册时机（最佳实践）
-const pwaConfig = {
-  dest: 'public',
-  register: false, // 手动注册，更好的控制时机
-  skipWaiting: true,
-  disable: isDev,
-  cleanupOutdatedCaches: true,
-  // 使用默认缓存策略，无需自定义配置
-};
-
-// 创建基础配置
 const nextConfig = {
   reactStrictMode: true,
   // 启用 React Compiler
@@ -98,7 +84,4 @@ const nextConfig = {
   },
 };
 
-// 应用 PWA 配置
-const withPWAConfig = nextPWA(pwaConfig);
-// next-pwa 类型定义问题
-export default withPWAConfig(nextConfig);
+export default nextConfig;

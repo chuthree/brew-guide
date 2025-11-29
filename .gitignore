@@ -46,10 +46,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Service Worker
-public/sw.js
-public/workbox-*.js
-
 # Capacitor
 # iOS specific
 ios/App/App/public/
