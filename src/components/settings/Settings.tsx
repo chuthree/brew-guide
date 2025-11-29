@@ -170,6 +170,7 @@ export interface SettingsOptions {
   showGrinderScale?: boolean; // 是否在冲煮页显示磨豆机刻度指示器
   // 生豆库设置
   enableGreenBeanInventory?: boolean; // 是否启用生豆库功能
+  enableConvertToGreen?: boolean; // 是否启用熟豆转生豆功能（需先启用生豆库）
   // 每日提醒设置
   dailyReminder: boolean;
   dailyReminderTime: string;

@@ -355,6 +355,53 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                     <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                   </label>
                 </div>
+
+                {/* 转为生豆功能 - 仅在生豆库启用时显示 */}
+                {settings.enableGreenBeanInventory && (
+                  <div className="ml-4 border-l-2 border-neutral-200 pl-4 dark:border-neutral-700">
+                    {/* 开关 */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                          启用熟豆转生豆
+                        </div>
+                        <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                          在熟豆详情页显示转换入口
+                        </div>
+                      </div>
+                      <label className="relative inline-flex shrink-0 cursor-pointer items-center">
+                        <input
+                          type="checkbox"
+                          checked={settings.enableConvertToGreen || false}
+                          onChange={e =>
+                            handleChange(
+                              'enableConvertToGreen',
+                              e.target.checked
+                            )
+                          }
+                          className="peer sr-only"
+                        />
+                        <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                      </label>
+                    </div>
+
+                    {/* 功能介绍卡片 */}
+                    <div className="mt-4 rounded-lg bg-neutral-100 p-3 dark:bg-neutral-800">
+                      <div className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
+                        <p className="mb-2">
+                          在生豆库功能上线前，你可能用熟豆记录来管理生豆。此功能可将这些旧数据转换为正确的生豆库格式。
+                        </p>
+                        <p className="mb-2">
+                          转换后，已用掉的部分会变成「烘焙记录 +
+                          新熟豆」，剩余部分保留在生豆中。原有的冲煮笔记会自动迁移到新熟豆，快捷扣除等变动记录会被清理。
+                        </p>
+                        <p className="text-neutral-500 dark:text-neutral-500">
+                          仅限未关联生豆来源的熟豆使用，数据变动较大，建议先备份。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

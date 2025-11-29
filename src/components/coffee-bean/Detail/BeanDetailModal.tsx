@@ -104,6 +104,8 @@ interface BeanDetailModalProps {
     greenBean: CoffeeBean,
     roastedBeanTemplate: Omit<CoffeeBean, 'id' | 'timestamp'>
   ) => void;
+  /** 转为生豆回调 - 将熟豆转换为生豆（用于迁移旧数据） */
+  onConvertToGreen?: (bean: CoffeeBean) => void;
 }
 
 const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
@@ -117,6 +119,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onRate,
   onRepurchase,
   onRoast,
+  onConvertToGreen,
 }) => {
   // 使用 Zustand Store 获取实时更新的咖啡豆数据
   // 性能优化：只在当前咖啡豆的 ID 匹配时订阅，避免不必要的重新渲染
@@ -795,61 +798,81 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             )}
 
             {/* 原有的操作按钮 */}
-            {bean && (onEdit || onShare || onDelete || printEnabled) && (
-              <ActionMenu
-                items={[
-                  ...(onDelete
-                    ? [
-                        {
-                          id: 'delete',
-                          label: '删除',
-                          onClick: () => {
-                            onDelete(bean);
-                            handleClose();
+            {bean &&
+              (onEdit ||
+                onShare ||
+                onDelete ||
+                printEnabled ||
+                onConvertToGreen) && (
+                <ActionMenu
+                  items={[
+                    ...(onDelete
+                      ? [
+                          {
+                            id: 'delete',
+                            label: '删除',
+                            onClick: () => {
+                              onDelete(bean);
+                              handleClose();
+                            },
+                            color: 'danger' as const,
                           },
-                          color: 'danger' as const,
-                        },
-                      ]
-                    : []),
-                  ...(printEnabled
-                    ? [
-                        {
-                          id: 'print',
-                          label: '打印',
-                          onClick: handlePrint,
-                          color: 'default' as const,
-                        },
-                      ]
-                    : []),
-                  // 统一分享按钮
-                  ...(onShare
-                    ? [
-                        {
-                          id: 'share',
-                          label: '分享',
-                          onClick: () => setShareModalOpen(true),
-                          color: 'default' as const,
-                        },
-                      ]
-                    : []),
-                  ...(onEdit
-                    ? [
-                        {
-                          id: 'edit',
-                          label: '编辑',
-                          onClick: () => {
-                            onEdit(bean);
-                            // 不再关闭详情页，让编辑表单叠加在上面
+                        ]
+                      : []),
+                    // 转为生豆选项 - 仅对没有来源生豆ID的熟豆显示
+                    ...(!isGreenBean &&
+                    !bean.sourceGreenBeanId &&
+                    onConvertToGreen
+                      ? [
+                          {
+                            id: 'convertToGreen',
+                            label: '转为生豆',
+                            onClick: () => {
+                              onConvertToGreen(bean);
+                            },
+                            color: 'default' as const,
                           },
-                          color: 'default' as const,
-                        },
-                      ]
-                    : []),
-                ].filter(item => item)} // 过滤空项
-                useMorphingAnimation={true}
-                triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-              />
-            )}
+                        ]
+                      : []),
+                    ...(printEnabled
+                      ? [
+                          {
+                            id: 'print',
+                            label: '打印',
+                            onClick: handlePrint,
+                            color: 'default' as const,
+                          },
+                        ]
+                      : []),
+                    // 统一分享按钮
+                    ...(onShare
+                      ? [
+                          {
+                            id: 'share',
+                            label: '分享',
+                            onClick: () => setShareModalOpen(true),
+                            color: 'default' as const,
+                          },
+                        ]
+                      : []),
+                    ...(onEdit
+                      ? [
+                          {
+                            id: 'edit',
+                            label: '编辑',
+                            onClick: () => {
+                              onEdit(bean);
+                              // 不再关闭详情页，让编辑表单叠加在上面
+                            },
+                            color: 'default' as const,
+                          },
+                        ]
+                      : []),
+                  ].filter(item => item)} // 过滤空项
+                  useMorphingAnimation={true}
+                  triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                />
+              )}
           </div>
         </div>
 

@@ -513,4 +513,373 @@ export const RoastingManager = {
       console.error('清理生豆关联数据失败:', error);
     }
   },
+
+  /**
+   * 将熟豆转换为生豆（用于迁移用户之前当作生豆使用的熟豆数据）
+   *
+   * 转换逻辑：
+   * 1. 创建生豆：继承原熟豆的所有信息，保持 capacity 和 remaining 不变
+   * 2. 计算烘焙量：capacity - remaining（已使用的量等于已烘焙的量）
+   * 3. 创建熟豆：烘焙量作为 capacity，减去普通笔记消耗后的量作为 remaining
+   * 4. 创建烘焙记录：关联生豆和熟豆
+   * 5. 迁移普通笔记：将 beanId 指向新熟豆
+   * 6. 删除变动记录：快捷扣除、容量调整等记录
+   * 7. 删除原熟豆
+   *
+   * @param roastedBeanId 要转换的熟豆ID
+   * @returns 转换结果
+   */
+  async convertRoastedToGreen(roastedBeanId: string): Promise<{
+    success: boolean;
+    greenBean?: CoffeeBean;
+    newRoastedBean?: CoffeeBean;
+    roastingNote?: BrewingNoteData;
+    migratedNotesCount?: number;
+    deletedRecordsCount?: number;
+    error?: string;
+  }> {
+    try {
+      const { Storage } = await import('@/lib/core/storage');
+
+      // 1. 获取原熟豆信息
+      const originalBean = await CoffeeBeanManager.getBeanById(roastedBeanId);
+      if (!originalBean) {
+        return { success: false, error: '找不到咖啡豆记录' };
+      }
+
+      // 确认是熟豆
+      const beanState = originalBean.beanState || 'roasted';
+      if (beanState !== 'roasted') {
+        return { success: false, error: '只能将熟豆转换为生豆' };
+      }
+
+      // 确认没有来源生豆（避免转换已经是烘焙产生的熟豆）
+      if (originalBean.sourceGreenBeanId) {
+        return {
+          success: false,
+          error: '该熟豆已关联生豆来源，无法转换',
+        };
+      }
+
+      // 2. 获取所有关联笔记
+      const notesStr = await Storage.get('brewingNotes');
+      const allNotes: BrewingNoteData[] = notesStr ? JSON.parse(notesStr) : [];
+
+      // 筛选与原熟豆关联的笔记
+      const relatedNotes = allNotes.filter(
+        note => note.beanId === roastedBeanId
+      );
+
+      // 分类笔记
+      const brewingNotes: BrewingNoteData[] = []; // 普通冲煮笔记
+      const recordNotes: BrewingNoteData[] = []; // 变动记录（需删除）
+
+      for (const note of relatedNotes) {
+        if (
+          note.source === 'quick-decrement' ||
+          note.source === 'capacity-adjustment' ||
+          note.source === 'roasting'
+        ) {
+          recordNotes.push(note);
+        } else {
+          // 普通冲煮笔记（包括导入的笔记）
+          brewingNotes.push(note);
+        }
+      }
+
+      // 3. 计算普通笔记消耗的咖啡量
+      let noteUsageTotal = 0;
+      for (const note of brewingNotes) {
+        if (note.params?.coffee) {
+          const match = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
+          if (match) {
+            noteUsageTotal += parseFloat(match[0]);
+          }
+        }
+      }
+
+      // 4. 计算各项数值
+      const capacity = parseFloat(originalBean.capacity || '0');
+      const remaining = parseFloat(originalBean.remaining || '0');
+      const roastedAmount = capacity - remaining; // 已使用量 = 已烘焙量
+
+      // 边界检查：如果没有使用过，则无需转换
+      if (roastedAmount <= 0) {
+        return {
+          success: false,
+          error: '该咖啡豆尚未使用，无需转换（容量等于剩余量）',
+        };
+      }
+
+      // 计算新熟豆的剩余量
+      const newRoastedRemaining = Math.max(0, roastedAmount - noteUsageTotal);
+
+      // 5. 创建生豆
+      const greenBeanData: Omit<CoffeeBean, 'id' | 'timestamp'> = {
+        name: originalBean.name,
+        beanState: 'green',
+        beanType: originalBean.beanType,
+        capacity: originalBean.capacity,
+        remaining: originalBean.remaining,
+        image: originalBean.image,
+        roastLevel: originalBean.roastLevel,
+        flavor: originalBean.flavor,
+        notes: originalBean.notes,
+        brand: originalBean.brand,
+        price: originalBean.price,
+        blendComponents: originalBean.blendComponents,
+        // 使用原熟豆的 roastDate 作为购买日期（如果有的话）
+        purchaseDate: originalBean.roastDate,
+      };
+
+      const greenBean = await CoffeeBeanManager.addBean(greenBeanData);
+
+      // 6. 创建新熟豆
+      // 直接使用原熟豆名称，因为原熟豆会被删除，不会产生重名
+      const roastedBeanName = originalBean.name;
+
+      // 计算熟豆价格（基于生豆单价和烘焙量）
+      let roastedPrice: string | undefined;
+      if (originalBean.price && capacity > 0) {
+        const priceNum = parseFloat(originalBean.price);
+        if (priceNum > 0) {
+          roastedPrice = ((priceNum / capacity) * roastedAmount).toFixed(2);
+        }
+      }
+
+      const newRoastedBeanData: Omit<CoffeeBean, 'id' | 'timestamp'> = {
+        name: roastedBeanName,
+        beanState: 'roasted',
+        beanType: originalBean.beanType,
+        capacity: CoffeeBeanManager.formatNumber(roastedAmount),
+        remaining: CoffeeBeanManager.formatNumber(newRoastedRemaining),
+        image: originalBean.image,
+        roastLevel: originalBean.roastLevel,
+        roastDate: originalBean.roastDate, // 保留原熟豆的烘焙日期
+        flavor: originalBean.flavor,
+        notes: originalBean.notes,
+        brand: originalBean.brand,
+        price: roastedPrice,
+        blendComponents: originalBean.blendComponents,
+        sourceGreenBeanId: greenBean.id, // 关联到新创建的生豆
+      };
+
+      const newRoastedBean =
+        await CoffeeBeanManager.addBean(newRoastedBeanData);
+
+      // 7. 创建烘焙记录
+      const roastingNote: BrewingNoteData = {
+        id: nanoid(),
+        timestamp: Date.now(),
+        coffeeBeanInfo: {
+          name: greenBean.name,
+          roastLevel: greenBean.roastLevel || '未知',
+          roastDate: greenBean.purchaseDate,
+        },
+        rating: 0,
+        taste: {},
+        notes: `从熟豆转换：烘焙了 ${CoffeeBeanManager.formatNumber(roastedAmount)}g 生豆 → ${newRoastedBean.name}`,
+        source: 'roasting',
+        beanId: greenBean.id,
+        changeRecord: {
+          roastingRecord: {
+            greenBeanId: greenBean.id,
+            greenBeanName: greenBean.name,
+            roastedAmount,
+            roastedBeanId: newRoastedBean.id,
+            roastedBeanName: newRoastedBean.name,
+          },
+        },
+      };
+
+      // 8. 更新笔记数据
+      const updatedNotes: BrewingNoteData[] = [];
+      const recordIdsToDelete = new Set(recordNotes.map(n => n.id));
+
+      for (const note of allNotes) {
+        // 跳过要删除的变动记录
+        if (recordIdsToDelete.has(note.id)) {
+          continue;
+        }
+
+        // 迁移普通冲煮笔记的 beanId
+        if (note.beanId === roastedBeanId) {
+          updatedNotes.push({
+            ...note,
+            beanId: newRoastedBean.id,
+            coffeeBeanInfo: {
+              ...note.coffeeBeanInfo,
+              name: newRoastedBean.name,
+            },
+          });
+        } else {
+          updatedNotes.push(note);
+        }
+      }
+
+      // 添加烘焙记录
+      updatedNotes.unshift(roastingNote);
+
+      // 保存笔记
+      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+
+      // 9. 删除原熟豆（不触发关联清理，因为我们已经手动处理了）
+      const beans = await CoffeeBeanManager.getAllBeans();
+      const filteredBeans = beans.filter(bean => bean.id !== roastedBeanId);
+      await Storage.set('coffeeBeans', JSON.stringify(filteredBeans));
+
+      // 从 IndexedDB 删除
+      const { db } = await import('@/lib/core/db');
+      await db.coffeeBeans.delete(roastedBeanId);
+
+      // 清除缓存
+      CoffeeBeanManager.clearCache();
+
+      // 10. 触发更新事件
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
+        window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+      }
+
+      return {
+        success: true,
+        greenBean,
+        newRoastedBean,
+        roastingNote,
+        migratedNotesCount: brewingNotes.length,
+        deletedRecordsCount: recordNotes.length,
+      };
+    } catch (error) {
+      console.error('转换熟豆为生豆失败:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '转换失败',
+      };
+    }
+  },
+
+  /**
+   * 预览熟豆转生豆的效果（不执行实际转换）
+   *
+   * @param roastedBeanId 要转换的熟豆ID
+   * @returns 预览结果
+   */
+  async previewConvertRoastedToGreen(roastedBeanId: string): Promise<{
+    success: boolean;
+    preview?: {
+      originalBean: {
+        name: string;
+        capacity: number;
+        remaining: number;
+      };
+      greenBean: {
+        capacity: number;
+        remaining: number;
+      };
+      roastingAmount: number;
+      newRoastedBean: {
+        capacity: number;
+        remaining: number;
+      };
+      brewingNotesCount: number;
+      noteUsageTotal: number;
+      recordsToDeleteCount: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const { Storage } = await import('@/lib/core/storage');
+
+      // 获取原熟豆信息
+      const originalBean = await CoffeeBeanManager.getBeanById(roastedBeanId);
+      if (!originalBean) {
+        return { success: false, error: '找不到咖啡豆记录' };
+      }
+
+      const beanState = originalBean.beanState || 'roasted';
+      if (beanState !== 'roasted') {
+        return { success: false, error: '只能将熟豆转换为生豆' };
+      }
+
+      if (originalBean.sourceGreenBeanId) {
+        return {
+          success: false,
+          error: '该熟豆已关联生豆来源，无法转换',
+        };
+      }
+
+      // 获取所有关联笔记
+      const notesStr = await Storage.get('brewingNotes');
+      const allNotes: BrewingNoteData[] = notesStr ? JSON.parse(notesStr) : [];
+      const relatedNotes = allNotes.filter(
+        note => note.beanId === roastedBeanId
+      );
+
+      // 分类并统计
+      let brewingNotesCount = 0;
+      let recordsToDeleteCount = 0;
+      let noteUsageTotal = 0;
+
+      for (const note of relatedNotes) {
+        if (
+          note.source === 'quick-decrement' ||
+          note.source === 'capacity-adjustment' ||
+          note.source === 'roasting'
+        ) {
+          recordsToDeleteCount++;
+        } else {
+          brewingNotesCount++;
+          if (note.params?.coffee) {
+            const match = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
+            if (match) {
+              noteUsageTotal += parseFloat(match[0]);
+            }
+          }
+        }
+      }
+
+      // 计算数值
+      const capacity = parseFloat(originalBean.capacity || '0');
+      const remaining = parseFloat(originalBean.remaining || '0');
+      const roastingAmount = capacity - remaining;
+
+      if (roastingAmount <= 0) {
+        return {
+          success: false,
+          error: '该咖啡豆尚未使用，无需转换（容量等于剩余量）',
+        };
+      }
+
+      const newRoastedRemaining = Math.max(0, roastingAmount - noteUsageTotal);
+
+      return {
+        success: true,
+        preview: {
+          originalBean: {
+            name: originalBean.name,
+            capacity,
+            remaining,
+          },
+          greenBean: {
+            capacity,
+            remaining,
+          },
+          roastingAmount,
+          newRoastedBean: {
+            capacity: roastingAmount,
+            remaining: newRoastedRemaining,
+          },
+          brewingNotesCount,
+          noteUsageTotal,
+          recordsToDeleteCount,
+        },
+      };
+    } catch (error) {
+      console.error('预览转换失败:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '预览失败',
+      };
+    }
+  },
 };

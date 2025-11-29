@@ -3666,6 +3666,93 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           setEditingBean(roastedBeanTemplate as ExtendedCoffeeBean);
           setShowBeanForm(true);
         }}
+        onConvertToGreen={
+          settings.enableGreenBeanInventory && settings.enableConvertToGreen
+            ? async bean => {
+                // 转为生豆：先预览转换效果，然后确认执行
+                try {
+                  const { showToast } = await import(
+                    '@/components/common/feedback/LightToast'
+                  );
+                  const { RoastingManager } = await import(
+                    '@/lib/managers/roastingManager'
+                  );
+
+                  // 先预览转换效果
+                  const preview =
+                    await RoastingManager.previewConvertRoastedToGreen(bean.id);
+
+                  if (!preview.success || !preview.preview) {
+                    showToast({
+                      type: 'error',
+                      title: preview.error || '无法转换',
+                      duration: 3000,
+                    });
+                    return;
+                  }
+
+                  const p = preview.preview;
+
+                  // 构建确认消息
+                  const confirmMessage = [
+                    `将「${p.originalBean.name}」转换为生豆？\n`,
+                    `📦 原熟豆：${p.originalBean.capacity}g 总量，${p.originalBean.remaining}g 剩余`,
+                    `\n🌱 生豆：${p.greenBean.capacity}g 总量，${p.greenBean.remaining}g 剩余`,
+                    `🔥 烘焙量：${p.roastingAmount}g`,
+                    `☕ 新熟豆：${p.newRoastedBean.capacity}g 总量，${p.newRoastedBean.remaining}g 剩余`,
+                    p.brewingNotesCount > 0
+                      ? `\n📝 将迁移 ${p.brewingNotesCount} 条冲煮记录（共 ${p.noteUsageTotal}g）`
+                      : '',
+                    p.recordsToDeleteCount > 0
+                      ? `🗑️ 将删除 ${p.recordsToDeleteCount} 条变动记录`
+                      : '',
+                  ]
+                    .filter(Boolean)
+                    .join('\n');
+
+                  // 显示确认对话框
+                  if (!window.confirm(confirmMessage)) {
+                    return;
+                  }
+
+                  // 执行转换
+                  const result = await RoastingManager.convertRoastedToGreen(
+                    bean.id
+                  );
+
+                  if (result.success) {
+                    // 关闭详情页
+                    setBeanDetailOpen(false);
+
+                    showToast({
+                      type: 'success',
+                      title: '转换成功',
+                      duration: 2000,
+                    });
+
+                    // 触发数据更新
+                    handleBeanListChange();
+                  } else {
+                    showToast({
+                      type: 'error',
+                      title: result.error || '转换失败',
+                      duration: 3000,
+                    });
+                  }
+                } catch (error) {
+                  console.error('转换失败:', error);
+                  const { showToast } = await import(
+                    '@/components/common/feedback/LightToast'
+                  );
+                  showToast({
+                    type: 'error',
+                    title: '转换失败',
+                    duration: 2000,
+                  });
+                }
+              }
+            : undefined
+        }
       />
 
       {/* 添加咖啡豆模态框独立渲染，与 Settings 同级 */}
