@@ -264,10 +264,23 @@ export const RoastingManager = {
       const roastDate =
         options?.roastDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD 格式
 
-      // 6. 调用完整烘焙方法，自动创建熟豆
+      // 6. 自动计算价格：熟豆价格 = 生豆单价 × 烘焙量
+      let roastedPrice: string | undefined;
+      if (greenBean.price && greenBean.capacity) {
+        const greenPrice = parseFloat(greenBean.price);
+        const greenCapacity = parseFloat(greenBean.capacity);
+        if (greenPrice > 0 && greenCapacity > 0) {
+          roastedPrice = ((greenPrice / greenCapacity) * roastedAmount).toFixed(
+            2
+          );
+        }
+      }
+
+      // 7. 调用完整烘焙方法，自动创建熟豆
       const result = await this.roastGreenBean(greenBeanId, roastedAmount, {
         name: roastedBeanName,
         roastDate: roastDate,
+        price: roastedPrice,
       });
 
       return result;
