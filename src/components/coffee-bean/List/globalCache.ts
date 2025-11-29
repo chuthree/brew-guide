@@ -1,6 +1,7 @@
 import {
   ExtendedCoffeeBean,
   BeanType,
+  BeanState,
   ViewOption,
   BloggerBeansYear,
   BeanFilterMode,
@@ -39,8 +40,19 @@ export const globalCache: {
   varieties: string[];
   selectedVariety: string | null;
   selectedBeanType: BeanType;
+  // 每个豆子状态的类型筛选记忆
+  selectedBeanTypes: {
+    green: BeanType;
+    roasted: BeanType;
+  };
+  selectedBeanState: BeanState;
   // 新增分类相关状态
   filterMode: BeanFilterMode;
+  // 每个豆子状态的筛选模式记忆
+  filterModes: {
+    green: BeanFilterMode;
+    roasted: BeanFilterMode;
+  };
   selectedOrigin: string | null;
   selectedFlavorPeriod: FlavorPeriodStatus | null;
   selectedRoaster: string | null;
@@ -48,7 +60,17 @@ export const globalCache: {
   availableFlavorPeriods: FlavorPeriodStatus[];
   availableRoasters: string[];
   showEmptyBeans: boolean;
+  // 每个豆子状态的显示空豆子设置
+  showEmptyBeansSettings: {
+    green: boolean;
+    roasted: boolean;
+  };
   isImageFlowMode: boolean;
+  // 每个豆子状态的图片流模式设置
+  isImageFlowModes: {
+    green: boolean;
+    roasted: boolean;
+  };
   viewMode: ViewOption;
   sortOption: SortOption;
   // 统计视图相关状态
@@ -62,6 +84,11 @@ export const globalCache: {
   };
   // 为每个视图模式添加独立的排序选项
   inventorySortOption: SortOption;
+  // 每个豆子状态的库存排序选项记忆
+  inventorySortOptions: {
+    green: SortOption;
+    roasted: SortOption;
+  };
   rankingSortOption: SortOption;
   bloggerSortOption: SortOption;
   rankingBeanType: BeanType;
@@ -81,8 +108,19 @@ export const globalCache: {
   varieties: [],
   selectedVariety: null,
   selectedBeanType: 'all',
+  // 每个豆子状态的类型筛选初始值
+  selectedBeanTypes: {
+    green: 'all',
+    roasted: 'all',
+  },
+  selectedBeanState: 'roasted',
   // 新增分类相关状态初始值
   filterMode: 'variety',
+  // 每个豆子状态的筛选模式初始值
+  filterModes: {
+    green: 'variety',
+    roasted: 'variety',
+  },
   selectedOrigin: null,
   selectedFlavorPeriod: null,
   selectedRoaster: null,
@@ -90,7 +128,17 @@ export const globalCache: {
   availableFlavorPeriods: [],
   availableRoasters: [],
   showEmptyBeans: false,
+  // 每个豆子状态的显示空豆子设置初始值
+  showEmptyBeansSettings: {
+    green: false,
+    roasted: false,
+  },
   isImageFlowMode: false,
+  // 每个豆子状态的图片流模式初始值
+  isImageFlowModes: {
+    green: false,
+    roasted: false,
+  },
   viewMode: 'inventory',
   sortOption: 'remaining_days_asc',
   // 统计视图相关状态初始值
@@ -104,6 +152,11 @@ export const globalCache: {
   },
   // 为每个视图模式设置默认排序选项
   inventorySortOption: 'remaining_days_asc',
+  // 每个豆子状态的库存排序默认值
+  inventorySortOptions: {
+    green: 'last_modified_desc', // 生豆默认按最近变动
+    roasted: 'remaining_days_asc', // 熟豆默认按赏味期
+  },
   rankingSortOption: 'rating_desc',
   bloggerSortOption: 'rating_desc',
   rankingBeanType: 'all',
@@ -127,6 +180,23 @@ export const saveShowEmptyBeansPreference = (value: boolean): void => {
   saveBooleanState(MODULE_NAME, 'showEmptyBeans', value);
 };
 
+// 按 beanState 读取显示空豆子设置
+export const getShowEmptyBeansByStatePreference = (
+  beanState: BeanState
+): boolean => {
+  const key = `showEmptyBeans_${beanState}`;
+  return getBooleanState(MODULE_NAME, key, false);
+};
+
+// 按 beanState 保存显示空豆子设置
+export const saveShowEmptyBeansByStatePreference = (
+  beanState: BeanState,
+  value: boolean
+): void => {
+  const key = `showEmptyBeans_${beanState}`;
+  saveBooleanState(MODULE_NAME, key, value);
+};
+
 // 从localStorage读取选中的品种
 export const getSelectedVarietyPreference = (): string | null => {
   const value = getStringState(MODULE_NAME, 'selectedVariety', '');
@@ -147,6 +217,35 @@ export const getSelectedBeanTypePreference = (): BeanType => {
 // 保存选中的豆子类型到localStorage
 export const saveSelectedBeanTypePreference = (value: BeanType): void => {
   saveStringState(MODULE_NAME, 'selectedBeanType', value);
+};
+
+// 按 beanState 读取选中的豆子类型
+export const getSelectedBeanTypeByStatePreference = (
+  beanState: BeanState
+): BeanType => {
+  const key = `selectedBeanType_${beanState}`;
+  const value = getStringState(MODULE_NAME, key, 'all');
+  return value as BeanType;
+};
+
+// 按 beanState 保存选中的豆子类型
+export const saveSelectedBeanTypeByStatePreference = (
+  beanState: BeanState,
+  value: BeanType
+): void => {
+  const key = `selectedBeanType_${beanState}`;
+  saveStringState(MODULE_NAME, key, value);
+};
+
+// 从localStorage读取选中的豆子状态（生豆/熟豆）
+export const getSelectedBeanStatePreference = (): BeanState => {
+  const value = getStringState(MODULE_NAME, 'selectedBeanState', 'roasted');
+  return value as BeanState;
+};
+
+// 保存选中的豆子状态到localStorage
+export const saveSelectedBeanStatePreference = (value: BeanState): void => {
+  saveStringState(MODULE_NAME, 'selectedBeanState', value);
 };
 
 // 从localStorage读取视图模式
@@ -184,6 +283,31 @@ export const getInventorySortOptionPreference = (): SortOption => {
 // 保存库存视图排序选项到localStorage
 export const saveInventorySortOptionPreference = (value: SortOption): void => {
   saveStringState(MODULE_NAME, 'inventorySortOption', value);
+};
+
+// 按 beanState 读取库存排序选项
+export const getInventorySortOptionByStatePreference = (
+  beanState: BeanState
+): SortOption => {
+  const key = `inventorySortOption_${beanState}`;
+  // 生豆默认按最近变动，熟豆默认按赏味期
+  const defaultValue =
+    beanState === 'green' ? 'last_modified_desc' : 'remaining_days_asc';
+  const value = getStringState(MODULE_NAME, key, defaultValue);
+  // 生豆不支持赏味期排序，如果存储的是 remaining_days 则返回默认值
+  if (beanState === 'green' && value.includes('remaining_days')) {
+    return 'last_modified_desc';
+  }
+  return value as SortOption;
+};
+
+// 按 beanState 保存库存排序选项
+export const saveInventorySortOptionByStatePreference = (
+  beanState: BeanState,
+  value: SortOption
+): void => {
+  const key = `inventorySortOption_${beanState}`;
+  saveStringState(MODULE_NAME, key, value);
 };
 
 // 从localStorage读取个人榜单视图排序选项
@@ -286,15 +410,37 @@ export const initializeBloggerPreferences = (): void => {
   globalCache.bloggerYears.fenix = getBloggerYearMemory('fenix');
 };
 
-// 从localStorage读取分类模式
+// 从 localStorage 读取分类模式
 export const getFilterModePreference = (): BeanFilterMode => {
   const value = getStringState(MODULE_NAME, 'filterMode', 'variety');
   return value as BeanFilterMode;
 };
 
-// 保存分类模式到localStorage
+// 保存分类模式到 localStorage
 export const saveFilterModePreference = (value: BeanFilterMode): void => {
   saveStringState(MODULE_NAME, 'filterMode', value);
+};
+
+// 按 beanState 读取分类模式
+export const getFilterModeByStatePreference = (
+  beanState: BeanState
+): BeanFilterMode => {
+  const key = `filterMode_${beanState}`;
+  const value = getStringState(MODULE_NAME, key, 'variety');
+  // 生豆不支持赏味期筛选，如果存储的是 flavorPeriod 则返回 variety
+  if (beanState === 'green' && value === 'flavorPeriod') {
+    return 'variety';
+  }
+  return value as BeanFilterMode;
+};
+
+// 按 beanState 保存分类模式
+export const saveFilterModeByStatePreference = (
+  beanState: BeanState,
+  value: BeanFilterMode
+): void => {
+  const key = `filterMode_${beanState}`;
+  saveStringState(MODULE_NAME, key, value);
 };
 
 // 从localStorage读取选中的产地
@@ -341,6 +487,23 @@ export const getImageFlowModePreference = (): boolean => {
 // 保存图片流模式到localStorage
 export const saveImageFlowModePreference = (value: boolean): void => {
   saveBooleanState(MODULE_NAME, 'isImageFlowMode', value);
+};
+
+// 按 beanState 读取图片流模式
+export const getImageFlowModeByStatePreference = (
+  beanState: BeanState
+): boolean => {
+  const key = `isImageFlowMode_${beanState}`;
+  return getBooleanState(MODULE_NAME, key, false);
+};
+
+// 按 beanState 保存图片流模式
+export const saveImageFlowModeByStatePreference = (
+  beanState: BeanState,
+  value: boolean
+): void => {
+  const key = `isImageFlowMode_${beanState}`;
+  saveBooleanState(MODULE_NAME, key, value);
 };
 
 // 从localStorage读取统计视图时间分组模式
@@ -431,18 +594,43 @@ const removeSearchHistoryItem = (query: string): void => {
 
 // 初始化全局缓存的状态
 globalCache.showEmptyBeans = getShowEmptyBeansPreference();
+// 初始化每个 beanState 的显示空豆子设置
+globalCache.showEmptyBeansSettings = {
+  green: getShowEmptyBeansByStatePreference('green'),
+  roasted: getShowEmptyBeansByStatePreference('roasted'),
+};
 globalCache.selectedVariety = getSelectedVarietyPreference();
 globalCache.selectedBeanType = getSelectedBeanTypePreference();
+// 初始化每个 beanState 的类型筛选记忆
+globalCache.selectedBeanTypes = {
+  green: getSelectedBeanTypeByStatePreference('green'),
+  roasted: getSelectedBeanTypeByStatePreference('roasted'),
+};
 globalCache.isImageFlowMode = getImageFlowModePreference();
+// 初始化每个 beanState 的图片流模式记忆
+globalCache.isImageFlowModes = {
+  green: getImageFlowModeByStatePreference('green'),
+  roasted: getImageFlowModeByStatePreference('roasted'),
+};
 globalCache.viewMode = getViewModePreference();
 globalCache.sortOption = getSortOptionPreference();
 globalCache.inventorySortOption = getInventorySortOptionPreference();
+// 初始化每个 beanState 的库存排序选项记忆
+globalCache.inventorySortOptions = {
+  green: getInventorySortOptionByStatePreference('green'),
+  roasted: getInventorySortOptionByStatePreference('roasted'),
+};
 globalCache.rankingSortOption = getRankingSortOptionPreference();
 globalCache.bloggerSortOption = getBloggerSortOptionPreference();
 globalCache.rankingBeanType = getRankingBeanTypePreference();
 globalCache.bloggerYear = getBloggerYearPreference();
 // 初始化新增的分类相关状态
 globalCache.filterMode = getFilterModePreference();
+// 初始化每个 beanState 的 filterMode 记忆
+globalCache.filterModes = {
+  green: getFilterModeByStatePreference('green'),
+  roasted: getFilterModeByStatePreference('roasted'),
+};
 globalCache.selectedOrigin = getSelectedOriginPreference();
 globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
 globalCache.selectedRoaster = getSelectedRoasterPreference();

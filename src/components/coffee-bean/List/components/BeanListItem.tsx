@@ -414,27 +414,38 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                   : 'text-neutral-600 dark:text-neutral-400'
               }`}
             >
-              {(bean.roastDate || bean.isInTransit) && (
-                <span className="inline">
-                  {bean.isInTransit
-                    ? '在途'
-                    : bean.isFrozen
-                      ? '冷冻'
-                      : bean.roastDate && dateDisplayMode === 'flavorPeriod'
-                        ? flavorInfo.status
-                        : bean.roastDate && dateDisplayMode === 'agingDays'
-                          ? getAgingDaysText(bean.roastDate)
-                          : bean.roastDate
-                            ? formatDateShort(bean.roastDate)
-                            : ''}
-                  {((bean.capacity && bean.remaining) ||
-                    (bean.price && bean.capacity)) && (
-                    <span className="mx-2 text-neutral-400 dark:text-neutral-600">
-                      ·
-                    </span>
-                  )}
-                </span>
-              )}
+              {/* 生豆显示购买日期，熟豆显示烘焙日期 */}
+              {(() => {
+                const isGreenBean = bean.beanState === 'green';
+                const displayDate = isGreenBean
+                  ? bean.purchaseDate
+                  : bean.roastDate;
+                return displayDate || bean.isInTransit ? (
+                  <span className="inline">
+                    {bean.isInTransit
+                      ? '在途'
+                      : bean.isFrozen
+                        ? '冷冻'
+                        : !isGreenBean &&
+                            displayDate &&
+                            dateDisplayMode === 'flavorPeriod'
+                          ? flavorInfo.status
+                          : !isGreenBean &&
+                              displayDate &&
+                              dateDisplayMode === 'agingDays'
+                            ? getAgingDaysText(displayDate)
+                            : displayDate
+                              ? formatDateShort(displayDate)
+                              : ''}
+                    {((bean.capacity && bean.remaining) ||
+                      (bean.price && bean.capacity)) && (
+                      <span className="mx-2 text-neutral-400 dark:text-neutral-600">
+                        ·
+                      </span>
+                    )}
+                  </span>
+                ) : null;
+              })()}
 
               {bean.capacity && bean.remaining && (
                 <span className="inline">

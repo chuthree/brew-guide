@@ -66,7 +66,9 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   // 判断笔记是否为变动记录 - 纯函数，不需要缓存
   const isChangeRecord = (note: BrewingNote) => {
     return (
-      note.source === 'quick-decrement' || note.source === 'capacity-adjustment'
+      note.source === 'quick-decrement' ||
+      note.source === 'capacity-adjustment' ||
+      note.source === 'roasting'
     );
   };
 

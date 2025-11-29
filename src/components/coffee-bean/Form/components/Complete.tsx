@@ -75,16 +75,29 @@ const Complete: React.FC<CompleteProps> = ({
             </span>
           </div>
         )}
-        {!!bean.roastDate && !bean.isInTransit && (
+        {/* 生豆显示购买日期，熟豆显示烘焙日期 */}
+        {bean.beanState === 'green' && !!bean.purchaseDate && (
           <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
-              烘焙日期
+              购买日期
             </span>
             <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-              {bean.roastDate}
+              {bean.purchaseDate}
             </span>
           </div>
         )}
+        {bean.beanState !== 'green' &&
+          !!bean.roastDate &&
+          !bean.isInTransit && (
+            <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+              <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
+                烘焙日期
+              </span>
+              <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
+                {bean.roastDate}
+              </span>
+            </div>
+          )}
         {!!bean.isInTransit && (
           <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">

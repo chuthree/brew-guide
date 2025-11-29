@@ -1,6 +1,11 @@
 import { useMemo, useCallback } from 'react';
 import { debounce } from 'lodash';
-import { ExtendedCoffeeBean, BeanType, BeanFilterMode } from '../types';
+import {
+  ExtendedCoffeeBean,
+  BeanType,
+  BeanState,
+  BeanFilterMode,
+} from '../types';
 import { SortOption, sortBeans } from '../SortSelector';
 import { isBeanEmpty } from '../globalCache';
 import {
@@ -23,6 +28,7 @@ interface UseEnhancedBeanFilteringProps {
   selectedFlavorPeriod: FlavorPeriodStatus | null;
   selectedRoaster: string | null;
   selectedBeanType: BeanType;
+  selectedBeanState: BeanState;
   showEmptyBeans: boolean;
   sortOption: SortOption;
 }
@@ -51,6 +57,7 @@ export const useEnhancedBeanFiltering = ({
   selectedFlavorPeriod,
   selectedRoaster,
   selectedBeanType,
+  selectedBeanState,
   showEmptyBeans,
   sortOption,
 }: UseEnhancedBeanFilteringProps): UseEnhancedBeanFilteringReturn => {
@@ -61,17 +68,23 @@ export const useEnhancedBeanFiltering = ({
 
       let filtered = beanList;
 
-      // 1. 按豆子类型筛选
+      // 1. 按豆子状态筛选（生豆/熟豆）
+      filtered = filtered.filter(bean => {
+        const beanState = bean.beanState || 'roasted'; // 默认为熟豆
+        return beanState === selectedBeanState;
+      });
+
+      // 2. 按豆子类型筛选
       if (selectedBeanType && selectedBeanType !== 'all') {
         filtered = filtered.filter(bean => bean.beanType === selectedBeanType);
       }
 
-      // 2. 按是否用完筛选
+      // 3. 按是否用完筛选
       filtered = filtered.filter(bean =>
         isEmptyFilter ? isBeanEmpty(bean) : !isBeanEmpty(bean)
       );
 
-      // 3. 根据当前分类模式进行筛选
+      // 4. 根据当前分类模式进行筛选
       switch (filterMode) {
         case 'variety':
           if (selectedVariety) {
@@ -140,6 +153,7 @@ export const useEnhancedBeanFiltering = ({
       selectedFlavorPeriod,
       selectedRoaster,
       selectedBeanType,
+      selectedBeanState,
       sortOption,
     ]
   );
@@ -162,6 +176,12 @@ export const useEnhancedBeanFiltering = ({
 
     let filtered = beans;
 
+    // 先按 beanState 筛选（生豆/熟豆）
+    filtered = filtered.filter(bean => {
+      const beanState = bean.beanState || 'roasted';
+      return beanState === selectedBeanState;
+    });
+
     // 按豆子类型筛选
     if (selectedBeanType && selectedBeanType !== 'all') {
       filtered = filtered.filter(bean => bean.beanType === selectedBeanType);
@@ -173,7 +193,7 @@ export const useEnhancedBeanFiltering = ({
     }
 
     return filtered;
-  }, [beans, selectedBeanType, showEmptyBeans]);
+  }, [beans, selectedBeanState, selectedBeanType, showEmptyBeans]);
 
   // 使用useMemo缓存可用品种列表
   const availableVarieties = useMemo(() => {

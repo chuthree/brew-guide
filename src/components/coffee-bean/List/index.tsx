@@ -26,6 +26,7 @@ import {
   ExtendedCoffeeBean,
   CoffeeBeansProps,
   BeanType,
+  BeanState,
   BloggerBeansYear,
   VIEW_OPTIONS,
   ViewOption,
@@ -34,11 +35,19 @@ import {
 import {
   globalCache,
   saveShowEmptyBeansPreference,
+  saveShowEmptyBeansByStatePreference,
+  getShowEmptyBeansByStatePreference,
   saveSelectedVarietyPreference,
   saveSelectedBeanTypePreference,
+  saveSelectedBeanTypeByStatePreference,
+  getSelectedBeanTypeByStatePreference,
+  saveSelectedBeanStatePreference,
+  getSelectedBeanStatePreference,
   saveViewModePreference,
   saveSortOptionPreference,
   saveInventorySortOptionPreference,
+  saveInventorySortOptionByStatePreference,
+  getInventorySortOptionByStatePreference,
   saveRankingSortOptionPreference,
   saveBloggerSortOptionPreference,
   saveRankingBeanTypePreference,
@@ -47,10 +56,14 @@ import {
   saveBloggerYearMemory,
   initializeBloggerPreferences,
   saveFilterModePreference,
+  saveFilterModeByStatePreference,
+  getFilterModeByStatePreference,
   saveSelectedOriginPreference,
   saveSelectedFlavorPeriodPreference,
   saveSelectedRoasterPreference,
   saveImageFlowModePreference,
+  saveImageFlowModeByStatePreference,
+  getImageFlowModeByStatePreference,
   isBeanEmpty,
   getSearchHistoryPreference,
   addSearchHistory,
@@ -141,6 +154,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [selectedBeanType, setSelectedBeanType] = useState<BeanType>(
     globalCache.selectedBeanType
   );
+  const [selectedBeanState, setSelectedBeanState] = useState<BeanState>(() => {
+    const savedState = getSelectedBeanStatePreference();
+    globalCache.selectedBeanState = savedState;
+    return savedState;
+  });
   const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(
     globalCache.showEmptyBeans
   );
@@ -251,6 +269,45 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     error?: Error;
   }> => {
     try {
+      // 获取豆子信息以检查是否为生豆
+      const bean = beans.find(b => b.id === beanId);
+      const beanState = bean?.beanState || 'roasted';
+
+      // 如果是生豆，使用烘焙功能
+      if (beanState === 'green') {
+        const { RoastingManager } = await import(
+          '@/lib/managers/roastingManager'
+        );
+        const result = await RoastingManager.simpleRoast(
+          beanId,
+          decrementAmount
+        );
+
+        if (result.success && result.greenBean) {
+          // 触发数据更新
+          window.dispatchEvent(
+            new CustomEvent('coffeeBeanDataChanged', {
+              detail: {
+                action: 'update',
+                beanId: beanId,
+              },
+            })
+          );
+
+          return {
+            success: true,
+            value: result.greenBean.remaining,
+            reducedToZero: parseFloat(result.greenBean.remaining || '0') === 0,
+          };
+        } else {
+          return {
+            success: false,
+            error: new Error(result.error || '烘焙失败'),
+          };
+        }
+      }
+
+      // 熟豆使用原来的快捷扣除逻辑
       const result = await baseHandleQuickDecrement(
         beanId,
         currentValue,
@@ -293,6 +350,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     selectedFlavorPeriod,
     selectedRoaster,
     selectedBeanType,
+    selectedBeanState,
     showEmptyBeans,
     sortOption,
   });
@@ -301,6 +359,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const { espressoCount, filterCount, omniCount } = useMemo(() => {
     // 根据当前的筛选条件计算不同类型的豆子数量
     let beansToCount = beans;
+
+    // 先按 beanState 筛选
+    beansToCount = beansToCount.filter(bean => {
+      const beanState = bean.beanState || 'roasted';
+      return beanState === selectedBeanState;
+    });
 
     // 如果不显示空豆子，先过滤掉空豆子
     if (!showEmptyBeans) {
@@ -351,6 +415,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     return { espressoCount: espresso, filterCount: filter, omniCount: omni };
   }, [
     beans,
+    selectedBeanState,
     showEmptyBeans,
     filterMode,
     selectedVariety,
@@ -432,13 +497,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   }, [beans]);
 
   // 切换图片流模式
-  const handleToggleImageFlowMode = () => {
+  const handleToggleImageFlowMode = useCallback(() => {
     const newMode = !isImageFlowMode;
     setIsImageFlowMode(newMode);
-    // 保存到全局缓存和localStorage
+    // 保存到全局缓存和localStorage（同时保存到全局和按状态的存储）
     globalCache.isImageFlowMode = newMode;
+    globalCache.isImageFlowModes[selectedBeanState] = newMode;
     saveImageFlowModePreference(newMode);
-  };
+    saveImageFlowModeByStatePreference(selectedBeanState, newMode);
+  }, [isImageFlowMode, selectedBeanState]);
 
   // 当没有图片咖啡豆时，自动关闭图片流模式
   // 但只在数据已经加载完成后才执行此检查，避免初始化时误判
@@ -829,13 +896,102 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       const newBeanType = beanType === selectedBeanType ? 'all' : beanType;
 
       setSelectedBeanType(newBeanType);
-      // 更新全局缓存并保存到本地存储
+      // 更新全局缓存并保存到本地存储（同时保存到全局和按状态的存储）
       globalCache.selectedBeanType = newBeanType;
+      globalCache.selectedBeanTypes[selectedBeanState] = newBeanType;
       saveSelectedBeanTypePreference(newBeanType);
+      saveSelectedBeanTypeByStatePreference(selectedBeanState, newBeanType);
       // 使用防抖更新筛选
       debouncedUpdateFilters({ selectedBeanType: newBeanType });
     },
-    [selectedBeanType, debouncedUpdateFilters]
+    [selectedBeanType, selectedBeanState, debouncedUpdateFilters]
+  );
+
+  // 处理豆子状态切换（生豆/熟豆）
+  const handleBeanStateChange = useCallback(
+    (beanState: BeanState) => {
+      // 先保存当前 beanState 的所有筛选选项
+      const currentBeanState = selectedBeanState;
+      globalCache.filterModes[currentBeanState] = filterMode;
+      saveFilterModeByStatePreference(currentBeanState, filterMode);
+      globalCache.inventorySortOptions[currentBeanState] = inventorySortOption;
+      saveInventorySortOptionByStatePreference(
+        currentBeanState,
+        inventorySortOption
+      );
+      // 保存当前 beanState 的类型筛选
+      globalCache.selectedBeanTypes[currentBeanState] = selectedBeanType;
+      saveSelectedBeanTypeByStatePreference(currentBeanState, selectedBeanType);
+      // 保存当前 beanState 的显示空豆子设置
+      globalCache.showEmptyBeansSettings[currentBeanState] = showEmptyBeans;
+      saveShowEmptyBeansByStatePreference(currentBeanState, showEmptyBeans);
+      // 保存当前 beanState 的图片流模式
+      globalCache.isImageFlowModes[currentBeanState] = isImageFlowMode;
+      saveImageFlowModeByStatePreference(currentBeanState, isImageFlowMode);
+
+      // 切换 beanState
+      setSelectedBeanState(beanState);
+      globalCache.selectedBeanState = beanState;
+      saveSelectedBeanStatePreference(beanState);
+
+      // 加载目标 beanState 的 filterMode
+      const targetFilterMode =
+        globalCache.filterModes[beanState] ||
+        getFilterModeByStatePreference(beanState);
+      setFilterMode(targetFilterMode);
+      globalCache.filterMode = targetFilterMode;
+      saveFilterModePreference(targetFilterMode);
+
+      // 加载目标 beanState 的 sortOption
+      const targetSortOption =
+        globalCache.inventorySortOptions[beanState] ||
+        getInventorySortOptionByStatePreference(beanState);
+      setInventorySortOption(targetSortOption);
+      globalCache.inventorySortOption = targetSortOption;
+      saveInventorySortOptionPreference(targetSortOption);
+
+      // 加载目标 beanState 的类型筛选
+      const targetBeanType =
+        globalCache.selectedBeanTypes[beanState] ||
+        getSelectedBeanTypeByStatePreference(beanState);
+      setSelectedBeanType(targetBeanType);
+      globalCache.selectedBeanType = targetBeanType;
+      saveSelectedBeanTypePreference(targetBeanType);
+
+      // 加载目标 beanState 的显示空豆子设置
+      const targetShowEmptyBeans =
+        globalCache.showEmptyBeansSettings[beanState] ??
+        getShowEmptyBeansByStatePreference(beanState);
+      setShowEmptyBeans(targetShowEmptyBeans);
+      globalCache.showEmptyBeans = targetShowEmptyBeans;
+      saveShowEmptyBeansPreference(targetShowEmptyBeans);
+
+      // 加载目标 beanState 的图片流模式
+      const targetImageFlowMode =
+        globalCache.isImageFlowModes[beanState] ??
+        getImageFlowModeByStatePreference(beanState);
+      setIsImageFlowMode(targetImageFlowMode);
+      globalCache.isImageFlowMode = targetImageFlowMode;
+      saveImageFlowModePreference(targetImageFlowMode);
+
+      // 使用防抖更新筛选
+      debouncedUpdateFilters({
+        selectedBeanState: beanState,
+        filterMode: targetFilterMode,
+        sortOption: targetSortOption,
+        selectedBeanType: targetBeanType,
+        showEmptyBeans: targetShowEmptyBeans,
+      });
+    },
+    [
+      debouncedUpdateFilters,
+      filterMode,
+      selectedBeanState,
+      inventorySortOption,
+      selectedBeanType,
+      showEmptyBeans,
+      isImageFlowMode,
+    ]
   );
 
   // 处理编辑咖啡豆
@@ -944,12 +1100,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const toggleShowEmptyBeans = useCallback(() => {
     const newShowEmptyBeans = !showEmptyBeans;
     setShowEmptyBeans(newShowEmptyBeans);
-    // 更新全局缓存并保存到本地存储
+    // 更新全局缓存并保存到本地存储（同时保存到全局和按状态的存储）
     globalCache.showEmptyBeans = newShowEmptyBeans;
+    globalCache.showEmptyBeansSettings[selectedBeanState] = newShowEmptyBeans;
     saveShowEmptyBeansPreference(newShowEmptyBeans);
+    saveShowEmptyBeansByStatePreference(selectedBeanState, newShowEmptyBeans);
     // 使用防抖更新筛选
     debouncedUpdateFilters({ showEmptyBeans: newShowEmptyBeans });
-  }, [showEmptyBeans, debouncedUpdateFilters]);
+  }, [showEmptyBeans, selectedBeanState, debouncedUpdateFilters]);
 
   // 处理分类模式变更
   const handleFilterModeChange = useCallback(
@@ -957,7 +1115,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       setFilterMode(mode);
       // 更新全局缓存并保存到本地存储
       globalCache.filterMode = mode;
+      globalCache.filterModes[selectedBeanState] = mode;
       saveFilterModePreference(mode);
+      saveFilterModeByStatePreference(selectedBeanState, mode);
       // 清除当前选中的分类项
       setSelectedVariety(null);
       setSelectedOrigin(null);
@@ -974,7 +1134,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       // 防抖更新筛选
       debouncedUpdateFilters({ filterMode: mode });
     },
-    [debouncedUpdateFilters]
+    [debouncedUpdateFilters, selectedBeanState]
   );
 
   // 处理产地点击
@@ -1421,7 +1581,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       case VIEW_OPTIONS.INVENTORY:
         setInventorySortOption(option);
         globalCache.inventorySortOption = option;
+        globalCache.inventorySortOptions[selectedBeanState] = option;
         saveInventorySortOptionPreference(option);
+        saveInventorySortOptionByStatePreference(selectedBeanState, option);
         break;
       case VIEW_OPTIONS.RANKING:
         setRankingSortOption(option);
@@ -1472,6 +1634,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           setShowAddForm(false);
           setEditingBean(null);
         }}
+        initialBeanState={selectedBeanState}
       />
 
       {/* 咖啡豆评分表单 */}
@@ -1546,6 +1709,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         onRankingShare={handleRankingShare}
         selectedBeanType={selectedBeanType}
         onBeanTypeChange={handleBeanTypeChange}
+        selectedBeanState={selectedBeanState}
+        onBeanStateChange={handleBeanStateChange}
         selectedVariety={selectedVariety}
         onVarietyClick={handleVarietyClick}
         showEmptyBeans={showEmptyBeans}
@@ -1670,7 +1835,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               text: '手动添加',
               onClick: () => {
                 if (showBeanForm) {
-                  showBeanForm(null);
+                  showBeanForm(null, selectedBeanState);
                 } else {
                   setShowAddForm(true);
                 }
@@ -1680,7 +1845,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               icon: '↓',
               text: '快速添加',
               onClick: () => {
-                if (onShowImport) onShowImport();
+                if (onShowImport) onShowImport(selectedBeanState);
               },
             },
           ]}

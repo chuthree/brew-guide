@@ -348,11 +348,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 咖啡豆表单状态
   const [showBeanForm, setShowBeanForm] = useState(false);
+  const [editingBeanState, setEditingBeanState] = useState<'green' | 'roasted'>(
+    'roasted'
+  );
   const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(
     null
   );
+  // 烘焙来源生豆ID（当从生豆详情页点击"去烘焙"时设置）
+  const [roastingSourceBeanId, setRoastingSourceBeanId] = useState<
+    string | null
+  >(null);
   const [beanListKey, setBeanListKey] = useState(0);
   const [showImportBeanForm, setShowImportBeanForm] = useState(false);
+  const [importingBeanState, setImportingBeanState] = useState<
+    'green' | 'roasted'
+  >('roasted');
 
   // 咖啡豆详情状态
   const [beanDetailOpen, setBeanDetailOpen] = useState(false);
@@ -1453,7 +1463,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               (beanData.capacity && beanData.capacity.toString().trim()) || '',
             remaining: '',
             price: (beanData.price && beanData.price.toString().trim()) || '',
-            roastDate: (beanData.roastDate && beanData.roastDate.trim()) || '',
+            // 生豆模式下，将roastDate作为purchaseDate处理
+            roastDate:
+              importingBeanState === 'green'
+                ? ''
+                : (beanData.roastDate && beanData.roastDate.trim()) || '',
+            // 生豆模式下，使用roastDate作为purchaseDate（因为AI识别返回的是roastDate字段）
+            ...(importingBeanState === 'green' &&
+            beanData.roastDate &&
+            beanData.roastDate.trim()
+              ? { purchaseDate: beanData.roastDate.trim() }
+              : {}),
             flavor:
               Array.isArray(beanData.flavor) && beanData.flavor.length > 0
                 ? beanData.flavor.filter(f => f && f.trim())
@@ -1467,6 +1487,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           } else if (bean.capacity) {
             bean.remaining = bean.capacity;
           }
+
+          // 设置 beanState（根据当前导入模式）
+          bean.beanState = importingBeanState;
 
           // 只在字段存在时才设置其他可选字段
           if (beanData.startDay !== undefined)
@@ -1594,8 +1617,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }
   };
 
-  const handleBeanForm = (bean: ExtendedCoffeeBean | null = null) => {
+  const handleBeanForm = (
+    bean: ExtendedCoffeeBean | null = null,
+    beanState?: 'green' | 'roasted'
+  ) => {
     setEditingBean(bean);
+    setEditingBeanState(beanState || 'roasted');
     setShowBeanForm(true);
   };
 
@@ -1744,9 +1771,76 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       const currentBeans = await CoffeeBeanManager.getAllBeans();
       const isFirstBean = !editingBean?.id && currentBeans.length === 0;
 
-      if (editingBean?.id) {
+      // 检查是否是烘焙操作（从生豆转换为熟豆）
+      if (roastingSourceBeanId && bean.sourceGreenBeanId) {
+        // 调用 RoastingManager 完成烘焙转熟豆流程
+        const { RoastingManager } = await import(
+          '@/lib/managers/roastingManager'
+        );
+        const { CoffeeBeanManager } = await import(
+          '@/lib/managers/coffeeBeanManager'
+        );
+        const { showToast } = await import(
+          '@/components/common/feedback/LightToast'
+        );
+
+        // 获取烘焙量（用户填写的容量）
+        const roastedAmount = parseFloat(bean.capacity || '0');
+
+        if (roastedAmount <= 0) {
+          showToast({
+            type: 'error',
+            title: '请填写烘焙后的容量',
+            duration: 2000,
+          });
+          return;
+        }
+
+        // 如果用户没有填写价格，自动根据生豆价格计算
+        let finalBean = { ...bean };
+        if (!bean.price || bean.price.trim() === '') {
+          const greenBean =
+            await CoffeeBeanManager.getBeanById(roastingSourceBeanId);
+          if (greenBean?.price && greenBean?.capacity) {
+            const greenPrice = parseFloat(greenBean.price);
+            const greenCapacity = parseFloat(greenBean.capacity);
+            if (greenPrice > 0 && greenCapacity > 0) {
+              // 熟豆价格 = 生豆单价 × 烘焙量
+              const roastedPrice = (greenPrice / greenCapacity) * roastedAmount;
+              finalBean.price = roastedPrice.toFixed(2);
+            }
+          }
+        }
+
+        // 调用烘焙方法，会自动扣除生豆容量并创建烘焙记录
+        const result = await RoastingManager.roastGreenBean(
+          roastingSourceBeanId,
+          roastedAmount,
+          finalBean
+        );
+
+        if (!result.success) {
+          showToast({
+            type: 'error',
+            title: result.error || '烘焙失败',
+            duration: 2000,
+          });
+          return;
+        }
+
+        showToast({
+          type: 'success',
+          title: `烘焙成功，已创建熟豆`,
+          duration: 2000,
+        });
+
+        // 清除烘焙源生豆ID
+        setRoastingSourceBeanId(null);
+      } else if (editingBean?.id) {
+        // 普通编辑操作
         await CoffeeBeanManager.updateBean(editingBean.id, bean);
       } else {
+        // 普通新增操作
         await CoffeeBeanManager.addBean(bean);
       }
 
@@ -2764,7 +2858,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 监听添加咖啡豆模态框的打开/关闭事件
   React.useEffect(() => {
-    const handleBeanImportOpened = () => {
+    const handleBeanImportOpened = (
+      event: CustomEvent<{ beanState?: 'green' | 'roasted' }>
+    ) => {
+      const beanState = event.detail?.beanState || 'roasted';
+      setImportingBeanState(beanState);
       setShowImportBeanForm(true);
     };
 
@@ -2772,11 +2870,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       setShowImportBeanForm(false);
     };
 
-    window.addEventListener('beanImportOpened', handleBeanImportOpened);
+    window.addEventListener(
+      'beanImportOpened',
+      handleBeanImportOpened as EventListener
+    );
     window.addEventListener('beanImportClosing', handleBeanImportClosing);
 
     return () => {
-      window.removeEventListener('beanImportOpened', handleBeanImportOpened);
+      window.removeEventListener(
+        'beanImportOpened',
+        handleBeanImportOpened as EventListener
+      );
       window.removeEventListener('beanImportClosing', handleBeanImportClosing);
     };
   }, []);
@@ -2947,8 +3051,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             key={beanListKey}
             isOpen={activeMainTab === '咖啡豆'}
             showBeanForm={handleBeanForm}
-            onShowImport={() => {
-              window.dispatchEvent(new CustomEvent('beanImportOpened'));
+            onShowImport={beanState => {
+              window.dispatchEvent(
+                new CustomEvent('beanImportOpened', {
+                  detail: { beanState },
+                })
+              );
             }}
             externalViewMode={currentBeanView}
             onExternalViewChange={handleBeanViewChange}
@@ -3447,7 +3555,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         onClose={() => {
           setShowBeanForm(false);
           setEditingBean(null);
+          setEditingBeanState('roasted');
+          setRoastingSourceBeanId(null); // 清除烘焙源生豆ID
         }}
+        initialBeanState={editingBeanState}
         onRepurchase={
           editingBean
             ? async () => {
@@ -3547,6 +3658,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             console.error('续购失败:', error);
           }
         }}
+        onRoast={(greenBean, roastedBeanTemplate) => {
+          // 去烘焙：打开熟豆编辑表单，预填充生豆信息
+          // 但剩余量为空，烘焙日期为今天
+          // 记录烘焙源生豆ID，保存时会调用 RoastingManager
+          setRoastingSourceBeanId(greenBean.id);
+          setEditingBean(roastedBeanTemplate as ExtendedCoffeeBean);
+          setShowBeanForm(true);
+        }}
       />
 
       {/* 添加咖啡豆模态框独立渲染，与 Settings 同级 */}
@@ -3611,7 +3730,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
               // 恢复咖啡豆容量（根据笔记类型采用不同的恢复策略）
               try {
-                if (noteToDelete.source === 'capacity-adjustment') {
+                if (noteToDelete.source === 'roasting') {
+                  // 处理烘焙记录的删除：恢复生豆容量 + 清除熟豆关联
+                  const { RoastingManager } = await import(
+                    '@/lib/managers/roastingManager'
+                  );
+                  const result =
+                    await RoastingManager.deleteRoastingRecord(noteId);
+                  if (!result.success) {
+                    console.error('删除烘焙记录失败:', result.error);
+                  }
+                  // deleteRoastingRecord 已经处理了笔记删除，直接返回
+                  return;
+                } else if (noteToDelete.source === 'capacity-adjustment') {
                   // 处理容量调整记录的恢复
                   const beanId = noteToDelete.beanId;
                   const capacityAdjustment =

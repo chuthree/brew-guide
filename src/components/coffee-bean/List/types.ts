@@ -25,8 +25,11 @@ const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
 
 export interface CoffeeBeansProps {
   isOpen: boolean;
-  showBeanForm?: (bean: ExtendedCoffeeBean | null) => void;
-  onShowImport?: () => void;
+  showBeanForm?: (
+    bean: ExtendedCoffeeBean | null,
+    beanState?: 'green' | 'roasted'
+  ) => void;
+  onShowImport?: (beanState: 'green' | 'roasted') => void;
   // 添加外部视图控制相关props
   externalViewMode?: ViewOption;
   onExternalViewChange?: (view: ViewOption) => void;
@@ -157,9 +160,16 @@ export const generateBeanTitle = (
 export type BloggerBeansYear = 2023 | 2024 | 2025;
 export type BeanType = 'all' | 'espresso' | 'filter' | 'omni';
 export type BloggerType = 'peter' | 'fenix';
+export type BeanState = 'green' | 'roasted';
 
 // 博主显示名称
 export const BLOGGER_LABELS: Record<BloggerType, string> = {
   peter: 'Peter',
   fenix: '矮人',
+};
+
+// 豆子状态显示名称
+export const BEAN_STATE_LABELS: Record<BeanState, string> = {
+  green: '生豆',
+  roasted: '咖啡豆',
 };

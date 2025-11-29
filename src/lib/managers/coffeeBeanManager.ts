@@ -244,11 +244,26 @@ export const CoffeeBeanManager = {
   async deleteBean(id: string): Promise<boolean> {
     try {
       const beans = await this.getAllBeans();
+      const beanToDelete = beans.find(bean => bean.id === id);
       const filtered = beans.filter(bean => bean.id !== id);
 
       if (filtered.length === beans.length) {
         // 没有找到需要删除的咖啡豆
         return false;
+      }
+
+      // 处理生豆/熟豆删除时的关联清理
+      if (beanToDelete) {
+        const { RoastingManager } = await import('./roastingManager');
+        const beanState = beanToDelete.beanState || 'roasted';
+
+        if (beanState === 'green') {
+          // 删除生豆时：清除派生熟豆的关联 + 清除烘焙记录的关联
+          await RoastingManager.onGreenBeanDeleted(id);
+        } else if (beanToDelete.sourceGreenBeanId) {
+          // 删除由烘焙产生的熟豆时：清除烘焙记录中的 roastedBeanId
+          await RoastingManager.onRoastedBeanDeleted(id);
+        }
       }
 
       // 保存更新后的数组

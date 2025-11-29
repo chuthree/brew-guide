@@ -29,6 +29,20 @@ interface BasicInfoProps {
   onRepurchase?: () => void;
 }
 
+// 判断是否为生豆
+const isGreenBean = (
+  bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
+): boolean => {
+  return bean.beanState === 'green';
+};
+
+// 判断是否为烘焙模式（从生豆转换而来）
+const isRoastingMode = (
+  bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
+): boolean => {
+  return !!bean.sourceGreenBeanId && bean.beanState === 'roasted';
+};
+
 const BasicInfo: React.FC<BasicInfoProps> = ({
   bean,
   onBeanChange,
@@ -52,18 +66,25 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     );
   }, [bean.capacity, bean.remaining, editingRemaining]);
 
-  // 处理日期变化
+  // 处理日期变化 - 根据豆子状态决定更新哪个字段
   const handleDateChange = (date: Date) => {
     // 使用本地时间格式化为 YYYY-MM-DD，避免时区问题
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const formattedDate = `${year}-${month}-${day}`;
-    onBeanChange('roastDate')(formattedDate);
+
+    // 生豆使用 purchaseDate，熟豆使用 roastDate
+    if (isGreenBean(bean)) {
+      onBeanChange('purchaseDate')(formattedDate);
+    } else {
+      onBeanChange('roastDate')(formattedDate);
+    }
   };
 
-  // 解析日期字符串为Date对象
-  const parseRoastDate = (dateStr: string | undefined): Date | undefined => {
+  // 解析日期字符串为Date对象 - 根据豆子状态获取对应日期
+  const parseDisplayDate = (): Date | undefined => {
+    const dateStr = isGreenBean(bean) ? bean.purchaseDate : bean.roastDate;
     if (!dateStr) return undefined;
     // 如果是完整的日期格式 YYYY-MM-DD
     if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -74,6 +95,17 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     // 如果只是年份，返回undefined让DatePicker显示placeholder
     return undefined;
   };
+
+  // 获取日期标签和占位符文本
+  const getDateLabelAndPlaceholder = () => {
+    if (isGreenBean(bean)) {
+      return { label: '购买日期', placeholder: '选择购买日期' };
+    }
+    return { label: '烘焙日期', placeholder: '选择烘焙日期' };
+  };
+
+  const { label: dateLabel, placeholder: datePlaceholder } =
+    getDateLabelAndPlaceholder();
 
   // 处理容量变化 - 只更新本地状态，不触发主表单更新
   const handleCapacityChange = (value: string) => {
@@ -179,7 +211,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
           咖啡豆名称 <span className="text-red-500">*</span>{' '}
           <span className="ml-1 text-xs text-neutral-400 dark:text-neutral-500">
-            (可用：烘焙商 咖啡豆名称)
+            (可用：{isGreenBean(bean) ? '生豆商' : '烘焙商'} 咖啡豆名称)
           </span>
         </label>
         <AutocompleteInput
@@ -201,7 +233,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
       <div className="grid w-full grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            库存量(g)
+            {isRoastingMode(bean) ? '烘焙量(g)' : '库存量(g)'}
           </label>
           <div className="flex w-full items-center justify-start gap-2">
             <div className="flex-1">
@@ -211,7 +243,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 step="0.1"
                 value={remainingValue}
                 onChange={e => handleRemainingChange(e.target.value)}
-                placeholder="剩余量"
+                placeholder={isRoastingMode(bean) ? '同烘焙量' : '剩余量'}
                 className="w-full border-b border-neutral-300 bg-transparent py-2 text-center outline-none dark:border-neutral-700"
                 onBlur={validateRemaining}
               />
@@ -224,13 +256,13 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 step="0.1"
                 value={capacityValue}
                 onChange={e => handleCapacityChange(e.target.value)}
-                placeholder="总量"
+                placeholder={isRoastingMode(bean) ? '烘焙量' : '总量'}
                 className="w-full border-b border-neutral-300 bg-transparent py-2 text-center outline-none dark:border-neutral-700"
                 onBlur={() => {
                   // 失焦时更新主表单的总量
                   onBeanChange('capacity')(capacityValue);
 
-                  // 失焦时判断是否需要同步剩余量
+                  // 失焦时判断是否需要同步剩余量（烘焙模式或新增模式）
                   if (
                     capacityValue &&
                     (!remainingValue || remainingValue.trim() === '')
@@ -267,7 +299,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
           <AutocompleteInput
             value={bean.price || ''}
             onChange={onBeanChange('price')}
-            placeholder="例如：88"
+            placeholder={isRoastingMode(bean) ? '自动计算' : '例如：88'}
             clearable={false}
             suggestions={[]}
             inputType="number"
@@ -304,26 +336,29 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              烘焙日期
+              {dateLabel}
             </label>
-            <button
-              type="button"
-              onClick={toggleInTransitState}
-              className={`text-xs ${bean.isInTransit ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-600 dark:text-neutral-400'} underline`}
-            >
-              {bean.isInTransit ? '取消在途状态' : '设为在途'}
-            </button>
+            {/* 在途状态按钮仅对熟豆显示 */}
+            {!isGreenBean(bean) && (
+              <button
+                type="button"
+                onClick={toggleInTransitState}
+                className={`text-xs ${bean.isInTransit ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-600 dark:text-neutral-400'} underline`}
+              >
+                {bean.isInTransit ? '取消在途状态' : '设为在途'}
+              </button>
+            )}
           </div>
           <div className="relative flex w-full items-center justify-start">
-            {bean.isInTransit ? (
+            {bean.isInTransit && !isGreenBean(bean) ? (
               <div className="w-full border-b border-neutral-300 bg-transparent py-2 text-neutral-500 opacity-50 dark:border-neutral-700 dark:text-neutral-400">
                 在途中...
               </div>
             ) : (
               <DatePicker
-                date={parseRoastDate(bean.roastDate)}
+                date={parseDisplayDate()}
                 onDateChange={handleDateChange}
-                placeholder="选择烘焙日期"
+                placeholder={datePlaceholder}
                 className="w-full"
               />
             )}

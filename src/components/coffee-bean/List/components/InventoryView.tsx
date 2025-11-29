@@ -6,6 +6,7 @@ import { ExtendedCoffeeBean, BeanType } from '../types';
 import BeanListItem from './BeanListItem';
 import ImageFlowView from './ImageFlowView';
 import RemainingEditor from './RemainingEditor';
+import { showToast } from '@/components/common/feedback/LightToast';
 
 // 已移除手动分页，改用 react-virtuoso 虚拟列表
 
@@ -113,21 +114,38 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   const handleQuickDecrement = async (decrementAmount: number) => {
     if (!editingRemaining) return;
 
-    const { beanId, value } = editingRemaining;
+    const { beanId, value, bean } = editingRemaining;
     setEditingRemaining(null);
 
     try {
       const result = await onQuickDecrement(beanId, value, decrementAmount);
       if (result.success) {
-        const updatedBean = filteredBeans.find(bean => bean.id === beanId);
+        const updatedBean = filteredBeans.find(b => b.id === beanId);
         if (updatedBean) {
           // 乐观更新本地对象并触发一次重新渲染
           updatedBean.remaining = result.value || '0';
           setRerenderTick(t => t + 1);
         }
+      } else if (result.error) {
+        // 显示错误提示
+        const isGreenBean = bean?.beanState === 'green';
+        const errorMessage = result.error.message || '操作失败，请重试';
+        showToast({
+          type: 'error',
+          title: isGreenBean
+            ? `烘焙失败: ${errorMessage}`
+            : `扣除失败: ${errorMessage}`,
+          duration: 3000,
+        });
       }
     } catch (error) {
       console.error('快捷减量失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      showToast({
+        type: 'error',
+        title: `操作失败: ${errorMessage}`,
+        duration: 3000,
+      });
     }
   };
 
@@ -201,7 +219,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
               <div
                 ref={ref}
                 style={style}
-                className="mx-6 flex flex-col gap-y-5"
+                className="mx-6 flex flex-col gap-y-4"
                 {...props}
               >
                 {children}

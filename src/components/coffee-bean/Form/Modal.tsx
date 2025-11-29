@@ -16,6 +16,7 @@ interface CoffeeBeanFormModalProps {
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
   onClose: () => void;
   onRepurchase?: () => void;
+  initialBeanState?: 'green' | 'roasted';
 }
 
 const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
@@ -24,6 +25,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   onSave,
   onClose,
   onRepurchase,
+  initialBeanState,
 }) => {
   // 动画状态管理
   const [shouldRender, setShouldRender] = useState(false);
@@ -139,13 +141,14 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
       >
         <div className="pb-safe-bottom modal-form-container max-h-[calc(85vh-40px)] overflow-auto px-6">
           <CoffeeBeanForm
-            key={`bean-form-${initialBean?.id || 'new'}-${initialBean?.name || ''}`}
+            key={`bean-form-${initialBean?.id || 'new'}-${initialBean?.name || ''}-${initialBeanState || 'roasted'}`}
             ref={formRef}
             onSave={onSave}
             onCancel={onClose}
             initialBean={initialBean || undefined}
             onRepurchase={onRepurchase}
             onStepChange={setCurrentStep}
+            initialBeanState={initialBeanState}
           />
         </div>
       </div>

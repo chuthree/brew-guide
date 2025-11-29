@@ -6,10 +6,12 @@ import {
   ViewOption,
   VIEW_OPTIONS,
   BeanType,
+  BeanState,
   BloggerBeansYear,
   BeanFilterMode,
   BloggerType,
   BLOGGER_LABELS,
+  BEAN_STATE_LABELS,
 } from '../types';
 import {
   SortOption,
@@ -20,6 +22,7 @@ import {
   getSortOrderLabel,
   getSortOrdersForType,
   getAvailableSortTypesForView,
+  getSortTypeLabelByState,
 } from '../SortSelector';
 import { X, ArrowUpRight, AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -136,12 +139,14 @@ interface SortSectionProps {
   viewMode: ViewOption;
   sortOption: SortOption;
   onSortChange: (option: SortOption) => void;
+  selectedBeanState?: BeanState;
 }
 
 const SortSection: React.FC<SortSectionProps> = ({
   viewMode,
   sortOption,
   onSortChange,
+  selectedBeanState = 'roasted',
 }) => {
   const { type: currentType, order: currentOrder } =
     getSortTypeAndOrder(sortOption);
@@ -154,18 +159,20 @@ const SortSection: React.FC<SortSectionProps> = ({
       <div className="space-y-3">
         {/* 排序方式 */}
         <div className="flex flex-wrap items-center gap-2">
-          {getAvailableSortTypesForView(viewMode).map(type => (
-            <FilterButton
-              key={type}
-              isActive={type === currentType}
-              onClick={() => {
-                const newOption = getSortOption(type, SORT_ORDERS.DESC);
-                onSortChange(newOption);
-              }}
-            >
-              {SORT_TYPE_LABELS[type]}
-            </FilterButton>
-          ))}
+          {getAvailableSortTypesForView(viewMode, selectedBeanState).map(
+            type => (
+              <FilterButton
+                key={type}
+                isActive={type === currentType}
+                onClick={() => {
+                  const newOption = getSortOption(type, SORT_ORDERS.DESC);
+                  onSortChange(newOption);
+                }}
+              >
+                {getSortTypeLabelByState(type, selectedBeanState)}
+              </FilterButton>
+            )
+          )}
         </div>
 
         {/* 排序顺序 */}
@@ -247,12 +254,16 @@ const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
 interface FilterModeSectionProps {
   filterMode: BeanFilterMode;
   onFilterModeChange: (mode: BeanFilterMode) => void;
+  selectedBeanState?: BeanState;
 }
 
 const FilterModeSection: React.FC<FilterModeSectionProps> = ({
   filterMode,
   onFilterModeChange,
+  selectedBeanState = 'roasted',
 }) => {
+  const isGreenBean = selectedBeanState === 'green';
+
   return (
     <div>
       <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
@@ -271,17 +282,20 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
         >
           按产地
         </FilterButton>
-        <FilterButton
-          isActive={filterMode === 'flavorPeriod'}
-          onClick={() => onFilterModeChange('flavorPeriod')}
-        >
-          按赏味期
-        </FilterButton>
+        {/* 赏味期筛选仅对熟豆显示 */}
+        {!isGreenBean && (
+          <FilterButton
+            isActive={filterMode === 'flavorPeriod'}
+            onClick={() => onFilterModeChange('flavorPeriod')}
+          >
+            按赏味期
+          </FilterButton>
+        )}
         <FilterButton
           isActive={filterMode === 'roaster'}
           onClick={() => onFilterModeChange('roaster')}
         >
-          按烘焙商
+          {isGreenBean ? '按生豆商' : '按烘焙商'}
         </FilterButton>
       </div>
     </div>
@@ -305,6 +319,8 @@ interface ViewSwitcherProps {
   onRankingShare?: () => void;
   selectedBeanType?: BeanType;
   onBeanTypeChange?: (type: BeanType) => void;
+  selectedBeanState?: BeanState;
+  onBeanStateChange?: (state: BeanState) => void;
   selectedVariety?: string | null;
   onVarietyClick?: (variety: string | null) => void;
   showEmptyBeans?: boolean;
@@ -371,6 +387,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   onRankingShare,
   selectedBeanType,
   onBeanTypeChange,
+  selectedBeanState = 'roasted',
+  onBeanStateChange,
   selectedVariety,
   onVarietyClick,
   showEmptyBeans,
@@ -718,17 +736,50 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
         <div className="flex items-center space-x-3">
           <div className="text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
             {viewMode === VIEW_OPTIONS.INVENTORY ? (
-              beansCount === 0 && totalBeans === 0 ? (
-                '' // 当没有咖啡豆时不显示任何统计信息
-              ) : showEmptyBeans ? (
-                `${beansCount} 款咖啡豆，总共 ${originalTotalWeight}${!hideTotalWeight && totalWeight ? `，剩余 ${totalWeight}` : ''}`
+              showEmptyBeans ? (
+                <span className="flex items-baseline">
+                  {beansCount} 款
+                  <span
+                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                    onClick={() => {
+                      // 切换生豆/熟豆
+                      const newState =
+                        selectedBeanState === 'green' ? 'roasted' : 'green';
+                      onBeanStateChange?.(newState);
+                    }}
+                    title="点击切换生豆/熟豆"
+                  >
+                    {BEAN_STATE_LABELS[selectedBeanState]}
+                  </span>
+                  ，总共 {originalTotalWeight || '0g'}
+                  {!hideTotalWeight && totalWeight
+                    ? `，剩余 ${totalWeight}`
+                    : ''}
+                </span>
               ) : (
-                `${beansCount} 款咖啡豆${!hideTotalWeight && totalWeight ? `，剩余 ${totalWeight}` : ''}`
+                <span className="flex items-baseline">
+                  {beansCount} 款
+                  <span
+                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                    onClick={() => {
+                      // 切换生豆/熟豆
+                      const newState =
+                        selectedBeanState === 'green' ? 'roasted' : 'green';
+                      onBeanStateChange?.(newState);
+                    }}
+                    title="点击切换生豆/熟豆"
+                  >
+                    {BEAN_STATE_LABELS[selectedBeanState]}
+                  </span>
+                  {!hideTotalWeight && totalWeight
+                    ? `，剩余 ${totalWeight}`
+                    : ''}
+                </span>
               )
             ) : viewMode === VIEW_OPTIONS.BLOGGER ? (
               <span className="flex items-baseline">
                 <span
-                  className="cursor-pointer underline decoration-neutral-400 decoration-dashed underline-offset-2 transition-colors hover:decoration-neutral-600 dark:decoration-neutral-500 dark:hover:decoration-neutral-300"
+                  className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
                   onClick={() => {
                     // 切换博主
                     const newBlogger =
@@ -743,7 +794,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   豆单，{bloggerBeansCount || 0} 款 (&nbsp;
                   <span
                     ref={yearButtonRef}
-                    className="cursor-pointer underline decoration-neutral-400 decoration-dashed underline-offset-2 transition-colors hover:decoration-neutral-600 dark:decoration-neutral-500 dark:hover:decoration-neutral-300"
+                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
                     onClick={handleYearClick}
                     data-year-selector
                     title="点击切换年份"
@@ -1010,6 +1061,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           viewMode={viewMode}
                           sortOption={sortOption}
                           onSortChange={onSortChange}
+                          selectedBeanState={selectedBeanState}
                         />
                       </div>
                     </div>
@@ -1022,7 +1074,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       )}
 
       {/* 库存视图的品种标签筛选 - 仅在库存视图中显示 */}
-      {viewMode === VIEW_OPTIONS.INVENTORY && totalBeans && totalBeans > 0 ? (
+      {viewMode === VIEW_OPTIONS.INVENTORY ? (
         <div className="relative" ref={filterExpandRef}>
           {/* 整个分类栏容器 - 下边框在这里 */}
           <div className="border-b border-neutral-200 dark:border-neutral-800">
@@ -1274,6 +1326,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             <FilterModeSection
                               filterMode={filterMode}
                               onFilterModeChange={onFilterModeChange}
+                              selectedBeanState={selectedBeanState}
                             />
                           )}
 
@@ -1281,6 +1334,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           viewMode={viewMode}
                           sortOption={sortOption}
                           onSortChange={onSortChange}
+                          selectedBeanState={selectedBeanState}
                         />
 
                         <BeanTypeFilter

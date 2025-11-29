@@ -76,6 +76,15 @@ interface ChangeRecordDetails {
     changeAmount: number; // 变化量（正数表示增加，负数表示减少）
     changeType: 'increase' | 'decrease' | 'set'; // 变化类型：增加、减少、直接设置
   };
+
+  // 烘焙记录相关
+  roastingRecord?: {
+    greenBeanId: string; // 生豆ID
+    greenBeanName: string; // 生豆名称
+    roastedAmount: number; // 烘焙的重量(g)
+    roastedBeanId?: string; // 烘焙后的熟豆ID（如果有关联）
+    roastedBeanName?: string; // 烘焙后的熟豆名称
+  };
 }
 
 export interface BrewingNote {
@@ -102,7 +111,11 @@ export interface BrewingNote {
   };
   notes: string;
   totalTime: number;
-  source?: string; // 笔记来源，如'quick-decrement'表示快捷扣除自动生成，'capacity-adjustment'表示容量调整
+  source?:
+    | 'quick-decrement'
+    | 'capacity-adjustment'
+    | 'roasting'
+    | 'beanconqueror-import'; // 笔记来源：快捷扣除、容量调整、烘焙、导入
   beanId?: string; // 关联的咖啡豆ID
 
   // 变动记录详细信息

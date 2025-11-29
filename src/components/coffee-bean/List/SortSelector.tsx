@@ -366,6 +366,20 @@ export const SORT_TYPE_LABELS: Record<SortType, string> = {
   [SORT_TYPES.LAST_MODIFIED]: '最近变动',
 };
 
+// 根据 beanState 获取排序方式的显示名称
+export const getSortTypeLabelByState = (
+  type: SortType,
+  beanState: 'green' | 'roasted' = 'roasted'
+): string => {
+  // 生豆特殊处理
+  if (beanState === 'green') {
+    if (type === SORT_TYPES.ROAST_DATE) {
+      return '购买日期';
+    }
+  }
+  return SORT_TYPE_LABELS[type];
+};
+
 // 排序顺序的显示名称和图标
 const SORT_ORDER_LABELS: Record<
   SortOrder,
@@ -535,14 +549,27 @@ export const getSortOrdersForType = (type: SortType): SortOrder[] => {
   return [SORT_ORDERS.ASC, SORT_ORDERS.DESC];
 };
 
-// 根据视图模式获取可用的排序方式
+// 根据视图模式和豆子状态获取可用的排序方式
 export const getAvailableSortTypesForView = (
-  viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats'
+  viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats',
+  beanState: 'green' | 'roasted' = 'roasted'
 ) => {
+  const isGreenBean = beanState === 'green';
+
   switch (viewMode) {
     case 'inventory':
+      // 生豆不显示赏味期排序
+      if (isGreenBean) {
+        return [
+          SORT_TYPES.LAST_MODIFIED,
+          SORT_TYPES.ROAST_DATE, // 生豆显示为"购买日期"
+          SORT_TYPES.REMAINING_AMOUNT,
+          SORT_TYPES.PRICE,
+          SORT_TYPES.NAME,
+        ];
+      }
       return [
-        SORT_TYPES.LAST_MODIFIED, // 添加最近变动排序
+        SORT_TYPES.LAST_MODIFIED,
         SORT_TYPES.ROAST_DATE,
         SORT_TYPES.REMAINING_DAYS,
         SORT_TYPES.REMAINING_AMOUNT,

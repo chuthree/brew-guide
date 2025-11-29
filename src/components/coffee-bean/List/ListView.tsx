@@ -379,8 +379,11 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
           // 构建参数信息项
           const infoItems = [];
-          if (bean.roastDate && !bean.isInTransit) {
-            infoItems.push(formatDateShort(bean.roastDate));
+          // 生豆显示购买日期，熟豆显示烘焙日期
+          const isGreenBean = bean.beanState === 'green';
+          const displayDate = isGreenBean ? bean.purchaseDate : bean.roastDate;
+          if (displayDate && !bean.isInTransit) {
+            infoItems.push(formatDateShort(displayDate));
           }
 
           const remaining =

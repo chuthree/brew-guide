@@ -39,7 +39,14 @@ export interface CoffeeBean {
 
   // 分类标签
   beanType?: 'espresso' | 'filter' | 'omni'; // 豆子类型：意式/手冲/全能
+  beanState?: 'green' | 'roasted'; // 豆子状态：生豆/熟豆，默认为熟豆
   brand?: string; // 品牌
+
+  // 生豆专用字段
+  purchaseDate?: string; // 购买日期（生豆使用）
+
+  // 生豆来源追溯（仅烘焙产生的熟豆使用）
+  sourceGreenBeanId?: string; // 来源生豆ID
 
   // 评分相关字段 (榜单功能使用)
   overallRating?: number; // 总体评分/喜好星值 (1-5)
@@ -64,6 +71,14 @@ export interface ChangeRecordDetails {
     newAmount: number; // 新容量
     changeAmount: number; // 变化量（正数表示增加，负数表示减少）
     changeType: 'increase' | 'decrease' | 'set'; // 变化类型：增加、减少、直接设置
+  };
+  // 烘焙记录相关
+  roastingRecord?: {
+    greenBeanId: string; // 生豆ID
+    greenBeanName: string; // 生豆名称
+    roastedAmount: number; // 烘焙的重量(g)
+    roastedBeanId?: string; // 烘焙后的熟豆ID（如果有关联）
+    roastedBeanName?: string; // 烘焙后的熟豆名称
   };
 }
 
@@ -90,7 +105,11 @@ export interface BrewingNoteData {
   rating: number;
   taste: TasteRatings;
   notes: string;
-  source?: string; // 笔记来源，如'quick-decrement'表示快捷扣除自动生成，'capacity-adjustment'表示容量调整
+  source?:
+    | 'quick-decrement'
+    | 'capacity-adjustment'
+    | 'roasting'
+    | 'beanconqueror-import'; // 笔记来源：快捷扣除、容量调整、烘焙、导入
   beanId?: string; // 关联的咖啡豆ID
 
   // 变动记录详细信息

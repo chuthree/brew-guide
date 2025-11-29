@@ -36,6 +36,8 @@ interface CoffeeBeanFormProps {
   onRepurchase?: () => void;
   /** 步骤变化回调，用于同步历史栈 */
   onStepChange?: (step: number) => void;
+  /** 初始豆子状态（生豆/熟豆），用于新建时自动设置 */
+  initialBeanState?: 'green' | 'roasted';
 }
 
 // 暴露给父组件的方法
@@ -53,7 +55,17 @@ const steps: StepConfig[] = [
 ];
 
 const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
-  ({ onSave, onCancel, initialBean, onRepurchase, onStepChange }, ref) => {
+  (
+    {
+      onSave,
+      onCancel,
+      initialBean,
+      onRepurchase,
+      onStepChange,
+      initialBeanState,
+    },
+    ref
+  ) => {
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('basic');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +154,18 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         startDay: 0,
         endDay: 0,
         blendComponents: [],
+        beanState: initialBeanState || 'roasted', // 使用传入的 initialBeanState 或默认为熟豆
+        // 生豆预设今天的购买日期
+        purchaseDate:
+          initialBeanState === 'green'
+            ? (() => {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+              })()
+            : undefined,
       };
     });
 

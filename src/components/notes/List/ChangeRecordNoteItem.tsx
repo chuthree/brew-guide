@@ -28,6 +28,10 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
   const beanName = note.coffeeBeanInfo?.name || '未知咖啡豆';
   const dateFormatted = note.timestamp ? formatDate(note.timestamp) : '';
 
+  // 判断是否是烘焙记录
+  const isRoastingRecord = note.source === 'roasting';
+  const roastingRecord = note.changeRecord?.roastingRecord;
+
   // 根据记录类型生成显示标签
   const getDisplayLabel = () => {
     if (note.source === 'quick-decrement') {
@@ -47,6 +51,10 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
       } else {
         return `${capacityAdjustment?.newAmount || 0}g`;
       }
+    } else if (note.source === 'roasting') {
+      // 烘焙记录 - 显示为扣除生豆的量
+      const amount = roastingRecord?.roastedAmount || 0;
+      return `-${amount}g`;
     }
 
     return '0g';
@@ -78,13 +86,26 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
             {beanName}
           </div>
 
-          {/* 变动量标签 - 固定宽度 */}
+          {/* 变动量标签 - 统一使用 neutral 色调 */}
           <div className="w-12 overflow-hidden rounded-xs bg-neutral-100 px-1 py-px text-center text-xs font-medium whitespace-nowrap text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
             {getDisplayLabel()}
           </div>
 
-          {/* 备注 - 弹性宽度，占用剩余空间 */}
-          {note.notes && (
+          {/* 烘焙记录：显示转换后的熟豆名称 */}
+          {isRoastingRecord && roastingRecord?.roastedBeanName && (
+            <div className="flex min-w-0 flex-1 items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
+              <span className="text-neutral-400 dark:text-neutral-600">→</span>
+              <span
+                className="truncate text-neutral-600 dark:text-neutral-300"
+                title={roastingRecord.roastedBeanName}
+              >
+                {roastingRecord.roastedBeanName}
+              </span>
+            </div>
+          )}
+
+          {/* 备注 - 弹性宽度，占用剩余空间（非烘焙记录显示） */}
+          {!isRoastingRecord && note.notes && (
             <div
               className="min-w-0 flex-1 truncate text-xs text-neutral-500 dark:text-neutral-400"
               title={note.notes}
@@ -194,6 +215,16 @@ export default React.memo(ChangeRecordNoteItem, (prevProps, nextProps) => {
       nextNote.changeRecord?.capacityAdjustment?.changeAmount ||
     prevNote.changeRecord?.capacityAdjustment?.changeType !==
       nextNote.changeRecord?.capacityAdjustment?.changeType
+  ) {
+    return false;
+  }
+
+  // 检查烘焙记录详情
+  if (
+    prevNote.changeRecord?.roastingRecord?.roastedAmount !==
+      nextNote.changeRecord?.roastingRecord?.roastedAmount ||
+    prevNote.changeRecord?.roastingRecord?.roastedBeanName !==
+      nextNote.changeRecord?.roastingRecord?.roastedBeanName
   ) {
     return false;
   }
