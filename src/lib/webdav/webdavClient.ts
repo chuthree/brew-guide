@@ -407,30 +407,45 @@ export class WebDAVClient {
 
   /**
    * 检查文件是否存在
+   * 使用 PROPFIND 方法代替 HEAD，因为 CORS 代理可能不支持 HEAD 请求
    */
   async fileExists(filename: string): Promise<boolean> {
     try {
       const url = this.buildUrl(filename);
       const proxiedUrl = this.getProxiedUrl(url);
 
+      // 使用 PROPFIND 检查文件是否存在，Depth: 0 只获取目标资源本身
       const response = await fetch(proxiedUrl, {
-        method: 'HEAD',
+        method: 'PROPFIND',
         headers: {
           Authorization: this.authHeader,
+          Depth: '0',
+          'Content-Type': 'application/xml; charset=utf-8',
         },
+        body: `<?xml version="1.0" encoding="utf-8" ?>
+<D:propfind xmlns:D="DAV:">
+  <D:prop>
+    <D:resourcetype/>
+  </D:prop>
+</D:propfind>`,
       });
 
-      this.logSummary('head', {
+      // WebDAV PROPFIND 成功返回 207 Multi-Status
+      const exists = response.ok || response.status === 207;
+
+      this.logSummary('fileExists', {
         filename,
         status: response.status,
-        ok: response.ok,
+        ok: exists,
+        path: url,
       });
 
-      return response.ok;
+      return exists;
     } catch (error) {
-      this.logSummary('head', {
+      this.logSummary('fileExists', {
         filename,
         ok: false,
+        error: error instanceof Error ? error.message : String(error),
       });
       return false;
     }
