@@ -368,6 +368,8 @@ interface ViewSwitcherProps {
   // 新增搜索历史相关props
   searchHistory?: string[];
   onSearchHistoryClick?: (query: string) => void;
+  // 生豆库启用设置
+  enableGreenBeanInventory?: boolean;
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -435,6 +437,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   // 新增搜索历史参数
   searchHistory = [],
   onSearchHistoryClick,
+  // 生豆库启用设置
+  enableGreenBeanInventory = false,
 }) => {
   // 添加极简模式状态
   const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
@@ -739,18 +743,24 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
               showEmptyBeans ? (
                 <span className="flex items-baseline">
                   {beansCount} 款
-                  <span
-                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-                    onClick={() => {
-                      // 切换生豆/熟豆
-                      const newState =
-                        selectedBeanState === 'green' ? 'roasted' : 'green';
-                      onBeanStateChange?.(newState);
-                    }}
-                    title="点击切换生豆/熟豆"
-                  >
-                    {BEAN_STATE_LABELS[selectedBeanState]}
-                  </span>
+                  {enableGreenBeanInventory ? (
+                    <span
+                      className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                      onClick={() => {
+                        // 切换生豆/熟豆
+                        const newState =
+                          selectedBeanState === 'green' ? 'roasted' : 'green';
+                        onBeanStateChange?.(newState);
+                      }}
+                      title="点击切换生豆/熟豆"
+                    >
+                      {BEAN_STATE_LABELS[selectedBeanState]}
+                    </span>
+                  ) : (
+                    <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                      {BEAN_STATE_LABELS[selectedBeanState]}
+                    </span>
+                  )}
                   ，总共 {originalTotalWeight || '0g'}
                   {!hideTotalWeight && totalWeight
                     ? `，剩余 ${totalWeight}`
@@ -759,18 +769,24 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
               ) : (
                 <span className="flex items-baseline">
                   {beansCount} 款
-                  <span
-                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-                    onClick={() => {
-                      // 切换生豆/熟豆
-                      const newState =
-                        selectedBeanState === 'green' ? 'roasted' : 'green';
-                      onBeanStateChange?.(newState);
-                    }}
-                    title="点击切换生豆/熟豆"
-                  >
-                    {BEAN_STATE_LABELS[selectedBeanState]}
-                  </span>
+                  {enableGreenBeanInventory ? (
+                    <span
+                      className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                      onClick={() => {
+                        // 切换生豆/熟豆
+                        const newState =
+                          selectedBeanState === 'green' ? 'roasted' : 'green';
+                        onBeanStateChange?.(newState);
+                      }}
+                      title="点击切换生豆/熟豆"
+                    >
+                      {BEAN_STATE_LABELS[selectedBeanState]}
+                    </span>
+                  ) : (
+                    <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                      {BEAN_STATE_LABELS[selectedBeanState]}
+                    </span>
+                  )}
                   {!hideTotalWeight && totalWeight
                     ? `，剩余 ${totalWeight}`
                     : ''}

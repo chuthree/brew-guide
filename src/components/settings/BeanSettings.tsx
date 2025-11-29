@@ -82,7 +82,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
           <ChevronLeft className="h-5 w-5" />
         </button>
         <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
-          豆仓列表显示设置
+          豆仓设置
         </h2>
       </div>
 
@@ -314,6 +314,41 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                       checked={settings.showBeanRating || false}
                       onChange={e =>
                         handleChange('showBeanRating', e.target.checked)
+                      }
+                      className="peer sr-only"
+                    />
+                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* 生豆库设置区域分割线 */}
+            <div className="mt-4 border-t border-neutral-200 pt-4 dark:border-neutral-700">
+              <div className="mb-4 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                生豆库设置
+              </div>
+
+              <div className="space-y-5">
+                {/* 启用生豆库功能 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                      启用生豆库
+                    </div>
+                    <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                      关闭后将隐藏生豆/熟豆切换功能
+                    </div>
+                  </div>
+                  <label className="relative inline-flex shrink-0 cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      checked={settings.enableGreenBeanInventory || false}
+                      onChange={e =>
+                        handleChange(
+                          'enableGreenBeanInventory',
+                          e.target.checked
+                        )
                       }
                       className="peer sr-only"
                     />

@@ -164,6 +164,8 @@ export interface SettingsOptions {
   };
   // 磨豆机刻度显示设置
   showGrinderScale?: boolean; // 是否在冲煮页显示磨豆机刻度指示器
+  // 生豆库设置
+  enableGreenBeanInventory?: boolean; // 是否启用生豆库功能
   // 每日提醒设置
   dailyReminder: boolean;
   dailyReminderTime: string;
@@ -267,6 +269,8 @@ export const defaultSettings: SettingsOptions = {
   hiddenCommonMethods: {}, // 默认没有隐藏的方案
   // 隐藏的器具默认值
   hiddenEquipments: [], // 默认没有隐藏的器具
+  // 生豆库设置默认值
+  enableGreenBeanInventory: false, // 默认关闭生豆库功能
   // 磨豆机默认值
   grinders: [], // 默认没有磨豆机
   // 磨豆机默认同步设置
