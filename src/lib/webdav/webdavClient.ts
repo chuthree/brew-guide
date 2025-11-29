@@ -19,9 +19,77 @@ export class WebDAVClient {
   }
 
   /**
+   * 检查代理是否返回了错误
+   * 代理会把远程服务器的错误包装成 JSON 格式：{"contents":null,"status":{"error":{...}}}
+   */
+  private checkProxyError(responseText: string): string | null {
+    try {
+      // 尝试解析为 JSON（代理的错误响应格式）
+      if (responseText.startsWith('{') && responseText.includes('"status"')) {
+        const json = JSON.parse(responseText);
+
+        // 检查是否有错误
+        if (json.status?.error) {
+          const error = json.status.error;
+          return error.message || error.code || error.name || '代理请求失败';
+        }
+
+        // 检查 contents 是否为 null（代理请求失败的另一种情况）
+        if (json.contents === null && json.status) {
+          return '代理请求失败：无法获取远程内容';
+        }
+      }
+    } catch {
+      // 不是 JSON 格式，不是代理错误
+    }
+    return null;
+  }
+
+  /**
+   * 检查 WebDAV 错误响应
+   * 如坚果云返回: <d:error xmlns:d="DAV:"><s:exception>ObjectNotFound</s:exception>...</d:error>
+   */
+  private checkWebDAVError(responseText: string): string | null {
+    // 检查是否包含 error 标签
+    if (
+      responseText.includes('<d:error') ||
+      responseText.includes('<D:error') ||
+      responseText.includes('<error')
+    ) {
+      // 尝试提取错误信息
+      const exceptionMatch = responseText.match(
+        /<s:exception>([^<]+)<\/s:exception>/
+      );
+      const messageMatch = responseText.match(
+        /<s:message>([^<]+)<\/s:message>/
+      );
+
+      if (exceptionMatch || messageMatch) {
+        const exception = exceptionMatch?.[1] || '';
+        const message = messageMatch?.[1] || '';
+        return `${exception}: ${message}`.trim() || 'WebDAV 错误';
+      }
+
+      return 'WebDAV 返回错误响应';
+    }
+
+    // 检查常见的 WebDAV 错误
+    if (
+      responseText.includes('ObjectNotFound') ||
+      responseText.includes('does not exist')
+    ) {
+      return '资源不存在';
+    }
+
+    return null;
+  }
+
+  /**
    * 测试连接
    */
   async testConnection(): Promise<boolean> {
+    // 清空之前的日志
+
     try {
       // 首先检查 WebDAV 服务器根路径是否可访问
       const baseUrl = this.config.url.endsWith('/')
@@ -39,14 +107,49 @@ export class WebDAVClient {
         },
       });
 
-      if (!baseResponse.ok && baseResponse.status !== 207) {
-        console.error(
-          `[WebDAV] 无法连接到服务器: ${baseResponse.status} ${baseResponse.statusText}`
-        );
+      console.log(`[WebDAV] HTTP 响应状态: ${baseResponse.status}`);
+
+      // 读取响应内容
+      const responseText = await baseResponse.text();
+      console.log(`[WebDAV] 响应内容长度: ${responseText.length} 字节`);
+
+      // 🔧 检查代理是否返回了错误（代理会把错误包装成 JSON）
+      const proxyError = this.checkProxyError(responseText);
+      if (proxyError) {
+        console.log(`[WebDAV] 代理返回错误: ${proxyError}`);
         return false;
       }
 
-      console.log('[WebDAV] 服务器连接成功');
+      // 🔧 检查是否为 WebDAV 错误响应（如坚果云的 ObjectNotFound）
+      const webdavError = this.checkWebDAVError(responseText);
+      if (webdavError) {
+        console.log(`[WebDAV] WebDAV 错误: ${webdavError}`);
+        return false;
+      }
+
+      // 检查响应内容是否为有效的 WebDAV 成功响应（必须包含 multistatus）
+      const isValidWebDAV = responseText.includes('multistatus');
+
+      // 检查是否有认证错误响应
+      const hasAuthError =
+        responseText.includes('401') ||
+        responseText.includes('403') ||
+        responseText.includes('Unauthorized') ||
+        responseText.includes('Forbidden');
+
+      if (hasAuthError) {
+        console.log(`[WebDAV] 错误: 响应包含认证错误`);
+        console.log(`[WebDAV] 响应内容片段: ${responseText.substring(0, 500)}`);
+        return false;
+      }
+
+      if (!isValidWebDAV) {
+        console.log(`[WebDAV] 错误: 响应不是有效的 WebDAV 格式`);
+        console.log(`[WebDAV] 响应内容片段: ${responseText.substring(0, 500)}`);
+        return false;
+      }
+
+      console.log('[WebDAV] 服务器连接成功，响应为有效的 WebDAV 格式');
 
       // 然后检查并创建远程路径
       if (this.config.remotePath) {
@@ -54,23 +157,24 @@ export class WebDAVClient {
           ? this.config.remotePath.slice(0, -1)
           : this.config.remotePath;
 
-        console.log(`[WebDAV] 确保远程路径存在: ${remotePath}`);
+        console.log(`[WebDAV] 检查远程路径: ${remotePath}`);
         const dirCreated = await this.ensureDirectoryExists(remotePath);
 
         if (!dirCreated) {
-          console.error(
-            `[WebDAV] 创建远程路径失败: ${remotePath}，可能没有写入权限`
-          );
+          console.log(`[WebDAV] 错误: 远程路径检查/创建失败: ${remotePath}`);
           this.logSummary('test-connection', {
             url: baseUrl,
             remotePath: this.config.remotePath,
             ok: false,
-            error: '无法创建远程目录，请检查权限设置',
+            error: '无法访问或创建远程目录',
           });
           return false;
         }
+
+        console.log(`[WebDAV] 远程路径已就绪: ${remotePath}`);
       }
 
+      console.log('[WebDAV] 连接测试成功');
       this.logSummary('test-connection', {
         url: baseUrl,
         remotePath: this.config.remotePath,
@@ -79,10 +183,11 @@ export class WebDAVClient {
 
       return true;
     } catch (error) {
-      console.error('WebDAV 连接测试失败:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.log(`[WebDAV] 错误: 连接测试异常 - ${errorMsg}`);
       this.logSummary('test-connection', {
         ok: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMsg,
       });
       return false;
     }
@@ -93,13 +198,27 @@ export class WebDAVClient {
    */
   async uploadFile(filename: string, content: string): Promise<boolean> {
     try {
-      // 🔧 关键修复：上传前先确保目录存在
+      // 🔧 修复：上传前先确保完整的目录路径存在
+      // 需要确保 remotePath 存在
+      if (this.config.remotePath) {
+        const remotePath = this.config.remotePath.endsWith('/')
+          ? this.config.remotePath.slice(0, -1)
+          : this.config.remotePath;
+        await this.ensureDirectoryExists(remotePath);
+      }
+
+      // 如果文件在子目录中，还需要创建子目录
       const pathParts = filename.split('/');
       if (pathParts.length > 1) {
         // 如果文件在子目录中，先创建目录结构
         const dirPath = pathParts.slice(0, -1).join('/');
-        console.log(`[WebDAV] 确保目录存在: ${dirPath}`);
-        await this.ensureDirectoryExists(dirPath);
+        // 构建完整的目录路径：remotePath + dirPath
+        const remotePath = this.config.remotePath
+          .replace(/^\/+/, '')
+          .replace(/\/+$/, '');
+        const fullDirPath = remotePath ? `${remotePath}/${dirPath}` : dirPath;
+        console.log(`[WebDAV] 确保子目录存在: ${fullDirPath}`);
+        await this.ensureDirectoryExists(fullDirPath);
       }
 
       const url = this.buildUrl(filename);
@@ -329,15 +448,36 @@ export class WebDAVClient {
   }
 
   /**
+   * 构建目录操作的 URL（不包含 remotePath，因为目录操作可能就是针对 remotePath 本身）
+   */
+  private buildDirectoryUrl(dirPath: string): string {
+    // 移除 URL 末尾的斜杠
+    const baseUrl = this.config.url.endsWith('/')
+      ? this.config.url.slice(0, -1)
+      : this.config.url;
+
+    // 移除路径开头和末尾的斜杠
+    const normalizedPath = dirPath.replace(/^\/+/, '').replace(/\/+$/, '');
+
+    if (!normalizedPath) {
+      return baseUrl;
+    }
+
+    return `${baseUrl}/${normalizedPath}`;
+  }
+
+  /**
    * 确保目录存在（递归创建）
    */
   private async ensureDirectoryExists(path: string): Promise<boolean> {
     if (!path) return true;
 
     try {
-      // 检查目录是否已存在
-      const url = this.buildUrl(path);
+      // 🔧 修复：使用专门的目录 URL 构建方法，避免路径重复
+      const url = this.buildDirectoryUrl(path);
       const proxiedUrl = this.getProxiedUrl(url);
+
+      console.log(`[WebDAV] 检查目录是否存在: ${url}`);
 
       const checkResponse = await fetch(proxiedUrl, {
         method: 'PROPFIND',
@@ -347,21 +487,46 @@ export class WebDAVClient {
         },
       });
 
-      // 目录已存在
-      if (checkResponse.ok || checkResponse.status === 207) {
+      // 读取响应内容
+      const responseText = await checkResponse.text();
+      console.log(`[WebDAV] PROPFIND 响应状态: ${checkResponse.status}`);
+      console.log(`[WebDAV] 响应内容片段: ${responseText.substring(0, 200)}`);
+
+      // 🔧 检查代理是否返回了错误
+      const proxyError = this.checkProxyError(responseText);
+      if (proxyError) {
+        console.log(`[WebDAV] 代理返回错误: ${proxyError}`);
+        return false;
+      }
+
+      // 🔧 检查是否为 WebDAV 错误响应（如坚果云的 ObjectNotFound）
+      const webdavError = this.checkWebDAVError(responseText);
+
+      // 验证是否为有效的 WebDAV 成功响应（必须包含 multistatus）
+      const isValidWebDAV = responseText.includes('multistatus');
+
+      // 目录已存在（必须是有效的 WebDAV multistatus 响应）
+      if (isValidWebDAV) {
+        console.log(`[WebDAV] 目录已存在: ${path}`);
         return true;
       }
 
-      // 目录不存在，需要创建
-      if (checkResponse.status === 404) {
-        console.log(`[WebDAV] 创建目录: ${path}`);
+      // 目录不存在（WebDAV 错误或 404）
+      if (
+        webdavError ||
+        responseText.includes('ObjectNotFound') ||
+        responseText.includes('does not exist')
+      ) {
+        console.log(`[WebDAV] 目录不存在，开始创建: ${path}`);
 
         // 递归创建父目录
         const pathParts = path.split('/').filter(p => p);
         for (let i = 1; i <= pathParts.length; i++) {
           const currentPath = pathParts.slice(0, i).join('/');
-          const currentUrl = this.buildUrl(currentPath);
+          const currentUrl = this.buildDirectoryUrl(currentPath);
           const currentProxiedUrl = this.getProxiedUrl(currentUrl);
+
+          console.log(`[WebDAV] 尝试创建目录: ${currentUrl}`);
 
           const mkcolResponse = await fetch(currentProxiedUrl, {
             method: 'MKCOL',
@@ -370,25 +535,58 @@ export class WebDAVClient {
             },
           });
 
-          // 405 表示目录已存在，这是正常的
-          if (
-            !mkcolResponse.ok &&
-            mkcolResponse.status !== 201 &&
-            mkcolResponse.status !== 405
-          ) {
-            console.error(
-              `[WebDAV] 创建目录失败: ${currentPath} (${mkcolResponse.status})`
-            );
+          const mkcolText = await mkcolResponse.text();
+          console.log(`[WebDAV] MKCOL 响应状态: ${mkcolResponse.status}`);
+
+          // 🔧 检查代理是否返回了错误
+          const mkcolProxyError = this.checkProxyError(mkcolText);
+          if (mkcolProxyError) {
+            console.log(`[WebDAV] 代理返回错误: ${mkcolProxyError}`);
             return false;
           }
+
+          // 检查是否有认证错误
+          const hasAuthError =
+            mkcolText.includes('401') ||
+            mkcolText.includes('403') ||
+            mkcolText.includes('Unauthorized') ||
+            mkcolText.includes('Forbidden');
+
+          if (hasAuthError) {
+            console.log(`[WebDAV] 错误: 创建目录时认证失败: ${currentPath}`);
+            console.log(`[WebDAV] 响应内容: ${mkcolText.substring(0, 300)}`);
+            return false;
+          }
+
+          // 检查 MKCOL 是否成功
+          // 成功的情况：201 Created, 405 Method Not Allowed (目录已存在)
+          // 或者响应内容为空（某些服务器成功时不返回内容）
+          const mkcolSuccess =
+            mkcolResponse.status === 201 ||
+            mkcolResponse.status === 405 ||
+            mkcolText === '' ||
+            mkcolText.includes('Created');
+
+          if (!mkcolSuccess) {
+            console.log(`[WebDAV] 错误: 创建目录失败: ${currentPath}`);
+            console.log(`[WebDAV] 响应内容: ${mkcolText.substring(0, 300)}`);
+            return false;
+          }
+
+          console.log(`[WebDAV] 目录创建成功或已存在: ${currentPath}`);
         }
 
         return true;
       }
 
+      // 响应既不是有效的 WebDAV 也不是 404，可能是其他错误
+      console.log(`[WebDAV] 错误: 无法确定目录状态`);
+      console.log(`[WebDAV] 响应内容: ${responseText.substring(0, 300)}`);
       return false;
     } catch (error) {
-      console.error(`[WebDAV] 确保目录存在失败: ${path}`, error);
+      console.log(
+        `[WebDAV] 错误: 确保目录存在失败: ${path} - ${error instanceof Error ? error.message : String(error)}`
+      );
       return false;
     }
   }

@@ -86,7 +86,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         setStatus('error');
         // 根据配置情况给出更具体的提示
         if (settings.remotePath) {
-          setError('连接失败：无法创建远程目录，请检查路径和权限');
+          setError('连接失败：请检查服务器地址、账号密码和路径是否正确');
         } else {
           setError('连接失败：请检查服务器地址和认证信息');
         }
@@ -132,7 +132,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         setStatus('error');
         // 根据配置情况给出更具体的提示
         if (settings.remotePath) {
-          setError('连接失败：无法创建远程目录，请检查路径和权限');
+          setError('连接失败：请检查服务器地址、账号密码和路径是否正确');
         } else {
           setError('连接失败：请检查服务器地址、账号或密码');
         }
