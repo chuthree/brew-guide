@@ -85,7 +85,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         ratio: extractRatioNumber(method.params.ratio),
         grindSize: method.params.grindSize,
         water: extractNumber(method.params.water),
-        time: method.params.stages?.[0]?.time?.toString() || '0',
+        time: method.params.stages?.[0]?.time?.toString() ?? '',
         temp: extractNumber(method.params.temp || ''),
       });
     }
@@ -241,7 +241,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               <div className="space-y-2">
                 {renderParamInput(
                   '咖啡粉',
-                  editingValues?.coffee || extractNumber(method.params.coffee),
+                  editingValues?.coffee ?? extractNumber(method.params.coffee),
                   value => updateParam('coffee', value),
                   'g'
                 )}
@@ -253,7 +253,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       </label>
                       <GrindSizeInput
                         value={
-                          editingValues?.grindSize || method.params.grindSize
+                          editingValues?.grindSize ?? method.params.grindSize
                         }
                         onChange={value => updateParam('grindSize', value)}
                         className="flex w-24 items-center justify-end"
@@ -263,14 +263,15 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                     </div>
                     {renderParamInput(
                       '萃取时长',
-                      editingValues?.time ||
-                        (method.params.stages?.[0]?.time || 0).toString(),
+                      editingValues?.time ??
+                        method.params.stages?.[0]?.time?.toString() ??
+                        '',
                       value => updateParam('time', value),
                       's'
                     )}
                     {renderParamInput(
                       '液重',
-                      editingValues?.water ||
+                      editingValues?.water ??
                         extractNumber(method.params.water),
                       value => updateParam('water', value),
                       'g'
@@ -280,7 +281,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                   <>
                     {renderParamInput(
                       '粉水比',
-                      editingValues?.ratio ||
+                      editingValues?.ratio ??
                         extractRatioNumber(method.params.ratio),
                       value => updateParam('ratio', value),
                       undefined,
@@ -293,7 +294,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       </label>
                       <GrindSizeInput
                         value={
-                          editingValues?.grindSize || method.params.grindSize
+                          editingValues?.grindSize ?? method.params.grindSize
                         }
                         onChange={value => updateParam('grindSize', value)}
                         className="flex w-24 items-center justify-end"
@@ -303,8 +304,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                     </div>
                     {renderParamInput(
                       '水温',
-                      editingValues?.temp ||
-                        extractNumber(method.params.temp || ''),
+                      editingValues?.temp ??
+                        extractNumber(method.params.temp ?? ''),
                       value => updateParam('temp', value),
                       '°C'
                     )}
