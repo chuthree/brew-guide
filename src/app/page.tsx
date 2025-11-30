@@ -105,6 +105,8 @@ import BrewingNoteEditModal from '@/components/notes/Form/BrewingNoteEditModal';
 import NoteDetailModal from '@/components/notes/Detail/NoteDetailModal';
 import ImageViewer from '@/components/common/ui/ImageViewer';
 import NavigationSettings from '@/components/settings/NavigationSettings';
+import ConvertToGreenDrawer from '@/components/coffee-bean/ConvertToGreenDrawer';
+import type { ConvertToGreenPreview } from '@/components/coffee-bean/ConvertToGreenDrawer';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -497,6 +499,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [reminderType, setReminderType] = useState<BackupReminderType | null>(
     null
   );
+
+  // 转生豆确认抽屉状态
+  const [showConvertToGreenDrawer, setShowConvertToGreenDrawer] =
+    useState(false);
+  const [convertToGreenPreview, setConvertToGreenPreview] =
+    useState<ConvertToGreenPreview | null>(null);
 
   // 加载自定义器具
   useEffect(() => {
@@ -3668,11 +3676,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         onConvertToGreen={
           settings.enableGreenBeanInventory && settings.enableConvertToGreen
             ? async bean => {
-                // 转为生豆：先预览转换效果，然后确认执行
+                // 转为生豆：先预览转换效果，然后打开确认抽屉
                 try {
-                  const { showToast } = await import(
-                    '@/components/common/feedback/LightToast'
-                  );
                   const { RoastingManager } = await import(
                     '@/lib/managers/roastingManager'
                   );
@@ -3692,64 +3697,31 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                   const p = preview.preview;
 
-                  // 构建确认消息（根据是否直接转换显示不同内容）
-                  const confirmMessage = p.directConvert
-                    ? [
-                        `将「${p.originalBean.name}」转换为生豆？\n`,
-                        `📦 原熟豆：${p.originalBean.capacity}g（未使用）`,
-                        `\n🌱 转换后：${p.greenBean.capacity}g 生豆`,
-                        `\n此豆尚未使用，将直接转为生豆。`,
-                      ].join('\n')
-                    : [
-                        `将「${p.originalBean.name}」转换为生豆？\n`,
-                        `📦 原熟豆：${p.originalBean.capacity}g 总量，${p.originalBean.remaining}g 剩余`,
-                        `\n🌱 生豆：${p.greenBean.capacity}g 总量，${p.greenBean.remaining}g 剩余`,
-                        `🔥 烘焙量：${p.roastingAmount}g`,
-                        `☕ 新熟豆：${p.newRoastedBean.capacity}g 总量，${p.newRoastedBean.remaining}g 剩余`,
-                        p.brewingNotesCount > 0
-                          ? `\n📝 将迁移 ${p.brewingNotesCount} 条冲煮记录（共 ${p.noteUsageTotal}g）`
-                          : '',
-                        p.recordsToDeleteCount > 0
-                          ? `🗑️ 将删除 ${p.recordsToDeleteCount} 条变动记录`
-                          : '',
-                      ]
-                        .filter(Boolean)
-                        .join('\n');
-
-                  // 显示确认对话框
-                  if (!window.confirm(confirmMessage)) {
-                    return;
-                  }
-
-                  // 执行转换
-                  const result = await RoastingManager.convertRoastedToGreen(
-                    bean.id
-                  );
-
-                  if (result.success) {
-                    // 关闭详情页
-                    setBeanDetailOpen(false);
-
-                    showToast({
-                      type: 'success',
-                      title: '转换成功',
-                      duration: 2000,
-                    });
-
-                    // 触发数据更新
-                    handleBeanListChange();
-                  } else {
-                    showToast({
-                      type: 'error',
-                      title: result.error || '转换失败',
-                      duration: 3000,
-                    });
-                  }
+                  // 保存预览数据并打开确认抽屉
+                  setConvertToGreenPreview({
+                    beanId: bean.id,
+                    beanName: p.originalBean.name,
+                    originalBean: {
+                      capacity: p.originalBean.capacity,
+                      remaining: p.originalBean.remaining,
+                    },
+                    greenBean: {
+                      capacity: p.greenBean.capacity,
+                      remaining: p.greenBean.remaining,
+                    },
+                    roastingAmount: p.roastingAmount,
+                    newRoastedBean: {
+                      capacity: p.newRoastedBean.capacity,
+                      remaining: p.newRoastedBean.remaining,
+                    },
+                    brewingNotesCount: p.brewingNotesCount,
+                    noteUsageTotal: p.noteUsageTotal,
+                    recordsToDeleteCount: p.recordsToDeleteCount,
+                    directConvert: p.directConvert,
+                  });
+                  setShowConvertToGreenDrawer(true);
                 } catch (error) {
-                  console.error('转换失败:', error);
-                  const { showToast } = await import(
-                    '@/components/common/feedback/LightToast'
-                  );
+                  console.error('预览转换失败:', error);
                   showToast({
                     type: 'error',
                     title: '转换失败',
@@ -3985,6 +3957,63 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         onShareEquipment={handleShareEquipment}
         onReorderEquipments={handleReorderEquipments}
         settings={settings}
+      />
+
+      {/* 转生豆确认抽屉 */}
+      <ConvertToGreenDrawer
+        isOpen={showConvertToGreenDrawer}
+        onClose={() => {
+          setShowConvertToGreenDrawer(false);
+          // 注意：不要在这里清空 preview，否则内容会在动画播放时突然消失
+          // setConvertToGreenPreview(null) 已移至 onExitComplete
+        }}
+        onExitComplete={() => {
+          // 在退出动画完成后清理数据
+          setConvertToGreenPreview(null);
+        }}
+        onConfirm={async () => {
+          if (!convertToGreenPreview) return;
+
+          try {
+            const { RoastingManager } = await import(
+              '@/lib/managers/roastingManager'
+            );
+
+            // 执行转换
+            const result = await RoastingManager.convertRoastedToGreen(
+              convertToGreenPreview.beanId
+            );
+
+            if (result.success) {
+              // 关闭详情页
+              setBeanDetailOpen(false);
+
+              showToast({
+                type: 'success',
+                title: '转换成功',
+                duration: 2000,
+              });
+
+              // 触发数据更新
+              handleBeanListChange();
+            } else {
+              showToast({
+                type: 'error',
+                title: result.error || '转换失败',
+                duration: 3000,
+              });
+            }
+          } catch (error) {
+            console.error('转换失败:', error);
+            showToast({
+              type: 'error',
+              title: '转换失败',
+              duration: 2000,
+            });
+          }
+          // 注意：数据清理已统一由 onExitComplete 处理
+        }}
+        preview={convertToGreenPreview}
       />
 
       {/* ImageViewer 独立渲染在最外层，避免受到父组件透明度影响 */}

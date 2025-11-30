@@ -76,6 +76,7 @@
   },
   "devDependencies": {
     "@csstools/postcss-oklab-function": "^4.0.12",
+    "@svgr/webpack": "^8.1.0",
     "@types/lodash": "^4.17.20",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",

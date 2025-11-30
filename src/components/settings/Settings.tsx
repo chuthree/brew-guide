@@ -1180,9 +1180,9 @@ const Settings: React.FC<SettingsProps> = ({
                   result.downloadUrl
                 ) {
                   setUpdateInfo({
-                    latestVersion: result.latestVersion,
-                    downloadUrl: result.downloadUrl,
-                    releaseNotes: result.releaseNotes,
+                    latestVersion: result.latestVersion!,
+                    downloadUrl: result.downloadUrl!,
+                    releaseNotes: result.releaseNotes ?? '',
                   });
                   setShowUpdateDrawer(true);
                 } else {
