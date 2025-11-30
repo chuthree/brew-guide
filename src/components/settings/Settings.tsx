@@ -417,6 +417,7 @@ const Settings: React.FC<SettingsProps> = ({
     releaseNotes?: string;
   } | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const versionLongPressRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // 计算是否有隐藏的方案和器具
   const hasHiddenMethods = React.useMemo(() => {
@@ -1163,7 +1164,7 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
 
         {/* 版本信息 */}
-        <div className="px-6 pt-12 text-center text-xs text-neutral-400 dark:text-neutral-600">
+        <div className="px-6 pt-12 text-center text-xs text-neutral-400 select-none dark:text-neutral-600">
           <p>[版本号]</p>
           <button
             onClick={async () => {
@@ -1213,9 +1214,40 @@ const Settings: React.FC<SettingsProps> = ({
                 setIsCheckingUpdate(false);
               }
             }}
+            onPointerDown={() => {
+              // 长按处理：0.5秒后显示版本信息
+              versionLongPressRef.current = setTimeout(async () => {
+                try {
+                  const result = await checkForUpdates();
+                  setUpdateInfo({
+                    latestVersion: result.latestVersion ?? '',
+                    downloadUrl: result.downloadUrl ?? '',
+                    releaseNotes: result.releaseNotes,
+                  });
+                  setShowUpdateDrawer(true);
+                  if (settings.hapticFeedback) {
+                    hapticsUtils.light();
+                  }
+                } catch (error) {
+                  console.error('获取版本信息失败:', error);
+                }
+              }, 500);
+            }}
+            onPointerUp={() => {
+              // 清除长按计时
+              if (versionLongPressRef.current) {
+                clearTimeout(versionLongPressRef.current);
+              }
+            }}
+            onPointerLeave={() => {
+              // 离开按钮时清除长按计时
+              if (versionLongPressRef.current) {
+                clearTimeout(versionLongPressRef.current);
+              }
+            }}
             disabled={isCheckingUpdate}
             className="underline transition-colors hover:text-neutral-500 active:text-neutral-600 disabled:opacity-50 dark:hover:text-neutral-500 dark:active:text-neutral-400"
-            title="点击检查更新"
+            title="点击检查更新，长按查看版本详情"
           >
             {isCheckingUpdate ? '检测中...' : `v${APP_VERSION}`}
           </button>
