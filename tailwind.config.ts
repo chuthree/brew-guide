@@ -36,9 +36,15 @@ const config: Config = {
 					"0%,70%,100%": { opacity: "1" },
 					"20%,50%": { opacity: "0" },
 				},
+				"scan": {
+					"0%": { transform: "translateY(0)" },
+					"50%": { transform: "translateY(11rem)" },
+					"100%": { transform: "translateY(0)" },
+				},
 			},
 			animation: {
 				"caret-blink": "caret-blink 1.25s ease-out infinite",
+				"scan": "scan 2s ease-in-out infinite",
 			},
 		},
 	},
