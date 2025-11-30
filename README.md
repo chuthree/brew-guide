@@ -80,9 +80,7 @@ pnpm cap:android
 
 欢迎提交 Issue 和 PR！
 
-- 代码规范：[项目开发规范](docs/project_develop.md)
-- 项目结构：[项目结构规范](docs/project_struct.md)
-- UI 设计：[设计系统](docs/design_system.md)
+- 项目架构：[架构文档](docs/ARCHITECTURE.md)
 
 ## 许可
 
