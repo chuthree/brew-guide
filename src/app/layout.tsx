@@ -323,9 +323,7 @@ export default function RootLayout({
 
             <p>
               <a href="https://coffee.chu3.top/">访问 Brew Guide 网页版</a> |
-              <a href="https://www.123912.com/s/prGKTd-HpJWA">
-                下载 App（123 网盘）
-              </a>
+              <a href="https://gitee.com/chu3/brew-guide/releases">下载 App</a>
             </p>
           </div>
         </noscript>
