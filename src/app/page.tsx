@@ -394,13 +394,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     alt: string;
   } | null>(null);
 
-  // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、添加咖啡豆、笔记详情 或 笔记编辑）
-  // 注意：咖啡豆表单是抽屉式组件，不需要触发主页面转场动画
+  // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、笔记详情 或 笔记编辑）
+  // 注意：咖啡豆导入是 ActionDrawer 抽屉式组件，不需要触发主页面转场动画
   const hasAnyModalOpen =
     isSettingsOpen ||
     hasSubSettingsOpen ||
     beanDetailOpen ||
-    showImportBeanForm ||
     brewingNoteEditOpen ||
     noteDetailOpen;
 

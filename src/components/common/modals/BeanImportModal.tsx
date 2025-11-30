@@ -1,22 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Clipboard,
-  Code,
-  ExternalLink,
-  ScanLine,
-  Image as ImageIcon,
-} from 'lucide-react';
-import BeanSearchModal from './BeanSearchModal';
-import QRScannerModal from '@/components/coffee-bean/Scanner/QRScannerModal';
-import type { CoffeeBean } from '@/types/app';
-import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
+import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
 
 interface BeanImportModalProps {
   showForm: boolean;
@@ -53,83 +42,16 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   onImport,
   onClose,
 }) => {
-  // 状态管理
-  const [importData, setImportData] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [currentMode, setCurrentMode] = useState<'buttons' | 'input'>(
-    'buttons'
-  );
-  const [inputType, setInputType] = useState<
-    'clipboard' | 'json' | 'search' | 'qr' | 'image'
-  >('clipboard');
-  // 搜索模态框状态
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  // 二维码扫描模态框状态
-  const [showQRScannerModal, setShowQRScannerModal] = useState(false);
   // 图片识别加载状态
   const [isRecognizing, setIsRecognizing] = useState(false);
+  // 是否展开输入框
+  const [showJsonInput, setShowJsonInput] = useState(false);
+  // JSON 输入内容
+  const [jsonInputValue, setJsonInputValue] = useState('');
   // 图片输入 ref
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  // 转场动画状态
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  // 清除消息状态
-  const clearMessages = useCallback(() => {
-    setError(null);
-    setSuccess(null);
-  }, []);
-
-  // 重置所有状态
-  const resetAllStates = useCallback(() => {
-    setImportData('');
-    setCurrentMode('buttons');
-    setInputType('clipboard');
-    setShowSearchModal(false);
-    clearMessages();
-  }, [clearMessages]);
-
-  // 关闭处理
-  const handleClose = useCallback(() => {
-    // 立即通知父组件关闭，让父组件通过 showForm prop 控制动画
-    window.dispatchEvent(new CustomEvent('beanImportClosing'));
-    modalHistory.back();
-  }, []);
-
-  // 使用统一的历史栈管理系统
-  useModalHistory({
-    id: 'bean-import',
-    isOpen: showForm,
-    onClose,
-  });
-
-  // 处理显示/隐藏动画
-  useEffect(() => {
-    if (showForm) {
-      setShouldRender(true);
-      // 使用 requestAnimationFrame 触发动画（比 setTimeout 更快更流畅）
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-      });
-    } else {
-      setIsVisible(false);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-      }, 350); // 与动画时长匹配
-      return () => clearTimeout(timer);
-    }
-  }, [showForm]);
-
-  // 表单关闭时重置状态
-  useEffect(() => {
-    if (!showForm) {
-      resetAllStates();
-    }
-  }, [showForm, resetAllStates]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // JSON 输入框 ref
+  const jsonTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 确保字段为字符串类型
   const ensureStringFields = useCallback((item: ImportedBean): ImportedBean => {
@@ -142,89 +64,54 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     return result;
   }, []);
 
-  // 处理添加数据
-  const handleImport = useCallback(async () => {
-    if (!importData.trim()) {
-      setError('请输入要添加的数据');
-      return;
-    }
+  // 处理添加数据（通用）
+  const handleImportData = useCallback(
+    async (data: unknown) => {
+      try {
+        const isArray = Array.isArray(data);
+        const dataArray = isArray ? data : [data];
 
-    try {
-      const { extractJsonFromText } = await import('@/lib/utils/jsonUtils');
-      setError(null);
-      const beanData = extractJsonFromText(importData);
+        // 验证数据 - 只验证是否有咖啡豆名称
+        if (
+          !dataArray.every(
+            item =>
+              typeof item === 'object' &&
+              item !== null &&
+              'name' in item &&
+              typeof (item as Record<string, unknown>).name === 'string' &&
+              ((item as Record<string, unknown>).name as string).trim() !== ''
+          )
+        ) {
+          showToast({
+            type: 'error',
+            title: isArray ? '部分数据缺少咖啡豆名称' : '数据缺少咖啡豆名称',
+          });
+          return;
+        }
 
-      if (!beanData) {
-        setError('无法从输入中提取有效数据');
-        return;
+        // 处理数据
+        const processedBeans = dataArray.map(bean => ({
+          ...ensureStringFields(bean as unknown as ImportedBean),
+          timestamp: Date.now(),
+        }));
+
+        await onImport(JSON.stringify(processedBeans));
+        onClose();
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : '未知错误';
+        showToast({ type: 'error', title: `添加失败: ${errorMessage}` });
       }
-
-      const isArray = Array.isArray(beanData);
-      const dataArray = isArray ? beanData : [beanData];
-
-      // 验证数据 - 只验证是否有咖啡豆名称
-      if (
-        !dataArray.every(
-          item =>
-            typeof item === 'object' &&
-            item !== null &&
-            'name' in item &&
-            typeof (item as Record<string, unknown>).name === 'string' &&
-            ((item as Record<string, unknown>).name as string).trim() !== ''
-        )
-      ) {
-        setError(isArray ? '部分数据缺少咖啡豆名称' : '数据缺少咖啡豆名称');
-        return;
-      }
-
-      // 处理数据
-      const processedBeans = dataArray.map(bean => ({
-        ...ensureStringFields(bean as unknown as ImportedBean),
-        timestamp: Date.now(),
-      }));
-
-      setSuccess(
-        isArray ? '正在批量添加咖啡豆数据...' : '正在添加咖啡豆数据...'
-      );
-      await onImport(JSON.stringify(processedBeans));
-
-      // 通知父组件关闭，让父组件通过 showForm prop 控制动画
-      window.dispatchEvent(new CustomEvent('beanImportClosing'));
-      onClose(); // 立即调用，让父组件设置 showForm=false，触发 useEffect 处理动画
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      setError(`添加失败: ${errorMessage}`);
-      setSuccess(null);
-    }
-  }, [importData, ensureStringFields, onImport, onClose, resetAllStates]);
-
-  // 从搜索组件选择咖啡豆
-  const handleSelectFromSearch = useCallback((bean: CoffeeBean) => {
-    setImportData(JSON.stringify(bean, null, 2));
-    setSuccess('✨ 已选择咖啡豆，请检查信息是否正确');
-    setInputType('search');
-    setCurrentMode('input');
-  }, []);
-
-  // 从二维码扫描获取咖啡豆
-  const handleScanSuccess = useCallback((bean: Partial<CoffeeBean>) => {
-    setImportData(JSON.stringify(bean, null, 2));
-    setSuccess('✨ 已扫描二维码，请检查信息是否正确');
-    setInputType('qr');
-    setCurrentMode('input');
-    setShowQRScannerModal(false); // 关闭扫描器模态框
-  }, []);
+    },
+    [ensureStringFields, onImport, onClose]
+  );
 
   // 处理剪贴板识别
   const handleClipboardRecognition = useCallback(async () => {
-    clearMessages();
-    setInputType('clipboard');
-    setCurrentMode('input');
-
     try {
       const clipboardText = await navigator.clipboard.readText();
       if (!clipboardText.trim()) {
-        setError('剪贴板为空');
+        showToast({ type: 'error', title: '剪贴板为空' });
         return;
       }
 
@@ -233,21 +120,14 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       const beanData = extractJsonFromText(clipboardText);
 
       if (beanData) {
-        setImportData(JSON.stringify(beanData, null, 2));
-        setSuccess('✨ 从剪贴板识别到咖啡豆数据');
+        await handleImportData(beanData);
       } else {
-        setImportData(clipboardText);
-        setSuccess('已粘贴剪贴板内容，请检查数据格式');
+        showToast({ type: 'error', title: '无法识别剪贴板中的咖啡豆数据' });
       }
     } catch (_error) {
-      setError('无法访问剪贴板，请手动粘贴数据');
+      showToast({ type: 'error', title: '无法访问剪贴板' });
     }
-  }, [clearMessages]);
-
-  // 处理扫描二维码
-  const handleScanQRCode = useCallback(() => {
-    setShowQRScannerModal(true);
-  }, []);
+  }, [handleImportData]);
 
   // 处理图片上传识别
   const handleImageUpload = useCallback(
@@ -257,54 +137,46 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
       // 验证文件类型
       if (!file.type.startsWith('image/')) {
-        setError('请上传图片文件');
+        showToast({ type: 'error', title: '请上传图片文件' });
         return;
       }
 
       // 验证文件大小（最大 10MB）
       if (file.size > 10 * 1024 * 1024) {
-        setError('图片大小不能超过 10MB');
+        showToast({ type: 'error', title: '图片大小不能超过 10MB' });
         return;
       }
 
-      clearMessages();
       setIsRecognizing(true);
-      setInputType('image');
-      setCurrentMode('input');
-      setImportData('');
 
       try {
         // 压缩图片
-        console.log('📸 开始压缩图片...');
         const { smartCompress } = await import('@/lib/utils/imageCompression');
         const compressedFile = await smartCompress(file);
 
-        // 识别图片 - 使用流式回调
+        // 识别图片
         const { recognizeBeanImage } = await import(
           '@/lib/api/beanRecognition'
         );
 
-        const beanData = await recognizeBeanImage(
-          compressedFile,
-          progressData => {
-            // 实时更新显示的内容
-            setImportData(progressData);
-          }
-        );
-
-        // 最终格式化显示
-        setImportData(JSON.stringify(beanData, null, 2));
-        setSuccess('✨ 图片识别成功，请检查信息是否正确');
+        const beanData = await recognizeBeanImage(compressedFile);
         setIsRecognizing(false);
+        await handleImportData(beanData);
       } catch (error) {
         console.error('图片识别失败:', error);
-        setError(
-          error instanceof Error ? error.message : '图片识别失败，请重试'
-        );
+        showToast({
+          type: 'error',
+          title: error instanceof Error ? error.message : '图片识别失败',
+        });
         setIsRecognizing(false);
       }
+
+      // 清除文件输入，以便可以再次选择同一文件
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     },
-    [clearMessages]
+    [handleImportData]
   );
 
   // 触发图片选择
@@ -318,7 +190,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       // 首先尝试使用现代API
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(BEAN_RECOGNITION_PROMPT);
-        showToast({ type: 'success', title: '复制成功' });
+        showToast({ type: 'success', title: '提示词已复制' });
         return;
       }
 
@@ -338,7 +210,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
       const successful = document.execCommand('copy');
       if (successful) {
-        showToast({ type: 'success', title: '复制成功' });
+        showToast({ type: 'success', title: '提示词已复制' });
       } else {
         showToast({ type: 'error', title: '复制失败' });
       }
@@ -351,270 +223,211 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }
   }, []);
 
-  // 处理输入JSON
+  // 处理输入JSON - 切换到输入框模式
   const handleInputJSON = useCallback(() => {
-    clearMessages();
-    setInputType('json');
-    setCurrentMode('input');
-  }, [clearMessages]);
+    setShowJsonInput(true);
+    // 等待动画完成后聚焦输入框
+    setTimeout(() => {
+      jsonTextareaRef.current?.focus();
+    }, 300);
+  }, []);
 
-  // 返回到按钮界面
-  const handleBackToButtons = useCallback(() => {
-    setCurrentMode('buttons');
-    setImportData('');
-    clearMessages();
-  }, [clearMessages]);
+  // 提交 JSON 输入
+  const handleSubmitJson = useCallback(async () => {
+    if (!jsonInputValue.trim()) {
+      showToast({ type: 'error', title: '请输入咖啡豆数据' });
+      return;
+    }
 
-  // 重新识别剪切板
-  const handleRetryClipboard = useCallback(async () => {
-    await handleClipboardRecognition();
-  }, [handleClipboardRecognition]);
+    try {
+      const { extractJsonFromText } = await import('@/lib/utils/jsonUtils');
+      const beanData = extractJsonFromText(jsonInputValue);
+
+      if (beanData) {
+        await handleImportData(beanData);
+        setJsonInputValue('');
+        setShowJsonInput(false);
+      } else {
+        showToast({ type: 'error', title: '无法解析输入的数据' });
+      }
+    } catch (_error) {
+      showToast({ type: 'error', title: '数据格式错误' });
+    }
+  }, [jsonInputValue, handleImportData]);
+
+  // 取消输入
+  const handleCancelJsonInput = useCallback(() => {
+    setShowJsonInput(false);
+    setJsonInputValue('');
+  }, []);
+
+  // 关闭时重置状态
+  const handleClose = useCallback(() => {
+    setShowJsonInput(false);
+    setJsonInputValue('');
+    onClose();
+  }, [onClose]);
+
+  // 操作项配置
+  const actions = [
+    {
+      id: 'image',
+      label: isRecognizing ? '识别中...' : '图片识别咖啡豆（推荐）',
+      onClick: handleUploadImageClick,
+      disabled: isRecognizing,
+    },
+    {
+      id: 'clipboard',
+      label: '识别剪切板',
+      onClick: handleClipboardRecognition,
+    },
+    {
+      id: 'json',
+      label: '输入 JSON',
+      onClick: handleInputJSON,
+    },
+  ];
 
   return (
     <>
-      {shouldRender && (
-        <div
-          className="fixed inset-0 mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
-          style={getChildPageStyle(isVisible)}
-        >
-          {/* 头部 - 只有左上角返回按钮 */}
-          <div className="pt-safe-top flex items-center px-4 py-4">
-            <button
-              onClick={handleClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-800 transition-opacity hover:opacity-80 dark:text-white"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* 内容区域 */}
-          <div
-            className="pb-safe-bottom mt-16 flex-1 px-6"
-            style={{
-              // 正常情况下允许垂直滚动
-              overflowY: 'auto',
-              // 使用 CSS 来处理触摸行为
-              touchAction: 'pan-y pinch-zoom',
-            }}
-          >
-            {/* 大标题 */}
-            <div className="mb-8">
-              <h1 className="text-md mb-4 font-bold text-neutral-800 dark:text-white">
-                添加咖啡豆
-              </h1>
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={currentMode}
-                  initial={{ opacity: 0, x: 5 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -5 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-sm font-medium text-neutral-600 dark:text-neutral-400"
-                >
-                  {currentMode === 'buttons' ? (
-                    <>
-                      <span>将包含咖啡豆信息的图片和</span>
-                      <button
-                        onClick={handleCopyPrompt}
-                        className="mx-1 inline-flex items-center gap-1 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-white"
-                      >
-                        提示词
-                      </button>
-                      <span>
-                        发送至 DeepSeek 等 AI 平台，复制返回的 JSON
-                        数据后，点击下方按钮。
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      {inputType === 'clipboard' &&
-                        '已自动识别剪切板内容，请检查数据格式是否正确'}
-                      {inputType === 'json' &&
-                        '请粘贴咖啡豆的 JSON 数据或文本信息'}
-                      {inputType === 'search' &&
-                        '从搜索结果自动填入，请检查信息是否正确'}
-                      {inputType === 'qr' && '已扫描二维码，请检查信息是否正确'}
-                      {inputType === 'image' && '请检查识别结果是否正确'}
-                    </>
-                  )}
-                </motion.p>
-              </AnimatePresence>
-            </div>
-
-            {/* 动态内容区域 */}
-            <AnimatePresence mode="wait">
-              {currentMode === 'buttons' ? (
-                <motion.div
-                  key="buttons"
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -8 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-3"
-                >
-                  {/* 识别剪切板 */}
-                  <button
-                    onClick={handleClipboardRecognition}
-                    className="flex w-full items-center justify-between rounded bg-neutral-200/50 p-4 transition-colors dark:bg-neutral-800"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Clipboard className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
-                      <span className="font-medium text-neutral-800 dark:text-white">
-                        识别剪切板
-                      </span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-neutral-500" />
-                  </button>
-
-                  {/* 输入JSON */}
-                  <button
-                    onClick={handleInputJSON}
-                    className="flex w-full items-center justify-between rounded bg-neutral-200/50 p-4 transition-colors dark:bg-neutral-800"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Code className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
-                      <span className="font-medium text-neutral-800 dark:text-white">
-                        输入 JSON
-                      </span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-neutral-500" />
-                  </button>
-
-                  {/* 扫描二维码 */}
-                  <button
-                    onClick={handleScanQRCode}
-                    className="flex w-full items-center justify-between rounded bg-neutral-200/50 p-4 transition-colors dark:bg-neutral-800"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <ScanLine className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
-                      <span className="font-medium text-neutral-800 dark:text-white">
-                        扫描二维码
-                      </span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-neutral-500" />
-                  </button>
-
-                  {/* 分隔线 */}
-                  <div className="py-2">
-                    <div className="h-px bg-neutral-100 dark:bg-neutral-800/50"></div>
-                  </div>
-
-                  {/* 拍照识别咖啡豆 */}
-                  <button
-                    onClick={handleUploadImageClick}
-                    className="flex w-full items-center justify-between rounded bg-neutral-200/50 p-4 transition-colors dark:bg-neutral-800"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <ImageIcon className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
-                      <span className="font-medium text-neutral-800 dark:text-white">
-                        图片识别咖啡豆（推荐）
-                      </span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-neutral-500" />
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="input"
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -8 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-3"
-                >
-                  {/* 返回按钮 */}
-                  <button
-                    onClick={handleBackToButtons}
-                    className="flex w-full items-center justify-between rounded bg-neutral-200/50 p-4 transition-colors dark:bg-neutral-800"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <ChevronLeft className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
-                      <span className="font-medium text-neutral-800 dark:text-white">
-                        返回上一步
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* 输入框 */}
-                  <div className="relative">
-                    <textarea
-                      className="w-full resize-none rounded border border-transparent bg-neutral-200/50 p-4 text-sm text-neutral-800 transition-all placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-700"
-                      placeholder={
-                        isRecognizing
-                          ? '识别中...'
-                          : success
-                            ? `✅ ${success}`
-                            : inputType === 'clipboard'
-                              ? '识别剪切板内容中...'
-                              : inputType === 'json'
-                                ? '粘贴咖啡豆数据...'
-                                : inputType === 'image'
-                                  ? '图片识别结果将显示在这里'
-                                  : '咖啡豆信息'
-                      }
-                      value={importData}
-                      onChange={e => setImportData(e.target.value)}
-                      rows={12}
-                      disabled={isRecognizing}
-                    />
-                    {/* 错误提示 - 左下角 */}
-                    {error && (
-                      <div className="absolute bottom-3 left-3 flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-400/60"></span>
-                        <span>{error}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 底部按钮区域 */}
-                  <div className="space-y-3">
-                    {/* 重新识别剪切板按钮 - 只在剪切板模式且有错误时显示 */}
-                    {error && inputType === 'clipboard' && (
-                      <button
-                        onClick={handleRetryClipboard}
-                        className="flex w-full items-center justify-between rounded bg-neutral-200/50 p-4 transition-colors hover:bg-neutral-200/70 dark:bg-neutral-800 dark:hover:bg-neutral-800/70"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <Clipboard className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
-                          <span className="font-medium text-neutral-800 dark:text-white">
-                            重新识别剪切板
-                          </span>
-                        </div>
-                      </button>
-                    )}
-
-                    {/* 添加按钮 - 只在有数据时显示 */}
-                    {importData.trim() && !isRecognizing && (
-                      <button
-                        onClick={handleImport}
-                        className="flex w-full items-center justify-center rounded bg-neutral-200/50 p-4 transition-colors hover:bg-neutral-200/70 dark:bg-neutral-800 dark:hover:bg-neutral-800/70"
-                      >
-                        <span className="font-medium text-neutral-800 dark:text-white">
-                          添加咖啡豆
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+      <ActionDrawer
+        isOpen={showForm}
+        onClose={handleClose}
+        historyId="bean-import"
+      >
+        {/* 图标区域 - 带切换动画 */}
+        <div className="mb-6 text-neutral-800 dark:text-neutral-200">
+          <AnimatePresence mode="popLayout">
+            {!showJsonInput ? (
+              <motion.div
+                key="circle-icon"
+                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                transition={{ duration: 0.15 }}
+              >
+                <AddCircleIcon width={128} height={128} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="box-icon"
+                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                transition={{ duration: 0.15 }}
+              >
+                <AddBoxIcon width={128} height={128} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      )}
+        <ActionDrawer.Content>
+          <AnimatePresence mode="popLayout">
+            {!showJsonInput ? (
+              <motion.p
+                key="description"
+                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                transition={{ duration: 0.15 }}
+                className="text-neutral-500 dark:text-neutral-400"
+              >
+                选择添加咖啡豆的方式。推荐使用
+                <span className="text-neutral-800 dark:text-neutral-200">
+                  图片识别
+                </span>
+                ，或将图片与
+                <button
+                  onClick={handleCopyPrompt}
+                  className="mx-0.5 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-neutral-200"
+                >
+                  提示词
+                </button>
+                发送至 AI 获取 JSON 后粘贴。
+              </motion.p>
+            ) : (
+              <motion.p
+                key="input-hint"
+                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                transition={{ duration: 0.15 }}
+                className="text-neutral-500 dark:text-neutral-400"
+              >
+                粘贴从
+                <span className="text-neutral-800 dark:text-neutral-200">
+                  {' '}
+                  AI 或他人分享
+                </span>
+                获取的咖啡豆 JSON 数据，支持单个或多个咖啡豆批量导入。
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </ActionDrawer.Content>
 
-      {/* 搜索模态框 */}
-      <BeanSearchModal
-        isOpen={showSearchModal}
-        onClose={() => setShowSearchModal(false)}
-        onSelectBean={handleSelectFromSearch}
-      />
-
-      {/* 二维码扫描模态框 */}
-      <QRScannerModal
-        isOpen={showQRScannerModal}
-        onClose={() => setShowQRScannerModal(false)}
-        onScanSuccess={handleScanSuccess}
-      />
+        {/* 操作按钮列表 */}
+        <div className="flex flex-col gap-2">
+          <AnimatePresence mode="popLayout">
+            {!showJsonInput ? (
+              // 三个操作按钮
+              <motion.div
+                key="actions"
+                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                transition={{ duration: 0.15 }}
+                className="flex flex-col gap-2"
+              >
+                {actions.map(action => (
+                  <motion.button
+                    key={action.id}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 disabled:opacity-50 dark:bg-neutral-800 dark:text-white"
+                  >
+                    {action.label}
+                  </motion.button>
+                ))}
+              </motion.div>
+            ) : (
+              // JSON 输入区域
+              <motion.div
+                key="json-input"
+                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
+                transition={{ duration: 0.15 }}
+                className="flex flex-col gap-2"
+              >
+                <textarea
+                  ref={jsonTextareaRef}
+                  value={jsonInputValue}
+                  onChange={e => setJsonInputValue(e.target.value)}
+                  placeholder='{"name": "咖啡豆名称", ...}'
+                  className="h-24 w-full resize-none rounded-2xl bg-neutral-100 px-4 py-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-600"
+                />
+                <div className="flex gap-2">
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleCancelJsonInput}
+                    className="flex-1 rounded-full bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                  >
+                    取消
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSubmitJson}
+                    className="flex-1 rounded-full bg-neutral-900 px-4 py-3 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+                  >
+                    确认导入
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </ActionDrawer>
 
       {/* 隐藏的文件输入 */}
       <input
