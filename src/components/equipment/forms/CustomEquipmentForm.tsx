@@ -251,9 +251,15 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
   });
 
   // 添加杯型选择状态（默认/自定义）
-  const [cupShapeType, setCupShapeType] = useState<'default' | 'custom'>(
-    initialEquipment?.customShapeSvg ? 'custom' : 'default'
-  );
+  // 初始化逻辑：只有在既有customShapeSvg数据，且当前预设不是espresso时，才显示为自定义
+  const [cupShapeType, setCupShapeType] = useState<'default' | 'custom'>(() => {
+    // espresso预设不支持杯型选择，始终为default
+    if (initialEquipment?.animationType === 'espresso') {
+      return 'default';
+    }
+    // 只有同时满足两个条件才判定为custom：1) 有customShapeSvg数据 2) 预设不禁止自定义
+    return initialEquipment?.customShapeSvg ? 'custom' : 'default';
+  });
 
   // 添加阀门样式选择状态（默认/自定义）
   const [_valveShapeType, setValveShapeType] = useState<string>('default');
@@ -469,6 +475,8 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
     } else if (selectedPreset === 'espresso') {
       handleChange('animationType', 'espresso');
       handleChange('hasValve', false);
+      // espresso预设强制使用默认杯型
+      setCupShapeType('default');
     } else if (selectedPreset === 'custom') {
       handleChange('animationType', 'custom');
       // 自定义预设强制使用自定义杯型
@@ -561,6 +569,14 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           isCustom: true as const,
           customPourAnimations:
             selectedPreset === 'custom' ? processedAnimations : undefined,
+          // 根据杯型选择，清空或保留customShapeSvg
+          customShapeSvg:
+            cupShapeType === 'custom' ? equipment.customShapeSvg : '',
+          // 如果使用默认杯型，同时清空阀门自定义数据
+          customValveSvg:
+            cupShapeType === 'custom' ? equipment.customValveSvg : '',
+          customValveOpenSvg:
+            cupShapeType === 'custom' ? equipment.customValveOpenSvg : '',
         };
 
         // 检查杯型SVG数据是否存在
