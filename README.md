@@ -38,7 +38,7 @@
 - 深色/浅色模式
 - 数据导入导出
 - 墨水屏优化
-- 多平台支持（Web、iOS、Android、桌面）
+- 多平台支持（Web、iOS、Android）
 
 ## 开发
 
@@ -54,16 +54,11 @@ pnpm dev
 # 构建
 pnpm build
 
-# 桌面应用构建
-pnpm build:desktop
-
 # 移动端开发
 pnpm cap:build
 pnpm cap:ios
 pnpm cap:android
 ```
-
-> 桌面应用构建需要预先安装 [Pake](https://github.com/tw93/Pake) 工具
 
 ## 技术栈
 
@@ -73,7 +68,6 @@ pnpm cap:android
 - [Framer Motion](https://www.framer.com/motion/) - 动画库
 - [TypeScript](https://www.typescriptlang.org/) - 类型安全
 - [Capacitor](https://capacitorjs.com/) - 跨平台原生运行时
-- [Pake](https://github.com/tw93/Pake) - 桌面应用打包工具
 - [Dexie](https://dexie.org/) - IndexedDB 包装器
 
 ## 贡献

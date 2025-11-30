@@ -6,7 +6,7 @@
 
 import type { SyncMetadataV2 } from './types';
 import { Storage } from '@/lib/core/storage';
-import WebDAVClient from './webdavClient';
+import { WebDAVClient } from './webdavClient';
 import { safeJsonParse } from './utils';
 
 const METADATA_KEY = 'webdav-sync-metadata';
@@ -146,5 +146,3 @@ export class MetadataManager {
     }
   }
 }
-
-export default MetadataManager;

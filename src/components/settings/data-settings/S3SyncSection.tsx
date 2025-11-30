@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import S3SyncManager from '@/lib/s3/syncManagerV2';
+import { S3SyncManager } from '@/lib/s3/syncManagerV2';
 import type {
   SyncResult,
   SyncMetadataV2 as SyncMetadata,

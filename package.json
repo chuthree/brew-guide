@@ -21,10 +21,8 @@
     "cap:android": "npx cap open android",
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
-    "build:desktop": "./build-desktop.sh",
     "perf:check": "./scripts/perf-check.sh",
-    "perf:analyze": "ANALYZE=true pnpm build",
-    "version": "1.5.2-beta.2"
+    "perf:analyze": "ANALYZE=true pnpm build"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^7.1.0",
@@ -55,7 +53,6 @@
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "core-js": "^3.44.0",
     "date-fns": "^4.1.0",
     "dexie": "^4.2.1",
     "framer-motion": "^12.23.24",

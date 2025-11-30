@@ -103,19 +103,6 @@ export async function checkForUpdates(): Promise<VersionCheckResult> {
 }
 
 /**
- * 获取上次检测时间
- */
-export async function getLastCheckTime(): Promise<number | null> {
-  try {
-    const { Storage } = await import('@/lib/core/storage');
-    const lastCheck = await Storage.get('lastVersionCheck');
-    return lastCheck ? parseInt(lastCheck) : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * 保存检测时间
  */
 export async function saveCheckTime(): Promise<void> {
@@ -125,16 +112,4 @@ export async function saveCheckTime(): Promise<void> {
   } catch {
     // 静默失败
   }
-}
-
-/**
- * 判断是否需要检测更新
- * 默认每天检测一次
- */
-export async function shouldCheckForUpdates(): Promise<boolean> {
-  const lastCheck = await getLastCheckTime();
-  if (!lastCheck) return true;
-
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-  return Date.now() - lastCheck > ONE_DAY;
 }

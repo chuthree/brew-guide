@@ -150,18 +150,6 @@ export function formatBytes(bytes: number, decimals: number = 2): string {
 }
 
 /**
- * 获取存储使用情况的颜色状态
- * 用于 UI 展示
- */
-export function getStorageUsageColor(
-  usagePercent: number
-): 'safe' | 'warning' | 'danger' {
-  if (usagePercent < 70) return 'safe';
-  if (usagePercent < 90) return 'warning';
-  return 'danger';
-}
-
-/**
  * 持久化存储管理器
  */
 export class PersistentStorageManager {

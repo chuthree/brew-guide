@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import WebDAVSyncManager from '@/lib/webdav/syncManager';
+import { WebDAVSyncManager } from '@/lib/webdav/syncManager';
 import type { SyncResult as WebDAVSyncResult } from '@/lib/webdav/types';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '../Settings';

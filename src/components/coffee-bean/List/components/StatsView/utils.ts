@@ -7,8 +7,3 @@ export const formatNumber = (num: number): string => {
     .replace(/\.00$/, '')
     .replace(/(\.\d)0$/, '$1');
 };
-
-// 序号格式化
-export const formatNumber2Digits = (num: number): string => {
-  return num.toString().padStart(2, '0');
-};

@@ -20,9 +20,6 @@
 # production
 /build
 
-# desktop build output
-/desktop/
-
 # misc
 .DS_Store
 *.pem

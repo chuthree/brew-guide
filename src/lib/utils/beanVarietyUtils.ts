@@ -187,15 +187,6 @@ const beanHasProcess = (bean: ExtendedCoffeeBean, process: string): boolean => {
 };
 
 /**
- * 检查咖啡豆是否有品种信息
- * @param bean 咖啡豆对象
- * @returns 是否有品种信息
- */
-export const beanHasVarietyInfo = (bean: ExtendedCoffeeBean): boolean => {
-  return getBeanVarieties(bean).length > 0;
-};
-
-/**
  * 获取咖啡豆的产地信息
  * 从blendComponents获取产地信息
  * @param bean 咖啡豆对象

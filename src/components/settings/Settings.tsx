@@ -455,7 +455,7 @@ const Settings: React.FC<SettingsProps> = ({
 
       // 优先检查已启用的服务
       if (s3Enabled) {
-        const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+        const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
         const s3Config = settings.s3Sync!;
 
         if (
@@ -479,8 +479,7 @@ const Settings: React.FC<SettingsProps> = ({
           }
         }
       } else if (webdavEnabled) {
-        const WebDAVSyncManager = (await import('@/lib/webdav/syncManager'))
-          .default;
+        const { WebDAVSyncManager } = await import('@/lib/webdav/syncManager');
         const webdavConfig = settings.webdavSync!;
 
         if (
@@ -543,7 +542,7 @@ const Settings: React.FC<SettingsProps> = ({
       let connected = false;
 
       if (s3Enabled) {
-        const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+        const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
         const s3Config = settings.s3Sync!;
 
         manager = new S3SyncManager();
@@ -556,8 +555,7 @@ const Settings: React.FC<SettingsProps> = ({
           endpoint: s3Config.endpoint || undefined,
         });
       } else if (webdavEnabled) {
-        const WebDAVSyncManager = (await import('@/lib/webdav/syncManager'))
-          .default;
+        const { WebDAVSyncManager } = await import('@/lib/webdav/syncManager');
         const webdavConfig = settings.webdavSync!;
 
         manager = new WebDAVSyncManager();

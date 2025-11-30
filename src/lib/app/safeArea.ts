@@ -177,5 +177,3 @@ export const SafeAreaManager = {
     }
   },
 };
-
-export default SafeAreaManager;

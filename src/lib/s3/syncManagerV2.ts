@@ -3,7 +3,7 @@
  * 继承 BaseSyncManager，只实现 S3 特定逻辑
  */
 
-import S3Client, { S3Config } from './s3Client';
+import { S3Client, S3Config } from './s3Client';
 import { MetadataManager } from './metadataManager';
 import { BaseSyncManager, IMetadataManager } from '@/lib/sync/BaseSyncManager';
 
@@ -69,5 +69,3 @@ export class S3SyncManager extends BaseSyncManager {
     }
   }
 }
-
-export default S3SyncManager;

@@ -2016,7 +2016,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       let connected = false;
 
       if (s3Enabled) {
-        const S3SyncManager = (await import('@/lib/s3/syncManagerV2')).default;
+        const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
         const s3Config = settings.s3Sync!;
 
         manager = new S3SyncManager();
@@ -2029,8 +2029,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           endpoint: s3Config.endpoint || undefined,
         });
       } else if (webdavEnabled) {
-        const WebDAVSyncManager = (await import('@/lib/webdav/syncManager'))
-          .default;
+        const { WebDAVSyncManager } = await import('@/lib/webdav/syncManager');
         const webdavConfig = settings.webdavSync!;
 
         manager = new WebDAVSyncManager();

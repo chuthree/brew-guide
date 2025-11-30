@@ -4,7 +4,7 @@
  */
 
 import { Storage } from '@/lib/core/storage';
-import type S3Client from './s3Client';
+import type { S3Client } from './s3Client';
 import type {
   SyncMetadata,
   SyncMetadataV1,

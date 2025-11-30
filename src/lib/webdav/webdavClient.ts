@@ -757,5 +757,3 @@ export class WebDAVClient {
     }
   }
 }
-
-export default WebDAVClient;

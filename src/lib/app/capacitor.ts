@@ -3,7 +3,7 @@
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import SafeAreaManager from './safeArea';
+import { SafeAreaManager } from './safeArea';
 
 export const isNative = () => {
   return Capacitor.isNativePlatform();

@@ -48,12 +48,3 @@ export const useEquipmentStore = create<EquipmentState>(set => ({
     }
   },
 }));
-
-// 导出工具函数，保持向后兼容
-export const getSelectedEquipmentFromStore = (): string => {
-  return useEquipmentStore.getState().selectedEquipment;
-};
-
-export const setSelectedEquipmentInStore = (equipmentId: string): void => {
-  useEquipmentStore.getState().setSelectedEquipment(equipmentId);
-};

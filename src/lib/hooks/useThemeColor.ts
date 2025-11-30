@@ -128,5 +128,3 @@ export const useThemeColor = (options: UseThemeColorOptions = {}) => {
     };
   }, [theme, systemTheme, useOverlay, enabled]);
 };
-
-export default useThemeColor;

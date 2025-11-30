@@ -8,7 +8,7 @@
  * 3. 其他同步逻辑由 BaseSyncManager 统一处理
  */
 
-import WebDAVClient from './webdavClient';
+import { WebDAVClient } from './webdavClient';
 import type { WebDAVConfig } from './types';
 import { MetadataManager } from './metadataManager';
 import { BaseSyncManager, IMetadataManager } from '@/lib/sync/BaseSyncManager';
@@ -119,5 +119,3 @@ export class WebDAVSyncManager extends BaseSyncManager {
     }
   }
 }
-
-export default WebDAVSyncManager;

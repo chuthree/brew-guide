@@ -184,5 +184,3 @@ export const equipmentUtils = {
     return { showLeftBorder, showRightBorder };
   },
 };
-
-export default equipmentUtils;

@@ -46,5 +46,3 @@ export const addBrowserCompatClass = (): void => {
 export const initBrowserCompat = (): void => {
   addBrowserCompatClass();
 };
-
-export default initBrowserCompat;
