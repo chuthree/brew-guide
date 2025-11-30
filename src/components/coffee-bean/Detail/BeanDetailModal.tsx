@@ -202,9 +202,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       setIsVisible(false);
       // 重置打印模态框状态，防止下次打开时直接显示打印界面
       setPrintModalOpen(false);
-      // 等待动画完成后再移除DOM
+      // 等待动画完成后再移除DOM，并清理数据
       const timer = setTimeout(() => {
         setShouldRender(false);
+        // 动画结束后清空数据，为下次打开做准备
+        setRelatedNotes([]);
+        setEquipmentNames({});
       }, 350); // 与动画时长匹配
       return () => clearTimeout(timer);
     }
@@ -592,8 +595,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   // 获取相关的冲煮记录
   useEffect(() => {
     const loadRelatedNotes = async () => {
+      // 只在打开时加载数据，关闭时保持数据（让数据保持到动画结束）
       if (!bean?.id || !isOpen) {
-        setRelatedNotes([]);
         return;
       }
 
