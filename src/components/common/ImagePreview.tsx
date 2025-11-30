@@ -3,8 +3,10 @@
 import React, { useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useModalHistory } from '@/lib/hooks/useModalHistory';
 
 interface ImagePreviewProps {
+  id?: string;
   src: string;
   alt: string;
   isOpen: boolean;
@@ -13,12 +15,20 @@ interface ImagePreviewProps {
 }
 
 const ImagePreview: React.FC<ImagePreviewProps> = ({
+  id = 'image-preview',
   src,
   alt,
   isOpen,
   onClose,
   layoutId = 'image-preview',
 }) => {
+  // 适配历史栈
+  useModalHistory({
+    id,
+    isOpen,
+    onClose,
+  });
+
   // 监听 ESC 键关闭
   useEffect(() => {
     if (!isOpen) return;

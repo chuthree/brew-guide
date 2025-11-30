@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useModalHistory } from '@/lib/hooks/useModalHistory';
 
 interface ImageViewerProps {
+  id?: string;
   isOpen: boolean;
   imageUrl: string;
   alt: string;
@@ -12,12 +14,20 @@ interface ImageViewerProps {
 }
 
 const ImageViewer: React.FC<ImageViewerProps> = ({
+  id = 'image-viewer',
   isOpen,
   imageUrl,
   alt,
   onClose,
 }) => {
   const [hasError, setHasError] = useState(false);
+
+  // 适配历史栈
+  useModalHistory({
+    id,
+    isOpen,
+    onClose,
+  });
 
   // 重置错误状态当弹窗打开时
   React.useEffect(() => {
