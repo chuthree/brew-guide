@@ -51,7 +51,10 @@ export async function exportSelectedNotes({
     }
 
     // 复制选中的笔记到临时容器
-    const selectedNoteElements: { clone: HTMLElement; original: HTMLElement }[] = [];
+    const selectedNoteElements: {
+      clone: HTMLElement;
+      original: HTMLElement;
+    }[] = [];
 
     // 首先收集所有选中的笔记元素（同时保存原始元素和克隆元素）
     allNoteElements.forEach(el => {
@@ -118,13 +121,15 @@ export async function exportSelectedNotes({
       // 核心思路：让图片 100% 填充，由父容器控制尺寸，而不是让图片自己决定尺寸
       const cloneImages = clone.querySelectorAll('img[src], img[srcSet]');
       const originalImages = original.querySelectorAll('img[src], img[srcSet]');
-      
+
       cloneImages.forEach((img, imgIndex) => {
         const imgElement = img as HTMLImageElement;
         const parentContainer = imgElement.parentElement;
-        
+
         // 获取原始元素中对应图片的父容器尺寸（原始元素在 DOM 中，可以正确获取尺寸）
-        const originalImg = originalImages[imgIndex] as HTMLImageElement | undefined;
+        const originalImg = originalImages[imgIndex] as
+          | HTMLImageElement
+          | undefined;
         const originalParent = originalImg?.parentElement;
 
         // 创建新的 img 元素 - 不复制原有的 className
