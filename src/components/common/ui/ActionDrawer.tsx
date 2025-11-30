@@ -3,6 +3,7 @@
 import React, { useState, ComponentType, SVGProps } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export interface ActionDrawerProps {
   /** 控制抽屉是否打开 */
@@ -114,6 +115,9 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
       `action-drawer-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   );
   const modalId = historyId || autoId;
+
+  // 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: isOpen });
 
   // 集成历史栈管理，支持返回键关闭
   useModalHistory({
