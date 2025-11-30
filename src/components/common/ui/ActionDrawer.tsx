@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, ComponentType, SVGProps } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, ComponentType, SVGProps } from 'react';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
@@ -116,6 +115,10 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   );
   const modalId = historyId || autoId;
 
+  // 动画状态管理（与 EquipmentManagementDrawer 保持一致）
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
   // 同步顶部安全区颜色
   useThemeColor({ useOverlay: true, enabled: isOpen });
 
@@ -126,59 +129,48 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
     onClose,
   });
 
-  // iOS 风格弹簧动画配置
-  // 使用 duration + bounce 模式，更易于控制且更接近 iOS 原生体验
-  // visualDuration: 动画主体完成的时间，弹性过冲在此之后
-  // bounce: 弹性程度，iOS sheet 通常使用较低的 bounce 值（0.15-0.25）
-  const springTransition = {
-    type: 'spring' as const,
-    visualDuration: 0.4,
-    bounce: 0.15,
-  };
+  // 处理显示/隐藏动画
+  // 动画时长：350ms，与 CSS transition 保持一致
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      // 延迟触发动画，确保 DOM 已渲染
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+      // 等待退出动画完成后卸载组件并触发回调
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+        onExitComplete?.();
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, onExitComplete]);
 
-  // 退出动画使用更快的配置，避免拖沓感
-  const exitTransition = {
-    type: 'spring' as const,
-    visualDuration: 0.3,
-    bounce: 0,
-  };
-
-  const overlayVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-  };
+  if (!shouldRender) return null;
 
   return (
-    <AnimatePresence onExitComplete={onExitComplete}>
-      {isOpen && (
-        <>
-          {/* 背景遮罩 */}
-          <motion.div
-            key="overlay"
-            className="fixed inset-0 z-50 bg-black/50"
-            variants={overlayVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            transition={{ duration: 0.3 }}
-            onClick={onClose}
-          />
+    <>
+      {/* 背景遮罩 */}
+      <div
+        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-300 ${
+          isVisible ? 'opacity-100' : 'opacity-0'
+        }`}
+        onClick={onClose}
+      />
 
-          {/* 抽屉内容 */}
-          <motion.div
-            key="drawer"
-            className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[500px] rounded-t-3xl bg-white dark:bg-neutral-900"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-            initial={{ y: '100%' }}
-            animate={{ y: 0, transition: springTransition }}
-            exit={{ y: '100%', transition: exitTransition }}
-          >
-            {/* 内容区域 */}
-            <div className="flex flex-col px-6 pt-8 pb-6">{children}</div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+      {/* 抽屉内容 */}
+      <div
+        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[500px] rounded-t-3xl bg-white transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${
+          isVisible ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {/* 内容区域 */}
+        <div className="flex flex-col px-6 pt-8 pb-6">{children}</div>
+      </div>
+    </>
   );
 };
 
