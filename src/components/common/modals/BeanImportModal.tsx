@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
@@ -52,6 +52,17 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   // JSON 输入框 ref
   const jsonTextareaRef = useRef<HTMLTextAreaElement>(null);
+  // 剪贴板识别状态
+  const [clipboardStatus, setClipboardStatus] = useState<'idle' | 'error'>(
+    'idle'
+  );
+
+  // 重置剪贴板状态（当弹窗关闭或重新打开时）
+  useEffect(() => {
+    if (showForm) {
+      setClipboardStatus('idle');
+    }
+  }, [showForm]);
 
   // 确保字段为字符串类型
   const ensureStringFields = useCallback((item: ImportedBean): ImportedBean => {
@@ -106,12 +117,28 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     [ensureStringFields, onImport, onClose]
   );
 
+  // 处理输入JSON - 切换到输入框模式
+  const handleInputJSON = useCallback(() => {
+    setShowJsonInput(true);
+    // 等待动画完成后聚焦输入框
+    setTimeout(() => {
+      jsonTextareaRef.current?.focus();
+    }, 300);
+  }, []);
+
   // 处理剪贴板识别
   const handleClipboardRecognition = useCallback(async () => {
+    // 如果当前是错误状态，切换到 JSON 输入模式
+    if (clipboardStatus === 'error') {
+      setClipboardStatus('idle');
+      handleInputJSON();
+      return;
+    }
+
     try {
       const clipboardText = await navigator.clipboard.readText();
       if (!clipboardText.trim()) {
-        showToast({ type: 'error', title: '剪贴板为空' });
+        setClipboardStatus('error');
         return;
       }
 
@@ -122,12 +149,12 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       if (beanData) {
         await handleImportData(beanData);
       } else {
-        showToast({ type: 'error', title: '无法识别剪贴板中的咖啡豆数据' });
+        setClipboardStatus('error');
       }
     } catch (_error) {
-      showToast({ type: 'error', title: '无法访问剪贴板' });
+      setClipboardStatus('error');
     }
-  }, [handleImportData]);
+  }, [handleImportData, clipboardStatus, handleInputJSON]);
 
   // 处理图片上传识别
   const handleImageUpload = useCallback(
@@ -223,15 +250,6 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }
   }, []);
 
-  // 处理输入JSON - 切换到输入框模式
-  const handleInputJSON = useCallback(() => {
-    setShowJsonInput(true);
-    // 等待动画完成后聚焦输入框
-    setTimeout(() => {
-      jsonTextareaRef.current?.focus();
-    }, 300);
-  }, []);
-
   // 提交 JSON 输入
   const handleSubmitJson = useCallback(async () => {
     if (!jsonInputValue.trim()) {
@@ -278,7 +296,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     },
     {
       id: 'clipboard',
-      label: '识别剪切板',
+      label: clipboardStatus === 'error' ? '识别失败，再试一次' : '识别剪切板',
       onClick: handleClipboardRecognition,
     },
     {
@@ -332,18 +350,18 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 transition={{ duration: 0.15 }}
                 className="text-neutral-500 dark:text-neutral-400"
               >
-                选择添加咖啡豆的方式。推荐使用
+                推荐使用
                 <span className="text-neutral-800 dark:text-neutral-200">
                   图片识别
                 </span>
-                ，或将图片与
+                添加咖啡豆，或将图片与
                 <button
                   onClick={handleCopyPrompt}
                   className="mx-0.5 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-neutral-200"
                 >
                   提示词
                 </button>
-                发送至 AI 获取 JSON 后粘贴。
+                发送至 DeepSeek 等 AI 平台获取 JSON 后粘贴。
               </motion.p>
             ) : (
               <motion.p
@@ -357,7 +375,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 粘贴从
                 <span className="text-neutral-800 dark:text-neutral-200">
                   {' '}
-                  AI 或他人分享
+                  AI 助手或他人分享
                 </span>
                 获取的咖啡豆 JSON 数据，支持单个或多个咖啡豆批量导入。
               </motion.p>
@@ -416,9 +434,16 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                     取消
                   </motion.button>
                   <motion.button
-                    whileTap={{ scale: 0.98 }}
+                    whileTap={
+                      !jsonInputValue.trim() ? undefined : { scale: 0.98 }
+                    }
                     onClick={handleSubmitJson}
-                    className="flex-1 rounded-full bg-neutral-900 px-4 py-3 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+                    disabled={!jsonInputValue.trim()}
+                    className={`flex-1 rounded-full px-4 py-3 text-sm font-medium transition-colors ${
+                      jsonInputValue.trim()
+                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                        : 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500'
+                    }`}
                   >
                     确认导入
                   </motion.button>
