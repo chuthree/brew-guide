@@ -45,25 +45,31 @@ const waitForImages = (element: HTMLElement): Promise<void> => {
 
 /**
  * 处理Next.js Image组件，转换为原生img元素以确保在html-to-image中正确渲染
+ * 核心思路：让图片 100% 填充，由父容器控制尺寸，而不是让图片自己决定尺寸
  */
 const processImages = (container: HTMLElement) => {
   const nextImages = container.querySelectorAll('img[src], img[srcSet]');
   nextImages.forEach(img => {
     const imgElement = img as HTMLImageElement;
-    // 创建新的 img 元素
+    const parentContainer = imgElement.parentElement;
+
+    // 创建新的 img 元素 - 不复制原有的 className
     const newImg = document.createElement('img');
 
     // 复制基本属性
     if (imgElement.src) newImg.src = imgElement.src;
     if (imgElement.alt) newImg.alt = imgElement.alt;
 
-    // 复制样式类和内联样式
-    newImg.className = imgElement.className;
+    // 给父容器设置明确的内联尺寸（使用 getBoundingClientRect 获取当前缩放后的实际尺寸）
+    if (parentContainer) {
+      const parentRect = parentContainer.getBoundingClientRect();
+      parentContainer.style.width = `${parentRect.width}px`;
+      parentContainer.style.height = `${parentRect.height}px`;
+    }
 
-    // 咖啡豆列表中的图片使用固定尺寸 (56px)
-    newImg.style.cssText = imgElement.style.cssText;
-    newImg.style.width = '56px';
-    newImg.style.height = '56px';
+    // 图片用 100% 填充父容器
+    newImg.style.width = '100%';
+    newImg.style.height = '100%';
     newImg.style.objectFit = 'cover';
     newImg.style.borderRadius = '4px';
 

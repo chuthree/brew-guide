@@ -51,13 +51,16 @@ export async function exportSelectedNotes({
     }
 
     // 复制选中的笔记到临时容器
-    const selectedNoteElements: HTMLElement[] = [];
+    const selectedNoteElements: { clone: HTMLElement; original: HTMLElement }[] = [];
 
-    // 首先收集所有选中的笔记元素
+    // 首先收集所有选中的笔记元素（同时保存原始元素和克隆元素）
     allNoteElements.forEach(el => {
       const noteId = el.getAttribute('data-note-id');
       if (noteId && selectedNotes.includes(noteId)) {
-        selectedNoteElements.push(el.cloneNode(true) as HTMLElement);
+        selectedNoteElements.push({
+          clone: el.cloneNode(true) as HTMLElement,
+          original: el as HTMLElement,
+        });
       }
     });
 
@@ -95,7 +98,7 @@ export async function exportSelectedNotes({
 
     // 然后处理每个笔记元素并添加到临时容器
     for (let index = 0; index < selectedNoteElements.length; index++) {
-      const clone = selectedNoteElements[index];
+      const { clone, original } = selectedNoteElements[index];
 
       // 移除复选框 - 保留其父级div避免影响布局
       const checkbox = clone.querySelector('input[type="checkbox"]');
@@ -112,38 +115,44 @@ export async function exportSelectedNotes({
       }
 
       // 处理 Next.js Image 组件 - 转换为原生 img 元素以确保在 html-to-image 中正确渲染
-      const nextImages = clone.querySelectorAll('img[src], img[srcSet]');
-      nextImages.forEach(img => {
+      // 核心思路：让图片 100% 填充，由父容器控制尺寸，而不是让图片自己决定尺寸
+      const cloneImages = clone.querySelectorAll('img[src], img[srcSet]');
+      const originalImages = original.querySelectorAll('img[src], img[srcSet]');
+      
+      cloneImages.forEach((img, imgIndex) => {
         const imgElement = img as HTMLImageElement;
-        // 创建新的 img 元素
+        const parentContainer = imgElement.parentElement;
+        
+        // 获取原始元素中对应图片的父容器尺寸（原始元素在 DOM 中，可以正确获取尺寸）
+        const originalImg = originalImages[imgIndex] as HTMLImageElement | undefined;
+        const originalParent = originalImg?.parentElement;
+
+        // 创建新的 img 元素 - 不复制原有的 className
         const newImg = document.createElement('img');
 
         // 复制基本属性
         if (imgElement.src) newImg.src = imgElement.src;
         if (imgElement.alt) newImg.alt = imgElement.alt;
 
-        // 复制样式类和内联样式
-        newImg.className = imgElement.className;
+        // 给父容器设置明确的内联尺寸（从原始元素获取当前缩放后的实际尺寸）
+        if (parentContainer && originalParent) {
+          const originalRect = originalParent.getBoundingClientRect();
+          parentContainer.style.width = `${originalRect.width}px`;
+          parentContainer.style.height = `${originalRect.height}px`;
+        }
 
         // 检查是否是相册视图中的图片（通过父元素类名判断）
         const isGalleryImage = imgElement.closest('.grid') !== null; // 相册视图使用grid布局
-        const parentContainer = imgElement.parentElement;
         const hasAspectSquare =
           parentContainer?.classList.contains('aspect-square');
 
-        if (isGalleryImage || hasAspectSquare) {
-          // 相册视图中的图片保持其原有尺寸比例
-          newImg.style.cssText = imgElement.style.cssText;
-          // 确保图片能正确填充容器
-          newImg.style.objectFit = 'cover';
-          newImg.style.width = '100%';
-          newImg.style.height = '100%';
-        } else {
-          // 列表视图中的图片使用固定尺寸
-          newImg.style.cssText = imgElement.style.cssText;
-          newImg.style.width = '56px'; // 14*4 = 56px (Tailwind的w-14)
-          newImg.style.height = '56px';
-          newImg.style.objectFit = 'cover';
+        // 图片用 100% 填充父容器
+        newImg.style.width = '100%';
+        newImg.style.height = '100%';
+        newImg.style.objectFit = 'cover';
+
+        // 列表视图中的图片需要圆角
+        if (!isGalleryImage && !hasAspectSquare) {
           newImg.style.borderRadius = '6px';
         }
 
@@ -169,7 +178,7 @@ export async function exportSelectedNotes({
         const textElements = clone.querySelectorAll(
           'p, h1, h2, h3, h4, h5, span, div'
         );
-        textElements.forEach(el => {
+        textElements.forEach((el: Element) => {
           if (el.classList.contains('text-neutral-800')) {
             el.classList.remove('text-neutral-800');
             el.classList.add('text-neutral-100');
@@ -181,7 +190,7 @@ export async function exportSelectedNotes({
 
         // 处理进度条颜色
         const progressBars = clone.querySelectorAll('.bg-neutral-800');
-        progressBars.forEach(el => {
+        progressBars.forEach((el: Element) => {
           el.classList.remove('bg-neutral-800');
           el.classList.add('bg-neutral-100');
         });
@@ -189,7 +198,7 @@ export async function exportSelectedNotes({
         const progressBackgrounds = clone.querySelectorAll(
           '.bg-neutral-200\\/50'
         );
-        progressBackgrounds.forEach(el => {
+        progressBackgrounds.forEach((el: Element) => {
           el.classList.remove('bg-neutral-200/50');
           el.classList.add('bg-neutral-800');
         });
