@@ -339,7 +339,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
               type="text"
               value={settings.username}
               onChange={e => onSettingChange('username', e.target.value)}
-              placeholder="邮箱或手机号"
+              placeholder="username"
               autoComplete="username"
               className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
