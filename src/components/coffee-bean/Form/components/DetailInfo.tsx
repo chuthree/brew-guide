@@ -97,7 +97,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
             <div className="flex space-x-2">
               <button
                 type="button"
-                onClick={autoSetFlavorPeriod}
+                onClick={() => autoSetFlavorPeriod()}
                 className="text-xs text-neutral-600 underline dark:text-neutral-400"
               >
                 按烘焙度重置

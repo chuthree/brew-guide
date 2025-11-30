@@ -31,7 +31,7 @@ export const getCustomFlavorPeriodSettings = async () => {
 
 // 根据烘焙度获取默认赏味期参数
 const getDefaultFlavorPeriodByRoastLevel = async (
-  roastLevel: string
+  roastLevel: string | undefined | null
 ) => {
   const customFlavorPeriod = await getCustomFlavorPeriodSettings();
 
@@ -42,13 +42,16 @@ const getDefaultFlavorPeriodByRoastLevel = async (
     dark: { startDay: 14, endDay: 90 },
   };
 
-  if (roastLevel?.includes('浅')) {
+  // 确保 roastLevel 是字符串类型
+  const roastLevelStr = typeof roastLevel === 'string' ? roastLevel : '';
+
+  if (roastLevelStr.includes('浅')) {
     const startDay =
       customFlavorPeriod!.light.startDay || PRESET_VALUES.light.startDay;
     const endDay =
       customFlavorPeriod!.light.endDay || PRESET_VALUES.light.endDay;
     return { startDay, endDay };
-  } else if (roastLevel?.includes('深')) {
+  } else if (roastLevelStr.includes('深')) {
     const startDay =
       customFlavorPeriod!.dark.startDay || PRESET_VALUES.dark.startDay;
     const endDay = customFlavorPeriod!.dark.endDay || PRESET_VALUES.dark.endDay;
@@ -65,7 +68,7 @@ const getDefaultFlavorPeriodByRoastLevel = async (
 
 // 同步版本的赏味期参数获取（使用默认值）
 export const getDefaultFlavorPeriodByRoastLevelSync = (
-  roastLevel: string,
+  roastLevel: string | undefined | null,
   customFlavorPeriod?: SettingsOptions['customFlavorPeriod']
 ) => {
   const flavorPeriod = customFlavorPeriod || defaultSettings.customFlavorPeriod;
@@ -77,12 +80,15 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
     dark: { startDay: 14, endDay: 90 },
   };
 
-  if (roastLevel?.includes('浅')) {
+  // 确保 roastLevel 是字符串类型
+  const roastLevelStr = typeof roastLevel === 'string' ? roastLevel : '';
+
+  if (roastLevelStr.includes('浅')) {
     const startDay =
       flavorPeriod!.light.startDay || PRESET_VALUES.light.startDay;
     const endDay = flavorPeriod!.light.endDay || PRESET_VALUES.light.endDay;
     return { startDay, endDay };
-  } else if (roastLevel?.includes('深')) {
+  } else if (roastLevelStr.includes('深')) {
     const startDay = flavorPeriod!.dark.startDay || PRESET_VALUES.dark.startDay;
     const endDay = flavorPeriod!.dark.endDay || PRESET_VALUES.dark.endDay;
     return { startDay, endDay };
