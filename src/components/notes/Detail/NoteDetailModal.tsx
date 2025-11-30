@@ -133,9 +133,13 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     id: 'note-detail',
     isOpen,
     onClose: () => {
-      // 通知父组件详情页正在关闭，以便同步动画
-      window.dispatchEvent(new CustomEvent('noteDetailClosing'));
+      // 先触发子页面的退出动画
       onClose();
+      // 延迟通知父页面开始恢复动画，避免两个动画重叠造成闪烁
+      // 在子页面动画进行到一半时通知，让动画更流畅衔接
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('noteDetailClosing'));
+      }, 175); // 350ms 动画的一半
     },
   });
 
