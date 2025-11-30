@@ -337,7 +337,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                       启用生豆库
                     </div>
                     <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                      关闭后将隐藏生豆/熟豆切换功能
+                      在咖啡豆库存概要切换生豆/熟豆库
                     </div>
                   </div>
                   <label className="relative inline-flex shrink-0 cursor-pointer items-center">
