@@ -33,11 +33,7 @@ const BeanShareModal: React.FC<BeanShareModalProps> = ({
   if (!bean) return null;
 
   return (
-    <ActionDrawer
-      isOpen={isOpen}
-      onClose={onClose}
-      historyId="bean-share"
-    >
+    <ActionDrawer isOpen={isOpen} onClose={onClose} historyId="bean-share">
       <ActionDrawer.Icon icon={IosShareIcon} />
       <ActionDrawer.Content>
         <p className="text-neutral-500 dark:text-neutral-400">
