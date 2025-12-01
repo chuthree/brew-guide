@@ -944,4 +944,5 @@ export const sponsorsList = [
   'JayGoaler',
   '汉唐',
   '宝玉妹妹',
+  'Jarod',
 ];
