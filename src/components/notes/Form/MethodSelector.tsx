@@ -258,6 +258,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                         onChange={value => updateParam('grindSize', value)}
                         className="flex items-center"
                         inputClassName="min-w-12 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-left text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                        autoWidth
                         defaultSyncEnabled={grinderDefaultSyncEnabled}
                         dropdownPlacement="right"
                       />
@@ -300,6 +301,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                         onChange={value => updateParam('grindSize', value)}
                         className="flex items-center"
                         inputClassName="min-w-12 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-left text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                        autoWidth
                         defaultSyncEnabled={grinderDefaultSyncEnabled}
                         dropdownPlacement="right"
                       />

@@ -338,22 +338,39 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
       [activeIndex, allOptions, handleOptionClick]
     );
 
-    // 计算自适应宽度（基于字符数，中文2倍宽度）
-    const inputWidth = useMemo(() => {
-      const text = value || placeholder;
-      const charWidth = calculateTextWidth(text);
-      // 每个字符约 8px，加上 padding (16px)
-      const width = Math.max(charWidth * 8 + 16, 48); // 最小 48px
-      return Math.min(width, 200); // 最大 200px
-    }, [value, placeholder]);
+    // 用于测量文本实际宽度的隐藏元素
+    const measureRef = useRef<HTMLSpanElement>(null);
+    const [measuredWidth, setMeasuredWidth] = useState<number | undefined>(
+      undefined
+    );
 
-    // 计算自适应宽度（用于 size 属性）
-    const inputSize = autoWidth
-      ? calculateTextWidth(value || placeholder)
-      : undefined;
+    // 测量实际文本宽度
+    useEffect(() => {
+      if (!autoWidth || !measureRef.current) return;
+      const text = value || placeholder;
+      measureRef.current.textContent = text;
+      // 获取实际渲染宽度，加上一点 padding
+      const width = measureRef.current.offsetWidth + 4;
+      setMeasuredWidth(width);
+    }, [autoWidth, value, placeholder]);
 
     return (
       <div className={`relative ${className}`}>
+        {/* 隐藏的测量元素，继承输入框的字体样式 */}
+        {autoWidth && (
+          <span
+            ref={measureRef}
+            className={inputClassName}
+            style={{
+              position: 'absolute',
+              visibility: 'hidden',
+              whiteSpace: 'pre',
+              height: 0,
+              overflow: 'hidden',
+            }}
+            aria-hidden="true"
+          />
+        )}
         <input
           ref={node => {
             inputRef.current = node;
@@ -364,8 +381,7 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className={inputClassName}
-          style={!autoWidth ? { width: inputWidth } : undefined}
-          size={inputSize}
+          style={autoWidth && measuredWidth ? { width: measuredWidth } : undefined}
           aria-autocomplete="list"
           aria-expanded={isOpen}
           {...getReferenceProps({
