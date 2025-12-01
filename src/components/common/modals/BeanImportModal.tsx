@@ -4,6 +4,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
 import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
 
@@ -37,15 +38,18 @@ const BEAN_RECOGNITION_PROMPT = `提取图片中的咖啡豆信息,直接返回J
 
 规则: 数值不带单位/不编造/不确定不填/直接返回JSON`;
 
+// 步骤类型定义
+type ImportStep = 'main' | 'json-input';
+
 const BeanImportModal: React.FC<BeanImportModalProps> = ({
   showForm,
   onImport,
   onClose,
 }) => {
+  // 当前步骤
+  const [currentStep, setCurrentStep] = useState<ImportStep>('main');
   // 图片识别加载状态
   const [isRecognizing, setIsRecognizing] = useState(false);
-  // 是否展开输入框
-  const [showJsonInput, setShowJsonInput] = useState(false);
   // JSON 输入内容
   const [jsonInputValue, setJsonInputValue] = useState('');
   // 图片输入 ref
@@ -57,10 +61,25 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     'idle'
   );
 
-  // 重置剪贴板状态（当弹窗关闭或重新打开时）
+  // 返回主界面
+  const goBackToMain = useCallback(() => {
+    setCurrentStep('main');
+    setJsonInputValue('');
+  }, []);
+
+  // 使用 modalHistory 管理 JSON 输入步骤的返回行为
+  useModalHistory({
+    id: 'bean-import-json-input',
+    isOpen: showForm && currentStep === 'json-input',
+    onClose: goBackToMain,
+  });
+
+  // 重置状态（当弹窗关闭或重新打开时）
   useEffect(() => {
     if (showForm) {
       setClipboardStatus('idle');
+      setCurrentStep('main');
+      setJsonInputValue('');
     }
   }, [showForm]);
 
@@ -117,9 +136,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     [ensureStringFields, onImport, onClose]
   );
 
-  // 处理输入JSON - 切换到输入框模式
+  // 处理输入JSON - 进入 JSON 输入步骤
   const handleInputJSON = useCallback(() => {
-    setShowJsonInput(true);
+    setCurrentStep('json-input');
     // 等待动画完成后聚焦输入框
     setTimeout(() => {
       jsonTextareaRef.current?.focus();
@@ -264,7 +283,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       if (beanData) {
         await handleImportData(beanData);
         setJsonInputValue('');
-        setShowJsonInput(false);
+        setCurrentStep('main');
       } else {
         showToast({ type: 'error', title: '无法解析输入的数据' });
       }
@@ -273,15 +292,14 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }
   }, [jsonInputValue, handleImportData]);
 
-  // 取消输入
+  // 取消输入 - 返回主界面
   const handleCancelJsonInput = useCallback(() => {
-    setShowJsonInput(false);
-    setJsonInputValue('');
-  }, []);
+    goBackToMain();
+  }, [goBackToMain]);
 
   // 关闭时重置状态
   const handleClose = useCallback(() => {
-    setShowJsonInput(false);
+    setCurrentStep('main');
     setJsonInputValue('');
     onClose();
   }, [onClose]);
@@ -316,7 +334,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         {/* 图标区域 - 带切换动画 */}
         <div className="mb-6 text-neutral-800 dark:text-neutral-200">
           <AnimatePresence mode="popLayout">
-            {!showJsonInput ? (
+            {currentStep === 'main' ? (
               <motion.div
                 key="circle-icon"
                 initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
@@ -341,7 +359,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         </div>
         <ActionDrawer.Content>
           <AnimatePresence mode="popLayout">
-            {!showJsonInput ? (
+            {currentStep === 'main' ? (
               <motion.p
                 key="description"
                 initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
@@ -354,14 +372,14 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 <span className="text-neutral-800 dark:text-neutral-200">
                   图片识别
                 </span>
-                添加咖啡豆，或将图片与
+                添加咖啡豆，也可将图片和
                 <button
                   onClick={handleCopyPrompt}
                   className="mx-0.5 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-neutral-200"
                 >
                   提示词
                 </button>
-                发送至 DeepSeek 等 AI 平台获取 JSON 后粘贴。
+                发给 AI 生成 JSON 后粘贴导入。
               </motion.p>
             ) : (
               <motion.p
@@ -372,12 +390,12 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 transition={{ duration: 0.15 }}
                 className="text-neutral-500 dark:text-neutral-400"
               >
-                粘贴从
+                粘贴
                 <span className="text-neutral-800 dark:text-neutral-200">
                   {' '}
-                  AI 助手或他人分享
+                  AI 生成或他人分享
                 </span>
-                获取的咖啡豆 JSON 数据，支持单个或多个咖啡豆批量导入。
+                的咖啡豆 JSON 数据，支持单个或批量导入。
               </motion.p>
             )}
           </AnimatePresence>
@@ -386,7 +404,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         {/* 操作按钮列表 */}
         <div className="flex flex-col gap-2">
           <AnimatePresence mode="popLayout">
-            {!showJsonInput ? (
+            {currentStep === 'main' ? (
               // 三个操作按钮
               <motion.div
                 key="actions"

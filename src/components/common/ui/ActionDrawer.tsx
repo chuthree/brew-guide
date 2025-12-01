@@ -143,7 +143,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
       const timer = setTimeout(() => {
         setShouldRender(false);
         onExitComplete?.();
-      }, 500);
+      }, 350);
       return () => clearTimeout(timer);
     }
   }, [isOpen, onExitComplete]);
@@ -154,7 +154,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
     <>
       {/* 背景遮罩 */}
       <div
-        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-500 ease-in-out ${
+        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-350 ease-in-out ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={onClose}
@@ -162,7 +162,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
 
       {/* 抽屉内容 */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[500px] rounded-t-3xl bg-white transition-transform duration-500 ease-in-out dark:bg-neutral-900 ${
+        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[500px] rounded-t-3xl bg-white transition-transform duration-350 ease-in-out dark:bg-neutral-900 ${
           isVisible ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
