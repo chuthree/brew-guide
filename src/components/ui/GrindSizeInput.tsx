@@ -381,7 +381,9 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className={inputClassName}
-          style={autoWidth && measuredWidth ? { width: measuredWidth } : undefined}
+          style={
+            autoWidth && measuredWidth ? { width: measuredWidth } : undefined
+          }
           aria-autocomplete="list"
           aria-expanded={isOpen}
           {...getReferenceProps({
