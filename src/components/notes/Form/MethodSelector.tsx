@@ -155,10 +155,10 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     isNumber: boolean = true
   ) => (
     <div className="flex items-center">
-      <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+      <label className="w-14 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         {label}:
       </label>
-      <div className="flex w-20 items-center justify-end">
+      <div className="flex items-center">
         {prefix && (
           <span className="mr-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             {prefix}
@@ -169,7 +169,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
           inputMode={isNumber ? 'decimal' : 'text'}
           value={value}
           onChange={e => onChange(e.target.value)}
-          className={`${width} rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100`}
+          className={`${width} rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-left text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100`}
         />
         {unit && (
           <span className="ml-0.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -248,7 +248,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                 {isEspresso ? (
                   <>
                     <div className="flex items-center">
-                      <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                      <label className="w-14 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                         研磨度:
                       </label>
                       <GrindSizeInput
@@ -256,8 +256,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                           editingValues?.grindSize ?? method.params.grindSize
                         }
                         onChange={value => updateParam('grindSize', value)}
-                        className="flex w-24 items-center justify-end"
-                        inputClassName="w-20 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                        className="flex items-center"
+                        inputClassName="min-w-12 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-left text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                         defaultSyncEnabled={grinderDefaultSyncEnabled}
                         dropdownPlacement="right"
                       />
@@ -290,7 +290,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       '1:'
                     )}
                     <div className="flex items-center">
-                      <label className="w-14 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                      <label className="w-14 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                         研磨度:
                       </label>
                       <GrindSizeInput
@@ -298,8 +298,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                           editingValues?.grindSize ?? method.params.grindSize
                         }
                         onChange={value => updateParam('grindSize', value)}
-                        className="flex w-24 items-center justify-end"
-                        inputClassName="w-20 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                        className="flex items-center"
+                        inputClassName="min-w-12 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-left text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                         defaultSyncEnabled={grinderDefaultSyncEnabled}
                         dropdownPlacement="right"
                       />
