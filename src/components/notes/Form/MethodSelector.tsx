@@ -259,6 +259,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                         className="flex w-24 items-center justify-end"
                         inputClassName="w-20 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                         defaultSyncEnabled={grinderDefaultSyncEnabled}
+                        dropdownPlacement="right"
                       />
                     </div>
                     {renderParamInput(
@@ -300,6 +301,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                         className="flex w-24 items-center justify-end"
                         inputClassName="w-20 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-right text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                         defaultSyncEnabled={grinderDefaultSyncEnabled}
+                        dropdownPlacement="right"
                       />
                     </div>
                     {renderParamInput(

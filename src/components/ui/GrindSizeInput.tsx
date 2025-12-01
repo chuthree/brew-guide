@@ -93,6 +93,8 @@ interface GrindSizeInputProps {
   autoWidth?: boolean;
   /** 默认同步开关状态（由设置控制），默认为 true */
   defaultSyncEnabled?: boolean;
+  /** 下拉菜单位置，默认为 'bottom'，可选 'right' 避免遮挡下方元素 */
+  dropdownPlacement?: 'bottom' | 'right';
 }
 
 /** 暴露给外部的方法 */
@@ -144,6 +146,7 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
       onSyncStateChange,
       autoWidth = false,
       defaultSyncEnabled = true,
+      dropdownPlacement = 'bottom',
     },
     ref
   ) => {
@@ -175,7 +178,7 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
       onOpenChange: setIsOpen,
       middleware: [offset(4), shift({ padding: 8 })],
       whileElementsMounted: autoUpdate,
-      placement: 'bottom-start',
+      placement: dropdownPlacement === 'right' ? 'right-start' : 'bottom-start',
     });
 
     const { getReferenceProps, getFloatingProps, getItemProps } =
