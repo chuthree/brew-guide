@@ -130,7 +130,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   });
 
   // 处理显示/隐藏动画
-  // 动画时长：350ms，与 CSS transition 保持一致
+  // 动画时长：500ms，与 CSS transition 保持一致
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
@@ -143,7 +143,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
       const timer = setTimeout(() => {
         setShouldRender(false);
         onExitComplete?.();
-      }, 350);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [isOpen, onExitComplete]);
@@ -154,7 +154,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
     <>
       {/* 背景遮罩 */}
       <div
-        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-500 ease-in-out ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={onClose}
@@ -162,7 +162,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
 
       {/* 抽屉内容 */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[500px] rounded-t-3xl bg-white transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${
+        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[500px] rounded-t-3xl bg-white transition-transform duration-500 ease-in-out dark:bg-neutral-900 ${
           isVisible ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
