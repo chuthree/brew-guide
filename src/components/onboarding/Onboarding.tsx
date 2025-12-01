@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Drawer } from 'vaul';
 import {
   SettingsOptions,
   defaultSettings,
@@ -12,7 +13,6 @@ import { Capacitor } from '@capacitor/core';
 import PersistentStorageManager, {
   isPersistentStorageSupported,
   isPWAMode,
-  type StorageEstimate,
 } from '@/lib/utils/persistentStorage';
 
 // 设置页面界面属性
@@ -26,12 +26,13 @@ const Onboarding: React.FC<OnboardingProps> = ({
   onSettingsChange,
   onComplete,
 }) => {
-  // 使用半透明叠加层颜色同步顶部安全区
-  useThemeColor({ useOverlay: true, enabled: true });
+  // 控制抽屉打开状态 - 直接打开，无需延迟
+  const [isOpen, setIsOpen] = useState(true);
+
+  // 使用 useThemeColor hook 同步顶部安全区颜色
+  useThemeColor({ useOverlay: true, enabled: isOpen });
 
   // 持久化存储状态
-  const [isNativePlatform, setIsNativePlatform] = useState(false);
-  const [isPWA, setIsPWA] = useState(false);
   const [isPersisted, setIsPersisted] = useState(false);
   const [canRequestPersist, setCanRequestPersist] = useState(false);
 
@@ -39,11 +40,9 @@ const Onboarding: React.FC<OnboardingProps> = ({
   useEffect(() => {
     const checkPlatform = async () => {
       const isNative = Capacitor.isNativePlatform();
-      setIsNativePlatform(isNative);
 
       if (!isNative) {
         const pwaMode = isPWAMode();
-        setIsPWA(pwaMode);
 
         if (pwaMode && isPersistentStorageSupported()) {
           setCanRequestPersist(true);
@@ -93,82 +92,83 @@ const Onboarding: React.FC<OnboardingProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      {/* 半透明背景 */}
-      <div className="absolute inset-0 bg-black/50" />
+    <Drawer.Root open={isOpen} dismissible={false}>
+      <Drawer.Portal>
+        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/50" />
+        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mt-24 flex flex-col rounded-t-3xl bg-white/95 backdrop-blur-xl dark:bg-neutral-900/95">
+          <div className="pb-safe-bottom flex w-full flex-col gap-6 px-6 py-8">
+            {/* Logo 和标题区域 */}
+            <div className="flex flex-col items-start gap-6">
+              {/* App Icon */}
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[1.125rem]">
+                <Image
+                  src="/images/icons/app/icon-192x192.png"
+                  alt="Brew Guide"
+                  width={64}
+                  height={64}
+                  className="h-full w-full object-cover"
+                />
+              </div>
 
-      {/* 设置内容卡片 */}
-      <div className="pb-safe-bottom relative flex w-full flex-col gap-6 rounded-t-3xl bg-white/95 px-6 py-8 shadow-2xl backdrop-blur-xl dark:bg-neutral-900/95">
-        {/* Logo 和标题区域 */}
-        <div className="flex flex-col items-start gap-6">
-          {/* App Icon */}
-          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-[1.125rem]">
-            <Image
-              src="/images/icons/app/icon-192x192.png"
-              alt="Brew Guide"
-              width={64}
-              height={64}
-              className="h-full w-full object-cover"
-            />
-          </div>
-
-          {/* 标题 */}
-          <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
-            欢迎使用 “Brew Guide”
-          </h1>
-        </div>
-
-        {/* 特性介绍 */}
-        <div className="flex flex-col gap-5">
-          {/* 特性 1 - 免费开源本地 */}
-          <div className="flex items-start gap-4">
-            <Lock className="mt-1.5 h-7 w-7 flex-shrink-0 text-neutral-700 dark:text-neutral-300" />
-            <div className="flex flex-col">
-              <h3 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">
-                本地存储
-              </h3>
-              <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-                完全免费且开源，所有数据存储在本地设备中，无需联网即可使用，你的隐私完全由自己掌控。
-              </p>
+              {/* 标题 */}
+              <Drawer.Title className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+                欢迎使用 "Brew Guide"
+              </Drawer.Title>
             </div>
-          </div>
 
-          {/* 特性 2 - 一站式管理 */}
-          <div className="flex items-start gap-4">
-            <Layers className="mt-1.5 h-7 w-7 flex-shrink-0 text-neutral-700 dark:text-neutral-300" />
-            <div className="gap- flex flex-col">
-              <h3 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">
-                一站管理
-              </h3>
-              <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-                从辅助冲煮计时到豆仓库存管理，再到详细的品鉴笔记记录，一应俱全。
-              </p>
+            {/* 特性介绍 */}
+            <div className="flex flex-col gap-5">
+              {/* 特性 1 - 免费开源本地 */}
+              <div className="flex items-start gap-4">
+                <Lock className="mt-1.5 h-7 w-7 shrink-0 text-neutral-700 dark:text-neutral-300" />
+                <div className="flex flex-col">
+                  <h3 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">
+                    本地存储
+                  </h3>
+                  <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                    完全免费且开源，所有数据存储在本地设备中，无需联网即可使用，你的隐私完全由自己掌控。
+                  </p>
+                </div>
+              </div>
+
+              {/* 特性 2 - 一站式管理 */}
+              <div className="flex items-start gap-4">
+                <Layers className="mt-1.5 h-7 w-7 shrink-0 text-neutral-700 dark:text-neutral-300" />
+                <div className="flex flex-col">
+                  <h3 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">
+                    一站管理
+                  </h3>
+                  <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                    从辅助冲煮计时到豆仓库存管理，再到详细的品鉴笔记记录，一应俱全。
+                  </p>
+                </div>
+              </div>
+
+              {/* 特性 3 - 导入导出分享 */}
+              <div className="flex items-start gap-4">
+                <Share2 className="mt-1.5 h-7 w-7 shrink-0 text-neutral-700 dark:text-neutral-300" />
+                <div className="flex flex-col">
+                  <h3 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">
+                    轻松分享
+                  </h3>
+                  <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                    支持数据导入导出，轻松分享你的冲煮方案与品鉴心得。
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* 特性 3 - 导入导出分享 */}
-          <div className="flex items-start gap-4">
-            <Share2 className="mt-1.5 h-7 w-7 flex-shrink-0 text-neutral-700 dark:text-neutral-300" />
-            <div className="flex flex-col">
-              <h3 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">
-                轻松分享
-              </h3>
-              <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-                支持数据导入导出，轻松分享你的冲煮方案与品鉴心得。
-              </p>
-            </div>
+            {/* 底部按钮 */}
+            <button
+              onClick={handleComplete}
+              className="mt-24 w-full rounded-full bg-neutral-800 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-neutral-700 active:scale-[0.98] dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+            >
+              开始使用
+            </button>
           </div>
-        </div>
-
-        {/* 底部按钮 */}
-        <button
-          onClick={handleComplete}
-          className="mt-24 w-full rounded-full bg-neutral-800 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-neutral-700 active:scale-[0.98] dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
-        >
-          开始使用
-        </button>
-      </div>
-    </div>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 };
 

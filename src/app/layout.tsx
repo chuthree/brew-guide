@@ -115,8 +115,8 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
-    title: 'Brew Guide 咖啡冲煮',
+    statusBarStyle: 'black-translucent',
+    title: 'Brew Guide',
   },
   verification: {
     google: null,
@@ -212,16 +212,7 @@ export default function RootLayout({
         />
         <link rel="icon" href="/images/icons/app/favicon.ico" sizes="any" />
         <link rel="manifest" href="/manifest.json" />
-        <meta
-          name="theme-color"
-          content="#fafafa"
-          media="(prefers-color-scheme: light)"
-        />
-        <meta
-          name="theme-color"
-          content="#171717"
-          media="(prefers-color-scheme: dark)"
-        />
+        {/* theme-color 由客户端 useThemeColor hook 动态管理，避免 RSC 静态标签覆盖 */}
         {/* 百度统计代码 */}
         <BaiduAnalytics />
         {/* 字体缩放初始化脚本 - 必须在页面渲染前执行，避免字体闪烁 */}
@@ -282,7 +273,7 @@ export default function RootLayout({
           />
         )}
       </head>
-      <body className="fixed inset-0 overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+      <body>
         {/* SEO: 为不支持 JavaScript 的搜索引擎爬虫提供内容 */}
         <noscript>
           <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
@@ -331,19 +322,22 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
+          enableColorScheme={false}
           disableTransitionOnChange
         >
-          <Suspense>
-            <CapacitorInit />
-            <StorageInit />
-            <ModalHistoryInit />
-            <KeyboardManager />
-          </Suspense>
-          <div className="mx-auto h-full w-full max-w-[500px] overflow-hidden">
-            {children}
+          <div className="h-dvh overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+            <Suspense>
+              <CapacitorInit />
+              <StorageInit />
+              <ModalHistoryInit />
+              <KeyboardManager />
+            </Suspense>
+            <div className="mx-auto h-full w-full max-w-[500px] overflow-hidden">
+              {children}
+            </div>
+            <LightToast />
+            <ExitToast />
           </div>
-          <LightToast />
-          <ExitToast />
         </ThemeProvider>
         <Analytics />
       </body>

@@ -6,6 +6,7 @@ import type { SyncResult as WebDAVSyncResult } from '@/lib/webdav/types';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '../Settings';
 import { Upload, Download } from 'lucide-react';
+import WebDAVTutorialModal from './WebDAVTutorialModal';
 
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
 
@@ -44,8 +45,9 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     message: string;
     percentage: number;
   } | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
-  // 自动连接
+  // 自动连接 - 当启用且配置完整时自动连接
   useEffect(() => {
     if (!enabled) {
       // 如果被禁用，重置状态
@@ -64,7 +66,26 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       return;
     }
 
-    // 如果配置完整，尝试自动连接
+    // 如果已经标记为连接成功（例如从教程完成后），直接设置状态并创建 manager
+    if (settings.lastConnectionSuccess) {
+      const initManager = async () => {
+        const manager = new WebDAVSyncManager();
+        const connected = await manager.initialize({
+          url: settings.url,
+          username: settings.username,
+          password: settings.password,
+          remotePath: settings.remotePath,
+        });
+        if (connected) {
+          setStatus('connected');
+          setSyncManager(manager);
+        }
+      };
+      initManager();
+      return;
+    }
+
+    // 如果配置完整但未标记为连接成功，尝试自动连接
     const autoConnect = async () => {
       setStatus('connecting');
       const manager = new WebDAVSyncManager();
@@ -95,7 +116,49 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     };
     autoConnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled]);
+  }, [
+    enabled,
+    settings.url,
+    settings.username,
+    settings.password,
+    settings.lastConnectionSuccess,
+  ]);
+
+  // 教程完成回调 - 将配置信息填入并测试连接
+  const handleTutorialComplete = async (config: {
+    url: string;
+    username: string;
+    password: string;
+  }) => {
+    // 依次更新配置信息
+    onSettingChange('url', config.url);
+    onSettingChange('username', config.username);
+    onSettingChange('password', config.password);
+    onSettingChange('lastConnectionSuccess', true);
+
+    // 展开配置面板
+    setExpanded(true);
+
+    // 设置连接成功状态
+    setStatus('connected');
+
+    // 创建 SyncManager 实例
+    const manager = new WebDAVSyncManager();
+    await manager.initialize({
+      url: config.url,
+      username: config.username,
+      password: config.password,
+      remotePath: settings.remotePath,
+    });
+    setSyncManager(manager);
+
+    // 通知 Settings 页面更新云同步状态
+    window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
+
+    if (hapticFeedback) {
+      hapticsUtils.light();
+    }
+  };
 
   // 测试连接
   const testConnection = async () => {
@@ -450,6 +513,13 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
           </button>
         </div>
       )}
+
+      {/* WebDAV 配置教程 */}
+      <WebDAVTutorialModal
+        isOpen={showTutorial}
+        onClose={() => setShowTutorial(false)}
+        onComplete={handleTutorialComplete}
+      />
     </div>
   );
 };

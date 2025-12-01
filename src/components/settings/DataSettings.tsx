@@ -19,6 +19,7 @@ import {
   DataManagementSection,
   ToolsSection,
 } from './data-settings';
+import WebDAVTutorialModal from './data-settings/WebDAVTutorialModal';
 import { Capacitor } from '@capacitor/core';
 import PersistentStorageManager, {
   isPersistentStorageSupported,
@@ -147,6 +148,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   // 云同步类型选择
   const [showSyncTypeDropdown, setShowSyncTypeDropdown] = useState(false);
+  // WebDAV 教程弹窗
+  const [showWebDAVTutorial, setShowWebDAVTutorial] = useState(false);
   const syncType = s3Settings.enabled
     ? 's3'
     : webdavSettings.enabled
@@ -268,13 +271,16 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     handleChange('s3Sync', newS3Settings);
   };
 
-  // WebDAV 设置变更处理
+  // WebDAV 设置变更处理 - 使用函数式更新避免状态竞态
+  const webdavSettingsRef = useRef(webdavSettings);
+  webdavSettingsRef.current = webdavSettings;
+
   const handleWebDAVSettingChange = <K extends keyof WebDAVSyncSettings>(
     key: K,
     value: WebDAVSyncSettings[K]
   ) => {
     const newWebDAVSettings: WebDAVSyncSettings = {
-      ...webdavSettings,
+      ...webdavSettingsRef.current,
       [key]: value,
     };
 
@@ -283,6 +289,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       newWebDAVSettings.lastConnectionSuccess = false;
     }
 
+    // 更新 ref 以便下次调用使用最新状态
+    webdavSettingsRef.current = newWebDAVSettings;
     setWebDAVSettings(newWebDAVSettings);
     handleChange('webdavSync', newWebDAVSettings);
   };
@@ -510,8 +518,22 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               />
             )}
 
-            {/* 下拉上传开关 - 仅在启用云同步时显示 */}
-            {(s3Settings.enabled || webdavSettings.enabled) && (
+            {/* 引导式配置按钮 - 仅在启用 WebDAV 且未成功连接时显示 */}
+            {webdavSettings.enabled &&
+              !webdavSettings.lastConnectionSuccess && (
+                <button
+                  onClick={() => setShowWebDAVTutorial(true)}
+                  className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                >
+                  <span>引导式配置（推荐新手）</span>
+                  <ChevronRight className="h-4 w-4 text-neutral-400" />
+                </button>
+              )}
+
+            {/* 下拉上传开关 - 仅在启用云同步且已成功连接时显示 */}
+            {((s3Settings.enabled && s3Settings.lastConnectionSuccess) ||
+              (webdavSettings.enabled &&
+                webdavSettings.lastConnectionSuccess)) && (
               <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
                 <div>
                   <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
@@ -777,6 +799,33 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         {/* 工具设置组 */}
         <ToolsSection onDataChange={onDataChange} />
       </div>
+
+      {/* WebDAV 配置教程 */}
+      <WebDAVTutorialModal
+        isOpen={showWebDAVTutorial}
+        onClose={() => setShowWebDAVTutorial(false)}
+        onComplete={async (config: {
+          url: string;
+          username: string;
+          password: string;
+        }) => {
+          // 一次性更新所有配置，避免状态更新竞态问题
+          const newWebDAVSettings: WebDAVSyncSettings = {
+            ...webdavSettings,
+            url: config.url,
+            username: config.username,
+            password: config.password,
+            lastConnectionSuccess: true,
+            enabled: true,
+          };
+          setWebDAVSettings(newWebDAVSettings);
+          handleChange('webdavSync', newWebDAVSettings);
+          // 不在此处关闭弹窗，让用户看到完成页面后再关闭
+          // 通知云同步状态变化
+          window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
+          if (settings.hapticFeedback) hapticsUtils.light();
+        }}
+      />
 
       {/* 冲突解决模态框 */}
       {showConflictModal && (

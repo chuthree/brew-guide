@@ -172,14 +172,15 @@ select:focus,
 html {
   /* 动态字体大小：基础大小 × 缩放比例 */
   font-size: calc(var(--base-font-size) * var(--font-scale));
+  /* 高度 100% 确保覆盖视口 */
+  height: 100%;
+  overflow: hidden;
 }
 
-html,
 body {
   color: var(--foreground);
-  background: var(--background);
-  position: fixed;
-  inset: 0;
+  /* 不设置背景 - 让 Vaul 动态控制 */
+  min-height: 100%;
   touch-action: manipulation;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, ComponentType, SVGProps } from 'react';
+import React, { useState, ComponentType, SVGProps, useCallback } from 'react';
+import { Drawer } from 'vaul';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
@@ -55,12 +56,18 @@ export interface ActionDrawerButtonProps {
 }
 
 /**
- * 通用操作抽屉组件
+ * 通用操作抽屉组件 (基于 Vaul)
  *
  * 采用复合组件模式，支持灵活的内容布局：
  * - ActionDrawer.Icon - 顶部图标区域
  * - ActionDrawer.Content - 中间内容区域
  * - ActionDrawer.Actions - 底部操作按钮区域
+ *
+ * ## 特性
+ * - 基于 Vaul 实现，支持拖拽关闭
+ * - iOS 风格的丝滑动画 (500ms, cubic-bezier(0.32, 0.72, 0, 1))
+ * - 支持返回键关闭
+ * - 支持背景点击关闭
  *
  * ## 间距规范（基于 8px 网格）
  *
@@ -115,11 +122,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   );
   const modalId = historyId || autoId;
 
-  // 动画状态管理（与 EquipmentManagementDrawer 保持一致）
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  // 同步顶部安全区颜色
+  // 同步顶部安全区颜色（用于 meta theme-color）
   useThemeColor({ useOverlay: true, enabled: isOpen });
 
   // 集成历史栈管理，支持返回键关闭
@@ -129,48 +132,57 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
     onClose,
   });
 
-  // 处理显示/隐藏动画
-  // 动画时长：500ms，与 CSS transition 保持一致
-  useEffect(() => {
-    if (isOpen) {
-      setShouldRender(true);
-      // 延迟触发动画，确保 DOM 已渲染
-      const timer = setTimeout(() => setIsVisible(true), 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsVisible(false);
-      // 等待退出动画完成后卸载组件并触发回调
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-        onExitComplete?.();
-      }, 350);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, onExitComplete]);
+  // 处理打开状态变化
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        onClose();
+      }
+    },
+    [onClose]
+  );
 
-  if (!shouldRender) return null;
+  // 动画结束回调
+  const handleAnimationEnd = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        onExitComplete?.();
+      }
+    },
+    [onExitComplete]
+  );
 
   return (
-    <>
-      {/* 背景遮罩 */}
-      <div
-        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-350 ease-in-out ${
-          isVisible ? 'opacity-100' : 'opacity-0'
-        }`}
-        onClick={onClose}
-      />
+    <Drawer.Root
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      onAnimationEnd={handleAnimationEnd}
+      repositionInputs={false}
+    >
+      <Drawer.Portal>
+        {/* 背景遮罩 - 强制 fixed 定位确保覆盖安全区 */}
+        <Drawer.Overlay
+          className="fixed! inset-0 z-50 bg-black/50"
+          style={{ position: 'fixed' }}
+        />
 
-      {/* 抽屉内容 */}
-      <div
-        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[500px] rounded-t-3xl bg-white transition-transform duration-350 ease-in-out dark:bg-neutral-900 ${
-          isVisible ? 'translate-y-0' : 'translate-y-full'
-        }`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* 内容区域 */}
-        <div className="flex flex-col px-6 pt-8 pb-6">{children}</div>
-      </div>
-    </>
+        {/* 抽屉内容 */}
+        <Drawer.Content
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-[500px] flex-col rounded-t-3xl bg-white outline-none dark:bg-neutral-900"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          aria-describedby={undefined}
+        >
+          {/* 无障碍标题 - 视觉隐藏 */}
+          <Drawer.Title className="sr-only">操作面板</Drawer.Title>
+
+          {/* 拖拽手柄 - 可选，提供视觉提示 */}
+          {/* <Drawer.Handle className="mx-auto mt-4 h-1.5 w-12 shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-600" /> */}
+
+          {/* 内容区域 */}
+          <div className="flex flex-col px-6 pt-8 pb-6">{children}</div>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 };
 
