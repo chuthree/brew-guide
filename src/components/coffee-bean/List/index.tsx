@@ -364,6 +364,17 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     sortOption,
   });
 
+  // 计算当前状态下的豆子统计
+  const { currentStateBeanCount, hasEmptyBeansInCurrentState } = useMemo(() => {
+    const currentStateBeans = beans.filter(
+      bean => (bean.beanState || 'roasted') === selectedBeanState
+    );
+    return {
+      currentStateBeanCount: currentStateBeans.length,
+      hasEmptyBeansInCurrentState: currentStateBeans.some(isBeanEmpty),
+    };
+  }, [beans, selectedBeanState]);
+
   // 计算每种类型的咖啡豆数量（用于类型筛选显示）
   const { espressoCount, filterCount, omniCount } = useMemo(() => {
     // 根据当前的筛选条件计算不同类型的豆子数量
@@ -1891,7 +1902,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               selectedVariety={selectedVariety}
               showEmptyBeans={showEmptyBeans}
               selectedBeanType={selectedBeanType}
-              beans={beans}
+              selectedBeanState={selectedBeanState}
+              hasEmptyBeansInCurrentState={hasEmptyBeansInCurrentState}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onShare={bean => handleShare(bean, copyText)}

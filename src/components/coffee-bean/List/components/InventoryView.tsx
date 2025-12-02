@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
-import { ExtendedCoffeeBean, BeanType } from '../types';
+import { ExtendedCoffeeBean, BeanType, BeanState } from '../types';
 import BeanListItem from './BeanListItem';
 import ImageFlowView from './ImageFlowView';
 import RemainingEditor from './RemainingEditor';
@@ -10,13 +10,58 @@ import { showToast } from '@/components/common/feedback/LightToast';
 
 // 已移除手动分页，改用 react-virtuoso 虚拟列表
 
+/** 获取空状态提示消息 */
+const getEmptyStateMessage = ({
+  searchQuery,
+  selectedVariety,
+  selectedBeanType,
+  hasEmptyBeansInCurrentState,
+  showEmptyBeans,
+  isGreenBean,
+}: {
+  searchQuery: string;
+  selectedVariety: string | null;
+  selectedBeanType: BeanType;
+  hasEmptyBeansInCurrentState: boolean;
+  showEmptyBeans: boolean;
+  isGreenBean: boolean;
+}): string => {
+  const beanLabel = isGreenBean ? '生豆' : '咖啡豆';
+
+  if (searchQuery.trim()) {
+    return `[ 没有找到匹配"${searchQuery.trim()}"的${beanLabel} ]`;
+  }
+
+  if (selectedVariety) {
+    return `[ 没有${selectedVariety}品种的${beanLabel} ]`;
+  }
+
+  if (selectedBeanType !== 'all') {
+    const typeLabel =
+      selectedBeanType === 'espresso'
+        ? '意式'
+        : selectedBeanType === 'filter'
+          ? '手冲'
+          : '全能';
+    return `[ 没有${typeLabel}${beanLabel} ]`;
+  }
+
+  if (hasEmptyBeansInCurrentState && !showEmptyBeans) {
+    return `[ 所有${beanLabel}已用完，点击"已用完"查看 ]`;
+  }
+
+  return `[ 暂无${beanLabel}，请点击下方按钮添加 ]`;
+};
+
 interface InventoryViewProps {
   filteredBeans: ExtendedCoffeeBean[];
   emptyBeans: ExtendedCoffeeBean[]; // 已用完的豆子
   selectedVariety: string | null;
   showEmptyBeans: boolean;
   selectedBeanType: BeanType;
-  beans: ExtendedCoffeeBean[];
+  selectedBeanState?: BeanState;
+  /** 当前状态下是否存在已用完的豆子（由父组件计算传入） */
+  hasEmptyBeansInCurrentState?: boolean;
   onEdit: (bean: ExtendedCoffeeBean) => void;
   onDelete: (bean: ExtendedCoffeeBean) => void;
   onShare: (bean: ExtendedCoffeeBean) => void;
@@ -58,7 +103,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   selectedVariety,
   showEmptyBeans,
   selectedBeanType,
-  beans,
+  selectedBeanState = 'roasted',
+  hasEmptyBeansInCurrentState = false,
   onEdit,
   onDelete,
   onShare,
@@ -179,6 +225,19 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     return items;
   }, [filteredBeans, emptyBeans, showEmptyBeans]);
 
+  // 判断是否为生豆
+  const isGreenBean = selectedBeanState === 'green';
+
+  // 获取空状态提示消息
+  const emptyStateMessage = getEmptyStateMessage({
+    searchQuery,
+    selectedVariety,
+    selectedBeanType,
+    hasEmptyBeansInCurrentState,
+    showEmptyBeans,
+    isGreenBean,
+  });
+
   // 如果是图片流模式，直接返回图片流视图
   if (isImageFlowMode) {
     return (
@@ -193,21 +252,12 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       />
     );
   }
+
   return (
     <div className="inventory-view-container relative h-full w-full">
       {filteredBeans.length === 0 && emptyBeans.length === 0 ? (
         <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-          {searchQuery.trim()
-            ? `[ 没有找到匹配"${searchQuery.trim()}"的咖啡豆 ]`
-            : selectedVariety
-              ? `[ 没有${selectedVariety}品种的咖啡豆 ]`
-              : selectedBeanType !== 'all'
-                ? `[ 没有${selectedBeanType === 'espresso' ? '意式' : selectedBeanType === 'filter' ? '手冲' : '全能'}咖啡豆 ]`
-                : beans.length > 0
-                  ? showEmptyBeans
-                    ? '[ 暂无咖啡豆，请点击下方按钮添加 ]'
-                    : '[ 所有咖啡豆已用完，点击"已用完"查看 ]'
-                  : '[ 暂无咖啡豆，请点击下方按钮添加 ]'}
+          {emptyStateMessage}
         </div>
       ) : (
         <div className="pb-64">

@@ -733,6 +733,23 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     return null;
   }
 
+  // 完全没有数据时不显示筛选栏
+  // 库存视图：开启生豆库时始终显示，否则需要有咖啡豆数据
+  // 榜单视图：没有评分咖啡豆
+  // 博主视图：没有博主豆单数据
+  const hasNoData =
+    (viewMode === VIEW_OPTIONS.INVENTORY &&
+      !enableGreenBeanInventory &&
+      (totalBeans === 0 || totalBeans === undefined)) ||
+    (viewMode === VIEW_OPTIONS.RANKING &&
+      (!rankingBeansCount || rankingBeansCount === 0)) ||
+    (viewMode === VIEW_OPTIONS.BLOGGER &&
+      (!bloggerBeansCount || bloggerBeansCount === 0));
+
+  if (hasNoData) {
+    return null;
+  }
+
   return (
     <div className="sticky top-0 flex-none space-y-6 bg-neutral-50 pt-6 dark:bg-neutral-900">
       {/* 视图切换与筛选栏 - 统一布局 */}
