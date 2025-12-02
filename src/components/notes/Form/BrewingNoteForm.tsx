@@ -1156,8 +1156,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
       {/* Form content - 更新内容区域样式以确保正确滚动 */}
       <div className="grow space-y-6 pb-20">
-        {/* 咖啡豆信息 - 只有在有选择咖啡豆或编辑已有记录时才显示 */}
+        {/* 咖啡豆信息 - 有选中咖啡豆、传入咖啡豆或编辑已有记录时显示 */}
         {(selectedCoffeeBean ||
+          initialData.coffeeBean ||
           (initialData.id && formData.coffeeBeanInfo.name)) && (
           <div className="space-y-4">
             <div className="mb-3 text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
@@ -1289,60 +1290,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
               </button>
             </>
-          )}
-        </div>{' '}
-        {/* 咖啡豆信息 */}
-        <div className="space-y-4">
-          {/* 只有在新建笔记且没有选择咖啡豆时才显示输入框 */}
-          {!initialData.coffeeBean && !initialData.id && (
-            <div className="grid gap-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <input
-                    id="coffee-bean-name"
-                    name="coffeeBeanName"
-                    type="text"
-                    value={formData.coffeeBeanInfo.name}
-                    onChange={e =>
-                      setFormData({
-                        ...formData,
-                        coffeeBeanInfo: {
-                          ...formData.coffeeBeanInfo,
-                          name: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                    placeholder="咖啡豆名称"
-                  />
-                </div>
-                <div>
-                  <Select
-                    value={formData.coffeeBeanInfo.roastLevel}
-                    onValueChange={value =>
-                      setFormData({
-                        ...formData,
-                        coffeeBeanInfo: {
-                          ...formData.coffeeBeanInfo,
-                          roastLevel: value,
-                        },
-                      })
-                    }
-                  >
-                    <SelectTrigger className="h-auto w-full rounded-none border-0 border-b border-neutral-200 bg-transparent px-0 py-2 text-xs shadow-none focus-within:border-neutral-400 dark:border-neutral-800 dark:focus-within:border-neutral-600">
-                      <SelectValue placeholder="选择烘焙度" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[40vh] overflow-y-auto rounded-lg border-neutral-200/70 bg-white/95 shadow-lg backdrop-blur-xs dark:border-neutral-800/70 dark:bg-neutral-900/95">
-                      {ROAST_LEVELS.map(level => (
-                        <SelectItem key={level} value={level}>
-                          {level}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
           )}
         </div>
         {/* 添加方案参数编辑 - 只在编辑记录时显示 */}
