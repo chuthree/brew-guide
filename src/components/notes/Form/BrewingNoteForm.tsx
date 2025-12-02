@@ -343,6 +343,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   }, [initialData.totalTime]);
 
   const formRef = useRef<HTMLFormElement>(null);
+  // 使用 state 存储滚动容器元素，确保 Virtuoso 能正确获取滚动父元素
+  const [coffeeBeanScrollContainer, setCoffeeBeanScrollContainer] =
+    useState<HTMLDivElement | null>(null);
   const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(
     null
   );
@@ -1219,13 +1222,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     />
                   </div>
                   {/* 选择器内容：限制高度并启用滚动 */}
-                  <div className="max-h-60 overflow-y-auto px-3">
+                  <div
+                    ref={setCoffeeBeanScrollContainer}
+                    className="max-h-60 overflow-y-auto px-3"
+                  >
                     <CoffeeBeanSelector
                       coffeeBeans={coffeeBeans}
                       selectedCoffeeBean={selectedCoffeeBean}
                       onSelect={handleCoffeeBeanSelect}
                       searchQuery={coffeeBeanSearchQuery}
                       showStatusDots={settings?.showStatusDots}
+                      scrollParentRef={coffeeBeanScrollContainer ?? undefined}
                     />
                   </div>
                 </div>
