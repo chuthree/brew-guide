@@ -1,9 +1,28 @@
 'use client';
 
-import React, { useState, ComponentType, SVGProps, useCallback } from 'react';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  ComponentType,
+  SVGProps,
+  useCallback,
+  forwardRef,
+} from 'react';
 import { Drawer } from 'vaul';
+import { motion, Transition, AnimatePresence } from 'framer-motion';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+
+/**
+ * 统一动画规范
+ * 基于 CSS transition 标准: 0.2s ease
+ * ease = cubic-bezier(0.25, 0.1, 0.25, 1.0)
+ */
+export const DRAWER_TRANSITION: Transition = {
+  duration: 0.2,
+  ease: [0.25, 0.1, 0.25, 1.0],
+};
 
 export interface ActionDrawerProps {
   /** 控制抽屉是否打开 */
@@ -53,6 +72,16 @@ export interface ActionDrawerButtonProps {
   className?: string;
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
+}
+
+/**
+ * 内容切换容器的 Props
+ */
+export interface ActionDrawerSwitcherProps {
+  /** 当前显示的内容 key，用于触发切换动画 */
+  activeKey: string;
+  /** 内容 */
+  children: React.ReactNode;
 }
 
 /**
@@ -107,6 +136,58 @@ export interface ActionDrawerButtonProps {
  * </ActionDrawer>
  * ```
  */
+
+/**
+ * 高度动画包装组件
+ * 使用 ResizeObserver 测量内容高度，并用 framer-motion 动画过渡
+ */
+const HeightAnimator: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | 'auto'>('auto');
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    const element = contentRef.current;
+    if (!element) return;
+
+    // 监听高度变化
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        // 获取元素的实际高度（包括 padding）
+        const newHeight = entry.target.scrollHeight;
+
+        // 首次渲染时直接设置高度，不播放动画
+        if (isFirstRender.current) {
+          isFirstRender.current = false;
+          setHeight(newHeight);
+          return;
+        }
+
+        setHeight(newHeight);
+      }
+    });
+
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  return (
+    <motion.div
+      initial={false}
+      animate={{ height }}
+      transition={DRAWER_TRANSITION}
+      style={{ overflow: 'hidden' }}
+    >
+      <div ref={contentRef}>{children}</div>
+    </motion.div>
+  );
+};
+
 const ActionDrawer: React.FC<ActionDrawerProps> & {
   Icon: React.FC<ActionDrawerIconProps>;
   Content: React.FC<ActionDrawerContentProps>;
@@ -114,6 +195,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   PrimaryButton: React.FC<ActionDrawerButtonProps>;
   SecondaryButton: React.FC<ActionDrawerButtonProps>;
   DangerButton: React.FC<ActionDrawerButtonProps>;
+  Switcher: React.FC<ActionDrawerSwitcherProps>;
 } = ({ isOpen, onClose, children, historyId, onExitComplete }) => {
   // 生成稳定的唯一 ID（如果未提供 historyId）
   const [autoId] = useState(
@@ -178,8 +260,10 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
           {/* 拖拽手柄 - 可选，提供视觉提示 */}
           {/* <Drawer.Handle className="mx-auto mt-4 h-1.5 w-12 shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-600" /> */}
 
-          {/* 内容区域 */}
-          <div className="flex flex-col px-6 pt-8 pb-6">{children}</div>
+          {/* 内容区域 - 使用 useMeasure 测量高度并动画过渡 */}
+          <HeightAnimator>
+            <div className="flex flex-col px-6 pt-8 pb-6">{children}</div>
+          </HeightAnimator>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
@@ -314,6 +398,46 @@ const ActionDrawerDangerButton: React.FC<ActionDrawerButtonProps> = ({
   </button>
 );
 
+/**
+ * 内容切换容器组件
+ *
+ * 用于在抽屉内部实现内容切换动画，统一使用 popLayout 模式和标准动画规范。
+ * 使用此组件可以避免每个使用者自己编写 AnimatePresence 和 motion.div。
+ *
+ * @example
+ * ```tsx
+ * <ActionDrawer.Switcher activeKey={currentStep}>
+ *   {currentStep === 'main' ? (
+ *     <div>主界面内容</div>
+ *   ) : (
+ *     <div>其他界面内容</div>
+ *   )}
+ * </ActionDrawer.Switcher>
+ * ```
+ */
+const SwitcherContent = forwardRef<
+  HTMLDivElement,
+  { children: React.ReactNode }
+>(({ children }, ref) => <div ref={ref}>{children}</div>);
+SwitcherContent.displayName = 'SwitcherContent';
+
+const ActionDrawerSwitcher: React.FC<ActionDrawerSwitcherProps> = ({
+  activeKey,
+  children,
+}) => (
+  <AnimatePresence mode="popLayout" initial={false}>
+    <motion.div
+      key={activeKey}
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={DRAWER_TRANSITION}
+    >
+      {children}
+    </motion.div>
+  </AnimatePresence>
+);
+
 // 绑定子组件
 ActionDrawer.Icon = ActionDrawerIcon;
 ActionDrawer.Content = ActionDrawerContent;
@@ -321,5 +445,6 @@ ActionDrawer.Actions = ActionDrawerActions;
 ActionDrawer.PrimaryButton = ActionDrawerPrimaryButton;
 ActionDrawer.SecondaryButton = ActionDrawerSecondaryButton;
 ActionDrawer.DangerButton = ActionDrawerDangerButton;
+ActionDrawer.Switcher = ActionDrawerSwitcher;
 
 export default ActionDrawer;

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
@@ -324,6 +324,103 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     },
   ];
 
+  // 主界面内容
+  const mainContent = (
+    <>
+      {/* 图标区域 */}
+      <div className="mb-6 text-neutral-800 dark:text-neutral-200">
+        <AddCircleIcon width={128} height={128} />
+      </div>
+
+      {/* 内容区域 */}
+      <ActionDrawer.Content>
+        <p className="text-neutral-500 dark:text-neutral-400">
+          推荐使用
+          <span className="text-neutral-800 dark:text-neutral-200">
+            图片识别
+          </span>
+          添加咖啡豆，也可将图片和
+          <button
+            onClick={handleCopyPrompt}
+            className="mx-0.5 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-neutral-200"
+          >
+            提示词
+          </button>
+          发给 AI 生成 JSON 后粘贴导入。
+        </p>
+      </ActionDrawer.Content>
+
+      {/* 操作按钮列表 */}
+      <div className="flex flex-col gap-2">
+        {actions.map(action => (
+          <motion.button
+            key={action.id}
+            whileTap={{ scale: 0.98 }}
+            onClick={action.onClick}
+            disabled={action.disabled}
+            className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 disabled:opacity-50 dark:bg-neutral-800 dark:text-white"
+          >
+            {action.label}
+          </motion.button>
+        ))}
+      </div>
+    </>
+  );
+
+  // JSON 输入界面内容
+  const jsonInputContent = (
+    <>
+      {/* 图标区域 */}
+      <div className="mb-6 text-neutral-800 dark:text-neutral-200">
+        <AddBoxIcon width={128} height={128} />
+      </div>
+
+      {/* 内容区域 */}
+      <ActionDrawer.Content>
+        <p className="text-neutral-500 dark:text-neutral-400">
+          粘贴
+          <span className="text-neutral-800 dark:text-neutral-200">
+            {' '}
+            AI 生成或他人分享
+          </span>
+          的咖啡豆 JSON 数据，支持单个或批量导入。
+        </p>
+      </ActionDrawer.Content>
+
+      {/* JSON 输入区域 */}
+      <div className="flex flex-col gap-2">
+        <textarea
+          ref={jsonTextareaRef}
+          value={jsonInputValue}
+          onChange={e => setJsonInputValue(e.target.value)}
+          placeholder='{"name": "咖啡豆名称", ...}'
+          className="h-24 w-full resize-none rounded-2xl bg-neutral-100 px-4 py-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-600"
+        />
+        <div className="flex gap-2">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={handleCancelJsonInput}
+            className="flex-1 rounded-full bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+          >
+            取消
+          </motion.button>
+          <motion.button
+            whileTap={!jsonInputValue.trim() ? undefined : { scale: 0.98 }}
+            onClick={handleSubmitJson}
+            disabled={!jsonInputValue.trim()}
+            className={`flex-1 rounded-full px-4 py-3 text-sm font-medium transition-colors ${
+              jsonInputValue.trim()
+                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                : 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500'
+            }`}
+          >
+            确认导入
+          </motion.button>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <>
       <ActionDrawer
@@ -331,145 +428,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         onClose={handleClose}
         historyId="bean-import"
       >
-        {/* 图标区域 - 带切换动画 */}
-        <div className="mb-6 text-neutral-800 dark:text-neutral-200">
-          <AnimatePresence mode="popLayout">
-            {currentStep === 'main' ? (
-              <motion.div
-                key="circle-icon"
-                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                transition={{ duration: 0.15 }}
-              >
-                <AddCircleIcon width={128} height={128} />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="box-icon"
-                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                transition={{ duration: 0.15 }}
-              >
-                <AddBoxIcon width={128} height={128} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-        <ActionDrawer.Content>
-          <AnimatePresence mode="popLayout">
-            {currentStep === 'main' ? (
-              <motion.p
-                key="description"
-                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                transition={{ duration: 0.15 }}
-                className="text-neutral-500 dark:text-neutral-400"
-              >
-                推荐使用
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  图片识别
-                </span>
-                添加咖啡豆，也可将图片和
-                <button
-                  onClick={handleCopyPrompt}
-                  className="mx-0.5 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-neutral-200"
-                >
-                  提示词
-                </button>
-                发给 AI 生成 JSON 后粘贴导入。
-              </motion.p>
-            ) : (
-              <motion.p
-                key="input-hint"
-                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                transition={{ duration: 0.15 }}
-                className="text-neutral-500 dark:text-neutral-400"
-              >
-                粘贴
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  {' '}
-                  AI 生成或他人分享
-                </span>
-                的咖啡豆 JSON 数据，支持单个或批量导入。
-              </motion.p>
-            )}
-          </AnimatePresence>
-        </ActionDrawer.Content>
-
-        {/* 操作按钮列表 */}
-        <div className="flex flex-col gap-2">
-          <AnimatePresence mode="popLayout">
-            {currentStep === 'main' ? (
-              // 三个操作按钮
-              <motion.div
-                key="actions"
-                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                transition={{ duration: 0.15 }}
-                className="flex flex-col gap-2"
-              >
-                {actions.map(action => (
-                  <motion.button
-                    key={action.id}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={action.onClick}
-                    disabled={action.disabled}
-                    className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 disabled:opacity-50 dark:bg-neutral-800 dark:text-white"
-                  >
-                    {action.label}
-                  </motion.button>
-                ))}
-              </motion.div>
-            ) : (
-              // JSON 输入区域
-              <motion.div
-                key="json-input"
-                initial={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-                exit={{ opacity: 0, filter: 'blur(1px)', scale: 0.99 }}
-                transition={{ duration: 0.15 }}
-                className="flex flex-col gap-2"
-              >
-                <textarea
-                  ref={jsonTextareaRef}
-                  value={jsonInputValue}
-                  onChange={e => setJsonInputValue(e.target.value)}
-                  placeholder='{"name": "咖啡豆名称", ...}'
-                  className="h-24 w-full resize-none rounded-2xl bg-neutral-100 px-4 py-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-600"
-                />
-                <div className="flex gap-2">
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleCancelJsonInput}
-                    className="flex-1 rounded-full bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
-                  >
-                    取消
-                  </motion.button>
-                  <motion.button
-                    whileTap={
-                      !jsonInputValue.trim() ? undefined : { scale: 0.98 }
-                    }
-                    onClick={handleSubmitJson}
-                    disabled={!jsonInputValue.trim()}
-                    className={`flex-1 rounded-full px-4 py-3 text-sm font-medium transition-colors ${
-                      jsonInputValue.trim()
-                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                        : 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500'
-                    }`}
-                  >
-                    确认导入
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <ActionDrawer.Switcher activeKey={currentStep}>
+          {currentStep === 'main' ? mainContent : jsonInputContent}
+        </ActionDrawer.Switcher>
       </ActionDrawer>
 
       {/* 隐藏的文件输入 */}
