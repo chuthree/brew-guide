@@ -1,5 +1,5 @@
 {
-  "version": "1.5.2",
+  "version": "1.5.3",
   "downloadUrl": "https://gitee.com/chu3/brew-guide/releases",
-  "releaseNotes": "加入磨豆机管理和生豆库，修复若干问题"
+  "releaseNotes": "新增云同步引导教程，修复已知问题，并优化笔记输入体验"
 }

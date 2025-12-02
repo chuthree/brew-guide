@@ -1004,7 +1004,7 @@ const Settings: React.FC<SettingsProps> = ({
           >
             <div className="flex items-center space-x-3">
               <Settings2 className="h-4 w-4 text-neutral-500" />
-              <span>磨豆机设置（Beta）</span>
+              <span>磨豆机设置</span>
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>

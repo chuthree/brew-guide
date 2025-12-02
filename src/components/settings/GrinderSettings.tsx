@@ -162,7 +162,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
           <ChevronLeft className="h-5 w-5" />
         </button>
         <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
-          磨豆机设置（Beta）
+          磨豆机设置
         </h2>
       </div>
 
