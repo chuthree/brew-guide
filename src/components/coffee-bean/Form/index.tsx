@@ -38,6 +38,8 @@ interface CoffeeBeanFormProps {
   onStepChange?: (step: number) => void;
   /** 初始豆子状态（生豆/熟豆），用于新建时自动设置 */
   initialBeanState?: 'green' | 'roasted';
+  /** 识别时使用的原始图片 base64（用于在表单中显示） */
+  recognitionImage?: string | null;
 }
 
 // 暴露给父组件的方法
@@ -63,6 +65,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       onRepurchase,
       onStepChange,
       initialBeanState,
+      recognitionImage,
     },
     ref
   ) => {
@@ -744,6 +747,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
               toggleInTransitState={toggleInTransitState}
               isEdit={!!initialBean}
               onRepurchase={onRepurchase}
+              recognitionImage={recognitionImage}
             />
           );
 

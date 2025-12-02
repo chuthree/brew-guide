@@ -262,7 +262,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
 
           {/* 内容区域 - 使用 useMeasure 测量高度并动画过渡 */}
           <HeightAnimator>
-            <div className="flex flex-col px-6 pt-8 pb-6">{children}</div>
+            <div className="flex flex-col p-6">{children}</div>
           </HeightAnimator>
         </Drawer.Content>
       </Drawer.Portal>

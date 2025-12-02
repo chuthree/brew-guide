@@ -365,6 +365,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [importingBeanState, setImportingBeanState] = useState<
     'green' | 'roasted'
   >('roasted');
+  // 识别时使用的原始图片 base64（用于在表单中显示）
+  const [recognitionImage, setRecognitionImage] = useState<string | null>(null);
 
   // 咖啡豆详情状态
   const [beanDetailOpen, setBeanDetailOpen] = useState(false);
@@ -3563,8 +3565,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           setEditingBean(null);
           setEditingBeanState('roasted');
           setRoastingSourceBeanId(null); // 清除烘焙源生豆ID
+          setRecognitionImage(null); // 清除识别图片
         }}
         initialBeanState={editingBeanState}
+        recognitionImage={recognitionImage}
         onRepurchase={
           editingBean
             ? async () => {
@@ -3737,6 +3741,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         showForm={showImportBeanForm}
         onImport={handleImportBean}
         onClose={() => setShowImportBeanForm(false)}
+        onRecognitionImage={setRecognitionImage}
       />
 
       {/* 笔记编辑模态框独立渲染，与 Settings 同级 */}

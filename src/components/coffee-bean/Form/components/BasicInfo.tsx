@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Camera, Image as ImageIcon, X, CornerDownRight } from 'lucide-react';
+import {
+  Camera,
+  Image as ImageIcon,
+  X,
+  CornerDownRight,
+  Plus,
+} from 'lucide-react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
@@ -27,6 +33,8 @@ interface BasicInfoProps {
   toggleInTransitState: () => void;
   isEdit?: boolean;
   onRepurchase?: () => void;
+  /** 识别时使用的原始图片 base64（用于在表单中显示） */
+  recognitionImage?: string | null;
 }
 
 // 判断是否为生豆
@@ -53,6 +61,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   toggleInTransitState,
   isEdit = false,
   onRepurchase,
+  recognitionImage,
 }) => {
   // 处理容量和剩余容量的状态
   const [capacityValue, setCapacityValue] = useState('');
@@ -163,7 +172,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         <div className="flex w-full items-center gap-2">
           {bean.image ? (
             /* 有图片时：只显示图片 */
-            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
               <Image
                 src={bean.image}
                 alt="咖啡豆图片"
@@ -181,13 +190,13 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
               </button>
             </div>
           ) : (
-            /* 无图片时：显示两个占位框 */
+            /* 无图片时：显示拍照框、相册框，以及识别图片（如果有） */
             <>
               {/* 拍照框 */}
               <button
                 type="button"
                 onClick={() => handleImageSelect('camera')}
-                className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
                 title="拍照"
               >
                 <Camera className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
@@ -197,11 +206,33 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
               <button
                 type="button"
                 onClick={() => handleImageSelect('gallery')}
-                className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
                 title="相册"
               >
                 <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
               </button>
+
+              {/* 识别图片（如果有） - 点击使用此图片 */}
+              {recognitionImage && (
+                <button
+                  type="button"
+                  onClick={() => onBeanChange('image')(recognitionImage)}
+                  className="group relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 transition-colors dark:bg-neutral-800/60"
+                  title="使用识别图片"
+                >
+                  <Image
+                    src={recognitionImage}
+                    alt="识别图片"
+                    className="object-cover"
+                    fill
+                    sizes="64px"
+                  />
+                  {/* 遮罩层和加号 */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors group-hover:bg-black/40">
+                    <Plus className="h-6 w-6 text-white drop-shadow-md" />
+                  </div>
+                </button>
+              )}
             </>
           )}
         </div>

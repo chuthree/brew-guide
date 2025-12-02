@@ -17,6 +17,8 @@ interface CoffeeBeanFormModalProps {
   onClose: () => void;
   onRepurchase?: () => void;
   initialBeanState?: 'green' | 'roasted';
+  /** 识别时使用的原始图片 base64（用于在表单中显示） */
+  recognitionImage?: string | null;
 }
 
 const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
@@ -26,6 +28,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   onClose,
   onRepurchase,
   initialBeanState,
+  recognitionImage,
 }) => {
   // 动画状态管理
   const [shouldRender, setShouldRender] = useState(false);
@@ -149,6 +152,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
             onRepurchase={onRepurchase}
             onStepChange={setCurrentStep}
             initialBeanState={initialBeanState}
+            recognitionImage={recognitionImage}
           />
         </div>
       </div>

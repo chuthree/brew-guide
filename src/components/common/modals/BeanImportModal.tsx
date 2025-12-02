@@ -8,10 +8,36 @@ import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
 import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
 
+// 模拟 API 开关 - 设置为 true 时使用模拟数据
+const USE_MOCK_API = false;
+
+// 模拟识别延迟时间（毫秒）
+const MOCK_RECOGNITION_DELAY = 100;
+
+// 模拟返回的咖啡豆数据
+const MOCK_BEAN_DATA = {
+  name: '西可 洪都拉斯水洗瑰夏',
+  roastLevel: '浅度烘焙',
+  roastDate: '2024-11-15',
+  capacity: '200',
+  remaining: '200',
+  flavor: ['橘子', '荔枝', '蜂蜜'],
+  beanType: 'filter',
+  blendComponents: [
+    {
+      origin: '洪都拉斯',
+      process: '水洗',
+      variety: '瑰夏',
+    },
+  ],
+};
+
 interface BeanImportModalProps {
   showForm: boolean;
   onImport: (jsonData: string) => Promise<void>;
   onClose: () => void;
+  /** 识别图片成功后回调，传递原始图片的 base64 */
+  onRecognitionImage?: (imageBase64: string) => void;
 }
 
 interface ImportedBean {
@@ -39,17 +65,79 @@ const BEAN_RECOGNITION_PROMPT = `提取图片中的咖啡豆信息,直接返回J
 规则: 数值不带单位/不编造/不确定不填/直接返回JSON`;
 
 // 步骤类型定义
-type ImportStep = 'main' | 'json-input';
+type ImportStep = 'main' | 'json-input' | 'recognizing';
+
+// 扫描线动画组件
+// 四角边框装饰组件
+const CornerBorder: React.FC<{
+  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+}> = ({ position }) => {
+  const baseClasses = 'absolute w-6 h-6 border-white/80';
+  const positionClasses = {
+    'top-left': 'top-0 left-0 border-t-2 border-l-2 rounded-tl-xl',
+    'top-right': 'top-0 right-0 border-t-2 border-r-2 rounded-tr-xl',
+    'bottom-left': 'bottom-0 left-0 border-b-2 border-l-2 rounded-bl-xl',
+    'bottom-right': 'bottom-0 right-0 border-b-2 border-r-2 rounded-br-xl',
+  };
+
+  return <div className={`${baseClasses} ${positionClasses[position]}`} />;
+};
+
+const ScanningOverlay: React.FC<{ imageUrl: string }> = ({ imageUrl }) => {
+  return (
+    <div className="relative w-full overflow-hidden rounded-3xl bg-neutral-900">
+      {/* 背景图片 - 保持原始比例，变暗处理 */}
+      <img
+        src={imageUrl}
+        alt="正在识别的图片"
+        className="w-full rounded-3xl brightness-75"
+        style={{ maxHeight: '50vh', objectFit: 'cover' }}
+      />
+
+      {/* 四角边框装饰 */}
+      <div className="absolute inset-4">
+        <CornerBorder position="top-left" />
+        <CornerBorder position="top-right" />
+        <CornerBorder position="bottom-left" />
+        <CornerBorder position="bottom-right" />
+      </div>
+
+      {/* 扫描线效果 - 简洁的白色扫描线 */}
+      <motion.div
+        className="absolute right-0 left-0 h-px"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.6) 20%, rgba(255, 255, 255, 0.9) 50%, rgba(255, 255, 255, 0.6) 80%, transparent 100%)',
+          boxShadow: '0 0 12px 2px rgba(255, 255, 255, 0.3)',
+        }}
+        initial={{ top: '0%' }}
+        animate={{
+          top: ['0%', '100%', '0%'],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      />
+    </div>
+  );
+};
 
 const BeanImportModal: React.FC<BeanImportModalProps> = ({
   showForm,
   onImport,
   onClose,
+  onRecognitionImage,
 }) => {
   // 当前步骤
   const [currentStep, setCurrentStep] = useState<ImportStep>('main');
   // 图片识别加载状态
   const [isRecognizing, setIsRecognizing] = useState(false);
+  // 识别中的图片 URL
+  const [recognizingImageUrl, setRecognizingImageUrl] = useState<string | null>(
+    null
+  );
   // JSON 输入内容
   const [jsonInputValue, setJsonInputValue] = useState('');
   // 图片输入 ref
@@ -65,7 +153,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   const goBackToMain = useCallback(() => {
     setCurrentStep('main');
     setJsonInputValue('');
-  }, []);
+    // 清理图片 URL
+    if (recognizingImageUrl) {
+      URL.revokeObjectURL(recognizingImageUrl);
+      setRecognizingImageUrl(null);
+    }
+    setIsRecognizing(false);
+  }, [recognizingImageUrl]);
 
   // 使用 modalHistory 管理 JSON 输入步骤的返回行为
   useModalHistory({
@@ -80,8 +174,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       setClipboardStatus('idle');
       setCurrentStep('main');
       setJsonInputValue('');
+      setIsRecognizing(false);
+      if (recognizingImageUrl) {
+        URL.revokeObjectURL(recognizingImageUrl);
+        setRecognizingImageUrl(null);
+      }
     }
-  }, [showForm]);
+  }, [showForm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 确保字段为字符串类型
   const ensureStringFields = useCallback((item: ImportedBean): ImportedBean => {
@@ -193,20 +292,82 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         return;
       }
 
+      // 创建图片预览 URL
+      const imageUrl = URL.createObjectURL(file);
+      setRecognizingImageUrl(imageUrl);
+      setCurrentStep('recognizing');
       setIsRecognizing(true);
 
       try {
-        // 压缩图片
-        const { smartCompress } = await import('@/lib/utils/imageCompression');
-        const compressedFile = await smartCompress(file);
+        let beanData: unknown;
 
-        // 识别图片
-        const { recognizeBeanImage } = await import(
-          '@/lib/api/beanRecognition'
-        );
+        if (USE_MOCK_API) {
+          // 模拟 API 请求
+          await new Promise(resolve =>
+            setTimeout(resolve, MOCK_RECOGNITION_DELAY)
+          );
+          beanData = MOCK_BEAN_DATA;
+        } else {
+          // 真实 API 请求
+          // 压缩图片
+          const { smartCompress } = await import(
+            '@/lib/utils/imageCompression'
+          );
+          const compressedFile = await smartCompress(file);
 
-        const beanData = await recognizeBeanImage(compressedFile);
+          // 识别图片
+          const { recognizeBeanImage } = await import(
+            '@/lib/api/beanRecognition'
+          );
+
+          beanData = await recognizeBeanImage(compressedFile);
+        }
+
+        // 识别成功后，检查是否为单个豆子（非批量），如果是则传递识别图片
+        // 判断条件：不是数组，或者是只有一个元素的数组
+        const isSingleBean =
+          !Array.isArray(beanData) ||
+          (Array.isArray(beanData) && beanData.length === 1);
+        if (isSingleBean && onRecognitionImage) {
+          // 将原始图片文件转换为 base64 并压缩
+          // 使用 Promise 确保图片处理完成后再继续
+          await new Promise<void>(resolve => {
+            const reader = new FileReader();
+            reader.onload = async () => {
+              const base64 = reader.result as string;
+              if (base64) {
+                try {
+                  // 压缩图片，与表单中的压缩参数保持一致
+                  const { compressBase64Image } = await import(
+                    '@/lib/utils/imageCapture'
+                  );
+                  const compressedBase64 = await compressBase64Image(base64, {
+                    maxSizeMB: 0.1, // 100KB
+                    maxWidthOrHeight: 1200,
+                    initialQuality: 0.8,
+                  });
+                  onRecognitionImage(compressedBase64);
+                } catch (error) {
+                  // 压缩失败时使用原图
+                  if (process.env.NODE_ENV === 'development') {
+                    console.error('识别图片压缩失败:', error);
+                  }
+                  onRecognitionImage(base64);
+                }
+              }
+              resolve();
+            };
+            reader.onerror = () => resolve();
+            reader.readAsDataURL(file);
+          });
+        }
+
+        // 清理状态
         setIsRecognizing(false);
+        URL.revokeObjectURL(imageUrl);
+        setRecognizingImageUrl(null);
+        setCurrentStep('main');
+
         await handleImportData(beanData);
       } catch (error) {
         console.error('图片识别失败:', error);
@@ -215,6 +376,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           title: error instanceof Error ? error.message : '图片识别失败',
         });
         setIsRecognizing(false);
+        URL.revokeObjectURL(imageUrl);
+        setRecognizingImageUrl(null);
+        setCurrentStep('main');
       }
 
       // 清除文件输入，以便可以再次选择同一文件
@@ -222,7 +386,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         fileInputRef.current.value = '';
       }
     },
-    [handleImportData]
+    [handleImportData, onRecognitionImage]
   );
 
   // 触发图片选择
@@ -301,16 +465,20 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   const handleClose = useCallback(() => {
     setCurrentStep('main');
     setJsonInputValue('');
+    setIsRecognizing(false);
+    if (recognizingImageUrl) {
+      URL.revokeObjectURL(recognizingImageUrl);
+      setRecognizingImageUrl(null);
+    }
     onClose();
-  }, [onClose]);
+  }, [onClose, recognizingImageUrl]);
 
   // 操作项配置
   const actions = [
     {
       id: 'image',
-      label: isRecognizing ? '识别中...' : '图片识别咖啡豆（推荐）',
+      label: '图片识别咖啡豆（推荐）',
       onClick: handleUploadImageClick,
-      disabled: isRecognizing,
     },
     {
       id: 'clipboard',
@@ -357,8 +525,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
             key={action.id}
             whileTap={{ scale: 0.98 }}
             onClick={action.onClick}
-            disabled={action.disabled}
-            className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 disabled:opacity-50 dark:bg-neutral-800 dark:text-white"
+            className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
           >
             {action.label}
           </motion.button>
@@ -421,6 +588,41 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     </>
   );
 
+  // 识别中界面内容
+  const recognizingContent = (
+    <>
+      {/* 图片扫描区域 */}
+      <div className="mb-6">
+        {recognizingImageUrl && (
+          <ScanningOverlay imageUrl={recognizingImageUrl} />
+        )}
+      </div>
+
+      {/* 内容区域 */}
+      <ActionDrawer.Content>
+        <p className="text-neutral-500 dark:text-neutral-400">
+          正在
+          <span className="text-neutral-800 dark:text-neutral-200">
+            识别咖啡豆信息
+          </span>
+          ，请稍候...
+        </p>
+      </ActionDrawer.Content>
+    </>
+  );
+
+  // 根据步骤渲染内容
+  const renderContent = () => {
+    switch (currentStep) {
+      case 'recognizing':
+        return recognizingContent;
+      case 'json-input':
+        return jsonInputContent;
+      default:
+        return mainContent;
+    }
+  };
+
   return (
     <>
       <ActionDrawer
@@ -429,7 +631,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         historyId="bean-import"
       >
         <ActionDrawer.Switcher activeKey={currentStep}>
-          {currentStep === 'main' ? mainContent : jsonInputContent}
+          {renderContent()}
         </ActionDrawer.Switcher>
       </ActionDrawer>
 
