@@ -43,9 +43,10 @@ function validateImageFile(file: File): void {
   }
 }
 
-// 识别咖啡豆图片（流式版本）
+// 识别咖啡豆图片（非流式版本）
 export async function recognizeBeanImage(
   imageFile: File,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onProgress?: (chunk: string) => void
 ): Promise<any> {
   // 验证文件安全性
@@ -66,13 +67,13 @@ export async function recognizeBeanImage(
   formData.append('image', imageFile);
 
   try {
-    console.log('🔄 开始流式请求...');
+    console.log('🔄 开始请求...');
     const response = await fetch(apiUrl, {
       method: 'POST',
       body: formData,
       credentials: 'include',
       headers: {
-        Accept: 'text/event-stream', // 请求流式响应
+        Accept: 'application/json', // 请求非流式响应
       },
       signal: AbortSignal.timeout(API_CONFIG.timeout),
     });
@@ -85,71 +86,15 @@ export async function recognizeBeanImage(
       throw new Error(error.error || `请求失败: ${response.status}`);
     }
 
-    // 检查是否是流式响应
-    const contentType = response.headers.get('content-type');
-    if (contentType?.includes('text/event-stream')) {
-      // 处理 SSE 流式响应
-      console.log('📡 检测到流式响应，开始接收数据...');
+    // 非流式响应处理
+    const result = await response.json();
+    console.log('✅ 解析响应成功:', result);
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error('无法读取响应流');
-      }
-
-      let finalContent = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              const content = parsed.content || '';
-              if (content) {
-                // 服务器发送的已经是完整内容，直接使用
-                finalContent = content;
-                // 实时回调更新
-                if (onProgress) {
-                  onProgress(content);
-                }
-              }
-            } catch (e) {
-              // 忽略解析错误
-            }
-          }
-        }
-      }
-
-      console.log('✅ 流式响应完成');
-
-      // 解析最终的 JSON
-      try {
-        const beanData = JSON.parse(finalContent);
-        return beanData;
-      } catch (e) {
-        throw new Error('无法解析识别结果');
-      }
-    } else {
-      // 非流式响应，按原来的方式处理
-      const result = await response.json();
-      console.log('✅ 解析响应成功:', result);
-
-      if (!result.success) {
-        throw new Error(result.error || '识别失败');
-      }
-
-      return result.data;
+    if (!result.success) {
+      throw new Error(result.error || '识别失败');
     }
+
+    return result.data;
   } catch (error) {
     console.error('❌ 请求失败:', error);
 
