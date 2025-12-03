@@ -33,8 +33,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
+!.env.example
+!server/.env.example
 
 # vercel
 .vercel
@@ -71,5 +73,5 @@ android/app/release/
 
 logs/
 
-# API Server (deployed separately)
-server.js
+# API Server
+server/.env
