@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { CoffeeBean } from '@/types/app';
 import WelcomeScreen from './WelcomeScreen';
 import IntroScreen from './IntroScreen';
+import FavoriteRoasterScreen from './FavoriteRoasterScreen';
+import EndingScreen from './EndingScreen';
 
 interface ScreenContentProps {
   screenIndex: number;
@@ -12,6 +14,7 @@ interface ScreenContentProps {
   hasStarted: boolean;
   onStart: () => void;
   onNextScreen: () => void;
+  onReplay: () => void;
   beanImages: string[];
   totalWeight: number;
   beans: CoffeeBean[];
@@ -26,6 +29,7 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
   hasStarted,
   onStart,
   onNextScreen,
+  onReplay,
   beanImages,
   totalWeight,
   beans,
@@ -66,6 +70,12 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
             onComplete={onNextScreen}
           />
         );
+      case 1:
+        return (
+          <FavoriteRoasterScreen beans={beans} onComplete={onNextScreen} />
+        );
+      case 2:
+        return <EndingScreen onReplay={onReplay} />;
       default:
         return (
           <div className="flex h-full items-center justify-center">

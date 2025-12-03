@@ -67,7 +67,7 @@ const SegmentWeight: React.FC<SegmentWeightProps> = ({
         })
         .to(labelRef.current, {
           x: '-2%',
-          duration: 1.5,
+          duration: 2.5,
           ease: 'none',
         })
         .to(labelRef.current, {
@@ -87,7 +87,7 @@ const SegmentWeight: React.FC<SegmentWeightProps> = ({
         {
           x: '-100%',
           opacity: 1,
-          duration: 2.5,
+          duration: 3.5,
           ease: 'none',
         }
       );

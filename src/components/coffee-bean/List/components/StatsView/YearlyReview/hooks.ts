@@ -15,12 +15,23 @@ export const useColorTransition = (
   const animationRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const fromColorsRef = useRef<ColorTuple>(targetColors);
+  const currentColorsRef = useRef<ColorTuple>(targetColors);
+  const prevTargetRef = useRef<string>(targetColors.join(','));
 
   useEffect(() => {
-    // 如果颜色相同，不需要动画
-    if (targetColors.every((c, i) => c === currentColors[i])) return;
+    const targetKey = targetColors.join(',');
 
-    fromColorsRef.current = currentColors;
+    // 如果目标颜色没变，不需要动画
+    if (targetKey === prevTargetRef.current) return;
+    prevTargetRef.current = targetKey;
+
+    // 取消之前的动画
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    // 从当前颜色开始过渡
+    fromColorsRef.current = currentColorsRef.current;
     startTimeRef.current = performance.now();
 
     const animate = (now: number) => {
@@ -34,6 +45,7 @@ export const useColorTransition = (
         lerpColor(fromColorsRef.current[i], target, eased)
       ) as ColorTuple;
 
+      currentColorsRef.current = interpolated;
       setCurrentColors(interpolated);
 
       if (progress < 1) {

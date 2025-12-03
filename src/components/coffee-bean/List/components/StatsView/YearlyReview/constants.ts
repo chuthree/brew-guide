@@ -1,12 +1,23 @@
 import type { ColorTuple, ScreenTheme } from './types';
 
-// 预设屏幕总数
-export const TOTAL_SCREENS = 10;
+// 预设屏幕总数（当前预览版只有 3 个屏幕）
+export const TOTAL_SCREENS = 3;
+
+// 每个屏幕的动画时长（秒），用于进度条同步
+// Screen 0 (IntroScreen): SegmentTitle(3.0) + SegmentHeadline(3.5) + SegmentImages(2.2) + SegmentReview(3.5) + SegmentWeight(3.5) + SegmentGrid(3.5) ≈ 19s
+// Screen 1 (FavoriteRoasterScreen): Segment1(3.0) + Segment2(2.8) ≈ 5.8s
+export const SCREEN_DURATIONS = [19, 5.8];
 
 // 欢迎页主题 - 清新的薄荷青绿
 export const WELCOME_THEME: ScreenTheme = {
   colors: ['#00B894', '#55EFC4', '#00CEC9', '#81ECEC'],
   accent: '#00B894',
+};
+
+// 结束页主题 - 宁静的蓝色
+export const ENDING_THEME: ScreenTheme = {
+  colors: ['#0984E3', '#74B9FF', '#0652DD', '#A3D8F4'],
+  accent: '#0984E3',
 };
 
 // 每个屏幕的主题渐变配置 - 水果风味色系，鲜艳活泼

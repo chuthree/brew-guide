@@ -61,7 +61,7 @@ const SegmentReview: React.FC<SegmentReviewProps> = ({
         })
         .to(ref.current, {
           x: '-2%',
-          duration: 1.5,
+          duration: 2.5,
           ease: 'none',
         })
         .to(ref.current, {

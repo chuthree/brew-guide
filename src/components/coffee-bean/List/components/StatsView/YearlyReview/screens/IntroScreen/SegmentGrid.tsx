@@ -152,7 +152,7 @@ const SegmentGrid: React.FC<SegmentGridProps> = ({
         textRef.current,
         {
           x: '-2%',
-          duration: 1.5,
+          duration: 2.5,
           ease: 'none',
         },
         0.5
@@ -167,7 +167,7 @@ const SegmentGrid: React.FC<SegmentGridProps> = ({
           duration: 0.5,
           ease: 'power3.in',
         },
-        2.0
+        3.0
       );
 
       animationOrder.forEach((cellIndex, orderIndex) => {
@@ -182,7 +182,7 @@ const SegmentGrid: React.FC<SegmentGridProps> = ({
               duration: 0.5,
               ease: 'power2.in',
             },
-            2.0
+            3.0
           );
         }
       });
@@ -235,7 +235,7 @@ const SegmentGrid: React.FC<SegmentGridProps> = ({
         }}
       >
         <span className="text-[2rem] leading-tight font-bold tracking-tight">
-          全部有 {beanCount} 款
+          总共有 {beanCount} 款
         </span>
       </div>
     </div>

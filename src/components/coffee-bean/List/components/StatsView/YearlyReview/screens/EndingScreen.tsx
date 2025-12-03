@@ -1,17 +1,23 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { RotateCcw } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import type { ScreenProps } from '../types';
 
+interface EndingScreenProps extends ScreenProps {
+  onReplay?: () => void;
+}
+
 /**
- * 欢迎介绍屏幕 - 点击后开始动画，带动态模糊滑出效果
+ * 结束屏幕 - 感谢页面，带重播按钮
  */
-const WelcomeScreen: React.FC<ScreenProps> = ({ onComplete }) => {
+const EndingScreen: React.FC<EndingScreenProps> = ({ onReplay }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const blurRef = useRef<SVGFEGaussianBlurElement>(null);
   const [isExiting, setIsExiting] = useState(false);
 
@@ -38,13 +44,17 @@ const WelcomeScreen: React.FC<ScreenProps> = ({ onComplete }) => {
     blurRef.current.setAttribute('stdDeviation', `${blurAmount}, 0`);
   };
 
-  // 处理开始按钮点击 - 触发退出动画
-  const handleStart = () => {
+  // 处理重播按钮点击
+  const handleReplay = () => {
     if (isExiting) return;
     setIsExiting(true);
 
-    // 同时对标题和底部内容应用退出动画
-    if (titleRef.current && bottomRef.current && blurRef.current) {
+    if (
+      titleRef.current &&
+      contentRef.current &&
+      buttonRef.current &&
+      blurRef.current
+    ) {
       activeElementRef.current = titleRef.current;
       gsap.ticker.add(updateBlur);
 
@@ -54,12 +64,12 @@ const WelcomeScreen: React.FC<ScreenProps> = ({ onComplete }) => {
           if (blurRef.current) {
             blurRef.current.setAttribute('stdDeviation', '0, 0');
           }
-          onComplete?.();
+          onReplay?.();
         },
       });
 
-      // 标题和底部同时向左滑出
-      tl.to([titleRef.current, bottomRef.current], {
+      // 所有元素同时向左滑出
+      tl.to([titleRef.current, contentRef.current, buttonRef.current], {
         x: '-120%',
         opacity: 0,
         duration: 0.5,
@@ -67,32 +77,49 @@ const WelcomeScreen: React.FC<ScreenProps> = ({ onComplete }) => {
         stagger: 0.05,
       });
     } else {
-      onComplete?.();
+      onReplay?.();
     }
   };
 
-  // 入场动画 - 只做淡入，不移动
+  // 入场动画
   useGSAP(
     () => {
-      if (!titleRef.current || !bottomRef.current) return;
+      if (!titleRef.current || !contentRef.current || !buttonRef.current)
+        return;
 
-      gsap.set([titleRef.current, bottomRef.current], { opacity: 0 });
+      gsap.set([titleRef.current, contentRef.current, buttonRef.current], {
+        opacity: 0,
+        y: 20,
+      });
 
       const tl = gsap.timeline();
 
       tl.to(titleRef.current, {
         opacity: 1,
-        duration: 0.6,
+        y: 0,
+        duration: 0.4,
         ease: 'power2.out',
-      }).to(
-        bottomRef.current,
-        {
-          opacity: 1,
-          duration: 0.5,
-          ease: 'power2.out',
-        },
-        '-=0.3'
-      );
+      })
+        .to(
+          contentRef.current,
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.35,
+            ease: 'power2.out',
+          },
+          '-=0.2'
+        )
+        .to(
+          buttonRef.current,
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.35,
+            ease: 'power2.out',
+          },
+          '-=0.2'
+        );
     },
     { scope: containerRef }
   );
@@ -100,13 +127,13 @@ const WelcomeScreen: React.FC<ScreenProps> = ({ onComplete }) => {
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 flex flex-col items-center justify-between overflow-hidden py-16"
+      className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden px-8"
     >
       {/* SVG 滤镜定义 - 用于运动模糊 */}
       <svg className="absolute h-0 w-0" aria-hidden="true">
         <defs>
           <filter
-            id="welcome-motion-blur"
+            id="ending-motion-blur"
             x="-50%"
             y="-50%"
             width="200%"
@@ -121,46 +148,46 @@ const WelcomeScreen: React.FC<ScreenProps> = ({ onComplete }) => {
         </defs>
       </svg>
 
-      {/* 上方标题 */}
-      <div className="flex flex-1 flex-col items-center justify-center">
-        <div
-          ref={titleRef}
-          className="text-[4rem] font-bold tracking-tighter text-white"
-          style={{
-            filter: 'url(#welcome-motion-blur)',
-            willChange: 'transform, opacity',
-          }}
-        >
-          Replay'25
-        </div>
-      </div>
-
-      {/* 底部介绍文字和按钮 */}
+      {/* 感谢标题 */}
       <div
-        ref={bottomRef}
-        className="flex flex-col items-center gap-4 px-8"
+        ref={titleRef}
+        className="mb-6 text-center text-xl leading-tight font-bold tracking-tight text-white"
         style={{
-          filter: 'url(#welcome-motion-blur)',
+          filter: 'url(#ending-motion-blur)',
           willChange: 'transform, opacity',
         }}
       >
-        <div className="flex flex-col items-center gap-2 text-center">
-          <span className="text-xl font-medium text-white/90">回顾这一年</span>
-          <span className="text-base leading-relaxed text-white/90">
-            从你的记录中，回顾一下 2025 年
-            <br />
-            看看买了哪些好豆，喜好是什么。
-          </span>
-        </div>
-        <button
-          onClick={handleStart}
-          className="mt-2 flex items-center gap-2 rounded-full bg-white/20 px-8 py-4 text-lg font-medium text-white backdrop-blur-sm transition-all hover:bg-white/30 active:scale-95"
-        >
-          前往年度回顾
-        </button>
+        感谢你的支持!
       </div>
+
+      {/* 说明内容 */}
+      <div
+        ref={contentRef}
+        className="mb-10 flex flex-col items-center gap-4 text-center"
+        style={{
+          filter: 'url(#ending-motion-blur)',
+          willChange: 'transform, opacity',
+        }}
+      >
+        <p className="text-base leading-relaxed text-white">
+          这只是预览版，完整版将在今年晚些推出～
+        </p>
+      </div>
+
+      {/* 重播按钮 */}
+      <button
+        ref={buttonRef}
+        onClick={handleReplay}
+        className="flex items-center gap-2 rounded-full bg-white/20 px-8 py-4 text-lg font-medium text-white backdrop-blur-sm hover:bg-white/30 active:scale-95"
+        style={{
+          willChange: 'transform, opacity',
+        }}
+      >
+        <RotateCcw size={20} />
+        重新播放
+      </button>
     </div>
   );
 };
 
-export default WelcomeScreen;
+export default EndingScreen;

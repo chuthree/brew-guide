@@ -59,7 +59,7 @@ const SegmentTitle: React.FC<SegmentTitleProps> = ({ onComplete, blurRef }) => {
         })
         .to(ref.current, {
           x: '-2%',
-          duration: 1.2,
+          duration: 2.0,
           ease: 'none',
         })
         .to(ref.current, {
@@ -81,7 +81,7 @@ const SegmentTitle: React.FC<SegmentTitleProps> = ({ onComplete, blurRef }) => {
         willChange: 'transform, opacity',
       }}
     >
-      Replay&apos;25
+      Replay'25
     </div>
   );
 };

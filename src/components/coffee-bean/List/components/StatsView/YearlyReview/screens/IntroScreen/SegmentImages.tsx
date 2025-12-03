@@ -72,7 +72,7 @@ const SegmentImages: React.FC<SegmentImagesProps> = ({
       });
 
       const containerWidth = containerRef.current.clientWidth;
-      const staggerDelay = 0.05;
+      const staggerDelay = 0.08;
 
       imageRefs.current.forEach((ref, index) => {
         if (!ref) return;
@@ -87,7 +87,7 @@ const SegmentImages: React.FC<SegmentImagesProps> = ({
           {
             x: 20,
             opacity: 1,
-            duration: 0.3,
+            duration: 0.4,
             ease: 'power3.out',
           },
           index * staggerDelay
@@ -96,20 +96,20 @@ const SegmentImages: React.FC<SegmentImagesProps> = ({
             ref,
             {
               x: -20,
-              duration: 0.5,
+              duration: 1.0,
               ease: 'none',
             },
-            0.3 + index * staggerDelay
+            0.4 + index * staggerDelay
           )
           .to(
             ref,
             {
               x: -containerWidth,
               opacity: 0,
-              duration: 0.3,
+              duration: 0.4,
               ease: 'power3.in',
             },
-            0.8 + index * staggerDelay
+            1.4 + index * staggerDelay
           );
       });
     },
