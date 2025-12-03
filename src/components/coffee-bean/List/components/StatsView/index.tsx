@@ -69,8 +69,8 @@ const YearlyReviewPreviewCard: React.FC<YearlyReviewPreviewCardProps> = ({
   return (
     <motion.div
       onClick={onClick}
-      className="relative cursor-pointer overflow-hidden rounded-md shadow"
-      style={{ height: '72px' }}
+      className="relative z-0 cursor-pointer overflow-hidden rounded-md shadow"
+      style={{ height: '72px', isolation: 'isolate' }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
     >
@@ -98,7 +98,7 @@ const YearlyReviewPreviewCard: React.FC<YearlyReviewPreviewCardProps> = ({
       {/* 关闭按钮 - 右上角 */}
       <motion.button
         onClick={handleDismiss}
-        className="absolute top-2 right-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-white/70 backdrop-blur-sm transition-colors hover:bg-white/25 hover:text-white"
+        className="absolute top-2 right-2 z-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-white/70 backdrop-blur-sm transition-colors hover:bg-white/25 hover:text-white"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
@@ -106,7 +106,7 @@ const YearlyReviewPreviewCard: React.FC<YearlyReviewPreviewCardProps> = ({
       </motion.button>
 
       {/* 内容 */}
-      <div className="relative z-10 flex h-full items-center px-4">
+      <div className="relative z-1 flex h-full items-center px-4">
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-bold tracking-tight text-white">
             Replay'{String(currentYear).slice(-2)} / Preview
