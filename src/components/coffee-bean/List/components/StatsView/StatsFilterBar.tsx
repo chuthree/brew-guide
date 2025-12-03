@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateGroupingMode } from './types';
+import YearlyReviewDrawer from './YearlyReviewDrawer';
 
 export const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
   year: '按年统计',
@@ -238,6 +239,9 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const filterExpandRef = useRef<HTMLDivElement>(null);
 
+  // 年度回顾抽屉状态
+  const [isYearlyReviewOpen, setIsYearlyReviewOpen] = useState(false);
+
   // 滚动容器引用
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftShadow, setShowLeftShadow] = useState(false);
@@ -423,7 +427,7 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                   )}
 
                   {/* 时间分组 */}
-                  <div>
+                  <div className="mb-4">
                     <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
                       时间分组
                     </div>
@@ -449,12 +453,33 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                       </FilterButton>
                     </div>
                   </div>
+
+                  {/* 更多功能 */}
+                  <div>
+                    <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                      更多
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FilterButton
+                        isActive={false}
+                        onClick={() => setIsYearlyReviewOpen(true)}
+                      >
+                        年度回顾
+                      </FilterButton>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             </>
           )}
         </AnimatePresence>
       </div>
+
+      {/* 年度回顾抽屉 */}
+      <YearlyReviewDrawer
+        isOpen={isYearlyReviewOpen}
+        onClose={() => setIsYearlyReviewOpen(false)}
+      />
     </div>
   );
 };
