@@ -133,11 +133,11 @@ const FavoriteRoasterScreen: React.FC<FavoriteRoasterScreenProps> = ({
 
   // 图片未加载完成时不渲染内容
   if (!imagesLoaded) {
-    return <div className="absolute inset-0 overflow-hidden" />;
+    return <div className="h-full w-full pt-32" />;
   }
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
+    <div className="h-full w-full pt-32">
       {currentSegment === 0 && (
         <Segment1
           roasterName={roasterName}

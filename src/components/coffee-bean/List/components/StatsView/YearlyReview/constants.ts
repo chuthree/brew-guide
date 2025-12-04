@@ -1,12 +1,18 @@
 import type { ColorTuple, ScreenTheme } from './types';
 
-// 预设屏幕总数（当前预览版只有 3 个屏幕）
-export const TOTAL_SCREENS = 3;
+// 预设屏幕总数（当前预览版只有 8 个屏幕）
+export const TOTAL_SCREENS = 9;
 
 // 每个屏幕的动画时长（秒），用于进度条同步
 // Screen 0 (IntroScreen): SegmentTitle(3.0) + SegmentHeadline(3.5) + SegmentImages(2.2) + SegmentReview(3.5) + SegmentWeight(3.5) + SegmentGrid(3.5) ≈ 19s
 // Screen 1 (FavoriteRoasterScreen): Segment1(3.0) + Segment2(2.8) ≈ 5.8s
-export const SCREEN_DURATIONS = [19, 5.8];
+// Screen 2 (CategoryFlowScreen): 图片流动画 ≈ 5s
+// Screen 3 (OriginCategoryScreen): 产地统计 ≈ 3s
+// Screen 4 (VarietyCategoryScreen): 品种统计 ≈ 3s
+// Screen 5 (ProcessCategoryScreen): 处理法统计 ≈ 3s
+// Screen 6 (OriginDetailScreen): Headline(3.5) + Consumption(3.5) ≈ 7s
+// Screen 7 (VarietyDetailScreen): Headline(3.5) + Consumption(3.5) ≈ 7s
+export const SCREEN_DURATIONS = [19, 5.8, 5, 3, 3, 3, 7, 7];
 
 // 欢迎页主题 - 清新的薄荷青绿
 export const WELCOME_THEME: ScreenTheme = {

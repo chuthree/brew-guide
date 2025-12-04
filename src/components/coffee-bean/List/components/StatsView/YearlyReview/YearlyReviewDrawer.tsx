@@ -329,7 +329,7 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
               </AnimatePresence>
 
               {/* 内容区域 - 带切换动画 */}
-              <div className="relative flex-1 overflow-hidden">
+              <div className="relative flex-1">
                 <AnimatePresence mode="wait" custom={direction}>
                   <ScreenContent
                     key={hasStarted ? currentScreen : 'welcome'}

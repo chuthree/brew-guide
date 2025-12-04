@@ -63,7 +63,7 @@ const SegmentHeadline: React.FC<SegmentHeadlineProps> = ({
         })
         .to(ref.current, {
           x: '-2%',
-          duration: 2.5,
+          duration: 1.5,
           ease: 'none',
         })
         .to(ref.current, {

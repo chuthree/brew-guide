@@ -27,10 +27,7 @@ const IntroScreen: React.FC<BeanScreenProps> = ({
   const [currentSegment, setCurrentSegment] = useState<number>(0);
 
   return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0 flex items-center justify-center overflow-hidden"
-    >
+    <div ref={containerRef} className="h-full w-full pt-32">
       {/* SVG 滤镜定义 - 用于运动模糊 */}
       <svg className="absolute h-0 w-0" aria-hidden="true">
         <defs>

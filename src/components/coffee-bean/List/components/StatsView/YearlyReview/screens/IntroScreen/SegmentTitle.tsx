@@ -59,7 +59,7 @@ const SegmentTitle: React.FC<SegmentTitleProps> = ({ onComplete, blurRef }) => {
         })
         .to(ref.current, {
           x: '-2%',
-          duration: 2.0,
+          duration: 1.0,
           ease: 'none',
         })
         .to(ref.current, {

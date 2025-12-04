@@ -5,7 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { CoffeeBean } from '@/types/app';
 import WelcomeScreen from './WelcomeScreen';
 import IntroScreen from './IntroScreen';
+import BeanCategoryScreen from './BeanCategoryScreen';
+import CategoryFlowScreen from './CategoryFlowScreen';
+import OriginCategoryScreen from './OriginCategoryScreen';
+import VarietyCategoryScreen from './VarietyCategoryScreen';
+import ProcessCategoryScreen from './ProcessCategoryScreen';
 import FavoriteRoasterScreen from './FavoriteRoasterScreen';
+import OriginDetailScreen from './OriginDetailScreen';
+import VarietyDetailScreen from './VarietyDetailScreen';
 import EndingScreen from './EndingScreen';
 
 interface ScreenContentProps {
@@ -75,6 +82,60 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
           <FavoriteRoasterScreen beans={beans} onComplete={onNextScreen} />
         );
       case 2:
+        return (
+          <CategoryFlowScreen
+            beanImages={beanImages}
+            totalWeight={totalWeight}
+            beans={beans}
+            onComplete={onNextScreen}
+          />
+        );
+      case 3:
+        return (
+          <OriginCategoryScreen
+            beanImages={beanImages}
+            totalWeight={totalWeight}
+            beans={beans}
+            onComplete={onNextScreen}
+          />
+        );
+      case 4:
+        return (
+          <VarietyCategoryScreen
+            beanImages={beanImages}
+            totalWeight={totalWeight}
+            beans={beans}
+            onComplete={onNextScreen}
+          />
+        );
+      case 5:
+        return (
+          <ProcessCategoryScreen
+            beanImages={beanImages}
+            totalWeight={totalWeight}
+            beans={beans}
+            onComplete={onNextScreen}
+          />
+        );
+      case 6:
+        return (
+          <OriginDetailScreen
+            beanImages={beanImages}
+            totalWeight={totalWeight}
+            beans={beans}
+            onComplete={onNextScreen}
+          />
+        );
+      case 7:
+        return (
+          <VarietyDetailScreen
+            beanImages={beanImages}
+            totalWeight={totalWeight}
+            beans={beans}
+            onComplete={onNextScreen}
+          />
+        );
+      case 8:
         return <EndingScreen onReplay={onReplay} />;
       default:
         return (
@@ -89,7 +150,7 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
 
   return (
     <motion.div
-      className="absolute inset-0"
+      className="absolute inset-0 pt-24"
       custom={direction}
       variants={variants}
       initial="enter"
