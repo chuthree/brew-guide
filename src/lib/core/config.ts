@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.5.4-beta.2';
+export const APP_VERSION = '1.5.4';
 
 // Types
 export interface Stage {

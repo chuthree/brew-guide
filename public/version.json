@@ -1,5 +1,5 @@
 {
-  "version": "1.5.3",
+  "version": "1.5.4",
   "downloadUrl": "https://gitee.com/chu3/brew-guide/releases",
-  "releaseNotes": "优化咖啡豆识别体验，新增云同步引导并修复已知问题"
+  "releaseNotes": "加入年度回顾，在统计中进入"
 }
