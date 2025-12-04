@@ -15,6 +15,7 @@ import StorageInit from '@/providers/StorageProvider';
 import ModalHistoryInit from '@/providers/ModalHistoryProvider';
 
 import { BaiduAnalytics } from '@/components/common/BaiduAnalytics';
+import DevTools from '@/components/common/DevTools';
 
 // 只加载需要的 GeistMono 字重（用于计时器）
 const geistMono = localFont({
@@ -325,6 +326,7 @@ export default function RootLayout({
           enableColorScheme={false}
           disableTransitionOnChange
         >
+          <DevTools />
           <div className="h-dvh overflow-hidden bg-neutral-50 dark:bg-neutral-900">
             <Suspense>
               <CapacitorInit />
