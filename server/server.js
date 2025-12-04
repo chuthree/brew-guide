@@ -15,7 +15,14 @@ const RATE_LIMIT_CONFIG = {
   maxRequests: 10, // 每个 IP 最多 10 次请求
 };
 
+// 年度报告专用限流配置（更严格）
+const YEARLY_REPORT_RATE_LIMIT = {
+  windowMs: 24 * 60 * 60 * 1000, // 24 小时
+  maxRequests: 5, // 每个 IP 每天最多 5 次
+};
+
 const requestCounts = new Map();
+const yearlyReportCounts = new Map();
 
 // 清理过期的请求记录
 setInterval(() => {
@@ -26,6 +33,19 @@ setInterval(() => {
     }
   }
 }, RATE_LIMIT_CONFIG.windowMs);
+
+// 清理过期的年度报告请求记录（每小时清理一次）
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [ip, data] of yearlyReportCounts.entries()) {
+      if (now - data.startTime > YEARLY_REPORT_RATE_LIMIT.windowMs) {
+        yearlyReportCounts.delete(ip);
+      }
+    }
+  },
+  60 * 60 * 1000
+);
 
 /**
  * Rate Limiting 中间件
@@ -62,6 +82,43 @@ function rateLimiter(req, res, next) {
   next();
 }
 
+/**
+ * 年度报告专用 Rate Limiting 中间件（每天 5 次）
+ */
+function yearlyReportRateLimiter(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+
+  if (!yearlyReportCounts.has(ip)) {
+    yearlyReportCounts.set(ip, { count: 1, startTime: now });
+    return next();
+  }
+
+  const data = yearlyReportCounts.get(ip);
+
+  // 如果超过时间窗口（24小时），重置计数
+  if (now - data.startTime > YEARLY_REPORT_RATE_LIMIT.windowMs) {
+    yearlyReportCounts.set(ip, { count: 1, startTime: now });
+    return next();
+  }
+
+  // 检查是否超过限制
+  if (data.count >= YEARLY_REPORT_RATE_LIMIT.maxRequests) {
+    const hoursLeft = Math.ceil(
+      (YEARLY_REPORT_RATE_LIMIT.windowMs - (now - data.startTime)) /
+        (60 * 60 * 1000)
+    );
+    console.log(`🚫 Yearly report rate limit exceeded for IP: ${ip}`);
+    return res.status(429).json({
+      error: `年度报告生成次数已达上限（每天 ${YEARLY_REPORT_RATE_LIMIT.maxRequests} 次），请 ${hoursLeft} 小时后再试`,
+      retryAfter: hoursLeft * 3600,
+    });
+  }
+
+  data.count++;
+  next();
+}
+
 // ==================== AI 提示词配置 ====================
 const AI_PROMPT = `请仔细识别图片中的咖啡豆包装信息，提取所有可见文字，返回JSON格式。
 
@@ -90,6 +147,33 @@ const AI_PROMPT = `请仔细识别图片中的咖啡豆包装信息，提取所�
 4. 不确定的信息不要编造
 5. 直接返回JSON`;
 
+// 年度报告 AI 提示词
+const YEARLY_REPORT_PROMPT = `你是一位专业的咖啡品鉴师和文案作家。请根据用户一年的咖啡消费数据，撰写一份温暖、有趣、个性化的年度咖啡报告。
+
+## 写作风格
+- 温暖亲切，像老朋友聊天
+- 适度幽默，有咖啡文化底蕴
+- 数据与故事结合
+- 简洁有力，每段不超过两句话
+
+## 输出格式
+直接输出5-7个自然段落，每段之间用空行分隔。不要使用任何标题、标签、编号或特殊格式。
+
+## 内容要点（按顺序，自然融入段落中）
+1. 开场问候，提及用户名和年份
+2. 年度亮点数据（豆子数量、总重量等）
+3. 最爱的烘焙商或产地
+4. 口味偏好画像（处理法、品种等）
+5. 冲煮习惯（时间、器具等）
+6. 一个有趣的发现或计算
+7. 结语祝福，期待新一年
+
+## 注意事项
+1. 必须使用提供的真实数据，不要编造
+2. 如果某项数据为0或缺失，自然跳过不提
+3. 保持积极温暖的语调
+4. 纯文本输出，不要 JSON、不要 markdown`;
+
 // AI API 配置
 const AI_CONFIG = {
   baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
@@ -97,6 +181,15 @@ const AI_CONFIG = {
   temperature: 0.1,
   maxTokens: 1000,
   timeout: 120000,
+};
+
+// 年度报告 AI 配置（使用 DeepSeek-V3 非思考模式，更有创意）
+const YEARLY_REPORT_AI_CONFIG = {
+  baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+  model: 'deepseek-v3.1',
+  temperature: 0.7,
+  maxTokens: 2000,
+  timeout: 60000,
 };
 
 // 文件上传安全配置
@@ -604,6 +697,166 @@ app.post(
         console.error('API 错误详情:', error.response.data);
         return res.status(error.response.status).json({
           error: '图片识别失败',
+          details: error.response.data,
+        });
+      }
+
+      res.status(500).json({
+        error: '服务器内部错误',
+        message: error.message,
+      });
+    }
+  }
+);
+
+// 年度报告生成接口（流式传输）
+app.post(
+  '/api/yearly-report',
+  yearlyReportRateLimiter,
+  express.json(),
+  async (req, res) => {
+    try {
+      const startTime = Date.now();
+      console.log(`[${new Date().toISOString()}] 收到年度报告生成请求`);
+
+      const { username, year, stats } = req.body;
+
+      // 验证必要参数
+      if (!stats || typeof stats !== 'object') {
+        return res.status(400).json({
+          error: '缺少统计数据',
+        });
+      }
+
+      const currentYear = year || new Date().getFullYear();
+      const displayName = username || '咖啡爱好者';
+
+      // 构建数据摘要供 AI 参考
+      const dataSummary = `
+## 用户信息
+- 用户名: ${displayName}
+- 统计年份: ${currentYear}
+
+## 咖啡豆数据
+- 购买豆子数量: ${stats.beanCount || 0} 款
+- 总重量: ${stats.totalWeight || 0} 克
+- 总花费: ${stats.totalCost || 0} 元
+- 平均单价: ${stats.avgPrice || 0} 元/包
+
+## 偏好分析
+- 最爱烘焙商: ${stats.favoriteRoaster || '暂无数据'}（购买 ${stats.favoriteRoasterCount || 0} 次）
+- 最爱产地 TOP3: ${(stats.topOrigins || []).join('、') || '暂无数据'}
+- 最爱品种 TOP3: ${(stats.topVarieties || []).join('、') || '暂无数据'}
+- 最爱处理法 TOP3: ${(stats.topProcesses || []).join('、') || '暂无数据'}
+- 烘焙度偏好: ${stats.roastPreference || '暂无数据'}
+
+## 冲煮数据
+- 冲煮次数: ${stats.brewCount || 0} 次
+- 常用器具: ${(stats.topEquipments || []).join('、') || '暂无数据'}
+- 最早冲煮时间: ${stats.earliestBrewTime || '暂无数据'}
+- 最晚冲煮时间: ${stats.latestBrewTime || '暂无数据'}
+- 平均评分: ${stats.avgRating || '暂无数据'}
+`;
+
+      // 调用 AI 生成报告
+      const apiKey = process.env.SILICONFLOW_API_KEY;
+      if (!apiKey) {
+        console.error('❌ 未配置 SILICONFLOW_API_KEY');
+        return res.status(500).json({
+          error: '服务器配置错误：未设置 API Key',
+        });
+      }
+
+      console.log('🤖 开始调用 AI 生成年度报告（流式）...');
+
+      // 设置流式响应头
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+
+      const response = await axios.post(
+        YEARLY_REPORT_AI_CONFIG.baseURL,
+        {
+          model: YEARLY_REPORT_AI_CONFIG.model,
+          messages: [
+            {
+              role: 'system',
+              content: YEARLY_REPORT_PROMPT,
+            },
+            {
+              role: 'user',
+              content: `请根据以下数据生成年度咖啡报告：\n${dataSummary}`,
+            },
+          ],
+          temperature: YEARLY_REPORT_AI_CONFIG.temperature,
+          max_tokens: YEARLY_REPORT_AI_CONFIG.maxTokens,
+          stream: true,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: YEARLY_REPORT_AI_CONFIG.timeout,
+          responseType: 'stream',
+        }
+      );
+
+      let fullContent = '';
+
+      // 处理流式响应
+      response.data.on('data', chunk => {
+        const lines = chunk
+          .toString()
+          .split('\n')
+          .filter(line => line.trim());
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              continue;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content || '';
+              if (content) {
+                fullContent += content;
+                // 发送 SSE 事件
+                res.write(`data: ${JSON.stringify({ content })}\n\n`);
+              }
+            } catch (e) {
+              // 忽略解析错误
+            }
+          }
+        }
+      });
+
+      response.data.on('end', () => {
+        const totalDuration = Date.now() - startTime;
+        console.log(`⏱️  总耗时: ${totalDuration}ms`);
+        console.log('✅ 年度报告流式生成完成');
+        console.log('📝 完整内容:', fullContent.substring(0, 100) + '...');
+
+        // 发送完成事件
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.end();
+      });
+
+      response.data.on('error', err => {
+        console.error('❌ 流式响应错误:', err.message);
+        res.write(`data: ${JSON.stringify({ error: '生成过程中断' })}\n\n`);
+        res.end();
+      });
+    } catch (error) {
+      console.error('❌ 年度报告生成失败:', error.message);
+
+      if (error.response) {
+        console.error('API 错误详情:', error.response.data);
+        return res.status(error.response.status).json({
+          error: '报告生成失败',
           details: error.response.data,
         });
       }

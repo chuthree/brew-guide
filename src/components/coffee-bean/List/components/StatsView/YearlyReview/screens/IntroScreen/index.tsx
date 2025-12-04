@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import type { CoffeeBean } from '@/types/app';
 import type { BeanScreenProps } from '../../types';
 import SegmentTitle from './SegmentTitle';
@@ -9,6 +9,7 @@ import SegmentImages from './SegmentImages';
 import SegmentReview from './SegmentReview';
 import SegmentWeight from './SegmentWeight';
 import SegmentGrid from './SegmentGrid';
+import SegmentCost from './SegmentCost';
 
 /**
  * 第一屏：开场动画（Apple Music Replay 风格）
@@ -23,8 +24,21 @@ const IntroScreen: React.FC<BeanScreenProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const blurRef = useRef<SVGFEGaussianBlurElement>(null);
 
-  // 当前显示的段落索引（0, 1, 1.5, 2, 3, 4）
+  // 当前显示的段落索引（0, 1, 1.5, 2, 3, 4, 5）
   const [currentSegment, setCurrentSegment] = useState<number>(0);
+
+  // 计算今年咖啡豆总花费
+  const totalCost = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return beans
+      .filter(bean => new Date(bean.timestamp).getFullYear() === currentYear)
+      .reduce((sum, bean) => {
+        // 解析价格字符串，支持 "98", "¥98", "98元" 等格式
+        const priceStr = bean.price || '0';
+        const price = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+        return sum + price;
+      }, 0);
+  }, [beans]);
 
   return (
     <div ref={containerRef} className="h-full w-full pt-32">
@@ -74,7 +88,18 @@ const IntroScreen: React.FC<BeanScreenProps> = ({
         />
       )}
       {currentSegment === 4 && (
-        <SegmentGrid beans={beans} onComplete={onComplete} blurRef={blurRef} />
+        <SegmentGrid
+          beans={beans}
+          onComplete={() => setCurrentSegment(5)}
+          blurRef={blurRef}
+        />
+      )}
+      {currentSegment === 5 && (
+        <SegmentCost
+          totalCost={totalCost}
+          onComplete={onComplete}
+          blurRef={blurRef}
+        />
       )}
     </div>
   );

@@ -8,15 +8,18 @@ import { X } from 'lucide-react';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { Storage } from '@/lib/core/storage';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
 import {
   TOTAL_SCREENS,
+  PROGRESS_SCREENS,
   WELCOME_THEME,
   SCREEN_THEMES,
   ENDING_THEME,
+  REPORT_THEME,
   SCREEN_DURATIONS,
 } from './constants';
 import { useColorTransition } from './hooks';
@@ -49,6 +52,9 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
 
   // 获取咖啡豆数据
   const beans = useCoffeeBeanStore(state => state.beans);
+
+  // 获取冲煮笔记数据
+  const notes = useBrewingNoteStore(state => state.notes);
 
   // 提取有图片的咖啡豆图片列表（最少 5 张，不足时重复）
   const beanImages = useMemo(() => {
@@ -172,8 +178,10 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
   // 根据当前屏幕选择主题颜色
   const getCurrentTheme = () => {
     if (!hasStarted) return WELCOME_THEME;
-    // 最后一屏使用结束主题（蓝色）
-    if (currentScreen === TOTAL_SCREENS - 1) return ENDING_THEME;
+    // 最后一屏使用报告主题（咖啡棕）
+    if (currentScreen === TOTAL_SCREENS - 1) return REPORT_THEME;
+    // 倒数第二屏使用结束主题（蓝色）
+    if (currentScreen === TOTAL_SCREENS - 2) return ENDING_THEME;
     // 其他屏幕使用对应主题
     return SCREEN_THEMES[currentScreen] || WELCOME_THEME;
   };
@@ -270,16 +278,16 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
                 </motion.button>
               </div>
 
-              {/* 进度条区域 - 仅在开始后显示，结束页不显示，带淡入动画 */}
+              {/* 进度条区域 - 仅在开始后显示，结束页和报告页不显示，带淡入动画 */}
               <AnimatePresence>
-                {hasStarted && currentScreen !== TOTAL_SCREENS - 1 && (
+                {hasStarted && currentScreen < PROGRESS_SCREENS && (
                   <motion.div
                     className="relative z-10 mt-3 flex gap-1 px-4"
                     initial={{ opacity: 0, filter: 'blur(8px)' }}
                     animate={{ opacity: 1, filter: 'blur(0px)' }}
                     transition={{ duration: 0.4, ease: 'easeOut' }}
                   >
-                    {Array.from({ length: TOTAL_SCREENS - 1 }).map(
+                    {Array.from({ length: PROGRESS_SCREENS }).map(
                       (_, index) => (
                         <div
                           key={index}
@@ -309,9 +317,9 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
                 )}
               </AnimatePresence>
 
-              {/* 标识区域 - 仅在开始后显示，结束页不显示，带淡入动画 */}
+              {/* 标识区域 - 仅在开始后显示，结束页和报告页不显示，带淡入动画 */}
               <AnimatePresence>
-                {hasStarted && currentScreen !== TOTAL_SCREENS - 1 && (
+                {hasStarted && currentScreen < PROGRESS_SCREENS && (
                   <motion.div
                     className="relative z-10 mt-1 flex items-center justify-between px-4 text-lg font-medium text-neutral-100"
                     initial={{ opacity: 0, filter: 'blur(8px)' }}
@@ -342,12 +350,13 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
                     beanImages={beanImages}
                     totalWeight={totalWeight}
                     beans={beans}
+                    notes={notes}
                   />
                 </AnimatePresence>
               </div>
 
-              {/* 底部导航区域 - 点击左右切换（仅在开始后且非结束页显示） */}
-              {hasStarted && currentScreen !== TOTAL_SCREENS - 1 && (
+              {/* 底部导航区域 - 点击左右切换（仅在开始后且在进度屏幕内显示） */}
+              {hasStarted && currentScreen < PROGRESS_SCREENS && (
                 <div className="absolute inset-x-0 top-24 bottom-0 z-20 flex">
                   {/* 左侧点击区域 - 上一屏 */}
                   <button

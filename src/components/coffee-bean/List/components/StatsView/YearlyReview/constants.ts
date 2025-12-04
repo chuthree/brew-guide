@@ -1,18 +1,25 @@
 import type { ColorTuple, ScreenTheme } from './types';
 
-// 预设屏幕总数（当前预览版只有 8 个屏幕）
-export const TOTAL_SCREENS = 9;
+// 预设屏幕总数（当前预览版有 12 个屏幕，最后2个不计入进度条）
+export const TOTAL_SCREENS = 12;
 
 // 每个屏幕的动画时长（秒），用于进度条同步
-// Screen 0 (IntroScreen): SegmentTitle(3.0) + SegmentHeadline(3.5) + SegmentImages(2.2) + SegmentReview(3.5) + SegmentWeight(3.5) + SegmentGrid(3.5) ≈ 19s
+// Screen 0 (IntroScreen): SegmentTitle(3.0) + SegmentHeadline(3.5) + SegmentImages(2.2) + SegmentReview(3.5) + SegmentWeight(3.5) + SegmentGrid(3.5) + SegmentCost(3.5) ≈ 22.5s
 // Screen 1 (FavoriteRoasterScreen): Segment1(3.0) + Segment2(2.8) ≈ 5.8s
 // Screen 2 (CategoryFlowScreen): 图片流动画 ≈ 5s
-// Screen 3 (OriginCategoryScreen): 产地统计 ≈ 3s
-// Screen 4 (VarietyCategoryScreen): 品种统计 ≈ 3s
-// Screen 5 (ProcessCategoryScreen): 处理法统计 ≈ 3s
-// Screen 6 (OriginDetailScreen): Headline(3.5) + Consumption(3.5) ≈ 7s
-// Screen 7 (VarietyDetailScreen): Headline(3.5) + Consumption(3.5) ≈ 7s
-export const SCREEN_DURATIONS = [19, 5.8, 5, 3, 3, 3, 7, 7];
+// Screen 3 (InsightScreen): ExploreStats ≈ 4.5s (数字滚动需要足够时间展示)
+// Screen 4 (OriginCategoryScreen): 产地统计 ≈ 3s
+// Screen 5 (VarietyCategoryScreen): 品种统计 ≈ 3s
+// Screen 6 (ProcessCategoryScreen): 处理法统计 ≈ 3s
+// Screen 7 (BrewTimeScreen - earliest): 最早冲咖啡时间 ≈ 4.5s
+// Screen 8 (BrewTimeScreen - latest): 最晚冲咖啡时间 ≈ 4.5s
+// Screen 9 (SummaryScreen): 年度总结 ≈ 18s
+// Screen 10 (EndingScreen): 结束过渡页 - 不计入进度条
+// Screen 11 (ReportScreen): 年度报告页 - 不计入进度条
+export const SCREEN_DURATIONS = [22.5, 5.8, 5, 4.5, 3, 3, 3, 4.5, 4.5, 18];
+
+// 进度条显示的屏幕数量（不包含结束页和报告页）
+export const PROGRESS_SCREENS = 10;
 
 // 欢迎页主题 - 清新的薄荷青绿
 export const WELCOME_THEME: ScreenTheme = {
@@ -24,6 +31,12 @@ export const WELCOME_THEME: ScreenTheme = {
 export const ENDING_THEME: ScreenTheme = {
   colors: ['#0984E3', '#74B9FF', '#0652DD', '#A3D8F4'],
   accent: '#0984E3',
+};
+
+// 年度报告主题 - Cloud Dancer 宁静白色
+export const REPORT_THEME: ScreenTheme = {
+  colors: ['#EEEDE6', '#E5E4DD', '#D8D7D0', '#F5F4ED'],
+  accent: '#EEEDE6',
 };
 
 // 每个屏幕的主题渐变配置 - 水果风味色系，鲜艳活泼
@@ -64,14 +77,19 @@ export const SCREEN_THEMES: ScreenTheme[] = [
     accent: '#FF5252',
   },
   {
-    // 🍇 葡萄 - 优雅的紫罗兰
-    colors: ['#9C27B0', '#BA68C8', '#AB47BC', '#E1BEE7'],
-    accent: '#9C27B0',
+    // 🌅 日出 - 最早冲咖啡，温暖的晨曦
+    colors: ['#FF8C42', '#FFD166', '#F4A261', '#FFBE76'],
+    accent: '#FF8C42',
   },
   {
-    // 🌴 热带水果 - 芒果凤梨的热情
-    colors: ['#FF6F00', '#FFB300', '#FFA000', '#FFE082'],
-    accent: '#FF6F00',
+    // 🌙 星夜 - 最晚冲咖啡，深邃的午夜蓝
+    colors: ['#1E3A5F', '#3D5A80', '#293241', '#457B9D'],
+    accent: '#3D5A80',
+  },
+  {
+    // 🩶 高级灰 - 年度总结，简约质感
+    colors: ['#4a4a4a', '#5c5c5c', '#3d3d3d', '#6e6e6e'],
+    accent: '#4a4a4a',
   },
   {
     // 🍒 樱桃 - 甜蜜收尾的深红

@@ -4,22 +4,19 @@ import React, { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
-interface SegmentConsumptionProps {
-  amount: number;
-  unit: string;
-  label: string;
+interface SegmentTopOriginProps {
+  originName: string;
+  originImages: string[];
   onComplete?: () => void;
   blurRef?: React.RefObject<SVGFEGaussianBlurElement | null>;
 }
 
 /**
- * 消耗量展示 - 左上角标题 + 中间大字滚动
- * 复用 IntroScreen SegmentWeight 的设计
+ * 综合洞察 - 最爱产地
+ * 复用 SegmentWeight 的设计：左上角文案 + 超大产地名横向滚动
  */
-const SegmentConsumption: React.FC<SegmentConsumptionProps> = ({
-  amount,
-  unit,
-  label,
+const SegmentTopOrigin: React.FC<SegmentTopOriginProps> = ({
+  originName,
   onComplete,
   blurRef,
 }) => {
@@ -28,8 +25,6 @@ const SegmentConsumption: React.FC<SegmentConsumptionProps> = ({
   const bigTextRef = useRef<HTMLDivElement>(null);
   const lastXRef = useRef<number>(0);
   const velocityRef = useRef<number>(0);
-
-  const formattedAmount = Math.round(amount).toLocaleString();
 
   const updateBlur = () => {
     if (!labelRef.current || !blurRef?.current) return;
@@ -85,7 +80,7 @@ const SegmentConsumption: React.FC<SegmentConsumptionProps> = ({
           },
         });
 
-      // 超大文字动画 - 从屏幕右侧边缘匀速滚动到完全离开左侧
+      // 超大产地名动画 - 从屏幕右侧边缘匀速滚动到完全离开左侧
       gsap.fromTo(
         bigTextRef.current,
         { x: '100%', opacity: 1 },
@@ -107,20 +102,19 @@ const SegmentConsumption: React.FC<SegmentConsumptionProps> = ({
         ref={labelRef}
         className="absolute top-12 left-0 flex flex-col pl-4 text-white"
         style={{
-          filter: 'url(#motion-blur-origin)',
+          filter: 'url(#insight-motion-blur)',
           willChange: 'transform, opacity',
         }}
       >
         <span className="text-[3rem] leading-tight font-bold tracking-tight">
-          {label}
+          你最爱的风味
         </span>
         <span className="text-[3rem] leading-tight font-bold tracking-tight">
-          {formattedAmount}
-          {unit}
+          来自
         </span>
       </div>
 
-      {/* 超大重量文字 - 从右到左匀速滚动 */}
+      {/* 超大产地名 - 从右到左匀速滚动 */}
       <div
         ref={bigTextRef}
         className="absolute flex items-center whitespace-nowrap"
@@ -134,17 +128,16 @@ const SegmentConsumption: React.FC<SegmentConsumptionProps> = ({
         <span
           className="font-bold tracking-tighter text-white"
           style={{
-            fontSize: 'clamp(200px, 55vw, 320px)',
+            fontSize: 'clamp(120px, 40vw, 240px)',
             lineHeight: 0.85,
             textShadow: '0 4px 30px rgba(0,0,0,0.3)',
           }}
         >
-          {formattedAmount}
-          {unit}
+          {originName}
         </span>
       </div>
     </div>
   );
 };
 
-export default SegmentConsumption;
+export default SegmentTopOrigin;

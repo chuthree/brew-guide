@@ -109,7 +109,7 @@ const YearlyReviewPreviewCard: React.FC<YearlyReviewPreviewCardProps> = ({
       <div className="relative z-1 flex h-full items-center px-4">
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-bold tracking-tight text-white">
-            Replay'{String(currentYear).slice(-2)} / Preview
+            Replay'{String(currentYear).slice(-2)}
           </span>
         </div>
       </div>

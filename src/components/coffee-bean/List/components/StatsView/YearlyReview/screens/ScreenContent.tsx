@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CoffeeBean } from '@/types/app';
+import type { BrewingNote } from '@/lib/core/config';
 import WelcomeScreen from './WelcomeScreen';
 import IntroScreen from './IntroScreen';
 import BeanCategoryScreen from './BeanCategoryScreen';
@@ -11,9 +12,11 @@ import OriginCategoryScreen from './OriginCategoryScreen';
 import VarietyCategoryScreen from './VarietyCategoryScreen';
 import ProcessCategoryScreen from './ProcessCategoryScreen';
 import FavoriteRoasterScreen from './FavoriteRoasterScreen';
-import OriginDetailScreen from './OriginDetailScreen';
-import VarietyDetailScreen from './VarietyDetailScreen';
+import BrewTimeScreen from './BrewTimeScreen';
+import InsightScreen from './InsightScreen';
+import SummaryScreen from './SummaryScreen';
 import EndingScreen from './EndingScreen';
+import ReportScreen from './ReportScreen';
 
 interface ScreenContentProps {
   screenIndex: number;
@@ -25,6 +28,7 @@ interface ScreenContentProps {
   beanImages: string[];
   totalWeight: number;
   beans: CoffeeBean[];
+  notes: BrewingNote[];
 }
 
 /**
@@ -40,6 +44,7 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
   beanImages,
   totalWeight,
   beans,
+  notes,
 }) => {
   // 滑动变体动画
   const variants = {
@@ -92,7 +97,7 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
         );
       case 3:
         return (
-          <OriginCategoryScreen
+          <InsightScreen
             beanImages={beanImages}
             totalWeight={totalWeight}
             beans={beans}
@@ -101,7 +106,7 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
         );
       case 4:
         return (
-          <VarietyCategoryScreen
+          <OriginCategoryScreen
             beanImages={beanImages}
             totalWeight={totalWeight}
             beans={beans}
@@ -110,7 +115,7 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
         );
       case 5:
         return (
-          <ProcessCategoryScreen
+          <VarietyCategoryScreen
             beanImages={beanImages}
             totalWeight={totalWeight}
             beans={beans}
@@ -119,7 +124,7 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
         );
       case 6:
         return (
-          <OriginDetailScreen
+          <ProcessCategoryScreen
             beanImages={beanImages}
             totalWeight={totalWeight}
             beans={beans}
@@ -128,15 +133,32 @@ const ScreenContent: React.FC<ScreenContentProps> = ({
         );
       case 7:
         return (
-          <VarietyDetailScreen
-            beanImages={beanImages}
-            totalWeight={totalWeight}
+          <BrewTimeScreen
+            notes={notes}
             beans={beans}
+            beanImages={beanImages}
+            type="earliest"
             onComplete={onNextScreen}
           />
         );
       case 8:
-        return <EndingScreen onReplay={onReplay} />;
+        return (
+          <BrewTimeScreen
+            notes={notes}
+            beans={beans}
+            beanImages={beanImages}
+            type="latest"
+            onComplete={onNextScreen}
+          />
+        );
+      case 9:
+        return <SummaryScreen beans={beans} onComplete={onNextScreen} />;
+      case 10:
+        return (
+          <EndingScreen onReplay={onReplay} onGenerateReport={onNextScreen} />
+        );
+      case 11:
+        return <ReportScreen beans={beans} notes={notes} onReplay={onReplay} />;
       default:
         return (
           <div className="flex h-full items-center justify-center">

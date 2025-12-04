@@ -52,6 +52,7 @@ export const APP_DATA_KEYS = [
   'customFlavorDimensions', // 自定义风味维度
   'flavorDimensionHistoricalLabels', // 风味维度历史标签
   'backupReminderSettings', // 备份提醒设置
+  'yearlyReports', // 年度报告
 ];
 
 /**

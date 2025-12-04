@@ -1,23 +1,26 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { RotateCcw } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import type { ScreenProps } from '../types';
 
 interface EndingScreenProps extends ScreenProps {
   onReplay?: () => void;
+  onGenerateReport?: () => void;
 }
 
 /**
- * 结束屏幕 - 感谢页面，带重播按钮
+ * 结束屏幕 - 过渡页面，提供重播和生成报告选项
  */
-const EndingScreen: React.FC<EndingScreenProps> = ({ onReplay }) => {
+const EndingScreen: React.FC<EndingScreenProps> = ({
+  onReplay,
+  onGenerateReport,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonsRef = useRef<HTMLDivElement>(null);
   const blurRef = useRef<SVGFEGaussianBlurElement>(null);
   const [isExiting, setIsExiting] = useState(false);
 
@@ -52,7 +55,7 @@ const EndingScreen: React.FC<EndingScreenProps> = ({ onReplay }) => {
     if (
       titleRef.current &&
       contentRef.current &&
-      buttonRef.current &&
+      buttonsRef.current &&
       blurRef.current
     ) {
       activeElementRef.current = titleRef.current;
@@ -69,7 +72,7 @@ const EndingScreen: React.FC<EndingScreenProps> = ({ onReplay }) => {
       });
 
       // 所有元素同时向左滑出
-      tl.to([titleRef.current, contentRef.current, buttonRef.current], {
+      tl.to([titleRef.current, contentRef.current, buttonsRef.current], {
         x: '-120%',
         opacity: 0,
         duration: 0.5,
@@ -81,13 +84,19 @@ const EndingScreen: React.FC<EndingScreenProps> = ({ onReplay }) => {
     }
   };
 
+  // 处理生成报告按钮点击
+  const handleGenerateReport = () => {
+    if (isExiting) return;
+    onGenerateReport?.();
+  };
+
   // 入场动画
   useGSAP(
     () => {
-      if (!titleRef.current || !contentRef.current || !buttonRef.current)
+      if (!titleRef.current || !contentRef.current || !buttonsRef.current)
         return;
 
-      gsap.set([titleRef.current, contentRef.current, buttonRef.current], {
+      gsap.set([titleRef.current, contentRef.current, buttonsRef.current], {
         opacity: 0,
         y: 20,
       });
@@ -111,7 +120,7 @@ const EndingScreen: React.FC<EndingScreenProps> = ({ onReplay }) => {
           '-=0.2'
         )
         .to(
-          buttonRef.current,
+          buttonsRef.current,
           {
             opacity: 1,
             y: 0,
@@ -127,7 +136,7 @@ const EndingScreen: React.FC<EndingScreenProps> = ({ onReplay }) => {
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden px-8"
+      className="absolute inset-0 flex flex-col items-center overflow-hidden px-8"
     >
       {/* SVG 滤镜定义 - 用于运动模糊 */}
       <svg className="absolute h-0 w-0" aria-hidden="true">
@@ -148,10 +157,10 @@ const EndingScreen: React.FC<EndingScreenProps> = ({ onReplay }) => {
         </defs>
       </svg>
 
-      {/* 感谢标题 */}
+      {/* 感谢标题 - 居中 */}
       <div
         ref={titleRef}
-        className="mb-6 text-center text-xl leading-tight font-bold tracking-tight text-white"
+        className="absolute top-1/2 -translate-y-1/2 text-center text-2xl leading-tight font-bold tracking-tight text-white"
         style={{
           filter: 'url(#ending-motion-blur)',
           willChange: 'transform, opacity',
@@ -160,32 +169,33 @@ const EndingScreen: React.FC<EndingScreenProps> = ({ onReplay }) => {
         感谢你的支持!
       </div>
 
-      {/* 说明内容 */}
-      <div
-        ref={contentRef}
-        className="mb-10 flex flex-col items-center gap-4 text-center"
-        style={{
-          filter: 'url(#ending-motion-blur)',
-          willChange: 'transform, opacity',
-        }}
-      >
-        <p className="text-base leading-relaxed text-white">
-          这只是预览版，完整版将在今年晚些推出～
-        </p>
-      </div>
+      {/* 隐藏的内容区域（保持动画引用） */}
+      <div ref={contentRef} className="hidden" />
 
-      {/* 重播按钮 */}
-      <button
-        ref={buttonRef}
-        onClick={handleReplay}
-        className="flex items-center gap-2 rounded-full bg-white/20 px-8 py-4 text-lg font-medium text-white backdrop-blur-sm hover:bg-white/30 active:scale-95"
+      {/* 按钮区域 - 底部 */}
+      <div
+        ref={buttonsRef}
+        className="pb-safe absolute right-0 bottom-12 left-0 flex flex-col items-center gap-3"
         style={{
           willChange: 'transform, opacity',
         }}
       >
-        <RotateCcw size={20} />
-        重新播放
-      </button>
+        {/* 生成报告按钮 - 主按钮 */}
+        <button
+          onClick={handleGenerateReport}
+          className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-base font-medium text-neutral-800 active:scale-95"
+        >
+          生成年度报告
+        </button>
+
+        {/* 重播按钮 - 纯文字 */}
+        <button
+          onClick={handleReplay}
+          className="text-sm text-white/60 active:scale-95"
+        >
+          重新播放
+        </button>
+      </div>
     </div>
   );
 };
