@@ -71,8 +71,8 @@ interface UseGreenBeanStatsDataResult {
 // ============================================================================
 
 /** 解析数字字段 */
-const parseNum = (value: string | number | undefined): number => {
-  if (value === undefined) return 0;
+const parseNum = (value: string | number | undefined | null): number => {
+  if (value === undefined || value === null) return 0;
   const parsed = parseFloat(value.toString().replace(/[^\d.]/g, ''));
   return isNaN(parsed) ? 0 : parsed;
 };
