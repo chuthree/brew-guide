@@ -12,8 +12,42 @@ const PORT = process.env.PORT || 3100;
 // ==================== Rate Limiting ====================
 const RATE_LIMIT_CONFIG = {
   windowMs: 60 * 1000, // 1 分钟
-  maxRequests: 10, // 每个 IP 最多 10 次请求
+  maxRequests: 30, // 每个 IP 最多 30 次请求（支持批量图片识别）
 };
+
+// ==================== 并发控制 ====================
+// 限制同时处理的 AI 请求数，避免服务器过载
+const MAX_CONCURRENT_AI_REQUESTS = 3;
+let currentAIRequests = 0;
+const aiRequestQueue = [];
+
+/**
+ * 获取 AI 请求许可（简单的信号量实现）
+ */
+function acquireAISlot() {
+  return new Promise(resolve => {
+    const tryAcquire = () => {
+      if (currentAIRequests < MAX_CONCURRENT_AI_REQUESTS) {
+        currentAIRequests++;
+        resolve();
+      } else {
+        aiRequestQueue.push(tryAcquire);
+      }
+    };
+    tryAcquire();
+  });
+}
+
+/**
+ * 释放 AI 请求许可
+ */
+function releaseAISlot() {
+  currentAIRequests--;
+  if (aiRequestQueue.length > 0) {
+    const next = aiRequestQueue.shift();
+    next();
+  }
+}
 
 // 年度报告专用限流配置（更严格）
 const YEARLY_REPORT_RATE_LIMIT = {
@@ -120,32 +154,33 @@ function yearlyReportRateLimiter(req, res, next) {
 }
 
 // ==================== AI 提示词配置 ====================
-const AI_PROMPT = `请仔细识别图片中的咖啡豆包装信息，提取所有可见文字，返回JSON格式。
+const AI_PROMPT = `你是咖啡豆包装信息提取专家。仔细阅读图片中所有文字，提取咖啡豆信息并返回JSON。
 
-## 必填字段
-- name: 品牌+产品名(如"西可咖啡 洪都拉斯水洗瑰夏")
+## 输出格式
+{
+  "name": "品牌 产品名",
+  "blendComponents": [{"origin": "产地", "process": "处理法", "variety": "品种"}],
+  "flavor": ["风味1", "风味2"],
+  "roastLevel": "烘焙度",
+  "roastDate": "YYYY-MM-DD",
+  "capacity": 数字,
+  "price": 数字,
+  "beanType": "filter|espresso|omni",
+  "notes": "其他信息"
+}
 
-## 重要字段(图片中有就必须提取)
-- blendComponents: 咖啡豆成分数组，每个成分包含:
-  - origin: 产地/产区(如"哥伦比亚""埃塞俄比亚 耶加雪菲")
-  - process: 处理法(如"水洗""日晒""蜜处理")
-  - variety: 品种(如"瑰夏""铁皮卡""波旁")
-- flavor: 风味描述数组(如["柑橘","蜂蜜","花香"])
+## 字段说明
+- name: 必填，格式"烘焙商 豆名"如"少数派 花月夜"
+- blendComponents: 产地/处理法/品种，如{"origin":"埃塞俄比亚","process":"日晒","variety":"原生种"}
+- flavor: 风味描述数组，如["柑橘","蜂蜜","花香"]
 - roastLevel: 极浅烘焙|浅度烘焙|中浅烘焙|中度烘焙|中深烘焙|深度烘焙
-- roastDate: 烘焙日期 YYYY-MM-DD格式(年份没有则默认2025)
-
-## 可选字段
-- capacity: 容量克数(纯数字)
-- price: 价格(纯数字)
-- beanType: espresso|filter|omni
-- notes: 庄园名/处理站/海拔等补充信息
+- roastDate: 仅图片有明确日期时填写，缺年份补2025，无日期则不填此字段
+- capacity/price: 纯数字不带单位
 
 ## 规则
-1. 仔细阅读包装上所有文字
-2. 产地、处理法、品种信息放入blendComponents
-3. 数值不带单位
-4. 不确定的信息不要编造
-5. 直接返回JSON`;
+1. 只提取图片中明确可见的信息
+2. 没有的字段不要填写，不要编造
+3. 直接返回JSON，不要markdown包裹`;
 
 // 年度报告 AI 提示词
 const YEARLY_REPORT_PROMPT = `你是一位专业的咖啡品鉴师和文案作家。请根据用户一年的咖啡消费数据，撰写一份温暖、有趣、个性化的年度咖啡报告。
@@ -181,7 +216,38 @@ const AI_CONFIG = {
   temperature: 0.1,
   maxTokens: 1000,
   timeout: 120000,
+  maxRetries: 2, // 最大重试次数
+  retryDelay: 1000, // 重试间隔（毫秒）
 };
+
+/**
+ * 带重试的 axios 请求
+ */
+async function axiosWithRetry(config, retries = AI_CONFIG.maxRetries) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await axios(config);
+    } catch (error) {
+      const isLastAttempt = attempt === retries;
+      const isRetryable =
+        error.code === 'ECONNRESET' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ECONNABORTED' ||
+        (error.response && error.response.status >= 500);
+
+      if (isLastAttempt || !isRetryable) {
+        throw error;
+      }
+
+      console.log(
+        `⚠️ 请求失败，${AI_CONFIG.retryDelay}ms 后重试 (${attempt + 1}/${retries})...`
+      );
+      await new Promise(r =>
+        setTimeout(r, AI_CONFIG.retryDelay * (attempt + 1))
+      );
+    }
+  }
+}
 
 // 年度报告 AI 配置（使用 DeepSeek-V3 非思考模式，更有创意）
 const YEARLY_REPORT_AI_CONFIG = {
@@ -381,8 +447,15 @@ app.post(
   rateLimiter,
   upload.single('image'),
   async (req, res) => {
+    // 获取 AI 请求许可（并发控制）
+    await acquireAISlot();
+    console.log(
+      `📊 当前 AI 并发: ${currentAIRequests}/${MAX_CONCURRENT_AI_REQUESTS}, 队列: ${aiRequestQueue.length}`
+    );
+
     try {
       if (!req.file) {
+        releaseAISlot();
         return res.status(400).json({
           error: '请上传图片文件',
         });
@@ -520,14 +593,17 @@ app.post(
         );
         console.log('✅ 响应已发送\n');
 
+        // 释放 AI 请求许可
+        releaseAISlot();
         return; // 流式响应完成，提前返回
       }
 
       // 非流式响应（向后兼容）
       console.log('📦 使用标准响应模式');
-      const response = await axios.post(
-        AI_CONFIG.baseURL,
-        {
+      const response = await axiosWithRetry({
+        method: 'post',
+        url: AI_CONFIG.baseURL,
+        data: {
           model: AI_CONFIG.model,
           messages: [
             {
@@ -550,16 +626,14 @@ app.post(
           max_tokens: AI_CONFIG.maxTokens,
           response_format: { type: 'json_object' },
         },
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: AI_CONFIG.timeout,
-          maxContentLength: 50 * 1024 * 1024,
-          maxBodyLength: 50 * 1024 * 1024,
-        }
-      );
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: AI_CONFIG.timeout,
+        maxContentLength: 50 * 1024 * 1024,
+        maxBodyLength: 50 * 1024 * 1024,
+      });
 
       const aiDuration = Date.now() - aiStartTime;
       console.log(
@@ -688,7 +762,13 @@ app.post(
         `⏱️  总耗时: ${totalDuration}ms (${(totalDuration / 1000).toFixed(1)}s)`
       );
       console.log('✅ 响应已发送\n');
+
+      // 释放 AI 请求许可
+      releaseAISlot();
     } catch (error) {
+      // 释放 AI 请求许可
+      releaseAISlot();
+
       console.error('❌ 识别失败:', error.message);
       console.error('错误堆栈:', error.stack);
 

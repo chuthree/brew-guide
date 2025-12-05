@@ -2,6 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 
+// 开关：设置为 false 禁用开发工具
+const ENABLE_DEV_TOOLS = false;
+
 /**
  * 开发工具组件
  * 仅在开发环境下启用 react-scan 和 stats.js
@@ -10,8 +13,8 @@ export function DevTools() {
   const statsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // 仅在开发环境下运行
-    if (process.env.NODE_ENV !== 'development') return;
+    // 仅在开发环境下运行，且开关开启
+    if (process.env.NODE_ENV !== 'development' || !ENABLE_DEV_TOOLS) return;
 
     let stats: InstanceType<typeof import('stats.js').default> | null = null;
     let animationId: number;
@@ -71,8 +74,8 @@ export function DevTools() {
     };
   }, []);
 
-  // 仅在开发环境下渲染
-  if (process.env.NODE_ENV !== 'development') {
+  // 仅在开发环境下且开关开启时渲染
+  if (process.env.NODE_ENV !== 'development' || !ENABLE_DEV_TOOLS) {
     return null;
   }
 

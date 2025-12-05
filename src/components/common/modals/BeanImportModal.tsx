@@ -65,7 +65,22 @@ const BEAN_RECOGNITION_PROMPT = `提取图片中的咖啡豆信息,直接返回J
 规则: 数值不带单位/不编造/不确定不填/直接返回JSON`;
 
 // 步骤类型定义
-type ImportStep = 'main' | 'json-input' | 'recognizing';
+type ImportStep = 'main' | 'json-input' | 'recognizing' | 'multi-preview';
+
+// 最大同时选择图片数
+const MAX_IMAGES = 5;
+// 最大并发识别数（服务器已优化并发控制，可提高到 5）
+const MAX_CONCURRENT = 5;
+
+// 单张图片的识别状态
+interface ImageRecognitionState {
+  id: string;
+  file: File;
+  previewUrl: string;
+  status: 'pending' | 'processing' | 'success' | 'error';
+  result?: unknown;
+  error?: string;
+}
 
 // 扫描线动画组件
 // 四角边框装饰组件
@@ -148,6 +163,12 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   const [clipboardStatus, setClipboardStatus] = useState<'idle' | 'error'>(
     'idle'
   );
+  // 多图选择状态
+  const [selectedImages, setSelectedImages] = useState<ImageRecognitionState[]>(
+    []
+  );
+  // 多图识别是否正在进行
+  const [isMultiRecognizing, setIsMultiRecognizing] = useState(false);
 
   // 返回主界面
   const goBackToMain = useCallback(() => {
@@ -158,13 +179,24 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       URL.revokeObjectURL(recognizingImageUrl);
       setRecognizingImageUrl(null);
     }
+    // 清理多图选择
+    selectedImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
+    setSelectedImages([]);
+    setIsMultiRecognizing(false);
     setIsRecognizing(false);
-  }, [recognizingImageUrl]);
+  }, [recognizingImageUrl, selectedImages]);
 
   // 使用 modalHistory 管理 JSON 输入步骤的返回行为
   useModalHistory({
     id: 'bean-import-json-input',
     isOpen: showForm && currentStep === 'json-input',
+    onClose: goBackToMain,
+  });
+
+  // 使用 modalHistory 管理多图预览步骤的返回行为
+  useModalHistory({
+    id: 'bean-import-multi-preview',
+    isOpen: showForm && currentStep === 'multi-preview',
     onClose: goBackToMain,
   });
 
@@ -175,10 +207,14 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       setCurrentStep('main');
       setJsonInputValue('');
       setIsRecognizing(false);
+      setIsMultiRecognizing(false);
       if (recognizingImageUrl) {
         URL.revokeObjectURL(recognizingImageUrl);
         setRecognizingImageUrl(null);
       }
+      // 清理多图选择
+      selectedImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
+      setSelectedImages([]);
     }
   }, [showForm]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -274,111 +310,137 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }
   }, [handleImportData, clipboardStatus, handleInputJSON]);
 
-  // 处理图片上传识别
+  // 识别单张图片的核心函数
+  const recognizeSingleImage = useCallback(
+    async (
+      file: File,
+      imageUrl: string
+    ): Promise<{ data: unknown; file: File }> => {
+      let beanData: unknown;
+
+      if (USE_MOCK_API) {
+        await new Promise(resolve =>
+          setTimeout(resolve, MOCK_RECOGNITION_DELAY)
+        );
+        beanData = MOCK_BEAN_DATA;
+      } else {
+        const { smartCompress } = await import('@/lib/utils/imageCompression');
+        const compressedFile = await smartCompress(file);
+        const { recognizeBeanImage } = await import(
+          '@/lib/api/beanRecognition'
+        );
+        beanData = await recognizeBeanImage(compressedFile);
+      }
+
+      return { data: beanData, file };
+    },
+    []
+  );
+
+  // 处理图片上传识别（支持单张和多张）
   const handleImageUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
 
-      // 验证文件类型
-      if (!file.type.startsWith('image/')) {
-        showToast({ type: 'error', title: '请上传图片文件' });
+      // 过滤有效图片文件
+      const validFiles: File[] = [];
+      for (let i = 0; i < Math.min(files.length, MAX_IMAGES); i++) {
+        const file = files[i];
+        if (!file.type.startsWith('image/')) {
+          continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          continue;
+        }
+        validFiles.push(file);
+      }
+
+      if (validFiles.length === 0) {
+        showToast({ type: 'error', title: '请上传有效的图片文件' });
         return;
       }
 
-      // 验证文件大小（最大 10MB）
-      if (file.size > 10 * 1024 * 1024) {
-        showToast({ type: 'error', title: '图片大小不能超过 10MB' });
-        return;
-      }
-
-      // 创建图片预览 URL
-      const imageUrl = URL.createObjectURL(file);
-      setRecognizingImageUrl(imageUrl);
-      setCurrentStep('recognizing');
-      setIsRecognizing(true);
-
-      try {
-        let beanData: unknown;
-
-        if (USE_MOCK_API) {
-          // 模拟 API 请求
-          await new Promise(resolve =>
-            setTimeout(resolve, MOCK_RECOGNITION_DELAY)
-          );
-          beanData = MOCK_BEAN_DATA;
-        } else {
-          // 真实 API 请求
-          // 压缩图片
-          const { smartCompress } = await import(
-            '@/lib/utils/imageCompression'
-          );
-          const compressedFile = await smartCompress(file);
-
-          // 识别图片
-          const { recognizeBeanImage } = await import(
-            '@/lib/api/beanRecognition'
-          );
-
-          beanData = await recognizeBeanImage(compressedFile);
-        }
-
-        // 识别成功后，检查是否为单个豆子（非批量），如果是则传递识别图片
-        // 判断条件：不是数组，或者是只有一个元素的数组
-        const isSingleBean =
-          !Array.isArray(beanData) ||
-          (Array.isArray(beanData) && beanData.length === 1);
-        if (isSingleBean && onRecognitionImage) {
-          // 将原始图片文件转换为 base64 并压缩
-          // 使用 Promise 确保图片处理完成后再继续
-          await new Promise<void>(resolve => {
-            const reader = new FileReader();
-            reader.onload = async () => {
-              const base64 = reader.result as string;
-              if (base64) {
-                try {
-                  // 压缩图片，与表单中的压缩参数保持一致
-                  const { compressBase64Image } = await import(
-                    '@/lib/utils/imageCapture'
-                  );
-                  const compressedBase64 = await compressBase64Image(base64, {
-                    maxSizeMB: 0.1, // 100KB
-                    maxWidthOrHeight: 1200,
-                    initialQuality: 0.8,
-                  });
-                  onRecognitionImage(compressedBase64);
-                } catch (error) {
-                  // 压缩失败时使用原图
-                  if (process.env.NODE_ENV === 'development') {
-                    console.error('识别图片压缩失败:', error);
-                  }
-                  onRecognitionImage(base64);
-                }
-              }
-              resolve();
-            };
-            reader.onerror = () => resolve();
-            reader.readAsDataURL(file);
-          });
-        }
-
-        // 清理状态
-        setIsRecognizing(false);
-        URL.revokeObjectURL(imageUrl);
-        setRecognizingImageUrl(null);
-        setCurrentStep('main');
-
-        await handleImportData(beanData);
-      } catch (error) {
-        console.error('图片识别失败:', error);
+      // 如果选择超过限制，提示
+      if (files.length > MAX_IMAGES) {
         showToast({
-          type: 'error',
-          title: error instanceof Error ? error.message : '图片识别失败',
+          type: 'info',
+          title: `最多选择 ${MAX_IMAGES} 张图片`,
         });
-        setIsRecognizing(false);
-        URL.revokeObjectURL(imageUrl);
-        setRecognizingImageUrl(null);
-        setCurrentStep('main');
+      }
+
+      // 单张图片：使用原有的单图流程
+      if (validFiles.length === 1) {
+        const file = validFiles[0];
+        const imageUrl = URL.createObjectURL(file);
+        setRecognizingImageUrl(imageUrl);
+        setCurrentStep('recognizing');
+        setIsRecognizing(true);
+
+        try {
+          const { data: beanData } = await recognizeSingleImage(file, imageUrl);
+
+          // 识别成功后，检查是否为单个豆子，如果是则传递识别图片
+          const isSingleBean =
+            !Array.isArray(beanData) ||
+            (Array.isArray(beanData) && beanData.length === 1);
+          if (isSingleBean && onRecognitionImage) {
+            await new Promise<void>(resolve => {
+              const reader = new FileReader();
+              reader.onload = async () => {
+                const base64 = reader.result as string;
+                if (base64) {
+                  try {
+                    const { compressBase64Image } = await import(
+                      '@/lib/utils/imageCapture'
+                    );
+                    const compressedBase64 = await compressBase64Image(base64, {
+                      maxSizeMB: 0.1,
+                      maxWidthOrHeight: 1200,
+                      initialQuality: 0.8,
+                    });
+                    onRecognitionImage(compressedBase64);
+                  } catch (error) {
+                    if (process.env.NODE_ENV === 'development') {
+                      console.error('识别图片压缩失败:', error);
+                    }
+                    onRecognitionImage(base64);
+                  }
+                }
+                resolve();
+              };
+              reader.onerror = () => resolve();
+              reader.readAsDataURL(file);
+            });
+          }
+
+          setIsRecognizing(false);
+          URL.revokeObjectURL(imageUrl);
+          setRecognizingImageUrl(null);
+          setCurrentStep('main');
+
+          await handleImportData(beanData);
+        } catch (error) {
+          console.error('图片识别失败:', error);
+          showToast({
+            type: 'error',
+            title: error instanceof Error ? error.message : '图片识别失败',
+          });
+          setIsRecognizing(false);
+          URL.revokeObjectURL(imageUrl);
+          setRecognizingImageUrl(null);
+          setCurrentStep('main');
+        }
+      } else {
+        // 多张图片：进入预览模式
+        const imageStates: ImageRecognitionState[] = validFiles.map(file => ({
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          status: 'pending' as const,
+        }));
+        setSelectedImages(imageStates);
+        setCurrentStep('multi-preview');
       }
 
       // 清除文件输入，以便可以再次选择同一文件
@@ -386,8 +448,193 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         fileInputRef.current.value = '';
       }
     },
-    [handleImportData, onRecognitionImage]
+    [handleImportData, onRecognitionImage, recognizeSingleImage]
   );
+
+  // 删除预览中的图片
+  const handleRemoveImage = useCallback((id: string) => {
+    setSelectedImages(prev => {
+      const toRemove = prev.find(img => img.id === id);
+      if (toRemove) {
+        URL.revokeObjectURL(toRemove.previewUrl);
+      }
+      const remaining = prev.filter(img => img.id !== id);
+      // 如果删到只剩一张或没有了，返回主界面
+      if (remaining.length === 0) {
+        setCurrentStep('main');
+      }
+      return remaining;
+    });
+  }, []);
+
+  // 压缩图片为 base64
+  const compressImageToBase64 = useCallback(
+    async (file: File): Promise<string | null> => {
+      return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64 = reader.result as string;
+          if (base64) {
+            try {
+              const { compressBase64Image } = await import(
+                '@/lib/utils/imageCapture'
+              );
+              const compressedBase64 = await compressBase64Image(base64, {
+                maxSizeMB: 0.1,
+                maxWidthOrHeight: 1200,
+                initialQuality: 0.8,
+              });
+              resolve(compressedBase64);
+            } catch (error) {
+              if (process.env.NODE_ENV === 'development') {
+                console.error('图片压缩失败:', error);
+              }
+              resolve(base64);
+            }
+          } else {
+            resolve(null);
+          }
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    },
+    []
+  );
+
+  // 并行识别多张图片（带限流）
+  const handleMultiRecognition = useCallback(async () => {
+    if (selectedImages.length === 0) return;
+
+    setIsMultiRecognizing(true);
+
+    // 创建一个 Promise 队列来控制并发
+    const results: Array<{
+      id: string;
+      data: unknown;
+      imageBase64: string | null;
+      success: boolean;
+    }> = [];
+    const queue = [...selectedImages];
+    const processing: Promise<void>[] = [];
+
+    const processImage = async (img: ImageRecognitionState) => {
+      // 更新状态为处理中
+      setSelectedImages(prev =>
+        prev.map(i => (i.id === img.id ? { ...i, status: 'processing' } : i))
+      );
+
+      try {
+        // 并行执行识别和图片压缩
+        const [{ data }, imageBase64] = await Promise.all([
+          recognizeSingleImage(img.file, img.previewUrl),
+          compressImageToBase64(img.file),
+        ]);
+        // 更新状态为成功
+        setSelectedImages(prev =>
+          prev.map(i =>
+            i.id === img.id ? { ...i, status: 'success', result: data } : i
+          )
+        );
+        results.push({ id: img.id, data, imageBase64, success: true });
+      } catch (error) {
+        // 更新状态为失败
+        setSelectedImages(prev =>
+          prev.map(i =>
+            i.id === img.id
+              ? {
+                  ...i,
+                  status: 'error',
+                  error: error instanceof Error ? error.message : '识别失败',
+                }
+              : i
+          )
+        );
+        results.push({
+          id: img.id,
+          data: null,
+          imageBase64: null,
+          success: false,
+        });
+      }
+    };
+
+    // 使用限流并发
+    while (queue.length > 0 || processing.length > 0) {
+      // 填充到最大并发数
+      while (processing.length < MAX_CONCURRENT && queue.length > 0) {
+        const img = queue.shift()!;
+        const promise = processImage(img).then(() => {
+          // 移除已完成的 promise
+          const index = processing.indexOf(promise);
+          if (index > -1) processing.splice(index, 1);
+        });
+        processing.push(promise);
+      }
+
+      // 等待任意一个完成
+      if (processing.length > 0) {
+        await Promise.race(processing);
+      }
+    }
+
+    setIsMultiRecognizing(false);
+
+    // 统计结果
+    const successResults = results.filter(r => r.success);
+    const failedCount = results.filter(r => !r.success).length;
+
+    if (successResults.length === 0) {
+      showToast({ type: 'error', title: '所有图片识别失败' });
+      return;
+    }
+
+    // 合并所有识别结果，并将图片添加到每个豆子数据中
+    const allBeanData: unknown[] = [];
+    for (const r of successResults) {
+      const addImageToBean = (bean: unknown) => {
+        if (bean && typeof bean === 'object' && r.imageBase64) {
+          return { ...bean, image: r.imageBase64 };
+        }
+        return bean;
+      };
+
+      if (Array.isArray(r.data)) {
+        // 如果一张图识别出多个豆子，只给第一个豆子添加图片
+        r.data.forEach((bean, index) => {
+          allBeanData.push(index === 0 ? addImageToBean(bean) : bean);
+        });
+      } else if (r.data) {
+        allBeanData.push(addImageToBean(r.data));
+      }
+    }
+
+    if (allBeanData.length === 0) {
+      showToast({ type: 'error', title: '未能识别到咖啡豆信息' });
+      return;
+    }
+
+    // 清理
+    selectedImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
+    setSelectedImages([]);
+    setCurrentStep('main');
+
+    // 导入数据
+    await handleImportData(allBeanData);
+
+    // 提示结果
+    if (failedCount > 0) {
+      showToast({
+        type: 'info',
+        title: `成功识别 ${successResults.length} 张，${failedCount} 张失败`,
+      });
+    }
+  }, [
+    selectedImages,
+    recognizeSingleImage,
+    handleImportData,
+    compressImageToBase64,
+  ]);
 
   // 触发图片选择
   const handleUploadImageClick = useCallback(() => {
@@ -611,6 +858,152 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     </>
   );
 
+  // 多图预览界面内容
+  const multiPreviewContent = (
+    <>
+      {/* 图片网格预览 */}
+      <div className="mb-6">
+        <div className="grid grid-cols-3 gap-3">
+          {selectedImages.map(img => (
+            <div
+              key={img.id}
+              className="relative aspect-square overflow-hidden rounded-2xl bg-neutral-100 dark:bg-neutral-800"
+            >
+              <img
+                src={img.previewUrl}
+                alt="预览"
+                className={`h-full w-full object-cover transition-all duration-300 ${
+                  img.status === 'processing'
+                    ? 'scale-[1.02] brightness-90'
+                    : ''
+                } ${img.status === 'success' ? 'brightness-100' : ''} ${
+                  img.status === 'error' ? 'brightness-50 grayscale' : ''
+                }`}
+              />
+
+              {/* 处理中 - 简洁的边框动画 */}
+              {img.status === 'processing' && (
+                <div className="absolute inset-0 rounded-2xl ring-2 ring-neutral-400 ring-offset-1 ring-offset-transparent dark:ring-neutral-500" />
+              )}
+
+              {/* 成功状态 - 右下角小勾 */}
+              {img.status === 'success' && (
+                <div className="absolute right-1.5 bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900/80 dark:bg-white/90">
+                  <svg
+                    className="h-3 w-3 text-white dark:text-neutral-900"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+              )}
+
+              {/* 失败状态 - 右下角小叉 */}
+              {img.status === 'error' && (
+                <div className="absolute right-1.5 bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-500/80">
+                  <svg
+                    className="h-3 w-3 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </div>
+              )}
+
+              {/* 删除按钮 - 仅待处理时显示 */}
+              {!isMultiRecognizing && img.status === 'pending' && (
+                <button
+                  onClick={() => handleRemoveImage(img.id)}
+                  className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900/60 text-white backdrop-blur-sm transition-all hover:bg-neutral-900/80 dark:bg-white/60 dark:text-neutral-900 dark:hover:bg-white/80"
+                >
+                  <svg
+                    className="h-3 w-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 内容区域 */}
+      <ActionDrawer.Content>
+        {isMultiRecognizing ? (
+          <p className="text-neutral-500 dark:text-neutral-400">
+            正在识别
+            <span className="text-neutral-800 dark:text-neutral-200">
+              {' '}
+              {selectedImages.filter(i => i.status === 'success').length}/
+              {selectedImages.length}{' '}
+            </span>
+            张图片...
+          </p>
+        ) : (
+          <p className="text-neutral-500 dark:text-neutral-400">
+            已选择
+            <span className="text-neutral-800 dark:text-neutral-200">
+              {' '}
+              {selectedImages.length}{' '}
+            </span>
+            张，批量导入不进入编辑
+          </p>
+        )}
+      </ActionDrawer.Content>
+
+      {/* 操作按钮 */}
+      <div className="flex gap-2">
+        <motion.button
+          whileTap={isMultiRecognizing ? undefined : { scale: 0.98 }}
+          onClick={goBackToMain}
+          disabled={isMultiRecognizing}
+          className={`flex-1 rounded-full px-4 py-3 text-sm font-medium transition-colors ${
+            isMultiRecognizing
+              ? 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500'
+              : 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-white'
+          }`}
+        >
+          取消
+        </motion.button>
+        <motion.button
+          whileTap={isMultiRecognizing ? undefined : { scale: 0.98 }}
+          onClick={handleMultiRecognition}
+          disabled={isMultiRecognizing}
+          className={`flex-1 rounded-full px-4 py-3 text-sm font-medium transition-colors ${
+            isMultiRecognizing
+              ? 'bg-neutral-200 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
+              : 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+          }`}
+        >
+          {isMultiRecognizing ? '识别中...' : '开始识别'}
+        </motion.button>
+      </div>
+    </>
+  );
+
   // 根据步骤渲染内容
   const renderContent = () => {
     switch (currentStep) {
@@ -618,6 +1011,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         return recognizingContent;
       case 'json-input':
         return jsonInputContent;
+      case 'multi-preview':
+        return multiPreviewContent;
       default:
         return mainContent;
     }
@@ -635,11 +1030,12 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         </ActionDrawer.Switcher>
       </ActionDrawer>
 
-      {/* 隐藏的文件输入 */}
+      {/* 隐藏的文件输入 - 支持多选 */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={handleImageUpload}
       />
