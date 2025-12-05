@@ -6,6 +6,7 @@ import hapticsUtils from '@/lib/ui/haptics';
 import { restoreDefaultThemeColor } from '@/lib/hooks/useThemeColor';
 import { checkForUpdates, saveCheckTime } from '@/lib/utils/versionCheck';
 import UpdateDrawer from './UpdateDrawer';
+import FeedbackDrawer from './FeedbackDrawer';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 import { useTheme } from 'next-themes';
@@ -20,7 +21,7 @@ import {
   Timer,
   Database,
   Bell,
-  ClipboardPen,
+  Lightbulb,
   Shuffle,
   ArrowUpDown,
   Palette,
@@ -411,6 +412,7 @@ const Settings: React.FC<SettingsProps> = ({
 
   // 版本更新检测状态
   const [showUpdateDrawer, setShowUpdateDrawer] = useState(false);
+  const [showFeedbackDrawer, setShowFeedbackDrawer] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<{
     latestVersion: string;
     downloadUrl: string;
@@ -1148,7 +1150,7 @@ const Settings: React.FC<SettingsProps> = ({
           </button>
           <button
             onClick={() => {
-              window.open('https://help.chu3.top/docs/contact', '_blank');
+              setShowFeedbackDrawer(true);
               if (settings.hapticFeedback) {
                 hapticsUtils.light();
               }
@@ -1156,8 +1158,8 @@ const Settings: React.FC<SettingsProps> = ({
             className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
             <div className="flex items-center space-x-3">
-              <ClipboardPen className="h-4 w-4 text-neutral-500" />
-              <span>提交反馈</span>
+              <Lightbulb className="h-4 w-4 text-neutral-500" />
+              <span>想法收集站</span>
             </div>
             <ChevronRight className="h-4 w-4 text-neutral-400" />
           </button>
@@ -1312,6 +1314,13 @@ const Settings: React.FC<SettingsProps> = ({
           releaseNotes={updateInfo.releaseNotes}
         />
       )}
+
+      {/* 反馈建议抽屉 */}
+      <FeedbackDrawer
+        isOpen={showFeedbackDrawer}
+        onClose={() => setShowFeedbackDrawer(false)}
+        hapticFeedback={settings.hapticFeedback}
+      />
     </div>
   );
 };

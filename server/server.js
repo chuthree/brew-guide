@@ -3,8 +3,16 @@ import cors from 'cors';
 import multer from 'multer';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+// ESM 环境下获取 __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -399,9 +407,14 @@ app.use(
         callback(new Error('Not allowed by CORS'));
       }
     },
-    methods: ['POST', 'GET', 'OPTIONS'],
+    methods: ['POST', 'GET', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'x-admin-key',
+    ],
   })
 );
 
@@ -948,6 +961,464 @@ app.post(
     }
   }
 );
+
+// ==================== 反馈建议系统 ====================
+
+// 反馈数据文件路径
+const FEEDBACK_FILE = path.join(__dirname, 'data', 'feedbacks.json');
+
+// 管理员密钥（复用现有的 ADMIN_KEY 环境变量）
+const FEEDBACK_ADMIN_KEY = process.env.ADMIN_KEY || 'brew-guide-admin-2025';
+
+// IP 哈希 salt（保护用户隐私）
+const IP_HASH_SALT = process.env.IP_HASH_SALT || 'brew-guide-salt-2025-secure';
+
+// 反馈提交限流配置
+const FEEDBACK_RATE_LIMIT = {
+  windowMs: 60 * 60 * 1000, // 1 小时
+  maxSubmissions: 5, // 每个 IP 每小时最多提交 5 条
+};
+const feedbackSubmitCounts = new Map();
+
+// 投票限流配置
+const VOTE_RATE_LIMIT = {
+  windowMs: 60 * 1000, // 1 分钟
+  maxVotes: 10, // 每个 IP 每分钟最多投票 10 次
+};
+const voteRateCounts = new Map();
+
+// 清理过期的反馈提交记录
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of feedbackSubmitCounts.entries()) {
+    if (now - data.startTime > FEEDBACK_RATE_LIMIT.windowMs) {
+      feedbackSubmitCounts.delete(ip);
+    }
+  }
+}, FEEDBACK_RATE_LIMIT.windowMs);
+
+// 清理过期的投票记录
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of voteRateCounts.entries()) {
+    if (now - data.startTime > VOTE_RATE_LIMIT.windowMs) {
+      voteRateCounts.delete(ip);
+    }
+  }
+}, VOTE_RATE_LIMIT.windowMs);
+
+/**
+ * 将 IP 地址哈希化（保护隐私）
+ */
+function hashIP(ip) {
+  return crypto
+    .createHash('sha256')
+    .update(ip + IP_HASH_SALT)
+    .digest('hex')
+    .substring(0, 16);
+}
+
+/**
+ * 时间安全的字符串比较（防止时序攻击）
+ */
+function secureCompare(a, b) {
+  if (!a || !b || a.length !== b.length) {
+    // 防止长度信息泄露，仍需执行完整比较
+    const dummy = 'x'.repeat(Math.max(a?.length || 0, b?.length || 0, 32));
+    crypto.timingSafeEqual(Buffer.from(dummy), Buffer.from(dummy));
+    return false;
+  }
+  try {
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 过滤危险内容（XSS 防护）
+ */
+function sanitizeContent(content) {
+  if (typeof content !== 'string') return '';
+  return content
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+/**
+ * 获取客户端 IP
+ */
+function getClientIP(req) {
+  return (
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req.headers['x-real-ip'] ||
+    req.ip ||
+    req.connection?.remoteAddress ||
+    'unknown'
+  );
+}
+
+/**
+ * 确保数据目录和文件存在
+ */
+function ensureFeedbackFile() {
+  const dataDir = path.dirname(FEEDBACK_FILE);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  if (!fs.existsSync(FEEDBACK_FILE)) {
+    fs.writeFileSync(FEEDBACK_FILE, JSON.stringify({ feedbacks: [] }, null, 2));
+  }
+}
+
+/**
+ * 读取反馈数据
+ */
+function readFeedbacks() {
+  ensureFeedbackFile();
+  try {
+    const data = fs.readFileSync(FEEDBACK_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('读取反馈数据失败:', error);
+    return { feedbacks: [] };
+  }
+}
+
+/**
+ * 写入反馈数据
+ */
+function writeFeedbacks(data) {
+  ensureFeedbackFile();
+  fs.writeFileSync(FEEDBACK_FILE, JSON.stringify(data, null, 2));
+}
+
+/**
+ * 生成唯一 ID
+ */
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+}
+
+/**
+ * 反馈提交限流中间件
+ */
+function feedbackRateLimiter(req, res, next) {
+  const ip = getClientIP(req);
+  const ipHash = hashIP(ip);
+  const now = Date.now();
+
+  if (!feedbackSubmitCounts.has(ipHash)) {
+    feedbackSubmitCounts.set(ipHash, { count: 1, startTime: now });
+    return next();
+  }
+
+  const data = feedbackSubmitCounts.get(ipHash);
+
+  if (now - data.startTime > FEEDBACK_RATE_LIMIT.windowMs) {
+    feedbackSubmitCounts.set(ipHash, { count: 1, startTime: now });
+    return next();
+  }
+
+  if (data.count >= FEEDBACK_RATE_LIMIT.maxSubmissions) {
+    const minutesLeft = Math.ceil(
+      (FEEDBACK_RATE_LIMIT.windowMs - (now - data.startTime)) / 60000
+    );
+    return res.status(429).json({
+      error: `提交过于频繁，请 ${minutesLeft} 分钟后再试`,
+    });
+  }
+
+  data.count++;
+  next();
+}
+
+/**
+ * 投票限流中间件
+ */
+function voteRateLimiter(req, res, next) {
+  const ip = getClientIP(req);
+  const ipHash = hashIP(ip);
+  const now = Date.now();
+
+  if (!voteRateCounts.has(ipHash)) {
+    voteRateCounts.set(ipHash, { count: 1, startTime: now });
+    return next();
+  }
+
+  const data = voteRateCounts.get(ipHash);
+
+  if (now - data.startTime > VOTE_RATE_LIMIT.windowMs) {
+    voteRateCounts.set(ipHash, { count: 1, startTime: now });
+    return next();
+  }
+
+  if (data.count >= VOTE_RATE_LIMIT.maxVotes) {
+    return res.status(429).json({ error: '操作过于频繁，请稍后再试' });
+  }
+
+  data.count++;
+  next();
+}
+
+/**
+ * 管理员验证中间件（使用时间安全比较）
+ */
+function adminAuth(req, res, next) {
+  const adminKey = req.headers['x-admin-key'];
+  const clientIP = getClientIP(req);
+
+  if (!secureCompare(adminKey, FEEDBACK_ADMIN_KEY)) {
+    console.warn(`⚠️ 管理员验证失败 - IP: ${clientIP.substring(0, 15)}...`);
+    return res.status(403).json({ error: '无权限操作' });
+  }
+
+  // 记录管理员操作
+  console.log(
+    `🔐 管理员验证成功 - IP: ${clientIP.substring(0, 15)}..., 路径: ${req.path}`
+  );
+  next();
+}
+
+// GET /api/feedbacks - 获取反馈列表
+app.get('/api/feedbacks', (req, res) => {
+  try {
+    const { feedbacks } = readFeedbacks();
+    const clientIP = getClientIP(req);
+    const clientIpHash = hashIP(clientIP);
+
+    // 调试日志
+    console.log(
+      `📋 获取反馈列表 - IP: ${clientIP.substring(0, 10)}..., Hash: ${clientIpHash}`
+    );
+
+    // 返回给用户的数据（隐藏敏感信息，添加是否已投票标记）
+    const publicFeedbacks = feedbacks
+      .filter(f => {
+        // 过滤已删除的
+        if (f.status === 'deleted') return false;
+        // 审核中的只有自己能看到
+        if (f.status === 'pending' && f.ipHash !== clientIpHash) return false;
+        return true;
+      })
+      .map(f => ({
+        id: f.id,
+        content: f.content,
+        votes: f.votes,
+        status: f.status,
+        reply: f.reply,
+        createdAt: f.createdAt,
+        hasVoted: f.votedIpHashes?.includes(clientIpHash) || false,
+        isOwner: f.ipHash === clientIpHash, // 标记是否是自己提交的
+      }))
+      .sort((a, b) => {
+        // 置顶的排在前面
+        if (a.status === 'pinned' && b.status !== 'pinned') return -1;
+        if (b.status === 'pinned' && a.status !== 'pinned') return 1;
+        // 然后按投票数排序
+        return b.votes - a.votes;
+      });
+
+    res.json({ feedbacks: publicFeedbacks });
+  } catch (error) {
+    console.error('获取反馈列表失败:', error);
+    res.status(500).json({ error: '获取反馈失败' });
+  }
+});
+
+// POST /api/feedbacks - 提交新反馈
+app.post('/api/feedbacks', feedbackRateLimiter, express.json(), (req, res) => {
+  try {
+    const { content } = req.body;
+
+    // 验证内容
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ error: '请输入反馈内容' });
+    }
+
+    const trimmedContent = content.trim();
+    if (trimmedContent.length < 5) {
+      return res.status(400).json({ error: '反馈内容至少需要 5 个字符' });
+    }
+    if (trimmedContent.length > 200) {
+      return res.status(400).json({ error: '反馈内容不能超过 200 个字符' });
+    }
+
+    const clientIP = getClientIP(req);
+    const ipHash = hashIP(clientIP);
+
+    const data = readFeedbacks();
+
+    // XSS 防护：过滤危险字符
+    const safeContent = sanitizeContent(trimmedContent);
+
+    const newFeedback = {
+      id: generateId(),
+      content: safeContent,
+      ipHash,
+      votes: 0,
+      votedIpHashes: [],
+      status: 'pending', // pending | open | accepted | rejected | done | pinned | deleted
+      reply: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    data.feedbacks.push(newFeedback);
+    writeFeedbacks(data);
+
+    console.log(`📝 新反馈提交: ${trimmedContent.substring(0, 50)}...`);
+
+    res.status(201).json({
+      success: true,
+      feedback: {
+        id: newFeedback.id,
+        content: newFeedback.content,
+        votes: 0,
+        status: newFeedback.status,
+        createdAt: newFeedback.createdAt,
+        hasVoted: false,
+        isOwner: true,
+      },
+    });
+  } catch (error) {
+    console.error('提交反馈失败:', error);
+    res.status(500).json({ error: '提交反馈失败' });
+  }
+});
+
+// POST /api/feedbacks/:id/vote - 点赞/取消点赞（带限流）
+app.post('/api/feedbacks/:id/vote', voteRateLimiter, (req, res) => {
+  try {
+    const { id } = req.params;
+    const clientIP = getClientIP(req);
+    const ipHash = hashIP(clientIP);
+
+    const data = readFeedbacks();
+    const feedback = data.feedbacks.find(f => f.id === id);
+
+    if (!feedback || feedback.status === 'deleted') {
+      return res.status(404).json({ error: '反馈不存在' });
+    }
+
+    // 初始化投票数组（兼容旧数据）
+    if (!feedback.votedIpHashes) {
+      feedback.votedIpHashes = [];
+    }
+
+    const hasVoted = feedback.votedIpHashes.includes(ipHash);
+
+    if (hasVoted) {
+      // 取消点赞
+      feedback.votedIpHashes = feedback.votedIpHashes.filter(h => h !== ipHash);
+      feedback.votes = Math.max(0, feedback.votes - 1);
+    } else {
+      // 点赞
+      feedback.votedIpHashes.push(ipHash);
+      feedback.votes++;
+    }
+
+    feedback.updatedAt = new Date().toISOString();
+    writeFeedbacks(data);
+
+    res.json({
+      success: true,
+      votes: feedback.votes,
+      hasVoted: !hasVoted,
+    });
+  } catch (error) {
+    console.error('投票失败:', error);
+    res.status(500).json({ error: '投票失败' });
+  }
+});
+
+// PUT /api/feedbacks/:id - 管理员更新反馈（状态/回复）
+app.put('/api/feedbacks/:id', adminAuth, express.json(), (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, reply } = req.body;
+
+    const data = readFeedbacks();
+    const feedback = data.feedbacks.find(f => f.id === id);
+
+    if (!feedback) {
+      return res.status(404).json({ error: '反馈不存在' });
+    }
+
+    // 更新状态
+    if (
+      status &&
+      [
+        'pending',
+        'open',
+        'accepted',
+        'rejected',
+        'done',
+        'pinned',
+        'deleted',
+      ].includes(status)
+    ) {
+      feedback.status = status;
+    }
+
+    // 更新回复（管理员回复也进行安全过滤）
+    if (reply !== undefined) {
+      feedback.reply = sanitizeContent(reply.trim().substring(0, 500));
+    }
+
+    feedback.updatedAt = new Date().toISOString();
+    writeFeedbacks(data);
+
+    console.log(`✏️ 反馈已更新: ${id}, 状态: ${feedback.status}`);
+
+    res.json({ success: true, feedback });
+  } catch (error) {
+    console.error('更新反馈失败:', error);
+    res.status(500).json({ error: '更新反馈失败' });
+  }
+});
+
+// DELETE /api/feedbacks/:id - 管理员删除反馈
+app.delete('/api/feedbacks/:id', adminAuth, (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const data = readFeedbacks();
+    const feedbackIndex = data.feedbacks.findIndex(f => f.id === id);
+
+    if (feedbackIndex === -1) {
+      return res.status(404).json({ error: '反馈不存在' });
+    }
+
+    // 软删除（标记状态）
+    data.feedbacks[feedbackIndex].status = 'deleted';
+    data.feedbacks[feedbackIndex].updatedAt = new Date().toISOString();
+    writeFeedbacks(data);
+
+    console.log(`🗑️ 反馈已删除: ${id}`);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('删除反馈失败:', error);
+    res.status(500).json({ error: '删除反馈失败' });
+  }
+});
+
+// GET /api/feedbacks/admin - 管理员获取完整列表（包含所有信息，但不含已删除）
+app.get('/api/feedbacks/admin', adminAuth, (req, res) => {
+  try {
+    const { feedbacks } = readFeedbacks();
+    // 过滤掉已删除的反馈
+    const activeFeedbacks = feedbacks.filter(f => f.status !== 'deleted');
+    res.json({ feedbacks: activeFeedbacks });
+  } catch (error) {
+    console.error('获取管理员反馈列表失败:', error);
+    res.status(500).json({ error: '获取反馈失败' });
+  }
+});
 
 // 404 处理
 app.use((req, res) => {

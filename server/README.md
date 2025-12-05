@@ -1,12 +1,12 @@
 # Brew Guide API Server
 
-咖啡豆图片识别 API 服务，基于阿里云通义千问 VL 模型。
+咖啡豆图片识别 & 用户反馈 API 服务。
 
 ## 功能
 
-- 📷 上传咖啡豆包装图片
-- 🤖 AI 自动识别并提取咖啡豆信息（品牌、产地、处理法、风味等）
-- 🔒 完善的安全校验（文件类型、魔数验证、文件名检查）
+- 📷 上传咖啡豆包装图片，AI 自动识别并提取咖啡豆信息
+- 💬 用户反馈系统（提交建议、投票、管理员审核）
+- 🔒 完善的安全校验（文件类型、魔数验证、XSS 防护、限流）
 
 ## 快速开始
 
@@ -14,7 +14,7 @@
 
 ```bash
 cd server
-npm install express cors multer axios dotenv
+pnpm install
 ```
 
 ### 2. 配置环境变量
@@ -23,13 +23,18 @@ npm install express cors multer axios dotenv
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，填入你的 API Key：
+编辑 `.env` 文件：
 
-```
+```bash
+# AI 识别 API Key (必填)
 SILICONFLOW_API_KEY=your_api_key_here
-```
 
-> API Key 获取：[阿里云百炼平台](https://bailian.console.aliyun.com/)
+# 反馈系统管理员密钥 (建议修改)
+ADMIN_KEY=your-secure-admin-key
+
+# IP 哈希 salt (建议修改以提高安全性)
+IP_HASH_SALT=your-unique-salt
+```
 
 ### 3. 启动服务
 
@@ -57,27 +62,67 @@ Content-Type: multipart/form-data
 - image: 图片文件 (支持 JPG/PNG/GIF/WebP/HEIC，最大 5MB)
 ```
 
-**响应示例：**
+### 反馈系统
 
-```json
-{
-  "success": true,
-  "data": {
-    "name": "西可咖啡 洪都拉斯水洗瑰夏",
-    "blendComponents": [
-      {
-        "origin": "洪都拉斯",
-        "process": "水洗",
-        "variety": "瑰夏"
-      }
-    ],
-    "flavor": ["柑橘", "蜂蜜", "花香"],
-    "roastLevel": "浅度烘焙",
-    "roastDate": "2025-01-15",
-    "capacity": 200
-  },
-  "timestamp": "2025-01-15T10:30:00.000Z"
-}
+#### 获取反馈列表（公开）
+
+```bash
+GET /api/feedbacks
+```
+
+返回所有已审核的反馈，待审核的反馈仅提交者可见。
+
+#### 提交新反馈
+
+```bash
+POST /api/feedbacks
+Content-Type: application/json
+
+{"content": "建议内容（5-200字符）"}
+```
+
+限流：每个 IP 每小时最多 5 条。
+
+#### 点赞/取消点赞
+
+```bash
+POST /api/feedbacks/:id/vote
+```
+
+限流：每个 IP 每分钟最多 10 次。
+
+#### 管理员：获取全部反馈
+
+```bash
+GET /api/feedbacks/admin
+Header: x-admin-key: <ADMIN_KEY>
+```
+
+#### 管理员：更新反馈状态/回复
+
+```bash
+PUT /api/feedbacks/:id
+Header: x-admin-key: <ADMIN_KEY>
+Content-Type: application/json
+
+{"status": "accepted", "reply": "感谢反馈！"}
+```
+
+状态值：
+
+- `pending` - 审核中（用户提交后默认状态，仅自己可见）
+- `open` - 待处理（审核通过，公开可见）
+- `accepted` - 已采纳（决定会做）
+- `rejected` - 未采纳（决定不做）
+- `done` - 已完成（已实现）
+- `pinned` - 置顶（重要公告）
+- `deleted` - 已删除（软删除）
+
+#### 管理员：删除反馈
+
+```bash
+DELETE /api/feedbacks/:id
+Header: x-admin-key: <ADMIN_KEY>
 ```
 
 ## Docker 部署
@@ -89,18 +134,24 @@ docker run -d -p 3100:3100 --env-file .env brew-guide-api
 
 ## 环境变量
 
-| 变量名                | 必填 | 默认值    | 说明                       |
-| --------------------- | ---- | --------- | -------------------------- |
-| `SILICONFLOW_API_KEY` | ✅   | -         | 阿里云百炼 API Key         |
-| `PORT`                | ❌   | 3100      | 服务端口                   |
-| `ALLOWED_ORIGINS`     | ❌   | localhost | 允许的前端域名（逗号分隔） |
+| 变量名                | 必填 | 默认值                      | 说明                       |
+| --------------------- | ---- | --------------------------- | -------------------------- |
+| `SILICONFLOW_API_KEY` | ✅   | -                           | AI 识别 API Key            |
+| `ADMIN_KEY`           | ⚠️   | brew-guide-admin-2025       | 反馈管理员密钥（建议修改） |
+| `IP_HASH_SALT`        | ⚠️   | brew-guide-salt-2025-secure | IP 哈希 salt（建议修改）   |
+| `PORT`                | ❌   | 3100                        | 服务端口                   |
+| `ALLOWED_ORIGINS`     | ❌   | localhost                   | 允许的前端域名（逗号分隔） |
 
 ## 安全说明
 
-- API Key 通过环境变量配置，不会暴露在代码中
-- 支持 CORS 白名单配置
-- 文件上传有 MIME 类型和魔数双重验证
-- 文件名安全检查（防止路径遍历攻击）
+- **API Key 保护**：通过环境变量配置，不暴露在代码中
+- **CORS 白名单**：可配置允许的前端域名
+- **文件上传安全**：MIME 类型和魔数双重验证，文件名安全检查
+- **XSS 防护**：用户输入内容自动过滤危险字符
+- **限流保护**：提交和投票接口均有速率限制
+- **时序攻击防护**：管理员密钥使用时间安全比较
+- **隐私保护**：IP 地址哈希化存储，公开 API 不暴露敏感信息
+- **操作日志**：记录管理员验证和操作
 
 ## License
 
