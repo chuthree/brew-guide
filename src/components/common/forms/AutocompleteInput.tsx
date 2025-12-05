@@ -33,6 +33,8 @@ interface AutocompleteInputProps {
   // 新增：自定义预设标记和预设删除功能
   isCustomPreset?: (value: string) => boolean;
   onRemovePreset?: (value: string) => void;
+  // 新增：回车键回调
+  onEnter?: () => void;
 }
 
 const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
@@ -57,6 +59,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   // 新增：自定义预设标记和预设删除功能
   isCustomPreset = () => false,
   onRemovePreset,
+  // 新增：回车键回调
+  onEnter,
 }) => {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -240,8 +244,11 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   // 处理键盘事件
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && inputValue) {
+      e.preventDefault();
       onChange(inputValue);
       setOpen(false);
+      // 调用回车回调
+      onEnter?.();
     } else if (e.key === 'Escape') {
       setOpen(false);
     } else if (

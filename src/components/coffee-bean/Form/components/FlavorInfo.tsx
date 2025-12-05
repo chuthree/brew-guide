@@ -78,6 +78,7 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
               )}
               className="w-full border-none"
               onBlur={() => flavorInput.trim() && onAddFlavor()}
+              onEnter={() => flavorInput.trim() && onAddFlavor()}
             />
           </div>
           <button

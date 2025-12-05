@@ -106,13 +106,11 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
 
           return (
             <div key={index}>
-              <div className="mb-3 flex items-center justify-between">
-                {components.length > 1 && (
+              {components.length > 1 && (
+                <div className="mb-3 flex items-center justify-between">
                   <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                     成分 #{index + 1}
                   </span>
-                )}
-                {components.length > 1 && (
                   <button
                     type="button"
                     onClick={() => onRemove(index)}
@@ -120,8 +118,8 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                   >
                     移除
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {components.length > 1 && (
                 <div className="mb-3 space-y-1">

@@ -401,6 +401,54 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
           // 传入新的烘焙度值，避免使用过时的state
           setTimeout(() => autoSetFlavorPeriod(safeValue), 100);
+        } else if (field === 'name') {
+          // 更新名称
+          setBean(prev => ({
+            ...prev,
+            [field]: safeValue,
+          }));
+
+          // 从名称中智能提取产地、处理法、品种并自动填充到成分
+          if (safeValue.trim() && blendComponents.length === 1) {
+            const extractedOrigin = DEFAULT_ORIGINS.find(origin =>
+              safeValue.includes(origin)
+            );
+            const extractedProcess = DEFAULT_PROCESSES.find(process =>
+              safeValue.includes(process)
+            );
+            const extractedVariety = DEFAULT_VARIETIES.find(variety =>
+              safeValue.includes(variety)
+            );
+
+            // 只有当提取到信息且对应字段为空时才自动填充
+            if (extractedOrigin || extractedProcess || extractedVariety) {
+              setBlendComponents(prev => {
+                const newComponents = [...prev];
+                if (newComponents.length > 0) {
+                  // 只在字段为空时填充，避免覆盖用户手动输入的内容
+                  if (extractedOrigin && !newComponents[0].origin) {
+                    newComponents[0] = {
+                      ...newComponents[0],
+                      origin: extractedOrigin,
+                    };
+                  }
+                  if (extractedProcess && !newComponents[0].process) {
+                    newComponents[0] = {
+                      ...newComponents[0],
+                      process: extractedProcess,
+                    };
+                  }
+                  if (extractedVariety && !newComponents[0].variety) {
+                    newComponents[0] = {
+                      ...newComponents[0],
+                      variety: extractedVariety,
+                    };
+                  }
+                }
+                return newComponents;
+              });
+            }
+          }
         } else {
           setBean(prev => ({
             ...prev,
