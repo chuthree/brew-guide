@@ -1,6 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: true
----
-生成代码时遵循 [project_develop.md](mdc:docs/project_develop.md)

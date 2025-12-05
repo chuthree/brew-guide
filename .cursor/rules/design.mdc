@@ -1,6 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: true
----
-对页面UI进行更改时，参考 [design_system.md](mdc:docs/design_system.md)

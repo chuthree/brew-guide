@@ -1,6 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: true
----
-代码项目规范遵循 [project_struct.md](mdc:docs/project_struct.md)
