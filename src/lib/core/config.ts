@@ -945,4 +945,5 @@ export const sponsorsList = [
   '汉唐',
   '宝玉妹妹',
   'Jarod',
+  'Typnosis',
 ];
