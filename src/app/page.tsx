@@ -92,6 +92,8 @@ import {
   BackupReminderUtils,
   BackupReminderType,
 } from '@/lib/utils/backupReminderUtils';
+import YearlyReviewReminderDrawer from '@/components/common/modals/YearlyReviewReminderDrawer';
+import { YearlyReviewReminderUtils } from '@/lib/utils/yearlyReviewReminderUtils';
 import {
   getEquipmentNameById,
   getEquipmentById,
@@ -501,6 +503,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     null
   );
 
+  // 年度回顾提醒状态
+  const [showYearlyReviewReminder, setShowYearlyReviewReminder] =
+    useState(false);
+
   // 转生豆确认抽屉状态
   const [showConvertToGreenDrawer, setShowConvertToGreenDrawer] =
     useState(false);
@@ -676,24 +682,34 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
   }, [initialHasBeans]);
 
-  // 检查备份提醒
+  // 检查备份提醒和年度回顾提醒
   useEffect(() => {
-    const checkBackupReminder = async () => {
+    const checkReminders = async () => {
       try {
-        const shouldShow = await BackupReminderUtils.shouldShowReminder();
-        if (shouldShow) {
+        // 先检查备份提醒
+        const shouldShowBackup = await BackupReminderUtils.shouldShowReminder();
+        if (shouldShowBackup) {
           const currentReminderType =
             await BackupReminderUtils.getReminderType();
           setReminderType(currentReminderType);
           setShowBackupReminder(true);
+          // 如果显示了备份提醒，不再检查年度回顾提醒
+          return;
+        }
+
+        // 没有备份提醒时，检查年度回顾提醒
+        const shouldShowYearlyReview =
+          await YearlyReviewReminderUtils.shouldShowReminder();
+        if (shouldShowYearlyReview) {
+          setShowYearlyReviewReminder(true);
         }
       } catch (error) {
-        console.error('检查备份提醒失败:', error);
+        console.error('检查提醒失败:', error);
       }
     };
 
     // 延迟检查，确保应用完全加载
-    const timer = setTimeout(checkBackupReminder, 3000);
+    const timer = setTimeout(checkReminders, 3000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -3204,6 +3220,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           isOpen={showBackupReminder}
           onClose={() => setShowBackupReminder(false)}
           reminderType={reminderType}
+        />
+
+        <YearlyReviewReminderDrawer
+          isOpen={showYearlyReviewReminder}
+          onClose={() => setShowYearlyReviewReminder(false)}
+          onGoToReview={() => {
+            // 1. 切换到咖啡豆 Tab
+            setActiveMainTab('咖啡豆');
+            // 2. 切换到统计视图
+            handleBeanViewChange(VIEW_OPTIONS.STATS);
+            // 3. 延迟打开年度回顾抽屉，确保视图已切换
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('openYearlyReview'));
+            }, 300);
+          }}
         />
       </div>
 

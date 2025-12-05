@@ -53,6 +53,7 @@ export const APP_DATA_KEYS = [
   'flavorDimensionHistoricalLabels', // 风味维度历史标签
   'backupReminderSettings', // 备份提醒设置
   'yearlyReports', // 年度报告
+  'yearlyReviewReminderSettings', // 年度回顾提醒设置
 ];
 
 /**

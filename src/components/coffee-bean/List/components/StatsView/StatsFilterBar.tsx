@@ -242,6 +242,18 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   // 年度回顾抽屉状态
   const [isYearlyReviewOpen, setIsYearlyReviewOpen] = useState(false);
 
+  // 监听外部打开年度回顾的事件
+  useEffect(() => {
+    const handleOpenYearlyReview = () => {
+      setIsYearlyReviewOpen(true);
+    };
+
+    window.addEventListener('openYearlyReview', handleOpenYearlyReview);
+    return () => {
+      window.removeEventListener('openYearlyReview', handleOpenYearlyReview);
+    };
+  }, []);
+
   // 滚动容器引用
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftShadow, setShowLeftShadow] = useState(false);
