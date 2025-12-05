@@ -6,8 +6,7 @@
 
 ## 网页版访问
 
-- **国内**：[https://coffee.chu3.top/](http://coffee.chu3.top/)
-- **海外**：[https://brew-guide.vercel.app/](https://brew-guide.vercel.app/)
+- **全球**：[https://coffee.chu3.top/](http://coffee.chu3.top/)
 
 ## 主要功能
 
