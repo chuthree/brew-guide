@@ -20,6 +20,7 @@ import {
   useRole,
   useListNavigation,
   useInteractions,
+  useTransitionStyles,
   FloatingPortal,
 } from '@floating-ui/react';
 
@@ -193,6 +194,28 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
           loop: true,
         }),
       ]);
+
+    // 过渡动画配置：使用 floating-ui 的 useTransitionStyles
+    // 参考 https://jakub.kr/components/exit-animations - 退出动画使用较小的位移值
+    const { isMounted, styles: transitionStyles } = useTransitionStyles(
+      context,
+      {
+        duration: {
+          open: 200,
+          close: 150,
+        },
+        initial: {
+          opacity: 0,
+          transform: 'translateY(-8px)',
+          filter: 'blur(4px)',
+        },
+        close: {
+          opacity: 0,
+          transform: 'translateY(-12px)',
+          filter: 'blur(4px)',
+        },
+      }
+    );
 
     // 暴露方法给外部
     useImperativeHandle(
@@ -393,80 +416,90 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
         />
 
         {/* 下拉面板 */}
-        {isOpen && allOptions.length > 0 && (
+        {isMounted && allOptions.length > 0 && (
           <FloatingPortal>
             <div
               ref={refs.setFloating}
               style={floatingStyles}
               {...getFloatingProps()}
-              className="z-9999 flex flex-col gap-1.5"
             >
-              {/* 选中的磨豆机 - 胶囊形状独立显示 */}
-              {allOptions
-                .filter(o => o.type === 'selected-grinder')
-                .map((option, index) => (
-                  <button
-                    key={option.grinderId}
-                    ref={node => {
-                      listRef.current[index] = node;
-                    }}
-                    type="button"
-                    role="option"
-                    aria-selected={activeIndex === index}
-                    tabIndex={activeIndex === index ? 0 : -1}
-                    onMouseDown={e => {
-                      // 阻止 mousedown 导致输入框失去焦点
-                      e.preventDefault();
-                    }}
-                    {...getItemProps({
-                      onClick: e => handleOptionClick(option, e),
-                    })}
-                    className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-full border border-neutral-200/60 bg-white/90 px-2.5 py-1 text-xs text-neutral-600 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition-colors dark:border-neutral-700/60 dark:bg-neutral-800/90 dark:text-neutral-400"
-                  >
-                    {isSyncEnabled ? (
-                      <Link2 className="h-3 w-3 shrink-0" />
-                    ) : (
-                      <Unlink className="h-3 w-3 shrink-0 opacity-50" />
-                    )}
-                    <span
-                      className={`whitespace-nowrap ${isSyncEnabled ? '' : 'opacity-50'}`}
+              {/* 内部容器用于过渡动画，避免与定位 transform 冲突 */}
+              <div
+                style={transitionStyles}
+                className="z-9999 flex flex-col gap-1.5"
+              >
+                {/* 选中的磨豆机 - 胶囊形状独立显示 */}
+                {allOptions
+                  .filter(o => o.type === 'selected-grinder')
+                  .map((option, index) => (
+                    <button
+                      key={option.grinderId}
+                      ref={node => {
+                        listRef.current[index] = node;
+                      }}
+                      type="button"
+                      role="option"
+                      aria-selected={activeIndex === index}
+                      tabIndex={activeIndex === index ? 0 : -1}
+                      onMouseDown={e => {
+                        // 阻止 mousedown 导致输入框失去焦点
+                        e.preventDefault();
+                      }}
+                      {...getItemProps({
+                        onClick: e => handleOptionClick(option, e),
+                      })}
+                      className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-full border border-neutral-200/60 bg-white/90 px-2.5 py-1 text-xs text-neutral-600 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition-colors dark:border-neutral-700/60 dark:bg-neutral-800/90 dark:text-neutral-400"
                     >
-                      {option.label}
-                    </span>
-                  </button>
-                ))}
-
-              {/* 其他选项列表 */}
-              {allOptions.filter(o => o.type !== 'selected-grinder').length >
-                0 && (
-                <div className="max-h-40 overflow-y-auto rounded-2xl border border-neutral-200/60 bg-white/90 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm dark:border-neutral-700/60 dark:bg-neutral-800/90">
-                  {allOptions
-                    .map((option, originalIndex) => ({ option, originalIndex }))
-                    .filter(({ option }) => option.type !== 'selected-grinder')
-                    .map(({ option, originalIndex }) => (
-                      <button
-                        key={option.grinderId ?? `restore-${originalIndex}`}
-                        ref={node => {
-                          listRef.current[originalIndex] = node;
-                        }}
-                        type="button"
-                        role="option"
-                        tabIndex={-1}
-                        {...getItemProps({
-                          onClick: () => handleOptionClick(option),
-                        })}
-                        className="flex w-full cursor-pointer items-center gap-1.5 px-2.5 py-1.5 text-left text-xs text-neutral-600 dark:text-neutral-400"
+                      {isSyncEnabled ? (
+                        <Link2 className="h-3 w-3 shrink-0" />
+                      ) : (
+                        <Unlink className="h-3 w-3 shrink-0 opacity-50" />
+                      )}
+                      <span
+                        className={`whitespace-nowrap ${isSyncEnabled ? '' : 'opacity-50'}`}
                       >
-                        {option.type === 'restore' && (
-                          <Undo2 className="h-3 w-3 shrink-0" />
-                        )}
-                        <span className="whitespace-nowrap">
-                          {option.label}
-                        </span>
-                      </button>
-                    ))}
-                </div>
-              )}
+                        {option.label}
+                      </span>
+                    </button>
+                  ))}
+
+                {/* 其他选项列表 */}
+                {allOptions.filter(o => o.type !== 'selected-grinder').length >
+                  0 && (
+                  <div className="max-h-40 overflow-y-auto rounded-2xl border border-neutral-200/60 bg-white/90 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm dark:border-neutral-700/60 dark:bg-neutral-800/90">
+                    {allOptions
+                      .map((option, originalIndex) => ({
+                        option,
+                        originalIndex,
+                      }))
+                      .filter(
+                        ({ option }) => option.type !== 'selected-grinder'
+                      )
+                      .map(({ option, originalIndex }) => (
+                        <button
+                          key={option.grinderId ?? `restore-${originalIndex}`}
+                          ref={node => {
+                            listRef.current[originalIndex] = node;
+                          }}
+                          type="button"
+                          role="option"
+                          tabIndex={-1}
+                          {...getItemProps({
+                            onClick: () => handleOptionClick(option),
+                          })}
+                          className="flex w-full cursor-pointer items-center gap-1.5 px-2.5 py-1.5 text-left text-xs text-neutral-600 dark:text-neutral-400"
+                        >
+                          {option.type === 'restore' && (
+                            <Undo2 className="h-3 w-3 shrink-0" />
+                          )}
+                          <span className="whitespace-nowrap">
+                            {option.label}
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
           </FloatingPortal>
         )}
