@@ -478,11 +478,7 @@ const FeedbackDrawer: React.FC<FeedbackDrawerProps> = ({
   };
 
   return (
-    <ActionDrawer
-      isOpen={isOpen}
-      onClose={onClose}
-      historyId="feedback-drawer"
-    >
+    <ActionDrawer isOpen={isOpen} onClose={onClose} historyId="feedback-drawer">
       <ActionDrawer.Switcher activeKey={currentStep}>
         {currentStep === 'list' ? (
           <div>
