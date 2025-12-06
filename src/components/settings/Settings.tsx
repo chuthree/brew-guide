@@ -1292,7 +1292,16 @@ const Settings: React.FC<SettingsProps> = ({
               }, [] as React.ReactNode[])}
             、and You
           </p>
-          <p className="mt-12">
+          <p className="mx-auto mt-12 max-w-48 text-left">
+            <a
+              href="https://github.com/chuthree/brew-guide"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              GitHub
+            </a>
+            {' / '}
             <a
               href="https://gitee.com/chu3/brew-guide"
               target="_blank"
@@ -1300,6 +1309,15 @@ const Settings: React.FC<SettingsProps> = ({
               className="underline"
             >
               Gitee
+            </a>
+            {' / '}
+            <a
+              href="https://status.chu3.top/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              状态页
             </a>
           </p>
         </div>

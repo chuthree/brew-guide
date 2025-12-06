@@ -78,3 +78,7 @@ pnpm cap:android
 ## 许可
 
 本项目采用 [MIT](https://choosealicense.com/licenses/mit/) 许可证。
+
+## 相关链接
+
+- **服务状态**：[https://status.chu3.top/](https://status.chu3.top/)
