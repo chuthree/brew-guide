@@ -159,7 +159,7 @@ const FeedbackDrawer: React.FC<FeedbackDrawerProps> = ({
 
   // 筛选状态
   const [activeFilter, setActiveFilter] = useState<FeedbackStatus | 'all'>(
-    'all'
+    'open'
   );
 
   // 展开状态管理（记录哪些反馈内容是展开的）
@@ -464,9 +464,9 @@ const FeedbackDrawer: React.FC<FeedbackDrawerProps> = ({
   const filterOptions: { key: FeedbackStatus | 'all'; label: string }[] = [
     { key: 'all', label: '全部' },
     { key: 'pinned', label: '置顶' },
-    { key: 'done', label: '已完成' },
-    { key: 'accepted', label: '已采纳' },
     { key: 'open', label: '待处理' },
+    { key: 'accepted', label: '已采纳' },
+    { key: 'done', label: '已完成' },
     { key: 'rejected', label: '未采纳' },
     ...(isAdminMode ? [{ key: 'pending' as const, label: '审核中' }] : []),
   ];
