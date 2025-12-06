@@ -119,6 +119,9 @@ export interface FilterTabsProps {
   // 搜索历史相关props
   searchHistory?: string[];
   onSearchHistoryClick?: (query: string) => void;
+  // 笔记显示样式相关props
+  noteDisplayStyle?: 'list' | 'card';
+  onNoteDisplayStyleChange?: (style: 'list' | 'card') => void;
 }
 
 // 添加笔记按钮属性

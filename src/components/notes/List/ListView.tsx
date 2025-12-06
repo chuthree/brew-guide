@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { BrewingNote } from '@/lib/core/config';
 import NoteItem from './NoteItem';
+import NoteItemCard from './NoteItemCard';
 import ChangeRecordNoteItem from './ChangeRecordNoteItem';
 import GalleryView from './GalleryView';
 import DateImageFlowView from './DateImageFlowView';
@@ -32,6 +33,8 @@ interface NotesListViewProps {
   beanPrices?: Record<string, number>;
   // 咖啡豆列表
   coffeeBeans?: import('@/types/app').CoffeeBean[];
+  // 笔记显示样式
+  noteDisplayStyle?: 'list' | 'card';
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
@@ -53,9 +56,13 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   equipmentNames = {},
   beanPrices = {},
   coffeeBeans = [],
+  noteDisplayStyle = 'list',
 }) => {
   const [unitPriceCache] = useState<Record<string, number>>(beanPrices);
   const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false);
+
+  // 根据设置选择笔记项组件
+  const NoteItemComponent = noteDisplayStyle === 'card' ? NoteItemCard : NoteItem;
 
   // 使用风味维度hook - 在父组件中调用一次，然后传递给所有子组件
   const { getValidTasteRatings } = useFlavorDimensions();
@@ -203,7 +210,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
           ),
         }}
         itemContent={(index, note) => (
-          <NoteItem
+          <NoteItemComponent
             key={note.id}
             note={note}
             equipmentNames={equipmentNames}

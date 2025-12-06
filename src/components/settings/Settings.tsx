@@ -67,6 +67,7 @@ export interface SettingsOptions {
   notesMaxLines: number; // 备注最大显示行数
   showTotalPrice: boolean; // 是否显示总价格而不是单价
   showStatusDots: boolean; // 是否显示状态点
+  noteDisplayStyle: 'list' | 'card'; // 笔记显示样式：列表/卡片
 
   safeAreaMargins?: {
     top: number; // 顶部边距
@@ -209,6 +210,7 @@ export const defaultSettings: SettingsOptions = {
   notesMaxLines: 3, // 默认最大显示3行
   showTotalPrice: false, // 默认显示单价
   showStatusDots: false, // 默认不显示状态点
+  noteDisplayStyle: 'list', // 默认笔记显示样式
 
   safeAreaMargins: {
     top: 38, // 默认顶部边距 42px

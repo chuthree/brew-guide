@@ -45,6 +45,8 @@ export async function exportSelectedNotes({
     tempContainer.style.backgroundColor = backgroundColor;
     tempContainer.style.fontFamily =
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    tempContainer.style.paddingTop = '12px';
+    tempContainer.style.paddingBottom = '12px';
 
     if (isDarkMode) {
       tempContainer.classList.add('dark');
@@ -102,6 +104,11 @@ export async function exportSelectedNotes({
     // 然后处理每个笔记元素并添加到临时容器
     for (let index = 0; index < selectedNoteElements.length; index++) {
       const { clone, original } = selectedNoteElements[index];
+
+      // 移除第一个元素的上边距（容器已经有 padding）
+      if (index === 0) {
+        clone.style.marginTop = '0';
+      }
 
       // 移除复选框 - 保留其父级div避免影响布局
       const checkbox = clone.querySelector('input[type="checkbox"]');
