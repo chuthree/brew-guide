@@ -333,14 +333,14 @@ export const extractAvailableFlavorPeriodStatuses = (
     statusesSet.add(status);
   });
 
-  // 按优先级排序：在途 > 冷冻 > 赏味期 > 养豆期 > 衰退期 > 未知
+  // 按优先级排序：冷冻 > 赏味期 > 养豆期 > 衰退期 > 未知 > 在途
   const priorityOrder = [
-    FlavorPeriodStatus.IN_TRANSIT,
     FlavorPeriodStatus.FROZEN,
     FlavorPeriodStatus.OPTIMAL,
     FlavorPeriodStatus.AGING,
     FlavorPeriodStatus.DECLINE,
     FlavorPeriodStatus.UNKNOWN,
+    FlavorPeriodStatus.IN_TRANSIT,
   ];
 
   return priorityOrder.filter(status => statusesSet.has(status));
