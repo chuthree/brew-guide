@@ -418,8 +418,6 @@ const ViewModeSection: React.FC<ViewModeSectionProps> = ({
   );
 };
 
-
-
 // 排序区域组件 - 使用筛选按钮样式
 interface SortSectionProps {
   sortOption: SortOption;

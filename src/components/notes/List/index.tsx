@@ -180,15 +180,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   );
 
   // 笔记显示样式状态（持久化记忆 - 使用 localStorage 存储 UI 偏好设置）
-  const [noteDisplayStyle, setNoteDisplayStyle] = useState<'list' | 'card'>(() => {
-    if (typeof window !== 'undefined') {
-      return (
-        (localStorage.getItem('notes-display-style') as 'list' | 'card') ||
-        'list'
-      );
+  const [noteDisplayStyle, setNoteDisplayStyle] = useState<'list' | 'card'>(
+    () => {
+      if (typeof window !== 'undefined') {
+        return (
+          (localStorage.getItem('notes-display-style') as 'list' | 'card') ||
+          'list'
+        );
+      }
+      return 'list';
     }
-    return 'list';
-  });
+  );
 
   // 笔记显示样式更新
   const updateNoteDisplayStyle = useCallback((style: 'list' | 'card') => {

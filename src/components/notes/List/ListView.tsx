@@ -62,7 +62,8 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false);
 
   // 根据设置选择笔记项组件
-  const NoteItemComponent = noteDisplayStyle === 'card' ? NoteItemCard : NoteItem;
+  const NoteItemComponent =
+    noteDisplayStyle === 'card' ? NoteItemCard : NoteItem;
 
   // 使用风味维度hook - 在父组件中调用一次，然后传递给所有子组件
   const { getValidTasteRatings } = useFlavorDimensions();
