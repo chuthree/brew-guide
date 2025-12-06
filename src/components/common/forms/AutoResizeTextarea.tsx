@@ -39,6 +39,10 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
       placeholder={placeholder}
       readOnly={readOnly}
       rows={rows}
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
       style={{
         ...style,
       }}

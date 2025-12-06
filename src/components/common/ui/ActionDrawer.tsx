@@ -41,6 +41,11 @@ export interface ActionDrawerProps {
    * 适合在此时机清理数据，避免内容在动画播放时突然消失
    */
   onExitComplete?: () => void;
+  /**
+   * 是否在输入框聚焦时重新定位抽屉（适应键盘）
+   * 默认 false，设为 true 可以让抽屉随键盘顶起
+   */
+  repositionInputs?: boolean;
 }
 
 export interface ActionDrawerIconProps {
@@ -196,7 +201,14 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   SecondaryButton: React.FC<ActionDrawerButtonProps>;
   DangerButton: React.FC<ActionDrawerButtonProps>;
   Switcher: React.FC<ActionDrawerSwitcherProps>;
-} = ({ isOpen, onClose, children, historyId, onExitComplete }) => {
+} = ({
+  isOpen,
+  onClose,
+  children,
+  historyId,
+  onExitComplete,
+  repositionInputs = false,
+}) => {
   // 生成稳定的唯一 ID（如果未提供 historyId）
   const [autoId] = useState(
     () =>
@@ -239,7 +251,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
       open={isOpen}
       onOpenChange={handleOpenChange}
       onAnimationEnd={handleAnimationEnd}
-      repositionInputs={false}
+      repositionInputs={repositionInputs}
     >
       <Drawer.Portal>
         {/* 背景遮罩 - 强制 fixed 定位确保覆盖安全区 */}

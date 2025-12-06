@@ -478,7 +478,11 @@ const FeedbackDrawer: React.FC<FeedbackDrawerProps> = ({
   };
 
   return (
-    <ActionDrawer isOpen={isOpen} onClose={onClose} historyId="feedback-drawer">
+    <ActionDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      historyId="feedback-drawer"
+    >
       <ActionDrawer.Switcher activeKey={currentStep}>
         {currentStep === 'list' ? (
           <div>
@@ -655,6 +659,10 @@ const FeedbackDrawer: React.FC<FeedbackDrawerProps> = ({
               onChange={e => setInputContent(e.target.value)}
               placeholder="说说你的想法吧～"
               maxLength={200}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
               className="mb-2 h-32 w-full resize-none rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:placeholder:text-neutral-500 dark:focus:border-neutral-500"
             />
 
