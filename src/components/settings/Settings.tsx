@@ -173,6 +173,8 @@ export interface SettingsOptions {
   // 生豆库设置
   enableGreenBeanInventory?: boolean; // 是否启用生豆库功能
   enableConvertToGreen?: boolean; // 是否启用熟豆转生豆功能（需先启用生豆库）
+  // 识图设置
+  autoFillRecognitionImage?: boolean; // 是否自动填充识图图片到表单（默认false，需手动点击加号添加）
   // 每日提醒设置
   dailyReminder: boolean;
   dailyReminderTime: string;
@@ -292,6 +294,8 @@ export const defaultSettings: SettingsOptions = {
     manualNote: true, // 手动添加笔记默认开启
     noteEdit: false, // 笔记编辑表单默认关闭
   },
+  // 识图设置默认值
+  autoFillRecognitionImage: false, // 默认不自动填充识图图片，需手动添加
   // 每日提醒默认值
   dailyReminder: false,
   dailyReminderTime: '20:00',

@@ -3773,6 +3773,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         onImport={handleImportBean}
         onClose={() => setShowImportBeanForm(false)}
         onRecognitionImage={setRecognitionImage}
+        settings={settings}
       />
 
       {/* 笔记编辑模态框独立渲染，与 Settings 同级 */}

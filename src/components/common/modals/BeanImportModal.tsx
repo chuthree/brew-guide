@@ -7,6 +7,7 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
 import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
+import { SettingsOptions } from '@/components/settings/Settings';
 
 // 模拟 API 开关 - 设置为 true 时使用模拟数据
 const USE_MOCK_API = false;
@@ -38,6 +39,8 @@ interface BeanImportModalProps {
   onClose: () => void;
   /** 识别图片成功后回调，传递原始图片的 base64 */
   onRecognitionImage?: (imageBase64: string) => void;
+  /** 设置项，用于控制是否自动填充识图图片 */
+  settings?: SettingsOptions;
 }
 
 interface ImportedBean {
@@ -144,6 +147,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   onImport,
   onClose,
   onRecognitionImage,
+  settings,
 }) => {
   // 当前步骤
   const [currentStep, setCurrentStep] = useState<ImportStep>('main');
@@ -380,10 +384,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         try {
           const { data: beanData } = await recognizeSingleImage(file, imageUrl);
 
-          // 识别成功后，检查是否为单个豆子，如果是则传递识别图片
+          // 识别成功后，检查是否为单个豆子，如果是则传递识别图片（无论设置如何，都传递给表单，由表单决定是否自动填充）
           const isSingleBean =
             !Array.isArray(beanData) ||
             (Array.isArray(beanData) && beanData.length === 1);
+
           if (isSingleBean && onRecognitionImage) {
             await new Promise<void>(resolve => {
               const reader = new FileReader();
