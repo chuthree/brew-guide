@@ -51,6 +51,11 @@ const isRoastingMode = (
   return !!bean.sourceGreenBeanId && bean.beanState === 'roasted';
 };
 
+// 辅助函数：格式化数字，去除末尾多余的0
+const formatDecimal = (num: number, decimals: number = 1): string => {
+  return parseFloat(num.toFixed(decimals)).toString();
+};
+
 const BasicInfo: React.FC<BasicInfoProps> = ({
   bean,
   onBeanChange,
@@ -66,6 +71,9 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   // 处理容量和剩余容量的状态
   const [capacityValue, setCapacityValue] = useState('');
   const [remainingValue, setRemainingValue] = useState('');
+  // 处理脱水率状态
+  const [moistureLoss, setMoistureLoss] = useState('');
+  const [isMoistureFocused, setIsMoistureFocused] = useState(false);
 
   // 初始化和同步容量值
   useEffect(() => {
@@ -74,6 +82,23 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
       editingRemaining !== null ? editingRemaining : bean.remaining || ''
     );
   }, [bean.capacity, bean.remaining, editingRemaining]);
+
+  // 同步脱水率
+  useEffect(() => {
+    if (
+      !isMoistureFocused &&
+      capacityValue &&
+      remainingValue &&
+      parseFloat(capacityValue) > 0
+    ) {
+      const cap = parseFloat(capacityValue);
+      const rem = parseFloat(remainingValue);
+      const loss = ((cap - rem) / cap) * 100;
+      setMoistureLoss(formatDecimal(loss));
+    } else if (!isMoistureFocused && (!capacityValue || !remainingValue)) {
+      setMoistureLoss('');
+    }
+  }, [capacityValue, remainingValue, isMoistureFocused]);
 
   // 处理日期变化 - 根据豆子状态决定更新哪个字段
   const handleDateChange = (date: Date) => {
@@ -130,6 +155,27 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     }
     setRemainingValue(value);
     onBeanChange('remaining')(value);
+  };
+
+  // 处理脱水率变化（实时计算）
+  const handleMoistureChange = (value: string) => {
+    setMoistureLoss(value);
+    
+    const loss = parseFloat(value);
+    const cap = parseFloat(capacityValue);
+
+    if (!isNaN(loss) && !isNaN(cap) && cap > 0) {
+      // 熟豆 = 生豆 * (1 - loss/100)
+      const newRem = cap * (1 - loss / 100);
+      // 保留一位小数，并去除末尾的0
+      const newRemStr = formatDecimal(newRem);
+      setRemainingValue(newRemStr);
+      onBeanChange('remaining')(newRemStr);
+    }
+  };
+
+  const handleMoistureBlur = () => {
+    setIsMoistureFocused(false);
   };
 
   // 处理图片选择逻辑 (相册或拍照)
@@ -274,7 +320,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 step="0.1"
                 value={remainingValue}
                 onChange={e => handleRemainingChange(e.target.value)}
-                placeholder={isRoastingMode(bean) ? '同烘焙量' : '剩余量'}
+                placeholder={isRoastingMode(bean) ? '熟豆量' : '剩余量'}
                 className="w-full border-b border-neutral-300 bg-transparent py-2 text-center outline-none dark:border-neutral-700"
                 onBlur={validateRemaining}
               />
@@ -287,14 +333,16 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 step="0.1"
                 value={capacityValue}
                 onChange={e => handleCapacityChange(e.target.value)}
-                placeholder={isRoastingMode(bean) ? '烘焙量' : '总量'}
+                placeholder={isRoastingMode(bean) ? '生豆量' : '总量'}
                 className="w-full border-b border-neutral-300 bg-transparent py-2 text-center outline-none dark:border-neutral-700"
                 onBlur={() => {
                   // 失焦时更新主表单的总量
                   onBeanChange('capacity')(capacityValue);
 
-                  // 失焦时判断是否需要同步剩余量（烘焙模式或新增模式）
+                  // 失焦时判断是否需要同步剩余量
+                  // 烘焙模式下不自动同步，让用户手动输入实际熟豆量
                   if (
+                    !isRoastingMode(bean) &&
                     capacityValue &&
                     (!remainingValue || remainingValue.trim() === '')
                   ) {
@@ -309,8 +357,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             </div>
           </div>
 
-          {/* 续购按钮 - 只在编辑模式下显示 */}
-          {isEdit && onRepurchase && (
+          {/* 续购按钮 - 只在编辑模式下显示，且不在烘焙模式下显示 */}
+          {isEdit && onRepurchase && !isRoastingMode(bean) && (
             <button
               type="button"
               onClick={onRepurchase}
@@ -325,19 +373,36 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
 
         <div className="space-y-2">
           <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            价格(¥)
+            {isRoastingMode(bean) ? '脱水率' : '价格(¥)'}
           </label>
-          <AutocompleteInput
-            value={bean.price || ''}
-            onChange={onBeanChange('price')}
-            placeholder={isRoastingMode(bean) ? '自动计算' : '例如：88'}
-            clearable={false}
-            suggestions={[]}
-            inputType="number"
-            inputMode="decimal"
-            allowDecimal={true}
-            maxDecimalPlaces={2}
-          />
+          {isRoastingMode(bean) ? (
+            <div className="relative w-full">
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                value={moistureLoss}
+                onChange={e => handleMoistureChange(e.target.value)}
+                onFocus={() => setIsMoistureFocused(true)}
+                onBlur={handleMoistureBlur}
+                placeholder="自动计算"
+                className="w-full border-b border-neutral-300 bg-transparent py-2 text-left outline-none dark:border-neutral-700"
+              />
+              <span className="absolute top-2 right-0 text-neutral-500">%</span>
+            </div>
+          ) : (
+            <AutocompleteInput
+              value={bean.price || ''}
+              onChange={onBeanChange('price')}
+              placeholder="例如：88"
+              clearable={false}
+              suggestions={[]}
+              inputType="number"
+              inputMode="decimal"
+              allowDecimal={true}
+              maxDecimalPlaces={2}
+            />
+          )}
         </div>
       </div>
 
