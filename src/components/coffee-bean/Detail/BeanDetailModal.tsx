@@ -21,6 +21,16 @@ import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 
+// 烘焙度选项
+const ROAST_LEVELS = [
+  '极浅烘焙',
+  '浅度烘焙',
+  '中浅烘焙',
+  '中度烘焙',
+  '中深烘焙',
+  '深度烘焙',
+] as const;
+
 // 小尺寸咖啡豆图片组件（用于关联豆子卡片）
 const BeanImageSmall: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
   const [imageError, setImageError] = useState(false);
@@ -245,6 +255,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   // 备注编辑状态
   const notesRef = useRef<HTMLDivElement>(null);
 
+  // 烘焙度下拉状态
+  const [showRoastLevelDropdown, setShowRoastLevelDropdown] = useState(false);
+  const roastLevelRef = useRef<HTMLDivElement>(null);
+
+  // 成分编辑 refs（产地、处理法、品种）
+  const originRef = useRef<HTMLDivElement>(null);
+  const processRef = useRef<HTMLDivElement>(null);
+  const varietyRef = useRef<HTMLDivElement>(null);
+
   // 处理显示/隐藏动画
   useEffect(() => {
     if (isOpen) {
@@ -441,6 +460,22 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     }
   }, [bean?.notes, bean?.id]);
 
+  // 初始化成分值（产地、处理法、品种）
+  useEffect(() => {
+    const firstComponent = bean?.blendComponents?.[0];
+    if (firstComponent) {
+      if (originRef.current && firstComponent.origin) {
+        originRef.current.textContent = firstComponent.origin;
+      }
+      if (processRef.current && firstComponent.process) {
+        processRef.current.textContent = firstComponent.process;
+      }
+      if (varietyRef.current && firstComponent.variety) {
+        varietyRef.current.textContent = firstComponent.variety;
+      }
+    }
+  }, [bean?.blendComponents, bean?.id]);
+
   // 保存备注的函数
   const handleSaveNotes = async (newNotes: string) => {
     if (!bean?.id) return;
@@ -468,6 +503,102 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       console.error('保存备注失败:', error);
     }
   };
+
+  // 通用的字段更新函数
+  const handleUpdateField = async (updates: Partial<CoffeeBean>) => {
+    if (!bean?.id) return;
+
+    try {
+      const { CoffeeBeanManager } = await import(
+        '@/lib/managers/coffeeBeanManager'
+      );
+
+      await CoffeeBeanManager.updateBean(bean.id, updates);
+
+      // 触发数据更新事件
+      window.dispatchEvent(
+        new CustomEvent('coffeeBeanDataChanged', {
+          detail: {
+            action: 'update',
+            beanId: bean.id,
+          },
+        })
+      );
+    } catch (error) {
+      console.error('更新字段失败:', error);
+    }
+  };
+
+  // 处理烘焙度选择
+  const handleRoastLevelSelect = (level: string) => {
+    handleUpdateField({ roastLevel: level });
+    setShowRoastLevelDropdown(false);
+  };
+
+  // 处理成分编辑（单品豆，只有一个 blendComponent）
+  const handleBlendComponentUpdate = (
+    field: 'origin' | 'process' | 'variety',
+    value: string
+  ) => {
+    if (!bean?.blendComponents) return;
+
+    // 复制当前 blendComponents
+    const updatedComponents = [...bean.blendComponents];
+
+    // 如果没有成分，创建一个新的
+    if (updatedComponents.length === 0) {
+      updatedComponents.push({ [field]: value });
+    } else {
+      // 更新第一个成分（单品豆）
+      updatedComponents[0] = {
+        ...updatedComponents[0],
+        [field]: value.trim(),
+      };
+    }
+
+    handleUpdateField({ blendComponents: updatedComponents });
+  };
+
+  // 处理产地编辑
+  const handleOriginInput = () => {
+    if (originRef.current) {
+      const value = originRef.current.textContent || '';
+      handleBlendComponentUpdate('origin', value);
+    }
+  };
+
+  // 处理处理法编辑
+  const handleProcessInput = () => {
+    if (processRef.current) {
+      const value = processRef.current.textContent || '';
+      handleBlendComponentUpdate('process', value);
+    }
+  };
+
+  // 处理品种编辑
+  const handleVarietyInput = () => {
+    if (varietyRef.current) {
+      const value = varietyRef.current.textContent || '';
+      handleBlendComponentUpdate('variety', value);
+    }
+  };
+
+  // 点击外部关闭烘焙度下拉
+  useEffect(() => {
+    if (!showRoastLevelDropdown) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        roastLevelRef.current &&
+        !roastLevelRef.current.contains(e.target as Node)
+      ) {
+        setShowRoastLevelDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showRoastLevelDropdown]);
 
   // 处理备注内容变化
   const handleNotesInput = () => {
@@ -1142,18 +1273,135 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                   );
                 })()}
 
-                {/* 产地信息（单品豆时显示）*/}
+                {/* 产地信息（单品豆时显示）- 支持无感编辑 */}
                 {(() => {
-                  const originItems = getOriginInfoItems();
                   const isMultipleBlend =
                     bean?.blendComponents && bean.blendComponents.length > 1;
+                  const firstComponent = bean?.blendComponents?.[0];
+
+                  // 单品豆且有成分信息时显示可编辑区域
+                  if (isMultipleBlend) return null;
+
+                  // 获取当前值
+                  const origin = firstComponent?.origin || '';
+                  const process = firstComponent?.process || '';
+                  const variety = firstComponent?.variety || '';
+                  const roastLevel = bean?.roastLevel || '';
+
+                  // 至少有一个字段有值才显示
+                  if (!origin && !process && !variety && !roastLevel)
+                    return null;
+
                   return (
-                    originItems.length > 0 &&
-                    !isMultipleBlend && <InfoGrid items={originItems} />
+                    <div className="space-y-3">
+                      {/* 产地 */}
+                      {origin && (
+                        <div className="flex items-start">
+                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            产地
+                          </div>
+                          <div
+                            ref={originRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onBlur={handleOriginInput}
+                            className="ml-4 cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                            style={{ minHeight: '1.25em' }}
+                          >
+                            {searchQuery ? (
+                              <HighlightText
+                                text={origin}
+                                highlight={searchQuery}
+                              />
+                            ) : (
+                              origin
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 处理法 */}
+                      {process && (
+                        <div className="flex items-start">
+                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            处理法
+                          </div>
+                          <div
+                            ref={processRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onBlur={handleProcessInput}
+                            className="ml-4 cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                            style={{ minHeight: '1.25em' }}
+                          >
+                            {process}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 品种 */}
+                      {variety && (
+                        <div className="flex items-start">
+                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            品种
+                          </div>
+                          <div
+                            ref={varietyRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onBlur={handleVarietyInput}
+                            className="ml-4 cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                            style={{ minHeight: '1.25em' }}
+                          >
+                            {variety}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 烘焙度 - 点击下拉选择 */}
+                      {roastLevel && (
+                        <div className="flex items-start">
+                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            烘焙度
+                          </div>
+                          <div
+                            ref={roastLevelRef}
+                            className="relative ml-4 inline-flex"
+                          >
+                            <span
+                              onClick={() =>
+                                setShowRoastLevelDropdown(!showRoastLevelDropdown)
+                              }
+                              className="cursor-pointer text-xs font-medium text-neutral-800 dark:text-neutral-100"
+                            >
+                              {roastLevel}
+                            </span>
+                            {/* 下拉选择框 */}
+                            {showRoastLevelDropdown && (
+                              <div className="absolute top-full left-0 z-50 mt-1 min-w-[100px] rounded border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+                                {ROAST_LEVELS.map(level => (
+                                  <div
+                                    key={level}
+                                    onClick={() => handleRoastLevelSelect(level)}
+                                    className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
+                                      level === roastLevel
+                                        ? 'bg-neutral-100 text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
+                                        : 'text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-700/50'
+                                    }`}
+                                  >
+                                    {level}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })()}
 
-                {/* 拼配成分（拼配豆时显示）*/}
+                {/* 拼配成分（拼配豆时显示）- 支持无感编辑 */}
                 {bean?.blendComponents && bean.blendComponents.length > 1 && (
                   <div className="flex items-start">
                     <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -1170,27 +1418,84 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           },
                           index: number
                         ) => {
-                          const parts = [
-                            comp.origin,
-                            comp.variety,
-                            comp.process,
-                          ].filter(Boolean);
-                          const displayText =
-                            parts.length > 0
-                              ? parts.join(' · ')
-                              : `组成 ${index + 1}`;
+                          // 处理拼配成分字段编辑
+                          const handleBlendFieldEdit = (
+                            field: 'origin' | 'process' | 'variety',
+                            value: string
+                          ) => {
+                            const updatedComponents = [...bean.blendComponents!];
+                            updatedComponents[index] = {
+                              ...updatedComponents[index],
+                              [field]: value.trim(),
+                            };
+                            handleUpdateField({ blendComponents: updatedComponents });
+                          };
 
                           return (
                             <div
                               key={index}
-                              className="flex items-center gap-2"
+                              className="flex items-center gap-1 text-xs font-medium text-neutral-800 dark:text-neutral-100"
                             >
-                              <span className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                                {displayText}
-                              </span>
+                              {/* 产地 */}
+                              {comp.origin && (
+                                <span
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onBlur={e => {
+                                    const newValue = e.currentTarget.textContent?.trim() || '';
+                                    if (newValue !== comp.origin) {
+                                      handleBlendFieldEdit('origin', newValue);
+                                    }
+                                  }}
+                                  className="cursor-text outline-none"
+                                >
+                                  {comp.origin}
+                                </span>
+                              )}
+                              {/* 分隔符 */}
+                              {comp.origin && (comp.variety || comp.process) && (
+                                <span className="text-neutral-400 dark:text-neutral-600">·</span>
+                              )}
+                              {/* 品种 */}
+                              {comp.variety && (
+                                <span
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onBlur={e => {
+                                    const newValue = e.currentTarget.textContent?.trim() || '';
+                                    if (newValue !== comp.variety) {
+                                      handleBlendFieldEdit('variety', newValue);
+                                    }
+                                  }}
+                                  className="cursor-text outline-none"
+                                >
+                                  {comp.variety}
+                                </span>
+                              )}
+                              {/* 分隔符 */}
+                              {comp.variety && comp.process && (
+                                <span className="text-neutral-400 dark:text-neutral-600">·</span>
+                              )}
+                              {/* 处理法 */}
+                              {comp.process && (
+                                <span
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onBlur={e => {
+                                    const newValue = e.currentTarget.textContent?.trim() || '';
+                                    if (newValue !== comp.process) {
+                                      handleBlendFieldEdit('process', newValue);
+                                    }
+                                  }}
+                                  className="cursor-text outline-none"
+                                >
+                                  {comp.process}
+                                </span>
+                              )}
+                              {/* 百分比 */}
                               {comp.percentage !== undefined &&
                                 comp.percentage !== null && (
-                                  <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                                  <span className="ml-1 text-neutral-600 dark:text-neutral-400">
                                     {comp.percentage}%
                                   </span>
                                 )}
@@ -1202,7 +1507,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                   </div>
                 )}
 
-                {/* 风味 */}
+                {/* 风味 - 支持无感编辑，每个标签可点击编辑 */}
                 {bean.flavor && bean.flavor.length > 0 && (
                   <div className="flex items-start">
                     <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -1212,7 +1517,22 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       {bean.flavor.map((flavor: string, index: number) => (
                         <span
                           key={index}
-                          className="bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                          contentEditable
+                          suppressContentEditableWarning
+                          onBlur={e => {
+                            const newValue = e.currentTarget.textContent?.trim() || '';
+                            if (newValue !== flavor) {
+                              const newFlavors = [...bean.flavor!];
+                              if (newValue === '') {
+                                // 如果编辑为空，删除该标签
+                                newFlavors.splice(index, 1);
+                              } else {
+                                newFlavors[index] = newValue;
+                              }
+                              handleUpdateField({ flavor: newFlavors });
+                            }
+                          }}
+                          className="cursor-text bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800 dark:text-neutral-300"
                         >
                           {flavor}
                         </span>
