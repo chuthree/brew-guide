@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { BrewingNote } from '@/lib/core/config';
@@ -57,6 +57,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   // 标题可见性状态
   const [isTitleVisible, setIsTitleVisible] = useState(true);
 
+  // 备注编辑状态
+  const notesRef = useRef<HTMLDivElement>(null);
+
   // 使用风味维度hook
   const { getValidTasteRatings } = useFlavorDimensions();
 
@@ -87,6 +90,49 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       setBeanImageError(false);
     }
   }, [note?.image, beanInfo?.image]);
+
+  // 初始化备注值
+  useEffect(() => {
+    if (note?.notes && notesRef.current) {
+      notesRef.current.textContent = note.notes;
+    }
+  }, [note?.notes, note?.id]);
+
+  // 保存备注的函数
+  const handleSaveNotes = async (newNotes: string) => {
+    if (!note?.id) return;
+
+    try {
+      const { useBrewingNoteStore } = await import(
+        '@/lib/stores/brewingNoteStore'
+      );
+
+      // 更新备注
+      await useBrewingNoteStore.getState().updateNote(note.id, {
+        notes: newNotes.trim(),
+      });
+
+      // 触发数据更新事件
+      window.dispatchEvent(
+        new CustomEvent('brewingNoteDataChanged', {
+          detail: {
+            action: 'update',
+            noteId: note.id,
+          },
+        })
+      );
+    } catch (error) {
+      console.error('保存备注失败:', error);
+    }
+  };
+
+  // 处理备注内容变化
+  const handleNotesInput = () => {
+    if (notesRef.current) {
+      const newContent = notesRef.current.textContent || '';
+      handleSaveNotes(newContent);
+    }
+  };
 
   // 监测标题可见性
   useEffect(() => {
@@ -149,20 +195,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     modalHistory.back();
   }, []);
 
-  // 只在需要时渲染DOM
-  if (!shouldRender) return null;
-
-  const beanName = note?.coffeeBeanInfo?.name;
-  const validTasteRatings = note ? getValidTasteRatings(note.taste) : [];
-  const hasTasteRatings = validTasteRatings.length > 0;
-
-  // 构建标题文本 - 只显示咖啡豆名称
-  const getTitleText = () => {
-    if (!note) return '未命名';
-    return beanName || '未命名';
-  };
-
-  // 判断是否为意式咖啡笔记
+  // 判断是否为意式咖啡笔记 - 必须在所有 hooks 调用后，在条件返回前
   const isEspresso = React.useMemo(() => {
     if (!note) return false;
     // 检查器具ID (兼容自定义意式器具ID格式，通常包含 espresso)
@@ -175,6 +208,19 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     }
     return false;
   }, [note]);
+
+  // 只在需要时渲染DOM
+  if (!shouldRender) return null;
+
+  const beanName = note?.coffeeBeanInfo?.name;
+  const validTasteRatings = note ? getValidTasteRatings(note.taste) : [];
+  const hasTasteRatings = validTasteRatings.length > 0;
+
+  // 构建标题文本 - 只显示咖啡豆名称
+  const getTitleText = () => {
+    if (!note) return '未命名';
+    return beanName || '未命名';
+  };
 
   return (
     <>
@@ -620,9 +666,19 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               </div>
 
               {/* 备注信息 */}
-              {note.notes && note.notes.trim() && (
+              {note.notes && (
                 <div className="border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
-                  <div className="text-xs font-medium whitespace-pre-line text-neutral-800 dark:text-neutral-100">
+                  <div
+                    ref={notesRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onBlur={handleNotesInput}
+                    className="cursor-text text-xs font-medium whitespace-pre-wrap text-neutral-800 outline-none dark:text-neutral-100"
+                    style={{
+                      minHeight: '1.5em',
+                      wordBreak: 'break-word',
+                    }}
+                  >
                     {note.notes}
                   </div>
                 </div>

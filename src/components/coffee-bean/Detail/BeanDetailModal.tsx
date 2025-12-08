@@ -243,9 +243,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const [showGreenBeanRecords, setShowGreenBeanRecords] = useState(false);
 
   // 备注编辑状态
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [notesValue, setNotesValue] = useState('');
-  const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const notesRef = useRef<HTMLDivElement>(null);
 
   // 处理显示/隐藏动画
   useEffect(() => {
@@ -438,12 +436,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 初始化备注值
   useEffect(() => {
-    if (bean?.notes) {
-      setNotesValue(bean.notes);
-    } else {
-      setNotesValue('');
+    if (bean?.notes && notesRef.current) {
+      notesRef.current.textContent = bean.notes;
     }
-  }, [bean?.notes]);
+  }, [bean?.notes, bean?.id]);
 
   // 保存备注的函数
   const handleSaveNotes = async (newNotes: string) => {
@@ -473,21 +469,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     }
   };
 
-  // 自动调整 textarea 高度
-  const adjustTextareaHeight = () => {
-    const textarea = notesTextareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
+  // 处理备注内容变化
+  const handleNotesInput = () => {
+    if (notesRef.current) {
+      const newContent = notesRef.current.textContent || '';
+      handleSaveNotes(newContent);
     }
   };
-
-  // 当进入编辑模式或内容变化时，调整高度
-  useEffect(() => {
-    if (isEditingNotes) {
-      adjustTextareaHeight();
-    }
-  }, [isEditingNotes, notesValue]);
 
   // 工具函数：格式化数字显示
   const formatNumber = (value: string | undefined): string =>
@@ -1234,44 +1222,32 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 )}
 
                 {/* 备注 */}
-                {(bean.notes || isEditingNotes) && (
+                {bean.notes && (
                   <div className="flex items-start">
                     <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       备注
                     </div>
-                    {isEditingNotes ? (
-                      <textarea
-                        ref={notesTextareaRef}
-                        autoFocus
-                        value={notesValue}
-                        onChange={e => {
-                          setNotesValue(e.target.value);
-                        }}
-                        onBlur={() => {
-                          // 失去焦点时保存并退出编辑模式
-                          handleSaveNotes(notesValue);
-                          setIsEditingNotes(false);
-                        }}
-                        className="ml-4 w-full resize-none overflow-hidden rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-medium text-neutral-800 outline-none focus:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-neutral-600"
-                        placeholder="添加备注..."
-                        rows={1}
-                      />
-                    ) : (
-                      <div
-                        onClick={() => setIsEditingNotes(true)}
-                        className="ml-4 cursor-text text-xs font-medium whitespace-pre-wrap text-neutral-800 dark:text-neutral-100"
-                      >
-                        {searchQuery ? (
-                          <HighlightText
-                            text={bean.notes || ''}
-                            highlight={searchQuery}
-                            className="text-neutral-700 dark:text-neutral-300"
-                          />
-                        ) : (
-                          bean.notes
-                        )}
-                      </div>
-                    )}
+                    <div
+                      ref={notesRef}
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={handleNotesInput}
+                      className="ml-4 cursor-text text-xs font-medium whitespace-pre-wrap text-neutral-800 outline-none dark:text-neutral-100"
+                      style={{
+                        minHeight: '1.5em',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {searchQuery ? (
+                        <HighlightText
+                          text={bean.notes || ''}
+                          highlight={searchQuery}
+                          className="text-neutral-700 dark:text-neutral-300"
+                        />
+                      ) : (
+                        bean.notes
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
