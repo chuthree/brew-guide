@@ -18,6 +18,59 @@ import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
+import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+
+// 小尺寸咖啡豆图片组件（用于关联豆子卡片）
+const BeanImageSmall: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
+  const [imageError, setImageError] = useState(false);
+  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadRoasterLogo = async () => {
+      if (!bean.name || bean.image) {
+        setRoasterLogo(null);
+        return;
+      }
+
+      const roasterName = extractRoasterFromName(bean.name);
+      if (roasterName && roasterName !== '未知烘焙商') {
+        const logo = await RoasterLogoManager.getLogoByRoaster(roasterName);
+        setRoasterLogo(logo);
+      } else {
+        setRoasterLogo(null);
+      }
+    };
+
+    loadRoasterLogo();
+  }, [bean.name, bean.image]);
+
+  return (
+    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xs bg-neutral-200/30 dark:bg-neutral-800/40">
+      {bean.image && !imageError ? (
+        <Image
+          src={bean.image}
+          alt={bean.name}
+          fill
+          className="object-cover"
+          onError={() => setImageError(true)}
+        />
+      ) : roasterLogo && !imageError ? (
+        <Image
+          src={roasterLogo}
+          alt={extractRoasterFromName(bean.name) || '烘焙商图标'}
+          fill
+          className="object-cover"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[10px] font-medium text-neutral-400 dark:text-neutral-600">
+          {bean.name ? bean.name.charAt(0) : '豆'}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(
@@ -149,6 +202,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   }, [bean, allBeans]);
 
   const [imageError, setImageError] = useState(false);
+  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
   const [relatedNotes, setRelatedNotes] = useState<BrewingNote[]>([]);
   const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>(
     {}
@@ -654,6 +708,27 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   // 判断当前豆子是否为生豆
   const isGreenBean = bean?.beanState === 'green';
 
+  // 加载烘焙商logo
+  useEffect(() => {
+    const loadRoasterLogo = async () => {
+      if (!bean?.name || bean?.image) {
+        // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
+        setRoasterLogo(null);
+        return;
+      }
+
+      const roasterName = extractRoasterFromName(bean.name);
+      if (roasterName && roasterName !== '未知烘焙商') {
+        const logo = await RoasterLogoManager.getLogoByRoaster(roasterName);
+        setRoasterLogo(logo);
+      } else {
+        setRoasterLogo(null);
+      }
+    };
+
+    loadRoasterLogo();
+  }, [bean?.name, bean?.image]);
+
   // 获取相关的冲煮记录
   useEffect(() => {
     const loadRelatedNotes = async () => {
@@ -990,34 +1065,45 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           }}
         >
           {/* 图片区域 */}
-          {bean?.image && (
-            <div className="mb-4">
-              <div className="flex cursor-pointer justify-center bg-neutral-200/30 p-4 dark:bg-neutral-800/40">
-                <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                  {imageError ? (
-                    <div className="absolute inset-0 flex items-center justify-center px-8 text-sm text-neutral-500 dark:text-neutral-400">
-                      加载失败
-                    </div>
-                  ) : (
-                    <Image
-                      src={bean.image}
-                      alt={bean.name || '咖啡豆图片'}
-                      height={192}
-                      width={192}
-                      className="h-full w-auto object-cover"
-                      onError={() => setImageError(true)}
-                      onClick={() => {
-                        if (!imageError) {
-                          setCurrentImageUrl(bean.image || '');
-                          setImageViewerOpen(true);
-                        }
-                      }}
-                    />
-                  )}
-                </div>
+          <div className="mb-4">
+            <div className="flex cursor-pointer justify-center bg-neutral-200/30 p-4 dark:bg-neutral-800/40">
+              <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                {bean?.image && !imageError ? (
+                  <Image
+                    src={bean.image}
+                    alt={bean.name || '咖啡豆图片'}
+                    height={192}
+                    width={192}
+                    className="h-full w-auto object-cover"
+                    onError={() => setImageError(true)}
+                    onClick={() => {
+                      if (!imageError) {
+                        setCurrentImageUrl(bean.image || '');
+                        setImageViewerOpen(true);
+                      }
+                    }}
+                  />
+                ) : roasterLogo && !imageError ? (
+                  <Image
+                    src={roasterLogo}
+                    alt={extractRoasterFromName(bean?.name || '') || '烘焙商图标'}
+                    height={192}
+                    width={192}
+                    className="h-full w-auto object-cover"
+                    onError={() => setImageError(true)}
+                    onClick={() => {
+                      setCurrentImageUrl(roasterLogo);
+                      setImageViewerOpen(true);
+                    }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-2xl font-medium text-neutral-400 dark:text-neutral-600">
+                    {bean?.name ? bean.name.charAt(0) : '豆'}
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* 标题区域 */}
           <div className="mb-4 px-6">
@@ -1349,20 +1435,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           >
                             <div className="flex items-center gap-3">
                               {/* 图片 */}
-                              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xs bg-neutral-200/30 dark:bg-neutral-800/40">
-                                {relatedBean.image ? (
-                                  <Image
-                                    src={relatedBean.image}
-                                    alt={relatedBean.name}
-                                    fill
-                                    className="object-cover"
-                                  />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-[10px] text-neutral-400">
-                                    无图
-                                  </div>
-                                )}
-                              </div>
+                              <BeanImageSmall bean={relatedBean} />
 
                               {/* 信息 */}
                               <div className="min-w-0 flex-1">
@@ -1473,20 +1546,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                     return (
                                       <div className="flex items-center gap-3">
                                         {/* 图片 */}
-                                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xs bg-neutral-200/30 dark:bg-neutral-800/40">
-                                          {roastedBean.image ? (
-                                            <Image
-                                              src={roastedBean.image}
-                                              alt={roastedBean.name}
-                                              fill
-                                              className="object-cover"
-                                            />
-                                          ) : (
-                                            <div className="flex h-full w-full items-center justify-center text-[10px] text-neutral-400">
-                                              无图
-                                            </div>
-                                          )}
-                                        </div>
+                                        <BeanImageSmall bean={roastedBean} />
 
                                         {/* 信息 */}
                                         <div className="min-w-0 flex-1">
