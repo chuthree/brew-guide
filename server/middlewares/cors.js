@@ -18,6 +18,11 @@ export const corsMiddleware = cors({
     // 允许没有 origin 的请求（如 curl、Postman）
     if (!origin) return callback(null, true);
 
+    // 如果配置为 '*'，允许所有来源
+    if (corsConfig.allowedOrigins === '*') {
+      return callback(null, true);
+    }
+
     if (corsConfig.allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {

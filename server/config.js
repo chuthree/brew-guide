@@ -62,9 +62,11 @@ export const securityConfig = {
  */
 export const corsConfig = {
   allowedOrigins: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-        .map(o => o.trim())
-        .filter(o => o && o !== '*')
+    ? process.env.ALLOWED_ORIGINS === '*'
+      ? '*'
+      : process.env.ALLOWED_ORIGINS.split(',')
+          .map(o => o.trim())
+          .filter(o => o)
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true,
   methods: ['POST', 'GET', 'PUT', 'DELETE', 'OPTIONS'],
