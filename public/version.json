@@ -1,5 +1,5 @@
 {
-  "version": "1.5.5",
+  "version": "1.5.6",
   "downloadUrl": "https://gitee.com/chu3/brew-guide/releases",
-  "releaseNotes": "加入年度回顾，在统计中进入"
+  "releaseNotes": "加入想法收集站，识别咖啡豆可多选，详情页备注可直接编辑等"
 }
