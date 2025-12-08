@@ -75,3 +75,6 @@ logs/
 
 # API Server
 server/.env
+server/*.log
+server/server.js.bak
+server/data/
