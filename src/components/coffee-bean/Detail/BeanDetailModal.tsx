@@ -458,9 +458,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (bean?.notes && notesRef.current) {
       notesRef.current.textContent = bean.notes;
     }
-  }, [bean?.notes, bean?.id]);
+    // 只在切换咖啡豆时初始化，不依赖 notes 值变化
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bean?.id]);
 
-  // 初始化成分值（产地、处理法、品种）
+  // 初始化成分值（产地、处理法、品种）- 只在切换咖啡豆时初始化
   useEffect(() => {
     const firstComponent = bean?.blendComponents?.[0];
     if (firstComponent) {
@@ -474,7 +476,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         varietyRef.current.textContent = firstComponent.variety;
       }
     }
-  }, [bean?.blendComponents, bean?.id]);
+    // 只在切换咖啡豆时初始化，不依赖 blendComponents 值变化
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bean?.id]);
 
   // 保存备注的函数
   const handleSaveNotes = async (newNotes: string) => {
