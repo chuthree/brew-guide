@@ -60,7 +60,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   // 备注编辑状态
   const notesRef = useRef<HTMLDivElement>(null);
 
-  // 使用风味维度hook
+  // 使用评分维度hook
   const { getValidTasteRatings } = useFlavorDimensions();
 
   // 处理显示/隐藏动画

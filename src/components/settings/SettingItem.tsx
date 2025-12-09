@@ -52,10 +52,10 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
                   </div>
                 </div>
                 <div
-                  className={`flex min-w-0 flex-1 items-center justify-between py-3.5 ${
+                  className={`flex min-w-0 flex-1 items-center justify-between border-b py-3.5 ${
                     !isLast && !isExpanded
-                      ? 'border-b border-black/5 dark:border-white/5'
-                      : ''
+                      ? 'border-black/5 dark:border-white/5'
+                      : 'border-transparent'
                   }`}
                 >
                   <span className="truncate leading-none">{item.label}</span>
@@ -103,10 +103,11 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
               >
                 <div className="overflow-hidden">
                   {expandedContent && (
-                    <div
-                      className={`relative ${!isLast ? 'border-b border-black/5 dark:border-white/5' : ''}`}
-                    >
+                    <div className="relative">
                       {expandedContent}
+                      {!isLast && (
+                        <div className="ml-[42px] border-b border-black/5 dark:border-white/5" />
+                      )}
                     </div>
                   )}
                 </div>

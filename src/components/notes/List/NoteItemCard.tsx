@@ -310,16 +310,16 @@ export default React.memo(NoteItemCard, (prevProps, nextProps) => {
     return false;
   }
 
-  // 检查口感 - 🔥 修复：检查所有风味维度（包括自定义维度）
+  // 检查口感 - 🔥 修复：检查所有评分维度（包括自定义维度）
   const prevTasteKeys = Object.keys(prevNote.taste || {});
   const nextTasteKeys = Object.keys(nextNote.taste || {});
 
-  // 检查风味维度数量是否变化
+  // 检查评分维度数量是否变化
   if (prevTasteKeys.length !== nextTasteKeys.length) {
     return false;
   }
 
-  // 检查每个风味维度的值是否变化
+  // 检查每个评分维度的值是否变化
   for (const key of nextTasteKeys) {
     if (prevNote.taste?.[key] !== nextNote.taste?.[key]) {
       return false;

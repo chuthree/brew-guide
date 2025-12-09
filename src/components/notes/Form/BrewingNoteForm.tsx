@@ -221,7 +221,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   settings,
   isCopy = false, // 默认不是复制操作
 }) => {
-  // 风味维度数据
+  // 评分维度数据
   const [flavorDimensions, setFlavorDimensions] = useState<FlavorDimension[]>(
     []
   );
@@ -401,7 +401,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 创建一个历史维度项
         const historicalDimension: FlavorDimension = {
           id: tasteId,
-          label: historicalLabels[tasteId] || '已删除的风味维度',
+          label: historicalLabels[tasteId] || '已删除的评分维度',
           order: 999, // 放在最后
           isDefault: false,
         };
@@ -413,7 +413,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     return displayDims.sort((a, b) => a.order - b.order);
   };
 
-  // 加载风味维度数据
+  // 加载评分维度数据
   useEffect(() => {
     const loadFlavorDimensions = async () => {
       try {
@@ -444,14 +444,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           setDisplayDimensions(displayDims);
         }
       } catch (error) {
-        console.error('加载风味维度失败:', error);
+        console.error('加载评分维度失败:', error);
       }
     };
 
     loadFlavorDimensions();
   }, [initialData.taste]);
 
-  // 监听风味维度变化
+  // 监听评分维度变化
   useEffect(() => {
     const handleFlavorDimensionsChange = async (event: Event) => {
       const customEvent = event as CustomEvent;

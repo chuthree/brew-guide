@@ -65,7 +65,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   const NoteItemComponent =
     noteDisplayStyle === 'card' ? NoteItemCard : NoteItem;
 
-  // 使用风味维度hook - 在父组件中调用一次，然后传递给所有子组件
+  // 使用评分维度hook - 在父组件中调用一次，然后传递给所有子组件
   const { getValidTasteRatings } = useFlavorDimensions();
 
   // 🔥 直接使用 preFilteredNotes，不需要内部 state

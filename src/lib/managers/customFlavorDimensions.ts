@@ -1,11 +1,11 @@
 /**
- * 自定义风味维度管理器
+ * 自定义评分维度管理器
  * 提供风味评分维度的增删改查功能
  */
 
 import { Storage } from '@/lib/core/storage';
 
-// 风味维度接口
+// 评分维度接口
 export interface FlavorDimension {
   id: string;
   label: string;
@@ -13,7 +13,7 @@ export interface FlavorDimension {
   isDefault: boolean;
 }
 
-// 默认风味维度
+// 默认评分维度
 export const DEFAULT_FLAVOR_DIMENSIONS: FlavorDimension[] = [
   { id: 'acidity', label: '酸度', order: 0, isDefault: true },
   { id: 'sweetness', label: '甜度', order: 1, isDefault: true },
@@ -29,11 +29,11 @@ let dimensionsCache: FlavorDimension[] | null = null;
 let historicalLabelsCache: Record<string, string> | null = null;
 
 /**
- * 自定义风味维度管理器
+ * 自定义评分维度管理器
  */
 export const CustomFlavorDimensionsManager = {
   /**
-   * 获取所有风味维度（带缓存）
+   * 获取所有评分维度（带缓存）
    */
   async getFlavorDimensions(): Promise<FlavorDimension[]> {
     // 🔥 如果缓存存在，直接返回
@@ -52,7 +52,7 @@ export const CustomFlavorDimensionsManager = {
       dimensionsCache = DEFAULT_FLAVOR_DIMENSIONS;
       return dimensionsCache;
     } catch (error) {
-      console.error('获取风味维度失败:', error);
+      console.error('获取评分维度失败:', error);
       dimensionsCache = DEFAULT_FLAVOR_DIMENSIONS;
       return dimensionsCache;
     }
@@ -92,7 +92,7 @@ export const CustomFlavorDimensionsManager = {
   },
 
   /**
-   * 保存风味维度
+   * 保存评分维度
    */
   async saveFlavorDimensions(dimensions: FlavorDimension[]): Promise<void> {
     try {
@@ -104,7 +104,7 @@ export const CustomFlavorDimensionsManager = {
       await this.saveHistoricalLabels(historicalLabels);
 
       await Storage.set(STORAGE_KEY, JSON.stringify(dimensions));
-      
+
       // 🔥 清除缓存，下次读取时会重新加载
       dimensionsCache = null;
 
@@ -115,13 +115,13 @@ export const CustomFlavorDimensionsManager = {
         })
       );
     } catch (error) {
-      console.error('保存风味维度失败:', error);
+      console.error('保存评分维度失败:', error);
       throw error;
     }
   },
 
   /**
-   * 添加新的风味维度
+   * 添加新的评分维度
    */
   async addFlavorDimension(label: string): Promise<FlavorDimension> {
     const dimensions = await this.getFlavorDimensions();
@@ -141,7 +141,7 @@ export const CustomFlavorDimensionsManager = {
   },
 
   /**
-   * 更新风味维度
+   * 更新评分维度
    */
   async updateFlavorDimension(
     id: string,
@@ -151,7 +151,7 @@ export const CustomFlavorDimensionsManager = {
     const index = dimensions.findIndex(d => d.id === id);
 
     if (index === -1) {
-      throw new Error('风味维度不存在');
+      throw new Error('评分维度不存在');
     }
 
     // 不允许修改默认维度的ID，但可以修改label
@@ -160,18 +160,18 @@ export const CustomFlavorDimensionsManager = {
   },
 
   /**
-   * 删除风味维度（不能删除默认维度）
+   * 删除评分维度（不能删除默认维度）
    */
   async deleteFlavorDimension(id: string): Promise<void> {
     const dimensions = await this.getFlavorDimensions();
     const dimension = dimensions.find(d => d.id === id);
 
     if (!dimension) {
-      throw new Error('风味维度不存在');
+      throw new Error('评分维度不存在');
     }
 
     if (dimension.isDefault) {
-      throw new Error('不能删除默认风味维度');
+      throw new Error('不能删除默认评分维度');
     }
 
     // 在删除之前，确保标签已保存到历史记录中
@@ -184,7 +184,7 @@ export const CustomFlavorDimensionsManager = {
   },
 
   /**
-   * 重新排序风味维度
+   * 重新排序评分维度
    */
   async reorderFlavorDimensions(dimensionIds: string[]): Promise<void> {
     const dimensions = await this.getFlavorDimensions();
@@ -193,7 +193,7 @@ export const CustomFlavorDimensionsManager = {
     const reordered = dimensionIds.map((id, index) => {
       const dimension = dimensions.find(d => d.id === id);
       if (!dimension) {
-        throw new Error(`风味维度 ${id} 不存在`);
+        throw new Error(`评分维度 ${id} 不存在`);
       }
       return { ...dimension, order: index };
     });
@@ -202,7 +202,7 @@ export const CustomFlavorDimensionsManager = {
   },
 
   /**
-   * 重置为默认风味维度
+   * 重置为默认评分维度
    */
   async resetToDefault(): Promise<void> {
     await this.saveFlavorDimensions([...DEFAULT_FLAVOR_DIMENSIONS]);
@@ -240,7 +240,7 @@ export const CustomFlavorDimensionsManager = {
 
     // 如果历史标签中也没有，返回人性化的默认标签
     if (id.startsWith('custom_')) {
-      return '已删除的风味维度';
+      return '已删除的评分维度';
     }
 
     return id;

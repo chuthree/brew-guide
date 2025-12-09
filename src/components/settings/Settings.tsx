@@ -36,6 +36,9 @@ import {
   CircleHelp,
   Users,
   Heart,
+  User,
+  MessageCircle,
+  ThumbsUp,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -849,6 +852,7 @@ const Settings: React.FC<SettingsProps> = ({
               },
             },
             {
+              icon: MessageCircle,
               label: '交流群',
               isExpanded: qrCodeType === 'group',
               onClick: () => {
@@ -875,6 +879,7 @@ const Settings: React.FC<SettingsProps> = ({
               ),
             },
             {
+              icon: ThumbsUp,
               label: '赞赏码',
               isExpanded: qrCodeType === 'appreciation',
               onClick: () => {
@@ -1000,7 +1005,7 @@ const Settings: React.FC<SettingsProps> = ({
             },
             {
               icon: Palette,
-              label: '风味维度',
+              label: '评分维度',
               onClick: subSettingsHandlers.onOpenFlavorDimensionSettings,
             },
           ]}
@@ -1010,7 +1015,7 @@ const Settings: React.FC<SettingsProps> = ({
         <SettingGroup
           items={[
             {
-              icon: Users,
+              icon: User,
               label: '用户名',
               value: settings.username,
               placeholder: '点击输入',

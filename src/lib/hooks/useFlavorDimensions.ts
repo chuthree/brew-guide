@@ -5,7 +5,7 @@ import {
 } from '@/lib/managers/customFlavorDimensions';
 
 /**
- * 自定义Hook：获取风味维度数据
+ * 自定义Hook：获取评分维度数据
  */
 export const useFlavorDimensions = () => {
   const [dimensions, setDimensions] = useState<FlavorDimension[]>([]);
@@ -24,7 +24,7 @@ export const useFlavorDimensions = () => {
         setDimensions(dims);
         setHistoricalLabels(labels);
       } catch (error) {
-        console.error('加载风味维度数据失败:', error);
+        console.error('加载评分维度数据失败:', error);
       } finally {
         setLoading(false);
       }
@@ -41,7 +41,7 @@ export const useFlavorDimensions = () => {
 
     loadData();
 
-    // 监听风味维度变化
+    // 监听评分维度变化
     window.addEventListener(
       'flavorDimensionsChanged',
       handleFlavorDimensionsChange as EventListener
@@ -72,7 +72,7 @@ export const useFlavorDimensions = () => {
 
     // 如果历史标签中也没有，返回人性化的默认标签
     if (id.startsWith('custom_')) {
-      return '已删除的风味维度';
+      return '已删除的评分维度';
     }
 
     return id;

@@ -64,7 +64,7 @@ export interface NoteItemProps {
   onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void;
   // 是否为列表中的最后一项（用于虚拟化下控制分割线）
   isLast?: boolean;
-  // 风味维度评分处理函数（从父组件传入，避免每个子组件重复调用）
+  // 评分维度评分处理函数（从父组件传入，避免每个子组件重复调用）
   getValidTasteRatings?: (
     taste: Record<string, number>
   ) => Array<{ id: string; label: string; value: number }>;

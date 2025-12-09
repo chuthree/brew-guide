@@ -360,7 +360,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     loadPrintSettings();
   }, [isOpen]);
 
-  // 使用风味维度hook
+  // 使用评分维度hook
   const { getValidTasteRatings } = useFlavorDimensions();
 
   // 监测标题可见性
@@ -1209,7 +1209,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 ) : roasterLogo && !imageError ? (
                   <Image
                     src={roasterLogo}
-                    alt={extractRoasterFromName(bean?.name || '') || '烘焙商图标'}
+                    alt={
+                      extractRoasterFromName(bean?.name || '') || '烘焙商图标'
+                    }
                     height={192}
                     width={192}
                     className="h-full w-auto object-cover"
@@ -1374,7 +1376,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           >
                             <span
                               onClick={() =>
-                                setShowRoastLevelDropdown(!showRoastLevelDropdown)
+                                setShowRoastLevelDropdown(
+                                  !showRoastLevelDropdown
+                                )
                               }
                               className="cursor-pointer text-xs font-medium text-neutral-800 dark:text-neutral-100"
                             >
@@ -1386,7 +1390,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                 {ROAST_LEVELS.map(level => (
                                   <div
                                     key={level}
-                                    onClick={() => handleRoastLevelSelect(level)}
+                                    onClick={() =>
+                                      handleRoastLevelSelect(level)
+                                    }
                                     className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
                                       level === roastLevel
                                         ? 'bg-neutral-100 text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
@@ -1427,12 +1433,16 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             field: 'origin' | 'process' | 'variety',
                             value: string
                           ) => {
-                            const updatedComponents = [...bean.blendComponents!];
+                            const updatedComponents = [
+                              ...bean.blendComponents!,
+                            ];
                             updatedComponents[index] = {
                               ...updatedComponents[index],
                               [field]: value.trim(),
                             };
-                            handleUpdateField({ blendComponents: updatedComponents });
+                            handleUpdateField({
+                              blendComponents: updatedComponents,
+                            });
                           };
 
                           return (
@@ -1446,7 +1456,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                   contentEditable
                                   suppressContentEditableWarning
                                   onBlur={e => {
-                                    const newValue = e.currentTarget.textContent?.trim() || '';
+                                    const newValue =
+                                      e.currentTarget.textContent?.trim() || '';
                                     if (newValue !== comp.origin) {
                                       handleBlendFieldEdit('origin', newValue);
                                     }
@@ -1457,16 +1468,20 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                 </span>
                               )}
                               {/* 分隔符 */}
-                              {comp.origin && (comp.variety || comp.process) && (
-                                <span className="text-neutral-400 dark:text-neutral-600">·</span>
-                              )}
+                              {comp.origin &&
+                                (comp.variety || comp.process) && (
+                                  <span className="text-neutral-400 dark:text-neutral-600">
+                                    ·
+                                  </span>
+                                )}
                               {/* 品种 */}
                               {comp.variety && (
                                 <span
                                   contentEditable
                                   suppressContentEditableWarning
                                   onBlur={e => {
-                                    const newValue = e.currentTarget.textContent?.trim() || '';
+                                    const newValue =
+                                      e.currentTarget.textContent?.trim() || '';
                                     if (newValue !== comp.variety) {
                                       handleBlendFieldEdit('variety', newValue);
                                     }
@@ -1478,7 +1493,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                               )}
                               {/* 分隔符 */}
                               {comp.variety && comp.process && (
-                                <span className="text-neutral-400 dark:text-neutral-600">·</span>
+                                <span className="text-neutral-400 dark:text-neutral-600">
+                                  ·
+                                </span>
                               )}
                               {/* 处理法 */}
                               {comp.process && (
@@ -1486,7 +1503,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                   contentEditable
                                   suppressContentEditableWarning
                                   onBlur={e => {
-                                    const newValue = e.currentTarget.textContent?.trim() || '';
+                                    const newValue =
+                                      e.currentTarget.textContent?.trim() || '';
                                     if (newValue !== comp.process) {
                                       handleBlendFieldEdit('process', newValue);
                                     }
@@ -1524,7 +1542,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           contentEditable
                           suppressContentEditableWarning
                           onBlur={e => {
-                            const newValue = e.currentTarget.textContent?.trim() || '';
+                            const newValue =
+                              e.currentTarget.textContent?.trim() || '';
                             if (newValue !== flavor) {
                               const newFlavors = [...bean.flavor!];
                               if (newValue === '') {

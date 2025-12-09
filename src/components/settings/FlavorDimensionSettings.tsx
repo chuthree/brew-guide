@@ -71,7 +71,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
   const [newDimensionLabel, setNewDimensionLabel] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // 加载风味维度数据
+  // 加载评分维度数据
   useEffect(() => {
     loadDimensions();
   }, []);
@@ -82,7 +82,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
         await CustomFlavorDimensionsManager.getFlavorDimensions();
       setDimensions(loadedDimensions);
     } catch (error) {
-      console.error('加载风味维度失败:', error);
+      console.error('加载评分维度失败:', error);
     }
   };
 
@@ -102,8 +102,8 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
         hapticsUtils.light();
       }
     } catch (error) {
-      console.error('添加风味维度失败:', error);
-      alert('添加风味维度失败，请重试');
+      console.error('添加评分维度失败:', error);
+      alert('添加评分维度失败，请重试');
     }
   };
 
@@ -129,8 +129,8 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
         hapticsUtils.light();
       }
     } catch (error) {
-      console.error('更新风味维度失败:', error);
-      alert('更新风味维度失败，请重试');
+      console.error('更新评分维度失败:', error);
+      alert('更新评分维度失败，请重试');
     }
   };
 
@@ -146,7 +146,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
     if (!dimension) return;
 
     if (dimension.isDefault) {
-      alert('不能删除默认风味维度');
+      alert('不能删除默认评分维度');
       return;
     }
 
@@ -160,14 +160,14 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
         hapticsUtils.light();
       }
     } catch (error) {
-      console.error('删除风味维度失败:', error);
-      alert('删除风味维度失败，请重试');
+      console.error('删除评分维度失败:', error);
+      alert('删除评分维度失败，请重试');
     }
   };
 
   // 重置为默认
   const handleResetToDefault = async () => {
-    if (!confirm('确定要重置为默认风味维度吗？这将删除所有自定义维度。'))
+    if (!confirm('确定要重置为默认评分维度吗？这将删除所有自定义维度。'))
       return;
 
     try {
@@ -178,8 +178,8 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
         hapticsUtils.medium();
       }
     } catch (error) {
-      console.error('重置风味维度失败:', error);
-      alert('重置风味维度失败，请重试');
+      console.error('重置评分维度失败:', error);
+      alert('重置评分维度失败，请重试');
     }
   };
 
@@ -205,220 +205,218 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
 
   return (
     <SettingPage
-      title="风味维度设置"
+      title="评分维度设置"
       isVisible={isVisible}
       onClose={handleClose}
     >
       {/* 滚动内容区域 */}
-      <div className="mx-auto w-full flex-1 overflow-y-auto sm:max-w-sm">
-        <div className="-mt-4 space-y-6 px-6">
-          {/* 说明文字 */}
-          <div className="space-y-3 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-            <div className="text-xs text-neutral-600 dark:text-neutral-400">
-              <p className="mb-3">
-                自定义笔记中的风味评分维度。可以添加、编辑、删除和重新排序维度。
-              </p>
-              <ul className="ml-3 space-y-1">
-                <li>• 默认维度可以重命名但不能删除</li>
-                <li>• 拖拽图标可以重新排序</li>
-                <li>• 删除维度不会影响已有笔记中的评分数据</li>
-              </ul>
-            </div>
+      <div className="-mt-4 space-y-6 px-6">
+        {/* 说明文字 */}
+        <div className="space-y-3 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
+          <div className="text-xs text-neutral-600 dark:text-neutral-400">
+            <p className="mb-3">
+              自定义笔记中的风味评分维度。可以添加、编辑、删除和重新排序维度。
+            </p>
+            <ul className="ml-3 space-y-1">
+              <li>• 默认维度可以重命名但不能删除</li>
+              <li>• 拖拽图标可以重新排序</li>
+              <li>• 删除维度不会影响已有笔记中的评分数据</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* 维度列表 */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              当前维度 ({dimensions.length})
+            </h3>
+            <button
+              onClick={handleResetToDefault}
+              className="text-xs text-neutral-500 underline hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+            >
+              重置为默认
+            </button>
           </div>
 
-          {/* 维度列表 */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                当前维度 ({dimensions.length})
-              </h3>
-              <button
-                onClick={handleResetToDefault}
-                className="text-xs text-neutral-500 underline hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+          <Reorder.Group
+            axis="y"
+            values={dimensions}
+            onReorder={handleReorder}
+            className="space-y-2"
+          >
+            {dimensions.map(dimension => (
+              <Reorder.Item
+                key={dimension.id}
+                value={dimension}
+                whileDrag={{
+                  scale: 1.01,
+                  transition: { duration: 0.1 },
+                }}
+                style={{
+                  listStyle: 'none',
+                }}
               >
-                重置为默认
-              </button>
-            </div>
-
-            <Reorder.Group
-              axis="y"
-              values={dimensions}
-              onReorder={handleReorder}
-              className="space-y-2"
-            >
-              {dimensions.map(dimension => (
-                <Reorder.Item
-                  key={dimension.id}
-                  value={dimension}
+                <motion.div
+                  className="flex items-center py-3"
                   whileDrag={{
-                    scale: 1.01,
+                    backgroundColor: 'rgba(0,0,0,0.05)',
                     transition: { duration: 0.1 },
                   }}
-                  style={{
-                    listStyle: 'none',
+                  onPointerDown={e => {
+                    const target = e.target as HTMLElement;
+                    const isDragHandle = target.closest('.drag-handle');
+                    if (!isDragHandle) {
+                      e.preventDefault();
+                    }
                   }}
                 >
-                  <motion.div
-                    className="flex items-center py-3"
-                    whileDrag={{
-                      backgroundColor: 'rgba(0,0,0,0.05)',
-                      transition: { duration: 0.1 },
-                    }}
-                    onPointerDown={e => {
-                      const target = e.target as HTMLElement;
-                      const isDragHandle = target.closest('.drag-handle');
-                      if (!isDragHandle) {
-                        e.preventDefault();
-                      }
-                    }}
-                  >
-                    {/* 拖拽手柄 */}
-                    <div className="drag-handle mr-3 cursor-grab p-1 pl-0 active:cursor-grabbing">
-                      <motion.div
-                        whileDrag={{
-                          color: 'rgb(107 114 128)',
-                          transition: { duration: 0.1 },
-                        }}
-                      >
-                        <GripVertical className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
-                      </motion.div>
-                    </div>
+                  {/* 拖拽手柄 */}
+                  <div className="drag-handle mr-3 cursor-grab p-1 pl-0 active:cursor-grabbing">
+                    <motion.div
+                      whileDrag={{
+                        color: 'rgb(107 114 128)',
+                        transition: { duration: 0.1 },
+                      }}
+                    >
+                      <GripVertical className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+                    </motion.div>
+                  </div>
 
-                    {/* 维度内容 */}
-                    <div className="flex-1">
-                      {editingId === dimension.id ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={editingLabel}
-                            onChange={e => setEditingLabel(e.target.value)}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') saveEdit();
-                              if (e.key === 'Escape') cancelEdit();
-                            }}
-                            className="flex-1 rounded bg-neutral-100 px-2 py-1 text-sm focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:bg-neutral-700"
-                            autoFocus
-                          />
-                          <button
-                            onClick={saveEdit}
-                            className="rounded bg-neutral-800 px-2 py-1 text-xs text-white hover:opacity-80 dark:bg-neutral-200 dark:text-neutral-800"
-                          >
-                            保存
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                          >
-                            取消
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <motion.div
-                            whileDrag={{
-                              color: 'rgb(107 114 128)',
-                              transition: { duration: 0.1 },
-                            }}
-                          >
-                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                              {dimension.label}
+                  {/* 维度内容 */}
+                  <div className="flex-1">
+                    {editingId === dimension.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editingLabel}
+                          onChange={e => setEditingLabel(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveEdit();
+                            if (e.key === 'Escape') cancelEdit();
+                          }}
+                          className="flex-1 rounded bg-neutral-100 px-2 py-1 text-sm focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:bg-neutral-700"
+                          autoFocus
+                        />
+                        <button
+                          onClick={saveEdit}
+                          className="rounded bg-neutral-800 px-2 py-1 text-xs text-white hover:opacity-80 dark:bg-neutral-200 dark:text-neutral-800"
+                        >
+                          保存
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                        >
+                          取消
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <motion.div
+                          whileDrag={{
+                            color: 'rgb(107 114 128)',
+                            transition: { duration: 0.1 },
+                          }}
+                        >
+                          <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                            {dimension.label}
+                          </span>
+                          {dimension.isDefault && (
+                            <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">
+                              (默认)
                             </span>
-                            {dimension.isDefault && (
-                              <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">
-                                (默认)
-                              </span>
-                            )}
-                          </motion.div>
-                          <div className="flex items-center gap-1">
+                          )}
+                        </motion.div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => startEditing(dimension)}
+                            className="p-1 text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                          >
+                            <Edit3 className="h-3 w-3" />
+                          </button>
+                          {!dimension.isDefault && (
                             <button
-                              onClick={() => startEditing(dimension)}
-                              className="p-1 text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                              onClick={() =>
+                                handleDeleteDimension(dimension.id)
+                              }
+                              className="p-1 text-neutral-400 hover:text-red-500 dark:text-neutral-500 dark:hover:text-red-400"
                             >
-                              <Edit3 className="h-3 w-3" />
+                              <Trash2 className="h-3 w-3" />
                             </button>
-                            {!dimension.isDefault && (
-                              <button
-                                onClick={() =>
-                                  handleDeleteDimension(dimension.id)
-                                }
-                                className="p-1 text-neutral-400 hover:text-red-500 dark:text-neutral-500 dark:hover:text-red-400"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            )}
-                          </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </motion.div>
-                </Reorder.Item>
-              ))}
-            </Reorder.Group>
-          </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
+        </div>
 
-          {/* 添加新维度 */}
-          <div className="space-y-3">
-            {/* <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+        {/* 添加新维度 */}
+        <div className="space-y-3">
+          {/* <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                             添加新维度
                         </h3>
                          */}
-            <AnimatePresence>
-              {showAddForm ? (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newDimensionLabel}
-                      onChange={e => setNewDimensionLabel(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') handleAddDimension();
-                        if (e.key === 'Escape') {
-                          setShowAddForm(false);
-                          setNewDimensionLabel('');
-                        }
-                      }}
-                      placeholder="醇厚度、香气、余韵..."
-                      className="flex-1 rounded border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                      autoFocus
-                    />
-                    <button
-                      onClick={handleAddDimension}
-                      disabled={!newDimensionLabel.trim()}
-                      className="rounded bg-neutral-800 px-4 py-2 text-sm text-white hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-200 dark:text-neutral-800"
-                    >
-                      添加
-                    </button>
-                    <button
-                      onClick={() => {
+          <AnimatePresence>
+            {showAddForm ? (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-3"
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newDimensionLabel}
+                    onChange={e => setNewDimensionLabel(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleAddDimension();
+                      if (e.key === 'Escape') {
                         setShowAddForm(false);
                         setNewDimensionLabel('');
-                      }}
-                      className="px-4 py-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                    >
-                      取消
-                    </button>
-                  </div>
-                </motion.div>
-              ) : (
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded border border-dashed border-neutral-300 bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-600 transition-colors hover:border-neutral-400 hover:text-neutral-800 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:border-neutral-500 dark:hover:text-neutral-300"
-                >
-                  <Plus className="h-4 w-4" />
-                  添加新的风味维度
-                </button>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* 底部空间 */}
-          <div className="h-20" />
+                      }
+                    }}
+                    placeholder="醇厚度、香气、余韵..."
+                    className="flex-1 rounded border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleAddDimension}
+                    disabled={!newDimensionLabel.trim()}
+                    className="rounded bg-neutral-800 px-4 py-2 text-sm text-white hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-200 dark:text-neutral-800"
+                  >
+                    添加
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAddForm(false);
+                      setNewDimensionLabel('');
+                    }}
+                    className="px-4 py-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                  >
+                    取消
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="flex w-full items-center justify-center gap-2 rounded border border-dashed border-neutral-300 bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-600 transition-colors hover:border-neutral-400 hover:text-neutral-800 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:border-neutral-500 dark:hover:text-neutral-300"
+              >
+                <Plus className="h-4 w-4" />
+                添加新的评分维度
+              </button>
+            )}
+          </AnimatePresence>
         </div>
+
+        {/* 底部空间 */}
+        <div className="h-20" />
       </div>
     </SettingPage>
   );
