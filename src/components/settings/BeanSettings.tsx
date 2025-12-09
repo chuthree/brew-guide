@@ -327,6 +327,29 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                   <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
                 </label>
               </div>
+
+              {/* 沉浸式添加 */}
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                    沉浸式添加
+                  </div>
+                  <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                    手动添加时直接进入可编辑的详情页
+                  </div>
+                </div>
+                <label className="relative inline-flex shrink-0 cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={settings.immersiveAdd || false}
+                    onChange={e =>
+                      handleChange('immersiveAdd', e.target.checked)
+                    }
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                </label>
+              </div>
             </div>
           </div>
 

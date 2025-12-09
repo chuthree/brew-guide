@@ -1968,7 +1968,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               icon: '+',
               text: '手动添加',
               onClick: () => {
-                if (showBeanForm) {
+                // 沉浸式添加模式：触发事件打开详情页添加模式
+                if (settings?.immersiveAdd) {
+                  window.dispatchEvent(
+                    new CustomEvent('immersiveAddOpened', {
+                      detail: { beanState: selectedBeanState },
+                    })
+                  );
+                } else if (showBeanForm) {
                   showBeanForm(null, selectedBeanState);
                 } else {
                   setShowAddForm(true);

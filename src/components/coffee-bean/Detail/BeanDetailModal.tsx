@@ -7,12 +7,27 @@ import dynamic from 'next/dynamic';
 import { CoffeeBean } from '@/types/app';
 import { BrewingNote } from '@/lib/core/config';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
-import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
+import { captureImage } from '@/lib/utils/imageCapture';
+import { compressImage } from '@/lib/utils/imageCompression';
+import {
+  calculateFlavorInfo,
+  getDefaultFlavorPeriodByRoastLevelSync,
+} from '@/lib/utils/flavorPeriodUtils';
+import {
+  defaultSettings,
+  type SettingsOptions,
+} from '@/components/settings/Settings';
 import HighlightText from '@/components/common/ui/HighlightText';
+import { DatePicker } from '@/components/common/ui/DatePicker';
 import { getEquipmentName } from '@/components/notes/utils';
 import { formatDate, formatRating } from '@/components/notes/utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
-import { ArrowRight, ChevronLeft } from 'lucide-react';
+import {
+  ArrowRight,
+  ChevronLeft,
+  Camera,
+  Image as ImageIcon,
+} from 'lucide-react';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
@@ -20,6 +35,13 @@ import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import {
+  DEFAULT_ORIGINS,
+  DEFAULT_PROCESSES,
+  DEFAULT_VARIETIES,
+  addCustomPreset,
+  getFullPresets,
+} from '@/components/coffee-bean/Form/constants';
 
 // 烘焙度选项
 const ROAST_LEVELS = [
@@ -30,6 +52,13 @@ const ROAST_LEVELS = [
   '中深烘焙',
   '深度烘焙',
 ] as const;
+
+// 咖啡豆类型选项
+const BEAN_TYPES = [
+  { value: 'filter' as const, label: '手冲' },
+  { value: 'espresso' as const, label: '意式' },
+  { value: 'omni' as const, label: '全能' },
+];
 
 // 小尺寸咖啡豆图片组件（用于关联豆子卡片）
 const BeanImageSmall: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
@@ -127,13 +156,19 @@ interface InfoItem {
 const InfoGrid: React.FC<{
   items: InfoItem[];
   className?: string;
-}> = ({ items, className = '' }) => {
+  isAddMode?: boolean;
+  onItemClick?: (key: string) => void;
+}> = ({ items, className = '', isAddMode = false, onItemClick }) => {
   if (items.length === 0) return null;
 
   return (
     <div className={`space-y-3 ${className}`}>
       {items.map(item => (
-        <div key={item.key} className="flex items-start">
+        <div
+          key={item.key}
+          className={`flex items-start ${isAddMode && onItemClick ? 'cursor-pointer' : ''}`}
+          onClick={() => isAddMode && onItemClick?.(item.key)}
+        >
           <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             {item.label}
           </div>
@@ -141,7 +176,9 @@ const InfoGrid: React.FC<{
             className={`ml-4 text-xs font-medium ${
               item.type === 'status' && item.color
                 ? item.color
-                : 'text-neutral-800 dark:text-neutral-100'
+                : (isAddMode && item.value === '输入') || item.value === '选择'
+                  ? 'text-neutral-400 dark:text-neutral-500'
+                  : 'text-neutral-800 dark:text-neutral-100'
             } ${item.key === 'roastDate' ? 'whitespace-pre-line' : ''}`}
           >
             {item.value}
@@ -169,6 +206,12 @@ interface BeanDetailModalProps {
   ) => void;
   /** 转为生豆回调 - 将熟豆转换为生豆（用于迁移旧数据） */
   onConvertToGreen?: (bean: CoffeeBean) => void;
+  /** 模式：view 查看/编辑现有豆子，add 添加新豆子 */
+  mode?: 'view' | 'add';
+  /** 添加模式下的保存回调 */
+  onSaveNew?: (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => void;
+  /** 添加模式下的初始豆子状态 */
+  initialBeanState?: 'green' | 'roasted';
 }
 
 const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
@@ -183,7 +226,47 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onRepurchase,
   onRoast,
   onConvertToGreen,
+  mode = 'view',
+  onSaveNew,
+  initialBeanState = 'roasted',
 }) => {
+  // 是否为添加模式
+  const isAddMode = mode === 'add';
+
+  // 添加模式下的临时 bean 数据
+  const [tempBean, setTempBean] = useState<Partial<CoffeeBean>>(() => ({
+    name: '',
+    beanState: initialBeanState,
+    beanType: 'filter',
+    capacity: '',
+    remaining: '',
+    roastLevel: '',
+    roastDate: '',
+    purchaseDate: '',
+    flavor: [],
+    notes: '',
+    blendComponents: [{ origin: '', process: '', variety: '' }],
+  }));
+
+  // 重置临时 bean（当模式或初始状态变化时）
+  React.useEffect(() => {
+    if (isAddMode && isOpen) {
+      setTempBean({
+        name: '',
+        beanState: initialBeanState,
+        beanType: 'filter',
+        capacity: '',
+        remaining: '',
+        roastLevel: '',
+        roastDate: '',
+        purchaseDate: '',
+        flavor: [],
+        notes: '',
+        blendComponents: [{ origin: '', process: '', variety: '' }],
+      });
+    }
+  }, [isAddMode, isOpen, initialBeanState]);
+
   // 使用 Zustand Store 获取实时更新的咖啡豆数据
   // 性能优化：只在当前咖啡豆的 ID 匹配时订阅，避免不必要的重新渲染
   const storeBean = useCoffeeBeanStore(state => {
@@ -193,7 +276,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 优先使用 Store 中的实时数据，如果 Store 中没有（初始加载时），则使用 props 传入的数据
   // 这样既能保证初始显示，又能实时响应数据变化
-  const bean = storeBean || propBean;
+  // 在添加模式下，使用临时 bean
+  const bean = isAddMode ? (tempBean as CoffeeBean) : storeBean || propBean;
 
   // 获取所有豆子用于查找关联豆
   const allBeans = useCoffeeBeanStore(state => state.beans);
@@ -251,6 +335,14 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 生豆记录显示状态（仅熟豆有此 Tab）
   const [showGreenBeanRecords, setShowGreenBeanRecords] = useState(false);
+
+  // 容量/价格内联编辑状态
+  const [editingCapacity, setEditingCapacity] = useState(false);
+  const [editingRemaining, setEditingRemaining] = useState(false);
+  const [editingPrice, setEditingPrice] = useState(false);
+  const capacityInputRef = useRef<HTMLInputElement>(null);
+  const remainingInputRef = useRef<HTMLInputElement>(null);
+  const priceInputRef = useRef<HTMLInputElement>(null);
 
   // 备注编辑状态
   const notesRef = useRef<HTMLDivElement>(null);
@@ -482,6 +574,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 保存备注的函数
   const handleSaveNotes = async (newNotes: string) => {
+    // 添加模式：直接更新临时 bean
+    if (isAddMode) {
+      setTempBean(prev => ({ ...prev, notes: newNotes.trim() }));
+      return;
+    }
+
     if (!bean?.id) return;
 
     try {
@@ -510,6 +608,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 通用的字段更新函数
   const handleUpdateField = async (updates: Partial<CoffeeBean>) => {
+    // 添加模式：直接更新临时 bean
+    if (isAddMode) {
+      setTempBean(prev => ({ ...prev, ...updates }));
+      return;
+    }
+
     if (!bean?.id) return;
 
     try {
@@ -533,10 +637,96 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     }
   };
 
-  // 处理烘焙度选择
-  const handleRoastLevelSelect = (level: string) => {
-    handleUpdateField({ roastLevel: level });
+  // 处理烘焙度选择 - 同时自动设置赏味期
+  const handleRoastLevelSelect = async (level: string) => {
     setShowRoastLevelDropdown(false);
+
+    let startDay = 0;
+    let endDay = 0;
+
+    try {
+      // 从设置中获取自定义赏味期配置
+      const { Storage } = await import('@/lib/core/storage');
+      const settingsStr = await Storage.get('brewGuideSettings');
+      let customFlavorPeriod = defaultSettings.customFlavorPeriod;
+
+      if (settingsStr) {
+        const settings: SettingsOptions = JSON.parse(settingsStr);
+        customFlavorPeriod =
+          settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+      }
+
+      // 使用工具函数获取烘焙度对应的赏味期设置
+      const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
+        level,
+        customFlavorPeriod
+      );
+      startDay = flavorPeriod.startDay;
+      endDay = flavorPeriod.endDay;
+    } catch (error) {
+      console.error('获取自定义赏味期设置失败，使用默认值:', error);
+      // 使用工具函数获取默认值
+      const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(level);
+      startDay = flavorPeriod.startDay;
+      endDay = flavorPeriod.endDay;
+    }
+
+    handleUpdateField({
+      roastLevel: level,
+      startDay,
+      endDay,
+    });
+  };
+
+  // 处理容量输入
+  const handleCapacityBlur = (value: string) => {
+    setEditingCapacity(false);
+    if (value) {
+      const currentRemaining = isAddMode ? tempBean.remaining : bean?.remaining;
+      handleUpdateField({
+        capacity: value,
+        // 如果没有剩余量，默认等于容量
+        remaining: currentRemaining || value,
+      });
+    }
+  };
+
+  // 处理剩余量输入
+  const handleRemainingBlur = (value: string) => {
+    setEditingRemaining(false);
+    if (value) {
+      handleUpdateField({ remaining: value });
+    }
+  };
+
+  // 处理价格输入
+  const handlePriceBlur = (value: string) => {
+    setEditingPrice(false);
+    if (value) {
+      handleUpdateField({ price: value });
+    }
+  };
+
+  // 处理日期选择
+  const handleDateChange = (
+    date: Date,
+    field: 'roastDate' | 'purchaseDate'
+  ) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    handleUpdateField({ [field]: formattedDate });
+  };
+
+  // 解析日期字符串为Date对象
+  const parseDateString = (dateStr: string | undefined): Date | undefined => {
+    if (!dateStr) return undefined;
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+    return undefined;
   };
 
   // 处理成分编辑（单品豆，只有一个 blendComponent）
@@ -584,6 +774,45 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (varietyRef.current) {
       const value = varietyRef.current.textContent || '';
       handleBlendComponentUpdate('variety', value);
+    }
+  };
+
+  // 处理图片选择（添加模式用）
+  const handleImageSelect = async (source: 'camera' | 'gallery') => {
+    try {
+      // 获取图片
+      const result = await captureImage({ source });
+
+      // 将 dataUrl 转换为 File 对象
+      const response = await fetch(result.dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `image.${result.format}`, {
+        type: `image/${result.format}`,
+      });
+
+      // 压缩图片
+      const compressedFile = await compressImage(file, {
+        maxWidth: 1024,
+        maxHeight: 1024,
+        quality: 0.8,
+        maxSizeMB: 0.3,
+      });
+
+      // 转换为 base64
+      const reader = new FileReader();
+      reader.onload = e => {
+        const base64 = e.target?.result as string;
+        if (isAddMode) {
+          setTempBean(prev => ({ ...prev, image: base64 }));
+        } else if (bean) {
+          handleUpdateField({ image: base64 });
+        }
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('图片选择失败:', error);
+      }
     }
   };
 
@@ -669,21 +898,29 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const getBasicInfoItems = (): InfoItem[] => {
     const items: InfoItem[] = [];
     const flavorInfo = getFlavorInfo();
+    const currentBean = isAddMode ? tempBean : bean;
 
     // 容量信息 - 显示为：剩余量/总容量
-    if (bean?.capacity && bean?.remaining) {
+    if (isAddMode || (currentBean?.capacity && currentBean?.remaining)) {
+      const capacity = currentBean?.capacity || '';
+      const remaining = currentBean?.remaining || '';
       items.push({
         key: 'inventory',
         label: '容量',
-        value: `${formatNumber(bean.remaining)} / ${formatNumber(bean.capacity)} 克`,
+        value:
+          capacity && remaining
+            ? `${formatNumber(remaining)} / ${formatNumber(capacity)} 克`
+            : isAddMode
+              ? '输入'
+              : '',
         type: 'normal',
       });
     }
 
     // 价格信息 - 显示为：总价(克价)
-    if (bean?.price && bean?.capacity) {
-      const totalPrice = bean.price;
-      const capacityNum = parseFloat(bean.capacity);
+    if (isAddMode || (currentBean?.price && currentBean?.capacity)) {
+      const totalPrice = currentBean?.price || '';
+      const capacityNum = parseFloat(currentBean?.capacity || '0');
       const priceNum = parseFloat(totalPrice);
       const pricePerGram =
         !isNaN(priceNum) && !isNaN(capacityNum) && capacityNum > 0
@@ -693,53 +930,65 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       items.push({
         key: 'price',
         label: '价格',
-        value: `${totalPrice} 元 (${pricePerGram} 元/克)`,
+        value: totalPrice
+          ? `${totalPrice} 元 (${pricePerGram} 元/克)`
+          : isAddMode
+            ? '输入'
+            : '',
         type: 'normal',
       });
     }
 
     // 日期显示 - 生豆显示购买日期，熟豆显示烘焙日期/在途状态
-    const isGreenBeanType = bean?.beanState === 'green';
+    const isGreenBeanType = currentBean?.beanState === 'green';
 
     if (isGreenBeanType) {
       // 生豆：显示购买日期
-      if (bean?.purchaseDate) {
+      if (isAddMode || currentBean?.purchaseDate) {
         items.push({
           key: 'purchaseDate',
           label: '购买日期',
-          value: formatDateString(bean.purchaseDate),
+          value: currentBean?.purchaseDate
+            ? formatDateString(currentBean.purchaseDate)
+            : isAddMode
+              ? '点击选择'
+              : '',
           type: 'normal',
         });
       }
     } else {
       // 熟豆：显示烘焙日期或在途状态
-      if (bean?.isInTransit) {
+      if (currentBean?.isInTransit) {
         items.push({
           key: 'roastDate',
           label: '状态',
           value: '在途',
           type: 'normal',
         });
-      } else if (bean?.roastDate) {
+      } else if (isAddMode || currentBean?.roastDate) {
         items.push({
           key: 'roastDate',
           label: '烘焙日期',
-          value: formatDateString(bean.roastDate),
+          value: currentBean?.roastDate
+            ? formatDateString(currentBean.roastDate)
+            : isAddMode
+              ? '点击选择'
+              : '',
           type: 'normal',
         });
       }
     }
 
-    // 赏味期/状态 - 仅对熟豆显示
-    if (!isGreenBeanType) {
-      if (bean?.isFrozen) {
+    // 赏味期/状态 - 仅对熟豆显示（非添加模式）
+    if (!isGreenBeanType && !isAddMode) {
+      if (currentBean?.isFrozen) {
         items.push({
           key: 'flavor',
           label: '状态',
           value: '冷冻',
           type: 'normal',
         });
-      } else if (bean?.roastDate && !bean?.isInTransit) {
+      } else if (currentBean?.roastDate && !currentBean?.isInTransit) {
         items.push({
           key: 'flavor',
           label: '赏味期',
@@ -1055,14 +1304,70 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             }}
           >
             <h2 className="max-w-full truncate px-2 text-center text-sm font-medium text-neutral-800 dark:text-neutral-100">
-              {bean?.name || '未命名'}
+              {isAddMode
+                ? tempBean.name || '添加咖啡豆'
+                : bean?.name || '未命名'}
             </h2>
           </div>
 
           {/* 右侧操作按钮 */}
-          <div className="flex flex-shrink-0 items-center gap-3">
-            {/* 生豆：直接显示"去烘焙"按钮 */}
-            {bean && isGreenBean && onRoast && (
+          <div className="flex shrink-0 items-center gap-3">
+            {/* 添加模式：显示保存按钮 */}
+            {isAddMode &&
+              (() => {
+                const canSave = !!tempBean.name?.trim();
+                return (
+                  <button
+                    onClick={() => {
+                      // 验证必填字段
+                      if (!canSave) {
+                        return;
+                      }
+
+                      // 保存自定义的预设值
+                      const components = tempBean.blendComponents || [];
+
+                      components.forEach(component => {
+                        // 检查产地是否是自定义值
+                        if (component.origin) {
+                          if (!DEFAULT_ORIGINS.includes(component.origin)) {
+                            addCustomPreset('origins', component.origin);
+                          }
+                        }
+                        // 检查处理法是否是自定义值
+                        if (component.process) {
+                          if (!DEFAULT_PROCESSES.includes(component.process)) {
+                            addCustomPreset('processes', component.process);
+                          }
+                        }
+                        // 检查品种是否是自定义值
+                        if (component.variety) {
+                          if (!DEFAULT_VARIETIES.includes(component.variety)) {
+                            addCustomPreset('varieties', component.variety);
+                          }
+                        }
+                      });
+
+                      // 调用保存回调
+                      onSaveNew?.(
+                        tempBean as Omit<CoffeeBean, 'id' | 'timestamp'>
+                      );
+                      handleClose();
+                    }}
+                    disabled={!canSave}
+                    className={`px-3 py-1 text-xs font-medium transition-colors ${
+                      canSave
+                        ? 'text-neutral-800 dark:text-neutral-100'
+                        : 'cursor-not-allowed text-neutral-300 dark:text-neutral-600'
+                    }`}
+                  >
+                    保存
+                  </button>
+                );
+              })()}
+
+            {/* 查看模式：生豆显示"去烘焙"按钮 */}
+            {!isAddMode && bean && isGreenBean && onRoast && (
               <button
                 onClick={handleGoToRoast}
                 className="flex h-8 items-center justify-center rounded-full bg-neutral-100 px-3 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
@@ -1073,8 +1378,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
               </button>
             )}
 
-            {/* 熟豆：通过菜单显示"去冲煮/去记录" */}
-            {bean && !isGreenBean && (
+            {/* 查看模式：熟豆通过菜单显示"去冲煮/去记录" */}
+            {!isAddMode && bean && !isGreenBean && (
               <ActionMenu
                 items={[
                   {
@@ -1098,8 +1403,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
               />
             )}
 
-            {/* 原有的操作按钮 */}
-            {bean &&
+            {/* 查看模式：原有的操作按钮 */}
+            {!isAddMode &&
+              bean &&
               (onEdit ||
                 onShare ||
                 onDelete ||
@@ -1187,97 +1493,529 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             touchAction: 'pan-y pinch-zoom',
           }}
         >
-          {/* 图片区域 */}
-          <div className="mb-4">
-            <div className="flex cursor-pointer justify-center bg-neutral-200/30 p-4 dark:bg-neutral-800/40">
-              <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                {bean?.image && !imageError ? (
-                  <Image
-                    src={bean.image}
-                    alt={bean.name || '咖啡豆图片'}
-                    height={192}
-                    width={192}
-                    className="h-full w-auto object-cover"
-                    onError={() => setImageError(true)}
-                    onClick={() => {
-                      if (!imageError) {
-                        setCurrentImageUrl(bean.image || '');
-                        setImageViewerOpen(true);
+          {/* 图片区域 - 添加模式或有图片时显示 */}
+          {(isAddMode || ((bean?.image || roasterLogo) && !imageError)) && (
+            <div className="mb-4">
+              <div className="flex cursor-pointer items-end justify-center gap-3 bg-neutral-200/30 px-6 py-3 dark:bg-neutral-800/40">
+                {/* 有图片时显示图片 */}
+                {(isAddMode ? tempBean.image : bean?.image) && !imageError ? (
+                  <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                    <Image
+                      src={(isAddMode ? tempBean.image : bean?.image) || ''}
+                      alt={
+                        (isAddMode ? tempBean.name : bean?.name) || '咖啡豆图片'
                       }
-                    }}
-                  />
-                ) : roasterLogo && !imageError ? (
-                  <Image
-                    src={roasterLogo}
-                    alt={
-                      extractRoasterFromName(bean?.name || '') || '烘焙商图标'
-                    }
-                    height={192}
-                    width={192}
-                    className="h-full w-auto object-cover"
-                    onError={() => setImageError(true)}
-                    onClick={() => {
-                      setCurrentImageUrl(roasterLogo);
-                      setImageViewerOpen(true);
-                    }}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-2xl font-medium text-neutral-400 dark:text-neutral-600">
-                    {bean?.name ? bean.name.charAt(0) : '豆'}
+                      height={192}
+                      width={192}
+                      className="h-full w-auto object-cover"
+                      onError={() => setImageError(true)}
+                      onClick={() => {
+                        if (!imageError) {
+                          const imgUrl = isAddMode
+                            ? tempBean.image
+                            : bean?.image;
+                          if (imgUrl) {
+                            setCurrentImageUrl(imgUrl);
+                            setImageViewerOpen(true);
+                          }
+                        }
+                      }}
+                    />
+                    {/* 添加模式下显示删除按钮 */}
+                    {isAddMode && (
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setTempBean(prev => ({ ...prev, image: undefined }));
+                        }}
+                        className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500"
+                      >
+                        <span className="text-xs">×</span>
+                      </button>
+                    )}
                   </div>
-                )}
+                ) : roasterLogo && !imageError && !isAddMode ? (
+                  <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                    <Image
+                      src={roasterLogo}
+                      alt={
+                        extractRoasterFromName(bean?.name || '') || '烘焙商图标'
+                      }
+                      height={192}
+                      width={192}
+                      className="h-full w-auto object-cover"
+                      onError={() => setImageError(true)}
+                      onClick={() => {
+                        setCurrentImageUrl(roasterLogo);
+                        setImageViewerOpen(true);
+                      }}
+                    />
+                  </div>
+                ) : isAddMode ? (
+                  /* 添加模式下无图片时显示两个添加按钮 - 底部对齐，相册大拍照小 */
+                  <>
+                    {/* 拍照盒子 - 小 */}
+                    <div className="relative h-20 shrink-0 overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
+                      <button
+                        type="button"
+                        onClick={() => handleImageSelect('camera')}
+                        className="flex h-full w-20 items-center justify-center transition-colors hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80"
+                        title="拍照"
+                      >
+                        <Camera className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
+                      </button>
+                    </div>
+                    {/* 相册盒子 - 大 */}
+                    <div className="relative h-32 overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
+                      <button
+                        type="button"
+                        onClick={() => handleImageSelect('gallery')}
+                        className="flex h-full w-32 items-center justify-center transition-colors hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80"
+                        title="相册"
+                      >
+                        <ImageIcon className="h-6 w-6 text-neutral-300 dark:text-neutral-600" />
+                      </button>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
-          </div>
+          )}
 
           {/* 标题区域 */}
           <div className="mb-4 px-6">
-            <h2
-              id="bean-detail-title"
-              className="text-sm font-medium text-neutral-800 dark:text-neutral-100"
-            >
-              {searchQuery ? (
-                <HighlightText
-                  text={bean?.name || '未命名'}
-                  highlight={searchQuery}
-                />
-              ) : (
-                bean?.name || '未命名'
-              )}
-            </h2>
+            {isAddMode ? (
+              <input
+                type="text"
+                value={tempBean.name || ''}
+                onChange={e => {
+                  const newName = e.target.value;
+                  setTempBean(prev => {
+                    const updated = { ...prev, name: newName };
+
+                    // 从名称中智能提取产地、处理法、品种并自动填充到成分
+                    // 使用 getFullPresets 获取完整列表（包括用户保存的自定义预设）
+                    if (newName.trim()) {
+                      const allOrigins = getFullPresets('origins');
+                      const allProcesses = getFullPresets('processes');
+                      const allVarieties = getFullPresets('varieties');
+
+                      const extractedOrigin = allOrigins.find(origin =>
+                        newName.includes(origin)
+                      );
+                      const extractedProcess = allProcesses.find(process =>
+                        newName.includes(process)
+                      );
+                      const extractedVariety = allVarieties.find(variety =>
+                        newName.includes(variety)
+                      );
+
+                      // 只有当提取到信息且对应字段为空时才自动填充
+                      if (
+                        extractedOrigin ||
+                        extractedProcess ||
+                        extractedVariety
+                      ) {
+                        const currentComponents = prev.blendComponents || [
+                          { origin: '', process: '', variety: '' },
+                        ];
+                        const newComponents = [...currentComponents];
+                        if (newComponents.length > 0) {
+                          // 只在字段为空时填充，避免覆盖用户手动输入的内容
+                          if (extractedOrigin && !newComponents[0].origin) {
+                            newComponents[0] = {
+                              ...newComponents[0],
+                              origin: extractedOrigin,
+                            };
+                          }
+                          if (extractedProcess && !newComponents[0].process) {
+                            newComponents[0] = {
+                              ...newComponents[0],
+                              process: extractedProcess,
+                            };
+                          }
+                          if (extractedVariety && !newComponents[0].variety) {
+                            newComponents[0] = {
+                              ...newComponents[0],
+                              variety: extractedVariety,
+                            };
+                          }
+                          updated.blendComponents = newComponents;
+                        }
+                      }
+                    }
+
+                    return updated;
+                  });
+                }}
+                placeholder="输入咖啡豆名称"
+                className="w-full border-b border-dashed border-neutral-300 bg-transparent pb-1 text-sm font-medium text-neutral-800 outline-none placeholder:text-neutral-400 focus:border-neutral-500 dark:border-neutral-600 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
+              />
+            ) : (
+              <h2
+                id="bean-detail-title"
+                className="text-sm font-medium text-neutral-800 dark:text-neutral-100"
+              >
+                {searchQuery ? (
+                  <HighlightText
+                    text={bean?.name || '未命名'}
+                    highlight={searchQuery}
+                  />
+                ) : (
+                  bean?.name || '未命名'
+                )}
+              </h2>
+            )}
           </div>
 
-          {bean ? (
+          {bean || isAddMode ? (
             <div className="space-y-3 px-6">
               {/* 咖啡豆信息 */}
               <div className="space-y-3">
-                {/* 基础信息 */}
-                <InfoGrid items={getBasicInfoItems()} />
-
-                {/* 虚线分割线 - 只在有基础信息且有后续内容时显示 */}
+                {/* 基础信息 - 使用内联编辑 */}
                 {(() => {
-                  const basicItems = getBasicInfoItems();
-                  const originItems = getOriginInfoItems();
-                  const isMultipleBlend =
-                    bean?.blendComponents && bean.blendComponents.length > 1;
-                  const hasOriginInfo =
-                    originItems.length > 0 && !isMultipleBlend;
-                  const hasBlendInfo = isMultipleBlend;
-                  const hasFlavor = bean.flavor && bean.flavor.length > 0;
-                  const hasNotes = bean.notes && bean.notes.trim();
+                  const currentBean = isAddMode ? tempBean : bean;
+                  const capacity = currentBean?.capacity || '';
+                  const remaining = currentBean?.remaining || '';
+                  const price = currentBean?.price || '';
+                  const isGreenBeanType = currentBean?.beanState === 'green';
+                  const dateValue = isGreenBeanType
+                    ? currentBean?.purchaseDate
+                    : currentBean?.roastDate;
+                  const dateLabel = isGreenBeanType ? '购买日期' : '烘焙日期';
+                  const dateField = isGreenBeanType
+                    ? 'purchaseDate'
+                    : 'roastDate';
 
-                  const hasBasicInfo = basicItems.length > 0;
-                  const hasFollowingContent =
-                    hasOriginInfo || hasBlendInfo || hasFlavor || hasNotes;
+                  // 计算克价
+                  const capacityNum = parseFloat(capacity || '0');
+                  const priceNum = parseFloat(price);
+                  const pricePerGram =
+                    !isNaN(priceNum) && !isNaN(capacityNum) && capacityNum > 0
+                      ? (priceNum / capacityNum).toFixed(2)
+                      : '';
+
+                  // 计算赏味期信息（仅熟豆）
+                  // 为添加模式创建临时的 CoffeeBean 结构以计算赏味期
+                  const tempBeanForFlavor: CoffeeBean | null =
+                    !isGreenBeanType &&
+                    currentBean?.roastDate &&
+                    !currentBean?.isInTransit &&
+                    !currentBean?.isFrozen
+                      ? {
+                          id: currentBean.id || 'temp',
+                          name: currentBean.name || '',
+                          roastDate: currentBean.roastDate,
+                          roastLevel: currentBean.roastLevel || '',
+                          capacity: currentBean.capacity || '0',
+                          remaining: currentBean.remaining || '0',
+                          timestamp: Date.now(),
+                          startDay: currentBean.startDay,
+                          endDay: currentBean.endDay,
+                        }
+                      : null;
+                  const flavorInfo = tempBeanForFlavor
+                    ? calculateFlavorInfo(tempBeanForFlavor)
+                    : null;
+
+                  // 计算已养豆天数
+                  const getDaysSinceRoast = (
+                    dateStr: string | undefined
+                  ): number => {
+                    if (!dateStr) return 0;
+                    try {
+                      const today = new Date();
+                      const roastDate = new Date(dateStr);
+                      const todayDate = new Date(
+                        today.getFullYear(),
+                        today.getMonth(),
+                        today.getDate()
+                      );
+                      const roastDateOnly = new Date(
+                        roastDate.getFullYear(),
+                        roastDate.getMonth(),
+                        roastDate.getDate()
+                      );
+                      return Math.ceil(
+                        (todayDate.getTime() - roastDateOnly.getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      );
+                    } catch {
+                      return 0;
+                    }
+                  };
+                  const daysSinceRoast = !isGreenBeanType
+                    ? getDaysSinceRoast(currentBean?.roastDate)
+                    : 0;
+
+                  const hasContent =
+                    capacity || price || dateValue || currentBean?.isInTransit;
+                  if (!isAddMode && !hasContent) return null;
 
                   return (
-                    showBeanInfoDivider &&
-                    hasBasicInfo &&
-                    hasFollowingContent && (
-                      <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
-                    )
+                    <div className="space-y-3">
+                      {/* 容量 */}
+                      {(isAddMode || (capacity && remaining)) && (
+                        <div className="flex items-start">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            容量
+                          </div>
+                          <div className="ml-4 flex items-center gap-1 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                            {isAddMode && editingCapacity ? (
+                              <input
+                                ref={capacityInputRef}
+                                type="number"
+                                inputMode="decimal"
+                                autoFocus
+                                defaultValue={capacity}
+                                placeholder="总容量"
+                                className="w-16 border-b border-neutral-400 bg-transparent outline-none dark:border-neutral-500"
+                                onBlur={e => handleCapacityBlur(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    handleCapacityBlur(
+                                      (e.target as HTMLInputElement).value
+                                    );
+                                  }
+                                }}
+                              />
+                            ) : isAddMode && editingRemaining ? (
+                              <>
+                                <input
+                                  ref={remainingInputRef}
+                                  type="number"
+                                  inputMode="decimal"
+                                  autoFocus
+                                  defaultValue={remaining}
+                                  placeholder="剩余量"
+                                  className="w-16 border-b border-neutral-400 bg-transparent outline-none dark:border-neutral-500"
+                                  onBlur={e =>
+                                    handleRemainingBlur(e.target.value)
+                                  }
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      handleRemainingBlur(
+                                        (e.target as HTMLInputElement).value
+                                      );
+                                    }
+                                  }}
+                                />
+                                <span>/ {formatNumber(capacity)} 克</span>
+                              </>
+                            ) : capacity ? (
+                              isAddMode ? (
+                                // 添加模式：剩余量和容量分别可点击编辑
+                                <>
+                                  <span
+                                    className="cursor-text"
+                                    onClick={() => setEditingRemaining(true)}
+                                  >
+                                    {formatNumber(remaining) ||
+                                      formatNumber(capacity)}
+                                  </span>
+                                  <span> / </span>
+                                  <span
+                                    className="cursor-text"
+                                    onClick={() => setEditingCapacity(true)}
+                                  >
+                                    {formatNumber(capacity)}
+                                  </span>
+                                  <span> 克</span>
+                                </>
+                              ) : (
+                                // 非添加模式：纯展示
+                                <span>
+                                  {formatNumber(remaining) ||
+                                    formatNumber(capacity)}{' '}
+                                  / {formatNumber(capacity)} 克
+                                </span>
+                              )
+                            ) : isAddMode ? (
+                              <span
+                                className="cursor-text text-neutral-400 dark:text-neutral-500"
+                                onClick={() => setEditingCapacity(true)}
+                              >
+                                输入总容量
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 价格 */}
+                      {(isAddMode || price) && (
+                        <div className="flex items-start">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            价格
+                          </div>
+                          <div className="ml-4 flex items-center gap-1 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                            {isAddMode && editingPrice ? (
+                              <>
+                                <input
+                                  ref={priceInputRef}
+                                  type="number"
+                                  inputMode="decimal"
+                                  autoFocus
+                                  defaultValue={price}
+                                  placeholder="价格"
+                                  className="w-16 border-b border-neutral-400 bg-transparent outline-none dark:border-neutral-500"
+                                  onBlur={e => handlePriceBlur(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      handlePriceBlur(
+                                        (e.target as HTMLInputElement).value
+                                      );
+                                    }
+                                  }}
+                                />
+                                <span>元</span>
+                              </>
+                            ) : price ? (
+                              isAddMode ? (
+                                // 添加模式：点击可编辑
+                                <span
+                                  className="cursor-text"
+                                  onClick={() => setEditingPrice(true)}
+                                >
+                                  {price} 元
+                                  {pricePerGram
+                                    ? ` (${pricePerGram} 元/克)`
+                                    : ''}
+                                </span>
+                              ) : (
+                                // 非添加模式：纯展示
+                                <span>
+                                  {price} 元
+                                  {pricePerGram
+                                    ? ` (${pricePerGram} 元/克)`
+                                    : ''}
+                                </span>
+                              )
+                            ) : isAddMode ? (
+                              <span
+                                className="cursor-text text-neutral-400 dark:text-neutral-500"
+                                onClick={() => setEditingPrice(true)}
+                              >
+                                输入价格
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 日期 */}
+                      {(isAddMode || dateValue || currentBean?.isInTransit) && (
+                        <div className="flex items-center">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            {!isAddMode && currentBean?.isInTransit
+                              ? '状态'
+                              : dateLabel}
+                          </div>
+                          <div className="ml-4 flex items-center gap-2 text-xs font-medium">
+                            {!isAddMode && currentBean?.isInTransit ? (
+                              <span className="whitespace-nowrap text-neutral-800 dark:text-neutral-100">
+                                在途
+                              </span>
+                            ) : isAddMode && bean?.isInTransit ? (
+                              <span
+                                onClick={() =>
+                                  handleUpdateField({ isInTransit: false })
+                                }
+                                className="cursor-pointer bg-neutral-100 px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                              >
+                                在途
+                              </span>
+                            ) : (
+                              // 添加模式未选择在途 或 非添加模式
+                              <>
+                                {dateValue ? (
+                                  isAddMode ? (
+                                    <DatePicker
+                                      date={parseDateString(dateValue)}
+                                      onDateChange={date =>
+                                        handleDateChange(
+                                          date,
+                                          dateField as
+                                            | 'roastDate'
+                                            | 'purchaseDate'
+                                        )
+                                      }
+                                      placeholder={`选择${dateLabel}`}
+                                      className="[&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
+                                      displayFormat="yyyy-MM-dd"
+                                    />
+                                  ) : (
+                                    <span className="whitespace-nowrap text-neutral-800 dark:text-neutral-100">
+                                      {formatDateString(dateValue)}
+                                    </span>
+                                  )
+                                ) : (
+                                  <DatePicker
+                                    date={parseDateString(dateValue)}
+                                    onDateChange={date =>
+                                      handleDateChange(
+                                        date,
+                                        dateField as
+                                          | 'roastDate'
+                                          | 'purchaseDate'
+                                      )
+                                    }
+                                    placeholder={`选择${dateLabel}`}
+                                    className="[&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
+                                  />
+                                )}
+                                {/* 添加模式：在途状态选项 */}
+                                {isAddMode && (
+                                  <>
+                                    <div className="mx-1 h-3 w-px bg-neutral-200 dark:bg-neutral-700" />
+                                    <span
+                                      onClick={() =>
+                                        handleUpdateField({ isInTransit: true })
+                                      }
+                                      className="cursor-pointer bg-neutral-100/50 px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-neutral-400 dark:bg-neutral-800/50 dark:text-neutral-500"
+                                    >
+                                      在途
+                                    </span>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 赏味期（仅熟豆且有烘焙日期时显示，添加模式下不显示因为下面有设置） */}
+                      {!isGreenBeanType && flavorInfo && !isAddMode && (
+                        <div className="flex items-start">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            赏味期
+                          </div>
+                          <div className="ml-4 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                            {flavorInfo.status}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 冷冻状态（非添加模式下，冷冻时显示） */}
+                      {!isAddMode && bean?.isFrozen && (
+                        <div className="flex items-start">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            状态
+                          </div>
+                          <div className="ml-4 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                            冷冻
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })()}
+
+                {/* 虚线分割线 - 开启设置后始终显示 */}
+                {showBeanInfoDivider && (
+                  <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
+                )}
 
                 {/* 产地信息（单品豆时显示）- 支持无感编辑 */}
                 {(() => {
@@ -1286,7 +2024,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                   const firstComponent = bean?.blendComponents?.[0];
 
                   // 单品豆且有成分信息时显示可编辑区域
-                  if (isMultipleBlend) return null;
+                  if (isMultipleBlend && !isAddMode) return null;
 
                   // 获取当前值
                   const origin = firstComponent?.origin || '';
@@ -1294,78 +2032,176 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                   const variety = firstComponent?.variety || '';
                   const roastLevel = bean?.roastLevel || '';
 
-                  // 至少有一个字段有值才显示
-                  if (!origin && !process && !variety && !roastLevel)
+                  // 查看模式下至少有一个字段有值才显示；添加模式下总是显示
+                  if (
+                    !isAddMode &&
+                    !origin &&
+                    !process &&
+                    !variety &&
+                    !roastLevel
+                  )
                     return null;
 
                   return (
                     <div className="space-y-3">
-                      {/* 产地 */}
-                      {origin && (
+                      {/* 咖啡豆类型 - 添加模式下显示 */}
+                      {isAddMode && (
                         <div className="flex items-start">
-                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            类型
+                          </div>
+                          <div className="ml-4 flex items-center gap-2">
+                            {BEAN_TYPES.map(type => (
+                              <span
+                                key={type.value}
+                                onClick={() =>
+                                  handleUpdateField({ beanType: type.value })
+                                }
+                                className={`cursor-pointer px-1.5 py-0.5 text-xs font-medium ${
+                                  bean?.beanType === type.value
+                                    ? 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
+                                    : 'bg-neutral-100/70 text-neutral-400 dark:bg-neutral-800/70 dark:text-neutral-500'
+                                }`}
+                              >
+                                {type.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 产地 */}
+                      {(isAddMode || origin) && (
+                        <div className="flex items-start">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             产地
                           </div>
-                          <div
-                            ref={originRef}
-                            contentEditable
-                            suppressContentEditableWarning
-                            onBlur={handleOriginInput}
-                            className="ml-4 cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
-                            style={{ minHeight: '1.25em' }}
-                          >
-                            {searchQuery ? (
-                              <HighlightText
-                                text={origin}
-                                highlight={searchQuery}
-                              />
-                            ) : (
-                              origin
+                          <div className="relative ml-4 flex-1">
+                            {isAddMode && !origin && (
+                              <span
+                                className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
+                                data-placeholder="origin"
+                              >
+                                输入产地
+                              </span>
                             )}
+                            <div
+                              ref={originRef}
+                              contentEditable
+                              suppressContentEditableWarning
+                              onInput={e => {
+                                const placeholder =
+                                  e.currentTarget.parentElement?.querySelector(
+                                    '[data-placeholder="origin"]'
+                                  ) as HTMLElement;
+                                if (placeholder) {
+                                  placeholder.style.display = e.currentTarget
+                                    .textContent
+                                    ? 'none'
+                                    : '';
+                                }
+                              }}
+                              onBlur={handleOriginInput}
+                              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                              style={{ minHeight: '1.25em' }}
+                            >
+                              {searchQuery ? (
+                                <HighlightText
+                                  text={origin}
+                                  highlight={searchQuery}
+                                />
+                              ) : (
+                                origin
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
 
                       {/* 处理法 */}
-                      {process && (
+                      {(isAddMode || process) && (
                         <div className="flex items-start">
-                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             处理法
                           </div>
-                          <div
-                            ref={processRef}
-                            contentEditable
-                            suppressContentEditableWarning
-                            onBlur={handleProcessInput}
-                            className="ml-4 cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
-                            style={{ minHeight: '1.25em' }}
-                          >
-                            {process}
+                          <div className="relative ml-4 flex-1">
+                            {isAddMode && !process && (
+                              <span
+                                className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
+                                data-placeholder="process"
+                              >
+                                输入处理法
+                              </span>
+                            )}
+                            <div
+                              ref={processRef}
+                              contentEditable
+                              suppressContentEditableWarning
+                              onInput={e => {
+                                const placeholder =
+                                  e.currentTarget.parentElement?.querySelector(
+                                    '[data-placeholder="process"]'
+                                  ) as HTMLElement;
+                                if (placeholder) {
+                                  placeholder.style.display = e.currentTarget
+                                    .textContent
+                                    ? 'none'
+                                    : '';
+                                }
+                              }}
+                              onBlur={handleProcessInput}
+                              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                              style={{ minHeight: '1.25em' }}
+                            >
+                              {process}
+                            </div>
                           </div>
                         </div>
                       )}
 
                       {/* 品种 */}
-                      {variety && (
+                      {(isAddMode || variety) && (
                         <div className="flex items-start">
-                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             品种
                           </div>
-                          <div
-                            ref={varietyRef}
-                            contentEditable
-                            suppressContentEditableWarning
-                            onBlur={handleVarietyInput}
-                            className="ml-4 cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
-                            style={{ minHeight: '1.25em' }}
-                          >
-                            {variety}
+                          <div className="relative ml-4 flex-1">
+                            {isAddMode && !variety && (
+                              <span
+                                className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
+                                data-placeholder="variety"
+                              >
+                                输入品种
+                              </span>
+                            )}
+                            <div
+                              ref={varietyRef}
+                              contentEditable
+                              suppressContentEditableWarning
+                              onInput={e => {
+                                const placeholder =
+                                  e.currentTarget.parentElement?.querySelector(
+                                    '[data-placeholder="variety"]'
+                                  ) as HTMLElement;
+                                if (placeholder) {
+                                  placeholder.style.display = e.currentTarget
+                                    .textContent
+                                    ? 'none'
+                                    : '';
+                                }
+                              }}
+                              onBlur={handleVarietyInput}
+                              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                              style={{ minHeight: '1.25em' }}
+                            >
+                              {variety}
+                            </div>
                           </div>
                         </div>
                       )}
 
                       {/* 烘焙度 - 点击下拉选择 */}
-                      {roastLevel && (
+                      {(isAddMode || roastLevel) && (
                         <div className="flex items-start">
                           <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             烘焙度
@@ -1380,9 +2216,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                   !showRoastLevelDropdown
                                 )
                               }
-                              className="cursor-pointer text-xs font-medium text-neutral-800 dark:text-neutral-100"
+                              className={`cursor-pointer text-xs font-medium ${isAddMode && !roastLevel ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-800 dark:text-neutral-100'}`}
                             >
-                              {roastLevel}
+                              {roastLevel || (isAddMode ? '选择烘焙度' : '')}
                             </span>
                             {/* 下拉选择框 */}
                             {showRoastLevelDropdown && (
@@ -1403,6 +2239,74 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                   </div>
                                 ))}
                               </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 赏味期设置 - 添加模式下显示 */}
+                      {isAddMode && (
+                        <div className="flex items-center">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            赏味期
+                          </div>
+                          <div className="ml-4 flex items-center gap-2">
+                            {bean?.isFrozen ? (
+                              <span
+                                onClick={() =>
+                                  handleUpdateField({ isFrozen: false })
+                                }
+                                className="cursor-pointer bg-neutral-100 px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                              >
+                                冷冻
+                              </span>
+                            ) : (
+                              // 未冷冻：显示输入框和冷冻选项
+                              <>
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  value={bean?.startDay ?? ''}
+                                  onChange={e =>
+                                    handleUpdateField({
+                                      startDay: e.target.value
+                                        ? parseInt(e.target.value)
+                                        : undefined,
+                                    })
+                                  }
+                                  placeholder="天数"
+                                  className="w-10 bg-neutral-100 px-1.5 py-0.5 text-center text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800 dark:text-neutral-300"
+                                />
+                                <span className="text-xs text-neutral-400">
+                                  ~
+                                </span>
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  value={bean?.endDay ?? ''}
+                                  onChange={e =>
+                                    handleUpdateField({
+                                      endDay: e.target.value
+                                        ? parseInt(e.target.value)
+                                        : undefined,
+                                    })
+                                  }
+                                  placeholder="天数"
+                                  className="w-10 bg-neutral-100 px-1.5 py-0.5 text-center text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800 dark:text-neutral-300"
+                                />
+                                <span className="text-xs text-neutral-400">
+                                  天
+                                </span>
+                                <div className="mx-1 h-3 w-px bg-neutral-200 dark:bg-neutral-700" />
+                                <span
+                                  onClick={() =>
+                                    handleUpdateField({ isFrozen: true })
+                                  }
+                                  className="cursor-pointer bg-neutral-100/70 px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-neutral-400 dark:bg-neutral-800/70 dark:text-neutral-500"
+                                >
+                                  冷冻
+                                </span>
+                              </>
                             )}
                           </div>
                         </div>
@@ -1529,124 +2433,256 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                   </div>
                 )}
 
-                {/* 风味 - 支持无感编辑，每个标签可点击编辑 */}
-                {bean.flavor && bean.flavor.length > 0 && (
+                {/* 风味 - 已有标签可编辑，新增用 input */}
+                {(isAddMode || (bean?.flavor && bean.flavor.length > 0)) && (
                   <div className="flex items-start">
-                    <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       风味
                     </div>
-                    <div className="ml-4 flex flex-wrap gap-1">
-                      {bean.flavor.map((flavor: string, index: number) => (
-                        <span
-                          key={index}
-                          contentEditable
-                          suppressContentEditableWarning
-                          onBlur={e => {
-                            const newValue =
-                              e.currentTarget.textContent?.trim() || '';
-                            if (newValue !== flavor) {
-                              const newFlavors = [...bean.flavor!];
-                              if (newValue === '') {
-                                // 如果编辑为空，删除该标签
-                                newFlavors.splice(index, 1);
-                              } else {
-                                newFlavors[index] = newValue;
-                              }
-                              handleUpdateField({ flavor: newFlavors });
-                            }
-                          }}
-                          className="cursor-text bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800 dark:text-neutral-300"
-                        >
-                          {flavor}
-                        </span>
-                      ))}
+                    <div className="ml-4 flex flex-1 flex-wrap items-center gap-1">
+                      {(() => {
+                        const currentFlavors = isAddMode
+                          ? tempBean.flavor || []
+                          : bean?.flavor || [];
+
+                        const placeholder =
+                          currentFlavors.length === 0
+                            ? '输入风味，空格分隔'
+                            : '+ ';
+
+                        // 计算输入框宽度的函数
+                        const calcWidth = (text: string, fallback: string) => {
+                          const displayText = text || fallback;
+                          // 每个中文字符约 2ch，英文约 1ch，额外加 1ch 余量
+                          let len = 0;
+                          for (let i = 0; i < displayText.length; i++) {
+                            len += displayText.charCodeAt(i) > 127 ? 2 : 1;
+                          }
+                          return `${len + 1}ch`;
+                        };
+
+                        return (
+                          <>
+                            {/* 已有的风味标签 - contentEditable 支持点击编辑 */}
+                            {currentFlavors.map(
+                              (flavor: string, index: number) => (
+                                <span
+                                  key={index}
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onBlur={e => {
+                                    const newValue =
+                                      e.currentTarget.textContent?.trim() || '';
+                                    if (newValue !== flavor) {
+                                      const newFlavors = [...currentFlavors];
+                                      if (newValue === '') {
+                                        newFlavors.splice(index, 1);
+                                      } else {
+                                        newFlavors[index] = newValue;
+                                      }
+                                      handleUpdateField({ flavor: newFlavors });
+                                    }
+                                  }}
+                                  className="cursor-text bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800 dark:text-neutral-300"
+                                >
+                                  {flavor}
+                                </span>
+                              )
+                            )}
+                            {/* 添加模式：输入框宽度自适应内容或 placeholder */}
+                            {isAddMode && (
+                              <input
+                                type="text"
+                                placeholder={placeholder}
+                                onInput={e => {
+                                  const input = e.currentTarget;
+                                  input.style.width = calcWidth(
+                                    input.value,
+                                    placeholder
+                                  );
+                                }}
+                                onKeyDown={e => {
+                                  // 输入法组合中不处理
+                                  if (e.nativeEvent.isComposing) return;
+
+                                  const input = e.currentTarget;
+                                  const value = input.value.trim();
+
+                                  if (e.key === ' ' || e.key === 'Enter') {
+                                    if (value) {
+                                      e.preventDefault();
+                                      handleUpdateField({
+                                        flavor: [...currentFlavors, value],
+                                      });
+                                      input.value = '';
+                                      input.style.width = calcWidth('', '+');
+                                    }
+                                  }
+
+                                  // 退格键：把最后一个标签移回输入框继续编辑
+                                  if (
+                                    e.key === 'Backspace' &&
+                                    !value &&
+                                    currentFlavors.length > 0
+                                  ) {
+                                    e.preventDefault();
+                                    const lastFlavor =
+                                      currentFlavors[currentFlavors.length - 1];
+                                    const newFlavors = currentFlavors.slice(
+                                      0,
+                                      -1
+                                    );
+                                    handleUpdateField({ flavor: newFlavors });
+                                    input.value = lastFlavor;
+                                    input.style.width = calcWidth(
+                                      lastFlavor,
+                                      '+'
+                                    );
+                                  }
+                                }}
+                                onBlur={e => {
+                                  const input = e.currentTarget;
+                                  const value = input.value.trim();
+                                  if (value) {
+                                    handleUpdateField({
+                                      flavor: [...currentFlavors, value],
+                                    });
+                                    input.value = '';
+                                  }
+                                  // 失焦后根据新 placeholder 调整宽度
+                                  const newPlaceholder =
+                                    currentFlavors.length === 0 && !value
+                                      ? '输入风味，空格分隔'
+                                      : '+ ';
+                                  input.style.width = calcWidth(
+                                    '',
+                                    newPlaceholder
+                                  );
+                                }}
+                                className="bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 placeholder:text-neutral-400 focus:outline-none dark:bg-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-500"
+                                style={{ width: calcWidth('', placeholder) }}
+                              />
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
 
                 {/* 备注 */}
-                {bean.notes && (
+                {(isAddMode || bean?.notes) && (
                   <div className="flex items-start">
-                    <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       备注
                     </div>
-                    <div
-                      ref={notesRef}
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={handleNotesInput}
-                      className="ml-4 cursor-text text-xs font-medium whitespace-pre-wrap text-neutral-800 outline-none dark:text-neutral-100"
-                      style={{
-                        minHeight: '1.5em',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {searchQuery ? (
-                        <HighlightText
-                          text={bean.notes || ''}
-                          highlight={searchQuery}
-                          className="text-neutral-700 dark:text-neutral-300"
-                        />
-                      ) : (
-                        bean.notes
+                    <div className="relative ml-4 flex-1">
+                      {isAddMode && !tempBean.notes && (
+                        <span
+                          className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
+                          data-placeholder="notes"
+                        >
+                          输入备注
+                        </span>
                       )}
+                      <div
+                        ref={notesRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={e => {
+                          const placeholder =
+                            e.currentTarget.parentElement?.querySelector(
+                              '[data-placeholder="notes"]'
+                            ) as HTMLElement;
+                          if (placeholder) {
+                            placeholder.style.display = e.currentTarget
+                              .textContent
+                              ? 'none'
+                              : '';
+                          }
+                        }}
+                        onBlur={handleNotesInput}
+                        className="cursor-text text-xs font-medium whitespace-pre-wrap text-neutral-800 outline-none dark:text-neutral-100"
+                        style={{
+                          minHeight: '1.5em',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {(() => {
+                          const currentNotes = isAddMode
+                            ? tempBean.notes
+                            : bean?.notes;
+                          if (!currentNotes) return '';
+                          if (searchQuery) {
+                            return (
+                              <HighlightText
+                                text={currentNotes || ''}
+                                highlight={searchQuery}
+                                className="text-neutral-700 dark:text-neutral-300"
+                              />
+                            );
+                          }
+                          return currentNotes;
+                        })()}
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* 个人榜单评价区域 - 根据设置和内容决定是否显示 */}
-              {(showBeanRating ||
-                (bean.overallRating && bean.overallRating > 0)) && (
-                <div className="border-t border-neutral-200/40 pt-3 dark:border-neutral-800/40">
-                  {bean.overallRating && bean.overallRating > 0 ? (
-                    // 已有评价，显示评价内容
-                    <div
-                      className="cursor-pointer space-y-3"
-                      onClick={() => {
-                        setRatingModalOpen(true);
-                      }}
-                    >
-                      {/* 评分 */}
+              {!isAddMode &&
+                (showBeanRating ||
+                  (bean?.overallRating && bean.overallRating > 0)) && (
+                  <div className="border-t border-neutral-200/40 pt-3 dark:border-neutral-800/40">
+                    {bean?.overallRating && bean.overallRating > 0 ? (
+                      // 已有评价，显示评价内容
+                      <div
+                        className="cursor-pointer space-y-3"
+                        onClick={() => {
+                          setRatingModalOpen(true);
+                        }}
+                      >
+                        {/* 评分 */}
+                        <div className="flex items-start">
+                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            评分
+                          </div>
+                          <div className="ml-4 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                            {bean?.overallRating} / 5
+                          </div>
+                        </div>
+
+                        {/* 评价备注 */}
+                        {bean?.ratingNotes && bean.ratingNotes.trim() && (
+                          <div className="flex items-start">
+                            <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                              评价
+                            </div>
+                            <div className="ml-4 text-xs font-medium whitespace-pre-line text-neutral-800 dark:text-neutral-100">
+                              {bean?.ratingNotes}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      // 无评价，显示添加提示
                       <div className="flex items-start">
                         <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                           评分
                         </div>
-                        <div className="ml-4 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {bean.overallRating} / 5
-                        </div>
+                        <button
+                          onClick={() => {
+                            setRatingModalOpen(true);
+                          }}
+                          className="ml-4 text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
+                        >
+                          + 添加评价
+                        </button>
                       </div>
-
-                      {/* 评价备注 */}
-                      {bean.ratingNotes && bean.ratingNotes.trim() && (
-                        <div className="flex items-start">
-                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                            评价
-                          </div>
-                          <div className="ml-4 text-xs font-medium whitespace-pre-line text-neutral-800 dark:text-neutral-100">
-                            {bean.ratingNotes}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    // 无评价，显示添加提示
-                    <div className="flex items-start">
-                      <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        评分
-                      </div>
-                      <button
-                        onClick={() => {
-                          setRatingModalOpen(true);
-                        }}
-                        className="ml-4 text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
-                      >
-                        + 添加评价
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
 
               {/* 相关冲煮记录 - 简化布局 - 只在有记录时显示 */}
               {(() => {

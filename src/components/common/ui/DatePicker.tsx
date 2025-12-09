@@ -14,6 +14,7 @@ export interface DatePickerProps {
   locale?: string;
   className?: string;
   disabled?: boolean;
+  displayFormat?: string;
 }
 
 export function DatePicker({
@@ -23,6 +24,7 @@ export function DatePicker({
   locale = 'zh-CN',
   className = '',
   disabled = false,
+  displayFormat = 'yyyy/MM/dd',
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const localeObj = locale === 'zh-CN' ? zhCN : enUS;
@@ -47,10 +49,10 @@ export function DatePicker({
             type="button"
           >
             <span
-              className={`${!date ? 'text-neutral-500' : 'text-neutral-800 dark:text-white'}`}
+              className={`${!date ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-800 dark:text-white'}`}
             >
               {date
-                ? format(date, 'yyyy/MM/dd', { locale: localeObj })
+                ? format(date, displayFormat, { locale: localeObj })
                 : placeholder}
             </span>
           </button>

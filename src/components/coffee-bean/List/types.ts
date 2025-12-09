@@ -48,6 +48,7 @@ export interface CoffeeBeansProps {
     showTotalPrice?: boolean;
     showStatusDots?: boolean;
     simplifiedViewLabels?: boolean;
+    immersiveAdd?: boolean; // 沉浸式添加模式
   };
 }
 

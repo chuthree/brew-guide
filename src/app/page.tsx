@@ -375,6 +375,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [beanDetailData, setBeanDetailData] =
     useState<ExtendedCoffeeBean | null>(null);
   const [beanDetailSearchQuery, setBeanDetailSearchQuery] = useState('');
+  // 沉浸式添加模式状态
+  const [beanDetailAddMode, setBeanDetailAddMode] = useState(false);
+  const [beanDetailAddBeanState, setBeanDetailAddBeanState] = useState<
+    'green' | 'roasted'
+  >('roasted');
 
   // 笔记编辑模态框状态
   const [brewingNoteEditOpen, setBrewingNoteEditOpen] = useState(false);
@@ -2821,6 +2826,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     const handleBeanDetailClosing = () => {
       setBeanDetailOpen(false);
+      // 重置添加模式状态
+      setBeanDetailAddMode(false);
+    };
+
+    // 监听沉浸式添加模式事件
+    const handleImmersiveAddOpened = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        beanState?: 'green' | 'roasted';
+      }>;
+      setBeanDetailAddMode(true);
+      setBeanDetailAddBeanState(customEvent.detail?.beanState || 'roasted');
+      setBeanDetailData(null);
+      setBeanDetailSearchQuery('');
+      setBeanDetailOpen(true);
     };
 
     window.addEventListener(
@@ -2828,6 +2847,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       handleBeanDetailOpened as EventListener
     );
     window.addEventListener('beanDetailClosing', handleBeanDetailClosing);
+    window.addEventListener(
+      'immersiveAddOpened',
+      handleImmersiveAddOpened as EventListener
+    );
 
     return () => {
       window.removeEventListener(
@@ -2835,6 +2858,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleBeanDetailOpened as EventListener
       );
       window.removeEventListener('beanDetailClosing', handleBeanDetailClosing);
+      window.removeEventListener(
+        'immersiveAddOpened',
+        handleImmersiveAddOpened as EventListener
+      );
     };
   }, []);
 
@@ -3093,6 +3120,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               notesMaxLines: settings.notesMaxLines,
               showTotalPrice: settings.showTotalPrice,
               showStatusDots: settings.showStatusDots,
+              immersiveAdd: settings.immersiveAdd,
             }}
           />
         )}
@@ -3630,8 +3658,25 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       <BeanDetailModal
         isOpen={beanDetailOpen}
         bean={beanDetailData}
-        onClose={() => setBeanDetailOpen(false)}
+        onClose={() => {
+          setBeanDetailOpen(false);
+          setBeanDetailAddMode(false);
+        }}
         searchQuery={beanDetailSearchQuery}
+        mode={beanDetailAddMode ? 'add' : 'view'}
+        initialBeanState={beanDetailAddBeanState}
+        onSaveNew={async newBean => {
+          try {
+            const { CoffeeBeanManager } = await import(
+              '@/lib/managers/coffeeBeanManager'
+            );
+            await CoffeeBeanManager.addBean(newBean);
+            handleBeanListChange();
+            setBeanDetailAddMode(false);
+          } catch (error) {
+            console.error('添加咖啡豆失败:', error);
+          }
+        }}
         onEdit={bean => {
           // 不关闭详情页，让编辑表单叠加在上面
           setEditingBean(bean);
