@@ -7,13 +7,13 @@ import { restoreDefaultThemeColor } from '@/lib/hooks/useThemeColor';
 import { checkForUpdates, saveCheckTime } from '@/lib/utils/versionCheck';
 import UpdateDrawer from './UpdateDrawer';
 import FeedbackDrawer from './FeedbackDrawer';
+import SettingGroup from './SettingItem';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 
 import { useTheme } from 'next-themes';
 import { LayoutSettings } from '../brewing/Timer/Settings';
 import {
   ChevronLeft,
-  ChevronRight,
   Monitor,
   Archive,
   List,
@@ -34,6 +34,8 @@ import {
   Settings2,
   Layout,
   CircleHelp,
+  Users,
+  Heart,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -758,20 +760,21 @@ const Settings: React.FC<SettingsProps> = ({
       style={settingsStyle}
     >
       {/* 头部导航栏 */}
-      <div className="pt-safe-top relative z-20 flex items-center justify-center py-4">
+      <div className="pt-safe-top relative z-20 flex items-center justify-between px-6">
         <button
           onClick={handleClose}
-          className="absolute left-4 flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300"
+          className="flex flex-5 items-center rounded-full text-neutral-700 dark:text-neutral-300"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="-ml-1 h-5 w-5" />
+          <h2 className="pl-2.5 text-xl font-medium text-neutral-800 dark:text-neutral-200">
+            设置
+          </h2>
         </button>
-        <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
-          设置
-        </h2>
+
         {/* 云同步快捷按钮 */}
         {s3Status === 'connected' && (
           <div
-            className="absolute right-4 flex items-center gap-2"
+            className="absolute right-6 flex items-center gap-2"
             data-sync-menu
           >
             {/* 上传按钮 - 从右侧滑入 */}
@@ -817,359 +820,215 @@ const Settings: React.FC<SettingsProps> = ({
       </div>
 
       {/* 滚动内容区域 - 新的简洁设计 */}
-      <div className="pb-safe-bottom relative flex-1 divide-y divide-neutral-200 overflow-y-auto dark:divide-neutral-800">
+      <div className="pb-safe-bottom relative flex-1 overflow-y-auto">
         {/* 顶部渐变阴影（随滚动粘附）*/}
         <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
-        {/* 赞助支持 */}
-        <div className="-mt-4 px-6 py-4">
-          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-            支持 & 交流
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => {
-                if (qrCodeType === 'appreciation') {
-                  setQrCodeType(null);
-                  setShowQRCodes(false);
-                } else {
-                  setQrCodeType('appreciation');
-                  setShowQRCodes(true);
-                }
-              }}
-              className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-            >
-              <span>
-                {qrCodeType === 'appreciation' ? '收起二维码' : '赞赏码'}
-              </span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`ml-2 h-4 w-4 text-neutral-600 transition-transform dark:text-neutral-400 ${qrCodeType === 'appreciation' ? 'rotate-180' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={() => {
-                if (qrCodeType === 'group') {
-                  setQrCodeType(null);
-                  setShowQRCodes(false);
-                } else {
-                  setQrCodeType('group');
-                  setShowQRCodes(true);
-                }
-              }}
-              className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-            >
-              <span>{qrCodeType === 'group' ? '收起二维码' : '交流群'}</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`ml-2 h-4 w-4 text-neutral-600 transition-transform dark:text-neutral-400 ${qrCodeType === 'group' ? 'rotate-180' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {showQRCodes && (
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              {qrCodeType === 'appreciation' ? (
-                <>
-                  <div className="flex flex-col items-center">
-                    <div className="relative aspect-square w-full overflow-hidden rounded">
-                      <Image
-                        src="/images/content/appreciation-code.jpg"
-                        alt="赞赏码"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                      赞赏码（开发不易，要是能支持一下就太好了 www）
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-center opacity-0">
-                    <div className="invisible relative aspect-square w-full overflow-hidden rounded">
-                      <div className="h-full w-full" />
-                    </div>
-                    <p className="invisible mt-2 text-xs">占位</p>
-                  </div>
-                </>
-              ) : qrCodeType === 'group' ? (
-                <>
-                  <div className="flex flex-col items-center opacity-0">
-                    <div className="invisible relative aspect-square w-full overflow-hidden rounded">
-                      <div className="h-full w-full" />
-                    </div>
-                    <p className="invisible mt-2 text-xs">占位</p>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="relative aspect-square w-full overflow-hidden rounded">
-                      <Image
-                        src="https://coffee.chu3.top/images/content/chu-code.jpg"
-                        alt="chu 的微信二维码"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                      加 chu 的微信拉你进群～
-                    </p>
-                  </div>
-                </>
-              ) : null}
-            </div>
-          )}
-        </div>
-
-        {/* 个人信息设置组 */}
-        <div className="px-6 py-4">
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="username"
-                className="mb-2 block text-sm font-medium text-neutral-800 dark:text-neutral-200"
-              >
-                用户名
-              </label>
-              <input
-                type="text"
-                id="username"
-                value={settings.username}
-                onChange={e => handleChange('username', e.target.value)}
-                placeholder="请输入您的用户名"
-                className="w-full appearance-none rounded bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900 focus:ring-2 focus:ring-neutral-500 focus:outline-hidden dark:bg-neutral-800 dark:text-neutral-100"
-              />
-              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                用于在分享时显示签名
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* 按钮组 */}
-        <div className="space-y-4 px-6 py-4">
-          <button
-            onClick={subSettingsHandlers.onOpenDisplaySettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Monitor className="h-4 w-4 text-neutral-500" />
-              <span>显示设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-          <button
-            onClick={subSettingsHandlers.onOpenNavigationSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Layout className="h-4 w-4 text-neutral-500" />
-              <span>导航栏设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-          <button
-            onClick={subSettingsHandlers.onOpenNotificationSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Bell className="h-4 w-4 text-neutral-500" />
-              <span>通知设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-        </div>
-        <div className="space-y-4 px-6 py-4">
-          <button
-            onClick={subSettingsHandlers.onOpenTimerSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Timer className="h-4 w-4 text-neutral-500" />
-              <span>计时器设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-          <button
-            onClick={subSettingsHandlers.onOpenGrinderSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Settings2 className="h-4 w-4 text-neutral-500" />
-              <span>磨豆机设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-          <button
-            onClick={subSettingsHandlers.onOpenRandomCoffeeBeanSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Shuffle className="h-4 w-4 text-neutral-500" />
-              <span>随机咖啡豆设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-          {hasHiddenMethods && (
-            <button
-              onClick={subSettingsHandlers.onOpenHiddenMethodsSettings}
-              className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-            >
-              <div className="flex items-center space-x-3">
-                <EyeOff className="h-4 w-4 text-neutral-500" />
-                <span>隐藏的预设方案</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-neutral-400" />
-            </button>
-          )}
-          {hasHiddenEquipments && (
-            <button
-              onClick={subSettingsHandlers.onOpenHiddenEquipmentsSettings}
-              className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-            >
-              <div className="flex items-center space-x-3">
-                <EyeOff className="h-4 w-4 text-neutral-500" />
-                <span>隐藏的预设器具</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-neutral-400" />
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-4 px-6 py-4">
-          <button
-            onClick={subSettingsHandlers.onOpenBeanSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <List className="h-4 w-4 text-neutral-500" />
-              <span>豆仓设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-
-          <button
-            onClick={subSettingsHandlers.onOpenStockSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Archive className="h-4 w-4 text-neutral-500" />
-              <span>扣除设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-
-          <button
-            onClick={subSettingsHandlers.onOpenFlavorPeriodSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <CalendarDays className="h-4 w-4 text-neutral-500" />
-              <span>赏味期设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-
-          <button
-            onClick={subSettingsHandlers.onOpenRoasterLogoSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <ImagePlus className="h-4 w-4 text-neutral-500" />
-              <span>烘焙商图标设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-        </div>
-
-        {/* 笔记相关设置 */}
-        <div className="space-y-4 px-6 py-4">
-          <button
-            onClick={subSettingsHandlers.onOpenSearchSortSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <ArrowUpDown className="h-4 w-4 text-neutral-500" />
-              <span>搜索排序设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-
-          <button
-            onClick={subSettingsHandlers.onOpenFlavorDimensionSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Palette className="h-4 w-4 text-neutral-500" />
-              <span>风味维度设置</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-        </div>
-
-        {/* 数据管理入口按钮 */}
-        <div className="px-6 py-4">
-          <button
-            onClick={subSettingsHandlers.onOpenDataSettings}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Database className="h-4 w-4 text-neutral-500" />
-              <span>数据管理</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-        </div>
 
         {/* 帮助与反馈 */}
-        <div className="space-y-4 px-6 py-4">
-          <button
-            onClick={() => {
-              window.open('https://help.chu3.top/docs', '_blank');
-              if (settings.hapticFeedback) {
-                hapticsUtils.light();
-              }
-            }}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <CircleHelp className="h-4 w-4 text-neutral-500" />
-              <span>帮助文档</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-          <button
-            onClick={() => {
-              setShowFeedbackDrawer(true);
-              if (settings.hapticFeedback) {
-                hapticsUtils.light();
-              }
-            }}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <div className="flex items-center space-x-3">
-              <Lightbulb className="h-4 w-4 text-neutral-500" />
-              <span>想法收集站</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-        </div>
+        <SettingGroup
+          className="-mt-4"
+          items={[
+            {
+              icon: CircleHelp,
+              label: '帮助文档',
+              onClick: () => {
+                window.open('https://help.chu3.top/docs', '_blank');
+                if (settings.hapticFeedback) {
+                  hapticsUtils.light();
+                }
+              },
+            },
+            {
+              icon: Lightbulb,
+              label: '想法收集站',
+              onClick: () => {
+                setShowFeedbackDrawer(true);
+                if (settings.hapticFeedback) {
+                  hapticsUtils.light();
+                }
+              },
+            },
+            {
+              label: '交流群',
+              isExpanded: qrCodeType === 'group',
+              onClick: () => {
+                setQrCodeType(qrCodeType === 'group' ? null : 'group');
+                if (settings.hapticFeedback) {
+                  hapticsUtils.light();
+                }
+              },
+              expandedContent: (
+                <div className="flex flex-col items-start justify-center pb-3.5 pl-[42px]">
+                  <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
+                    <Image
+                      src="/images/content/group-code.jpg"
+                      alt="交流群二维码"
+                      width={200}
+                      height={200}
+                      className="h-auto w-[200px]"
+                    />
+                  </div>
+                  <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                    群满 200 人哩，加开发者拉你进群吧
+                  </p>
+                </div>
+              ),
+            },
+            {
+              label: '赞赏码',
+              isExpanded: qrCodeType === 'appreciation',
+              onClick: () => {
+                setQrCodeType(
+                  qrCodeType === 'appreciation' ? null : 'appreciation'
+                );
+                if (settings.hapticFeedback) {
+                  hapticsUtils.light();
+                }
+              },
+              expandedContent: (
+                <div className="flex flex-col items-start justify-center pb-3.5 pl-[42px]">
+                  <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
+                    <Image
+                      src="/images/content/appreciation-code.jpg"
+                      alt="赞赏码"
+                      width={200}
+                      height={200}
+                      className="h-auto w-[200px]"
+                    />
+                  </div>
+                  <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                    赞赏码（开发不易，要是能支持一下就太好了 www）
+                  </p>
+                </div>
+              ),
+            },
+          ]}
+        />
+
+        {/* 显示与界面设置 */}
+        <SettingGroup
+          items={[
+            {
+              icon: Monitor,
+              label: '外观与字体',
+              onClick: subSettingsHandlers.onOpenDisplaySettings,
+            },
+            {
+              icon: Layout,
+              label: '导航栏',
+              onClick: subSettingsHandlers.onOpenNavigationSettings,
+            },
+            {
+              icon: Bell,
+              label: '通知',
+              onClick: subSettingsHandlers.onOpenNotificationSettings,
+            },
+          ]}
+        />
+        {/* 功能设置 */}
+        <SettingGroup
+          items={[
+            {
+              icon: Timer,
+              label: '计时器',
+              onClick: subSettingsHandlers.onOpenTimerSettings,
+            },
+            {
+              icon: Settings2,
+              label: '磨豆机',
+              onClick: subSettingsHandlers.onOpenGrinderSettings,
+            },
+            {
+              icon: Shuffle,
+              label: '随机咖啡豆规则',
+              onClick: subSettingsHandlers.onOpenRandomCoffeeBeanSettings,
+            },
+            ...(hasHiddenMethods
+              ? [
+                  {
+                    icon: EyeOff,
+                    label: '隐藏的预设方案',
+                    onClick: subSettingsHandlers.onOpenHiddenMethodsSettings,
+                  },
+                ]
+              : []),
+            ...(hasHiddenEquipments
+              ? [
+                  {
+                    icon: EyeOff,
+                    label: '隐藏的预设器具',
+                    onClick: subSettingsHandlers.onOpenHiddenEquipmentsSettings,
+                  },
+                ]
+              : []),
+          ]}
+        />
+
+        {/* 咖啡豆管理 */}
+        <SettingGroup
+          items={[
+            {
+              icon: List,
+              label: '豆仓',
+              onClick: subSettingsHandlers.onOpenBeanSettings,
+            },
+            {
+              icon: Archive,
+              label: '库存扣除',
+              onClick: subSettingsHandlers.onOpenStockSettings,
+            },
+            {
+              icon: CalendarDays,
+              label: '赏味期',
+              onClick: subSettingsHandlers.onOpenFlavorPeriodSettings,
+            },
+            {
+              icon: ImagePlus,
+              label: '烘焙商图标',
+              onClick: subSettingsHandlers.onOpenRoasterLogoSettings,
+            },
+          ]}
+        />
+
+        {/* 笔记管理 */}
+        <SettingGroup
+          items={[
+            {
+              icon: ArrowUpDown,
+              label: '搜索与排序',
+              onClick: subSettingsHandlers.onOpenSearchSortSettings,
+            },
+            {
+              icon: Palette,
+              label: '风味维度',
+              onClick: subSettingsHandlers.onOpenFlavorDimensionSettings,
+            },
+          ]}
+        />
+
+        {/* 数据与备份 */}
+        <SettingGroup
+          items={[
+            {
+              icon: Users,
+              label: '用户名',
+              value: settings.username,
+              placeholder: '点击输入',
+              editable: true,
+              onSave: value => {
+                handleChange('username', value);
+                if (settings.hapticFeedback) {
+                  hapticsUtils.light();
+                }
+              },
+            },
+            {
+              icon: Database,
+              label: '数据与备份',
+              onClick: subSettingsHandlers.onOpenDataSettings,
+            },
+          ]}
+        />
 
         {/* 版本信息 */}
         <div className="px-6 pt-12 text-center text-xs text-neutral-400 select-none dark:text-neutral-600">

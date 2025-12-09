@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { SettingsOptions } from './Settings';
-import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import { SettingPage } from './atomic';
 import {
   commonMethods,
   equipmentList,
@@ -127,78 +127,58 @@ const HiddenMethodsSettings: React.FC<HiddenMethodsSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <div
-      className="fixed inset-0 mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
-      style={getChildPageStyle(isVisible)}
+    <SettingPage
+      title="隐藏的预设方案"
+      isVisible={isVisible}
+      onClose={handleClose}
     >
-      {/* 头部导航栏 */}
-      <div className="pt-safe-top relative flex items-center justify-center py-4">
-        <button
-          onClick={handleClose}
-          className="absolute left-4 flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
-          隐藏的预设方案
-        </h2>
-      </div>
-
-      {/* 滚动内容区域 */}
-      <div className="pb-safe-bottom relative flex-1 overflow-y-auto">
-        {/* 顶部渐变阴影 */}
-        <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
-
-        <div className="-mt-4 space-y-4 px-6">
-          {totalHiddenCount === 0 ? (
-            <div className="mt-12 flex flex-col items-center justify-center text-center">
-              <Eye className="mb-2 h-10 w-10 text-neutral-300 dark:text-neutral-600" />
-              <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                没有隐藏的方案
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* 隐藏的方案列表 */}
-              <div className="space-y-4">
-                {Object.entries(hiddenMethods).map(
-                  ([equipmentId, methodIds]) => (
-                    <div key={equipmentId}>
-                      <h3 className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        {getEquipmentName(equipmentId)}
-                      </h3>
-                      <div className="space-y-1.5">
-                        {methodIds.map(methodId => (
-                          <div
-                            key={methodId}
-                            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800"
-                          >
-                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                              {getMethodName(equipmentId, methodId)}
-                            </span>
-                            <button
-                              onClick={() =>
-                                handleUnhideMethod(equipmentId, methodId)
-                              }
-                              className="text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                            >
-                              恢复
-                            </button>
-                          </div>
-                        ))}
+      <div className="-mt-4 space-y-4 px-6">
+        {totalHiddenCount === 0 ? (
+          <div className="mt-12 flex flex-col items-center justify-center text-center">
+            <Eye className="mb-2 h-10 w-10 text-neutral-300 dark:text-neutral-600" />
+            <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              没有隐藏的方案
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* 隐藏的方案列表 */}
+            <div className="space-y-4">
+              {Object.entries(hiddenMethods).map(([equipmentId, methodIds]) => (
+                <div key={equipmentId}>
+                  <h3 className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    {getEquipmentName(equipmentId)}
+                  </h3>
+                  <div className="space-y-1.5">
+                    {methodIds.map(methodId => (
+                      <div
+                        key={methodId}
+                        className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800"
+                      >
+                        <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                          {getMethodName(equipmentId, methodId)}
+                        </span>
+                        <button
+                          onClick={() =>
+                            handleUnhideMethod(equipmentId, methodId)
+                          }
+                          className="text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+                        >
+                          恢复
+                        </button>
                       </div>
-                    </div>
-                  )
-                )}
-              </div>
-            </>
-          )}
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
-          {/* 底部空间 */}
-          <div className="h-16" />
-        </div>
+        {/* 底部空间 */}
+        <div className="h-16" />
       </div>
-    </div>
+    </SettingPage>
   );
 };
 

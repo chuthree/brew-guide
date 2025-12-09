@@ -1,14 +1,13 @@
 'use client';
 
 import React from 'react';
-import { ChevronLeft } from 'lucide-react';
 import { SettingsOptions } from './Settings';
-import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import hapticsUtils from '@/lib/ui/haptics';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import { SettingPage } from './atomic';
 
 interface NotificationSettingsProps {
   settings: SettingsOptions;
@@ -242,104 +241,83 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <div
-      className="fixed inset-0 mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
-      style={getChildPageStyle(isVisible)}
-    >
-      {/* 头部导航栏 */}
-      <div className="pt-safe-top relative flex items-center justify-center py-4">
-        <button
-          onClick={handleClose}
-          className="absolute left-4 flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
-          通知设置
-        </h2>
-      </div>
-
+    <SettingPage title="通知设置" isVisible={isVisible} onClose={handleClose}>
       {/* 滚动内容区域 */}
-      <div className="pb-safe-bottom relative flex-1 overflow-y-auto">
-        {/* 顶部渐变阴影 */}
-        <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
+      {/* 通用设置 */}
+      <div className="-mt-4 px-6 py-4">
+        <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+          通用
+        </h3>
+        <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
+          {/* 提示音 */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              提示音
+            </span>
+            <Switch
+              checked={settings.notificationSound}
+              onChange={() =>
+                handleChange('notificationSound', !settings.notificationSound)
+              }
+            />
+          </div>
 
-        {/* 通用设置 */}
-        <div className="-mt-4 px-6 py-4">
-          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-            通用
-          </h3>
-          <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-            {/* 提示音 */}
+          {/* 震动反馈 - 仅在原生应用中显示 */}
+          {isNativeApp && (
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                提示音
+                震动反馈
               </span>
               <Switch
-                checked={settings.notificationSound}
+                checked={settings.hapticFeedback}
                 onChange={() =>
-                  handleChange('notificationSound', !settings.notificationSound)
+                  handleChange('hapticFeedback', !settings.hapticFeedback)
+                }
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 每日提醒 - 仅在原生应用中显示 */}
+      {isNativeApp && (
+        <div className="px-6 py-4">
+          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+            每日提醒
+          </h3>
+          <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                开启提醒
+              </span>
+              <Switch
+                checked={settings.dailyReminder}
+                onChange={() =>
+                  handleDailyReminderChange(!settings.dailyReminder)
                 }
               />
             </div>
 
-            {/* 震动反馈 - 仅在原生应用中显示 */}
-            {isNativeApp && (
-              <div className="flex items-center justify-between">
+            {settings.dailyReminder && (
+              <div className="flex items-center justify-between border-t border-neutral-200 pt-4 dark:border-neutral-700">
                 <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  震动反馈
+                  提醒时间
                 </span>
-                <Switch
-                  checked={settings.hapticFeedback}
-                  onChange={() =>
-                    handleChange('hapticFeedback', !settings.hapticFeedback)
-                  }
+                <input
+                  type="time"
+                  value={settings.dailyReminderTime}
+                  onChange={handleTimeChange}
+                  className="rounded bg-white px-2 py-1 text-sm font-medium text-neutral-800 focus:ring-2 focus:ring-neutral-500 focus:outline-hidden dark:bg-neutral-700 dark:text-neutral-200"
                 />
               </div>
             )}
           </div>
+          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            开启后，将在设定时间提醒您冲一杯咖啡
+          </p>
         </div>
-
-        {/* 每日提醒 - 仅在原生应用中显示 */}
-        {isNativeApp && (
-          <div className="px-6 py-4">
-            <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-              每日提醒
-            </h3>
-            <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  开启提醒
-                </span>
-                <Switch
-                  checked={settings.dailyReminder}
-                  onChange={() =>
-                    handleDailyReminderChange(!settings.dailyReminder)
-                  }
-                />
-              </div>
-
-              {settings.dailyReminder && (
-                <div className="flex items-center justify-between border-t border-neutral-200 pt-4 dark:border-neutral-700">
-                  <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    提醒时间
-                  </span>
-                  <input
-                    type="time"
-                    value={settings.dailyReminderTime}
-                    onChange={handleTimeChange}
-                    className="rounded bg-white px-2 py-1 text-sm font-medium text-neutral-800 focus:ring-2 focus:ring-neutral-500 focus:outline-hidden dark:bg-neutral-700 dark:text-neutral-200"
-                  />
-                </div>
-              )}
-            </div>
-            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-              开启后，将在设定时间提醒您冲一杯咖啡
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
+      )}
+    </SettingPage>
   );
 };
 

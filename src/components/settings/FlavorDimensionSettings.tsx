@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
 
 import { SettingsOptions } from './Settings';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
@@ -10,8 +10,8 @@ import {
   FlavorDimension,
 } from '@/lib/managers/customFlavorDimensions';
 import hapticsUtils from '@/lib/ui/haptics';
-import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import { SettingPage } from './atomic';
 
 interface FlavorDimensionSettingsProps {
   settings: SettingsOptions;
@@ -204,26 +204,13 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <div
-      className="pt-safe-top pb-safe-bottom fixed inset-0 z-[60] mx-auto flex max-w-[640px] flex-col bg-neutral-50 sm:max-w-full dark:bg-neutral-900"
-      style={getChildPageStyle(isVisible)}
+    <SettingPage
+      title="风味维度设置"
+      isVisible={isVisible}
+      onClose={handleClose}
     >
-      {/* 头部导航栏 */}
-      <div className="relative mx-auto flex w-full items-center justify-center pb-4 sm:max-w-sm">
-        <button
-          onClick={handleClose}
-          className="absolute left-4 flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <h2 className="text-md font-medium text-neutral-800 dark:text-neutral-200">
-          风味维度设置
-        </h2>
-      </div>
-
       {/* 滚动内容区域 */}
       <div className="mx-auto w-full flex-1 overflow-y-auto sm:max-w-sm">
-        <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
         <div className="-mt-4 space-y-6 px-6">
           {/* 说明文字 */}
           <div className="space-y-3 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
@@ -433,7 +420,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
           <div className="h-20" />
         </div>
       </div>
-    </div>
+    </SettingPage>
   );
 };
 
