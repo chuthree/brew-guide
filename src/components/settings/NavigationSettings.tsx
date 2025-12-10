@@ -76,7 +76,6 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
       coffeeBeanViews: {
         [VIEW_OPTIONS.INVENTORY]: true,
         [VIEW_OPTIONS.RANKING]: true,
-        [VIEW_OPTIONS.BLOGGER]: true,
         [VIEW_OPTIONS.STATS]: true,
       },
       pinnedViews: [],
@@ -117,7 +116,6 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
       coffeeBeanViews: {
         [VIEW_OPTIONS.INVENTORY]: true,
         [VIEW_OPTIONS.RANKING]: true,
-        [VIEW_OPTIONS.BLOGGER]: true,
         [VIEW_OPTIONS.STATS]: true,
       },
       pinnedViews: [],
@@ -157,7 +155,6 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
       coffeeBeanViews: {
         [VIEW_OPTIONS.INVENTORY]: true,
         [VIEW_OPTIONS.RANKING]: true,
-        [VIEW_OPTIONS.BLOGGER]: true,
         [VIEW_OPTIONS.STATS]: true,
       },
       pinnedViews: [],
@@ -208,7 +205,6 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
   const coffeeBeanViews = settings.navigationSettings?.coffeeBeanViews || {
     [VIEW_OPTIONS.INVENTORY]: true,
     [VIEW_OPTIONS.RANKING]: true,
-    [VIEW_OPTIONS.BLOGGER]: true,
     [VIEW_OPTIONS.STATS]: true,
   };
 

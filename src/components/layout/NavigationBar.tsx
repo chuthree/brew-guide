@@ -367,7 +367,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     coffeeBeanViews = {
       [VIEW_OPTIONS.INVENTORY]: true,
       [VIEW_OPTIONS.RANKING]: true,
-      [VIEW_OPTIONS.BLOGGER]: true,
       [VIEW_OPTIONS.STATS]: true,
     },
   } = settings.navigationSettings || {};

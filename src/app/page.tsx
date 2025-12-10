@@ -806,7 +806,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         const coffeeBeanViews = navigationSettings?.coffeeBeanViews || {
           [VIEW_OPTIONS.INVENTORY]: true,
           [VIEW_OPTIONS.RANKING]: true,
-          [VIEW_OPTIONS.BLOGGER]: true,
           [VIEW_OPTIONS.STATS]: true,
         };
 

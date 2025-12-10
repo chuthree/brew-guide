@@ -39,8 +39,6 @@ async function buildSW() {
         'images/**/*.{png,jpg,jpeg,svg,ico,webp}',
         // 音频文件
         'sounds/*.mp3',
-        // 数据文件
-        'data/*.csv',
         // PWA 必需文件
         'manifest.json',
         // HTML 页面（静态导出的页面）
