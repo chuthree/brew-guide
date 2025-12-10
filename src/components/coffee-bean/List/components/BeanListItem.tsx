@@ -488,7 +488,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
           {shouldShowNotes() && (
             <div
-              className={`rounded bg-neutral-200/30 p-1.5 text-xs leading-relaxed font-medium whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85 ${
+              className={`rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85 ${
                 limitNotesLines
                   ? 'cursor-pointer transition-colors hover:bg-neutral-200/40 dark:hover:bg-neutral-800/50'
                   : ''

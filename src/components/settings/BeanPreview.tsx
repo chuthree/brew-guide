@@ -256,9 +256,14 @@ const BeanPreviewItem: React.FC<{
     showBeanNotes && ((showFlavorInfo && bean.flavor?.length) || bean.notes);
 
   const getFullNotesContent = () => {
-    if (showFlavorInfo && bean.flavor?.length) {
-      const flavorText = bean.flavor.join(' · ');
-      return bean.notes ? `${flavorText}\n\n${bean.notes}` : flavorText;
+    const hasFlavor = showFlavorInfo && bean.flavor?.length;
+    const hasNotes = bean.notes && bean.notes.trim() !== '';
+
+    if (hasFlavor && hasNotes) {
+      return `${bean.flavor!.join(' · ')}\n${bean.notes!}`;
+    }
+    if (hasFlavor) {
+      return bean.flavor!.join(' · ');
     }
     return bean.notes || '';
   };
@@ -338,7 +343,7 @@ const BeanPreviewItem: React.FC<{
         </div>
 
         {shouldShowNotes() && (
-          <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium tracking-widest whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
+          <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
             <div
               className={
                 limitNotesLines ? getLineClampClass(notesMaxLines) : ''
