@@ -946,4 +946,5 @@ export const sponsorsList = [
   '宝玉妹妹',
   'Jarod',
   'Typnosis',
+  '一拂',
 ];
