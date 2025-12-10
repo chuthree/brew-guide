@@ -39,7 +39,7 @@ export const SORT_OPTIONS = {
   NAME_DESC: 'name_desc', // 名称按字母倒序（Z→A）
   RATING_ASC: 'rating_asc', // 评分从低到高（升序）
   RATING_DESC: 'rating_desc', // 评分从高到低（降序）
-  ORIGINAL: 'original', // 博主榜单原始排序
+  ORIGINAL: 'original',
   REMAINING_AMOUNT_ASC: 'remaining_amount_asc', // 剩余量从少到多（升序）
   REMAINING_AMOUNT_DESC: 'remaining_amount_desc', // 剩余量从多到少（降序）
   ROAST_DATE_ASC: 'roast_date_asc', // 烘焙日期从早到晚（升序）
@@ -189,71 +189,37 @@ export const sortBeans = (
 // 转换库存排序选项到榜单排序选项
 export const convertToRankingSortOption = (
   option: SortOption,
-  viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats'
+  viewMode: 'inventory' | 'ranking' | 'stats'
 ): RankingSortOption => {
-  if (viewMode === 'blogger') {
-    // 博主榜单视图的特殊处理
-    switch (option) {
-      case SORT_OPTIONS.REMAINING_DAYS_ASC:
-        return RANKING_SORT_OPTIONS.ORIGINAL; // 在博主榜单视图中，第一个选项是原始排序
-      case SORT_OPTIONS.REMAINING_DAYS_DESC:
-        return RANKING_SORT_OPTIONS.RATING_DESC; // 评分降序
-      case SORT_OPTIONS.RATING_ASC:
-        return RANKING_SORT_OPTIONS.RATING_ASC; // 评分升序
-      case SORT_OPTIONS.NAME_ASC:
-        return RANKING_SORT_OPTIONS.NAME_ASC;
-      case SORT_OPTIONS.NAME_DESC:
-        return RANKING_SORT_OPTIONS.NAME_DESC;
-      case SORT_OPTIONS.RATING_DESC:
-        return RANKING_SORT_OPTIONS.RATING_DESC;
-      case SORT_OPTIONS.ORIGINAL:
-        return RANKING_SORT_OPTIONS.ORIGINAL;
-      case SORT_OPTIONS.PRICE_ASC:
-        return RANKING_SORT_OPTIONS.PRICE_ASC;
-      case SORT_OPTIONS.PRICE_DESC:
-        return RANKING_SORT_OPTIONS.PRICE_DESC;
-      case SORT_OPTIONS.REMAINING_AMOUNT_ASC:
-      case SORT_OPTIONS.REMAINING_AMOUNT_DESC:
-      case SORT_OPTIONS.ROAST_DATE_ASC:
-      case SORT_OPTIONS.ROAST_DATE_DESC:
-      case SORT_OPTIONS.LAST_MODIFIED_ASC:
-      case SORT_OPTIONS.LAST_MODIFIED_DESC:
-        return RANKING_SORT_OPTIONS.ORIGINAL; // 默认使用原始排序
-      default:
-        return RANKING_SORT_OPTIONS.ORIGINAL;
-    }
-  } else {
-    // 个人榜单视图
-    switch (option) {
-      case SORT_OPTIONS.NAME_ASC:
-        return RANKING_SORT_OPTIONS.NAME_ASC;
-      case SORT_OPTIONS.NAME_DESC:
-        return RANKING_SORT_OPTIONS.NAME_DESC;
-      case SORT_OPTIONS.REMAINING_DAYS_ASC:
-      case SORT_OPTIONS.REMAINING_AMOUNT_ASC:
-      case SORT_OPTIONS.ROAST_DATE_ASC:
-        return RANKING_SORT_OPTIONS.RATING_DESC; // 评分从高到低
-      case SORT_OPTIONS.REMAINING_DAYS_DESC:
-      case SORT_OPTIONS.REMAINING_AMOUNT_DESC:
-      case SORT_OPTIONS.ROAST_DATE_DESC:
-        return RANKING_SORT_OPTIONS.RATING_ASC; // 评分从低到高
-      case SORT_OPTIONS.RATING_ASC:
-        return RANKING_SORT_OPTIONS.RATING_ASC;
-      case SORT_OPTIONS.RATING_DESC:
-        return RANKING_SORT_OPTIONS.RATING_DESC;
-      case SORT_OPTIONS.PRICE_ASC:
-        return RANKING_SORT_OPTIONS.RATING_DESC;
-      case SORT_OPTIONS.PRICE_DESC:
-        return RANKING_SORT_OPTIONS.RATING_ASC;
-      case SORT_OPTIONS.LAST_MODIFIED_ASC:
-        return RANKING_SORT_OPTIONS.RATING_DESC; // 最近变动升序，返回评分降序
-      case SORT_OPTIONS.LAST_MODIFIED_DESC:
-        return RANKING_SORT_OPTIONS.RATING_ASC; // 最近变动降序，返回评分升序
-      case SORT_OPTIONS.ORIGINAL:
-        return RANKING_SORT_OPTIONS.ORIGINAL;
-      default:
-        return RANKING_SORT_OPTIONS.RATING_DESC;
-    }
+  switch (option) {
+    case SORT_OPTIONS.NAME_ASC:
+      return RANKING_SORT_OPTIONS.NAME_ASC;
+    case SORT_OPTIONS.NAME_DESC:
+      return RANKING_SORT_OPTIONS.NAME_DESC;
+    case SORT_OPTIONS.REMAINING_DAYS_ASC:
+    case SORT_OPTIONS.REMAINING_AMOUNT_ASC:
+    case SORT_OPTIONS.ROAST_DATE_ASC:
+      return RANKING_SORT_OPTIONS.RATING_DESC; // 评分从高到低
+    case SORT_OPTIONS.REMAINING_DAYS_DESC:
+    case SORT_OPTIONS.REMAINING_AMOUNT_DESC:
+    case SORT_OPTIONS.ROAST_DATE_DESC:
+      return RANKING_SORT_OPTIONS.RATING_ASC; // 评分从低到高
+    case SORT_OPTIONS.RATING_ASC:
+      return RANKING_SORT_OPTIONS.RATING_ASC;
+    case SORT_OPTIONS.RATING_DESC:
+      return RANKING_SORT_OPTIONS.RATING_DESC;
+    case SORT_OPTIONS.PRICE_ASC:
+      return RANKING_SORT_OPTIONS.RATING_DESC;
+    case SORT_OPTIONS.PRICE_DESC:
+      return RANKING_SORT_OPTIONS.RATING_ASC;
+    case SORT_OPTIONS.LAST_MODIFIED_ASC:
+      return RANKING_SORT_OPTIONS.RATING_DESC; // 最近变动升序，返回评分降序
+    case SORT_OPTIONS.LAST_MODIFIED_DESC:
+      return RANKING_SORT_OPTIONS.RATING_ASC; // 最近变动降序，返回评分升序
+    case SORT_OPTIONS.ORIGINAL:
+      return RANKING_SORT_OPTIONS.ORIGINAL;
+    default:
+      return RANKING_SORT_OPTIONS.RATING_DESC;
   }
 };
 
@@ -337,7 +303,7 @@ export const SORT_TYPES = {
   REMAINING_DAYS: 'remaining_days', // 赏味期
   NAME: 'name', // 名称
   RATING: 'rating', // 评分
-  ORIGINAL: 'original', // 原始排序（仅用于博主榜单）
+  ORIGINAL: 'original',
   REMAINING_AMOUNT: 'remaining_amount', // 剩余量
   ROAST_DATE: 'roast_date', // 烘焙日期
   PRICE: 'price', // 克价
@@ -576,8 +542,6 @@ export const getAvailableSortTypesForView = (
       ];
     case 'ranking':
       return [SORT_TYPES.RATING, SORT_TYPES.LAST_MODIFIED];
-    case 'blogger':
-      return [SORT_TYPES.ORIGINAL, SORT_TYPES.RATING, SORT_TYPES.PRICE];
     case 'stats':
       return [
         SORT_TYPES.REMAINING_DAYS,
@@ -592,7 +556,7 @@ export const getAvailableSortTypesForView = (
 };
 
 interface SortSelectorProps {
-  viewMode: 'inventory' | 'ranking' | 'blogger' | 'stats';
+  viewMode: 'inventory' | 'ranking' | 'stats';
   sortOption: SortOption;
   onSortChange: (value: SortOption) => void;
   showSelector?: boolean;
@@ -662,11 +626,7 @@ const SortSelector: React.FC<SortSelectorProps> = ({
           {getAvailableSortTypes(viewMode).map(type => (
             <CustomSelectItem
               key={type}
-              value={
-                type === SORT_TYPES.ORIGINAL
-                  ? SORT_OPTIONS.ORIGINAL
-                  : getSortOption(type, currentOrder)
-              }
+              value={getSortOption(type, currentOrder)}
               className="font-medium tracking-wide text-neutral-800 transition-colors data-highlighted:opacity-80 dark:text-neutral-100"
               onClick={() => handleTypeChange(type)}
             >

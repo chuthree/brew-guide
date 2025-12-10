@@ -2,7 +2,6 @@
 export const VIEW_OPTIONS = {
   INVENTORY: 'inventory',
   RANKING: 'ranking',
-  BLOGGER: 'blogger',
   STATS: 'stats',
 } as const;
 
@@ -12,7 +11,6 @@ export type ViewOption = (typeof VIEW_OPTIONS)[keyof typeof VIEW_OPTIONS];
 export const VIEW_LABELS: Record<ViewOption, string> = {
   [VIEW_OPTIONS.INVENTORY]: '咖啡豆库存',
   [VIEW_OPTIONS.RANKING]: '个人榜单',
-  [VIEW_OPTIONS.BLOGGER]: '博主榜单',
   [VIEW_OPTIONS.STATS]: '统计视图',
 };
 
@@ -20,6 +18,5 @@ export const VIEW_LABELS: Record<ViewOption, string> = {
 export const SIMPLIFIED_VIEW_LABELS: Record<ViewOption, string> = {
   [VIEW_OPTIONS.INVENTORY]: '库存',
   [VIEW_OPTIONS.RANKING]: '榜单',
-  [VIEW_OPTIONS.BLOGGER]: '推荐',
   [VIEW_OPTIONS.STATS]: '统计',
 };

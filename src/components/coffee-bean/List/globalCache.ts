@@ -3,9 +3,7 @@ import {
   BeanType,
   BeanState,
   ViewOption,
-  BloggerBeansYear,
   BeanFilterMode,
-  BloggerType,
 } from './types';
 import {
   getBooleanState,
@@ -32,11 +30,6 @@ export const globalCache: {
   beans: ExtendedCoffeeBean[];
   ratedBeans: ExtendedCoffeeBean[];
   filteredBeans: ExtendedCoffeeBean[];
-  bloggerBeans: {
-    2023: ExtendedCoffeeBean[];
-    2024: ExtendedCoffeeBean[];
-    2025: ExtendedCoffeeBean[];
-  };
   varieties: string[];
   selectedVariety: string | null;
   selectedBeanType: BeanType;
@@ -109,21 +102,12 @@ export const globalCache: {
     roasted: SortOption;
   };
   rankingSortOption: SortOption;
-  bloggerSortOption: SortOption;
   rankingBeanType: BeanType;
-  bloggerYear: BloggerBeansYear; // 保留用于向后兼容
-  bloggerType: BloggerType;
-  // 每个博主的年份记忆
-  bloggerYears: {
-    peter: BloggerBeansYear;
-    fenix: BloggerBeansYear;
-  };
   initialized: boolean;
 } = {
   beans: [],
   ratedBeans: [],
   filteredBeans: [],
-  bloggerBeans: { 2023: [], 2024: [], 2025: [] }, // 初始化三年的博主榜单
   varieties: [],
   selectedVariety: null,
   selectedBeanType: 'all',
@@ -196,15 +180,7 @@ export const globalCache: {
     roasted: 'remaining_days_asc', // 熟豆默认按赏味期
   },
   rankingSortOption: 'rating_desc',
-  bloggerSortOption: 'rating_desc',
   rankingBeanType: 'all',
-  bloggerYear: 2025, // 保留用于向后兼容
-  bloggerType: 'peter',
-  // 每个博主的默认年份
-  bloggerYears: {
-    peter: 2025,
-    fenix: 2025, // 矮人博主默认2025年
-  },
   initialized: false,
 };
 
@@ -426,17 +402,6 @@ export const saveRankingSortOptionPreference = (value: SortOption): void => {
   saveStringState(MODULE_NAME, 'rankingSortOption', value);
 };
 
-// 从localStorage读取博主榜单视图排序选项
-export const getBloggerSortOptionPreference = (): SortOption => {
-  const value = getStringState(MODULE_NAME, 'bloggerSortOption', 'rating_desc');
-  return migrateSortOption(value, 'blogger') as SortOption;
-};
-
-// 保存博主榜单视图排序选项到localStorage
-export const saveBloggerSortOptionPreference = (value: SortOption): void => {
-  saveStringState(MODULE_NAME, 'bloggerSortOption', value);
-};
-
 // 从localStorage读取榜单豆子类型
 export const getRankingBeanTypePreference = (): BeanType => {
   const value = getStringState(MODULE_NAME, 'rankingBeanType', 'all');
@@ -446,73 +411,6 @@ export const getRankingBeanTypePreference = (): BeanType => {
 // 保存榜单豆子类型到localStorage
 export const saveRankingBeanTypePreference = (value: BeanType): void => {
   saveStringState(MODULE_NAME, 'rankingBeanType', value);
-};
-
-// 从 localStorage读取博主榜单年份
-export const getBloggerYearPreference = (): BloggerBeansYear => {
-  const value = getNumberState(MODULE_NAME, 'bloggerYear', 2025);
-  return value as BloggerBeansYear;
-};
-
-// 保存博主榜单年份到localStorage
-const saveBloggerYearPreference = (value: BloggerBeansYear): void => {
-  saveNumberState(MODULE_NAME, 'bloggerYear', value);
-};
-
-// 从localStorage读取博主类型
-export const getBloggerTypePreference = (): BloggerType => {
-  const value = getStringState(MODULE_NAME, 'bloggerType', 'peter');
-  return value as BloggerType;
-};
-
-// 保存博主类型到localStorage
-export const saveBloggerTypePreference = (value: BloggerType): void => {
-  saveStringState(MODULE_NAME, 'bloggerType', value);
-};
-
-// 从localStorage读取博主年份记忆
-export const getBloggerYearMemory = (
-  blogger: BloggerType
-): BloggerBeansYear => {
-  const key = `bloggerYear_${blogger}`;
-  const defaultYear = blogger === 'peter' ? 2025 : 2025; // fenix也默认为2025
-  const value = getNumberState(MODULE_NAME, key, defaultYear);
-
-  // 验证年份是否有效
-  const validYears = blogger === 'peter' ? [2024, 2025] : [2023, 2024, 2025];
-  if (validYears.includes(value)) {
-    return value as BloggerBeansYear;
-  }
-
-  // 如果无效，返回默认年份
-  return defaultYear as BloggerBeansYear;
-};
-
-// 保存博主年份记忆到localStorage
-export const saveBloggerYearMemory = (
-  blogger: BloggerType,
-  year: BloggerBeansYear
-): void => {
-  // 验证年份是否有效
-  const validYears = blogger === 'peter' ? [2024, 2025] : [2023, 2024, 2025];
-  if (!validYears.includes(year)) {
-    console.warn(`Invalid year ${year} for blogger ${blogger}, not saving`);
-    return;
-  }
-
-  const key = `bloggerYear_${blogger}`;
-  saveNumberState(MODULE_NAME, key, year);
-};
-
-// 初始化globalCache中的博主相关设置
-export const initializeBloggerPreferences = (): void => {
-  // 从localStorage加载博主类型
-  const savedBloggerType = getBloggerTypePreference();
-  globalCache.bloggerType = savedBloggerType;
-
-  // 从localStorage加载各博主的年份记忆
-  globalCache.bloggerYears.peter = getBloggerYearMemory('peter');
-  globalCache.bloggerYears.fenix = getBloggerYearMemory('fenix');
 };
 
 // 从 localStorage 读取分类模式
@@ -796,9 +694,7 @@ globalCache.inventorySortOptions = {
   roasted: getInventorySortOptionByStatePreference('roasted'),
 };
 globalCache.rankingSortOption = getRankingSortOptionPreference();
-globalCache.bloggerSortOption = getBloggerSortOptionPreference();
 globalCache.rankingBeanType = getRankingBeanTypePreference();
-globalCache.bloggerYear = getBloggerYearPreference();
 // 初始化新增的分类相关状态
 globalCache.filterMode = getFilterModePreference();
 // 初始化每个 beanState 的 filterMode 记忆
@@ -842,7 +738,6 @@ if (typeof window !== 'undefined') {
     globalCache.beans = [];
     globalCache.ratedBeans = [];
     globalCache.filteredBeans = [];
-    globalCache.bloggerBeans = { 2023: [], 2024: [], 2025: [] };
     globalCache.varieties = [];
     globalCache.availableOrigins = [];
     globalCache.availableFlavorPeriods = [];
@@ -858,10 +753,7 @@ if (typeof window !== 'undefined') {
     globalCache.sortOption = getSortOptionPreference();
     globalCache.inventorySortOption = getInventorySortOptionPreference();
     globalCache.rankingSortOption = getRankingSortOptionPreference();
-    globalCache.bloggerSortOption = getBloggerSortOptionPreference();
     globalCache.rankingBeanType = getRankingBeanTypePreference();
-    globalCache.bloggerYear = getBloggerYearPreference();
-    globalCache.bloggerType = getBloggerTypePreference();
     globalCache.filterMode = getFilterModePreference();
     globalCache.selectedOrigin = getSelectedOriginPreference();
     globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();

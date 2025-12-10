@@ -52,11 +52,6 @@ export interface CoffeeBean {
   overallRating?: number; // 总体评分/喜好星值 (1-5)
   ratingNotes?: string; // 评价备注
 
-  // 博主榜单专用字段
-  ratingEspresso?: number; // 美式评分 (博主榜单 - 意式豆)
-  ratingMilkBased?: number; // 奶咖评分 (博主榜单 - 意式豆)
-  purchaseChannel?: string; // 购买渠道 (博主榜单)
-
   // 拼配成分
   blendComponents?: BlendComponent[];
 }

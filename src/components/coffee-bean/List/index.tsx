@@ -11,7 +11,6 @@ import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal';
 import CoffeeBeanRatingModal from '../Rating/Modal';
 import _CoffeeBeanRanking from '../Ranking';
-import { getBloggerBeans, BloggerType } from '@/lib/utils/csvUtils';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import { useCopy } from '@/lib/hooks/useCopy';
 import CopyFailureModal from '../ui/copy-failure-modal';
@@ -27,7 +26,6 @@ import {
   CoffeeBeansProps,
   BeanType,
   BeanState,
-  BloggerBeansYear,
   VIEW_OPTIONS,
   ViewOption,
   BeanFilterMode,
@@ -51,12 +49,7 @@ import {
   saveInventorySortOptionByStatePreference,
   getInventorySortOptionByStatePreference,
   saveRankingSortOptionPreference,
-  saveBloggerSortOptionPreference,
   saveRankingBeanTypePreference,
-  saveBloggerTypePreference,
-  getBloggerYearMemory,
-  saveBloggerYearMemory,
-  initializeBloggerPreferences,
   saveFilterModePreference,
   saveFilterModeByStatePreference,
   getFilterModeByStatePreference,
@@ -109,8 +102,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   externalViewMode,
   onExternalViewChange,
   initialViewMode,
-  initialBloggerType,
-  onBloggerTypeChange,
   settings,
 }) => {
   const { copyText, showFailureModal, failureContent, closeFailureModal } =
@@ -134,9 +125,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   );
   const [rankingSortOption, setRankingSortOption] = useState<SortOption>(
     globalCache.rankingSortOption
-  );
-  const [bloggerSortOption, setBloggerSortOption] = useState<SortOption>(
-    globalCache.bloggerSortOption
   );
   // 使用外部传递的视图状态，如果没有则使用初始化参数或内部状态作为后备
   const viewMode = externalViewMode || initialViewMode || globalCache.viewMode;
@@ -194,12 +182,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [rankingBeanType, setRankingBeanType] = useState<BeanType>(
     globalCache.rankingBeanType
   );
-  const [bloggerType, setBloggerType] = useState<BloggerType>(
-    initialBloggerType || globalCache.bloggerType
-  );
-  const [bloggerYear, setBloggerYear] = useState<BloggerBeansYear>(
-    globalCache.bloggerYears[initialBloggerType || globalCache.bloggerType]
-  );
 
   // 辅助引用和状态
   const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(
@@ -216,42 +198,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       // 如果传入了初始视图模式且与当前不同，更新视图模式
       setViewMode(initialViewMode);
       hasChanges = true;
-    }
-
-    if (initialBloggerType && initialBloggerType !== bloggerType) {
-      // 如果传入了初始博主类型且与当前不同，更新博主类型
-      setBloggerType(initialBloggerType);
-      // 同时更新年份
-      const rememberedYear = getBloggerYearMemory(initialBloggerType);
-      setBloggerYear(rememberedYear);
-      hasChanges = true;
-
-      // 如果是矮人博主且当前选择的是手冲豆，自动切换到意式豆
-      if (initialBloggerType === 'fenix' && rankingBeanType === 'filter') {
-        setRankingBeanType('espresso');
-      }
-    }
-
-    // 如果是博主榜单视图且是矮人博主，确保不选择手冲豆
-    if (
-      initialViewMode === VIEW_OPTIONS.BLOGGER &&
-      initialBloggerType === 'fenix' &&
-      rankingBeanType === 'filter'
-    ) {
-      setRankingBeanType('espresso');
-      hasChanges = true;
-    }
-
-    // 只有在有变化时才触发数据加载
-    if (
-      hasChanges &&
-      initialViewMode === VIEW_OPTIONS.BLOGGER &&
-      globalCache.initialized
-    ) {
-      // 使用setTimeout避免在同一个渲染周期内多次setState
-      setTimeout(() => {
-        loadBloggerBeans();
-      }, 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 空依赖数组，只在组件挂载时执行一次
@@ -492,19 +438,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     }
   }, [updateFilteredBeansAndCategories]);
 
-  // 添加榜单和博主榜单的豆子数量状态
+  // 添加榜单豆子数量状态
   const [rankingBeansCount, setRankingBeansCount] = useState<number>(0);
-  const [bloggerBeansCount, setBloggerBeansCount] = useState<number>(0);
 
   // 榜单各类型豆子数量
   const [rankingEspressoCount, setRankingEspressoCount] = useState<number>(0);
   const [rankingFilterCount, setRankingFilterCount] = useState<number>(0);
   const [rankingOmniCount, setRankingOmniCount] = useState<number>(0);
-
-  // 博主榜单各类型豆子数量
-  const [bloggerEspressoCount, setBloggerEspressoCount] = useState<number>(0);
-  const [bloggerFilterCount, setBloggerFilterCount] = useState<number>(0);
-  const [bloggerOmniCount, setBloggerOmniCount] = useState<number>(0);
 
   // 添加图片流模式状态 - 从globalCache读取持久化状态
   const [isImageFlowMode, setIsImageFlowMode] = useState<boolean>(
@@ -647,69 +587,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       console.error('加载评分咖啡豆失败:', error);
     }
   }, [viewMode, rankingBeanType]);
-
-  // 加载博主榜单的咖啡豆
-  const loadBloggerBeans = React.useCallback(async () => {
-    if (viewMode !== VIEW_OPTIONS.BLOGGER) return;
-
-    try {
-      // 加载所有类型的博主榜单数据以统计数量
-      const allBloggerBeansData = await getBloggerBeans(
-        'all',
-        bloggerYear,
-        bloggerType
-      );
-
-      // 统计各类型豆子数量
-      const espresso = allBloggerBeansData.filter(
-        bean => bean.beanType === 'espresso'
-      ).length;
-      const filter = allBloggerBeansData.filter(
-        bean => bean.beanType === 'filter'
-      ).length;
-      const omni = allBloggerBeansData.filter(
-        bean => bean.beanType === 'omni'
-      ).length;
-
-      setBloggerEspressoCount(espresso);
-      setBloggerFilterCount(filter);
-      setBloggerOmniCount(omni);
-
-      // 如果当前选中的类型没有数据，自动切换到"全部"
-      if (rankingBeanType !== 'all') {
-        if (
-          (rankingBeanType === 'espresso' && espresso === 0) ||
-          (rankingBeanType === 'filter' && filter === 0) ||
-          (rankingBeanType === 'omni' && omni === 0)
-        ) {
-          setRankingBeanType('all');
-          globalCache.rankingBeanType = 'all';
-          saveRankingBeanTypePreference('all');
-          // 需要重新加载"全部"类型的数据
-          return;
-        }
-      }
-
-      // 加载当前选中类型的数据
-      const bloggerBeansData = await getBloggerBeans(
-        rankingBeanType,
-        bloggerYear,
-        bloggerType
-      );
-
-      // 更新博主榜单豆子数量
-      setBloggerBeansCount(bloggerBeansData.length);
-
-      // 更新全局缓存中指定年份的数据
-      globalCache.bloggerBeans[bloggerYear] = bloggerBeansData;
-    } catch (error) {
-      console.error(
-        `加载博主榜单咖啡豆 (${bloggerType} ${bloggerYear}) 失败:`,
-        error
-      );
-    }
-  }, [viewMode, rankingBeanType, bloggerYear, bloggerType]);
-
   // 优化的数据加载逻辑 - 减少依赖项，避免重复触发
   useEffect(() => {
     if (isOpen) {
@@ -719,32 +596,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         unmountTimeoutRef.current = null;
       }
 
-      // 初始化博主偏好设置
-      initializeBloggerPreferences();
-
-      // 更新组件状态以反映从localStorage加载的值，但不覆盖初始化参数
-      if (!initialBloggerType) {
-        setBloggerType(globalCache.bloggerType);
-        setBloggerYear(globalCache.bloggerYears[globalCache.bloggerType]);
-      }
-
       loadBeans();
       loadRatedBeans();
-      loadBloggerBeans();
     } else {
       // 组件关闭时，不立即清空状态，延迟重置
       unmountTimeoutRef.current = setTimeout(() => {
         // 不执行任何操作，状态保持不变
       }, 5000);
     }
-  }, [
-    isOpen,
-    forceRefreshKey,
-    loadBeans,
-    loadRatedBeans,
-    loadBloggerBeans,
-    initialBloggerType,
-  ]);
+  }, [isOpen, forceRefreshKey, loadBeans, loadRatedBeans]);
 
   // 监听统一的咖啡豆数据更新事件
   useEffect(() => {
@@ -844,9 +704,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   // 在视图切换时更新数据
   useEffect(() => {
-    if (viewMode === VIEW_OPTIONS.BLOGGER) {
-      loadBloggerBeans();
-    } else if (viewMode === VIEW_OPTIONS.RANKING) {
+    if (viewMode === VIEW_OPTIONS.RANKING) {
       loadRatedBeans();
     } else if (viewMode === VIEW_OPTIONS.INVENTORY) {
       // 在切换到库存视图时，应用当前的排序选项重新排序
@@ -858,27 +716,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     }
   }, [
     viewMode,
-    loadBloggerBeans,
     loadRatedBeans,
     beans,
     sortOption,
     updateFilteredBeansAndCategories,
   ]);
 
-  // 确保在榜单beanType或年份变化时更新计数
+  // 确保在榜单beanType变化时更新计数
   useEffect(() => {
     if (viewMode === VIEW_OPTIONS.RANKING) {
       loadRatedBeans();
-    } else if (viewMode === VIEW_OPTIONS.BLOGGER) {
-      loadBloggerBeans();
     }
-  }, [
-    rankingBeanType,
-    bloggerYear,
-    viewMode,
-    loadRatedBeans,
-    loadBloggerBeans,
-  ]);
+  }, [rankingBeanType, viewMode, loadRatedBeans]);
 
   // 当显示空豆子设置改变时更新全局缓存 - 简化版本
   useEffect(() => {
@@ -918,9 +767,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         case VIEW_OPTIONS.RANKING:
           newSortOption = rankingSortOption;
           break;
-        case VIEW_OPTIONS.BLOGGER:
-          newSortOption = bloggerSortOption;
-          break;
         default:
           newSortOption = inventorySortOption;
       }
@@ -934,7 +780,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.viewMode = viewMode;
       saveViewModePreference(viewMode);
     }
-  }, [viewMode, inventorySortOption, rankingSortOption, bloggerSortOption]);
+  }, [viewMode, inventorySortOption, rankingSortOption]);
 
   // 当排序选项改变时更新数据 - 优化防抖动
   useEffect(() => {
@@ -1305,21 +1151,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   // 当榜单豆子类型变更时更新数据
   useEffect(() => {
-    if (globalCache.initialized) {
-      if (viewMode === VIEW_OPTIONS.RANKING) {
-        loadRatedBeans();
-      } else if (viewMode === VIEW_OPTIONS.BLOGGER) {
-        loadBloggerBeans();
-      }
+    if (globalCache.initialized && viewMode === VIEW_OPTIONS.RANKING) {
+      loadRatedBeans();
     }
-  }, [rankingBeanType, loadRatedBeans, loadBloggerBeans, viewMode]);
-
-  // 当博主榜单年份或博主类型变更时更新数据
-  useEffect(() => {
-    if (globalCache.initialized && viewMode === VIEW_OPTIONS.BLOGGER) {
-      loadBloggerBeans();
-    }
-  }, [bloggerYear, bloggerType, loadBloggerBeans, viewMode]);
+  }, [rankingBeanType, loadRatedBeans, viewMode]);
 
   // 组件加载后初始化各视图的排序选项
   useEffect(() => {
@@ -1334,9 +1169,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         case VIEW_OPTIONS.RANKING:
           currentSortOption = rankingSortOption;
           break;
-        case VIEW_OPTIONS.BLOGGER:
-          currentSortOption = bloggerSortOption;
-          break;
         default:
           currentSortOption = inventorySortOption;
       }
@@ -1345,13 +1177,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       setSortOption(currentSortOption);
       globalCache.sortOption = currentSortOption;
     }
-  }, [
-    isOpen,
-    viewMode,
-    inventorySortOption,
-    rankingSortOption,
-    bloggerSortOption,
-  ]);
+  }, [isOpen, viewMode, inventorySortOption, rankingSortOption]);
 
   // 添加搜索状态
   const [isSearching, setIsSearching] = useState(false);
@@ -1717,11 +1543,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         globalCache.rankingSortOption = option;
         saveRankingSortOptionPreference(option);
         break;
-      case VIEW_OPTIONS.BLOGGER:
-        setBloggerSortOption(option);
-        globalCache.bloggerSortOption = option;
-        saveBloggerSortOptionPreference(option);
-        break;
     }
 
     // 更新全局缓存
@@ -1804,35 +1625,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           globalCache.rankingBeanType = newType;
           saveRankingBeanTypePreference(newType);
         }}
-        bloggerYear={bloggerYear}
-        onBloggerYearChange={newYear => {
-          setBloggerYear(newYear);
-          // 保存到全局缓存和本地存储
-          globalCache.bloggerYears[bloggerType] = newYear;
-          saveBloggerYearMemory(bloggerType, newYear);
-        }}
-        bloggerType={bloggerType}
-        onBloggerTypeChange={newType => {
-          setBloggerType(newType);
-          // 保存到本地存储
-          globalCache.bloggerType = newType;
-          saveBloggerTypePreference(newType);
-
-          // 加载该博主的记忆年份
-          const rememberedYear = getBloggerYearMemory(newType);
-          setBloggerYear(rememberedYear);
-          globalCache.bloggerYears[newType] = rememberedYear;
-
-          // 如果切换到矮人博主且当前选择的是手冲豆，自动切换到意式豆
-          if (newType === 'fenix' && rankingBeanType === 'filter') {
-            setRankingBeanType('espresso');
-            globalCache.rankingBeanType = 'espresso';
-            saveRankingBeanTypePreference('espresso');
-          }
-
-          // 调用外部传入的博主类型变更回调
-          onBloggerTypeChange?.(newType);
-        }}
         onRankingShare={handleRankingShare}
         selectedBeanType={selectedBeanType}
         onBeanTypeChange={handleBeanTypeChange}
@@ -1848,15 +1640,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         rankingBeansCount={rankingBeansCount}
-        bloggerBeansCount={bloggerBeansCount}
         // 榜单各类型豆子数量
         rankingEspressoCount={rankingEspressoCount}
         rankingFilterCount={rankingFilterCount}
         rankingOmniCount={rankingOmniCount}
-        // 博主榜单各类型豆子数量
-        bloggerEspressoCount={bloggerEspressoCount}
-        bloggerFilterCount={bloggerFilterCount}
-        bloggerOmniCount={bloggerOmniCount}
         isImageFlowMode={isImageFlowMode}
         onToggleImageFlowMode={handleToggleImageFlowMode}
         hasImageBeans={hasImageBeans}
@@ -1929,29 +1716,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             />
           </div>
         )}
-        {/* 添加榜单和博主榜单视图 */}
-        {(viewMode === VIEW_OPTIONS.RANKING ||
-          viewMode === VIEW_OPTIONS.BLOGGER) && (
+        {/* 添加榜单视图 */}
+        {viewMode === VIEW_OPTIONS.RANKING && (
           <div
             className="scroll-with-bottom-bar h-full w-full overflow-y-auto"
             ref={el => setRankingScrollEl(el)}
           >
             <CoffeeBeanRanking
-              isOpen={
-                viewMode === VIEW_OPTIONS.RANKING ||
-                viewMode === VIEW_OPTIONS.BLOGGER
-              }
+              isOpen={viewMode === VIEW_OPTIONS.RANKING}
               onShowRatingForm={handleShowRatingForm}
               sortOption={convertToRankingSortOption(sortOption, viewMode)}
               hideFilters={true}
               beanType={rankingBeanType}
-              viewMode={
-                viewMode === VIEW_OPTIONS.BLOGGER ? 'blogger' : 'personal'
-              }
-              year={viewMode === VIEW_OPTIONS.BLOGGER ? bloggerYear : undefined}
-              blogger={
-                viewMode === VIEW_OPTIONS.BLOGGER ? bloggerType : undefined
-              }
               isSearching={isSearching}
               searchQuery={searchQuery}
               scrollParentRef={rankingScrollEl ?? undefined}

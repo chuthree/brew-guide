@@ -4,12 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Virtuoso } from 'react-virtuoso';
 import { CoffeeBean } from '@/types/app';
-import {
-  getBloggerBeans,
-  BloggerBean,
-  BloggerType,
-  getVideoUrlFromEpisode,
-} from '@/lib/utils/csvUtils';
 
 // 下划线动画配置
 const UNDERLINE_TRANSITION = {
@@ -17,32 +11,6 @@ const UNDERLINE_TRANSITION = {
   stiffness: 500,
   damping: 35,
   mass: 1,
-};
-
-// 用于检测当前运行环境
-const isMobileApp =
-  typeof window !== 'undefined' &&
-  window.hasOwnProperty('Capacitor') &&
-  !!(window as Window & { Capacitor?: { isNative?: boolean } }).Capacitor
-    ?.isNative;
-
-// 处理链接打开的工具函数
-const openLink = async (url: string) => {
-  if (!url) return;
-
-  try {
-    // 直接使用 window.open 在所有平台都能工作
-    // Capacitor 会自动处理在原生应用中打开外部浏览器
-    window.open(url, '_blank');
-  } catch (error) {
-    console.error('打开链接出错:', error);
-    // 最后的回退方案
-    try {
-      window.location.href = url;
-    } catch {
-      console.error('所有打开链接的方法都失败了');
-    }
-  }
 };
 
 export const SORT_OPTIONS = {
@@ -76,9 +44,6 @@ interface CoffeeBeanRankingProps {
   hideFilters?: boolean;
   beanType?: 'all' | 'espresso' | 'filter' | 'omni';
   isOpen: boolean;
-  viewMode?: 'personal' | 'blogger';
-  year?: 2023 | 2024 | 2025;
-  blogger?: 'peter' | 'fenix';
   isSearching?: boolean;
   searchQuery?: string;
   scrollParentRef?: HTMLElement;
@@ -90,25 +55,17 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
   sortOption = SORT_OPTIONS.RATING_DESC,
   hideFilters = false,
   beanType: externalBeanType,
-  viewMode = 'personal',
-  year: externalYear,
-  blogger: externalBlogger = 'peter',
-  // 搜索相关props
   isSearching = false,
   searchQuery = '',
   scrollParentRef,
 }) => {
-  const [ratedBeans, setRatedBeans] = useState<(CoffeeBean | BloggerBean)[]>(
-    []
-  );
+  const [ratedBeans, setRatedBeans] = useState<CoffeeBean[]>([]);
   const [unratedBeans, setUnratedBeans] = useState<CoffeeBean[]>([]);
   const [beanType, setBeanType] = useState<
     'all' | 'espresso' | 'filter' | 'omni'
   >(externalBeanType || 'all');
   const [showUnrated, setShowUnrated] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [year, setYear] = useState<2023 | 2024 | 2025>(externalYear || 2025);
-  const [blogger, setBlogger] = useState<BloggerType>(externalBlogger);
 
   // 监听外部传入的筛选类型变化
   useEffect(() => {
@@ -117,106 +74,22 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     }
   }, [externalBeanType]);
 
-  // 监听外部传入的年份变化
-  useEffect(() => {
-    if (externalYear !== undefined) {
-      setYear(externalYear);
-    }
-  }, [externalYear]);
-
-  // 监听外部传入的博主类型变化
-  useEffect(() => {
-    if (externalBlogger !== undefined) {
-      setBlogger(externalBlogger);
-    }
-  }, [externalBlogger]);
-
-  // Fenix博主评分比较函数
-  const compareFenixRating = useCallback(
-    (ratingA: string, ratingB: string): number => {
-      // 解析评分：5+ -> {base: 5, modifier: 1}, 5 -> {base: 5, modifier: 0}, 5- -> {base: 5, modifier: -1}
-      const parseRating = (rating: string) => {
-        const trimmed = rating.trim();
-        if (trimmed.endsWith('+')) {
-          return { base: parseFloat(trimmed.slice(0, -1)), modifier: 1 };
-        } else if (trimmed.endsWith('-')) {
-          return { base: parseFloat(trimmed.slice(0, -1)), modifier: -1 };
-        } else {
-          return { base: parseFloat(trimmed), modifier: 0 };
-        }
-      };
-
-      const a = parseRating(ratingA);
-      const b = parseRating(ratingB);
-
-      // 首先比较基础分数
-      if (a.base !== b.base) {
-        return b.base - a.base; // 降序：高分在前
-      }
-
-      // 基础分数相同时，比较修饰符：+ > 无修饰 > -
-      return b.modifier - a.modifier;
-    },
-    []
-  );
-
   // 排序咖啡豆的函数
   const sortBeans = useCallback(
     (beansToSort: CoffeeBean[], option: RankingSortOption): CoffeeBean[] => {
       const sorted = [...beansToSort];
 
-      // 博主榜单模式下，对于ORIGINAL选项使用特殊处理，保留从CSV导入的原始顺序
-      if (viewMode === 'blogger' && option === SORT_OPTIONS.ORIGINAL) {
-        return sorted; // 直接返回，保留getBloggerBeans函数中已经设置的顺序
-      }
-
       switch (option) {
         case SORT_OPTIONS.ORIGINAL:
-          // 对于原始选项，有序号的按序号排序，没有序号的保持原有顺序
-          return sorted.sort((a, b) => {
-            // 检查是否有序号属性（可能在 id 中包含）
-            const aId = a.id || '';
-            const bId = b.id || '';
-
-            // 从 id 中提取序号（假设格式为 blogger-type-序号-name-随机字符）
-            const aMatch = aId.match(/blogger-\w+-(\d+)-/);
-            const bMatch = bId.match(/blogger-\w+-(\d+)-/);
-
-            if (aMatch && bMatch) {
-              // 如果两者都有序号，按序号排序
-              return parseInt(aMatch[1]) - parseInt(bMatch[1]);
-            } else if (aMatch) {
-              // a 有序号，b 没有，a 排前面
-              return -1;
-            } else if (bMatch) {
-              // b 有序号，a 没有，b 排前面
-              return 1;
-            }
-            // 都没有序号，保持原有顺序
-            return 0;
-          });
+          return sorted;
 
         case SORT_OPTIONS.RATING_DESC:
           return sorted.sort((a, b) => {
-            // Fenix博主使用特殊的评分比较逻辑
-            if (viewMode === 'blogger' && blogger === 'fenix') {
-              const aRating = (a as BloggerBean).originalRating || '0';
-              const bRating = (b as BloggerBean).originalRating || '0';
-              return compareFenixRating(aRating, bRating);
-            }
-            // 其他情况使用普通数值比较
             return (b.overallRating || 0) - (a.overallRating || 0);
           });
 
         case SORT_OPTIONS.RATING_ASC:
           return sorted.sort((a, b) => {
-            // Fenix博主使用特殊的评分比较逻辑（反向）
-            if (viewMode === 'blogger' && blogger === 'fenix') {
-              const aRating = (a as BloggerBean).originalRating || '0';
-              const bRating = (b as BloggerBean).originalRating || '0';
-              return compareFenixRating(bRating, aRating); // 注意这里参数顺序相反
-            }
-            // 其他情况使用普通数值比较
             return (a.overallRating || 0) - (b.overallRating || 0);
           });
 
@@ -254,7 +127,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
           return sorted;
       }
     },
-    [viewMode, blogger, compareFenixRating]
+    []
   );
 
   // 加载咖啡豆数据的函数
@@ -262,41 +135,32 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     if (!isOpen) return;
 
     try {
-      let ratedBeansData: (CoffeeBean | BloggerBean)[] = [];
+      let ratedBeansData: CoffeeBean[] = [];
       let unratedBeansData: CoffeeBean[] = [];
 
-      if (viewMode === 'blogger') {
-        // Use CSV utility function with the current year state and blogger type
-        ratedBeansData = await getBloggerBeans(beanType, year, blogger);
-        unratedBeansData = []; // Blogger view doesn't show unrated
+      const { CoffeeBeanManager } = await import(
+        '@/lib/managers/coffeeBeanManager'
+      );
+      if (beanType === 'all') {
+        ratedBeansData = await CoffeeBeanManager.getRatedBeans();
       } else {
-        // Load personal rated beans
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        if (beanType === 'all') {
-          ratedBeansData = await CoffeeBeanManager.getRatedBeans();
-        } else {
-          ratedBeansData =
-            await CoffeeBeanManager.getRatedBeansByType(beanType);
-        }
-
-        // Load all beans, filter out unrated
-        const allBeans = await CoffeeBeanManager.getAllBeans();
-        const ratedIds = new Set(ratedBeansData.map(bean => bean.id));
-
-        unratedBeansData = allBeans.filter(bean => {
-          const isUnrated =
-            !ratedIds.has(bean.id) &&
-            (!bean.overallRating || bean.overallRating === 0);
-          if (beanType === 'all') return isUnrated;
-          if (beanType === 'espresso')
-            return isUnrated && bean.beanType === 'espresso';
-          if (beanType === 'filter')
-            return isUnrated && bean.beanType === 'filter';
-          return isUnrated;
-        });
+        ratedBeansData = await CoffeeBeanManager.getRatedBeansByType(beanType);
       }
+
+      const allBeans = await CoffeeBeanManager.getAllBeans();
+      const ratedIds = new Set(ratedBeansData.map(bean => bean.id));
+
+      unratedBeansData = allBeans.filter(bean => {
+        const isUnrated =
+          !ratedIds.has(bean.id) &&
+          (!bean.overallRating || bean.overallRating === 0);
+        if (beanType === 'all') return isUnrated;
+        if (beanType === 'espresso')
+          return isUnrated && bean.beanType === 'espresso';
+        if (beanType === 'filter')
+          return isUnrated && bean.beanType === 'filter';
+        return isUnrated;
+      });
 
       setRatedBeans(sortBeans(ratedBeansData, sortOption));
       setUnratedBeans(
@@ -307,7 +171,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
       setRatedBeans([]);
       setUnratedBeans([]);
     }
-  }, [isOpen, beanType, sortOption, viewMode, year, blogger, sortBeans]);
+  }, [isOpen, beanType, sortOption, sortBeans]);
 
   // 在组件挂载、isOpen变化、beanType变化、sortOption变化或refreshTrigger变化时重新加载数据
   useEffect(() => {
@@ -318,15 +182,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
   const calculatePricePerGram = (bean: CoffeeBean) => {
     if (!bean.price || !bean.capacity) return null;
 
-    // 处理博主榜单豆子 - 博主榜单豆子的价格已经是每百克价格
-    if ((bean as BloggerBean).isBloggerRecommended) {
-      const price = parseFloat(bean.price.replace(/[^\d.]/g, ''));
-      if (isNaN(price)) return null;
-      // 直接返回价格的1/100，因为原始数据已经是每百克价格
-      return (price / 100).toFixed(2);
-    }
-
-    // 常规豆子价格计算
     const price = parseFloat(bean.price.replace(/[^\d.]/g, ''));
     const capacity = parseFloat(bean.capacity.replace(/[^\d.]/g, ''));
 
@@ -353,49 +208,22 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     const queryTerms = query.split(/\s+/).filter(term => term.length > 0);
 
     return ratedBeans.filter(bean => {
-      // 检查豆子名称
       const nameMatch = bean.name?.toLowerCase().includes(query);
-
-      // 检查产地（BloggerBean特有字段）
-      const originMatch = (bean as BloggerBean).origin
-        ?.toLowerCase()
-        .includes(query);
-
-      // 检查风味描述（BloggerBean特有字段）
-      const flavorMatch = (bean as BloggerBean).flavorDescription
-        ?.toLowerCase()
-        .includes(query);
-
-      // 检查烘焙度
       const roastLevelMatch = bean.roastLevel?.toLowerCase().includes(query);
-
-      // 检查备注
       const notesMatch =
         bean.notes?.toLowerCase().includes(query) ||
         bean.ratingNotes?.toLowerCase().includes(query);
 
-      // 多关键词搜索：所有关键词都必须在某个字段中找到
       const multiTermMatch = queryTerms.every(term => {
         return (
           bean.name?.toLowerCase().includes(term) ||
-          (bean as BloggerBean).origin?.toLowerCase().includes(term) ||
-          (bean as BloggerBean).flavorDescription
-            ?.toLowerCase()
-            .includes(term) ||
           bean.roastLevel?.toLowerCase().includes(term) ||
           bean.notes?.toLowerCase().includes(term) ||
           bean.ratingNotes?.toLowerCase().includes(term)
         );
       });
 
-      return (
-        nameMatch ||
-        originMatch ||
-        flavorMatch ||
-        roastLevelMatch ||
-        notesMatch ||
-        multiTermMatch
-      );
+      return nameMatch || roastLevelMatch || notesMatch || multiTermMatch;
     });
   }, [ratedBeans, isSearching, searchQuery]);
 
@@ -516,15 +344,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                 尝试使用其他关键词搜索
               </div>
             </div>
-          ) : viewMode === 'blogger' &&
-            blogger === 'fenix' &&
-            beanType === 'filter' ? (
-            <div className="text-center">
-              <div>[ 矮人博主暂无手冲豆数据 ]</div>
-              <div className="mt-1 text-[9px] opacity-70">
-                请切换到&ldquo;意式豆&rdquo;或&ldquo;全部&rdquo;查看数据
-              </div>
-            </div>
           ) : (
             <div>[ 有咖啡豆数据后，再来查看吧～ ]</div>
           )}
@@ -539,193 +358,49 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                 className={`${index < filteredRatedBeans.length - 1 ? 'border-b border-neutral-200/60 dark:border-neutral-800/40' : ''}`}
               >
                 <div className="flex items-start px-6 py-3">
-                  {/* 序号 - 极简风格 */}
                   <div className="mr-2 w-4 shrink-0 text-xs font-medium text-neutral-600 dark:text-neutral-400">
                     {index + 1}
                   </div>
 
-                  {/* 咖啡豆信息 */}
                   <div
-                    className={`min-w-0 flex-1 ${viewMode !== 'blogger' ? 'cursor-pointer' : ''}`}
-                    onClick={
-                      viewMode !== 'blogger'
-                        ? () => handleRateBeanClick(bean as CoffeeBean)
-                        : undefined
-                    }
+                    className="min-w-0 flex-1 cursor-pointer"
+                    onClick={() => handleRateBeanClick(bean)}
                   >
                     <div className="flex items-center leading-none">
                       <div className="truncate text-xs font-medium text-neutral-800 dark:text-neutral-100">
                         {bean.name}
                       </div>
                       <div className="ml-2 shrink-0 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                        {viewMode === 'blogger' &&
-                        blogger === 'fenix' &&
-                        (bean as BloggerBean).originalRating
-                          ? (bean as BloggerBean).originalRating // 直接显示原始评分格式，如 5+, 5, 5-
-                          : `+${(bean as CoffeeBean).overallRating !== undefined ? (bean as CoffeeBean).overallRating : 0}`}
+                        +
+                        {bean.overallRating !== undefined
+                          ? bean.overallRating
+                          : 0}
                       </div>
                     </div>
                     <div className="mt-1.5 text-justify text-xs font-medium text-neutral-600 dark:text-neutral-400">
                       {(() => {
-                        // 显示信息数组
                         const infoArray: (React.ReactNode | string)[] = [];
 
-                        // 矮人博主特殊信息显示
-                        if (viewMode === 'blogger' && blogger === 'fenix') {
-                          const fenixBean = bean as BloggerBean;
-
-                          // 产区信息
-                          if (fenixBean.origin) {
-                            infoArray.push(fenixBean.origin);
-                          }
-
-                          // 风味描述
-                          if (fenixBean.flavorDescription) {
-                            infoArray.push(fenixBean.flavorDescription);
-                          }
-                        } else {
-                          // 豆子类型 - 只有在"全部豆子"视图下显示
-                          if (beanType === 'all') {
-                            const currentBeanType = (bean as CoffeeBean)
-                              .beanType;
-                            infoArray.push(
-                              currentBeanType === 'espresso'
-                                ? '意式豆'
-                                : currentBeanType === 'filter'
-                                  ? '手冲豆'
-                                  : '全能豆'
-                            );
-                          }
-                        }
-
-                        // 处理法和烘焙度 - 仅对Peter博主显示
-                        if (viewMode === 'blogger' && blogger === 'peter') {
-                          if (
-                            (bean as BloggerBean).year === 2025 &&
-                            (bean as CoffeeBean).beanType === 'filter'
-                          ) {
-                            // 2025手冲豆：处理法 · 烘焙度
-                            const processInfo =
-                              (bean as BloggerBean).process &&
-                              (bean as BloggerBean).process !== '/'
-                                ? (bean as BloggerBean).process
-                                : '';
-                            const roastInfo =
-                              (bean as CoffeeBean).roastLevel &&
-                              (bean as CoffeeBean).roastLevel !== '未知' &&
-                              (bean as CoffeeBean).roastLevel !== '/'
-                                ? ((bean as CoffeeBean).roastLevel as string)
-                                : '';
-
-                            if (processInfo && roastInfo) {
-                              infoArray.push(`${processInfo} · ${roastInfo}`);
-                            } else if (processInfo) {
-                              infoArray.push(processInfo);
-                            } else if (roastInfo) {
-                              infoArray.push(roastInfo);
-                            }
-                          } else {
-                            // 其他情况：只显示烘焙度
-                            if (
-                              (bean as CoffeeBean).roastLevel &&
-                              (bean as CoffeeBean).roastLevel !== '未知'
-                            ) {
-                              infoArray.push(
-                                (bean as CoffeeBean).roastLevel as string
-                              );
-                            }
-                          }
-                        } else if (viewMode !== 'blogger') {
-                          // 个人榜单：显示烘焙度
-                          if (
-                            (bean as CoffeeBean).roastLevel &&
-                            (bean as CoffeeBean).roastLevel !== '未知'
-                          ) {
-                            infoArray.push(
-                              (bean as CoffeeBean).roastLevel as string
-                            );
-                          }
-                        }
-
-                        // 视频期数 - 仅Peter博主榜单模式下显示
-                        if (
-                          viewMode === 'blogger' &&
-                          blogger === 'peter' &&
-                          (bean as BloggerBean).videoEpisode
-                        ) {
-                          const episode = (bean as BloggerBean).videoEpisode;
-                          // Extract brand and bean name from the full bean name (e.g., "Joker 摆脱冷气")
-                          const nameParts = bean.name.split(' ');
-                          const brand = nameParts[0]; // Assuming first part is brand
-                          const beanNameOnly = nameParts.slice(1).join(' '); // Rest is bean name
-
-                          const videoUrl = getVideoUrlFromEpisode(
-                            episode,
-                            brand,
-                            beanNameOnly
+                        if (beanType === 'all') {
+                          const currentBeanType = bean.beanType;
+                          infoArray.push(
+                            currentBeanType === 'espresso'
+                              ? '意式豆'
+                              : currentBeanType === 'filter'
+                                ? '手冲豆'
+                                : '全能豆'
                           );
-
-                          if (videoUrl) {
-                            // 有视频链接时，添加可点击的元素
-                            infoArray.push(
-                              <span
-                                key={`video-${(bean as CoffeeBean).id}`}
-                                className="inline-flex cursor-pointer items-center underline"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  openLink(videoUrl);
-                                }}
-                              >
-                                第{episode}期
-                              </span>
-                            );
-                          } else {
-                            // 没有视频链接时，仍显示期数但不可点击
-                            infoArray.push(`第${episode}期`);
-                          }
                         }
 
-                        // 每克价格
-                        const pricePerGram = calculatePricePerGram(
-                          bean as CoffeeBean
-                        );
+                        if (bean.roastLevel && bean.roastLevel !== '未知') {
+                          infoArray.push(bean.roastLevel);
+                        }
+
+                        const pricePerGram = calculatePricePerGram(bean);
                         if (pricePerGram) {
                           infoArray.push(`${pricePerGram}元/克`);
                         }
 
-                        // 意式豆特有信息 - 美式分数和奶咖分数 (Only for 2025 data)
-                        if (
-                          (bean as CoffeeBean).beanType === 'espresso' &&
-                          viewMode === 'blogger' &&
-                          (bean as BloggerBean).year === 2025
-                        ) {
-                          const bloggerBean = bean as BloggerBean;
-                          if (
-                            bloggerBean.ratingEspresso !== undefined &&
-                            bloggerBean.ratingMilkBased !== undefined
-                          ) {
-                            infoArray.push(
-                              `美式/奶咖:${bloggerBean.ratingEspresso}/${bloggerBean.ratingMilkBased}`
-                            );
-                          } else if (bloggerBean.ratingEspresso !== undefined) {
-                            infoArray.push(
-                              `美式:${bloggerBean.ratingEspresso}`
-                            );
-                          } else if (
-                            bloggerBean.ratingMilkBased !== undefined
-                          ) {
-                            infoArray.push(
-                              `奶咖:${bloggerBean.ratingMilkBased}`
-                            );
-                          }
-                        }
-
-                        // 评价备注 - 个人榜单模式下不在这里显示，改为独立区域显示
-                        // if (viewMode !== 'blogger' && bean.ratingNotes) {
-                        //     infoArray.push(bean.ratingNotes);
-                        // }
-
-                        // 渲染信息数组，在元素之间添加分隔点
                         return infoArray.map((info, index) => (
                           <React.Fragment key={index}>
                             {index > 0 && <span className="mx-1">·</span>}
@@ -735,61 +410,13 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                       })()}
                     </div>
 
-                    {/* 矮人博主优缺点显示区域 */}
-                    {viewMode === 'blogger' && blogger === 'fenix' && (
-                      <div className="mt-2 space-y-1">
-                        {(bean as BloggerBean).advantages && (
-                          <div className="flex items-start rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium tracking-widest text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
-                            <span className="w-3.5 shrink-0 text-center">
-                              +
-                            </span>
-                            <span className="flex-1">
-                              {(bean as BloggerBean).advantages}
-                            </span>
-                          </div>
-                        )}
-                        {(bean as BloggerBean).disadvantages && (
-                          <div className="flex items-start rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium tracking-widest text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
-                            <span className="w-3.5 shrink-0 text-center">
-                              -
-                            </span>
-                            <span className="flex-1">
-                              {(bean as BloggerBean).disadvantages}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Peter博主备注显示区域 */}
                     {(() => {
-                      const rn = (bean as CoffeeBean).ratingNotes;
-                      return (
-                        viewMode === 'blogger' &&
-                        blogger === 'peter' &&
-                        typeof rn === 'string' &&
-                        rn.trim()
-                      );
+                      const rn = bean.ratingNotes;
+                      return typeof rn === 'string' && rn.trim();
                     })() && (
                       <div className="mt-2">
                         <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium tracking-widest whitespace-pre-wrap text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
-                          {(bean as CoffeeBean).ratingNotes as string}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 个人榜单备注显示区域 */}
-                    {(() => {
-                      const rn = (bean as CoffeeBean).ratingNotes;
-                      return (
-                        viewMode !== 'blogger' &&
-                        typeof rn === 'string' &&
-                        rn.trim()
-                      );
-                    })() && (
-                      <div className="mt-2">
-                        <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium tracking-widest whitespace-pre-wrap text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
-                          {(bean as CoffeeBean).ratingNotes as string}
+                          {bean.ratingNotes as string}
                         </div>
                       </div>
                     )}
@@ -899,39 +526,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* 数据来源 - 仅在博主榜单模式下显示 */}
-      {viewMode === 'blogger' && ratedBeans.length > 0 && (
-        <div className="mt-4 space-y-1 text-center text-[10px] text-neutral-500 dark:text-neutral-400">
-          <div>
-            {blogger === 'fenix' ? (
-              <span
-                className="cursor-pointer underline"
-                onClick={() =>
-                  openLink('https://docs.qq.com/sheet/DTXBmUEd3R25NaGNX')
-                }
-              >
-                数据来自于 矮人(Fenix) 咖啡豆评测榜单 ( 同步时间：2025 / 8 / 21
-                )
-              </span>
-            ) : (
-              <span
-                className="cursor-pointer underline"
-                onClick={() =>
-                  openLink(
-                    year === 2024
-                      ? 'https://www.kdocs.cn/l/cmx9enIek2Hm'
-                      : 'https://kdocs.cn/l/cr1urhFNvrgK'
-                  )
-                }
-              >
-                数据来自于 Peter 咖啡豆评测榜单 ( 同步时间：2025 / 10 / 29 )
-              </span>
-            )}
-          </div>
-          <div className="mt-3 text-[9px] opacity-70"></div>
         </div>
       )}
     </div>

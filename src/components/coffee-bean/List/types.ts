@@ -35,8 +35,6 @@ export interface CoffeeBeansProps {
   onExternalViewChange?: (view: ViewOption) => void;
   // 添加初始化参数支持
   initialViewMode?: ViewOption;
-  initialBloggerType?: BloggerType;
-  onBloggerTypeChange?: (type: BloggerType) => void;
   // 添加设置参数
   settings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
@@ -158,16 +156,8 @@ export const generateBeanTitle = (
     : bean.name;
 };
 
-export type BloggerBeansYear = 2023 | 2024 | 2025;
 export type BeanType = 'all' | 'espresso' | 'filter' | 'omni';
-export type BloggerType = 'peter' | 'fenix';
 export type BeanState = 'green' | 'roasted';
-
-// 博主显示名称
-export const BLOGGER_LABELS: Record<BloggerType, string> = {
-  peter: 'Peter',
-  fenix: '矮人',
-};
 
 // 豆子状态显示名称
 export const BEAN_STATE_LABELS: Record<BeanState, string> = {
