@@ -725,16 +725,32 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   // 处理咖啡豆按钮点击
   const handleBeanTabClick = () => {
+    // 只剩两个可用视图时，点击直接切换视图，不弹出下拉
+    if (
+      activeMainTab === '咖啡豆' &&
+      !isCurrentViewPinned &&
+      availableViewsCount === 2
+    ) {
+      // 找到另一个可用视图
+      const allViews = Object.values(VIEW_OPTIONS);
+      const enabledViews = allViews.filter(
+        v => !pinnedViews.includes(v) && coffeeBeanViews[v] !== false
+      );
+      if (enabledViews.length === 2 && currentBeanView) {
+        const nextView = enabledViews.find(v => v !== currentBeanView);
+        if (nextView && nextView !== currentBeanView) {
+          onBeanViewChange?.(nextView);
+        }
+      }
+      return;
+    }
+    // 其余情况保持原有逻辑
     if (activeMainTab === '咖啡豆' && !isCurrentViewPinned) {
-      // 如果已经在咖啡豆页面且不是固定视图，切换下拉菜单显示状态
       if (availableViewsCount > 1) {
         onToggleViewDropdown?.();
       }
     } else {
-      // 如果不在咖啡豆页面，或者当前是固定视图
       handleMainTabClick('咖啡豆');
-
-      // 如果当前是固定视图，切换回最后一次选中的非固定视图
       if (isCurrentViewPinned) {
         const targetView =
           lastUnpinnedViewRef.current || getFirstAvailableView();
