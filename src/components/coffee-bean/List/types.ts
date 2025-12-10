@@ -13,14 +13,14 @@ export type ExtendedCoffeeBean = CoffeeBean;
 export { VIEW_OPTIONS, VIEW_LABELS, type ViewOption };
 
 // 咖啡豆分类模式
-export type BeanFilterMode = 'variety' | 'origin' | 'flavorPeriod' | 'roaster';
+export type BeanFilterMode = 'roaster' | 'origin' | 'variety' | 'flavorPeriod';
 
 // 分类模式显示名称
 const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
-  variety: '按品种',
-  origin: '按产地',
-  flavorPeriod: '按赏味期',
   roaster: '按烘焙商',
+  origin: '按产地',
+  variety: '按品种',
+  flavorPeriod: '按赏味期',
 };
 
 export interface CoffeeBeansProps {

@@ -271,16 +271,22 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <FilterButton
-          isActive={filterMode === 'variety'}
-          onClick={() => onFilterModeChange('variety')}
+          isActive={filterMode === 'roaster'}
+          onClick={() => onFilterModeChange('roaster')}
         >
-          按品种
+          {isGreenBean ? '按生豆商' : '按烘焙商'}
         </FilterButton>
         <FilterButton
           isActive={filterMode === 'origin'}
           onClick={() => onFilterModeChange('origin')}
         >
           按产地
+        </FilterButton>
+        <FilterButton
+          isActive={filterMode === 'variety'}
+          onClick={() => onFilterModeChange('variety')}
+        >
+          按品种
         </FilterButton>
         {/* 赏味期筛选仅对熟豆显示 */}
         {!isGreenBean && (
@@ -291,12 +297,6 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
             按赏味期
           </FilterButton>
         )}
-        <FilterButton
-          isActive={filterMode === 'roaster'}
-          onClick={() => onFilterModeChange('roaster')}
-        >
-          {isGreenBean ? '按生豆商' : '按烘焙商'}
-        </FilterButton>
       </div>
     </div>
   );
