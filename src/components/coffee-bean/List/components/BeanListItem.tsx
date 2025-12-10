@@ -419,70 +419,71 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             </div>
 
             <div
-              className={`text-xs leading-relaxed font-medium tracking-wide ${
+              className={`overflow-hidden text-xs leading-relaxed font-medium tracking-wide ${
                 isEmpty
                   ? 'text-neutral-400 dark:text-neutral-600'
                   : 'text-neutral-600 dark:text-neutral-400'
               }`}
             >
               {/* 生豆显示购买日期，熟豆显示烘焙日期 */}
-              {(() => {
-                const isGreenBean = bean.beanState === 'green';
-                const displayDate = isGreenBean
-                  ? bean.purchaseDate
-                  : bean.roastDate;
-                return displayDate || bean.isInTransit ? (
-                  <span className="inline">
-                    {bean.isInTransit
-                      ? '在途'
-                      : bean.isFrozen
-                        ? '冷冻'
-                        : !isGreenBean &&
-                            displayDate &&
-                            dateDisplayMode === 'flavorPeriod'
-                          ? flavorInfo.status
+                {(() => {
+                  const isGreenBean = bean.beanState === 'green';
+                  const displayDate = isGreenBean
+                    ? bean.purchaseDate
+                    : bean.roastDate;
+                  return displayDate || bean.isInTransit ? (
+                    <span className="inline whitespace-nowrap">
+                      {bean.isInTransit
+                        ? '在途'
+                        : bean.isFrozen
+                          ? '冷冻'
                           : !isGreenBean &&
                               displayDate &&
-                              dateDisplayMode === 'agingDays'
-                            ? getAgingDaysText(displayDate)
-                            : displayDate
-                              ? formatDateShort(displayDate)
-                              : ''}
-                    {((bean.capacity && bean.remaining) ||
-                      (bean.price && bean.capacity)) && (
+                              dateDisplayMode === 'flavorPeriod'
+                            ? flavorInfo.status
+                            : !isGreenBean &&
+                                displayDate &&
+                                dateDisplayMode === 'agingDays'
+                              ? getAgingDaysText(displayDate)
+                              : displayDate
+                                ? formatDateShort(displayDate)
+                                : ''}
+                      {((bean.capacity && bean.remaining) ||
+                        (bean.price && bean.capacity)) && (
+                        <span className="mx-2 text-neutral-400 dark:text-neutral-600">
+                          ·
+                        </span>
+                      )}
+                    </span>
+                  ) : null;
+                })()}
+
+                {bean.capacity && bean.remaining && (
+                  <span className="inline whitespace-nowrap">
+                    <span
+                      onClick={e => onRemainingClick(bean, e)}
+                      className="cursor-pointer"
+                      data-click-area="remaining-edit"
+                    >
+                      <span className="border-b border-dashed border-neutral-400 transition-colors dark:border-neutral-600">
+                        {formatNumber(bean.remaining)}
+                      </span>
+                      /{formatNumber(bean.capacity)}克
+                    </span>
+                    {bean.price && bean.capacity && (
                       <span className="mx-2 text-neutral-400 dark:text-neutral-600">
                         ·
                       </span>
                     )}
                   </span>
-                ) : null;
-              })()}
+                )}
 
-              {bean.capacity && bean.remaining && (
-                <span className="inline">
-                  <span
-                    onClick={e => onRemainingClick(bean, e)}
-                    className="cursor-pointer"
-                    data-click-area="remaining-edit"
-                  >
-                    <span className="border-b border-dashed border-neutral-400 transition-colors dark:border-neutral-600">
-                      {formatNumber(bean.remaining)}
-                    </span>
-                    /{formatNumber(bean.capacity)}克
+                {bean.price && bean.capacity && (
+                  <span className="inline whitespace-nowrap">
+                    {formatPrice(bean.price, bean.capacity)}
                   </span>
-                  {bean.price && bean.capacity && (
-                    <span className="mx-2 text-neutral-400 dark:text-neutral-600">
-                      ·
-                    </span>
-                  )}
-                </span>
-              )}
+                )}
 
-              {bean.price && bean.capacity && (
-                <span className="inline">
-                  {formatPrice(bean.price, bean.capacity)}
-                </span>
-              )}
             </div>
           </div>
 
