@@ -565,7 +565,6 @@ export const getAvailableSortTypesForView = (
           SORT_TYPES.ROAST_DATE, // 生豆显示为"购买日期"
           SORT_TYPES.REMAINING_AMOUNT,
           SORT_TYPES.PRICE,
-          SORT_TYPES.NAME,
         ];
       }
       return [
@@ -574,17 +573,11 @@ export const getAvailableSortTypesForView = (
         SORT_TYPES.REMAINING_DAYS,
         SORT_TYPES.REMAINING_AMOUNT,
         SORT_TYPES.PRICE,
-        SORT_TYPES.NAME,
       ];
     case 'ranking':
-      return [SORT_TYPES.RATING, SORT_TYPES.NAME, SORT_TYPES.LAST_MODIFIED];
+      return [SORT_TYPES.RATING, SORT_TYPES.LAST_MODIFIED];
     case 'blogger':
-      return [
-        SORT_TYPES.ORIGINAL,
-        SORT_TYPES.RATING,
-        SORT_TYPES.PRICE,
-        SORT_TYPES.NAME,
-      ];
+      return [SORT_TYPES.ORIGINAL, SORT_TYPES.RATING, SORT_TYPES.PRICE];
     case 'stats':
       return [
         SORT_TYPES.REMAINING_DAYS,
@@ -594,11 +587,7 @@ export const getAvailableSortTypesForView = (
         SORT_TYPES.LAST_MODIFIED,
       ];
     default:
-      return [
-        SORT_TYPES.REMAINING_DAYS,
-        SORT_TYPES.NAME,
-        SORT_TYPES.LAST_MODIFIED,
-      ];
+      return [SORT_TYPES.REMAINING_DAYS, SORT_TYPES.LAST_MODIFIED];
   }
 };
 

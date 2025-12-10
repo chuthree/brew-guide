@@ -342,9 +342,31 @@ export const saveViewModePreference = (value: ViewOption): void => {
 };
 
 // 从localStorage读取排序选项（全局）
+// 迁移旧的 NAME 排序选项到其他排序方式
+const migrateSortOption = (
+  value: string,
+  viewMode: string = 'inventory'
+): SortOption => {
+  // 如果是 NAME 相关的排序选项，迁移到更合适的选项
+  if (value === 'name_asc' || value === 'name_desc') {
+    // 根据视图模式返回不同的默认值
+    switch (viewMode) {
+      case 'inventory':
+        return 'last_modified_desc';
+      case 'ranking':
+        return 'rating_desc';
+      case 'blogger':
+        return 'original';
+      default:
+        return 'remaining_days_asc';
+    }
+  }
+  return value as SortOption;
+};
+
 export const getSortOptionPreference = (): SortOption => {
   const value = getStringState(MODULE_NAME, 'sortOption', 'remaining_days_asc');
-  return value as SortOption;
+  return migrateSortOption(value) as SortOption;
 };
 
 // 保存排序选项到localStorage（全局）
@@ -359,7 +381,7 @@ export const getInventorySortOptionPreference = (): SortOption => {
     'inventorySortOption',
     'remaining_days_asc'
   );
-  return value as SortOption;
+  return migrateSortOption(value, 'inventory') as SortOption;
 };
 
 // 保存库存视图排序选项到localStorage
@@ -380,7 +402,8 @@ export const getInventorySortOptionByStatePreference = (
   if (beanState === 'green' && value.includes('remaining_days')) {
     return 'last_modified_desc';
   }
-  return value as SortOption;
+  // 迁移 NAME 排序选项
+  return migrateSortOption(value, 'inventory') as SortOption;
 };
 
 // 按 beanState 保存库存排序选项
@@ -395,7 +418,7 @@ export const saveInventorySortOptionByStatePreference = (
 // 从localStorage读取个人榜单视图排序选项
 export const getRankingSortOptionPreference = (): SortOption => {
   const value = getStringState(MODULE_NAME, 'rankingSortOption', 'rating_desc');
-  return value as SortOption;
+  return migrateSortOption(value, 'ranking') as SortOption;
 };
 
 // 保存个人榜单视图排序选项到localStorage
@@ -406,7 +429,7 @@ export const saveRankingSortOptionPreference = (value: SortOption): void => {
 // 从localStorage读取博主榜单视图排序选项
 export const getBloggerSortOptionPreference = (): SortOption => {
   const value = getStringState(MODULE_NAME, 'bloggerSortOption', 'rating_desc');
-  return value as SortOption;
+  return migrateSortOption(value, 'blogger') as SortOption;
 };
 
 // 保存博主榜单视图排序选项到localStorage
