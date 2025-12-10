@@ -1465,6 +1465,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           beanPrices={{}}
           coffeeBeans={coffeeBeans}
           noteDisplayStyle={noteDisplayStyle}
+          settings={settings}
         />
       </div>
 

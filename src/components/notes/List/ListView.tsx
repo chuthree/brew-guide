@@ -9,6 +9,7 @@ import ChangeRecordNoteItem from './ChangeRecordNoteItem';
 import GalleryView from './GalleryView';
 import DateImageFlowView from './DateImageFlowView';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
+import { SettingsOptions } from '@/components/settings/Settings';
 
 // 定义组件属性接口
 interface NotesListViewProps {
@@ -35,6 +36,8 @@ interface NotesListViewProps {
   coffeeBeans?: import('@/types/app').CoffeeBean[];
   // 笔记显示样式
   noteDisplayStyle?: 'list' | 'card';
+  // 设置
+  settings?: SettingsOptions;
 }
 
 const NotesListView: React.FC<NotesListViewProps> = ({
@@ -57,9 +60,19 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   beanPrices = {},
   coffeeBeans = [],
   noteDisplayStyle = 'list',
+  settings,
 }) => {
   const [unitPriceCache] = useState<Record<string, number>>(beanPrices);
-  const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false);
+  const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(
+    settings?.defaultExpandChangeLog ?? false
+  );
+
+  // 监听设置变化，更新展开状态
+  React.useEffect(() => {
+    if (settings?.defaultExpandChangeLog !== undefined) {
+      setShowQuickDecrementNotes(settings.defaultExpandChangeLog);
+    }
+  }, [settings?.defaultExpandChangeLog]);
 
   // 根据设置选择笔记项组件
   const NoteItemComponent =

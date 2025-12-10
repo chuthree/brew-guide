@@ -39,6 +39,7 @@ import {
   User,
   MessageCircle,
   ThumbsUp,
+  Notebook,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -175,6 +176,11 @@ export interface SettingsOptions {
   };
   // 磨豆机刻度显示设置
   showGrinderScale?: boolean; // 是否在冲煮页显示磨豆机刻度指示器
+  // 笔记设置
+  defaultExpandRating: boolean; // 添加笔记时默认展开评分维度
+  defaultExpandChangeLog: boolean; // 笔记列表默认展开变动记录
+  showFlavorRatingInForm: boolean; // 添加笔记时显示风味评分
+  showOverallRatingInForm: boolean; // 添加笔记时显示总体评分
   // 生豆库设置
   enableGreenBeanInventory?: boolean; // 是否启用生豆库功能
   enableConvertToGreen?: boolean; // 是否启用熟豆转生豆功能（需先启用生豆库）
@@ -300,6 +306,11 @@ export const defaultSettings: SettingsOptions = {
     manualNote: true, // 手动添加笔记默认开启
     noteEdit: false, // 笔记编辑表单默认关闭
   },
+  // 笔记设置默认值
+  defaultExpandRating: false,
+  defaultExpandChangeLog: false,
+  showFlavorRatingInForm: true,
+  showOverallRatingInForm: true,
   // 识图设置默认值
   autoFillRecognitionImage: false, // 默认不自动填充识图图片，需手动添加
   // 每日提醒默认值
@@ -320,6 +331,7 @@ export interface SubSettingsHandlers {
   onOpenRandomCoffeeBeanSettings: () => void;
   onOpenSearchSortSettings: () => void;
   onOpenFlavorDimensionSettings: () => void;
+  onOpenNoteSettings: () => void;
   onOpenHiddenMethodsSettings: () => void;
   onOpenHiddenEquipmentsSettings: () => void;
   onOpenRoasterLogoSettings: () => void;
@@ -999,6 +1011,11 @@ const Settings: React.FC<SettingsProps> = ({
         {/* 笔记管理 */}
         <SettingGroup
           items={[
+            {
+              icon: Notebook,
+              label: '笔记',
+              onClick: subSettingsHandlers.onOpenNoteSettings,
+            },
             {
               icon: ArrowUpDown,
               label: '搜索与排序',

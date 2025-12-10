@@ -922,6 +922,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     return method?.name || selectedMethod || '未知方案';
   }, [availableMethods, selectedMethod]);
 
+  // 判断是否是添加模式
+  const isAdding = !id || isCopy;
+
+  // 根据设置决定是否显示部分区域
+  const showFlavorSection =
+    !isAdding || (settings?.showFlavorRatingInForm ?? true);
+  const showOverallSection =
+    !isAdding || (settings?.showOverallRatingInForm ?? true);
+
   // Inside the component, add a new state for showing/hiding flavor ratings
   const [showFlavorRatings, setShowFlavorRatings] = useState(() => {
     // 初始化时检查是否有任何风味评分大于0
@@ -930,7 +939,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       Object.values(initialData.taste).some(value => value > 0);
 
     // 如果有风味评分，默认展开
-    return hasTasteValues || false;
+    if (hasTasteValues) return true;
+
+    // 如果是添加新笔记（没有ID或是复制操作）且设置中开启了默认展开
+    if (isAdding && settings?.defaultExpandRating) return true;
+
+    return false;
   });
 
   // 监听风味评分变化
@@ -1512,101 +1526,105 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           </div>
         )}
         {/* 风味评分 */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-              风味评分
+        {showFlavorSection && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                风味评分
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFlavorRatings(!showFlavorRatings)}
+                className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400"
+              >
+                [ {showFlavorRatings ? '收起' : '展开'} ]
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowFlavorRatings(!showFlavorRatings)}
-              className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400"
-            >
-              [ {showFlavorRatings ? '收起' : '展开'} ]
-            </button>
-          </div>
 
-          {showFlavorRatings && (
-            <div className="grid grid-cols-2 gap-8">
-              {displayDimensions.map(dimension => {
-                const value = formData.taste[dimension.id] || 0;
-                return (
-                  <div key={dimension.id} className="relative space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                        {dimension.label}
-                        {dimension.order === 999 && (
-                          <span className="ml-1 text-[10px] text-neutral-400 dark:text-neutral-500">
-                            (已删除)
-                          </span>
+            {showFlavorRatings && (
+              <div className="grid grid-cols-2 gap-8">
+                {displayDimensions.map(dimension => {
+                  const value = formData.taste[dimension.id] || 0;
+                  return (
+                    <div key={dimension.id} className="relative space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                          {dimension.label}
+                          {dimension.order === 999 && (
+                            <span className="ml-1 text-[10px] text-neutral-400 dark:text-neutral-500">
+                              (已删除)
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                          [ {value || 0} ]
+                        </div>
+                      </div>
+                      <input
+                        id={`taste-${dimension.id}`}
+                        name={`taste_${dimension.id}`}
+                        type="range"
+                        min="0"
+                        max="5"
+                        step="1"
+                        value={value || 0}
+                        onChange={e =>
+                          setFormData({
+                            ...formData,
+                            taste: {
+                              ...formData.taste,
+                              [dimension.id]: parseInt(e.target.value),
+                            },
+                          })
+                        }
+                        onTouchStart={tasteHandlers(dimension.id).onTouchStart(
+                          value
                         )}
-                      </div>
-                      <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                        [ {value || 0} ]
-                      </div>
+                        onTouchMove={tasteHandlers(dimension.id).onTouchMove}
+                        onTouchEnd={tasteHandlers(dimension.id).onTouchEnd}
+                        className={SLIDER_STYLES}
+                      />
                     </div>
-                    <input
-                      id={`taste-${dimension.id}`}
-                      name={`taste_${dimension.id}`}
-                      type="range"
-                      min="0"
-                      max="5"
-                      step="1"
-                      value={value || 0}
-                      onChange={e =>
-                        setFormData({
-                          ...formData,
-                          taste: {
-                            ...formData.taste,
-                            [dimension.id]: parseInt(e.target.value),
-                          },
-                        })
-                      }
-                      onTouchStart={tasteHandlers(dimension.id).onTouchStart(
-                        value
-                      )}
-                      onTouchMove={tasteHandlers(dimension.id).onTouchMove}
-                      onTouchEnd={tasteHandlers(dimension.id).onTouchEnd}
-                      className={SLIDER_STYLES}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         {/* 总体评分 */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-              总体评分
+        {showOverallSection && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                总体评分
+              </div>
+              <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                [ {formData.rating.toFixed(1)} ]
+              </div>
             </div>
-            <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-              [ {formData.rating.toFixed(1)} ]
+            <div className="relative py-3">
+              <input
+                id="overall-rating"
+                name="overallRating"
+                type="range"
+                min="0"
+                max="5"
+                step="0.5"
+                value={formData.rating}
+                onChange={e =>
+                  setFormData({
+                    ...formData,
+                    rating: parseFloat(e.target.value),
+                  })
+                }
+                onTouchStart={ratingHandlers.onTouchStart(formData.rating)}
+                onTouchMove={ratingHandlers.onTouchMove}
+                onTouchEnd={ratingHandlers.onTouchEnd}
+                className={SLIDER_STYLES}
+              />
             </div>
           </div>
-          <div className="relative py-3">
-            <input
-              id="overall-rating"
-              name="overallRating"
-              type="range"
-              min="0"
-              max="5"
-              step="0.5"
-              value={formData.rating}
-              onChange={e =>
-                setFormData({
-                  ...formData,
-                  rating: parseFloat(e.target.value),
-                })
-              }
-              onTouchStart={ratingHandlers.onTouchStart(formData.rating)}
-              onTouchMove={ratingHandlers.onTouchMove}
-              onTouchEnd={ratingHandlers.onTouchEnd}
-              className={SLIDER_STYLES}
-            />
-          </div>
-        </div>
+        )}
         {/* 笔记 */}
         <div className="space-y-4">
           <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">

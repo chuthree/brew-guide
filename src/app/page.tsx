@@ -46,6 +46,7 @@ import DataSettings from '@/components/settings/DataSettings';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import RandomCoffeeBeanSettings from '@/components/settings/RandomCoffeeBeanSettings';
 import SearchSortSettings from '@/components/settings/SearchSortSettings';
+import NoteSettings from '@/components/settings/NoteSettings';
 import FlavorDimensionSettings from '@/components/settings/FlavorDimensionSettings';
 import HiddenMethodsSettings from '@/components/settings/HiddenMethodsSettings';
 import HiddenEquipmentsSettings from '@/components/settings/HiddenEquipmentsSettings';
@@ -247,6 +248,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [showRandomCoffeeBeanSettings, setShowRandomCoffeeBeanSettings] =
     useState(false);
   const [showSearchSortSettings, setShowSearchSortSettings] = useState(false);
+  const [showNoteSettings, setShowNoteSettings] = useState(false);
   const [showFlavorDimensionSettings, setShowFlavorDimensionSettings] =
     useState(false);
   const [showHiddenMethodsSettings, setShowHiddenMethodsSettings] =
@@ -268,6 +270,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showNotificationSettings ||
     showRandomCoffeeBeanSettings ||
     showSearchSortSettings ||
+    showNoteSettings ||
     showFlavorDimensionSettings ||
     showHiddenMethodsSettings ||
     showHiddenEquipmentsSettings ||
@@ -325,14 +328,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               }
             }
 
-            setSettings(parsedSettings as unknown as SettingsOptions);
+            // 合并默认设置，确保新添加的设置项有默认值
+            const mergedSettings = {
+              ...defaultSettings,
+              ...parsedSettings,
+            };
+            setSettings(mergedSettings as SettingsOptions);
 
             // 应用字体缩放级别
             if (
-              parsedSettings.textZoomLevel &&
-              typeof parsedSettings.textZoomLevel === 'number'
+              mergedSettings.textZoomLevel &&
+              typeof mergedSettings.textZoomLevel === 'number'
             ) {
-              fontZoomUtils.set(parsedSettings.textZoomLevel);
+              fontZoomUtils.set(mergedSettings.textZoomLevel);
             }
           } catch {
             // JSON解析失败，使用默认设置
@@ -3479,6 +3487,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onOpenRandomCoffeeBeanSettings: () =>
             setShowRandomCoffeeBeanSettings(true),
           onOpenSearchSortSettings: () => setShowSearchSortSettings(true),
+          onOpenNoteSettings: () => setShowNoteSettings(true),
           onOpenFlavorDimensionSettings: () =>
             setShowFlavorDimensionSettings(true),
           onOpenHiddenMethodsSettings: () => setShowHiddenMethodsSettings(true),
@@ -3567,6 +3576,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <SearchSortSettings
           settings={settings}
           onClose={() => setShowSearchSortSettings(false)}
+          handleChange={handleSubSettingChange}
+        />
+      )}
+
+      {showNoteSettings && (
+        <NoteSettings
+          settings={settings}
+          onClose={() => setShowNoteSettings(false)}
           handleChange={handleSubSettingChange}
         />
       )}
