@@ -5,7 +5,12 @@ import React, { useState, useEffect } from 'react';
 import { SettingsOptions, defaultSettings } from './Settings';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import { SettingPage } from './atomic';
+import {
+  SettingPage,
+  SettingSection,
+  SettingRow,
+  SettingToggle,
+} from './atomic';
 
 interface StockSettingsProps {
   settings: SettingsOptions;
@@ -145,75 +150,40 @@ const StockSettings: React.FC<StockSettingsProps> = ({
       isVisible={isVisible}
       onClose={handleClose}
     >
-      <div className="-mt-4 px-6 py-4">
-        {/* ===== 熟豆扣除设置区域 ===== */}
-        <div className="mb-8">
-          <h3 className="mb-4 text-base font-medium text-neutral-800 dark:text-neutral-200">
-            熟豆库存扣除
-          </h3>
+      <SettingSection title="熟豆库存扣除" className="-mt-4">
+        <SettingRow
+          label="启用“全部扣除”选项"
+          description="显示ALL按钮，可一次性扣除剩余库存"
+        >
+          <SettingToggle
+            checked={settings.enableAllDecrementOption}
+            onChange={checked =>
+              handleChange('enableAllDecrementOption', checked)
+            }
+          />
+        </SettingRow>
+        <SettingRow
+          label="启用自定义扣除输入"
+          description="允许用户在快捷扣除框中输入任意数字"
+          isLast
+        >
+          <SettingToggle
+            checked={settings.enableCustomDecrementInput}
+            onChange={checked =>
+              handleChange('enableCustomDecrementInput', checked)
+            }
+          />
+        </SettingRow>
+      </SettingSection>
 
-          {/* 功能开关选项 */}
-          <div className="mb-6 space-y-4">
-            {/* ALL扣除选项开关 */}
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  启用&ldquo;全部扣除&rdquo;选项
-                </div>
-                <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                  显示ALL按钮，可一次性扣除剩余库存
-                </div>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={settings.enableAllDecrementOption}
-                  onChange={e =>
-                    handleChange('enableAllDecrementOption', e.target.checked)
-                  }
-                  className="peer sr-only"
-                />
-                <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-              </label>
-            </div>
-
-            {/* 自定义输入选项开关 */}
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  启用自定义扣除输入
-                </div>
-                <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                  允许用户在快捷扣除框中输入任意数字
-                </div>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={settings.enableCustomDecrementInput}
-                  onChange={e =>
-                    handleChange('enableCustomDecrementInput', e.target.checked)
-                  }
-                  className="peer sr-only"
-                />
-                <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-              </label>
-            </div>
-          </div>
-
-          {/* 预设值管理 */}
-          <div className="mb-2">
-            <h4 className="mb-3 text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              预设扣除值管理
-            </h4>
-          </div>
-
+      <SettingSection title="预设扣除值管理">
+        <div className="p-4">
           <div className="mb-3 flex flex-wrap gap-2">
             {decrementPresets.map(value => (
               <button
                 key={value}
                 onClick={() => removeDecrementPreset(value)}
-                className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                className="rounded bg-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
               >
                 -{value}g ×
               </button>
@@ -244,7 +214,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
                   }
                 }}
                 placeholder="克数"
-                className="w-16 rounded-l rounded-r-none bg-neutral-100 px-2 py-1.5 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:bg-neutral-800"
+                className="w-16 rounded-l rounded-r-none bg-neutral-200 px-2 py-1.5 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:bg-neutral-700"
               />
               <button
                 onClick={addDecrementPreset}
@@ -259,97 +229,54 @@ const StockSettings: React.FC<StockSettingsProps> = ({
               </button>
             </div>
           </div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
             点击预设值可以删除，输入克数后按回车或点击"+"可以添加新的预设值。
           </p>
         </div>
+      </SettingSection>
 
-        {/* 生豆烘焙设置区域 - 仅当生豆库功能启用时显示 */}
-        {settings.enableGreenBeanInventory && (
-          <>
-            {/* 分隔线 */}
-            <div className="my-6 border-t border-neutral-200 dark:border-neutral-700"></div>
+      {settings.enableGreenBeanInventory && (
+        <>
+          <SettingSection title="生豆快捷烘焙">
+            <SettingRow
+              label="启用“全部烘焙”选项"
+              description="显示ALL按钮，可一次性烘焙剩余库存"
+            >
+              <SettingToggle
+                checked={
+                  settings.enableAllGreenBeanRoastOption ??
+                  defaultSettings.enableAllGreenBeanRoastOption
+                }
+                onChange={checked =>
+                  handleChange('enableAllGreenBeanRoastOption', checked)
+                }
+              />
+            </SettingRow>
+            <SettingRow
+              label="启用自定义烘焙量输入"
+              description="允许用户在快捷烘焙框中输入任意数字"
+              isLast
+            >
+              <SettingToggle
+                checked={
+                  settings.enableCustomGreenBeanRoastInput ??
+                  defaultSettings.enableCustomGreenBeanRoastInput
+                }
+                onChange={checked =>
+                  handleChange('enableCustomGreenBeanRoastInput', checked)
+                }
+              />
+            </SettingRow>
+          </SettingSection>
 
-            {/* ===== 生豆烘焙设置区域 ===== */}
-            <div className="mb-4">
-              <h3 className="mb-4 text-base font-medium text-neutral-800 dark:text-neutral-200">
-                生豆快捷烘焙
-              </h3>
-
-              {/* 功能开关选项 */}
-              <div className="mb-6 space-y-4">
-                {/* ALL烘焙选项开关 */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                      启用&ldquo;全部烘焙&rdquo;选项
-                    </div>
-                    <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                      显示ALL按钮，可一次性烘焙剩余库存
-                    </div>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={
-                        settings.enableAllGreenBeanRoastOption ??
-                        defaultSettings.enableAllGreenBeanRoastOption
-                      }
-                      onChange={e =>
-                        handleChange(
-                          'enableAllGreenBeanRoastOption',
-                          e.target.checked
-                        )
-                      }
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                  </label>
-                </div>
-
-                {/* 自定义输入选项开关 */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                      启用自定义烘焙量输入
-                    </div>
-                    <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                      允许用户在快捷烘焙框中输入任意数字
-                    </div>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={
-                        settings.enableCustomGreenBeanRoastInput ??
-                        defaultSettings.enableCustomGreenBeanRoastInput
-                      }
-                      onChange={e =>
-                        handleChange(
-                          'enableCustomGreenBeanRoastInput',
-                          e.target.checked
-                        )
-                      }
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                  </label>
-                </div>
-              </div>
-
-              {/* 预设值管理 */}
-              <div className="mb-2">
-                <h4 className="mb-3 text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  预设烘焙量管理
-                </h4>
-              </div>
-
+          <SettingSection title="预设烘焙量管理">
+            <div className="p-4">
               <div className="mb-3 flex flex-wrap gap-2">
                 {greenBeanRoastPresets.map(value => (
                   <button
                     key={value}
                     onClick={() => removeGreenBeanRoastPreset(value)}
-                    className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                    className="rounded bg-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
                   >
                     -{value}g ×
                   </button>
@@ -386,7 +313,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
                       }
                     }}
                     placeholder="克数"
-                    className="w-16 rounded-l rounded-r-none bg-neutral-100 px-2 py-1.5 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:bg-neutral-800"
+                    className="w-16 rounded-l rounded-r-none bg-neutral-200 px-2 py-1.5 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:bg-neutral-700"
                   />
                   <button
                     onClick={addGreenBeanRoastPreset}
@@ -401,13 +328,13 @@ const StockSettings: React.FC<StockSettingsProps> = ({
                   </button>
                 </div>
               </div>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 点击预设值可以删除，输入克数后按回车或点击"+"可以添加新的预设值。
               </p>
             </div>
-          </>
-        )}
-      </div>
+          </SettingSection>
+        </>
+      )}
     </SettingPage>
   );
 };

@@ -50,7 +50,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
 
   return (
     <div
-      className={`flex w-full items-stretch px-4 text-sm font-medium ${className}`}
+      className={`flex w-full items-stretch px-3.5 text-sm font-medium ${className}`}
     >
       <div
         className={`flex min-w-0 flex-1 items-center justify-between py-3.5 ${

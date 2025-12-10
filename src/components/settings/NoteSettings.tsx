@@ -71,7 +71,6 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
         <SettingRow
           label="显示总体评分"
           description="添加笔记时显示总体评分滑块"
-          isLast
         >
           <SettingToggle
             checked={settings.showOverallRatingInForm ?? true}
@@ -83,6 +82,7 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
         <SettingRow
           label="显示风味评分"
           description="添加笔记时显示风味评分区域"
+          isLast
         >
           <SettingToggle
             checked={settings.showFlavorRatingInForm ?? true}

@@ -4,7 +4,13 @@ import React from 'react';
 import { SettingsOptions } from './Settings';
 import { ButtonGroup } from '../ui/ButtonGroup';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import { SettingPage } from './atomic';
+import {
+  SettingPage,
+  SettingSection,
+  SettingRow,
+  SettingToggle,
+  SettingSlider,
+} from './atomic';
 
 import BeanPreview from './BeanPreview';
 
@@ -72,364 +78,189 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       {/* 预览区域 */}
       <BeanPreview settings={settings} />
 
-      {/* 设置内容 */}
-      <div className="mt-8 px-6">
-        <div className="space-y-5">
-          {/* 简化咖啡豆名称 */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              简化咖啡豆名称
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={settings.showOnlyBeanName || false}
-                onChange={e =>
-                  handleChange('showOnlyBeanName', e.target.checked)
+      <SettingSection title="列表显示" className="mt-6">
+        <SettingRow label="简化咖啡豆名称">
+          <SettingToggle
+            checked={settings.showOnlyBeanName || false}
+            onChange={checked => handleChange('showOnlyBeanName', checked)}
+          />
+        </SettingRow>
+
+        <SettingRow label="日期显示模式">
+          <ButtonGroup
+            value={settings.dateDisplayMode || 'date'}
+            options={[
+              { value: 'date', label: '日期' },
+              { value: 'flavorPeriod', label: '赏味期' },
+              { value: 'agingDays', label: '养豆天数' },
+            ]}
+            onChange={value =>
+              handleChange(
+                'dateDisplayMode',
+                value as 'date' | 'flavorPeriod' | 'agingDays'
+              )
+            }
+          />
+        </SettingRow>
+
+        <SettingRow label="显示总价格">
+          <SettingToggle
+            checked={settings.showTotalPrice || false}
+            onChange={checked => handleChange('showTotalPrice', checked)}
+          />
+        </SettingRow>
+
+        <SettingRow label="显示状态点">
+          <SettingToggle
+            checked={settings.showStatusDots || false}
+            onChange={checked => handleChange('showStatusDots', checked)}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="显示备注区域"
+          isLast={settings.showBeanNotes === false}
+        >
+          <SettingToggle
+            checked={settings.showBeanNotes !== false}
+            onChange={checked => handleChange('showBeanNotes', checked)}
+          />
+        </SettingRow>
+
+        {settings.showBeanNotes !== false && (
+          <>
+            <SettingRow label="显示风味信息">
+              <SettingToggle
+                checked={settings.showFlavorInfo || false}
+                onChange={checked => handleChange('showFlavorInfo', checked)}
+              />
+            </SettingRow>
+            <SettingRow
+              label="限制备注显示行数"
+              isLast={!settings.limitNotesLines}
+            >
+              <SettingToggle
+                checked={settings.limitNotesLines || false}
+                onChange={checked => handleChange('limitNotesLines', checked)}
+              />
+            </SettingRow>
+            {settings.limitNotesLines && (
+              <SettingRow isLast vertical>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                    最大显示行数
+                  </span>
+                  <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                    {settings.notesMaxLines || 3}行
+                  </span>
+                </div>
+                <div className="w-full pt-2 pb-1">
+                  <SettingSlider
+                    min={1}
+                    max={5}
+                    step={1}
+                    value={settings.notesMaxLines || 3}
+                    onChange={val => handleChange('notesMaxLines', val)}
+                    minLabel="1行"
+                    maxLabel="5行"
+                    showTicks
+                  />
+                </div>
+              </SettingRow>
+            )}
+          </>
+        )}
+      </SettingSection>
+
+      <SettingSection title="咖啡豆详情功能">
+        <SettingRow label="标签打印功能">
+          <SettingToggle
+            checked={settings.enableBeanPrint || false}
+            onChange={checked => handleChange('enableBeanPrint', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="显示信息分割线">
+          <SettingToggle
+            checked={settings.showBeanInfoDivider !== false}
+            onChange={checked => handleChange('showBeanInfoDivider', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="启用评分功能" isLast>
+          <SettingToggle
+            checked={settings.showBeanRating || false}
+            onChange={checked => handleChange('showBeanRating', checked)}
+          />
+        </SettingRow>
+      </SettingSection>
+
+      <SettingSection title="识图添加设置">
+        <SettingRow
+          label="自动填充识图图片"
+          description="单张图片识别后自动填充到表单图片字段"
+        >
+          <SettingToggle
+            checked={settings.autoFillRecognitionImage || false}
+            onChange={checked =>
+              handleChange('autoFillRecognitionImage', checked)
+            }
+          />
+        </SettingRow>
+        <SettingRow
+          label="沉浸式添加"
+          description="手动添加时直接进入可编辑的详情页"
+          isLast
+        >
+          <SettingToggle
+            checked={settings.immersiveAdd || false}
+            onChange={checked => handleChange('immersiveAdd', checked)}
+          />
+        </SettingRow>
+      </SettingSection>
+
+      <SettingSection title="生豆库设置">
+        <SettingRow
+          label="启用生豆库"
+          description="在咖啡豆库存概要切换生豆/熟豆库"
+          isLast={!settings.enableGreenBeanInventory}
+        >
+          <SettingToggle
+            checked={settings.enableGreenBeanInventory || false}
+            onChange={checked =>
+              handleChange('enableGreenBeanInventory', checked)
+            }
+          />
+        </SettingRow>
+
+        {settings.enableGreenBeanInventory && (
+          <>
+            <SettingRow
+              label="启用熟豆转生豆"
+              description="在熟豆详情页显示转换入口"
+              isLast
+            >
+              <SettingToggle
+                checked={settings.enableConvertToGreen || false}
+                onChange={checked =>
+                  handleChange('enableConvertToGreen', checked)
                 }
-                className="peer sr-only"
               />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
+            </SettingRow>
 
-          {/* 日期显示模式 */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              日期显示模式
+            <div className="p-4 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+              <p className="mb-2">
+                在生豆库功能上线前，你可能用熟豆记录来管理生豆。此功能可将这些旧数据转换为正确的生豆库格式。
+              </p>
+              <p className="mb-2">
+                转换后，已用掉的部分会变成「烘焙记录 +
+                新熟豆」，剩余部分保留在生豆中。原有的冲煮笔记会自动迁移到新熟豆，快捷扣除等变动记录会被清理。
+              </p>
+              <p className="text-neutral-400 dark:text-neutral-500">
+                仅限未关联生豆来源的熟豆使用，数据变动较大，建议先备份。
+              </p>
             </div>
-            <ButtonGroup
-              value={settings.dateDisplayMode || 'date'}
-              options={[
-                { value: 'date', label: '日期' },
-                { value: 'flavorPeriod', label: '赏味期' },
-                { value: 'agingDays', label: '养豆天数' },
-              ]}
-              onChange={value =>
-                handleChange(
-                  'dateDisplayMode',
-                  value as 'date' | 'flavorPeriod' | 'agingDays'
-                )
-              }
-            />
-          </div>
-
-          {/* 显示总价格 */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              显示总价格
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={settings.showTotalPrice || false}
-                onChange={e => handleChange('showTotalPrice', e.target.checked)}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
-
-          {/* 显示状态点 */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              显示状态点
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={settings.showStatusDots || false}
-                onChange={e => handleChange('showStatusDots', e.target.checked)}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
-
-          {/* 显示备注区域 */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              显示备注区域
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={settings.showBeanNotes !== false}
-                onChange={e => handleChange('showBeanNotes', e.target.checked)}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
-
-          {/* 显示风味信息 - 只有在开启备注显示时才显示 */}
-          {settings.showBeanNotes !== false && (
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                显示风味信息
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={settings.showFlavorInfo || false}
-                  onChange={e =>
-                    handleChange('showFlavorInfo', e.target.checked)
-                  }
-                  className="peer sr-only"
-                />
-                <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-              </label>
-            </div>
-          )}
-
-          {/* 限制备注显示行数 - 只有在开启备注显示时才显示 */}
-          {settings.showBeanNotes !== false && (
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                限制备注显示行数
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={settings.limitNotesLines || false}
-                  onChange={e =>
-                    handleChange('limitNotesLines', e.target.checked)
-                  }
-                  className="peer sr-only"
-                />
-                <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-              </label>
-            </div>
-          )}
-
-          {/* 备注最大显示行数 - 只有在开启备注显示和限制行数时才显示 */}
-          {settings.showBeanNotes !== false && settings.limitNotesLines && (
-            <div className="ml-4 border-l-2 border-neutral-200 pl-4 dark:border-neutral-700">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  最大显示行数
-                </div>
-                <div className="text-sm text-neutral-400 dark:text-neutral-500">
-                  {settings.notesMaxLines || 3}行
-                </div>
-              </div>
-              <div className="px-1">
-                <input
-                  type="range"
-                  min="1"
-                  max="6"
-                  step="1"
-                  value={settings.notesMaxLines || 3}
-                  onChange={e =>
-                    handleChange('notesMaxLines', parseInt(e.target.value))
-                  }
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
-                />
-                <div className="mt-1 flex justify-between text-xs text-neutral-500">
-                  <span>1行</span>
-                  <span>6行</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 咖啡豆详情功能区分割线 */}
-          <div className="mt-4 border-t border-neutral-200 pt-4 dark:border-neutral-700">
-            <div className="mb-4 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              咖啡豆详情功能
-            </div>
-
-            <div className="space-y-5">
-              {/* 启用标签保存功能 */}
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  标签打印功能
-                </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.enableBeanPrint || false}
-                    onChange={e =>
-                      handleChange('enableBeanPrint', e.target.checked)
-                    }
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                </label>
-              </div>
-
-              {/* 显示信息分割线 */}
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  显示信息分割线
-                </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.showBeanInfoDivider !== false}
-                    onChange={e =>
-                      handleChange('showBeanInfoDivider', e.target.checked)
-                    }
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                </label>
-              </div>
-
-              {/* 显示评分功能 */}
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    显示空评分区域
-                  </div>
-                </div>
-                <label className="relative inline-flex flex-shrink-0 cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.showBeanRating || false}
-                    onChange={e =>
-                      handleChange('showBeanRating', e.target.checked)
-                    }
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* 识图设置区域分割线 */}
-          <div className="mt-4 border-t border-neutral-200 pt-4 dark:border-neutral-700">
-            <div className="mb-4 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              识图添加设置
-            </div>
-
-            <div className="space-y-5">
-              {/* 自动填充识图图片 */}
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    自动填充识图图片
-                  </div>
-                  <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                    单张图片识别后自动填充到表单图片字段
-                  </div>
-                </div>
-                <label className="relative inline-flex shrink-0 cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.autoFillRecognitionImage || false}
-                    onChange={e =>
-                      handleChange('autoFillRecognitionImage', e.target.checked)
-                    }
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                </label>
-              </div>
-
-              {/* 沉浸式添加 */}
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    沉浸式添加
-                  </div>
-                  <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                    手动添加时直接进入可编辑的详情页
-                  </div>
-                </div>
-                <label className="relative inline-flex shrink-0 cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.immersiveAdd || false}
-                    onChange={e =>
-                      handleChange('immersiveAdd', e.target.checked)
-                    }
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* 生豆库设置区域分割线 */}
-          <div className="mt-4 border-t border-neutral-200 pt-4 dark:border-neutral-700">
-            <div className="mb-4 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              生豆库设置
-            </div>
-
-            <div className="space-y-5">
-              {/* 启用生豆库功能 */}
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    启用生豆库
-                  </div>
-                  <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                    在咖啡豆库存概要切换生豆/熟豆库
-                  </div>
-                </div>
-                <label className="relative inline-flex shrink-0 cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.enableGreenBeanInventory || false}
-                    onChange={e =>
-                      handleChange('enableGreenBeanInventory', e.target.checked)
-                    }
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                </label>
-              </div>
-
-              {/* 转为生豆功能 - 仅在生豆库启用时显示 */}
-              {settings.enableGreenBeanInventory && (
-                <div className="ml-4 border-l-2 border-neutral-200 pl-4 dark:border-neutral-700">
-                  {/* 开关 */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                        启用熟豆转生豆
-                      </div>
-                      <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                        在熟豆详情页显示转换入口
-                      </div>
-                    </div>
-                    <label className="relative inline-flex shrink-0 cursor-pointer items-center">
-                      <input
-                        type="checkbox"
-                        checked={settings.enableConvertToGreen || false}
-                        onChange={e =>
-                          handleChange('enableConvertToGreen', e.target.checked)
-                        }
-                        className="peer sr-only"
-                      />
-                      <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-                    </label>
-                  </div>
-
-                  {/* 功能介绍卡片 */}
-                  <div className="mt-4 rounded-lg bg-neutral-100 p-3 dark:bg-neutral-800">
-                    <div className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
-                      <p className="mb-2">
-                        在生豆库功能上线前，你可能用熟豆记录来管理生豆。此功能可将这些旧数据转换为正确的生豆库格式。
-                      </p>
-                      <p className="mb-2">
-                        转换后，已用掉的部分会变成「烘焙记录 +
-                        新熟豆」，剩余部分保留在生豆中。原有的冲煮笔记会自动迁移到新熟豆，快捷扣除等变动记录会被清理。
-                      </p>
-                      <p className="text-neutral-500 dark:text-neutral-500">
-                        仅限未关联生豆来源的熟豆使用，数据变动较大，建议先备份。
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+          </>
+        )}
+      </SettingSection>
     </SettingPage>
   );
 };

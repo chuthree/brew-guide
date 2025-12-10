@@ -129,14 +129,14 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
           hapticsUtils.success();
         }
       } else {
-        alert('上传失败，请重试');
+        alert('添加失败，请重试');
         if (hapticFeedback) {
           hapticsUtils.error();
         }
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('上传失败：' + (error as Error).message);
+      alert('添加失败：' + (error as Error).message);
       if (hapticFeedback) {
         hapticsUtils.error();
       }
@@ -254,7 +254,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                         disabled={isUploading}
                         className="rounded px-2.5 py-1 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 disabled:opacity-50 dark:text-neutral-400 dark:hover:bg-neutral-700"
                       >
-                        {isUploading ? '上传中...' : hasLogo ? '更换' : '上传'}
+                        {isUploading ? '添加中...' : hasLogo ? '更换' : '添加'}
                       </button>
 
                       {/* 隐藏的文件输入 */}
