@@ -1,6 +1,6 @@
 # 咖啡冲煮指南 (Brew Guide)
 
-一站式咖啡小工具,支持辅助冲煮,豆仓管理与品鉴记录功能。
+一站式咖啡辅助工具，提供冲煮计时、咖啡豆库存管理和品鉴记录功能。
 
 ![应用截图](https://pic1.imgdb.cn/item/6913fbc43203f7be00f6dedd.png)
 
@@ -75,26 +75,14 @@ pnpm cap:android
 
 - 项目架构：[架构文档](docs/ARCHITECTURE.md)
 
-## 许可
+## 许可证
 
-**Copyright © 2025 chuthree. All rights reserved.**
+Copyright © 2025 chu3 (chuthree)
 
-本项目采用 [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html) 许可证开源。
+本项目采用 [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html) 开源协议。
 
-**这意味着**：
+## 链接
 
-- ✅ 可以自由使用、修改和分发
-- ✅ 可以用于商业用途
-- ❌ 衍生作品必须同样采用 GPL-3.0 开源
-- ❌ 不能闭源商用
-
-**官方仓库**：
-
-- GitHub: https://github.com/chuthree/brew-guide
-- Gitee: https://gitee.com/chu3/brew-guide
-
-**首次发布**：2025-02-01
-
-## 相关链接
-
-- **服务状态**：[https://status.chu3.top/](https://status.chu3.top/)
+- **GitHub**: https://github.com/chuthree/brew-guide
+- **Gitee**: https://gitee.com/chu3/brew-guide
+- **服务状态**: https://status.chu3.top
