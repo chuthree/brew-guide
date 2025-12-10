@@ -20,7 +20,7 @@ import {
   getAvailableSortTypesForView,
   getSortTypeLabelByState,
 } from '../SortSelector';
-import { X, ArrowUpRight, AlignLeft } from 'lucide-react';
+import { X, AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   FlavorPeriodStatus,
@@ -308,7 +308,6 @@ interface ViewSwitcherProps {
   originalTotalWeight?: string;
   rankingBeanType?: BeanType;
   onRankingBeanTypeChange?: (type: BeanType) => void;
-  onRankingShare?: () => void;
   selectedBeanType?: BeanType;
   onBeanTypeChange?: (type: BeanType) => void;
   selectedBeanState?: BeanState;
@@ -369,7 +368,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   originalTotalWeight,
   rankingBeanType = 'all',
   onRankingBeanTypeChange,
-  onRankingShare,
   selectedBeanType,
   onBeanTypeChange,
   selectedBeanState = 'roasted',
@@ -870,25 +868,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     {/* 固定在右侧的操作按钮 */}
                     <div className="relative z-10 flex flex-shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
                       {/* 年份选择器已移至标题中 */}
-
-                      {/* 分享按钮 - 仅在个人榜单视图中显示且有评分咖啡豆数据时 */}
-                      {viewMode === VIEW_OPTIONS.RANKING &&
-                        onRankingShare &&
-                        rankingBeansCount &&
-                        rankingBeansCount > 0 && (
-                          <button
-                            onClick={onRankingShare}
-                            className="relative pb-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400"
-                          >
-                            <span className="relative underline decoration-sky-500 underline-offset-2">
-                              分享
-                            </span>
-                            <ArrowUpRight
-                              className="ml-1 inline-block h-3 w-3"
-                              color="currentColor"
-                            />
-                          </button>
-                        )}
 
                       {/* 右侧固定按钮的左侧渐变遮罩 */}
                       <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-gradient-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>

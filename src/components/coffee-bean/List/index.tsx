@@ -81,9 +81,7 @@ import {
 import ViewSwitcher from './components/ViewSwitcher';
 import InventoryView from './components/InventoryView';
 import StatsView from './components/StatsView';
-import { toPng } from 'html-to-image';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { exportListPreview } from './components/ListExporter';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
@@ -1329,155 +1327,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     return filterBeansBySearch(emptyBeans);
   }, [emptyBeans, showEmptyBeans, filterBeansBySearch]);
 
-  const [_isExportingRanking, setIsExportingRanking] = useState(false);
-
-  // 处理榜单分享
-  const handleRankingShare = async () => {
-    // 找到榜单容器
-    const rankingContainer = document.querySelector(
-      '.coffee-bean-ranking-container'
-    );
-    if (!rankingContainer) {
-      showToast({
-        type: 'error',
-        title: '无法找到榜单数据容器',
-      });
-      return;
-    }
-
-    setIsExportingRanking(true);
-
-    try {
-      // 创建一个临时容器用于导出
-      const tempContainer = document.createElement('div');
-      const isDarkMode = document.documentElement.classList.contains('dark');
-      const backgroundColor = isDarkMode ? '#171717' : '#fafafa';
-
-      // 设置样式
-      tempContainer.style.backgroundColor = backgroundColor;
-      tempContainer.style.maxWidth = '100%';
-      tempContainer.style.width = '350px';
-      tempContainer.style.fontFamily =
-        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
-
-      if (isDarkMode) {
-        tempContainer.classList.add('dark');
-      }
-
-      // 复制榜单内容到临时容器
-      const clone = rankingContainer.cloneNode(true) as HTMLElement;
-
-      // 移除未评分咖啡豆部分
-      const unratedSection = clone.querySelector('.mt-4');
-      if (unratedSection) {
-        unratedSection.remove();
-      }
-
-      // 调整克隆内容的样式，移除多余的内边距
-      clone.style.padding = '0';
-      clone.style.paddingTop = '0';
-      clone.style.paddingBottom = '0';
-
-      // 调整榜单内部元素的内边距
-      const listItems = clone.querySelectorAll('[class*="py-2"]');
-      listItems.forEach(item => {
-        (item as HTMLElement).style.paddingTop = '4px';
-        (item as HTMLElement).style.paddingBottom = '4px';
-      });
-
-      // 移除底部额外的内边距
-      if (clone.classList.contains('pb-16')) {
-        clone.classList.remove('pb-16');
-        clone.style.paddingBottom = '0';
-      }
-
-      // 添加标题
-      const title = document.createElement('h2');
-      title.innerText = '个人咖啡豆榜单';
-      title.style.textAlign = 'left';
-      title.style.marginBottom = '8px';
-      title.style.fontSize = '12px';
-      title.style.color = isDarkMode ? '#f5f5f5' : '#262626';
-      title.style.padding = '24px';
-
-      tempContainer.appendChild(title);
-      tempContainer.appendChild(clone);
-
-      // 获取用户名
-      const { Storage } = await import('@/lib/core/storage');
-      const settingsStr = await Storage.get('brewGuideSettings');
-      let username = '';
-      if (settingsStr) {
-        try {
-          const settings = JSON.parse(settingsStr);
-          username = settings.username?.trim() || '';
-        } catch (e) {
-          console.error('解析用户设置失败', e);
-        }
-      }
-
-      // 添加底部标记
-      const footer = document.createElement('p');
-      footer.style.textAlign = 'left';
-      footer.style.marginTop = '8px';
-      footer.style.fontSize = '11px';
-      footer.style.color = isDarkMode ? '#a3a3a3' : '#525252';
-      footer.style.padding = '24px';
-      footer.style.display = 'flex';
-      footer.style.justifyContent = 'space-between';
-
-      if (username) {
-        // 如果有用户名，将用户名放在左边，Brew Guide放在右边
-        const usernameSpan = document.createElement('span');
-        usernameSpan.innerText = `@${username}`;
-
-        const appNameSpan = document.createElement('span');
-        appNameSpan.innerText = '—— Brew Guide';
-
-        footer.appendChild(usernameSpan);
-        footer.appendChild(appNameSpan);
-      } else {
-        // 如果没有用户名，保持原样
-        footer.innerText = '—— Brew Guide';
-      }
-
-      tempContainer.appendChild(footer);
-
-      // 添加到文档以便能够导出
-      document.body.appendChild(tempContainer);
-
-      // 使用html-to-image生成PNG
-      const imageData = await toPng(tempContainer, {
-        quality: 1,
-        pixelRatio: 5,
-        backgroundColor: backgroundColor,
-      });
-
-      // 删除临时容器
-      document.body.removeChild(tempContainer);
-
-      // 使用统一的临时文件管理器分享图片
-      await TempFileManager.shareImageFile(imageData, 'coffee-ranking', {
-        title: '我的咖啡豆个人榜单',
-        text: '我的咖啡豆个人榜单',
-        dialogTitle: '分享我的咖啡豆个人榜单',
-      });
-
-      showToast({
-        type: 'success',
-        title: '个人榜单已保存为图片',
-      });
-    } catch (error) {
-      console.error('生成个人榜单图片失败', error);
-      showToast({
-        type: 'error',
-        title: '生成图片失败',
-      });
-    } finally {
-      setIsExportingRanking(false);
-    }
-  };
-
   const [isExportingPreview, setIsExportingPreview] = useState(false);
 
   // 处理预览图导出
@@ -1625,7 +1474,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           globalCache.rankingBeanType = newType;
           saveRankingBeanTypePreference(newType);
         }}
-        onRankingShare={handleRankingShare}
         selectedBeanType={selectedBeanType}
         onBeanTypeChange={handleBeanTypeChange}
         selectedBeanState={selectedBeanState}
