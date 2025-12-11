@@ -189,22 +189,13 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         <SettingRow
           label="自动填充识图图片"
           description="单张图片识别后自动填充到表单图片"
+          isLast
         >
           <SettingToggle
             checked={settings.autoFillRecognitionImage || false}
             onChange={checked =>
               handleChange('autoFillRecognitionImage', checked)
             }
-          />
-        </SettingRow>
-        <SettingRow
-          label="沉浸式添加"
-          description="手动添加改用全屏且简洁表单"
-          isLast
-        >
-          <SettingToggle
-            checked={settings.immersiveAdd || false}
-            onChange={checked => handleChange('immersiveAdd', checked)}
           />
         </SettingRow>
       </SettingSection>

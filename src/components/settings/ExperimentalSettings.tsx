@@ -68,11 +68,21 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
   return (
     <SettingPage title="实验性功能" isVisible={isVisible} onClose={handleClose}>
       <SettingSection
+        title="咖啡豆"
+        footer="手动添加咖啡豆时，使用全屏且简洁的表单。"
+      >
+        <SettingRow label="沉浸式添加" isLast>
+          <SettingToggle
+            checked={settings.immersiveAdd || false}
+            onChange={checked => handleChange('immersiveAdd', checked)}
+          />
+        </SettingRow>
+      </SettingSection>
+      <SettingSection
         title="笔记"
-        className="-mt-4"
         footer="分享单个笔记时，将笔记转换为简洁的图片与文案，优化视觉效果以适配社交平台分享。"
       >
-        <SettingRow label="图文分享模式" isLast>
+        <SettingRow label="图文分享" isLast>
           <SettingToggle
             checked={settings.artisticSharingEnabled ?? false}
             onChange={checked =>
