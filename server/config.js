@@ -154,6 +154,15 @@ export const aiConfig = {
     maxTokens: 2000,
     timeout: 60000,
   },
+  // 反馈审核
+  feedbackModeration: {
+    baseURL:
+      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    model: 'deepseek-v3.1',
+    temperature: 0.1, // 低温度以获得确定性结果
+    maxTokens: 500,
+    timeout: 10000,
+  },
   // 并发控制
   maxConcurrentRequests: 3,
 };
@@ -217,6 +226,24 @@ export const aiPrompts = {
 2. 如果某项数据为0或缺失，自然跳过不提
 3. 保持积极温暖的语调
 4. 纯文本输出，不要 JSON、不要 markdown`,
+
+  feedbackModeration: `你是内容审核助手。请检查以下用户反馈内容是否包含违规信息（如仇恨言论、暴力、色情、垃圾广告、政治敏感、人身攻击等）。
+
+## 输出格式（严格遵守 JSON）
+{
+  "safe": boolean
+}
+
+## 审核标准
+1. 允许：对产品的建议、Bug反馈、一般性吐槽、咖啡相关讨论。
+2. 禁止：
+   - 明显的垃圾广告
+   - 严重的脏话或人身攻击
+   - 色情、暴力、恐怖内容
+   - 政治敏感内容
+   - 恶意刷屏
+
+请只返回 JSON，不要包含其他文本。`,
 };
 
 /**

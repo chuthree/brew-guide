@@ -179,8 +179,59 @@ export async function generateYearlyReportStreaming(dataSummary) {
   return response;
 }
 
+/**
+ * 审核反馈内容
+ *
+ * @param {string} content - 反馈内容
+ * @returns {Promise<{safe: boolean}>} 审核结果
+ */
+export async function moderateFeedback(content) {
+  const startTime = Date.now();
+  logger.info('🤖 Starting feedback moderation...');
+
+  try {
+    const response = await axiosWithRetry({
+      method: 'post',
+      url: aiConfig.feedbackModeration.baseURL,
+      data: {
+        model: aiConfig.feedbackModeration.model,
+        messages: [
+          { role: 'system', content: aiPrompts.feedbackModeration },
+          { role: 'user', content: content },
+        ],
+        temperature: aiConfig.feedbackModeration.temperature,
+        max_tokens: aiConfig.feedbackModeration.maxTokens,
+        response_format: { type: 'json_object' },
+      },
+      headers: {
+        Authorization: `Bearer ${apiKeys.siliconflow}`,
+        'Content-Type': 'application/json',
+      },
+      timeout: aiConfig.feedbackModeration.timeout,
+    });
+
+    const duration = Date.now() - startTime;
+    logger.logAI(aiConfig.feedbackModeration.model, duration);
+
+    const contentStr = response.data.choices[0]?.message?.content;
+    if (!contentStr) {
+      throw new Error('Empty response from AI');
+    }
+
+    const result = JSON.parse(contentStr);
+    return {
+      safe: typeof result.safe === 'boolean' ? result.safe : false,
+    };
+  } catch (error) {
+    logger.error('Feedback moderation failed:', error);
+    // AI 服务故障时，默认为不安全（转人工）
+    return { safe: false };
+  }
+}
+
 export default {
   recognizeBeanStreaming,
   recognizeBean,
   generateYearlyReportStreaming,
+  moderateFeedback,
 };

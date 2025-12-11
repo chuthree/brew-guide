@@ -17,6 +17,7 @@ import {
   updateFeedback,
   deleteFeedback,
 } from '../services/feedback-storage.js';
+import { moderateFeedback } from '../services/ai.js';
 import { hashIP, generateId } from '../utils/crypto.js';
 import { sanitizeContent } from '../utils/sanitize.js';
 import {
@@ -76,54 +77,77 @@ router.get('/feedbacks', (req, res) => {
  * POST /api/feedbacks
  * 提交新反馈
  */
-router.post('/feedbacks', feedbackRateLimiter, express.json(), (req, res) => {
-  try {
-    const { content } = req.body;
+router.post(
+  '/feedbacks',
+  feedbackRateLimiter,
+  express.json(),
+  async (req, res) => {
+    try {
+      const { content } = req.body;
 
-    // 验证内容
-    const validation = validateFeedbackContent(content);
-    if (!validation.valid) {
-      return res.status(400).json({ error: validation.error });
-    }
+      // 验证内容
+      const validation = validateFeedbackContent(content);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
 
-    const clientIP = getClientIP(req);
-    const ipHash = hashIP(clientIP);
+      const clientIP = getClientIP(req);
+      const ipHash = hashIP(clientIP);
 
-    // XSS 防护
-    const safeContent = sanitizeContent(content.trim());
+      // XSS 防护
+      const safeContent = sanitizeContent(content.trim());
 
-    const newFeedback = {
-      id: generateId(),
-      content: safeContent,
-      ipHash,
-      votes: 0,
-      votedIpHashes: [],
-      status: 'pending',
-      reply: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      // AI 内容审核
+      let moderationResult = { safe: false };
+      try {
+        moderationResult = await moderateFeedback(safeContent);
+      } catch (error) {
+        logger.error(
+          'AI moderation failed, falling back to manual review:',
+          error
+        );
+        // 保持 safe: false, status: pending
+      }
 
-    addFeedback(newFeedback);
-    logger.info(`New feedback submitted: ${safeContent.substring(0, 50)}...`);
-
-    res.status(201).json({
-      success: true,
-      feedback: {
-        id: newFeedback.id,
-        content: newFeedback.content,
+      const newFeedback = {
+        id: generateId(),
+        content: safeContent,
+        ipHash,
         votes: 0,
-        status: newFeedback.status,
-        createdAt: newFeedback.createdAt,
-        hasVoted: false,
-        isOwner: true,
-      },
-    });
-  } catch (error) {
-    logger.error('Failed to submit feedback:', error);
-    res.status(500).json({ error: '提交反馈失败' });
+        votedIpHashes: [],
+        // 审核通过则直接公开(open)，否则待人工审核(pending)
+        status: moderationResult.safe ? 'open' : 'pending',
+        aiModeration: moderationResult,
+        reply: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      addFeedback(newFeedback);
+      logger.info(
+        `New feedback submitted: ${safeContent.substring(0, 50)}... [AI: ${
+          moderationResult.safe ? 'PASS' : 'FAIL'
+        }]`
+      );
+
+      res.status(201).json({
+        success: true,
+        feedback: {
+          id: newFeedback.id,
+          content: newFeedback.content,
+          votes: 0,
+          status: newFeedback.status,
+          createdAt: newFeedback.createdAt,
+          hasVoted: false,
+          isOwner: true,
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to submit feedback:', error);
+      res.status(500).json({ error: '提交反馈失败' });
+    }
   }
-});
+);
 
 /**
  * POST /api/feedbacks/:id/vote
