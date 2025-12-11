@@ -1,5 +1,5 @@
 {
-  "version": "1.5.6",
+  "version": "1.5.7",
   "downloadUrl": "https://gitee.com/chu3/brew-guide/releases",
-  "releaseNotes": "加入想法收集站，识别咖啡豆可多选，详情页备注可直接编辑等"
+  "releaseNotes": "咖啡豆添加庄园字段并支持无感编辑，新增笔记设置及实验性的图文分享、沉浸式添加功能"
 }
