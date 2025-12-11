@@ -87,20 +87,22 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         </SettingRow>
 
         <SettingRow label="日期显示模式">
-          <ButtonGroup
-            value={settings.dateDisplayMode || 'date'}
-            options={[
-              { value: 'date', label: '日期' },
-              { value: 'flavorPeriod', label: '赏味期' },
-              { value: 'agingDays', label: '养豆天数' },
-            ]}
-            onChange={value =>
-              handleChange(
-                'dateDisplayMode',
-                value as 'date' | 'flavorPeriod' | 'agingDays'
-              )
-            }
-          />
+          <div className="flex h-0 items-center">
+            <ButtonGroup
+              value={settings.dateDisplayMode || 'date'}
+              options={[
+                { value: 'date', label: '日期' },
+                { value: 'flavorPeriod', label: '赏味期' },
+                { value: 'agingDays', label: '养豆天数' },
+              ]}
+              onChange={value =>
+                handleChange(
+                  'dateDisplayMode',
+                  value as 'date' | 'flavorPeriod' | 'agingDays'
+                )
+              }
+            />
+          </div>
         </SettingRow>
 
         <SettingRow label="显示总价格">
@@ -146,26 +148,16 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             </SettingRow>
             {settings.limitNotesLines && (
               <SettingRow isLast vertical>
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    最大显示行数
-                  </span>
-                  <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {settings.notesMaxLines || 3}行
-                  </span>
-                </div>
-                <div className="w-full pt-2 pb-1">
-                  <SettingSlider
-                    min={1}
-                    max={5}
-                    step={1}
-                    value={settings.notesMaxLines || 3}
-                    onChange={val => handleChange('notesMaxLines', val)}
-                    minLabel="1行"
-                    maxLabel="5行"
-                    showTicks
-                  />
-                </div>
+                <SettingSlider
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={settings.notesMaxLines || 3}
+                  onChange={val => handleChange('notesMaxLines', val)}
+                  minLabel="1行"
+                  maxLabel="5行"
+                  showTicks
+                />
               </SettingRow>
             )}
           </>
@@ -193,10 +185,10 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="识图添加设置">
+      <SettingSection title="咖啡豆添加设置">
         <SettingRow
           label="自动填充识图图片"
-          description="单张图片识别后自动填充到表单图片字段"
+          description="单张图片识别后自动填充到表单图片"
         >
           <SettingToggle
             checked={settings.autoFillRecognitionImage || false}
@@ -207,7 +199,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         </SettingRow>
         <SettingRow
           label="沉浸式添加"
-          description="手动添加时直接进入可编辑的详情页"
+          description="手动添加改用全屏且简洁表单"
           isLast
         >
           <SettingToggle
@@ -217,12 +209,11 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="生豆库设置">
-        <SettingRow
-          label="启用生豆库"
-          description="在咖啡豆库存概要切换生豆/熟豆库"
-          isLast={!settings.enableGreenBeanInventory}
-        >
+      <SettingSection
+        title="生豆库设置"
+        footer="在咖啡豆库存概要中点击“咖啡豆”来切换生豆/熟豆库"
+      >
+        <SettingRow label="启用生豆库" isLast>
           <SettingToggle
             checked={settings.enableGreenBeanInventory || false}
             onChange={checked =>
@@ -230,27 +221,16 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             }
           />
         </SettingRow>
+      </SettingSection>
 
-        {settings.enableGreenBeanInventory && (
-          <>
-            <SettingRow
-              label="启用熟豆转生豆"
-              description="在熟豆详情页显示转换入口"
-              isLast
-            >
-              <SettingToggle
-                checked={settings.enableConvertToGreen || false}
-                onChange={checked =>
-                  handleChange('enableConvertToGreen', checked)
-                }
-              />
-            </SettingRow>
-
-            <div className="p-4 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-              <p className="mb-2">
+      {settings.enableGreenBeanInventory && (
+        <SettingSection
+          footer={
+            <div className="space-y-2 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+              <p>
                 在生豆库功能上线前，你可能用熟豆记录来管理生豆。此功能可将这些旧数据转换为正确的生豆库格式。
               </p>
-              <p className="mb-2">
+              <p>
                 转换后，已用掉的部分会变成「烘焙记录 +
                 新熟豆」，剩余部分保留在生豆中。原有的冲煮笔记会自动迁移到新熟豆，快捷扣除等变动记录会被清理。
               </p>
@@ -258,9 +238,18 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                 仅限未关联生豆来源的熟豆使用，数据变动较大，建议先备份。
               </p>
             </div>
-          </>
-        )}
-      </SettingSection>
+          }
+        >
+          <SettingRow label="启用熟豆转生豆" isLast>
+            <SettingToggle
+              checked={settings.enableConvertToGreen || false}
+              onChange={checked =>
+                handleChange('enableConvertToGreen', checked)
+              }
+            />
+          </SettingRow>
+        </SettingSection>
+      )}
     </SettingPage>
   );
 };

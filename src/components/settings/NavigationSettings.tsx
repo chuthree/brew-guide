@@ -4,7 +4,12 @@ import React from 'react';
 import { SettingsOptions } from './Settings';
 import hapticsUtils from '@/lib/ui/haptics';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { SettingPage } from './atomic';
+import {
+  SettingPage,
+  SettingSection,
+  SettingRow,
+  SettingToggle,
+} from './atomic';
 import {
   ViewOption,
   VIEW_LABELS,
@@ -218,25 +223,6 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
     }
   ).length;
 
-  // 开关组件
-  const Switch = ({
-    checked,
-    onChange,
-  }: {
-    checked: boolean;
-    onChange: () => void;
-  }) => (
-    <label className="relative inline-flex cursor-pointer items-center">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="peer sr-only"
-      />
-      <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-    </label>
-  );
-
   const getLabel = (view: ViewOption) => {
     return settings.simplifiedViewLabels
       ? SIMPLIFIED_VIEW_LABELS[view]
@@ -246,121 +232,86 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
   return (
     <SettingPage title="导航栏设置" isVisible={isVisible} onClose={handleClose}>
       {/* 通用设置 */}
-      <div className="-mt-4 px-6 py-4">
-        <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-          通用
-        </h3>
-        <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              简化标签名称
-            </span>
-            <Switch
-              checked={settings.simplifiedViewLabels ?? false}
-              onChange={() =>
-                handleChange(
-                  'simplifiedViewLabels',
-                  !settings.simplifiedViewLabels
-                )
-              }
-            />
-          </div>
-        </div>
-        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-          开启后，导航栏标签将使用更简洁的名称（如“库存”代替“咖啡豆库存”）
-        </p>
-      </div>
+      <SettingSection title="通用" className="-mt-4">
+        <SettingRow
+          label="简化标签名称"
+          description="开启后，导航栏标签将使用更简洁的名称（如“库存”代替“咖啡豆库存”）"
+          isLast
+        >
+          <SettingToggle
+            checked={settings.simplifiedViewLabels ?? false}
+            onChange={checked => handleChange('simplifiedViewLabels', checked)}
+          />
+        </SettingRow>
+      </SettingSection>
 
       {/* 主导航显示设置 */}
-      <div className="px-6 py-4">
-        <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-          主导航显示
-        </h3>
-        <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              冲煮
-            </span>
-            <Switch
-              checked={visibleTabs.brewing}
-              onChange={() => handleMainTabToggle('brewing')}
+      <SettingSection title="主导航显示" footer="至少需要保留一个主导航标签页">
+        <SettingRow label="冲煮">
+          <SettingToggle
+            checked={visibleTabs.brewing}
+            onChange={() => handleMainTabToggle('brewing')}
+          />
+        </SettingRow>
+        {availableUnpinnedViewsCount > 0 && (
+          <SettingRow
+            label={settings.simplifiedViewLabels ? '库存' : '咖啡豆库存'}
+          >
+            <SettingToggle
+              checked={visibleTabs.coffeeBean}
+              onChange={() => handleMainTabToggle('coffeeBean')}
             />
-          </div>
-          {availableUnpinnedViewsCount > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                {settings.simplifiedViewLabels ? '库存' : '咖啡豆库存'}
-              </span>
-              <Switch
-                checked={visibleTabs.coffeeBean}
-                onChange={() => handleMainTabToggle('coffeeBean')}
-              />
-            </div>
-          )}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              笔记
-            </span>
-            <Switch
-              checked={visibleTabs.notes}
-              onChange={() => handleMainTabToggle('notes')}
-            />
-          </div>
-        </div>
-        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-          至少需要保留一个主导航标签页
-        </p>
-      </div>
+          </SettingRow>
+        )}
+        <SettingRow label="笔记" isLast>
+          <SettingToggle
+            checked={visibleTabs.notes}
+            onChange={() => handleMainTabToggle('notes')}
+          />
+        </SettingRow>
+      </SettingSection>
 
       {/* 咖啡豆视图显示设置 */}
       {visibleTabs.coffeeBean && availableUnpinnedViewsCount > 0 && (
-        <div className="px-6 py-4">
-          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-            视图显示
-          </h3>
-          <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-            {Object.values(VIEW_OPTIONS)
-              .filter(view => !pinnedViews.includes(view))
-              .map(view => (
-                <div key={view} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    {getLabel(view)}
-                  </span>
-                  <Switch
-                    checked={coffeeBeanViews[view] ?? true}
-                    onChange={() => handleBeanViewToggle(view)}
-                  />
-                </div>
-              ))}
-          </div>
-          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-            控制在咖啡豆页面下拉菜单中显示的视图选项
-          </p>
-        </div>
+        <SettingSection
+          title="视图显示"
+          footer="控制在咖啡豆页面下拉菜单中显示的视图选项"
+        >
+          {Object.values(VIEW_OPTIONS)
+            .filter(view => !pinnedViews.includes(view))
+            .map((view, index, array) => (
+              <SettingRow
+                key={view}
+                label={getLabel(view)}
+                isLast={index === array.length - 1}
+              >
+                <SettingToggle
+                  checked={coffeeBeanViews[view] ?? true}
+                  onChange={() => handleBeanViewToggle(view)}
+                />
+              </SettingRow>
+            ))}
+        </SettingSection>
       )}
 
       {/* 视图固定设置 */}
-      <div className="px-6 py-4">
-        <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-          固定视图
-        </h3>
-        <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-          {Object.values(VIEW_OPTIONS).map(view => (
-            <div key={view} className="flex items-center justify-between">
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                {getLabel(view)}
-              </span>
-              <Switch
-                checked={pinnedViews.includes(view)}
-                onChange={() => handlePinViewToggle(view)}
-              />
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-          开启后，该视图将作为独立标签页显示在主导航栏右侧
-        </p>
-      </div>
+      <SettingSection
+        title="固定视图"
+        footer="开启后，该视图将作为独立标签页显示在主导航栏右侧"
+      >
+        {Object.values(VIEW_OPTIONS).map((view, index, array) => (
+          <SettingRow
+            key={view}
+            label={getLabel(view)}
+            isLast={index === array.length - 1}
+          >
+            <SettingToggle
+              checked={pinnedViews.includes(view)}
+              onChange={() => handlePinViewToggle(view)}
+            />
+          </SettingRow>
+        ))}
+      </SettingSection>
     </SettingPage>
   );
 };

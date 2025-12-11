@@ -7,7 +7,12 @@ import { Capacitor } from '@capacitor/core';
 import hapticsUtils from '@/lib/ui/haptics';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import { SettingPage } from './atomic';
+import {
+  SettingPage,
+  SettingSection,
+  SettingRow,
+  SettingToggle,
+} from './atomic';
 
 interface NotificationSettingsProps {
   settings: SettingsOptions;
@@ -219,103 +224,54 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     }
   };
 
-  // 开关组件
-  const Switch = ({
-    checked,
-    onChange,
-  }: {
-    checked: boolean;
-    onChange: () => void;
-  }) => (
-    <label className="relative inline-flex cursor-pointer items-center">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="peer sr-only"
-      />
-      <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-    </label>
-  );
-
   if (!shouldRender) return null;
 
   return (
     <SettingPage title="通知设置" isVisible={isVisible} onClose={handleClose}>
-      {/* 滚动内容区域 */}
       {/* 通用设置 */}
-      <div className="-mt-4 px-6 py-4">
-        <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-          通用
-        </h3>
-        <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-          {/* 提示音 */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              提示音
-            </span>
-            <Switch
-              checked={settings.notificationSound}
-              onChange={() =>
-                handleChange('notificationSound', !settings.notificationSound)
-              }
-            />
-          </div>
+      <SettingSection title="通用" className="-mt-4">
+        <SettingRow label="提示音">
+          <SettingToggle
+            checked={settings.notificationSound}
+            onChange={checked => handleChange('notificationSound', checked)}
+          />
+        </SettingRow>
 
-          {/* 震动反馈 - 仅在原生应用中显示 */}
-          {isNativeApp && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                震动反馈
-              </span>
-              <Switch
-                checked={settings.hapticFeedback}
-                onChange={() =>
-                  handleChange('hapticFeedback', !settings.hapticFeedback)
-                }
-              />
-            </div>
-          )}
-        </div>
-      </div>
+        {/* 震动反馈 - 仅在原生应用中显示 */}
+        {isNativeApp && (
+          <SettingRow label="震动反馈">
+            <SettingToggle
+              checked={settings.hapticFeedback}
+              onChange={checked => handleChange('hapticFeedback', checked)}
+            />
+          </SettingRow>
+        )}
+      </SettingSection>
 
       {/* 每日提醒 - 仅在原生应用中显示 */}
       {isNativeApp && (
-        <div className="px-6 py-4">
-          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-            每日提醒
-          </h3>
-          <div className="space-y-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                开启提醒
-              </span>
-              <Switch
-                checked={settings.dailyReminder}
-                onChange={() =>
-                  handleDailyReminderChange(!settings.dailyReminder)
-                }
-              />
-            </div>
+        <SettingSection
+          title="每日提醒"
+          footer="开启后，将在设定时间提醒您冲一杯咖啡"
+        >
+          <SettingRow label="开启提醒">
+            <SettingToggle
+              checked={settings.dailyReminder}
+              onChange={checked => handleDailyReminderChange(checked)}
+            />
+          </SettingRow>
 
-            {settings.dailyReminder && (
-              <div className="flex items-center justify-between border-t border-neutral-200 pt-4 dark:border-neutral-700">
-                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  提醒时间
-                </span>
-                <input
-                  type="time"
-                  value={settings.dailyReminderTime}
-                  onChange={handleTimeChange}
-                  className="rounded bg-white px-2 py-1 text-sm font-medium text-neutral-800 focus:ring-2 focus:ring-neutral-500 focus:outline-hidden dark:bg-neutral-700 dark:text-neutral-200"
-                />
-              </div>
-            )}
-          </div>
-          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-            开启后，将在设定时间提醒您冲一杯咖啡
-          </p>
-        </div>
+          {settings.dailyReminder && (
+            <SettingRow label="提醒时间">
+              <input
+                type="time"
+                value={settings.dailyReminderTime}
+                onChange={handleTimeChange}
+                className="rounded bg-white px-2 py-1 text-sm font-medium text-neutral-800 focus:ring-2 focus:ring-neutral-500 focus:outline-hidden dark:bg-neutral-700 dark:text-neutral-200"
+              />
+            </SettingRow>
+          )}
+        </SettingSection>
       )}
     </SettingPage>
   );

@@ -200,7 +200,7 @@ export const defaultSettings: SettingsOptions = {
   textZoomLevel: 1.0,
   layoutSettings: {
     stageInfoReversed: false,
-    progressBarHeight: 4,
+    progressBarHeight: 12,
     controlsReversed: false,
     alwaysShowTimerInfo: true, // 默认显示计时器信息
     showStageDivider: true, // 默认显示阶段分隔线

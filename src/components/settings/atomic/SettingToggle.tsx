@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface SettingToggleProps {
   checked: boolean;
@@ -15,16 +15,35 @@ const SettingToggle: React.FC<SettingToggleProps> = ({
   onChange,
   disabled = false,
 }) => {
+  // 使用内部状态实现即时响应（乐观更新）
+  const [localChecked, setLocalChecked] = useState(checked);
+
+  // 当外部 props 改变时，同步内部状态
+  useEffect(() => {
+    setLocalChecked(checked);
+  }, [checked]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
+    // 立即更新内部状态，提供即时反馈
+    setLocalChecked(newValue);
+
+    // 使用 requestAnimationFrame 确保 UI 渲染优先于逻辑处理
+    requestAnimationFrame(() => {
+      onChange(newValue);
+    });
+  };
+
   return (
-    <label className="relative inline-flex cursor-pointer items-center">
+    <label className="relative inline-flex h-0 w-12 cursor-pointer items-center">
       <input
         type="checkbox"
-        checked={checked}
-        onChange={e => onChange(e.target.checked)}
+        checked={localChecked}
+        onChange={handleChange}
         disabled={disabled}
         className="peer sr-only"
       />
-      <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+      <div className="absolute top-1/2 left-0 h-6 w-12 -translate-y-1/2 rounded-full bg-neutral-200 transition-colors duration-200 peer-checked:bg-neutral-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-7 after:rounded-full after:bg-white after:transition-transform after:duration-200 after:content-[''] peer-checked:after:translate-x-4 dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
     </label>
   );
 };

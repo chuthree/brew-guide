@@ -3,8 +3,14 @@
 import React from 'react';
 
 import { SettingsOptions, defaultSettings } from './Settings';
+import { ButtonGroup } from '@/components/ui/ButtonGroup';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import { SettingPage } from './atomic';
+import {
+  SettingPage,
+  SettingSection,
+  SettingRow,
+  SettingToggle,
+} from './atomic';
 
 interface RandomCoffeeBeanSettingsProps {
   settings: SettingsOptions;
@@ -103,225 +109,98 @@ const RandomCoffeeBeanSettings: React.FC<RandomCoffeeBeanSettingsProps> = ({
       isVisible={isVisible}
       onClose={handleClose}
     >
-      {/* 长按随机类型设置 */}
-      <div className="-mt-4 px-6 py-4">
-        <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-          随机类型
-        </h3>
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="block text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              长按切换咖啡豆类型
-            </label>
-            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              开启后，点击随机按钮选择一种类型，长按随机按钮选择另一种类型
-            </p>
-          </div>
-          <label className="relative ml-4 inline-flex cursor-pointer items-center">
-            <input
-              type="checkbox"
-              checked={randomSettings.enableLongPressRandomType}
-              onChange={e => handleLongPressRandomChange(e.target.checked)}
-              className="peer sr-only"
-            />
-            <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-          </label>
-        </div>
+      <SettingSection title="随机类型">
+        <SettingRow
+          label="长按随机不同类型咖啡豆"
+          isLast={!randomSettings.enableLongPressRandomType}
+        >
+          <SettingToggle
+            checked={randomSettings.enableLongPressRandomType}
+            onChange={handleLongPressRandomChange}
+          />
+        </SettingRow>
 
-        {/* 默认随机类型设置 - 仅在启用长按功能时显示 */}
         {randomSettings.enableLongPressRandomType && (
-          <div className="mt-4 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-            <label className="mb-3 block text-sm font-medium text-neutral-800 dark:text-neutral-200">
-              长按时选择的类型
-            </label>
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={() => handleDefaultRandomTypeChange('espresso')}
-                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  randomSettings.defaultRandomType === 'espresso'
-                    ? 'bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                    : 'bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300'
-                }`}
-              >
-                意式
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDefaultRandomTypeChange('filter')}
-                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  randomSettings.defaultRandomType === 'filter'
-                    ? 'bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                    : 'bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300'
-                }`}
-              >
-                手冲
-              </button>
+          <SettingRow
+            label="长按时随机的类型"
+            description={`点击随机${
+              randomSettings.defaultRandomType === 'espresso' ? '手冲' : '意式'
+            }豆，长按随机${
+              randomSettings.defaultRandomType === 'espresso' ? '意式' : '手冲'
+            }豆`}
+            isLast
+          >
+            <div className="flex h-0 items-center">
+              <ButtonGroup
+                value={randomSettings.defaultRandomType}
+                options={[
+                  { value: 'espresso', label: '意式' },
+                  { value: 'filter', label: '手冲' },
+                ]}
+                onChange={val =>
+                  handleDefaultRandomTypeChange(val as 'espresso' | 'filter')
+                }
+              />
             </div>
-            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-              点击随机：选择
-              {randomSettings.defaultRandomType === 'espresso'
-                ? '手冲'
-                : '意式'}
-              豆 • 长按随机：选择
-              {randomSettings.defaultRandomType === 'espresso'
-                ? '意式'
-                : '手冲'}
-              豆
-            </p>
-          </div>
+          </SettingRow>
         )}
-      </div>
+      </SettingSection>
 
-      {/* 赏味期范围设置 */}
-      <div className="px-6 py-4">
-        <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-          赏味期范围
-        </h3>
-        <p className="mb-4 text-xs text-neutral-500 dark:text-neutral-400">
-          选择随机咖啡豆的赏味期状态范围，不选择任何项目时将包含所有状态
-        </p>
+      <SettingSection title="随机范围">
+        <SettingRow label="养豆期">
+          <SettingToggle
+            checked={randomSettings.flavorPeriodRanges.aging}
+            onChange={checked =>
+              handleFlavorPeriodRangeChange('aging', checked)
+            }
+          />
+        </SettingRow>
 
-        <div className="space-y-4">
-          {/* 养豆期 */}
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                养豆期
-              </span>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                正在养豆阶段的咖啡豆
-              </p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={randomSettings.flavorPeriodRanges.aging}
-                onChange={e =>
-                  handleFlavorPeriodRangeChange('aging', e.target.checked)
-                }
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
+        <SettingRow label="赏味期">
+          <SettingToggle
+            checked={randomSettings.flavorPeriodRanges.optimal}
+            onChange={checked =>
+              handleFlavorPeriodRangeChange('optimal', checked)
+            }
+          />
+        </SettingRow>
 
-          {/* 赏味期 */}
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                赏味期
-              </span>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                处于最佳赏味期的咖啡豆
-              </p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={randomSettings.flavorPeriodRanges.optimal}
-                onChange={e =>
-                  handleFlavorPeriodRangeChange('optimal', e.target.checked)
-                }
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
+        <SettingRow label="衰退期">
+          <SettingToggle
+            checked={randomSettings.flavorPeriodRanges.decline}
+            onChange={checked =>
+              handleFlavorPeriodRangeChange('decline', checked)
+            }
+          />
+        </SettingRow>
 
-          {/* 衰退期 */}
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                衰退期
-              </span>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                已过赏味期的咖啡豆
-              </p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={randomSettings.flavorPeriodRanges.decline}
-                onChange={e =>
-                  handleFlavorPeriodRangeChange('decline', e.target.checked)
-                }
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
+        <SettingRow label="冷冻">
+          <SettingToggle
+            checked={randomSettings.flavorPeriodRanges.frozen}
+            onChange={checked =>
+              handleFlavorPeriodRangeChange('frozen', checked)
+            }
+          />
+        </SettingRow>
 
-          {/* 冷冻 */}
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                冷冻
-              </span>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                冷冻保存的咖啡豆
-              </p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={randomSettings.flavorPeriodRanges.frozen}
-                onChange={e =>
-                  handleFlavorPeriodRangeChange('frozen', e.target.checked)
-                }
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
+        <SettingRow label="在途">
+          <SettingToggle
+            checked={randomSettings.flavorPeriodRanges.inTransit}
+            onChange={checked =>
+              handleFlavorPeriodRangeChange('inTransit', checked)
+            }
+          />
+        </SettingRow>
 
-          {/* 在途 */}
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                在途
-              </span>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                运输中的咖啡豆
-              </p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={randomSettings.flavorPeriodRanges.inTransit}
-                onChange={e =>
-                  handleFlavorPeriodRangeChange('inTransit', e.target.checked)
-                }
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
-
-          {/* 未知 */}
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                未知状态
-              </span>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                无法确定赏味期状态的咖啡豆
-              </p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={randomSettings.flavorPeriodRanges.unknown}
-                onChange={e =>
-                  handleFlavorPeriodRangeChange('unknown', e.target.checked)
-                }
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
-            </label>
-          </div>
-        </div>
-      </div>
+        <SettingRow label="未知状态" isLast>
+          <SettingToggle
+            checked={randomSettings.flavorPeriodRanges.unknown}
+            onChange={checked =>
+              handleFlavorPeriodRangeChange('unknown', checked)
+            }
+          />
+        </SettingRow>
+      </SettingSection>
     </SettingPage>
   );
 };

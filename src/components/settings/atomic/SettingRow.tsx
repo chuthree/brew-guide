@@ -36,7 +36,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
                 {label}
               </span>
               {description && (
-                <span className="mt-1.5 block text-xs text-neutral-500 dark:text-neutral-400">
+                <span className="mt-1.5 block text-xs font-normal text-neutral-500 dark:text-neutral-400">
                   {description}
                 </span>
               )}
@@ -49,9 +49,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
   }
 
   return (
-    <div
-      className={`flex w-full items-stretch px-3.5 text-sm font-medium ${className}`}
-    >
+    <div className={`flex w-full items-stretch px-3.5 ${className}`}>
       <div
         className={`flex min-w-0 flex-1 items-center justify-between py-3.5 ${
           !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
@@ -59,7 +57,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
       >
         {label && (
           <div className="mr-4 flex min-w-0 flex-1 flex-col">
-            <span className="truncate leading-none text-neutral-800 dark:text-neutral-200">
+            <span className="truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
               {label}
             </span>
             {description && (
