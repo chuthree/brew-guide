@@ -20,6 +20,24 @@ export const DEFAULT_ORIGINS = [
   '云南保山',
 ];
 
+export const DEFAULT_ESTATES = [
+  '翡翠庄园',
+  '耶加雪菲',
+  '古吉',
+  '西达摩',
+  '科契尔',
+  '花魁',
+  '哈特曼',
+  '红蜜庄园',
+  '百年庄园',
+  '钻石庄园',
+  '艾丽达庄园',
+  '卡门庄园',
+  '希望庄园',
+  '九十+',
+  '朱苦拉',
+];
+
 export const DEFAULT_PROCESSES = [
   '水洗',
   '日晒',
@@ -89,7 +107,7 @@ const saveCustomPresets = (key: string, presets: string[]): void => {
 
 // 添加自定义预设
 export const addCustomPreset = (
-  key: 'origins' | 'processes' | 'varieties',
+  key: 'origins' | 'estates' | 'processes' | 'varieties',
   value: string
 ): void => {
   if (!isBrowser || !value.trim()) return;
@@ -104,7 +122,7 @@ export const addCustomPreset = (
 
 // 删除自定义预设
 export const removeCustomPreset = (
-  key: 'origins' | 'processes' | 'varieties',
+  key: 'origins' | 'estates' | 'processes' | 'varieties',
   value: string
 ): void => {
   if (!isBrowser) return;
@@ -119,7 +137,7 @@ export const removeCustomPreset = (
 
 // 检查是否为自定义预设
 export const isCustomPreset = (
-  key: 'origins' | 'processes' | 'varieties',
+  key: 'origins' | 'estates' | 'processes' | 'varieties',
   value: string
 ): boolean => {
   if (!isBrowser) return false;
@@ -128,10 +146,11 @@ export const isCustomPreset = (
 
 // 获取完整预设列表（自定义+默认）
 export const getFullPresets = (
-  key: 'origins' | 'processes' | 'varieties'
+  key: 'origins' | 'estates' | 'processes' | 'varieties'
 ): string[] => {
   const defaults = {
     origins: DEFAULT_ORIGINS,
+    estates: DEFAULT_ESTATES,
     processes: DEFAULT_PROCESSES,
     varieties: DEFAULT_VARIETIES,
   };

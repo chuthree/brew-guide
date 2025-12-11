@@ -30,6 +30,7 @@ import {
   extractUniqueVarieties,
   getBeanProcesses,
   getBeanFlavors,
+  getBeanEstates,
 } from '@/lib/utils/beanVarietyUtils';
 import { ExtendedCoffeeBean } from '../../types';
 import GreenBeanStatsView from './GreenBeanStatsView';
@@ -728,6 +729,18 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     return Array.from(originCount.entries()).sort((a, b) => b[1] - a[1]);
   }, [filteredBeans]);
 
+  // 计算庄园统计
+  const estateStats = useMemo(() => {
+    const estateCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const estates = getBeanEstates(bean);
+      estates.forEach(estate => {
+        estateCount.set(estate, (estateCount.get(estate) || 0) + 1);
+      });
+    });
+    return Array.from(estateCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
   // 计算品种统计
   const varietyStats = useMemo(() => {
     const varietyCount = new Map<string, number>();
@@ -767,6 +780,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
   // 如果所有统计都为空，不显示
   if (
     originStats.length === 0 &&
+    estateStats.length === 0 &&
     varietyStats.length === 0 &&
     processStats.length === 0 &&
     flavorStats.length === 0
@@ -782,6 +796,11 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
 
         {/* 产地 */}
         <AttributeCard title="产地" data={originStats} />
+
+        {/* 庄园 */}
+        {estateStats.length > 0 && (
+          <AttributeCard title="庄园" data={estateStats} />
+        )}
 
         {/* 品种 */}
         <AttributeCard title="品种" data={varietyStats} />

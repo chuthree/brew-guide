@@ -11,6 +11,7 @@ import {
   extractUniqueOrigins,
   extractUniqueVarieties,
   getBeanProcesses,
+  getBeanEstates,
 } from '@/lib/utils/beanVarietyUtils';
 
 interface BlendComponentsProps {
@@ -61,7 +62,7 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
 
   // 判断值是否为自定义预设
   const checkIsCustomPreset = (
-    key: 'origins' | 'processes' | 'varieties',
+    key: 'origins' | 'estates' | 'processes' | 'varieties',
     value: string
   ): boolean => {
     return isCustomPreset(key, value);
@@ -69,7 +70,7 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
 
   // 处理删除自定义预设
   const handleRemovePreset = (
-    key: 'origins' | 'processes' | 'varieties',
+    key: 'origins' | 'estates' | 'processes' | 'varieties',
     value: string
   ): void => {
     removeCustomPreset(key, value);
@@ -124,6 +125,26 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
     // 过滤出未使用过的预设
     const unusedPresets = allPresets.filter(p => !usedVarieties.includes(p));
     return [...usedVarieties, ...unusedPresets];
+  }, [beans, _forceUpdate]);
+
+  const currentEstates = useMemo(() => {
+    // 从咖啡豆中统计庄园使用情况
+    const estateCount = new Map<string, number>();
+    beans.forEach(bean => {
+      const estates = getBeanEstates(bean);
+      estates.forEach(estate => {
+        estateCount.set(estate, (estateCount.get(estate) || 0) + 1);
+      });
+    });
+    // 按使用次数排序
+    const usedEstates = Array.from(estateCount.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
+    // 获取完整预设列表
+    const allPresets = getFullPresets('estates');
+    // 过滤出未使用过的预设
+    const unusedPresets = allPresets.filter(p => !usedEstates.includes(p));
+    return [...usedEstates, ...unusedPresets];
   }, [beans, _forceUpdate]);
 
   return (
@@ -196,7 +217,7 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <AutocompleteInput
                   label="产地"
                   value={component.origin || ''}
@@ -208,6 +229,19 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                     checkIsCustomPreset('origins', value)
                   }
                   onRemovePreset={value => handleRemovePreset('origins', value)}
+                />
+
+                <AutocompleteInput
+                  label="庄园"
+                  value={component.estate || ''}
+                  onChange={value => onChange(index, 'estate', value)}
+                  placeholder="庄园"
+                  suggestions={currentEstates}
+                  clearable
+                  isCustomPreset={value =>
+                    checkIsCustomPreset('estates', value)
+                  }
+                  onRemovePreset={value => handleRemovePreset('estates', value)}
                 />
 
                 <AutocompleteInput

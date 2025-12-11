@@ -169,6 +169,7 @@ Content-Type: multipart/form-data
     "blendComponents": [
       {
         "origin": "埃塞俄比亚",
+        "estate": "耶加雪菲",
         "process": "日晒",
         "variety": "原生种"
       }

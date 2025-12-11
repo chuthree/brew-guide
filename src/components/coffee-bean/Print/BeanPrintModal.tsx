@@ -61,7 +61,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   // 提取 bean 组件信息的通用函数
   const extractBeanComponentInfo = (
     bean: CoffeeBean | null,
-    field: 'origin' | 'process' | 'variety'
+    field: 'origin' | 'estate' | 'process' | 'variety'
   ): string => {
     if (!bean?.blendComponents || bean.blendComponents.length === 0) return '';
     const values = Array.from(

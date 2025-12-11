@@ -131,9 +131,10 @@ const Complete: React.FC<CompleteProps> = ({
             </span>
             <div className="ml-4 flex max-w-[60%] flex-col items-end gap-1 text-right text-sm font-medium">
               {blendComponents.map((comp, index) => {
-                // 构建成分文本：产地 · 处理法 · 品种
+                // 构建成分文本：产地 · 庄园 · 处理法 · 品种
                 const componentParts = [
                   comp.origin,
+                  comp.estate,
                   comp.process,
                   comp.variety,
                 ].filter(Boolean);

@@ -513,6 +513,7 @@ function generateBeanTemplateJson() {
     {
       "percentage": 100,
       "origin": "",
+      "estate": "",
       "process": "",
       "variety": ""
     }
@@ -574,7 +575,11 @@ export function beanToReadableText(bean: CoffeeBean): string {
     if (isBlend) {
       // 拼配豆：检查是否有有效的成分信息
       const hasValidBlendInfo = bean.blendComponents.some(
-        component => component.origin || component.process || component.variety
+        component =>
+          component.origin ||
+          component.estate ||
+          component.process ||
+          component.variety
       );
 
       if (hasValidBlendInfo) {
@@ -582,6 +587,7 @@ export function beanToReadableText(bean: CoffeeBean): string {
         bean.blendComponents.forEach((component, index) => {
           const componentText = [
             component.origin || '',
+            component.estate || '',
             component.process || '',
             component.variety || '',
           ]
@@ -600,10 +606,14 @@ export function beanToReadableText(bean: CoffeeBean): string {
       const component = bean.blendComponents[0];
       if (
         component &&
-        (component.origin || component.process || component.variety)
+        (component.origin ||
+          component.estate ||
+          component.process ||
+          component.variety)
       ) {
         text += `成分信息:\n`;
         if (component.origin) text += `产地: ${component.origin}\n`;
+        if (component.estate) text += `庄园: ${component.estate}\n`;
         if (component.process) text += `处理法: ${component.process}\n`;
         if (component.variety) text += `品种: ${component.variety}\n`;
       }
@@ -877,17 +887,24 @@ function parseCoffeeBeanText(text: string): Partial<CoffeeBean> | null {
     bean.roastDate = dateMatch[1].trim();
   }
 
-  // 提取单品豆的成分信息（产地、处理法、品种）
+  // 提取单品豆的成分信息（产地、庄园、处理法、品种）
   const originMatch = text.match(/产地:\s*(.*?)(?:\n|$)/);
+  const estateMatch = text.match(/庄园:\s*(.*?)(?:\n|$)/);
   const processMatch = text.match(/处理法:\s*(.*?)(?:\n|$)/);
   const varietyMatch = text.match(/品种:\s*(.*?)(?:\n|$)/);
 
   // 如果有任何成分信息，创建blendComponents
-  if (originMatch?.[1] || processMatch?.[1] || varietyMatch?.[1]) {
+  if (
+    originMatch?.[1] ||
+    estateMatch?.[1] ||
+    processMatch?.[1] ||
+    varietyMatch?.[1]
+  ) {
     bean.blendComponents = [
       {
         percentage: 100,
         origin: originMatch?.[1]?.trim() || '',
+        estate: estateMatch?.[1]?.trim() || '',
         process: processMatch?.[1]?.trim() || '',
         variety: varietyMatch?.[1]?.trim() || '',
       },

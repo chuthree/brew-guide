@@ -1205,10 +1205,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       const beansWithScores = beansToFilter.map(bean => {
         // 基本信息搜索
         const name = bean.name?.toLowerCase() || '';
-        // 从 blendComponents 获取产地和处理法信息（用于向后兼容搜索）
+        // 从 blendComponents 获取产地、庄园和处理法信息（用于向后兼容搜索）
         const origin =
           bean.blendComponents
             ?.map(c => c.origin)
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase() || '';
+        const estate =
+          bean.blendComponents
+            ?.map(c => c.estate)
             .filter(Boolean)
             .join(' ')
             .toLowerCase() || '';
@@ -1229,12 +1235,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 风味标签搜索 - 将数组转换为字符串进行搜索
         const flavors = bean.flavor?.join(' ').toLowerCase() || '';
 
-        // 拼配组件搜索 - 包含成分中的品种信息
+        // 拼配组件搜索 - 包含成分中的品种、庄园信息
         const blendComponentsText =
           bean.blendComponents
             ?.map(
               comp =>
-                `${comp.percentage || ''} ${comp.origin || ''} ${comp.process || ''} ${comp.variety || ''}`
+                `${comp.percentage || ''} ${comp.origin || ''} ${comp.estate || ''} ${comp.process || ''} ${comp.variety || ''}`
             )
             .join(' ')
             .toLowerCase() || '';
@@ -1251,6 +1257,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         const searchableTexts = [
           { text: name, weight: 3 }, // 名称权重最高
           { text: origin, weight: 2 }, // 产地权重较高
+          { text: estate, weight: 2 }, // 庄园权重较高
           { text: process, weight: 2 }, // 处理法权重较高
           { text: notes, weight: 1 }, // 备注权重一般
           { text: roastLevel, weight: 1 }, // 烘焙度权重一般

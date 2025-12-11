@@ -66,6 +66,7 @@ const CUSTOM_PRESETS_PREFIX = 'brew-guide:custom-presets:';
  */
 const CUSTOM_PRESETS_KEYS = [
   'origins', // 产地
+  'estates', // 庄园
   'processes', // 处理法
   'varieties', // 品种
 ];

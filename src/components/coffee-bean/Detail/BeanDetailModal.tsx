@@ -245,7 +245,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     purchaseDate: '',
     flavor: [],
     notes: '',
-    blendComponents: [{ origin: '', process: '', variety: '' }],
+    blendComponents: [{ origin: '', estate: '', process: '', variety: '' }],
   }));
 
   // 重置临时 bean（当模式或初始状态变化时）
@@ -262,7 +262,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         purchaseDate: '',
         flavor: [],
         notes: '',
-        blendComponents: [{ origin: '', process: '', variety: '' }],
+        blendComponents: [{ origin: '', estate: '', process: '', variety: '' }],
       });
     }
   }, [isAddMode, isOpen, initialBeanState]);
@@ -351,8 +351,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const [showRoastLevelDropdown, setShowRoastLevelDropdown] = useState(false);
   const roastLevelRef = useRef<HTMLDivElement>(null);
 
-  // 成分编辑 refs（产地、处理法、品种）
+  // 成分编辑 refs（产地、庄园、处理法、品种）
   const originRef = useRef<HTMLDivElement>(null);
+  const estateRef = useRef<HTMLDivElement>(null);
   const processRef = useRef<HTMLDivElement>(null);
   const varietyRef = useRef<HTMLDivElement>(null);
 
@@ -554,12 +555,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bean?.id]);
 
-  // 初始化成分值（产地、处理法、品种）- 只在切换咖啡豆时初始化
+  // 初始化成分值（产地、庄园、处理法、品种）- 只在切换咖啡豆时初始化
   useEffect(() => {
     const firstComponent = bean?.blendComponents?.[0];
     if (firstComponent) {
       if (originRef.current && firstComponent.origin) {
         originRef.current.textContent = firstComponent.origin;
+      }
+      if (estateRef.current && firstComponent.estate) {
+        estateRef.current.textContent = firstComponent.estate;
       }
       if (processRef.current && firstComponent.process) {
         processRef.current.textContent = firstComponent.process;
@@ -731,7 +735,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 处理成分编辑（单品豆，只有一个 blendComponent）
   const handleBlendComponentUpdate = (
-    field: 'origin' | 'process' | 'variety',
+    field: 'origin' | 'estate' | 'process' | 'variety',
     value: string
   ) => {
     if (!bean?.blendComponents) return;
@@ -758,6 +762,14 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (originRef.current) {
       const value = originRef.current.textContent || '';
       handleBlendComponentUpdate('origin', value);
+    }
+  };
+
+  // 处理庄园编辑
+  const handleEstateInput = () => {
+    if (estateRef.current) {
+      const value = estateRef.current.textContent || '';
+      handleBlendComponentUpdate('estate', value);
     }
   };
 
@@ -1005,7 +1017,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const createInfoItem = (
     key: string,
     label: string,
-    blendField: 'origin' | 'process' | 'variety',
+    blendField: 'origin' | 'estate' | 'process' | 'variety',
     enableHighlight = false
   ): InfoItem | null => {
     if (!bean?.blendComponents) return null;
@@ -1044,6 +1056,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     // 使用 createInfoItem 函数，避免重复逻辑
     const originItem = createInfoItem('origin', '产地', 'origin', true);
     if (originItem) items.push(originItem);
+
+    const estateItem = createInfoItem('estate', '庄园', 'estate');
+    if (estateItem) items.push(estateItem);
 
     const processItem = createInfoItem('process', '处理法', 'process');
     if (processItem) items.push(processItem);
@@ -1618,7 +1633,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         extractedVariety
                       ) {
                         const currentComponents = prev.blendComponents || [
-                          { origin: '', process: '', variety: '' },
+                          { origin: '', estate: '', process: '', variety: '' },
                         ];
                         const newComponents = [...currentComponents];
                         if (newComponents.length > 0) {
@@ -2028,6 +2043,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
                   // 获取当前值
                   const origin = firstComponent?.origin || '';
+                  const estate = firstComponent?.estate || '';
                   const process = firstComponent?.process || '';
                   const variety = firstComponent?.variety || '';
                   const roastLevel = bean?.roastLevel || '';
@@ -2036,6 +2052,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                   if (
                     !isAddMode &&
                     !origin &&
+                    !estate &&
                     !process &&
                     !variety &&
                     !roastLevel
@@ -2113,6 +2130,47 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                               ) : (
                                 origin
                               )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 庄园 */}
+                      {(isAddMode || estate) && (
+                        <div className="flex items-start">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            庄园
+                          </div>
+                          <div className="relative ml-4 flex-1">
+                            {isAddMode && !estate && (
+                              <span
+                                className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
+                                data-placeholder="estate"
+                              >
+                                输入庄园
+                              </span>
+                            )}
+                            <div
+                              ref={estateRef}
+                              contentEditable
+                              suppressContentEditableWarning
+                              onInput={e => {
+                                const placeholder =
+                                  e.currentTarget.parentElement?.querySelector(
+                                    '[data-placeholder="estate"]'
+                                  ) as HTMLElement;
+                                if (placeholder) {
+                                  placeholder.style.display = e.currentTarget
+                                    .textContent
+                                    ? 'none'
+                                    : '';
+                                }
+                              }}
+                              onBlur={handleEstateInput}
+                              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                              style={{ minHeight: '1.25em' }}
+                            >
+                              {estate}
                             </div>
                           </div>
                         </div>
@@ -2318,7 +2376,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 {/* 拼配成分（拼配豆时显示）- 支持无感编辑 */}
                 {bean?.blendComponents && bean.blendComponents.length > 1 && (
                   <div className="flex items-start">
-                    <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       拼配成分
                     </div>
                     <div className="ml-4 space-y-2">
@@ -2326,6 +2384,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         (
                           comp: {
                             origin?: string;
+                            estate?: string;
                             variety?: string;
                             process?: string;
                             percentage?: number;
@@ -2334,7 +2393,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         ) => {
                           // 处理拼配成分字段编辑
                           const handleBlendFieldEdit = (
-                            field: 'origin' | 'process' | 'variety',
+                            field: 'origin' | 'estate' | 'process' | 'variety',
                             value: string
                           ) => {
                             const updatedComponents = [
@@ -2372,7 +2431,30 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                 </span>
                               )}
                               {/* 分隔符 */}
-                              {comp.origin &&
+                              {comp.origin && comp.estate && (
+                                <span className="text-neutral-400 dark:text-neutral-600">
+                                  ·
+                                </span>
+                              )}
+                              {/* 庄园 */}
+                              {comp.estate && (
+                                <span
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onBlur={e => {
+                                    const newValue =
+                                      e.currentTarget.textContent?.trim() || '';
+                                    if (newValue !== comp.estate) {
+                                      handleBlendFieldEdit('estate', newValue);
+                                    }
+                                  }}
+                                  className="cursor-text outline-none"
+                                >
+                                  {comp.estate}
+                                </span>
+                              )}
+                              {/* 分隔符 */}
+                              {(comp.origin || comp.estate) &&
                                 (comp.variety || comp.process) && (
                                   <span className="text-neutral-400 dark:text-neutral-600">
                                     ·

@@ -18,6 +18,7 @@ import Complete from './components/Complete';
 import {
   addCustomPreset,
   DEFAULT_ORIGINS,
+  DEFAULT_ESTATES,
   DEFAULT_PROCESSES,
   DEFAULT_VARIETIES,
 } from './constants';
@@ -99,6 +100,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         return [
           {
             origin: '',
+            estate: '',
             process: '',
             variety: '',
           },
@@ -461,10 +463,13 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
             [field]: safeValue,
           }));
 
-          // 从名称中智能提取产地、处理法、品种并自动填充到成分
+          // 从名称中智能提取产地、庄园、处理法、品种并自动填充到成分
           if (safeValue.trim() && blendComponents.length === 1) {
             const extractedOrigin = DEFAULT_ORIGINS.find(origin =>
               safeValue.includes(origin)
+            );
+            const extractedEstate = DEFAULT_ESTATES.find(estate =>
+              safeValue.includes(estate)
             );
             const extractedProcess = DEFAULT_PROCESSES.find(process =>
               safeValue.includes(process)
@@ -474,7 +479,12 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
             );
 
             // 只有当提取到信息且对应字段为空时才自动填充
-            if (extractedOrigin || extractedProcess || extractedVariety) {
+            if (
+              extractedOrigin ||
+              extractedEstate ||
+              extractedProcess ||
+              extractedVariety
+            ) {
               setBlendComponents(prev => {
                 const newComponents = [...prev];
                 if (newComponents.length > 0) {
@@ -483,6 +493,12 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
                     newComponents[0] = {
                       ...newComponents[0],
                       origin: extractedOrigin,
+                    };
+                  }
+                  if (extractedEstate && !newComponents[0].estate) {
+                    newComponents[0] = {
+                      ...newComponents[0],
+                      estate: extractedEstate,
                     };
                   }
                   if (extractedProcess && !newComponents[0].process) {
@@ -649,6 +665,11 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         // 检查产地是否是自定义值
         if (component.origin && !DEFAULT_ORIGINS.includes(component.origin)) {
           addCustomPreset('origins', component.origin);
+        }
+
+        // 检查庄园是否是自定义值
+        if (component.estate && !DEFAULT_ESTATES.includes(component.estate)) {
+          addCustomPreset('estates', component.estate);
         }
 
         // 检查处理法是否是自定义值

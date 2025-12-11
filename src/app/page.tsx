@@ -128,6 +128,7 @@ interface ExtendedStep extends Step {
 interface BlendComponent {
   percentage?: number;
   origin?: string;
+  estate?: string;
   process?: string;
   variety?: string;
 }
@@ -1566,7 +1567,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 comp &&
                 typeof comp === 'object' &&
                 comp !== null &&
-                ('origin' in comp || 'process' in comp || 'variety' in comp)
+                ('origin' in comp ||
+                  'estate' in comp ||
+                  'process' in comp ||
+                  'variety' in comp)
             );
 
             if (validComponents.length > 0) {
@@ -1574,6 +1578,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 const component = comp as Record<string, unknown>;
                 return {
                   origin: (component.origin as string) || '',
+                  estate: (component.estate as string) || '',
                   process: (component.process as string) || '',
                   variety: (component.variety as string) || '',
                   // 只在明确有百分比时才设置百分比值，否则保持为undefined
@@ -1597,14 +1602,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               unknown
             >;
             const legacyOrigin = beanDataRecord.origin as string;
+            const legacyEstate = beanDataRecord.estate as string;
             const legacyProcess = beanDataRecord.process as string;
             const legacyVariety = beanDataRecord.variety as string;
 
-            if (legacyOrigin || legacyProcess || legacyVariety) {
+            if (
+              legacyOrigin ||
+              legacyEstate ||
+              legacyProcess ||
+              legacyVariety
+            ) {
               bean.blendComponents = [
                 {
                   percentage: 100,
                   origin: legacyOrigin || '',
+                  estate: legacyEstate || '',
                   process: legacyProcess || '',
                   variety: legacyVariety || '',
                 },

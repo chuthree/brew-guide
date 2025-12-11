@@ -1,6 +1,7 @@
 import { CoffeeBean } from '@/types/app';
 import {
   getBeanOrigins,
+  getBeanEstates,
   getBeanProcesses,
   getBeanVarieties,
 } from '@/lib/utils/beanVarietyUtils';
@@ -107,6 +108,11 @@ export const generateBeanTitle = (
           additionalParams.push(comp.origin);
         }
 
+        // 检查并添加庄园
+        if (comp.estate && !isIncluded(comp.estate)) {
+          additionalParams.push(comp.estate);
+        }
+
         // 检查并添加处理法
         if (comp.process && !isIncluded(comp.process)) {
           additionalParams.push(comp.process);
@@ -130,6 +136,14 @@ export const generateBeanTitle = (
     origins.forEach(origin => {
       if (!isIncluded(origin)) {
         additionalParams.push(origin);
+      }
+    });
+
+    // 使用工具函数获取庄园信息
+    const estates = getBeanEstates(bean);
+    estates.forEach(estate => {
+      if (!isIncluded(estate)) {
+        additionalParams.push(estate);
       }
     });
 

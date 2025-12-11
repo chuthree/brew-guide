@@ -62,8 +62,8 @@ const BEAN_RECOGNITION_PROMPT = `提取图片中的咖啡豆信息,直接返回J
 - beanType: espresso|filter|omni
 - flavor: 风味数组["橘子","荔枝"]
 - startDay/endDay: 养豆天数
-- blendComponents: 产地/处理法/品种 [{origin:"埃塞俄比亚",process:"日晒",variety:"原生种"}]
-- notes: 庄园/处理站/海拔 (产地信息放blendComponents,这里只放补充信息)
+- blendComponents: 产地/庄园/处理法/品种 [{origin:"埃塞俄比亚",estate:"翡翠庄园",process:"日晒",variety:"原生种"}]
+- notes: 处理站/海拔等补充信息
 
 规则: 数值不带单位/不编造/不确定不填/直接返回JSON`;
 

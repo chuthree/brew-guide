@@ -231,6 +231,60 @@ export const getBeanProcesses = (bean: CoffeeBean): string[] => {
 };
 
 /**
+ * 获取咖啡豆的庄园信息
+ * 从blendComponents获取庄园信息
+ * @param bean 咖啡豆对象
+ * @returns 庄园数组
+ */
+export const getBeanEstates = (bean: CoffeeBean): string[] => {
+  const estates: string[] = [];
+
+  // 从blendComponents获取庄园信息
+  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+    bean.blendComponents.forEach(component => {
+      if (isValidText(component.estate)) {
+        estates.push(component.estate!.trim());
+      }
+    });
+  }
+
+  // 去重并返回
+  return Array.from(new Set(estates));
+};
+
+/**
+ * 从咖啡豆数组中提取所有唯一的庄园
+ * @param beans 咖啡豆数组
+ * @returns 按数量排序的唯一庄园数组（数量多的在前）
+ */
+export const extractUniqueEstates = (beans: CoffeeBean[]): string[] => {
+  const estateCount = new Map<string, number>();
+
+  // 统计每个庄园的咖啡豆数量
+  beans.forEach(bean => {
+    const estates = getBeanEstates(bean);
+    estates.forEach(estate => {
+      estateCount.set(estate, (estateCount.get(estate) || 0) + 1);
+    });
+  });
+
+  // 按数量排序，数量多的在前
+  const estates = Array.from(estateCount.entries())
+    .sort((a, b) => {
+      // 按数量降序排列
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+
+      // 数量相同时按名称字母顺序排列
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(entry => entry[0]);
+
+  return estates;
+};
+
+/**
  * 获取咖啡豆的风味标签
  * @param bean 咖啡豆对象
  * @returns 风味标签数组

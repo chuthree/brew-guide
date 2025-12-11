@@ -8,6 +8,7 @@ export interface TasteRatings {
 export interface BlendComponent {
   percentage?: number; // 百分比 (1-100)，可选
   origin?: string; // 产地
+  estate?: string; // 庄园
   process?: string; // 处理法
   variety?: string; // 品种
 }
