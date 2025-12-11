@@ -40,6 +40,7 @@ import {
   MessageCircle,
   ThumbsUp,
   Notebook,
+  FlaskConical,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -181,6 +182,7 @@ export interface SettingsOptions {
   defaultExpandChangeLog: boolean; // 笔记列表默认展开变动记录
   showFlavorRatingInForm: boolean; // 添加笔记时显示风味评分
   showOverallRatingInForm: boolean; // 添加笔记时显示总体评分
+  artisticSharingEnabled: boolean; // 是否启用图文分享模式
   // 生豆库设置
   enableGreenBeanInventory?: boolean; // 是否启用生豆库功能
   enableConvertToGreen?: boolean; // 是否启用熟豆转生豆功能（需先启用生豆库）
@@ -311,6 +313,7 @@ export const defaultSettings: SettingsOptions = {
   defaultExpandChangeLog: false,
   showFlavorRatingInForm: true,
   showOverallRatingInForm: true,
+  artisticSharingEnabled: false,
   // 识图设置默认值
   autoFillRecognitionImage: false, // 默认不自动填充识图图片，需手动添加
   // 每日提醒默认值
@@ -336,6 +339,7 @@ export interface SubSettingsHandlers {
   onOpenHiddenEquipmentsSettings: () => void;
   onOpenRoasterLogoSettings: () => void;
   onOpenGrinderSettings: () => void;
+  onOpenExperimentalSettings: () => void;
 }
 
 interface SettingsProps {
@@ -1025,6 +1029,17 @@ const Settings: React.FC<SettingsProps> = ({
               icon: Palette,
               label: '评分维度',
               onClick: subSettingsHandlers.onOpenFlavorDimensionSettings,
+            },
+          ]}
+        />
+
+        {/* 实验性功能 */}
+        <SettingGroup
+          items={[
+            {
+              icon: FlaskConical,
+              label: '实验性功能',
+              onClick: subSettingsHandlers.onOpenExperimentalSettings,
             },
           ]}
         />

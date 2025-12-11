@@ -1,5 +1,6 @@
 import React from 'react';
 import { LucideIcon, ChevronRight } from 'lucide-react';
+import SettingToggle from './atomic/SettingToggle';
 
 export interface SettingItemData {
   icon?: LucideIcon;
@@ -11,6 +12,10 @@ export interface SettingItemData {
   isExpanded?: boolean;
   editable?: boolean;
   onSave?: (value: string) => void;
+  type?: 'default' | 'switch';
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+  description?: string;
 }
 
 interface SettingGroupProps {
@@ -32,14 +37,24 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
         {items.map((item, index) => {
           const Icon = item.icon;
           const isLast = index === items.length - 1;
-          const { isExpanded, expandedContent, editable, onSave, placeholder } =
-            item;
-          const Container = editable ? 'div' : 'button';
+          const {
+            isExpanded,
+            expandedContent,
+            editable,
+            onSave,
+            placeholder,
+            type,
+            checked,
+            onChange,
+            description,
+          } = item;
+          const isSwitch = type === 'switch';
+          const Container = editable || isSwitch ? 'div' : 'button';
 
           return (
             <div key={`${item.label}-${index}`}>
               <Container
-                onClick={!editable ? item.onClick : undefined}
+                onClick={!editable && !isSwitch ? item.onClick : undefined}
                 className="flex w-full items-stretch pr-3.5 pl-[7px] text-sm font-medium text-neutral-800 transition-colors dark:text-neutral-200"
               >
                 <div
@@ -58,7 +73,14 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
                       : 'border-transparent'
                   }`}
                 >
-                  <span className="truncate leading-none">{item.label}</span>
+                  <div className="flex flex-col items-start gap-0.5 overflow-hidden">
+                    <span className="truncate leading-none">{item.label}</span>
+                    {description && (
+                      <span className="truncate text-xs font-normal text-neutral-400 dark:text-neutral-500">
+                        {description}
+                      </span>
+                    )}
+                  </div>
                   {editable ? (
                     <div
                       contentEditable
@@ -76,6 +98,11 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
                     >
                       {item.value}
                     </div>
+                  ) : isSwitch ? (
+                    <SettingToggle
+                      checked={checked || false}
+                      onChange={onChange || (() => {})}
+                    />
                   ) : (
                     <div className="flex items-center gap-2">
                       {item.value && (

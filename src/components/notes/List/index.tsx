@@ -60,6 +60,7 @@ import {
   isSameEquipment,
   getEquipmentIdByName,
 } from '@/lib/utils/equipmentUtils';
+import ArtisticShareDrawer from '../Share/ArtisticShareDrawer';
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   isOpen,
@@ -99,6 +100,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 模态显示状态
   const [showChangeRecordEditModal, setShowChangeRecordEditModal] =
     useState(false);
+
+  // 图文分享状态
+  const [showArtisticShareDrawer, setShowArtisticShareDrawer] = useState(false);
+  const [artisticShareNote, setArtisticShareNote] =
+    useState<BrewingNote | null>(null);
 
   // 分享模式状态
   const [isShareMode, setIsShareMode] = useState(false);
@@ -1149,6 +1155,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     setSelectedNotes([]);
   };
 
+  // 处理图文分享
+  const handleArtisticShare = () => {
+    if (selectedNotes.length !== 1) return;
+    const noteId = selectedNotes[0];
+    const note = notes.find(n => n.id === noteId);
+    if (note) {
+      setArtisticShareNote(note);
+      setShowArtisticShareDrawer(true);
+    }
+  };
+
   // 保存并分享笔记截图
   const handleSaveNotes = async () => {
     if (selectedNotes.length === 0 || isSaving) return;
@@ -1494,6 +1511,18 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
               {isSaving ? '生成中...' : `保存为图片 (${selectedNotes.length})`}
             </button>
             <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+            <button
+              onClick={handleArtisticShare}
+              disabled={selectedNotes.length !== 1}
+              className={`mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400 ${
+                selectedNotes.length !== 1
+                  ? 'cursor-not-allowed opacity-50'
+                  : ''
+              }`}
+            >
+              分享图文
+            </button>
+            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
           </div>
         </div>
       ) : (
@@ -1517,6 +1546,22 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             }, 300);
           }}
           settings={settings}
+        />
+      )}
+
+      {/* 图文分享抽屉 */}
+      {artisticShareNote && (
+        <ArtisticShareDrawer
+          isOpen={showArtisticShareDrawer}
+          onClose={() => {
+            setShowArtisticShareDrawer(false);
+            // 延迟清理数据
+            setTimeout(() => {
+              setArtisticShareNote(null);
+              handleCancelShare(); // 关闭分享模式
+            }, 300);
+          }}
+          note={artisticShareNote}
         />
       )}
     </>

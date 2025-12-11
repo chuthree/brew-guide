@@ -52,6 +52,7 @@ import HiddenMethodsSettings from '@/components/settings/HiddenMethodsSettings';
 import HiddenEquipmentsSettings from '@/components/settings/HiddenEquipmentsSettings';
 import RoasterLogoSettings from '@/components/settings/RoasterLogoSettings';
 import GrinderSettings from '@/components/settings/GrinderSettings';
+import ExperimentalSettings from '@/components/settings/ExperimentalSettings';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
 import Onboarding from '@/components/onboarding/Onboarding';
@@ -257,6 +258,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     useState(false);
   const [showRoasterLogoSettings, setShowRoasterLogoSettings] = useState(false);
   const [showGrinderSettings, setShowGrinderSettings] = useState(false);
+  const [showExperimentalSettings, setShowExperimentalSettings] =
+    useState(false);
 
   // 计算是否有任何子设置页面打开
   const hasSubSettingsOpen =
@@ -275,7 +278,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showHiddenMethodsSettings ||
     showHiddenEquipmentsSettings ||
     showRoasterLogoSettings ||
-    showGrinderSettings;
+    showGrinderSettings ||
+    showExperimentalSettings;
 
   const [settings, setSettings] = useState<SettingsOptions>(() => {
     // 使用默认设置作为初始值，稍后在 useEffect 中异步加载
@@ -3495,6 +3499,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setShowHiddenEquipmentsSettings(true),
           onOpenRoasterLogoSettings: () => setShowRoasterLogoSettings(true),
           onOpenGrinderSettings: () => setShowGrinderSettings(true),
+          onOpenExperimentalSettings: () => setShowExperimentalSettings(true),
         }}
       />
 
@@ -3626,6 +3631,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <GrinderSettings
           settings={settings}
           onClose={() => setShowGrinderSettings(false)}
+          handleChange={handleSubSettingChange}
+        />
+      )}
+
+      {showExperimentalSettings && (
+        <ExperimentalSettings
+          settings={settings}
+          onClose={() => setShowExperimentalSettings(false)}
           handleChange={handleSubSettingChange}
         />
       )}
