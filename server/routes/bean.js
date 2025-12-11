@@ -135,7 +135,9 @@ router.post(
       logger.info('📦 Using standard mode');
       const aiResponse = await recognizeBean(imageUrl);
 
-      logger.info('AI raw response:', aiResponse.substring(0, 200) + '...');
+      logger.info(
+        `AI raw response (${aiResponse.length} chars): ${aiResponse}`
+      );
 
       // 解析 JSON
       let beanData;
@@ -165,6 +167,25 @@ router.post(
               break;
             }
           }
+        }
+
+        // 修复数据格式
+        const fixBeanData = bean => {
+          // blendComponents 对象转数组
+          if (bean.blendComponents && !Array.isArray(bean.blendComponents)) {
+            logger.warn('Fixed blendComponents: converted object to array');
+            bean.blendComponents = [bean.blendComponents];
+          }
+          // 移除值为 0 的 capacity 和 price
+          if (bean.capacity === 0) delete bean.capacity;
+          if (bean.price === 0) delete bean.price;
+          return bean;
+        };
+
+        if (Array.isArray(beanData)) {
+          beanData = beanData.map(fixBeanData);
+        } else {
+          beanData = fixBeanData(beanData);
         }
 
         // 验证数据

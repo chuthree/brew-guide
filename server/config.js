@@ -139,8 +139,8 @@ export const aiConfig = {
     baseURL:
       'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
     model: 'qwen3-vl-flash',
-    temperature: 0.1,
-    maxTokens: 1000,
+    temperature: 0.3,
+    maxTokens: 2000,
     timeout: 120000,
     maxRetries: 2,
     retryDelay: 1000,
@@ -162,9 +162,9 @@ export const aiConfig = {
  * AI 提示词
  */
 export const aiPrompts = {
-  beanRecognition: `你是咖啡豆包装信息提取专家。仔细阅读图片中所有文字，提取咖啡豆信息并返回JSON。
+  beanRecognition: `你是咖啡豆信息提取专家。仔细阅读图片中所有文字，提取咖啡豆信息并返回JSON。
 
-## 输出格式
+## 输出格式（严格遵守）
 {
   "name": "品牌 产品名",
   "blendComponents": [{"origin": "产地", "estate": "庄园", "process": "处理法", "variety": "品种"}],
@@ -179,16 +179,18 @@ export const aiPrompts = {
 
 ## 字段说明
 - name: 必填，格式"烘焙商 豆名"如"少数派 花月夜"
-- blendComponents: 产地/庄园/处理法/品种，如{"origin":"巴拿马","estate":"翡翠庄园","process":"日晒","variety":"瑰夏"}
+- blendComponents: 【必须是数组】产地/庄园/处理法/品种，如[{"origin":"巴拿马","estate":"赏花","process":"日晒","variety":"瑰夏"}]，单品豆也要用数组包裹
 - flavor: 风味描述数组，如["柑橘","蜂蜜","花香"]
 - roastLevel: 极浅烘焙|浅度烘焙|中浅烘焙|中度烘焙|中深烘焙|深度烘焙
 - roastDate: 仅图片有明确日期时填写，缺年份补2025，无日期则不填此字段
-- capacity/price: 纯数字不带单位
+- capacity/price: 纯数字不带单位，未知或为0时不填此字段
 
 ## 规则
 1. 只提取图片中明确可见的信息
 2. 没有的字段不要填写，不要编造
-3. 直接返回JSON，不要markdown包裹`,
+3. blendComponents 必须是数组格式 [{...}]，不能是对象 {...}
+4. 名称中包含的产地、庄园等信息必须同步填充到blendComponents
+`,
 
   yearlyReport: `你是一位专业的咖啡品鉴师和文案作家。请根据用户一年的咖啡消费数据，撰写一份温暖、有趣、个性化的年度咖啡报告。
 
