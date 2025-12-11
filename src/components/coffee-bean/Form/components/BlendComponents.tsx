@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { BlendComponent } from '@/types/app';
 import {
@@ -6,6 +6,12 @@ import {
   removeCustomPreset,
   getFullPresets,
 } from '../constants';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import {
+  extractUniqueOrigins,
+  extractUniqueVarieties,
+  getBeanProcesses,
+} from '@/lib/utils/beanVarietyUtils';
 
 interface BlendComponentsProps {
   components: BlendComponent[];
@@ -74,10 +80,51 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
   // 添加forceUpdate状态以在删除预设时触发重新渲染
   const [_forceUpdate, setForceUpdate] = React.useState(0);
 
-  // 每次在渲染时获取最新的预设列表
-  const currentOrigins = getFullPresets('origins');
-  const currentProcesses = getFullPresets('processes');
-  const currentVarieties = getFullPresets('varieties');
+  // 从 store 获取咖啡豆数据
+  const beans = useCoffeeBeanStore(state => state.beans);
+
+  // 按使用率排序的预设列表
+  // 优先显示用户咖啡豆中使用过的值（按使用次数排序），然后是默认预设中未使用过的值
+  const currentOrigins = useMemo(() => {
+    // 从咖啡豆中统计产地使用情况（已按使用次数排序）
+    const usedOrigins = extractUniqueOrigins(beans);
+    // 获取完整预设列表（包含自定义和默认）
+    const allPresets = getFullPresets('origins');
+    // 过滤出未使用过的预设
+    const unusedPresets = allPresets.filter(p => !usedOrigins.includes(p));
+    // 合并：使用过的在前（按次数排序），未使用的在后
+    return [...usedOrigins, ...unusedPresets];
+  }, [beans, _forceUpdate]);
+
+  const currentProcesses = useMemo(() => {
+    // 从咖啡豆中统计处理法使用情况
+    const processCount = new Map<string, number>();
+    beans.forEach(bean => {
+      const processes = getBeanProcesses(bean);
+      processes.forEach(process => {
+        processCount.set(process, (processCount.get(process) || 0) + 1);
+      });
+    });
+    // 按使用次数排序
+    const usedProcesses = Array.from(processCount.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
+    // 获取完整预设列表
+    const allPresets = getFullPresets('processes');
+    // 过滤出未使用过的预设
+    const unusedPresets = allPresets.filter(p => !usedProcesses.includes(p));
+    return [...usedProcesses, ...unusedPresets];
+  }, [beans, _forceUpdate]);
+
+  const currentVarieties = useMemo(() => {
+    // 从咖啡豆中统计品种使用情况（已按使用次数排序）
+    const usedVarieties = extractUniqueVarieties(beans);
+    // 获取完整预设列表
+    const allPresets = getFullPresets('varieties');
+    // 过滤出未使用过的预设
+    const unusedPresets = allPresets.filter(p => !usedVarieties.includes(p));
+    return [...usedVarieties, ...unusedPresets];
+  }, [beans, _forceUpdate]);
 
   return (
     <div className="w-full space-y-5">
