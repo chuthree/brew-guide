@@ -71,7 +71,16 @@ export const getDefaultFlavorPeriodByRoastLevel = async (
         roasterConfig.flavorPeriod
       );
       if (isValidPeriod(specificPeriod)) {
-        return specificPeriod;
+        // 获取全局默认预设和硬编码预设作为回退
+        const globalPeriod = selectPeriodByRoastLevel(
+          roastLevel,
+          customFlavorPeriod!
+        );
+        const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
+        return {
+          startDay: specificPeriod.startDay || globalPeriod.startDay || presetPeriod.startDay,
+          endDay: specificPeriod.endDay || globalPeriod.endDay || presetPeriod.endDay,
+        };
       }
     }
   }
@@ -105,7 +114,14 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
         roasterConfig.flavorPeriod
       );
       if (isValidPeriod(specificPeriod)) {
-        return specificPeriod;
+        // 获取全局默认预设和硬编码预设作为回退
+        const flavorPeriod = customFlavorPeriod || defaultSettings.customFlavorPeriod;
+        const globalPeriod = selectPeriodByRoastLevel(roastLevel, flavorPeriod!);
+        const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
+        return {
+          startDay: specificPeriod.startDay || globalPeriod.startDay || presetPeriod.startDay,
+          endDay: specificPeriod.endDay || globalPeriod.endDay || presetPeriod.endDay,
+        };
       }
     }
   }
