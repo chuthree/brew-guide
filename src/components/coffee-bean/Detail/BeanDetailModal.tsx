@@ -660,10 +660,17 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
       }
 
+      const { extractRoasterFromName } = await import(
+        '@/lib/utils/beanVarietyUtils'
+      );
+      const beanName = isAddMode ? tempBean.name : bean?.name;
+      const roasterName = extractRoasterFromName(beanName || '');
+
       // 使用工具函数获取烘焙度对应的赏味期设置
       const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
         level,
-        customFlavorPeriod
+        customFlavorPeriod,
+        roasterName
       );
       startDay = flavorPeriod.startDay;
       endDay = flavorPeriod.endDay;

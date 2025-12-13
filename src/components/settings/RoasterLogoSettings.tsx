@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, X, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
-import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
+import RoasterLogoManager, {
+  RoasterConfig,
+} from '@/lib/managers/RoasterLogoManager';
 import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
@@ -25,7 +27,9 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [roasters, setRoasters] = useState<string[]>([]);
-  const [logos, setLogos] = useState<Map<string, string>>(new Map());
+  const [roasterConfigs, setRoasterConfigs] = useState<
+    Map<string, RoasterConfig>
+  >(new Map());
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
@@ -65,11 +69,11 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     }
   }, [isOpen]);
 
-  // 加载烘焙商列表和图标
+  // 加载烘焙商列表和配置
   useEffect(() => {
     if (isOpen) {
       loadRoasters();
-      loadLogos();
+      loadConfigs();
     }
   }, [isOpen]);
 
@@ -86,16 +90,16 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     }
   };
 
-  const loadLogos = async () => {
+  const loadConfigs = async () => {
     try {
-      const allLogos = await RoasterLogoManager.getAllLogos();
-      const logoMap = new Map<string, string>();
-      allLogos.forEach(logo => {
-        logoMap.set(logo.roasterName, logo.logoData);
+      const allConfigs = await RoasterLogoManager.getAllConfigs();
+      const configMap = new Map<string, RoasterConfig>();
+      allConfigs.forEach(config => {
+        configMap.set(config.roasterName, config);
       });
-      setLogos(logoMap);
+      setRoasterConfigs(configMap);
     } catch (error) {
-      console.error('Failed to load logos:', error);
+      console.error('Failed to load configs:', error);
     }
   };
 
@@ -123,8 +127,8 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     try {
       const success = await RoasterLogoManager.uploadLogo(roasterName, file);
       if (success) {
-        // 重新加载图标
-        await loadLogos();
+        // 重新加载配置
+        await loadConfigs();
         if (hapticFeedback) {
           hapticsUtils.success();
         }
@@ -145,7 +149,8 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     }
   };
 
-  const handleDeleteLogo = async (roasterName: string) => {
+  const handleDeleteLogo = async (roasterName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!confirm(`确定要删除 ${roasterName} 的图标吗？`)) {
       return;
     }
@@ -153,7 +158,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     try {
       const success = await RoasterLogoManager.deleteLogo(roasterName);
       if (success) {
-        await loadLogos();
+        await loadConfigs();
         if (hapticFeedback) {
           hapticsUtils.success();
         }
@@ -166,7 +171,8 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     }
   };
 
-  const triggerFileInput = (roasterName: string) => {
+  const triggerFileInput = (roasterName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     const input = fileInputRefs.current.get(roasterName);
     if (input) {
       input.click();
@@ -176,11 +182,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage
-      title="烘焙商图标设置"
-      isVisible={isVisible}
-      onClose={handleClose}
-    >
+    <SettingPage title="烘焙商图标" isVisible={isVisible} onClose={handleClose}>
       <div className="-mt-4 px-6">
         {roasters.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -202,16 +204,16 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
             {/* 烘焙商列表 */}
             <div className="space-y-2">
               {roasters.map(roaster => {
-                const hasLogo = logos.has(roaster);
-                const logoData = logos.get(roaster);
+                const config = roasterConfigs.get(roaster);
+                const hasLogo = !!config?.logoData;
+                const logoData = config?.logoData;
                 const isUploading = uploading === roaster;
 
                 return (
                   <div
                     key={roaster}
-                    className="flex items-center justify-between rounded bg-neutral-100 p-1.5 dark:bg-neutral-800"
+                    className="flex items-center justify-between rounded bg-neutral-100 p-2 dark:bg-neutral-800"
                   >
-                    {/* 烘焙商名称和图标预览 */}
                     <div className="flex items-center gap-3">
                       {/* 图标预览 */}
                       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded border border-neutral-200 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-900">
@@ -240,7 +242,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                     <div className="flex items-center gap-1.5">
                       {hasLogo && (
                         <button
-                          onClick={() => handleDeleteLogo(roaster)}
+                          onClick={e => handleDeleteLogo(roaster, e)}
                           disabled={isUploading}
                           className="rounded p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-red-500 disabled:opacity-50 dark:hover:bg-neutral-700"
                           title="删除图标"
@@ -250,7 +252,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                       )}
 
                       <button
-                        onClick={() => triggerFileInput(roaster)}
+                        onClick={e => triggerFileInput(roaster, e)}
                         disabled={isUploading}
                         className="rounded px-2.5 py-1 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 disabled:opacity-50 dark:text-neutral-400 dark:hover:bg-neutral-700"
                       >
@@ -272,7 +274,6 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                           if (file) {
                             handleFileSelect(roaster, file);
                           }
-                          // 重置input值，允许选择同一文件
                           e.target.value = '';
                         }}
                       />

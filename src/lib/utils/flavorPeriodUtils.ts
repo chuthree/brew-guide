@@ -3,6 +3,8 @@ import {
   defaultSettings,
   type SettingsOptions,
 } from '@/components/settings/Settings';
+import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
 
 // 赏味期信息接口
 export interface FlavorInfo {
@@ -10,6 +12,29 @@ export interface FlavorInfo {
   remainingDays: number;
   status?: string;
 }
+
+// 预设值常量
+const PRESET_VALUES = {
+  light: { startDay: 7, endDay: 60 },
+  medium: { startDay: 10, endDay: 60 },
+  dark: { startDay: 14, endDay: 90 },
+};
+
+// 根据烘焙度选择对应的配置类型
+const selectPeriodByRoastLevel = (
+  roastLevel: string | undefined | null,
+  periods: { light: any; medium: any; dark: any }
+) => {
+  const roastLevelStr = typeof roastLevel === 'string' ? roastLevel : '';
+  if (roastLevelStr.includes('浅')) return periods.light;
+  if (roastLevelStr.includes('深')) return periods.dark;
+  return periods.medium;
+};
+
+// 检查配置是否有效（至少有一个非0值）
+const isValidPeriod = (period: { startDay: number; endDay: number }) => {
+  return period.startDay > 0 || period.endDay > 0;
+};
 
 // 获取自定义赏味期设置
 export const getCustomFlavorPeriodSettings = async () => {
@@ -30,75 +55,70 @@ export const getCustomFlavorPeriodSettings = async () => {
 };
 
 // 根据烘焙度获取默认赏味期参数
-const getDefaultFlavorPeriodByRoastLevel = async (
-  roastLevel: string | undefined | null
+export const getDefaultFlavorPeriodByRoastLevel = async (
+  roastLevel: string | undefined | null,
+  roasterName?: string
 ) => {
   const customFlavorPeriod = await getCustomFlavorPeriodSettings();
 
-  // 定义硬编码的预设值（当用户未自定义时使用）
-  const PRESET_VALUES = {
-    light: { startDay: 7, endDay: 60 },
-    medium: { startDay: 10, endDay: 60 },
-    dark: { startDay: 14, endDay: 90 },
-  };
-
-  // 确保 roastLevel 是字符串类型
-  const roastLevelStr = typeof roastLevel === 'string' ? roastLevel : '';
-
-  if (roastLevelStr.includes('浅')) {
-    const startDay =
-      customFlavorPeriod!.light.startDay || PRESET_VALUES.light.startDay;
-    const endDay =
-      customFlavorPeriod!.light.endDay || PRESET_VALUES.light.endDay;
-    return { startDay, endDay };
-  } else if (roastLevelStr.includes('深')) {
-    const startDay =
-      customFlavorPeriod!.dark.startDay || PRESET_VALUES.dark.startDay;
-    const endDay = customFlavorPeriod!.dark.endDay || PRESET_VALUES.dark.endDay;
-    return { startDay, endDay };
-  } else {
-    // 默认为中烘焙
-    const startDay =
-      customFlavorPeriod!.medium.startDay || PRESET_VALUES.medium.startDay;
-    const endDay =
-      customFlavorPeriod!.medium.endDay || PRESET_VALUES.medium.endDay;
-    return { startDay, endDay };
+  // 如果提供了有效的烘焙商名称，尝试获取烘焙商特定的配置
+  if (roasterName && roasterName !== '未知烘焙商') {
+    const roasterConfig =
+      await RoasterLogoManager.getConfigByRoaster(roasterName);
+    if (roasterConfig?.flavorPeriod) {
+      const specificPeriod = selectPeriodByRoastLevel(
+        roastLevel,
+        roasterConfig.flavorPeriod
+      );
+      if (isValidPeriod(specificPeriod)) {
+        return specificPeriod;
+      }
+    }
   }
+
+  // 使用全局自定义配置或预设值
+  const selectedPeriod = selectPeriodByRoastLevel(
+    roastLevel,
+    customFlavorPeriod!
+  );
+  const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
+
+  return {
+    startDay: selectedPeriod.startDay || presetPeriod.startDay,
+    endDay: selectedPeriod.endDay || presetPeriod.endDay,
+  };
 };
 
-// 同步版本的赏味期参数获取（使用默认值）
+// 同步版本的赏味期参数获取
 export const getDefaultFlavorPeriodByRoastLevelSync = (
   roastLevel: string | undefined | null,
-  customFlavorPeriod?: SettingsOptions['customFlavorPeriod']
+  customFlavorPeriod?: SettingsOptions['customFlavorPeriod'],
+  roasterName?: string
 ) => {
-  const flavorPeriod = customFlavorPeriod || defaultSettings.customFlavorPeriod;
-
-  // 定义硬编码的预设值（当用户未自定义时使用）
-  const PRESET_VALUES = {
-    light: { startDay: 7, endDay: 60 },
-    medium: { startDay: 10, endDay: 60 },
-    dark: { startDay: 14, endDay: 90 },
-  };
-
-  // 确保 roastLevel 是字符串类型
-  const roastLevelStr = typeof roastLevel === 'string' ? roastLevel : '';
-
-  if (roastLevelStr.includes('浅')) {
-    const startDay =
-      flavorPeriod!.light.startDay || PRESET_VALUES.light.startDay;
-    const endDay = flavorPeriod!.light.endDay || PRESET_VALUES.light.endDay;
-    return { startDay, endDay };
-  } else if (roastLevelStr.includes('深')) {
-    const startDay = flavorPeriod!.dark.startDay || PRESET_VALUES.dark.startDay;
-    const endDay = flavorPeriod!.dark.endDay || PRESET_VALUES.dark.endDay;
-    return { startDay, endDay };
-  } else {
-    // 默认为中烘焙
-    const startDay =
-      flavorPeriod!.medium.startDay || PRESET_VALUES.medium.startDay;
-    const endDay = flavorPeriod!.medium.endDay || PRESET_VALUES.medium.endDay;
-    return { startDay, endDay };
+  // 如果提供了有效的烘焙商名称，尝试获取烘焙商特定的配置
+  if (roasterName && roasterName !== '未知烘焙商') {
+    const roasterConfig =
+      RoasterLogoManager.getConfigByRoasterSync(roasterName);
+    if (roasterConfig?.flavorPeriod) {
+      const specificPeriod = selectPeriodByRoastLevel(
+        roastLevel,
+        roasterConfig.flavorPeriod
+      );
+      if (isValidPeriod(specificPeriod)) {
+        return specificPeriod;
+      }
+    }
   }
+
+  // 使用全局自定义配置或预设值
+  const flavorPeriod = customFlavorPeriod || defaultSettings.customFlavorPeriod;
+  const selectedPeriod = selectPeriodByRoastLevel(roastLevel, flavorPeriod!);
+  const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
+
+  return {
+    startDay: selectedPeriod.startDay || presetPeriod.startDay,
+    endDay: selectedPeriod.endDay || presetPeriod.endDay,
+  };
 };
 
 // 计算咖啡豆的赏味期信息
@@ -142,9 +162,11 @@ export const calculateFlavorInfo = (
 
   // 如果没有自定义值，则根据烘焙度设置默认值
   if (startDay === 0 && endDay === 0) {
+    const roasterName = extractRoasterFromName(bean.name);
     const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
       bean.roastLevel || '',
-      customFlavorPeriod
+      customFlavorPeriod,
+      roasterName
     );
     startDay = defaultPeriod.startDay;
     endDay = defaultPeriod.endDay;

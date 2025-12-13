@@ -251,9 +251,16 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
           ) {
             const customFlavorPeriod =
               settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+
+            const { extractRoasterFromName } = await import(
+              '@/lib/utils/beanVarietyUtils'
+            );
+            const roasterName = extractRoasterFromName(bean.name);
+
             const { startDay, endDay } = getDefaultFlavorPeriodByRoastLevelSync(
               bean.roastLevel,
-              customFlavorPeriod
+              customFlavorPeriod,
+              roasterName
             );
 
             setBean(prev => ({
@@ -740,10 +747,19 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
             settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
         }
 
-        // 使用工具函数获取烘焙度对应的赏味期设置
+        // 从咖啡豆名称中提取烘焙商名称
+        const { extractRoasterFromName } = await import(
+          '@/lib/utils/beanVarietyUtils'
+        );
+        const roasterName = bean.name
+          ? extractRoasterFromName(bean.name)
+          : undefined;
+
+        // 使用工具函数获取烘焙度对应的赏味期设置，传入烘焙商名称
         const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
           currentRoastLevel,
-          customFlavorPeriod
+          customFlavorPeriod,
+          roasterName
         );
         startDay = flavorPeriod.startDay;
         endDay = flavorPeriod.endDay;

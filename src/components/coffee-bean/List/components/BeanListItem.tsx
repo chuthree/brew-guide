@@ -159,8 +159,11 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     // 如果没有自定义值，从flavorInfo中获取默认值
     if (startDay === 0 && endDay === 0) {
+      const roasterName = extractRoasterFromName(bean.name);
       const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
-        bean.roastLevel || ''
+        bean.roastLevel || '',
+        undefined,
+        roasterName
       );
       startDay = defaultPeriod.startDay;
       endDay = defaultPeriod.endDay;
