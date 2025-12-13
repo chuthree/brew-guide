@@ -76,10 +76,17 @@ export const getDefaultFlavorPeriodByRoastLevel = async (
           roastLevel,
           customFlavorPeriod!
         );
-        const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
+        const presetPeriod = selectPeriodByRoastLevel(
+          roastLevel,
+          PRESET_VALUES
+        );
         return {
-          startDay: specificPeriod.startDay || globalPeriod.startDay || presetPeriod.startDay,
-          endDay: specificPeriod.endDay || globalPeriod.endDay || presetPeriod.endDay,
+          startDay:
+            specificPeriod.startDay ||
+            globalPeriod.startDay ||
+            presetPeriod.startDay,
+          endDay:
+            specificPeriod.endDay || globalPeriod.endDay || presetPeriod.endDay,
         };
       }
     }
@@ -115,12 +122,23 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
       );
       if (isValidPeriod(specificPeriod)) {
         // 获取全局默认预设和硬编码预设作为回退
-        const flavorPeriod = customFlavorPeriod || defaultSettings.customFlavorPeriod;
-        const globalPeriod = selectPeriodByRoastLevel(roastLevel, flavorPeriod!);
-        const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
+        const flavorPeriod =
+          customFlavorPeriod || defaultSettings.customFlavorPeriod;
+        const globalPeriod = selectPeriodByRoastLevel(
+          roastLevel,
+          flavorPeriod!
+        );
+        const presetPeriod = selectPeriodByRoastLevel(
+          roastLevel,
+          PRESET_VALUES
+        );
         return {
-          startDay: specificPeriod.startDay || globalPeriod.startDay || presetPeriod.startDay,
-          endDay: specificPeriod.endDay || globalPeriod.endDay || presetPeriod.endDay,
+          startDay:
+            specificPeriod.startDay ||
+            globalPeriod.startDay ||
+            presetPeriod.startDay,
+          endDay:
+            specificPeriod.endDay || globalPeriod.endDay || presetPeriod.endDay,
         };
       }
     }
