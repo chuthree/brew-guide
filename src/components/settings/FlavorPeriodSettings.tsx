@@ -1,18 +1,11 @@
 'use client';
 
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SettingsOptions, defaultSettings } from './Settings';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { SettingPage } from './atomic';
 import SettingSection from './atomic/SettingSection';
 import SettingRow from './atomic/SettingRow';
-import SettingToggle from './atomic/SettingToggle';
 import RoasterLogoManager, {
   RoasterConfig,
 } from '@/lib/managers/RoasterLogoManager';
@@ -352,33 +345,6 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
     [settings.detailedFlavorPeriod, settings.customFlavorPeriod]
   );
 
-  // 切换详细模式
-  const handleDetailedModeToggle = useCallback(
-    (enabled: boolean) => {
-      handleChange('detailedFlavorPeriodEnabled', enabled);
-
-      // 当开启详细模式时，如果详细设置为空，则从简单设置初始化
-      if (enabled && !settings.detailedFlavorPeriod) {
-        const simple = settings.customFlavorPeriod || {
-          light: { startDay: 0, endDay: 0 },
-          medium: { startDay: 0, endDay: 0 },
-          dark: { startDay: 0, endDay: 0 },
-        };
-
-        const initialDetailed = {
-          extraLight: { ...simple.light },
-          light: { ...simple.light },
-          mediumLight: { ...simple.light },
-          medium: { ...simple.medium },
-          mediumDark: { ...simple.dark },
-          dark: { ...simple.dark },
-        };
-        handleChange('detailedFlavorPeriod', initialDetailed);
-      }
-    },
-    [settings.customFlavorPeriod, settings.detailedFlavorPeriod, handleChange]
-  );
-
   const renderFlavorInputs = (
     startDay: number,
     endDay: number,
@@ -467,16 +433,6 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
       onClose={handleClose}
     >
       <div className="mt-4">
-        {/* 详细模式开关 */}
-        <SettingSection title="模式设置" footer="为每种烘焙度单独设置赏味期">
-          <SettingRow label="详细烘焙度设置" isLast>
-            <SettingToggle
-              checked={isDetailedMode}
-              onChange={handleDetailedModeToggle}
-            />
-          </SettingRow>
-        </SettingSection>
-
         {/* 全局默认预设 - 简单模式 */}
         {!isDetailedMode && (
           <SettingSection

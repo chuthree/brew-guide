@@ -653,11 +653,16 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       const { Storage } = await import('@/lib/core/storage');
       const settingsStr = await Storage.get('brewGuideSettings');
       let customFlavorPeriod = defaultSettings.customFlavorPeriod;
+      let detailedEnabled = false;
+      let detailedFlavorPeriod = defaultSettings.detailedFlavorPeriod;
 
       if (settingsStr) {
         const settings: SettingsOptions = JSON.parse(settingsStr);
         customFlavorPeriod =
           settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+        detailedEnabled = settings.detailedFlavorPeriodEnabled ?? false;
+        detailedFlavorPeriod =
+          settings.detailedFlavorPeriod || defaultSettings.detailedFlavorPeriod;
       }
 
       const { extractRoasterFromName } = await import(
@@ -666,17 +671,19 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       const beanName = isAddMode ? tempBean.name : bean?.name;
       const roasterName = extractRoasterFromName(beanName || '');
 
-      // 使用工具函数获取烘焙度对应的赏味期设置
+      // 使用工具函数获取烘焙度对应的赏味期设置，传入详细模式参数
       const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
         level,
         customFlavorPeriod,
-        roasterName
+        roasterName,
+        detailedEnabled,
+        detailedFlavorPeriod
       );
       startDay = flavorPeriod.startDay;
       endDay = flavorPeriod.endDay;
     } catch (error) {
       console.error('获取自定义赏味期设置失败，使用默认值:', error);
-      // 使用工具函数获取默认值
+      // 使用工具函数获取默认值（会自动从 localStorage 读取设置）
       const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(level);
       startDay = flavorPeriod.startDay;
       endDay = flavorPeriod.endDay;

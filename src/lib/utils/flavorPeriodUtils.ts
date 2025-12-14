@@ -306,20 +306,60 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
   detailedEnabled?: boolean,
   detailedFlavorPeriod?: SettingsOptions['detailedFlavorPeriod']
 ) => {
+  // 如果没有传递详细模式参数，尝试从 localStorage 同步读取
+  let effectiveDetailedEnabled = detailedEnabled;
+  let effectiveDetailedFlavorPeriod = detailedFlavorPeriod;
+  let effectiveCustomFlavorPeriod = customFlavorPeriod;
+
+  if (
+    effectiveDetailedEnabled === undefined ||
+    effectiveDetailedFlavorPeriod === undefined ||
+    effectiveCustomFlavorPeriod === undefined
+  ) {
+    try {
+      if (typeof window !== 'undefined') {
+        const settingsStr = localStorage.getItem('brewGuideSettings');
+        if (settingsStr) {
+          const settings: SettingsOptions = JSON.parse(settingsStr);
+          if (effectiveDetailedEnabled === undefined) {
+            effectiveDetailedEnabled =
+              settings.detailedFlavorPeriodEnabled ?? false;
+          }
+          if (effectiveDetailedFlavorPeriod === undefined) {
+            effectiveDetailedFlavorPeriod =
+              settings.detailedFlavorPeriod ||
+              defaultSettings.detailedFlavorPeriod;
+          }
+          if (effectiveCustomFlavorPeriod === undefined) {
+            effectiveCustomFlavorPeriod =
+              settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+          }
+        }
+      }
+    } catch {
+      // 静默处理错误，使用默认值
+    }
+  }
+
+  // 确保有默认值
+  effectiveDetailedEnabled = effectiveDetailedEnabled ?? false;
+  effectiveDetailedFlavorPeriod =
+    effectiveDetailedFlavorPeriod || defaultSettings.detailedFlavorPeriod;
+  effectiveCustomFlavorPeriod =
+    effectiveCustomFlavorPeriod || defaultSettings.customFlavorPeriod;
+
   // 如果提供了有效的烘焙商名称，尝试获取烘焙商特定的配置
   if (roasterName && roasterName !== '未知烘焙商') {
     const roasterConfig =
       RoasterLogoManager.getConfigByRoasterSync(roasterName);
 
     // 详细模式下的处理
-    if (detailedEnabled) {
+    if (effectiveDetailedEnabled) {
       const detailedLevel = parseRoastLevel(roastLevel);
       if (detailedLevel) {
         const simpleType = DETAILED_TO_SIMPLE[detailedLevel];
-        const globalDetailedSettings =
-          detailedFlavorPeriod || defaultSettings.detailedFlavorPeriod;
-        const globalSimpleSettings =
-          customFlavorPeriod || defaultSettings.customFlavorPeriod;
+        const globalDetailedSettings = effectiveDetailedFlavorPeriod;
+        const globalSimpleSettings = effectiveCustomFlavorPeriod;
 
         // 1. 优先检查烘焙商的详细设置
         if (roasterConfig?.detailedFlavorPeriod) {
@@ -392,11 +432,9 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
       );
       if (isValidPeriod(specificPeriod)) {
         // 获取全局默认预设和硬编码预设作为回退
-        const flavorPeriod =
-          customFlavorPeriod || defaultSettings.customFlavorPeriod;
         const globalPeriod = selectPeriodByRoastLevel(
           roastLevel,
-          flavorPeriod!
+          effectiveCustomFlavorPeriod!
         );
         const presetPeriod = selectPeriodByRoastLevel(
           roastLevel,
@@ -415,20 +453,22 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
   }
 
   // 如果启用了详细模式，使用详细设置
-  if (detailedEnabled) {
+  if (effectiveDetailedEnabled) {
     const detailedLevel = parseRoastLevel(roastLevel);
     if (detailedLevel) {
       return getDetailedFlavorPeriodSync(
         detailedLevel,
-        detailedFlavorPeriod || defaultSettings.detailedFlavorPeriod,
-        customFlavorPeriod || defaultSettings.customFlavorPeriod
+        effectiveDetailedFlavorPeriod,
+        effectiveCustomFlavorPeriod
       );
     }
   }
 
   // 使用全局自定义配置或预设值（简单模式）
-  const flavorPeriod = customFlavorPeriod || defaultSettings.customFlavorPeriod;
-  const selectedPeriod = selectPeriodByRoastLevel(roastLevel, flavorPeriod!);
+  const selectedPeriod = selectPeriodByRoastLevel(
+    roastLevel,
+    effectiveCustomFlavorPeriod!
+  );
   const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
 
   return {

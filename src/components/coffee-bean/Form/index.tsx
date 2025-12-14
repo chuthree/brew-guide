@@ -251,6 +251,11 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
           ) {
             const customFlavorPeriod =
               settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+            const detailedEnabled =
+              settings.detailedFlavorPeriodEnabled ?? false;
+            const detailedFlavorPeriod =
+              settings.detailedFlavorPeriod ||
+              defaultSettings.detailedFlavorPeriod;
 
             const { extractRoasterFromName } = await import(
               '@/lib/utils/beanVarietyUtils'
@@ -260,7 +265,9 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
             const { startDay, endDay } = getDefaultFlavorPeriodByRoastLevelSync(
               bean.roastLevel,
               customFlavorPeriod,
-              roasterName
+              roasterName,
+              detailedEnabled,
+              detailedFlavorPeriod
             );
 
             setBean(prev => ({
@@ -740,11 +747,17 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         const { Storage } = await import('@/lib/core/storage');
         const settingsStr = await Storage.get('brewGuideSettings');
         let customFlavorPeriod = defaultSettings.customFlavorPeriod;
+        let detailedEnabled = false;
+        let detailedFlavorPeriod = defaultSettings.detailedFlavorPeriod;
 
         if (settingsStr) {
           const settings: SettingsOptions = JSON.parse(settingsStr);
           customFlavorPeriod =
             settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+          detailedEnabled = settings.detailedFlavorPeriodEnabled ?? false;
+          detailedFlavorPeriod =
+            settings.detailedFlavorPeriod ||
+            defaultSettings.detailedFlavorPeriod;
         }
 
         // 从咖啡豆名称中提取烘焙商名称
@@ -755,11 +768,13 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
           ? extractRoasterFromName(bean.name)
           : undefined;
 
-        // 使用工具函数获取烘焙度对应的赏味期设置，传入烘焙商名称
+        // 使用工具函数获取烘焙度对应的赏味期设置，传入烘焙商名称和详细模式参数
         const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
           currentRoastLevel,
           customFlavorPeriod,
-          roasterName
+          roasterName,
+          detailedEnabled,
+          detailedFlavorPeriod
         );
         startDay = flavorPeriod.startDay;
         endDay = flavorPeriod.endDay;
