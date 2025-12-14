@@ -5,16 +5,31 @@
 
 import { compressImage } from '@/lib/utils/imageCompression';
 
-export interface RoasterFlavorPeriod {
+// 简单模式赏味期设置
+export interface RoasterFlavorPeriodSimple {
   light: { startDay: number; endDay: number };
   medium: { startDay: number; endDay: number };
   dark: { startDay: number; endDay: number };
 }
 
+// 详细模式赏味期设置
+export interface RoasterFlavorPeriodDetailed {
+  extraLight: { startDay: number; endDay: number };
+  light: { startDay: number; endDay: number };
+  mediumLight: { startDay: number; endDay: number };
+  medium: { startDay: number; endDay: number };
+  mediumDark: { startDay: number; endDay: number };
+  dark: { startDay: number; endDay: number };
+}
+
+// 兼容类型：同时支持简单模式和详细模式
+export type RoasterFlavorPeriod = RoasterFlavorPeriodSimple;
+
 export interface RoasterConfig {
   roasterName: string; // 烘焙商名称
   logoData?: string; // Base64 编码的图片数据
-  flavorPeriod?: RoasterFlavorPeriod; // 自定义赏味期设置
+  flavorPeriod?: RoasterFlavorPeriod; // 简单模式赏味期设置
+  detailedFlavorPeriod?: RoasterFlavorPeriodDetailed; // 详细模式赏味期设置
   updatedAt: number; // 更新时间戳
 }
 
@@ -137,13 +152,23 @@ class RoasterLogoManager {
   }
 
   /**
-   * 设置烘焙商赏味期
+   * 设置烘焙商赏味期（简单模式）
    */
   async setFlavorPeriod(
     roasterName: string,
     flavorPeriod: RoasterFlavorPeriod
   ): Promise<boolean> {
     return this.updateConfig(roasterName, { flavorPeriod });
+  }
+
+  /**
+   * 设置烘焙商详细赏味期（详细模式）
+   */
+  async setDetailedFlavorPeriod(
+    roasterName: string,
+    detailedFlavorPeriod: RoasterFlavorPeriodDetailed
+  ): Promise<boolean> {
+    return this.updateConfig(roasterName, { detailedFlavorPeriod });
   }
 
   /**

@@ -38,6 +38,11 @@ const SettingSection: React.FC<SettingSectionProps> = ({
     return validChildren.map((child, index) => {
       if (!React.isValidElement(child)) return child;
 
+      // 如果是原生 DOM 元素（如 div、span 等），不注入 isLast 属性
+      if (typeof child.type === 'string') {
+        return child;
+      }
+
       // 检查是否是最后一个元素
       const isLast = index === validChildren.length - 1;
 

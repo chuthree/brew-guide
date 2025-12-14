@@ -98,6 +98,17 @@ export interface SettingsOptions {
     medium: { startDay: number; endDay: number }; // 中烘焙
     dark: { startDay: number; endDay: number }; // 深烘焙
   };
+  // 是否启用详细赏味期设置（按6种烘焙度分别设置）
+  detailedFlavorPeriodEnabled?: boolean;
+  // 详细赏味期设置（6种烘焙度）
+  detailedFlavorPeriod?: {
+    extraLight: { startDay: number; endDay: number }; // 极浅烘焙
+    light: { startDay: number; endDay: number }; // 浅度烘焙
+    mediumLight: { startDay: number; endDay: number }; // 中浅烘焙
+    medium: { startDay: number; endDay: number }; // 中度烘焙
+    mediumDark: { startDay: number; endDay: number }; // 中深烘焙
+    dark: { startDay: number; endDay: number }; // 深度烘焙
+  };
   // 备份提醒设置
   backupReminder?: {
     enabled: boolean;
@@ -252,6 +263,17 @@ export const defaultSettings: SettingsOptions = {
     light: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆7天，赏味期60天
     medium: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆10天，赏味期60天
     dark: { startDay: 0, endDay: 0 }, // 0表示使用预设值：养豆14天，赏味期90天
+  },
+  // 详细赏味期设置默认关闭
+  detailedFlavorPeriodEnabled: false,
+  // 详细赏味期设置 - 初始为空，使用预设值或从简单设置继承
+  detailedFlavorPeriod: {
+    extraLight: { startDay: 0, endDay: 0 }, // 极浅烘焙，继承自浅烘
+    light: { startDay: 0, endDay: 0 }, // 浅度烘焙，继承自浅烘
+    mediumLight: { startDay: 0, endDay: 0 }, // 中浅烘焙，继承自浅烘
+    medium: { startDay: 0, endDay: 0 }, // 中度烘焙，继承自中烘
+    mediumDark: { startDay: 0, endDay: 0 }, // 中深烘焙，继承自深烘
+    dark: { startDay: 0, endDay: 0 }, // 深度烘焙，继承自深烘
   },
   // 备份提醒设置默认为undefined，将在运行时从BackupReminderUtils加载
   backupReminder: undefined,
