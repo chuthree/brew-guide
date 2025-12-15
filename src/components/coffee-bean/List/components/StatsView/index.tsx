@@ -150,74 +150,70 @@ const createExplanation = (
     useFallbackStats,
   } = metadata;
 
-  // 备选统计模式下的特殊说明
-  const fallbackNote = useFallbackStats
-    ? '基于咖啡豆剩余量变化估算，建议使用冲煮记录获得更精准数据'
-    : undefined;
-
   switch (key) {
     case 'totalConsumption':
       return {
         title: isHistoricalView ? '消耗' : '总消耗',
         value,
-        formula: useFallbackStats
-          ? '∑ (购买容量 - 剩余量)'
-          : '∑ 每条冲煮记录的咖啡用量',
-        dataSource: useFallbackStats
+        formula: isHistoricalView
+          ? '∑ 每条冲煮记录的咖啡用量'
+          : '∑ (购买容量 - 剩余量)',
+        dataSource: isHistoricalView
           ? [
-              { label: '咖啡豆数量', value: `${beansTotal} 款` },
+              { label: '有效冲煮记录', value: `${validNotes} 条` },
               { label: '统计天数', value: `${actualDays} 天` },
             ]
           : [
-              { label: '有效冲煮记录', value: `${validNotes} 条` },
+              { label: '咖啡豆数量', value: `${beansTotal} 款` },
               { label: '统计天数', value: `${actualDays} 天` },
             ],
-        note:
-          fallbackNote ||
-          (validNotes < 5 ? '记录较少，数据仅供参考' : undefined),
+        note: isHistoricalView
+          ? validNotes < 5
+            ? '记录较少，数据仅供参考'
+            : undefined
+          : '基于咖啡豆容量变化计算，不受冲煮记录影响',
       };
 
     case 'totalCost':
       return {
         title: isHistoricalView ? '花费' : '总花费',
         value,
-        formula: useFallbackStats
-          ? '∑ (消耗量 × 单价/容量)'
-          : '∑ (用量 × 单价/容量)',
-        dataSource: useFallbackStats
+        formula: isHistoricalView
+          ? '∑ (用量 × 单价/容量)'
+          : '∑ (消耗量 × 单价/容量)',
+        dataSource: isHistoricalView
           ? [
-              { label: '咖啡豆数量', value: `${beansTotal} 款` },
+              { label: '有效冲煮记录', value: `${validNotes} 条` },
               {
                 label: '有价格的咖啡豆',
                 value: `${beansWithPrice}/${beansTotal} 款`,
               },
             ]
           : [
-              { label: '有效冲煮记录', value: `${validNotes} 条` },
+              { label: '咖啡豆数量', value: `${beansTotal} 款` },
               {
                 label: '有价格的咖啡豆',
                 value: `${beansWithPrice}/${beansTotal} 款`,
               },
             ],
         note:
-          fallbackNote ||
-          (beansWithPrice < beansTotal
+          beansWithPrice < beansTotal
             ? `${beansTotal - beansWithPrice} 款咖啡豆缺少价格信息，未计入花费`
-            : undefined),
+            : isHistoricalView
+              ? undefined
+              : '基于咖啡豆容量变化计算',
       };
 
     case 'dailyConsumption':
       return {
         title: '日均消耗',
         value,
-        formula: useFallbackStats ? '总消耗 ÷ 统计天数' : '总消耗 ÷ 统计天数',
+        formula: '总消耗 ÷ 统计天数',
         dataSource: [
           { label: '总消耗', value: fmtWeight(stats.overview.consumption) },
           { label: '统计天数', value: `${actualDays} 天` },
         ],
-        note:
-          fallbackNote ||
-          (actualDays < 7 ? '统计周期较短，日均值可能波动较大' : undefined),
+        note: actualDays < 7 ? '统计周期较短，日均值可能波动较大' : undefined,
       };
 
     case 'dailyCost':
@@ -230,10 +226,9 @@ const createExplanation = (
           { label: '统计天数', value: `${actualDays} 天` },
         ],
         note:
-          fallbackNote ||
-          (beansWithPrice < beansTotal
+          beansWithPrice < beansTotal
             ? '部分咖啡豆缺少价格，实际花费可能更高'
-            : undefined),
+            : undefined,
       };
 
     case 'todayConsumption':

@@ -95,11 +95,11 @@ const ConsumptionTrendChart: React.FC<ConsumptionTrendChartProps> = ({
                   width={`${actualBarWidth}%`}
                   height={`${visualHeight}%`}
                   rx="1"
-                  className={`transition-all duration-200 ${
+                  className={
                     isActive
                       ? 'fill-neutral-800 dark:fill-neutral-200'
                       : 'fill-neutral-200 dark:fill-neutral-700'
-                  }`}
+                  }
                 />
               </g>
             );
