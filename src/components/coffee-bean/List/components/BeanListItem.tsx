@@ -413,7 +413,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
           className={`flex min-w-0 flex-1 flex-col gap-y-2 ${shouldShowNotes() ? '' : 'justify-center'}`}
         >
           <div className="flex flex-col justify-center gap-y-1">
-            <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
+            <div className="line-clamp-2 text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
               {searchQuery ? (
                 <HighlightText text={displayTitle} highlight={searchQuery} />
               ) : (
@@ -422,7 +422,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             </div>
 
             <div
-              className={`overflow-hidden text-xs leading-relaxed font-medium tracking-wide ${
+              className={`overflow-hidden text-xs leading-relaxed font-medium ${
                 isEmpty
                   ? 'text-neutral-400 dark:text-neutral-600'
                   : 'text-neutral-600 dark:text-neutral-400'
@@ -491,7 +491,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
           {shouldShowNotes() && (
             <div
-              className={`rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85 ${
+              className={`rounded bg-neutral-100 px-1.5 py-1 text-xs font-medium tracking-wide whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85 ${
                 limitNotesLines
                   ? 'cursor-pointer transition-colors hover:bg-neutral-200/40 dark:hover:bg-neutral-800/50'
                   : ''

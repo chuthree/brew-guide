@@ -135,7 +135,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1 overflow-visible">
-                <div className="pr-2 text-xs font-medium break-words text-neutral-800 dark:text-neutral-100">
+                <div className="text-xs font-medium wrap-break-word text-neutral-800 dark:text-neutral-100">
                   {/* 根据是否有方案来决定显示内容 */}
                   {note.method && note.method.trim() !== '' ? (
                     // 有方案时的显示逻辑
@@ -299,7 +299,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
         {/* 备注信息 */}
         {hasNotes && (
-          <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
+          <div className="rounded bg-neutral-100 px-1.5 py-1 text-xs font-medium tracking-wide whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
             {note.notes}
           </div>
         )}

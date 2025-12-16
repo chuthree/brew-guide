@@ -343,7 +343,7 @@ const BeanPreviewItem: React.FC<{
         </div>
 
         {shouldShowNotes() && (
-          <div className="rounded bg-neutral-200/30 p-1.5 text-xs leading-tight font-medium whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
+          <div className="rounded bg-neutral-200/30 px-1.5 py-1 text-xs font-medium tracking-wide whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
             <div
               className={
                 limitNotesLines ? getLineClampClass(notesMaxLines) : ''

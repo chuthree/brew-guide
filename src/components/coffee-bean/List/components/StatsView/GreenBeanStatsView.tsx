@@ -238,7 +238,7 @@ const ClickableStatsBlock: React.FC<ClickableStatsBlockProps> = ({
     <div
       data-stats-block
       onClick={handleClick}
-      className="flex cursor-pointer flex-col justify-between rounded-md bg-neutral-200/30 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
+      className="flex cursor-pointer flex-col justify-between rounded-md bg-neutral-100 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
     >
       <div className="mb-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         {title}
@@ -257,7 +257,7 @@ const InventoryForecast: React.FC<{ data: TypeInventoryStats[] }> = ({
   if (data.length === 0) return null;
 
   return (
-    <div className="rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
+    <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800/40">
       <div className="mb-2 grid grid-cols-4 gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         <div>类型</div>
         <div className="text-right">剩余</div>
@@ -295,7 +295,7 @@ const RoastingDetails: React.FC<{ data: RoastingDetailItem[] }> = ({
   };
 
   return (
-    <div className="rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
+    <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800/40">
       <div className="mb-2 grid grid-cols-[2fr_1fr_1fr] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         <div>生豆</div>
         <div className="text-right">烘焙量</div>
@@ -369,7 +369,7 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
+      className={`relative overflow-hidden rounded-md bg-neutral-100 p-3 dark:bg-neutral-800/40 ${hasMore ? 'cursor-pointer' : ''}`}
       onClick={handleToggle}
     >
       <div className="mb-2 grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -450,7 +450,7 @@ const BeanCountStats: React.FC<BeanCountStatsProps> = ({
     <div
       data-stats-block
       onClick={handleClick}
-      className="cursor-pointer rounded-md bg-neutral-200/30 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
+      className="cursor-pointer rounded-md bg-neutral-100 p-3 transition-colors active:bg-neutral-300/40 dark:bg-neutral-800/40 dark:active:bg-neutral-700/40"
     >
       <div className="mb-2 grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
         <div>生豆</div>
@@ -638,7 +638,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           {chart && (
-            <div className="col-span-2 flex flex-col justify-between rounded-md bg-neutral-200/30 p-3 dark:bg-neutral-800/40">
+            <div className="col-span-2 flex flex-col justify-between rounded-md bg-neutral-100 p-3 dark:bg-neutral-800/40">
               {chart}
             </div>
           )}

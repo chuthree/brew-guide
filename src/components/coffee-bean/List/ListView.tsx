@@ -288,7 +288,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             {/* 右侧内容区域 - 与图片等高 */}
             <div className="flex flex-col justify-center gap-y-1.5">
               {/* 选项名称 */}
-              <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
+              <div className="line-clamp-2 text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
                 不使用咖啡豆
               </div>
 
@@ -452,7 +452,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                   {/* 右侧内容区域 - 与图片等高 */}
                   <div className="flex flex-col justify-center gap-y-1.5">
                     {/* 咖啡豆名称和烘焙度 */}
-                    <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
+                    <div className="line-clamp-2 text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
                       {bean.name}
                       {bean.roastLevel && ` ${bean.roastLevel}`}
                       <span className={statusClass}> {freshStatus}</span>

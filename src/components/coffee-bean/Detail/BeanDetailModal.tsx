@@ -169,7 +169,7 @@ const InfoGrid: React.FC<{
           className={`flex items-start ${isAddMode && onItemClick ? 'cursor-pointer' : ''}`}
           onClick={() => isAddMode && onItemClick?.(item.key)}
         >
-          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             {item.label}
           </div>
           <div
@@ -1314,7 +1314,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           {/* 左侧关闭按钮 */}
           <button
             onClick={handleClose}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
           >
             <ChevronLeft className="-ml-px h-4.5 w-4.5 text-neutral-600 dark:text-neutral-400" />
           </button>
@@ -2275,7 +2275,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       {/* 烘焙度 - 点击下拉选择 */}
                       {(isAddMode || roastLevel) && (
                         <div className="flex items-start">
-                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             烘焙度
                           </div>
                           <div
@@ -2579,7 +2579,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                       handleUpdateField({ flavor: newFlavors });
                                     }
                                   }}
-                                  className="cursor-text bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800 dark:text-neutral-300"
+                                  className="cursor-text bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800/40 dark:text-neutral-300"
                                 >
                                   {flavor}
                                 </span>
@@ -2741,7 +2741,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       >
                         {/* 评分 */}
                         <div className="flex items-start">
-                          <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             评分
                           </div>
                           <div className="ml-4 text-xs font-medium text-neutral-800 dark:text-neutral-100">
@@ -2752,7 +2752,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         {/* 评价备注 */}
                         {bean?.ratingNotes && bean.ratingNotes.trim() && (
                           <div className="flex items-start">
-                            <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                               评价
                             </div>
                             <div className="ml-4 text-xs font-medium whitespace-pre-line text-neutral-800 dark:text-neutral-100">
@@ -2764,7 +2764,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     ) : (
                       // 无评价，显示添加提示
                       <div className="flex items-start">
-                        <div className="w-16 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                        <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                           评分
                         </div>
                         <button
@@ -2882,7 +2882,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         relatedBeans.map(relatedBean => (
                           <div
                             key={`source-${relatedBean.id}`}
-                            className="rounded bg-neutral-100 p-1.5 dark:bg-neutral-800"
+                            className="rounded bg-neutral-200 p-1.5 dark:bg-neutral-800/40"
                           >
                             <div className="flex items-center gap-3">
                               {/* 图片 */}
@@ -2922,7 +2922,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           return (
                             <div
                               key={note.id}
-                              className="rounded bg-neutral-100 p-1.5 dark:bg-neutral-800"
+                              className="rounded bg-neutral-100 p-1.5 dark:bg-neutral-800/40"
                             >
                               {/* card wrapper */}
                               {isChangeRecord ? (
@@ -3121,7 +3121,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                                     <div className="min-w-0 flex-1">
                                       <div className="space-y-1.5">
                                         {/* 标题行 - 复杂的显示逻辑 */}
-                                        <div className="text-xs font-medium break-words text-neutral-800 dark:text-neutral-100">
+                                        <div className="text-xs font-medium wrap-break-word text-neutral-800 dark:text-neutral-100">
                                           {note.method &&
                                           note.method.trim() !== '' ? (
                                             // 有方案时的显示逻辑
@@ -3261,7 +3261,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
                                   {/* 备注信息 */}
                                   {note.notes && note.notes.trim() && (
-                                    <div className="rounded bg-neutral-200/50 p-1.5 text-xs leading-tight font-medium tracking-widest whitespace-pre-line text-neutral-800/70 dark:bg-neutral-700/50 dark:text-neutral-400/85">
+                                    <div className="rounded bg-neutral-200/30 px-1.5 py-1 text-xs font-medium tracking-wide whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
                                       {note.notes}
                                     </div>
                                   )}
