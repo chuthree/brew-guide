@@ -25,7 +25,10 @@ import type {
  */
 export interface IStorageClient {
   testConnection(): Promise<boolean>;
-  uploadFile(key: string, content: string): Promise<boolean>;
+  uploadFile(
+    key: string,
+    content: string
+  ): Promise<boolean | { success: false; error: string }>;
   downloadFile(key: string): Promise<string | null>;
   deleteFile(key: string): Promise<boolean>;
   fileExists(key: string): Promise<boolean>;
@@ -299,6 +302,16 @@ export abstract class BaseSyncManager {
     // 🔧 清除缓存，确保同步使用最新数据
     this.clearMetadataCache();
 
+    // 调试日志收集器
+    const debugLogs: string[] = [];
+    const addLog = (message: string) => {
+      const timestamp = new Date().toISOString();
+      debugLogs.push(`[${timestamp}] ${message}`);
+      console.log(`📝 [${this.getServiceName()}] ${message}`);
+    };
+
+    addLog(`开始同步，方向: ${options.preferredDirection || 'auto'}`);
+
     const result: SyncResult = {
       success: false,
       message: '',
@@ -307,6 +320,7 @@ export abstract class BaseSyncManager {
       deletedFiles: 0,
       errors: [],
       warnings: [],
+      debugLogs: [],
     };
 
     try {
@@ -319,7 +333,17 @@ export abstract class BaseSyncManager {
       });
 
       // 1. 获取本地文件元数据
+      addLog('正在获取本地文件元数据...');
       const localFilesMetadata = await this.getLocalFilesMetadata();
+      const localFileKeys = Object.keys(localFilesMetadata);
+      addLog(`本地文件数量: ${localFileKeys.length}`);
+
+      // 记录每个本地文件的详细信息
+      for (const [key, meta] of Object.entries(localFilesMetadata)) {
+        addLog(
+          `  - ${key}: size=${meta.size}, hash=${meta.hash?.substring(0, 12)}...`
+        );
+      }
 
       options.onProgress?.({
         phase: 'preparing',
@@ -330,7 +354,22 @@ export abstract class BaseSyncManager {
       });
 
       // 2. 获取远程元数据（不使用缓存）
+      addLog('正在获取远程元数据...');
       const remoteMetadata = await this.getCachedRemoteMetadata(false);
+      if (remoteMetadata) {
+        const remoteFileKeys = Object.keys(remoteMetadata.files);
+        addLog(`远程文件数量: ${remoteFileKeys.length}`);
+        addLog(
+          `远程最后同步时间: ${remoteMetadata.lastSyncTime ? new Date(remoteMetadata.lastSyncTime).toLocaleString('zh-CN') : '无'}`
+        );
+        for (const [key, meta] of Object.entries(remoteMetadata.files)) {
+          addLog(
+            `  - ${key}: size=${meta.size}, hash=${meta.hash?.substring(0, 12)}...`
+          );
+        }
+      } else {
+        addLog('远程元数据为空（首次同步或云端无数据）');
+      }
 
       options.onProgress?.({
         phase: 'preparing',
@@ -341,7 +380,16 @@ export abstract class BaseSyncManager {
       });
 
       // 3. 获取基准元数据（不使用缓存）
+      addLog('正在获取基准元数据...');
       const baseMetadata = await this.getCachedLocalMetadata(false);
+      if (baseMetadata) {
+        addLog(`基准文件数量: ${Object.keys(baseMetadata.files).length}`);
+        addLog(
+          `基准最后同步时间: ${baseMetadata.lastSyncTime ? new Date(baseMetadata.lastSyncTime).toLocaleString('zh-CN') : '无'}`
+        );
+      } else {
+        addLog('基准元数据为空');
+      }
 
       console.log(`📊 ${this.getServiceName()} 同步状态:`, {
         本地文件数: Object.keys(localFilesMetadata).length,
@@ -353,47 +401,71 @@ export abstract class BaseSyncManager {
 
       // 4. 如果指定了同步方向，直接执行
       if (options.preferredDirection === 'upload') {
+        addLog('用户选择：强制上传');
         // 验证本地数据是否有效
         if (Object.keys(localFilesMetadata).length === 0) {
+          addLog('错误：本地没有可上传的数据');
           console.error(`❌ [${this.getServiceName()}] 本地没有可上传的数据`);
           result.success = false;
           result.message = '上传失败：本地没有可上传的数据';
           result.errors.push('获取本地数据失败，请检查应用存储状态');
+          result.debugLogs = debugLogs;
           return result;
         }
 
+        addLog(`准备上传 ${Object.keys(localFilesMetadata).length} 个文件`);
         console.log(
           `⬆️ [${this.getServiceName()}] 执行强制上传，文件数: ${Object.keys(localFilesMetadata).length}`
         );
-        await this.uploadAllFiles(localFilesMetadata, result, options);
+        await this.uploadAllFiles(localFilesMetadata, result, options, addLog);
+        addLog(
+          `上传完成：成功 ${result.uploadedFiles} 个，错误 ${result.errors.length} 个`
+        );
         await this.updateMetadataAfterSync(localFilesMetadata);
+        addLog('元数据更新完成');
         result.message = `已上传 ${result.uploadedFiles} 个文件`;
         result.success = result.errors.length === 0;
+        result.debugLogs = debugLogs;
         return result;
       }
 
       if (options.preferredDirection === 'download') {
+        addLog('用户选择：强制下载');
         console.log(`⬇️ [${this.getServiceName()}] 执行强制下载`);
         if (remoteMetadata) {
+          addLog(`准备下载 ${Object.keys(remoteMetadata.files).length} 个文件`);
           console.log(
             `⬇️ [${this.getServiceName()}] 远程文件数: ${Object.keys(remoteMetadata.files).length}`
           );
-          await this.downloadAllFiles(remoteMetadata.files, result, options);
+          await this.downloadAllFiles(
+            remoteMetadata.files,
+            result,
+            options,
+            addLog
+          );
+          addLog(
+            `下载完成：成功 ${result.downloadedFiles} 个，错误 ${result.errors.length} 个`
+          );
           await this.updateMetadataAfterSync(remoteMetadata.files);
+          addLog('元数据更新完成');
           result.message = `已下载 ${result.downloadedFiles} 个文件`;
           result.success = result.errors.length === 0;
+          result.debugLogs = debugLogs;
           return result;
         } else {
+          addLog('错误：云端没有数据可下载');
           console.warn(
             `⚠️ [${this.getServiceName()}] 下载失败：没有远程元数据`
           );
           result.message = '下载失败：云端没有数据';
           result.success = false;
+          result.debugLogs = debugLogs;
           return result;
         }
       }
 
       // 5. 计算同步计划
+      addLog('正在计算同步计划...');
       options.onProgress?.({
         phase: 'preparing',
         completed: 60,
@@ -409,6 +481,9 @@ export abstract class BaseSyncManager {
       );
 
       const summary = this.syncPlanner.generatePlanSummary(plan);
+      addLog(
+        `同步计划: 上传=${plan.upload.length}, 下载=${plan.download.length}, 冲突=${plan.conflicts.length}, 本地删除=${plan.deleteLocal.length}, 远程删除=${plan.deleteRemote.length}`
+      );
 
       console.log('📋 同步计划:', {
         上传: plan.upload.length,
@@ -422,11 +497,13 @@ export abstract class BaseSyncManager {
         plan.conflicts.length > 0 &&
         options.conflictStrategy === ('manual' as ConflictStrategy)
       ) {
+        addLog(`发现 ${plan.conflicts.length} 个冲突，需要手动解决`);
         result.conflict = true;
         result.plan = plan;
         result.remoteMetadata = remoteMetadata;
         result.message = `发现 ${plan.conflicts.length} 个冲突，需要手动解决`;
         result.warnings?.push(result.message);
+        result.debugLogs = debugLogs;
         return result;
       }
 
@@ -439,24 +516,30 @@ export abstract class BaseSyncManager {
         plan.deleteRemote.length === 0 &&
         plan.conflicts.length === 0
       ) {
+        addLog('同步计划为空，数据已是最新');
         await this.updateMetadataAfterSync(localFilesMetadata);
         result.success = true;
         result.message = '数据已是最新，无需同步';
+        result.debugLogs = debugLogs;
         return result;
       }
 
       // 8. 干运行模式
       if (options.dryRun) {
+        addLog('干运行模式，不执行实际同步');
         result.plan = plan;
         result.message = `同步预览: ${summary}`;
         result.success = true;
+        result.debugLogs = debugLogs;
         return result;
       }
 
       // 9. 执行同步计划
-      await this.executeSyncPlan(plan, result, options);
+      addLog('开始执行同步计划...');
+      await this.executeSyncPlan(plan, result, options, addLog);
 
       // 10. 更新元数据
+      addLog('正在更新元数据...');
       options.onProgress?.({
         phase: 'finalizing',
         completed: 95,
@@ -468,20 +551,31 @@ export abstract class BaseSyncManager {
       // 🔧 关键修复：同步后重新获取本地文件元数据
       const updatedLocalFiles = await this.getLocalFilesMetadata();
       await this.updateMetadataAfterSync(updatedLocalFiles);
+      addLog('元数据更新完成');
 
       // 清除元数据缓存，确保下次同步使用最新数据
       this.clearMetadataCache();
 
       // 11. 生成结果
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      addLog(
+        `同步完成，耗时 ${duration}s，上传 ${result.uploadedFiles}，下载 ${result.downloadedFiles}，错误 ${result.errors.length}`
+      );
       result.success = result.errors.length === 0;
       result.message = result.success
         ? `同步完成 (${duration}s): ${summary}`
         : `同步部分完成，遇到 ${result.errors.length} 个错误`;
+      result.debugLogs = debugLogs;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
+      const errorStack = error instanceof Error ? error.stack : '';
+      addLog(`同步异常: ${errorMessage}`);
+      if (errorStack) {
+        addLog(`异常堆栈: ${errorStack}`);
+      }
       result.errors.push(`同步失败: ${errorMessage}`);
       result.message = '同步失败';
+      result.debugLogs = debugLogs;
       console.error(`\n❌ ${this.getServiceName()} 同步过程中发生错误:`, error);
 
       // 错误情况也要清除缓存
@@ -528,9 +622,13 @@ export abstract class BaseSyncManager {
   protected async uploadAllFiles(
     localFiles: Record<string, FileMetadata>,
     result: SyncResult,
-    options: SyncOptions = {}
+    options: SyncOptions = {},
+    addLog?: (message: string) => void
   ): Promise<void> {
+    const log = addLog || (() => {});
+
     if (!this.client) {
+      log('错误：客户端未初始化');
       result.errors.push('客户端未初始化');
       return;
     }
@@ -539,14 +637,20 @@ export abstract class BaseSyncManager {
     const totalFiles = files.length;
     let completedFiles = 0;
 
+    log(`开始上传 ${totalFiles} 个文件`);
+
     for (const [key, metadata] of files) {
       try {
+        log(`正在获取文件内容: ${key}`);
         const content = await this.getFileContent(key);
         if (!content) {
+          log(`错误：获取 ${key} 内容失败，内容为空`);
           result.errors.push(`获取 ${key} 内容失败`);
           completedFiles++;
           continue;
         }
+
+        log(`文件 ${key} 内容长度: ${content.length} 字节`);
 
         options.onProgress?.({
           phase: 'uploading',
@@ -556,23 +660,40 @@ export abstract class BaseSyncManager {
           message: `正在上传数据...`,
         });
 
-        const success = await this.client.uploadFile(key, content);
+        log(`正在上传文件: ${key}`);
+        const uploadResult = await this.client.uploadFile(key, content);
+
+        // 处理新的返回格式：boolean 或 { success: false; error: string }
+        const success = uploadResult === true;
+        const errorDetail =
+          typeof uploadResult === 'object' && uploadResult.error
+            ? uploadResult.error
+            : null;
+
         if (success) {
           result.uploadedFiles = (result.uploadedFiles || 0) + 1;
+          log(`上传成功: ${key}`);
           console.log(`✅ [${this.getServiceName()}] 上传成功: ${key}`);
         } else {
-          result.errors.push(`上传 ${key} 失败`);
-          console.error(`❌ [${this.getServiceName()}] 上传失败: ${key}`);
+          const errorInfo = errorDetail || '客户端返回 false';
+          log(`上传失败: ${key}（${errorInfo}）`);
+          result.errors.push(`上传 ${key} 失败: ${errorInfo}`);
+          console.error(
+            `❌ [${this.getServiceName()}] 上传失败: ${key} - ${errorInfo}`
+          );
         }
 
         completedFiles++;
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
+        log(`上传 ${key} 异常: ${errorMsg}`);
         result.errors.push(`上传 ${key} 时出错: ${errorMsg}`);
         console.error(`❌ [${this.getServiceName()}] 上传 ${key} 失败:`, error);
         completedFiles++;
       }
     }
+
+    log(`上传流程结束，完成 ${completedFiles}/${totalFiles}`);
   }
 
   /**
@@ -582,9 +703,13 @@ export abstract class BaseSyncManager {
   protected async downloadAllFiles(
     remoteFiles: Record<string, FileMetadata>,
     result: SyncResult,
-    options: SyncOptions = {}
+    options: SyncOptions = {},
+    addLog?: (message: string) => void
   ): Promise<void> {
+    const log = addLog || (() => {});
+
     if (!this.client) {
+      log('错误：客户端未初始化');
       result.errors.push('客户端未初始化');
       return;
     }
@@ -592,6 +717,8 @@ export abstract class BaseSyncManager {
     const files = Object.entries(remoteFiles);
     const totalFiles = files.length;
     let completedFiles = 0;
+
+    log(`开始下载 ${totalFiles} 个文件`);
 
     for (const [key, metadata] of files) {
       try {
@@ -603,26 +730,35 @@ export abstract class BaseSyncManager {
           message: `正在下载数据...`,
         });
 
+        log(`正在下载文件: ${key}`);
         const content = await this.client.downloadFile(key);
         if (!content) {
+          log(`下载失败: ${key}（内容为空）`);
           result.errors.push(`下载 ${key} 失败`);
           console.error(`❌ [${this.getServiceName()}] 下载失败: ${key}`);
           completedFiles++;
           continue;
         }
 
+        log(`文件 ${key} 下载内容长度: ${content.length} 字节`);
+
+        log(`正在保存文件: ${key}`);
         await this.saveFileContent(key, content);
         result.downloadedFiles = (result.downloadedFiles || 0) + 1;
+        log(`下载成功: ${key}`);
         console.log(`✅ [${this.getServiceName()}] 下载成功: ${key}`);
 
         completedFiles++;
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
+        log(`下载 ${key} 异常: ${errorMsg}`);
         result.errors.push(`下载 ${key} 时出错: ${errorMsg}`);
         console.error(`❌ [${this.getServiceName()}] 下载 ${key} 失败:`, error);
         completedFiles++;
       }
     }
+
+    log(`下载流程结束，完成 ${completedFiles}/${totalFiles}`);
   }
 
   /**
@@ -632,9 +768,13 @@ export abstract class BaseSyncManager {
   protected async executeSyncPlan(
     plan: SyncPlan,
     result: SyncResult,
-    options: SyncOptions
+    options: SyncOptions,
+    addLog?: (message: string) => void
   ): Promise<void> {
+    const log = addLog || (() => {});
+
     if (!this.client) {
+      log('错误：客户端未初始化');
       result.errors.push('客户端未初始化');
       return;
     }
@@ -646,21 +786,38 @@ export abstract class BaseSyncManager {
       plan.deleteRemote.length;
     let completedOperations = 0;
 
+    log(`执行同步计划：总共 ${totalOperations} 个操作`);
+
     // 1. 上传文件
+    log(`开始上传 ${plan.upload.length} 个文件`);
     for (const file of plan.upload) {
       try {
+        log(`正在获取文件内容: ${file.key}`);
         const content = await this.getFileContent(file.key);
         if (!content) {
+          log(`错误：获取 ${file.key} 内容失败`);
           result.errors.push(`获取 ${file.key} 内容失败`);
           completedOperations++;
           continue;
         }
 
-        const success = await this.client.uploadFile(file.key, content);
+        log(`正在上传: ${file.key}（${content.length} 字节）`);
+        const uploadResult = await this.client.uploadFile(file.key, content);
+
+        // 处理新的返回格式：boolean 或 { success: false; error: string }
+        const success = uploadResult === true;
+        const errorDetail =
+          typeof uploadResult === 'object' && uploadResult.error
+            ? uploadResult.error
+            : null;
+
         if (success) {
           result.uploadedFiles = (result.uploadedFiles || 0) + 1;
+          log(`上传成功: ${file.key}`);
         } else {
-          result.errors.push(`上传 ${file.key} 失败`);
+          const errorInfo = errorDetail || '客户端返回 false';
+          log(`上传失败: ${file.key}（${errorInfo}）`);
+          result.errors.push(`上传 ${file.key} 失败: ${errorInfo}`);
         }
 
         completedOperations++;
@@ -673,6 +830,7 @@ export abstract class BaseSyncManager {
         });
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
+        log(`上传 ${file.key} 异常: ${errorMsg}`);
         result.errors.push(`上传 ${file.key} 时出错: ${errorMsg}`);
         console.error(
           `❌ [${this.getServiceName()}] 上传 ${file.key} 失败:`,
@@ -683,17 +841,22 @@ export abstract class BaseSyncManager {
     }
 
     // 2. 下载文件
+    log(`开始下载 ${plan.download.length} 个文件`);
     for (const file of plan.download) {
       try {
+        log(`正在下载: ${file.key}`);
         const content = await this.client.downloadFile(file.key);
         if (!content) {
+          log(`下载失败: ${file.key}（内容为空）`);
           result.errors.push(`下载 ${file.key} 失败`);
           completedOperations++;
           continue;
         }
 
+        log(`正在保存: ${file.key}（${content.length} 字节）`);
         await this.saveFileContent(file.key, content);
         result.downloadedFiles = (result.downloadedFiles || 0) + 1;
+        log(`下载成功: ${file.key}`);
 
         completedOperations++;
         options.onProgress?.({
@@ -705,6 +868,7 @@ export abstract class BaseSyncManager {
         });
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
+        log(`下载 ${file.key} 异常: ${errorMsg}`);
         result.errors.push(`下载 ${file.key} 时出错: ${errorMsg}`);
         console.error(
           `❌ [${this.getServiceName()}] 下载 ${file.key} 失败:`,
@@ -715,17 +879,22 @@ export abstract class BaseSyncManager {
     }
 
     // 3. 删除远程文件
+    log(`开始删除 ${plan.deleteRemote.length} 个远程文件`);
     for (const file of plan.deleteRemote) {
       try {
+        log(`正在删除远程文件: ${file.key}`);
         const success = await this.client.deleteFile(file.key);
         if (success) {
           result.deletedFiles = (result.deletedFiles || 0) + 1;
+          log(`删除远程成功: ${file.key}`);
         } else {
+          log(`删除远程失败: ${file.key}`);
           result.errors.push(`删除远程 ${file.key} 失败`);
         }
         completedOperations++;
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
+        log(`删除远程 ${file.key} 异常: ${errorMsg}`);
         result.errors.push(`删除远程 ${file.key} 时出错: ${errorMsg}`);
         console.error(
           `❌ [${this.getServiceName()}] 删除远程 ${file.key} 失败:`,
@@ -736,13 +905,17 @@ export abstract class BaseSyncManager {
     }
 
     // 4. 删除本地文件
+    log(`开始删除 ${plan.deleteLocal.length} 个本地文件`);
     for (const file of plan.deleteLocal) {
       try {
+        log(`正在删除本地文件: ${file.key}`);
         await Storage.remove(file.key);
         result.deletedFiles = (result.deletedFiles || 0) + 1;
+        log(`删除本地成功: ${file.key}`);
         completedOperations++;
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
+        log(`删除本地 ${file.key} 异常: ${errorMsg}`);
         result.errors.push(`删除本地 ${file.key} 时出错: ${errorMsg}`);
         console.error(
           `❌ [${this.getServiceName()}] 删除本地 ${file.key} 失败:`,
@@ -751,6 +924,10 @@ export abstract class BaseSyncManager {
         completedOperations++;
       }
     }
+
+    log(
+      `同步计划执行完成：上传 ${result.uploadedFiles}，下载 ${result.downloadedFiles}，删除 ${result.deletedFiles}`
+    );
   }
 
   /**

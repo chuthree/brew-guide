@@ -166,6 +166,8 @@ export interface SyncResult {
   remoteMetadata?: SyncMetadata | null;
   /** 同步计划（用于预览） */
   plan?: SyncPlan;
+  /** 调试日志（用于诊断同步问题） */
+  debugLogs?: string[];
 }
 
 /**

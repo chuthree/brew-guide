@@ -288,6 +288,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
  * 图标规范：
  * - 使用 SVGR 导入的 SVG 作为 React 组件
  * - 统一中性色：浅色模式黑色，深色模式白色
+ * - 统一线条宽度：0.5px
  * - 默认尺寸 128px
  *
  * @example
@@ -298,7 +299,7 @@ const ActionDrawerIcon: React.FC<ActionDrawerIconProps> = ({
   icon: Icon,
   size = 128,
 }) => (
-  <div className="mb-6 text-neutral-800 dark:text-neutral-200">
+  <div className="mb-6 text-neutral-800 dark:text-neutral-200 [&_svg]:stroke-[0.5]">
     <Icon width={size} height={size} />
   </div>
 );

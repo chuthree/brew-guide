@@ -113,13 +113,20 @@ export class MetadataManager {
 
     try {
       const content = JSON.stringify(metadata, null, 2);
-      const success = await this.client.uploadFile(
+      const uploadResult = await this.client.uploadFile(
         METADATA_REMOTE_KEY,
         content
       );
 
+      // 处理新的返回格式：boolean 或 { success: false; error: string }
+      const success = uploadResult === true;
+      const errorDetail =
+        typeof uploadResult === 'object' && uploadResult.error
+          ? uploadResult.error
+          : null;
+
       if (!success) {
-        throw new Error('上传元数据失败');
+        throw new Error(errorDetail || '上传元数据失败');
       }
     } catch (error) {
       console.error('保存远程元数据失败:', error);

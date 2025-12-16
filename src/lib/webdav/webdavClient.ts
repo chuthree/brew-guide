@@ -218,7 +218,10 @@ export class WebDAVClient {
   /**
    * 上传文件
    */
-  async uploadFile(filename: string, content: string): Promise<boolean> {
+  async uploadFile(
+    filename: string,
+    content: string
+  ): Promise<boolean | { success: false; error: string }> {
     try {
       // 🔧 修复：上传前先确保完整的目录路径存在
       // 需要确保 remotePath 存在
@@ -247,6 +250,7 @@ export class WebDAVClient {
       const proxiedUrl = this.getProxiedUrl(url);
 
       console.log(`[WebDAV] 上传文件: ${filename} 到 ${url}`);
+      console.log(`[WebDAV] 文件大小: ${content.length} 字节`);
 
       const response = await fetch(proxiedUrl, {
         method: 'PUT',
@@ -269,20 +273,42 @@ export class WebDAVClient {
       });
 
       if (!success) {
-        console.error(
-          `[WebDAV] 上传失败: ${response.status} ${response.statusText}`
-        );
+        // 尝试读取响应体获取更多错误信息
+        let errorDetail = `HTTP ${response.status} ${response.statusText}`;
+        try {
+          const responseText = await response.text();
+          if (responseText) {
+            // 检查是否有代理错误
+            const proxyError = this.checkProxyError(responseText);
+            if (proxyError) {
+              errorDetail = `代理错误: ${proxyError}`;
+            } else {
+              // 检查 WebDAV 错误
+              const webdavError = this.checkWebDAVError(responseText);
+              if (webdavError) {
+                errorDetail = `WebDAV 错误: ${webdavError}`;
+              } else if (responseText.length < 500) {
+                errorDetail = `${errorDetail} - ${responseText}`;
+              }
+            }
+          }
+        } catch {
+          // 忽略读取响应体的错误
+        }
+        console.error(`[WebDAV] 上传失败: ${errorDetail}`);
+        return { success: false, error: errorDetail };
       }
 
       return success;
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       console.error('上传文件失败:', error);
       this.logSummary('upload', {
         filename,
         ok: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMsg,
       });
-      return false;
+      return { success: false, error: `异常: ${errorMsg}` };
     }
   }
 

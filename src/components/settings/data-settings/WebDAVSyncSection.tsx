@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { WebDAVSyncManager } from '@/lib/webdav/syncManager';
 import type { SyncResult as WebDAVSyncResult } from '@/lib/webdav/types';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '../Settings';
 import { Upload, Download } from 'lucide-react';
 import WebDAVTutorialModal from './WebDAVTutorialModal';
+import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
 
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
 
@@ -46,6 +48,12 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     percentage: number;
   } | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
+
+  // 调试日志抽屉状态
+  const [showDebugDrawer, setShowDebugDrawer] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   // 自动连接 - 当启用且配置完整时自动连接
   useEffect(() => {
@@ -266,11 +274,39 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
           });
           setTimeout(() => window.location.reload(), 2500);
         } else {
-          showToast({
-            type: 'info',
-            title: '数据已是最新，无需同步',
-            duration: 2000,
-          });
+          // 当上传/下载都是 0 时，检查是否用户主动点击了上传按钮
+          // 如果是主动上传但结果为 0，可能存在问题，显示调试日志
+          if (
+            direction === 'upload' &&
+            result.debugLogs &&
+            result.debugLogs.length > 0
+          ) {
+            setDebugLogs(result.debugLogs);
+            setShowDebugDrawer(true);
+            showToast({
+              type: 'warning',
+              title: '上传完成但未传输任何文件，请查看详细日志',
+              duration: 3000,
+            });
+          } else if (
+            direction === 'download' &&
+            result.debugLogs &&
+            result.debugLogs.length > 0
+          ) {
+            setDebugLogs(result.debugLogs);
+            setShowDebugDrawer(true);
+            showToast({
+              type: 'warning',
+              title: '下载完成但未传输任何文件，请查看详细日志',
+              duration: 3000,
+            });
+          } else {
+            showToast({
+              type: 'info',
+              title: '数据已是最新，无需同步',
+              duration: 2000,
+            });
+          }
         }
 
         if (hapticFeedback) {
@@ -279,6 +315,11 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
 
         onSyncComplete?.();
       } else {
+        // 同步失败时也显示调试日志
+        if (result.debugLogs && result.debugLogs.length > 0) {
+          setDebugLogs(result.debugLogs);
+          setShowDebugDrawer(true);
+        }
         setError(result.message || '同步失败');
         const { showToast } = await import(
           '@/components/common/feedback/LightToast'
@@ -304,6 +345,31 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     } finally {
       setIsSyncing(false);
       setSyncProgress(null);
+    }
+  };
+
+  // 复制日志到剪贴板
+  const handleCopyLogs = async () => {
+    const logText = debugLogs.join('\n');
+    try {
+      await navigator.clipboard.writeText(logText);
+      setCopySuccess(true);
+      if (hapticFeedback) {
+        hapticsUtils.light();
+      }
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      // 降级方案：选中文本框内容
+      if (textAreaRef.current) {
+        textAreaRef.current.select();
+      }
+    }
+  };
+
+  // 全选文本框内容
+  const handleSelectAll = () => {
+    if (textAreaRef.current) {
+      textAreaRef.current.select();
     }
   };
 
@@ -520,6 +586,41 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         onClose={() => setShowTutorial(false)}
         onComplete={handleTutorialComplete}
       />
+
+      {/* 调试日志抽屉 */}
+      <ActionDrawer
+        isOpen={showDebugDrawer}
+        onClose={() => setShowDebugDrawer(false)}
+        historyId="webdav-debug-logs"
+      >
+        <ActionDrawer.Icon icon={DataAlertIcon} />
+        <ActionDrawer.Content>
+          <p className="mb-3 text-neutral-500 dark:text-neutral-400">
+            同步过程中的
+            <span className="text-neutral-800 dark:text-neutral-200">
+              详细日志
+            </span>
+            ，可以帮助开发者诊断问题。点击文本框可全选内容。
+          </p>
+          <textarea
+            ref={textAreaRef}
+            readOnly
+            onClick={handleSelectAll}
+            value={debugLogs.join('\n')}
+            className="h-48 w-full resize-none rounded-md border border-neutral-200 bg-neutral-50 p-3 font-mono text-xs leading-relaxed text-neutral-700 focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+          />
+        </ActionDrawer.Content>
+        <ActionDrawer.Actions>
+          <ActionDrawer.SecondaryButton
+            onClick={() => setShowDebugDrawer(false)}
+          >
+            关闭
+          </ActionDrawer.SecondaryButton>
+          <ActionDrawer.PrimaryButton onClick={handleCopyLogs}>
+            {copySuccess ? '已复制' : '复制日志'}
+          </ActionDrawer.PrimaryButton>
+        </ActionDrawer.Actions>
+      </ActionDrawer>
     </div>
   );
 };

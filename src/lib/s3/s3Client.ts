@@ -121,7 +121,7 @@ export class S3Client {
   async uploadFile(
     key: string,
     content: string | ArrayBuffer
-  ): Promise<boolean> {
+  ): Promise<boolean | { success: false; error: string }> {
     try {
       const fullKey = this.getFullKey(key);
 
@@ -157,17 +157,20 @@ export class S3Client {
       if (!response.ok) {
         const responseText = await response.text();
         console.error('❌ 上传失败，响应内容:', responseText.substring(0, 500));
+        const errorDetail = `HTTP ${response.status} ${response.statusText}${responseText ? ` - ${responseText.substring(0, 200)}` : ''}`;
+        return { success: false, error: errorDetail };
       }
 
       return response.ok;
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       console.error('❌ 上传文件失败:', error);
       this.logSummary('upload', {
         key,
         ok: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMsg,
       });
-      return false;
+      return { success: false, error: `异常: ${errorMsg}` };
     }
   }
 
