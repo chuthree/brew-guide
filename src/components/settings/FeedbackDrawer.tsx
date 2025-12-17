@@ -19,10 +19,10 @@ import {
 import {
   ThumbsUp,
   MessageCircle,
-  Loader2,
   Shield,
   Trash2,
   ArrowUp,
+  Loader2,
 } from 'lucide-react';
 import { Storage } from '@/lib/core/storage';
 
@@ -532,8 +532,28 @@ const FeedbackDrawer: React.FC<FeedbackDrawerProps> = ({
                 className="max-h-[50vh] space-y-3 overflow-y-auto"
               >
                 {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+                  <div className="space-y-3">
+                    {/* 骨架屏 - 模拟3个反馈卡片 */}
+                    {[1, 2, 3, 4].map(i => (
+                      <div
+                        key={i}
+                        className="animate-pulse rounded-xl bg-neutral-100 p-3 dark:bg-neutral-800"
+                      >
+                        {/* 内容骨架 */}
+                        <div className="mb-2 space-y-2">
+                          <div className="h-3.5 w-full rounded bg-neutral-200 dark:bg-neutral-700" />
+                          <div className="h-3.5 w-4/5 rounded bg-neutral-200 dark:bg-neutral-700" />
+                        </div>
+                        {/* 底部信息骨架 */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+                            <div className="h-3 w-16 rounded bg-neutral-200 dark:bg-neutral-700" />
+                          </div>
+                          <div className="h-6 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : filteredFeedbacks.length === 0 ? (
                   <div className="py-12 text-center text-sm text-neutral-400">
