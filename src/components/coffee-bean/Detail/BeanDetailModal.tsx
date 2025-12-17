@@ -127,14 +127,6 @@ const BeanPrintModal = dynamic(
   }
 );
 
-// 动态导入 BeanShareModal 组件
-const BeanShareModal = dynamic(
-  () => import('@/components/coffee-bean/Share/BeanShareModal'),
-  {
-    ssr: false,
-  }
-);
-
 // 动态导入 BeanRatingModal 组件
 const BeanRatingModal = dynamic(
   () => import('@/components/coffee-bean/Rating/Modal'),
@@ -315,9 +307,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   // 打印功能状态
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printEnabled, setPrintEnabled] = useState(false);
-
-  // 分享状态
-  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // 评分状态
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
@@ -1480,13 +1469,24 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           },
                         ]
                       : []),
-                    // 统一分享按钮
+                    // 统一分享按钮 - 触发事件退出到列表并进入分享模式
                     ...(onShare
                       ? [
                           {
                             id: 'share',
                             label: '分享',
-                            onClick: () => setShareModalOpen(true),
+                            onClick: () => {
+                              // 关闭详情页
+                              handleClose();
+                              // 触发分享事件，传递当前咖啡豆 ID
+                              setTimeout(() => {
+                                window.dispatchEvent(
+                                  new CustomEvent('beanShareTriggered', {
+                                    detail: { beanId: bean.id },
+                                  })
+                                );
+                              }, 300); // 等待详情页关闭动画
+                            },
                             color: 'default' as const,
                           },
                         ]
@@ -3300,18 +3300,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           onClose={() => setPrintModalOpen(false)}
         />
       )}
-
-      {/* 分享模态框 */}
-      <BeanShareModal
-        isOpen={shareModalOpen}
-        bean={bean}
-        onClose={() => setShareModalOpen(false)}
-        onTextShare={(bean: CoffeeBean) => {
-          if (onShare) {
-            onShare(bean);
-          }
-        }}
-      />
 
       {/* 评分模态框 */}
       <BeanRatingModal

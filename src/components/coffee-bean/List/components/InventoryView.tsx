@@ -82,6 +82,10 @@ interface InventoryViewProps {
   // 备注展开状态相关
   expandedNotes?: Record<string, boolean>;
   onNotesExpandToggle?: (beanId: string, expanded: boolean) => void;
+  // 分享模式相关
+  isShareMode?: boolean;
+  selectedBeans?: string[];
+  onToggleSelect?: (beanId: string) => void;
   settings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
     showOnlyBeanName?: boolean;
@@ -115,6 +119,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   isImageFlowMode = false,
   expandedNotes = {},
   onNotesExpandToggle,
+  isShareMode = false,
+  selectedBeans = [],
+  onToggleSelect,
   settings,
   scrollParentRef,
 }) => {
@@ -127,6 +134,11 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   } | null>(null);
 
   const handleDetailClick = (bean: ExtendedCoffeeBean) => {
+    // 分享模式下不打开详情页，而是切换选择状态
+    if (isShareMode && onToggleSelect) {
+      onToggleSelect(bean.id);
+      return;
+    }
     // 通过事件打开详情页
     window.dispatchEvent(
       new CustomEvent('beanDetailOpened', {
@@ -310,6 +322,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                         searchQuery={isSearching ? searchQuery : ''}
                         isNotesExpanded={expandedNotes[item.bean.id]}
                         onNotesExpandToggle={onNotesExpandToggle}
+                        isShareMode={isShareMode}
+                        isSelected={selectedBeans.includes(item.bean.id)}
+                        onToggleSelect={onToggleSelect}
                         settings={settings}
                       />
                     );

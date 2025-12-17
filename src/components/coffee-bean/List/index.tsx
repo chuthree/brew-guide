@@ -187,6 +187,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   );
   const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isLoadingRef = useRef<boolean>(false);
+  const beansContainerRef = useRef<HTMLDivElement | null>(null);
 
   // 处理初始化参数 - 只在组件首次挂载时执行
   useEffect(() => {
@@ -1182,6 +1183,32 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
+  // 分享模式状态
+  const [isShareMode, setIsShareMode] = useState(false);
+  const [selectedBeans, setSelectedBeans] = useState<string[]>([]);
+  const [isSavingShareImage, setIsSavingShareImage] = useState(false);
+
+  // 监听分享事件 - 从咖啡豆详情触发的分享
+  useEffect(() => {
+    const handleBeanShareTriggered = (e: Event) => {
+      const customEvent = e as CustomEvent<{ beanId: string }>;
+      if (customEvent.detail?.beanId) {
+        // 进入分享模式并选中该咖啡豆
+        setIsShareMode(true);
+        setSelectedBeans([customEvent.detail.beanId]);
+      }
+    };
+
+    window.addEventListener('beanShareTriggered', handleBeanShareTriggered);
+
+    return () => {
+      window.removeEventListener(
+        'beanShareTriggered',
+        handleBeanShareTriggered
+      );
+    };
+  }, []);
+
   // 加载搜索历史
   useEffect(() => {
     setSearchHistory(getSearchHistoryPreference());
@@ -1430,6 +1457,102 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     // 执行搜索 - 不需要添加到历史因为已经在历史中
   };
 
+  // 分享模式相关处理函数
+  const handleToggleSelect = (beanId: string) => {
+    setSelectedBeans(prev => {
+      if (prev.includes(beanId)) {
+        return prev.filter(id => id !== beanId);
+      } else {
+        return [...prev, beanId];
+      }
+    });
+  };
+
+  const handleCancelShare = () => {
+    setIsShareMode(false);
+    setSelectedBeans([]);
+  };
+
+  const handleSaveBeansAsImage = async () => {
+    if (selectedBeans.length === 0 || isSavingShareImage) return;
+
+    setIsSavingShareImage(true);
+
+    try {
+      const { exportSelectedBeans } = await import(
+        '@/components/coffee-bean/Share/BeansExporter'
+      );
+      await exportSelectedBeans({
+        selectedBeans,
+        beansContainerRef,
+        onSuccess: message => {
+          showToast({ type: 'success', title: message, duration: 2000 });
+        },
+        onError: message => {
+          showToast({ type: 'error', title: message, duration: 3000 });
+        },
+        onComplete: () => {
+          setIsSavingShareImage(false);
+          handleCancelShare();
+        },
+      });
+    } catch (error) {
+      console.error('导出咖啡豆失败:', error);
+      showToast({ type: 'error', title: '导出咖啡豆失败', duration: 3000 });
+      setIsSavingShareImage(false);
+    }
+  };
+
+  const handleShareText = async () => {
+    if (selectedBeans.length === 0) return;
+
+    try {
+      // 获取选中的咖啡豆
+      const beansToShare = beans.filter(bean =>
+        selectedBeans.includes(bean.id)
+      );
+
+      // 生成文本
+      const { beanToReadableText } = await import('@/lib/utils/jsonUtils');
+      const isSingleBean = beansToShare.length === 1;
+
+      const texts = beansToShare.map(bean => {
+        const shareableBean = {
+          name: bean.name,
+          capacity: bean.capacity,
+          roastLevel: bean.roastLevel,
+          roastDate: bean.roastDate,
+          flavor: bean.flavor,
+          blendComponents: bean.blendComponents,
+          price: bean.price,
+          beanType: bean.beanType,
+          notes: bean.notes,
+          startDay: bean.startDay,
+          endDay: bean.endDay,
+        };
+        // 单个豆子包含元数据标记，多个豆子不包含（最后统一添加）
+        return beanToReadableText(
+          shareableBean as Parameters<typeof beanToReadableText>[0],
+          { includeMetadata: isSingleBean }
+        );
+      });
+
+      // 多个咖啡豆时：用分隔线连接，并在最后添加一次元数据标记
+      let fullText: string;
+      if (isSingleBean) {
+        fullText = texts[0];
+      } else {
+        fullText = texts.join('\n---\n') + '\n---\n@DATA_TYPE:COFFEE_BEAN@\n';
+      }
+
+      copyText(fullText);
+      handleCancelShare();
+    } catch (error) {
+      console.error('分享文本失败:', error);
+      showToast({ type: 'error', title: '分享文本失败', duration: 3000 });
+    }
+  };
+
   // 当搜索查询改变且不为空时，添加到历史记录
   useEffect(() => {
     if (searchQuery.trim() && isSearching) {
@@ -1551,7 +1674,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         {viewMode === VIEW_OPTIONS.INVENTORY && (
           <div
             className="h-full w-full overflow-y-auto"
-            ref={el => setInventoryScrollEl(el)}
+            ref={el => {
+              setInventoryScrollEl(el);
+              beansContainerRef.current = el;
+            }}
           >
             <InventoryView
               filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
@@ -1573,6 +1699,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               scrollParentRef={inventoryScrollEl ?? undefined}
               expandedNotes={expandedNotes}
               onNotesExpandToggle={handleNotesExpandToggle}
+              isShareMode={isShareMode}
+              selectedBeans={selectedBeans}
+              onToggleSelect={handleToggleSelect}
             />
           </div>
         )}
@@ -1606,8 +1735,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         )}
       </div>
 
-      {/* 添加和导入按钮 - 仅在库存视图显示 */}
-      {viewMode === VIEW_OPTIONS.INVENTORY && (
+      {/* 添加和导入按钮 - 仅在库存视图且非分享模式下显示 */}
+      {viewMode === VIEW_OPTIONS.INVENTORY && !isShareMode && (
         <BottomActionBar
           buttons={[
             {
@@ -1637,6 +1766,49 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             },
           ]}
         />
+      )}
+
+      {/* 分享模式下的底部操作栏 */}
+      {viewMode === VIEW_OPTIONS.INVENTORY && isShareMode && (
+        <div className="bottom-action-bar">
+          <div className="pointer-events-none absolute right-0 bottom-full left-0 h-12 bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900"></div>
+          <div className="pb-safe-bottom relative mx-auto flex max-w-[500px] items-center bg-neutral-50 dark:bg-neutral-900">
+            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+            <button
+              onClick={handleCancelShare}
+              className="mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400"
+            >
+              取消
+            </button>
+            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+            <button
+              onClick={handleSaveBeansAsImage}
+              disabled={selectedBeans.length === 0 || isSavingShareImage}
+              className={`mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400 ${
+                selectedBeans.length === 0 || isSavingShareImage
+                  ? 'cursor-not-allowed opacity-50'
+                  : ''
+              }`}
+            >
+              {isSavingShareImage
+                ? '生成中...'
+                : `保存为图片 (${selectedBeans.length})`}
+            </button>
+            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+            <button
+              onClick={handleShareText}
+              disabled={selectedBeans.length === 0}
+              className={`mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400 ${
+                selectedBeans.length === 0
+                  ? 'cursor-not-allowed opacity-50'
+                  : ''
+              }`}
+            >
+              分享文本
+            </button>
+            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+          </div>
+        </div>
       )}
 
       {/* 复制失败模态框 */}

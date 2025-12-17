@@ -147,6 +147,33 @@ export function extractJsonFromText(
       if (process.env.NODE_ENV === 'development') {
         console.warn('检测到咖啡豆文本格式');
       }
+      // 检查是否包含多个咖啡豆（使用 ---\n 分隔）
+      const beanSections = originalText.split(/\n---\n/).filter(section => {
+        const trimmed = section.trim();
+        return (
+          trimmed.startsWith('【咖啡豆】') ||
+          trimmed.startsWith('【咖啡豆信息】')
+        );
+      });
+
+      if (beanSections.length > 1) {
+        // 批量导入：解析多个咖啡豆
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(
+            `检测到批量咖啡豆文本格式，共 ${beanSections.length} 个`
+          );
+        }
+        const beans: Partial<CoffeeBean>[] = [];
+        for (const section of beanSections) {
+          const bean = parseCoffeeBeanText(section.trim());
+          if (bean && bean.name) {
+            beans.push(bean);
+          }
+        }
+        return beans.length > 0 ? (beans as CoffeeBean[]) : null;
+      }
+
+      // 单个咖啡豆
       return parseCoffeeBeanText(originalText);
     }
 
@@ -525,9 +552,15 @@ function generateBeanTemplateJson() {
 /**
  * 将咖啡豆对象转换为可读文本格式
  * @param bean 咖啡豆对象
+ * @param options 可选配置
+ * @param options.includeMetadata 是否包含元数据标记，默认为 true
  * @returns 格式化的可读文本
  */
-export function beanToReadableText(bean: CoffeeBean): string {
+export function beanToReadableText(
+  bean: CoffeeBean,
+  options?: { includeMetadata?: boolean }
+): string {
+  const { includeMetadata = true } = options || {};
   let text = `【咖啡豆信息】${bean.name}\n`;
 
   // 确定豆子类型（单品/拼配）
@@ -639,8 +672,10 @@ export function beanToReadableText(bean: CoffeeBean): string {
     text += `备注信息:\n${bean.notes}\n`;
   }
 
-  // 元数据标记
-  text += '\n---\n@DATA_TYPE:COFFEE_BEAN@\n';
+  // 元数据标记（可选）
+  if (includeMetadata) {
+    text += '\n---\n@DATA_TYPE:COFFEE_BEAN@\n';
+  }
   return text;
 }
 

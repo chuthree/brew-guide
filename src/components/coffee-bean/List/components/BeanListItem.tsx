@@ -25,6 +25,10 @@ interface BeanListItemProps {
   // 外部控制的备注展开状态
   isNotesExpanded?: boolean;
   onNotesExpandToggle?: (beanId: string, expanded: boolean) => void;
+  // 分享模式相关属性
+  isShareMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (beanId: string) => void;
   settings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
     showOnlyBeanName?: boolean;
@@ -46,6 +50,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   searchQuery = '',
   isNotesExpanded: externalNotesExpanded,
   onNotesExpandToggle,
+  isShareMode = false,
+  isSelected = false,
+  onToggleSelect,
   settings,
 }) => {
   // 状态管理
@@ -278,6 +285,11 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
+    // 分享模式下，点击任何区域都切换选择状态
+    if (isShareMode && onToggleSelect) {
+      onToggleSelect(bean.id);
+      return;
+    }
     const target = e.target as HTMLElement;
     if (
       target.closest('[data-click-area="image"]') ||
@@ -338,11 +350,26 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
   return (
     <div
-      className={`group ${isEmpty ? 'opacity-50' : ''} ${onDetailClick ? 'cursor-pointer transition-colors' : ''}`}
+      className={`group ${isEmpty ? 'opacity-50' : ''} ${onDetailClick || isShareMode ? 'cursor-pointer transition-colors' : ''}`}
       onClick={handleCardClick}
       data-bean-item={bean.id}
     >
       <div className="flex gap-3">
+        {/* 分享模式下显示选择框 */}
+        {isShareMode && (
+          <div className="flex shrink-0 items-center">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={e => {
+                e.stopPropagation();
+                if (onToggleSelect) onToggleSelect(bean.id);
+              }}
+              onClick={e => e.stopPropagation()}
+              className="relative h-4 w-4 appearance-none rounded border border-neutral-300 text-xs checked:bg-neutral-800 checked:after:absolute checked:after:top-1/2 checked:after:left-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:text-white checked:after:content-['✓'] dark:border-neutral-700 dark:checked:bg-neutral-200 dark:checked:after:text-black"
+            />
+          </div>
+        )}
         <div className="relative self-start">
           <div
             className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
@@ -469,7 +496,13 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     className="cursor-pointer"
                     data-click-area="remaining-edit"
                   >
-                    <span className={settings?.isExportMode || isEmpty ? '' : 'border-b border-dashed border-neutral-400 transition-colors dark:border-neutral-600'}>
+                    <span
+                      className={
+                        settings?.isExportMode || isEmpty
+                          ? ''
+                          : 'border-b border-dashed border-neutral-400 transition-colors dark:border-neutral-600'
+                      }
+                    >
                       {formatNumber(bean.remaining)}
                     </span>
                     /{formatNumber(bean.capacity)}克
