@@ -1343,27 +1343,42 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     setIsExportingPreview(true);
 
     try {
-      // 计算总重量信息和概要文本
-      const beansToExport = isSearching ? searchFilteredBeans : filteredBeans;
-      const totalWeightText = calculateTotalWeight();
-      const originalTotalWeightText = calculateOriginalTotalWeight();
+      // 根据【包含已用完】选择情况和搜索状态，获取正确的豆子列表
+      const normalBeans = isSearching ? searchFilteredBeans : filteredBeans;
+      const emptyBeansToExport = isSearching
+        ? searchFilteredEmptyBeans
+        : emptyBeans;
+      const beansToExport = showEmptyBeans
+        ? [...normalBeans, ...emptyBeansToExport]
+        : normalBeans;
+
+      // 计算总重量信息和概要文本（传入正确的豆子列表）
+      const totalWeightText = calculateTotalWeight(beansToExport);
+      const originalTotalWeightText =
+        calculateOriginalTotalWeight(beansToExport);
+
+      // 根据豆子状态决定显示文本
+      const beanTypeName = selectedBeanState === 'green' ? '生豆' : '咖啡豆';
 
       // 生成概要文本，与界面显示保持一致
       const summaryText = (() => {
         if (beansToExport.length === 0) return '';
 
         if (showEmptyBeans) {
-          return `${beansToExport.length} 款咖啡豆，总共 ${originalTotalWeightText}，剩余 ${totalWeightText}`;
+          return `${beansToExport.length} 款${beanTypeName}，总共 ${originalTotalWeightText}，剩余 ${totalWeightText}`;
         } else {
-          return `${beansToExport.length} 款咖啡豆，剩余 ${totalWeightText}`;
+          return `${beansToExport.length} 款${beanTypeName}，剩余 ${totalWeightText}`;
         }
       })();
 
       const result = await exportListPreview(
-        beansToExport,
+        normalBeans,
         expandedNotes,
         settings, // 传递用户的真实设置
-        summaryText
+        summaryText,
+        {
+          emptyBeans: showEmptyBeans ? emptyBeansToExport : undefined, // 传递已用完的豆子列表用于分割线
+        }
       );
 
       showToast({

@@ -34,6 +34,7 @@ interface BeanListItemProps {
     notesMaxLines?: number;
     showTotalPrice?: boolean;
     showStatusDots?: boolean;
+    isExportMode?: boolean;
   };
 }
 
@@ -468,7 +469,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     className="cursor-pointer"
                     data-click-area="remaining-edit"
                   >
-                    <span className="border-b border-dashed border-neutral-400 transition-colors dark:border-neutral-600">
+                    <span className={settings?.isExportMode ? '' : 'border-b border-dashed border-neutral-400 transition-colors dark:border-neutral-600'}>
                       {formatNumber(bean.remaining)}
                     </span>
                     /{formatNumber(bean.capacity)}克

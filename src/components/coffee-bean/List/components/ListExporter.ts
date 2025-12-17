@@ -7,6 +7,7 @@ import ExportListView from './ExportListView';
 
 interface ExportOptions {
   backgroundColor?: string;
+  emptyBeans?: ExtendedCoffeeBean[];
 }
 
 /**
@@ -137,6 +138,7 @@ export const exportListPreview = async (
       root.render(
         React.createElement(ExportListView, {
           filteredBeans,
+          emptyBeans: options.emptyBeans,
           isDarkMode,
           expandedNotes,
           settings: userSettings || {
