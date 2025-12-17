@@ -233,11 +233,7 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
     <SettingPage title="导航栏设置" isVisible={isVisible} onClose={handleClose}>
       {/* 通用设置 */}
       <SettingSection title="通用" className="-mt-4">
-        <SettingRow
-          label="简化标签名称"
-          description="开启后，导航栏标签将使用更简洁的名称（如“库存”代替“咖啡豆库存”）"
-          isLast
-        >
+        <SettingRow label="简化标签名称" isLast>
           <SettingToggle
             checked={settings.simplifiedViewLabels ?? false}
             onChange={checked => handleChange('simplifiedViewLabels', checked)}
