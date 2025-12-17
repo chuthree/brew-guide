@@ -115,8 +115,13 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
 
   // 过滤出未用完的咖啡豆，并按赏味期排序
   const availableBeans = useMemo(() => {
-    // 首先过滤掉剩余量为0(且设置了容量)的咖啡豆，但保留在途状态的咖啡豆
+    // 首先过滤掉剩余量为0(且设置了容量)的咖啡豆，排除生豆，但保留在途状态的咖啡豆
     const filteredBeans = coffeeBeans.filter(bean => {
+      // 排除生豆
+      if (bean.beanState === 'green') {
+        return false;
+      }
+
       // 如果没有设置容量，则直接显示
       if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
         return true;

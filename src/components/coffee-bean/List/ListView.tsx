@@ -196,8 +196,13 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
   // 过滤出未用完的咖啡豆，并按规则排序
   const availableBeans = useMemo(() => {
-    // 过滤掉剩余量为0(且设置了容量)的咖啡豆，但保留在途状态的咖啡豆
+    // 过滤掉剩余量为0(且设置了容量)的咖啡豆，排除生豆，但保留在途状态的咖啡豆
     const filteredBeans = beans.filter(bean => {
+      // 排除生豆
+      if (bean.beanState === 'green') {
+        return false;
+      }
+
       // 如果没有设置容量，则直接显示
       if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
         return true;
@@ -464,7 +469,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         <React.Fragment key={i}>
                           <span className="inline">{item}</span>
                           {i < infoItems.length - 1 && (
-                            <span className="mx-2 text-neutral-400 dark:text-neutral-600">
+                            <span className="bg-red mx-2 text-neutral-400 dark:text-neutral-600">
                               ·
                             </span>
                           )}

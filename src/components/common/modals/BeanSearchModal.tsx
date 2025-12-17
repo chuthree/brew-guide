@@ -283,21 +283,23 @@ const BeanSearchModal: React.FC<BeanSearchModalProps> = ({
       setIsSearching(true);
 
       try {
-        // 在已加载的数据中搜索
+        // 在已加载的数据中搜索，排除生豆
         const filteredResults = allBeans.filter(
           bean =>
-            bean.name.toLowerCase().includes(trimmedQuery) ||
-            bean.brand?.toLowerCase().includes(trimmedQuery) ||
-            bean.blendComponents?.some(
-              comp =>
-                comp.origin?.toLowerCase().includes(trimmedQuery) ||
-                comp.process?.toLowerCase().includes(trimmedQuery) ||
-                comp.variety?.toLowerCase().includes(trimmedQuery)
-            ) ||
-            bean.flavor?.some((f: string) =>
-              f.toLowerCase().includes(trimmedQuery)
-            ) ||
-            bean.notes?.toLowerCase().includes(trimmedQuery)
+            // 排除生豆
+            bean.beanState !== 'green' &&
+            (bean.name.toLowerCase().includes(trimmedQuery) ||
+              bean.brand?.toLowerCase().includes(trimmedQuery) ||
+              bean.blendComponents?.some(
+                comp =>
+                  comp.origin?.toLowerCase().includes(trimmedQuery) ||
+                  comp.process?.toLowerCase().includes(trimmedQuery) ||
+                  comp.variety?.toLowerCase().includes(trimmedQuery)
+              ) ||
+              bean.flavor?.some((f: string) =>
+                f.toLowerCase().includes(trimmedQuery)
+              ) ||
+              bean.notes?.toLowerCase().includes(trimmedQuery))
         );
 
         // 缓存搜索结果（限制缓存大小）
