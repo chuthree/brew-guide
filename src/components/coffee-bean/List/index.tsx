@@ -295,7 +295,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     availableOrigins,
     availableFlavorPeriods,
     availableRoasters,
-    debouncedUpdateFilters,
   } = useEnhancedBeanFiltering({
     beans,
     filterMode,
@@ -799,10 +798,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.selectedVarieties[selectedBeanState] = variety;
       saveSelectedVarietyPreference(variety);
       saveSelectedVarietyByStatePreference(selectedBeanState, variety);
-      // 使用防抖更新筛选
-      debouncedUpdateFilters({ selectedVariety: variety });
     },
-    [debouncedUpdateFilters, selectedBeanState]
+    [selectedBeanState]
   );
 
   // 处理豆子类型点击 - 简化版本，优化的Hook会自动处理筛选
@@ -817,10 +814,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.selectedBeanTypes[selectedBeanState] = newBeanType;
       saveSelectedBeanTypePreference(newBeanType);
       saveSelectedBeanTypeByStatePreference(selectedBeanState, newBeanType);
-      // 使用防抖更新筛选
-      debouncedUpdateFilters({ selectedBeanType: newBeanType });
     },
-    [selectedBeanType, selectedBeanState, debouncedUpdateFilters]
+    [selectedBeanType, selectedBeanState]
   );
 
   // 处理豆子状态切换（生豆/熟豆）
@@ -931,22 +926,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       setSelectedRoaster(targetRoaster);
       globalCache.selectedRoaster = targetRoaster;
       saveSelectedRoasterPreference(targetRoaster);
-
-      // 使用防抖更新筛选
-      debouncedUpdateFilters({
-        selectedBeanState: beanState,
-        filterMode: targetFilterMode,
-        sortOption: targetSortOption,
-        selectedBeanType: targetBeanType,
-        showEmptyBeans: targetShowEmptyBeans,
-        selectedVariety: targetVariety,
-        selectedOrigin: targetOrigin,
-        selectedFlavorPeriod: targetFlavorPeriod,
-        selectedRoaster: targetRoaster,
-      });
     },
     [
-      debouncedUpdateFilters,
       filterMode,
       selectedBeanState,
       inventorySortOption,
@@ -1071,9 +1052,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     globalCache.showEmptyBeansSettings[selectedBeanState] = newShowEmptyBeans;
     saveShowEmptyBeansPreference(newShowEmptyBeans);
     saveShowEmptyBeansByStatePreference(selectedBeanState, newShowEmptyBeans);
-    // 使用防抖更新筛选
-    debouncedUpdateFilters({ showEmptyBeans: newShowEmptyBeans });
-  }, [showEmptyBeans, selectedBeanState, debouncedUpdateFilters]);
+  }, [showEmptyBeans, selectedBeanState]);
 
   // 处理分类模式变更
   const handleFilterModeChange = useCallback(
@@ -1097,10 +1076,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       saveSelectedOriginPreference(null);
       saveSelectedFlavorPeriodPreference(null);
       saveSelectedRoasterPreference(null);
-      // 防抖更新筛选
-      debouncedUpdateFilters({ filterMode: mode });
     },
-    [debouncedUpdateFilters, selectedBeanState]
+    [selectedBeanState]
   );
 
   // 处理产地点击
@@ -1112,10 +1089,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.selectedOrigins[selectedBeanState] = origin;
       saveSelectedOriginPreference(origin);
       saveSelectedOriginByStatePreference(selectedBeanState, origin);
-      // 防抖更新筛选
-      debouncedUpdateFilters({ selectedOrigin: origin });
     },
-    [debouncedUpdateFilters, selectedBeanState]
+    [selectedBeanState]
   );
 
   // 处理赏味期状态点击
@@ -1127,10 +1102,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.selectedFlavorPeriods[selectedBeanState] = status;
       saveSelectedFlavorPeriodPreference(status);
       saveSelectedFlavorPeriodByStatePreference(selectedBeanState, status);
-      // 防抖更新筛选
-      debouncedUpdateFilters({ selectedFlavorPeriod: status });
     },
-    [debouncedUpdateFilters, selectedBeanState]
+    [selectedBeanState]
   );
 
   // 处理烘焙商点击
@@ -1142,10 +1115,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.selectedRoasters[selectedBeanState] = roaster;
       saveSelectedRoasterPreference(roaster);
       saveSelectedRoasterByStatePreference(selectedBeanState, roaster);
-      // 防抖更新筛选
-      debouncedUpdateFilters({ selectedRoaster: roaster });
     },
-    [debouncedUpdateFilters, selectedBeanState]
+    [selectedBeanState]
   );
 
   // 当榜单豆子类型变更时更新数据

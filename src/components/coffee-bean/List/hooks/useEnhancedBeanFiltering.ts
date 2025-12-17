@@ -1,5 +1,4 @@
 import { useMemo, useCallback } from 'react';
-import { debounce } from 'lodash';
 import {
   ExtendedCoffeeBean,
   BeanType,
@@ -40,9 +39,6 @@ interface UseEnhancedBeanFilteringReturn {
   availableOrigins: string[];
   availableFlavorPeriods: FlavorPeriodStatus[];
   availableRoasters: string[];
-  debouncedUpdateFilters: (
-    filters: Partial<UseEnhancedBeanFilteringProps>
-  ) => void;
 }
 
 /**
@@ -215,20 +211,6 @@ export const useEnhancedBeanFiltering = ({
     return extractUniqueRoasters(baseFilteredBeans);
   }, [baseFilteredBeans]);
 
-  // 防抖的筛选更新函数
-  const debouncedUpdateFilters = useCallback(
-    (filters: Partial<UseEnhancedBeanFilteringProps>) => {
-      const debouncedHandler = debounce(() => {
-        // 这个函数主要用于外部调用时的防抖处理
-        // 实际的筛选逻辑已经通过useMemo优化
-        console.warn('Enhanced filters updated:', filters);
-      }, 300);
-
-      debouncedHandler();
-    },
-    []
-  );
-
   return {
     filteredBeans,
     emptyBeans,
@@ -236,6 +218,5 @@ export const useEnhancedBeanFiltering = ({
     availableOrigins,
     availableFlavorPeriods,
     availableRoasters,
-    debouncedUpdateFilters,
   };
 };

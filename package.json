@@ -61,7 +61,6 @@
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "keshi": "^3.0.2",
-    "lodash": "^4.17.21",
     "lucide-react": "^0.525.0",
     "modern-screenshot": "^4.6.7",
     "nanoid": "^5.1.5",
@@ -71,7 +70,6 @@
     "react-dom": "19.2.0",
     "react-scan": "^0.4.3",
     "react-virtuoso": "^4.14.0",
-    "regenerator-runtime": "^0.14.1",
     "stats.js": "^0.17.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
@@ -82,7 +80,6 @@
   "devDependencies": {
     "@csstools/postcss-oklab-function": "^4.0.12",
     "@svgr/webpack": "^8.1.0",
-    "@types/lodash": "^4.17.20",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "@types/uuid": "^10.0.0",
