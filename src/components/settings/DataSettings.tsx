@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { SettingsOptions } from './Settings';
 import { ButtonGroup } from '../ui/ButtonGroup';
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import {
   BackupReminderSettings,
   BackupReminderUtils,
@@ -114,15 +113,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
   onCloseRef.current = onClose;
 
   // 动画状态
-  const [shouldRender, setShouldRender] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
-
-  // 冲突弹窗
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [conflictRemoteTime, setConflictRemoteTime] = useState<number | null>(
-    null
-  );
-  useThemeColor({ useOverlay: true, enabled: showConflictModal });
 
   // 云同步设置
   const [s3Settings, setS3Settings] = useState<S3SyncSettings>(() =>
@@ -324,15 +315,6 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     }
   };
 
-  // 冲突解决
-  const handleConflictResolution = async (direction: 'upload' | 'download') => {
-    setShowConflictModal(false);
-    // 这里需要触发S3组件的同步
-    window.dispatchEvent(
-      new CustomEvent('s3ConflictResolved', { detail: { direction } })
-    );
-  };
-
   // 请求持久化存储
   const handleRequestPersist = async () => {
     if (isNativePlatform || !isPWA || !isPersistentStorageSupported()) {
@@ -378,8 +360,6 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       console.error('刷新存储信息失败:', error);
     }
   };
-
-  if (!shouldRender) return null;
 
   return (
     <SettingPage title="数据管理" isVisible={isVisible} onClose={handleClose}>
@@ -471,10 +451,6 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               hapticFeedback={settings.hapticFeedback}
               onSettingChange={handleS3SettingChange}
               onSyncComplete={onDataChange}
-              onConflict={time => {
-                setConflictRemoteTime(time);
-                setShowConflictModal(true);
-              }}
               onEnable={() => {
                 handleS3SettingChange('enabled', true);
                 handleWebDAVSettingChange('enabled', false);
@@ -803,80 +779,6 @@ const DataSettings: React.FC<DataSettingsProps> = ({
           if (settings.hapticFeedback) hapticsUtils.light();
         }}
       />
-
-      {/* 冲突解决模态框 */}
-      {showConflictModal && (
-        <div
-          className="fixed inset-0 z-100 flex flex-col justify-end bg-black/50"
-          onClick={() => setShowConflictModal(false)}
-        >
-          <div
-            className="pb-safe-bottom mx-auto w-full max-w-[500px] rounded-t-2xl bg-neutral-100 p-5 shadow-2xl dark:bg-neutral-800"
-            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-          >
-            <div className="mb-4 text-center">
-              <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
-                检测到数据冲突
-              </h3>
-              <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-                本地和云端都有数据，请选择保留哪一方
-              </p>
-              {!conflictRemoteTime && (
-                <p className="mt-2 rounded bg-orange-50 px-3 py-2 text-xs text-orange-600 dark:bg-orange-900/20 dark:text-orange-400">
-                  💡 首次同步：通常建议下载云端数据
-                </p>
-              )}
-            </div>
-
-            <div className="mb-4 space-y-3">
-              <div className="rounded border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  📥 云端数据
-                </p>
-                <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
-                  {conflictRemoteTime
-                    ? `最后更新：${new Date(conflictRemoteTime).toLocaleString(
-                        'zh-CN',
-                        {
-                          month: 'numeric',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        }
-                      )}`
-                    : '云端有数据'}
-                </p>
-              </div>
-              <div className="rounded bg-neutral-200/60 p-4 dark:bg-neutral-900/60">
-                <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                  📱 本地数据
-                </p>
-                <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
-                  当前设备上的数据
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => handleConflictResolution('download')}
-                className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-              >
-                ⬇️ 下载云端数据（推荐）
-              </button>
-              <button
-                onClick={() => handleConflictResolution('upload')}
-                className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600"
-              >
-                ⬆️ 上传本地数据
-              </button>
-              <p className="pt-2 text-center text-xs text-neutral-500 dark:text-neutral-400">
-                ⚠️ 选择后将覆盖另一方的数据，请谨慎操作
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </SettingPage>
   );
 };
