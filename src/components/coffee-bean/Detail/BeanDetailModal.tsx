@@ -318,6 +318,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const [showBeanRating, setShowBeanRating] = useState(false);
   // 详情页显示设置
   const [showBeanInfoDivider, setShowBeanInfoDivider] = useState(true);
+  // 庄园字段显示设置（添加模式）
+  const [showEstateField, setShowEstateField] = useState(false);
 
   // 变动记录显示状态
   const [showChangeRecords, setShowChangeRecords] = useState(false);
@@ -423,19 +425,23 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           const printEnabledValue = settings.enableBeanPrint === true;
           const showRatingValue = settings.showBeanRating === true;
           const showInfoDividerValue = settings.showBeanInfoDivider !== false; // 默认true
+          const showEstateFieldValue = settings.showEstateField === true; // 默认false
           setPrintEnabled(printEnabledValue);
           setShowBeanRating(showRatingValue);
           setShowBeanInfoDivider(showInfoDividerValue);
+          setShowEstateField(showEstateFieldValue);
         } else {
           setPrintEnabled(false);
           setShowBeanRating(false);
           setShowBeanInfoDivider(true); // 默认显示
+          setShowEstateField(false); // 默认不显示
         }
       } catch (error) {
         console.error('加载打印设置失败:', error);
         setPrintEnabled(false);
         setShowBeanRating(false);
         setShowBeanInfoDivider(true); // 默认显示
+        setShowEstateField(false); // 默认不显示
       }
     };
 
@@ -2149,8 +2155,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         </div>
                       )}
 
-                      {/* 庄园 */}
-                      {(isAddMode || estate) && (
+                      {/* 庄园 - 添加模式下根据设置或已有数据显示，查看模式下有内容时显示 */}
+                      {((isAddMode && (showEstateField || estate)) ||
+                        (!isAddMode && estate)) && (
                         <div className="flex items-start">
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             庄园

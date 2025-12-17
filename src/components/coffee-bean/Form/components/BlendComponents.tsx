@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { BlendComponent } from '@/types/app';
 import {
@@ -31,6 +31,34 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
   onRemove,
   onChange,
 }) => {
+  // 庄园字段显示设置
+  const [showEstateFieldSetting, setShowEstateFieldSetting] = useState(false);
+
+  // 加载庄园显示设置
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const { Storage } = await import('@/lib/core/storage');
+        const settingsStr = await Storage.get('brewGuideSettings');
+        if (settingsStr) {
+          const settings = JSON.parse(settingsStr);
+          setShowEstateFieldSetting(settings.showEstateField || false);
+        }
+      } catch (error) {
+        console.error('加载庄园显示设置失败:', error);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  // 检查是否有任何成分已有庄园数据
+  const hasExistingEstate = useMemo(() => {
+    return components.some(comp => comp.estate && comp.estate.trim() !== '');
+  }, [components]);
+
+  // 最终是否显示庄园字段：设置开启 或 已有庄园数据
+  const showEstateField = showEstateFieldSetting || hasExistingEstate;
+
   // 计算总百分比
   const totalPercentage = components.reduce(
     (sum, component) =>
@@ -217,7 +245,9 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div
+                className={`grid gap-3 ${showEstateField ? 'grid-cols-2' : 'grid-cols-3'}`}
+              >
                 <AutocompleteInput
                   label="产地"
                   value={component.origin || ''}
@@ -231,18 +261,22 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                   onRemovePreset={value => handleRemovePreset('origins', value)}
                 />
 
-                <AutocompleteInput
-                  label="庄园"
-                  value={component.estate || ''}
-                  onChange={value => onChange(index, 'estate', value)}
-                  placeholder="庄园"
-                  suggestions={currentEstates}
-                  clearable
-                  isCustomPreset={value =>
-                    checkIsCustomPreset('estates', value)
-                  }
-                  onRemovePreset={value => handleRemovePreset('estates', value)}
-                />
+                {showEstateField && (
+                  <AutocompleteInput
+                    label="庄园"
+                    value={component.estate || ''}
+                    onChange={value => onChange(index, 'estate', value)}
+                    placeholder="庄园"
+                    suggestions={currentEstates}
+                    clearable
+                    isCustomPreset={value =>
+                      checkIsCustomPreset('estates', value)
+                    }
+                    onRemovePreset={value =>
+                      handleRemovePreset('estates', value)
+                    }
+                  />
+                )}
 
                 <AutocompleteInput
                   label="处理法"

@@ -199,6 +199,8 @@ export interface SettingsOptions {
   enableConvertToGreen?: boolean; // 是否启用熟豆转生豆功能（需先启用生豆库）
   // 识图设置
   autoFillRecognitionImage?: boolean; // 是否自动填充识图图片到表单（默认false，需手动点击加号添加）
+  // 庄园字段显示设置
+  showEstateField?: boolean; // 是否在添加表单中显示庄园输入框（默认false）
   // 沉浸式添加设置
   immersiveAdd?: boolean; // 是否启用沉浸式添加模式（在详情页直接添加/编辑咖啡豆）
   // 每日提醒设置
@@ -1013,7 +1015,7 @@ const Settings: React.FC<SettingsProps> = ({
           items={[
             {
               icon: List,
-              label: '豆仓',
+              label: '咖啡豆',
               onClick: subSettingsHandlers.onOpenBeanSettings,
             },
             {

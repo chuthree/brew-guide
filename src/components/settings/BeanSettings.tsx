@@ -74,19 +74,19 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage title="豆仓设置" isVisible={isVisible} onClose={handleClose}>
+    <SettingPage title="咖啡豆设置" isVisible={isVisible} onClose={handleClose}>
       {/* 预览区域 */}
       <BeanPreview settings={settings} />
 
       <SettingSection title="列表显示" className="mt-6">
-        <SettingRow label="简化咖啡豆名称">
+        <SettingRow label="简化豆名">
           <SettingToggle
             checked={settings.showOnlyBeanName || false}
             onChange={checked => handleChange('showOnlyBeanName', checked)}
           />
         </SettingRow>
 
-        <SettingRow label="日期显示模式">
+        <SettingRow label="日期模式">
           <div className="flex h-0 items-center">
             <ButtonGroup
               value={settings.dateDisplayMode || 'date'}
@@ -105,24 +105,21 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
           </div>
         </SettingRow>
 
-        <SettingRow label="显示总价格">
+        <SettingRow label="总价格">
           <SettingToggle
             checked={settings.showTotalPrice || false}
             onChange={checked => handleChange('showTotalPrice', checked)}
           />
         </SettingRow>
 
-        <SettingRow label="显示状态点">
+        <SettingRow label="状态点">
           <SettingToggle
             checked={settings.showStatusDots || false}
             onChange={checked => handleChange('showStatusDots', checked)}
           />
         </SettingRow>
 
-        <SettingRow
-          label="显示备注区域"
-          isLast={settings.showBeanNotes === false}
-        >
+        <SettingRow label="备注区域" isLast={settings.showBeanNotes === false}>
           <SettingToggle
             checked={settings.showBeanNotes !== false}
             onChange={checked => handleChange('showBeanNotes', checked)}
@@ -131,16 +128,13 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
 
         {settings.showBeanNotes !== false && (
           <>
-            <SettingRow label="显示风味信息">
+            <SettingRow label="风味信息">
               <SettingToggle
                 checked={settings.showFlavorInfo || false}
                 onChange={checked => handleChange('showFlavorInfo', checked)}
               />
             </SettingRow>
-            <SettingRow
-              label="限制备注显示行数"
-              isLast={!settings.limitNotesLines}
-            >
+            <SettingRow label="备注行数限制" isLast={!settings.limitNotesLines}>
               <SettingToggle
                 checked={settings.limitNotesLines || false}
                 onChange={checked => handleChange('limitNotesLines', checked)}
@@ -164,20 +158,20 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         )}
       </SettingSection>
 
-      <SettingSection title="咖啡豆详情功能">
-        <SettingRow label="标签打印功能">
+      <SettingSection title="详情页">
+        <SettingRow label="标签打印">
           <SettingToggle
             checked={settings.enableBeanPrint || false}
             onChange={checked => handleChange('enableBeanPrint', checked)}
           />
         </SettingRow>
-        <SettingRow label="显示信息分割线">
+        <SettingRow label="信息分割线">
           <SettingToggle
             checked={settings.showBeanInfoDivider !== false}
             onChange={checked => handleChange('showBeanInfoDivider', checked)}
           />
         </SettingRow>
-        <SettingRow label="启用评分功能" isLast>
+        <SettingRow label="评分" isLast>
           <SettingToggle
             checked={settings.showBeanRating || false}
             onChange={checked => handleChange('showBeanRating', checked)}
@@ -185,12 +179,8 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="咖啡豆添加设置">
-        <SettingRow
-          label="自动填充识图图片"
-          description="单张图片识别后自动填充到表单图片"
-          isLast
-        >
+      <SettingSection title="添加">
+        <SettingRow label="识图自动填充">
           <SettingToggle
             checked={settings.autoFillRecognitionImage || false}
             onChange={checked =>
@@ -198,13 +188,19 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             }
           />
         </SettingRow>
+        <SettingRow label="庄园字段" isLast>
+          <SettingToggle
+            checked={settings.showEstateField || false}
+            onChange={checked => handleChange('showEstateField', checked)}
+          />
+        </SettingRow>
       </SettingSection>
 
       <SettingSection
-        title="生豆库设置"
-        footer="在咖啡豆库存概要中点击“咖啡豆”来切换生豆/熟豆库"
+        title="生豆库"
+        footer="在咖啡豆库存概要中点击「咖啡豆」来切换生豆/熟豆库"
       >
-        <SettingRow label="启用生豆库" isLast>
+        <SettingRow label="生豆库" isLast>
           <SettingToggle
             checked={settings.enableGreenBeanInventory || false}
             onChange={checked =>
@@ -231,7 +227,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             </div>
           }
         >
-          <SettingRow label="启用熟豆转生豆" isLast>
+          <SettingRow label="熟豆转生豆" isLast>
             <SettingToggle
               checked={settings.enableConvertToGreen || false}
               onChange={checked =>
