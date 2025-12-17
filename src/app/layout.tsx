@@ -297,7 +297,6 @@ export default function RootLayout({
               <li>
                 智能搜索：支持名称、品牌、产区、庄园、风味、处理法、品种筛选
               </li>
-              <li>在线数据库支持，快速导入咖啡豆信息</li>
             </ul>
 
             <h2>冲煮笔记</h2>

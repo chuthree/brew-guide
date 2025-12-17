@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 // import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-menu' // 移除操作菜单
 import { ExtendedCoffeeBean, generateBeanTitle } from '../types';
 import { isBeanEmpty } from '../globalCache';

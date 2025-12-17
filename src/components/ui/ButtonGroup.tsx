@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-
 interface ButtonGroupProps<T extends string> {
   value: T;
   options: { value: T; label: string }[];

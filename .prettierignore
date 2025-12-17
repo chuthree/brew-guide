@@ -21,7 +21,6 @@ ios
 .env.*
 
 # Public assets
-public/data/*.csv
 public/sounds
 public/images
 

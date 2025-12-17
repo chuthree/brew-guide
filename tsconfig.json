@@ -6,6 +6,8 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // "noUnusedLocals": true,  // 暂时注释，有 171 个未使用变量需要手动清理
+    // "noUnusedParameters": true,  // 暂时注释
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",

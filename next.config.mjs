@@ -27,11 +27,6 @@ const nextConfig = {
   // Turbopack 配置
   turbopack: {
     rules: {
-      // CSV 文件支持
-      '*.csv': {
-        loaders: ['csv-loader'],
-        as: '*.js',
-      },
       // SVGR 支持 - 将 SVG 转换为 React 组件
       '*.svg': {
         loaders: ['@svgr/webpack'],
@@ -42,21 +37,6 @@ const nextConfig = {
 
   // 为兼容保留 webpack 配置，但添加空的 turbopack 配置以避免警告
   webpack: config => {
-    // CSV 文件支持
-    config.module.rules.push({
-      test: /\.csv$/,
-      use: [
-        {
-          loader: 'csv-loader',
-          options: {
-            dynamicTyping: true,
-            header: false,
-            skipEmptyLines: true,
-          },
-        },
-      ],
-    });
-
     // SVGR 配置 - 将 SVG 转换为 React 组件
     // 参考: https://react-svgr.com/docs/next/
     const fileLoaderRule = config.module.rules.find(rule =>
