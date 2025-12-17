@@ -109,7 +109,7 @@ const BeanPreview: React.FC<BeanPreviewProps> = ({ settings }) => {
             </div>
 
             {/* 第二个豆子 - 完整显示在中间 */}
-            <div className="z-10">
+            <div className="transform">
               <BeanPreviewItem bean={sampleBeans[1]} settings={settings} />
             </div>
 
