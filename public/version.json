@@ -1,5 +1,5 @@
 {
-  "version": "1.5.7",
+  "version": "1.5.8",
   "downloadUrl": "https://gitee.com/chu3/brew-guide/releases",
-  "releaseNotes": "咖啡豆添加庄园字段并支持无感编辑，新增笔记设置及实验性的图文分享、沉浸式添加功能"
+  "releaseNotes": "烘焙商赏味期预设与咖啡豆分享功能重构，庄园字段改为手动开启，简化笔记卡片样式"
 }
