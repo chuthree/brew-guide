@@ -147,18 +147,12 @@ const NoteItemCard: React.FC<NoteItemProps> = ({
       : null;
 
     // 返回包含元数据和笔记的 JSX
-    return (
-      <>
-        {metaContent && <span className="opacity-60">{metaContent}</span>}
-        {metaContent && hasNotes && <span className="opacity-60">，</span>}
-        {notesContent}
-      </>
-    );
+    return <>{notesContent}</>;
   };
 
   return (
     <div
-      className={`group note-item mx-3 mt-3 rounded-md bg-neutral-200/30 first:mt-3 dark:bg-neutral-800/40 ${!isShareMode ? 'cursor-pointer' : 'cursor-pointer'}`}
+      className={`group note-item mx-3 mt-3 rounded bg-neutral-100 first:mt-3 dark:bg-neutral-800/40 ${!isShareMode ? 'cursor-pointer' : 'cursor-pointer'}`}
       onClick={handleNoteClick}
       data-note-id={note.id}
     >
@@ -196,12 +190,12 @@ const NoteItemCard: React.FC<NoteItemProps> = ({
         </div>
 
         {/* 分割线 */}
-        <div className="my-3 h-px bg-neutral-200/60 dark:bg-neutral-700/50" />
+        <div className="my-2 h-px bg-neutral-200/60 dark:bg-neutral-700/50" />
 
         {/* 统一内容区域 */}
         <div
           ref={contentRef}
-          className={`text-xs leading-relaxed font-medium text-neutral-700 dark:text-neutral-300 ${!isExpanded && !isShareMode ? 'line-clamp-3' : 'whitespace-pre-line'}`}
+          className={`text-xs font-medium tracking-wide text-neutral-700 dark:text-neutral-300 ${!isExpanded && !isShareMode ? 'line-clamp-3' : 'whitespace-pre-line'}`}
           onClick={e => {
             // 如果内容没有溢出，不阻止事件冒泡，让卡片点击事件触发进入详情
             if (isOverflowing && !isShareMode) {
@@ -216,7 +210,7 @@ const NoteItemCard: React.FC<NoteItemProps> = ({
         {/* 图片区域 - 放在最下面，保持原始比例 */}
         {note.image && (
           <div
-            className="relative mt-3 h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/50 dark:bg-neutral-700/30"
+            className="relative mt-2 h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/50 dark:bg-neutral-700/30"
             onClick={e => {
               e.stopPropagation();
               if (!imageError) setImageViewerOpen(true);
