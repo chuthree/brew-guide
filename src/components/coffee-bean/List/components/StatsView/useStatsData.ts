@@ -361,6 +361,7 @@ export const useStatsData = (
     let beanBasedConsumption = 0;
     let beanBasedCost = 0;
     let earliestBeanTime = Infinity;
+    let earliestNoteTime = Infinity; // 新增：记录最早的笔记时间
     const beanBasedTypeConsumption: Record<BeanType, number> = {
       espresso: 0,
       filter: 0,
@@ -369,7 +370,7 @@ export const useStatsData = (
 
     // 仅在全部视图时，计算基于容量变化的消耗
     if (!selectedDate) {
-      // 遍历所有熟豆，计算总消耗（容量 - 剩余量）
+      // 遍历所有熟豆，计算总消耗（容量 - 剩余量）和最早创建时间
       for (const bean of roastedBeans) {
         const capacity = parseNum(bean.capacity);
         const remaining = parseNum(bean.remaining);
@@ -394,6 +395,18 @@ export const useStatsData = (
         // 找到最早的咖啡豆创建时间
         if (bean.timestamp && bean.timestamp < earliestBeanTime) {
           earliestBeanTime = bean.timestamp;
+        }
+      }
+
+      // 遍历所有笔记，找到最早的有效笔记时间（用于确定数据周期起始时间）
+      for (const note of notes) {
+        if (
+          note.timestamp &&
+          note.source !== 'capacity-adjustment' &&
+          note.source !== 'roasting' &&
+          note.timestamp < earliestNoteTime
+        ) {
+          earliestNoteTime = note.timestamp;
         }
       }
     }
@@ -551,10 +564,11 @@ export const useStatsData = (
       totalCost = beanBasedCost;
       typeConsumption = beanBasedTypeConsumption;
 
-      // 计算日期范围（基于咖啡豆创建时间）
-      if (earliestBeanTime !== Infinity) {
-        effectiveDateRange = { start: earliestBeanTime, end: now };
-        actualDays = calculateDaysBetween(earliestBeanTime, now);
+      // 计算日期范围（同时考虑咖啡豆创建时间和笔记时间，取较早的时间）
+      const earliestTime = Math.min(earliestBeanTime, earliestNoteTime);
+      if (earliestTime !== Infinity) {
+        effectiveDateRange = { start: earliestTime, end: now };
+        actualDays = calculateDaysBetween(earliestTime, now);
       }
     }
 
