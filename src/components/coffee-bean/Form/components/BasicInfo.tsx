@@ -35,6 +35,8 @@ interface BasicInfoProps {
   onRepurchase?: () => void;
   /** 识别时使用的原始图片 base64（用于在表单中显示） */
   recognitionImage?: string | null;
+  /** 容量变化时的回调，用于触发类型推断 */
+  onCapacityChange?: (capacity: string) => void;
 }
 
 // 判断是否为生豆
@@ -67,6 +69,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   isEdit = false,
   onRepurchase,
   recognitionImage,
+  onCapacityChange,
 }) => {
   // 处理容量和剩余容量的状态
   const [capacityValue, setCapacityValue] = useState('');
@@ -160,7 +163,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   // 处理脱水率变化（实时计算）
   const handleMoistureChange = (value: string) => {
     setMoistureLoss(value);
-    
+
     const loss = parseFloat(value);
     const cap = parseFloat(capacityValue);
 
@@ -349,6 +352,9 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                     setRemainingValue(capacityValue);
                     onBeanChange('remaining')(capacityValue);
                   }
+
+                  // 触发容量变化回调，用于类型推断
+                  onCapacityChange?.(capacityValue);
 
                   // 调用主表单的失焦处理函数（用于其他逻辑）
                   handleCapacityBlur?.();

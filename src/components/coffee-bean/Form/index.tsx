@@ -29,6 +29,7 @@ import {
 import { compressBase64Image } from '@/lib/utils/imageCapture';
 import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
+import { inferBeanType } from '@/lib/utils/beanTypeInference';
 
 interface CoffeeBeanFormProps {
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
@@ -316,6 +317,24 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     const handleCapacityBlur = useCallback(() => {
       // 预留给其他可能的失焦处理逻辑
     }, []);
+
+    // 处理容量变化并智能推断咖啡豆类型
+    // 只在新建模式下自动推断，编辑模式保持用户原有选择
+    const handleCapacityChangeForTypeInference = useCallback(
+      (capacity: string) => {
+        // 只在新建模式下进行自动推断
+        if (initialBean) return;
+
+        // 如果用户已选择全能，不再自动推断
+        if (bean.beanType === 'omni') return;
+
+        const type = inferBeanType(capacity);
+        if (type) {
+          setBean(prev => ({ ...prev, beanType: type }));
+        }
+      },
+      [initialBean, bean.beanType]
+    );
 
     // 获取当前步骤索引
     const getCurrentStepIndex = () => {
@@ -901,6 +920,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
               isEdit={!!initialBean}
               onRepurchase={onRepurchase}
               recognitionImage={recognitionImage}
+              onCapacityChange={handleCapacityChangeForTypeInference}
             />
           );
 
