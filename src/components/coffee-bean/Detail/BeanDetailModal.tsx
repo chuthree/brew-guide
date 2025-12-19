@@ -544,7 +544,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   // 初始化备注值
   useEffect(() => {
     if (bean?.notes && notesRef.current) {
-      notesRef.current.textContent = bean.notes;
+      notesRef.current.innerText = bean.notes;
     }
     // 只在切换咖啡豆时初始化，不依赖 notes 值变化
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -857,7 +857,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   // 处理备注内容变化
   const handleNotesInput = () => {
     if (notesRef.current) {
-      const newContent = notesRef.current.textContent || '';
+      const newContent = notesRef.current.innerText || '';
       handleSaveNotes(newContent);
     }
   };
@@ -1796,7 +1796,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             容量
                           </div>
-                          <div className="ml-4 flex items-center gap-1 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          <div className="flex items-center gap-1 text-xs font-medium text-neutral-800 dark:text-neutral-100">
                             {isAddMode && editingCapacity ? (
                               <input
                                 ref={capacityInputRef}
@@ -1884,7 +1884,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             价格
                           </div>
-                          <div className="ml-4 flex items-center gap-1 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          <div className="flex items-center gap-1 text-xs font-medium text-neutral-800 dark:text-neutral-100">
                             {isAddMode && editingPrice ? (
                               <>
                                 <input
@@ -1947,7 +1947,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                               ? '状态'
                               : dateLabel}
                           </div>
-                          <div className="ml-4 flex items-center gap-2 text-xs font-medium">
+                          <div className="flex items-center gap-2 text-xs font-medium">
                             {!isAddMode && currentBean?.isInTransit ? (
                               <span className="whitespace-nowrap text-neutral-800 dark:text-neutral-100">
                                 在途
@@ -2026,7 +2026,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             赏味期
                           </div>
-                          <div className="ml-4 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
                             {flavorInfo.status}
                           </div>
                         </div>
@@ -2038,7 +2038,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             状态
                           </div>
-                          <div className="ml-4 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
                             冷冻
                           </div>
                         </div>
@@ -2087,7 +2087,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             类型
                           </div>
-                          <div className="ml-4 flex items-center gap-2">
+                          <div className="flex items-center gap-2">
                             {BEAN_TYPES.map(type => (
                               <span
                                 key={type.value}
@@ -2113,7 +2113,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             产地
                           </div>
-                          <div className="relative ml-4 flex-1">
+                          <div className="relative flex-1">
                             {isAddMode && !origin && (
                               <span
                                 className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
@@ -2162,7 +2162,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             庄园
                           </div>
-                          <div className="relative ml-4 flex-1">
+                          <div className="relative flex-1">
                             {isAddMode && !estate && (
                               <span
                                 className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
@@ -2203,7 +2203,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             处理法
                           </div>
-                          <div className="relative ml-4 flex-1">
+                          <div className="relative flex-1">
                             {isAddMode && !process && (
                               <span
                                 className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
@@ -2244,7 +2244,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             品种
                           </div>
-                          <div className="relative ml-4 flex-1">
+                          <div className="relative flex-1">
                             {isAddMode && !variety && (
                               <span
                                 className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
@@ -2287,7 +2287,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           </div>
                           <div
                             ref={roastLevelRef}
-                            className="relative ml-4 inline-flex"
+                            className="relative inline-flex"
                           >
                             <span
                               onClick={() =>
@@ -2329,7 +2329,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             赏味期
                           </div>
-                          <div className="ml-4 flex items-center gap-2">
+                          <div className="flex items-center gap-2">
                             {bean?.isFrozen ? (
                               <span
                                 onClick={() =>
@@ -2542,7 +2542,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       风味
                     </div>
-                    <div className="ml-4 flex flex-1 flex-wrap items-center gap-1">
+                    <div className="flex flex-1 flex-wrap items-center gap-1">
                       {(() => {
                         const currentFlavors = isAddMode
                           ? tempBean.flavor || []
@@ -2679,7 +2679,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       备注
                     </div>
-                    <div className="relative ml-4 flex-1">
+                    <div className="relative flex-1">
                       {isAddMode && !tempBean.notes && (
                         <span
                           className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
@@ -2751,7 +2751,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                             评分
                           </div>
-                          <div className="ml-4 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
                             {bean?.overallRating} / 5
                           </div>
                         </div>

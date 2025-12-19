@@ -1,16 +1,32 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { BrewingNote } from '@/lib/core/config';
 import { CoffeeBean } from '@/types/app';
-import { formatDate, formatRating } from '@/components/notes/utils';
+import { formatDate } from '@/components/notes/utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
 import { ChevronLeft, Pen } from 'lucide-react';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
+
+// 信息行组件
+interface InfoRowProps {
+  label: string;
+  children: React.ReactNode;
+}
+
+const InfoRow: React.FC<InfoRowProps> = ({ label, children }) => (
+  <div className="flex items-start">
+    <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+      {label}
+    </div>
+    {children}
+  </div>
+);
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(
@@ -94,22 +110,18 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   // 初始化备注值
   useEffect(() => {
     if (note?.notes && notesRef.current) {
-      notesRef.current.textContent = note.notes;
+      notesRef.current.innerText = note.notes;
     }
   }, [note?.notes, note?.id]);
 
   // 保存备注的函数
-  const handleSaveNotes = async (newNotes: string) => {
+  const handleSaveNotes = useCallback(async (newNotes: string) => {
     if (!note?.id) return;
 
     try {
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
-
-      // 更新备注
+      // 更新备注 - 保留换行符，不使用 trim()
       await useBrewingNoteStore.getState().updateNote(note.id, {
-        notes: newNotes.trim(),
+        notes: newNotes,
       });
 
       // 触发数据更新事件
@@ -124,15 +136,15 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     } catch (error) {
       console.error('保存备注失败:', error);
     }
-  };
+  }, [note?.id]);
 
   // 处理备注内容变化
-  const handleNotesInput = () => {
+  const handleNotesInput = useCallback(() => {
     if (notesRef.current) {
-      const newContent = notesRef.current.textContent || '';
+      const newContent = notesRef.current.innerText || '';
       handleSaveNotes(newContent);
     }
-  };
+  }, [handleSaveNotes]);
 
   // 监测标题可见性
   useEffect(() => {
@@ -209,18 +221,98 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     return false;
   }, [note]);
 
-  // 只在需要时渲染DOM
-  if (!shouldRender) return null;
-
   const beanName = note?.coffeeBeanInfo?.name;
-  const validTasteRatings = note ? getValidTasteRatings(note.taste) : [];
+  const validTasteRatings = useMemo(
+    () => (note ? getValidTasteRatings(note.taste) : []),
+    [note, getValidTasteRatings]
+  );
   const hasTasteRatings = validTasteRatings.length > 0;
 
-  // 构建标题文本 - 只显示咖啡豆名称
-  const getTitleText = () => {
+  // 构建标题文本 - 只显示咖啡豆名称（使用 useMemo 缓存）
+  const titleText = useMemo(() => {
     if (!note) return '未命名';
     return beanName || '未命名';
-  };
+  }, [note, beanName]);
+
+  // 编辑按钮点击处理
+  const handleEditClick = useCallback(() => {
+    if (note && onEdit) {
+      onEdit(note);
+      // 不关闭详情页，让编辑表单叠加在上面
+    }
+  }, [note, onEdit]);
+
+  // ActionMenu 菜单项（使用 useMemo 缓存）
+  const actionMenuItems = useMemo(() => {
+    if (!note) return [];
+
+    const items = [];
+
+    if (onDelete) {
+      items.push({
+        id: 'delete',
+        label: '删除',
+        onClick: () => {
+          // 添加确认对话框
+          let noteName = '此笔记';
+          if (note.source === 'quick-decrement') {
+            noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`;
+          } else if (note.source === 'capacity-adjustment') {
+            noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的容量调整记录`;
+          } else {
+            noteName = note.method || '此笔记';
+          }
+
+          if (window.confirm(`确认要删除"${noteName}"吗？`)) {
+            onDelete(note.id);
+            onClose();
+          }
+        },
+        color: 'danger' as const,
+      });
+    }
+
+    if (onShare) {
+      items.push({
+        id: 'share',
+        label: '分享',
+        onClick: () => {
+          onShare(note.id);
+          onClose();
+        },
+        color: 'default' as const,
+      });
+    }
+
+    if (onCopy) {
+      items.push({
+        id: 'copy',
+        label: '复制',
+        onClick: () => {
+          onCopy(note.id);
+          onClose();
+        },
+        color: 'default' as const,
+      });
+    }
+
+    if (onEdit) {
+      items.push({
+        id: 'edit',
+        label: '编辑',
+        onClick: () => {
+          onEdit(note);
+          // 不关闭详情页，让编辑表单叠加在上面
+        },
+        color: 'default' as const,
+      });
+    }
+
+    return items;
+  }, [note, onDelete, onShare, onCopy, onEdit, onClose]);
+
+  // 只在需要时渲染DOM
+  if (!shouldRender) return null;
 
   return (
     <>
@@ -233,7 +325,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           {/* 左侧关闭按钮 */}
           <button
             onClick={handleClose}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
           >
             <ChevronLeft className="-ml-px h-4.5 w-4.5 text-neutral-600 dark:text-neutral-400" />
           </button>
@@ -252,20 +344,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
             }}
           >
             <h2 className="max-w-full truncate px-2 text-center text-sm font-medium text-neutral-800 dark:text-neutral-100">
-              {getTitleText()}
+              {titleText}
             </h2>
           </div>
 
           {/* 右侧操作按钮 */}
           {note && (onEdit || onDelete || onCopy || onShare) && (
-            <div className="flex flex-shrink-0 items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               {/* 编辑按钮 */}
               {onEdit && (
                 <button
-                  onClick={() => {
-                    onEdit(note);
-                    // 不关闭详情页，让编辑表单叠加在上面
-                  }}
+                  onClick={handleEditClick}
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                 >
                   <Pen className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" />
@@ -273,78 +362,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               )}
 
               {/* 更多操作菜单 */}
-              {(onEdit || onDelete || onCopy || onShare) && (
+              {actionMenuItems.length > 0 && (
                 <ActionMenu
-                  items={[
-                    ...(onDelete
-                      ? [
-                          {
-                            id: 'delete',
-                            label: '删除',
-                            onClick: () => {
-                              // 添加确认对话框
-                              let noteName = '此笔记';
-                              if (note.source === 'quick-decrement') {
-                                noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`;
-                              } else if (
-                                note.source === 'capacity-adjustment'
-                              ) {
-                                noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的容量调整记录`;
-                              } else {
-                                noteName = note.method || '此笔记';
-                              }
-
-                              if (
-                                window.confirm(`确认要删除"${noteName}"吗？`)
-                              ) {
-                                onDelete(note.id);
-                                onClose();
-                              }
-                            },
-                            color: 'danger' as const,
-                          },
-                        ]
-                      : []),
-                    ...(onShare
-                      ? [
-                          {
-                            id: 'share',
-                            label: '分享',
-                            onClick: () => {
-                              onShare(note.id);
-                              onClose();
-                            },
-                            color: 'default' as const,
-                          },
-                        ]
-                      : []),
-                    ...(onCopy
-                      ? [
-                          {
-                            id: 'copy',
-                            label: '复制',
-                            onClick: () => {
-                              onCopy(note.id);
-                              onClose();
-                            },
-                            color: 'default' as const,
-                          },
-                        ]
-                      : []),
-                    ...(onEdit
-                      ? [
-                          {
-                            id: 'edit',
-                            label: '编辑',
-                            onClick: () => {
-                              onEdit(note);
-                              // 不关闭详情页，让编辑表单叠加在上面
-                            },
-                            color: 'default' as const,
-                          },
-                        ]
-                      : []),
-                  ].filter(item => item)}
+                  items={actionMenuItems}
                   useMorphingAnimation={true}
                   triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                 />
@@ -396,7 +416,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   <>
                     {/* 咖啡豆图片 - 小图 */}
                     {beanInfo?.image && (
-                      <div className="relative h-20 flex-shrink-0 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                      <div className="relative h-20 shrink-0 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
                         {beanImageError ? (
                           <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
                             加载失败
@@ -456,218 +476,154 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               id="note-detail-title"
               className="text-sm font-medium text-neutral-800 dark:text-neutral-100"
             >
-              {getTitleText()}
+              {titleText}
             </h2>
           </div>
 
           {note ? (
-            <div className="space-y-4 px-6">
-              {/* 器具和方案信息 */}
-              <div className="flex items-center gap-3">
-                {/* 器具 */}
-                <div className="flex flex-1 flex-col">
-                  <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    器具
-                  </div>
-                  <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                    {equipmentName}
-                  </div>
-                </div>
-
-                <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-
-                {/* 方案 */}
-                <div className="flex flex-1 flex-col">
-                  <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    方案
-                  </div>
-                  <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                    {note.method || '-'}
-                  </div>
-                </div>
-              </div>
-
-              {/* 参数信息 - 一排四个 */}
-              {note.params && (
-                <div className="flex items-center gap-3 border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
-                  {isEspresso ? (
-                    // 意式参数：粉量 · 研磨度 · 时间 · 液重
-                    <>
-                      {/* 粉量 */}
-                      <div className="flex flex-1 flex-col">
-                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          粉量
-                        </div>
-                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {note.params.coffee}
-                        </div>
-                        {beanName && beanUnitPrice > 0 && (
-                          <div className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">
-                            {beanUnitPrice.toFixed(2)}元/克
+            <div className="space-y-3 px-6">
+              {/* 咖啡豆信息 */}
+              {beanInfo && (
+                <>
+                  {/* 产地、处理法、品种 */}
+                  {[
+                    {
+                      label: '产地',
+                      value: beanInfo.blendComponents?.[0]?.origin,
+                    },
+                    {
+                      label: '处理法',
+                      value: beanInfo.blendComponents?.[0]?.process,
+                    },
+                    {
+                      label: '品种',
+                      value: beanInfo.blendComponents?.[0]?.variety,
+                    },
+                  ].map(
+                    ({ label, value }) =>
+                      value && (
+                        <InfoRow key={label} label={label}>
+                          <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                            {value}
                           </div>
-                        )}
-                      </div>
-
-                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-
-                      {/* 研磨度 */}
-                      <div className="flex flex-1 flex-col">
-                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          研磨度
-                        </div>
-                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {note.params.grindSize || '-'}
-                        </div>
-                      </div>
-
-                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-
-                      {/* 时间 */}
-                      <div className="flex flex-1 flex-col">
-                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          时间
-                        </div>
-                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {note.totalTime ? `${note.totalTime}s` : '-'}
-                        </div>
-                      </div>
-
-                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-
-                      {/* 液重 */}
-                      <div className="flex flex-1 flex-col">
-                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          液重
-                        </div>
-                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {note.params.water}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    // 手冲参数：粉量 · 粉水比 · 研磨度 · 水温
-                    <>
-                      {/* 粉量 */}
-                      <div className="flex flex-1 flex-col">
-                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          粉量
-                        </div>
-                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {note.params.coffee}
-                        </div>
-                        {beanName && beanUnitPrice > 0 && (
-                          <div className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">
-                            {beanUnitPrice.toFixed(2)}元/克
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-
-                      {/* 粉水比 */}
-                      <div className="flex flex-1 flex-col">
-                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          粉水比
-                        </div>
-                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {note.params.ratio}
-                        </div>
-                      </div>
-
-                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-
-                      {/* 研磨度 */}
-                      <div className="flex flex-1 flex-col">
-                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          研磨度
-                        </div>
-                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {note.params.grindSize || '-'}
-                        </div>
-                      </div>
-
-                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-
-                      {/* 水温 */}
-                      <div className="flex flex-1 flex-col">
-                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          水温
-                        </div>
-                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {note.params.temp || '-'}
-                        </div>
-                      </div>
-                    </>
+                        </InfoRow>
+                      )
                   )}
-                </div>
+
+                  {/* 风味 */}
+                  {beanInfo.flavor && beanInfo.flavor.length > 0 && (
+                    <InfoRow label="风味">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {beanInfo.flavor.map(
+                          (flavor: string, index: number) => (
+                            <span
+                              key={index}
+                              className="bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
+                            >
+                              {flavor}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </InfoRow>
+                  )}
+
+                  {/* 分割线 */}
+                  <div className="border-t border-dashed border-neutral-200 dark:border-neutral-800"></div>
+                </>
               )}
 
-              {/* 风味评分 - 一排四个 */}
+              {/* 方案 */}
+              <InfoRow label="方案">
+                <div className="space-x-1 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                  <span>{equipmentName}</span>
+                  <span className="text-neutral-400 dark:text-neutral-600">
+                    ·
+                  </span>
+                  <span>{note.method || '未命名'}</span>
+                </div>
+              </InfoRow>
+
+              {/* 参数信息 */}
+              {note.params &&
+                (() => {
+                  // 意式参数：粉量 · 研磨度 · 时间 · 液重
+                  // 手冲参数：粉量 · 粉水比 · 研磨度 · 水温
+                  const params = isEspresso
+                    ? [
+                        note.params.coffee,
+                        note.params.grindSize || '-',
+                        note.totalTime ? `${note.totalTime}s` : '-',
+                        note.params.water,
+                      ]
+                    : [
+                        note.params.coffee,
+                        note.params.ratio,
+                        note.params.grindSize || '-',
+                        note.params.temp || '-',
+                      ];
+
+                  return (
+                    <InfoRow label="参数">
+                      <div className="flex flex-col">
+                        <div className="space-x-1 text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                          {params.map((param, index, arr) => (
+                            <React.Fragment key={index}>
+                              <span>{param}</span>
+                              {index < arr.length - 1 && (
+                                <span className="text-neutral-400 dark:text-neutral-600">
+                                  ·
+                                </span>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                        {beanName && beanUnitPrice > 0 && (
+                          <div className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">
+                            {beanUnitPrice.toFixed(2)}元/克
+                          </div>
+                        )}
+                      </div>
+                    </InfoRow>
+                  );
+                })()}
+
+              {/* 风味评分 */}
               {hasTasteRatings && (
-                <div className="border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
-                  <div className="flex items-center gap-3">
-                    {validTasteRatings.map((rating, index) => (
-                      <React.Fragment key={rating.id}>
-                        {index > 0 && (
-                          <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-                        )}
-                        <div className="flex flex-1 flex-col">
-                          <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                            {rating.label}
-                          </div>
-                          <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                            {rating.value}
-                          </div>
-                        </div>
-                      </React.Fragment>
+                <InfoRow label="评分">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {validTasteRatings.map(rating => (
+                      <span
+                        key={rating.id}
+                        className="bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
+                      >
+                        {rating.label}
+                        {rating.value}
+                      </span>
                     ))}
-                    {/* 补充空白占位以保持布局一致 */}
-                    {validTasteRatings.length < 4 &&
-                      Array.from({ length: 4 - validTasteRatings.length }).map(
-                        (_, i) => (
-                          <React.Fragment key={`empty-${i}`}>
-                            <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-                            <div className="flex-1"></div>
-                          </React.Fragment>
-                        )
-                      )}
                   </div>
-                </div>
+                </InfoRow>
               )}
 
-              {/* 总体评分和时间 - 两格布局 */}
-              <div className="border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
-                <div className="flex items-center gap-3">
-                  {/* 时间 */}
-                  <div className="flex flex-1 flex-col">
-                    <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      时间
-                    </div>
-                    <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                      {formatDate(note.timestamp)}
-                    </div>
-                  </div>
+              {/* 总体评分 */}
+              {note.rating > 0 && (
+                <InfoRow label="总评">
+                  <span className="bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300">
+                    {note.rating}/5
+                  </span>
+                </InfoRow>
+              )}
 
-                  {/* 总体评分 */}
-                  {note.rating > 0 && (
-                    <>
-                      <div className="h-10 w-px border-l border-dashed border-neutral-200 dark:border-neutral-800/70"></div>
-                      <div className="flex flex-1 flex-col">
-                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          总体评分
-                        </div>
-                        <div className="mt-1.5 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {formatRating(note.rating)}
-                        </div>
-                      </div>
-                    </>
-                  )}
+              {/* 时间 */}
+              <InfoRow label="时间">
+                <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                  {formatDate(note.timestamp)}
                 </div>
-              </div>
+              </InfoRow>
 
-              {/* 备注信息 */}
+              {/* 笔记信息 */}
               {note.notes && (
-                <div className="border-t border-dashed border-neutral-200 pt-4 dark:border-neutral-800">
+                <InfoRow label="笔记">
                   <div
                     ref={notesRef}
                     contentEditable
@@ -681,7 +637,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   >
                     {note.notes}
                   </div>
-                </div>
+                </InfoRow>
               )}
             </div>
           ) : null}
