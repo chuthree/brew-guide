@@ -139,6 +139,7 @@ export interface SettingsOptions {
     syncMode: 'manual';
     lastConnectionSuccess?: boolean;
     enablePullToSync?: boolean; // 是否启用下拉上传功能
+    useProxy?: boolean; // 是否使用 CORS 代理（浏览器环境推荐开启，移动端/局域网可关闭）
   };
   // 随机咖啡豆设置
   randomCoffeeBeans?: {

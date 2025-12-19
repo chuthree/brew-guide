@@ -55,7 +55,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
   const [copySuccess, setCopySuccess] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 自动连接 - 当启用且配置完整时自动连接
+  // 自动连接 - 仅在页面加载时，如果之前连接成功过，自动恢复连接
   useEffect(() => {
     if (!enabled) {
       // 如果被禁用，重置状态
@@ -74,7 +74,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       return;
     }
 
-    // 如果已经标记为连接成功（例如从教程完成后），直接设置状态并创建 manager
+    // 只有标记为连接成功过的情况下，才自动恢复连接（用于页面刷新后恢复状态）
     if (settings.lastConnectionSuccess) {
       const initManager = async () => {
         const manager = new WebDAVSyncManager();
@@ -83,54 +83,21 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
           username: settings.username,
           password: settings.password,
           remotePath: settings.remotePath,
+          useProxy: settings.useProxy,
         });
         if (connected) {
           setStatus('connected');
           setSyncManager(manager);
+        } else {
+          // 恢复连接失败，重置状态
+          setStatus('disconnected');
+          onSettingChange('lastConnectionSuccess', false);
         }
       };
       initManager();
-      return;
     }
-
-    // 如果配置完整但未标记为连接成功，尝试自动连接
-    const autoConnect = async () => {
-      setStatus('connecting');
-      const manager = new WebDAVSyncManager();
-      const connected = await manager.initialize({
-        url: settings.url,
-        username: settings.username,
-        password: settings.password,
-        remotePath: settings.remotePath,
-      });
-
-      if (connected) {
-        setStatus('connected');
-        setSyncManager(manager);
-        // 标记为连接成功
-        onSettingChange('lastConnectionSuccess', true);
-        // 通知 Settings 页面更新云同步状态
-        window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
-      } else {
-        setStatus('error');
-        // 根据配置情况给出更具体的提示
-        if (settings.remotePath) {
-          setError('连接失败：请检查服务器地址、账号密码和路径是否正确');
-        } else {
-          setError('连接失败：请检查服务器地址和认证信息');
-        }
-        onSettingChange('lastConnectionSuccess', false);
-      }
-    };
-    autoConnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    enabled,
-    settings.url,
-    settings.username,
-    settings.password,
-    settings.lastConnectionSuccess,
-  ]);
+  }, [enabled, settings.lastConnectionSuccess]);
 
   // 教程完成回调 - 将配置信息填入并测试连接
   const handleTutorialComplete = async (config: {
@@ -186,10 +153,12 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         username: settings.username,
         password: settings.password,
         remotePath: settings.remotePath,
+        useProxy: settings.useProxy,
       });
 
       if (connected) {
         setStatus('connected');
+
         setSyncManager(manager);
         onSettingChange('lastConnectionSuccess', true);
 
@@ -454,9 +423,20 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
               placeholder="https://dav.jianguoyun.com/dav/"
               className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
-            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              坚果云: https://dav.jianguoyun.com/dav/
-            </p>
+            <div className="mt-1.5 flex items-center justify-between">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                坚果云: https://dav.jianguoyun.com/dav/
+              </p>
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={settings.useProxy !== false}
+                  onChange={e => onSettingChange('useProxy', e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-neutral-300 text-neutral-600 focus:ring-1 focus:ring-neutral-400 dark:border-neutral-600 dark:bg-neutral-700"
+                />
+                <span>代理</span>
+              </label>
+            </div>
           </div>
 
           {/* 账号 */}

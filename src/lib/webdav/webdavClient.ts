@@ -541,6 +541,7 @@ export class WebDAVClient {
       const proxiedUrl = this.getProxiedUrl(url);
 
       console.log(`[WebDAV] 检查目录是否存在: ${url}`);
+      console.log(`[WebDAV] 实际请求 URL: ${proxiedUrl}`);
 
       const checkResponse = await fetch(proxiedUrl, {
         method: 'PROPFIND',
@@ -656,10 +657,16 @@ export class WebDAVClient {
    * 获取代理后的 URL
    */
   private getProxiedUrl(originalUrl: string): string {
+    // 如果用户明确设置不使用代理，直接返回原始 URL
+    if (this.config.useProxy === false) {
+      return originalUrl;
+    }
+
     // 在浏览器环境下使用 CORS 代理
     if (typeof window !== 'undefined') {
       return `${this.corsProxy}${encodeURIComponent(originalUrl)}`;
     }
+
     // 在 Node.js 或 Capacitor 原生环境下直接使用原始 URL
     return originalUrl;
   }

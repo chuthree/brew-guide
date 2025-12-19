@@ -26,6 +26,8 @@ export interface WebDAVConfig {
   password: string;
   /** 远程目录路径 */
   remotePath: string;
+  /** 是否使用 CORS 代理（浏览器环境下跨域访问时需要） */
+  useProxy?: boolean;
 }
 
 /**
