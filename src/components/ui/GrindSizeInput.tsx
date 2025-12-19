@@ -420,14 +420,11 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
           <FloatingPortal>
             <div
               ref={refs.setFloating}
-              style={floatingStyles}
+              style={{ ...floatingStyles, zIndex: 9999 }}
               {...getFloatingProps()}
             >
               {/* 内部容器用于过渡动画，避免与定位 transform 冲突 */}
-              <div
-                style={transitionStyles}
-                className="z-9999 flex flex-col gap-1.5"
-              >
+              <div style={transitionStyles} className="flex flex-col gap-1.5">
                 {/* 选中的磨豆机 - 胶囊形状独立显示 */}
                 {allOptions
                   .filter(o => o.type === 'selected-grinder')
