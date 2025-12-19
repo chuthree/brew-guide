@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { BrewingNote } from '@/lib/core/config';
@@ -115,28 +121,31 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   }, [note?.notes, note?.id]);
 
   // 保存备注的函数
-  const handleSaveNotes = useCallback(async (newNotes: string) => {
-    if (!note?.id) return;
+  const handleSaveNotes = useCallback(
+    async (newNotes: string) => {
+      if (!note?.id) return;
 
-    try {
-      // 更新备注 - 保留换行符，不使用 trim()
-      await useBrewingNoteStore.getState().updateNote(note.id, {
-        notes: newNotes,
-      });
+      try {
+        // 更新备注 - 保留换行符，不使用 trim()
+        await useBrewingNoteStore.getState().updateNote(note.id, {
+          notes: newNotes,
+        });
 
-      // 触发数据更新事件
-      window.dispatchEvent(
-        new CustomEvent('brewingNoteDataChanged', {
-          detail: {
-            action: 'update',
-            noteId: note.id,
-          },
-        })
-      );
-    } catch (error) {
-      console.error('保存备注失败:', error);
-    }
-  }, [note?.id]);
+        // 触发数据更新事件
+        window.dispatchEvent(
+          new CustomEvent('brewingNoteDataChanged', {
+            detail: {
+              action: 'update',
+              noteId: note.id,
+            },
+          })
+        );
+      } catch (error) {
+        console.error('保存备注失败:', error);
+      }
+    },
+    [note?.id]
+  );
 
   // 处理备注内容变化
   const handleNotesInput = useCallback(() => {
