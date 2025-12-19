@@ -113,3 +113,49 @@ export async function saveCheckTime(): Promise<void> {
     // 静默失败
   }
 }
+
+/**
+ * 检查是否可以进行自动更新检测（一天只检测一次）
+ */
+export async function canAutoCheck(): Promise<boolean> {
+  try {
+    const { Storage } = await import('@/lib/core/storage');
+
+    // 检查是否在延迟期内（用户点击"以后再说"后7天内不检查）
+    const postponedUntil = await Storage.get('versionCheckPostponedUntil');
+    if (postponedUntil) {
+      const postponedTime = parseInt(postponedUntil, 10);
+      if (Date.now() < postponedTime) {
+        return false;
+      }
+    }
+
+    // 检查今天是否已经检测过
+    const lastCheck = await Storage.get('lastVersionCheck');
+    if (lastCheck) {
+      const lastCheckTime = parseInt(lastCheck, 10);
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      if (Date.now() - lastCheckTime < oneDayMs) {
+        return false;
+      }
+    }
+
+    return true;
+  } catch {
+    return true; // 出错时允许检测
+  }
+}
+
+/**
+ * 延迟更新检测（7天内不再自动检测）
+ */
+export async function postponeUpdateCheck(): Promise<void> {
+  try {
+    const { Storage } = await import('@/lib/core/storage');
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const postponedUntil = Date.now() + sevenDaysMs;
+    await Storage.set('versionCheckPostponedUntil', postponedUntil.toString());
+  } catch {
+    // 静默失败
+  }
+}

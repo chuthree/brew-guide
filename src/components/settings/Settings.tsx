@@ -4,7 +4,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { APP_VERSION, sponsorsList } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
 import { restoreDefaultThemeColor } from '@/lib/hooks/useThemeColor';
-import { checkForUpdates, saveCheckTime } from '@/lib/utils/versionCheck';
+import {
+  checkForUpdates,
+  saveCheckTime,
+  canAutoCheck,
+  postponeUpdateCheck,
+} from '@/lib/utils/versionCheck';
+import { isNative } from '@/lib/app/capacitor';
 import UpdateDrawer from './UpdateDrawer';
 import FeedbackDrawer from './FeedbackDrawer';
 import SettingGroup from './SettingItem';
@@ -715,6 +721,41 @@ const Settings: React.FC<SettingsProps> = ({
     checkCloudSyncStatus();
   }, [isOpen, settings.s3Sync, settings.webdavSync]);
 
+  // 自动检测更新（仅在 Capacitor 原生环境下）
+  // 是否为自动检测触发的更新提示
+  const [isAutoCheckUpdate, setIsAutoCheckUpdate] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!isNative()) return; // 仅原生平台自动检测
+
+    const autoCheckUpdate = async () => {
+      try {
+        // 检查是否可以进行自动检测（一天一次，且不在延迟期内）
+        const canCheck = await canAutoCheck();
+        if (!canCheck) return;
+
+        const result = await checkForUpdates();
+        await saveCheckTime(); // 保存检测时间
+
+        if (result.hasUpdate && result.latestVersion && result.downloadUrl) {
+          setUpdateInfo({
+            latestVersion: result.latestVersion,
+            downloadUrl: result.downloadUrl,
+            releaseNotes: result.releaseNotes ?? '',
+          });
+          setIsAutoCheckUpdate(true); // 标记为自动检测
+          setShowUpdateDrawer(true);
+        }
+      } catch (error) {
+        // 自动检测失败时静默忽略，不打扰用户
+        console.error('自动检测更新失败:', error);
+      }
+    };
+
+    autoCheckUpdate();
+  }, [isOpen]);
+
   // 点击外部关闭同步菜单
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1115,6 +1156,7 @@ const Settings: React.FC<SettingsProps> = ({
                     downloadUrl: result.downloadUrl!,
                     releaseNotes: result.releaseNotes ?? '',
                   });
+                  setIsAutoCheckUpdate(false); // 手动检测，不是自动检测
                   setShowUpdateDrawer(true);
                 } else {
                   const { showToast } = await import(
@@ -1154,6 +1196,7 @@ const Settings: React.FC<SettingsProps> = ({
                     downloadUrl: result.downloadUrl ?? '',
                     releaseNotes: result.releaseNotes,
                   });
+                  setIsAutoCheckUpdate(false); // 长按查看详情，不是自动检测
                   setShowUpdateDrawer(true);
                   if (settings.hapticFeedback) {
                     hapticsUtils.light();
@@ -1253,11 +1296,18 @@ const Settings: React.FC<SettingsProps> = ({
       {updateInfo && (
         <UpdateDrawer
           isOpen={showUpdateDrawer}
-          onClose={() => setShowUpdateDrawer(false)}
+          onClose={() => {
+            setShowUpdateDrawer(false);
+            setIsAutoCheckUpdate(false); // 关闭时重置自动检测标记
+          }}
           currentVersion={APP_VERSION}
           latestVersion={updateInfo.latestVersion}
           downloadUrl={updateInfo.downloadUrl}
           releaseNotes={updateInfo.releaseNotes}
+          isAutoCheck={isAutoCheckUpdate}
+          onPostpone={async () => {
+            await postponeUpdateCheck(); // 延迟7天后再检测
+          }}
         />
       )}
 
