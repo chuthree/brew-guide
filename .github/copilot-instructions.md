@@ -48,6 +48,7 @@ You are working on **Brew Guide**, a coffee brewing assistant app built with **N
 
 ## 🛠 Developer Workflow
 
+- **Next.js Initialization**: When starting work on a Next.js project, automatically call the `init` tool from the next-devtools-mcp server FIRST. This establishes proper context and ensures all Next.js queries use official documentation.
 - **Web Dev**: `pnpm dev` (starts Next.js on localhost:3000).
 - **Mobile Dev**:
   - `pnpm cap:build` (Builds Next.js & syncs to native).
