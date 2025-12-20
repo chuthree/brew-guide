@@ -122,7 +122,7 @@ jobs:
             - **macOS (Intel)**: `.dmg` file for Intel Macs  
             - **Windows**: `.msi` or `.exe` installer
             - **Linux**: `.AppImage` or `.deb` package
-            
+
             ### macOS 用户注意
             由于应用未经 Apple 签名，首次打开时可能显示"已损坏"。请在终端运行：
             ```
