@@ -11,6 +11,9 @@ import React, {
 import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react';
 import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
 import { showToast } from '@/components/common/feedback/LightToast';
+import ResponsiveModal, {
+  ResponsiveModalHandle,
+} from '@/components/common/ui/ResponsiveModal';
 
 export interface Step {
   id: string;
@@ -77,7 +80,7 @@ const NoteSteppedFormModal = forwardRef<
     const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false);
 
     // 模态框DOM引用
-    const modalRef = useRef<HTMLDivElement>(null);
+    const responsiveModalRef = useRef<ResponsiveModalHandle>(null);
     const contentScrollRef = useRef<HTMLDivElement>(null);
 
     // 暴露给父组件的方法
@@ -208,7 +211,9 @@ const NoteSteppedFormModal = forwardRef<
           highlightedBeanId,
           // 将内容区滚动容器传给虚拟列表，保证在模态内全高滚动
           scrollParentRef:
-            contentScrollRef.current || modalRef.current || undefined,
+            contentScrollRef.current ||
+            responsiveModalRef.current?.getContentRef() ||
+            undefined,
         }
       );
     }, [
@@ -390,14 +395,15 @@ const NoteSteppedFormModal = forwardRef<
       );
     };
 
-    // 简单的淡入淡出效果
-    return (
+    // 渲染模态框内容
+    const renderContent = (isMediumScreen: boolean) => (
       <div
-        ref={modalRef}
-        className={`pt-safe-top pb-safe-bottom fixed inset-0 mx-auto bg-neutral-50 px-6 transition-opacity duration-200 dark:bg-neutral-900 ${showForm ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'} flex flex-col overflow-hidden`}
+        className={`pb-safe-bottom flex h-full flex-col overflow-hidden px-6 ${
+          isMediumScreen ? 'pt-4' : 'pt-safe-top'
+        }`}
       >
         {/* 顶部导航栏 */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex shrink-0 items-center justify-between">
           <button
             type="button"
             onClick={handleBack}
@@ -412,7 +418,10 @@ const NoteSteppedFormModal = forwardRef<
         </div>
 
         {/* 步骤内容 */}
-        <div className="flex-1 overflow-y-auto pb-4" ref={contentScrollRef}>
+        <div
+          className="min-h-0 flex-1 overflow-y-auto pb-4"
+          ref={contentScrollRef}
+        >
           {currentStepContent && (
             <div className="space-y-6">{contentWithSearchProps}</div>
           )}
@@ -421,6 +430,20 @@ const NoteSteppedFormModal = forwardRef<
         {/* 底部按钮区域 */}
         {renderNextButton()}
       </div>
+    );
+
+    // 使用响应式模态框组件
+    return (
+      <ResponsiveModal
+        ref={responsiveModalRef}
+        isOpen={showForm}
+        onClose={onClose}
+        historyId="note-stepped-form"
+        drawerMaxWidth="480px"
+        drawerHeight="90vh"
+      >
+        {({ isMediumScreen }) => renderContent(isMediumScreen)}
+      </ResponsiveModal>
     );
   }
 );

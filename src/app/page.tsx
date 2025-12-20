@@ -420,21 +420,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     alt: string;
   } | null>(null);
 
-  // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、笔记详情 或 笔记编辑）
+  // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、笔记详情）
   // 注意：咖啡豆导入是 ActionDrawer 抽屉式组件，不需要触发主页面转场动画
+  // 注意：brewingNoteEditOpen 使用 ResponsiveModal，自己管理动画和历史栈
   const hasAnyModalOpen =
-    isSettingsOpen ||
-    hasSubSettingsOpen ||
-    beanDetailOpen ||
-    brewingNoteEditOpen ||
-    noteDetailOpen;
+    isSettingsOpen || hasSubSettingsOpen || beanDetailOpen || noteDetailOpen;
 
   // 详情页类型的模态框（咖啡豆/笔记详情）- 在大屏幕时作为右侧面板显示，主页面不需要动画
   const hasDetailModalOpen = beanDetailOpen || noteDetailOpen;
 
-  // 其他模态框（设置页、笔记编辑等）- 在大屏幕时仍然是全屏覆盖，主页面需要动画
-  const hasOverlayModalOpen =
-    isSettingsOpen || hasSubSettingsOpen || brewingNoteEditOpen;
+  // 其他模态框（设置页等）- 在大屏幕时仍然是全屏覆盖，主页面需要动画
+  // 注意：brewingNoteEditOpen 使用 ResponsiveModal，自己管理动画，不需要触发主页面转场
+  const hasOverlayModalOpen = isSettingsOpen || hasSubSettingsOpen;
 
   // 统一管理 pageStackManager 的状态
   React.useEffect(() => {

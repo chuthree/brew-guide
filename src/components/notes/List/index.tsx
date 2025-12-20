@@ -1506,15 +1506,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                   : '',
             },
             {
-              text: '保存为图片',
-              onClick: handleSaveNotes,
-              className:
-                selectedNotes.length === 0 || isSaving
-                  ? 'cursor-not-allowed opacity-50'
-                  : '',
-            },
-            {
-              text: '艺术分享',
+              text: '图文分享',
               onClick: handleArtisticShare,
               className:
                 selectedNotes.length !== 1
