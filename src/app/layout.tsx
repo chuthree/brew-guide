@@ -332,7 +332,7 @@ export default function RootLayout({
               <ModalHistoryInit />
               <KeyboardManager />
             </Suspense>
-            <div className="mx-auto h-full w-full max-w-[500px] overflow-hidden">
+            <div className="mx-auto h-full w-full overflow-hidden">
               {children}
             </div>
             <LightToast />

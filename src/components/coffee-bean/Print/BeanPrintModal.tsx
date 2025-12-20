@@ -485,7 +485,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   return (
     <>
       <div
-        className={`fixed inset-0 mx-auto flex max-w-[500px] flex-col overflow-hidden bg-neutral-50 transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${isVisible ? 'translate-x-0' : 'translate-x-full'} `}
+        className={`fixed inset-0 mx-auto flex max-w-md flex-col overflow-hidden bg-neutral-50 transition-transform duration-350 ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${isVisible ? 'translate-x-0' : 'translate-x-full'} `}
       >
         {/* 顶部按钮栏 */}
         <div className="pt-safe-top sticky top-0 flex items-center justify-between bg-neutral-50 px-4 py-3 dark:bg-neutral-900">

@@ -1301,7 +1301,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 mx-auto flex max-w-[500px] flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900"
+        className="fixed inset-0 mx-auto flex flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900"
         style={getChildPageStyle(isVisible)}
       >
         {/* 顶部按钮栏 */}

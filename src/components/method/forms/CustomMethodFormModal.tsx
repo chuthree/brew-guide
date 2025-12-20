@@ -193,7 +193,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
       {showCustomForm && currentCustomEquipment && (
         <div
           data-modal="custom-method-form"
-          className="pt-safe-top pb-safe-bottom fixed inset-0 inset-x-0 bottom-0 z-50 mx-auto flex h-full max-w-[500px] flex-col overflow-hidden bg-neutral-50 px-6 dark:bg-neutral-900"
+          className="pt-safe-top pb-safe-bottom fixed inset-0 inset-x-0 bottom-0 z-50 mx-auto flex h-full flex-col overflow-hidden bg-neutral-50 px-6 dark:bg-neutral-900"
         >
           <CustomMethodForm
             onSave={handleSaveMethod}

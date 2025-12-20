@@ -842,7 +842,7 @@ const Settings: React.FC<SettingsProps> = ({
 
   return (
     <div
-      className="fixed inset-0 mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
+      className="fixed inset-0 mx-auto flex flex-col bg-neutral-50 dark:bg-neutral-900"
       style={settingsStyle}
     >
       {/* 头部导航栏 */}

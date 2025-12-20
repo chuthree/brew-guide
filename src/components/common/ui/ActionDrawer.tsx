@@ -262,7 +262,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
 
         {/* 抽屉内容 */}
         <Drawer.Content
-          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-[500px] flex-col rounded-t-3xl bg-white outline-none dark:bg-neutral-900"
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md flex-col rounded-t-3xl bg-white outline-none dark:bg-neutral-900"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           aria-describedby={undefined}
         >

@@ -185,7 +185,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
   return (
     <div
-      className="pt-safe-top pb-safe-bottom fixed inset-0 z-10 mx-auto max-w-[500px] overflow-auto bg-neutral-50 px-6 dark:bg-neutral-900"
+      className="pt-safe-top pb-safe-bottom fixed inset-0 z-10 mx-auto overflow-auto bg-neutral-50 px-6 dark:bg-neutral-900"
       style={getChildPageStyle(isVisible)}
     >
       {/* 顶部标题栏 */}

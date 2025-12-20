@@ -85,23 +85,6 @@ export function getParentPageStyle(
 }
 
 /**
- * 生成子页面的CSS类名
- */
-function getChildPageClassName(): string {
-  const baseClasses = `
-    fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
-    will-change-transform
-  `.trim();
-
-  const transitionClasses = `
-    transition-all
-  `.trim();
-
-  // 使用内联样式来设置 transition duration 和 easing
-  return `${baseClasses} ${transitionClasses}`;
-}
-
-/**
  * 生成子页面的内联样式
  */
 export function getChildPageStyle(

@@ -227,7 +227,7 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
 
           {/* 抽屉内容 - 固定高度，几乎占满屏幕 */}
           <Drawer.Content
-            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-[500px] flex-col rounded-t-3xl outline-none"
+            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md flex-col rounded-t-3xl outline-none"
             style={{
               height: 'calc(100dvh - 24px)',
             }}

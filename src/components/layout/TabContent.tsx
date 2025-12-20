@@ -784,7 +784,7 @@ const TabContent: React.FC<TabContentProps> = ({
 
         {/* 磨豆机刻度指示器 - 在随机按钮上方 */}
         {(settings.showGrinderScale ?? true) && (
-          <div className="pointer-events-none fixed right-0 bottom-[120px] left-0 z-10 mx-auto mb-[var(--safe-area-bottom)] flex max-w-[500px] items-center justify-end p-6">
+          <div className="pointer-events-none fixed right-0 bottom-[120px] left-0 z-10 mx-auto mb-(--safe-area-bottom) flex items-center justify-end p-6">
             <div className="pointer-events-auto">
               <GrinderScaleIndicator
                 visible={true}
@@ -795,7 +795,7 @@ const TabContent: React.FC<TabContentProps> = ({
         )}
 
         {/* 随机选豆按钮 - 单独放置在搜索工具栏上方 */}
-        <div className="pointer-events-none fixed right-0 bottom-[60px] left-0 z-10 mx-auto mb-[var(--safe-area-bottom)] flex max-w-[500px] items-center justify-end p-6">
+        <div className="pointer-events-none fixed right-0 bottom-[60px] left-0 z-10 mx-auto mb-(--safe-area-bottom) flex items-center justify-end p-6">
           <motion.button
             type="button"
             onClick={() => handleRandomBean(false)}
@@ -833,7 +833,7 @@ const TabContent: React.FC<TabContentProps> = ({
         </div>
 
         {/* 底部搜索工具栏 */}
-        <div className="pointer-events-none fixed right-0 bottom-0 left-0 z-10 mx-auto mb-[var(--safe-area-bottom)] flex max-w-[500px] items-center justify-end p-6">
+        <div className="pointer-events-none fixed right-0 bottom-0 left-0 z-10 mx-auto mb-(--safe-area-bottom) flex items-center justify-end p-6">
           <div className="pointer-events-none flex items-center justify-center gap-2">
             <AnimatePresence mode="popLayout">
               {isSearching && (
@@ -851,7 +851,7 @@ const TabContent: React.FC<TabContentProps> = ({
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="搜索咖啡豆名称..."
-                    className="w-48 rounded-full border border-neutral-200 bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:border-neutral-700/50 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
+                    className="w-48 rounded-full border border-neutral-200 bg-neutral-100 px-5 py-3.5 text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:border-neutral-700/50 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
                     autoComplete="off"
                     onKeyDown={e => e.key === 'Escape' && handleCloseSearch()}
                   />

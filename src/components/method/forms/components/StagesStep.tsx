@@ -223,7 +223,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
       exit="out"
       variants={pageVariants}
       transition={pageTransition}
-      className="relative mx-auto max-w-md space-y-8"
+      className="relative mx-auto space-y-8"
     >
       {/* 顶部固定导航 */}
       <div className="sticky top-0 z-10 flex flex-col border-b border-neutral-200 bg-neutral-50 pt-2 pb-4 dark:border-neutral-700 dark:bg-neutral-900">

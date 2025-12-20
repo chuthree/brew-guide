@@ -86,7 +86,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
       } `}
     >
       <div
-        className={`absolute inset-x-0 bottom-0 mx-auto max-h-[90vh] max-w-[500px] overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl transition-transform duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] dark:bg-neutral-900 ${showModal ? 'translate-y-0' : 'translate-y-full'} `}
+        className={`absolute inset-x-0 bottom-0 mx-auto max-h-[90vh] max-w-md overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl transition-transform duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] dark:bg-neutral-900 ${showModal ? 'translate-y-0' : 'translate-y-full'} `}
         style={{
           willChange: 'transform',
         }}
