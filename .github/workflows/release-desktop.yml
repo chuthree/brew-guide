@@ -105,7 +105,7 @@ jobs:
 
       - name: Build Tauri app
         id: tauri
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0.6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -122,6 +122,12 @@ jobs:
             - **macOS (Intel)**: `.dmg` file for Intel Macs  
             - **Windows**: `.msi` or `.exe` installer
             - **Linux**: `.AppImage` or `.deb` package
+            
+            ### macOS 用户注意
+            由于应用未经 Apple 签名，首次打开时可能显示"已损坏"。请在终端运行：
+            ```
+            xattr -cr /Applications/Brew\ Guide.app
+            ```
           releaseDraft: true
           prerelease: false
           # Retry up to 3 times on failure
