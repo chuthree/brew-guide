@@ -381,6 +381,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                       alt: bean.image
                         ? bean.name || '咖啡豆图片'
                         : extractRoasterFromName(bean.name) + ' 烘焙商图标',
+                      backUrl: bean.image ? bean.backImage : undefined,
                     },
                   })
                 );

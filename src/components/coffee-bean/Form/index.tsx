@@ -870,6 +870,41 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       reader.readAsDataURL(file);
     };
 
+    // 处理背面图片上传
+    const handleBackImageUpload = async (file: File) => {
+      if (!file.type.startsWith('image/')) return;
+
+      const reader = new FileReader();
+
+      reader.onload = async () => {
+        try {
+          const base64 = reader.result as string;
+          if (!base64) return;
+
+          const compressedBase64 = await compressBase64Image(base64, {
+            maxSizeMB: 0.1, // 100KB
+            maxWidthOrHeight: 1200,
+            initialQuality: 0.8,
+          });
+          setBean(prev => ({ ...prev, backImage: compressedBase64 }));
+        } catch (error) {
+          // Log error in development only
+          if (process.env.NODE_ENV === 'development') {
+            console.error('背面图片处理失败:', error);
+          }
+        }
+      };
+
+      reader.onerror = () => {
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+          console.error('背面图片文件读取失败');
+        }
+      };
+
+      reader.readAsDataURL(file);
+    };
+
     // 验证当前步骤是否可以进行下一步
     const isStepValid = () => {
       if (currentStep === 'basic') {
@@ -913,6 +948,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
               bean={bean}
               onBeanChange={handleInputChange}
               onImageUpload={handleImageUpload}
+              onBackImageUpload={handleBackImageUpload}
               editingRemaining={editingRemaining}
               validateRemaining={validateRemaining}
               handleCapacityBlur={handleCapacityBlur}

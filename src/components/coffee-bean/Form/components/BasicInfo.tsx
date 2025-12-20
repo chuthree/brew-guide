@@ -27,6 +27,7 @@ interface BasicInfoProps {
     field: keyof Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => (value: string) => void;
   onImageUpload: (file: File) => void;
+  onBackImageUpload?: (file: File) => void;
   editingRemaining: string | null;
   validateRemaining: () => void;
   handleCapacityBlur?: () => void;
@@ -62,6 +63,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   bean,
   onBeanChange,
   onImageUpload,
+  onBackImageUpload,
   editingRemaining,
   validateRemaining,
   handleCapacityBlur,
@@ -182,7 +184,10 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   };
 
   // 处理图片选择逻辑 (相册或拍照)
-  const handleImageSelect = async (source: 'camera' | 'gallery') => {
+  const handleImageSelect = async (
+    source: 'camera' | 'gallery',
+    imageType: 'front' | 'back' = 'front'
+  ) => {
     try {
       // 获取图片（已经是base64格式）
       const result = await captureImage({ source });
@@ -194,8 +199,12 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         type: `image/${result.format}`,
       });
 
-      // 使用传入的onImageUpload函数处理文件（父组件会进行压缩）
-      onImageUpload(file);
+      // 根据类型使用不同的回调函数处理文件（父组件会进行压缩）
+      if (imageType === 'back' && onBackImageUpload) {
+        onBackImageUpload(file);
+      } else {
+        onImageUpload(file);
+      }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
         console.error('打开相机/相册失败:', error);
@@ -217,72 +226,141 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
           咖啡豆图片
         </label>
-        {/* 笔记图片 */}
-        <div className="flex w-full items-center gap-2">
-          {bean.image ? (
-            /* 有图片时：只显示图片 */
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
-              <Image
-                src={bean.image}
-                alt="咖啡豆图片"
-                className="object-cover"
-                fill
-                sizes="64px"
-              />
-              {/* 删除按钮 */}
-              <button
-                type="button"
-                onClick={() => onBeanChange('image')('')}
-                className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500 dark:bg-neutral-200/80 dark:text-neutral-800 dark:hover:bg-red-500 dark:hover:text-white"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
-          ) : (
-            /* 无图片时：显示拍照框、相册框，以及识别图片（如果有） */
+        {/* 图片选择区 - 四种状态 */}
+        <div className="flex w-full items-end gap-2">
+          {bean.image && bean.backImage ? (
+            /* 状态3: 正面图 + 背面图 */
             <>
-              {/* 拍照框 */}
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
+                <Image
+                  src={bean.image}
+                  alt="咖啡豆正面"
+                  className="object-cover"
+                  fill
+                  sizes="64px"
+                />
+                <button
+                  type="button"
+                  onClick={() => onBeanChange('image')('')}
+                  className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500 dark:bg-neutral-200/80 dark:text-neutral-800 dark:hover:bg-red-500 dark:hover:text-white"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
+                <Image
+                  src={bean.backImage}
+                  alt="咖啡豆背面"
+                  className="object-cover"
+                  fill
+                  sizes="64px"
+                />
+                <button
+                  type="button"
+                  onClick={() => onBeanChange('backImage')('')}
+                  className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500 dark:bg-neutral-200/80 dark:text-neutral-800 dark:hover:bg-red-500 dark:hover:text-white"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            </>
+          ) : bean.image && !bean.backImage ? (
+            /* 状态2: 只有正面图 → 正面图 + 背面添加按钮 */
+            <>
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
+                <Image
+                  src={bean.image}
+                  alt="咖啡豆正面"
+                  className="object-cover"
+                  fill
+                  sizes="64px"
+                />
+                <button
+                  type="button"
+                  onClick={() => onBeanChange('image')('')}
+                  className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500 dark:bg-neutral-200/80 dark:text-neutral-800 dark:hover:bg-red-500 dark:hover:text-white"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => handleImageSelect('camera')}
+                onClick={() => handleImageSelect('gallery', 'back')}
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
+                title="添加背面图片"
+              >
+                <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
+              </button>
+            </>
+          ) : !bean.image && bean.backImage ? (
+            /* 状态4: 只有背面图 → 相册按钮 + 背面图 */
+            <>
+              <button
+                type="button"
+                onClick={() => handleImageSelect('gallery', 'front')}
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
+                title="添加正面图片"
+              >
+                <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
+              </button>
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
+                <Image
+                  src={bean.backImage}
+                  alt="咖啡豆背面"
+                  className="object-cover"
+                  fill
+                  sizes="64px"
+                />
+                <button
+                  type="button"
+                  onClick={() => onBeanChange('backImage')('')}
+                  className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500 dark:bg-neutral-200/80 dark:text-neutral-800 dark:hover:bg-red-500 dark:hover:text-white"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            </>
+          ) : (
+            /* 状态1: 无图片 → 拍照 + 相册 */
+            <>
+              <button
+                type="button"
+                onClick={() => handleImageSelect('camera', 'front')}
                 className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
                 title="拍照"
               >
                 <Camera className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
               </button>
-
-              {/* 相册框 */}
               <button
                 type="button"
-                onClick={() => handleImageSelect('gallery')}
+                onClick={() => handleImageSelect('gallery', 'front')}
                 className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
-                title="相册"
+                title="从相册选择"
               >
                 <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
               </button>
-
-              {/* 识别图片（如果有） - 点击使用此图片 */}
-              {recognitionImage && (
-                <button
-                  type="button"
-                  onClick={() => onBeanChange('image')(recognitionImage)}
-                  className="group relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 transition-colors dark:bg-neutral-800/60"
-                  title="使用识别图片"
-                >
-                  <Image
-                    src={recognitionImage}
-                    alt="识别图片"
-                    className="object-cover"
-                    fill
-                    sizes="64px"
-                  />
-                  {/* 遮罩层和加号 */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors group-hover:bg-black/40">
-                    <Plus className="h-6 w-6 text-white drop-shadow-md" />
-                  </div>
-                </button>
-              )}
             </>
+          )}
+
+          {/* 识别图片（如果有） - 点击使用此图片作为正面 */}
+          {recognitionImage && !bean.image && (
+            <button
+              type="button"
+              onClick={() => onBeanChange('image')(recognitionImage)}
+              className="group relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 transition-colors dark:bg-neutral-800/60"
+              title="使用识别图片作为正面"
+            >
+              <Image
+                src={recognitionImage}
+                alt="识别图片"
+                className="object-cover"
+                fill
+                sizes="64px"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors group-hover:bg-black/40">
+                <Plus className="h-6 w-6 text-white drop-shadow-md" />
+              </div>
+            </button>
           )}
         </div>
       </div>

@@ -418,6 +418,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [imageViewerData, setImageViewerData] = useState<{
     url: string;
     alt: string;
+    backUrl?: string;
   } | null>(null);
 
   // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、笔记详情）
@@ -781,9 +782,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 监听 ImageViewer 打开事件
   useEffect(() => {
     const handleImageViewerOpen = (
-      e: CustomEvent<{ url: string; alt: string }>
+      e: CustomEvent<{ url: string; alt: string; backUrl?: string }>
     ) => {
-      setImageViewerData({ url: e.detail.url, alt: e.detail.alt });
+      setImageViewerData({
+        url: e.detail.url,
+        alt: e.detail.alt,
+        backUrl: e.detail.backUrl,
+      });
       setImageViewerOpen(true);
     };
 
@@ -4535,6 +4540,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <ImageViewer
           isOpen={imageViewerOpen}
           imageUrl={imageViewerData.url}
+          backImageUrl={imageViewerData.backUrl}
           alt={imageViewerData.alt}
           onClose={() => {
             setImageViewerOpen(false);
