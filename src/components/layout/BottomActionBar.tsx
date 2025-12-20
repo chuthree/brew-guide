@@ -19,7 +19,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
   bottomHint,
 }) => {
   return (
-    <div className={`bottom-action-bar ${className}`}>
+    <div className={`fixed right-0 bottom-0 left-0 md:left-36 ${className}`}>
       <div className="pointer-events-none absolute right-0 bottom-full left-0 h-12 bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900"></div>
       <div className="pb-safe-bottom relative mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900">
         <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>

@@ -1741,45 +1741,32 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
       {/* 分享模式下的底部操作栏 */}
       {viewMode === VIEW_OPTIONS.INVENTORY && isShareMode && (
-        <div className="bottom-action-bar">
-          <div className="pointer-events-none absolute right-0 bottom-full left-0 h-12 bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900"></div>
-          <div className="pb-safe-bottom relative mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900">
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            <button
-              onClick={handleCancelShare}
-              className="mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400"
-            >
-              取消
-            </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            <button
-              onClick={handleSaveBeansAsImage}
-              disabled={selectedBeans.length === 0 || isSavingShareImage}
-              className={`mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400 ${
+        <BottomActionBar
+          buttons={[
+            {
+              text: '取消',
+              onClick: handleCancelShare,
+            },
+            {
+              text: isSavingShareImage
+                ? '生成中...'
+                : `保存为图片 (${selectedBeans.length})`,
+              onClick: handleSaveBeansAsImage,
+              className:
                 selectedBeans.length === 0 || isSavingShareImage
                   ? 'cursor-not-allowed opacity-50'
-                  : ''
-              }`}
-            >
-              {isSavingShareImage
-                ? '生成中...'
-                : `保存为图片 (${selectedBeans.length})`}
-            </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            <button
-              onClick={handleShareText}
-              disabled={selectedBeans.length === 0}
-              className={`mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400 ${
+                  : '',
+            },
+            {
+              text: '分享文本',
+              onClick: handleShareText,
+              className:
                 selectedBeans.length === 0
                   ? 'cursor-not-allowed opacity-50'
-                  : ''
-              }`}
-            >
-              分享文本
-            </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-          </div>
-        </div>
+                  : '',
+            },
+          ]}
+        />
       )}
 
       {/* 复制失败模态框 */}

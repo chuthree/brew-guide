@@ -28,6 +28,7 @@ import { BrewingHistoryProps } from '../types';
 
 import FilterTabs from './FilterTabs';
 import AddNoteButton from './AddNoteButton';
+import BottomActionBar from '@/components/layout/BottomActionBar';
 import { showToast } from '@/components/common/feedback/LightToast';
 
 import ChangeRecordEditModal from '../Form/ChangeRecordEditModal';
@@ -1488,43 +1489,40 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
       {/* 底部操作栏 - 分享模式下显示保存和取消按钮，图片流模式下隐藏添加按钮 */}
       {isShareMode ? (
-        <div className="bottom-action-bar">
-          <div className="pointer-events-none absolute right-0 bottom-full left-0 h-12 bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900"></div>
-          <div className="pb-safe-bottom relative mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900">
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            <button
-              onClick={handleCancelShare}
-              className="mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400"
-            >
-              取消
-            </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            <button
-              onClick={handleSaveNotes}
-              disabled={selectedNotes.length === 0 || isSaving}
-              className={`mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400 ${
+        <BottomActionBar
+          buttons={[
+            {
+              text: '取消',
+              onClick: handleCancelShare,
+            },
+            {
+              text: isSaving
+                ? '生成中...'
+                : `保存为图片 (${selectedNotes.length})`,
+              onClick: handleSaveNotes,
+              className:
                 selectedNotes.length === 0 || isSaving
                   ? 'cursor-not-allowed opacity-50'
-                  : ''
-              }`}
-            >
-              {isSaving ? '生成中...' : `保存为图片 (${selectedNotes.length})`}
-            </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            <button
-              onClick={handleArtisticShare}
-              disabled={selectedNotes.length !== 1}
-              className={`mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400 ${
+                  : '',
+            },
+            {
+              text: '保存为图片',
+              onClick: handleSaveNotes,
+              className:
+                selectedNotes.length === 0 || isSaving
+                  ? 'cursor-not-allowed opacity-50'
+                  : '',
+            },
+            {
+              text: '艺术分享',
+              onClick: handleArtisticShare,
+              className:
                 selectedNotes.length !== 1
                   ? 'cursor-not-allowed opacity-50'
-                  : ''
-              }`}
-            >
-              分享图文
-            </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-          </div>
-        </div>
+                  : '',
+            },
+          ]}
+        />
       ) : (
         !isImageFlowMode &&
         !isDateImageFlowMode && <AddNoteButton onAddNote={handleAddNote} />
