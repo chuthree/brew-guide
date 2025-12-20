@@ -64,9 +64,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: pnpm tauri
-          tagName: v__VERSION__
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           releaseName: 'Brew Guide v__VERSION__'
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+          # 手动触发时上传 workflow artifacts
+          uploadWorkflowArtifacts: true
