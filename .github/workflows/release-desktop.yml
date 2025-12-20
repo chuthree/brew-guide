@@ -70,5 +70,11 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-          # 手动触发时上传 workflow artifacts
-          uploadWorkflowArtifacts: true
+
+      - name: Upload built bundles as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-bundles
+          path: |
+            src-tauri/target/**/release/bundle/**
+          if-no-files-found: error
