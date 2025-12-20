@@ -2,9 +2,24 @@ use tauri::{
     image::Image,
     menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder},
     tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState},
-    Manager, Emitter,
+    Manager, Emitter, Listener,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
+
+#[cfg(target_os = "macos")]
+use tauri::ActivationPolicy;
+
+// 全局状态：托盘图标是否可见
+struct TrayState {
+    visible: bool,
+}
+
+impl Default for TrayState {
+    fn default() -> Self {
+        Self { visible: true }
+    }
+}
 
 // 咖啡豆数据结构（简化版，用于菜单栏显示）
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,6 +69,25 @@ fn set_tray_visible(app: tauri::AppHandle, visible: bool) -> Result<(), String> 
     {
         if let Some(tray) = app.tray_by_id("main-tray") {
             tray.set_visible(visible).map_err(|e| e.to_string())?;
+            
+            // 更新全局状态
+            if let Some(state) = app.try_state::<Arc<Mutex<TrayState>>>() {
+                if let Ok(mut s) = state.lock() {
+                    s.visible = visible;
+                }
+            }
+            
+            // macOS: 根据托盘图标可见性调整 Dock 图标显示
+            #[cfg(target_os = "macos")]
+            {
+                if visible {
+                    // 显示托盘图标时，隐藏 Dock 图标
+                    let _ = app.set_activation_policy(ActivationPolicy::Accessory);
+                } else {
+                    // 隐藏托盘图标时，显示 Dock 图标（普通应用模式）
+                    let _ = app.set_activation_policy(ActivationPolicy::Regular);
+                }
+            }
         }
     }
     Ok(())
@@ -320,6 +354,46 @@ pub fn run() {
                 )?;
             }
             
+            // 初始化托盘状态
+            app.manage(Arc::new(Mutex::new(TrayState::default())));
+            
+            // 监听应用激活事件（点击 Dock 图标时显示窗口）
+            #[cfg(desktop)]
+            {
+                let app_handle = app.handle().clone();
+                app.listen("tauri://activated", move |_| {
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                });
+            }
+            
+            // 监听窗口关闭事件（仅桌面端）
+            #[cfg(desktop)]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    let app_handle = app.handle().clone();
+                    window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                            // 检查托盘图标是否可见
+                            let tray_visible = if let Some(state) = app_handle.try_state::<Arc<Mutex<TrayState>>>() {
+                                state.lock().map(|s| s.visible).unwrap_or(false)
+                            } else {
+                                false
+                            };
+                            
+                            if tray_visible {
+                                // 托盘图标可见时：阻止关闭，隐藏窗口
+                                api.prevent_close();
+                                let _ = app_handle.get_webview_window("main").unwrap().hide();
+                            }
+                            // 托盘图标不可见时：允许关闭（退出应用）
+                        }
+                    });
+                }
+            }
+            
             // 创建系统托盘图标（仅桌面端）
             #[cfg(desktop)]
             {
@@ -394,6 +468,12 @@ pub fn run() {
                         }
                     })
                     .build(app)?;
+                
+                // macOS: 默认隐藏 Dock 图标，因为托盘图标存在
+                #[cfg(target_os = "macos")]
+                {
+                    let _ = app.set_activation_policy(ActivationPolicy::Accessory);
+                }
             }
             
             Ok(())
