@@ -17,6 +17,10 @@ concurrency:
   group: tauri-release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  # Unified naming pattern: BrewGuide_<version>_<platform>_<arch>.<ext>
+  APP_NAME: 'BrewGuide'
+
 jobs:
   build:
     permissions:
@@ -29,22 +33,26 @@ jobs:
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
             rust_target: 'aarch64-apple-darwin'
-            artifact_name: 'macos-aarch64'
+            os_name: 'macos'
+            arch: 'arm64'
           # macOS - Intel
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
             rust_target: 'x86_64-apple-darwin'
-            artifact_name: 'macos-x86_64'
+            os_name: 'macos'
+            arch: 'x64'
           # Windows x64
           - platform: windows-latest
             args: ''
             rust_target: ''
-            artifact_name: 'windows-x64'
+            os_name: 'windows'
+            arch: 'x64'
           # Linux x64
           - platform: ubuntu-22.04
             args: ''
             rust_target: ''
-            artifact_name: 'linux-x64'
+            os_name: 'linux'
+            arch: 'x64'
 
     runs-on: ${{ matrix.platform }}
 
@@ -78,7 +86,6 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Setup Rust cache
@@ -95,7 +102,7 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
-      # Read version from tauri.conf.json for manual releases
+      # Read version from tauri.conf.json
       - name: Get app version
         id: app_version
         shell: bash
@@ -109,64 +116,93 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Use pnpm as the tauri script runner
           tauriScript: pnpm tauri
-          # Only create release when triggered by tag push or manual release request
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || (github.event.inputs.create_release == 'true' && format('v{0}', steps.app_version.outputs.version) || '') }}
           releaseName: ${{ (github.ref_type == 'tag' || github.event.inputs.create_release == 'true') && 'Brew Guide v__VERSION__' || '' }}
           releaseBody: |
-            ## Brew Guide Desktop v__VERSION__
+            ## Brew Guide v__VERSION__
 
-            Download the appropriate installer for your platform:
-            - **macOS (Apple Silicon)**: `.dmg` file for M1/M2/M3 Macs
-            - **macOS (Intel)**: `.dmg` file for Intel Macs  
-            - **Windows**: `.msi` or `.exe` installer
-            - **Linux**: `.AppImage` or `.deb` package
+            ### 下载说明 / Download
+
+            | 平台 Platform | 架构 Arch | 文件 File |
+            |--------------|----------|-----------|
+            | macOS | Apple Silicon (M1/M2/M3) | `BrewGuide_*_macos_arm64.dmg` |
+            | macOS | Intel | `BrewGuide_*_macos_x64.dmg` |
+            | Windows | x64 | `BrewGuide_*_windows_x64.msi` 或 `.exe` |
+            | Linux | x64 | `BrewGuide_*_linux_x64.AppImage` 或 `.deb` |
+            | Android | arm64/universal | `BrewGuide_*_android.apk` |
+            | iOS | arm64 | `BrewGuide_*_ios.ipa` |
 
             ### macOS 用户注意
             由于应用未经 Apple 签名，首次打开时可能显示"已损坏"。请在终端运行：
-            ```
+            ```bash
             xattr -cr /Applications/Brew\ Guide.app
             ```
           releaseDraft: true
           prerelease: false
-          # Retry up to 3 times on failure
           retryAttempts: 3
-          # Always upload workflow artifacts (allows downloading even without release)
           uploadWorkflowArtifacts: true
-          workflowArtifactNamePattern: '[platform]-[arch]-[bundle]'
-          # Build arguments
+          # Naming pattern: BrewGuide_1.5.9_macos_arm64.dmg
+          releaseAssetNamePattern: '${{ env.APP_NAME }}_[version]_[platform]_[arch][ext]'
           args: ${{ matrix.args }}
 
-      # Fallback artifact upload - different paths per platform
-      - name: Upload macOS artifacts
+      # Rename and upload artifacts with standardized names
+      - name: Rename and upload macOS artifacts
         if: always() && matrix.platform == 'macos-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact_name }}-bundles
-          path: |
-            src-tauri/target/${{ matrix.rust_target }}/release/bundle/dmg/*.dmg
-          if-no-files-found: warn
-          retention-days: 7
+        shell: bash
+        run: |
+          VERSION="${{ steps.app_version.outputs.version }}"
+          mkdir -p renamed-artifacts
 
-      - name: Upload Windows artifacts
+          # Find and rename DMG
+          DMG_FILE=$(find src-tauri/target/${{ matrix.rust_target }}/release/bundle/dmg -name "*.dmg" 2>/dev/null | head -1)
+          if [ -n "$DMG_FILE" ]; then
+            cp "$DMG_FILE" "renamed-artifacts/${{ env.APP_NAME }}_${VERSION}_${{ matrix.os_name }}_${{ matrix.arch }}.dmg"
+          fi
+
+      - name: Rename and upload Windows artifacts
         if: always() && matrix.platform == 'windows-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact_name }}-bundles
-          path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/nsis/*.exe
-          if-no-files-found: warn
-          retention-days: 7
+        shell: bash
+        run: |
+          VERSION="${{ steps.app_version.outputs.version }}"
+          mkdir -p renamed-artifacts
 
-      - name: Upload Linux artifacts
+          # Find and rename MSI
+          MSI_FILE=$(find src-tauri/target/release/bundle/msi -name "*.msi" 2>/dev/null | head -1)
+          if [ -n "$MSI_FILE" ]; then
+            cp "$MSI_FILE" "renamed-artifacts/${{ env.APP_NAME }}_${VERSION}_${{ matrix.os_name }}_${{ matrix.arch }}.msi"
+          fi
+
+          # Find and rename NSIS exe
+          EXE_FILE=$(find src-tauri/target/release/bundle/nsis -name "*.exe" 2>/dev/null | head -1)
+          if [ -n "$EXE_FILE" ]; then
+            cp "$EXE_FILE" "renamed-artifacts/${{ env.APP_NAME }}_${VERSION}_${{ matrix.os_name }}_${{ matrix.arch }}_setup.exe"
+          fi
+
+      - name: Rename and upload Linux artifacts
         if: always() && matrix.platform == 'ubuntu-22.04'
+        shell: bash
+        run: |
+          VERSION="${{ steps.app_version.outputs.version }}"
+          mkdir -p renamed-artifacts
+
+          # Find and rename AppImage
+          APPIMAGE_FILE=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" 2>/dev/null | head -1)
+          if [ -n "$APPIMAGE_FILE" ]; then
+            cp "$APPIMAGE_FILE" "renamed-artifacts/${{ env.APP_NAME }}_${VERSION}_${{ matrix.os_name }}_${{ matrix.arch }}.AppImage"
+          fi
+
+          # Find and rename DEB
+          DEB_FILE=$(find src-tauri/target/release/bundle/deb -name "*.deb" 2>/dev/null | head -1)
+          if [ -n "$DEB_FILE" ]; then
+            cp "$DEB_FILE" "renamed-artifacts/${{ env.APP_NAME }}_${VERSION}_${{ matrix.os_name }}_${{ matrix.arch }}.deb"
+          fi
+
+      - name: Upload renamed artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}-bundles
-          path: |
-            src-tauri/target/release/bundle/appimage/*.AppImage
-            src-tauri/target/release/bundle/deb/*.deb
+          name: ${{ env.APP_NAME }}_${{ steps.app_version.outputs.version }}_${{ matrix.os_name }}_${{ matrix.arch }}
+          path: renamed-artifacts/*
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 30
