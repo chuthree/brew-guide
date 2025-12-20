@@ -51,33 +51,24 @@ interface ImportedBean {
 }
 
 // 咖啡豆识别提示词
-const BEAN_RECOGNITION_PROMPT = `你是咖啡豆信息提取专家。仔细阅读图片中所有文字，提取咖啡豆信息并返回JSON。
+const BEAN_RECOGNITION_PROMPT = `从咖啡豆包装图片提取信息，返回JSON。
 
-## 输出格式（严格遵守）
 {
-  "name": "品牌 产品名",
-  "blendComponents": [{"origin": "产地", "estate": "庄园", "process": "处理法", "variety": "品种"}],
-  "flavor": ["风味1", "风味2"],
-  "roastLevel": "烘焙度",
-  "roastDate": "YYYY-MM-DD",
-  "capacity": 数字,
-  "price": 数字,
+  "name": "string // 必填，格式：烘焙商 豆名",
+  "blendComponents": [{"origin": "string", "estate": "string", "process": "string", "variety": "string"}],
+  "flavor": ["string"],
+  "roastLevel": "极浅烘焙|浅度烘焙|中浅烘焙|中度烘焙|中深烘焙|深度烘焙",
+  "roastDate": "YYYY-MM-DD // 缺年份补2025",
+  "capacity": "number // 克，不带单位",
+  "price": "number // 元，不带单位",
   "beanType": "filter|espresso|omni",
-  "notes": "海拔/处理站/批次号等补充信息，用/分隔"
+  "notes": "string // 海拔/处理站/批次号等其他信息(用/分隔)"
 }
 
-## 字段说明
-- name: 必填，格式"烘焙商 豆名"如"少数派 花月夜"
-- blendComponents: 【必须是数组】产地/庄园/处理法/品种，如[{"origin":"巴拿马","estate":"赏花","process":"日晒","variety":"瑰夏"}]，单品豆也要用数组包裹
-- flavor: 风味描述数组，如["柑橘","蜂蜜","花香"]
-- roastLevel: 极浅烘焙|浅度烘焙|中浅烘焙|中度烘焙|中深烘焙|深度烘焙
-- roastDate: 仅图片有明确日期时填写，缺年份补2025，无日期则不填
-- capacity/price: 纯数字不带单位，未知时不填
-- beanType: 根据包装标注、容量、烘焙度综合判断。大包装(≥300g)/深烘/意式拼配倾向espresso；小包装(≤200g)/浅烘/单品倾向filter；明确标注全能选omni；无法判断默认filter
-
-## 规则
-1. 只提取图片中明确可见的信息，没有的字段不填
-2. blendComponents 必须是数组格式 [{...}]`;
+- 图片有多款(支)咖啡豆时，返回数组[{},{}]
+- 只提取图片中可见的信息，未知字段不填
+- blendComponents必须是数组，单品豆也用数组包裹
+- beanType判断：≥300g/深烘/拼配→espresso；≤200g/浅烘/单品→filter；标注全能→omni；默认filter`;
 
 // 步骤类型定义
 type ImportStep = 'main' | 'json-input' | 'recognizing' | 'multi-preview';
