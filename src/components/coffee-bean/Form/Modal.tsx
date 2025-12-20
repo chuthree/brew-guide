@@ -134,7 +134,6 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
       {/* 背景遮罩 */}
       <div
         className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={onClose}
       />
 
       {/* 抽屉内容 */}
