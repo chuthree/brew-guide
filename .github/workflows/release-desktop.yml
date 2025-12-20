@@ -1,0 +1,158 @@
+name: Release Desktop Apps
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.5.9)'
+        required: true
+
+env:
+  APP_NAME: brew-guide
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS Universal (Intel + Apple Silicon)
+          - platform: macos-latest
+            target: universal-apple-darwin
+            bundles: dmg
+            ext: dmg
+            suffix: macos-universal
+          
+          # Windows x64
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+            ext: exe
+            suffix: windows-x64
+          
+          # Linux x64 - AppImage
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: appimage
+            ext: AppImage
+            suffix: linux-x64
+
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install macOS targets
+        if: matrix.platform == 'macos-latest'
+        run: |
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: pnpm tauri
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      - name: Rename artifacts (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          cd src-tauri/target/${{ matrix.target }}/release/bundle/dmg
+          for f in *.dmg; do
+            mv "$f" "${{ env.APP_NAME }}-${{ steps.version.outputs.version }}-${{ matrix.suffix }}.dmg"
+          done
+
+      - name: Rename artifacts (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          cd src-tauri/target/${{ matrix.target }}/release/bundle/nsis
+          Get-ChildItem -Filter "*.exe" | ForEach-Object {
+            Rename-Item $_.Name "${{ env.APP_NAME }}-${{ steps.version.outputs.version }}-${{ matrix.suffix }}.exe"
+          }
+
+      - name: Rename artifacts (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          cd src-tauri/target/${{ matrix.target }}/release/bundle/appimage
+          for f in *.AppImage; do
+            mv "$f" "${{ env.APP_NAME }}-${{ steps.version.outputs.version }}-${{ matrix.suffix }}.AppImage"
+          done
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ matrix.suffix }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.${{ matrix.ext }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: find artifacts -type f -name "*.*"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.exe
+            artifacts/**/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

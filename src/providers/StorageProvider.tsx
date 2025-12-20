@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useTraySync } from '@/lib/hooks/useTraySync';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+
+// 检查是否在 Tauri 环境中
+const isTauri = () => {
+  return typeof window !== 'undefined' && '__TAURI__' in window;
+};
 
 /**
  * 存储系统初始化组件
@@ -8,6 +15,53 @@ import { useEffect, useState } from 'react';
  */
 export default function StorageInit() {
   const [initialized, setInitialized] = useState(false);
+  const beans = useCoffeeBeanStore(state => state.beans);
+
+  // 处理从菜单栏点击咖啡豆导航
+  const handleNavigateToBean = useCallback(
+    (beanId: string) => {
+      // 从 store 中查找咖啡豆
+      const bean = beans.find(b => b.id === beanId);
+      if (bean) {
+        // 触发咖啡豆详情打开事件
+        window.dispatchEvent(
+          new CustomEvent('beanDetailOpened', {
+            detail: { bean, searchQuery: '' },
+          })
+        );
+      } else {
+        console.warn('未找到咖啡豆:', beanId);
+      }
+    },
+    [beans]
+  );
+
+  // 同步咖啡豆数据到 Tauri 菜单栏（桌面端）
+  useTraySync(handleNavigateToBean);
+
+  // 初始化托盘图标可见性（根据设置）
+  useEffect(() => {
+    if (!isTauri()) return;
+
+    const initTrayVisibility = async () => {
+      try {
+        const { Storage } = await import('@/lib/core/storage');
+        const settingsStr = await Storage.get('brewGuideSettings');
+        if (settingsStr) {
+          const settings = JSON.parse(settingsStr);
+          // 如果设置中明确为 false，则隐藏托盘图标
+          if (settings.showMenuBarIcon === false) {
+            const { invoke } = await import('@tauri-apps/api/core');
+            await invoke('set_tray_visible', { visible: false });
+          }
+        }
+      } catch (error) {
+        console.debug('Failed to init tray visibility:', error);
+      }
+    };
+
+    initTrayVisibility();
+  }, []);
 
   useEffect(() => {
     async function initStorage() {
@@ -28,6 +82,17 @@ export default function StorageInit() {
           } catch (storeError) {
             console.error('⚠️ 预加载笔记数据失败:', storeError);
             // 不阻止应用启动
+          }
+
+          // 加载咖啡豆数据（用于菜单栏同步）
+          try {
+            const { useCoffeeBeanStore } = await import(
+              '@/lib/stores/coffeeBeanStore'
+            );
+            await useCoffeeBeanStore.getState().loadBeans();
+            console.warn('✅ 咖啡豆数据已预加载');
+          } catch (beanError) {
+            console.error('⚠️ 预加载咖啡豆数据失败:', beanError);
           }
 
           // 初始化完成后清理过期的临时文件

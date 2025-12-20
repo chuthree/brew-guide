@@ -216,6 +216,8 @@ export interface SettingsOptions {
   // 隐藏二维码选项
   hideGroupQRCode?: boolean; // 是否隐藏交流群二维码
   hideAppreciationQRCode?: boolean; // 是否隐藏赞赏码
+  // 菜单栏图标设置（桌面端）
+  showMenuBarIcon?: boolean; // 是否显示菜单栏图标（默认true）
 }
 
 // 默认设置

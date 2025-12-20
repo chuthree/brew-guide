@@ -497,3 +497,20 @@ body[data-scroll-locked] {
     @apply bg-background text-foreground;
   }
 }
+
+/* ================================
+   Tauri 桌面端样式
+   ================================ */
+
+/* Tauri 环境下设置标题栏高度变量，供 SafeAreaManager 使用 */
+@media (min-width: 768px) {
+  body.tauri-app {
+    /* macOS Overlay 标题栏高度约 28px */
+    --tauri-titlebar-height: 28px;
+  }
+}
+
+/* 拖动区域内的元素不可交互 */
+[data-tauri-drag-region] * {
+  pointer-events: none;
+}

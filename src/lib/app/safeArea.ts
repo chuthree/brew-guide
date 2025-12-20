@@ -52,7 +52,9 @@ export const SafeAreaManager = {
 
   /**
    * 设置安全区域 CSS 变量
-   * 移动端：原生安全区域 + 用户自定义边距，网页版：用户自定义边距
+   * 移动端：原生安全区域 + 用户自定义边距
+   * Tauri 桌面端：标题栏高度 + 用户自定义边距
+   * 网页版：用户自定义边距
    */
   setupSafeAreaVariables(customMargins?: {
     top: number;
@@ -66,6 +68,12 @@ export const SafeAreaManager = {
 
     // 固定的左右边距
     const horizontalMargin = 12;
+
+    // 检测是否在 Tauri 环境中（桌面端）
+    const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+    // 检测是否是中等屏幕以上（md: 768px）
+    const isMediumScreen =
+      typeof window !== 'undefined' && window.innerWidth >= 768;
 
     if (Capacitor.isNativePlatform()) {
       // 移动端：原生安全区域 + 用户自定义边距
@@ -85,6 +93,17 @@ export const SafeAreaManager = {
         '--safe-area-right',
         `calc(var(--safe-area-inset-right, 0px) + ${horizontalMargin}px)`
       );
+    } else if (isTauri && isMediumScreen) {
+      // Tauri 桌面端（md 及以上）：标题栏高度 + 用户自定义边距
+      // macOS Overlay 标题栏高度约 28px
+      const titlebarHeight = 28;
+      root.style.setProperty(
+        '--safe-area-top',
+        `${titlebarHeight + margins.top}px`
+      );
+      root.style.setProperty('--safe-area-bottom', `${margins.bottom}px`);
+      root.style.setProperty('--safe-area-left', `${horizontalMargin}px`);
+      root.style.setProperty('--safe-area-right', `${horizontalMargin}px`);
     } else {
       // 网页版：用户自定义边距
       root.style.setProperty('--safe-area-top', `${margins.top}px`);
