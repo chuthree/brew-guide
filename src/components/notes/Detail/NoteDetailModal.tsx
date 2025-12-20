@@ -27,7 +27,7 @@ interface InfoRowProps {
 
 const InfoRow: React.FC<InfoRowProps> = ({ label, children }) => (
   <div className="flex items-start">
-    <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+    <div className="w-13 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
       {label}
     </div>
     {children}

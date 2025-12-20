@@ -165,7 +165,7 @@ const InfoGrid: React.FC<{
             {item.label}
           </div>
           <div
-            className={`ml-4 text-xs font-medium ${
+            className={`text-xs font-medium ${
               item.type === 'status' && item.color
                 ? item.color
                 : (isAddMode && item.value === '输入') || item.value === '选择'
@@ -2400,7 +2400,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                       拼配成分
                     </div>
-                    <div className="ml-4 space-y-2">
+                    <div className="space-y-2">
                       {bean.blendComponents.map(
                         (
                           comp: {
@@ -2762,7 +2762,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                               评价
                             </div>
-                            <div className="ml-4 text-xs font-medium whitespace-pre-line text-neutral-800 dark:text-neutral-100">
+                            <div className="text-xs font-medium whitespace-pre-line text-neutral-800 dark:text-neutral-100">
                               {bean?.ratingNotes}
                             </div>
                           </div>
@@ -2778,7 +2778,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           onClick={() => {
                             setRatingModalOpen(true);
                           }}
-                          className="ml-4 text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
+                          className="text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
                         >
                           + 添加评价
                         </button>

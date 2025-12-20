@@ -213,6 +213,9 @@ export interface SettingsOptions {
   // 每日提醒设置
   dailyReminder: boolean;
   dailyReminderTime: string;
+  // 隐藏二维码选项
+  hideGroupQRCode?: boolean; // 是否隐藏交流群二维码
+  hideAppreciationQRCode?: boolean; // 是否隐藏赞赏码
 }
 
 // 默认设置
@@ -350,6 +353,9 @@ export const defaultSettings: SettingsOptions = {
   // 每日提醒默认值
   dailyReminder: false,
   dailyReminderTime: '20:00',
+  // 隐藏二维码选项默认值
+  hideGroupQRCode: false,
+  hideAppreciationQRCode: false,
 };
 
 // 子设置页面的打开/关闭函数接口
@@ -468,6 +474,10 @@ const Settings: React.FC<SettingsProps> = ({
   const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(
     null
   );
+  // 添加确认隐藏状态（跟踪哪个二维码正在确认中）
+  const [confirmingHide, setConfirmingHide] = useState<
+    'group' | 'appreciation' | null
+  >(null);
 
   // 版本更新检测状态
   const [showUpdateDrawer, setShowUpdateDrawer] = useState(false);
@@ -771,6 +781,22 @@ const Settings: React.FC<SettingsProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSyncMenu]);
 
+  // 点击外部恢复隐藏确认状态
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (confirmingHide) {
+        const target = e.target as HTMLElement;
+        // 如果点击的不是确认按钮本身，则恢复状态
+        if (!target.closest('[data-hide-confirm]')) {
+          setConfirmingHide(null);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [confirmingHide]);
+
   // 添加主题颜色更新的 Effect
   useEffect(() => {
     // 确保只在客户端执行
@@ -934,62 +960,143 @@ const Settings: React.FC<SettingsProps> = ({
                 }
               },
             },
-            {
-              icon: MessageCircle,
-              label: '交流群',
-              isExpanded: qrCodeType === 'group',
-              onClick: () => {
-                setQrCodeType(qrCodeType === 'group' ? null : 'group');
-                if (settings.hapticFeedback) {
-                  hapticsUtils.light();
-                }
-              },
-              expandedContent: (
-                <div className="flex flex-col items-start justify-center pb-3.5 pl-[42px]">
-                  <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
-                    <Image
-                      src="/images/content/group-code.jpg"
-                      alt="交流群二维码"
-                      width={200}
-                      height={200}
-                      className="h-auto w-[200px]"
-                    />
-                  </div>
-                  <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                    群满 200 人哩，加开发者拉你进群吧
-                  </p>
-                </div>
-              ),
-            },
-            {
-              icon: ThumbsUp,
-              label: '赞赏码',
-              isExpanded: qrCodeType === 'appreciation',
-              onClick: () => {
-                setQrCodeType(
-                  qrCodeType === 'appreciation' ? null : 'appreciation'
-                );
-                if (settings.hapticFeedback) {
-                  hapticsUtils.light();
-                }
-              },
-              expandedContent: (
-                <div className="flex flex-col items-start justify-center pb-3.5 pl-[42px]">
-                  <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
-                    <Image
-                      src="/images/content/appreciation-code.jpg"
-                      alt="赞赏码"
-                      width={200}
-                      height={200}
-                      className="h-auto w-[200px]"
-                    />
-                  </div>
-                  <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                    赞赏码（开发不易，要是能支持一下就太好了 www）
-                  </p>
-                </div>
-              ),
-            },
+            ...(!settings.hideGroupQRCode
+              ? [
+                  {
+                    icon: MessageCircle,
+                    label: '交流群',
+                    isExpanded: qrCodeType === 'group',
+                    onClick: () => {
+                      setQrCodeType(qrCodeType === 'group' ? null : 'group');
+                      if (settings.hapticFeedback) {
+                        hapticsUtils.light();
+                      }
+                    },
+                    expandedContent: (
+                      <div className="flex flex-col items-start justify-center pb-3.5 pl-[42px]">
+                        <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
+                          <Image
+                            src="/images/content/group-code.jpg"
+                            alt="交流群二维码"
+                            width={200}
+                            height={200}
+                            className="h-auto w-[200px]"
+                          />
+                        </div>
+                        <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                          群满 200 人哩，加开发者拉你进群吧
+                          {confirmingHide === 'group' ? (
+                            <span data-hide-confirm>
+                              {' - '}
+                              <button
+                                onClick={async e => {
+                                  e.stopPropagation();
+                                  await handleChange('hideGroupQRCode', true);
+                                  setConfirmingHide(null);
+                                  setQrCodeType(null);
+                                  if (settings.hapticFeedback) {
+                                    hapticsUtils.medium();
+                                  }
+                                }}
+                                className="cursor-pointer text-red-500 hover:text-red-600 active:text-red-700 dark:text-red-400 dark:hover:text-red-500"
+                              >
+                                永久隐藏
+                              </button>
+                            </span>
+                          ) : (
+                            <span data-hide-confirm>
+                              {' - '}
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setConfirmingHide('group');
+                                  if (settings.hapticFeedback) {
+                                    hapticsUtils.light();
+                                  }
+                                }}
+                                className="cursor-pointer text-neutral-500 hover:text-neutral-600 active:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                              >
+                                不再显示
+                              </button>
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    ),
+                  },
+                ]
+              : []),
+            ...(!settings.hideAppreciationQRCode
+              ? [
+                  {
+                    icon: ThumbsUp,
+                    label: '赞赏码',
+                    isExpanded: qrCodeType === 'appreciation',
+                    onClick: () => {
+                      setQrCodeType(
+                        qrCodeType === 'appreciation' ? null : 'appreciation'
+                      );
+                      if (settings.hapticFeedback) {
+                        hapticsUtils.light();
+                      }
+                    },
+                    expandedContent: (
+                      <div className="flex flex-col items-start justify-center pb-3.5 pl-[42px]">
+                        <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
+                          <Image
+                            src="/images/content/appreciation-code.jpg"
+                            alt="赞赏码"
+                            width={200}
+                            height={200}
+                            className="h-auto w-[200px]"
+                          />
+                        </div>
+                        <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                          赞赏码（开发不易，要是能支持一下就太好了 www）
+                          {confirmingHide === 'appreciation' ? (
+                            <span data-hide-confirm>
+                              {' - '}
+                              <button
+                                onClick={async e => {
+                                  e.stopPropagation();
+                                  await handleChange(
+                                    'hideAppreciationQRCode',
+                                    true
+                                  );
+                                  setConfirmingHide(null);
+                                  setQrCodeType(null);
+                                  if (settings.hapticFeedback) {
+                                    hapticsUtils.medium();
+                                  }
+                                }}
+                                className="cursor-pointer text-red-500 hover:text-red-600 active:text-red-700 dark:text-red-400 dark:hover:text-red-500"
+                              >
+                                永久隐藏
+                              </button>
+                            </span>
+                          ) : (
+                            <span data-hide-confirm>
+                              {' - '}
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setConfirmingHide('appreciation');
+                                  if (settings.hapticFeedback) {
+                                    hapticsUtils.light();
+                                  }
+                                }}
+                                className="cursor-pointer text-neutral-500 hover:text-neutral-600 active:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                              >
+                                不再显示
+                              </button>
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    ),
+                  },
+                ]
+              : []),
           ]}
         />
 
@@ -1219,7 +1326,7 @@ const Settings: React.FC<SettingsProps> = ({
               }
             }}
             disabled={isCheckingUpdate}
-            className="underline transition-colors hover:text-neutral-500 active:text-neutral-600 disabled:opacity-50 dark:hover:text-neutral-500 dark:active:text-neutral-400"
+            className="cursor-pointer underline transition-colors hover:text-neutral-500 active:text-neutral-600 disabled:opacity-50 dark:hover:text-neutral-500 dark:active:text-neutral-400"
             title="点击检查更新，长按查看版本详情"
           >
             {isCheckingUpdate ? '检测中...' : `v${APP_VERSION}`}
