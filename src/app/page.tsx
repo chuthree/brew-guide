@@ -3098,7 +3098,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         {/* 主内容区域 - 桌面端独立滚动 */}
         <main
-          className={`h-full flex-1 ${
+          className={`md:pt-safe-top h-full flex-1 ${
             activeMainTab === '冲煮' &&
             activeBrewingStep === 'brewing' &&
             currentBrewingMethod &&

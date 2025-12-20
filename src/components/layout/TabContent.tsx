@@ -768,7 +768,7 @@ const TabContent: React.FC<TabContentProps> = ({
     return (
       <>
         <div
-          className="scroll-with-bottom-bar h-full w-full overflow-y-auto p-6"
+          className="scroll-with-bottom-bar h-full w-full overflow-y-auto p-6 md:pt-0"
           ref={el => setBeanScrollEl(el)}
         >
           <CoffeeBeanList
@@ -951,7 +951,7 @@ const TabContent: React.FC<TabContentProps> = ({
   // 渲染默认列表内容
   return (
     <>
-      <div className="content-area m-6 space-y-4">
+      <div className="content-area m-6 space-y-4 md:mt-0">
         {showEmptyMethodsMessage ? (
           <div className="mt-4 flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
             [ 当前器具暂无自定义方案，请点击下方按钮添加 ]

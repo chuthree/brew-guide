@@ -73,8 +73,10 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
   };
 
   return (
-    <div className={`relative w-full overflow-hidden ${className}`}>
-      <div className="mt-2 flex items-center md:mt-4 md:flex-col md:items-start md:gap-4">
+    <div
+      className={`relative mt-2 w-full overflow-hidden md:mt-7 ${className}`}
+    >
+      <div className="flex items-center md:flex-col md:items-start md:gap-4">
         {/* 器具选择滚动区域 */}
         <div
           ref={scrollContainerRef}

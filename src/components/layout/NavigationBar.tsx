@@ -1033,7 +1033,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                 {/* 设置入口按钮图标 - 扩大触碰区域 */}
                 <div
                   onClick={handleTitleClick}
-                  className="-mt-3 -ml-3 flex cursor-pointer items-center pt-3 pr-4 pb-3 pl-3 text-[12px] tracking-widest text-neutral-500 md:pt-0 dark:text-neutral-400"
+                  className="-mt-3 -ml-3 flex cursor-pointer items-center pt-3 pr-4 pb-3 pl-3 text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400"
                 >
                   {canGoBack() && onBackClick ? (
                     <ArrowLeft className="mr-1 h-4 w-4" />
