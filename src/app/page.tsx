@@ -913,7 +913,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       setBeanDetailOpen(false);
       setBeanDetailAddMode(false);
     }
-    
+
     setCurrentBeanView(view);
     // 保存到本地存储
     saveStringState('coffee-beans', 'viewMode', view);
@@ -3089,43 +3089,118 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         />
 
         {/* 主内容区域 - 桌面端独立滚动 */}
-        <main className="flex-1 overflow-y-auto md:overflow-y-scroll">
+        <main
+          className={`h-full flex-1 ${
+            activeMainTab === '冲煮' &&
+            activeBrewingStep === 'brewing' &&
+            currentBrewingMethod &&
+            !showHistory
+              ? 'flex flex-col overflow-hidden'
+              : 'overflow-y-auto md:overflow-y-scroll'
+          }`}
+        >
           {activeMainTab === '冲煮' && (
-            <div className="h-full space-y-5 overflow-y-auto">
-              <TabContent
-                activeMainTab={activeMainTab}
-                activeTab={activeTab}
-                content={content}
-                selectedMethod={selectedMethod as Method}
-                currentBrewingMethod={currentBrewingMethod as Method}
-                isTimerRunning={isTimerRunning}
-                showComplete={showComplete}
-                currentStage={currentStage}
-                isWaiting={isStageWaiting}
-                selectedEquipment={selectedEquipment}
-                selectedCoffeeBean={selectedCoffeeBean}
-                selectedCoffeeBeanData={selectedCoffeeBeanData}
-                countdownTime={countdownTime}
-                customMethods={customMethods}
-                actionMenuStates={actionMenuStates}
-                setActionMenuStates={setActionMenuStates}
-                setShowCustomForm={setShowCustomForm}
-                setShowImportForm={setShowImportForm}
-                settings={settings}
-                onMethodSelect={handleMethodSelectWrapper}
-                onCoffeeBeanSelect={handleCoffeeBeanSelect}
-                onEditMethod={handleEditCustomMethod}
-                onDeleteMethod={handleDeleteCustomMethod}
-                onHideMethod={handleHideMethod}
-                setActiveMainTab={setActiveMainTab}
-                resetBrewingState={resetBrewingState}
-                customEquipments={customEquipments}
-                expandedStages={expandedStagesRef.current}
-                setShowEquipmentForm={setShowEquipmentForm}
-                setEditingEquipment={setEditingEquipment}
-                handleDeleteEquipment={handleDeleteEquipment}
-              />
-            </div>
+            <>
+              <div
+                className={`h-full ${
+                  activeBrewingStep === 'brewing' &&
+                  currentBrewingMethod &&
+                  !showHistory
+                    ? 'min-h-0 flex-1 overflow-y-auto'
+                    : 'space-y-5 overflow-y-auto'
+                }`}
+              >
+                <TabContent
+                  activeMainTab={activeMainTab}
+                  activeTab={activeTab}
+                  content={content}
+                  selectedMethod={selectedMethod as Method}
+                  currentBrewingMethod={currentBrewingMethod as Method}
+                  isTimerRunning={isTimerRunning}
+                  showComplete={showComplete}
+                  currentStage={currentStage}
+                  isWaiting={isStageWaiting}
+                  selectedEquipment={selectedEquipment}
+                  selectedCoffeeBean={selectedCoffeeBean}
+                  selectedCoffeeBeanData={selectedCoffeeBeanData}
+                  countdownTime={countdownTime}
+                  customMethods={customMethods}
+                  actionMenuStates={actionMenuStates}
+                  setActionMenuStates={setActionMenuStates}
+                  setShowCustomForm={setShowCustomForm}
+                  setShowImportForm={setShowImportForm}
+                  settings={settings}
+                  onMethodSelect={handleMethodSelectWrapper}
+                  onCoffeeBeanSelect={handleCoffeeBeanSelect}
+                  onEditMethod={handleEditCustomMethod}
+                  onDeleteMethod={handleDeleteCustomMethod}
+                  onHideMethod={handleHideMethod}
+                  setActiveMainTab={setActiveMainTab}
+                  resetBrewingState={resetBrewingState}
+                  customEquipments={customEquipments}
+                  expandedStages={expandedStagesRef.current}
+                  setShowEquipmentForm={setShowEquipmentForm}
+                  setEditingEquipment={setEditingEquipment}
+                  handleDeleteEquipment={handleDeleteEquipment}
+                />
+              </div>
+
+              {activeBrewingStep === 'brewing' &&
+                currentBrewingMethod &&
+                !showHistory && (
+                  <BrewingTimer
+                    currentBrewingMethod={currentBrewingMethod as Method}
+                    onStatusChange={({ isRunning }) => {
+                      const event = new CustomEvent('brewing:timerStatus', {
+                        detail: {
+                          isRunning,
+                          status: isRunning ? 'running' : 'stopped',
+                        },
+                      });
+                      window.dispatchEvent(event);
+                    }}
+                    onStageChange={({ currentStage, progress, isWaiting }) => {
+                      const event = new CustomEvent('brewing:stageChange', {
+                        detail: {
+                          currentStage,
+                          stage: currentStage,
+                          progress,
+                          isWaiting,
+                        },
+                      });
+                      window.dispatchEvent(event);
+                    }}
+                    onCountdownChange={time => {
+                      setTimeout(() => {
+                        const event = new CustomEvent(
+                          'brewing:countdownChange',
+                          {
+                            detail: { remainingTime: time },
+                          }
+                        );
+                        window.dispatchEvent(event);
+                      }, 0);
+                    }}
+                    onComplete={isComplete => {
+                      if (isComplete) {
+                        const event = new CustomEvent('brewing:complete');
+                        window.dispatchEvent(event);
+                      }
+                    }}
+                    onTimerComplete={() => {
+                      // 冲煮完成后的处理，确保显示笔记表单
+                      // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
+                    }}
+                    onExpandedStagesChange={stages => {
+                      expandedStagesRef.current = stages;
+                    }}
+                    settings={settings}
+                    selectedEquipment={selectedEquipment}
+                    isCoffeeBrewed={isCoffeeBrewed}
+                    layoutSettings={settings.layoutSettings}
+                  />
+                )}
+            </>
           )}
           {activeMainTab === '笔记' && (
             <BrewingHistory
@@ -3182,60 +3257,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                       e.name === selectedEquipment) &&
                     e.animationType === 'custom'
                 )}
-              />
-            )}
-
-          {activeMainTab === '冲煮' &&
-            activeBrewingStep === 'brewing' &&
-            currentBrewingMethod &&
-            !showHistory && (
-              <BrewingTimer
-                currentBrewingMethod={currentBrewingMethod as Method}
-                onStatusChange={({ isRunning }) => {
-                  const event = new CustomEvent('brewing:timerStatus', {
-                    detail: {
-                      isRunning,
-                      status: isRunning ? 'running' : 'stopped',
-                    },
-                  });
-                  window.dispatchEvent(event);
-                }}
-                onStageChange={({ currentStage, progress, isWaiting }) => {
-                  const event = new CustomEvent('brewing:stageChange', {
-                    detail: {
-                      currentStage,
-                      stage: currentStage,
-                      progress,
-                      isWaiting,
-                    },
-                  });
-                  window.dispatchEvent(event);
-                }}
-                onCountdownChange={time => {
-                  setTimeout(() => {
-                    const event = new CustomEvent('brewing:countdownChange', {
-                      detail: { remainingTime: time },
-                    });
-                    window.dispatchEvent(event);
-                  }, 0);
-                }}
-                onComplete={isComplete => {
-                  if (isComplete) {
-                    const event = new CustomEvent('brewing:complete');
-                    window.dispatchEvent(event);
-                  }
-                }}
-                onTimerComplete={() => {
-                  // 冲煮完成后的处理，确保显示笔记表单
-                  // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
-                }}
-                onExpandedStagesChange={stages => {
-                  expandedStagesRef.current = stages;
-                }}
-                settings={settings}
-                selectedEquipment={selectedEquipment}
-                isCoffeeBrewed={isCoffeeBrewed}
-                layoutSettings={settings.layoutSettings}
               />
             )}
 
