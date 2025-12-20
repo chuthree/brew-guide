@@ -14,7 +14,10 @@ import { CoffeeBean } from '@/types/app';
 import { formatDate } from '@/components/notes/utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
-import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import {
+  getChildPageStyle,
+  useIsLargeScreen,
+} from '@/lib/navigation/pageTransition';
 import { ChevronLeft, Pen } from 'lucide-react';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
@@ -67,6 +70,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   onCopy,
   onShare,
 }) => {
+  // 检测是否为大屏幕（lg 断点）
+  const isLargeScreen = useIsLargeScreen();
+
   const [imageError, setImageError] = useState(false);
   const [beanImageError, setBeanImageError] = useState(false); // 咖啡豆图片加载错误状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -326,7 +332,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 mx-auto flex flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900"
+        className={`flex flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900 ${
+          isLargeScreen ? 'h-full w-full' : 'fixed inset-0 mx-auto'
+        }`}
         style={getChildPageStyle(isVisible)}
       >
         {/* 顶部按钮栏 */}

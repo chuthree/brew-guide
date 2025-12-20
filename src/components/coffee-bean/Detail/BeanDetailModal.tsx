@@ -31,7 +31,10 @@ import {
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
-import { getChildPageStyle } from '@/lib/navigation/pageTransition';
+import {
+  getChildPageStyle,
+  useIsLargeScreen,
+} from '@/lib/navigation/pageTransition';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
@@ -222,6 +225,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onSaveNew,
   initialBeanState = 'roasted',
 }) => {
+  // 检测是否为大屏幕（lg 断点）
+  const isLargeScreen = useIsLargeScreen();
+
   // 是否为添加模式
   const isAddMode = mode === 'add';
 
@@ -1301,7 +1307,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 mx-auto flex flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900"
+        className={`flex flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900 ${
+          isLargeScreen ? 'h-full w-full' : 'fixed inset-0 mx-auto'
+        }`}
         style={getChildPageStyle(isVisible)}
       >
         {/* 顶部按钮栏 */}

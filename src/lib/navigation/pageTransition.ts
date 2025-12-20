@@ -69,12 +69,59 @@ class PageStackManager {
 export const pageStackManager = new PageStackManager();
 
 /**
+ * Tailwind lg 断点的像素值 (1024px)
+ */
+export const LG_BREAKPOINT = 1024;
+
+/**
+ * 检查当前是否为大屏幕 (lg 断点及以上)
+ * 仅在客户端有效，服务端默认返回 false
+ */
+export function isLargeScreen(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth >= LG_BREAKPOINT;
+}
+
+/**
+ * Hook: 监听是否为大屏幕
+ */
+export function useIsLargeScreen(): boolean {
+  const [isLarge, setIsLarge] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= LG_BREAKPOINT;
+  });
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(`(min-width: ${LG_BREAKPOINT}px)`);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsLarge(e.matches);
+    };
+
+    // 设置初始值
+    setIsLarge(mediaQuery.matches);
+
+    // 监听变化
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  return isLarge;
+}
+
+/**
  * 生成父页面的转场样式
+ * 在 lg 断点及以上时不应用转场动画（三栏布局）
  */
 export function getParentPageStyle(
   hasModal: boolean,
   config: PageTransitionConfig = IOS_TRANSITION_CONFIG
 ): React.CSSProperties {
+  // 大屏幕时不应用转场动画
+  if (isLargeScreen()) {
+    return {};
+  }
+
   return {
     transform: hasModal
       ? `translateX(${config.parentTranslateX}) scale(${config.parentScale})`
@@ -86,11 +133,20 @@ export function getParentPageStyle(
 
 /**
  * 生成子页面的内联样式
+ * 在 lg 断点及以上时不应用滑入动画（详情页作为右侧面板）
  */
 export function getChildPageStyle(
   isVisible: boolean,
   config: PageTransitionConfig = IOS_TRANSITION_CONFIG
 ): React.CSSProperties {
+  // 大屏幕时不应用转场动画，直接显示
+  if (isLargeScreen()) {
+    return {
+      opacity: isVisible ? 1 : 0,
+      transition: `opacity ${config.duration}ms ${config.easing}`,
+    };
+  }
+
   return {
     // 使用 translate3d 开启硬件加速
     // 子页面初始位置：从右侧偏移 childInitialX 的位置滑入（而不是从 100% 开始）

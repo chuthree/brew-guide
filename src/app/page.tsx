@@ -103,6 +103,7 @@ import {
 import {
   pageStackManager,
   getParentPageStyle,
+  useIsLargeScreen,
 } from '@/lib/navigation/pageTransition';
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
 import BrewingNoteEditModal from '@/components/notes/Form/BrewingNoteEditModal';
@@ -233,6 +234,9 @@ const AppContainer = () => {
 };
 
 const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
+  // 检测是否为大屏幕（lg 断点）- 用于三栏布局
+  const isLargeScreen = useIsLargeScreen();
+
   // 使用设置相关状态
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -904,6 +908,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 处理咖啡豆视图切换
   const handleBeanViewChange = (view: ViewOption) => {
+    // 切换视图时关闭咖啡豆详情页（大屏幕三栏布局下）
+    if (beanDetailOpen) {
+      setBeanDetailOpen(false);
+      setBeanDetailAddMode(false);
+    }
+    
     setCurrentBeanView(view);
     // 保存到本地存储
     saveStringState('coffee-beans', 'viewMode', view);
@@ -1435,6 +1445,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handleMainTabClick = (tab: MainTabType) => {
     if (tab === activeMainTab) {
       return;
+    }
+
+    // 切换主 Tab 时关闭详情页（大屏幕三栏布局下）
+    if (beanDetailOpen) {
+      setBeanDetailOpen(false);
+      setBeanDetailAddMode(false);
+    }
+    if (noteDetailOpen) {
+      setNoteDetailOpen(false);
     }
 
     saveMainTabPreference(tab);
@@ -3270,6 +3289,341 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           )}
         </main>
 
+        {/* 大屏幕详情面板区域 - 三栏布局的右侧，带过渡动画 */}
+        {isLargeScreen && (
+          <aside
+            className={`h-full shrink-0 transition-[width,border-color] duration-350 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+              beanDetailOpen || noteDetailOpen
+                ? 'w-96 border-l border-neutral-200 dark:border-neutral-800'
+                : 'w-0 border-l border-transparent'
+            }`}
+          >
+            {/* 内部容器保持固定宽度，避免内容在动画时变形 */}
+            <div
+              className={`h-full w-96 overflow-hidden transition-opacity duration-350 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                beanDetailOpen || noteDetailOpen ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              {/* 咖啡豆详情 */}
+              {beanDetailOpen && (
+                <BeanDetailModal
+                  isOpen={beanDetailOpen}
+                  bean={beanDetailData}
+                  onClose={() => {
+                    setBeanDetailOpen(false);
+                    setBeanDetailAddMode(false);
+                  }}
+                  searchQuery={beanDetailSearchQuery}
+                  mode={beanDetailAddMode ? 'add' : 'view'}
+                  initialBeanState={beanDetailAddBeanState}
+                  onSaveNew={async newBean => {
+                    try {
+                      const { CoffeeBeanManager } = await import(
+                        '@/lib/managers/coffeeBeanManager'
+                      );
+                      await CoffeeBeanManager.addBean(newBean);
+                      handleBeanListChange();
+                      setBeanDetailAddMode(false);
+                    } catch (error) {
+                      console.error('添加咖啡豆失败:', error);
+                    }
+                  }}
+                  onEdit={bean => {
+                    setEditingBean(bean);
+                    setShowBeanForm(true);
+                  }}
+                  onDelete={async bean => {
+                    setBeanDetailOpen(false);
+                    try {
+                      const { CoffeeBeanManager } = await import(
+                        '@/lib/managers/coffeeBeanManager'
+                      );
+                      await CoffeeBeanManager.deleteBean(bean.id);
+                      handleBeanListChange();
+                    } catch (error) {
+                      console.error('删除咖啡豆失败:', error);
+                    }
+                  }}
+                  onShare={async bean => {
+                    try {
+                      const { beanToReadableText } = await import(
+                        '@/lib/utils/jsonUtils'
+                      );
+                      const { copyToClipboard } = await import(
+                        '@/lib/utils/exportUtils'
+                      );
+                      const { showToast } = await import(
+                        '@/components/common/feedback/LightToast'
+                      );
+
+                      const text = beanToReadableText(bean);
+                      const result = await copyToClipboard(text);
+
+                      if (result.success) {
+                        showToast({
+                          type: 'success',
+                          title: '已复制到剪贴板',
+                          duration: 2000,
+                        });
+
+                        if (settings.hapticFeedback) {
+                          hapticsUtils.light();
+                        }
+                      } else {
+                        showToast({
+                          type: 'error',
+                          title: '复制失败',
+                          duration: 2000,
+                        });
+                      }
+                    } catch (error) {
+                      console.error('复制失败:', error);
+                    }
+                  }}
+                  onRepurchase={async bean => {
+                    setBeanDetailOpen(false);
+                    try {
+                      const { createRepurchaseBean } = await import(
+                        '@/lib/utils/beanRepurchaseUtils'
+                      );
+                      const newBeanData = await createRepurchaseBean(bean);
+                      setEditingBean(newBeanData as ExtendedCoffeeBean);
+                      setShowBeanForm(true);
+                    } catch (error) {
+                      console.error('续购失败:', error);
+                    }
+                  }}
+                  onRoast={(greenBean, roastedBeanTemplate) => {
+                    setRoastingSourceBeanId(greenBean.id);
+                    setEditingBean(roastedBeanTemplate as ExtendedCoffeeBean);
+                    setShowBeanForm(true);
+                  }}
+                  onConvertToGreen={
+                    settings.enableGreenBeanInventory &&
+                    settings.enableConvertToGreen
+                      ? async bean => {
+                          try {
+                            const { RoastingManager } = await import(
+                              '@/lib/managers/roastingManager'
+                            );
+
+                            const preview =
+                              await RoastingManager.previewConvertRoastedToGreen(
+                                bean.id
+                              );
+
+                            if (!preview.success || !preview.preview) {
+                              showToast({
+                                type: 'error',
+                                title: preview.error || '无法转换',
+                                duration: 3000,
+                              });
+                              return;
+                            }
+
+                            const p = preview.preview;
+
+                            setConvertToGreenPreview({
+                              beanId: bean.id,
+                              beanName: p.originalBean.name,
+                              originalBean: {
+                                capacity: p.originalBean.capacity,
+                                remaining: p.originalBean.remaining,
+                              },
+                              greenBean: {
+                                capacity: p.greenBean.capacity,
+                                remaining: p.greenBean.remaining,
+                              },
+                              roastingAmount: p.roastingAmount,
+                              newRoastedBean: {
+                                capacity: p.newRoastedBean.capacity,
+                                remaining: p.newRoastedBean.remaining,
+                              },
+                              brewingNotesCount: p.brewingNotesCount,
+                              noteUsageTotal: p.noteUsageTotal,
+                              recordsToDeleteCount: p.recordsToDeleteCount,
+                              directConvert: p.directConvert,
+                            });
+                            setShowConvertToGreenDrawer(true);
+                          } catch (error) {
+                            console.error('预览转换失败:', error);
+                            showToast({
+                              type: 'error',
+                              title: '转换失败',
+                              duration: 2000,
+                            });
+                          }
+                        }
+                      : undefined
+                  }
+                />
+              )}
+              {/* 笔记详情 */}
+              {noteDetailOpen && noteDetailData && (
+                <NoteDetailModal
+                  isOpen={noteDetailOpen}
+                  note={noteDetailData.note}
+                  onClose={() => setNoteDetailOpen(false)}
+                  equipmentName={noteDetailData.equipmentName}
+                  beanUnitPrice={noteDetailData.beanUnitPrice}
+                  beanInfo={noteDetailData.beanInfo}
+                  onEdit={async note => {
+                    const { Storage } = await import('@/lib/core/storage');
+                    const notesStr = await Storage.get('brewingNotes');
+                    if (notesStr) {
+                      const allNotes: BrewingNote[] = JSON.parse(notesStr);
+                      const fullNote = allNotes.find(n => n.id === note.id);
+                      if (fullNote) {
+                        setBrewingNoteEditData(fullNote as BrewingNoteData);
+                        setBrewingNoteEditOpen(true);
+                      }
+                    }
+                  }}
+                  onDelete={async noteId => {
+                    setNoteDetailOpen(false);
+                    try {
+                      const { Storage } = await import('@/lib/core/storage');
+                      const savedNotes = await Storage.get('brewingNotes');
+                      if (!savedNotes) return;
+
+                      const notes: BrewingNote[] = JSON.parse(savedNotes);
+                      const noteToDelete = notes.find(
+                        note => note.id === noteId
+                      );
+                      if (!noteToDelete) {
+                        console.warn('未找到要删除的笔记:', noteId);
+                        return;
+                      }
+
+                      try {
+                        if (noteToDelete.source === 'roasting') {
+                          const { RoastingManager } = await import(
+                            '@/lib/managers/roastingManager'
+                          );
+                          const result =
+                            await RoastingManager.deleteRoastingRecord(noteId);
+                          if (!result.success) {
+                            console.error('删除烘焙记录失败:', result.error);
+                          }
+                          return;
+                        } else if (
+                          noteToDelete.source === 'capacity-adjustment'
+                        ) {
+                          const beanId = noteToDelete.beanId;
+                          const capacityAdjustment =
+                            noteToDelete.changeRecord?.capacityAdjustment;
+
+                          if (beanId && capacityAdjustment) {
+                            const changeAmount =
+                              capacityAdjustment.changeAmount;
+                            if (
+                              typeof changeAmount === 'number' &&
+                              !isNaN(changeAmount) &&
+                              changeAmount !== 0
+                            ) {
+                              const { CoffeeBeanManager } = await import(
+                                '@/lib/managers/coffeeBeanManager'
+                              );
+
+                              const currentBean =
+                                await CoffeeBeanManager.getBeanById(beanId);
+                              if (currentBean) {
+                                const currentRemaining = parseFloat(
+                                  currentBean.remaining || '0'
+                                );
+                                const restoredRemaining =
+                                  currentRemaining - changeAmount;
+                                let finalRemaining = Math.max(
+                                  0,
+                                  restoredRemaining
+                                );
+
+                                if (currentBean.capacity) {
+                                  const totalCapacity = parseFloat(
+                                    currentBean.capacity
+                                  );
+                                  if (
+                                    !isNaN(totalCapacity) &&
+                                    totalCapacity > 0
+                                  ) {
+                                    finalRemaining = Math.min(
+                                      finalRemaining,
+                                      totalCapacity
+                                    );
+                                  }
+                                }
+
+                                const formattedRemaining =
+                                  CoffeeBeanManager.formatNumber(
+                                    finalRemaining
+                                  );
+                                await CoffeeBeanManager.updateBean(beanId, {
+                                  remaining: formattedRemaining,
+                                });
+                              }
+                            }
+                          }
+                        } else {
+                          const {
+                            extractCoffeeAmountFromNote,
+                            getNoteAssociatedBeanId,
+                          } = await import('@/components/notes/utils');
+                          const coffeeAmount =
+                            extractCoffeeAmountFromNote(noteToDelete);
+                          const beanId = getNoteAssociatedBeanId(noteToDelete);
+
+                          if (beanId && coffeeAmount > 0) {
+                            const { CoffeeBeanManager } = await import(
+                              '@/lib/managers/coffeeBeanManager'
+                            );
+                            await CoffeeBeanManager.increaseBeanRemaining(
+                              beanId,
+                              coffeeAmount
+                            );
+                          }
+                        }
+                      } catch (error) {
+                        console.error('恢复咖啡豆容量失败:', error);
+                      }
+
+                      const { useBrewingNoteStore } = await import(
+                        '@/lib/stores/brewingNoteStore'
+                      );
+                      const deleteNote =
+                        useBrewingNoteStore.getState().deleteNote;
+                      await deleteNote(noteId);
+                    } catch (error) {
+                      console.error('删除笔记失败:', error);
+                    }
+                  }}
+                  onCopy={async noteId => {
+                    setNoteDetailOpen(false);
+                    const { Storage } = await import('@/lib/core/storage');
+                    const notesStr = await Storage.get('brewingNotes');
+                    if (notesStr) {
+                      const allNotes: BrewingNote[] = JSON.parse(notesStr);
+                      const fullNote = allNotes.find(n => n.id === noteId);
+                      if (fullNote) {
+                        setBrewingNoteEditData(fullNote as BrewingNoteData);
+                        setIsBrewingNoteCopy(true);
+                        setBrewingNoteEditOpen(true);
+                      }
+                    }
+                  }}
+                  onShare={noteId => {
+                    setNoteDetailOpen(false);
+                    window.dispatchEvent(
+                      new CustomEvent('noteShareTriggered', {
+                        detail: { noteId },
+                      })
+                    );
+                  }}
+                />
+              )}
+            </div>
+          </aside>
+        )}
+
         <BackupReminderModal
           isOpen={showBackupReminder}
           onClose={() => setShowBackupReminder(false)}
@@ -3698,163 +4052,169 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
       />
 
-      {/* 咖啡豆详情独立渲染，与 Settings 同级 */}
-      <BeanDetailModal
-        isOpen={beanDetailOpen}
-        bean={beanDetailData}
-        onClose={() => {
-          setBeanDetailOpen(false);
-          setBeanDetailAddMode(false);
-        }}
-        searchQuery={beanDetailSearchQuery}
-        mode={beanDetailAddMode ? 'add' : 'view'}
-        initialBeanState={beanDetailAddBeanState}
-        onSaveNew={async newBean => {
-          try {
-            const { CoffeeBeanManager } = await import(
-              '@/lib/managers/coffeeBeanManager'
-            );
-            await CoffeeBeanManager.addBean(newBean);
-            handleBeanListChange();
+      {/* 咖啡豆详情独立渲染，与 Settings 同级 - 仅在非大屏幕时渲染（大屏幕时在三栏布局内） */}
+      {!isLargeScreen && (
+        <BeanDetailModal
+          isOpen={beanDetailOpen}
+          bean={beanDetailData}
+          onClose={() => {
+            setBeanDetailOpen(false);
             setBeanDetailAddMode(false);
-          } catch (error) {
-            console.error('添加咖啡豆失败:', error);
-          }
-        }}
-        onEdit={bean => {
-          // 不关闭详情页，让编辑表单叠加在上面
-          setEditingBean(bean);
-          setShowBeanForm(true);
-        }}
-        onDelete={async bean => {
-          setBeanDetailOpen(false);
-          try {
-            const { CoffeeBeanManager } = await import(
-              '@/lib/managers/coffeeBeanManager'
-            );
-            await CoffeeBeanManager.deleteBean(bean.id);
-            handleBeanListChange();
-          } catch (error) {
-            console.error('删除咖啡豆失败:', error);
-          }
-        }}
-        onShare={async bean => {
-          // 处理文本分享 - 复制到剪贴板
-          try {
-            const { beanToReadableText } = await import(
-              '@/lib/utils/jsonUtils'
-            );
-            const { copyToClipboard } = await import('@/lib/utils/exportUtils');
-            const { showToast } = await import(
-              '@/components/common/feedback/LightToast'
-            );
-
-            const text = beanToReadableText(bean);
-            const result = await copyToClipboard(text);
-
-            if (result.success) {
-              showToast({
-                type: 'success',
-                title: '已复制到剪贴板',
-                duration: 2000,
-              });
-
-              // 触发震动反馈
-              if (settings.hapticFeedback) {
-                hapticsUtils.light();
-              }
-            } else {
-              showToast({
-                type: 'error',
-                title: '复制失败',
-                duration: 2000,
-              });
+          }}
+          searchQuery={beanDetailSearchQuery}
+          mode={beanDetailAddMode ? 'add' : 'view'}
+          initialBeanState={beanDetailAddBeanState}
+          onSaveNew={async newBean => {
+            try {
+              const { CoffeeBeanManager } = await import(
+                '@/lib/managers/coffeeBeanManager'
+              );
+              await CoffeeBeanManager.addBean(newBean);
+              handleBeanListChange();
+              setBeanDetailAddMode(false);
+            } catch (error) {
+              console.error('添加咖啡豆失败:', error);
             }
-          } catch (error) {
-            console.error('复制失败:', error);
-          }
-        }}
-        onRepurchase={async bean => {
-          setBeanDetailOpen(false);
-          try {
-            const { createRepurchaseBean } = await import(
-              '@/lib/utils/beanRepurchaseUtils'
-            );
-            const newBeanData = await createRepurchaseBean(bean);
-            // 直接传入新数据作为 initialBean，因为没有 id，会被当作新建
-            setEditingBean(newBeanData as ExtendedCoffeeBean);
+          }}
+          onEdit={bean => {
+            // 不关闭详情页，让编辑表单叠加在上面
+            setEditingBean(bean);
             setShowBeanForm(true);
-          } catch (error) {
-            console.error('续购失败:', error);
-          }
-        }}
-        onRoast={(greenBean, roastedBeanTemplate) => {
-          // 去烘焙：打开熟豆编辑表单，预填充生豆信息
-          // 但剩余量为空，烘焙日期为今天
-          // 记录烘焙源生豆ID，保存时会调用 RoastingManager
-          setRoastingSourceBeanId(greenBean.id);
-          setEditingBean(roastedBeanTemplate as ExtendedCoffeeBean);
-          setShowBeanForm(true);
-        }}
-        onConvertToGreen={
-          settings.enableGreenBeanInventory && settings.enableConvertToGreen
-            ? async bean => {
-                // 转为生豆：先预览转换效果，然后打开确认抽屉
-                try {
-                  const { RoastingManager } = await import(
-                    '@/lib/managers/roastingManager'
-                  );
+          }}
+          onDelete={async bean => {
+            setBeanDetailOpen(false);
+            try {
+              const { CoffeeBeanManager } = await import(
+                '@/lib/managers/coffeeBeanManager'
+              );
+              await CoffeeBeanManager.deleteBean(bean.id);
+              handleBeanListChange();
+            } catch (error) {
+              console.error('删除咖啡豆失败:', error);
+            }
+          }}
+          onShare={async bean => {
+            // 处理文本分享 - 复制到剪贴板
+            try {
+              const { beanToReadableText } = await import(
+                '@/lib/utils/jsonUtils'
+              );
+              const { copyToClipboard } = await import(
+                '@/lib/utils/exportUtils'
+              );
+              const { showToast } = await import(
+                '@/components/common/feedback/LightToast'
+              );
 
-                  // 先预览转换效果
-                  const preview =
-                    await RoastingManager.previewConvertRoastedToGreen(bean.id);
+              const text = beanToReadableText(bean);
+              const result = await copyToClipboard(text);
 
-                  if (!preview.success || !preview.preview) {
+              if (result.success) {
+                showToast({
+                  type: 'success',
+                  title: '已复制到剪贴板',
+                  duration: 2000,
+                });
+
+                // 触发震动反馈
+                if (settings.hapticFeedback) {
+                  hapticsUtils.light();
+                }
+              } else {
+                showToast({
+                  type: 'error',
+                  title: '复制失败',
+                  duration: 2000,
+                });
+              }
+            } catch (error) {
+              console.error('复制失败:', error);
+            }
+          }}
+          onRepurchase={async bean => {
+            setBeanDetailOpen(false);
+            try {
+              const { createRepurchaseBean } = await import(
+                '@/lib/utils/beanRepurchaseUtils'
+              );
+              const newBeanData = await createRepurchaseBean(bean);
+              // 直接传入新数据作为 initialBean，因为没有 id，会被当作新建
+              setEditingBean(newBeanData as ExtendedCoffeeBean);
+              setShowBeanForm(true);
+            } catch (error) {
+              console.error('续购失败:', error);
+            }
+          }}
+          onRoast={(greenBean, roastedBeanTemplate) => {
+            // 去烘焙：打开熟豆编辑表单，预填充生豆信息
+            // 但剩余量为空，烘焙日期为今天
+            // 记录烘焙源生豆ID，保存时会调用 RoastingManager
+            setRoastingSourceBeanId(greenBean.id);
+            setEditingBean(roastedBeanTemplate as ExtendedCoffeeBean);
+            setShowBeanForm(true);
+          }}
+          onConvertToGreen={
+            settings.enableGreenBeanInventory && settings.enableConvertToGreen
+              ? async bean => {
+                  // 转为生豆：先预览转换效果，然后打开确认抽屉
+                  try {
+                    const { RoastingManager } = await import(
+                      '@/lib/managers/roastingManager'
+                    );
+
+                    // 先预览转换效果
+                    const preview =
+                      await RoastingManager.previewConvertRoastedToGreen(
+                        bean.id
+                      );
+
+                    if (!preview.success || !preview.preview) {
+                      showToast({
+                        type: 'error',
+                        title: preview.error || '无法转换',
+                        duration: 3000,
+                      });
+                      return;
+                    }
+
+                    const p = preview.preview;
+
+                    // 保存预览数据并打开确认抽屉
+                    setConvertToGreenPreview({
+                      beanId: bean.id,
+                      beanName: p.originalBean.name,
+                      originalBean: {
+                        capacity: p.originalBean.capacity,
+                        remaining: p.originalBean.remaining,
+                      },
+                      greenBean: {
+                        capacity: p.greenBean.capacity,
+                        remaining: p.greenBean.remaining,
+                      },
+                      roastingAmount: p.roastingAmount,
+                      newRoastedBean: {
+                        capacity: p.newRoastedBean.capacity,
+                        remaining: p.newRoastedBean.remaining,
+                      },
+                      brewingNotesCount: p.brewingNotesCount,
+                      noteUsageTotal: p.noteUsageTotal,
+                      recordsToDeleteCount: p.recordsToDeleteCount,
+                      directConvert: p.directConvert,
+                    });
+                    setShowConvertToGreenDrawer(true);
+                  } catch (error) {
+                    console.error('预览转换失败:', error);
                     showToast({
                       type: 'error',
-                      title: preview.error || '无法转换',
-                      duration: 3000,
+                      title: '转换失败',
+                      duration: 2000,
                     });
-                    return;
                   }
-
-                  const p = preview.preview;
-
-                  // 保存预览数据并打开确认抽屉
-                  setConvertToGreenPreview({
-                    beanId: bean.id,
-                    beanName: p.originalBean.name,
-                    originalBean: {
-                      capacity: p.originalBean.capacity,
-                      remaining: p.originalBean.remaining,
-                    },
-                    greenBean: {
-                      capacity: p.greenBean.capacity,
-                      remaining: p.greenBean.remaining,
-                    },
-                    roastingAmount: p.roastingAmount,
-                    newRoastedBean: {
-                      capacity: p.newRoastedBean.capacity,
-                      remaining: p.newRoastedBean.remaining,
-                    },
-                    brewingNotesCount: p.brewingNotesCount,
-                    noteUsageTotal: p.noteUsageTotal,
-                    recordsToDeleteCount: p.recordsToDeleteCount,
-                    directConvert: p.directConvert,
-                  });
-                  setShowConvertToGreenDrawer(true);
-                } catch (error) {
-                  console.error('预览转换失败:', error);
-                  showToast({
-                    type: 'error',
-                    title: '转换失败',
-                    duration: 2000,
-                  });
                 }
-              }
-            : undefined
-        }
-      />
+              : undefined
+          }
+        />
+      )}
 
       {/* 添加咖啡豆模态框独立渲染，与 Settings 同级 */}
       <ImportModal
@@ -3879,8 +4239,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         isCopy={isBrewingNoteCopy}
       />
 
-      {/* 笔记详情模态框独立渲染，与 Settings 同级 */}
-      {noteDetailData && (
+      {/* 笔记详情模态框独立渲染，与 Settings 同级 - 仅在非大屏幕时渲染（大屏幕时在三栏布局内） */}
+      {!isLargeScreen && noteDetailData && (
         <NoteDetailModal
           isOpen={noteDetailOpen}
           note={noteDetailData.note}
