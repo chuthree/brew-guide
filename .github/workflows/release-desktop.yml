@@ -141,9 +141,8 @@ jobs:
           releaseDraft: true
           prerelease: false
           retryAttempts: 3
-          uploadWorkflowArtifacts: true
           # Naming pattern: BrewGuide_1.5.9_macos_arm64.dmg
-          releaseAssetNamePattern: '${{ env.APP_NAME }}_[version]_[platform]_[arch][ext]'
+          assetNamePattern: '${{ env.APP_NAME }}_[version]_[platform]_[arch][ext]'
           args: ${{ matrix.args }}
 
       # Rename and upload artifacts with standardized names
