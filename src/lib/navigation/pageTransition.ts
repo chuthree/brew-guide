@@ -111,14 +111,17 @@ export function useIsLargeScreen(): boolean {
 
 /**
  * 生成父页面的转场样式
- * 在 lg 断点及以上时不应用转场动画（三栏布局）
+ * @param hasModal 是否有模态框打开
+ * @param config 动画配置
+ * @param disableOnLargeScreen 是否在大屏幕（lg断点及以上）时禁用动画，默认 false
  */
 export function getParentPageStyle(
   hasModal: boolean,
-  config: PageTransitionConfig = IOS_TRANSITION_CONFIG
+  config: PageTransitionConfig = IOS_TRANSITION_CONFIG,
+  disableOnLargeScreen = false
 ): React.CSSProperties {
-  // 大屏幕时不应用转场动画
-  if (isLargeScreen()) {
+  // 仅当明确指定时，才在大屏幕禁用转场动画
+  if (disableOnLargeScreen && isLargeScreen()) {
     return {};
   }
 
@@ -133,14 +136,17 @@ export function getParentPageStyle(
 
 /**
  * 生成子页面的内联样式
- * 在 lg 断点及以上时不应用滑入动画（详情页作为右侧面板）
+ * @param isVisible 是否可见
+ * @param config 动画配置
+ * @param disableOnLargeScreen 是否在大屏幕（lg断点及以上）时禁用滑入动画，默认 false
  */
 export function getChildPageStyle(
   isVisible: boolean,
-  config: PageTransitionConfig = IOS_TRANSITION_CONFIG
+  config: PageTransitionConfig = IOS_TRANSITION_CONFIG,
+  disableOnLargeScreen = false
 ): React.CSSProperties {
-  // 大屏幕时不应用转场动画，直接显示
-  if (isLargeScreen()) {
+  // 仅当明确指定时，才在大屏幕禁用转场动画（如咖啡豆/笔记详情页作为右侧面板）
+  if (disableOnLargeScreen && isLargeScreen()) {
     return {
       opacity: isVisible ? 1 : 0,
       transition: `opacity ${config.duration}ms ${config.easing}`,

@@ -429,6 +429,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     brewingNoteEditOpen ||
     noteDetailOpen;
 
+  // 详情页类型的模态框（咖啡豆/笔记详情）- 在大屏幕时作为右侧面板显示，主页面不需要动画
+  const hasDetailModalOpen = beanDetailOpen || noteDetailOpen;
+
+  // 其他模态框（设置页、笔记编辑等）- 在大屏幕时仍然是全屏覆盖，主页面需要动画
+  const hasOverlayModalOpen =
+    isSettingsOpen || hasSubSettingsOpen || brewingNoteEditOpen;
+
   // 统一管理 pageStackManager 的状态
   React.useEffect(() => {
     pageStackManager.setModalOpen(hasAnyModalOpen);
@@ -3023,9 +3030,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   return (
     <>
       {/* 主页面内容 - 应用转场动画 */}
+      {/* 大屏幕时：只有非详情页模态框（设置等）需要主页动画 */}
+      {/* 小屏幕时：所有模态框都需要主页动画 */}
       <div
         className="flex h-full flex-col md:flex-row"
-        style={getParentPageStyle(hasModalOpen)}
+        style={getParentPageStyle(
+          isLargeScreen ? hasOverlayModalOpen : hasModalOpen
+        )}
       >
         <NavigationBar
           activeMainTab={activeMainTab}

@@ -335,7 +335,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         className={`flex flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900 ${
           isLargeScreen ? 'h-full w-full' : 'fixed inset-0 mx-auto'
         }`}
-        style={getChildPageStyle(isVisible)}
+        style={getChildPageStyle(isVisible, undefined, true)}
       >
         {/* 顶部按钮栏 */}
         <div className="pt-safe-top sticky top-0 flex items-center gap-3 bg-neutral-50 p-4 dark:bg-neutral-900">

@@ -997,8 +997,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         }}
       />
 
-      {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 - 桌面端移除最小高度 */}
-      <div className="relative min-h-[30px] w-full md:min-h-0">
+      {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 */}
+      {/* 桌面端：只在没有咖啡豆且在方案步骤时，才需要额外高度（因为此时只有导航TAB和器具栏） */}
+      <div
+        className={`relative min-h-[30px] w-full md:min-h-0 ${
+          activeBrewingStep === 'method' && !hasCoffeeBeans ? 'md:min-h-30' : ''
+        }`}
+      >
         {/* 修改：将AnimatePresence用于透明度变化而非高度变化 */}
         <AnimatePresence mode="wait">
           {showAlternativeHeader ? (
