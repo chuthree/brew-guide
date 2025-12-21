@@ -141,7 +141,7 @@ jobs:
           releaseDraft: true
           prerelease: false
           retryAttempts: 3
-          # Naming pattern: BrewGuide_1.5.9_macos_arm64.dmg
+          # Naming pattern: BrewGuide_1.5.10_macos_arm64.dmg
           assetNamePattern: '${{ env.APP_NAME }}_[version]_[platform]_[arch][ext]'
           args: ${{ matrix.args }}
 

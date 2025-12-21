@@ -1,5 +1,5 @@
 {
-  "version": "1.5.9",
+  "version": "1.5.10",
   "downloadUrl": "https://gitee.com/chu3/brew-guide/releases",
-  "releaseNotes": "新增自动更新检测，优化笔记详情样式，修复方案编辑时磨豆机显示问题"
+  "releaseNotes": "适配平板与桌面端，咖啡豆支持双面图，上线基于 Supabase 的实时云同步"
 }

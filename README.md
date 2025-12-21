@@ -22,7 +22,7 @@
 - 详细库存记录（产地、处理法、品种、烘焙度等）
 - 烘焙日期追踪和新鲜度监控
 - 消耗跟踪和剩余量管理
-- 智能搜索：支持名称、品牌、产区、风味、处理法、品种筛选
+- 支持名称、品牌、产区、风味、处理法、品种筛选
 
 **冲煮笔记**
 
@@ -36,7 +36,7 @@
 - 深色/浅色模式
 - 数据导入导出
 - 墨水屏优化
-- 多平台支持（Web、iOS、Android）
+- 多平台支持（Web、iOS、Android、macOS、Windows）
 
 ## 开发
 
@@ -59,6 +59,10 @@ pnpm build
 pnpm cap:build
 pnpm cap:ios
 pnpm cap:android
+
+# 桌面端开发
+pnpm tauri dev
+pnpm tauri build
 ```
 
 ## 技术栈
@@ -68,8 +72,10 @@ pnpm cap:android
 - [Tailwind CSS 4](https://tailwindcss.com/) - 样式解决方案
 - [Framer Motion](https://www.framer.com/motion/) - 动画库
 - [TypeScript](https://www.typescriptlang.org/) - 类型安全
-- [Capacitor](https://capacitorjs.com/) - 跨平台原生运行时
+- [Capacitor](https://capacitorjs.com/) - 跨平台原生运行时（iOS/Android）
+- [Tauri](https://tauri.app/) - 桌面应用框架（macOS/Windows）
 - [Dexie](https://dexie.org/) - IndexedDB 包装器
+- [Supabase](https://supabase.com/) - 实时云同步
 
 ## 贡献
 
