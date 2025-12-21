@@ -88,56 +88,62 @@ export default function StorageInit() {
                 supabaseSettings?.anonKey
               ) {
                 syncStatusStore.setProvider('supabase');
-                syncStatusStore.setSyncing();
 
-                const { simpleSyncService } = await import(
-                  '@/lib/supabase/simpleSyncService'
-                );
-
-                const initOk = simpleSyncService.initialize({
-                  url: supabaseSettings.url,
-                  anonKey: supabaseSettings.anonKey,
-                });
-
-                if (initOk) {
-                  // 测试连接
-                  const connected = await simpleSyncService.testConnection();
-                  console.log(
-                    '[StorageProvider] Supabase 连接测试:',
-                    connected
+                // 离线时跳过云端同步，避免一上来就是同步中状态
+                const isOnline =
+                  typeof navigator === 'undefined' ? true : navigator.onLine;
+                if (!isOnline) {
+                  syncStatusStore.setStatus('offline');
+                } else {
+                  const { simpleSyncService } = await import(
+                    '@/lib/supabase/simpleSyncService'
                   );
 
-                  if (connected) {
-                    // 关键：每次启动都从云端下载最新数据
-                    console.log('[StorageProvider] 从云端下载最新数据...');
-                    const result = await simpleSyncService.downloadAllData();
-                    console.log('[StorageProvider] 下载结果:', result);
+                  const initOk = simpleSyncService.initialize({
+                    url: supabaseSettings.url,
+                    anonKey: supabaseSettings.anonKey,
+                  });
 
-                    // downloadAllData 内部已经更新了 syncStatusStore
-                    // 即使 downloaded=0 也算成功（可能只是没有数据）
-                    // 只要 success 为 true 就表示同步成功
-                    if (result.success) {
-                      cloudSynced = true;
-                      // 确保状态为 success（downloadAllData 内部可能已设置）
-                      syncStatusStore.setSyncSuccess();
+                  if (initOk) {
+                    // 测试连接
+                    const connected = await simpleSyncService.testConnection();
+                    console.log(
+                      '[StorageProvider] Supabase 连接测试:',
+                      connected
+                    );
+
+                    if (connected) {
+                      // 关键：每次启动都从云端下载最新数据
+                      console.log('[StorageProvider] 从云端下载最新数据...');
+                      const result = await simpleSyncService.downloadAllData();
+                      console.log('[StorageProvider] 下载结果:', result);
+
+                      // downloadAllData 内部已经更新了 syncStatusStore
+                      // 即使 downloaded=0 也算成功（可能只是没有数据）
+                      // 只要 success 为 true 就表示同步成功
+                      if (result.success) {
+                        cloudSynced = true;
+                        // 确保状态为 success（downloadAllData 内部可能已设置）
+                        syncStatusStore.setSyncSuccess();
+                      } else {
+                        // 下载失败，设置错误状态
+                        syncStatusStore.setSyncError(
+                          result.message || '下载失败'
+                        );
+                      }
+
+                      // 启动实时监听
+                      if (supabaseSettings.realtimeEnabled) {
+                        simpleSyncService.startRealtimeSync();
+                        simpleSyncService.startLocalChangeListeners();
+                        console.log('[StorageProvider] 实时同步已启动');
+                      }
                     } else {
-                      // 下载失败，设置错误状态
-                      syncStatusStore.setSyncError(
-                        result.message || '下载失败'
-                      );
-                    }
-
-                    // 启动实时监听
-                    if (supabaseSettings.realtimeEnabled) {
-                      simpleSyncService.startRealtimeSync();
-                      simpleSyncService.startLocalChangeListeners();
-                      console.log('[StorageProvider] 实时同步已启动');
+                      syncStatusStore.setSyncError('连接失败');
                     }
                   } else {
-                    syncStatusStore.setSyncError('连接失败');
+                    syncStatusStore.setSyncError('初始化失败');
                   }
-                } else {
-                  syncStatusStore.setSyncError('初始化失败');
                 }
               }
             }
