@@ -2,9 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-// import ActionMenu, { ActionMenuItem } from '@/components/coffee-bean/ui/action-menu' // 移除操作菜单
 import { ExtendedCoffeeBean, generateBeanTitle } from '../types';
-import { isBeanEmpty } from '../globalCache';
+import { isBeanEmpty } from '../preferences';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import HighlightText from '@/components/common/ui/HighlightText';
 import {
@@ -381,6 +380,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                       alt: bean.image
                         ? bean.name || '咖啡豆图片'
                         : extractRoasterFromName(bean.name) + ' 烘焙商图标',
+                      backUrl: bean.backImage,
                     },
                   })
                 );

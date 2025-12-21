@@ -63,7 +63,7 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
           你的咖啡冲煮方案已经准备就绪
         </p>
       </div>
-      <div className="w-full max-w-sm space-y-4 px-4">
+      <div className="w-full space-y-4 px-4">
         <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">
             方案名称

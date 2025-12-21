@@ -149,7 +149,7 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
             style={{
               willChange: 'transform',
             }}
-            className="absolute inset-x-0 bottom-0 mx-auto max-h-[90vh] max-w-[500px] overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl dark:bg-neutral-900"
+            className="absolute inset-x-0 bottom-0 mx-auto max-h-[90vh] max-w-md overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl dark:bg-neutral-900"
             onClick={e => e.stopPropagation()}
           >
             {/* 拖动条 */}

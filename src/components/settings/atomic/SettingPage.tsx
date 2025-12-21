@@ -21,7 +21,7 @@ const SettingPage: React.FC<SettingPageProps> = ({
 }) => {
   return (
     <div
-      className="fixed inset-0 mx-auto flex max-w-[500px] flex-col bg-neutral-50 dark:bg-neutral-900"
+      className="fixed inset-0 mx-auto flex flex-col bg-neutral-50 dark:bg-neutral-900"
       style={getChildPageStyle(isVisible)}
     >
       {/* 头部导航栏 - 与主设置页面保持一致的设计 */}
@@ -41,7 +41,7 @@ const SettingPage: React.FC<SettingPageProps> = ({
       <div className="pb-safe-bottom relative flex-1 overflow-y-auto">
         {/* 顶部渐变阴影（随滚动粘附）*/}
         <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
-        
+
         {children}
       </div>
     </div>

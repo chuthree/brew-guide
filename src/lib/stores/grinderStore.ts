@@ -159,7 +159,13 @@ export const useGrinderStore = create<GrinderState>((set, get) => ({
     try {
       const settingsStr = await Storage.get('brewGuideSettings');
       if (settingsStr) {
-        const settings = JSON.parse(settingsStr);
+        let settings = JSON.parse(settingsStr);
+        
+        // 处理 Zustand persist 格式
+        if (settings?.state?.settings) {
+          settings = settings.state.settings;
+        }
+        
         if (settings.grinders && Array.isArray(settings.grinders)) {
           set({ grinders: settings.grinders, initialized: true });
           return;
@@ -175,8 +181,15 @@ export const useGrinderStore = create<GrinderState>((set, get) => ({
   persist: async () => {
     try {
       const settingsStr = await Storage.get('brewGuideSettings');
-      const settings = settingsStr ? JSON.parse(settingsStr) : {};
-      settings.grinders = get().grinders;
+      let settings = settingsStr ? JSON.parse(settingsStr) : {};
+      
+      // 处理 Zustand persist 格式
+      if (settings?.state?.settings) {
+        settings.state.settings.grinders = get().grinders;
+      } else {
+        settings.grinders = get().grinders;
+      }
+      
       await Storage.set('brewGuideSettings', JSON.stringify(settings));
     } catch (error) {
       console.error('保存磨豆机数据失败:', error);

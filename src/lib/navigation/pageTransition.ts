@@ -69,12 +69,62 @@ class PageStackManager {
 export const pageStackManager = new PageStackManager();
 
 /**
+ * Tailwind lg 断点的像素值 (1024px)
+ */
+export const LG_BREAKPOINT = 1024;
+
+/**
+ * 检查当前是否为大屏幕 (lg 断点及以上)
+ * 仅在客户端有效，服务端默认返回 false
+ */
+export function isLargeScreen(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth >= LG_BREAKPOINT;
+}
+
+/**
+ * Hook: 监听是否为大屏幕
+ */
+export function useIsLargeScreen(): boolean {
+  const [isLarge, setIsLarge] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= LG_BREAKPOINT;
+  });
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(`(min-width: ${LG_BREAKPOINT}px)`);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsLarge(e.matches);
+    };
+
+    // 设置初始值
+    setIsLarge(mediaQuery.matches);
+
+    // 监听变化
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  return isLarge;
+}
+
+/**
  * 生成父页面的转场样式
+ * @param hasModal 是否有模态框打开
+ * @param config 动画配置
+ * @param disableOnLargeScreen 是否在大屏幕（lg断点及以上）时禁用动画，默认 false
  */
 export function getParentPageStyle(
   hasModal: boolean,
-  config: PageTransitionConfig = IOS_TRANSITION_CONFIG
+  config: PageTransitionConfig = IOS_TRANSITION_CONFIG,
+  disableOnLargeScreen = false
 ): React.CSSProperties {
+  // 仅当明确指定时，才在大屏幕禁用转场动画
+  if (disableOnLargeScreen && isLargeScreen()) {
+    return {};
+  }
+
   return {
     transform: hasModal
       ? `translateX(${config.parentTranslateX}) scale(${config.parentScale})`
@@ -85,29 +135,24 @@ export function getParentPageStyle(
 }
 
 /**
- * 生成子页面的CSS类名
- */
-function getChildPageClassName(): string {
-  const baseClasses = `
-    fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 max-w-[500px] mx-auto
-    will-change-transform
-  `.trim();
-
-  const transitionClasses = `
-    transition-all
-  `.trim();
-
-  // 使用内联样式来设置 transition duration 和 easing
-  return `${baseClasses} ${transitionClasses}`;
-}
-
-/**
  * 生成子页面的内联样式
+ * @param isVisible 是否可见
+ * @param config 动画配置
+ * @param disableOnLargeScreen 是否在大屏幕（lg断点及以上）时禁用滑入动画，默认 false
  */
 export function getChildPageStyle(
   isVisible: boolean,
-  config: PageTransitionConfig = IOS_TRANSITION_CONFIG
+  config: PageTransitionConfig = IOS_TRANSITION_CONFIG,
+  disableOnLargeScreen = false
 ): React.CSSProperties {
+  // 仅当明确指定时，才在大屏幕禁用转场动画（如咖啡豆/笔记详情页作为右侧面板）
+  if (disableOnLargeScreen && isLargeScreen()) {
+    return {
+      opacity: isVisible ? 1 : 0,
+      transition: `opacity ${config.duration}ms ${config.easing}`,
+    };
+  }
+
   return {
     // 使用 translate3d 开启硬件加速
     // 子页面初始位置：从右侧偏移 childInitialX 的位置滑入（而不是从 100% 开始）

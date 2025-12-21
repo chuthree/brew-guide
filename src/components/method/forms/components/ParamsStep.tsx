@@ -62,7 +62,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
       exit="out"
       variants={pageVariants}
       transition={pageTransition}
-      className="mx-auto max-w-md space-y-10 pt-10 pb-20"
+      className="mx-auto space-y-10 pt-10 pb-20"
     >
       <div className="grid grid-cols-2 gap-6">
         {/* 咖啡粉量 */}

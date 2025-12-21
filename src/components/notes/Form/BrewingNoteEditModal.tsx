@@ -6,8 +6,7 @@ import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { Calendar } from '@/components/common/ui/Calendar';
-import { getChildPageStyle } from '@/lib/navigation/pageTransition';
-import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import ResponsiveModal from '@/components/common/ui/ResponsiveModal';
 
 interface BrewingNoteEditModalProps {
   showModal: boolean;
@@ -26,10 +25,6 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   settings,
   isCopy = false, // 默认不是复制操作
 }) => {
-  // 显示控制状态
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
   // 时间戳状态管理
   const [timestamp, setTimestamp] = useState<Date>(
     new Date(initialData?.timestamp || Date.now())
@@ -45,25 +40,6 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
       setTimestamp(new Date(initialData.timestamp));
     }
   }, [initialData]);
-
-  // 处理显示/隐藏动画
-  useEffect(() => {
-    if (showModal) {
-      setShouldRender(true);
-      // 使用 requestAnimationFrame 触发动画
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-      });
-    } else {
-      setIsVisible(false);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-      }, 350); // 与动画时长匹配
-      return () => clearTimeout(timer);
-    }
-  }, [showModal]);
 
   // 处理时间戳变化
   const handleTimestampChange = useCallback((newTimestamp: Date) => {
@@ -128,44 +104,12 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     [onSave, timestamp]
   );
 
-  // 使用统一的历史栈管理
-  useModalHistory({
-    id: 'brewing-note-edit',
-    isOpen: showModal,
-    onClose: () => {
-      // 通知父组件编辑页正在关闭
-      window.dispatchEvent(new CustomEvent('brewingNoteEditClosing'));
-      onClose();
-    },
-  });
-
-  // 处理关闭 - 使用统一的历史栈管理器
+  // 处理关闭
   const handleClose = useCallback(() => {
-    // 动画由 showModal 状态变化触发，无需手动设置 isVisible
-    modalHistory.back();
-  }, []);
-
-  // 移动端优化：防止背景滚动
-  useEffect(() => {
-    if (showModal && isVisible) {
-      // 防止背景页面滚动
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-    } else {
-      // 恢复背景页面滚动
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    }
-
-    return () => {
-      // 清理函数
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    };
-  }, [showModal, isVisible]);
+    // 通知父组件编辑页正在关闭
+    window.dispatchEvent(new CustomEvent('brewingNoteEditClosing'));
+    onClose();
+  }, [onClose]);
 
   // 处理保存按钮点击
   const handleSaveClick = useCallback(() => {
@@ -181,15 +125,15 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     }
   }, [initialData]);
 
-  if (!shouldRender) return null;
-
-  return (
+  // 渲染内容
+  const renderContent = (isMediumScreen: boolean) => (
     <div
-      className="pt-safe-top pb-safe-bottom fixed inset-0 z-10 mx-auto max-w-[500px] overflow-auto bg-neutral-50 px-6 dark:bg-neutral-900"
-      style={getChildPageStyle(isVisible)}
+      className={`pb-safe-bottom flex h-full flex-col overflow-hidden px-6 ${
+        isMediumScreen ? 'pt-4' : 'pt-safe-top'
+      }`}
     >
       {/* 顶部标题栏 */}
-      <div className="flex items-center justify-between">
+      <div className="flex shrink-0 items-center justify-between">
         <button
           type="button"
           onClick={handleClose}
@@ -236,7 +180,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
       </div>
 
       {/* 表单内容容器 */}
-      <div className="mt-6 flex-1">
+      <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
         {initialData && (
           <BrewingNoteForm
             id={initialData.id}
@@ -253,8 +197,8 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
         )}
       </div>
 
-      {/* 底部保存按钮 - 使用sticky定位相对于容器固定 */}
-      <div className="modal-bottom-button flex items-center justify-center">
+      {/* 底部保存按钮 */}
+      <div className="modal-bottom-button flex shrink-0 items-center justify-center">
         <button
           type="button"
           onClick={handleSaveClick}
@@ -264,6 +208,18 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
         </button>
       </div>
     </div>
+  );
+
+  return (
+    <ResponsiveModal
+      isOpen={showModal}
+      onClose={handleClose}
+      historyId="brewing-note-edit"
+      drawerMaxWidth="480px"
+      drawerHeight="90vh"
+    >
+      {({ isMediumScreen }) => renderContent(isMediumScreen)}
+    </ResponsiveModal>
   );
 };
 

@@ -6,7 +6,7 @@ import {
 } from '@/lib/utils/equipmentUtils';
 import type { BrewingNote } from '@/lib/core/config';
 import { SortOption, SORT_OPTIONS } from './types';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
+import { db } from '@/lib/core/db';
 
 /**
  * 从用户备注中提取萃取时间
@@ -147,8 +147,8 @@ export const getCoffeeBeanUnitPrice = async (
   beanName: string
 ): Promise<number> => {
   try {
-    // 获取所有咖啡豆
-    const beans = await CoffeeBeanManager.getAllBeans();
+    // 直接从 DB 获取所有咖啡豆
+    const beans = await db.coffeeBeans.toArray();
     // 查找匹配的咖啡豆
     const bean = beans.find(b => b.name === beanName);
     if (bean && bean.price && bean.capacity) {

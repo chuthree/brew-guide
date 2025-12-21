@@ -274,6 +274,13 @@ export async function saveCustomEquipment(
 
       console.warn(`[saveCustomEquipment] 器具${equipment.id}的方案保存完成`);
     }
+
+    // 触发自定义器具数据变更事件（用于 Supabase 同步）
+    window.dispatchEvent(
+      new CustomEvent('customEquipmentDataChanged', {
+        detail: { action: 'upsert', equipmentId: equipment.id, equipment },
+      })
+    );
   } catch (error) {
     console.error('[saveCustomEquipment] 保存器具失败:', error);
     throw new CustomEquipmentError(
@@ -340,6 +347,13 @@ export async function deleteCustomEquipment(id: string): Promise<void> {
     } catch {
       // 清理失败不阻止器具删除流程
     }
+
+    // 触发自定义器具数据变更事件（用于 Supabase 同步）
+    window.dispatchEvent(
+      new CustomEvent('customEquipmentDataChanged', {
+        detail: { action: 'delete', equipmentId: id },
+      })
+    );
   } catch (error) {
     console.error('[deleteCustomEquipment] 删除器具失败:', error);
     throw new CustomEquipmentError(`删除自定义器具失败: ${id}`, error);

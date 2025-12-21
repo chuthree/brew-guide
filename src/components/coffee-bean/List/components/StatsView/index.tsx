@@ -19,7 +19,7 @@ import {
   saveStatsBeanStatePreference,
   getStatsBeanStatePreference,
   StatsBeanStateType,
-} from '../../globalCache';
+} from '../../preferences';
 import StatsFilterBar from './StatsFilterBar';
 import ConsumptionTrendChart from './ConsumptionTrendChart';
 import { useStatsData, StatsMetadata } from './useStatsData';

@@ -1208,7 +1208,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
   return (
     <>
-      <div className="pb-safe-bottom sticky bottom-0 bg-neutral-50 px-6 pt-6 dark:bg-neutral-900">
+      <div className="pb-safe-bottom relative shrink-0 bg-neutral-50 px-6 pt-6 dark:bg-neutral-900">
         {/* 添加设置点和边框 */}
         <div className="absolute top-0 right-0 left-0 flex items-center justify-center">
           <div className="relative w-full border-t border-neutral-200 dark:border-neutral-800">

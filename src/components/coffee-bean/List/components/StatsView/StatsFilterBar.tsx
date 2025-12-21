@@ -303,7 +303,7 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   }, [isFilterExpanded]);
 
   return (
-    <div className="relative pt-6" ref={filterExpandRef}>
+    <div className="relative pt-6 md:pt-0" ref={filterExpandRef}>
       {/* 时间范围文案 - 可点击切换时间分组 */}
       {dateRangeLabel && (
         <div className="mb-6 flex items-center justify-between px-6">

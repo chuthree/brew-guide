@@ -21,7 +21,8 @@ export interface CoffeeBean {
   name: string; // 咖啡豆名称
 
   // 基本信息
-  image?: string; // 图片
+  image?: string; // 正面图片
+  backImage?: string; // 背面图片
   capacity?: string; // 容量
   remaining?: string; // 剩余量
   price?: string; // 价格

@@ -28,6 +28,7 @@ import { BrewingHistoryProps } from '../types';
 
 import FilterTabs from './FilterTabs';
 import AddNoteButton from './AddNoteButton';
+import BottomActionBar from '@/components/layout/BottomActionBar';
 import { showToast } from '@/components/common/feedback/LightToast';
 
 import ChangeRecordEditModal from '../Form/ChangeRecordEditModal';
@@ -56,6 +57,7 @@ import { SortOption, DateGroupingMode } from '../types';
 import { exportSelectedNotes } from '../Share/NotesExporter';
 import { extractExtractionTime, sortNotes } from '../utils';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import {
   isSameEquipment,
   getEquipmentIdByName,
@@ -274,16 +276,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const deleteNote = useBrewingNoteStore(state => state.deleteNote);
   const updateNote = useBrewingNoteStore(state => state.updateNote);
 
+  // 🔥 从 Zustand Store 订阅咖啡豆数据
+  const coffeeBeans = useCoffeeBeanStore(state => state.beans);
+
   const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>(
     {}
   );
   const [customEquipments, setCustomEquipments] = useState<
     import('@/lib/core/config').CustomEquipment[]
-  >([]);
-
-  // 咖啡豆数据状态
-  const [coffeeBeans, setCoffeeBeans] = useState<
-    import('@/types/app').CoffeeBean[]
   >([]);
 
   // 预览容器引用
@@ -546,43 +546,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       setEquipmentNames(namesMap);
     };
 
-    // 加载咖啡豆数据
-    const loadCoffeeBeanData = async () => {
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
-      );
-      const beans = await CoffeeBeanManager.getAllBeans();
-      setCoffeeBeans(beans);
-    };
-
     loadEquipmentData();
-    loadCoffeeBeanData();
-  }, [loadNotes]); // 只在组件挂载时执行一次
+  }, [loadNotes]);
 
   // 计算总消耗量
   useEffect(() => {
     totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(notes);
   }, [notes]);
-
-  // 监听咖啡豆数据更新
-  useEffect(() => {
-    const handleCoffeeBeansUpdated = async () => {
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
-      );
-      const beans = await CoffeeBeanManager.getAllBeans();
-      setCoffeeBeans(beans);
-    };
-
-    window.addEventListener('coffeeBeansUpdated', handleCoffeeBeansUpdated);
-
-    return () => {
-      window.removeEventListener(
-        'coffeeBeansUpdated',
-        handleCoffeeBeansUpdated
-      );
-    };
-  }, []);
 
   // 显示消息提示 - 使用 LightToast
   const showToastMessage = (
@@ -1382,7 +1352,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   return (
     <>
       {/* 主要内容区域 - 始终显示笔记列表 */}
-      <div className="sticky top-0 flex-none space-y-6 bg-neutral-50 pt-6 dark:bg-neutral-900">
+      <div className="sticky top-0 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
         {/* 数量显示 */}
         <div className="mb-6 flex items-center justify-between px-6">
           <div className="text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
@@ -1488,43 +1458,32 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
       {/* 底部操作栏 - 分享模式下显示保存和取消按钮，图片流模式下隐藏添加按钮 */}
       {isShareMode ? (
-        <div className="bottom-action-bar">
-          <div className="pointer-events-none absolute right-0 bottom-full left-0 h-12 bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900"></div>
-          <div className="pb-safe-bottom relative mx-auto flex max-w-[500px] items-center bg-neutral-50 dark:bg-neutral-900">
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            <button
-              onClick={handleCancelShare}
-              className="mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400"
-            >
-              取消
-            </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            <button
-              onClick={handleSaveNotes}
-              disabled={selectedNotes.length === 0 || isSaving}
-              className={`mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400 ${
+        <BottomActionBar
+          buttons={[
+            {
+              text: '取消',
+              onClick: handleCancelShare,
+            },
+            {
+              text: isSaving
+                ? '生成中...'
+                : `保存为图片 (${selectedNotes.length})`,
+              onClick: handleSaveNotes,
+              className:
                 selectedNotes.length === 0 || isSaving
                   ? 'cursor-not-allowed opacity-50'
-                  : ''
-              }`}
-            >
-              {isSaving ? '生成中...' : `保存为图片 (${selectedNotes.length})`}
-            </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-            <button
-              onClick={handleArtisticShare}
-              disabled={selectedNotes.length !== 1}
-              className={`mx-3 flex items-center justify-center text-xs font-medium text-neutral-600 hover:opacity-80 dark:text-neutral-400 ${
+                  : '',
+            },
+            {
+              text: '图文分享',
+              onClick: handleArtisticShare,
+              className:
                 selectedNotes.length !== 1
                   ? 'cursor-not-allowed opacity-50'
-                  : ''
-              }`}
-            >
-              分享图文
-            </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
-          </div>
-        </div>
+                  : '',
+            },
+          ]}
+        />
       ) : (
         !isImageFlowMode &&
         !isDateImageFlowMode && <AddNoteButton onAddNote={handleAddNote} />

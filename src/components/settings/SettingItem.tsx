@@ -55,7 +55,9 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
             <div key={`${item.label}-${index}`}>
               <Container
                 onClick={!editable && !isSwitch ? item.onClick : undefined}
-                className="flex w-full items-stretch pr-3.5 pl-[7px] text-sm font-medium text-neutral-800 transition-colors dark:text-neutral-200"
+                className={`flex w-full items-stretch pr-3.5 pl-[7px] text-sm font-medium text-neutral-800 transition-colors dark:text-neutral-200 ${
+                  !editable && !isSwitch ? 'cursor-pointer' : ''
+                }`}
               >
                 <div
                   className={`flex items-center pr-[7px] ${!item.icon ? 'opacity-0' : ''}`}

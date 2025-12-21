@@ -9,8 +9,11 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { showToast } from '@/components/common/feedback/LightToast';
+import ResponsiveModal, {
+  ResponsiveModalHandle,
+} from '@/components/common/ui/ResponsiveModal';
 
 export interface Step {
   id: string;
@@ -76,8 +79,11 @@ const NoteSteppedFormModal = forwardRef<
     // 添加随机按钮禁用状态
     const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false);
 
+    // 从 Store 获取咖啡豆数据
+    const allBeans = useCoffeeBeanStore(state => state.beans);
+
     // 模态框DOM引用
-    const modalRef = useRef<HTMLDivElement>(null);
+    const responsiveModalRef = useRef<ResponsiveModalHandle>(null);
     const contentScrollRef = useRef<HTMLDivElement>(null);
 
     // 暴露给父组件的方法
@@ -208,7 +214,9 @@ const NoteSteppedFormModal = forwardRef<
           highlightedBeanId,
           // 将内容区滚动容器传给虚拟列表，保证在模态内全高滚动
           scrollParentRef:
-            contentScrollRef.current || modalRef.current || undefined,
+            contentScrollRef.current ||
+            responsiveModalRef.current?.getContentRef() ||
+            undefined,
         }
       );
     }, [
@@ -219,7 +227,7 @@ const NoteSteppedFormModal = forwardRef<
     ]);
 
     // 随机选择咖啡豆
-    const handleRandomBean = async (isLongPress: boolean = false) => {
+    const handleRandomBean = (isLongPress: boolean = false) => {
       // 如果提供了自定义随机豆子方法，则调用它
       if (onRandomBean) {
         onRandomBean(isLongPress);
@@ -229,55 +237,38 @@ const NoteSteppedFormModal = forwardRef<
       // 如果按钮被禁用，直接返回
       if (isRandomButtonDisabled) return;
 
-      try {
-        const allBeans = await CoffeeBeanManager.getAllBeans();
-        // 过滤掉已经用完的豆子和在途状态的豆子
-        const availableBeans = allBeans.filter(bean => {
-          // 过滤掉在途状态的咖啡豆
-          if (bean.isInTransit) {
-            return false;
-          }
-
-          // 如果没有设置容量，则显示（因为无法判断是否用完）
-          if (
-            !bean.capacity ||
-            bean.capacity === '0' ||
-            bean.capacity === '0g'
-          ) {
-            return true;
-          }
-
-          // 如果设置了容量，则检查剩余量是否大于0
-          const remaining = parseFloat(bean.remaining || '0');
-          return remaining > 0;
-        });
-
-        if (availableBeans.length > 0) {
-          const randomIndex = Math.floor(Math.random() * availableBeans.length);
-          const randomBean = availableBeans[randomIndex];
-
-          // 设置高亮豆子ID，而不是直接选择
-          setHighlightedBeanId(randomBean.id);
-
-          // 4秒后清除高亮状态
-          setTimeout(() => {
-            setHighlightedBeanId(null);
-          }, 4000);
-        } else {
-          showToast({
-            type: 'info',
-            title: '没有可用的咖啡豆',
-            duration: 2000,
-          });
+      // 过滤掉已经用完的豆子和在途状态的豆子
+      const availableBeans = allBeans.filter(bean => {
+        // 过滤掉在途状态的咖啡豆
+        if (bean.isInTransit) {
+          return false;
         }
-      } catch (error) {
-        // Log error in development only
-        if (process.env.NODE_ENV === 'development') {
-          console.error('随机选择咖啡豆失败:', error);
+
+        // 如果没有设置容量，则显示（因为无法判断是否用完）
+        if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
+          return true;
         }
+
+        // 如果设置了容量，则检查剩余量是否大于0
+        const remaining = parseFloat(bean.remaining || '0');
+        return remaining > 0;
+      });
+
+      if (availableBeans.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableBeans.length);
+        const randomBean = availableBeans[randomIndex];
+
+        // 设置高亮豆子ID，而不是直接选择
+        setHighlightedBeanId(randomBean.id);
+
+        // 4秒后清除高亮状态
+        setTimeout(() => {
+          setHighlightedBeanId(null);
+        }, 4000);
+      } else {
         showToast({
-          type: 'error',
-          title: '随机选择失败',
+          type: 'info',
+          title: '没有可用的咖啡豆',
           duration: 2000,
         });
       }
@@ -390,14 +381,15 @@ const NoteSteppedFormModal = forwardRef<
       );
     };
 
-    // 简单的淡入淡出效果
-    return (
+    // 渲染模态框内容
+    const renderContent = (isMediumScreen: boolean) => (
       <div
-        ref={modalRef}
-        className={`pt-safe-top pb-safe-bottom fixed inset-0 mx-auto max-w-[500px] bg-neutral-50 px-6 transition-opacity duration-200 dark:bg-neutral-900 ${showForm ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'} flex flex-col overflow-hidden`}
+        className={`pb-safe-bottom flex h-full flex-col overflow-hidden px-6 ${
+          isMediumScreen ? 'pt-4' : 'pt-safe-top'
+        }`}
       >
         {/* 顶部导航栏 */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex shrink-0 items-center justify-between">
           <button
             type="button"
             onClick={handleBack}
@@ -412,7 +404,10 @@ const NoteSteppedFormModal = forwardRef<
         </div>
 
         {/* 步骤内容 */}
-        <div className="flex-1 overflow-y-auto pb-4" ref={contentScrollRef}>
+        <div
+          className="min-h-0 flex-1 overflow-y-auto pb-4"
+          ref={contentScrollRef}
+        >
           {currentStepContent && (
             <div className="space-y-6">{contentWithSearchProps}</div>
           )}
@@ -421,6 +416,20 @@ const NoteSteppedFormModal = forwardRef<
         {/* 底部按钮区域 */}
         {renderNextButton()}
       </div>
+    );
+
+    // 使用响应式模态框组件
+    return (
+      <ResponsiveModal
+        ref={responsiveModalRef}
+        isOpen={showForm}
+        onClose={onClose}
+        historyId="note-stepped-form"
+        drawerMaxWidth="480px"
+        drawerHeight="90vh"
+      >
+        {({ isMediumScreen }) => renderContent(isMediumScreen)}
+      </ResponsiveModal>
     );
   }
 );

@@ -25,6 +25,7 @@ import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
 import { MethodStepConfig } from '@/lib/types/method';
 import GrinderScaleIndicator from '@/components/ui/GrinderScaleIndicator';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -173,7 +174,10 @@ const TabContent: React.FC<TabContentProps> = ({
 
   // 随机选择器状态
   const [showRandomPicker, setShowRandomPicker] = useState(false);
-  const [allBeans, setAllBeans] = useState<CoffeeBean[]>([]);
+  // 直接从 Store 获取咖啡豆数据
+  const allBeans = useCoffeeBeanStore(state => state.beans);
+  const storeInitialized = useCoffeeBeanStore(state => state.initialized);
+  const loadBeansFromStore = useCoffeeBeanStore(state => state.loadBeans);
   const [isLongPressRandom, setIsLongPressRandom] = useState(false);
 
   // 分享功能已简化为直接复制到剪贴板，不再需要模态框状态
@@ -242,75 +246,12 @@ const TabContent: React.FC<TabContentProps> = ({
     }
   }, [settings?.hapticFeedback]);
 
-  // 加载所有咖啡豆数据 - 优化：只在首次需要时加载
+  // 确保 Store 已初始化
   useEffect(() => {
-    const loadBeans = async () => {
-      try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const beans = await CoffeeBeanManager.getAllBeans();
-        setAllBeans(beans);
-      } catch (error) {
-        console.error('加载咖啡豆失败:', error);
-      }
-    };
-
-    // 只在没有数据且需要时才加载
-    if (activeTab === '咖啡豆' && allBeans.length === 0) {
-      loadBeans();
+    if (!storeInitialized) {
+      loadBeansFromStore();
     }
-  }, [activeTab, allBeans.length]);
-
-  // 监听咖啡豆更新事件 - 使用 useRef 避免重新挂载
-  const handleBeansUpdatedRef = useRef<
-    ((event?: Event) => Promise<void>) | null
-  >(null);
-
-  // 创建稳定的事件处理函数
-  useEffect(() => {
-    handleBeansUpdatedRef.current = async (_event?: Event) => {
-      try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const beans = await CoffeeBeanManager.getAllBeans();
-        setAllBeans(beans);
-      } catch (error) {
-        console.error('更新咖啡豆数据失败:', error);
-      }
-    };
-  });
-
-  // 只在组件挂载时设置事件监听器，避免重复挂载
-  useEffect(() => {
-    // 组件挂载时立即获取最新数据，防止错过事件
-    const loadLatestData = async () => {
-      try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const beans = await CoffeeBeanManager.getAllBeans();
-        setAllBeans(beans);
-      } catch (error) {
-        console.error('挂载时加载数据失败:', error);
-      }
-    };
-
-    loadLatestData(); // 立即加载最新数据
-
-    const handleBeansUpdated = (_event?: Event) => {
-      if (handleBeansUpdatedRef.current) {
-        handleBeansUpdatedRef.current(_event);
-      }
-    };
-
-    window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
-
-    return () => {
-      window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
-    };
-  }, []); // 空依赖数组，只在挂载时执行一次
+  }, [storeInitialized, loadBeansFromStore]);
 
   // 简化的保存笔记处理 - 统一数据流避免竞态条件
   const handleSaveNote = async (note: BrewingNoteData) => {
@@ -552,12 +493,9 @@ const TabContent: React.FC<TabContentProps> = ({
   const handleRandomBean = async (isLongPress: boolean = false) => {
     await triggerHapticFeedback();
     try {
-      if (allBeans.length === 0) {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const beans = await CoffeeBeanManager.getAllBeans();
-        setAllBeans(beans);
+      // 如果 Store 未初始化，先加载
+      if (!storeInitialized) {
+        await loadBeansFromStore();
       }
 
       const availableBeans = allBeans.filter(bean => {
@@ -768,7 +706,7 @@ const TabContent: React.FC<TabContentProps> = ({
     return (
       <>
         <div
-          className="scroll-with-bottom-bar h-full w-full overflow-y-auto p-6"
+          className="scroll-with-bottom-bar h-full w-full overflow-y-auto p-6 md:pt-0"
           ref={el => setBeanScrollEl(el)}
         >
           <CoffeeBeanList
@@ -784,7 +722,7 @@ const TabContent: React.FC<TabContentProps> = ({
 
         {/* 磨豆机刻度指示器 - 在随机按钮上方 */}
         {(settings.showGrinderScale ?? true) && (
-          <div className="pointer-events-none fixed right-0 bottom-[120px] left-0 z-10 mx-auto mb-[var(--safe-area-bottom)] flex max-w-[500px] items-center justify-end p-6">
+          <div className="pointer-events-none fixed right-0 bottom-[120px] left-0 z-10 mx-auto mb-(--safe-area-bottom) flex items-center justify-end p-6">
             <div className="pointer-events-auto">
               <GrinderScaleIndicator
                 visible={true}
@@ -795,7 +733,7 @@ const TabContent: React.FC<TabContentProps> = ({
         )}
 
         {/* 随机选豆按钮 - 单独放置在搜索工具栏上方 */}
-        <div className="pointer-events-none fixed right-0 bottom-[60px] left-0 z-10 mx-auto mb-[var(--safe-area-bottom)] flex max-w-[500px] items-center justify-end p-6">
+        <div className="pointer-events-none fixed right-0 bottom-[60px] left-0 z-10 mx-auto mb-(--safe-area-bottom) flex items-center justify-end p-6">
           <motion.button
             type="button"
             onClick={() => handleRandomBean(false)}
@@ -833,7 +771,7 @@ const TabContent: React.FC<TabContentProps> = ({
         </div>
 
         {/* 底部搜索工具栏 */}
-        <div className="pointer-events-none fixed right-0 bottom-0 left-0 z-10 mx-auto mb-[var(--safe-area-bottom)] flex max-w-[500px] items-center justify-end p-6">
+        <div className="pointer-events-none fixed right-0 bottom-0 left-0 z-10 mx-auto mb-(--safe-area-bottom) flex items-center justify-end p-6">
           <div className="pointer-events-none flex items-center justify-center gap-2">
             <AnimatePresence mode="popLayout">
               {isSearching && (
@@ -851,7 +789,7 @@ const TabContent: React.FC<TabContentProps> = ({
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="搜索咖啡豆名称..."
-                    className="w-48 rounded-full border border-neutral-200 bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:border-neutral-700/50 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
+                    className="w-48 rounded-full border border-neutral-200 bg-neutral-100 px-5 py-3.5 text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:border-neutral-700/50 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
                     autoComplete="off"
                     onKeyDown={e => e.key === 'Escape' && handleCloseSearch()}
                   />
@@ -951,7 +889,7 @@ const TabContent: React.FC<TabContentProps> = ({
   // 渲染默认列表内容
   return (
     <>
-      <div className="content-area m-6 space-y-4">
+      <div className="content-area m-6 space-y-4 md:mt-0">
         {showEmptyMethodsMessage ? (
           <div className="mt-4 flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
             [ 当前器具暂无自定义方案，请点击下方按钮添加 ]

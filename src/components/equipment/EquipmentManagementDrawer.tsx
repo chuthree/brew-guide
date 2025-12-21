@@ -244,7 +244,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
 
       {/* 抽屉内容 */}
       <div
-        className={`fixed right-0 bottom-0 left-0 mx-auto max-w-[500px] rounded-t-3xl bg-neutral-50 backdrop-blur-xl transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'} `}
+        className={`fixed right-0 bottom-0 left-0 mx-auto max-w-md rounded-t-3xl bg-neutral-50 backdrop-blur-xl transition-transform duration-[350ms] ease-[cubic-bezier(0.36,0.66,0.04,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'} `}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-center pt-3 pb-2">

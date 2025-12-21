@@ -1,89 +1,27 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { CoffeeBean } from '@/types/app';
-
-// 简单的全局缓存，避免重复加载
-const globalBeanCache = {
-  beans: [] as CoffeeBean[],
-  initialized: false,
-  isLoading: false,
-  lastUpdated: 0,
-};
-
-// 缓存有效期（5分钟）
-const CACHE_DURATION = 5 * 60 * 1000;
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
 /**
- * 冲煮界面专用的咖啡豆数据Hook
- * 提供优化的数据加载和缓存机制
+ * 冲煮界面专用的咖啡豆数据 Hook
+ * 直接从 Zustand Store 获取数据，保持数据一致性
  */
 export const useCoffeeBeanData = () => {
-  const [beans, setBeans] = useState<CoffeeBean[]>(globalBeanCache.beans);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const isLoadingRef = useRef(false);
+  const beans = useCoffeeBeanStore(state => state.beans);
+  const isLoading = useCoffeeBeanStore(state => state.isLoading);
+  const initialized = useCoffeeBeanStore(state => state.initialized);
+  const loadBeans = useCoffeeBeanStore(state => state.loadBeans);
 
-  // 检查缓存是否有效
-  const isCacheValid = useCallback(() => {
-    const now = Date.now();
-    return (
-      globalBeanCache.initialized &&
-      globalBeanCache.beans.length > 0 &&
-      now - globalBeanCache.lastUpdated < CACHE_DURATION
-    );
-  }, []);
+  // 初始化时确保数据已加载
+  useEffect(() => {
+    if (!initialized && !isLoading) {
+      loadBeans();
+    }
+  }, [initialized, isLoading, loadBeans]);
 
-  // 加载咖啡豆数据
-  const loadBeans = useCallback(
-    async (forceReload = false) => {
-      // 防止重复加载
-      if (isLoadingRef.current) return;
-
-      try {
-        // 如果缓存有效且不强制重新加载，使用缓存数据
-        if (!forceReload && isCacheValid()) {
-          setBeans(globalBeanCache.beans);
-          return;
-        }
-
-        isLoadingRef.current = true;
-        setIsLoading(true);
-        setError(null);
-
-        // 动态导入CoffeeBeanManager
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-
-        // 如果强制重新加载，清除CoffeeBeanManager的缓存
-        if (forceReload) {
-          CoffeeBeanManager.clearCache();
-        }
-
-        const loadedBeans = await CoffeeBeanManager.getAllBeans();
-
-        // 更新全局缓存
-        globalBeanCache.beans = loadedBeans;
-        globalBeanCache.initialized = true;
-        globalBeanCache.isLoading = false;
-        globalBeanCache.lastUpdated = Date.now();
-
-        setBeans(loadedBeans);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : '加载咖啡豆数据失败';
-        setError(errorMessage);
-        console.error('加载咖啡豆数据失败:', err);
-      } finally {
-        isLoadingRef.current = false;
-        setIsLoading(false);
-      }
-    },
-    [isCacheValid]
-  );
-
-  // 根据ID查找咖啡豆
+  // 根据 ID 查找咖啡豆
   const findBeanById = useCallback(
     (id: string): CoffeeBean | null => {
       return beans.find(bean => bean.id === id) || null;
@@ -102,87 +40,34 @@ export const useCoffeeBeanData = () => {
   // 获取可用的咖啡豆（过滤掉用完的和在途的）
   const getAvailableBeans = useCallback(() => {
     return beans.filter(bean => {
-      // 过滤掉在途状态的咖啡豆
-      if (bean.isInTransit) {
-        return false;
-      }
-
-      // 如果没有设置容量，则直接显示
-      if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
+      if (bean.isInTransit) return false;
+      if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g')
         return true;
-      }
-
-      // 考虑remaining可能是字符串或者数字
       const remaining =
         typeof bean.remaining === 'string'
           ? parseFloat(bean.remaining)
           : Number(bean.remaining);
-
-      // 只过滤掉有容量设置且剩余量为0的咖啡豆
       return remaining > 0;
     });
   }, [beans]);
 
-  // 监听咖啡豆数据更新事件
-  useEffect(() => {
-    const handleCoffeeBeanDataChanged = () => {
-      // 数据变更时强制重新加载
-      loadBeans(true);
-    };
-
-    // 监听全局咖啡豆数据变更事件
-    if (typeof window !== 'undefined') {
-      // 监听两个事件以确保数据同步
-      // coffeeBeanDataChanged: 咖啡豆列表手动触发的事件
-      // coffeeBeansUpdated: CoffeeBeanManager.updateBean 触发的事件
-      window.addEventListener(
-        'coffeeBeanDataChanged',
-        handleCoffeeBeanDataChanged
-      );
-      window.addEventListener(
-        'coffeeBeansUpdated',
-        handleCoffeeBeanDataChanged
-      );
-
-      return () => {
-        window.removeEventListener(
-          'coffeeBeanDataChanged',
-          handleCoffeeBeanDataChanged
-        );
-        window.removeEventListener(
-          'coffeeBeansUpdated',
-          handleCoffeeBeanDataChanged
-        );
-      };
-    }
-  }, [loadBeans]);
-
-  // 初始化时加载数据
-  useEffect(() => {
-    loadBeans();
-  }, [loadBeans]);
-
   return {
     beans,
     isLoading,
-    error,
+    error: null,
     loadBeans,
     findBeanById,
     findBeanByName,
     getAvailableBeans,
-    // 提供一些有用的计算属性
     totalBeans: beans.length,
     availableBeans: getAvailableBeans(),
-    isCacheValid: isCacheValid(),
+    isCacheValid: initialized,
   };
 };
 
 /**
- * 清除全局缓存（用于测试或特殊情况）
+ * 清除全局缓存（已废弃，保留兼容性）
  */
-const clearGlobalBeanCache = () => {
-  globalBeanCache.beans = [];
-  globalBeanCache.initialized = false;
-  globalBeanCache.isLoading = false;
-  globalBeanCache.lastUpdated = 0;
+export const clearGlobalBeanCache = () => {
+  // Store 自动管理，无需手动清除
 };

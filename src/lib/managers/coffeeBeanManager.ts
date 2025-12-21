@@ -162,9 +162,16 @@ export const CoffeeBeanManager = {
       // 使缓存失效，确保下次获取最新数据
       this._invalidateCaches();
 
-      // 触发咖啡豆更新事件（除非在批量操作中）
+      // 触发事件（除非在批量操作中）
       if (typeof window !== 'undefined' && !isBatchOperation) {
+        // 触发 UI 刷新事件
         window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+        // 触发 Supabase 同步事件（带详细信息）
+        window.dispatchEvent(
+          new CustomEvent('coffeeBeanDataChanged', {
+            detail: { action: 'create', beanId: newBean.id, bean: newBean },
+          })
+        );
       }
 
       return newBean;
@@ -224,9 +231,16 @@ export const CoffeeBeanManager = {
         await this._syncNotesWithBeanInfo(id, originalBean, updatedBean);
       }
 
-      // 触发咖啡豆更新事件（除非在批量操作中）
+      // 触发事件（除非在批量操作中）
       if (typeof window !== 'undefined' && !isBatchOperation) {
+        // 触发 UI 刷新事件
         window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+        // 触发 Supabase 同步事件（带详细信息）
+        window.dispatchEvent(
+          new CustomEvent('coffeeBeanDataChanged', {
+            detail: { action: 'update', beanId: id, bean: updatedBean },
+          })
+        );
       }
 
       return updatedBean;
@@ -279,9 +293,16 @@ export const CoffeeBeanManager = {
       // 特别使单个豆子的缓存失效
       beanCache.delete(`bean_${id}`);
 
-      // 触发咖啡豆更新事件（除非在批量操作中）
+      // 触发事件（除非在批量操作中）
       if (typeof window !== 'undefined' && !isBatchOperation) {
+        // 触发 UI 刷新事件
         window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+        // 触发 Supabase 同步事件（带详细信息）
+        window.dispatchEvent(
+          new CustomEvent('coffeeBeanDataChanged', {
+            detail: { action: 'delete', beanId: id },
+          })
+        );
       }
 
       return true;

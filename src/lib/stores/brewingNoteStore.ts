@@ -1,152 +1,140 @@
+/**
+ * 冲煮笔记 Store
+ *
+ * 架构：Store ↔ IndexedDB ↔ Supabase
+ */
+
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 import { BrewingNote } from '@/lib/core/config';
+import { db } from '@/lib/core/db';
+import { nanoid } from 'nanoid';
 
 interface BrewingNoteStore {
   notes: BrewingNote[];
   isLoading: boolean;
   error: string | null;
-  initialized: boolean; // 🔥 新增：标记数据是否已初始化
+  initialized: boolean;
 
-  // Actions
   loadNotes: () => Promise<void>;
-  addNote: (note: BrewingNote) => Promise<void>;
-  updateNote: (id: string, updates: Partial<BrewingNote>) => Promise<void>;
-  deleteNote: (id: string) => Promise<void>;
+  addNote: (
+    note: BrewingNote | Omit<BrewingNote, 'id'>
+  ) => Promise<BrewingNote>;
+  updateNote: (
+    id: string,
+    updates: Partial<BrewingNote>
+  ) => Promise<BrewingNote | null>;
+  deleteNote: (id: string) => Promise<boolean>;
+
+  setNotes: (notes: BrewingNote[]) => void;
+  upsertNote: (note: BrewingNote) => Promise<void>;
+  removeNote: (id: string) => Promise<void>;
+
+  getNoteById: (id: string) => BrewingNote | undefined;
   refreshNotes: () => Promise<void>;
 }
 
-export const useBrewingNoteStore = create<BrewingNoteStore>((set, get) => ({
-  notes: [],
-  isLoading: false,
-  error: null,
-  initialized: false, // 🔥 初始为未初始化
+export const useBrewingNoteStore = create<BrewingNoteStore>()(
+  subscribeWithSelector((set, get) => ({
+    notes: [],
+    isLoading: false,
+    error: null,
+    initialized: false,
 
-  // 加载所有笔记
-  loadNotes: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const { Storage } = await import('@/lib/core/storage');
-      const savedNotes = await Storage.get('brewingNotes');
-      const parsedNotes: BrewingNote[] = savedNotes
-        ? JSON.parse(savedNotes)
-        : [];
-      set({ notes: parsedNotes, isLoading: false, initialized: true }); // 🔥 标记已初始化
-    } catch (error) {
-      set({ error: '加载笔记失败', isLoading: false, initialized: true }); // 🔥 即使失败也标记为已初始化
-      console.error('加载笔记失败:', error);
-    }
-  },
-
-  // 添加笔记
-  addNote: async (note: BrewingNote) => {
-    try {
-      const { Storage } = await import('@/lib/core/storage');
-
-      // 🔥 关键修复：如果未初始化，先加载数据
-      const state = get();
-      if (!state.initialized) {
-        console.warn('⚠️ 检测到未初始化就尝试添加笔记，先加载现有数据...');
-        const savedNotes = await Storage.get('brewingNotes');
-        const existingNotes: BrewingNote[] = savedNotes
-          ? JSON.parse(savedNotes)
-          : [];
-        // 添加新笔记到现有数据
-        const updatedNotes = [note, ...existingNotes];
-        await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-        set({ notes: updatedNotes, initialized: true });
-        return;
+    loadNotes: async () => {
+      if (get().isLoading) return;
+      set({ isLoading: true, error: null });
+      try {
+        const notes = await db.brewingNotes.toArray();
+        set({ notes, isLoading: false, initialized: true });
+      } catch {
+        set({ error: '加载笔记失败', isLoading: false, initialized: true });
       }
+    },
 
-      // 正常流程：已初始化，从内存获取
-      const currentNotes = state.notes;
-      const updatedNotes = [note, ...currentNotes];
+    addNote: async noteData => {
+      const inputNote = noteData as BrewingNote;
+      const newNote: BrewingNote = {
+        ...noteData,
+        id: inputNote.id || nanoid(),
+        timestamp: inputNote.timestamp || Date.now(),
+      };
 
-      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-      set({ notes: updatedNotes });
-    } catch (error) {
-      console.error('添加笔记失败:', error);
-      throw error;
-    }
-  },
+      await db.brewingNotes.put(newNote);
+      set(state => ({ notes: [newNote, ...state.notes] }));
 
-  // 更新笔记
-  updateNote: async (id: string, updates: Partial<BrewingNote>) => {
-    try {
-      const { Storage } = await import('@/lib/core/storage');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('brewingNoteDataChanged', {
+            detail: { action: 'create', noteId: newNote.id, note: newNote },
+          })
+        );
+      }
+      return newNote;
+    },
 
-      // 🔥 关键修复：如果未初始化，先加载数据
-      const state = get();
-      if (!state.initialized) {
-        console.warn('⚠️ 检测到未初始化就尝试更新笔记，先加载现有数据...');
-        const savedNotes = await Storage.get('brewingNotes');
-        const existingNotes: BrewingNote[] = savedNotes
-          ? JSON.parse(savedNotes)
-          : [];
-        const noteIndex = existingNotes.findIndex(note => note.id === id);
+    updateNote: async (id, updates) => {
+      const existingNote = get().notes.find(n => n.id === id);
+      if (!existingNote) return null;
 
-        if (noteIndex !== -1) {
-          existingNotes[noteIndex] = {
-            ...existingNotes[noteIndex],
-            ...updates,
-          };
-          await Storage.set('brewingNotes', JSON.stringify(existingNotes));
-          set({ notes: existingNotes, initialized: true });
+      const updatedNote: BrewingNote = { ...existingNote, ...updates, id };
+      await db.brewingNotes.put(updatedNote);
+      set(state => ({
+        notes: state.notes.map(n => (n.id === id ? updatedNote : n)),
+      }));
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('brewingNoteDataChanged', {
+            detail: { action: 'update', noteId: id, note: updatedNote },
+          })
+        );
+      }
+      return updatedNote;
+    },
+
+    deleteNote: async id => {
+      try {
+        await db.brewingNotes.delete(id);
+        set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('brewingNoteDataChanged', {
+              detail: { action: 'delete', noteId: id },
+            })
+          );
         }
-        return;
+        return true;
+      } catch {
+        return false;
       }
+    },
 
-      const currentNotes = state.notes;
+    setNotes: notes => set({ notes, initialized: true }),
 
-      // 🔥 找到要更新的笔记索引
-      const noteIndex = currentNotes.findIndex(note => note.id === id);
+    upsertNote: async note => {
+      await db.brewingNotes.put(note);
+      set(state => {
+        const exists = state.notes.some(n => n.id === note.id);
+        return exists
+          ? { notes: state.notes.map(n => (n.id === note.id ? note : n)) }
+          : { notes: [note, ...state.notes] };
+      });
+    },
 
-      if (noteIndex === -1) {
-        return;
-      }
+    removeNote: async id => {
+      await db.brewingNotes.delete(id);
+      set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
+    },
 
-      // 🔥 创建新数组，替换指定位置的笔记（确保引用改变）
-      const updatedNotes = [...currentNotes];
-      updatedNotes[noteIndex] = { ...currentNotes[noteIndex], ...updates };
+    getNoteById: id => get().notes.find(n => n.id === id),
 
-      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-      set({ notes: updatedNotes });
-    } catch (error) {
-      throw error;
-    }
-  },
+    refreshNotes: async () => {
+      set({ initialized: false });
+      await get().loadNotes();
+    },
+  }))
+);
 
-  // 删除笔记
-  deleteNote: async (id: string) => {
-    try {
-      const { Storage } = await import('@/lib/core/storage');
-
-      // 🔥 关键修复：如果未初始化，先加载数据
-      const state = get();
-      if (!state.initialized) {
-        console.warn('⚠️ 检测到未初始化就尝试删除笔记，先加载现有数据...');
-        const savedNotes = await Storage.get('brewingNotes');
-        const existingNotes: BrewingNote[] = savedNotes
-          ? JSON.parse(savedNotes)
-          : [];
-        const updatedNotes = existingNotes.filter(note => note.id !== id);
-        await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-        set({ notes: updatedNotes, initialized: true });
-        return;
-      }
-
-      const currentNotes = state.notes;
-      const updatedNotes = currentNotes.filter(note => note.id !== id);
-
-      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
-      set({ notes: updatedNotes });
-    } catch (error) {
-      console.error('删除笔记失败:', error);
-      throw error;
-    }
-  },
-
-  // 刷新笔记数据
-  refreshNotes: async () => {
-    await get().loadNotes();
-  },
-}));
+export const getBrewingNoteStore = () => useBrewingNoteStore.getState();

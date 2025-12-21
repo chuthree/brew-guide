@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { SettingsOptions } from './Settings';
 import { ButtonGroup } from '../ui/ButtonGroup';
@@ -15,6 +15,7 @@ import { SettingPage } from './atomic';
 import {
   S3SyncSection,
   WebDAVSyncSection,
+  SupabaseSyncSection,
   DataManagementSection,
   ToolsSection,
 } from './data-settings';
@@ -26,72 +27,15 @@ import PersistentStorageManager, {
   type StorageEstimate,
 } from '@/lib/utils/persistentStorage';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-
-type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>;
-type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
-
-const normalizeS3Settings = (
-  incoming?: SettingsOptions['s3Sync'] | null
-): S3SyncSettings => {
-  const defaults: S3SyncSettings = {
-    enabled: false,
-    accessKeyId: '',
-    secretAccessKey: '',
-    region: 'cn-south-1',
-    bucketName: '',
-    prefix: 'brew-guide-data/',
-    endpoint: '',
-    syncMode: 'manual' as const,
-    enablePullToSync: true,
-  };
-
-  if (!incoming) {
-    return { ...defaults };
-  }
-
-  const sanitizedRecord = { ...(incoming || {}) } as Record<string, unknown>;
-  delete sanitizedRecord.autoSync;
-  delete sanitizedRecord.syncInterval;
-
-  const result: S3SyncSettings = {
-    ...defaults,
-    ...(sanitizedRecord as Partial<S3SyncSettings>),
-  };
-
-  // 确保某些字段不会是 undefined
-  result.endpoint = result.endpoint || '';
-  result.syncMode = 'manual';
-
-  return result;
-};
-
-const normalizeWebDAVSettings = (
-  incoming?: SettingsOptions['webdavSync'] | null
-): WebDAVSyncSettings => {
-  const defaults: WebDAVSyncSettings = {
-    enabled: false,
-    url: '',
-    username: '',
-    password: '',
-    remotePath: 'brew-guide-data/',
-    syncMode: 'manual' as const,
-    enablePullToSync: true,
-  };
-
-  if (!incoming) {
-    return { ...defaults };
-  }
-
-  const result: WebDAVSyncSettings = {
-    ...defaults,
-    ...incoming,
-  };
-
-  // 确保 syncMode 始终为 manual
-  result.syncMode = 'manual';
-
-  return result;
-};
+import {
+  type CloudSyncType,
+  type S3SyncSettings,
+  type WebDAVSyncSettings,
+  type SupabaseSyncSettings,
+  normalizeS3Settings,
+  normalizeWebDAVSettings,
+  normalizeSupabaseSettings,
+} from '@/lib/hooks/useCloudSyncSettings';
 
 interface DataSettingsProps {
   settings: SettingsOptions;
@@ -122,6 +66,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
   const [webdavSettings, setWebDAVSettings] = useState<WebDAVSyncSettings>(() =>
     normalizeWebDAVSettings(settings.webdavSync)
   );
+  const [supabaseSettings, setSupabaseSettings] =
+    useState<SupabaseSyncSettings>(() =>
+      normalizeSupabaseSettings(settings.supabaseSync)
+    );
 
   // 备份提醒设置
   const [backupReminderSettings, setBackupReminderSettings] =
@@ -141,11 +89,14 @@ const DataSettings: React.FC<DataSettingsProps> = ({
   const [showSyncTypeDropdown, setShowSyncTypeDropdown] = useState(false);
   // WebDAV 教程弹窗
   const [showWebDAVTutorial, setShowWebDAVTutorial] = useState(false);
-  const syncType = s3Settings.enabled
-    ? 's3'
-    : webdavSettings.enabled
-      ? 'webdav'
-      : 'none';
+  // 优先级: supabase > s3 > webdav (推荐的 Supabase 应该优先显示)
+  const syncType = supabaseSettings.enabled
+    ? 'supabase'
+    : s3Settings.enabled
+      ? 's3'
+      : webdavSettings.enabled
+        ? 'webdav'
+        : 'none';
 
   // 关闭处理函数（带动画）
   const handleCloseWithAnimation = React.useCallback(() => {
@@ -243,13 +194,16 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     modalHistory.back();
   };
 
-  // S3 设置变更处理
+  // S3 设置变更处理 - 使用 ref 避免竞态问题
+  const s3SettingsRef = useRef(s3Settings);
+  s3SettingsRef.current = s3Settings;
+
   const handleS3SettingChange = <K extends keyof S3SyncSettings>(
     key: K,
     value: S3SyncSettings[K]
   ) => {
     const newS3Settings: S3SyncSettings = {
-      ...s3Settings,
+      ...s3SettingsRef.current,
       [key]: value,
     };
 
@@ -258,6 +212,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       newS3Settings.lastConnectionSuccess = false;
     }
 
+    // 更新 ref 以便下次调用使用最新状态
+    s3SettingsRef.current = newS3Settings;
     setS3Settings(newS3Settings);
     handleChange('s3Sync', newS3Settings);
   };
@@ -285,6 +241,133 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     setWebDAVSettings(newWebDAVSettings);
     handleChange('webdavSync', newWebDAVSettings);
   };
+
+  // Supabase 设置变更处理
+  const supabaseSettingsRef = useRef(supabaseSettings);
+  supabaseSettingsRef.current = supabaseSettings;
+
+  const handleSupabaseSettingChange = <K extends keyof SupabaseSyncSettings>(
+    key: K,
+    value: SupabaseSyncSettings[K]
+  ) => {
+    const newSupabaseSettings: SupabaseSyncSettings = {
+      ...supabaseSettingsRef.current,
+      [key]: value,
+    };
+
+    // 只有当修改配置参数（非 enabled 和 lastConnectionSuccess）时才清除连接状态
+    if (
+      key !== 'enabled' &&
+      key !== 'lastConnectionSuccess' &&
+      key !== 'realtimeEnabled'
+    ) {
+      newSupabaseSettings.lastConnectionSuccess = false;
+    }
+
+    // 更新 ref 以便下次调用使用最新状态
+    supabaseSettingsRef.current = newSupabaseSettings;
+    setSupabaseSettings(newSupabaseSettings);
+    handleChange('supabaseSync', newSupabaseSettings);
+  };
+
+  /**
+   * 原子化切换云同步类型
+   * 这个函数会同时更新所有三个设置，确保只有一个服务启用
+   * 并一次性保存所有设置到 Storage
+   */
+  const switchSyncType = useCallback(
+    async (type: CloudSyncType) => {
+      // 获取当前最新状态
+      const currentS3 = s3SettingsRef.current;
+      const currentWebDAV = webdavSettingsRef.current;
+      const currentSupabase = supabaseSettingsRef.current;
+
+      // 如果要禁用 Supabase，先断开其连接和实时同步
+      if (currentSupabase.enabled && type !== 'supabase') {
+        try {
+          const { simpleSyncService } = await import(
+            '@/lib/supabase/simpleSyncService'
+          );
+          simpleSyncService.disconnect();
+          console.log('🔌 [CloudSync] 已断开 Supabase 连接');
+        } catch (error) {
+          console.error('断开 Supabase 连接失败:', error);
+        }
+      }
+
+      // 根据目标类型，设置各服务的 enabled 状态
+      const newS3: S3SyncSettings = {
+        ...currentS3,
+        enabled: type === 's3',
+      };
+
+      const newWebDAV: WebDAVSyncSettings = {
+        ...currentWebDAV,
+        enabled: type === 'webdav',
+      };
+
+      const newSupabase: SupabaseSyncSettings = {
+        ...currentSupabase,
+        enabled: type === 'supabase',
+      };
+
+      // 更新所有 ref
+      s3SettingsRef.current = newS3;
+      webdavSettingsRef.current = newWebDAV;
+      supabaseSettingsRef.current = newSupabase;
+
+      // 更新所有 state
+      setS3Settings(newS3);
+      setWebDAVSettings(newWebDAV);
+      setSupabaseSettings(newSupabase);
+
+      // 一次性保存所有设置到 Storage（原子操作）
+      const { Storage } = await import('@/lib/core/storage');
+      const savedSettingsStr = await Storage.get('brewGuideSettings');
+      let savedSettings: Record<string, unknown> = {};
+
+      if (savedSettingsStr && typeof savedSettingsStr === 'string') {
+        try {
+          savedSettings = JSON.parse(savedSettingsStr);
+        } catch {
+          // 解析失败，使用空对象
+        }
+      }
+
+      // 更新所有云同步设置
+      const newSettings = {
+        ...savedSettings,
+        s3Sync: newS3,
+        webdavSync: newWebDAV,
+        supabaseSync: newSupabase,
+      };
+
+      await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
+
+      // 通过 handleChange 更新父组件状态，确保一致性
+      await handleChange('s3Sync', newS3);
+      await handleChange('webdavSync', newWebDAV);
+      await handleChange('supabaseSync', newSupabase);
+
+      // 触发自定义事件通知其他组件设置已更改
+      window.dispatchEvent(
+        new CustomEvent('storageChange', {
+          detail: { key: 'brewGuideSettings' },
+        })
+      );
+
+      console.log('[CloudSync] 切换同步类型:', type, {
+        s3Enabled: newS3.enabled,
+        webdavEnabled: newWebDAV.enabled,
+        supabaseEnabled: newSupabase.enabled,
+      });
+
+      if (settings.hapticFeedback) {
+        hapticsUtils.light();
+      }
+    },
+    [settings.hapticFeedback, handleChange]
+  );
 
   // 备份提醒设置变更
   const handleBackupReminderChange = async (enabled: boolean) => {
@@ -383,7 +466,9 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                     ? 'S3 对象存储'
                     : syncType === 'webdav'
                       ? 'WebDAV'
-                      : '不使用'}
+                      : syncType === 'supabase'
+                        ? 'Supabase 实时同步'
+                        : '不使用'}
                 </span>
                 <ChevronRight
                   className={`h-4 w-4 text-neutral-400 transition-transform ${showSyncTypeDropdown ? 'rotate-90' : ''}`}
@@ -396,10 +481,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               <div className="mt-2 space-y-2 rounded bg-neutral-100 p-2 dark:bg-neutral-800">
                 <button
                   onClick={() => {
-                    handleS3SettingChange('enabled', false);
-                    handleWebDAVSettingChange('enabled', false);
+                    switchSyncType('none');
                     setShowSyncTypeDropdown(false);
-                    if (settings.hapticFeedback) hapticsUtils.light();
                   }}
                   className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
                     syncType === 'none'
@@ -411,10 +494,21 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                 </button>
                 <button
                   onClick={() => {
-                    handleS3SettingChange('enabled', true);
-                    handleWebDAVSettingChange('enabled', false);
+                    switchSyncType('webdav');
                     setShowSyncTypeDropdown(false);
-                    if (settings.hapticFeedback) hapticsUtils.light();
+                  }}
+                  className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
+                    syncType === 'webdav'
+                      ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
+                      : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
+                  }`}
+                >
+                  WebDAV
+                </button>
+                <button
+                  onClick={() => {
+                    switchSyncType('s3');
+                    setShowSyncTypeDropdown(false);
                   }}
                   className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
                     syncType === 's3'
@@ -426,22 +520,34 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                 </button>
                 <button
                   onClick={() => {
-                    handleWebDAVSettingChange('enabled', true);
-                    handleS3SettingChange('enabled', false);
+                    switchSyncType('supabase');
                     setShowSyncTypeDropdown(false);
-                    if (settings.hapticFeedback) hapticsUtils.light();
                   }}
                   className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
-                    syncType === 'webdav'
+                    syncType === 'supabase'
                       ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
                       : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
                   }`}
                 >
-                  WebDAV
+                  <div className="flex items-center gap-2">
+                    <span>Supabase 实时同步</span>
+                  </div>
                 </button>
               </div>
             )}
           </div>
+
+          {/* Supabase 详细设置 */}
+          {supabaseSettings.enabled && (
+            <SupabaseSyncSection
+              settings={supabaseSettings}
+              enabled={supabaseSettings.enabled}
+              hapticFeedback={settings.hapticFeedback}
+              onSettingChange={handleSupabaseSettingChange}
+              onSyncComplete={onDataChange}
+              onEnable={() => switchSyncType('supabase')}
+            />
+          )}
 
           {/* S3 详细设置 */}
           {s3Settings.enabled && (
@@ -451,10 +557,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               hapticFeedback={settings.hapticFeedback}
               onSettingChange={handleS3SettingChange}
               onSyncComplete={onDataChange}
-              onEnable={() => {
-                handleS3SettingChange('enabled', true);
-                handleWebDAVSettingChange('enabled', false);
-              }}
+              onEnable={() => switchSyncType('s3')}
             />
           )}
 
@@ -466,10 +569,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               hapticFeedback={settings.hapticFeedback}
               onSettingChange={handleWebDAVSettingChange}
               onSyncComplete={onDataChange}
-              onEnable={() => {
-                handleWebDAVSettingChange('enabled', true);
-                handleS3SettingChange('enabled', false);
-              }}
+              onEnable={() => switchSyncType('webdav')}
             />
           )}
 
@@ -486,8 +586,9 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
           {/* 下拉上传开关 - 仅在启用云同步且已成功连接时显示 */}
           {((s3Settings.enabled && s3Settings.lastConnectionSuccess) ||
-            (webdavSettings.enabled &&
-              webdavSettings.lastConnectionSuccess)) && (
+            (webdavSettings.enabled && webdavSettings.lastConnectionSuccess) ||
+            (supabaseSettings.enabled &&
+              supabaseSettings.lastConnectionSuccess)) && (
             <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
               <div>
                 <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
@@ -503,7 +604,9 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                   checked={
                     s3Settings.enabled
                       ? s3Settings.enablePullToSync !== false
-                      : webdavSettings.enablePullToSync !== false
+                      : webdavSettings.enabled
+                        ? webdavSettings.enablePullToSync !== false
+                        : supabaseSettings.enablePullToSync !== false
                   }
                   onChange={e => {
                     if (s3Settings.enabled) {
@@ -513,6 +616,11 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                       );
                     } else if (webdavSettings.enabled) {
                       handleWebDAVSettingChange(
+                        'enablePullToSync',
+                        e.target.checked
+                      );
+                    } else if (supabaseSettings.enabled) {
+                      handleSupabaseSettingChange(
                         'enablePullToSync',
                         e.target.checked
                       );

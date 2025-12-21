@@ -133,14 +133,13 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     <>
       {/* 背景遮罩 */}
       <div
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-[400ms] ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={onClose}
+        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       />
 
       {/* 抽屉内容 */}
       <div
         ref={modalRef}
-        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[85vh] max-w-[500px] overflow-auto rounded-t-2xl bg-neutral-50 shadow-xl transition-transform duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[85vh] max-w-md overflow-auto rounded-t-2xl bg-neutral-50 shadow-xl transition-transform duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="pb-safe-bottom modal-form-container max-h-[calc(85vh-40px)] overflow-auto px-6">
           <CoffeeBeanForm

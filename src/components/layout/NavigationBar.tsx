@@ -13,8 +13,40 @@ import {
 } from '@/lib/brewing/parameters';
 import EquipmentBar from '@/components/equipment/EquipmentBar';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
+import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 
 import { Equal, ArrowLeft, ChevronsUpDown, Upload } from 'lucide-react';
+
+// Apple 风格的加载指示器 - 多条线段围成一圈
+const AppleSpinner: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const lines = 8;
+  return (
+    <div className={`relative ${className}`}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute top-1/2 left-1/2 h-[30%] w-[8%] origin-[center_170%] rounded-full bg-current"
+          style={{
+            transform: `translateX(-50%) translateY(-170%) rotate(${i * (360 / lines)}deg)`,
+            opacity: 1 - (i / lines) * 0.75,
+            animation: `apple-spinner ${lines * 0.1}s linear infinite`,
+            animationDelay: `${-i * 0.1}s`,
+          }}
+        />
+      ))}
+      <style jsx>{`
+        @keyframes apple-spinner {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0.25;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import {
   ViewOption,
@@ -85,7 +117,7 @@ const TabButton: React.FC<TabButtonProps> = ({
   dataTab,
 }) => {
   const baseClasses =
-    'text-xs font-medium tracking-widest whitespace-nowrap pb-3';
+    'text-xs font-medium tracking-widest whitespace-nowrap pb-3 md:pb-0';
   const stateClasses = isActive
     ? 'text-neutral-800 dark:text-neutral-100'
     : isDisabled
@@ -360,6 +392,14 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     activeMainTab,
     hasCoffeeBeans
   );
+
+  // 获取同步状态（Apple 风格：只在同步时显示转圈）
+  const syncStatus = useSyncStatusStore(state => state.status);
+  const syncProvider = useSyncStatusStore(state => state.provider);
+  const isReconnecting = useSyncStatusStore(state => state.isReconnecting);
+
+  // 判断是否正在同步（包括重连中）
+  const isSyncing = syncStatus === 'syncing' || isReconnecting;
 
   const {
     visibleTabs = { brewing: true, coffeeBean: true, notes: true },
@@ -953,9 +993,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   return (
     <motion.div
-      className={`pt-safe-top sticky top-0 border-b transition-colors duration-300 ease-in-out ${
+      className={`pt-safe-top sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:w-36 md:shrink-0 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 ${
         activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'
-          ? 'border-transparent'
+          ? 'border-transparent md:border-neutral-200 dark:md:border-neutral-800'
           : 'border-neutral-200 dark:border-neutral-800'
       }`}
       transition={{ duration: 0.3 }}
@@ -963,10 +1003,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       onTouchMove={handlePullTouchMove}
       onTouchEnd={handlePullTouchEnd}
     >
-      {/* 下拉上传指示器 - 绝对定位，在整个导航栏（安全区域 + 下拉区域 + 标签区域）内居中 */}
+      {/* 下拉上传指示器 - 绝对定位，在整个导航栏（安全区域 + 下拉区域 + 标签区域）内居中 - 仅移动端显示 */}
       {showPullIndicator && (
         <div
-          className="absolute inset-x-0 top-0 z-50 flex items-center justify-center"
+          className="absolute inset-x-0 top-0 z-50 flex items-center justify-center md:hidden"
           style={{
             // 总高度 = 安全区域 + 下拉区域 + 导航栏标签高度(约30px)
             height: `calc(env(safe-area-inset-top) + ${pullExtraHeight}px + 30px)`,
@@ -985,8 +1025,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         </div>
       )}
 
-      {/* 下拉上传指示器区域 - 占位用，撑开高度 */}
+      {/* 下拉上传指示器区域 - 占位用，撑开高度 - 仅移动端 */}
       <div
+        className="md:hidden"
         style={{
           height: `${pullExtraHeight}px`,
           transition:
@@ -997,7 +1038,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       />
 
       {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 */}
-      <div className="relative min-h-[30px] w-full">
+      {/* 桌面端：只在没有咖啡豆且在方案步骤时，才需要额外高度（因为此时只有导航TAB和器具栏） */}
+      <div
+        className={`relative min-h-[30px] w-full md:min-h-0 ${
+          activeBrewingStep === 'method' && !hasCoffeeBeans ? 'md:min-h-30' : ''
+        }`}
+      >
         {/* 修改：将AnimatePresence用于透明度变化而非高度变化 */}
         <AnimatePresence mode="wait">
           {showAlternativeHeader ? (
@@ -1023,7 +1069,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
               transition={{ duration: 0.2 }}
               style={{ pointerEvents: shouldHideHeader ? 'none' : 'auto' }}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between md:flex-col">
                 {/* 设置入口按钮图标 - 扩大触碰区域 */}
                 <div
                   onClick={handleTitleClick}
@@ -1034,11 +1080,19 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   ) : (
                     <Equal className="h-4 w-4" />
                   )}
-                  {!(canGoBack() && onBackClick) && <span></span>}
                 </div>
 
-                {/* 主导航按钮 - 保持固定高度避免抖动 */}
-                <div className="flex items-center space-x-6">
+                {/* 主导航按钮 - 保持固定高度避免抖动 - 桌面端垂直排列 */}
+                <div className="flex items-center space-x-6 md:mt-2 md:flex-col md:items-start md:space-y-4 md:space-x-0">
+                  {/* 移动端同步指示器 - 放在 tab 左边 */}
+                  {syncProvider === 'supabase' && isSyncing && (
+                    <div style={navItemStyle} className="md:hidden">
+                      <div className="pb-3 text-neutral-400 dark:text-neutral-500">
+                        <AppleSpinner className="h-3 w-3" />
+                      </div>
+                    </div>
+                  )}
+
                   {visibleTabs.brewing && (
                     <div style={navItemStyle}>
                       <TabButton
@@ -1065,7 +1119,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                           }
                         }}
                         onClick={handleBeanTabClick}
-                        className="flex cursor-pointer items-center pb-3 text-xs font-medium tracking-widest whitespace-nowrap transition-opacity duration-100"
+                        className="flex cursor-pointer items-center pb-3 text-xs font-medium tracking-widest whitespace-nowrap transition-opacity duration-100 md:pb-0"
                         style={{
                           opacity:
                             showViewDropdown &&
@@ -1229,30 +1283,41 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                     }}
                     className="overflow-hidden"
                   >
-                    <div className="bg-neutral-100 px-6 py-2 text-xs font-medium text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
-                      <div className="flex items-center justify-between gap-3">
+                    <div className="bg-neutral-100 px-6 py-2 text-xs font-medium text-neutral-500 md:mt-6 md:px-6 md:py-3 dark:bg-neutral-800/40 dark:text-neutral-400">
+                      <div className="flex items-center justify-between gap-3 md:flex-col md:items-start md:gap-6">
                         {/* 左侧：方案名称区域 - 使用省略号 */}
-                        <div className="flex min-w-0 flex-1 items-center overflow-hidden">
+                        <div className="flex min-w-0 flex-1 items-center overflow-hidden md:w-full md:flex-none md:flex-col md:items-start md:gap-1">
                           {parameterInfo.method && (
-                            <span className="truncate">
+                            <>
                               {getSelectedEquipmentName() && (
-                                <span>
+                                <span className="truncate md:text-wrap">
                                   {getSelectedEquipmentName()}
-                                  <span className="mx-1">·</span>
                                 </span>
                               )}
-                              {parameterInfo.method}
-                            </span>
+                              {getSelectedEquipmentName() && (
+                                <>
+                                  <span className="mx-1 shrink-0 md:hidden">
+                                    ·
+                                  </span>
+                                  <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                    /
+                                  </span>
+                                </>
+                              )}
+                              <span className="truncate md:text-wrap">
+                                {parameterInfo.method}
+                              </span>
+                            </>
                           )}
                         </div>
 
-                        {/* 右侧：参数区域 - 固定不压缩 */}
+                        {/* 右侧：参数区域 - 固定不压缩 - 桌面端全宽显示 */}
                         {parameterInfo.params && (
-                          <div className="flex shrink-0 items-center">
+                          <div className="flex shrink-0 items-center md:w-full md:flex-col md:items-start md:gap-1">
                             {espressoUtils.isEspresso(selectedMethod) ? (
                               // 意式参数显示
                               editableParams ? (
-                                <div className="flex items-center space-x-1 sm:space-x-2">
+                                <div className="flex items-center space-x-1 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0">
                                   <EditableParameter
                                     value={(
                                       displayOverlay?.coffee ||
@@ -1263,7 +1328,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     }
                                     unit="g"
                                   />
-                                  <span className="shrink-0">·</span>
+                                  <span className="shrink-0 md:hidden">·</span>
+                                  <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                    /
+                                  </span>
                                   <GrindSizeInput
                                     value={
                                       displayOverlay?.grindSize ||
@@ -1280,7 +1348,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                         ?.navigationBar ?? true
                                     }
                                   />
-                                  <span className="shrink-0">·</span>
+                                  <span className="shrink-0 md:hidden">·</span>
+                                  <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                    /
+                                  </span>
                                   <EditableParameter
                                     value={
                                       displayOverlay?.time ||
@@ -1294,7 +1365,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     onChange={v => _handleTimeChange(v)}
                                     unit="s"
                                   />
-                                  <span className="shrink-0">·</span>
+                                  <span className="shrink-0 md:hidden">·</span>
+                                  <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                    /
+                                  </span>
                                   <EditableParameter
                                     value={(
                                       displayOverlay?.water ||
@@ -1308,7 +1382,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 </div>
                               ) : (
                                 <div
-                                  className="flex cursor-pointer items-center space-x-1 transition-colors hover:text-neutral-700 sm:space-x-2 dark:hover:text-neutral-300"
+                                  className="flex cursor-pointer items-center space-x-1 transition-colors hover:text-neutral-700 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0 dark:hover:text-neutral-300"
                                   onClick={() => {
                                     if (selectedMethod && !isTimerRunning) {
                                       setEditableParams({
@@ -1330,11 +1404,17 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                   <span className="whitespace-nowrap">
                                     {parameterInfo.params.coffee}
                                   </span>
-                                  <span className="shrink-0">·</span>
+                                  <span className="shrink-0 md:hidden">·</span>
+                                  <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                    /
+                                  </span>
                                   <span className="whitespace-nowrap">
                                     {parameterInfo.params.grindSize || ''}
                                   </span>
-                                  <span className="shrink-0">·</span>
+                                  <span className="shrink-0 md:hidden">·</span>
+                                  <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                    /
+                                  </span>
                                   <span className="whitespace-nowrap">
                                     {espressoUtils.formatTime(
                                       espressoUtils.getExtractionTime(
@@ -1343,7 +1423,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                     )}
                                     s
                                   </span>
-                                  <span className="shrink-0">·</span>
+                                  <span className="shrink-0 md:hidden">·</span>
+                                  <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                    /
+                                  </span>
                                   <span className="whitespace-nowrap">
                                     {parameterInfo.params.water}
                                   </span>
@@ -1351,7 +1434,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                               )
                             ) : // 原有参数显示
                             editableParams ? (
-                              <div className="flex items-center space-x-1 sm:space-x-2">
+                              <div className="flex items-center space-x-1 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0">
                                 <EditableParameter
                                   value={(
                                     displayOverlay?.coffee ||
@@ -1360,7 +1443,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                   onChange={v => handleParamChange('coffee', v)}
                                   unit="g"
                                 />
-                                <span className="shrink-0">·</span>
+                                <span className="shrink-0 md:hidden">·</span>
+                                <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                  /
+                                </span>
                                 <EditableParameter
                                   value={(
                                     displayOverlay?.ratio ||
@@ -1372,7 +1458,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 />
                                 {parameterInfo.params?.grindSize && (
                                   <>
-                                    <span className="shrink-0">·</span>
+                                    <span className="shrink-0 md:hidden">
+                                      ·
+                                    </span>
+                                    <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                      /
+                                    </span>
                                     <GrindSizeInput
                                       value={
                                         displayOverlay?.grindSize ||
@@ -1393,7 +1484,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 )}
                                 {parameterInfo.params?.temp && (
                                   <>
-                                    <span className="shrink-0">·</span>
+                                    <span className="shrink-0 md:hidden">
+                                      ·
+                                    </span>
+                                    <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                      /
+                                    </span>
                                     <EditableParameter
                                       value={(
                                         displayOverlay?.temp ||
@@ -1409,7 +1505,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                               </div>
                             ) : (
                               <div
-                                className="flex cursor-pointer items-center space-x-1 transition-colors hover:text-neutral-700 sm:space-x-2 dark:hover:text-neutral-300"
+                                className="flex cursor-pointer items-center space-x-1 transition-colors hover:text-neutral-700 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0 dark:hover:text-neutral-300"
                                 onClick={() => {
                                   if (selectedMethod && !isTimerRunning) {
                                     setEditableParams({
@@ -1426,15 +1522,24 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                 <span className="whitespace-nowrap">
                                   {parameterInfo.params.coffee}
                                 </span>
-                                <span className="shrink-0">·</span>
+                                <span className="shrink-0 md:hidden">·</span>
+                                <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                  /
+                                </span>
                                 <span className="whitespace-nowrap">
                                   {parameterInfo.params.ratio}
                                 </span>
-                                <span className="shrink-0">·</span>
+                                <span className="shrink-0 md:hidden">·</span>
+                                <span className="hidden shrink-0 text-neutral-300 md:inline dark:text-neutral-700">
+                                  /
+                                </span>
                                 <span className="whitespace-nowrap">
                                   {parameterInfo.params.grindSize || ''}
                                 </span>
-                                <span className="shrink-0">·</span>
+                                <span className="shrink-0 md:hidden">·</span>
+                                <span className="hidden shrink-0 md:inline">
+                                  /
+                                </span>
                                 <span className="whitespace-nowrap">
                                   {parameterInfo.params.temp}
                                 </span>
@@ -1475,6 +1580,16 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
+      )}
+
+      {/* 桌面端同步指示器 - 固定在导航栏底部 */}
+      {syncProvider === 'supabase' && isSyncing && (
+        <div className="mt-auto hidden px-6 pb-6 md:block">
+          <div className="flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500">
+            <AppleSpinner className="h-3 w-3" />
+            <span>同步中</span>
+          </div>
+        </div>
       )}
     </motion.div>
   );

@@ -13,7 +13,13 @@ import {
   SettingRow,
   SettingSlider,
   SettingDescription,
+  SettingToggle,
 } from './atomic';
+
+// 检查是否在 Tauri 环境中
+const isTauri = () => {
+  return typeof window !== 'undefined' && '__TAURI__' in window;
+};
 
 interface DisplaySettingsProps {
   settings: SettingsOptions;
@@ -34,6 +40,7 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
     settings.textZoomLevel || 1.0
   );
   const [isFontZoomEnabled, setIsFontZoomEnabled] = React.useState(false);
+  const [isTauriEnv, setIsTauriEnv] = React.useState(false);
 
   // 控制动画状态
   const [shouldRender, setShouldRender] = React.useState(true);
@@ -84,6 +91,7 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
   // 检查字体缩放功能是否可用
   React.useEffect(() => {
     setIsFontZoomEnabled(fontZoomUtils.isAvailable());
+    setIsTauriEnv(isTauri());
   }, []);
 
   // 监控主题变化
@@ -98,6 +106,25 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
     await handleChange('textZoomLevel', newValue);
 
     // 触发震动反馈
+    if (settings.hapticFeedback) {
+      hapticsUtils.light();
+    }
+  };
+
+  // 处理菜单栏图标开关变更
+  const handleMenuBarIconChange = async (enabled: boolean) => {
+    await handleChange('showMenuBarIcon', enabled);
+
+    // 调用 Tauri 命令更新托盘图标可见性
+    if (isTauriEnv) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('set_tray_visible', { visible: enabled });
+      } catch (error) {
+        console.debug('Failed to update tray visibility:', error);
+      }
+    }
+
     if (settings.hapticFeedback) {
       hapticsUtils.light();
     }
@@ -147,6 +174,18 @@ const DisplaySettings: React.FC<DisplaySettingsProps> = ({
             </SettingRow>
           </SettingSection>
         </>
+      )}
+
+      {/* 菜单栏设置组 - 仅在 Tauri 桌面端显示 */}
+      {isTauriEnv && (
+        <SettingSection title="菜单栏">
+          <SettingRow label="显示菜单栏图标" isLast>
+            <SettingToggle
+              checked={settings.showMenuBarIcon !== false}
+              onChange={handleMenuBarIconChange}
+            />
+          </SettingRow>
+        </SettingSection>
       )}
 
       {/* 安全区域边距设置组 */}

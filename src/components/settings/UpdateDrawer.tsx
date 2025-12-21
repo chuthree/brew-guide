@@ -11,6 +11,8 @@ interface UpdateDrawerProps {
   latestVersion: string;
   downloadUrl: string;
   releaseNotes?: string;
+  isAutoCheck?: boolean; // 是否为自动检测触发
+  onPostpone?: () => void; // 点击"以后再说"的回调（7天后再提醒）
 }
 
 /**
@@ -23,9 +25,18 @@ const UpdateDrawer: React.FC<UpdateDrawerProps> = ({
   latestVersion,
   downloadUrl,
   releaseNotes,
+  isAutoCheck = false,
+  onPostpone,
 }) => {
   const handleDownload = () => {
     window.open(downloadUrl, '_blank');
+  };
+
+  const handleSecondaryClick = () => {
+    if (isAutoCheck && onPostpone) {
+      onPostpone();
+    }
+    onClose();
   };
 
   return (
@@ -53,8 +64,8 @@ const UpdateDrawer: React.FC<UpdateDrawerProps> = ({
       </ActionDrawer.Content>
 
       <ActionDrawer.Actions>
-        <ActionDrawer.SecondaryButton onClick={onClose}>
-          稍后再说
+        <ActionDrawer.SecondaryButton onClick={handleSecondaryClick}>
+          {isAutoCheck ? '以后再说' : '稍后再说'}
         </ActionDrawer.SecondaryButton>
         <ActionDrawer.PrimaryButton onClick={handleDownload}>
           前往更新

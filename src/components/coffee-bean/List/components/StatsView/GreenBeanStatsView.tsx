@@ -13,7 +13,7 @@ import {
   saveDateGroupingModePreference,
   saveSelectedDatePreference,
   saveSelectedDateByModePreference,
-} from '../../globalCache';
+} from '../../preferences';
 import StatsFilterBar from './StatsFilterBar';
 import ConsumptionTrendChart from './ConsumptionTrendChart';
 import {

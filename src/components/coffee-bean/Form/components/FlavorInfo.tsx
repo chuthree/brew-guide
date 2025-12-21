@@ -32,7 +32,7 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
       exit="out"
       variants={pageVariants}
       transition={pageTransition}
-      className="mx-auto flex h-full max-w-md flex-col items-center justify-center space-y-8"
+      className="mx-auto flex h-full max-w-md flex-col items-center justify-center space-y-8 pb-48"
     >
       <div className="w-full space-y-2">
         <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -91,7 +91,7 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
         </div>
       </div>
 
-      <div className="w-full space-y-4">
+      {/* <div className="w-full space-y-4">
         <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
           常用风味标签
         </label>
@@ -126,7 +126,7 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
             </div>
           </div>
         ))}
-      </div>
+      </div> */}
     </motion.div>
   );
 };
