@@ -264,32 +264,34 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
       if (hapticFeedback) hapticsUtils.light();
       window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
 
-      // 连接成功后自动下载云端数据
+      // 连接成功后自动执行完整同步（先上传本地数据，再下载云端数据）
+      // 这样确保首次连接时本地数据不会丢失
       setIsSyncing(true);
       try {
-        const result = await simpleSyncService.downloadAllData();
+        const result = await simpleSyncService.fullSync();
 
         const { showToast } = await import(
           '@/components/common/feedback/LightToast'
         );
 
-        if (result.success && result.downloaded > 0) {
-          showToast({
-            type: 'success',
-            title: `已同步 ${result.downloaded} 条数据`,
-            duration: 2000,
-          });
+        if (result.success) {
+          if (result.uploaded > 0 || result.downloaded > 0) {
+            showToast({
+              type: 'success',
+              title: `已同步: 上传 ${result.uploaded}，下载 ${result.downloaded}`,
+              duration: 2500,
+            });
+          } else {
+            showToast({
+              type: 'info',
+              title: '数据已是最新',
+              duration: 2000,
+            });
+          }
           setSyncSuccess();
           onSyncComplete?.();
-        } else if (result.success) {
-          showToast({
-            type: 'info',
-            title: '数据已是最新',
-            duration: 2000,
-          });
-          setSyncSuccess();
         } else {
-          // 下载有错误
+          // 同步有错误
           showToast({
             type: 'error',
             title: result.message,
@@ -298,8 +300,8 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           setSyncError(result.message);
         }
       } catch (err) {
-        console.error('自动下载失败:', err);
-        const errorMsg = err instanceof Error ? err.message : '下载失败';
+        console.error('自动同步失败:', err);
+        const errorMsg = err instanceof Error ? err.message : '同步失败';
         setSyncError(errorMsg);
       } finally {
         setIsSyncing(false);

@@ -448,8 +448,10 @@ export async function uploadAllData(): Promise<SyncResult> {
 // ============================================
 
 /**
- * 从云端下载所有数据并替换本地
- * 策略：云端是权威数据源，全量下载保证数据一致性
+ * 从云端下载所有数据
+ * 策略：
+ * - 云端有数据时：清空本地并替换为云端数据
+ * - 云端没有数据时：保留本地数据不变（防止首次同步清空本地）
  * 优化：并行下载所有表，大幅提升速度
  */
 export async function downloadAllData(): Promise<SyncResult> {
@@ -537,22 +539,24 @@ export async function downloadAllData(): Promise<SyncResult> {
       const errorMsg = getErrorMessage(beansResult.error);
       console.error('[Supabase] 下载咖啡豆失败:', beansResult.error);
       errors.push(`咖啡豆下载失败: ${errorMsg}`);
-    } else if (beansResult.data) {
+    } else if (beansResult.data && beansResult.data.length > 0) {
+      // 只有云端有数据时才清空并替换本地数据
       const beans = beansResult.data.map(
         (row: { data: CoffeeBean }) => row.data
       );
-      console.log(`[Supabase] 下载到 ${beans.length} 条咖啡豆`);
+      console.log(`[Supabase] 下载到 ${beans.length} 条咖啡豆，将替换本地数据`);
       // 清空并重新写入 IndexedDB
       await db.coffeeBeans.clear();
-      if (beans.length > 0) {
-        await db.coffeeBeans.bulkPut(beans);
-      }
+      await db.coffeeBeans.bulkPut(beans);
       // 直接更新 Store
       const { getCoffeeBeanStore } = await import(
         '@/lib/stores/coffeeBeanStore'
       );
       getCoffeeBeanStore().setBeans(beans);
       downloaded += beans.length;
+    } else {
+      // 云端没有数据，保留本地数据不变
+      console.log('[Supabase] 云端没有咖啡豆数据，保留本地数据');
     }
 
     // 处理冲煮笔记数据
@@ -560,22 +564,24 @@ export async function downloadAllData(): Promise<SyncResult> {
       const errorMsg = getErrorMessage(notesResult.error);
       console.error('[Supabase] 下载冲煮笔记失败:', notesResult.error);
       errors.push(`冲煮笔记下载失败: ${errorMsg}`);
-    } else if (notesResult.data) {
+    } else if (notesResult.data && notesResult.data.length > 0) {
+      // 只有云端有数据时才清空并替换本地数据
       const notes = notesResult.data.map(
         (row: { data: BrewingNote }) => row.data
       );
-      console.log(`[Supabase] 下载到 ${notes.length} 条笔记`);
+      console.log(`[Supabase] 下载到 ${notes.length} 条笔记，将替换本地数据`);
       // 清空并重新写入 IndexedDB
       await db.brewingNotes.clear();
-      if (notes.length > 0) {
-        await db.brewingNotes.bulkPut(notes);
-      }
+      await db.brewingNotes.bulkPut(notes);
       // 直接更新 Store
       const { getBrewingNoteStore } = await import(
         '@/lib/stores/brewingNoteStore'
       );
       getBrewingNoteStore().setNotes(notes);
       downloaded += notes.length;
+    } else {
+      // 云端没有数据，保留本地数据不变
+      console.log('[Supabase] 云端没有冲煮笔记数据，保留本地数据');
     }
 
     // 处理自定义器具数据
@@ -590,9 +596,15 @@ export async function downloadAllData(): Promise<SyncResult> {
       const equipments = equipmentsResult.data.map(
         (row: { data: CustomEquipment }) => row.data
       );
+      console.log(
+        `[Supabase] 下载到 ${equipments.length} 个自定义器具，将替换本地数据`
+      );
       await db.customEquipments.clear();
       await db.customEquipments.bulkPut(equipments);
       downloaded += equipments.length;
+    } else {
+      // 云端没有数据，保留本地数据不变
+      console.log('[Supabase] 云端没有自定义器具数据，保留本地数据');
     }
 
     // 处理自定义方案数据
@@ -604,9 +616,15 @@ export async function downloadAllData(): Promise<SyncResult> {
       const methods = methodsResult.data.map(
         (row: { data: { equipmentId: string; methods: Method[] } }) => row.data
       );
+      console.log(
+        `[Supabase] 下载到 ${methods.length} 个自定义方案，将替换本地数据`
+      );
       await db.customMethods.clear();
       await db.customMethods.bulkPut(methods);
       downloaded += methods.length;
+    } else {
+      // 云端没有数据，保留本地数据不变
+      console.log('[Supabase] 云端没有自定义方案数据，保留本地数据');
     }
 
     // 处理设置数据
@@ -760,8 +778,11 @@ export async function downloadAllData(): Promise<SyncResult> {
 // ============================================
 
 /**
- * 完整同步：先下载云端数据，再上传本地数据
- * 策略：云端优先，本地新数据会被上传
+ * 完整同步：先上传本地数据，再下载云端数据
+ * 策略：
+ * 1. 先上传本地数据到云端（upsert）
+ * 2. 再下载云端数据（云端有数据时替换本地，云端为空时保留本地）
+ * 这样确保首次同步时本地数据不会丢失
  */
 export async function fullSync(): Promise<SyncResult> {
   if (!supabaseClient) {
@@ -774,10 +795,10 @@ export async function fullSync(): Promise<SyncResult> {
     };
   }
 
-  // 先上传本地数据
+  // 1. 先上传本地数据到云端
   const uploadResult = await uploadAllData();
 
-  // 再下载云端数据（合并）
+  // 2. 再下载云端数据（云端有数据时替换，云端为空时保留本地）
   const downloadResult = await downloadAllData();
 
   const errors = [...uploadResult.errors, ...downloadResult.errors];
