@@ -513,10 +513,30 @@ export async function downloadAllData(): Promise<SyncResult> {
     const downloadTime = Date.now() - startTime;
     console.log(`[Supabase] 并行下载完成，耗时: ${downloadTime}ms`);
 
+    // 辅助函数：安全获取错误消息
+    const getErrorMessage = (error: unknown): string => {
+      if (!error) return '未知错误';
+      if (typeof error === 'string') return error;
+      if (error instanceof Error) return error.message;
+      if (typeof error === 'object' && error !== null) {
+        const e = error as Record<string, unknown>;
+        if (typeof e.message === 'string') return e.message;
+        if (typeof e.error === 'string') return e.error;
+        // 尝试序列化对象
+        try {
+          return JSON.stringify(error);
+        } catch {
+          return '错误对象无法解析';
+        }
+      }
+      return String(error);
+    };
+
     // 处理咖啡豆数据
     if (beansResult.error) {
+      const errorMsg = getErrorMessage(beansResult.error);
       console.error('[Supabase] 下载咖啡豆失败:', beansResult.error);
-      errors.push(`咖啡豆下载失败: ${beansResult.error.message}`);
+      errors.push(`咖啡豆下载失败: ${errorMsg}`);
     } else if (beansResult.data) {
       const beans = beansResult.data.map(
         (row: { data: CoffeeBean }) => row.data
@@ -537,8 +557,9 @@ export async function downloadAllData(): Promise<SyncResult> {
 
     // 处理冲煮笔记数据
     if (notesResult.error) {
+      const errorMsg = getErrorMessage(notesResult.error);
       console.error('[Supabase] 下载冲煮笔记失败:', notesResult.error);
-      errors.push(`冲煮笔记下载失败: ${notesResult.error.message}`);
+      errors.push(`冲煮笔记下载失败: ${errorMsg}`);
     } else if (notesResult.data) {
       const notes = notesResult.data.map(
         (row: { data: BrewingNote }) => row.data
@@ -559,11 +580,12 @@ export async function downloadAllData(): Promise<SyncResult> {
 
     // 处理自定义器具数据
     if (equipmentsResult.error) {
+      const errorMsg = getErrorMessage(equipmentsResult.error);
       console.error(
         '❌ [Supabase] 下载自定义器具失败:',
         equipmentsResult.error
       );
-      errors.push(`自定义器具下载失败: ${equipmentsResult.error.message}`);
+      errors.push(`自定义器具下载失败: ${errorMsg}`);
     } else if (equipmentsResult.data && equipmentsResult.data.length > 0) {
       const equipments = equipmentsResult.data.map(
         (row: { data: CustomEquipment }) => row.data
@@ -575,8 +597,9 @@ export async function downloadAllData(): Promise<SyncResult> {
 
     // 处理自定义方案数据
     if (methodsResult.error) {
+      const errorMsg = getErrorMessage(methodsResult.error);
       console.error('❌ [Supabase] 下载自定义方案失败:', methodsResult.error);
-      errors.push(`自定义方案下载失败: ${methodsResult.error.message}`);
+      errors.push(`自定义方案下载失败: ${errorMsg}`);
     } else if (methodsResult.data && methodsResult.data.length > 0) {
       const methods = methodsResult.data.map(
         (row: { data: { equipmentId: string; methods: Method[] } }) => row.data
@@ -589,8 +612,9 @@ export async function downloadAllData(): Promise<SyncResult> {
     // 处理设置数据
     if (settingsResult.error && settingsResult.error.code !== 'PGRST116') {
       // PGRST116 = no rows found，这是正常情况
+      const errorMsg = getErrorMessage(settingsResult.error);
       console.error('❌ [Supabase] 下载设置失败:', settingsResult.error);
-      errors.push(`设置下载失败: ${settingsResult.error.message}`);
+      errors.push(`设置下载失败: ${errorMsg}`);
     } else if (settingsResult.data?.data) {
       const settingsData = settingsResult.data.data as Record<string, unknown>;
       console.log(
@@ -651,7 +675,7 @@ export async function downloadAllData(): Promise<SyncResult> {
           detail: { key: 'brewGuideSettings', source: 'supabase' },
         })
       );
-      
+
       // 派发 settingsChanged 事件，通知 UI 组件刷新
       window.dispatchEvent(new CustomEvent('settingsChanged'));
 
@@ -688,6 +712,7 @@ export async function downloadAllData(): Promise<SyncResult> {
     console.log(`[Supabase] 下载处理完成，总耗时: ${totalTime}ms`);
 
     // 判断同步状态：只要主要数据（咖啡豆、笔记）下载成功就算成功
+    // 注意：如果没有数据，但请求成功（没有 error），也算成功
     const hasCriticalError = errors.some(
       e => e.includes('咖啡豆') || e.includes('笔记')
     );
@@ -700,14 +725,17 @@ export async function downloadAllData(): Promise<SyncResult> {
           ? `下载失败: ${errors[0]}`
           : `下载成功: ${downloaded} 条记录`;
 
+    // 确保最终状态一定被设置（不能停留在 syncing）
     if (isSuccess) {
       syncStatusStore.setSyncSuccess();
     } else {
       syncStatusStore.setSyncError(message);
     }
 
+    console.log(`[Supabase] 下载状态更新: ${isSuccess ? 'success' : 'error'}`);
+
     return {
-      success: errors.length === 0,
+      success: isSuccess,
       message,
       uploaded: 0,
       downloaded,
@@ -1177,7 +1205,7 @@ async function handleRealtimeChange(
               detail: { key: 'brewGuideSettings', source: 'supabase' },
             })
           );
-          
+
           // 派发 settingsChanged 事件，通知 UI 组件刷新
           window.dispatchEvent(new CustomEvent('settingsChanged'));
 

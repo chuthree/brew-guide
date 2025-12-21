@@ -66,10 +66,12 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   useEffect(() => {
     if (enabled && status === 'connected') {
       setSyncProvider('supabase');
+      // 如果已连接，确保全局状态也是 success（而不是停留在 syncing）
+      setSyncSuccess();
     } else if (!enabled) {
       resetSyncStatus();
     }
-  }, [enabled, status, setSyncProvider, resetSyncStatus]);
+  }, [enabled, status, setSyncProvider, setSyncSuccess, resetSyncStatus]);
 
   // 初始化连接
   useEffect(() => {

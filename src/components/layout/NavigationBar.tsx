@@ -1045,15 +1045,18 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   ) : (
                     <Equal
                       className={`h-4 w-4 ${
-                        syncProvider === 'supabase' && syncStatus === 'syncing'
-                          ? 'text-blue-500 dark:text-blue-400'
-                          : syncProvider === 'supabase' &&
-                              syncStatus === 'success'
-                            ? 'text-emerald-500 dark:text-emerald-400'
-                            : syncProvider === 'supabase' &&
-                                syncStatus === 'error'
-                              ? 'text-red-500 dark:text-red-400'
-                              : ''
+                        syncProvider === 'supabase'
+                          ? syncStatus === 'syncing'
+                            ? 'text-blue-500 dark:text-blue-400'
+                            : syncStatus === 'success'
+                              ? 'text-emerald-500 dark:text-emerald-400'
+                              : syncStatus === 'error'
+                                ? 'text-red-500 dark:text-red-400'
+                                : syncStatus === 'idle' ||
+                                    syncStatus === 'offline'
+                                  ? 'text-neutral-400 dark:text-neutral-500'
+                                  : ''
+                          : ''
                       }`}
                     />
                   )}

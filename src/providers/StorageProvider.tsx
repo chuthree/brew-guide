@@ -114,9 +114,17 @@ export default function StorageInit() {
                     console.log('[StorageProvider] 下载结果:', result);
 
                     // downloadAllData 内部已经更新了 syncStatusStore
-                    // 只要下载了数据就算成功同步
-                    if (result.downloaded > 0) {
+                    // 即使 downloaded=0 也算成功（可能只是没有数据）
+                    // 只要 success 为 true 就表示同步成功
+                    if (result.success) {
                       cloudSynced = true;
+                      // 确保状态为 success（downloadAllData 内部可能已设置）
+                      syncStatusStore.setSyncSuccess();
+                    } else {
+                      // 下载失败，设置错误状态
+                      syncStatusStore.setSyncError(
+                        result.message || '下载失败'
+                      );
                     }
 
                     // 启动实时监听
