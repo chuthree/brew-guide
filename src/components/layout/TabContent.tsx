@@ -25,6 +25,7 @@ import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
 import { MethodStepConfig } from '@/lib/types/method';
 import GrinderScaleIndicator from '@/components/ui/GrinderScaleIndicator';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -173,7 +174,10 @@ const TabContent: React.FC<TabContentProps> = ({
 
   // 随机选择器状态
   const [showRandomPicker, setShowRandomPicker] = useState(false);
-  const [allBeans, setAllBeans] = useState<CoffeeBean[]>([]);
+  // 直接从 Store 获取咖啡豆数据
+  const allBeans = useCoffeeBeanStore(state => state.beans);
+  const storeInitialized = useCoffeeBeanStore(state => state.initialized);
+  const loadBeansFromStore = useCoffeeBeanStore(state => state.loadBeans);
   const [isLongPressRandom, setIsLongPressRandom] = useState(false);
 
   // 分享功能已简化为直接复制到剪贴板，不再需要模态框状态
@@ -242,75 +246,12 @@ const TabContent: React.FC<TabContentProps> = ({
     }
   }, [settings?.hapticFeedback]);
 
-  // 加载所有咖啡豆数据 - 优化：只在首次需要时加载
+  // 确保 Store 已初始化
   useEffect(() => {
-    const loadBeans = async () => {
-      try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const beans = await CoffeeBeanManager.getAllBeans();
-        setAllBeans(beans);
-      } catch (error) {
-        console.error('加载咖啡豆失败:', error);
-      }
-    };
-
-    // 只在没有数据且需要时才加载
-    if (activeTab === '咖啡豆' && allBeans.length === 0) {
-      loadBeans();
+    if (!storeInitialized) {
+      loadBeansFromStore();
     }
-  }, [activeTab, allBeans.length]);
-
-  // 监听咖啡豆更新事件 - 使用 useRef 避免重新挂载
-  const handleBeansUpdatedRef = useRef<
-    ((event?: Event) => Promise<void>) | null
-  >(null);
-
-  // 创建稳定的事件处理函数
-  useEffect(() => {
-    handleBeansUpdatedRef.current = async (_event?: Event) => {
-      try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const beans = await CoffeeBeanManager.getAllBeans();
-        setAllBeans(beans);
-      } catch (error) {
-        console.error('更新咖啡豆数据失败:', error);
-      }
-    };
-  });
-
-  // 只在组件挂载时设置事件监听器，避免重复挂载
-  useEffect(() => {
-    // 组件挂载时立即获取最新数据，防止错过事件
-    const loadLatestData = async () => {
-      try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const beans = await CoffeeBeanManager.getAllBeans();
-        setAllBeans(beans);
-      } catch (error) {
-        console.error('挂载时加载数据失败:', error);
-      }
-    };
-
-    loadLatestData(); // 立即加载最新数据
-
-    const handleBeansUpdated = (_event?: Event) => {
-      if (handleBeansUpdatedRef.current) {
-        handleBeansUpdatedRef.current(_event);
-      }
-    };
-
-    window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
-
-    return () => {
-      window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
-    };
-  }, []); // 空依赖数组，只在挂载时执行一次
+  }, [storeInitialized, loadBeansFromStore]);
 
   // 简化的保存笔记处理 - 统一数据流避免竞态条件
   const handleSaveNote = async (note: BrewingNoteData) => {
@@ -552,12 +493,9 @@ const TabContent: React.FC<TabContentProps> = ({
   const handleRandomBean = async (isLongPress: boolean = false) => {
     await triggerHapticFeedback();
     try {
-      if (allBeans.length === 0) {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const beans = await CoffeeBeanManager.getAllBeans();
-        setAllBeans(beans);
+      // 如果 Store 未初始化，先加载
+      if (!storeInitialized) {
+        await loadBeansFromStore();
       }
 
       const availableBeans = allBeans.filter(bean => {

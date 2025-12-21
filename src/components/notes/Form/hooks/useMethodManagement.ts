@@ -270,12 +270,20 @@ export function useMethodManagement({
       }
     };
 
-    // 监听自定义方案变化事件
+    // 监听自定义方案变化事件（监听多个事件名以确保兼容）
     window.addEventListener('customMethodsChanged', handleCustomMethodsChange);
+    window.addEventListener(
+      'customMethodDataChanged',
+      handleCustomMethodsChange
+    );
 
     return () => {
       window.removeEventListener(
         'customMethodsChanged',
+        handleCustomMethodsChange
+      );
+      window.removeEventListener(
+        'customMethodDataChanged',
         handleCustomMethodsChange
       );
     };

@@ -13,6 +13,7 @@ import {
 } from '@/lib/brewing/parameters';
 import EquipmentBar from '@/components/equipment/EquipmentBar';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
+import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 
 import { Equal, ArrowLeft, ChevronsUpDown, Upload } from 'lucide-react';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
@@ -360,6 +361,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     activeMainTab,
     hasCoffeeBeans
   );
+
+  // 获取同步状态
+  const syncStatus = useSyncStatusStore(state => state.status);
+  const syncProvider = useSyncStatusStore(state => state.provider);
 
   const {
     visibleTabs = { brewing: true, coffeeBean: true, notes: true },
@@ -1038,7 +1043,19 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   {canGoBack() && onBackClick ? (
                     <ArrowLeft className="mr-1 h-4 w-4" />
                   ) : (
-                    <Equal className="h-4 w-4" />
+                    <Equal
+                      className={`h-4 w-4 ${
+                        syncProvider === 'supabase' && syncStatus === 'syncing'
+                          ? 'text-blue-500 dark:text-blue-400'
+                          : syncProvider === 'supabase' &&
+                              syncStatus === 'success'
+                            ? 'text-emerald-500 dark:text-emerald-400'
+                            : syncProvider === 'supabase' &&
+                                syncStatus === 'error'
+                              ? 'text-red-500 dark:text-red-400'
+                              : ''
+                      }`}
+                    />
                   )}
                   {!(canGoBack() && onBackClick) && <span></span>}
                 </div>

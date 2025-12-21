@@ -338,9 +338,30 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             }
 
             // 合并默认设置，确保新添加的设置项有默认值
+            // 对于嵌套对象（如云同步设置），需要深度合并
             const mergedSettings = {
               ...defaultSettings,
               ...parsedSettings,
+              // 云同步设置：如果已保存，完全使用保存的值（包括 enabled）
+              // 如果未保存，使用默认值
+              s3Sync: parsedSettings.s3Sync
+                ? {
+                    ...defaultSettings.s3Sync,
+                    ...((parsedSettings.s3Sync as object) || {}),
+                  }
+                : defaultSettings.s3Sync,
+              webdavSync: parsedSettings.webdavSync
+                ? {
+                    ...defaultSettings.webdavSync,
+                    ...((parsedSettings.webdavSync as object) || {}),
+                  }
+                : defaultSettings.webdavSync,
+              supabaseSync: parsedSettings.supabaseSync
+                ? {
+                    ...defaultSettings.supabaseSync,
+                    ...((parsedSettings.supabaseSync as object) || {}),
+                  }
+                : defaultSettings.supabaseSync,
             };
             setSettings(mergedSettings as SettingsOptions);
 
@@ -570,12 +591,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     loadEquipments();
 
+    // 添加事件监听（监听多个事件名以确保兼容）
     window.addEventListener('customEquipmentUpdate', handleEquipmentUpdate);
+    window.addEventListener(
+      'customEquipmentDataChanged',
+      handleEquipmentUpdate
+    );
     window.addEventListener('storage:changed', handleStorageChange);
 
     return () => {
       window.removeEventListener(
         'customEquipmentUpdate',
+        handleEquipmentUpdate
+      );
+      window.removeEventListener(
+        'customEquipmentDataChanged',
         handleEquipmentUpdate
       );
       window.removeEventListener('storage:changed', handleStorageChange);
@@ -2507,30 +2537,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           }
         }
       } else {
-        // 🔥 更新现有笔记 - 使用完全替换策略确保删除变动记录字段
-        // 先获取当前所有笔记
-        const { Storage } = await import('@/lib/core/storage');
-        const savedNotes = await Storage.get('brewingNotes');
-        const allNotes: BrewingNote[] = savedNotes
-          ? JSON.parse(savedNotes)
-          : [];
+        // 🔥 更新现有笔记 - 使用 Store 方法
+        const { useBrewingNoteStore } = await import(
+          '@/lib/stores/brewingNoteStore'
+        );
+        await useBrewingNoteStore
+          .getState()
+          .updateNote(noteToSave.id, noteToSave);
 
-        // 找到并完全替换目标笔记
-        const noteIndex = allNotes.findIndex(n => n.id === noteToSave.id);
-        if (noteIndex !== -1) {
-          allNotes[noteIndex] = noteToSave; // 完全替换，不是合并
-          await Storage.set('brewingNotes', JSON.stringify(allNotes));
-
-          // 更新 Zustand store
-          useBrewingNoteStore.setState({ notes: allNotes });
-
-          // 🔥 更新笔记详情页的数据，使其与编辑后的数据同步
-          if (noteDetailData && noteDetailData.note.id === noteToSave.id) {
-            setNoteDetailData({
-              ...noteDetailData,
-              note: noteToSave,
-            });
-          }
+        // 🔥 更新笔记详情页的数据，使其与编辑后的数据同步
+        if (noteDetailData && noteDetailData.note.id === noteToSave.id) {
+          setNoteDetailData({
+            ...noteDetailData,
+            note: noteToSave,
+          });
         }
       }
 
@@ -2719,13 +2739,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     loadMethods();
 
-    // 添加事件监听
+    // 添加事件监听（监听多个事件名以确保兼容）
     window.addEventListener('customMethodUpdate', handleMethodUpdate);
+    window.addEventListener('customMethodsChanged', handleMethodUpdate);
+    window.addEventListener('customMethodDataChanged', handleMethodUpdate);
     window.addEventListener('storage:changed', handleStorageChange);
 
     // 清理事件监听
     return () => {
       window.removeEventListener('customMethodUpdate', handleMethodUpdate);
+      window.removeEventListener('customMethodsChanged', handleMethodUpdate);
+      window.removeEventListener('customMethodDataChanged', handleMethodUpdate);
       window.removeEventListener('storage:changed', handleStorageChange);
     };
   }, [setCustomMethods]);

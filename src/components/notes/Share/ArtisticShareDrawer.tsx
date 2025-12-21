@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { BrewingNote, equipmentList, CustomEquipment } from '@/lib/core/config';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { loadCustomEquipments } from '@/lib/managers/customEquipments';
 import { CoffeeBean } from '@/types/app';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
@@ -31,6 +31,9 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
+
+  // 从 Store 获取咖啡豆数据
+  const allBeans = useCoffeeBeanStore(state => state.beans);
 
   const handleTextClick = () => {
     if (textRef.current) {
@@ -79,27 +82,20 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
   // Load bean data
   useEffect(() => {
     if (isOpen) {
-      const loadBean = async () => {
-        if (note.beanId) {
-          setIsLoading(true);
-          try {
-            const loadedBean = await CoffeeBeanManager.getBeanById(note.beanId);
-            setBean(loadedBean);
-          } catch (error) {
-            console.error('Failed to load bean:', error);
-          } finally {
-            setIsLoading(false);
-          }
-        } else {
-          setBean(null);
-        }
-      };
-      loadBean();
+      if (note.beanId) {
+        setIsLoading(true);
+        // 直接从 Store 查找
+        const loadedBean = allBeans.find(b => b.id === note.beanId) || null;
+        setBean(loadedBean);
+        setIsLoading(false);
+      } else {
+        setBean(null);
+      }
     } else {
       // Reset to text tab when closed
       setTimeout(() => setActiveTab('text'), 300);
     }
-  }, [isOpen, note.beanId]);
+  }, [isOpen, note.beanId, allBeans]);
 
   const tabs = useMemo(() => {
     const list: { id: Tab; label: string }[] = [{ id: 'text', label: '文案' }];
@@ -206,7 +202,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
   const handleCopyText = async () => {
     const text = generateShareText();
     const result = await copyToClipboard(text);
-    
+
     if (result.success) {
       showToast({ type: 'success', title: '文案已复制' });
     } else {
@@ -225,7 +221,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
     const metaInfo = [];
     if (equipmentName) metaInfo.push(equipmentName);
     if (note.method) metaInfo.push(note.method);
-    
+
     if (metaInfo.length > 0) {
       parts.push(metaInfo.join(' · '));
     }
@@ -270,7 +266,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
     if (note.taste) {
       // 检查是否有任何评分大于0
       const hasAnyRating = Object.values(note.taste).some(value => value > 0);
-      
+
       if (hasAnyRating) {
         parts.push(''); // 在参数和风味之间加空行分组
         const {

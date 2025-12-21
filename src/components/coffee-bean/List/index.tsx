@@ -7,7 +7,6 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal';
 import CoffeeBeanRatingModal from '../Rating/Modal';
 import _CoffeeBeanRanking from '../Ranking';
@@ -19,8 +18,6 @@ import {
   sortBeans,
   convertToRankingSortOption as _convertToRankingSortOption,
 } from './SortSelector';
-
-// 导入新创建的组件和类型
 import {
   ExtendedCoffeeBean,
   CoffeeBeansProps,
@@ -68,7 +65,7 @@ import {
   isBeanEmpty,
   getSearchHistoryPreference,
   addSearchHistory,
-} from './globalCache';
+} from './preferences';
 import { useBeanOperations } from './hooks/useBeanOperations';
 import { useEnhancedBeanFiltering } from './hooks/useEnhancedBeanFiltering';
 import {
@@ -85,12 +82,9 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import { exportListPreview } from './components/ListExporter';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
-// 重命名导入组件以避免混淆
 const CoffeeBeanRanking = _CoffeeBeanRanking;
-// 重命名函数以避免混淆
 const convertToRankingSortOption = _convertToRankingSortOption;
 
-// 添加全局缓存中的beanType属性
 globalCache.selectedBeanType = globalCache.selectedBeanType || 'all';
 
 const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
@@ -105,8 +99,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const { copyText, showFailureModal, failureContent, closeFailureModal } =
     useCopy();
 
-  // 基础状态
-  const [beans, setBeans] = useState<ExtendedCoffeeBean[]>(globalCache.beans);
+  // 直接从 Store 订阅数据
+  const beans = useCoffeeBeanStore(
+    state => state.beans
+  ) as ExtendedCoffeeBean[];
+  const storeInitialized = useCoffeeBeanStore(state => state.initialized);
+  const loadBeansFromStore = useCoffeeBeanStore(state => state.loadBeans);
+
   const [_ratedBeans, setRatedBeans] = useState<ExtendedCoffeeBean[]>(
     globalCache.ratedBeans
   );
@@ -176,15 +175,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     globalCache.selectedRoaster
   );
 
-  // 榜单视图状态
   const [rankingBeanType, setRankingBeanType] = useState<BeanType>(
     globalCache.rankingBeanType
   );
 
-  // 辅助引用和状态
-  const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(
-    !globalCache.initialized
-  );
+  const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!storeInitialized);
   const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isLoadingRef = useRef<boolean>(false);
   const beansContainerRef = useRef<HTMLDivElement | null>(null);
@@ -203,8 +198,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   // 使用自定义钩子处理咖啡豆操作
   const {
-    forceRefreshKey,
-    setForceRefreshKey,
     handleSaveBean,
     handleDelete,
     handleSaveRating,
@@ -405,46 +398,43 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     ]
   );
 
-  const loadBeans = React.useCallback(async () => {
-    if (isLoadingRef.current) return;
-
-    try {
-      if (globalCache.initialized && globalCache.beans.length > 0) {
-        setBeans(globalCache.beans);
-        updateFilteredBeansAndCategories(globalCache.beans);
-        setIsFirstLoad(false);
-        return;
-      }
-
-      isLoadingRef.current = true;
-      const loadedBeans =
-        (await CoffeeBeanManager.getAllBeans()) as ExtendedCoffeeBean[];
-
-      setBeans(loadedBeans);
-      globalCache.beans = loadedBeans;
-      globalCache.initialized = true;
-      updateFilteredBeansAndCategories(loadedBeans);
-      setIsFirstLoad(false);
-
-      // 同步更新 Zustand Store，确保详情页能实时响应数据变化
-      useCoffeeBeanStore.setState({ beans: loadedBeans });
-    } catch (error) {
-      console.error('加载咖啡豆数据失败:', error);
-      setIsFirstLoad(false);
-    } finally {
-      isLoadingRef.current = false;
+  // 初始化加载数据
+  useEffect(() => {
+    if (!storeInitialized) {
+      loadBeansFromStore();
     }
-  }, [updateFilteredBeansAndCategories]);
+  }, [storeInitialized, loadBeansFromStore]);
 
-  // 添加榜单豆子数量状态
+  // 监听咖啡豆数据变化事件，刷新 Store
+  useEffect(() => {
+    const handleBeansUpdated = () => {
+      loadBeansFromStore();
+    };
+
+    window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
+    window.addEventListener('coffeeBeanDataChanged', handleBeansUpdated);
+    window.addEventListener('coffeeBeanListChanged', handleBeansUpdated);
+
+    return () => {
+      window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
+      window.removeEventListener('coffeeBeanDataChanged', handleBeansUpdated);
+      window.removeEventListener('coffeeBeanListChanged', handleBeansUpdated);
+    };
+  }, [loadBeansFromStore]);
+
+  // 当 beans 变化时更新 globalCache（仅用于 UI 偏好设置）
+  useEffect(() => {
+    globalCache.filteredBeans = filteredBeans;
+    if (beans.length > 0) {
+      setIsFirstLoad(false);
+    }
+  }, [beans, filteredBeans]);
+
   const [rankingBeansCount, setRankingBeansCount] = useState<number>(0);
-
-  // 榜单各类型豆子数量
   const [rankingEspressoCount, setRankingEspressoCount] = useState<number>(0);
   const [rankingFilterCount, setRankingFilterCount] = useState<number>(0);
   const [rankingOmniCount, setRankingOmniCount] = useState<number>(0);
 
-  // 添加图片流模式状态 - 从globalCache读取持久化状态
   const [isImageFlowMode, setIsImageFlowMode] = useState<boolean>(
     globalCache.isImageFlowMode
   );
@@ -517,9 +507,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   // 当没有图片咖啡豆时，自动关闭图片流模式
   // 但只在数据已经加载完成后才执行此检查，避免初始化时误判
   useEffect(() => {
-    // 只有当数据已经初始化且确实没有图片豆子时才关闭
     if (
-      globalCache.initialized &&
+      storeInitialized &&
       isImageFlowMode &&
       !hasImageBeans &&
       beans.length > 0
@@ -528,169 +517,67 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.isImageFlowMode = false;
       saveImageFlowModePreference(false);
     }
-  }, [isImageFlowMode, hasImageBeans, beans.length]);
+  }, [storeInitialized, isImageFlowMode, hasImageBeans, beans.length]);
 
-  // 加载已评分的咖啡豆
-  const loadRatedBeans = React.useCallback(async () => {
+  // 从 Store beans 中筛选已评分的咖啡豆
+  const loadRatedBeans = React.useCallback(() => {
     if (viewMode !== VIEW_OPTIONS.RANKING) return;
 
-    try {
-      const ratedBeansData =
-        (await CoffeeBeanManager.getRatedBeans()) as ExtendedCoffeeBean[];
+    // 直接从 Store 的 beans 筛选有评分的豆子
+    const ratedBeansData = beans.filter(
+      bean => bean.overallRating !== undefined && bean.overallRating > 0
+    );
 
-      // 根据类型筛选
-      let filteredRatedBeans = ratedBeansData;
-      if (rankingBeanType !== 'all') {
-        filteredRatedBeans = ratedBeansData.filter(
-          bean => bean.beanType === rankingBeanType
-        );
-      }
-
-      setRatedBeans(filteredRatedBeans);
-      // 更新榜单豆子数量
-      setRankingBeansCount(filteredRatedBeans.length);
-
-      // 统计各类型豆子数量
-      const espresso = ratedBeansData.filter(
-        bean => bean.beanType === 'espresso'
-      ).length;
-      const filter = ratedBeansData.filter(
-        bean => bean.beanType === 'filter'
-      ).length;
-      const omni = ratedBeansData.filter(
-        bean => bean.beanType === 'omni'
-      ).length;
-
-      setRankingEspressoCount(espresso);
-      setRankingFilterCount(filter);
-      setRankingOmniCount(omni);
-
-      // 如果当前选中的类型没有数据，自动切换到"全部"
-      if (rankingBeanType !== 'all') {
-        if (
-          (rankingBeanType === 'espresso' && espresso === 0) ||
-          (rankingBeanType === 'filter' && filter === 0) ||
-          (rankingBeanType === 'omni' && omni === 0)
-        ) {
-          setRankingBeanType('all');
-          globalCache.rankingBeanType = 'all';
-          saveRankingBeanTypePreference('all');
-          // 需要重新加载"全部"类型的数据
-          return;
-        }
-      }
-
-      globalCache.ratedBeans = filteredRatedBeans;
-    } catch (error) {
-      console.error('加载评分咖啡豆失败:', error);
+    let filteredRatedBeans = ratedBeansData;
+    if (rankingBeanType !== 'all') {
+      filteredRatedBeans = ratedBeansData.filter(
+        bean => bean.beanType === rankingBeanType
+      );
     }
-  }, [viewMode, rankingBeanType]);
-  // 优化的数据加载逻辑 - 减少依赖项，避免重复触发
+
+    setRatedBeans(filteredRatedBeans);
+    setRankingBeansCount(filteredRatedBeans.length);
+
+    const espresso = ratedBeansData.filter(
+      bean => bean.beanType === 'espresso'
+    ).length;
+    const filter = ratedBeansData.filter(
+      bean => bean.beanType === 'filter'
+    ).length;
+    const omni = ratedBeansData.filter(bean => bean.beanType === 'omni').length;
+
+    setRankingEspressoCount(espresso);
+    setRankingFilterCount(filter);
+    setRankingOmniCount(omni);
+
+    if (rankingBeanType !== 'all') {
+      if (
+        (rankingBeanType === 'espresso' && espresso === 0) ||
+        (rankingBeanType === 'filter' && filter === 0) ||
+        (rankingBeanType === 'omni' && omni === 0)
+      ) {
+        setRankingBeanType('all');
+        globalCache.rankingBeanType = 'all';
+        saveRankingBeanTypePreference('all');
+        return;
+      }
+    }
+
+    globalCache.ratedBeans = filteredRatedBeans;
+  }, [viewMode, rankingBeanType, beans]);
+
+  // 组件打开时加载榜单数据
   useEffect(() => {
     if (isOpen) {
-      // 取消任何可能的超时重置
       if (unmountTimeoutRef.current) {
         clearTimeout(unmountTimeoutRef.current);
         unmountTimeoutRef.current = null;
       }
-
-      loadBeans();
       loadRatedBeans();
-    } else {
-      // 组件关闭时，不立即清空状态，延迟重置
-      unmountTimeoutRef.current = setTimeout(() => {
-        // 不执行任何操作，状态保持不变
-      }, 5000);
     }
-  }, [isOpen, forceRefreshKey, loadBeans, loadRatedBeans]);
+  }, [isOpen, loadRatedBeans]);
 
-  // 监听统一的咖啡豆数据更新事件
-  useEffect(() => {
-    const handleCoffeeBeanDataChanged = async (event: CustomEvent) => {
-      const { action, beanId } = event.detail;
-      console.warn('咖啡豆数据变更事件:', { action, beanId });
-
-      // 清除CoffeeBeanManager的缓存，确保获取最新数据
-      CoffeeBeanManager.clearCache();
-
-      // 强制重新加载数据
-      try {
-        const loadedBeans =
-          (await CoffeeBeanManager.getAllBeans()) as ExtendedCoffeeBean[];
-        setBeans(loadedBeans);
-        globalCache.beans = loadedBeans;
-        updateFilteredBeansAndCategories(loadedBeans);
-
-        // 同步更新 Zustand Store
-        useCoffeeBeanStore.setState({ beans: loadedBeans });
-      } catch (error) {
-        console.error('重新加载咖啡豆数据失败:', error);
-      }
-    };
-
-    // 监听数据变更事件
-    window.addEventListener(
-      'coffeeBeanDataChanged',
-      handleCoffeeBeanDataChanged as unknown as EventListener
-    );
-
-    return () => {
-      window.removeEventListener(
-        'coffeeBeanDataChanged',
-        handleCoffeeBeanDataChanged as unknown as EventListener
-      );
-    };
-  }, [updateFilteredBeansAndCategories]);
-
-  // 监听咖啡豆更新事件 - 使用 useRef 避免重新挂载
-  const handleBeansUpdatedRef = useRef<((event?: Event) => void) | null>(null);
-
-  // 创建稳定的事件处理函数
-  useEffect(() => {
-    handleBeansUpdatedRef.current = (_event?: Event) => {
-      setForceRefreshKey(prev => prev + 1);
-    };
-  });
-
-  // 只在组件挂载时设置事件监听器，避免重复挂载
-  useEffect(() => {
-    // 组件挂载时立即检查并获取最新数据，防止错过事件
-    const loadLatestData = async () => {
-      try {
-        const loadedBeans =
-          (await CoffeeBeanManager.getAllBeans()) as ExtendedCoffeeBean[];
-
-        // 更新状态和全局缓存
-        setBeans(loadedBeans);
-        globalCache.beans = loadedBeans;
-        globalCache.initialized = true;
-        updateFilteredBeansAndCategories(loadedBeans);
-
-        // 同步更新 Zustand Store
-        useCoffeeBeanStore.setState({ beans: loadedBeans });
-      } catch (error) {
-        console.error('挂载时加载数据失败:', error);
-      }
-    };
-
-    loadLatestData(); // 立即加载最新数据
-
-    const handleBeansUpdated = (_event?: Event) => {
-      if (handleBeansUpdatedRef.current) {
-        handleBeansUpdatedRef.current(_event);
-      }
-    };
-
-    window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
-    window.addEventListener('coffeeBeanListChanged', handleBeansUpdated);
-
-    return () => {
-      window.removeEventListener('coffeeBeansUpdated', handleBeansUpdated);
-      window.removeEventListener('coffeeBeanListChanged', handleBeansUpdated);
-    };
-  }, [updateFilteredBeansAndCategories]); // 添加缺失的依赖
-
-  // 清理unmountTimeout
+  // 清理 timeout
   useEffect(() => {
     return () => {
       if (unmountTimeoutRef.current) {
@@ -727,10 +614,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     }
   }, [rankingBeanType, viewMode, loadRatedBeans]);
 
-  // 当显示空豆子设置改变时更新全局缓存 - 简化版本
   useEffect(() => {
-    if (globalCache.initialized) {
-      // 更新全局缓存
+    if (storeInitialized) {
       globalCache.showEmptyBeans = showEmptyBeans;
       globalCache.selectedVariety = selectedVariety;
       globalCache.selectedBeanType = selectedBeanType;
@@ -738,10 +623,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.selectedOrigin = selectedOrigin;
       globalCache.selectedFlavorPeriod = selectedFlavorPeriod;
       globalCache.selectedRoaster = selectedRoaster;
-      // 优化的Hook会自动处理筛选，这里只需要更新缓存
-      updateFilteredBeansAndCategories(globalCache.beans);
     }
   }, [
+    storeInitialized,
     showEmptyBeans,
     selectedVariety,
     selectedBeanType,
@@ -749,13 +633,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     selectedOrigin,
     selectedFlavorPeriod,
     selectedRoaster,
-    updateFilteredBeansAndCategories,
   ]);
 
-  // 视图切换时更新排序选项
   useEffect(() => {
-    if (globalCache.initialized) {
-      // 根据视图模式选择对应的排序选项
+    if (storeInitialized) {
       let newSortOption: SortOption;
 
       switch (viewMode) {
@@ -769,12 +650,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           newSortOption = inventorySortOption;
       }
 
-      // 更新全局排序选项状态
       setSortOption(newSortOption);
       globalCache.sortOption = newSortOption;
       saveSortOptionPreference(newSortOption);
-
-      // 保存视图模式到本地存储
       globalCache.viewMode = viewMode;
       saveViewModePreference(viewMode);
     }
@@ -1119,12 +997,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     [selectedBeanState]
   );
 
-  // 当榜单豆子类型变更时更新数据
   useEffect(() => {
-    if (globalCache.initialized && viewMode === VIEW_OPTIONS.RANKING) {
+    if (storeInitialized && viewMode === VIEW_OPTIONS.RANKING) {
       loadRatedBeans();
     }
-  }, [rankingBeanType, loadRatedBeans, viewMode]);
+  }, [storeInitialized, rankingBeanType, loadRatedBeans, viewMode]);
 
   // 组件加载后初始化各视图的排序选项
   useEffect(() => {
@@ -1414,12 +1291,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         break;
     }
 
-    // 更新全局缓存
     globalCache.sortOption = option;
     saveSortOptionPreference(option);
-
-    // 强制清除缓存并重新加载数据
-    CoffeeBeanManager.clearCache();
   };
 
   // 处理搜索历史点击

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTraySync } from '@/lib/hooks/useTraySync';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 
 // 检查是否在 Tauri 环境中
 const isTauri = () => {
@@ -66,44 +67,111 @@ export default function StorageInit() {
   useEffect(() => {
     async function initStorage() {
       if (!initialized && typeof window !== 'undefined') {
+        const syncStatusStore = useSyncStatusStore.getState();
+
         try {
           // 动态导入存储模块，避免服务端渲染问题
           const { Storage } = await import('@/lib/core/storage');
           await Storage.initialize();
 
-          // 🔥 关键修复：初始化 Zustand store，提前加载笔记数据
+          // 检查是否配置了 Supabase 同步
+          let cloudSynced = false;
           try {
-            const { useBrewingNoteStore } = await import(
-              '@/lib/stores/brewingNoteStore'
+            const settingsStr = await Storage.get('brewGuideSettings');
+            if (settingsStr) {
+              const settings = JSON.parse(settingsStr);
+              const supabaseSettings = settings.supabaseSync;
+
+              if (
+                supabaseSettings?.enabled &&
+                supabaseSettings?.url &&
+                supabaseSettings?.anonKey
+              ) {
+                syncStatusStore.setProvider('supabase');
+                syncStatusStore.setSyncing();
+
+                const { simpleSyncService } = await import(
+                  '@/lib/supabase/simpleSyncService'
+                );
+
+                const initOk = simpleSyncService.initialize({
+                  url: supabaseSettings.url,
+                  anonKey: supabaseSettings.anonKey,
+                });
+
+                if (initOk) {
+                  // 测试连接
+                  const connected = await simpleSyncService.testConnection();
+                  console.log(
+                    '[StorageProvider] Supabase 连接测试:',
+                    connected
+                  );
+
+                  if (connected) {
+                    // 关键：每次启动都从云端下载最新数据
+                    console.log('[StorageProvider] 从云端下载最新数据...');
+                    const result = await simpleSyncService.downloadAllData();
+                    console.log('[StorageProvider] 下载结果:', result);
+
+                    // downloadAllData 内部已经更新了 syncStatusStore
+                    // 只要下载了数据就算成功同步
+                    if (result.downloaded > 0) {
+                      cloudSynced = true;
+                    }
+
+                    // 启动实时监听
+                    if (supabaseSettings.realtimeEnabled) {
+                      simpleSyncService.startRealtimeSync();
+                      simpleSyncService.startLocalChangeListeners();
+                      console.log('[StorageProvider] 实时同步已启动');
+                    }
+                  } else {
+                    syncStatusStore.setSyncError('连接失败');
+                  }
+                } else {
+                  syncStatusStore.setSyncError('初始化失败');
+                }
+              }
+            }
+          } catch (supabaseError) {
+            console.error('Supabase 初始化失败:', supabaseError);
+            syncStatusStore.setSyncError(
+              supabaseError instanceof Error
+                ? supabaseError.message
+                : '同步失败'
             );
-            // 应用启动时立即加载笔记数据到内存
-            await useBrewingNoteStore.getState().loadNotes();
-            console.warn('✅ 笔记数据已预加载到内存');
-          } catch (storeError) {
-            console.error('⚠️ 预加载笔记数据失败:', storeError);
-            // 不阻止应用启动
           }
 
-          // 加载咖啡豆数据（用于菜单栏同步）
-          try {
-            const { useCoffeeBeanStore } = await import(
-              '@/lib/stores/coffeeBeanStore'
-            );
-            await useCoffeeBeanStore.getState().loadBeans();
-            console.warn('✅ 咖啡豆数据已预加载');
-          } catch (beanError) {
-            console.error('⚠️ 预加载咖啡豆数据失败:', beanError);
+          // 如果没有从云端同步成功，则从本地 IndexedDB 加载数据
+          if (!cloudSynced) {
+            console.log('[StorageProvider] 从本地 IndexedDB 加载数据...');
+            try {
+              const { useBrewingNoteStore } = await import(
+                '@/lib/stores/brewingNoteStore'
+              );
+              await useBrewingNoteStore.getState().loadNotes();
+            } catch (e) {
+              console.error('加载笔记失败:', e);
+            }
+
+            try {
+              const { useCoffeeBeanStore } = await import(
+                '@/lib/stores/coffeeBeanStore'
+              );
+              await useCoffeeBeanStore.getState().loadBeans();
+            } catch (e) {
+              console.error('加载咖啡豆失败:', e);
+            }
           }
 
-          // 初始化完成后清理过期的临时文件
+          // 清理过期临时文件
           try {
             const { TempFileManager } = await import(
               '@/lib/utils/tempFileManager'
             );
             await TempFileManager.cleanupExpiredTempFiles();
-          } catch (tempFileError) {
-            console.warn('临时文件清理失败:', tempFileError);
-            // 不阻止应用启动
+          } catch (cleanupError) {
+            console.debug('清理临时文件失败:', cleanupError);
           }
 
           setInitialized(true);

@@ -3,7 +3,6 @@
 import React, {
   useState,
   useEffect,
-  useTransition,
   useCallback,
   useMemo,
   useRef,
@@ -11,8 +10,7 @@ import React, {
 import { Virtuoso } from 'react-virtuoso';
 import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
-import { globalCache } from './globalCache';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 import {
@@ -90,99 +88,33 @@ interface CoffeeBeanListProps {
 const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
   onSelect,
   isOpen: _isOpen = true,
-  searchQuery = '', // 添加搜索查询参数默认值
-  highlightedBeanId = null, // 添加高亮咖啡豆ID默认值
+  searchQuery = '',
+  highlightedBeanId = null,
   scrollParentRef,
-  showStatusDots = true, // 默认显示状态点
+  showStatusDots = true,
 }) => {
-  // 如果缓存已有数据，直接使用缓存初始化，避免闪烁
-  const [beans, setBeans] = useState<CoffeeBean[]>(() =>
-    globalCache.initialized ? globalCache.beans : []
-  );
-  const [_isPending, startTransition] = useTransition();
-  const [forceRefreshKey, setForceRefreshKey] = useState(0); // 添加强制刷新的key
+  // 直接从 Store 订阅数据
+  const beans = useCoffeeBeanStore(state => state.beans);
+  const storeInitialized = useCoffeeBeanStore(state => state.initialized);
+  const loadBeans = useCoffeeBeanStore(state => state.loadBeans);
 
-  // 添加ref用于存储咖啡豆元素列表
+  const [forceRefreshKey, setForceRefreshKey] = useState(0);
   const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // 优化的加载咖啡豆数据函数 - 支持强制刷新
-  const loadBeans = useCallback(async (forceReload = false) => {
-    try {
-      // 如果强制刷新或缓存未初始化，则重新加载数据
-      if (
-        forceReload ||
-        !globalCache.initialized ||
-        globalCache.beans.length === 0
-      ) {
-        const loadedBeans = await CoffeeBeanManager.getAllBeans();
-
-        // 更新全局缓存
-        globalCache.beans = loadedBeans;
-        globalCache.initialized = true;
-
-        // 使用 useTransition 包裹状态更新，避免界面闪烁
-        startTransition(() => {
-          setBeans(loadedBeans);
-        });
-      } else {
-        // 使用缓存数据
-        startTransition(() => {
-          setBeans(globalCache.beans);
-        });
-      }
-    } catch (error) {
-      console.error('加载咖啡豆数据失败:', error);
+  // 初始化加载
+  useEffect(() => {
+    if (!storeInitialized) {
+      loadBeans();
     }
-  }, []);
+  }, [storeInitialized, loadBeans]);
 
-  // 优化的数据加载逻辑 - 首次挂载和强制刷新时加载
+  // 监听数据变化事件
   useEffect(() => {
-    const shouldForceReload = forceRefreshKey > 0;
-    loadBeans(shouldForceReload);
-  }, [forceRefreshKey, loadBeans]);
-
-  // 监听咖啡豆更新事件 - 统一监听所有相关事件
-  useEffect(() => {
-    // 组件挂载时立即检查并获取最新数据，防止错过事件
-    const loadLatestData = async () => {
-      try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const beans = await CoffeeBeanManager.getAllBeans();
-
-        // 更新全局缓存
-        globalCache.beans = beans;
-        globalCache.initialized = true;
-
-        setBeans(beans);
-      } catch (error) {
-        console.error('挂载时加载数据失败:', error);
-      }
-    };
-
-    loadLatestData(); // 立即加载最新数据
-
-    const handleBeansUpdated = async () => {
-      // 清除CoffeeBeanManager缓存
-      try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        CoffeeBeanManager.clearCache();
-      } catch (error) {
-        console.error('清除CoffeeBeanManager缓存失败:', error);
-      }
-
-      // 清除全局缓存，强制重新加载
-      globalCache.beans = [];
-      globalCache.initialized = false;
-
-      // 强制刷新组件，确保触发重新加载
+    const handleBeansUpdated = () => {
+      loadBeans();
       setForceRefreshKey(prev => prev + 1);
     };
 
-    // 监听所有相关的咖啡豆更新事件
     window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
     window.addEventListener('coffeeBeanDataChanged', handleBeansUpdated);
     window.addEventListener('coffeeBeanListChanged', handleBeansUpdated);
@@ -192,7 +124,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
       window.removeEventListener('coffeeBeanDataChanged', handleBeansUpdated);
       window.removeEventListener('coffeeBeanListChanged', handleBeansUpdated);
     };
-  }, []); // 空依赖数组，只在挂载时执行一次
+  }, [loadBeans]);
 
   // 过滤出未用完的咖啡豆，并按规则排序
   const availableBeans = useMemo(() => {

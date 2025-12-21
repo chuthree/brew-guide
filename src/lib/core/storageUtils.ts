@@ -510,6 +510,13 @@ export const StorageUtils = {
       // 对于小型数据，使用Preferences/localStorage
       if (Capacitor.isNativePlatform()) {
         await Preferences.set({ key, value });
+        // 移动端也需要派发事件，确保数据同步
+        if (typeof window !== 'undefined') {
+          const storageEvent = new CustomEvent('storage:changed', {
+            detail: { key, source: 'internal' },
+          });
+          window.dispatchEvent(storageEvent);
+        }
       } else {
         // 检查是否在客户端环境
         if (typeof window !== 'undefined') {

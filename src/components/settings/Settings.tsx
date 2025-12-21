@@ -147,6 +147,17 @@ export interface SettingsOptions {
     enablePullToSync?: boolean; // 是否启用下拉上传功能
     useProxy?: boolean; // 是否使用 CORS 代理（浏览器环境推荐开启，移动端/局域网可关闭）
   };
+  // Supabase 实时同步设置
+  supabaseSync?: {
+    enabled: boolean;
+    url: string; // Supabase 项目 URL
+    anonKey: string; // Supabase anon key
+    realtimeEnabled: boolean; // 是否启用实时同步
+    syncMode: 'realtime' | 'manual';
+    lastConnectionSuccess?: boolean;
+    enablePullToSync?: boolean; // 是否启用下拉同步功能
+    lastSyncTime?: number; // 上次同步时间
+  };
   // 随机咖啡豆设置
   randomCoffeeBeans?: {
     enableLongPressRandomType: boolean; // 长按随机不同类型咖啡豆
@@ -302,6 +313,15 @@ export const defaultSettings: SettingsOptions = {
     endpoint: '', // 自定义端点
     syncMode: 'manual',
     enablePullToSync: true, // 默认启用下拉上传
+  },
+  // Supabase 同步设置默认值
+  supabaseSync: {
+    enabled: false,
+    url: '',
+    anonKey: '',
+    realtimeEnabled: true,
+    syncMode: 'realtime',
+    enablePullToSync: true,
   },
   // 随机咖啡豆设置默认值
   randomCoffeeBeans: {

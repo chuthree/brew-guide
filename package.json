@@ -55,6 +55,7 @@
     "@paper-design/shaders-react": "^0.0.67",
     "@radix-ui/react-popover": "^1.1.14",
     "@radix-ui/react-select": "^2.2.5",
+    "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/postcss": "^4.1.17",
     "@vercel/analytics": "^1.5.0",
     "autoprefixer": "^10.4.21",

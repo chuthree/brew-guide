@@ -6,7 +6,7 @@ import {
   BeanFilterMode,
 } from '../types';
 import { SortOption, sortBeans } from '../SortSelector';
-import { isBeanEmpty } from '../globalCache';
+import { isBeanEmpty } from '../preferences';
 import {
   beanHasVariety,
   extractUniqueVarieties,

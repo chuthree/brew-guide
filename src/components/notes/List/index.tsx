@@ -57,6 +57,7 @@ import { SortOption, DateGroupingMode } from '../types';
 import { exportSelectedNotes } from '../Share/NotesExporter';
 import { extractExtractionTime, sortNotes } from '../utils';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import {
   isSameEquipment,
   getEquipmentIdByName,
@@ -275,16 +276,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const deleteNote = useBrewingNoteStore(state => state.deleteNote);
   const updateNote = useBrewingNoteStore(state => state.updateNote);
 
+  // 🔥 从 Zustand Store 订阅咖啡豆数据
+  const coffeeBeans = useCoffeeBeanStore(state => state.beans);
+
   const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>(
     {}
   );
   const [customEquipments, setCustomEquipments] = useState<
     import('@/lib/core/config').CustomEquipment[]
-  >([]);
-
-  // 咖啡豆数据状态
-  const [coffeeBeans, setCoffeeBeans] = useState<
-    import('@/types/app').CoffeeBean[]
   >([]);
 
   // 预览容器引用
@@ -547,43 +546,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       setEquipmentNames(namesMap);
     };
 
-    // 加载咖啡豆数据
-    const loadCoffeeBeanData = async () => {
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
-      );
-      const beans = await CoffeeBeanManager.getAllBeans();
-      setCoffeeBeans(beans);
-    };
-
     loadEquipmentData();
-    loadCoffeeBeanData();
-  }, [loadNotes]); // 只在组件挂载时执行一次
+  }, [loadNotes]);
 
   // 计算总消耗量
   useEffect(() => {
     totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(notes);
   }, [notes]);
-
-  // 监听咖啡豆数据更新
-  useEffect(() => {
-    const handleCoffeeBeansUpdated = async () => {
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
-      );
-      const beans = await CoffeeBeanManager.getAllBeans();
-      setCoffeeBeans(beans);
-    };
-
-    window.addEventListener('coffeeBeansUpdated', handleCoffeeBeansUpdated);
-
-    return () => {
-      window.removeEventListener(
-        'coffeeBeansUpdated',
-        handleCoffeeBeansUpdated
-      );
-    };
-  }, []);
 
   // 显示消息提示 - 使用 LightToast
   const showToastMessage = (

@@ -9,7 +9,7 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { showToast } from '@/components/common/feedback/LightToast';
 import ResponsiveModal, {
   ResponsiveModalHandle,
@@ -78,6 +78,9 @@ const NoteSteppedFormModal = forwardRef<
 
     // 添加随机按钮禁用状态
     const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false);
+
+    // 从 Store 获取咖啡豆数据
+    const allBeans = useCoffeeBeanStore(state => state.beans);
 
     // 模态框DOM引用
     const responsiveModalRef = useRef<ResponsiveModalHandle>(null);
@@ -224,7 +227,7 @@ const NoteSteppedFormModal = forwardRef<
     ]);
 
     // 随机选择咖啡豆
-    const handleRandomBean = async (isLongPress: boolean = false) => {
+    const handleRandomBean = (isLongPress: boolean = false) => {
       // 如果提供了自定义随机豆子方法，则调用它
       if (onRandomBean) {
         onRandomBean(isLongPress);
@@ -234,55 +237,38 @@ const NoteSteppedFormModal = forwardRef<
       // 如果按钮被禁用，直接返回
       if (isRandomButtonDisabled) return;
 
-      try {
-        const allBeans = await CoffeeBeanManager.getAllBeans();
-        // 过滤掉已经用完的豆子和在途状态的豆子
-        const availableBeans = allBeans.filter(bean => {
-          // 过滤掉在途状态的咖啡豆
-          if (bean.isInTransit) {
-            return false;
-          }
-
-          // 如果没有设置容量，则显示（因为无法判断是否用完）
-          if (
-            !bean.capacity ||
-            bean.capacity === '0' ||
-            bean.capacity === '0g'
-          ) {
-            return true;
-          }
-
-          // 如果设置了容量，则检查剩余量是否大于0
-          const remaining = parseFloat(bean.remaining || '0');
-          return remaining > 0;
-        });
-
-        if (availableBeans.length > 0) {
-          const randomIndex = Math.floor(Math.random() * availableBeans.length);
-          const randomBean = availableBeans[randomIndex];
-
-          // 设置高亮豆子ID，而不是直接选择
-          setHighlightedBeanId(randomBean.id);
-
-          // 4秒后清除高亮状态
-          setTimeout(() => {
-            setHighlightedBeanId(null);
-          }, 4000);
-        } else {
-          showToast({
-            type: 'info',
-            title: '没有可用的咖啡豆',
-            duration: 2000,
-          });
+      // 过滤掉已经用完的豆子和在途状态的豆子
+      const availableBeans = allBeans.filter(bean => {
+        // 过滤掉在途状态的咖啡豆
+        if (bean.isInTransit) {
+          return false;
         }
-      } catch (error) {
-        // Log error in development only
-        if (process.env.NODE_ENV === 'development') {
-          console.error('随机选择咖啡豆失败:', error);
+
+        // 如果没有设置容量，则显示（因为无法判断是否用完）
+        if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
+          return true;
         }
+
+        // 如果设置了容量，则检查剩余量是否大于0
+        const remaining = parseFloat(bean.remaining || '0');
+        return remaining > 0;
+      });
+
+      if (availableBeans.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableBeans.length);
+        const randomBean = availableBeans[randomIndex];
+
+        // 设置高亮豆子ID，而不是直接选择
+        setHighlightedBeanId(randomBean.id);
+
+        // 4秒后清除高亮状态
+        setTimeout(() => {
+          setHighlightedBeanId(null);
+        }, 4000);
+      } else {
         showToast({
-          type: 'error',
-          title: '随机选择失败',
+          type: 'info',
+          title: '没有可用的咖啡豆',
           duration: 2000,
         });
       }

@@ -3591,21 +3591,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         onClose={() => setRatingModalOpen(false)}
         onSave={async (id: string, ratings: Partial<CoffeeBean>) => {
           try {
-            // 导入 CoffeeBeanManager
-            const { CoffeeBeanManager } = await import(
-              '@/lib/managers/coffeeBeanManager'
+            // 使用 Store 的 updateBean 方法（会自动同步到 DB 和触发事件）
+            const { useCoffeeBeanStore } = await import(
+              '@/lib/stores/coffeeBeanStore'
             );
-            // 更新评分 - 使用 updateBeanRatings 方法以清除评分缓存
-            await CoffeeBeanManager.updateBeanRatings(id, ratings);
-            // 触发数据更新事件，包含详细信息
-            window.dispatchEvent(
-              new CustomEvent('coffeeBeanDataChanged', {
-                detail: {
-                  action: 'update',
-                  beanId: id,
-                },
-              })
-            );
+            await useCoffeeBeanStore.getState().updateBean(id, ratings);
           } catch (error) {
             console.error('保存评分失败:', error);
           }

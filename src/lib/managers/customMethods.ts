@@ -134,10 +134,17 @@ export async function saveCustomMethod(
 
       // 触发自定义方案变化事件，通知所有监听组件
       if (typeof window !== 'undefined') {
-        const event = new CustomEvent('customMethodsChanged', {
-          detail: { equipmentId },
-        });
-        window.dispatchEvent(event);
+        window.dispatchEvent(
+          new CustomEvent('customMethodsChanged', {
+            detail: { equipmentId },
+          })
+        );
+        // 触发 Supabase 同步事件
+        window.dispatchEvent(
+          new CustomEvent('customMethodDataChanged', {
+            detail: { equipmentId, methods: uniqueMethods },
+          })
+        );
       }
 
       return true;
@@ -182,10 +189,17 @@ export async function saveCustomMethod(
 
     // 触发自定义方案变化事件，通知所有监听组件
     if (typeof window !== 'undefined') {
-      const event = new CustomEvent('customMethodsChanged', {
-        detail: { equipmentId: selectedEquipment },
-      });
-      window.dispatchEvent(event);
+      window.dispatchEvent(
+        new CustomEvent('customMethodsChanged', {
+          detail: { equipmentId: selectedEquipment },
+        })
+      );
+      // 触发 Supabase 同步事件
+      window.dispatchEvent(
+        new CustomEvent('customMethodDataChanged', {
+          detail: { equipmentId: selectedEquipment, methods: uniqueMethods },
+        })
+      );
     }
 
     // 重新加载所有方案数据
@@ -246,10 +260,17 @@ export async function deleteCustomMethod(
 
       // 触发自定义方案变化事件，通知所有监听组件
       if (typeof window !== 'undefined') {
-        const event = new CustomEvent('customMethodsChanged', {
-          detail: { equipmentId },
-        });
-        window.dispatchEvent(event);
+        window.dispatchEvent(
+          new CustomEvent('customMethodsChanged', {
+            detail: { equipmentId },
+          })
+        );
+        // 触发 Supabase 同步事件
+        window.dispatchEvent(
+          new CustomEvent('customMethodDataChanged', {
+            detail: { equipmentId, methods: updatedMethods },
+          })
+        );
       }
 
       return true;
@@ -279,10 +300,17 @@ export async function deleteCustomMethod(
 
     // 触发自定义方案变化事件，通知所有监听组件
     if (typeof window !== 'undefined') {
-      const event = new CustomEvent('customMethodsChanged', {
-        detail: { equipmentId: selectedEquipment },
-      });
-      window.dispatchEvent(event);
+      window.dispatchEvent(
+        new CustomEvent('customMethodsChanged', {
+          detail: { equipmentId: selectedEquipment },
+        })
+      );
+      // 触发 Supabase 同步事件
+      window.dispatchEvent(
+        new CustomEvent('customMethodDataChanged', {
+          detail: { equipmentId: selectedEquipment, methods: updatedMethods },
+        })
+      );
     }
 
     // 重新加载所有方案数据

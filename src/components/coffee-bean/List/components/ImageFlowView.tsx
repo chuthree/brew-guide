@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { ExtendedCoffeeBean } from '../types';
-import { isBeanEmpty } from '../globalCache';
+import { isBeanEmpty } from '../preferences';
 
 interface ImageFlowViewProps {
   filteredBeans: ExtendedCoffeeBean[];
