@@ -20,6 +20,7 @@ interface TrayBeanData {
   startDay: number | null;
   endDay: number | null;
   isFrozen: boolean | null;
+  isInTransit: boolean | null;
 }
 
 // 独立的同步函数，可以在任何地方调用
@@ -91,11 +92,12 @@ export function useTraySync(onNavigateToBean?: (beanId: string) => void) {
         startDay: bean.startDay != null ? Number(bean.startDay) : null,
         endDay: bean.endDay != null ? Number(bean.endDay) : null,
         isFrozen: bean.isFrozen ?? null,
+        isInTransit: bean.isInTransit ?? null,
       }));
 
     // 简单的去重检查，避免重复同步
     const syncKey = JSON.stringify(
-      trayBeans.map(b => `${b.id}-${b.remaining}`)
+      trayBeans.map(b => `${b.id}-${b.remaining}-${b.roastDate}-${b.isFrozen}-${b.isInTransit}`)
     );
     if (syncKey === lastSyncRef.current) return;
     lastSyncRef.current = syncKey;

@@ -33,6 +33,7 @@ pub struct CoffeeBean {
     pub start_day: Option<i32>,
     pub end_day: Option<i32>,
     pub is_frozen: Option<bool>,
+    pub is_in_transit: Option<bool>,  // 是否在途状态
 }
 
 // 计算赏味期状态
@@ -46,14 +47,15 @@ pub struct BeanFreshnessInfo {
     pub progress_percent: f32,            // 赏味期进度 (0-100)
 }
 
-// 赏味期状态分类
+// 赏味期状态分类（与前端 FlavorPeriodStatus 保持一致）
 #[derive(Debug, Clone, PartialEq)]
 pub enum FreshnessState {
     Resting,    // 养豆期（未到 start_day）
     Optimal,    // 最佳赏味期（start_day ~ end_day）
-    Fading,     // 赏味期衰退（end_day ~ end_day + 14）
-    Expired,    // 已过期（超过 end_day + 14）
+    Decline,    // 衰退期（超过 end_day）
     Frozen,     // 冷冻中
+    InTransit,  // 在途（尚未收到）
+    Unknown,    // 未知（没有烘焙日期）
 }
 
 // 从前端获取咖啡豆数据的命令
@@ -110,17 +112,21 @@ fn calculate_freshness(bean: &CoffeeBean) -> BeanFreshnessInfo {
     let end_day = bean.end_day.unwrap_or(30);
     let is_frozen = bean.is_frozen.unwrap_or(false);
     
-    // 判断赏味期状态
-    let freshness_state = if is_frozen {
+    let is_in_transit = bean.is_in_transit.unwrap_or(false);
+    
+    // 判断赏味期状态（与前端 calculateFlavorInfo 保持一致）
+    let freshness_state = if is_in_transit {
+        FreshnessState::InTransit
+    } else if is_frozen {
         FreshnessState::Frozen
+    } else if bean.roast_date.is_none() {
+        FreshnessState::Unknown
     } else if days_since_roast < start_day {
         FreshnessState::Resting
     } else if days_since_roast <= end_day {
         FreshnessState::Optimal
-    } else if days_since_roast <= end_day + 14 {
-        FreshnessState::Fading
     } else {
-        FreshnessState::Expired
+        FreshnessState::Decline
     };
     
     // 计算赏味期进度：从 start_day 到 end_day 的百分比
@@ -202,17 +208,17 @@ fn update_tray_with_beans(app: &tauri::AppHandle, beans: Vec<CoffeeBean>) -> Res
         .iter()
         .filter(|b| b.freshness_state == FreshnessState::Resting)
         .collect();
-    let mut fading_beans: Vec<&BeanFreshnessInfo> = active_beans
+    let mut decline_beans: Vec<&BeanFreshnessInfo> = active_beans
         .iter()
-        .filter(|b| b.freshness_state == FreshnessState::Fading)
-        .collect();
-    let mut expired_beans: Vec<&BeanFreshnessInfo> = active_beans
-        .iter()
-        .filter(|b| b.freshness_state == FreshnessState::Expired)
+        .filter(|b| b.freshness_state == FreshnessState::Decline)
         .collect();
     let frozen_beans: Vec<&BeanFreshnessInfo> = active_beans
         .iter()
         .filter(|b| b.freshness_state == FreshnessState::Frozen)
+        .collect();
+    let in_transit_beans: Vec<&BeanFreshnessInfo> = active_beans
+        .iter()
+        .filter(|b| b.freshness_state == FreshnessState::InTransit)
         .collect();
     
     // 排序：最佳赏味期按剩余天数升序（快过期的排前面）
@@ -230,10 +236,7 @@ fn update_tray_with_beans(app: &tauri::AppHandle, beans: Vec<CoffeeBean>) -> Res
     });
     
     // 衰退期按过期天数升序
-    fading_beans.sort_by(|a, b| a.days_since_roast.cmp(&b.days_since_roast));
-    
-    // 已过期按过期天数升序
-    expired_beans.sort_by(|a, b| a.days_since_roast.cmp(&b.days_since_roast));
+    decline_beans.sort_by(|a, b| a.days_since_roast.cmp(&b.days_since_roast));
     
     // === 统计数据 ===
     let bean_count = active_beans.len();
@@ -260,8 +263,20 @@ fn update_tray_with_beans(app: &tauri::AppHandle, beans: Vec<CoffeeBean>) -> Res
         .separator();
     
     // === 第二块：按赏味期分类的子菜单 ===
+    // 排序：冷冻中 / 赏味期 / 养豆期 / 衰退期 / 在途中
     
-    // 1. 赏味期
+    // 1. 冷冻中
+    if !frozen_beans.is_empty() {
+        let mut submenu = SubmenuBuilder::new(app, format!("冷冻中（{} 款）", frozen_beans.len()));
+        for info in frozen_beans.iter() {
+            let name = truncate_name(&info.bean.name, 16);
+            let item = MenuItemBuilder::with_id(format!("bean:{}", info.bean.id), name).build(app)?;
+            submenu = submenu.item(&item);
+        }
+        menu_builder = menu_builder.item(&submenu.build()?);
+    }
+    
+    // 2. 赏味期
     if !optimal_beans.is_empty() {
         let mut submenu = SubmenuBuilder::new(app, format!("赏味期（{} 款）", optimal_beans.len()));
         for info in optimal_beans.iter() {
@@ -275,7 +290,7 @@ fn update_tray_with_beans(app: &tauri::AppHandle, beans: Vec<CoffeeBean>) -> Res
         menu_builder = menu_builder.item(&submenu.build()?);
     }
     
-    // 2. 养豆期
+    // 3. 养豆期
     if !resting_beans.is_empty() {
         let mut submenu = SubmenuBuilder::new(app, format!("养豆期（{} 款）", resting_beans.len()));
         for info in resting_beans.iter() {
@@ -288,24 +303,23 @@ fn update_tray_with_beans(app: &tauri::AppHandle, beans: Vec<CoffeeBean>) -> Res
         menu_builder = menu_builder.item(&submenu.build()?);
     }
     
-    // 3. 已过期（合并衰退期和已过期）
-    let all_expired: Vec<&BeanFreshnessInfo> = fading_beans.iter().chain(expired_beans.iter()).cloned().collect();
-    if !all_expired.is_empty() {
-        let mut submenu = SubmenuBuilder::new(app, format!("已过期（{} 款）", all_expired.len()));
-        for info in all_expired.iter() {
+    // 4. 衰退期
+    if !decline_beans.is_empty() {
+        let mut submenu = SubmenuBuilder::new(app, format!("衰退期（{} 款）", decline_beans.len()));
+        for info in decline_beans.iter() {
             let days_over = info.days_since_roast - info.end_day;
             let name = truncate_name(&info.bean.name, 16);
-            let label = format!("{:>2} 天 · {}", days_over, name);
+            let label = format!("+{} 天 · {}", days_over, name);
             let item = MenuItemBuilder::with_id(format!("bean:{}", info.bean.id), label).build(app)?;
             submenu = submenu.item(&item);
         }
         menu_builder = menu_builder.item(&submenu.build()?);
     }
     
-    // 4. 冷冻中
-    if !frozen_beans.is_empty() {
-        let mut submenu = SubmenuBuilder::new(app, format!("冷冻中（{} 款）", frozen_beans.len()));
-        for info in frozen_beans.iter() {
+    // 5. 在途中
+    if !in_transit_beans.is_empty() {
+        let mut submenu = SubmenuBuilder::new(app, format!("在途中（{} 款）", in_transit_beans.len()));
+        for info in in_transit_beans.iter() {
             let name = truncate_name(&info.bean.name, 16);
             let item = MenuItemBuilder::with_id(format!("bean:{}", info.bean.id), name).build(app)?;
             submenu = submenu.item(&item);
@@ -422,13 +436,24 @@ pub fn run() {
                     .item(&quit)
                     .build()?;
                 
-                // 加载托盘图标（使用模板图标，macOS 会自动适配深色/浅色模式）
+                // 加载托盘图标
+                // macOS: 使用模板图标，系统会自动适配深色/浅色模式
+                // Windows: 使用白色填充的图标，在深色任务栏上更清晰
+                #[cfg(target_os = "macos")]
+                let icon = Image::from_path("icons/tray-iconTemplate@2x.png")
+                    .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../icons/tray-iconTemplate@2x.png")).unwrap());
+                
+                #[cfg(target_os = "windows")]
+                let icon = Image::from_path("icons/tray-icon-win.png")
+                    .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../icons/tray-icon-win.png")).unwrap());
+                
+                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                 let icon = Image::from_path("icons/tray-iconTemplate@2x.png")
                     .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../icons/tray-iconTemplate@2x.png")).unwrap());
                 
                 let _tray = TrayIconBuilder::with_id("main-tray")
                     .icon(icon)
-                    .icon_as_template(true)
+                    .icon_as_template(cfg!(target_os = "macos"))
                     .menu(&menu)
                     .tooltip("Brew Guide")
                     .on_menu_event(|app, event| {
