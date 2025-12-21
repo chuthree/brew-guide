@@ -97,7 +97,10 @@ export function useTraySync(onNavigateToBean?: (beanId: string) => void) {
 
     // 简单的去重检查，避免重复同步
     const syncKey = JSON.stringify(
-      trayBeans.map(b => `${b.id}-${b.remaining}-${b.roastDate}-${b.isFrozen}-${b.isInTransit}`)
+      trayBeans.map(
+        b =>
+          `${b.id}-${b.remaining}-${b.roastDate}-${b.isFrozen}-${b.isInTransit}`
+      )
     );
     if (syncKey === lastSyncRef.current) return;
     lastSyncRef.current = syncKey;
