@@ -30,6 +30,8 @@ import { compressBase64Image } from '@/lib/utils/imageCapture';
 import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
 import { inferBeanType } from '@/lib/utils/beanTypeInference';
+import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
+import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 
 interface CoffeeBeanFormProps {
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
@@ -177,6 +179,29 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
     // 定义额外的状态来跟踪风味标签输入
     const [flavorInput, setFlavorInput] = useState('');
+
+    // 烘焙商图标状态（仅用于显示，不存储到咖啡豆数据）
+    const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
+
+    // 加载烘焙商图标 - 当咖啡豆名称变化时
+    useEffect(() => {
+      const loadRoasterLogo = async () => {
+        if (!bean.name) {
+          setRoasterLogo(null);
+          return;
+        }
+
+        const roasterName = extractRoasterFromName(bean.name);
+        if (roasterName && roasterName !== '未知烘焙商') {
+          const logo = await RoasterLogoManager.getLogoByRoaster(roasterName);
+          setRoasterLogo(logo);
+        } else {
+          setRoasterLogo(null);
+        }
+      };
+
+      loadRoasterLogo();
+    }, [bean.name]);
 
     // 自动填充识图图片 - 在表单加载时检查设置，如果开启了自动填充且有识图图片，则自动填充
     useEffect(() => {
@@ -957,6 +982,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
               onRepurchase={onRepurchase}
               recognitionImage={recognitionImage}
               onCapacityChange={handleCapacityChangeForTypeInference}
+              roasterLogo={roasterLogo}
             />
           );
 

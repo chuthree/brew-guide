@@ -38,6 +38,8 @@ interface BasicInfoProps {
   recognitionImage?: string | null;
   /** 容量变化时的回调，用于触发类型推断 */
   onCapacityChange?: (capacity: string) => void;
+  /** 烘焙商图标（自动从烘焙商名称匹配获取） */
+  roasterLogo?: string | null;
 }
 
 // 判断是否为生豆
@@ -72,6 +74,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   onRepurchase,
   recognitionImage,
   onCapacityChange,
+  roasterLogo,
 }) => {
   // 处理容量和剩余容量的状态
   const [capacityValue, setCapacityValue] = useState('');
@@ -226,10 +229,10 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
           咖啡豆图片
         </label>
-        {/* 图片选择区 - 四种状态 */}
+        {/* 图片选择区 - 多种状态，烘焙商图标仅用于显示，不存储到数据 */}
         <div className="flex w-full items-end gap-2">
           {bean.image && bean.backImage ? (
-            /* 状态3: 正面图 + 背面图 */
+            /* 状态: 用户正面图 + 用户背面图 */
             <>
               <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
                 <Image
@@ -265,7 +268,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
               </div>
             </>
           ) : bean.image && !bean.backImage ? (
-            /* 状态2: 只有正面图 → 正面图 + 背面添加按钮 */
+            /* 状态: 用户正面图 + 添加背面按钮 */
             <>
               <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
                 <Image
@@ -292,8 +295,58 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
               </button>
             </>
+          ) : !bean.image && roasterLogo ? (
+            /* 状态: 烘焙商图标作为正面（仅显示，不存储） */
+            <>
+              <div
+                className="relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
+                onClick={() => handleImageSelect('gallery', 'front')}
+                title="点击替换为自定义图片"
+              >
+                <Image
+                  src={roasterLogo}
+                  alt="烘焙商图标"
+                  className="object-cover"
+                  fill
+                  sizes="64px"
+                />
+                {/* 半透明遮罩提示可替换 */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity hover:opacity-100">
+                  <Camera className="h-4 w-4 text-white drop-shadow-md" />
+                </div>
+              </div>
+              {bean.backImage ? (
+                /* 有背面图 */
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
+                  <Image
+                    src={bean.backImage}
+                    alt="咖啡豆背面"
+                    className="object-cover"
+                    fill
+                    sizes="64px"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onBeanChange('backImage')('')}
+                    className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500 dark:bg-neutral-200/80 dark:text-neutral-800 dark:hover:bg-red-500 dark:hover:text-white"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              ) : (
+                /* 无背面图，显示添加按钮 */
+                <button
+                  type="button"
+                  onClick={() => handleImageSelect('gallery', 'back')}
+                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
+                  title="添加背面图片"
+                >
+                  <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
+                </button>
+              )}
+            </>
           ) : !bean.image && bean.backImage ? (
-            /* 状态4: 只有背面图 → 相册按钮 + 背面图 */
+            /* 状态: 无正面图 + 有用户背面图 */
             <>
               <button
                 type="button"
@@ -321,7 +374,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
               </div>
             </>
           ) : (
-            /* 状态1: 无图片 → 拍照 + 相册 */
+            /* 状态: 无任何图片 → 拍照 + 相册 */
             <>
               <button
                 type="button"
@@ -342,8 +395,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             </>
           )}
 
-          {/* 识别图片（如果有） - 点击使用此图片作为正面 */}
-          {recognitionImage && !bean.image && (
+          {/* 识别图片（如果有且无自定义正面图和烘焙商图标） - 点击使用此图片作为正面 */}
+          {recognitionImage && !bean.image && !roasterLogo && (
             <button
               type="button"
               onClick={() => onBeanChange('image')(recognitionImage)}
