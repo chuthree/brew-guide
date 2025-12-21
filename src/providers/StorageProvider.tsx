@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTraySync } from '@/lib/hooks/useTraySync';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
+import { SyncManager } from '@/lib/sync/SyncManager';
 
 // 检查是否在 Tauri 环境中
 const isTauri = () => {
@@ -93,7 +94,7 @@ export default function StorageInit() {
                 const isOnline =
                   typeof navigator === 'undefined' ? true : navigator.onLine;
                 if (!isOnline) {
-                  syncStatusStore.setStatus('offline');
+                  syncStatusStore.setOffline();
                 } else {
                   const { simpleSyncService } = await import(
                     '@/lib/supabase/simpleSyncService'
@@ -105,6 +106,16 @@ export default function StorageInit() {
                   });
 
                   if (initOk) {
+                    // 初始化 SyncManager，用于处理后台恢复和重试
+                    SyncManager.initialize({
+                      testConnection: simpleSyncService.testConnection,
+                      downloadAllData: simpleSyncService.downloadAllData,
+                      uploadAllData: simpleSyncService.uploadAllData,
+                      startRealtimeSync: simpleSyncService.startRealtimeSync,
+                      stopRealtimeSync: simpleSyncService.stopRealtimeSync,
+                      getRealtimeStatus: simpleSyncService.getRealtimeStatus,
+                    });
+
                     // 测试连接
                     const connected = await simpleSyncService.testConnection();
                     console.log(
@@ -126,10 +137,8 @@ export default function StorageInit() {
                         // 确保状态为 success（downloadAllData 内部可能已设置）
                         syncStatusStore.setSyncSuccess();
                       } else {
-                        // 下载失败，设置错误状态
-                        syncStatusStore.setSyncError(
-                          result.message || '下载失败'
-                        );
+                        // 下载失败，静默重置（Apple 风格）
+                        syncStatusStore.setStatus('idle');
                       }
 
                       // 启动实时监听
@@ -139,21 +148,19 @@ export default function StorageInit() {
                         console.log('[StorageProvider] 实时同步已启动');
                       }
                     } else {
-                      syncStatusStore.setSyncError('连接失败');
+                      // 连接失败，静默重置（Apple 风格）
+                      syncStatusStore.setStatus('idle');
                     }
                   } else {
-                    syncStatusStore.setSyncError('初始化失败');
+                    syncStatusStore.setStatus('idle');
                   }
                 }
               }
             }
           } catch (supabaseError) {
+            // Apple 风格：初始化失败时静默处理，不打扰用户
             console.error('Supabase 初始化失败:', supabaseError);
-            syncStatusStore.setSyncError(
-              supabaseError instanceof Error
-                ? supabaseError.message
-                : '同步失败'
-            );
+            syncStatusStore.setStatus('idle');
           }
 
           // 如果没有从云端同步成功，则从本地 IndexedDB 加载数据

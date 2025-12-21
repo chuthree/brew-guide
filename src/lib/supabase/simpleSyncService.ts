@@ -7,6 +7,8 @@
  * 2. 上传：全量上传本地数据，服务端基于 updated_at 决定是否接受
  * 3. 下载：全量拉取云端数据，直接替换本地
  * 4. 实时同步：监听 Postgres Changes，自动更新本地
+ * 5. 自动重试：网络失败时自动重试，带指数退避
+ * 6. 后台恢复：从后台返回时自动重新连接
  */
 
 import {
@@ -819,110 +821,148 @@ export async function fullSync(): Promise<SyncResult> {
 // 单条数据同步
 // ============================================
 
+// 重试配置
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  delays: [1000, 2000, 4000], // 指数退避延迟
+};
+
 /**
- * 上传单个咖啡豆
+ * 带重试的操作包装器
+ */
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  operationName: string
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (attempt < RETRY_CONFIG.maxRetries) {
+        const delay = RETRY_CONFIG.delays[attempt] || 4000;
+        console.warn(
+          `[Supabase] ${operationName} 失败，${delay}ms 后重试 (${attempt + 1}/${RETRY_CONFIG.maxRetries})`
+        );
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError || new Error(`${operationName} 失败`);
+}
+
+/**
+ * 上传单个咖啡豆（带重试）
  */
 export async function uploadCoffeeBean(bean: CoffeeBean): Promise<boolean> {
   if (!supabaseClient) return false;
 
   try {
-    const { error } = await supabaseClient.from('coffee_beans').upsert(
-      {
-        id: bean.id,
-        user_id: DEFAULT_USER_ID,
-        data: bean,
-        updated_at: new Date(bean.timestamp || Date.now()).toISOString(),
-      },
-      { onConflict: 'id,user_id' }
-    );
+    return await withRetry(async () => {
+      const { error } = await supabaseClient!.from('coffee_beans').upsert(
+        {
+          id: bean.id,
+          user_id: DEFAULT_USER_ID,
+          data: bean,
+          updated_at: new Date(bean.timestamp || Date.now()).toISOString(),
+        },
+        { onConflict: 'id,user_id' }
+      );
 
-    if (error) {
-      console.error('❌ [Supabase] 上传咖啡豆失败:', error);
-      return false;
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    return true;
+      return true;
+    }, '上传咖啡豆');
   } catch (error) {
-    console.error('❌ [Supabase] 上传咖啡豆异常:', error);
+    console.error('❌ [Supabase] 上传咖啡豆失败:', error);
     return false;
   }
 }
 
 /**
- * 删除咖啡豆（软删除）
+ * 删除咖啡豆（软删除，带重试）
  */
 export async function deleteCoffeeBean(beanId: string): Promise<boolean> {
   if (!supabaseClient) return false;
 
   try {
-    const { error } = await supabaseClient
-      .from('coffee_beans')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', beanId)
-      .eq('user_id', DEFAULT_USER_ID);
+    return await withRetry(async () => {
+      const { error } = await supabaseClient!
+        .from('coffee_beans')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', beanId)
+        .eq('user_id', DEFAULT_USER_ID);
 
-    if (error) {
-      console.error('❌ [Supabase] 删除咖啡豆失败:', error);
-      return false;
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    return true;
+      return true;
+    }, '删除咖啡豆');
   } catch (error) {
-    console.error('❌ [Supabase] 删除咖啡豆异常:', error);
+    console.error('❌ [Supabase] 删除咖啡豆失败:', error);
     return false;
   }
 }
 
 /**
- * 上传单条冲煮笔记
+ * 上传单条冲煮笔记（带重试）
  */
 export async function uploadBrewingNote(note: BrewingNote): Promise<boolean> {
   if (!supabaseClient) return false;
 
   try {
-    const { error } = await supabaseClient.from('brewing_notes').upsert(
-      {
-        id: note.id,
-        user_id: DEFAULT_USER_ID,
-        data: note,
-        updated_at: new Date(note.timestamp || Date.now()).toISOString(),
-      },
-      { onConflict: 'id,user_id' }
-    );
+    return await withRetry(async () => {
+      const { error } = await supabaseClient!.from('brewing_notes').upsert(
+        {
+          id: note.id,
+          user_id: DEFAULT_USER_ID,
+          data: note,
+          updated_at: new Date(note.timestamp || Date.now()).toISOString(),
+        },
+        { onConflict: 'id,user_id' }
+      );
 
-    if (error) {
-      console.error('❌ [Supabase] 上传冲煮笔记失败:', error);
-      return false;
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    return true;
+      return true;
+    }, '上传冲煮笔记');
   } catch (error) {
-    console.error('❌ [Supabase] 上传冲煮笔记异常:', error);
+    console.error('❌ [Supabase] 上传冲煮笔记失败:', error);
     return false;
   }
 }
 
 /**
- * 删除冲煮笔记（软删除）
+ * 删除冲煮笔记（软删除，带重试）
  */
 export async function deleteBrewingNote(noteId: string): Promise<boolean> {
   if (!supabaseClient) return false;
 
   try {
-    const { error } = await supabaseClient
-      .from('brewing_notes')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', noteId)
-      .eq('user_id', DEFAULT_USER_ID);
+    return await withRetry(async () => {
+      const { error } = await supabaseClient!
+        .from('brewing_notes')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', noteId)
+        .eq('user_id', DEFAULT_USER_ID);
 
-    if (error) {
-      console.error('❌ [Supabase] 删除冲煮笔记失败:', error);
-      return false;
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    return true;
+      return true;
+    }, '删除冲煮笔记');
   } catch (error) {
-    console.error('❌ [Supabase] 删除冲煮笔记异常:', error);
+    console.error('❌ [Supabase] 删除冲煮笔记失败:', error);
     return false;
   }
 }
@@ -1491,7 +1531,7 @@ async function handleSettingsChange(event: CustomEvent): Promise<void> {
 // ============================================
 
 /**
- * 上传单个自定义器具
+ * 上传单个自定义器具（带重试）
  */
 export async function uploadCustomEquipment(
   equipment: CustomEquipment
@@ -1499,31 +1539,32 @@ export async function uploadCustomEquipment(
   if (!supabaseClient) return false;
 
   try {
-    const { error } = await supabaseClient.from('custom_equipments').upsert(
-      {
-        id: equipment.id,
-        user_id: DEFAULT_USER_ID,
-        data: equipment,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id,user_id' }
-    );
+    return await withRetry(async () => {
+      const { error } = await supabaseClient!.from('custom_equipments').upsert(
+        {
+          id: equipment.id,
+          user_id: DEFAULT_USER_ID,
+          data: equipment,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id,user_id' }
+      );
 
-    if (error) {
-      console.error('❌ [Supabase] 上传自定义器具失败:', error);
-      return false;
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    console.log('✅ [Supabase] 自定义器具已上传:', equipment.id);
-    return true;
+      console.log('✅ [Supabase] 自定义器具已上传:', equipment.id);
+      return true;
+    }, '上传自定义器具');
   } catch (error) {
-    console.error('❌ [Supabase] 上传自定义器具异常:', error);
+    console.error('❌ [Supabase] 上传自定义器具失败:', error);
     return false;
   }
 }
 
 /**
- * 删除单个自定义器具（软删除）
+ * 删除单个自定义器具（软删除，带重试）
  */
 export async function deleteCustomEquipment(
   equipmentId: string
@@ -1531,21 +1572,22 @@ export async function deleteCustomEquipment(
   if (!supabaseClient) return false;
 
   try {
-    const { error } = await supabaseClient
-      .from('custom_equipments')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', equipmentId)
-      .eq('user_id', DEFAULT_USER_ID);
+    return await withRetry(async () => {
+      const { error } = await supabaseClient!
+        .from('custom_equipments')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', equipmentId)
+        .eq('user_id', DEFAULT_USER_ID);
 
-    if (error) {
-      console.error('❌ [Supabase] 删除自定义器具失败:', error);
-      return false;
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    console.log('✅ [Supabase] 自定义器具已删除:', equipmentId);
-    return true;
+      console.log('✅ [Supabase] 自定义器具已删除:', equipmentId);
+      return true;
+    }, '删除自定义器具');
   } catch (error) {
-    console.error('❌ [Supabase] 删除自定义器具异常:', error);
+    console.error('❌ [Supabase] 删除自定义器具失败:', error);
     return false;
   }
 }
@@ -1555,7 +1597,7 @@ export async function deleteCustomEquipment(
 // ============================================
 
 /**
- * 上传自定义方案（按器具）
+ * 上传自定义方案（按器具，带重试）
  */
 export async function uploadCustomMethods(
   equipmentId: string,
@@ -1564,32 +1606,33 @@ export async function uploadCustomMethods(
   if (!supabaseClient) return false;
 
   try {
-    const { error } = await supabaseClient.from('custom_methods').upsert(
-      {
-        id: equipmentId,
-        user_id: DEFAULT_USER_ID,
-        equipment_id: equipmentId,
-        data: { equipmentId, methods },
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id,user_id' }
-    );
+    return await withRetry(async () => {
+      const { error } = await supabaseClient!.from('custom_methods').upsert(
+        {
+          id: equipmentId,
+          user_id: DEFAULT_USER_ID,
+          equipment_id: equipmentId,
+          data: { equipmentId, methods },
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id,user_id' }
+      );
 
-    if (error) {
-      console.error('❌ [Supabase] 上传自定义方案失败:', error);
-      return false;
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    console.log('✅ [Supabase] 自定义方案已上传:', equipmentId);
-    return true;
+      console.log('✅ [Supabase] 自定义方案已上传:', equipmentId);
+      return true;
+    }, '上传自定义方案');
   } catch (error) {
-    console.error('❌ [Supabase] 上传自定义方案异常:', error);
+    console.error('❌ [Supabase] 上传自定义方案失败:', error);
     return false;
   }
 }
 
 /**
- * 删除自定义方案（软删除）
+ * 删除自定义方案（软删除，带重试）
  */
 export async function deleteCustomMethods(
   equipmentId: string
@@ -1597,21 +1640,22 @@ export async function deleteCustomMethods(
   if (!supabaseClient) return false;
 
   try {
-    const { error } = await supabaseClient
-      .from('custom_methods')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', equipmentId)
-      .eq('user_id', DEFAULT_USER_ID);
+    return await withRetry(async () => {
+      const { error } = await supabaseClient!
+        .from('custom_methods')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', equipmentId)
+        .eq('user_id', DEFAULT_USER_ID);
 
-    if (error) {
-      console.error('❌ [Supabase] 删除自定义方案失败:', error);
-      return false;
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    console.log('✅ [Supabase] 自定义方案已删除:', equipmentId);
-    return true;
+      console.log('✅ [Supabase] 自定义方案已删除:', equipmentId);
+      return true;
+    }, '删除自定义方案');
   } catch (error) {
-    console.error('❌ [Supabase] 删除自定义方案异常:', error);
+    console.error('❌ [Supabase] 删除自定义方案失败:', error);
     return false;
   }
 }
@@ -1676,23 +1720,25 @@ export async function uploadUserSettings(): Promise<boolean> {
       }
     }
 
-    const { error } = await supabaseClient.from('user_settings').upsert(
-      {
-        id: 'app_settings',
-        user_id: DEFAULT_USER_ID,
-        data: settingsData,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id,user_id' }
-    );
+    // 使用重试机制上传
+    return await withRetry(async () => {
+      const { error } = await supabaseClient!.from('user_settings').upsert(
+        {
+          id: 'app_settings',
+          user_id: DEFAULT_USER_ID,
+          data: settingsData,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id,user_id' }
+      );
 
-    if (error) {
-      console.error('❌ [Supabase] 上传用户设置失败:', error);
-      return false;
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    console.log('✅ [Supabase] 用户设置已上传');
-    return true;
+      console.log('✅ [Supabase] 用户设置已上传');
+      return true;
+    }, '上传用户设置');
   } catch (error) {
     console.error('❌ [Supabase] 上传用户设置异常:', error);
     return false;

@@ -16,6 +16,37 @@ import GrindSizeInput from '@/components/ui/GrindSizeInput';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 
 import { Equal, ArrowLeft, ChevronsUpDown, Upload } from 'lucide-react';
+
+// Apple 风格的加载指示器 - 多条线段围成一圈
+const AppleSpinner: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const lines = 8;
+  return (
+    <div className={`relative ${className}`}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute top-1/2 left-1/2 h-[30%] w-[8%] origin-[center_170%] rounded-full bg-current"
+          style={{
+            transform: `translateX(-50%) translateY(-170%) rotate(${i * (360 / lines)}deg)`,
+            opacity: 1 - (i / lines) * 0.75,
+            animation: `apple-spinner ${lines * 0.1}s linear infinite`,
+            animationDelay: `${-i * 0.1}s`,
+          }}
+        />
+      ))}
+      <style jsx>{`
+        @keyframes apple-spinner {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0.25;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import {
   ViewOption,
@@ -362,9 +393,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     hasCoffeeBeans
   );
 
-  // 获取同步状态
+  // 获取同步状态（Apple 风格：只在同步时显示转圈）
   const syncStatus = useSyncStatusStore(state => state.status);
   const syncProvider = useSyncStatusStore(state => state.provider);
+  const isReconnecting = useSyncStatusStore(state => state.isReconnecting);
+
+  // 判断是否正在同步（包括重连中）
+  const isSyncing = syncStatus === 'syncing' || isReconnecting;
 
   const {
     visibleTabs = { brewing: true, coffeeBean: true, notes: true },
@@ -1043,28 +1078,21 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   {canGoBack() && onBackClick ? (
                     <ArrowLeft className="mr-1 h-4 w-4" />
                   ) : (
-                    <Equal
-                      className={`h-4 w-4 ${
-                        syncProvider === 'supabase'
-                          ? syncStatus === 'syncing'
-                            ? 'text-blue-500 dark:text-blue-400'
-                            : syncStatus === 'success'
-                              ? 'text-emerald-500 dark:text-emerald-400'
-                              : syncStatus === 'error'
-                                ? 'text-red-500 dark:text-red-400'
-                                : syncStatus === 'idle' ||
-                                    syncStatus === 'offline'
-                                  ? 'text-neutral-400 dark:text-neutral-500'
-                                  : ''
-                          : ''
-                      }`}
-                    />
+                    <Equal className="h-4 w-4" />
                   )}
-                  {!(canGoBack() && onBackClick) && <span></span>}
                 </div>
 
                 {/* 主导航按钮 - 保持固定高度避免抖动 - 桌面端垂直排列 */}
                 <div className="flex items-center space-x-6 md:mt-2 md:flex-col md:items-start md:space-y-4 md:space-x-0">
+                  {/* 移动端同步指示器 - 放在 tab 左边 */}
+                  {syncProvider === 'supabase' && isSyncing && (
+                    <div style={navItemStyle} className="md:hidden">
+                      <div className="pb-3 text-neutral-400 dark:text-neutral-500">
+                        <AppleSpinner className="h-3 w-3" />
+                      </div>
+                    </div>
+                  )}
+
                   {visibleTabs.brewing && (
                     <div style={navItemStyle}>
                       <TabButton
@@ -1552,6 +1580,16 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
+      )}
+
+      {/* 桌面端同步指示器 - 固定在导航栏底部 */}
+      {syncProvider === 'supabase' && isSyncing && (
+        <div className="mt-auto hidden px-6 pb-6 md:block">
+          <div className="flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500">
+            <AppleSpinner className="h-3 w-3" />
+            <span>同步中</span>
+          </div>
+        </div>
       )}
     </motion.div>
   );
