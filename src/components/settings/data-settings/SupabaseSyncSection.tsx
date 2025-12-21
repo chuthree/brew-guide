@@ -73,14 +73,13 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   // ============================================
-  // 自动恢复连接
+  // 状态初始化（不自动连接，连接在用户操作时按需建立）
   // ============================================
 
   useEffect(() => {
     if (!enabled) {
       setStatus('disconnected');
       setError('');
-      simpleSyncService.disconnect();
       return;
     }
 
@@ -90,32 +89,8 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
       return;
     }
 
-    if (settings.lastConnectionSuccess) {
-      const initConnection = async () => {
-        setStatus('connecting');
-
-        const initialized = simpleSyncService.initialize({
-          url: settings.url,
-          anonKey: settings.anonKey,
-        });
-
-        if (!initialized) {
-          setStatus('disconnected');
-          onSettingChange('lastConnectionSuccess', false);
-          return;
-        }
-
-        const connected = await simpleSyncService.testConnection();
-        if (connected) {
-          setStatus('connected');
-          notifyCloudSyncStatusChange();
-        } else {
-          setStatus('disconnected');
-          onSettingChange('lastConnectionSuccess', false);
-        }
-      };
-      initConnection();
-    }
+    // 如果之前成功连接过，显示为已连接状态
+    setStatus(settings.lastConnectionSuccess ? 'connected' : 'disconnected');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, settings.lastConnectionSuccess]);
 
@@ -163,11 +138,6 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   };
 
   const performSync = async (direction: 'upload' | 'download') => {
-    if (status !== 'connected') {
-      setError('请先测试连接');
-      return;
-    }
-
     if (isSyncing) {
       setError('同步正在进行中');
       return;
@@ -187,6 +157,29 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
     setError('');
 
     try {
+      // 按需建立连接
+      if (status !== 'connected') {
+        const initialized = simpleSyncService.initialize({
+          url: settings.url,
+          anonKey: settings.anonKey,
+        });
+        if (!initialized) {
+          setStatus('error');
+          setError('初始化失败，请检查配置');
+          setIsSyncing(false);
+          return;
+        }
+        const connected = await simpleSyncService.testConnection();
+        if (!connected) {
+          setStatus('error');
+          setError('连接失败，请检查配置');
+          setIsSyncing(false);
+          return;
+        }
+        setStatus('connected');
+        onSettingChange('lastConnectionSuccess', true);
+      }
+
       const result: SyncResult =
         direction === 'upload'
           ? await simpleSyncService.uploadAllData()

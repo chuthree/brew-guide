@@ -107,18 +107,3 @@ export function normalizeSupabaseSettings(
     ...incoming,
   };
 }
-
-/**
- * 获取当前激活的同步类型
- */
-export function getActiveSyncType(
-  s3: S3SyncSettings,
-  webdav: WebDAVSyncSettings,
-  supabase: SupabaseSyncSettings
-): CloudSyncType {
-  // 优先级: supabase > s3 > webdav
-  if (supabase.enabled) return 'supabase';
-  if (s3.enabled) return 's3';
-  if (webdav.enabled) return 'webdav';
-  return 'none';
-}

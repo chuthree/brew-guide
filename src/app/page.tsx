@@ -2096,16 +2096,23 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // ==================== 云同步相关状态和处理 ====================
   // 检查云同步是否已启用且连接成功，并且开启了下拉上传功能
   const isCloudSyncEnabled = useCallback(() => {
-    const s3Enabled =
-      settings.s3Sync?.enabled &&
-      settings.s3Sync?.lastConnectionSuccess &&
-      settings.s3Sync?.enablePullToSync !== false;
-    const webdavEnabled =
-      settings.webdavSync?.enabled &&
-      settings.webdavSync?.lastConnectionSuccess &&
-      settings.webdavSync?.enablePullToSync !== false;
-    return s3Enabled || webdavEnabled;
-  }, [settings.s3Sync, settings.webdavSync]);
+    const activeType = settings.activeSyncType;
+    if (!activeType || activeType === 'none') return false;
+
+    if (activeType === 's3') {
+      return (
+        settings.s3Sync?.lastConnectionSuccess &&
+        settings.s3Sync?.enablePullToSync !== false
+      );
+    }
+    if (activeType === 'webdav') {
+      return (
+        settings.webdavSync?.lastConnectionSuccess &&
+        settings.webdavSync?.enablePullToSync !== false
+      );
+    }
+    return false; // Supabase 不支持下拉同步
+  }, [settings.activeSyncType, settings.s3Sync, settings.webdavSync]);
 
   // 下拉上传处理函数
   const handlePullToSync = useCallback(async (): Promise<{
@@ -2113,59 +2120,61 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     message?: string;
   }> => {
     try {
-      const s3Enabled =
-        settings.s3Sync?.enabled && settings.s3Sync?.lastConnectionSuccess;
-      const webdavEnabled =
-        settings.webdavSync?.enabled &&
-        settings.webdavSync?.lastConnectionSuccess;
-
-      if (!s3Enabled && !webdavEnabled) {
+      const activeType = settings.activeSyncType;
+      if (!activeType || activeType === 'none') {
         return { success: false, message: '云同步未配置' };
       }
 
-      let manager: any;
       let connected = false;
+      let result: {
+        success: boolean;
+        uploadedFiles?: number;
+        message?: string;
+      } | null = null;
 
-      if (s3Enabled) {
+      if (activeType === 's3' && settings.s3Sync?.lastConnectionSuccess) {
         const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
-        const s3Config = settings.s3Sync!;
-
-        manager = new S3SyncManager();
-        connected = await manager.initialize({
-          region: s3Config.region,
-          accessKeyId: s3Config.accessKeyId,
-          secretAccessKey: s3Config.secretAccessKey,
-          bucketName: s3Config.bucketName,
-          prefix: s3Config.prefix,
-          endpoint: s3Config.endpoint || undefined,
+        const cfg = settings.s3Sync;
+        const mgr = new S3SyncManager();
+        connected = await mgr.initialize({
+          region: cfg.region,
+          accessKeyId: cfg.accessKeyId,
+          secretAccessKey: cfg.secretAccessKey,
+          bucketName: cfg.bucketName,
+          prefix: cfg.prefix,
+          endpoint: cfg.endpoint || undefined,
         });
-      } else if (webdavEnabled) {
+        if (connected) {
+          result = await mgr.sync({ preferredDirection: 'upload' });
+        }
+      } else if (
+        activeType === 'webdav' &&
+        settings.webdavSync?.lastConnectionSuccess
+      ) {
         const { WebDAVSyncManager } = await import('@/lib/webdav/syncManager');
-        const webdavConfig = settings.webdavSync!;
-
-        manager = new WebDAVSyncManager();
-        connected = await manager.initialize({
-          url: webdavConfig.url,
-          username: webdavConfig.username,
-          password: webdavConfig.password,
-          remotePath: webdavConfig.remotePath,
+        const cfg = settings.webdavSync;
+        const mgr = new WebDAVSyncManager();
+        connected = await mgr.initialize({
+          url: cfg.url,
+          username: cfg.username,
+          password: cfg.password,
+          remotePath: cfg.remotePath,
         });
+        if (connected) {
+          result = await mgr.sync({ preferredDirection: 'upload' });
+        }
+      } else {
+        return { success: false, message: '云同步未配置' };
       }
 
-      if (!connected || !manager) {
+      if (!connected || !result) {
         return { success: false, message: '云同步连接失败' };
       }
 
-      const result = await manager.sync({
-        preferredDirection: 'upload',
-      });
-
       if (result.success) {
-        if (result.uploadedFiles > 0) {
-          return {
-            success: true,
-            message: `已上传 ${result.uploadedFiles} 项`,
-          };
+        const uploaded = result.uploadedFiles ?? 0;
+        if (uploaded > 0) {
+          return { success: true, message: `已上传 ${uploaded} 项` };
         } else {
           return { success: true, message: '数据已是最新' };
         }
@@ -2179,7 +2188,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         message: error instanceof Error ? error.message : '上传失败',
       };
     }
-  }, [settings.s3Sync, settings.webdavSync]);
+  }, [settings.activeSyncType, settings.s3Sync, settings.webdavSync]);
   // ==================== 云同步相关状态和处理结束 ====================
 
   // 简化的历史记录导航事件处理

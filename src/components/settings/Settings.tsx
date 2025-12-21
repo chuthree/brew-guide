@@ -156,6 +156,8 @@ export interface SettingsOptions {
     lastConnectionSuccess?: boolean;
     lastSyncTime?: number; // 上次同步时间
   };
+  // 当前激活的云同步类型（用于 UI 显示，独立于各服务的 enabled 状态）
+  activeSyncType?: 'none' | 's3' | 'webdav' | 'supabase';
   // 随机咖啡豆设置
   randomCoffeeBeans?: {
     enableLongPressRandomType: boolean; // 长按随机不同类型咖啡豆
@@ -318,6 +320,8 @@ export const defaultSettings: SettingsOptions = {
     url: '',
     anonKey: '',
   },
+  // 当前激活的云同步类型默认值
+  activeSyncType: 'none',
   // 随机咖啡豆设置默认值
   randomCoffeeBeans: {
     enableLongPressRandomType: false, // 默认不启用长按随机类型

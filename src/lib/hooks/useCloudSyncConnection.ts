@@ -1,11 +1,10 @@
 /**
- * 云同步连接状态 Hook
+ * 云同步连接状态 Hook（简化版）
  *
- * 统一管理 S3、WebDAV、Supabase 的连接状态检查
- * 解耦 Settings.tsx 中的云同步逻辑
+ * 不主动建立连接，只提供状态管理和同步功能
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { SettingsOptions } from '@/components/settings/Settings';
 
 export type CloudSyncStatus =
@@ -16,17 +15,11 @@ export type CloudSyncStatus =
 export type CloudSyncProvider = 'none' | 's3' | 'webdav' | 'supabase';
 
 interface UseCloudSyncConnectionReturn {
-  /** 当前连接状态 */
   status: CloudSyncStatus;
-  /** 当前启用的提供商 */
   provider: CloudSyncProvider;
-  /** 是否正在同步 */
   isSyncing: boolean;
-  /** 设置同步状态 */
   setIsSyncing: (syncing: boolean) => void;
-  /** 手动刷新连接状态 */
   refresh: () => Promise<void>;
-  /** 执行快速同步 */
   performSync: (direction: 'upload' | 'download') => Promise<void>;
 }
 
@@ -34,22 +27,16 @@ interface UseCloudSyncConnectionReturn {
  * 获取当前启用的云同步提供商
  */
 function getEnabledProvider(settings: SettingsOptions): CloudSyncProvider {
-  // 优先级: supabase > s3 > webdav
-  if (
-    settings.supabaseSync?.enabled &&
-    settings.supabaseSync?.lastConnectionSuccess
-  ) {
+  const activeType = settings.activeSyncType;
+  if (!activeType || activeType === 'none') return 'none';
+
+  // 检查对应服务是否已成功连接过
+  if (activeType === 'supabase' && settings.supabaseSync?.lastConnectionSuccess)
     return 'supabase';
-  }
-  if (settings.s3Sync?.enabled && settings.s3Sync?.lastConnectionSuccess) {
+  if (activeType === 's3' && settings.s3Sync?.lastConnectionSuccess)
     return 's3';
-  }
-  if (
-    settings.webdavSync?.enabled &&
-    settings.webdavSync?.lastConnectionSuccess
-  ) {
+  if (activeType === 'webdav' && settings.webdavSync?.lastConnectionSuccess)
     return 'webdav';
-  }
   return 'none';
 }
 
@@ -58,95 +45,18 @@ function getEnabledProvider(settings: SettingsOptions): CloudSyncProvider {
  */
 export function useCloudSyncConnection(
   settings: SettingsOptions,
-  isOpen: boolean
+  _isOpen: boolean
 ): UseCloudSyncConnectionReturn {
-  const [status, setStatus] = useState<CloudSyncStatus>('disconnected');
-  const [provider, setProvider] = useState<CloudSyncProvider>('none');
+  const provider = getEnabledProvider(settings);
+  const status: CloudSyncStatus =
+    provider !== 'none' ? 'connected' : 'disconnected';
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // 检查连接状态
-  const checkStatus = useCallback(async () => {
-    const currentProvider = getEnabledProvider(settings);
-    setProvider(currentProvider);
+  const refresh = useCallback(async () => {}, []);
 
-    if (currentProvider === 'none') {
-      setStatus('disconnected');
-      return;
-    }
-
-    setStatus('connecting');
-
-    try {
-      let connected = false;
-
-      if (currentProvider === 'supabase') {
-        // 检查 Supabase 连接
-        const { simpleSyncService } = await import(
-          '@/lib/supabase/simpleSyncService'
-        );
-        const supabaseConfig = settings.supabaseSync!;
-
-        const initialized = simpleSyncService.initialize({
-          url: supabaseConfig.url,
-          anonKey: supabaseConfig.anonKey,
-        });
-
-        if (initialized) {
-          connected = await simpleSyncService.testConnection();
-        }
-      } else if (currentProvider === 's3') {
-        // 检查 S3 连接
-        const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
-        const s3Config = settings.s3Sync!;
-
-        if (
-          s3Config.accessKeyId &&
-          s3Config.secretAccessKey &&
-          s3Config.bucketName
-        ) {
-          const manager = new S3SyncManager();
-          connected = await manager.initialize({
-            region: s3Config.region,
-            accessKeyId: s3Config.accessKeyId,
-            secretAccessKey: s3Config.secretAccessKey,
-            bucketName: s3Config.bucketName,
-            prefix: s3Config.prefix,
-            endpoint: s3Config.endpoint || undefined,
-          });
-        }
-      } else if (currentProvider === 'webdav') {
-        // 检查 WebDAV 连接
-        const { WebDAVSyncManager } = await import('@/lib/webdav/syncManager');
-        const webdavConfig = settings.webdavSync!;
-
-        if (
-          webdavConfig.url &&
-          webdavConfig.username &&
-          webdavConfig.password
-        ) {
-          const manager = new WebDAVSyncManager();
-          connected = await manager.initialize({
-            url: webdavConfig.url,
-            username: webdavConfig.username,
-            password: webdavConfig.password,
-            remotePath: webdavConfig.remotePath,
-          });
-        }
-      }
-
-      setStatus(connected ? 'connected' : 'error');
-    } catch (error) {
-      console.error('检测云同步状态失败:', error);
-      setStatus('error');
-    }
-  }, [settings.supabaseSync, settings.s3Sync, settings.webdavSync]);
-
-  // 执行快速同步
   const performSync = useCallback(
     async (direction: 'upload' | 'download') => {
-      if (isSyncing || status !== 'connected') {
-        return;
-      }
+      if (isSyncing || provider === 'none') return;
 
       const { showToast } = await import(
         '@/components/common/feedback/LightToast'
@@ -157,29 +67,28 @@ export function useCloudSyncConnection(
         setIsSyncing(true);
 
         if (provider === 'supabase') {
-          // Supabase 同步
           const { simpleSyncService } = await import(
             '@/lib/supabase/simpleSyncService'
           );
-
           const result =
             direction === 'upload'
               ? await simpleSyncService.uploadAllData()
               : await simpleSyncService.downloadAllData();
 
           if (result.success) {
-            if (result.uploaded > 0 || result.downloaded > 0) {
+            const count =
+              result.uploaded > 0 ? result.uploaded : result.downloaded;
+            if (count > 0) {
               showToast({
                 type: 'success',
                 title:
                   direction === 'upload'
-                    ? `已上传 ${result.uploaded} 项到云端`
-                    : `已从云端下载 ${result.downloaded} 项，即将重启...`,
+                    ? `已上传 ${count} 项到云端`
+                    : `已从云端下载 ${count} 项，即将重启...`,
                 duration: 2500,
               });
-              if (direction === 'download') {
+              if (direction === 'download')
                 setTimeout(() => window.location.reload(), 2500);
-              }
             } else {
               showToast({
                 type: 'info',
@@ -191,79 +100,46 @@ export function useCloudSyncConnection(
           } else {
             showToast({ type: 'error', title: result.message, duration: 3000 });
           }
-        } else {
-          // S3 或 WebDAV 同步
-          let manager: any;
-          let connected = false;
-
-          if (provider === 's3') {
-            const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
-            const s3Config = settings.s3Sync!;
-            manager = new S3SyncManager();
-            connected = await manager.initialize({
-              region: s3Config.region,
-              accessKeyId: s3Config.accessKeyId,
-              secretAccessKey: s3Config.secretAccessKey,
-              bucketName: s3Config.bucketName,
-              prefix: s3Config.prefix,
-              endpoint: s3Config.endpoint || undefined,
-            });
-          } else if (provider === 'webdav') {
-            const { WebDAVSyncManager } = await import(
-              '@/lib/webdav/syncManager'
-            );
-            const webdavConfig = settings.webdavSync!;
-            manager = new WebDAVSyncManager();
-            connected = await manager.initialize({
-              url: webdavConfig.url,
-              username: webdavConfig.username,
-              password: webdavConfig.password,
-              remotePath: webdavConfig.remotePath,
-            });
-          }
-
-          if (!connected || !manager) {
-            throw new Error('云同步连接失败');
-          }
-
-          const result = await manager.sync({ preferredDirection: direction });
-
-          if (result.success) {
-            if (result.uploadedFiles > 0 && result.downloadedFiles > 0) {
-              showToast({
-                type: 'success',
-                title: `同步完成：上传 ${result.uploadedFiles} 项，下载 ${result.downloadedFiles} 项，即将重启...`,
-                duration: 3000,
-              });
-              setTimeout(() => window.location.reload(), 3000);
-            } else if (result.uploadedFiles > 0) {
-              showToast({
-                type: 'success',
-                title: `已上传 ${result.uploadedFiles} 项到云端`,
-                duration: 2500,
-              });
-            } else if (result.downloadedFiles > 0) {
-              showToast({
-                type: 'success',
-                title: `已从云端下载 ${result.downloadedFiles} 项，即将重启...`,
-                duration: 2500,
-              });
-              setTimeout(() => window.location.reload(), 2500);
-            } else {
-              showToast({
-                type: 'info',
-                title: '数据已是最新',
-                duration: 2000,
-              });
-            }
-            if (settings.hapticFeedback) hapticsUtils.medium();
-          } else {
-            showToast({
-              type: 'error',
-              title: result.message || '同步失败',
-              duration: 3000,
-            });
-          }
+        } else if (provider === 's3') {
+          const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
+          const cfg = settings.s3Sync!;
+          const mgr = new S3SyncManager();
+          const ok = await mgr.initialize({
+            region: cfg.region,
+            accessKeyId: cfg.accessKeyId,
+            secretAccessKey: cfg.secretAccessKey,
+            bucketName: cfg.bucketName,
+            prefix: cfg.prefix,
+            endpoint: cfg.endpoint || undefined,
+          });
+          if (!ok) throw new Error('S3 连接失败');
+          const result = await mgr.sync({ preferredDirection: direction });
+          handleFileSyncResult(
+            result,
+            showToast,
+            settings.hapticFeedback,
+            hapticsUtils
+          );
+        } else if (provider === 'webdav') {
+          const { WebDAVSyncManager } = await import(
+            '@/lib/webdav/syncManager'
+          );
+          const cfg = settings.webdavSync!;
+          const mgr = new WebDAVSyncManager();
+          const ok = await mgr.initialize({
+            url: cfg.url,
+            username: cfg.username,
+            password: cfg.password,
+            remotePath: cfg.remotePath,
+          });
+          if (!ok) throw new Error('WebDAV 连接失败');
+          const result = await mgr.sync({ preferredDirection: direction });
+          handleFileSyncResult(
+            result,
+            showToast,
+            settings.hapticFeedback,
+            hapticsUtils
+          );
         }
       } catch (error) {
         showToast({
@@ -275,30 +151,60 @@ export function useCloudSyncConnection(
         setIsSyncing(false);
       }
     },
-    [isSyncing, status, provider, settings]
+    [isSyncing, provider, settings]
   );
 
-  // 监听云同步状态变更事件
-  useEffect(() => {
-    const handleStatusChange = () => checkStatus();
-    window.addEventListener('cloudSyncStatusChange', handleStatusChange);
-    return () =>
-      window.removeEventListener('cloudSyncStatusChange', handleStatusChange);
-  }, [checkStatus]);
+  return { status, provider, isSyncing, setIsSyncing, refresh, performSync };
+}
 
-  // 页面打开时检查状态
-  useEffect(() => {
-    if (isOpen) {
-      checkStatus();
+// 处理文件同步结果
+function handleFileSyncResult(
+  result: {
+    success: boolean;
+    uploadedFiles?: number;
+    downloadedFiles?: number;
+    message?: string;
+  },
+  showToast: (opts: {
+    type: 'success' | 'error' | 'info' | 'warning';
+    title: string;
+    duration: number;
+  }) => void,
+  hapticFeedback: boolean | undefined,
+  hapticsUtils: { medium: () => void }
+) {
+  if (result.success) {
+    const up = result.uploadedFiles ?? 0;
+    const down = result.downloadedFiles ?? 0;
+    if (up > 0 && down > 0) {
+      showToast({
+        type: 'success',
+        title: `同步完成：上传 ${up} 项，下载 ${down} 项，即将重启...`,
+        duration: 3000,
+      });
+      setTimeout(() => window.location.reload(), 3000);
+    } else if (up > 0) {
+      showToast({
+        type: 'success',
+        title: `已上传 ${up} 项到云端`,
+        duration: 2500,
+      });
+    } else if (down > 0) {
+      showToast({
+        type: 'success',
+        title: `已从云端下载 ${down} 项，即将重启...`,
+        duration: 2500,
+      });
+      setTimeout(() => window.location.reload(), 2500);
+    } else {
+      showToast({ type: 'info', title: '数据已是最新', duration: 2000 });
     }
-  }, [isOpen, checkStatus]);
-
-  return {
-    status,
-    provider,
-    isSyncing,
-    setIsSyncing,
-    refresh: checkStatus,
-    performSync,
-  };
+    if (hapticFeedback) hapticsUtils.medium();
+  } else {
+    showToast({
+      type: 'error',
+      title: result.message || '同步失败',
+      duration: 3000,
+    });
+  }
 }

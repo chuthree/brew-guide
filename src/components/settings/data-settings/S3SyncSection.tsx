@@ -99,36 +99,15 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
       return;
     }
 
-    const autoConnect = async () => {
-      setStatus('connecting');
-      const manager = new S3SyncManager();
-      const connected = await manager.initialize({
-        region: settings.region,
-        accessKeyId: settings.accessKeyId,
-        secretAccessKey: settings.secretAccessKey,
-        bucketName: settings.bucketName,
-        prefix: settings.prefix,
-        endpoint: settings.endpoint || undefined,
-      });
-
-      if (connected) {
-        setStatus('connected');
-        setSyncManager(manager);
-        onSettingChange('lastConnectionSuccess', true);
-        notifyCloudSyncStatusChange();
-      } else {
-        setStatus('error');
-        if (!settings.endpoint) {
-          setError('连接失败：请检查服务地址和认证信息');
-        } else {
-          setError('连接失败：无法访问存储桶或缺少写入权限');
-        }
-        onSettingChange('lastConnectionSuccess', false);
-      }
-    };
-    autoConnect();
+    // 如果之前成功连接过，显示为已连接状态（但不实际建立连接）
+    // 实际连接在用户执行同步操作时按需建立
+    if (settings.lastConnectionSuccess) {
+      setStatus('connected');
+    } else {
+      setStatus('disconnected');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled]);
+  }, [enabled, settings.lastConnectionSuccess]);
 
   // ============================================
   // 连接和同步操作
@@ -180,11 +159,6 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
   };
 
   const performSync = async (direction: 'upload' | 'download') => {
-    if (!syncManager) {
-      setError('请先测试连接');
-      return;
-    }
-
     if (isSyncing) {
       setError('同步正在进行中');
       return;
@@ -195,7 +169,30 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
     setSyncProgress(null);
 
     try {
-      const result: SyncResult = await syncManager.sync({
+      // 按需建立连接
+      let manager = syncManager;
+      if (!manager) {
+        manager = new S3SyncManager();
+        const connected = await manager.initialize({
+          region: settings.region,
+          accessKeyId: settings.accessKeyId,
+          secretAccessKey: settings.secretAccessKey,
+          bucketName: settings.bucketName,
+          prefix: settings.prefix,
+          endpoint: settings.endpoint || undefined,
+        });
+        if (!connected) {
+          setStatus('error');
+          setError('连接失败，请检查配置');
+          setIsSyncing(false);
+          return;
+        }
+        setSyncManager(manager);
+        setStatus('connected');
+        onSettingChange('lastConnectionSuccess', true);
+      }
+
+      const result: SyncResult = await manager.sync({
         preferredDirection: direction,
         onProgress: progress => {
           setSyncProgress({

@@ -77,7 +77,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
   const [showTutorial, setShowTutorial] = useState(false);
 
   // ============================================
-  // 自动连接
+  // 状态初始化（不自动连接，连接在用户操作时按需建立）
   // ============================================
 
   useEffect(() => {
@@ -96,26 +96,8 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       return;
     }
 
-    if (settings.lastConnectionSuccess) {
-      const initManager = async () => {
-        const manager = new WebDAVSyncManager();
-        const connected = await manager.initialize({
-          url: settings.url,
-          username: settings.username,
-          password: settings.password,
-          remotePath: settings.remotePath,
-          useProxy: settings.useProxy,
-        });
-        if (connected) {
-          setStatus('connected');
-          setSyncManager(manager);
-        } else {
-          setStatus('disconnected');
-          onSettingChange('lastConnectionSuccess', false);
-        }
-      };
-      initManager();
-    }
+    // 如果之前成功连接过，显示为已连接状态
+    setStatus(settings.lastConnectionSuccess ? 'connected' : 'disconnected');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, settings.lastConnectionSuccess]);
 
@@ -195,24 +177,39 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
   };
 
   const performSync = async (direction: 'upload' | 'download') => {
-    if (!syncManager) {
-      setError('请先测试连接');
-      return;
-    }
-
     if (isSyncing) {
       setError('同步正在进行中');
       return;
     }
-
-    console.log(`🔄 [WebDAV] 开始同步，方向: ${direction}`);
 
     setIsSyncing(true);
     setError('');
     setSyncProgress(null);
 
     try {
-      const result: WebDAVSyncResult = await syncManager.sync({
+      // 按需建立连接
+      let manager = syncManager;
+      if (!manager) {
+        manager = new WebDAVSyncManager();
+        const connected = await manager.initialize({
+          url: settings.url,
+          username: settings.username,
+          password: settings.password,
+          remotePath: settings.remotePath,
+          useProxy: settings.useProxy,
+        });
+        if (!connected) {
+          setStatus('error');
+          setError('连接失败，请检查配置');
+          setIsSyncing(false);
+          return;
+        }
+        setSyncManager(manager);
+        setStatus('connected');
+        onSettingChange('lastConnectionSuccess', true);
+      }
+
+      const result: WebDAVSyncResult = await manager.sync({
         preferredDirection: direction,
         onProgress: progress => {
           console.log(
