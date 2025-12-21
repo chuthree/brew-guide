@@ -136,8 +136,8 @@ const DateImageFlowView: React.FC<DateImageFlowViewProps> = ({
             </div>
           </div>
 
-          {/* 该日期的图片网格 - 一行三列 */}
-          <div className="grid grid-cols-3 gap-1 px-1">
+          {/* 该日期的图片网格 - 响应式布局 */}
+          <div className="grid grid-cols-3 gap-1 px-1 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {dateNotes.map(note => {
               const beanName = note.coffeeBeanInfo?.name || '未知豆子';
               const isSelected = selectedNotes.includes(note.id);
@@ -160,7 +160,7 @@ const DateImageFlowView: React.FC<DateImageFlowViewProps> = ({
                         alt={beanName}
                         fill
                         className="object-cover"
-                        sizes="(max-width: 768px) 33vw, 200px"
+                        sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, 33vw"
                         loading="lazy"
                         onClick={e => handleImageClick(note, e)}
                       />

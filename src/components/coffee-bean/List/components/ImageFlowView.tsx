@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ExtendedCoffeeBean } from '../types';
 import { isBeanEmpty } from '../preferences';
@@ -20,6 +20,32 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
   emptyBeans,
   showEmptyBeans,
 }) => {
+  // 根据屏幕宽度确定每排的列数
+  const [columnsPerRow, setColumnsPerRow] = useState(3);
+
+  useEffect(() => {
+    const updateColumns = () => {
+      const width = window.innerWidth;
+      if (width >= 1280) {
+        // xl
+        setColumnsPerRow(6);
+      } else if (width >= 1024) {
+        // lg
+        setColumnsPerRow(5);
+      } else if (width >= 768) {
+        // md
+        setColumnsPerRow(4);
+      } else {
+        // 默认（包括 sm）
+        setColumnsPerRow(3);
+      }
+    };
+
+    updateColumns();
+    window.addEventListener('resize', updateColumns);
+    return () => window.removeEventListener('resize', updateColumns);
+  }, []);
+
   // 处理详情点击 - 通过事件打开
   const handleDetailClick = (bean: ExtendedCoffeeBean) => {
     window.dispatchEvent(
@@ -47,14 +73,14 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
     return [...normalBeans, ...emptyBeansWithImages];
   }, [filteredBeans, emptyBeans, showEmptyBeans]);
 
-  // 将咖啡豆分组，每排3个
+  // 将咖啡豆分组，每排根据屏幕大小显示不同数量
   const rows = useMemo(() => {
     const result = [];
-    for (let i = 0; i < beansWithImages.length; i += 3) {
-      result.push(beansWithImages.slice(i, i + 3));
+    for (let i = 0; i < beansWithImages.length; i += columnsPerRow) {
+      result.push(beansWithImages.slice(i, i + columnsPerRow));
     }
     return result;
-  }, [beansWithImages]);
+  }, [beansWithImages, columnsPerRow]);
 
   if (beansWithImages.length === 0) {
     return (
@@ -72,8 +98,13 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
             <div key={rowIndex} className="relative">
               {/* 架子容器 - 包含图片和架子 */}
               <div className="relative px-3">
-                {/* 咖啡豆图片 - 使用 grid 布局 */}
-                <div className="relative grid grid-cols-3 items-end gap-4">
+                {/* 咖啡豆图片 - 使用 grid 布局，底部对齐 */}
+                <div
+                  className="relative grid items-end gap-4"
+                  style={{
+                    gridTemplateColumns: `repeat(${columnsPerRow}, minmax(0, 1fr))`,
+                  }}
+                >
                   {row.map(bean => {
                     const isEmpty = isBeanEmpty(bean);
                     return (
@@ -89,7 +120,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                           style={{
                             height: 'auto',
                           }}
-                          sizes="33vw"
+                          sizes={`${Math.floor(100 / columnsPerRow)}vw`}
                           priority={false}
                           loading="lazy"
                           unoptimized
@@ -109,7 +140,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                   })}
                 </div>
 
-                {/* 架子 - 3D透视效果，向后向上延伸 */}
+                {/* 架子 - 3D透视效果，向后向上延伸，横跨整排 */}
                 <div className="absolute inset-x-0 bottom-0 -z-10 h-3">
                   {/* 台面 - 使用transform让它向后向上倾斜 */}
                   <div
