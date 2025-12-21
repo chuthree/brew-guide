@@ -1,14 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+/**
+ * WebDAV 同步配置组件
+ *
+ * 2025-12-21 重构：使用共享 Hook 和组件减少代码重复
+ */
+
+import React, { useState, useEffect } from 'react';
 import { WebDAVSyncManager } from '@/lib/webdav/syncManager';
 import type { SyncResult as WebDAVSyncResult } from '@/lib/webdav/types';
-import hapticsUtils from '@/lib/ui/haptics';
+import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { SettingsOptions } from '../Settings';
 import { Upload, Download } from 'lucide-react';
 import WebDAVTutorialModal from './WebDAVTutorialModal';
-import ActionDrawer from '@/components/common/ui/ActionDrawer';
-import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
+import { SyncHeaderButton, SyncDebugDrawer } from './shared';
 
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
 
@@ -32,40 +37,57 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
   onSyncComplete,
   onEnable,
 }) => {
-  const [status, setStatus] = useState<
-    'disconnected' | 'connecting' | 'connected' | 'error'
-  >('disconnected');
-  const [error, setError] = useState<string>('');
+  // ============================================
+  // 使用共享 Hook
+  // ============================================
+
+  const {
+    status,
+    setStatus,
+    error,
+    setError,
+    expanded,
+    setExpanded,
+    isSyncing,
+    setIsSyncing,
+    syncProgress,
+    setSyncProgress,
+    debugLogs,
+    setDebugLogs,
+    showDebugDrawer,
+    setShowDebugDrawer,
+    textAreaRef,
+    copySuccess,
+    handleCopyLogs,
+    handleSelectAll,
+    getStatusColor,
+    getStatusText,
+    notifyCloudSyncStatusChange,
+    triggerHaptic,
+  } = useSyncSection(enabled, { hapticFeedback, onSyncComplete });
+
+  // ============================================
+  // WebDAV 特有状态
+  // ============================================
+
   const [showPassword, setShowPassword] = useState(false);
-  const [expanded, setExpanded] = useState(false);
   const [syncManager, setSyncManager] = useState<WebDAVSyncManager | null>(
     null
   );
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<{
-    phase: string;
-    message: string;
-    percentage: number;
-  } | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
 
-  // 调试日志抽屉状态
-  const [showDebugDrawer, setShowDebugDrawer] = useState(false);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  // ============================================
+  // 自动连接
+  // ============================================
 
-  // 自动连接 - 仅在页面加载时，如果之前连接成功过，自动恢复连接
   useEffect(() => {
     if (!enabled) {
-      // 如果被禁用，重置状态
       setStatus('disconnected');
       setSyncManager(null);
       setError('');
       return;
     }
 
-    // 检查配置是否完整
     const isConfigComplete =
       settings.url && settings.username && settings.password;
 
@@ -74,7 +96,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       return;
     }
 
-    // 只有标记为连接成功过的情况下，才自动恢复连接（用于页面刷新后恢复状态）
     if (settings.lastConnectionSuccess) {
       const initManager = async () => {
         const manager = new WebDAVSyncManager();
@@ -89,7 +110,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
           setStatus('connected');
           setSyncManager(manager);
         } else {
-          // 恢复连接失败，重置状态
           setStatus('disconnected');
           onSettingChange('lastConnectionSuccess', false);
         }
@@ -99,25 +119,23 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, settings.lastConnectionSuccess]);
 
-  // 教程完成回调 - 将配置信息填入并测试连接
+  // ============================================
+  // 教程完成回调
+  // ============================================
+
   const handleTutorialComplete = async (config: {
     url: string;
     username: string;
     password: string;
   }) => {
-    // 依次更新配置信息
     onSettingChange('url', config.url);
     onSettingChange('username', config.username);
     onSettingChange('password', config.password);
     onSettingChange('lastConnectionSuccess', true);
 
-    // 展开配置面板
     setExpanded(true);
-
-    // 设置连接成功状态
     setStatus('connected');
 
-    // 创建 SyncManager 实例
     const manager = new WebDAVSyncManager();
     await manager.initialize({
       url: config.url,
@@ -127,15 +145,14 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     });
     setSyncManager(manager);
 
-    // 通知 Settings 页面更新云同步状态
-    window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
-
-    if (hapticFeedback) {
-      hapticsUtils.light();
-    }
+    notifyCloudSyncStatusChange();
+    triggerHaptic('light');
   };
 
-  // 测试连接
+  // ============================================
+  // 连接和同步操作
+  // ============================================
+
   const testConnection = async () => {
     if (!settings.url || !settings.username || !settings.password) {
       setError('请填写完整的WebDAV配置信息');
@@ -158,19 +175,12 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
 
       if (connected) {
         setStatus('connected');
-
         setSyncManager(manager);
         onSettingChange('lastConnectionSuccess', true);
-
-        // 通知 Settings 页面更新云同步状态
-        window.dispatchEvent(new CustomEvent('cloudSyncStatusChange'));
-
-        if (hapticFeedback) {
-          hapticsUtils.light();
-        }
+        notifyCloudSyncStatusChange();
+        triggerHaptic('light');
       } else {
         setStatus('error');
-        // 根据配置情况给出更具体的提示
         if (settings.remotePath) {
           setError('连接失败：请检查服务器地址、账号密码和路径是否正确');
         } else {
@@ -184,7 +194,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     }
   };
 
-  // 执行同步
   const performSync = async (direction: 'upload' | 'download') => {
     if (!syncManager) {
       setError('请先测试连接');
@@ -243,30 +252,12 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
           });
           setTimeout(() => window.location.reload(), 2500);
         } else {
-          // 当上传/下载都是 0 时，检查是否用户主动点击了上传按钮
-          // 如果是主动上传但结果为 0，可能存在问题，显示调试日志
-          if (
-            direction === 'upload' &&
-            result.debugLogs &&
-            result.debugLogs.length > 0
-          ) {
+          if (result.debugLogs && result.debugLogs.length > 0) {
             setDebugLogs(result.debugLogs);
             setShowDebugDrawer(true);
             showToast({
               type: 'warning',
-              title: '上传完成但未传输任何文件，请查看详细日志',
-              duration: 3000,
-            });
-          } else if (
-            direction === 'download' &&
-            result.debugLogs &&
-            result.debugLogs.length > 0
-          ) {
-            setDebugLogs(result.debugLogs);
-            setShowDebugDrawer(true);
-            showToast({
-              type: 'warning',
-              title: '下载完成但未传输任何文件，请查看详细日志',
+              title: `${direction === 'upload' ? '上传' : '下载'}完成但未传输任何文件，请查看详细日志`,
               duration: 3000,
             });
           } else {
@@ -278,13 +269,9 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
           }
         }
 
-        if (hapticFeedback) {
-          hapticsUtils.medium();
-        }
-
+        triggerHaptic('medium');
         onSyncComplete?.();
       } else {
-        // 同步失败时也显示调试日志
         if (result.debugLogs && result.debugLogs.length > 0) {
           setDebugLogs(result.debugLogs);
           setShowDebugDrawer(true);
@@ -317,98 +304,29 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     }
   };
 
-  // 复制日志到剪贴板
-  const handleCopyLogs = async () => {
-    const logText = debugLogs.join('\n');
-    try {
-      await navigator.clipboard.writeText(logText);
-      setCopySuccess(true);
-      if (hapticFeedback) {
-        hapticsUtils.light();
-      }
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      // 降级方案：选中文本框内容
-      if (textAreaRef.current) {
-        textAreaRef.current.select();
-      }
-    }
-  };
-
-  // 全选文本框内容
-  const handleSelectAll = () => {
-    if (textAreaRef.current) {
-      textAreaRef.current.select();
-    }
-  };
-
-  // 获取状态指示点的颜色
-  const getStatusColor = () => {
-    if (!enabled) return 'bg-neutral-300 dark:bg-neutral-600';
-    switch (status) {
-      case 'connected':
-        return 'bg-green-500';
-      case 'connecting':
-        return 'bg-yellow-500 animate-pulse';
-      case 'error':
-        return 'bg-red-500';
-      default:
-        return 'bg-neutral-300 dark:bg-neutral-600';
-    }
-  };
-
-  // 获取状态文本
-  const getStatusText = () => {
-    if (!enabled) return '点击启用';
-    switch (status) {
-      case 'connected':
-        return '已连接';
-      case 'connecting':
-        return '连接中...';
-      case 'error':
-        return '连接失败';
-      default:
-        return '未配置';
-    }
-  };
+  // ============================================
+  // UI 渲染
+  // ============================================
 
   return (
     <div className="ml-0 space-y-3">
-      {/* 主按钮 - 展开/收起配置 */}
-      <button
+      {/* 头部按钮 */}
+      <SyncHeaderButton
+        serviceName="WebDAV"
+        enabled={enabled}
+        status={status}
+        expanded={expanded}
+        statusColor={getStatusColor()}
+        statusText={getStatusText()}
         onClick={() => {
           if (!enabled && onEnable) {
             onEnable();
           }
           setExpanded(!expanded);
         }}
-        className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-      >
-        <div className="flex items-center gap-2">
-          <div className={`h-2 w-2 rounded-full ${getStatusColor()}`}></div>
-          <span>WebDAV 云同步配置</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">
-            {getStatusText()}
-          </span>
-          <svg
-            className={`h-4 w-4 text-neutral-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </div>
-      </button>
+      />
 
-      {/* 配置表单 - 折叠区域 */}
+      {/* 配置表单 */}
       {enabled && expanded && (
         <div className="space-y-3 rounded bg-neutral-100 p-4 dark:bg-neutral-800">
           {/* URL */}
@@ -534,7 +452,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       {/* 同步按钮 */}
       {enabled && status === 'connected' && (
         <div className="grid grid-cols-2 gap-3">
-          {/* 上传按钮 */}
           <button
             onClick={() => performSync('upload')}
             disabled={isSyncing}
@@ -545,8 +462,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
             />
             <span>上传</span>
           </button>
-
-          {/* 下载按钮 */}
           <button
             onClick={() => performSync('download')}
             disabled={isSyncing}
@@ -568,39 +483,16 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       />
 
       {/* 调试日志抽屉 */}
-      <ActionDrawer
+      <SyncDebugDrawer
         isOpen={showDebugDrawer}
         onClose={() => setShowDebugDrawer(false)}
-        historyId="webdav-debug-logs"
-      >
-        <ActionDrawer.Icon icon={DataAlertIcon} />
-        <ActionDrawer.Content>
-          <p className="mb-3 text-neutral-500 dark:text-neutral-400">
-            同步过程中的
-            <span className="text-neutral-800 dark:text-neutral-200">
-              详细日志
-            </span>
-            ，可以帮助开发者诊断问题。点击文本框可全选内容。
-          </p>
-          <textarea
-            ref={textAreaRef}
-            readOnly
-            onClick={handleSelectAll}
-            value={debugLogs.join('\n')}
-            className="h-48 w-full resize-none rounded-md border border-neutral-200 bg-neutral-50 p-3 font-mono text-xs leading-relaxed text-neutral-700 focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
-          />
-        </ActionDrawer.Content>
-        <ActionDrawer.Actions>
-          <ActionDrawer.SecondaryButton
-            onClick={() => setShowDebugDrawer(false)}
-          >
-            关闭
-          </ActionDrawer.SecondaryButton>
-          <ActionDrawer.PrimaryButton onClick={handleCopyLogs}>
-            {copySuccess ? '已复制' : '复制日志'}
-          </ActionDrawer.PrimaryButton>
-        </ActionDrawer.Actions>
-      </ActionDrawer>
+        logs={debugLogs}
+        textAreaRef={textAreaRef}
+        copySuccess={copySuccess}
+        onCopy={handleCopyLogs}
+        onSelectAll={handleSelectAll}
+        title="WebDAV 同步日志"
+      />
     </div>
   );
 };

@@ -15,6 +15,7 @@ import UpdateDrawer from './UpdateDrawer';
 import FeedbackDrawer from './FeedbackDrawer';
 import SettingGroup from './SettingItem';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import { useCloudSyncConnection } from '@/lib/hooks/useCloudSyncConnection';
 
 import { useTheme } from 'next-themes';
 import { LayoutSettings } from '../brewing/Timer/Settings';
@@ -147,15 +148,12 @@ export interface SettingsOptions {
     enablePullToSync?: boolean; // 是否启用下拉上传功能
     useProxy?: boolean; // 是否使用 CORS 代理（浏览器环境推荐开启，移动端/局域网可关闭）
   };
-  // Supabase 实时同步设置
+  // Supabase 云同步设置（仅支持手动上传/下载）
   supabaseSync?: {
     enabled: boolean;
     url: string; // Supabase 项目 URL
     anonKey: string; // Supabase anon key
-    realtimeEnabled: boolean; // 是否启用实时同步
-    syncMode: 'realtime' | 'manual';
     lastConnectionSuccess?: boolean;
-    enablePullToSync?: boolean; // 是否启用下拉同步功能
     lastSyncTime?: number; // 上次同步时间
   };
   // 随机咖啡豆设置
@@ -314,14 +312,11 @@ export const defaultSettings: SettingsOptions = {
     syncMode: 'manual',
     enablePullToSync: true, // 默认启用下拉上传
   },
-  // Supabase 同步设置默认值
+  // Supabase 同步设置默认值（仅手动同步）
   supabaseSync: {
     enabled: false,
     url: '',
     anonKey: '',
-    realtimeEnabled: true,
-    syncMode: 'realtime',
-    enablePullToSync: true,
   },
   // 随机咖啡豆设置默认值
   randomCoffeeBeans: {
@@ -524,234 +519,13 @@ const Settings: React.FC<SettingsProps> = ({
   }, [settings.hiddenEquipments]);
 
   // S3同步相关状态（仅用于同步按钮）
-  const [s3Status, setS3Status] = useState<
-    'disconnected' | 'connecting' | 'connected' | 'error'
-  >('disconnected');
+  const {
+    status: cloudSyncStatus,
+    isSyncing,
+    setIsSyncing,
+    performSync: performQuickSync,
+  } = useCloudSyncConnection(settings, isOpen);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  // 检测云同步连接状态的函数（同时支持S3和WebDAV）
-  const checkCloudSyncStatus = async () => {
-    try {
-      // 检查哪个云同步服务已启用
-      const s3Enabled =
-        settings.s3Sync?.enabled && settings.s3Sync?.lastConnectionSuccess;
-      const webdavEnabled =
-        settings.webdavSync?.enabled &&
-        settings.webdavSync?.lastConnectionSuccess;
-
-      if (!s3Enabled && !webdavEnabled) {
-        setS3Status('disconnected');
-        return;
-      }
-
-      setS3Status('connecting');
-
-      // 优先检查已启用的服务
-      if (s3Enabled) {
-        const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
-        const s3Config = settings.s3Sync!;
-
-        if (
-          s3Config.accessKeyId &&
-          s3Config.secretAccessKey &&
-          s3Config.bucketName
-        ) {
-          const manager = new S3SyncManager();
-          const connected = await manager.initialize({
-            region: s3Config.region,
-            accessKeyId: s3Config.accessKeyId,
-            secretAccessKey: s3Config.secretAccessKey,
-            bucketName: s3Config.bucketName,
-            prefix: s3Config.prefix,
-            endpoint: s3Config.endpoint || undefined,
-          });
-
-          if (connected) {
-            setS3Status('connected');
-            return;
-          }
-        }
-      } else if (webdavEnabled) {
-        const { WebDAVSyncManager } = await import('@/lib/webdav/syncManager');
-        const webdavConfig = settings.webdavSync!;
-
-        if (
-          webdavConfig.url &&
-          webdavConfig.username &&
-          webdavConfig.password
-        ) {
-          const manager = new WebDAVSyncManager();
-          const connected = await manager.initialize({
-            url: webdavConfig.url,
-            username: webdavConfig.username,
-            password: webdavConfig.password,
-            remotePath: webdavConfig.remotePath,
-          });
-
-          if (connected) {
-            setS3Status('connected');
-            return;
-          }
-        }
-      }
-
-      setS3Status('error');
-    } catch (error) {
-      console.error('检测云同步状态失败:', error);
-      setS3Status('error');
-    }
-  };
-
-  // 执行云同步
-  const performQuickSync = async (direction: 'upload' | 'download') => {
-    setShowSyncMenu(false);
-
-    if (isSyncing) {
-      return;
-    }
-
-    if (s3Status !== 'connected') {
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
-      showToast({
-        type: 'error',
-        title: '云同步未连接',
-        duration: 2000,
-      });
-      return;
-    }
-
-    try {
-      setIsSyncing(true);
-
-      const s3Enabled =
-        settings.s3Sync?.enabled && settings.s3Sync?.lastConnectionSuccess;
-      const webdavEnabled =
-        settings.webdavSync?.enabled &&
-        settings.webdavSync?.lastConnectionSuccess;
-
-      let manager: any;
-      let connected = false;
-
-      if (s3Enabled) {
-        const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
-        const s3Config = settings.s3Sync!;
-
-        manager = new S3SyncManager();
-        connected = await manager.initialize({
-          region: s3Config.region,
-          accessKeyId: s3Config.accessKeyId,
-          secretAccessKey: s3Config.secretAccessKey,
-          bucketName: s3Config.bucketName,
-          prefix: s3Config.prefix,
-          endpoint: s3Config.endpoint || undefined,
-        });
-      } else if (webdavEnabled) {
-        const { WebDAVSyncManager } = await import('@/lib/webdav/syncManager');
-        const webdavConfig = settings.webdavSync!;
-
-        manager = new WebDAVSyncManager();
-        connected = await manager.initialize({
-          url: webdavConfig.url,
-          username: webdavConfig.username,
-          password: webdavConfig.password,
-          remotePath: webdavConfig.remotePath,
-        });
-      }
-
-      if (!connected || !manager) {
-        throw new Error('云同步连接失败');
-      }
-
-      const result = await manager.sync({
-        preferredDirection: direction,
-      });
-
-      if (result.success) {
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
-
-        if (result.uploadedFiles > 0 && result.downloadedFiles > 0) {
-          showToast({
-            type: 'success',
-            title: `同步完成：上传 ${result.uploadedFiles} 项，下载 ${result.downloadedFiles} 项，即将重启...`,
-            duration: 3000,
-          });
-          setTimeout(() => window.location.reload(), 3000);
-        } else if (result.uploadedFiles > 0) {
-          showToast({
-            type: 'success',
-            title: `已上传 ${result.uploadedFiles} 项到云端`,
-            duration: 2500,
-          });
-        } else if (result.downloadedFiles > 0) {
-          showToast({
-            type: 'success',
-            title: `已从云端下载 ${result.downloadedFiles} 项，即将重启...`,
-            duration: 2500,
-          });
-          setTimeout(() => window.location.reload(), 2500);
-        } else {
-          showToast({
-            type: 'info',
-            title: '数据已是最新',
-            duration: 2000,
-          });
-        }
-
-        if (settings.hapticFeedback) {
-          hapticsUtils.medium();
-        }
-      } else {
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
-        showToast({
-          type: 'error',
-          title: result.message || '同步失败',
-          duration: 3000,
-        });
-      }
-    } catch (error) {
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
-      showToast({
-        type: 'error',
-        title: `同步失败: ${error instanceof Error ? error.message : '未知错误'}`,
-        duration: 3000,
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // 监听云同步状态变更
-  useEffect(() => {
-    const handleCloudSyncStatusChange = () => {
-      checkCloudSyncStatus();
-    };
-
-    window.addEventListener(
-      'cloudSyncStatusChange',
-      handleCloudSyncStatusChange
-    );
-
-    return () => {
-      window.removeEventListener(
-        'cloudSyncStatusChange',
-        handleCloudSyncStatusChange
-      );
-    };
-  }, [settings.s3Sync, settings.webdavSync]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    checkCloudSyncStatus();
-  }, [isOpen, settings.s3Sync, settings.webdavSync]);
 
   // 自动检测更新（仅在 Capacitor 原生环境下）
   // 是否为自动检测触发的更新提示
@@ -906,14 +680,17 @@ const Settings: React.FC<SettingsProps> = ({
         </button>
 
         {/* 云同步快捷按钮 */}
-        {s3Status === 'connected' && (
+        {cloudSyncStatus === 'connected' && (
           <div
             className="absolute right-6 flex items-center gap-2"
             data-sync-menu
           >
             {/* 上传按钮 - 从右侧滑入 */}
             <button
-              onClick={() => performQuickSync('upload')}
+              onClick={() => {
+                setShowSyncMenu(false);
+                performQuickSync('upload');
+              }}
               disabled={isSyncing}
               className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
                 showSyncMenu
@@ -926,7 +703,10 @@ const Settings: React.FC<SettingsProps> = ({
             </button>
             {/* 下载按钮 - 从右侧滑入 */}
             <button
-              onClick={() => performQuickSync('download')}
+              onClick={() => {
+                setShowSyncMenu(false);
+                performQuickSync('download');
+              }}
               disabled={isSyncing}
               className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
                 showSyncMenu

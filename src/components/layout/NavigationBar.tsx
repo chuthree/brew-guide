@@ -393,13 +393,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     hasCoffeeBeans
   );
 
-  // 获取同步状态（Apple 风格：只在同步时显示转圈）
+  // 获取同步状态（只在同步时显示转圈）
   const syncStatus = useSyncStatusStore(state => state.status);
   const syncProvider = useSyncStatusStore(state => state.provider);
-  const isReconnecting = useSyncStatusStore(state => state.isReconnecting);
 
-  // 判断是否正在同步（包括重连中）
-  const isSyncing = syncStatus === 'syncing' || isReconnecting;
+  // 判断是否正在同步
+  const isSyncing = syncStatus === 'syncing';
 
   const {
     visibleTabs = { brewing: true, coffeeBean: true, notes: true },

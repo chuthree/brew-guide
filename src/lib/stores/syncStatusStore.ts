@@ -1,15 +1,21 @@
+/**
+ * 同步状态 Store
+ *
+ * 2025-12-21 简化：移除自动重连相关逻辑，只保留手动同步所需状态
+ */
+
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
-export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error' | 'offline';
+export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 export type SyncProvider = 'supabase' | 'webdav' | 's3' | 'none';
 
-// 状态自动重置配置（Apple 风格：快速消失）
+// 状态自动重置配置
 const STATUS_AUTO_RESET_CONFIG = {
-  success: 500, // 成功后 0.5 秒快速重置（几乎无感）
-  error: 3000, // 错误状态保持 3 秒让用户看到 Toast
-  syncing: 30000, // 同步状态 30 秒超时自动重置（防止卡住）
+  success: 500, // 成功后快速重置
+  error: 3000, // 错误状态保持 3 秒
+  syncing: 30000, // 同步超时保护
 };
 
 interface SyncStatusState {
@@ -17,26 +23,20 @@ interface SyncStatusState {
   provider: SyncProvider;
   lastSyncTime: number | null;
   errorMessage: string | null;
-  retryCount: number;
-  maxRetries: number;
-  isReconnecting: boolean;
 
   // 内部状态
   _resetTimer: ReturnType<typeof setTimeout> | null;
   _syncingTimeout: ReturnType<typeof setTimeout> | null;
 
+  // 方法
   setStatus: (status: SyncStatus) => void;
   setProvider: (provider: SyncProvider) => void;
   setSyncSuccess: () => void;
   setSyncError: (message: string) => void;
   setSyncing: () => void;
-  setOffline: () => void;
-  setReconnecting: (isReconnecting: boolean) => void;
-  incrementRetry: () => number;
-  resetRetry: () => void;
   reset: () => void;
 
-  // 清理定时器
+  // 内部方法
   _clearTimers: () => void;
   _scheduleReset: (delay: number) => void;
 }
@@ -47,9 +47,6 @@ export const useSyncStatusStore = create<SyncStatusState>()(
     provider: 'none',
     lastSyncTime: null,
     errorMessage: null,
-    retryCount: 0,
-    maxRetries: 3,
-    isReconnecting: false,
     _resetTimer: null,
     _syncingTimeout: null,
 
@@ -70,7 +67,6 @@ export const useSyncStatusStore = create<SyncStatusState>()(
 
       const timer = setTimeout(() => {
         const currentState = get();
-        // 只有在非 syncing 状态才自动重置
         if (currentState.status !== 'syncing') {
           set({ status: 'idle', _resetTimer: null });
         }
@@ -95,11 +91,8 @@ export const useSyncStatusStore = create<SyncStatusState>()(
         status: 'success',
         lastSyncTime: Date.now(),
         errorMessage: null,
-        retryCount: 0,
-        isReconnecting: false,
       });
 
-      // 成功后自动重置状态
       _scheduleReset(STATUS_AUTO_RESET_CONFIG.success);
     },
 
@@ -110,10 +103,8 @@ export const useSyncStatusStore = create<SyncStatusState>()(
       set({
         status: 'error',
         errorMessage: message,
-        isReconnecting: false,
       });
 
-      // 错误后自动重置状态
       _scheduleReset(STATUS_AUTO_RESET_CONFIG.error);
     },
 
@@ -131,30 +122,12 @@ export const useSyncStatusStore = create<SyncStatusState>()(
             errorMessage: '同步超时',
             _syncingTimeout: null,
           });
-          // 错误后再重置
           currentState._scheduleReset(STATUS_AUTO_RESET_CONFIG.error);
         }
       }, STATUS_AUTO_RESET_CONFIG.syncing);
 
       set({ status: 'syncing', _syncingTimeout: syncingTimeout });
     },
-
-    setOffline: () => {
-      const { _clearTimers } = get();
-      _clearTimers();
-      set({ status: 'offline' });
-    },
-
-    setReconnecting: isReconnecting => set({ isReconnecting }),
-
-    incrementRetry: () => {
-      const { retryCount } = get();
-      const newCount = retryCount + 1;
-      set({ retryCount: newCount });
-      return newCount;
-    },
-
-    resetRetry: () => set({ retryCount: 0 }),
 
     reset: () => {
       const { _clearTimers } = get();
@@ -164,8 +137,6 @@ export const useSyncStatusStore = create<SyncStatusState>()(
         provider: 'none',
         lastSyncTime: null,
         errorMessage: null,
-        retryCount: 0,
-        isReconnecting: false,
         _resetTimer: null,
         _syncingTimeout: null,
       });

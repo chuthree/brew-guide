@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTraySync } from '@/lib/hooks/useTraySync';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
-import { SyncManager } from '@/lib/sync/SyncManager';
 
 // 检查是否在 Tauri 环境中
 const isTauri = () => {
@@ -75,8 +74,27 @@ export default function StorageInit() {
           const { Storage } = await import('@/lib/core/storage');
           await Storage.initialize();
 
-          // 检查是否配置了 Supabase 同步
-          let cloudSynced = false;
+          // 始终从本地 IndexedDB 加载数据（安全第一，不自动同步云端）
+          console.log('[StorageProvider] 从本地 IndexedDB 加载数据...');
+          try {
+            const { useBrewingNoteStore } = await import(
+              '@/lib/stores/brewingNoteStore'
+            );
+            await useBrewingNoteStore.getState().loadNotes();
+          } catch (e) {
+            console.error('加载笔记失败:', e);
+          }
+
+          try {
+            const { useCoffeeBeanStore } = await import(
+              '@/lib/stores/coffeeBeanStore'
+            );
+            await useCoffeeBeanStore.getState().loadBeans();
+          } catch (e) {
+            console.error('加载咖啡豆失败:', e);
+          }
+
+          // 检查 Supabase 配置（仅记录状态，不自动同步）
           try {
             const settingsStr = await Storage.get('brewGuideSettings');
             if (settingsStr) {
@@ -89,100 +107,13 @@ export default function StorageInit() {
                 supabaseSettings?.anonKey
               ) {
                 syncStatusStore.setProvider('supabase');
-
-                // 离线时跳过云端同步，避免一上来就是同步中状态
-                const isOnline =
-                  typeof navigator === 'undefined' ? true : navigator.onLine;
-                if (!isOnline) {
-                  syncStatusStore.setOffline();
-                } else {
-                  const { simpleSyncService } = await import(
-                    '@/lib/supabase/simpleSyncService'
-                  );
-
-                  const initOk = simpleSyncService.initialize({
-                    url: supabaseSettings.url,
-                    anonKey: supabaseSettings.anonKey,
-                  });
-
-                  if (initOk) {
-                    // 初始化 SyncManager，用于处理后台恢复和重试
-                    SyncManager.initialize({
-                      testConnection: simpleSyncService.testConnection,
-                      downloadAllData: simpleSyncService.downloadAllData,
-                      uploadAllData: simpleSyncService.uploadAllData,
-                      startRealtimeSync: simpleSyncService.startRealtimeSync,
-                      stopRealtimeSync: simpleSyncService.stopRealtimeSync,
-                      getRealtimeStatus: simpleSyncService.getRealtimeStatus,
-                    });
-
-                    // 测试连接
-                    const connected = await simpleSyncService.testConnection();
-                    console.log(
-                      '[StorageProvider] Supabase 连接测试:',
-                      connected
-                    );
-
-                    if (connected) {
-                      // 关键：每次启动都从云端下载最新数据
-                      console.log('[StorageProvider] 从云端下载最新数据...');
-                      const result = await simpleSyncService.downloadAllData();
-                      console.log('[StorageProvider] 下载结果:', result);
-
-                      // downloadAllData 内部已经更新了 syncStatusStore
-                      // 即使 downloaded=0 也算成功（可能只是没有数据）
-                      // 只要 success 为 true 就表示同步成功
-                      if (result.success) {
-                        cloudSynced = true;
-                        // 确保状态为 success（downloadAllData 内部可能已设置）
-                        syncStatusStore.setSyncSuccess();
-                      } else {
-                        // 下载失败，静默重置（Apple 风格）
-                        syncStatusStore.setStatus('idle');
-                      }
-
-                      // 启动实时监听
-                      if (supabaseSettings.realtimeEnabled) {
-                        simpleSyncService.startRealtimeSync();
-                        simpleSyncService.startLocalChangeListeners();
-                        console.log('[StorageProvider] 实时同步已启动');
-                      }
-                    } else {
-                      // 连接失败，静默重置（Apple 风格）
-                      syncStatusStore.setStatus('idle');
-                    }
-                  } else {
-                    syncStatusStore.setStatus('idle');
-                  }
-                }
+                // 设置为 idle，等待用户手动同步
+                syncStatusStore.setStatus('idle');
+                console.log('[StorageProvider] Supabase 已配置，等待用户手动同步');
               }
             }
           } catch (supabaseError) {
-            // Apple 风格：初始化失败时静默处理，不打扰用户
-            console.error('Supabase 初始化失败:', supabaseError);
-            syncStatusStore.setStatus('idle');
-          }
-
-          // 如果没有从云端同步成功，则从本地 IndexedDB 加载数据
-          if (!cloudSynced) {
-            console.log('[StorageProvider] 从本地 IndexedDB 加载数据...');
-            try {
-              const { useBrewingNoteStore } = await import(
-                '@/lib/stores/brewingNoteStore'
-              );
-              await useBrewingNoteStore.getState().loadNotes();
-            } catch (e) {
-              console.error('加载笔记失败:', e);
-            }
-
-            try {
-              const { useCoffeeBeanStore } = await import(
-                '@/lib/stores/coffeeBeanStore'
-              );
-              await useCoffeeBeanStore.getState().loadBeans();
-            } catch (e) {
-              console.error('加载咖啡豆失败:', e);
-            }
+            console.debug('检查 Supabase 配置失败:', supabaseError);
           }
 
           // 清理过期临时文件

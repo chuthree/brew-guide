@@ -256,11 +256,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     };
 
     // 只有当修改配置参数（非 enabled 和 lastConnectionSuccess）时才清除连接状态
-    if (
-      key !== 'enabled' &&
-      key !== 'lastConnectionSuccess' &&
-      key !== 'realtimeEnabled'
-    ) {
+    if (key !== 'enabled' && key !== 'lastConnectionSuccess') {
       newSupabaseSettings.lastConnectionSuccess = false;
     }
 
@@ -584,11 +580,9 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             </button>
           )}
 
-          {/* 下拉上传开关 - 仅在启用云同步且已成功连接时显示 */}
+          {/* 下拉上传开关 - 仅在 S3/WebDAV 启用且已成功连接时显示（Supabase 只支持手动同步） */}
           {((s3Settings.enabled && s3Settings.lastConnectionSuccess) ||
-            (webdavSettings.enabled && webdavSettings.lastConnectionSuccess) ||
-            (supabaseSettings.enabled &&
-              supabaseSettings.lastConnectionSuccess)) && (
+            (webdavSettings.enabled && webdavSettings.lastConnectionSuccess)) && (
             <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
               <div>
                 <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
@@ -604,9 +598,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                   checked={
                     s3Settings.enabled
                       ? s3Settings.enablePullToSync !== false
-                      : webdavSettings.enabled
-                        ? webdavSettings.enablePullToSync !== false
-                        : supabaseSettings.enablePullToSync !== false
+                      : webdavSettings.enablePullToSync !== false
                   }
                   onChange={e => {
                     if (s3Settings.enabled) {
@@ -616,11 +608,6 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                       );
                     } else if (webdavSettings.enabled) {
                       handleWebDAVSettingChange(
-                        'enablePullToSync',
-                        e.target.checked
-                      );
-                    } else if (supabaseSettings.enabled) {
-                      handleSupabaseSettingChange(
                         'enablePullToSync',
                         e.target.checked
                       );
