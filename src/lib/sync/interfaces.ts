@@ -172,7 +172,11 @@ export class BaseSyncManagerAdapter implements ISyncManager {
     private readonly manager: {
       sync(options: {
         preferredDirection?: 'upload' | 'download';
-        onProgress?: (p: { phase: string; message: string; percentage: number }) => void;
+        onProgress?: (p: {
+          phase: string;
+          message: string;
+          percentage: number;
+        }) => void;
       }): Promise<{
         success: boolean;
         message: string;
@@ -201,7 +205,12 @@ export class BaseSyncManagerAdapter implements ISyncManager {
     const result = await this.manager.sync({
       preferredDirection: options.direction,
       onProgress: options.onProgress
-        ? (p) => options.onProgress!({ phase: p.phase, message: p.message, percentage: p.percentage })
+        ? p =>
+            options.onProgress!({
+              phase: p.phase,
+              message: p.message,
+              percentage: p.percentage,
+            })
         : undefined,
     });
 
