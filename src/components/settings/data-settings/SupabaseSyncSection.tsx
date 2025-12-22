@@ -6,6 +6,9 @@
  * 2025-12-21 重构：
  * - 简化为纯手动同步
  * - 使用共享 Hook 和组件减少代码重复
+ *
+ * 2025-12-22 优化：
+ * - 添加错误详情抽屉，显示详细同步错误日志
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -15,11 +18,12 @@ import {
 } from '@/lib/supabase/simpleSyncService';
 import { SUPABASE_SETUP_SQL } from '@/lib/supabase';
 import { useSyncSection } from '@/lib/hooks/useSyncSection';
+import { buildSyncErrorLogs } from '@/lib/sync/types';
 import { SettingsOptions } from '../Settings';
 import { Upload, Download, ExternalLink } from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
-import { SyncHeaderButton } from './shared';
+import { SyncHeaderButton, SyncDebugDrawer } from './shared';
 
 type SupabaseSyncSettings = NonNullable<SettingsOptions['supabaseSync']>;
 
@@ -56,6 +60,14 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
     setExpanded,
     isSyncing,
     setIsSyncing,
+    debugLogs,
+    setDebugLogs,
+    showDebugDrawer,
+    setShowDebugDrawer,
+    textAreaRef: debugTextAreaRef,
+    copySuccess: debugCopySuccess,
+    handleCopyLogs,
+    handleSelectAll,
     getStatusColor,
     getStatusText,
     notifyCloudSyncStatusChange,
@@ -155,6 +167,7 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   const executeSync = async (direction: 'upload' | 'download') => {
     setIsSyncing(true);
     setError('');
+    setDebugLogs([]); // 清空之前的日志
 
     try {
       // 按需建立连接
@@ -165,14 +178,27 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
         });
         if (!initialized) {
           setStatus('error');
-          setError('初始化失败，请检查配置');
+          const errorMsg = '初始化失败，请检查配置';
+          setError(errorMsg);
+          setDebugLogs(
+            buildSyncErrorLogs('Supabase', direction, errorMsg, [
+              'Supabase URL 格式可能不正确',
+            ])
+          );
           setIsSyncing(false);
           return;
         }
         const connected = await simpleSyncService.testConnection();
         if (!connected) {
           setStatus('error');
-          setError('连接失败，请检查配置');
+          const errorMsg = '连接失败，请检查配置';
+          setError(errorMsg);
+          setDebugLogs(
+            buildSyncErrorLogs('Supabase', direction, errorMsg, [
+              '请确认 Supabase URL 和 Anon Key 正确',
+              '请确认已执行 SQL 初始化脚本',
+            ])
+          );
           setIsSyncing(false);
           return;
         }
@@ -215,6 +241,14 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
         onSyncComplete?.();
       } else {
         setError(result.message);
+        setDebugLogs(
+          buildSyncErrorLogs(
+            'Supabase',
+            direction,
+            result.message,
+            result.errors
+          )
+        );
         showToast({
           type: 'error',
           title: result.message,
@@ -223,7 +257,13 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '同步失败';
+      const errorStack = err instanceof Error ? err.stack : undefined;
       setError(errorMsg);
+      setDebugLogs(
+        buildSyncErrorLogs('Supabase', direction, errorMsg, [
+          errorStack || errorMsg,
+        ])
+      );
 
       const { showToast } = await import(
         '@/components/common/feedback/LightToast'
@@ -347,8 +387,16 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
 
           {/* 错误信息 */}
           {error && (
-            <div className="rounded-md bg-red-50 p-3 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-              {error}
+            <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
+              <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+              {debugLogs.length > 0 && (
+                <button
+                  onClick={() => setShowDebugDrawer(true)}
+                  className="mt-2 text-xs font-medium text-red-700 underline hover:text-red-800 dark:text-red-300 dark:hover:text-red-200"
+                >
+                  查看详细日志
+                </button>
+              )}
             </div>
           )}
 
@@ -454,6 +502,18 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           </ActionDrawer.PrimaryButton>
         </ActionDrawer.Actions>
       </ActionDrawer>
+
+      {/* 同步日志抽屉 */}
+      <SyncDebugDrawer
+        isOpen={showDebugDrawer}
+        onClose={() => setShowDebugDrawer(false)}
+        logs={debugLogs}
+        textAreaRef={debugTextAreaRef}
+        copySuccess={debugCopySuccess}
+        onCopy={handleCopyLogs}
+        onSelectAll={handleSelectAll}
+        title="Supabase 同步"
+      />
     </div>
   );
 };

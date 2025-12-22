@@ -1,10 +1,10 @@
 /**
  * 简化版 Supabase 同步服务
- * 
+ *
  * ⚠️ 2025-12-21 紧急简化
  * 移除了所有自动同步、实时同步功能
  * 只保留最基本的手动上传/下载功能
- * 
+ *
  * 核心原则：
  * 1. 只支持手动触发的上传和下载
  * 2. 上传：全量上传本地数据到云端
@@ -12,10 +12,7 @@
  * 4. 绝不自动同步，绝不自动覆盖本地数据
  */
 
-import {
-  createClient,
-  SupabaseClient,
-} from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { db } from '@/lib/core/db';
 import { Storage } from '@/lib/core/storage';
 import type { CoffeeBean } from '@/types/app';
@@ -188,6 +185,8 @@ export async function uploadAllData(): Promise<SyncResult> {
   const errors: string[] = [];
   let uploaded = 0;
 
+  // 设置 provider，确保错误详情显示正确的服务商
+  syncStatusStore.setProvider('supabase');
   syncStatusStore.setSyncing();
   const startTime = Date.now();
   console.log('[Supabase] 开始上传数据...');
@@ -201,7 +200,9 @@ export async function uploadAllData(): Promise<SyncResult> {
       db.customMethods.toArray(),
     ]);
 
-    console.log(`[Supabase] 本地数据: 咖啡豆 ${beans.length}, 笔记 ${notes.length}, 器具 ${equipments.length}, 方案 ${methods.length}`);
+    console.log(
+      `[Supabase] 本地数据: 咖啡豆 ${beans.length}, 笔记 ${notes.length}, 器具 ${equipments.length}, 方案 ${methods.length}`
+    );
 
     // 上传咖啡豆
     if (beans.length > 0) {
@@ -304,7 +305,9 @@ export async function uploadAllData(): Promise<SyncResult> {
           if (presetJson) {
             try {
               customPresets[presetKey] = JSON.parse(presetJson);
-            } catch { /* 忽略 */ }
+            } catch {
+              /* 忽略 */
+            }
           }
         }
         if (Object.keys(customPresets).length > 0) {
@@ -316,7 +319,9 @@ export async function uploadAllData(): Promise<SyncResult> {
         if (roasterLogosJson) {
           try {
             settingsData[ROASTER_LOGOS_KEY] = JSON.parse(roasterLogosJson);
-          } catch { /* 忽略 */ }
+          } catch {
+            /* 忽略 */
+          }
         }
       }
 
@@ -336,7 +341,9 @@ export async function uploadAllData(): Promise<SyncResult> {
         uploaded += Object.keys(settingsData).length;
       }
     } catch (err) {
-      errors.push(`设置上传异常: ${err instanceof Error ? err.message : '未知错误'}`);
+      errors.push(
+        `设置上传异常: ${err instanceof Error ? err.message : '未知错误'}`
+      );
     }
 
     const totalTime = Date.now() - startTime;
@@ -392,6 +399,8 @@ export async function downloadAllData(): Promise<SyncResult> {
   const errors: string[] = [];
   let downloaded = 0;
 
+  // 设置 provider，确保错误详情显示正确的服务商
+  syncStatusStore.setProvider('supabase');
   syncStatusStore.setSyncing();
   const startTime = Date.now();
   console.log('[Supabase] 开始下载数据...');
@@ -439,11 +448,15 @@ export async function downloadAllData(): Promise<SyncResult> {
     if (beansResult.error) {
       errors.push(`咖啡豆下载失败: ${beansResult.error.message}`);
     } else if (beansResult.data && beansResult.data.length > 0) {
-      const beans = beansResult.data.map((row: { data: CoffeeBean }) => row.data);
+      const beans = beansResult.data.map(
+        (row: { data: CoffeeBean }) => row.data
+      );
       console.log(`[Supabase] 下载到 ${beans.length} 条咖啡豆`);
       await db.coffeeBeans.clear();
       await db.coffeeBeans.bulkPut(beans);
-      const { getCoffeeBeanStore } = await import('@/lib/stores/coffeeBeanStore');
+      const { getCoffeeBeanStore } = await import(
+        '@/lib/stores/coffeeBeanStore'
+      );
       getCoffeeBeanStore().setBeans(beans);
       downloaded += beans.length;
     }
@@ -452,11 +465,15 @@ export async function downloadAllData(): Promise<SyncResult> {
     if (notesResult.error) {
       errors.push(`冲煮笔记下载失败: ${notesResult.error.message}`);
     } else if (notesResult.data && notesResult.data.length > 0) {
-      const notes = notesResult.data.map((row: { data: BrewingNote }) => row.data);
+      const notes = notesResult.data.map(
+        (row: { data: BrewingNote }) => row.data
+      );
       console.log(`[Supabase] 下载到 ${notes.length} 条笔记`);
       await db.brewingNotes.clear();
       await db.brewingNotes.bulkPut(notes);
-      const { getBrewingNoteStore } = await import('@/lib/stores/brewingNoteStore');
+      const { getBrewingNoteStore } = await import(
+        '@/lib/stores/brewingNoteStore'
+      );
       getBrewingNoteStore().setNotes(notes);
       downloaded += notes.length;
     }
@@ -465,7 +482,9 @@ export async function downloadAllData(): Promise<SyncResult> {
     if (equipmentsResult.error) {
       errors.push(`自定义器具下载失败: ${equipmentsResult.error.message}`);
     } else if (equipmentsResult.data && equipmentsResult.data.length > 0) {
-      const equipments = equipmentsResult.data.map((row: { data: CustomEquipment }) => row.data);
+      const equipments = equipmentsResult.data.map(
+        (row: { data: CustomEquipment }) => row.data
+      );
       console.log(`[Supabase] 下载到 ${equipments.length} 个自定义器具`);
       await db.customEquipments.clear();
       await db.customEquipments.bulkPut(equipments);
@@ -490,31 +509,43 @@ export async function downloadAllData(): Promise<SyncResult> {
       errors.push(`设置下载失败: ${settingsResult.error.message}`);
     } else if (settingsResult.data?.data) {
       const settingsData = settingsResult.data.data as Record<string, unknown>;
-      console.log(`[Supabase] 下载到 ${Object.keys(settingsData).length} 项设置`);
+      console.log(
+        `[Supabase] 下载到 ${Object.keys(settingsData).length} 项设置`
+      );
 
       for (const key of SETTINGS_KEYS_TO_SYNC) {
         if (settingsData[key] !== undefined) {
-          const value = typeof settingsData[key] === 'object'
-            ? JSON.stringify(settingsData[key])
-            : String(settingsData[key]);
+          const value =
+            typeof settingsData[key] === 'object'
+              ? JSON.stringify(settingsData[key])
+              : String(settingsData[key]);
           await Storage.set(key, value);
         }
       }
 
       // 恢复自定义预设
       if (typeof window !== 'undefined' && settingsData.customPresets) {
-        const customPresets = settingsData.customPresets as Record<string, unknown>;
+        const customPresets = settingsData.customPresets as Record<
+          string,
+          unknown
+        >;
         for (const presetKey of CUSTOM_PRESETS_KEYS) {
           if (customPresets[presetKey]) {
             const storageKey = `${CUSTOM_PRESETS_PREFIX}${presetKey}`;
-            localStorage.setItem(storageKey, JSON.stringify(customPresets[presetKey]));
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify(customPresets[presetKey])
+            );
           }
         }
       }
 
       // 恢复烘焙商图标
       if (typeof window !== 'undefined' && settingsData[ROASTER_LOGOS_KEY]) {
-        localStorage.setItem(ROASTER_LOGOS_KEY, JSON.stringify(settingsData[ROASTER_LOGOS_KEY]));
+        localStorage.setItem(
+          ROASTER_LOGOS_KEY,
+          JSON.stringify(settingsData[ROASTER_LOGOS_KEY])
+        );
       }
 
       downloaded += Object.keys(settingsData).length;
@@ -524,7 +555,9 @@ export async function downloadAllData(): Promise<SyncResult> {
     }
 
     const totalTime = Date.now() - startTime;
-    const hasCriticalError = errors.some(e => e.includes('咖啡豆') || e.includes('笔记'));
+    const hasCriticalError = errors.some(
+      e => e.includes('咖啡豆') || e.includes('笔记')
+    );
     const success = !hasCriticalError;
     const message = success
       ? `下载成功: ${downloaded} 条记录`

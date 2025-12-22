@@ -2,6 +2,13 @@
  * 同步状态 Store
  *
  * 2025-12-21 简化：移除自动重连相关逻辑，只保留手动同步所需状态
+ *
+ * 职责：
+ * - 管理全局同步状态（syncing/success/error/idle）
+ * - 提供同步超时保护
+ * - 状态自动重置
+ *
+ * 注意：UI 层的错误日志展示由各组件通过 useSyncSection hook 自行管理
  */
 
 import { create } from 'zustand';
