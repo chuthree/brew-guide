@@ -17,6 +17,7 @@ import { SettingsOptions } from '../Settings';
 import { Upload, Download } from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
+import { showToast } from '@/components/common/feedback/LightToast';
 import { SyncHeaderButton, SyncDebugDrawer } from './shared';
 
 type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>;
@@ -217,10 +218,6 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
       }
 
       if (result.success) {
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
-
         if (result.uploadedFiles > 0 && result.downloadedFiles > 0) {
           showToast({
             type: 'success',
@@ -267,9 +264,6 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
           setShowDebugDrawer(true);
         }
         setError(result.message || '同步失败');
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
         showToast({
           type: 'error',
           title: result.message || '同步失败',
@@ -279,10 +273,6 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
     } catch (err) {
       console.error('同步失败:', err);
       setError(`同步失败: ${err instanceof Error ? err.message : '未知错误'}`);
-
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
       showToast({
         type: 'error',
         title: `同步失败: ${err instanceof Error ? err.message : '未知错误'}`,

@@ -19,6 +19,7 @@ import {
 import { SUPABASE_SETUP_SQL } from '@/lib/supabase';
 import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { buildSyncErrorLogs } from '@/lib/sync/types';
+import { showToast } from '@/components/common/feedback/LightToast';
 import { SettingsOptions } from '../Settings';
 import { Upload, Download, ExternalLink } from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
@@ -211,10 +212,6 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           ? await simpleSyncService.uploadAllData()
           : await simpleSyncService.downloadAllData();
 
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
-
       if (result.success) {
         if (result.uploaded > 0 && direction === 'upload') {
           showToast({
@@ -265,9 +262,6 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
         ])
       );
 
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
       showToast({
         type: 'error',
         title: `同步失败: ${errorMsg}`,

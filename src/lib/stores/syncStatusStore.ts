@@ -13,10 +13,11 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import type { SyncStatus, CloudProvider } from '@/lib/sync/types';
 
-export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
-
-export type SyncProvider = 'supabase' | 'webdav' | 's3' | 'none';
+// 重导出类型，保持向后兼容
+export type { SyncStatus };
+export type SyncProvider = CloudProvider;
 
 // 状态自动重置配置
 const STATUS_AUTO_RESET_CONFIG = {

@@ -13,6 +13,7 @@ import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { SettingsOptions } from '../Settings';
 import { Upload, Download } from 'lucide-react';
 import WebDAVTutorialModal from './WebDAVTutorialModal';
+import { showToast } from '@/components/common/feedback/LightToast';
 import { SyncHeaderButton, SyncDebugDrawer } from './shared';
 
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
@@ -224,10 +225,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       });
 
       if (result.success) {
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
-
         if (result.uploadedFiles > 0 && result.downloadedFiles > 0) {
           showToast({
             type: 'success',
@@ -274,9 +271,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
           setShowDebugDrawer(true);
         }
         setError(result.message || '同步失败');
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
         showToast({
           type: 'error',
           title: result.message || 'WebDAV 同步失败',
@@ -286,10 +280,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       setError(`同步失败: ${errorMsg}`);
-
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
       showToast({
         type: 'error',
         title: `WebDAV 同步失败: ${errorMsg}`,
