@@ -1,15 +1,22 @@
 /**
  * 简化版 Supabase 同步服务
  *
- * ⚠️ 2025-12-21 紧急简化
- * 移除了所有自动同步、实时同步功能
- * 只保留最基本的手动上传/下载功能
+ * ⚠️ 2025-12-22 重大修复 - 基于业界标准重构
+ *
+ * 设计参考：
+ * - CouchDB 复制冲突模型: https://docs.couchdb.org/en/stable/replication/conflicts.html
+ * - RxDB 离线优先架构: https://rxdb.info/offline-first.html
+ * - 软删除墓碑模式 (Tombstone Pattern)
  *
  * 核心原则：
- * 1. 只支持手动触发的上传和下载
- * 2. 上传：全量上传本地数据到云端
- * 3. 下载：全量拉取云端数据替换本地（需用户确认）
- * 4. 绝不自动同步，绝不自动覆盖本地数据
+ * 1. 只支持手动触发的上传和下载（无自动同步）
+ * 2. 上传：全量上传本地数据 + 同步删除操作（软删除）
+ * 3. 下载：拉取云端未删除数据替换本地
+ * 4. 所有删除使用软删除（设置 deleted_at），保留历史记录
+ *
+ * 同步删除策略（关键）：
+ * - 上传时：本地不存在但云端存在 → 云端标记为 deleted_at
+ * - 下载时：只获取 deleted_at IS NULL 的记录
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -18,6 +25,12 @@ import { Storage } from '@/lib/core/storage';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote, CustomEquipment, Method } from '@/lib/core/config';
 import { getSyncStatusStore } from '@/lib/stores/syncStatusStore';
+import {
+  syncTableUpload,
+  fetchRemoteActiveRecords,
+  SYNC_TABLES,
+  DEFAULT_USER_ID,
+} from './syncOperations';
 
 // ============================================
 // 类型定义
@@ -41,9 +54,6 @@ export interface SupabaseConfig {
 // ============================================
 // 常量
 // ============================================
-
-// 固定的 user_id，用于数据隔离
-const DEFAULT_USER_ID = 'default_user';
 
 // 需要同步的设置键
 const SETTINGS_KEYS_TO_SYNC = [
@@ -167,7 +177,12 @@ export async function testConnection(): Promise<boolean> {
 
 /**
  * 上传所有本地数据到云端
- * 用户点击"上传"按钮时调用
+ *
+ * 使用基于 CouchDB 墓碑模式的同步策略：
+ * 1. Upsert 所有本地数据（设置 deleted_at = null）
+ * 2. 软删除云端存在但本地不存在的数据（设置 deleted_at = now）
+ *
+ * @returns 同步结果
  */
 export async function uploadAllData(): Promise<SyncResult> {
   const syncStatusStore = getSyncStatusStore();
@@ -185,14 +200,13 @@ export async function uploadAllData(): Promise<SyncResult> {
   const errors: string[] = [];
   let uploaded = 0;
 
-  // 设置 provider，确保错误详情显示正确的服务商
   syncStatusStore.setProvider('supabase');
   syncStatusStore.setSyncing();
   const startTime = Date.now();
-  console.log('[Supabase] 开始上传数据...');
+  console.log('[Supabase] 开始上传数据（含删除同步）...');
 
   try {
-    // 读取本地数据
+    // 1. 读取本地数据
     const [beans, notes, equipments, methods] = await Promise.all([
       db.coffeeBeans.toArray(),
       db.brewingNotes.toArray(),
@@ -204,147 +218,78 @@ export async function uploadAllData(): Promise<SyncResult> {
       `[Supabase] 本地数据: 咖啡豆 ${beans.length}, 笔记 ${notes.length}, 器具 ${equipments.length}, 方案 ${methods.length}`
     );
 
-    // 上传咖啡豆
-    if (beans.length > 0) {
-      const records = beans.map(bean => ({
+    // 2. 同步咖啡豆（使用模块化同步操作）
+    const beansResult = await syncTableUpload(
+      supabaseClient,
+      SYNC_TABLES.COFFEE_BEANS,
+      beans,
+      bean => ({
         id: bean.id,
-        user_id: DEFAULT_USER_ID,
         data: bean,
         updated_at: new Date(bean.timestamp || Date.now()).toISOString(),
-      }));
-      const { error } = await supabaseClient
-        .from('coffee_beans')
-        .upsert(records, { onConflict: 'id,user_id' });
-      if (error) {
-        errors.push(`咖啡豆上传失败: ${error.message}`);
-      } else {
-        uploaded += beans.length;
-      }
+      })
+    );
+    if (!beansResult.success) {
+      errors.push(`咖啡豆: ${beansResult.error}`);
+    } else {
+      uploaded += beansResult.data?.upserted || 0;
     }
 
-    // 上传冲煮笔记
-    if (notes.length > 0) {
-      const records = notes.map(note => ({
+    // 3. 同步冲煮笔记
+    const notesResult = await syncTableUpload(
+      supabaseClient,
+      SYNC_TABLES.BREWING_NOTES,
+      notes,
+      note => ({
         id: note.id,
-        user_id: DEFAULT_USER_ID,
         data: note,
         updated_at: new Date(note.timestamp || Date.now()).toISOString(),
-      }));
-      const { error } = await supabaseClient
-        .from('brewing_notes')
-        .upsert(records, { onConflict: 'id,user_id' });
-      if (error) {
-        errors.push(`冲煮笔记上传失败: ${error.message}`);
-      } else {
-        uploaded += notes.length;
-      }
+      })
+    );
+    if (!notesResult.success) {
+      errors.push(`冲煮笔记: ${notesResult.error}`);
+    } else {
+      uploaded += notesResult.data?.upserted || 0;
     }
 
-    // 上传自定义器具
-    if (equipments.length > 0) {
-      const records = equipments.map(eq => ({
+    // 4. 同步自定义器具
+    const equipmentsResult = await syncTableUpload(
+      supabaseClient,
+      SYNC_TABLES.CUSTOM_EQUIPMENTS,
+      equipments,
+      eq => ({
         id: eq.id,
-        user_id: DEFAULT_USER_ID,
         data: eq,
         updated_at: new Date().toISOString(),
-      }));
-      const { error } = await supabaseClient
-        .from('custom_equipments')
-        .upsert(records, { onConflict: 'id,user_id' });
-      if (error) {
-        errors.push(`自定义器具上传失败: ${error.message}`);
-      } else {
-        uploaded += equipments.length;
-      }
+      })
+    );
+    if (!equipmentsResult.success) {
+      errors.push(`自定义器具: ${equipmentsResult.error}`);
+    } else {
+      uploaded += equipmentsResult.data?.upserted || 0;
     }
 
-    // 上传自定义方案
-    if (methods.length > 0) {
-      const records = methods.map(m => ({
+    // 5. 同步自定义方案（注意：使用 equipmentId 作为 id）
+    const methodsWithId = methods.map(m => ({ ...m, id: m.equipmentId }));
+    const methodsResult = await syncTableUpload(
+      supabaseClient,
+      SYNC_TABLES.CUSTOM_METHODS,
+      methodsWithId,
+      m => ({
         id: m.equipmentId,
-        user_id: DEFAULT_USER_ID,
         equipment_id: m.equipmentId,
         data: m,
         updated_at: new Date().toISOString(),
-      }));
-      const { error } = await supabaseClient
-        .from('custom_methods')
-        .upsert(records, { onConflict: 'id,user_id' });
-      if (error) {
-        errors.push(`自定义方案上传失败: ${error.message}`);
-      } else {
-        uploaded += methods.length;
-      }
+      })
+    );
+    if (!methodsResult.success) {
+      errors.push(`自定义方案: ${methodsResult.error}`);
+    } else {
+      uploaded += methodsResult.data?.upserted || 0;
     }
 
-    // 上传设置数据
-    try {
-      const settingsData: Record<string, unknown> = {};
-
-      for (const key of SETTINGS_KEYS_TO_SYNC) {
-        const value = await Storage.get(key);
-        if (value) {
-          try {
-            let parsedValue = JSON.parse(value);
-            if (key === 'brewGuideSettings' && parsedValue?.state?.settings) {
-              parsedValue = parsedValue.state.settings;
-            }
-            settingsData[key] = parsedValue;
-          } catch {
-            settingsData[key] = value;
-          }
-        }
-      }
-
-      // 收集自定义预设
-      if (typeof window !== 'undefined') {
-        const customPresets: Record<string, unknown> = {};
-        for (const presetKey of CUSTOM_PRESETS_KEYS) {
-          const storageKey = `${CUSTOM_PRESETS_PREFIX}${presetKey}`;
-          const presetJson = localStorage.getItem(storageKey);
-          if (presetJson) {
-            try {
-              customPresets[presetKey] = JSON.parse(presetJson);
-            } catch {
-              /* 忽略 */
-            }
-          }
-        }
-        if (Object.keys(customPresets).length > 0) {
-          settingsData.customPresets = customPresets;
-        }
-
-        // 烘焙商图标
-        const roasterLogosJson = localStorage.getItem(ROASTER_LOGOS_KEY);
-        if (roasterLogosJson) {
-          try {
-            settingsData[ROASTER_LOGOS_KEY] = JSON.parse(roasterLogosJson);
-          } catch {
-            /* 忽略 */
-          }
-        }
-      }
-
-      const { error } = await supabaseClient.from('user_settings').upsert(
-        {
-          id: 'app_settings',
-          user_id: DEFAULT_USER_ID,
-          data: settingsData,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id,user_id' }
-      );
-
-      if (error) {
-        errors.push(`设置上传失败: ${error.message}`);
-      } else {
-        uploaded += Object.keys(settingsData).length;
-      }
-    } catch (err) {
-      errors.push(
-        `设置上传异常: ${err instanceof Error ? err.message : '未知错误'}`
-      );
-    }
+    // 6. 上传设置数据
+    uploaded += await uploadSettings(errors);
 
     const totalTime = Date.now() - startTime;
     console.log(`[Supabase] 上传完成，共 ${uploaded} 条，耗时: ${totalTime}ms`);
@@ -375,12 +320,91 @@ export async function uploadAllData(): Promise<SyncResult> {
   }
 }
 
+/**
+ * 上传设置数据到云端
+ */
+async function uploadSettings(errors: string[]): Promise<number> {
+  if (!supabaseClient) return 0;
+
+  try {
+    const settingsData: Record<string, unknown> = {};
+
+    for (const key of SETTINGS_KEYS_TO_SYNC) {
+      const value = await Storage.get(key);
+      if (value) {
+        try {
+          let parsedValue = JSON.parse(value);
+          if (key === 'brewGuideSettings' && parsedValue?.state?.settings) {
+            parsedValue = parsedValue.state.settings;
+          }
+          settingsData[key] = parsedValue;
+        } catch {
+          settingsData[key] = value;
+        }
+      }
+    }
+
+    // 收集自定义预设
+    if (typeof window !== 'undefined') {
+      const customPresets: Record<string, unknown> = {};
+      for (const presetKey of CUSTOM_PRESETS_KEYS) {
+        const storageKey = `${CUSTOM_PRESETS_PREFIX}${presetKey}`;
+        const presetJson = localStorage.getItem(storageKey);
+        if (presetJson) {
+          try {
+            customPresets[presetKey] = JSON.parse(presetJson);
+          } catch {
+            /* 忽略解析错误 */
+          }
+        }
+      }
+      if (Object.keys(customPresets).length > 0) {
+        settingsData.customPresets = customPresets;
+      }
+
+      // 烘焙商图标
+      const roasterLogosJson = localStorage.getItem(ROASTER_LOGOS_KEY);
+      if (roasterLogosJson) {
+        try {
+          settingsData[ROASTER_LOGOS_KEY] = JSON.parse(roasterLogosJson);
+        } catch {
+          /* 忽略解析错误 */
+        }
+      }
+    }
+
+    const { error } = await supabaseClient.from('user_settings').upsert(
+      {
+        id: 'app_settings',
+        user_id: DEFAULT_USER_ID,
+        data: settingsData,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id,user_id' }
+    );
+
+    if (error) {
+      errors.push(`设置上传失败: ${error.message}`);
+      return 0;
+    }
+
+    return Object.keys(settingsData).length;
+  } catch (err) {
+    errors.push(
+      `设置上传异常: ${err instanceof Error ? err.message : '未知错误'}`
+    );
+    return 0;
+  }
+}
+
 // ============================================
 // 下载数据（手动触发，需确认）
 // ============================================
 
 /**
  * 从云端下载所有数据并替换本地
+ *
+ * @description 只获取 deleted_at IS NULL 的记录
  * ⚠️ 此操作会覆盖本地数据，必须由用户明确确认后才能调用
  */
 export async function downloadAllData(): Promise<SyncResult> {
@@ -399,58 +423,46 @@ export async function downloadAllData(): Promise<SyncResult> {
   const errors: string[] = [];
   let downloaded = 0;
 
-  // 设置 provider，确保错误详情显示正确的服务商
   syncStatusStore.setProvider('supabase');
   syncStatusStore.setSyncing();
   const startTime = Date.now();
-  console.log('[Supabase] 开始下载数据...');
+  console.log('[Supabase] 开始下载数据（仅活跃记录）...');
 
   try {
-    // 并行下载所有表
-    const [
-      beansResult,
-      notesResult,
-      equipmentsResult,
-      methodsResult,
-      settingsResult,
-    ] = await Promise.all([
-      supabaseClient
-        .from('coffee_beans')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .is('deleted_at', null),
-      supabaseClient
-        .from('brewing_notes')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .is('deleted_at', null),
-      supabaseClient
-        .from('custom_equipments')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .is('deleted_at', null),
-      supabaseClient
-        .from('custom_methods')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .is('deleted_at', null),
-      supabaseClient
-        .from('user_settings')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .eq('id', 'app_settings')
-        .single(),
-    ]);
+    // 使用模块化操作获取数据
+    const [beansResult, notesResult, equipmentsResult, methodsResult] =
+      await Promise.all([
+        fetchRemoteActiveRecords<CoffeeBean>(
+          supabaseClient,
+          SYNC_TABLES.COFFEE_BEANS
+        ),
+        fetchRemoteActiveRecords<BrewingNote>(
+          supabaseClient,
+          SYNC_TABLES.BREWING_NOTES
+        ),
+        fetchRemoteActiveRecords<CustomEquipment>(
+          supabaseClient,
+          SYNC_TABLES.CUSTOM_EQUIPMENTS
+        ),
+        fetchRemoteActiveRecords<{ equipmentId: string; methods: Method[] }>(
+          supabaseClient,
+          SYNC_TABLES.CUSTOM_METHODS
+        ),
+      ]);
 
-    console.log(`[Supabase] 下载完成，耗时: ${Date.now() - startTime}ms`);
+    // 获取设置
+    const settingsResponse = await supabaseClient
+      .from('user_settings')
+      .select('data')
+      .eq('user_id', DEFAULT_USER_ID)
+      .eq('id', 'app_settings')
+      .single();
 
     // 处理咖啡豆
-    if (beansResult.error) {
-      errors.push(`咖啡豆下载失败: ${beansResult.error.message}`);
+    if (!beansResult.success) {
+      errors.push(`咖啡豆下载失败: ${beansResult.error}`);
     } else if (beansResult.data && beansResult.data.length > 0) {
-      const beans = beansResult.data.map(
-        (row: { data: CoffeeBean }) => row.data
-      );
+      const beans = beansResult.data;
       console.log(`[Supabase] 下载到 ${beans.length} 条咖啡豆`);
       await db.coffeeBeans.clear();
       await db.coffeeBeans.bulkPut(beans);
@@ -459,15 +471,20 @@ export async function downloadAllData(): Promise<SyncResult> {
       );
       getCoffeeBeanStore().setBeans(beans);
       downloaded += beans.length;
+    } else {
+      // 云端没有数据，清空本地
+      await db.coffeeBeans.clear();
+      const { getCoffeeBeanStore } = await import(
+        '@/lib/stores/coffeeBeanStore'
+      );
+      getCoffeeBeanStore().setBeans([]);
     }
 
     // 处理冲煮笔记
-    if (notesResult.error) {
-      errors.push(`冲煮笔记下载失败: ${notesResult.error.message}`);
+    if (!notesResult.success) {
+      errors.push(`冲煮笔记下载失败: ${notesResult.error}`);
     } else if (notesResult.data && notesResult.data.length > 0) {
-      const notes = notesResult.data.map(
-        (row: { data: BrewingNote }) => row.data
-      );
+      const notes = notesResult.data;
       console.log(`[Supabase] 下载到 ${notes.length} 条笔记`);
       await db.brewingNotes.clear();
       await db.brewingNotes.bulkPut(notes);
@@ -476,82 +493,47 @@ export async function downloadAllData(): Promise<SyncResult> {
       );
       getBrewingNoteStore().setNotes(notes);
       downloaded += notes.length;
+    } else {
+      await db.brewingNotes.clear();
+      const { getBrewingNoteStore } = await import(
+        '@/lib/stores/brewingNoteStore'
+      );
+      getBrewingNoteStore().setNotes([]);
     }
 
     // 处理自定义器具
-    if (equipmentsResult.error) {
-      errors.push(`自定义器具下载失败: ${equipmentsResult.error.message}`);
+    if (!equipmentsResult.success) {
+      errors.push(`自定义器具下载失败: ${equipmentsResult.error}`);
     } else if (equipmentsResult.data && equipmentsResult.data.length > 0) {
-      const equipments = equipmentsResult.data.map(
-        (row: { data: CustomEquipment }) => row.data
-      );
+      const equipments = equipmentsResult.data;
       console.log(`[Supabase] 下载到 ${equipments.length} 个自定义器具`);
       await db.customEquipments.clear();
       await db.customEquipments.bulkPut(equipments);
       downloaded += equipments.length;
+    } else {
+      await db.customEquipments.clear();
     }
 
     // 处理自定义方案
-    if (methodsResult.error) {
-      errors.push(`自定义方案下载失败: ${methodsResult.error.message}`);
+    if (!methodsResult.success) {
+      errors.push(`自定义方案下载失败: ${methodsResult.error}`);
     } else if (methodsResult.data && methodsResult.data.length > 0) {
-      const methods = methodsResult.data.map(
-        (row: { data: { equipmentId: string; methods: Method[] } }) => row.data
-      );
+      const methods = methodsResult.data;
       console.log(`[Supabase] 下载到 ${methods.length} 个自定义方案`);
       await db.customMethods.clear();
       await db.customMethods.bulkPut(methods);
       downloaded += methods.length;
+    } else {
+      await db.customMethods.clear();
     }
 
     // 处理设置
-    if (settingsResult.error && settingsResult.error.code !== 'PGRST116') {
-      errors.push(`设置下载失败: ${settingsResult.error.message}`);
-    } else if (settingsResult.data?.data) {
-      const settingsData = settingsResult.data.data as Record<string, unknown>;
-      console.log(
-        `[Supabase] 下载到 ${Object.keys(settingsData).length} 项设置`
+    if (settingsResponse.error && settingsResponse.error.code !== 'PGRST116') {
+      errors.push(`设置下载失败: ${settingsResponse.error.message}`);
+    } else if (settingsResponse.data?.data) {
+      downloaded += await downloadSettings(
+        settingsResponse.data.data as Record<string, unknown>
       );
-
-      for (const key of SETTINGS_KEYS_TO_SYNC) {
-        if (settingsData[key] !== undefined) {
-          const value =
-            typeof settingsData[key] === 'object'
-              ? JSON.stringify(settingsData[key])
-              : String(settingsData[key]);
-          await Storage.set(key, value);
-        }
-      }
-
-      // 恢复自定义预设
-      if (typeof window !== 'undefined' && settingsData.customPresets) {
-        const customPresets = settingsData.customPresets as Record<
-          string,
-          unknown
-        >;
-        for (const presetKey of CUSTOM_PRESETS_KEYS) {
-          if (customPresets[presetKey]) {
-            const storageKey = `${CUSTOM_PRESETS_PREFIX}${presetKey}`;
-            localStorage.setItem(
-              storageKey,
-              JSON.stringify(customPresets[presetKey])
-            );
-          }
-        }
-      }
-
-      // 恢复烘焙商图标
-      if (typeof window !== 'undefined' && settingsData[ROASTER_LOGOS_KEY]) {
-        localStorage.setItem(
-          ROASTER_LOGOS_KEY,
-          JSON.stringify(settingsData[ROASTER_LOGOS_KEY])
-        );
-      }
-
-      downloaded += Object.keys(settingsData).length;
-
-      // 触发 UI 刷新
-      window.dispatchEvent(new CustomEvent('settingsChanged'));
     }
 
     const totalTime = Date.now() - startTime;
@@ -569,7 +551,7 @@ export async function downloadAllData(): Promise<SyncResult> {
       syncStatusStore.setSyncError(message);
     }
 
-    console.log(`[Supabase] 下载处理完成，总耗时: ${totalTime}ms`);
+    console.log(`[Supabase] 下载完成，总耗时: ${totalTime}ms`);
     return { success, message, uploaded: 0, downloaded, errors };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '下载失败';
@@ -583,6 +565,54 @@ export async function downloadAllData(): Promise<SyncResult> {
       errors: [...errors, errorMessage],
     };
   }
+}
+
+/**
+ * 下载设置数据
+ */
+async function downloadSettings(
+  settingsData: Record<string, unknown>
+): Promise<number> {
+  console.log(`[Supabase] 下载到 ${Object.keys(settingsData).length} 项设置`);
+
+  for (const key of SETTINGS_KEYS_TO_SYNC) {
+    if (settingsData[key] !== undefined) {
+      const value =
+        typeof settingsData[key] === 'object'
+          ? JSON.stringify(settingsData[key])
+          : String(settingsData[key]);
+      await Storage.set(key, value);
+    }
+  }
+
+  // 恢复自定义预设
+  if (typeof window !== 'undefined' && settingsData.customPresets) {
+    const customPresets = settingsData.customPresets as Record<string, unknown>;
+    for (const presetKey of CUSTOM_PRESETS_KEYS) {
+      if (customPresets[presetKey]) {
+        const storageKey = `${CUSTOM_PRESETS_PREFIX}${presetKey}`;
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify(customPresets[presetKey])
+        );
+      }
+    }
+  }
+
+  // 恢复烘焙商图标
+  if (typeof window !== 'undefined' && settingsData[ROASTER_LOGOS_KEY]) {
+    localStorage.setItem(
+      ROASTER_LOGOS_KEY,
+      JSON.stringify(settingsData[ROASTER_LOGOS_KEY])
+    );
+  }
+
+  // 触发 UI 刷新
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('settingsChanged'));
+  }
+
+  return Object.keys(settingsData).length;
 }
 
 // ============================================

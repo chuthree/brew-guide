@@ -22,8 +22,16 @@ export * from './types';
 /**
  * Supabase 数据库初始化 SQL
  * 用户需要在 Supabase SQL Editor 中执行此脚本
+ *
+ * ⚠️ 同步删除策略说明：
+ * - 所有数据表都有 deleted_at 字段用于软删除
+ * - 上传时：本地不存在但云端存在的记录会被标记 deleted_at
+ * - 下载时：只获取 deleted_at IS NULL 的记录
+ * - 软删除的数据不会被物理删除，可以通过 SQL 查询历史数据
  */
 export const SUPABASE_SETUP_SQL = `-- Brew Guide Supabase 数据库初始化脚本
+-- 版本: 2.0.0 (2025-12-22 更新)
+-- 支持软删除同步策略
 
 -- 咖啡豆表
 CREATE TABLE IF NOT EXISTS coffee_beans (
@@ -84,11 +92,15 @@ CREATE TABLE IF NOT EXISTS user_settings (
   PRIMARY KEY (id, user_id)
 );
 
--- 索引
+-- 索引（包含软删除过滤索引，优化查询性能）
 CREATE INDEX IF NOT EXISTS idx_coffee_beans_user_id ON coffee_beans(user_id);
+CREATE INDEX IF NOT EXISTS idx_coffee_beans_active ON coffee_beans(user_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_brewing_notes_user_id ON brewing_notes(user_id);
+CREATE INDEX IF NOT EXISTS idx_brewing_notes_active ON brewing_notes(user_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_custom_equipments_user_id ON custom_equipments(user_id);
+CREATE INDEX IF NOT EXISTS idx_custom_equipments_active ON custom_equipments(user_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_custom_methods_user_id ON custom_methods(user_id);
+CREATE INDEX IF NOT EXISTS idx_custom_methods_active ON custom_methods(user_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
 -- RLS 策略（可选）
@@ -103,4 +115,15 @@ CREATE POLICY "Allow all on brewing_notes" ON brewing_notes FOR ALL USING (true)
 CREATE POLICY "Allow all on custom_equipments" ON custom_equipments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on custom_methods" ON custom_methods FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on user_settings" ON user_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- 可选：定期清理软删除数据的函数（超过 30 天的软删除数据）
+-- CREATE OR REPLACE FUNCTION cleanup_deleted_records()
+-- RETURNS void AS $$
+-- BEGIN
+--   DELETE FROM coffee_beans WHERE deleted_at < NOW() - INTERVAL '30 days';
+--   DELETE FROM brewing_notes WHERE deleted_at < NOW() - INTERVAL '30 days';
+--   DELETE FROM custom_equipments WHERE deleted_at < NOW() - INTERVAL '30 days';
+--   DELETE FROM custom_methods WHERE deleted_at < NOW() - INTERVAL '30 days';
+-- END;
+-- $$ LANGUAGE plpgsql;
 `;

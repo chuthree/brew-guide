@@ -1,5 +1,7 @@
 /**
  * Supabase 同步管理器
+ *
+ * 基于业界标准的同步实现（CouchDB 墓碑模式 + RxDB 离线优先架构）
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -17,8 +19,12 @@ import {
   createFailureResult,
   createSuccessResult,
 } from '@/lib/sync/interfaces';
-
-const DEFAULT_USER_ID = 'default_user';
+import {
+  syncTableUpload,
+  fetchRemoteActiveRecords,
+  SYNC_TABLES,
+  DEFAULT_USER_ID,
+} from './syncOperations';
 
 const SETTINGS_KEYS = [
   'brewGuideSettings',
@@ -116,6 +122,9 @@ export class SupabaseSyncManager implements ISyncManager {
     this.config = null;
   }
 
+  /**
+   * 上传本地数据到云端（使用模块化同步操作）
+   */
   private async upload(
     onProgress?: (progress: import('@/lib/sync/types').SyncProgress) => void
   ): Promise<ISyncResult> {
@@ -127,7 +136,7 @@ export class SupabaseSyncManager implements ISyncManager {
     onProgress?.({
       phase: 'uploading',
       message: '正在读取本地数据...',
-      percentage: 10,
+      percentage: 5,
     });
 
     const [beans, notes, equipments, methods] = await Promise.all([
@@ -137,89 +146,87 @@ export class SupabaseSyncManager implements ISyncManager {
       db.customMethods.toArray(),
     ]);
 
+    console.log(
+      `[Supabase] 本地数据: 咖啡豆 ${beans.length}, 笔记 ${notes.length}, 器具 ${equipments.length}, 方案 ${methods.length}`
+    );
+
+    // 使用模块化同步操作
     onProgress?.({
       phase: 'uploading',
-      message: '正在上传咖啡豆数据...',
+      message: '正在同步咖啡豆数据...',
       percentage: 20,
     });
-
-    const upsert = async (table: string, data: object[]) => {
-      const { error } = await this.client!.from(table).upsert(data, {
-        onConflict: 'id,user_id',
-      });
-      if (error) errors.push(`${table}: ${error.message}`);
-      else count += data.length;
-    };
-
-    if (beans.length)
-      await upsert(
-        'coffee_beans',
-        beans.map(b => ({
-          id: b.id,
-          user_id: DEFAULT_USER_ID,
-          data: b,
-          updated_at: new Date(b.timestamp || Date.now()).toISOString(),
-        }))
-      );
+    const beansResult = await syncTableUpload(
+      this.client,
+      SYNC_TABLES.COFFEE_BEANS,
+      beans,
+      b => ({
+        id: b.id,
+        data: b,
+        updated_at: new Date(b.timestamp || Date.now()).toISOString(),
+      })
+    );
+    if (!beansResult.success) errors.push(`咖啡豆: ${beansResult.error}`);
+    else count += beansResult.data?.upserted || 0;
 
     onProgress?.({
       phase: 'uploading',
-      message: '正在上传冲煮记录...',
+      message: '正在同步冲煮记录...',
       percentage: 40,
     });
-
-    if (notes.length)
-      await upsert(
-        'brewing_notes',
-        notes.map(n => ({
-          id: n.id,
-          user_id: DEFAULT_USER_ID,
-          data: n,
-          updated_at: new Date(n.timestamp || Date.now()).toISOString(),
-        }))
-      );
+    const notesResult = await syncTableUpload(
+      this.client,
+      SYNC_TABLES.BREWING_NOTES,
+      notes,
+      n => ({
+        id: n.id,
+        data: n,
+        updated_at: new Date(n.timestamp || Date.now()).toISOString(),
+      })
+    );
+    if (!notesResult.success) errors.push(`冲煮记录: ${notesResult.error}`);
+    else count += notesResult.data?.upserted || 0;
 
     onProgress?.({
       phase: 'uploading',
-      message: '正在上传器具数据...',
+      message: '正在同步器具数据...',
       percentage: 60,
     });
-
-    if (equipments.length)
-      await upsert(
-        'custom_equipments',
-        equipments.map(e => ({
-          id: e.id,
-          user_id: DEFAULT_USER_ID,
-          data: e,
-          updated_at: new Date().toISOString(),
-        }))
-      );
+    const equipmentsResult = await syncTableUpload(
+      this.client,
+      SYNC_TABLES.CUSTOM_EQUIPMENTS,
+      equipments,
+      e => ({ id: e.id, data: e, updated_at: new Date().toISOString() })
+    );
+    if (!equipmentsResult.success)
+      errors.push(`器具: ${equipmentsResult.error}`);
+    else count += equipmentsResult.data?.upserted || 0;
 
     onProgress?.({
       phase: 'uploading',
-      message: '正在上传方案数据...',
+      message: '正在同步方案数据...',
       percentage: 70,
     });
-
-    if (methods.length)
-      await upsert(
-        'custom_methods',
-        methods.map(m => ({
-          id: m.equipmentId,
-          user_id: DEFAULT_USER_ID,
-          equipment_id: m.equipmentId,
-          data: m,
-          updated_at: new Date().toISOString(),
-        }))
-      );
+    const methodsWithId = methods.map(m => ({ ...m, id: m.equipmentId }));
+    const methodsResult = await syncTableUpload(
+      this.client,
+      SYNC_TABLES.CUSTOM_METHODS,
+      methodsWithId,
+      m => ({
+        id: m.equipmentId,
+        equipment_id: m.equipmentId,
+        data: m,
+        updated_at: new Date().toISOString(),
+      })
+    );
+    if (!methodsResult.success) errors.push(`方案: ${methodsResult.error}`);
+    else count += methodsResult.data?.upserted || 0;
 
     onProgress?.({
       phase: 'uploading',
       message: '正在上传设置数据...',
       percentage: 85,
     });
-
     count += await this.uploadSettings(errors);
 
     onProgress?.({ phase: 'uploading', message: '上传完成', percentage: 100 });
@@ -260,7 +267,9 @@ export class SupabaseSyncManager implements ISyncManager {
         if (v)
           try {
             presets[k] = JSON.parse(v);
-          } catch {}
+          } catch {
+            /* 忽略解析错误 */
+          }
       }
       if (Object.keys(presets).length) data.customPresets = presets;
 
@@ -268,7 +277,9 @@ export class SupabaseSyncManager implements ISyncManager {
       if (logos)
         try {
           data[ROASTER_LOGOS_KEY] = JSON.parse(logos);
-        } catch {}
+        } catch {
+          /* 忽略解析错误 */
+        }
     }
 
     const { error } = await this.client.from('user_settings').upsert(
@@ -288,6 +299,9 @@ export class SupabaseSyncManager implements ISyncManager {
     return Object.keys(data).length;
   }
 
+  /**
+   * 下载云端数据到本地（使用模块化同步操作）
+   */
   private async download(
     onProgress?: (progress: import('@/lib/sync/types').SyncProgress) => void
   ): Promise<ISyncResult> {
@@ -302,50 +316,54 @@ export class SupabaseSyncManager implements ISyncManager {
       percentage: 10,
     });
 
-    const [beans, notes, equips, methods, settings] = await Promise.all([
-      this.client
-        .from('coffee_beans')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .is('deleted_at', null),
-      this.client
-        .from('brewing_notes')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .is('deleted_at', null),
-      this.client
-        .from('custom_equipments')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .is('deleted_at', null),
-      this.client
-        .from('custom_methods')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .is('deleted_at', null),
-      this.client
-        .from('user_settings')
-        .select('data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .eq('id', 'app_settings')
-        .single(),
-    ]);
+    // 使用模块化操作获取数据
+    const [beansResult, notesResult, equipmentsResult, methodsResult] =
+      await Promise.all([
+        fetchRemoteActiveRecords<CoffeeBean>(
+          this.client,
+          SYNC_TABLES.COFFEE_BEANS
+        ),
+        fetchRemoteActiveRecords<BrewingNote>(
+          this.client,
+          SYNC_TABLES.BREWING_NOTES
+        ),
+        fetchRemoteActiveRecords<CustomEquipment>(
+          this.client,
+          SYNC_TABLES.CUSTOM_EQUIPMENTS
+        ),
+        fetchRemoteActiveRecords<{ equipmentId: string; methods: Method[] }>(
+          this.client,
+          SYNC_TABLES.CUSTOM_METHODS
+        ),
+      ]);
+
+    // 获取设置
+    const settings = await this.client
+      .from('user_settings')
+      .select('data')
+      .eq('user_id', DEFAULT_USER_ID)
+      .eq('id', 'app_settings')
+      .single();
 
     onProgress?.({
       phase: 'downloading',
       message: '正在导入咖啡豆数据...',
       percentage: 30,
     });
-
-    if (beans.error) errors.push(`beans: ${beans.error.message}`);
-    else if (beans.data?.length) {
-      const arr = beans.data.map((r: { data: CoffeeBean }) => r.data);
+    if (!beansResult.success) {
+      errors.push(`beans: ${beansResult.error}`);
+    } else if (beansResult.data && beansResult.data.length > 0) {
       await db.coffeeBeans.clear();
-      await db.coffeeBeans.bulkPut(arr);
+      await db.coffeeBeans.bulkPut(beansResult.data);
       (await import('@/lib/stores/coffeeBeanStore'))
         .getCoffeeBeanStore()
-        .setBeans(arr);
-      count += arr.length;
+        .setBeans(beansResult.data);
+      count += beansResult.data.length;
+    } else {
+      await db.coffeeBeans.clear();
+      (await import('@/lib/stores/coffeeBeanStore'))
+        .getCoffeeBeanStore()
+        .setBeans([]);
     }
 
     onProgress?.({
@@ -353,16 +371,20 @@ export class SupabaseSyncManager implements ISyncManager {
       message: '正在导入冲煮记录...',
       percentage: 50,
     });
-
-    if (notes.error) errors.push(`notes: ${notes.error.message}`);
-    else if (notes.data?.length) {
-      const arr = notes.data.map((r: { data: BrewingNote }) => r.data);
+    if (!notesResult.success) {
+      errors.push(`notes: ${notesResult.error}`);
+    } else if (notesResult.data && notesResult.data.length > 0) {
       await db.brewingNotes.clear();
-      await db.brewingNotes.bulkPut(arr);
+      await db.brewingNotes.bulkPut(notesResult.data);
       (await import('@/lib/stores/brewingNoteStore'))
         .getBrewingNoteStore()
-        .setNotes(arr);
-      count += arr.length;
+        .setNotes(notesResult.data);
+      count += notesResult.data.length;
+    } else {
+      await db.brewingNotes.clear();
+      (await import('@/lib/stores/brewingNoteStore'))
+        .getBrewingNoteStore()
+        .setNotes([]);
     }
 
     onProgress?.({
@@ -370,13 +392,14 @@ export class SupabaseSyncManager implements ISyncManager {
       message: '正在导入器具数据...',
       percentage: 65,
     });
-
-    if (equips.error) errors.push(`equips: ${equips.error.message}`);
-    else if (equips.data?.length) {
-      const arr = equips.data.map((r: { data: CustomEquipment }) => r.data);
+    if (!equipmentsResult.success) {
+      errors.push(`equips: ${equipmentsResult.error}`);
+    } else if (equipmentsResult.data && equipmentsResult.data.length > 0) {
       await db.customEquipments.clear();
-      await db.customEquipments.bulkPut(arr);
-      count += arr.length;
+      await db.customEquipments.bulkPut(equipmentsResult.data);
+      count += equipmentsResult.data.length;
+    } else {
+      await db.customEquipments.clear();
     }
 
     onProgress?.({
@@ -384,15 +407,14 @@ export class SupabaseSyncManager implements ISyncManager {
       message: '正在导入方案数据...',
       percentage: 75,
     });
-
-    if (methods.error) errors.push(`methods: ${methods.error.message}`);
-    else if (methods.data?.length) {
-      const arr = methods.data.map(
-        (r: { data: { equipmentId: string; methods: Method[] } }) => r.data
-      );
+    if (!methodsResult.success) {
+      errors.push(`methods: ${methodsResult.error}`);
+    } else if (methodsResult.data && methodsResult.data.length > 0) {
       await db.customMethods.clear();
-      await db.customMethods.bulkPut(arr);
-      count += arr.length;
+      await db.customMethods.bulkPut(methodsResult.data);
+      count += methodsResult.data.length;
+    } else {
+      await db.customMethods.clear();
     }
 
     onProgress?.({
@@ -400,13 +422,13 @@ export class SupabaseSyncManager implements ISyncManager {
       message: '正在导入设置数据...',
       percentage: 90,
     });
-
-    if (settings.error && settings.error.code !== 'PGRST116')
+    if (settings.error && settings.error.code !== 'PGRST116') {
       errors.push(`settings: ${settings.error.message}`);
-    else if (settings.data?.data)
+    } else if (settings.data?.data) {
       count += await this.downloadSettings(
         settings.data.data as Record<string, unknown>
       );
+    }
 
     onProgress?.({
       phase: 'downloading',
