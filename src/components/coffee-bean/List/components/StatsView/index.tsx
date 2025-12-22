@@ -35,6 +35,7 @@ import {
 import { ExtendedCoffeeBean } from '../../types';
 import GreenBeanStatsView from './GreenBeanStatsView';
 import YearlyReviewDrawer from './YearlyReviewDrawer';
+import CoffeeOriginMap from './CoffeeOriginMap';
 import { Storage } from '@/lib/core/storage';
 
 // 格式化辅助函数
@@ -783,11 +784,31 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     return null;
   }
 
+  // 计算产地数量映射（用于地图上显示不同大小的点）
+  const originCountMap = useMemo(() => {
+    return new Map(originStats);
+  }, [originStats]);
+
+  // 获取所有产地名称（用于地图）
+  const originNames = useMemo(() => {
+    return originStats.map(([name]) => name);
+  }, [originStats]);
+
   return (
     <div className="w-full">
       <div className="space-y-3">
         {/* 咖啡豆数量统计 */}
         <BeanCountStats beans={filteredBeans} onExplain={onExplain} />
+
+        {/* 咖啡产区地图 */}
+        {originStats.length > 0 && (
+          <div className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800/40">
+            <CoffeeOriginMap
+              origins={originNames}
+              originCounts={originCountMap}
+            />
+          </div>
+        )}
 
         {/* 产地 */}
         <AttributeCard title="产地" data={originStats} />
