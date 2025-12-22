@@ -6,7 +6,6 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { db } from '@/lib/core/db';
-import { Storage } from '@/lib/core/storage';
 import { getSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote, CustomEquipment, Method } from '@/lib/core/config';
@@ -22,25 +21,11 @@ import {
 import {
   syncTableUpload,
   fetchRemoteActiveRecords,
+  uploadSettingsData,
+  downloadSettingsData,
   SYNC_TABLES,
   DEFAULT_USER_ID,
 } from './syncOperations';
-
-const SETTINGS_KEYS = [
-  'brewGuideSettings',
-  'brewingNotesVersion',
-  'equipmentOrder',
-  'onboardingCompleted',
-  'customFlavorDimensions',
-  'flavorDimensionHistoricalLabels',
-  'backupReminderSettings',
-  'yearlyReports',
-  'yearlyReviewReminderSettings',
-] as const;
-
-const PRESETS_PREFIX = 'brew-guide:custom-presets:';
-const PRESETS_KEYS = ['origins', 'estates', 'processes', 'varieties'] as const;
-const ROASTER_LOGOS_KEY = 'roaster-logos';
 
 interface SupabaseConfig {
   provider: 'supabase';
@@ -227,7 +212,9 @@ export class SupabaseSyncManager implements ISyncManager {
       message: '正在上传设置数据...',
       percentage: 85,
     });
-    count += await this.uploadSettings(errors);
+    const settingsResult = await uploadSettingsData(this.client);
+    if (!settingsResult.success) errors.push(`设置: ${settingsResult.error}`);
+    else count += settingsResult.affectedCount;
 
     onProgress?.({ phase: 'uploading', message: '上传完成', percentage: 100 });
 
@@ -240,63 +227,6 @@ export class SupabaseSyncManager implements ISyncManager {
           errors,
         }
       : createSuccessResult(`上传成功: ${count} 条`, { uploaded: count });
-  }
-
-  private async uploadSettings(errors: string[]): Promise<number> {
-    if (!this.client) return 0;
-
-    const data: Record<string, unknown> = {};
-    for (const key of SETTINGS_KEYS) {
-      const val = await Storage.get(key);
-      if (val) {
-        try {
-          let parsed = JSON.parse(val);
-          if (key === 'brewGuideSettings' && parsed?.state?.settings)
-            parsed = parsed.state.settings;
-          data[key] = parsed;
-        } catch {
-          data[key] = val;
-        }
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      const presets: Record<string, unknown> = {};
-      for (const k of PRESETS_KEYS) {
-        const v = localStorage.getItem(`${PRESETS_PREFIX}${k}`);
-        if (v)
-          try {
-            presets[k] = JSON.parse(v);
-          } catch {
-            /* 忽略解析错误 */
-          }
-      }
-      if (Object.keys(presets).length) data.customPresets = presets;
-
-      const logos = localStorage.getItem(ROASTER_LOGOS_KEY);
-      if (logos)
-        try {
-          data[ROASTER_LOGOS_KEY] = JSON.parse(logos);
-        } catch {
-          /* 忽略解析错误 */
-        }
-    }
-
-    const { error } = await this.client.from('user_settings').upsert(
-      {
-        id: 'app_settings',
-        user_id: DEFAULT_USER_ID,
-        data,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id,user_id' }
-    );
-
-    if (error) {
-      errors.push(`settings: ${error.message}`);
-      return 0;
-    }
-    return Object.keys(data).length;
   }
 
   /**
@@ -336,14 +266,6 @@ export class SupabaseSyncManager implements ISyncManager {
           SYNC_TABLES.CUSTOM_METHODS
         ),
       ]);
-
-    // 获取设置
-    const settings = await this.client
-      .from('user_settings')
-      .select('data')
-      .eq('user_id', DEFAULT_USER_ID)
-      .eq('id', 'app_settings')
-      .single();
 
     onProgress?.({
       phase: 'downloading',
@@ -422,12 +344,11 @@ export class SupabaseSyncManager implements ISyncManager {
       message: '正在导入设置数据...',
       percentage: 90,
     });
-    if (settings.error && settings.error.code !== 'PGRST116') {
-      errors.push(`settings: ${settings.error.message}`);
-    } else if (settings.data?.data) {
-      count += await this.downloadSettings(
-        settings.data.data as Record<string, unknown>
-      );
+    const settingsResult = await downloadSettingsData(this.client);
+    if (!settingsResult.success) {
+      errors.push(`settings: ${settingsResult.error}`);
+    } else {
+      count += settingsResult.affectedCount;
     }
 
     onProgress?.({
@@ -448,41 +369,5 @@ export class SupabaseSyncManager implements ISyncManager {
           errors,
         }
       : createSuccessResult(`下载成功: ${count} 条`, { downloaded: count });
-  }
-
-  private async downloadSettings(
-    data: Record<string, unknown>
-  ): Promise<number> {
-    for (const key of SETTINGS_KEYS) {
-      if (data[key] !== undefined) {
-        await Storage.set(
-          key,
-          typeof data[key] === 'object'
-            ? JSON.stringify(data[key])
-            : String(data[key])
-        );
-      }
-    }
-
-    if (typeof window !== 'undefined' && data.customPresets) {
-      const presets = data.customPresets as Record<string, unknown>;
-      for (const k of PRESETS_KEYS) {
-        if (presets[k])
-          localStorage.setItem(
-            `${PRESETS_PREFIX}${k}`,
-            JSON.stringify(presets[k])
-          );
-      }
-    }
-
-    if (typeof window !== 'undefined' && data[ROASTER_LOGOS_KEY]) {
-      localStorage.setItem(
-        ROASTER_LOGOS_KEY,
-        JSON.stringify(data[ROASTER_LOGOS_KEY])
-      );
-    }
-
-    window.dispatchEvent(new CustomEvent('settingsChanged'));
-    return Object.keys(data).length;
   }
 }

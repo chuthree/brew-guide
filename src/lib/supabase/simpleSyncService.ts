@@ -21,13 +21,14 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { db } from '@/lib/core/db';
-import { Storage } from '@/lib/core/storage';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote, CustomEquipment, Method } from '@/lib/core/config';
 import { getSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import {
   syncTableUpload,
   fetchRemoteActiveRecords,
+  uploadSettingsData,
+  downloadSettingsData,
   SYNC_TABLES,
   DEFAULT_USER_ID,
 } from './syncOperations';
@@ -50,30 +51,6 @@ export interface SupabaseConfig {
   url: string;
   anonKey: string;
 }
-
-// ============================================
-// 常量
-// ============================================
-
-// 需要同步的设置键
-const SETTINGS_KEYS_TO_SYNC = [
-  'brewGuideSettings',
-  'brewingNotesVersion',
-  'equipmentOrder',
-  'onboardingCompleted',
-  'customFlavorDimensions',
-  'flavorDimensionHistoricalLabels',
-  'backupReminderSettings',
-  'yearlyReports',
-  'yearlyReviewReminderSettings',
-];
-
-// 自定义预设键名
-const CUSTOM_PRESETS_PREFIX = 'brew-guide:custom-presets:';
-const CUSTOM_PRESETS_KEYS = ['origins', 'estates', 'processes', 'varieties'];
-
-// 烘焙商图标存储键
-const ROASTER_LOGOS_KEY = 'roaster-logos';
 
 // ============================================
 // 全局状态
@@ -288,8 +265,13 @@ export async function uploadAllData(): Promise<SyncResult> {
       uploaded += methodsResult.data?.upserted || 0;
     }
 
-    // 6. 上传设置数据
-    uploaded += await uploadSettings(errors);
+    // 6. 上传设置数据（使用共享函数）
+    const settingsResult = await uploadSettingsData(supabaseClient);
+    if (!settingsResult.success) {
+      errors.push(`设置: ${settingsResult.error}`);
+    } else {
+      uploaded += settingsResult.affectedCount;
+    }
 
     const totalTime = Date.now() - startTime;
     console.log(`[Supabase] 上传完成，共 ${uploaded} 条，耗时: ${totalTime}ms`);
@@ -317,83 +299,6 @@ export async function uploadAllData(): Promise<SyncResult> {
       downloaded: 0,
       errors: [...errors, errorMessage],
     };
-  }
-}
-
-/**
- * 上传设置数据到云端
- */
-async function uploadSettings(errors: string[]): Promise<number> {
-  if (!supabaseClient) return 0;
-
-  try {
-    const settingsData: Record<string, unknown> = {};
-
-    for (const key of SETTINGS_KEYS_TO_SYNC) {
-      const value = await Storage.get(key);
-      if (value) {
-        try {
-          let parsedValue = JSON.parse(value);
-          if (key === 'brewGuideSettings' && parsedValue?.state?.settings) {
-            parsedValue = parsedValue.state.settings;
-          }
-          settingsData[key] = parsedValue;
-        } catch {
-          settingsData[key] = value;
-        }
-      }
-    }
-
-    // 收集自定义预设
-    if (typeof window !== 'undefined') {
-      const customPresets: Record<string, unknown> = {};
-      for (const presetKey of CUSTOM_PRESETS_KEYS) {
-        const storageKey = `${CUSTOM_PRESETS_PREFIX}${presetKey}`;
-        const presetJson = localStorage.getItem(storageKey);
-        if (presetJson) {
-          try {
-            customPresets[presetKey] = JSON.parse(presetJson);
-          } catch {
-            /* 忽略解析错误 */
-          }
-        }
-      }
-      if (Object.keys(customPresets).length > 0) {
-        settingsData.customPresets = customPresets;
-      }
-
-      // 烘焙商图标
-      const roasterLogosJson = localStorage.getItem(ROASTER_LOGOS_KEY);
-      if (roasterLogosJson) {
-        try {
-          settingsData[ROASTER_LOGOS_KEY] = JSON.parse(roasterLogosJson);
-        } catch {
-          /* 忽略解析错误 */
-        }
-      }
-    }
-
-    const { error } = await supabaseClient.from('user_settings').upsert(
-      {
-        id: 'app_settings',
-        user_id: DEFAULT_USER_ID,
-        data: settingsData,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id,user_id' }
-    );
-
-    if (error) {
-      errors.push(`设置上传失败: ${error.message}`);
-      return 0;
-    }
-
-    return Object.keys(settingsData).length;
-  } catch (err) {
-    errors.push(
-      `设置上传异常: ${err instanceof Error ? err.message : '未知错误'}`
-    );
-    return 0;
   }
 }
 
@@ -449,14 +354,6 @@ export async function downloadAllData(): Promise<SyncResult> {
           SYNC_TABLES.CUSTOM_METHODS
         ),
       ]);
-
-    // 获取设置
-    const settingsResponse = await supabaseClient
-      .from('user_settings')
-      .select('data')
-      .eq('user_id', DEFAULT_USER_ID)
-      .eq('id', 'app_settings')
-      .single();
 
     // 处理咖啡豆
     if (!beansResult.success) {
@@ -527,13 +424,12 @@ export async function downloadAllData(): Promise<SyncResult> {
       await db.customMethods.clear();
     }
 
-    // 处理设置
-    if (settingsResponse.error && settingsResponse.error.code !== 'PGRST116') {
-      errors.push(`设置下载失败: ${settingsResponse.error.message}`);
-    } else if (settingsResponse.data?.data) {
-      downloaded += await downloadSettings(
-        settingsResponse.data.data as Record<string, unknown>
-      );
+    // 处理设置（使用共享函数）
+    const settingsResult = await downloadSettingsData(supabaseClient);
+    if (!settingsResult.success) {
+      errors.push(`设置下载失败: ${settingsResult.error}`);
+    } else {
+      downloaded += settingsResult.affectedCount;
     }
 
     const totalTime = Date.now() - startTime;
@@ -565,54 +461,6 @@ export async function downloadAllData(): Promise<SyncResult> {
       errors: [...errors, errorMessage],
     };
   }
-}
-
-/**
- * 下载设置数据
- */
-async function downloadSettings(
-  settingsData: Record<string, unknown>
-): Promise<number> {
-  console.log(`[Supabase] 下载到 ${Object.keys(settingsData).length} 项设置`);
-
-  for (const key of SETTINGS_KEYS_TO_SYNC) {
-    if (settingsData[key] !== undefined) {
-      const value =
-        typeof settingsData[key] === 'object'
-          ? JSON.stringify(settingsData[key])
-          : String(settingsData[key]);
-      await Storage.set(key, value);
-    }
-  }
-
-  // 恢复自定义预设
-  if (typeof window !== 'undefined' && settingsData.customPresets) {
-    const customPresets = settingsData.customPresets as Record<string, unknown>;
-    for (const presetKey of CUSTOM_PRESETS_KEYS) {
-      if (customPresets[presetKey]) {
-        const storageKey = `${CUSTOM_PRESETS_PREFIX}${presetKey}`;
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify(customPresets[presetKey])
-        );
-      }
-    }
-  }
-
-  // 恢复烘焙商图标
-  if (typeof window !== 'undefined' && settingsData[ROASTER_LOGOS_KEY]) {
-    localStorage.setItem(
-      ROASTER_LOGOS_KEY,
-      JSON.stringify(settingsData[ROASTER_LOGOS_KEY])
-    );
-  }
-
-  // 触发 UI 刷新
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('settingsChanged'));
-  }
-
-  return Object.keys(settingsData).length;
 }
 
 // ============================================

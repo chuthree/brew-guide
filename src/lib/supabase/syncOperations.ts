@@ -14,6 +14,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { Storage } from '@/lib/core/storage';
 
 // ============================================
 // 类型定义
@@ -34,7 +35,7 @@ export interface TableSyncState {
 }
 
 // ============================================
-// 常量
+// 常量（集中管理，避免重复定义）
 // ============================================
 
 export const DEFAULT_USER_ID = 'default_user';
@@ -49,6 +50,29 @@ export const SYNC_TABLES = {
 } as const;
 
 export type SyncTableName = (typeof SYNC_TABLES)[keyof typeof SYNC_TABLES];
+
+// 需要同步的设置键（单一来源）
+export const SETTINGS_KEYS = [
+  'brewGuideSettings',
+  'brewingNotesVersion',
+  'equipmentOrder',
+  'onboardingCompleted',
+  'customFlavorDimensions',
+  'flavorDimensionHistoricalLabels',
+  'backupReminderSettings',
+  'yearlyReports',
+  'yearlyReviewReminderSettings',
+] as const;
+
+// 自定义预设
+export const PRESETS_PREFIX = 'brew-guide:custom-presets:';
+export const PRESETS_KEYS = [
+  'origins',
+  'estates',
+  'processes',
+  'varieties',
+] as const;
+export const ROASTER_LOGOS_KEY = 'roaster-logos';
 
 // ============================================
 // 核心同步操作（原子化、可测试）
@@ -306,4 +330,147 @@ export async function syncTableUpload<T extends { id: string }>(
     data: { upserted: upsertedCount, deleted: deletedCount },
     affectedCount: upsertedCount + deletedCount,
   };
+}
+
+// ============================================
+// 设置同步操作（集中管理，避免重复代码）
+// ============================================
+
+/**
+ * 上传设置数据到云端
+ */
+export async function uploadSettingsData(
+  client: SupabaseClient
+): Promise<SyncOperationResult<number>> {
+  try {
+    const data: Record<string, unknown> = {};
+
+    // 从 Storage 收集设置
+    for (const key of SETTINGS_KEYS) {
+      const val = await Storage.get(key);
+      if (val) {
+        try {
+          let parsed = JSON.parse(val);
+          if (key === 'brewGuideSettings' && parsed?.state?.settings)
+            parsed = parsed.state.settings;
+          data[key] = parsed;
+        } catch {
+          data[key] = val;
+        }
+      }
+    }
+
+    // 收集浏览器端数据
+    if (typeof window !== 'undefined') {
+      const presets: Record<string, unknown> = {};
+      for (const k of PRESETS_KEYS) {
+        const v = localStorage.getItem(`${PRESETS_PREFIX}${k}`);
+        if (v)
+          try {
+            presets[k] = JSON.parse(v);
+          } catch {
+            /* 忽略解析错误 */
+          }
+      }
+      if (Object.keys(presets).length) data.customPresets = presets;
+
+      const logos = localStorage.getItem(ROASTER_LOGOS_KEY);
+      if (logos)
+        try {
+          data[ROASTER_LOGOS_KEY] = JSON.parse(logos);
+        } catch {
+          /* 忽略解析错误 */
+        }
+    }
+
+    const { error } = await client.from(SYNC_TABLES.USER_SETTINGS).upsert(
+      {
+        id: 'app_settings',
+        user_id: DEFAULT_USER_ID,
+        data,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id,user_id' }
+    );
+
+    if (error) {
+      return { success: false, error: error.message, affectedCount: 0 };
+    }
+
+    const count = Object.keys(data).length;
+    console.log(`[SyncOps] 设置上传成功: ${count} 项`);
+    return { success: true, data: count, affectedCount: count };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '未知错误';
+    return { success: false, error: message, affectedCount: 0 };
+  }
+}
+
+/**
+ * 下载设置数据并应用到本地
+ */
+export async function downloadSettingsData(
+  client: SupabaseClient
+): Promise<SyncOperationResult<number>> {
+  try {
+    const { data: row, error } = await client
+      .from(SYNC_TABLES.USER_SETTINGS)
+      .select('data')
+      .eq('user_id', DEFAULT_USER_ID)
+      .eq('id', 'app_settings')
+      .single();
+
+    // PGRST116 = 记录不存在，不算错误
+    if (error && error.code !== 'PGRST116') {
+      return { success: false, error: error.message, affectedCount: 0 };
+    }
+
+    if (!row?.data) {
+      return { success: true, data: 0, affectedCount: 0 };
+    }
+
+    const settingsData = row.data as Record<string, unknown>;
+
+    // 恢复设置到 Storage
+    for (const key of SETTINGS_KEYS) {
+      if (settingsData[key] !== undefined) {
+        const value =
+          typeof settingsData[key] === 'object'
+            ? JSON.stringify(settingsData[key])
+            : String(settingsData[key]);
+        await Storage.set(key, value);
+      }
+    }
+
+    // 恢复浏览器端数据
+    if (typeof window !== 'undefined') {
+      if (settingsData.customPresets) {
+        const presets = settingsData.customPresets as Record<string, unknown>;
+        for (const k of PRESETS_KEYS) {
+          if (presets[k])
+            localStorage.setItem(
+              `${PRESETS_PREFIX}${k}`,
+              JSON.stringify(presets[k])
+            );
+        }
+      }
+
+      if (settingsData[ROASTER_LOGOS_KEY]) {
+        localStorage.setItem(
+          ROASTER_LOGOS_KEY,
+          JSON.stringify(settingsData[ROASTER_LOGOS_KEY])
+        );
+      }
+
+      // 触发 UI 刷新
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
+    }
+
+    const count = Object.keys(settingsData).length;
+    console.log(`[SyncOps] 设置下载成功: ${count} 项`);
+    return { success: true, data: count, affectedCount: count };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '未知错误';
+    return { success: false, error: message, affectedCount: 0 };
+  }
 }
