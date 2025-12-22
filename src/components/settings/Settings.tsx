@@ -15,7 +15,7 @@ import UpdateDrawer from './UpdateDrawer';
 import FeedbackDrawer from './FeedbackDrawer';
 import SettingGroup from './SettingItem';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import { useCloudSyncConnection } from '@/lib/hooks/useCloudSyncConnection';
+import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
 
 import { useTheme } from 'next-themes';
 import { LayoutSettings } from '../brewing/Timer/Settings';
@@ -528,7 +528,7 @@ const Settings: React.FC<SettingsProps> = ({
     isSyncing,
     setIsSyncing,
     performSync: performQuickSync,
-  } = useCloudSyncConnection(settings, isOpen);
+  } = useCloudSyncConnection(settings);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
 
   // 自动检测更新（仅在 Capacitor 原生环境下）

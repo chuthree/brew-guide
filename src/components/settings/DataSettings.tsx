@@ -278,24 +278,20 @@ const DataSettings: React.FC<DataSettingsProps> = ({
    */
   const switchSyncType = useCallback(
     (type: CloudSyncType) => {
-      // 立即更新本地 state，UI 立即响应
       setActiveSyncType(type);
 
-      // 异步持久化（不阻塞 UI）
       (async () => {
-        // 如果要禁用 Supabase，断开其连接
         if (syncType === 'supabase' && type !== 'supabase') {
           try {
-            const { simpleSyncService } = await import(
-              '@/lib/supabase/simpleSyncService'
+            const { syncService } = await import(
+              '@/lib/sync/UnifiedSyncService'
             );
-            simpleSyncService.disconnect();
+            syncService.disconnect();
           } catch (e) {
-            console.error('断开 Supabase 连接失败:', e);
+            console.error('断开同步连接失败:', e);
           }
         }
 
-        // 只持久化 activeSyncType
         handleChange('activeSyncType', type);
       })();
 

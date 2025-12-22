@@ -1,10 +1,11 @@
 /**
  * Supabase 模块导出
- * 
- * 2025-12-21 简化：只保留手动上传/下载功能
  */
 
-// 简化版同步服务
+export { SupabaseSyncManager } from './SupabaseSyncManager';
+export type { SyncResult, SyncStatus } from './simpleSyncService';
+
+// 保留旧版 API 以保持向后兼容
 export {
   simpleSyncService,
   initializeSupabase,
@@ -13,8 +14,6 @@ export {
   downloadAllData,
   disconnectSupabase,
   isSupabaseInitialized,
-  type SyncResult,
-  type SyncStatus,
 } from './simpleSyncService';
 
 // 类型导出
