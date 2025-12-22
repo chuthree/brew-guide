@@ -11,10 +11,9 @@ import { WebDAVSyncManager } from '@/lib/webdav/syncManager';
 import type { SyncResult as WebDAVSyncResult } from '@/lib/webdav/types';
 import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { SettingsOptions } from '../Settings';
-import { Upload, Download } from 'lucide-react';
 import WebDAVTutorialModal from './WebDAVTutorialModal';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { SyncHeaderButton, SyncDebugDrawer } from './shared';
+import { SyncHeaderButton, SyncDebugDrawer, SyncButtons } from './shared';
 
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
 
@@ -437,30 +436,13 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       )}
 
       {/* 同步按钮 */}
-      {enabled && status === 'connected' && (
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => performSync('upload')}
-            disabled={isSyncing}
-            className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <Upload
-              className={`h-4 w-4 ${isSyncing && syncProgress?.phase === 'uploading' ? 'animate-pulse' : ''}`}
-            />
-            <span>上传</span>
-          </button>
-          <button
-            onClick={() => performSync('download')}
-            disabled={isSyncing}
-            className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <Download
-              className={`h-4 w-4 ${isSyncing && syncProgress?.phase === 'downloading' ? 'animate-pulse' : ''}`}
-            />
-            <span>下载</span>
-          </button>
-        </div>
-      )}
+      <SyncButtons
+        enabled={enabled}
+        isConnected={status === 'connected'}
+        isSyncing={isSyncing}
+        onUpload={() => performSync('upload')}
+        onDownload={() => performSync('download')}
+      />
 
       {/* WebDAV 配置教程 */}
       <WebDAVTutorialModal

@@ -93,11 +93,13 @@ export class SupabaseSyncManager implements ISyncManager {
     store.setProvider('supabase');
     store.setSyncing();
 
+    const onProgress = options.onProgress;
+
     try {
       const result =
         options.direction === 'upload'
-          ? await this.upload()
-          : await this.download();
+          ? await this.upload(onProgress)
+          : await this.download(onProgress);
       result.success
         ? store.setSyncSuccess()
         : store.setSyncError(result.message);
@@ -114,11 +116,19 @@ export class SupabaseSyncManager implements ISyncManager {
     this.config = null;
   }
 
-  private async upload(): Promise<ISyncResult> {
+  private async upload(
+    onProgress?: (progress: import('@/lib/sync/types').SyncProgress) => void
+  ): Promise<ISyncResult> {
     if (!this.client) return createFailureResult('客户端未初始化');
 
     const errors: string[] = [];
     let count = 0;
+
+    onProgress?.({
+      phase: 'uploading',
+      message: '正在读取本地数据...',
+      percentage: 10,
+    });
 
     const [beans, notes, equipments, methods] = await Promise.all([
       db.coffeeBeans.toArray(),
@@ -126,6 +136,12 @@ export class SupabaseSyncManager implements ISyncManager {
       db.customEquipments.toArray(),
       db.customMethods.toArray(),
     ]);
+
+    onProgress?.({
+      phase: 'uploading',
+      message: '正在上传咖啡豆数据...',
+      percentage: 20,
+    });
 
     const upsert = async (table: string, data: object[]) => {
       const { error } = await this.client!.from(table).upsert(data, {
@@ -145,6 +161,13 @@ export class SupabaseSyncManager implements ISyncManager {
           updated_at: new Date(b.timestamp || Date.now()).toISOString(),
         }))
       );
+
+    onProgress?.({
+      phase: 'uploading',
+      message: '正在上传冲煮记录...',
+      percentage: 40,
+    });
+
     if (notes.length)
       await upsert(
         'brewing_notes',
@@ -155,6 +178,13 @@ export class SupabaseSyncManager implements ISyncManager {
           updated_at: new Date(n.timestamp || Date.now()).toISOString(),
         }))
       );
+
+    onProgress?.({
+      phase: 'uploading',
+      message: '正在上传器具数据...',
+      percentage: 60,
+    });
+
     if (equipments.length)
       await upsert(
         'custom_equipments',
@@ -165,6 +195,13 @@ export class SupabaseSyncManager implements ISyncManager {
           updated_at: new Date().toISOString(),
         }))
       );
+
+    onProgress?.({
+      phase: 'uploading',
+      message: '正在上传方案数据...',
+      percentage: 70,
+    });
+
     if (methods.length)
       await upsert(
         'custom_methods',
@@ -177,7 +214,15 @@ export class SupabaseSyncManager implements ISyncManager {
         }))
       );
 
+    onProgress?.({
+      phase: 'uploading',
+      message: '正在上传设置数据...',
+      percentage: 85,
+    });
+
     count += await this.uploadSettings(errors);
+
+    onProgress?.({ phase: 'uploading', message: '上传完成', percentage: 100 });
 
     return errors.length
       ? {
@@ -226,17 +271,15 @@ export class SupabaseSyncManager implements ISyncManager {
         } catch {}
     }
 
-    const { error } = await this.client
-      .from('user_settings')
-      .upsert(
-        {
-          id: 'app_settings',
-          user_id: DEFAULT_USER_ID,
-          data,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id,user_id' }
-      );
+    const { error } = await this.client.from('user_settings').upsert(
+      {
+        id: 'app_settings',
+        user_id: DEFAULT_USER_ID,
+        data,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id,user_id' }
+    );
 
     if (error) {
       errors.push(`settings: ${error.message}`);
@@ -245,11 +288,19 @@ export class SupabaseSyncManager implements ISyncManager {
     return Object.keys(data).length;
   }
 
-  private async download(): Promise<ISyncResult> {
+  private async download(
+    onProgress?: (progress: import('@/lib/sync/types').SyncProgress) => void
+  ): Promise<ISyncResult> {
     if (!this.client) return createFailureResult('客户端未初始化');
 
     const errors: string[] = [];
     let count = 0;
+
+    onProgress?.({
+      phase: 'downloading',
+      message: '正在获取云端数据...',
+      percentage: 10,
+    });
 
     const [beans, notes, equips, methods, settings] = await Promise.all([
       this.client
@@ -280,6 +331,12 @@ export class SupabaseSyncManager implements ISyncManager {
         .single(),
     ]);
 
+    onProgress?.({
+      phase: 'downloading',
+      message: '正在导入咖啡豆数据...',
+      percentage: 30,
+    });
+
     if (beans.error) errors.push(`beans: ${beans.error.message}`);
     else if (beans.data?.length) {
       const arr = beans.data.map((r: { data: CoffeeBean }) => r.data);
@@ -290,6 +347,12 @@ export class SupabaseSyncManager implements ISyncManager {
         .setBeans(arr);
       count += arr.length;
     }
+
+    onProgress?.({
+      phase: 'downloading',
+      message: '正在导入冲煮记录...',
+      percentage: 50,
+    });
 
     if (notes.error) errors.push(`notes: ${notes.error.message}`);
     else if (notes.data?.length) {
@@ -302,6 +365,12 @@ export class SupabaseSyncManager implements ISyncManager {
       count += arr.length;
     }
 
+    onProgress?.({
+      phase: 'downloading',
+      message: '正在导入器具数据...',
+      percentage: 65,
+    });
+
     if (equips.error) errors.push(`equips: ${equips.error.message}`);
     else if (equips.data?.length) {
       const arr = equips.data.map((r: { data: CustomEquipment }) => r.data);
@@ -309,6 +378,12 @@ export class SupabaseSyncManager implements ISyncManager {
       await db.customEquipments.bulkPut(arr);
       count += arr.length;
     }
+
+    onProgress?.({
+      phase: 'downloading',
+      message: '正在导入方案数据...',
+      percentage: 75,
+    });
 
     if (methods.error) errors.push(`methods: ${methods.error.message}`);
     else if (methods.data?.length) {
@@ -320,12 +395,24 @@ export class SupabaseSyncManager implements ISyncManager {
       count += arr.length;
     }
 
+    onProgress?.({
+      phase: 'downloading',
+      message: '正在导入设置数据...',
+      percentage: 90,
+    });
+
     if (settings.error && settings.error.code !== 'PGRST116')
       errors.push(`settings: ${settings.error.message}`);
     else if (settings.data?.data)
       count += await this.downloadSettings(
         settings.data.data as Record<string, unknown>
       );
+
+    onProgress?.({
+      phase: 'downloading',
+      message: '下载完成',
+      percentage: 100,
+    });
 
     const critical = errors.some(
       e => e.includes('beans') || e.includes('notes')

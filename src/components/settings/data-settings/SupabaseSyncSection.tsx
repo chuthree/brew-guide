@@ -11,10 +11,10 @@ import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { buildSyncErrorLogs } from '@/lib/sync/types';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { SettingsOptions } from '../Settings';
-import { Upload, Download, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
-import { SyncHeaderButton, SyncDebugDrawer } from './shared';
+import { SyncHeaderButton, SyncDebugDrawer, SyncButtons } from './shared';
 
 type SupabaseSyncSettings = NonNullable<SettingsOptions['supabaseSync']>;
 
@@ -47,6 +47,8 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
     setExpanded,
     isSyncing,
     setIsSyncing,
+    syncProgress,
+    setSyncProgress,
     debugLogs,
     setDebugLogs,
     showDebugDrawer,
@@ -63,7 +65,6 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
 
   const [showAnonKey, setShowAnonKey] = useState(false);
   const [showSQLDrawer, setShowSQLDrawer] = useState(false);
-  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const managerRef = useRef<SupabaseSyncManager | null>(null);
@@ -144,18 +145,10 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
       return;
     }
 
-    if (direction === 'download') {
-      setShowDownloadConfirm(true);
-      return;
-    }
-
-    await executeSync(direction);
-  };
-
-  const executeSync = async (direction: 'upload' | 'download') => {
     setIsSyncing(true);
     setError('');
     setDebugLogs([]);
+    setSyncProgress(null);
 
     try {
       const manager = await getManager();
@@ -163,7 +156,11 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
         const errorMsg = '初始化失败，请检查配置';
         setStatus('error');
         setError(errorMsg);
-        setDebugLogs(buildSyncErrorLogs('Supabase', direction, errorMsg, ['URL 格式可能不正确']));
+        setDebugLogs(
+          buildSyncErrorLogs('Supabase', direction, errorMsg, [
+            'URL 格式可能不正确',
+          ])
+        );
         setIsSyncing(false);
         return;
       }
@@ -186,10 +183,25 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
       setStatus('connected');
       onSettingChange('lastConnectionSuccess', true);
 
-      const result = await manager.sync({ direction });
+      const result = await manager.sync({
+        direction,
+        onProgress: progress => {
+          console.log(
+            `📊 [Supabase] 同步进度: ${progress.phase} - ${progress.message} (${progress.percentage}%)`
+          );
+          setSyncProgress({
+            phase: progress.phase,
+            message: progress.message,
+            percentage: progress.percentage,
+          });
+        },
+      });
 
       if (result.success) {
-        const count = direction === 'upload' ? result.uploadedCount : result.downloadedCount;
+        const count =
+          direction === 'upload'
+            ? result.uploadedCount
+            : result.downloadedCount;
 
         if (count > 0) {
           showToast({
@@ -205,23 +217,38 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
             setTimeout(() => window.location.reload(), 2500);
           }
         } else {
-          showToast({ type: 'info', title: '数据已是最新，无需同步', duration: 2000 });
+          showToast({
+            type: 'info',
+            title: '数据已是最新，无需同步',
+            duration: 2000,
+          });
         }
 
         triggerHaptic('medium');
         onSyncComplete?.();
       } else {
         setError(result.message);
-        setDebugLogs(buildSyncErrorLogs('Supabase', direction, result.message, [...result.errors]));
+        setDebugLogs(
+          buildSyncErrorLogs('Supabase', direction, result.message, [
+            ...result.errors,
+          ])
+        );
         showToast({ type: 'error', title: result.message, duration: 3000 });
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '同步失败';
       setError(errorMsg);
-      setDebugLogs(buildSyncErrorLogs('Supabase', direction, errorMsg, [errorMsg]));
-      showToast({ type: 'error', title: `同步失败: ${errorMsg}`, duration: 3000 });
+      setDebugLogs(
+        buildSyncErrorLogs('Supabase', direction, errorMsg, [errorMsg])
+      );
+      showToast({
+        type: 'error',
+        title: `同步失败: ${errorMsg}`,
+        duration: 3000,
+      });
     } finally {
       setIsSyncing(false);
+      setSyncProgress(null);
     }
   };
 
@@ -283,7 +310,12 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
                 onClick={() => setShowAnonKey(!showAnonKey)}
                 className="absolute top-1/2 right-2 -translate-y-1/2 transform p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   {showAnonKey ? (
                     <path
                       strokeLinecap="round"
@@ -336,33 +368,27 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
         </div>
       )}
 
-      {enabled && status === 'connected' && (
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => performSync('upload')}
-            disabled={isSyncing}
-            className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <Upload className={`h-4 w-4 ${isSyncing ? 'animate-pulse' : ''}`} />
-            <span>上传</span>
-          </button>
-          <button
-            onClick={() => performSync('download')}
-            disabled={isSyncing}
-            className="flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <Download className={`h-4 w-4 ${isSyncing ? 'animate-pulse' : ''}`} />
-            <span>下载</span>
-          </button>
-        </div>
-      )}
+      <SyncButtons
+        enabled={enabled}
+        isConnected={status === 'connected'}
+        isSyncing={isSyncing}
+        onUpload={() => performSync('upload')}
+        onDownload={() => performSync('download')}
+      />
 
-      <ActionDrawer isOpen={showSQLDrawer} onClose={() => setShowSQLDrawer(false)} historyId="supabase-sql-drawer">
+      <ActionDrawer
+        isOpen={showSQLDrawer}
+        onClose={() => setShowSQLDrawer(false)}
+        historyId="supabase-sql-drawer"
+      >
         <ActionDrawer.Icon icon={DataAlertIcon} />
         <ActionDrawer.Content>
           <p className="mb-3 text-neutral-500 dark:text-neutral-400">
             请在 Supabase 项目的{' '}
-            <span className="text-neutral-800 dark:text-neutral-200">SQL Editor</span> 中执行以下脚本来创建所需的数据表。
+            <span className="text-neutral-800 dark:text-neutral-200">
+              SQL Editor
+            </span>{' '}
+            中执行以下脚本来创建所需的数据表。
           </p>
           <textarea
             ref={textAreaRef}
@@ -373,29 +399,11 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           />
         </ActionDrawer.Content>
         <ActionDrawer.Actions>
-          <ActionDrawer.SecondaryButton onClick={() => setShowSQLDrawer(false)}>关闭</ActionDrawer.SecondaryButton>
-          <ActionDrawer.PrimaryButton onClick={handleCopySQL}>{copySuccess ? '已复制' : '复制脚本'}</ActionDrawer.PrimaryButton>
-        </ActionDrawer.Actions>
-      </ActionDrawer>
-
-      <ActionDrawer isOpen={showDownloadConfirm} onClose={() => setShowDownloadConfirm(false)} historyId="supabase-download-confirm">
-        <ActionDrawer.Icon icon={DataAlertIcon} />
-        <ActionDrawer.Content>
-          <p className="mb-2 text-base font-medium text-neutral-800 dark:text-neutral-200">⚠️ 数据覆盖警告</p>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            下载操作将用云端数据完全覆盖本地数据，此操作不可撤销。
-          </p>
-          <p className="mt-2 text-sm font-medium text-red-500 dark:text-red-400">请确保您已备份重要数据！</p>
-        </ActionDrawer.Content>
-        <ActionDrawer.Actions>
-          <ActionDrawer.SecondaryButton onClick={() => setShowDownloadConfirm(false)}>取消</ActionDrawer.SecondaryButton>
-          <ActionDrawer.PrimaryButton
-            onClick={() => {
-              setShowDownloadConfirm(false);
-              executeSync('download');
-            }}
-          >
-            确认下载
+          <ActionDrawer.SecondaryButton onClick={() => setShowSQLDrawer(false)}>
+            关闭
+          </ActionDrawer.SecondaryButton>
+          <ActionDrawer.PrimaryButton onClick={handleCopySQL}>
+            {copySuccess ? '已复制' : '复制脚本'}
           </ActionDrawer.PrimaryButton>
         </ActionDrawer.Actions>
       </ActionDrawer>

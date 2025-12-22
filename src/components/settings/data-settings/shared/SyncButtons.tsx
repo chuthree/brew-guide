@@ -2,72 +2,119 @@
  * 同步操作按钮组件
  *
  * 共享组件，用于 S3、WebDAV、Supabase 的上传/下载按钮
+ * 同步时显示动态点数动画
  */
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, Download } from 'lucide-react';
-import type { SyncProgress } from '@/lib/sync/types';
 
 interface SyncButtonsProps {
+  /** 是否已启用 */
+  enabled?: boolean;
   /** 是否已连接 */
   isConnected: boolean;
   /** 是否正在同步 */
   isSyncing: boolean;
-  /** 同步进度 */
-  syncProgress: SyncProgress | null;
   /** 上传回调 */
   onUpload: () => void;
   /** 下载回调 */
   onDownload: () => void;
 }
 
+/** 动态点数组件 */
+const AnimatedDots: React.FC = () => {
+  const [dotCount, setDotCount] = useState(1);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDotCount(prev => (prev % 3) + 1);
+    }, 400);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className="inline-block w-4 text-left">{'.'.repeat(dotCount)}</span>
+  );
+};
+
 export const SyncButtons: React.FC<SyncButtonsProps> = ({
+  enabled = true,
   isConnected,
   isSyncing,
-  syncProgress,
   onUpload,
   onDownload,
 }) => {
-  if (!isConnected) {
+  // 记录当前同步方向
+  const [syncDirection, setSyncDirection] = useState<
+    'upload' | 'download' | null
+  >(null);
+
+  const handleUpload = () => {
+    setSyncDirection('upload');
+    onUpload();
+  };
+
+  const handleDownload = () => {
+    setSyncDirection('download');
+    onDownload();
+  };
+
+  // 同步结束后重置方向
+  useEffect(() => {
+    if (!isSyncing) {
+      setSyncDirection(null);
+    }
+  }, [isSyncing]);
+
+  if (!enabled || !isConnected) {
     return null;
   }
 
-  return (
-    <div className="flex gap-2">
-      {/* 同步进度显示 */}
-      {isSyncing && syncProgress && (
-        <div className="flex flex-1 items-center justify-center rounded-lg bg-neutral-100 px-3 py-2 dark:bg-neutral-800">
-          <div className="flex flex-col">
-            <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
-              {syncProgress.phase}
-            </span>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-              {syncProgress.message} ({syncProgress.percentage}%)
-            </span>
-          </div>
-        </div>
-      )}
+  const isUploading = isSyncing && syncDirection === 'upload';
+  const isDownloading = isSyncing && syncDirection === 'download';
 
+  return (
+    <div className="grid grid-cols-2 gap-3">
       {/* 上传按钮 */}
       <button
-        onClick={onUpload}
+        onClick={handleUpload}
         disabled={isSyncing}
-        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-neutral-100 px-4 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+        className={`flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${isSyncing ? 'opacity-60' : ''}`}
       >
-        <Upload className="h-4 w-4" />
-        <span>{isSyncing ? '同步中...' : '上传'}</span>
+        <Upload className={`h-4 w-4 ${isUploading ? 'animate-pulse' : ''}`} />
+        <span>
+          {isUploading ? (
+            <>
+              上传中
+              <AnimatedDots />
+            </>
+          ) : (
+            '上传'
+          )}
+        </span>
       </button>
 
       {/* 下载按钮 */}
       <button
-        onClick={onDownload}
+        onClick={handleDownload}
         disabled={isSyncing}
-        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-neutral-100 px-4 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+        className={`flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${isSyncing ? 'opacity-60' : ''}`}
       >
-        <Download className="h-4 w-4" />
-        <span>{isSyncing ? '同步中...' : '下载'}</span>
+        <Download
+          className={`h-4 w-4 ${isDownloading ? 'animate-pulse' : ''}`}
+        />
+        <span>
+          {isDownloading ? (
+            <>
+              下载中
+              <AnimatedDots />
+            </>
+          ) : (
+            '下载'
+          )}
+        </span>
       </button>
     </div>
   );
