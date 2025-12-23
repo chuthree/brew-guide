@@ -4,7 +4,10 @@ import {
   type SettingsOptions,
 } from '@/components/settings/Settings';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
-import { getRoasterConfigSync } from '@/lib/stores/settingsStore';
+import {
+  getRoasterConfigSync,
+  getSettingsStore,
+} from '@/lib/stores/settingsStore';
 
 // 赏味期信息接口
 export interface FlavorInfo {
@@ -91,30 +94,21 @@ const isValidPeriod = (period: { startDay: number; endDay: number }) => {
 };
 
 // 获取完整的赏味期设置（包括详细模式）
-export const getFlavorPeriodSettings = async (): Promise<{
+export const getFlavorPeriodSettings = (): {
   detailedEnabled: boolean;
   customFlavorPeriod: SettingsOptions['customFlavorPeriod'];
   detailedFlavorPeriod: SettingsOptions['detailedFlavorPeriod'];
-}> => {
+} => {
   try {
-    const { Storage } = await import('@/lib/core/storage');
-    const settingsStr = await Storage.get('brewGuideSettings');
-
-    if (settingsStr) {
-      const settings: SettingsOptions = JSON.parse(settingsStr);
-      return {
-        detailedEnabled: settings.detailedFlavorPeriodEnabled ?? false,
-        customFlavorPeriod:
-          settings.customFlavorPeriod || defaultSettings.customFlavorPeriod,
-        detailedFlavorPeriod:
-          settings.detailedFlavorPeriod || defaultSettings.detailedFlavorPeriod,
-      };
-    }
-
+    const settings = getSettingsStore().settings;
     return {
-      detailedEnabled: false,
-      customFlavorPeriod: defaultSettings.customFlavorPeriod,
-      detailedFlavorPeriod: defaultSettings.detailedFlavorPeriod,
+      detailedEnabled: settings.detailedFlavorPeriodEnabled ?? false,
+      customFlavorPeriod:
+        (settings.customFlavorPeriod as SettingsOptions['customFlavorPeriod']) ||
+        defaultSettings.customFlavorPeriod,
+      detailedFlavorPeriod:
+        (settings.detailedFlavorPeriod as SettingsOptions['detailedFlavorPeriod']) ||
+        defaultSettings.detailedFlavorPeriod,
     };
   } catch (error) {
     console.error('获取赏味期设置失败:', error);
@@ -127,8 +121,8 @@ export const getFlavorPeriodSettings = async (): Promise<{
 };
 
 // 获取自定义赏味期设置（保持向后兼容）
-export const getCustomFlavorPeriodSettings = async () => {
-  const settings = await getFlavorPeriodSettings();
+export const getCustomFlavorPeriodSettings = () => {
+  const settings = getFlavorPeriodSettings();
   return settings.customFlavorPeriod;
 };
 
@@ -165,11 +159,11 @@ const getDetailedFlavorPeriodSync = (
 };
 
 // 根据烘焙度获取默认赏味期参数
-export const getDefaultFlavorPeriodByRoastLevel = async (
+export const getDefaultFlavorPeriodByRoastLevel = (
   roastLevel: string | undefined | null,
   roasterName?: string
 ) => {
-  const flavorSettings = await getFlavorPeriodSettings();
+  const flavorSettings = getFlavorPeriodSettings();
   const { detailedEnabled, customFlavorPeriod, detailedFlavorPeriod } =
     flavorSettings;
 
@@ -317,22 +311,21 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
   ) {
     try {
       if (typeof window !== 'undefined') {
-        const settingsStr = localStorage.getItem('brewGuideSettings');
-        if (settingsStr) {
-          const settings: SettingsOptions = JSON.parse(settingsStr);
-          if (effectiveDetailedEnabled === undefined) {
-            effectiveDetailedEnabled =
-              settings.detailedFlavorPeriodEnabled ?? false;
-          }
-          if (effectiveDetailedFlavorPeriod === undefined) {
-            effectiveDetailedFlavorPeriod =
-              settings.detailedFlavorPeriod ||
-              defaultSettings.detailedFlavorPeriod;
-          }
-          if (effectiveCustomFlavorPeriod === undefined) {
-            effectiveCustomFlavorPeriod =
-              settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
-          }
+        // 使用 settingsStore 同步获取设置
+        const storeSettings = getSettingsStore().settings;
+        if (effectiveDetailedEnabled === undefined) {
+          effectiveDetailedEnabled =
+            storeSettings.detailedFlavorPeriodEnabled ?? false;
+        }
+        if (effectiveDetailedFlavorPeriod === undefined) {
+          effectiveDetailedFlavorPeriod =
+            (storeSettings.detailedFlavorPeriod as SettingsOptions['detailedFlavorPeriod']) ||
+            defaultSettings.detailedFlavorPeriod;
+        }
+        if (effectiveCustomFlavorPeriod === undefined) {
+          effectiveCustomFlavorPeriod =
+            (storeSettings.customFlavorPeriod as SettingsOptions['customFlavorPeriod']) ||
+            defaultSettings.customFlavorPeriod;
         }
       }
     } catch {

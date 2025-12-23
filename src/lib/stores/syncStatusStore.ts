@@ -2,9 +2,11 @@
  * 同步状态 Store
  *
  * 2025-12-21 简化：移除自动重连相关逻辑，只保留手动同步所需状态
+ * 2025-12-23 扩展：添加实时同步状态支持
  *
  * 职责：
  * - 管理全局同步状态（syncing/success/error/idle）
+ * - 管理实时同步连接状态
  * - 提供同步超时保护
  * - 状态自动重置
  *
@@ -19,6 +21,13 @@ import type { SyncStatus, CloudProvider } from '@/lib/sync/types';
 export type { SyncStatus };
 export type SyncProvider = CloudProvider;
 
+// 实时同步连接状态
+export type RealtimeStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'error';
+
 // 状态自动重置配置
 const STATUS_AUTO_RESET_CONFIG = {
   success: 500, // 成功后快速重置
@@ -32,6 +41,11 @@ interface SyncStatusState {
   lastSyncTime: number | null;
   errorMessage: string | null;
 
+  // 实时同步状态
+  realtimeStatus: RealtimeStatus;
+  realtimeEnabled: boolean;
+  pendingChangesCount: number;
+
   // 内部状态
   _resetTimer: ReturnType<typeof setTimeout> | null;
   _syncingTimeout: ReturnType<typeof setTimeout> | null;
@@ -44,6 +58,11 @@ interface SyncStatusState {
   setSyncing: () => void;
   reset: () => void;
 
+  // 实时同步方法
+  setRealtimeStatus: (status: RealtimeStatus) => void;
+  setRealtimeEnabled: (enabled: boolean) => void;
+  setPendingChangesCount: (count: number) => void;
+
   // 内部方法
   _clearTimers: () => void;
   _scheduleReset: (delay: number) => void;
@@ -55,6 +74,12 @@ export const useSyncStatusStore = create<SyncStatusState>()(
     provider: 'none',
     lastSyncTime: null,
     errorMessage: null,
+
+    // 实时同步初始状态
+    realtimeStatus: 'disconnected',
+    realtimeEnabled: false,
+    pendingChangesCount: 0,
+
     _resetTimer: null,
     _syncingTimeout: null,
 
@@ -148,6 +173,19 @@ export const useSyncStatusStore = create<SyncStatusState>()(
         _resetTimer: null,
         _syncingTimeout: null,
       });
+    },
+
+    // 实时同步方法
+    setRealtimeStatus: (status: RealtimeStatus) => {
+      set({ realtimeStatus: status });
+    },
+
+    setRealtimeEnabled: (enabled: boolean) => {
+      set({ realtimeEnabled: enabled });
+    },
+
+    setPendingChangesCount: (count: number) => {
+      set({ pendingChangesCount: count });
     },
   }))
 );

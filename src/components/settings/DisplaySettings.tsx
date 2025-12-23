@@ -7,6 +7,7 @@ import fontZoomUtils from '@/lib/utils/fontZoomUtils';
 import hapticsUtils from '@/lib/ui/haptics';
 import { ButtonGroup } from '@/components/ui/ButtonGroup';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import {
   SettingPage,
   SettingSection,
@@ -31,10 +32,26 @@ interface DisplaySettingsProps {
 }
 
 const DisplaySettings: React.FC<DisplaySettingsProps> = ({
-  settings,
+  settings: _settings, // 保留 props 兼容性，但使用 store
   onClose,
-  handleChange,
+  handleChange: _handleChange, // 保留 props 兼容性，但使用 store
 }) => {
+  // 使用 settingsStore 获取设置
+  const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+  const updateSettings = useSettingsStore(state => state.updateSettings);
+
+  // 使用 settingsStore 的 handleChange
+  const handleChange = React.useCallback(
+    async <K extends keyof SettingsOptions>(
+      key: K,
+      value: SettingsOptions[K]
+    ) => {
+      // 使用类型断言绕过 SettingsOptions 和 AppSettings 之间的微小差异
+      await updateSettings({ [key]: value } as any);
+    },
+    [updateSettings]
+  );
+
   const { theme, setTheme } = useTheme();
   const [zoomLevel, setZoomLevel] = React.useState(
     settings.textZoomLevel || 1.0

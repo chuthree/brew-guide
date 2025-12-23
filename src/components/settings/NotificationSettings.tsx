@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { SettingsOptions } from './Settings';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import hapticsUtils from '@/lib/ui/haptics';
@@ -24,10 +25,25 @@ interface NotificationSettingsProps {
 }
 
 const NotificationSettings: React.FC<NotificationSettingsProps> = ({
-  settings,
+  settings: _settings,
   onClose,
-  handleChange,
+  handleChange: _handleChange,
 }) => {
+  // 使用 settingsStore 获取设置
+  const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+  const updateSettings = useSettingsStore(state => state.updateSettings);
+
+  // 使用 settingsStore 的 handleChange
+  const handleChange = React.useCallback(
+    async <K extends keyof SettingsOptions>(
+      key: K,
+      value: SettingsOptions[K]
+    ) => {
+      await updateSettings({ [key]: value } as any);
+    },
+    [updateSettings]
+  );
+
   // 检测是否为原生应用
   const isNativeApp = Capacitor.isNativePlatform();
   const isAndroid = Capacitor.getPlatform() === 'android';

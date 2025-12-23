@@ -1,6 +1,6 @@
 /**
  * Supabase 同步相关的类型定义
- * 
+ *
  * 2025-12-21 简化：只保留手动上传/下载所需的类型
  */
 
@@ -84,11 +84,11 @@ export interface SupabaseCustomEquipment {
 
 /**
  * Supabase 表数据类型 - 自定义方案
+ * 注意：id 就是 equipmentId，每个器具只有一个方案集合
  */
 export interface SupabaseCustomMethod {
-  id: string;
+  id: string; // 等于 equipmentId
   user_id: string;
-  equipment_id: string;
   data: { equipmentId: string; methods: Method[] };
   created_at: string;
   updated_at: string;

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils/classNameUtils';
 import { CoffeeBean } from '@/types/app';
 import { BrewingNoteData } from '@/types/app';
 import hapticsUtils from '@/lib/ui/haptics';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 interface RemainingEditorProps {
   position?: { x: number; y: number } | null;
@@ -93,110 +94,52 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
     [onOpenChange, onCancel]
   );
 
+  // 从 settingsStore 获取设置
+  const storeSettings = useSettingsStore(state => state.settings);
+
   // 加载设置（预设值 + 功能开关）
   // 根据咖啡豆类型（生豆/熟豆）加载不同的预设值
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const { Storage } = await import('@/lib/core/storage');
-        const settingsStr = await Storage.get('brewGuideSettings');
-        const isGreenBean = coffeeBean?.beanState === 'green';
+    const isGreenBean = coffeeBean?.beanState === 'green';
+    const settings = storeSettings as SettingsOptions;
 
-        if (settingsStr) {
-          const settings = JSON.parse(settingsStr) as SettingsOptions;
-
-          // 根据咖啡豆类型选择预设值
-          if (isGreenBean) {
-            // 生豆模式：使用生豆烘焙预设值
-            if (settings.greenBeanRoastPresets?.length > 0) {
-              safeSetState(setDecrementValues)(settings.greenBeanRoastPresets);
-            } else {
-              safeSetState(setDecrementValues)(
-                defaultSettings.greenBeanRoastPresets
-              );
-            }
-            safeSetState(setEnableAllOption)(
-              settings.enableAllGreenBeanRoastOption ??
-                defaultSettings.enableAllGreenBeanRoastOption
-            );
-            safeSetState(setEnableCustomInput)(
-              settings.enableCustomGreenBeanRoastInput ??
-                defaultSettings.enableCustomGreenBeanRoastInput
-            );
-          } else {
-            // 熟豆模式：使用库存扣除预设值
-            if (settings.decrementPresets?.length > 0) {
-              safeSetState(setDecrementValues)(settings.decrementPresets);
-            } else {
-              safeSetState(setDecrementValues)(
-                defaultSettings.decrementPresets
-              );
-            }
-            safeSetState(setEnableAllOption)(
-              settings.enableAllDecrementOption ??
-                defaultSettings.enableAllDecrementOption
-            );
-            safeSetState(setEnableCustomInput)(
-              settings.enableCustomDecrementInput ??
-                defaultSettings.enableCustomDecrementInput
-            );
-          }
-
-          safeSetState(setHapticEnabled)(
-            settings.hapticFeedback ?? defaultSettings.hapticFeedback
-          );
-        } else {
-          // 无本地设置时回退到默认
-          if (isGreenBean) {
-            safeSetState(setDecrementValues)(
-              defaultSettings.greenBeanRoastPresets
-            );
-            safeSetState(setEnableAllOption)(
-              defaultSettings.enableAllGreenBeanRoastOption
-            );
-            safeSetState(setEnableCustomInput)(
-              defaultSettings.enableCustomGreenBeanRoastInput
-            );
-          } else {
-            safeSetState(setDecrementValues)(defaultSettings.decrementPresets);
-            safeSetState(setEnableAllOption)(
-              defaultSettings.enableAllDecrementOption
-            );
-            safeSetState(setEnableCustomInput)(
-              defaultSettings.enableCustomDecrementInput
-            );
-          }
-          safeSetState(setHapticEnabled)(defaultSettings.hapticFeedback);
-        }
-      } catch (error) {
-        console.error('加载库存扣除设置失败:', error);
+    // 根据咖啡豆类型选择预设值
+    if (isGreenBean) {
+      // 生豆模式：使用生豆烘焙预设值
+      if (settings.greenBeanRoastPresets?.length > 0) {
+        safeSetState(setDecrementValues)(settings.greenBeanRoastPresets);
+      } else {
+        safeSetState(setDecrementValues)(defaultSettings.greenBeanRoastPresets);
       }
-    };
-
-    loadSettings().catch(error => {
-      console.error('初始化加载设置失败:', error);
-    });
-
-    // 监听设置变更
-    const handleSettingsChange = (e: CustomEvent) => {
-      if (e.detail?.key === 'brewGuideSettings' && isMounted.current) {
-        loadSettings().catch(error => {
-          console.error('设置变更时加载设置失败:', error);
-        });
-      }
-    };
-
-    window.addEventListener(
-      'storageChange',
-      handleSettingsChange as EventListener
-    );
-    return () => {
-      window.removeEventListener(
-        'storageChange',
-        handleSettingsChange as EventListener
+      safeSetState(setEnableAllOption)(
+        settings.enableAllGreenBeanRoastOption ??
+          defaultSettings.enableAllGreenBeanRoastOption
       );
-    };
-  }, [coffeeBean?.beanState]);
+      safeSetState(setEnableCustomInput)(
+        settings.enableCustomGreenBeanRoastInput ??
+          defaultSettings.enableCustomGreenBeanRoastInput
+      );
+    } else {
+      // 熟豆模式：使用库存扣除预设值
+      if (settings.decrementPresets?.length > 0) {
+        safeSetState(setDecrementValues)(settings.decrementPresets);
+      } else {
+        safeSetState(setDecrementValues)(defaultSettings.decrementPresets);
+      }
+      safeSetState(setEnableAllOption)(
+        settings.enableAllDecrementOption ??
+          defaultSettings.enableAllDecrementOption
+      );
+      safeSetState(setEnableCustomInput)(
+        settings.enableCustomDecrementInput ??
+          defaultSettings.enableCustomDecrementInput
+      );
+    }
+
+    safeSetState(setHapticEnabled)(
+      settings.hapticFeedback ?? defaultSettings.hapticFeedback
+    );
+  }, [coffeeBean?.beanState, storeSettings]);
 
   // 添加键盘事件处理
   useEffect(() => {

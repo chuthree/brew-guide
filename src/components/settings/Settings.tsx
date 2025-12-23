@@ -16,6 +16,7 @@ import FeedbackDrawer from './FeedbackDrawer';
 import SettingGroup from './SettingItem';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
+import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
 
 import { useTheme } from 'next-themes';
 import { LayoutSettings } from '../brewing/Timer/Settings';
@@ -403,8 +404,6 @@ export interface SubSettingsHandlers {
 interface SettingsProps {
   isOpen: boolean;
   onClose: () => void;
-  settings: SettingsOptions;
-  setSettings: (settings: SettingsOptions) => void;
   onDataChange?: () => void;
   subSettingsHandlers: SubSettingsHandlers;
   hasSubSettingsOpen: boolean; // 是否有子设置页面打开
@@ -413,12 +412,23 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({
   isOpen,
   onClose,
-  settings,
-  setSettings,
   onDataChange: _onDataChange,
   subSettingsHandlers,
   hasSubSettingsOpen,
 }) => {
+  // 使用 Zustand store 管理设置
+  const settings = useSettingsStore(state => state.settings);
+  const updateSettings = useSettingsStore(state => state.updateSettings);
+  const storeInitialized = useSettingsStore(state => state.initialized);
+  const loadSettings = useSettingsStore(state => state.loadSettings);
+
+  // 初始化加载设置
+  useEffect(() => {
+    if (!storeInitialized) {
+      loadSettings();
+    }
+  }, [storeInitialized, loadSettings]);
+
   // 获取主题相关方法
   const { theme, systemTheme } = useTheme();
 
@@ -528,7 +538,7 @@ const Settings: React.FC<SettingsProps> = ({
     isSyncing,
     setIsSyncing,
     performSync: performQuickSync,
-  } = useCloudSyncConnection(settings);
+  } = useCloudSyncConnection(settings as SettingsOptions);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
 
   // 自动检测更新（仅在 Capacitor 原生环境下）
@@ -626,24 +636,22 @@ const Settings: React.FC<SettingsProps> = ({
     onClose,
   });
 
-  // 处理设置变更
-  const handleChange = async <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => {
-    // 直接更新设置并保存到存储
-    const newSettings = { ...settings, [key]: value };
-    setSettings(newSettings);
-    const { Storage } = await import('@/lib/core/storage');
-    await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-
-    // 触发自定义事件通知其他组件设置已更改
-    window.dispatchEvent(
-      new CustomEvent('storageChange', {
-        detail: { key: 'brewGuideSettings' },
-      })
-    );
-  };
+  // 处理设置变更 - 使用 settingsStore 更新
+  const handleChange = useCallback(
+    async <K extends keyof SettingsOptions>(
+      key: K,
+      value: SettingsOptions[K]
+    ) => {
+      try {
+        // 使用 settingsStore 更新设置（自动持久化到 IndexedDB）
+        // 使用 any 类型绕过 SettingsOptions 和 AppSettings 之间的微小差异
+        await updateSettings({ [key]: value } as any);
+      } catch (error) {
+        console.error('[Settings] handleChange error:', error);
+      }
+    },
+    [updateSettings]
+  );
 
   // 如果shouldRender为false，不渲染任何内容
   if (!shouldRender) return null;

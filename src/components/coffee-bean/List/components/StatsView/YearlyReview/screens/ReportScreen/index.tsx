@@ -11,6 +11,7 @@ import {
   useYearlyReportStore,
   type YearlyReport,
 } from '@/lib/stores/yearlyReportStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
@@ -92,9 +93,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // 新增：已保存的报告和是否查看历史
-  const [savedReport, setSavedReport] = useState<YearlyReport | null>(
-    null
-  );
+  const [savedReport, setSavedReport] = useState<YearlyReport | null>(null);
   const [isViewingSaved, setIsViewingSaved] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   // 新增：今日已使用次数
@@ -293,11 +292,9 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
           // 保存到本地
           if (fullText.trim()) {
             const currentYear = new Date().getFullYear();
-            const saved = await useYearlyReportStore.getState().saveReport(
-              currentYear,
-              name,
-              fullText
-            );
+            const saved = await useYearlyReportStore
+              .getState()
+              .saveReport(currentYear, name, fullText);
             setSavedReport(saved);
             console.log('✅ 报告已自动保存');
           }
@@ -329,16 +326,13 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
       setReportText('');
 
       try {
-        // 获取用户名
+        // 从 settingsStore 获取用户名
         let name = '咖啡爱好者';
-        const settingsStr = await Storage.get('brewGuideSettings');
-        if (settingsStr) {
-          const settings = JSON.parse(settingsStr);
-          const userName = settings.username?.trim();
-          if (userName) {
-            name = userName;
-            setUsername(name);
-          }
+        const settings = useSettingsStore.getState().settings;
+        const userName = settings.username?.trim();
+        if (userName) {
+          name = userName;
+          setUsername(name);
         }
 
         // 获取今日已使用次数
@@ -347,7 +341,9 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
 
         // 先检查本地是否有已保存的报告
         const currentYear = new Date().getFullYear();
-        const existingReport = useYearlyReportStore.getState().getReportByYear(currentYear);
+        const existingReport = useYearlyReportStore
+          .getState()
+          .getReportByYear(currentYear);
 
         if (existingReport) {
           // 有已保存的报告，直接显示

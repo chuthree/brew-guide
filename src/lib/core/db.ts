@@ -310,6 +310,20 @@ export class BrewGuideDB extends Dexie {
   // 旧版设置表（兼容性保留）
   settings!: Dexie.Table<{ key: string; value: string }, string>;
 
+  // 实时同步离线队列表
+  pendingOperations!: Dexie.Table<
+    {
+      id: string;
+      table: string;
+      type: 'upsert' | 'delete';
+      recordId: string;
+      data?: unknown;
+      timestamp: number;
+      retryCount: number;
+    },
+    string
+  >;
+
   constructor() {
     super('BrewGuideDB');
 
@@ -351,6 +365,19 @@ export class BrewGuideDB extends Dexie {
         console.log('开始数据库 v4 升级迁移...');
         // 迁移将在数据库打开后通过 dbUtils.migrateToV4 完成
       });
+
+    // 版本5：添加实时同步离线队列表
+    this.version(5).stores({
+      brewingNotes: 'id, timestamp, equipment, method',
+      coffeeBeans: 'id, timestamp, name, type',
+      settings: 'key',
+      customEquipments: 'id, name',
+      customMethods: 'equipmentId',
+      grinders: 'id, name',
+      yearlyReports: 'id, year, createdAt',
+      appSettings: 'id',
+      pendingOperations: 'id, table, recordId, timestamp',
+    });
   }
 }
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
 
 import { SettingsOptions } from './Settings';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { FlavorDimension, DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/core/db';
 import {
@@ -24,10 +25,25 @@ interface FlavorDimensionSettingsProps {
 }
 
 const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
-  settings,
+  settings: _settings,
   onClose,
   handleChange: _handleChange,
 }) => {
+  // 使用 settingsStore 获取设置
+  const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+  const updateSettings = useSettingsStore(state => state.updateSettings);
+
+  // 使用 settingsStore 的 handleChange
+  const handleChange = React.useCallback(
+    async <K extends keyof SettingsOptions>(
+      key: K,
+      value: SettingsOptions[K]
+    ) => {
+      await updateSettings({ [key]: value } as any);
+    },
+    [updateSettings]
+  );
+
   // 控制动画状态
   const [shouldRender, setShouldRender] = useState(true);
   const [isVisible, setIsVisible] = useState(false);

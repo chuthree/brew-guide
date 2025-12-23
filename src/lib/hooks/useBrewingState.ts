@@ -10,6 +10,7 @@ import {
   loadCustomMethods,
   saveCustomMethod as apiSaveCustomMethod,
   deleteCustomMethod as apiDeleteCustomMethod,
+  useCustomMethodStore,
 } from '@/lib/stores/customMethodStore';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { NavigationOptions, STEP_RULES } from '../brewing/constants';
@@ -306,7 +307,23 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
       return equipmentName;
     },
     [activeMainTab, showComplete, resetBrewingState, customEquipments]
-  ); // 加载自定义方案
+  );
+
+  // 订阅 Zustand store 的方案变化（支持实时同步自动刷新）
+  const methodsByEquipmentFromStore = useCustomMethodStore(
+    state => state.methodsByEquipment
+  );
+
+  // 当 Zustand store 变化时，同步到本地 state
+  useEffect(() => {
+    // 只有当 store 有数据且与本地不同时才更新
+    const storeHasData = Object.keys(methodsByEquipmentFromStore).length > 0;
+    if (storeHasData) {
+      setCustomMethods(methodsByEquipmentFromStore);
+    }
+  }, [methodsByEquipmentFromStore]);
+
+  // 初始加载自定义方案
   useEffect(() => {
     const loadMethods = async () => {
       try {

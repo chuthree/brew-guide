@@ -246,15 +246,14 @@ export async function uploadAllData(): Promise<SyncResult> {
       uploaded += equipmentsResult.data?.upserted || 0;
     }
 
-    // 5. 同步自定义方案（注意：使用 equipmentId 作为 id）
+    // 5. 同步自定义方案（id = equipmentId）
     const methodsWithId = methods.map(m => ({ ...m, id: m.equipmentId }));
     const methodsResult = await syncTableUpload(
       supabaseClient,
       SYNC_TABLES.CUSTOM_METHODS,
       methodsWithId,
       m => ({
-        id: m.equipmentId,
-        equipment_id: m.equipmentId,
+        id: m.equipmentId, // id = equipmentId
         data: m,
         updated_at: new Date().toISOString(),
       })

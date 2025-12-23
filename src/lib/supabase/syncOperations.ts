@@ -14,7 +14,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { Storage } from '@/lib/core/storage';
+import { db, AppSettings } from '@/lib/core/db';
 
 // ============================================
 // 类型定义
@@ -51,19 +51,7 @@ export const SYNC_TABLES = {
 
 export type SyncTableName = (typeof SYNC_TABLES)[keyof typeof SYNC_TABLES];
 
-// 需要同步的设置键（单一来源）
-// 注意：flavorDimensions 和 roasterConfigs 现在存储在 brewGuideSettings 中
-export const SETTINGS_KEYS = [
-  'brewGuideSettings',
-  'brewingNotesVersion',
-  'equipmentOrder',
-  'onboardingCompleted',
-  'backupReminderSettings',
-  'yearlyReports',
-  'yearlyReviewReminderSettings',
-] as const;
-
-// 自定义预设
+// 自定义预设（仍存储在 localStorage 中）
 export const PRESETS_PREFIX = 'brew-guide:custom-presets:';
 export const PRESETS_KEYS = [
   'origins',
@@ -71,7 +59,6 @@ export const PRESETS_KEYS = [
   'processes',
   'varieties',
 ] as const;
-// 注意：roasterConfigs 现在存储在 brewGuideSettings.roasterConfigs 中，不再使用独立的 localStorage key
 
 // ============================================
 // 核心同步操作（原子化、可测试）
@@ -337,6 +324,7 @@ export async function syncTableUpload<T extends { id: string }>(
 
 /**
  * 上传设置数据到云端
+ * 注意：设置数据现在完全存储在 IndexedDB appSettings 表中
  */
 export async function uploadSettingsData(
   client: SupabaseClient
@@ -344,22 +332,13 @@ export async function uploadSettingsData(
   try {
     const data: Record<string, unknown> = {};
 
-    // 从 Storage 收集设置
-    for (const key of SETTINGS_KEYS) {
-      const val = await Storage.get(key);
-      if (val) {
-        try {
-          let parsed = JSON.parse(val);
-          if (key === 'brewGuideSettings' && parsed?.state?.settings)
-            parsed = parsed.state.settings;
-          data[key] = parsed;
-        } catch {
-          data[key] = val;
-        }
-      }
+    // 从 IndexedDB appSettings 表收集设置（唯一数据来源）
+    const appSettingsRecord = await db.appSettings.get('main');
+    if (appSettingsRecord?.data) {
+      data.appSettings = appSettingsRecord.data;
     }
 
-    // 收集浏览器端数据
+    // 收集自定义预设（仍存储在 localStorage 中）
     if (typeof window !== 'undefined') {
       const presets: Record<string, unknown> = {};
       for (const k of PRESETS_KEYS) {
@@ -372,7 +351,6 @@ export async function uploadSettingsData(
           }
       }
       if (Object.keys(presets).length) data.customPresets = presets;
-      // roasterConfigs 已包含在 brewGuideSettings 中，无需单独处理
     }
 
     const { error } = await client.from(SYNC_TABLES.USER_SETTINGS).upsert(
@@ -400,6 +378,7 @@ export async function uploadSettingsData(
 
 /**
  * 下载设置数据并应用到本地
+ * 注意：设置数据现在完全存储在 IndexedDB appSettings 表中
  */
 export async function downloadSettingsData(
   client: SupabaseClient
@@ -422,37 +401,41 @@ export async function downloadSettingsData(
     }
 
     const settingsData = row.data as Record<string, unknown>;
+    let count = 0;
 
-    // 恢复设置到 Storage
-    for (const key of SETTINGS_KEYS) {
-      if (settingsData[key] !== undefined) {
-        const value =
-          typeof settingsData[key] === 'object'
-            ? JSON.stringify(settingsData[key])
-            : String(settingsData[key]);
-        await Storage.set(key, value);
-      }
+    // 恢复 IndexedDB appSettings（唯一数据存储）
+    if (settingsData.appSettings) {
+      const cloudAppSettings = settingsData.appSettings as AppSettings;
+      // 获取本地设置用于合并
+      const localRecord = await db.appSettings.get('main');
+      const localSettings = localRecord?.data || {};
+
+      // 合并设置：云端设置优先，但保留本地独有的字段
+      const mergedSettings = { ...localSettings, ...cloudAppSettings };
+      await db.appSettings.put({ id: 'main', data: mergedSettings });
+      console.log('[SyncOps] IndexedDB appSettings 已更新');
+      count++;
     }
 
-    // 恢复浏览器端数据
+    // 恢复自定义预设（仍存储在 localStorage 中）
     if (typeof window !== 'undefined') {
       if (settingsData.customPresets) {
         const presets = settingsData.customPresets as Record<string, unknown>;
         for (const k of PRESETS_KEYS) {
-          if (presets[k])
+          if (presets[k]) {
             localStorage.setItem(
               `${PRESETS_PREFIX}${k}`,
               JSON.stringify(presets[k])
             );
+            count++;
+          }
         }
       }
-      // roasterConfigs 已包含在 brewGuideSettings 中，通过 Storage.set 自动恢复
 
       // 触发 UI 刷新
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     }
 
-    const count = Object.keys(settingsData).length;
     console.log(`[SyncOps] 设置下载成功: ${count} 项`);
     return { success: true, data: count, affectedCount: count };
   } catch (err) {

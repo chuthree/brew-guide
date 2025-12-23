@@ -2,6 +2,7 @@
 
 import { toPng } from 'html-to-image';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
+import { getSettingsStore } from '@/lib/stores/settingsStore';
 
 interface NotesExporterProps {
   selectedNotes: string[];
@@ -222,18 +223,9 @@ export async function exportSelectedNotes({
     // 等待所有图片加载完成
     await waitForImages(tempContainer);
 
-    // 获取用户名
-    const { Storage } = await import('@/lib/core/storage');
-    const settingsStr = await Storage.get('brewGuideSettings');
-    let username = '';
-    if (settingsStr) {
-      try {
-        const settings = JSON.parse(settingsStr);
-        username = settings.username?.trim() || '';
-      } catch (e) {
-        console.error('解析用户设置失败', e);
-      }
-    }
+    // 从 settingsStore 获取用户名
+    const settings = getSettingsStore().settings;
+    const username = settings.username?.trim() || '';
 
     // 添加底部标记
     const footer = document.createElement('div');

@@ -198,8 +198,7 @@ export class SupabaseSyncManager implements ISyncManager {
       SYNC_TABLES.CUSTOM_METHODS,
       methodsWithId,
       m => ({
-        id: m.equipmentId,
-        equipment_id: m.equipmentId,
+        id: m.equipmentId, // id = equipmentId
         data: m,
         updated_at: new Date().toISOString(),
       })

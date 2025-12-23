@@ -19,6 +19,21 @@ export {
 // 类型导出
 export * from './types';
 
+// 实时同步模块导出
+export {
+  RealtimeSyncService,
+  getRealtimeSyncService,
+  useRealtimeSync,
+  useRealtimeSyncStatus,
+  offlineQueue,
+} from './realtime';
+
+export type {
+  RealtimeSyncConfig,
+  RealtimeSyncState,
+  RealtimeConnectionStatus,
+} from './realtime';
+
 /**
  * Supabase 数据库初始化 SQL
  * 用户需要在 Supabase SQL Editor 中执行此脚本
@@ -70,10 +85,10 @@ CREATE TABLE IF NOT EXISTS custom_equipments (
 );
 
 -- 自定义方案表
+-- 注意：id 就是 equipmentId，每个器具只有一个方案集合
 CREATE TABLE IF NOT EXISTS custom_methods (
   id TEXT NOT NULL,
   user_id TEXT NOT NULL,
-  equipment_id TEXT NOT NULL,
   data JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -115,6 +130,28 @@ CREATE POLICY "Allow all on brewing_notes" ON brewing_notes FOR ALL USING (true)
 CREATE POLICY "Allow all on custom_equipments" ON custom_equipments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on custom_methods" ON custom_methods FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on user_settings" ON user_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- ==================== 启用 Realtime 实时同步 ====================
+-- 将所有需要实时同步的表添加到 supabase_realtime 发布中
+-- 注意：这是实时同步的关键配置！
+
+-- 先尝试删除旧的发布（如果存在）
+DROP PUBLICATION IF EXISTS supabase_realtime;
+
+-- 创建新的发布，包含所有需要实时同步的表
+CREATE PUBLICATION supabase_realtime FOR TABLE 
+  coffee_beans,
+  brewing_notes,
+  custom_equipments,
+  custom_methods,
+  user_settings;
+
+-- 设置 replica identity 为 FULL，确保 UPDATE/DELETE 事件包含完整数据
+ALTER TABLE coffee_beans REPLICA IDENTITY FULL;
+ALTER TABLE brewing_notes REPLICA IDENTITY FULL;
+ALTER TABLE custom_equipments REPLICA IDENTITY FULL;
+ALTER TABLE custom_methods REPLICA IDENTITY FULL;
+ALTER TABLE user_settings REPLICA IDENTITY FULL;
 
 -- 可选：定期清理软删除数据的函数（超过 30 天的软删除数据）
 -- CREATE OR REPLACE FUNCTION cleanup_deleted_records()

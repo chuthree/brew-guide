@@ -21,10 +21,13 @@ interface HiddenEquipmentsSettingsProps {
 
 const HiddenEquipmentsSettings: React.FC<HiddenEquipmentsSettingsProps> = ({
   onClose,
-  settings,
-  onChange,
+  settings: _settings, // 保留 props 兼容性，但使用 store
+  onChange: _onChange, // 保留 props 兼容性，但使用 store
   customEquipments = [],
 }) => {
+  // 使用 settingsStore 获取设置
+  const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+
   // 控制动画状态
   const [shouldRender, setShouldRender] = useState(true);
   const [isVisible, setIsVisible] = useState(false);

@@ -8,6 +8,9 @@ import { SafeArea, initialize } from '@capacitor-community/safe-area';
  * 统一管理所有平台的安全区域逻辑
  */
 export const SafeAreaManager = {
+  // 存储 settingsStore 取消订阅函数
+  _unsubscribe: null as (() => void) | null,
+
   /**
    * 初始化安全区域
    */
@@ -18,6 +21,9 @@ export const SafeAreaManager = {
 
       // 加载用户设置并应用安全区域变量
       await this.loadAndApplySettings();
+
+      // 订阅 settingsStore 的 safeAreaMargins 变化
+      this.subscribeToSettingsStore();
 
       // 如果是原生平台，启用插件
       if (Capacitor.isNativePlatform()) {
@@ -32,22 +38,40 @@ export const SafeAreaManager = {
           },
         });
 
-        // 监听原生安全区域变化
+        // 监听原生安全区域变化（屏幕旋转等）
         this.watchNativeSafeAreaChanges();
-      } else {
-        // 网页版也需要监听设置变化
-        window.addEventListener('storageChange', (event: Event) => {
-          const customEvent = event as CustomEvent<{ key?: string }>;
-          if (customEvent.detail?.key === 'brewGuideSettings') {
-            this.loadAndApplySettings();
-          }
-        });
       }
 
       console.warn('SafeArea initialized successfully');
     } catch (error) {
       console.error('Failed to initialize SafeArea:', error);
     }
+  },
+
+  /**
+   * 订阅 settingsStore 的安全区域边距变化
+   */
+  subscribeToSettingsStore(): void {
+    // 动态导入以避免循环依赖
+    import('@/lib/stores/settingsStore').then(({ useSettingsStore }) => {
+      // 取消之前的订阅
+      if (this._unsubscribe) {
+        this._unsubscribe();
+      }
+
+      // 订阅 safeAreaMargins 变化
+      this._unsubscribe = useSettingsStore.subscribe(
+        state => state.settings.safeAreaMargins,
+        margins => {
+          console.log('[SafeArea] safeAreaMargins changed:', margins);
+          if (margins) {
+            this.setupSafeAreaVariables(margins);
+          } else {
+            this.setupSafeAreaVariables();
+          }
+        }
+      );
+    });
   },
 
   /**
@@ -114,7 +138,7 @@ export const SafeAreaManager = {
   },
 
   /**
-   * 监听原生安全区域变化
+   * 监听原生安全区域变化（仅屏幕方向变化）
    */
   watchNativeSafeAreaChanges(): void {
     // 监听方向变化
@@ -124,14 +148,7 @@ export const SafeAreaManager = {
         this.loadAndApplySettings();
       }, 300);
     });
-
-    // 监听设置变化
-    window.addEventListener('storageChange', (event: Event) => {
-      const customEvent = event as CustomEvent<{ key?: string }>;
-      if (customEvent.detail?.key === 'brewGuideSettings') {
-        this.loadAndApplySettings();
-      }
-    });
+    // 注意：设置变化现在通过 subscribeToSettingsStore() 处理
   },
 
   /**
@@ -139,19 +156,12 @@ export const SafeAreaManager = {
    */
   async loadAndApplySettings(): Promise<void> {
     try {
-      // 动态导入 Storage 以避免循环依赖
-      const { Storage } = await import('@/lib/core/storage');
-      const settingsStr = await Storage.get('brewGuideSettings');
+      // 使用 settingsStore 获取设置
+      const { getSettingsStore } = await import('@/lib/stores/settingsStore');
+      const settings = getSettingsStore().settings;
 
-      if (settingsStr) {
-        const settings = JSON.parse(settingsStr);
-        const margins = settings.safeAreaMargins;
-
-        if (margins) {
-          this.setupSafeAreaVariables(margins);
-        } else {
-          this.setupSafeAreaVariables();
-        }
+      if (settings.safeAreaMargins) {
+        this.setupSafeAreaVariables(settings.safeAreaMargins);
       } else {
         this.setupSafeAreaVariables();
       }

@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTraySync } from '@/lib/hooks/useTraySync';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
+import { getRealtimeSyncService } from '@/lib/supabase/realtime';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 检查是否在 Tauri 环境中
 const isTauri = () => {
@@ -41,20 +43,19 @@ export default function StorageInit() {
   useTraySync(handleNavigateToBean);
 
   // 初始化托盘图标可见性（根据设置）
+  const showMenuBarIcon = useSettingsStore(
+    state => state.settings.showMenuBarIcon
+  );
+
   useEffect(() => {
     if (!isTauri()) return;
 
     const initTrayVisibility = async () => {
       try {
-        const { Storage } = await import('@/lib/core/storage');
-        const settingsStr = await Storage.get('brewGuideSettings');
-        if (settingsStr) {
-          const settings = JSON.parse(settingsStr);
-          // 如果设置中明确为 false，则隐藏托盘图标
-          if (settings.showMenuBarIcon === false) {
-            const { invoke } = await import('@tauri-apps/api/core');
-            await invoke('set_tray_visible', { visible: false });
-          }
+        // 如果设置中明确为 false，则隐藏托盘图标
+        if (showMenuBarIcon === false) {
+          const { invoke } = await import('@tauri-apps/api/core');
+          await invoke('set_tray_visible', { visible: false });
         }
       } catch (error) {
         console.debug('Failed to init tray visibility:', error);
@@ -62,7 +63,7 @@ export default function StorageInit() {
     };
 
     initTrayVisibility();
-  }, []);
+  }, [showMenuBarIcon]);
 
   useEffect(() => {
     async function initStorage() {
@@ -96,20 +97,63 @@ export default function StorageInit() {
 
           // 检查 Supabase 配置（仅记录状态，不自动同步）
           try {
-            const settingsStr = await Storage.get('brewGuideSettings');
-            if (settingsStr) {
-              const settings = JSON.parse(settingsStr);
-              const supabaseSettings = settings.supabaseSync;
+            const { useSettingsStore: getStore } = await import(
+              '@/lib/stores/settingsStore'
+            );
+            const storeSettings = getStore.getState().settings;
+            if (storeSettings) {
+              const supabaseSettings = storeSettings.supabaseSync;
+              const activeSyncType = storeSettings.activeSyncType;
 
               if (
+                activeSyncType === 'supabase' &&
                 supabaseSettings?.enabled &&
                 supabaseSettings?.url &&
                 supabaseSettings?.anonKey
               ) {
                 syncStatusStore.setProvider('supabase');
-                // 设置为 idle，等待用户手动同步
+                syncStatusStore.setRealtimeEnabled(true);
+
+                // 启动实时同步服务
+                console.log('[StorageProvider] 启动 Supabase 实时同步...');
+                const realtimeService = getRealtimeSyncService();
+
+                // 订阅实时同步状态变更
+                realtimeService.subscribe(state => {
+                  syncStatusStore.setRealtimeStatus(state.connectionStatus);
+                  syncStatusStore.setPendingChangesCount(
+                    state.pendingChangesCount
+                  );
+                  if (state.lastSyncTime) {
+                    syncStatusStore.setStatus('success');
+                  }
+                });
+
+                // 连接实时同步
+                const connected = await realtimeService.connect({
+                  url: supabaseSettings.url,
+                  anonKey: supabaseSettings.anonKey,
+                  enableOfflineQueue: true,
+                });
+
+                if (connected) {
+                  console.log('[StorageProvider] Supabase 实时同步已连接');
+                  syncStatusStore.setStatus('idle');
+                } else {
+                  console.warn('[StorageProvider] Supabase 实时同步连接失败');
+                  syncStatusStore.setStatus('error');
+                }
+              } else if (
+                supabaseSettings?.enabled &&
+                supabaseSettings?.url &&
+                supabaseSettings?.anonKey
+              ) {
+                // Supabase 已配置但不是活动同步类型，设置为手动模式
+                syncStatusStore.setProvider('supabase');
                 syncStatusStore.setStatus('idle');
-                console.log('[StorageProvider] Supabase 已配置，等待用户手动同步');
+                console.log(
+                  '[StorageProvider] Supabase 已配置，等待用户手动同步'
+                );
               }
             }
           } catch (supabaseError) {

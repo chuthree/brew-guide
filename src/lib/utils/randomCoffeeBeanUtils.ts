@@ -4,6 +4,7 @@ import {
   FlavorPeriodStatus,
 } from '@/lib/utils/beanVarietyUtils';
 import { SettingsOptions } from '@/components/settings/Settings';
+import { getSettingsStore } from '@/lib/stores/settingsStore';
 
 /**
  * 咖啡豆类型
@@ -267,21 +268,13 @@ export class RandomCoffeeBeanSelector {
 /**
  * 获取随机咖啡豆设置的工具函数
  */
-export const getRandomCoffeeBeanSettings = async (): Promise<
-  SettingsOptions['randomCoffeeBeans']
-> => {
-  try {
-    const { Storage } = await import('@/lib/core/storage');
-    const settingsStr = await Storage.get('brewGuideSettings');
-
-    if (settingsStr) {
-      const settings: SettingsOptions = JSON.parse(settingsStr);
-      return settings.randomCoffeeBeans;
+export const getRandomCoffeeBeanSettings =
+  (): SettingsOptions['randomCoffeeBeans'] => {
+    try {
+      const settings = getSettingsStore().settings;
+      return settings.randomCoffeeBeans as SettingsOptions['randomCoffeeBeans'];
+    } catch (error) {
+      console.error('获取随机咖啡豆设置失败:', error);
+      return undefined;
     }
-
-    return undefined;
-  } catch (error) {
-    console.error('获取随机咖啡豆设置失败:', error);
-    return undefined;
-  }
-};
+  };

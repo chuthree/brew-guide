@@ -192,7 +192,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         }));
 
         // 触发变化事件
-        dispatchMethodChanged(equipmentId, uniqueMethods);
+        dispatchMethodChanged('create', equipmentId, uniqueMethods);
 
         return newMethod;
       } catch (error) {
@@ -230,7 +230,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         }));
 
         // 触发变化事件
-        dispatchMethodChanged(equipmentId, updatedMethods);
+        dispatchMethodChanged('update', equipmentId, updatedMethods);
 
         return updatedMethod;
       } catch (error) {
@@ -261,7 +261,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         }));
 
         // 触发变化事件
-        dispatchMethodChanged(equipmentId, updatedMethods);
+        dispatchMethodChanged('delete', equipmentId, updatedMethods);
 
         return true;
       } catch (error) {
@@ -288,7 +288,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         }));
 
         // 触发变化事件
-        dispatchMethodChanged(equipmentId, uniqueMethods);
+        dispatchMethodChanged('set', equipmentId, uniqueMethods);
       } catch (error) {
         console.error(
           '[CustomMethodStore] setMethodsForEquipment failed:',
@@ -309,7 +309,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         });
 
         // 触发变化事件
-        dispatchMethodChanged(equipmentId, []);
+        dispatchMethodChanged('delete', equipmentId, []);
       } catch (error) {
         console.error(
           '[CustomMethodStore] deleteMethodsForEquipment failed:',
@@ -337,18 +337,24 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
 
 /**
  * 触发方案变化事件
+ * 与其他 Store 保持一致的事件格式：包含 action 字段
  */
-function dispatchMethodChanged(equipmentId: string, methods: Method[]): void {
+function dispatchMethodChanged(
+  action: 'create' | 'update' | 'delete' | 'set',
+  equipmentId: string,
+  methods: Method[]
+): void {
   if (typeof window !== 'undefined') {
+    // 主事件：统一格式，包含 action
     window.dispatchEvent(
-      new CustomEvent('customMethodsChanged', {
-        detail: { equipmentId },
+      new CustomEvent('customMethodDataChanged', {
+        detail: { action, equipmentId, methods },
       })
     );
     // 兼容旧事件
     window.dispatchEvent(
-      new CustomEvent('customMethodDataChanged', {
-        detail: { equipmentId, methods },
+      new CustomEvent('customMethodsChanged', {
+        detail: { equipmentId },
       })
     );
   }

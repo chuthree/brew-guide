@@ -9,7 +9,7 @@ import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
-import { Storage } from '@/lib/core/storage';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
@@ -117,24 +117,15 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
     }
   };
 
-  // 获取用户名
+  // 获取用户名 - 从 settingsStore 获取
+  const storeUsername = useSettingsStore(state => state.settings.username);
+
   useEffect(() => {
-    const loadUsername = async () => {
-      try {
-        const settingsStr = await Storage.get('brewGuideSettings');
-        if (settingsStr) {
-          const settings = JSON.parse(settingsStr);
-          const name = settings.username?.trim();
-          if (name) {
-            setUsername(name.toUpperCase());
-          }
-        }
-      } catch (e) {
-        console.error('解析用户设置失败', e);
-      }
-    };
-    loadUsername();
-  }, []);
+    const name = storeUsername?.trim();
+    if (name) {
+      setUsername(name.toUpperCase());
+    }
+  }, [storeUsername]);
 
   // 重置进度当抽屉关闭后重新打开
   useEffect(() => {

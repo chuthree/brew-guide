@@ -30,7 +30,10 @@ import { compressBase64Image } from '@/lib/utils/imageCapture';
 import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
 import { inferBeanType } from '@/lib/utils/beanTypeInference';
-import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
+import {
+  getRoasterLogoSync,
+  useSettingsStore,
+} from '@/lib/stores/settingsStore';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 
 interface CoffeeBeanFormProps {
@@ -201,110 +204,76 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
     // 自动填充识图图片 - 在表单加载时检查设置，如果开启了自动填充且有识图图片，则自动填充
     useEffect(() => {
-      const autoFillRecognitionImage = async () => {
+      console.log(
+        '[自动填充检查] recognitionImage:',
+        recognitionImage ? '有图片' : '无图片'
+      );
+      console.log(
+        '[自动填充检查] initialBean:',
+        initialBean ? '编辑模式' : '新建模式'
+      );
+      console.log(
+        '[自动填充检查] bean.image:',
+        bean.image ? '已有图片' : '无图片'
+      );
+
+      // 只要没有图片且有识图图片就自动填充（不管是新建还是编辑）
+      // 因为识图导入后会先保存到数据库再打开表单，此时 initialBean 会有值
+      if (!bean.image && recognitionImage) {
+        // 从 settingsStore 获取设置
+        const settings = useSettingsStore.getState().settings;
         console.log(
-          '[自动填充检查] recognitionImage:',
-          recognitionImage ? '有图片' : '无图片'
-        );
-        console.log(
-          '[自动填充检查] initialBean:',
-          initialBean ? '编辑模式' : '新建模式'
-        );
-        console.log(
-          '[自动填充检查] bean.image:',
-          bean.image ? '已有图片' : '无图片'
+          '[自动填充检查] autoFillRecognitionImage 设置:',
+          settings.autoFillRecognitionImage
         );
 
-        // 只要没有图片且有识图图片就自动填充（不管是新建还是编辑）
-        // 因为识图导入后会先保存到数据库再打开表单，此时 initialBean 会有值
-        if (!bean.image && recognitionImage) {
-          try {
-            const { Storage } = await import('@/lib/core/storage');
-            const settingsStr = await Storage.get('brewGuideSettings');
-            let settings: SettingsOptions = defaultSettings;
-
-            if (settingsStr) {
-              settings = JSON.parse(settingsStr);
-            }
-
-            console.log(
-              '[自动填充检查] autoFillRecognitionImage 设置:',
-              settings.autoFillRecognitionImage
-            );
-
-            // 检查是否开启了自动填充设置
-            if (settings.autoFillRecognitionImage) {
-              console.log('[自动填充] 开始填充图片');
-              setBean(prev => ({
-                ...prev,
-                image: recognitionImage,
-              }));
-            } else {
-              console.log('[自动填充] 设置未开启，不自动填充');
-            }
-          } catch (error) {
-            console.error('自动填充识图图片失败:', error);
-          }
+        // 检查是否开启了自动填充设置
+        if (settings.autoFillRecognitionImage) {
+          console.log('[自动填充] 开始填充图片');
+          setBean(prev => ({
+            ...prev,
+            image: recognitionImage,
+          }));
+        } else {
+          console.log('[自动填充] 设置未开启，不自动填充');
         }
-      };
-
-      autoFillRecognitionImage();
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [recognitionImage]); // 只依赖 recognitionImage，避免重复触发
 
     // 从设置中加载自定义赏味期设置
     useEffect(() => {
-      const loadSettingsAndInitializeBean = async () => {
-        try {
-          const { Storage } = await import('@/lib/core/storage');
-          const settingsStr = await Storage.get('brewGuideSettings');
-          let settings: SettingsOptions = defaultSettings;
+      // 如果是新建咖啡豆且没有设置赏味期，使用自定义设置初始化
+      if (
+        !initialBean &&
+        bean.startDay === 0 &&
+        bean.endDay === 0 &&
+        bean.roastLevel
+      ) {
+        const settings = useSettingsStore.getState().settings;
+        const customFlavorPeriod =
+          settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+        const detailedEnabled = settings.detailedFlavorPeriodEnabled ?? false;
+        const detailedFlavorPeriod =
+          settings.detailedFlavorPeriod || defaultSettings.detailedFlavorPeriod;
 
-          if (settingsStr) {
-            settings = JSON.parse(settingsStr);
-          }
+        const roasterName = extractRoasterFromName(bean.name);
 
-          // 如果是新建咖啡豆且没有设置赏味期，使用自定义设置初始化
-          if (
-            !initialBean &&
-            bean.startDay === 0 &&
-            bean.endDay === 0 &&
-            bean.roastLevel
-          ) {
-            const customFlavorPeriod =
-              settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
-            const detailedEnabled =
-              settings.detailedFlavorPeriodEnabled ?? false;
-            const detailedFlavorPeriod =
-              settings.detailedFlavorPeriod ||
-              defaultSettings.detailedFlavorPeriod;
+        const { startDay, endDay } = getDefaultFlavorPeriodByRoastLevelSync(
+          bean.roastLevel,
+          customFlavorPeriod,
+          roasterName,
+          detailedEnabled,
+          detailedFlavorPeriod
+        );
 
-            const { extractRoasterFromName } = await import(
-              '@/lib/utils/beanVarietyUtils'
-            );
-            const roasterName = extractRoasterFromName(bean.name);
-
-            const { startDay, endDay } = getDefaultFlavorPeriodByRoastLevelSync(
-              bean.roastLevel,
-              customFlavorPeriod,
-              roasterName,
-              detailedEnabled,
-              detailedFlavorPeriod
-            );
-
-            setBean(prev => ({
-              ...prev,
-              startDay,
-              endDay,
-            }));
-          }
-        } catch (error) {
-          console.error('加载设置失败:', error);
-        }
-      };
-
-      loadSettingsAndInitializeBean();
-    }, [bean.endDay, bean.roastLevel, bean.startDay, initialBean]);
+        setBean(prev => ({
+          ...prev,
+          startDay,
+          endDay,
+        }));
+      }
+    }, [bean.endDay, bean.roastLevel, bean.startDay, bean.name, initialBean]);
 
     // 自动聚焦输入框
     useEffect(() => {
@@ -783,27 +752,15 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       const currentRoastLevel = roastLevelOverride || bean.roastLevel || '';
 
       try {
-        // 从设置中获取自定义赏味期配置
-        const { Storage } = await import('@/lib/core/storage');
-        const settingsStr = await Storage.get('brewGuideSettings');
-        let customFlavorPeriod = defaultSettings.customFlavorPeriod;
-        let detailedEnabled = false;
-        let detailedFlavorPeriod = defaultSettings.detailedFlavorPeriod;
-
-        if (settingsStr) {
-          const settings: SettingsOptions = JSON.parse(settingsStr);
-          customFlavorPeriod =
-            settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
-          detailedEnabled = settings.detailedFlavorPeriodEnabled ?? false;
-          detailedFlavorPeriod =
-            settings.detailedFlavorPeriod ||
-            defaultSettings.detailedFlavorPeriod;
-        }
+        // 从 settingsStore 获取自定义赏味期配置
+        const settings = useSettingsStore.getState().settings;
+        const customFlavorPeriod =
+          settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+        const detailedEnabled = settings.detailedFlavorPeriodEnabled ?? false;
+        const detailedFlavorPeriod =
+          settings.detailedFlavorPeriod || defaultSettings.detailedFlavorPeriod;
 
         // 从咖啡豆名称中提取烘焙商名称
-        const { extractRoasterFromName } = await import(
-          '@/lib/utils/beanVarietyUtils'
-        );
         const roasterName = bean.name
           ? extractRoasterFromName(bean.name)
           : undefined;

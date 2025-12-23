@@ -2,6 +2,10 @@
 
 /**
  * Supabase 同步配置组件
+ *
+ * 支持两种模式：
+ * 1. 手动同步：用户手动点击上传/下载按钮
+ * 2. 实时同步：当 activeSyncType === 'supabase' 时自动启用
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -11,10 +15,12 @@ import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { buildSyncErrorLogs } from '@/lib/sync/types';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { SettingsOptions } from '../Settings';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Wifi, WifiOff, RefreshCw, Clock } from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
 import { SyncHeaderButton, SyncDebugDrawer, SyncButtons } from './shared';
+import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
+import { getRealtimeSyncService } from '@/lib/supabase/realtime';
 
 type SupabaseSyncSettings = NonNullable<SettingsOptions['supabaseSync']>;
 
@@ -68,6 +74,10 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   const [copySuccess, setCopySuccess] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const managerRef = useRef<SupabaseSyncManager | null>(null);
+
+  // 实时同步状态
+  const { realtimeStatus, realtimeEnabled, pendingChangesCount } =
+    useSyncStatusStore();
 
   useEffect(() => {
     if (!enabled) {
@@ -365,6 +375,73 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           >
             {status === 'connecting' ? '连接中...' : '测试连接'}
           </button>
+
+          {/* 实时同步状态显示 */}
+          {realtimeEnabled && (
+            <div className="rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {realtimeStatus === 'connected' ? (
+                    <Wifi className="h-4 w-4 text-green-500" />
+                  ) : realtimeStatus === 'connecting' ? (
+                    <RefreshCw className="h-4 w-4 animate-spin text-amber-500" />
+                  ) : (
+                    <WifiOff className="h-4 w-4 text-neutral-400" />
+                  )}
+                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                    实时同步
+                  </span>
+                </div>
+                <span
+                  className={`text-xs font-medium ${
+                    realtimeStatus === 'connected'
+                      ? 'text-green-600 dark:text-green-400'
+                      : realtimeStatus === 'connecting'
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-neutral-500'
+                  }`}
+                >
+                  {realtimeStatus === 'connected'
+                    ? '已连接'
+                    : realtimeStatus === 'connecting'
+                      ? '连接中...'
+                      : realtimeStatus === 'error'
+                        ? '连接失败'
+                        : '未连接'}
+                </span>
+              </div>
+
+              {pendingChangesCount > 0 && (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{pendingChangesCount} 个变更待同步</span>
+                </div>
+              )}
+
+              {realtimeStatus === 'connected' && pendingChangesCount === 0 && (
+                <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                  本地变更将自动同步到云端
+                </p>
+              )}
+
+              {realtimeStatus !== 'connected' &&
+                realtimeStatus !== 'connecting' && (
+                  <button
+                    onClick={async () => {
+                      const service = getRealtimeSyncService();
+                      await service.connect({
+                        url: settings.url,
+                        anonKey: settings.anonKey,
+                        enableOfflineQueue: true,
+                      });
+                    }}
+                    className="mt-2 w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                  >
+                    重新连接
+                  </button>
+                )}
+            </div>
+          )}
         </div>
       )}
 

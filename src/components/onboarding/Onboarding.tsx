@@ -14,6 +14,7 @@ import PersistentStorageManager, {
   isPersistentStorageSupported,
   isPWAMode,
 } from '@/lib/utils/persistentStorage';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 设置页面界面属性
 interface OnboardingProps {
@@ -79,8 +80,9 @@ const Onboarding: React.FC<OnboardingProps> = ({
       const { Storage } = await import('@/lib/core/storage');
       // 标记引导已完成
       await Storage.set('onboardingCompleted', 'true');
-      // 保存默认设置
-      await Storage.set('brewGuideSettings', JSON.stringify(defaultSettings));
+
+      // 使用 settingsStore 保存默认设置
+      await useSettingsStore.getState().importSettings(defaultSettings as any);
 
       // 通知上层组件设置已变更
       onSettingsChange(defaultSettings);

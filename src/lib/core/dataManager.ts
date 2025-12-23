@@ -121,17 +121,18 @@ export const DataManager = {
       // 获取数据
       const storage = await getStorage();
       for (const key of APP_DATA_KEYS) {
+        // 特殊处理 brewGuideSettings - 从 settingsStore 获取
+        if (key === 'brewGuideSettings') {
+          const settingsFromStore = getSettingsStore().settings;
+          exportData.data[key] = settingsFromStore;
+          continue;
+        }
+
         const value = await storage.get(key);
         if (value) {
           try {
             // 尝试解析JSON
-            let parsedValue = JSON.parse(value);
-
-            // 如果是 brewGuideSettings，检查是否被 Zustand persist 包装
-            if (key === 'brewGuideSettings' && parsedValue?.state?.settings) {
-              // 解包 Zustand persist 的数据结构
-              parsedValue = parsedValue.state.settings;
-            }
+            const parsedValue = JSON.parse(value);
 
             exportData.data[key] = parsedValue;
 
@@ -286,12 +287,15 @@ export const DataManager = {
         if (importData.data[key] !== undefined) {
           let valueToSave = importData.data[key];
 
-          // 如果是 brewGuideSettings，检查是否被 Zustand persist 包装
-          // 如果导入的数据是 Zustand 格式（包含 state.settings），则解包
+          // 特殊处理 brewGuideSettings - 使用 settingsStore 导入
           if (key === 'brewGuideSettings' && typeof valueToSave === 'object') {
+            // 如果导入的数据是 Zustand 格式（包含 state.settings），则解包
             if ((valueToSave as any)?.state?.settings) {
               valueToSave = (valueToSave as any).state.settings;
             }
+            // 使用 settingsStore 导入设置（会自动保存到 IndexedDB）
+            await getSettingsStore().importSettings(valueToSave as any);
+            continue; // 跳过后续的 Storage 保存
           }
 
           // 保存到Storage

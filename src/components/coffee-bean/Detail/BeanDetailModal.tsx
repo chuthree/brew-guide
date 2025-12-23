@@ -36,7 +36,10 @@ import {
   useIsLargeScreen,
 } from '@/lib/navigation/pageTransition';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
+import {
+  getRoasterLogoSync,
+  useSettingsStore,
+} from '@/lib/stores/settingsStore';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 import {
   DEFAULT_ORIGINS,
@@ -419,39 +422,26 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     }
   }, [bean?.id, bean?.beanState, relatedNotes, relatedBeans, isOpen]);
 
-  // 加载打印和显示设置
-  useEffect(() => {
-    const loadPrintSettings = async () => {
-      try {
-        const { Storage } = await import('@/lib/core/storage');
-        const settingsStr = await Storage.get('brewGuideSettings');
-        if (settingsStr) {
-          const settings = JSON.parse(settingsStr);
-          const printEnabledValue = settings.enableBeanPrint === true;
-          const showRatingValue = settings.showBeanRating === true;
-          const showInfoDividerValue = settings.showBeanInfoDivider !== false; // 默认true
-          const showEstateFieldValue = settings.showEstateField === true; // 默认false
-          setPrintEnabled(printEnabledValue);
-          setShowBeanRating(showRatingValue);
-          setShowBeanInfoDivider(showInfoDividerValue);
-          setShowEstateField(showEstateFieldValue);
-        } else {
-          setPrintEnabled(false);
-          setShowBeanRating(false);
-          setShowBeanInfoDivider(true); // 默认显示
-          setShowEstateField(false); // 默认不显示
-        }
-      } catch (error) {
-        console.error('加载打印设置失败:', error);
-        setPrintEnabled(false);
-        setShowBeanRating(false);
-        setShowBeanInfoDivider(true); // 默认显示
-        setShowEstateField(false); // 默认不显示
-      }
-    };
+  // 加载打印和显示设置 - 从 settingsStore 获取
+  const storeSettings = useSettingsStore(state => state.settings);
 
-    loadPrintSettings();
-  }, [isOpen]);
+  useEffect(() => {
+    if (storeSettings) {
+      const printEnabledValue = storeSettings.enableBeanPrint === true;
+      const showRatingValue = storeSettings.showBeanRating === true;
+      const showInfoDividerValue = storeSettings.showBeanInfoDivider !== false; // 默认true
+      const showEstateFieldValue = storeSettings.showEstateField === true; // 默认false
+      setPrintEnabled(printEnabledValue);
+      setShowBeanRating(showRatingValue);
+      setShowBeanInfoDivider(showInfoDividerValue);
+      setShowEstateField(showEstateFieldValue);
+    } else {
+      setPrintEnabled(false);
+      setShowBeanRating(false);
+      setShowBeanInfoDivider(true); // 默认显示
+      setShowEstateField(false); // 默认不显示
+    }
+  }, [isOpen, storeSettings]);
 
   // 使用评分维度hook
   const { getValidTasteRatings } = useFlavorDimensions();
@@ -649,21 +639,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     let endDay = 0;
 
     try {
-      // 从设置中获取自定义赏味期配置
-      const { Storage } = await import('@/lib/core/storage');
-      const settingsStr = await Storage.get('brewGuideSettings');
-      let customFlavorPeriod = defaultSettings.customFlavorPeriod;
-      let detailedEnabled = false;
-      let detailedFlavorPeriod = defaultSettings.detailedFlavorPeriod;
-
-      if (settingsStr) {
-        const settings: SettingsOptions = JSON.parse(settingsStr);
-        customFlavorPeriod =
-          settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
-        detailedEnabled = settings.detailedFlavorPeriodEnabled ?? false;
-        detailedFlavorPeriod =
-          settings.detailedFlavorPeriod || defaultSettings.detailedFlavorPeriod;
-      }
+      // 从 settingsStore 获取自定义赏味期配置
+      const settings = useSettingsStore.getState().settings;
+      const customFlavorPeriod =
+        settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
+      const detailedEnabled = settings.detailedFlavorPeriodEnabled ?? false;
+      const detailedFlavorPeriod =
+        settings.detailedFlavorPeriod || defaultSettings.detailedFlavorPeriod;
 
       const { extractRoasterFromName } = await import(
         '@/lib/utils/beanVarietyUtils'

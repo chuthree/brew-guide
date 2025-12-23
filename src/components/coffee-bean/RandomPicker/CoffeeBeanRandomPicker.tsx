@@ -62,22 +62,16 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   const [cardDimensionsReady, setCardDimensionsReady] = useState(false);
   // 随机咖啡豆设置
   const [randomSettings, setRandomSettings] =
-    useState<Awaited<ReturnType<typeof getRandomCoffeeBeanSettings>>>(
-      undefined
-    );
+    useState<ReturnType<typeof getRandomCoffeeBeanSettings>>(undefined);
 
   // 动画过渡参数
   const springTransition = { stiffness: 500, damping: 25 };
 
   // 获取随机咖啡豆设置
   useEffect(() => {
-    const loadSettings = async () => {
-      const settings = await getRandomCoffeeBeanSettings();
-      setRandomSettings(settings);
-    };
-
     if (isOpen) {
-      loadSettings();
+      const settings = getRandomCoffeeBeanSettings();
+      setRandomSettings(settings);
     }
   }, [isOpen]);
 

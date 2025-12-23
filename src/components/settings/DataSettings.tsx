@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { SettingsOptions } from './Settings';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { ButtonGroup } from '../ui/ButtonGroup';
 import {
   BackupReminderSettings,
@@ -48,11 +49,26 @@ interface DataSettingsProps {
 }
 
 const DataSettings: React.FC<DataSettingsProps> = ({
-  settings,
+  settings: _settings,
   onClose,
-  handleChange,
+  handleChange: _handleChange,
   onDataChange,
 }) => {
+  // 使用 settingsStore 获取设置
+  const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+  const updateSettings = useSettingsStore(state => state.updateSettings);
+
+  // 使用 settingsStore 的 handleChange
+  const handleChange = React.useCallback(
+    async <K extends keyof SettingsOptions>(
+      key: K,
+      value: SettingsOptions[K]
+    ) => {
+      await updateSettings({ [key]: value } as any);
+    },
+    [updateSettings]
+  );
+
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 

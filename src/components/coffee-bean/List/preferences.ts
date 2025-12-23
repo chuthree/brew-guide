@@ -163,10 +163,12 @@ export const saveSelectedBeanStatePreference = (v: BeanState) =>
 export const isGreenBeanInventoryEnabled = (): boolean => {
   try {
     if (typeof window !== 'undefined') {
-      const settingsStr = localStorage.getItem('brewGuideSettings');
-      if (settingsStr) {
-        return JSON.parse(settingsStr).enableGreenBeanInventory === true;
-      }
+      // 使用动态导入避免循环依赖
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { useSettingsStore } = require('@/lib/stores/settingsStore');
+      return (
+        useSettingsStore.getState().settings.enableGreenBeanInventory === true
+      );
     }
   } catch {}
   return false;

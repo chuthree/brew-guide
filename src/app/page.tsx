@@ -37,6 +37,7 @@ import Settings, {
   SettingsOptions,
   defaultSettings,
 } from '@/components/settings/Settings';
+import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
 import DisplaySettings from '@/components/settings/DisplaySettings';
 import StockSettings from '@/components/settings/StockSettings';
 import BeanSettings from '@/components/settings/BeanSettings';
@@ -297,107 +298,30 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showGrinderSettings ||
     showExperimentalSettings;
 
-  const [settings, setSettings] = useState<SettingsOptions>(() => {
-    // 使用默认设置作为初始值，稍后在 useEffect 中异步加载
-    return defaultSettings;
-  });
+  // 使用 Zustand settingsStore 管理设置
+  const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+  const updateSettings = useSettingsStore(state => state.updateSettings);
+  const storeInitialized = useSettingsStore(state => state.initialized);
+  const loadSettingsFromStore = useSettingsStore(state => state.loadSettings);
 
-  // 初始化加载设置
+  // 初始化加载设置 - 使用 settingsStore
   useEffect(() => {
-    let isMounted = true;
-
-    const loadSettings = async () => {
-      try {
-        const { Storage } = await import('@/lib/core/storage');
-        const savedSettings = await Storage.get('brewGuideSettings');
-
-        if (savedSettings && typeof savedSettings === 'string' && isMounted) {
-          try {
-            let parsedSettings = JSON.parse(savedSettings) as Record<
-              string,
-              unknown
-            >;
-
-            // 检查是否是 Zustand persist 格式，如果是则解包
-            if (
-              parsedSettings.state &&
-              typeof parsedSettings.state === 'object' &&
-              (parsedSettings.state as any).settings
-            ) {
-              parsedSettings = (parsedSettings.state as any).settings;
-            }
-
-            // 迁移旧的showFlavorPeriod设置到新的dateDisplayMode
-            if (
-              parsedSettings.showFlavorPeriod !== undefined &&
-              parsedSettings.dateDisplayMode === undefined
-            ) {
-              parsedSettings.dateDisplayMode = parsedSettings.showFlavorPeriod
-                ? 'flavorPeriod'
-                : 'date';
-              delete parsedSettings.showFlavorPeriod;
-
-              // 保存迁移后的设置
-              try {
-                await Storage.set(
-                  'brewGuideSettings',
-                  JSON.stringify(parsedSettings)
-                );
-              } catch {
-                // 静默处理保存错误
-              }
-            }
-
-            // 合并默认设置，确保新添加的设置项有默认值
-            // 对于嵌套对象（如云同步设置），需要深度合并
-            const mergedSettings = {
-              ...defaultSettings,
-              ...parsedSettings,
-              // 云同步设置：如果已保存，完全使用保存的值（包括 enabled）
-              // 如果未保存，使用默认值
-              s3Sync: parsedSettings.s3Sync
-                ? {
-                    ...defaultSettings.s3Sync,
-                    ...((parsedSettings.s3Sync as object) || {}),
-                  }
-                : defaultSettings.s3Sync,
-              webdavSync: parsedSettings.webdavSync
-                ? {
-                    ...defaultSettings.webdavSync,
-                    ...((parsedSettings.webdavSync as object) || {}),
-                  }
-                : defaultSettings.webdavSync,
-              supabaseSync: parsedSettings.supabaseSync
-                ? {
-                    ...defaultSettings.supabaseSync,
-                    ...((parsedSettings.supabaseSync as object) || {}),
-                  }
-                : defaultSettings.supabaseSync,
-            };
-            setSettings(mergedSettings as SettingsOptions);
-
-            // 应用字体缩放级别
-            if (
-              mergedSettings.textZoomLevel &&
-              typeof mergedSettings.textZoomLevel === 'number'
-            ) {
-              fontZoomUtils.set(mergedSettings.textZoomLevel);
-            }
-          } catch {
-            // JSON解析失败，使用默认设置
-          }
-        }
-      } catch {
-        // 静默处理错误
+    const initSettings = async () => {
+      if (!storeInitialized) {
+        await loadSettingsFromStore();
+      }
+      // 应用字体缩放级别
+      const currentSettings = getSettingsStore().settings;
+      if (
+        currentSettings.textZoomLevel &&
+        typeof currentSettings.textZoomLevel === 'number'
+      ) {
+        fontZoomUtils.set(currentSettings.textZoomLevel);
       }
     };
 
-    loadSettings();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    initSettings();
+  }, [storeInitialized, loadSettingsFromStore]);
 
   // 咖啡豆表单状态
   const [showBeanForm, setShowBeanForm] = useState(false);
@@ -781,44 +705,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // 监听设置变化事件，重新加载设置以更新界面
-  useEffect(() => {
-    const handleSettingsChanged = async () => {
-      try {
-        const { Storage } = await import('@/lib/core/storage');
-        const savedSettings = await Storage.get('brewGuideSettings');
-        if (savedSettings && typeof savedSettings === 'string') {
-          const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
-          setSettings(parsedSettings);
-        }
-      } catch (error) {
-        console.error('重新加载设置失败:', error);
-      }
-    };
-
-    const handleStorageChanged = async (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail?.key === 'brewGuideSettings') {
-        try {
-          const { Storage } = await import('@/lib/core/storage');
-          const savedSettings = await Storage.get('brewGuideSettings');
-          if (savedSettings && typeof savedSettings === 'string') {
-            const parsedSettings = JSON.parse(savedSettings) as SettingsOptions;
-            setSettings(parsedSettings);
-          }
-        } catch (error) {
-          console.error('重新加载设置失败:', error);
-        }
-      }
-    };
-
-    window.addEventListener('settingsChanged', handleSettingsChanged);
-    window.addEventListener('storageChange', handleStorageChanged);
-    return () => {
-      window.removeEventListener('settingsChanged', handleSettingsChanged);
-      window.removeEventListener('storageChange', handleStorageChanged);
-    };
-  }, []);
+  // 设置变化事件监听已由 settingsStore 自动处理
+  // settingsStore 使用 subscribeWithSelector 会自动触发 UI 更新
+  // 保留事件监听用于兼容旧代码（如第三方组件监听 settingsChanged 事件）
 
   // 监听 ImageViewer 打开事件
   useEffect(() => {
@@ -1151,42 +1040,32 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   const [isCoffeeBrewed, setIsCoffeeBrewed] = useState(showComplete);
 
+  // 处理设置变更 - 使用 settingsStore
   const handleSettingsChange = useCallback(
     async (newSettings: SettingsOptions) => {
-      setSettings(newSettings);
       try {
-        const { Storage } = await import('@/lib/core/storage');
-        await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-
+        // 使用 any 类型绕过 SettingsOptions 和 AppSettings 之间的微小差异
+        await updateSettings(newSettings as any);
         if (newSettings.textZoomLevel) {
           fontZoomUtils.set(newSettings.textZoomLevel);
         }
-      } catch {
-        // 静默处理错误
+      } catch (error) {
+        console.error('[page] handleSettingsChange error:', error);
       }
     },
-    [setSettings]
+    [updateSettings]
   );
 
+  // 处理子设置变更 - 使用 settingsStore
   const handleSubSettingChange = useCallback(
     async (key: string, value: any) => {
-      const newSettings = { ...settings, [key]: value };
-      setSettings(newSettings);
       try {
-        const { Storage } = await import('@/lib/core/storage');
-        await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-
-        // 触发自定义事件通知其他组件设置已更改
-        window.dispatchEvent(
-          new CustomEvent('storageChange', {
-            detail: { key: 'brewGuideSettings' },
-          })
-        );
-      } catch {
-        // 静默处理错误
+        await updateSettings({ [key]: value } as any);
+      } catch (error) {
+        console.error('[page] handleSubSettingChange error:', error);
       }
     },
-    [settings]
+    [updateSettings]
   );
 
   const handleLayoutChange = useCallback(
@@ -2074,14 +1953,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   };
 
   const handleDataChange = async () => {
+    // 重新加载设置 - 使用 settingsStore
     try {
-      const { Storage } = await import('@/lib/core/storage');
-      const savedSettings = await Storage.get('brewGuideSettings');
-      if (savedSettings) {
-        setSettings(JSON.parse(savedSettings) as SettingsOptions);
-      }
-    } catch {
-      // 静默处理错误
+      await loadSettingsFromStore();
+    } catch (error) {
+      console.error('[page] handleDataChange: 加载设置失败', error);
     }
 
     try {
@@ -3906,8 +3782,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       <Settings
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        settings={settings}
-        setSettings={setSettings}
         onDataChange={handleDataChange}
         hasSubSettingsOpen={hasSubSettingsOpen}
         subSettingsHandlers={{

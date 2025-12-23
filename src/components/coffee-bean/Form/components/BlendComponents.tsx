@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { BlendComponent } from '@/types/app';
 import {
@@ -13,6 +13,7 @@ import {
   getBeanProcesses,
   getBeanEstates,
 } from '@/lib/utils/beanVarietyUtils';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 interface BlendComponentsProps {
   components: BlendComponent[];
@@ -31,25 +32,10 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
   onRemove,
   onChange,
 }) => {
-  // 庄园字段显示设置
-  const [showEstateFieldSetting, setShowEstateFieldSetting] = useState(false);
-
-  // 加载庄园显示设置
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const { Storage } = await import('@/lib/core/storage');
-        const settingsStr = await Storage.get('brewGuideSettings');
-        if (settingsStr) {
-          const settings = JSON.parse(settingsStr);
-          setShowEstateFieldSetting(settings.showEstateField || false);
-        }
-      } catch (error) {
-        console.error('加载庄园显示设置失败:', error);
-      }
-    };
-    loadSettings();
-  }, []);
+  // 庄园字段显示设置 - 从 settingsStore 获取
+  const showEstateFieldSetting = useSettingsStore(
+    state => state.settings.showEstateField || false
+  );
 
   // 检查是否有任何成分已有庄园数据
   const hasExistingEstate = useMemo(() => {

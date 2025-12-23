@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { SettingsOptions, defaultSettings } from './Settings';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { ButtonGroup } from '@/components/ui/ButtonGroup';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import {
@@ -22,10 +23,25 @@ interface RandomCoffeeBeanSettingsProps {
 }
 
 const RandomCoffeeBeanSettings: React.FC<RandomCoffeeBeanSettingsProps> = ({
-  settings,
+  settings: _settings,
   onClose,
-  handleChange,
+  handleChange: _handleChange,
 }) => {
+  // 使用 settingsStore 获取设置
+  const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+  const updateSettings = useSettingsStore(state => state.updateSettings);
+
+  // 使用 settingsStore 的 handleChange
+  const handleChange = React.useCallback(
+    async <K extends keyof SettingsOptions>(
+      key: K,
+      value: SettingsOptions[K]
+    ) => {
+      await updateSettings({ [key]: value } as any);
+    },
+    [updateSettings]
+  );
+
   // 控制动画状态
   const [shouldRender, setShouldRender] = React.useState(true);
   const [isVisible, setIsVisible] = React.useState(false);

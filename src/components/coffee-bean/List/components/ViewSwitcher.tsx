@@ -416,13 +416,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   // 生豆库启用设置
   enableGreenBeanInventory = false,
 }) => {
-  // 添加极简模式状态
-  const [_isMinimalistMode, setIsMinimalistMode] = useState(false);
-
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const filterExpandRef = useRef<HTMLDivElement>(null);
-  const [hideTotalWeight, setHideTotalWeight] = useState(false);
 
   // 检查是否在浏览器环境（用于 Portal）
   const [isMounted, setIsMounted] = useState(false);
@@ -558,45 +554,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     return () => clearTimeout(timer);
   }, [rankingBeanType, scrollToRankingSelected]);
 
-  // 获取全局设置
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const { Storage } = await import('@/lib/core/storage');
-        const settingsStr = await Storage.get('brewGuideSettings');
-        if (settingsStr) {
-          // 移除极简模式相关设置
-          setIsMinimalistMode(false); // 移除极简模式
-          setHideTotalWeight(false); // 始终显示总重量
-        }
-      } catch (error) {
-        // Log error in development only
-        if (process.env.NODE_ENV === 'development') {
-          console.error('加载设置失败', error);
-        }
-      }
-    };
-
-    loadSettings();
-
-    // 监听设置变更
-    const handleSettingsChange = (e: CustomEvent) => {
-      if (e.detail?.key === 'brewGuideSettings') {
-        loadSettings();
-      }
-    };
-
-    window.addEventListener(
-      'storageChange',
-      handleSettingsChange as EventListener
-    );
-    return () => {
-      window.removeEventListener(
-        'storageChange',
-        handleSettingsChange as EventListener
-      );
-    };
-  }, []);
+  // 注：isMinimalistMode 和 hideTotalWeight 功能已移除，始终为 false
 
   // 搜索相关逻辑
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -718,9 +676,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </span>
                   )}
                   ，总共 {originalTotalWeight || '0g'}
-                  {!hideTotalWeight && totalWeight
-                    ? `，剩余 ${totalWeight}`
-                    : ''}
+                  {totalWeight ? `，剩余 ${totalWeight}` : ''}
                 </span>
               ) : (
                 <span className="flex items-baseline">
@@ -743,9 +699,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       {BEAN_STATE_LABELS[selectedBeanState]}
                     </span>
                   )}
-                  {!hideTotalWeight && totalWeight
-                    ? `，剩余 ${totalWeight}`
-                    : ''}
+                  {totalWeight ? `，剩余 ${totalWeight}` : ''}
                 </span>
               )
             ) : rankingBeansCount === 0 ? (

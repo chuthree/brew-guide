@@ -43,6 +43,11 @@ const SettingSection: React.FC<SettingSectionProps> = ({
         return child;
       }
 
+      // 如果是 React.Fragment，不注入 isLast 属性（Fragment 只支持 key 和 children）
+      if (child.type === React.Fragment) {
+        return child;
+      }
+
       // 检查是否是最后一个元素
       const isLast = index === validChildren.length - 1;
 

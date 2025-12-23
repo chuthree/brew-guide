@@ -81,6 +81,7 @@ import StatsView from './components/StatsView';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { exportListPreview } from './components/ListExporter';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -439,54 +440,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     globalCache.isImageFlowMode
   );
 
-  // 生豆库启用设置状态
-  const [enableGreenBeanInventory, setEnableGreenBeanInventory] =
-    useState<boolean>(false);
+  // 生豆库启用设置 - 从 settingsStore 获取
+  const enableGreenBeanInventory = useSettingsStore(
+    state => state.settings.enableGreenBeanInventory === true
+  );
 
-  // 加载生豆库设置并监听变化
+  // 当生豆库被禁用且当前在生豆库视图时，切换回熟豆库
   useEffect(() => {
-    const loadGreenBeanSetting = async () => {
-      try {
-        const { Storage } = await import('@/lib/core/storage');
-        const settingsStr = await Storage.get('brewGuideSettings');
-        if (settingsStr) {
-          const parsedSettings = JSON.parse(settingsStr);
-          // 生豆库功能默认关闭，只有明确设置为 true 时才启用
-          const enabled = parsedSettings.enableGreenBeanInventory === true;
-          setEnableGreenBeanInventory(enabled);
-
-          // 如果生豆库被禁用且当前在生豆库视图，切换回熟豆库
-          if (!enabled && selectedBeanState === 'green') {
-            setSelectedBeanState('roasted');
-            globalCache.selectedBeanState = 'roasted';
-            saveSelectedBeanStatePreference('roasted');
-          }
-        }
-      } catch (error) {
-        console.error('加载生豆库设置失败:', error);
-      }
-    };
-
-    loadGreenBeanSetting();
-
-    // 监听设置变更
-    const handleSettingsChange = (e: CustomEvent) => {
-      if (e.detail?.key === 'brewGuideSettings') {
-        loadGreenBeanSetting();
-      }
-    };
-
-    window.addEventListener(
-      'storageChange',
-      handleSettingsChange as EventListener
-    );
-    return () => {
-      window.removeEventListener(
-        'storageChange',
-        handleSettingsChange as EventListener
-      );
-    };
-  }, [selectedBeanState]);
+    if (!enableGreenBeanInventory && selectedBeanState === 'green') {
+      setSelectedBeanState('roasted');
+      globalCache.selectedBeanState = 'roasted';
+      saveSelectedBeanStatePreference('roasted');
+    }
+  }, [enableGreenBeanInventory, selectedBeanState]);
 
   // 计算是否有图片咖啡豆（用于禁用/启用图片流按钮）
   const hasImageBeans = useMemo(() => {
