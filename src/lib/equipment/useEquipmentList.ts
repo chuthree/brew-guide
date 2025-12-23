@@ -159,6 +159,21 @@ export function useEquipmentList<
     };
   }, [handleEquipmentOrderUpdate]);
 
+  // 订阅设置变更事件（用于响应隐藏器具等设置变化）
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleSettingsChange = () => {
+      loadSortedEquipments();
+    };
+
+    window.addEventListener('settingsChanged', handleSettingsChange);
+
+    return () => {
+      window.removeEventListener('settingsChanged', handleSettingsChange);
+    };
+  }, [loadSortedEquipments]);
+
   return {
     allEquipments,
     isLoading,

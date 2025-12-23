@@ -6,6 +6,7 @@ import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import { getRealtimeSyncService } from '@/lib/supabase/realtime';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useDataLayer } from './DataLayerProvider';
 
 // 检查是否在 Tauri 环境中
 const isTauri = () => {
@@ -14,11 +15,16 @@ const isTauri = () => {
 
 /**
  * 存储系统初始化组件
- * 在应用启动时初始化IndexedDB和其他存储系统
+ *
+ * 优化说明：
+ * 1. 依赖 DataLayerProvider 完成数据加载，不再重复加载
+ * 2. 专注于 Supabase Realtime 连接的建立
+ * 3. Realtime 连接与数据加载并行进行
  */
 export default function StorageInit() {
   const [initialized, setInitialized] = useState(false);
   const beans = useCoffeeBeanStore(state => state.beans);
+  const { isInitialized: dataLayerReady } = useDataLayer();
 
   // 处理从菜单栏点击咖啡豆导航
   const handleNavigateToBean = useCallback(
@@ -65,120 +71,86 @@ export default function StorageInit() {
     initTrayVisibility();
   }, [showMenuBarIcon]);
 
+  // 初始化 Supabase Realtime 同步
   useEffect(() => {
-    async function initStorage() {
-      if (!initialized && typeof window !== 'undefined') {
-        const syncStatusStore = useSyncStatusStore.getState();
+    // 等待数据层就绪
+    if (!dataLayerReady || initialized) return;
 
-        try {
-          // 动态导入存储模块，避免服务端渲染问题
-          const { Storage } = await import('@/lib/core/storage');
-          await Storage.initialize();
+    async function initRealtimeSync() {
+      if (typeof window === 'undefined') return;
 
-          // 始终从本地 IndexedDB 加载数据（安全第一，不自动同步云端）
-          console.log('[StorageProvider] 从本地 IndexedDB 加载数据...');
-          try {
-            const { useBrewingNoteStore } = await import(
-              '@/lib/stores/brewingNoteStore'
-            );
-            await useBrewingNoteStore.getState().loadNotes();
-          } catch (e) {
-            console.error('加载笔记失败:', e);
-          }
+      const syncStatusStore = useSyncStatusStore.getState();
+      const settings = useSettingsStore.getState().settings;
 
-          try {
-            const { useCoffeeBeanStore } = await import(
-              '@/lib/stores/coffeeBeanStore'
-            );
-            await useCoffeeBeanStore.getState().loadBeans();
-          } catch (e) {
-            console.error('加载咖啡豆失败:', e);
-          }
+      try {
+        // 检查 Supabase 配置
+        const supabaseSettings = settings?.supabaseSync;
+        const activeSyncType = settings?.activeSyncType;
 
-          // 检查 Supabase 配置（仅记录状态，不自动同步）
-          try {
-            const { useSettingsStore: getStore } = await import(
-              '@/lib/stores/settingsStore'
-            );
-            const storeSettings = getStore.getState().settings;
-            if (storeSettings) {
-              const supabaseSettings = storeSettings.supabaseSync;
-              const activeSyncType = storeSettings.activeSyncType;
+        if (
+          activeSyncType === 'supabase' &&
+          supabaseSettings?.enabled &&
+          supabaseSettings?.url &&
+          supabaseSettings?.anonKey
+        ) {
+          syncStatusStore.setProvider('supabase');
+          syncStatusStore.setRealtimeEnabled(true);
 
-              if (
-                activeSyncType === 'supabase' &&
-                supabaseSettings?.enabled &&
-                supabaseSettings?.url &&
-                supabaseSettings?.anonKey
-              ) {
-                syncStatusStore.setProvider('supabase');
-                syncStatusStore.setRealtimeEnabled(true);
+          // 启动实时同步服务
+          console.log('[StorageProvider] 启动 Supabase 实时同步...');
+          const realtimeService = getRealtimeSyncService();
 
-                // 启动实时同步服务
-                console.log('[StorageProvider] 启动 Supabase 实时同步...');
-                const realtimeService = getRealtimeSyncService();
-
-                // 订阅实时同步状态变更
-                realtimeService.subscribe(state => {
-                  syncStatusStore.setRealtimeStatus(state.connectionStatus);
-                  syncStatusStore.setPendingChangesCount(
-                    state.pendingChangesCount
-                  );
-                  if (state.lastSyncTime) {
-                    syncStatusStore.setStatus('success');
-                  }
-                });
-
-                // 连接实时同步
-                const connected = await realtimeService.connect({
-                  url: supabaseSettings.url,
-                  anonKey: supabaseSettings.anonKey,
-                  enableOfflineQueue: true,
-                });
-
-                if (connected) {
-                  console.log('[StorageProvider] Supabase 实时同步已连接');
-                  syncStatusStore.setStatus('idle');
-                } else {
-                  console.warn('[StorageProvider] Supabase 实时同步连接失败');
-                  syncStatusStore.setStatus('error');
-                }
-              } else if (
-                supabaseSettings?.enabled &&
-                supabaseSettings?.url &&
-                supabaseSettings?.anonKey
-              ) {
-                // Supabase 已配置但不是活动同步类型，设置为手动模式
-                syncStatusStore.setProvider('supabase');
-                syncStatusStore.setStatus('idle');
-                console.log(
-                  '[StorageProvider] Supabase 已配置，等待用户手动同步'
-                );
-              }
+          // 订阅实时同步状态变更
+          realtimeService.subscribe(state => {
+            syncStatusStore.setRealtimeStatus(state.connectionStatus);
+            syncStatusStore.setPendingChangesCount(state.pendingChangesCount);
+            syncStatusStore.setInitialSyncing(state.isInitialSyncing);
+            if (state.lastSyncTime) {
+              syncStatusStore.setStatus('success');
             }
-          } catch (supabaseError) {
-            console.debug('检查 Supabase 配置失败:', supabaseError);
-          }
+          });
 
-          // 清理过期临时文件
-          try {
-            const { TempFileManager } = await import(
-              '@/lib/utils/tempFileManager'
-            );
-            await TempFileManager.cleanupExpiredTempFiles();
-          } catch (cleanupError) {
-            console.debug('清理临时文件失败:', cleanupError);
-          }
+          // 连接实时同步（现在是非阻塞的）
+          const connected = await realtimeService.connect({
+            url: supabaseSettings.url,
+            anonKey: supabaseSettings.anonKey,
+            enableOfflineQueue: true,
+          });
 
-          setInitialized(true);
-        } catch (error) {
-          console.error('存储系统初始化失败:', error);
+          if (connected) {
+            console.log('[StorageProvider] Supabase 实时同步已连接');
+            syncStatusStore.setStatus('idle');
+          } else {
+            console.warn('[StorageProvider] Supabase 实时同步连接失败');
+            syncStatusStore.setStatus('error');
+          }
+        } else if (
+          supabaseSettings?.enabled &&
+          supabaseSettings?.url &&
+          supabaseSettings?.anonKey
+        ) {
+          // Supabase 已配置但不是活动同步类型，设置为手动模式
+          syncStatusStore.setProvider('supabase');
+          syncStatusStore.setStatus('idle');
+          console.log('[StorageProvider] Supabase 已配置，等待用户手动同步');
         }
+
+        // 清理过期临时文件（异步执行，不阻塞）
+        import('@/lib/utils/tempFileManager').then(({ TempFileManager }) => {
+          TempFileManager.cleanupExpiredTempFiles().catch(e => {
+            console.debug('清理临时文件失败:', e);
+          });
+        });
+
+        setInitialized(true);
+      } catch (error) {
+        console.error('Realtime 同步初始化失败:', error);
+        setInitialized(true); // 即使失败也标记为已初始化，避免重试
       }
     }
 
-    initStorage();
-  }, [initialized]);
+    initRealtimeSync();
+  }, [dataLayerReady, initialized]);
 
   // 这个组件不会渲染任何内容，它只是初始化存储系统
   return null;

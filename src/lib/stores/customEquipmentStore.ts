@@ -98,6 +98,7 @@ export const useCustomEquipmentStore = create<CustomEquipmentStore>()(
         ...equipmentData,
         id: generateEquipmentId(equipmentData.animationType),
         isCustom: true,
+        timestamp: Date.now(),
       } as CustomEquipment;
 
       try {
@@ -124,6 +125,7 @@ export const useCustomEquipmentStore = create<CustomEquipmentStore>()(
         ...updates,
         id,
         isCustom: true,
+        timestamp: Date.now(),
       };
 
       try {

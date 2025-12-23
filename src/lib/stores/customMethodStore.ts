@@ -172,6 +172,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
       const newMethod: Method = {
         ...methodData,
         id: generateMethodId(),
+        timestamp: Date.now(),
       } as Method;
 
       try {
@@ -210,6 +211,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         ...existingMethod,
         ...updates,
         id: methodId,
+        timestamp: Date.now(),
       };
 
       try {

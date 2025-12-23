@@ -396,6 +396,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   // 获取同步状态（只在同步时显示转圈）
   const syncStatus = useSyncStatusStore(state => state.status);
   const syncProvider = useSyncStatusStore(state => state.provider);
+  const isInitialSyncing = useSyncStatusStore(state => state.isInitialSyncing);
 
   // 判断是否正在同步
   const isSyncing = syncStatus === 'syncing';
@@ -1079,6 +1080,20 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   ) : (
                     <Equal className="h-4 w-4" />
                   )}
+                  {/* 初始同步加载指示器 - Apple 备忘录风格 */}
+                  <AnimatePresence>
+                    {syncProvider === 'supabase' && isInitialSyncing && (
+                      <motion.div
+                        initial={{ opacity: 0, width: 0, marginLeft: 0 }}
+                        animate={{ opacity: 1, width: 'auto', marginLeft: 6 }}
+                        exit={{ opacity: 0, width: 0, marginLeft: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                        className="flex items-center overflow-hidden"
+                      >
+                        <AppleSpinner className="h-3 w-3" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* 主导航按钮 - 保持固定高度避免抖动 - 桌面端垂直排列 */}

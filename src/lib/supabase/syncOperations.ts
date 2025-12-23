@@ -65,6 +65,74 @@ export const PRESETS_KEYS = [
 // ============================================
 
 /**
+ * 获取云端表的最新更新时间戳
+ *
+ * @description 用于判断是否需要拉取云端数据
+ * @param client - Supabase 客户端
+ * @param table - 表名
+ * @returns 最新的 updated_at 时间戳（毫秒），如果没有数据返回 0
+ */
+export async function fetchRemoteLatestTimestamp(
+  client: SupabaseClient,
+  table: SyncTableName
+): Promise<SyncOperationResult<number>> {
+  try {
+    const { data, error } = await client
+      .from(table)
+      .select('updated_at')
+      .eq('user_id', DEFAULT_USER_ID)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error(
+        `[SyncOps] 获取 ${table} 云端最新时间戳失败:`,
+        error.message
+      );
+      return { success: false, error: error.message, affectedCount: 0 };
+    }
+
+    if (!data || data.length === 0) {
+      return { success: true, data: 0, affectedCount: 0 };
+    }
+
+    const timestamp = new Date(data[0].updated_at).getTime();
+    return { success: true, data: timestamp, affectedCount: 1 };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '未知错误';
+    return { success: false, error: message, affectedCount: 0 };
+  }
+}
+
+/**
+ * 获取云端所有表的最新更新时间戳（取最大值）
+ *
+ * @param client - Supabase 客户端
+ * @returns 所有表中最新的时间戳
+ */
+export async function fetchAllTablesLatestTimestamp(
+  client: SupabaseClient
+): Promise<number> {
+  const tables = [
+    SYNC_TABLES.COFFEE_BEANS,
+    SYNC_TABLES.BREWING_NOTES,
+    SYNC_TABLES.CUSTOM_EQUIPMENTS,
+    SYNC_TABLES.CUSTOM_METHODS,
+  ];
+
+  let maxTimestamp = 0;
+
+  for (const table of tables) {
+    const result = await fetchRemoteLatestTimestamp(client, table);
+    if (result.success && result.data) {
+      maxTimestamp = Math.max(maxTimestamp, result.data);
+    }
+  }
+
+  return maxTimestamp;
+}
+
+/**
  * 获取云端表中所有未删除记录的 ID 列表
  *
  * @description 这是同步删除检测的基础操作
@@ -89,8 +157,111 @@ export async function fetchRemoteActiveIds(
     }
 
     const ids = (data || []).map((row: { id: string }) => row.id);
-    console.log(`[SyncOps] ${table} 云端活跃记录: ${ids.length} 条`);
     return { success: true, data: ids, affectedCount: ids.length };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '未知错误';
+    return { success: false, error: message, affectedCount: 0 };
+  }
+}
+
+/**
+ * 获取云端所有记录（包括已删除的，用于冲突解决）
+ *
+ * @param client - Supabase 客户端
+ * @param table - 表名
+ * @returns 所有记录（包含 deleted_at 字段）
+ */
+export async function fetchRemoteAllRecords<T>(
+  client: SupabaseClient,
+  table: SyncTableName
+): Promise<
+  SyncOperationResult<
+    Array<{
+      id: string;
+      data: T;
+      updated_at: string;
+      deleted_at: string | null;
+    }>
+  >
+> {
+  try {
+    const { data, error } = await client
+      .from(table)
+      .select('id, data, updated_at, deleted_at')
+      .eq('user_id', DEFAULT_USER_ID);
+
+    if (error) {
+      console.error(`[SyncOps] 获取 ${table} 全部数据失败:`, error.message);
+      return { success: false, error: error.message, affectedCount: 0 };
+    }
+
+    const records = (data || []).map(
+      (row: {
+        id: string;
+        data: T;
+        updated_at: string;
+        deleted_at: string | null;
+      }) => ({
+        id: row.id,
+        data: row.data,
+        updated_at: row.updated_at,
+        deleted_at: row.deleted_at,
+      })
+    );
+
+    return { success: true, data: records, affectedCount: records.length };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '未知错误';
+    return { success: false, error: message, affectedCount: 0 };
+  }
+}
+
+/**
+ * 获取云端自某个时间点之后更新的记录（增量拉取）
+ *
+ * @description 只拉取 updated_at > sinceTime 的记录，用于增量同步
+ */
+export async function fetchRemoteChangedRecords<T>(
+  client: SupabaseClient,
+  table: SyncTableName,
+  sinceTime: number
+): Promise<
+  SyncOperationResult & {
+    data?: {
+      id: string;
+      data: T;
+      updated_at: string;
+      deleted_at: string | null;
+    }[];
+  }
+> {
+  try {
+    const sinceISO = new Date(sinceTime).toISOString();
+    const { data, error } = await client
+      .from(table)
+      .select('id, data, updated_at, deleted_at')
+      .eq('user_id', DEFAULT_USER_ID)
+      .gt('updated_at', sinceISO);
+
+    if (error) {
+      return { success: false, error: error.message, affectedCount: 0 };
+    }
+
+    const records = (data || []).map(
+      (row: {
+        id: string;
+        data: T;
+        updated_at: string;
+        deleted_at: string | null;
+      }) => ({
+        id: row.id,
+        data: row.data,
+        updated_at: row.updated_at,
+        deleted_at: row.deleted_at,
+      })
+    );
+
+    return { success: true, data: records, affectedCount: records.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : '未知错误';
     return { success: false, error: message, affectedCount: 0 };
@@ -131,7 +302,6 @@ export async function upsertRecords<T extends { id: string }>(
       return { success: false, error: error.message, affectedCount: 0 };
     }
 
-    console.log(`[SyncOps] ${table} upsert 成功: ${records.length} 条`);
     return { success: true, affectedCount: records.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : '未知错误';
@@ -170,7 +340,6 @@ export async function markRecordsAsDeleted(
       return { success: false, error: error.message, affectedCount: 0 };
     }
 
-    console.log(`[SyncOps] ${table} 软删除成功: ${ids.length} 条`);
     return { success: true, affectedCount: ids.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : '未知错误';
@@ -201,7 +370,6 @@ export async function fetchRemoteActiveRecords<T>(
     }
 
     const records = (data || []).map((row: { data: T }) => row.data);
-    console.log(`[SyncOps] ${table} 下载成功: ${records.length} 条`);
     return { success: true, data: records, affectedCount: records.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : '未知错误';
@@ -291,15 +459,6 @@ export async function syncTableUpload<T extends { id: string }>(
   const localIds = new Set(localRecords.map(r => r.id));
   const idsToDelete = calculateIdsToDelete(localIds, remoteIds);
 
-  console.log(
-    createSyncStateReport(
-      table,
-      localRecords.length,
-      remoteIds.length,
-      idsToDelete.length
-    )
-  );
-
   if (idsToDelete.length > 0) {
     const deleteResult = await markRecordsAsDeleted(client, table, idsToDelete);
     if (!deleteResult.success) {
@@ -338,6 +497,12 @@ export async function uploadSettingsData(
       data.appSettings = appSettingsRecord.data;
     }
 
+    // 收集磨豆机数据（存储在 IndexedDB grinders 表中）
+    const grinders = await db.grinders.toArray();
+    if (grinders.length > 0) {
+      data.grinders = grinders;
+    }
+
     // 收集自定义预设（仍存储在 localStorage 中）
     if (typeof window !== 'undefined') {
       const presets: Record<string, unknown> = {};
@@ -368,7 +533,6 @@ export async function uploadSettingsData(
     }
 
     const count = Object.keys(data).length;
-    console.log(`[SyncOps] 设置上传成功: ${count} 项`);
     return { success: true, data: count, affectedCount: count };
   } catch (err) {
     const message = err instanceof Error ? err.message : '未知错误';
@@ -417,6 +581,22 @@ export async function downloadSettingsData(
       count++;
     }
 
+    // 恢复磨豆机数据（存储在 IndexedDB grinders 表中）
+    if (settingsData.grinders && Array.isArray(settingsData.grinders)) {
+      const cloudGrinders = settingsData.grinders as Array<{
+        id: string;
+        name: string;
+        currentGrindSize?: string;
+      }>;
+      // 直接替换本地磨豆机数据（云端优先）
+      await db.grinders.clear();
+      if (cloudGrinders.length > 0) {
+        await db.grinders.bulkPut(cloudGrinders);
+      }
+      console.log(`[SyncOps] 磨豆机已更新: ${cloudGrinders.length} 个`);
+      count++;
+    }
+
     // 恢复自定义预设（仍存储在 localStorage 中）
     if (typeof window !== 'undefined') {
       if (settingsData.customPresets) {
@@ -436,7 +616,6 @@ export async function downloadSettingsData(
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     }
 
-    console.log(`[SyncOps] 设置下载成功: ${count} 项`);
     return { success: true, data: count, affectedCount: count };
   } catch (err) {
     const message = err instanceof Error ? err.message : '未知错误';

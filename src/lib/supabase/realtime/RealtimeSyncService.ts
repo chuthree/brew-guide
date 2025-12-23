@@ -7,6 +7,12 @@
  * 3. 使用 Last-Write-Wins 解决冲突
  * 4. 离线队列支持
  *
+ * 核心原则（重构后）：
+ * - 云端是权威数据源
+ * - 连接时先检查云端最新时间戳，决定是否需要拉取
+ * - 使用 lastSyncTime 追踪同步状态
+ * - 正确处理删除同步（tombstone 模式）
+ *
  * 架构参考：
  * - CouchDB Replication Protocol
  * - RxDB Offline-First Architecture
@@ -27,11 +33,16 @@ import {
   markRecordsAsDeleted,
   uploadSettingsData,
   downloadSettingsData,
+  fetchRemoteAllRecords,
+  fetchAllTablesLatestTimestamp,
+  fetchRemoteLatestTimestamp,
 } from '../syncOperations';
 import { offlineQueue } from './offlineQueue';
 import {
   shouldAcceptRemoteChange,
   batchResolveConflicts,
+  getLastSyncTime,
+  setLastSyncTime,
 } from './conflictResolver';
 import type {
   RealtimeSyncConfig,
@@ -155,6 +166,11 @@ export class RealtimeSyncService {
 
   /**
    * 初始化并连接
+   *
+   * 优化说明：
+   * 1. 移除了阻塞的连接测试（Realtime 订阅成功即表示连接成功）
+   * 2. 初始同步改为异步执行，不阻塞连接返回
+   * 3. 遵循 Supabase 官方最佳实践
    */
   async connect(config: RealtimeSyncConfig): Promise<boolean> {
     if (
@@ -169,31 +185,19 @@ export class RealtimeSyncService {
     this.setState({ connectionStatus: 'connecting', error: null });
 
     try {
-      // 创建 Supabase 客户端
-      this.client = createClient(config.url, config.anonKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-        realtime: {
-          params: {
-            eventsPerSecond: 10,
+      // 创建 Supabase 客户端（复用已有实例）
+      if (!this.client || this.config?.url !== config.url) {
+        this.client = createClient(config.url, config.anonKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+          realtime: {
+            params: {
+              eventsPerSecond: 10,
+            },
           },
-        },
-      });
-
-      // 测试连接
-      const { error: testError } = await this.client
-        .from(SYNC_TABLES.COFFEE_BEANS)
-        .select('id')
-        .limit(1);
-
-      if (
-        testError &&
-        testError.code !== 'PGRST116' &&
-        testError.code !== '42P01'
-      ) {
-        throw new Error(`连接测试失败: ${testError.message}`);
+        });
       }
 
-      // 建立 Realtime 订阅
+      // 建立 Realtime 订阅（这是核心连接步骤）
       await this.setupRealtimeSubscription();
 
       // 设置本地变更监听
@@ -202,13 +206,8 @@ export class RealtimeSyncService {
       this.setState({ connectionStatus: 'connected' });
       console.log('[RealtimeSync] 连接成功');
 
-      // 执行初始同步
-      await this.performInitialSync();
-
-      // 处理离线队列
-      if (config.enableOfflineQueue !== false) {
-        await this.processOfflineQueue();
-      }
+      // 异步执行初始同步和离线队列处理（不阻塞连接返回）
+      this.runBackgroundSync(config.enableOfflineQueue !== false);
 
       return true;
     } catch (error) {
@@ -216,6 +215,23 @@ export class RealtimeSyncService {
       console.error('[RealtimeSync] 连接失败:', message);
       this.setState({ connectionStatus: 'error', error: message });
       return false;
+    }
+  }
+
+  /**
+   * 后台执行同步任务
+   */
+  private async runBackgroundSync(processOfflineQueue: boolean): Promise<void> {
+    try {
+      // 执行初始同步
+      await this.performInitialSync();
+
+      // 处理离线队列
+      if (processOfflineQueue) {
+        await this.processOfflineQueue();
+      }
+    } catch (error) {
+      console.error('[RealtimeSync] 后台同步失败:', error);
     }
   }
 
@@ -312,14 +328,24 @@ export class RealtimeSyncService {
         payload => this.handleRemoteSettingsChange(payload)
       );
 
-    // 监听连接状态
-    this.channel.subscribe(status => {
-      console.log(`[RealtimeSync] Channel 状态: ${status}`);
-      if (status === 'SUBSCRIBED') {
-        this.setState({ connectionStatus: 'connected' });
-      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-        this.setState({ connectionStatus: 'disconnected' });
-      }
+    // 监听连接状态（5秒超时）
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('订阅超时'));
+      }, 5000);
+
+      this.channel!.subscribe(status => {
+        console.log(`[RealtimeSync] Channel 状态: ${status}`);
+        if (status === 'SUBSCRIBED') {
+          clearTimeout(timeout);
+          this.setState({ connectionStatus: 'connected' });
+          resolve();
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          clearTimeout(timeout);
+          this.setState({ connectionStatus: 'disconnected' });
+          reject(new Error(`订阅失败: ${status}`));
+        }
+      });
     });
   }
 
@@ -410,7 +436,10 @@ export class RealtimeSyncService {
         }
       }
 
-      this.setState({ lastSyncTime: Date.now() });
+      // 更新同步时间（包括持久化）
+      const newSyncTime = Date.now();
+      setLastSyncTime(newSyncTime);
+      this.setState({ lastSyncTime: newSyncTime });
     } catch (error) {
       console.error(`[RealtimeSync] 处理云端变更失败:`, error);
     }
@@ -442,7 +471,16 @@ export class RealtimeSyncService {
           );
           await useSettingsStore.getState().loadSettings();
 
-          this.setState({ lastSyncTime: Date.now() });
+          // 刷新磨豆机 Store
+          const { useGrinderStore } = await import(
+            '@/lib/stores/grinderStore'
+          );
+          await useGrinderStore.getState().refreshGrinders();
+
+          // 更新同步时间（包括持久化）
+          const newSyncTime = Date.now();
+          setLastSyncTime(newSyncTime);
+          this.setState({ lastSyncTime: newSyncTime });
         }
       }
     } catch (error) {
@@ -456,21 +494,77 @@ export class RealtimeSyncService {
   }
 
   /**
-   * 同步设置到云端
+   * 双向同步设置（先比较时间戳，决定是下载还是上传）
+   *
+   * 核心逻辑：
+   * 1. 获取云端设置的 updated_at 时间戳
+   * 2. 与本地 lastSyncTime 比较
+   * 3. 如果云端更新 → 下载（不需要上传，因为本地没有更新）
+   * 4. 如果云端没有更新 → 上传本地设置
+   *
+   * 注意：避免下载后立即上传导致的循环
    */
   private async syncSettings(): Promise<void> {
     if (!this.client) return;
 
+    // 设置标记防止上传触发的 realtime 事件导致循环
+    this.isProcessingRemoteSettings = true;
+
     try {
-      const result = await uploadSettingsData(this.client);
-      if (result.success) {
-        console.log('[RealtimeSync] 设置已上传到云端');
-        this.setState({ lastSyncTime: Date.now() });
+      const lastSyncTime = getLastSyncTime();
+
+      // 1. 获取云端设置时间戳
+      const remoteTimestampResult = await fetchRemoteLatestTimestamp(
+        this.client,
+        SYNC_TABLES.USER_SETTINGS
+      );
+
+      const remoteTimestamp = remoteTimestampResult.success
+        ? remoteTimestampResult.data || 0
+        : 0;
+
+      // 2. 如果云端有更新的设置（时间戳比上次同步时间更晚），下载
+      if (remoteTimestamp > lastSyncTime) {
+        console.log(
+          `[Sync] 设置: 云端更新 (${new Date(remoteTimestamp).toLocaleString()} > ${new Date(lastSyncTime).toLocaleString()}), 下载`
+        );
+
+        const downloadResult = await downloadSettingsData(this.client);
+        if (downloadResult.success) {
+          console.log('[Sync] 设置: 云端设置已下载');
+
+          // 刷新设置 Store 和磨豆机 Store
+          const { useSettingsStore } = await import(
+            '@/lib/stores/settingsStore'
+          );
+          await useSettingsStore.getState().loadSettings();
+
+          // 刷新磨豆机 Store
+          const { useGrinderStore } = await import(
+            '@/lib/stores/grinderStore'
+          );
+          await useGrinderStore.getState().refreshGrinders();
+        } else {
+          console.error('[Sync] 设置下载失败:', downloadResult.error);
+        }
+        // 下载后不需要上传，直接返回
+        return;
+      }
+
+      // 3. 云端没有更新，上传本地设置
+      const uploadResult = await uploadSettingsData(this.client);
+      if (uploadResult.success) {
+        console.log('[Sync] 设置: 已上传到云端');
       } else {
-        console.error('[RealtimeSync] 设置上传失败:', result.error);
+        console.error('[Sync] 设置上传失败:', uploadResult.error);
       }
     } catch (error) {
-      console.error('[RealtimeSync] 设置同步失败:', error);
+      console.error('[Sync] 设置同步失败:', error);
+    } finally {
+      // 延迟重置标记，避免上传触发的 realtime 事件导致循环
+      setTimeout(() => {
+        this.isProcessingRemoteSettings = false;
+      }, 3000);
     }
   }
 
@@ -740,6 +834,8 @@ export class RealtimeSyncService {
       handleMethodChange as unknown as EventListener
     );
     window.addEventListener('settingsChanged', handleSettingsChange);
+    // 磨豆机变更也触发设置同步（磨豆机数据包含在设置中）
+    window.addEventListener('grinderDataChanged', handleSettingsChange);
 
     // 保存清理函数
     this.localChangeListenerCleanup = () => {
@@ -760,6 +856,7 @@ export class RealtimeSyncService {
         handleMethodChange as unknown as EventListener
       );
       window.removeEventListener('settingsChanged', handleSettingsChange);
+      window.removeEventListener('grinderDataChanged', handleSettingsChange);
       if (this.settingsUploadTimer) {
         clearTimeout(this.settingsUploadTimer);
       }
@@ -793,16 +890,22 @@ export class RealtimeSyncService {
           updated_at: new Date().toISOString(),
         });
 
+        // 确保 id 字段正确（展开 data 后再设置 id，防止被覆盖）
+        const recordData = { ...(data as object), id: recordId };
+
         await upsertRecords(
           this.client,
           table,
-          [{ id: recordId, ...(data as object) }],
+          [recordData as { id: string }],
           mapFn
         );
         console.log(`[RealtimeSync] 已同步更新: ${table}/${recordId}`);
       }
 
-      this.setState({ lastSyncTime: Date.now() });
+      // 更新同步时间（包括持久化）
+      const newSyncTime = Date.now();
+      setLastSyncTime(newSyncTime);
+      this.setState({ lastSyncTime: newSyncTime });
     } catch (error) {
       console.error(`[RealtimeSync] 同步失败:`, error);
 
@@ -823,91 +926,288 @@ export class RealtimeSyncService {
   }
 
   /**
-   * 执行初始同步（双向合并）
+   * 执行初始同步（改进版：云端优先 + 正确的删除处理）
+   *
+   * 核心逻辑：
+   * 1. 检查云端最新时间戳，与本地 lastSyncTime 比较
+   * 2. 如果云端有更新，先拉取云端数据
+   * 3. 然后上传本地的新增/修改
+   * 4. 正确处理删除（本地删除→云端标记删除，云端删除→本地删除）
    */
   private async performInitialSync(): Promise<void> {
     if (!this.client) return;
 
-    console.log('[RealtimeSync] 开始初始同步...');
+    const syncStartTime = Date.now();
     this.setState({ isInitialSyncing: true });
 
     try {
-      // 同步咖啡豆
-      await this.syncTableGeneric(
-        SYNC_TABLES.COFFEE_BEANS,
-        async () => db.coffeeBeans.toArray(),
-        async (items: CoffeeBean[]) => {
-          await db.coffeeBeans.bulkPut(items);
-        },
-        (bean: CoffeeBean) => ({
-          id: bean.id,
-          data: bean,
-          updated_at: new Date(bean.timestamp || Date.now()).toISOString(),
-        })
+      const lastSyncTime = getLastSyncTime();
+      console.log(
+        `[Sync] 开始, lastSync=${lastSyncTime ? new Date(lastSyncTime).toLocaleString() : '首次'}`
       );
 
-      // 同步冲煮记录
-      await this.syncTableGeneric(
-        SYNC_TABLES.BREWING_NOTES,
-        async () => db.brewingNotes.toArray(),
-        async (items: BrewingNote[]) => {
-          await db.brewingNotes.bulkPut(items);
-        },
-        (note: BrewingNote) => ({
-          id: note.id,
-          data: note,
-          updated_at: new Date(note.timestamp || Date.now()).toISOString(),
-        })
-      );
-
-      // 同步自定义器具
-      await this.syncTableGeneric(
-        SYNC_TABLES.CUSTOM_EQUIPMENTS,
-        async () => db.customEquipments.toArray(),
-        async (items: CustomEquipment[]) => {
-          await db.customEquipments.bulkPut(items);
-        },
-        (equip: CustomEquipment) => ({
-          id: equip.id,
-          data: equip,
-          updated_at: new Date().toISOString(),
-        })
-      );
-
-      // 同步自定义方案
-      type MethodRecord = { equipmentId: string; methods: Method[] };
-      await this.syncTableGeneric<MethodRecord & { id: string }>(
-        SYNC_TABLES.CUSTOM_METHODS,
-        async () => {
-          const records = await db.customMethods.toArray();
-          // id 就是 equipmentId
-          return records.map(r => ({ ...r, id: r.equipmentId }));
-        },
-        async items => {
-          const methodRecords = items.map(
-            ({ id, ...rest }) => rest as unknown as MethodRecord
+      // 并行同步所有表（使用 allSettled 避免一个失败导致全部失败）
+      const results = await Promise.allSettled([
+        this.syncTableWithDelete(
+          SYNC_TABLES.COFFEE_BEANS,
+          async () => db.coffeeBeans.toArray(),
+          async (items: CoffeeBean[]) => {
+            await db.coffeeBeans.bulkPut(items);
+          },
+          async (ids: string[]) => {
+            for (const id of ids) {
+              await db.coffeeBeans.delete(id);
+            }
+          },
+          (bean: CoffeeBean) => ({
+            id: bean.id,
+            data: bean,
+            updated_at: new Date(bean.timestamp || Date.now()).toISOString(),
+          }),
+          lastSyncTime
+        ),
+        this.syncTableWithDelete(
+          SYNC_TABLES.BREWING_NOTES,
+          async () => db.brewingNotes.toArray(),
+          async (items: BrewingNote[]) => {
+            await db.brewingNotes.bulkPut(items);
+          },
+          async (ids: string[]) => {
+            for (const id of ids) {
+              await db.brewingNotes.delete(id);
+            }
+          },
+          (note: BrewingNote) => ({
+            id: note.id,
+            data: note,
+            updated_at: new Date(note.timestamp || Date.now()).toISOString(),
+          }),
+          lastSyncTime
+        ),
+        this.syncTableWithDelete(
+          SYNC_TABLES.CUSTOM_EQUIPMENTS,
+          async () => db.customEquipments.toArray(),
+          async (items: CustomEquipment[]) => {
+            await db.customEquipments.bulkPut(items);
+          },
+          async (ids: string[]) => {
+            for (const id of ids) {
+              await db.customEquipments.delete(id);
+            }
+          },
+          (equip: CustomEquipment) => ({
+            id: equip.id,
+            data: equip,
+            updated_at: new Date(equip.timestamp || Date.now()).toISOString(),
+          }),
+          lastSyncTime
+        ),
+        (async () => {
+          // 扩展类型以包含 timestamp 字段用于冲突解决
+          type MethodRecord = {
+            equipmentId: string;
+            methods: Method[];
+            timestamp?: number;
+          };
+          return this.syncTableWithDelete<MethodRecord & { id: string }>(
+            SYNC_TABLES.CUSTOM_METHODS,
+            async () => {
+              const records = await db.customMethods.toArray();
+              // 为每条记录计算 timestamp（取方案数组中最新的时间戳）
+              return records.map(r => {
+                const maxTimestamp = Math.max(
+                  0,
+                  ...r.methods.map(m => m.timestamp || 0)
+                );
+                return {
+                  ...r,
+                  id: r.equipmentId,
+                  timestamp: maxTimestamp || undefined,
+                };
+              });
+            },
+            async items => {
+              const methodRecords = items.map(
+                ({ id, ...rest }) => rest as unknown as MethodRecord
+              );
+              await db.customMethods.bulkPut(methodRecords);
+            },
+            async (ids: string[]) => {
+              for (const id of ids) {
+                await db.customMethods.delete(id);
+              }
+            },
+            method => {
+              // 获取方案数组中最新的时间戳
+              const maxTimestamp = Math.max(
+                0,
+                ...method.methods.map(m => m.timestamp || 0)
+              );
+              return {
+                id: method.id,
+                data: {
+                  equipmentId: method.equipmentId,
+                  methods: method.methods,
+                },
+                updated_at: new Date(maxTimestamp || Date.now()).toISOString(),
+              };
+            },
+            lastSyncTime
           );
-          await db.customMethods.bulkPut(methodRecords);
-        },
-        method => ({
-          id: method.id, // id = equipmentId
-          data: { equipmentId: method.equipmentId, methods: method.methods },
-          updated_at: new Date().toISOString(),
-        })
+        })(),
+      ]);
+
+      // 汇总同步结果
+      const successResults = results
+        .filter(
+          (
+            r
+          ): r is PromiseFulfilledResult<{
+            uploaded: number;
+            downloaded: number;
+            deleted: number;
+          }> => r.status === 'fulfilled'
+        )
+        .map(r => r.value);
+
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+      if (failedCount > 0) {
+        console.warn(`[Sync] ${failedCount} 个表同步失败`);
+      }
+
+      const totalChanges = successResults.reduce(
+        (acc, r) => ({
+          uploaded: acc.uploaded + r.uploaded,
+          downloaded: acc.downloaded + r.downloaded,
+          deleted: acc.deleted + r.deleted,
+        }),
+        { uploaded: 0, downloaded: 0, deleted: 0 }
       );
 
-      // 同步设置（上传本地设置到云端）
-      console.log('[RealtimeSync] 同步设置...');
+      // 同步设置
       await this.syncSettings();
 
-      // 刷新所有 Store 以反映最新数据
+      // 刷新所有 Store
       await this.refreshAllStores();
 
-      this.setState({ lastSyncTime: Date.now(), isInitialSyncing: false });
-      console.log('[RealtimeSync] 初始同步完成');
+      // 更新 lastSyncTime
+      const newSyncTime = Date.now();
+      setLastSyncTime(newSyncTime);
+      this.setState({ lastSyncTime: newSyncTime, isInitialSyncing: false });
+
+      const elapsed = Date.now() - syncStartTime;
+      console.log(
+        `[Sync] 完成 (${elapsed}ms): ↑${totalChanges.uploaded} ↓${totalChanges.downloaded} ×${totalChanges.deleted}`
+      );
     } catch (error) {
-      console.error('[RealtimeSync] 初始同步失败:', error);
+      console.error('[Sync] 同步失败:', error);
       this.setState({ isInitialSyncing: false });
+    }
+  }
+
+  /**
+   * 带删除处理的表同步方法（改进版）
+   *
+   * 使用新的 batchResolveConflicts 方法，正确处理：
+   * 1. 本地新增 → 上传
+   * 2. 云端新增 → 下载
+   * 3. 两边都有 → 比较时间戳
+   * 4. 云端已删除 → 本地删除
+   * 5. 本地删除 → 上传删除标记
+   */
+  private async syncTableWithDelete<
+    T extends { id: string; timestamp?: number },
+  >(
+    tableName: RealtimeSyncTable,
+    getLocalRecords: () => Promise<T[]>,
+    saveLocalRecords: (items: T[]) => Promise<void>,
+    deleteLocalRecords: (ids: string[]) => Promise<void>,
+    mapFn: (record: T) => Record<string, unknown>,
+    lastSyncTime: number
+  ): Promise<{ uploaded: number; downloaded: number; deleted: number }> {
+    const emptyResult = { uploaded: 0, downloaded: 0, deleted: 0 };
+
+    if (!this.client) {
+      console.error(`[Sync] ${tableName}: 无客户端`);
+      return emptyResult;
+    }
+
+    try {
+      // 1. 获取本地数据
+      const localRecords = await getLocalRecords();
+
+      // 2. 获取云端所有数据
+      const remoteResult = await fetchRemoteAllRecords<T>(
+        this.client,
+        tableName
+      );
+      if (!remoteResult.success) {
+        console.error(`[Sync] ${tableName}: 拉取失败 - ${remoteResult.error}`);
+        return emptyResult;
+      }
+
+      const remoteRecords = (remoteResult.data || []).map(r => ({
+        id: r.id,
+        user_id: DEFAULT_USER_ID,
+        data: r.data,
+        updated_at: r.updated_at,
+        deleted_at: r.deleted_at,
+      })) as CloudRecord<T>[];
+
+      // 统计云端已删除的记录数
+      const deletedInCloud = remoteRecords.filter(r => r.deleted_at).length;
+      console.log(
+        `[Sync] ${tableName}: 本地=${localRecords.length}, 云端=${remoteRecords.length} (已删除=${deletedInCloud})`
+      );
+
+      // 3. 使用冲突解决算法
+      const { toUpload, toDownload, toDeleteLocal } = batchResolveConflicts(
+        localRecords,
+        remoteRecords,
+        lastSyncTime
+      );
+
+      // 4. 执行上传
+      if (toUpload.length > 0) {
+        const result = await upsertRecords(
+          this.client,
+          tableName,
+          toUpload,
+          mapFn
+        );
+        if (!result.success) {
+          console.error(`[Sync] ${tableName} 上传失败:`, result.error);
+        }
+      }
+
+      // 5. 执行下载
+      if (toDownload.length > 0) {
+        await saveLocalRecords(toDownload);
+      }
+
+      // 6. 执行本地删除
+      if (toDeleteLocal.length > 0) {
+        await deleteLocalRecords(toDeleteLocal);
+        console.log(
+          `[Sync] ${tableName} 本地删除: ${toDeleteLocal.join(', ')}`
+        );
+      }
+
+      // 输出同步结果
+      if (toUpload.length || toDownload.length || toDeleteLocal.length) {
+        console.log(
+          `[Sync] ${tableName}: ↑${toUpload.length} ↓${toDownload.length} ×${toDeleteLocal.length}`
+        );
+      }
+
+      return {
+        uploaded: toUpload.length,
+        downloaded: toDownload.length,
+        deleted: toDeleteLocal.length,
+      };
+    } catch (error) {
+      console.error(`[Sync] ${tableName} 失败:`, error);
+      return { uploaded: 0, downloaded: 0, deleted: 0 };
     }
   }
 
@@ -916,108 +1216,52 @@ export class RealtimeSyncService {
    */
   private async refreshAllStores(): Promise<void> {
     try {
-      // 刷新咖啡豆 Store
-      const { useCoffeeBeanStore } = await import(
-        '@/lib/stores/coffeeBeanStore'
-      );
-      const beans = await db.coffeeBeans.toArray();
-      useCoffeeBeanStore.setState({ beans });
-      console.log(`[RealtimeSync] 刷新 coffeeBeans Store: ${beans.length} 条`);
-
-      // 刷新冲煮记录 Store
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
-      const notes = await db.brewingNotes.toArray();
-      useBrewingNoteStore.setState({ notes });
-      console.log(`[RealtimeSync] 刷新 brewingNotes Store: ${notes.length} 条`);
-
-      // 刷新自定义器具 Store
-      const { useCustomEquipmentStore } = await import(
-        '@/lib/stores/customEquipmentStore'
-      );
-      const equipments = await db.customEquipments.toArray();
-      useCustomEquipmentStore.setState({ equipments });
-      console.log(
-        `[RealtimeSync] 刷新 customEquipments Store: ${equipments.length} 条`
-      );
-
-      // 刷新自定义方案 Store
-      const { useCustomMethodStore } = await import(
-        '@/lib/stores/customMethodStore'
-      );
-      const methodsData = await db.customMethods.toArray();
-      const methodsByEquipment: Record<string, Method[]> = {};
-      for (const item of methodsData) {
-        methodsByEquipment[item.equipmentId] = item.methods;
-      }
-      useCustomMethodStore.setState({
-        methodsByEquipment,
-        initialized: true,
-      });
-      console.log(
-        `[RealtimeSync] 刷新 customMethods Store: ${methodsData.length} 条`
-      );
-
-      // 刷新设置 Store
-      const { useSettingsStore } = await import('@/lib/stores/settingsStore');
-      await useSettingsStore.getState().loadSettings();
-      console.log('[RealtimeSync] 刷新 settings Store');
+      // 并行刷新所有 Store
+      await Promise.all([
+        (async () => {
+          const { useCoffeeBeanStore } = await import(
+            '@/lib/stores/coffeeBeanStore'
+          );
+          const beans = await db.coffeeBeans.toArray();
+          useCoffeeBeanStore.setState({ beans });
+        })(),
+        (async () => {
+          const { useBrewingNoteStore } = await import(
+            '@/lib/stores/brewingNoteStore'
+          );
+          const notes = await db.brewingNotes.toArray();
+          useBrewingNoteStore.setState({ notes });
+        })(),
+        (async () => {
+          const { useCustomEquipmentStore } = await import(
+            '@/lib/stores/customEquipmentStore'
+          );
+          const equipments = await db.customEquipments.toArray();
+          useCustomEquipmentStore.setState({ equipments });
+        })(),
+        (async () => {
+          const { useCustomMethodStore } = await import(
+            '@/lib/stores/customMethodStore'
+          );
+          const methodsData = await db.customMethods.toArray();
+          const methodsByEquipment: Record<string, Method[]> = {};
+          for (const item of methodsData) {
+            methodsByEquipment[item.equipmentId] = item.methods;
+          }
+          useCustomMethodStore.setState({
+            methodsByEquipment,
+            initialized: true,
+          });
+        })(),
+        (async () => {
+          const { useSettingsStore } = await import(
+            '@/lib/stores/settingsStore'
+          );
+          await useSettingsStore.getState().loadSettings();
+        })(),
+      ]);
     } catch (error) {
-      console.error('[RealtimeSync] 刷新 Store 失败:', error);
-    }
-  }
-
-  /**
-   * 通用表同步方法（双向合并）
-   */
-  private async syncTableGeneric<T extends { id: string; timestamp?: number }>(
-    tableName: RealtimeSyncTable,
-    getLocalRecords: () => Promise<T[]>,
-    saveLocalRecords: (items: T[]) => Promise<void>,
-    mapFn: (record: T) => Record<string, unknown>
-  ): Promise<void> {
-    if (!this.client) return;
-
-    try {
-      // 获取本地数据
-      const localRecords = await getLocalRecords();
-
-      // 获取云端数据
-      const { data: remoteData, error } = await this.client
-        .from(tableName)
-        .select('*')
-        .eq('user_id', DEFAULT_USER_ID)
-        .is('deleted_at', null);
-
-      if (error) {
-        console.error(`[RealtimeSync] 获取 ${tableName} 云端数据失败:`, error);
-        return;
-      }
-
-      const remoteRecords = (remoteData || []) as CloudRecord<T>[];
-
-      // 批量冲突解决
-      const { toUpload, toDownload } = batchResolveConflicts(
-        localRecords,
-        remoteRecords
-      );
-
-      console.log(
-        `[RealtimeSync] ${tableName} 同步: 本地 ${localRecords.length}, 云端 ${remoteRecords.length}, 上传 ${toUpload.length}, 下载 ${toDownload.length}`
-      );
-
-      // 上传本地更新
-      if (toUpload.length > 0) {
-        await upsertRecords(this.client, tableName, toUpload, mapFn);
-      }
-
-      // 下载云端更新
-      if (toDownload.length > 0) {
-        await saveLocalRecords(toDownload);
-      }
-    } catch (error) {
-      console.error(`[RealtimeSync] 同步 ${tableName} 失败:`, error);
+      console.error('[Sync] 刷新 Store 失败:', error);
     }
   }
 

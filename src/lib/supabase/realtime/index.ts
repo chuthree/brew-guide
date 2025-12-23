@@ -19,6 +19,9 @@ export {
   batchResolveConflicts,
   shouldAcceptRemoteChange,
   extractTimestamp,
+  getLastSyncTime,
+  setLastSyncTime,
+  isModifiedAfterSync,
 } from './conflictResolver';
 
 // 离线队列

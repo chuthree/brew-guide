@@ -45,6 +45,7 @@ interface SyncStatusState {
   realtimeStatus: RealtimeStatus;
   realtimeEnabled: boolean;
   pendingChangesCount: number;
+  isInitialSyncing: boolean;
 
   // 内部状态
   _resetTimer: ReturnType<typeof setTimeout> | null;
@@ -62,6 +63,7 @@ interface SyncStatusState {
   setRealtimeStatus: (status: RealtimeStatus) => void;
   setRealtimeEnabled: (enabled: boolean) => void;
   setPendingChangesCount: (count: number) => void;
+  setInitialSyncing: (syncing: boolean) => void;
 
   // 内部方法
   _clearTimers: () => void;
@@ -79,6 +81,7 @@ export const useSyncStatusStore = create<SyncStatusState>()(
     realtimeStatus: 'disconnected',
     realtimeEnabled: false,
     pendingChangesCount: 0,
+    isInitialSyncing: false,
 
     _resetTimer: null,
     _syncingTimeout: null,
@@ -186,6 +189,10 @@ export const useSyncStatusStore = create<SyncStatusState>()(
 
     setPendingChangesCount: (count: number) => {
       set({ pendingChangesCount: count });
+    },
+
+    setInitialSyncing: (syncing: boolean) => {
+      set({ isInitialSyncing: syncing });
     },
   }))
 );

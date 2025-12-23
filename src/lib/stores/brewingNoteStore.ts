@@ -77,7 +77,12 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
       const existingNote = get().notes.find(n => n.id === id);
       if (!existingNote) return null;
 
-      const updatedNote: BrewingNote = { ...existingNote, ...updates, id };
+      const updatedNote: BrewingNote = {
+        ...existingNote,
+        ...updates,
+        id,
+        timestamp: Date.now(),
+      };
       await db.brewingNotes.put(updatedNote);
       set(state => ({
         notes: state.notes.map(n => (n.id === id ? updatedNote : n)),
