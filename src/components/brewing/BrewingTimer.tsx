@@ -37,6 +37,7 @@ import type {
   TimerCallbacks,
 } from '@/components/brewing/Timer';
 import { globalAudioManager } from '@/lib/audio/globalAudioManager';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 保留布局设置接口的导出，但使用从Timer模块导入的定义
 export type { LayoutSettings } from '@/components/brewing/Timer';
@@ -146,28 +147,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       // 首先更新本地状态
       setLocalLayoutSettings(newSettings);
 
-      // 更新全局设置并保存到 Storage
+      // 使用 settingsStore 保存设置
       try {
-        const { Storage } = await import('@/lib/core/storage');
-        const currentSettingsStr = await Storage.get('brewGuideSettings');
-        if (currentSettingsStr) {
-          const currentSettings = JSON.parse(currentSettingsStr);
-          const updatedSettings = {
-            ...currentSettings,
-            layoutSettings: newSettings,
-          };
-          await Storage.set(
-            'brewGuideSettings',
-            JSON.stringify(updatedSettings)
-          );
-
-          // 触发 storageChange 事件，通知其他组件设置已更改
-          window.dispatchEvent(
-            new CustomEvent('storageChange', {
-              detail: { key: 'brewGuideSettings' },
-            })
-          );
-        }
+        await useSettingsStore.getState().updateLayoutSettings(newSettings);
       } catch (error) {
         console.error('保存布局设置失败', error);
       }
@@ -196,27 +178,13 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       })
     );
 
-    // 将更新保存到 Storage 以确保持久化
-    const updateSettings = async () => {
-      try {
-        // 动态导入 Storage
-        const { Storage } = await import('@/lib/core/storage');
-        // 先获取当前设置
-        const currentSettingsStr = await Storage.get('brewGuideSettings');
-        if (currentSettingsStr) {
-          const currentSettings = JSON.parse(currentSettingsStr);
-          // 更新 showFlowRate 设置
-          const newSettings = { ...currentSettings, showFlowRate };
-          // 保存回存储
-          await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-          // 流速设置已保存
-        }
-      } catch (error) {
+    // 使用 settingsStore 保存设置
+    useSettingsStore
+      .getState()
+      .updateSettings({ showFlowRate })
+      .catch(error => {
         console.error('保存流速设置失败', error);
-      }
-    };
-
-    updateSettings();
+      });
   }, []);
 
   // 检查设备是否支持触感反馈

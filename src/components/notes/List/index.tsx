@@ -531,7 +531,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const loadEquipmentData = async () => {
       const { equipmentList } = await import('@/lib/core/config');
       const { loadCustomEquipments } = await import(
-        '@/lib/managers/customEquipments'
+        '@/lib/stores/customEquipmentStore'
       );
       const customEquips = await loadCustomEquipments();
       setCustomEquipments(customEquips);
@@ -607,12 +607,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
               !isNaN(changeAmount) &&
               changeAmount !== 0
             ) {
-              const { CoffeeBeanManager } = await import(
-                '@/lib/managers/coffeeBeanManager'
+              const { getCoffeeBeanStore } = await import(
+                '@/lib/stores/coffeeBeanStore'
               );
 
               // 获取当前咖啡豆信息
-              const currentBean = await CoffeeBeanManager.getBeanById(beanId);
+              const store = getCoffeeBeanStore();
+              const currentBean = store.getBeanById(beanId);
               if (currentBean) {
                 const currentRemaining = parseFloat(
                   currentBean.remaining || '0'
@@ -628,9 +629,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                   }
                 }
 
-                const formattedRemaining =
-                  CoffeeBeanManager.formatNumber(finalRemaining);
-                await CoffeeBeanManager.updateBean(beanId, {
+                const formattedRemaining = Number.isInteger(finalRemaining)
+                  ? finalRemaining.toString()
+                  : finalRemaining.toFixed(1);
+                await store.updateBean(beanId, {
                   remaining: formattedRemaining,
                 });
               }
@@ -644,10 +646,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           const beanId = getNoteAssociatedBeanId(noteToDelete);
 
           if (beanId && coffeeAmount > 0) {
-            const { CoffeeBeanManager } = await import(
-              '@/lib/managers/coffeeBeanManager'
+            const { increaseBeanRemaining } = await import(
+              '@/lib/stores/coffeeBeanStore'
             );
-            await CoffeeBeanManager.increaseBeanRemaining(beanId, coffeeAmount);
+            await increaseBeanRemaining(beanId, coffeeAmount);
           }
         }
       } catch (error) {
@@ -842,16 +844,21 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       // 同步咖啡豆容量变化
       if (updatedRecord.beanId) {
         try {
-          const { CoffeeBeanManager } = await import(
-            '@/lib/managers/coffeeBeanManager'
+          const { getCoffeeBeanStore, updateBeanRemaining } = await import(
+            '@/lib/stores/coffeeBeanStore'
           );
+          const store = getCoffeeBeanStore();
+
+          // 辅助函数：格式化数字
+          const formatNum = (value: number): string =>
+            Number.isInteger(value) ? value.toString() : value.toFixed(1);
 
           if (isNewRecord) {
             // 新记录：直接扣除咖啡豆剩余量
             if (updatedRecord.source === 'quick-decrement') {
               const decrementAmount = updatedRecord.quickDecrementAmount || 0;
               if (decrementAmount > 0) {
-                await CoffeeBeanManager.updateBeanRemaining(
+                await updateBeanRemaining(
                   updatedRecord.beanId,
                   decrementAmount
                 );
@@ -862,9 +869,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 0;
               if (Math.abs(changeAmount) > 0.01) {
                 // 获取当前咖啡豆信息
-                const currentBean = await CoffeeBeanManager.getBeanById(
-                  updatedRecord.beanId
-                );
+                const currentBean = store.getBeanById(updatedRecord.beanId);
                 if (currentBean) {
                   const currentRemaining = parseFloat(
                     currentBean.remaining || '0'
@@ -883,9 +888,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                     }
                   }
 
-                  const formattedRemaining =
-                    CoffeeBeanManager.formatNumber(finalRemaining);
-                  await CoffeeBeanManager.updateBean(updatedRecord.beanId, {
+                  const formattedRemaining = formatNum(finalRemaining);
+                  await store.updateBean(updatedRecord.beanId, {
                     remaining: formattedRemaining,
                   });
                 }
@@ -919,9 +923,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
             if (Math.abs(capacityDiff) > 0.01) {
               // 获取当前咖啡豆信息
-              const currentBean = await CoffeeBeanManager.getBeanById(
-                updatedRecord.beanId
-              );
+              const currentBean = store.getBeanById(updatedRecord.beanId);
               if (currentBean) {
                 const currentRemaining = parseFloat(
                   currentBean.remaining || '0'
@@ -940,9 +942,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                   }
                 }
 
-                const formattedRemaining =
-                  CoffeeBeanManager.formatNumber(finalRemaining);
-                await CoffeeBeanManager.updateBean(updatedRecord.beanId, {
+                const formattedRemaining = formatNum(finalRemaining);
+                await store.updateBean(updatedRecord.beanId, {
                   remaining: formattedRemaining,
                 });
               }

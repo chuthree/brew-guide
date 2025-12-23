@@ -1,0 +1,693 @@
+/**
+ * 统一设置 Store
+ *
+ * 架构设计：
+ * - 所有设置统一存储在 IndexedDB (appSettings 表)
+ * - 通过 Zustand 管理内存状态
+ * - 提供细粒度的更新方法，避免全量更新
+ * - 支持订阅特定设置变化
+ */
+
+import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { db, AppSettings } from '@/lib/core/db';
+import { LayoutSettings } from '@/components/brewing/Timer/Settings';
+import {
+  ViewOption,
+  VIEW_OPTIONS,
+} from '@/components/coffee-bean/List/constants';
+
+/**
+ * 默认设置值
+ */
+export const defaultSettings: AppSettings = {
+  // 通用设置
+  notificationSound: true,
+  hapticFeedback: true,
+  textZoomLevel: 1.0,
+  showFlowRate: false,
+  username: '',
+
+  // 布局设置
+  layoutSettings: {
+    stageInfoReversed: false,
+    progressBarHeight: 12,
+    controlsReversed: false,
+    alwaysShowTimerInfo: true,
+    showStageDivider: true,
+    compactMode: false,
+    dataFontSize: '2xl',
+  },
+
+  // 咖啡豆显示设置
+  decrementPresets: [15, 16, 18],
+  enableAllDecrementOption: false,
+  enableCustomDecrementInput: true,
+  greenBeanRoastPresets: [50, 100, 200],
+  enableAllGreenBeanRoastOption: false,
+  enableCustomGreenBeanRoastInput: true,
+  showOnlyBeanName: true,
+  simplifiedViewLabels: false,
+  dateDisplayMode: 'agingDays',
+  showFlavorInfo: false,
+  showBeanNotes: true,
+  limitNotesLines: true,
+  notesMaxLines: 3,
+  showTotalPrice: false,
+  showStatusDots: false,
+  noteDisplayStyle: 'list',
+
+  // 安全区域设置
+  safeAreaMargins: {
+    top: 38,
+    bottom: 38,
+  },
+
+  // 导航栏设置
+  navigationSettings: {
+    visibleTabs: {
+      brewing: true,
+      coffeeBean: true,
+      notes: true,
+    },
+    coffeeBeanViews: {
+      [VIEW_OPTIONS.INVENTORY]: true,
+      [VIEW_OPTIONS.RANKING]: true,
+      [VIEW_OPTIONS.STATS]: true,
+    },
+    pinnedViews: [],
+  },
+
+  // 赏味期设置
+  customFlavorPeriod: {
+    light: { startDay: 0, endDay: 0 },
+    medium: { startDay: 0, endDay: 0 },
+    dark: { startDay: 0, endDay: 0 },
+  },
+  detailedFlavorPeriodEnabled: false,
+  detailedFlavorPeriod: {
+    extraLight: { startDay: 0, endDay: 0 },
+    light: { startDay: 0, endDay: 0 },
+    mediumLight: { startDay: 0, endDay: 0 },
+    medium: { startDay: 0, endDay: 0 },
+    mediumDark: { startDay: 0, endDay: 0 },
+    dark: { startDay: 0, endDay: 0 },
+  },
+
+  // 备份提醒设置
+  backupReminder: undefined,
+
+  // 同步设置
+  s3Sync: {
+    enabled: false,
+    accessKeyId: '',
+    secretAccessKey: '',
+    region: 'cn-south-1',
+    bucketName: '',
+    prefix: 'brew-guide-data/',
+    endpoint: '',
+    syncMode: 'manual',
+    enablePullToSync: true,
+  },
+  webdavSync: undefined,
+  supabaseSync: {
+    enabled: false,
+    url: '',
+    anonKey: '',
+  },
+  activeSyncType: 'none',
+
+  // 随机咖啡豆设置
+  randomCoffeeBeans: {
+    enableLongPressRandomType: false,
+    defaultRandomType: 'espresso',
+    flavorPeriodRanges: {
+      aging: false,
+      optimal: true,
+      decline: true,
+      frozen: true,
+      inTransit: false,
+      unknown: true,
+    },
+  },
+
+  // 搜索排序设置
+  searchSort: {
+    enabled: false,
+    time: false,
+    rating: false,
+    extractionTime: true,
+  },
+
+  // 其他设置
+  enableBeanPrint: false,
+  showBeanRating: false,
+  showBeanInfoDivider: true,
+  hiddenCommonMethods: {},
+  hiddenEquipments: [],
+  grinderDefaultSync: {
+    navigationBar: true,
+    methodForm: true,
+    manualNote: true,
+    noteEdit: true,
+  },
+  showGrinderScale: true,
+
+  // 笔记设置
+  defaultExpandRating: false,
+  defaultExpandChangeLog: false,
+  showFlavorRatingInForm: true,
+  showOverallRatingInForm: true,
+  artisticSharingEnabled: false,
+
+  // 生豆库设置
+  enableGreenBeanInventory: false,
+  enableConvertToGreen: false,
+
+  // 识图设置
+  autoFillRecognitionImage: false,
+  showEstateField: false,
+  immersiveAdd: false,
+
+  // 每日提醒设置
+  dailyReminder: false,
+  dailyReminderTime: '09:00',
+
+  // 隐藏二维码选项
+  hideGroupQRCode: false,
+  hideAppreciationQRCode: false,
+
+  // 菜单栏图标设置
+  showMenuBarIcon: true,
+
+  // 自定义数据
+  customFlavorDimensions: [],
+  roasterLogos: {},
+  equipmentOrder: [],
+};
+
+/**
+ * 设置 Store 状态接口
+ */
+interface SettingsStore {
+  // 状态
+  settings: AppSettings;
+  isLoading: boolean;
+  initialized: boolean;
+  error: string | null;
+
+  // 初始化
+  loadSettings: () => Promise<void>;
+
+  // 通用更新方法
+  updateSettings: (updates: Partial<AppSettings>) => Promise<void>;
+
+  // 细粒度更新方法
+  updateLayoutSettings: (layout: Partial<LayoutSettings>) => Promise<void>;
+  updateNavigationSettings: (
+    nav: Partial<AppSettings['navigationSettings']>
+  ) => Promise<void>;
+  updateS3SyncSettings: (
+    s3: Partial<NonNullable<AppSettings['s3Sync']>>
+  ) => Promise<void>;
+  updateWebDAVSyncSettings: (
+    webdav: Partial<NonNullable<AppSettings['webdavSync']>>
+  ) => Promise<void>;
+  updateSupabaseSyncSettings: (
+    supabase: Partial<NonNullable<AppSettings['supabaseSync']>>
+  ) => Promise<void>;
+
+  // 隐藏器具/方案管理
+  hideEquipment: (equipmentId: string) => Promise<void>;
+  unhideEquipment: (equipmentId: string) => Promise<void>;
+  hideMethod: (equipmentId: string, methodId: string) => Promise<void>;
+  unhideMethod: (equipmentId: string, methodId: string) => Promise<void>;
+
+  // 自定义数据管理
+  setCustomFlavorDimensions: (dimensions: string[]) => Promise<void>;
+  setRoasterLogo: (roaster: string, logo: string) => Promise<void>;
+  removeRoasterLogo: (roaster: string) => Promise<void>;
+  setEquipmentOrder: (order: string[]) => Promise<void>;
+
+  // 重置
+  resetSettings: () => Promise<void>;
+
+  // 兼容性方法（用于迁移期间）
+  getSettingsForSync: () => AppSettings;
+  importSettings: (settings: AppSettings) => Promise<void>;
+}
+
+/**
+ * 设置 Store
+ */
+export const useSettingsStore = create<SettingsStore>()(
+  subscribeWithSelector((set, get) => ({
+    settings: { ...defaultSettings },
+    isLoading: false,
+    initialized: false,
+    error: null,
+
+    loadSettings: async () => {
+      if (get().isLoading) return;
+
+      set({ isLoading: true, error: null });
+
+      try {
+        // 从 IndexedDB 加载设置
+        const stored = await db.appSettings.get('main');
+
+        if (stored && stored.data) {
+          // 合并默认设置和存储的设置，确保新字段有默认值
+          const mergedSettings = { ...defaultSettings, ...stored.data };
+          set({
+            settings: mergedSettings,
+            isLoading: false,
+            initialized: true,
+          });
+        } else {
+          // 尝试从 localStorage 迁移（兼容旧版本）
+          const legacySettings = await loadLegacySettings();
+          if (legacySettings) {
+            const mergedSettings = { ...defaultSettings, ...legacySettings };
+            await db.appSettings.put({ id: 'main', data: mergedSettings });
+            set({
+              settings: mergedSettings,
+              isLoading: false,
+              initialized: true,
+            });
+          } else {
+            // 使用默认设置
+            await db.appSettings.put({ id: 'main', data: defaultSettings });
+            set({
+              settings: defaultSettings,
+              isLoading: false,
+              initialized: true,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[SettingsStore] loadSettings failed:', error);
+        set({
+          error: '加载设置失败',
+          isLoading: false,
+          initialized: true,
+          settings: defaultSettings,
+        });
+      }
+    },
+
+    updateSettings: async updates => {
+      const currentSettings = get().settings;
+      const newSettings = { ...currentSettings, ...updates };
+
+      try {
+        await db.appSettings.put({ id: 'main', data: newSettings });
+        set({ settings: newSettings });
+
+        // 触发设置变化事件（用于兼容旧代码）
+        dispatchSettingsChanged(newSettings);
+      } catch (error) {
+        console.error('[SettingsStore] updateSettings failed:', error);
+        throw error;
+      }
+    },
+
+    updateLayoutSettings: async layout => {
+      const currentSettings = get().settings;
+      const currentLayout = currentSettings.layoutSettings;
+      const defaultLayout = defaultSettings.layoutSettings!; // defaultSettings.layoutSettings 在定义中有值
+
+      // 确保所有字段都有值，使用类型断言来确保类型安全
+      const newLayoutSettings: NonNullable<AppSettings['layoutSettings']> = {
+        stageInfoReversed:
+          layout.stageInfoReversed ??
+          currentLayout?.stageInfoReversed ??
+          defaultLayout.stageInfoReversed,
+        progressBarHeight:
+          layout.progressBarHeight ??
+          currentLayout?.progressBarHeight ??
+          defaultLayout.progressBarHeight,
+        controlsReversed:
+          layout.controlsReversed ??
+          currentLayout?.controlsReversed ??
+          defaultLayout.controlsReversed,
+        alwaysShowTimerInfo:
+          layout.alwaysShowTimerInfo ??
+          currentLayout?.alwaysShowTimerInfo ??
+          defaultLayout.alwaysShowTimerInfo,
+        showStageDivider:
+          layout.showStageDivider ??
+          currentLayout?.showStageDivider ??
+          defaultLayout.showStageDivider,
+        compactMode:
+          layout.compactMode ??
+          currentLayout?.compactMode ??
+          defaultLayout.compactMode,
+        dataFontSize:
+          layout.dataFontSize ??
+          currentLayout?.dataFontSize ??
+          defaultLayout.dataFontSize,
+      };
+      await get().updateSettings({ layoutSettings: newLayoutSettings });
+    },
+
+    updateNavigationSettings: async nav => {
+      const currentSettings = get().settings;
+      const newNavSettings = {
+        ...currentSettings.navigationSettings,
+        ...nav,
+      };
+      await get().updateSettings({
+        navigationSettings: newNavSettings as AppSettings['navigationSettings'],
+      });
+    },
+
+    updateS3SyncSettings: async s3 => {
+      const currentSettings = get().settings;
+      const newS3Settings = {
+        ...currentSettings.s3Sync,
+        ...s3,
+      };
+      await get().updateSettings({
+        s3Sync: newS3Settings as AppSettings['s3Sync'],
+      });
+    },
+
+    updateWebDAVSyncSettings: async webdav => {
+      const currentSettings = get().settings;
+      const newWebDAVSettings = {
+        ...currentSettings.webdavSync,
+        ...webdav,
+      };
+      await get().updateSettings({
+        webdavSync: newWebDAVSettings as AppSettings['webdavSync'],
+      });
+    },
+
+    updateSupabaseSyncSettings: async supabase => {
+      const currentSettings = get().settings;
+      const newSupabaseSettings = {
+        ...currentSettings.supabaseSync,
+        ...supabase,
+      };
+      await get().updateSettings({
+        supabaseSync: newSupabaseSettings as AppSettings['supabaseSync'],
+      });
+    },
+
+    hideEquipment: async equipmentId => {
+      const currentSettings = get().settings;
+      const hiddenEquipments = [...(currentSettings.hiddenEquipments || [])];
+
+      if (!hiddenEquipments.includes(equipmentId)) {
+        hiddenEquipments.push(equipmentId);
+        await get().updateSettings({ hiddenEquipments });
+      }
+    },
+
+    unhideEquipment: async equipmentId => {
+      const currentSettings = get().settings;
+      const hiddenEquipments = (currentSettings.hiddenEquipments || []).filter(
+        id => id !== equipmentId
+      );
+      await get().updateSettings({ hiddenEquipments });
+    },
+
+    hideMethod: async (equipmentId, methodId) => {
+      const currentSettings = get().settings;
+      const hiddenCommonMethods = {
+        ...(currentSettings.hiddenCommonMethods || {}),
+      };
+      const equipmentHidden = [...(hiddenCommonMethods[equipmentId] || [])];
+
+      if (!equipmentHidden.includes(methodId)) {
+        equipmentHidden.push(methodId);
+        hiddenCommonMethods[equipmentId] = equipmentHidden;
+        await get().updateSettings({ hiddenCommonMethods });
+      }
+    },
+
+    unhideMethod: async (equipmentId, methodId) => {
+      const currentSettings = get().settings;
+      const hiddenCommonMethods = {
+        ...(currentSettings.hiddenCommonMethods || {}),
+      };
+      const equipmentHidden = (hiddenCommonMethods[equipmentId] || []).filter(
+        id => id !== methodId
+      );
+
+      if (equipmentHidden.length > 0) {
+        hiddenCommonMethods[equipmentId] = equipmentHidden;
+      } else {
+        delete hiddenCommonMethods[equipmentId];
+      }
+
+      await get().updateSettings({ hiddenCommonMethods });
+    },
+
+    setCustomFlavorDimensions: async dimensions => {
+      await get().updateSettings({ customFlavorDimensions: dimensions });
+    },
+
+    setRoasterLogo: async (roaster, logo) => {
+      const currentSettings = get().settings;
+      const roasterLogos = { ...(currentSettings.roasterLogos || {}) };
+      roasterLogos[roaster] = logo;
+      await get().updateSettings({ roasterLogos });
+    },
+
+    removeRoasterLogo: async roaster => {
+      const currentSettings = get().settings;
+      const roasterLogos = { ...(currentSettings.roasterLogos || {}) };
+      delete roasterLogos[roaster];
+      await get().updateSettings({ roasterLogos });
+    },
+
+    setEquipmentOrder: async order => {
+      await get().updateSettings({ equipmentOrder: order });
+    },
+
+    resetSettings: async () => {
+      try {
+        await db.appSettings.put({ id: 'main', data: defaultSettings });
+        set({ settings: defaultSettings });
+        dispatchSettingsChanged(defaultSettings);
+      } catch (error) {
+        console.error('[SettingsStore] resetSettings failed:', error);
+        throw error;
+      }
+    },
+
+    getSettingsForSync: () => {
+      return get().settings;
+    },
+
+    importSettings: async settings => {
+      const mergedSettings = { ...defaultSettings, ...settings };
+      try {
+        await db.appSettings.put({ id: 'main', data: mergedSettings });
+        set({ settings: mergedSettings });
+        dispatchSettingsChanged(mergedSettings);
+      } catch (error) {
+        console.error('[SettingsStore] importSettings failed:', error);
+        throw error;
+      }
+    },
+  }))
+);
+
+/**
+ * 触发设置变化事件（兼容旧代码）
+ */
+function dispatchSettingsChanged(settings: AppSettings): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('settingsChanged', {
+        detail: { settings },
+      })
+    );
+    // 兼容旧的事件名
+    window.dispatchEvent(
+      new CustomEvent('storageChange', {
+        detail: { key: 'brewGuideSettings' },
+      })
+    );
+  }
+}
+
+/**
+ * 从 localStorage 加载旧版设置（迁移用）
+ */
+async function loadLegacySettings(): Promise<Partial<AppSettings> | null> {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+
+    const settingsStr = localStorage.getItem('brewGuideSettings');
+    if (!settingsStr) return null;
+
+    let settings = JSON.parse(settingsStr);
+
+    // 处理 Zustand persist 格式
+    if (settings?.state?.settings) {
+      settings = settings.state.settings;
+    }
+
+    // 移除磨豆机数据（已迁移到单独的表）
+    delete settings.grinders;
+
+    // 迁移其他分散的数据
+    const flavorDimensionsStr = localStorage.getItem('customFlavorDimensions');
+    if (flavorDimensionsStr) {
+      try {
+        settings.customFlavorDimensions = JSON.parse(flavorDimensionsStr);
+      } catch {
+        // 忽略
+      }
+    }
+
+    const roasterLogosStr = localStorage.getItem('roasterLogos');
+    if (roasterLogosStr) {
+      try {
+        settings.roasterLogos = JSON.parse(roasterLogosStr);
+      } catch {
+        // 忽略
+      }
+    }
+
+    const equipmentOrderStr = localStorage.getItem('equipmentOrder');
+    if (equipmentOrderStr) {
+      try {
+        const order = JSON.parse(equipmentOrderStr);
+        settings.equipmentOrder = order.equipmentIds || [];
+      } catch {
+        // 忽略
+      }
+    }
+
+    return settings;
+  } catch (error) {
+    console.error('加载旧版设置失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 获取设置 Store 实例（非 React 环境使用）
+ */
+export const getSettingsStore = () => useSettingsStore.getState();
+
+/**
+ * 便捷 Hook：获取特定设置
+ */
+export function useSetting<K extends keyof AppSettings>(
+  key: K
+): AppSettings[K] {
+  return useSettingsStore(state => state.settings[key]);
+}
+
+/**
+ * 便捷 Hook：获取多个设置
+ */
+export function useSettings<K extends keyof AppSettings>(
+  keys: K[]
+): Pick<AppSettings, K> {
+  return useSettingsStore(state => {
+    const result = {} as Pick<AppSettings, K>;
+    for (const key of keys) {
+      result[key] = state.settings[key];
+    }
+    return result;
+  });
+}
+
+// ==================== 隐藏器具/方案工具函数 ====================
+
+/**
+ * 检查器具是否被隐藏
+ */
+export function isEquipmentHidden(equipmentId: string): boolean {
+  const settings = getSettingsStore().settings;
+  return (settings.hiddenEquipments || []).includes(equipmentId);
+}
+
+/**
+ * 获取所有隐藏的器具ID
+ */
+export function getHiddenEquipmentIds(): string[] {
+  const settings = getSettingsStore().settings;
+  return settings.hiddenEquipments || [];
+}
+
+/**
+ * 过滤隐藏的器具
+ */
+export function filterHiddenEquipments<T extends { id: string }>(
+  equipments: T[]
+): T[] {
+  const hiddenIds = getHiddenEquipmentIds();
+  if (hiddenIds.length === 0) return equipments;
+  return equipments.filter(e => !hiddenIds.includes(e.id));
+}
+
+/**
+ * 检查方案是否被隐藏
+ */
+export function isMethodHidden(equipmentId: string, methodId: string): boolean {
+  const settings = getSettingsStore().settings;
+  const hiddenMethods = settings.hiddenCommonMethods || {};
+  const equipmentHidden = hiddenMethods[equipmentId] || [];
+  return equipmentHidden.includes(methodId);
+}
+
+/**
+ * 获取所有隐藏的方案
+ */
+export function getAllHiddenMethods(): Record<string, string[]> {
+  const settings = getSettingsStore().settings;
+  return settings.hiddenCommonMethods || {};
+}
+
+/**
+ * 获取指定器具的隐藏方案ID列表
+ */
+export function getHiddenMethodIds(equipmentId: string): string[] {
+  const settings = getSettingsStore().settings;
+  const hiddenMethods = settings.hiddenCommonMethods || {};
+  return hiddenMethods[equipmentId] || [];
+}
+
+/**
+ * 过滤隐藏的方案
+ */
+export function filterHiddenMethods<T extends { id?: string; name: string }>(
+  methods: T[],
+  equipmentId: string
+): T[] {
+  const hiddenIds = getHiddenMethodIds(equipmentId);
+  if (hiddenIds.length === 0) return methods;
+  return methods.filter(m => {
+    const methodId = m.id || m.name;
+    return !hiddenIds.includes(methodId);
+  });
+}
+
+// ==================== 器具排序工具函数 ====================
+
+interface EquipmentOrder {
+  equipmentIds: string[];
+}
+
+/**
+ * 加载器具排序信息
+ */
+export function loadEquipmentOrder(): EquipmentOrder {
+  const settings = getSettingsStore().settings;
+  return { equipmentIds: settings.equipmentOrder || [] };
+}
+
+/**
+ * 保存器具排序信息
+ */
+export async function saveEquipmentOrder(order: EquipmentOrder): Promise<void> {
+  await getSettingsStore().setEquipmentOrder(order.equipmentIds);
+}

@@ -10,7 +10,7 @@ import { SettingsOptions } from '@/components/settings/Settings';
 
 import NoteSteppedFormModal, { Step } from './NoteSteppedFormModal';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
-import { loadCustomEquipments } from '@/lib/managers/customEquipments';
+import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 // 导入随机选择器组件
 import CoffeeBeanRandomPicker from '@/components/coffee-bean/RandomPicker/CoffeeBeanRandomPicker';
@@ -348,12 +348,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         if (match) {
           const coffeeAmount = parseFloat(match[0]);
           if (coffeeAmount > 0) {
-            import('@/lib/managers/coffeeBeanManager')
-              .then(({ CoffeeBeanManager }) =>
-                CoffeeBeanManager.updateBeanRemaining(
-                  selectedCoffeeBean.id,
-                  coffeeAmount
-                )
+            import('@/lib/stores/coffeeBeanStore')
+              .then(({ updateBeanRemaining }) =>
+                updateBeanRemaining(selectedCoffeeBean.id, coffeeAmount)
               )
               .catch(error => console.error('减少咖啡豆剩余量失败:', error));
           }

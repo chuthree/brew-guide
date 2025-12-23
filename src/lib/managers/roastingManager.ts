@@ -1,10 +1,19 @@
 import { CoffeeBean, BrewingNoteData } from '@/types/app';
-import { CoffeeBeanManager } from './coffeeBeanManager';
+import {
+  getCoffeeBeanStore,
+  updateBeanRemaining,
+  increaseBeanRemaining,
+} from '@/lib/stores/coffeeBeanStore';
 import { nanoid } from 'nanoid';
 import {
   parseBeanName,
   getNextAvailableNumber,
 } from '@/lib/utils/beanRepurchaseUtils';
+
+// 辅助函数：格式化数字
+function formatNumber(value: number): string {
+  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+}
 
 /**
  * 烘焙管理器 - 处理生豆到熟豆的转换
@@ -61,7 +70,7 @@ export const RoastingManager = {
   }> {
     try {
       // 1. 获取生豆信息
-      const greenBean = await CoffeeBeanManager.getBeanById(greenBeanId);
+      const greenBean = await getCoffeeBeanStore().getBeanById(greenBeanId);
       if (!greenBean) {
         return { success: false, error: '找不到生豆记录' };
       }
@@ -85,9 +94,12 @@ export const RoastingManager = {
 
       // 3. 扣除生豆容量
       const newRemaining = currentRemaining - roastedAmount;
-      const updatedGreenBean = await CoffeeBeanManager.updateBean(greenBeanId, {
-        remaining: CoffeeBeanManager.formatNumber(newRemaining),
-      });
+      const updatedGreenBean = await getCoffeeBeanStore().updateBean(
+        greenBeanId,
+        {
+          remaining: formatNumber(newRemaining),
+        }
+      );
 
       if (!updatedGreenBean) {
         return { success: false, error: '更新生豆容量失败' };
@@ -97,7 +109,7 @@ export const RoastingManager = {
       let roastedBean: CoffeeBean | undefined;
       if (roastedBeanData) {
         // 获取所有豆子用于生成名称
-        const allBeans = await CoffeeBeanManager.getAllBeans();
+        const allBeans = getCoffeeBeanStore().beans;
 
         // 使用续购逻辑生成熟豆名称（如果用户没有修改名称）
         const userProvidedName = roastedBeanData.name;
@@ -120,8 +132,8 @@ export const RoastingManager = {
           name: roastedBeanName,
           beanState: 'roasted',
           beanType: roastedBeanData.beanType || greenBean.beanType,
-          capacity: CoffeeBeanManager.formatNumber(userCapacity),
-          remaining: CoffeeBeanManager.formatNumber(userRemaining),
+          capacity: formatNumber(userCapacity),
+          remaining: formatNumber(userRemaining),
           // 继承生豆的其他属性
           image: roastedBeanData.image || greenBean.image,
           roastLevel: roastedBeanData.roastLevel || greenBean.roastLevel,
@@ -136,7 +148,7 @@ export const RoastingManager = {
           sourceGreenBeanId: greenBeanId,
         };
 
-        roastedBean = await CoffeeBeanManager.addBean(newRoastedBean);
+        roastedBean = await getCoffeeBeanStore().addBean(newRoastedBean);
 
         // 4.1 如果容量和剩余量不同，为熟豆创建一个变动记录
         if (roastedBean && userCapacity !== userRemaining) {
@@ -241,7 +253,7 @@ export const RoastingManager = {
   }> {
     try {
       // 1. 获取生豆信息（用于生成熟豆名称）
-      const greenBean = await CoffeeBeanManager.getBeanById(greenBeanId);
+      const greenBean = await getCoffeeBeanStore().getBeanById(greenBeanId);
       if (!greenBean) {
         return { success: false, error: '找不到生豆记录' };
       }
@@ -253,7 +265,7 @@ export const RoastingManager = {
       }
 
       // 3. 获取所有豆子用于生成名称
-      const allBeans = await CoffeeBeanManager.getAllBeans();
+      const allBeans = getCoffeeBeanStore().beans;
 
       // 4. 生成熟豆名称
       const roastedBeanName =
@@ -299,7 +311,7 @@ export const RoastingManager = {
    * @returns 熟豆列表
    */
   async getDerivedRoastedBeans(greenBeanId: string): Promise<CoffeeBean[]> {
-    const allBeans = await CoffeeBeanManager.getAllBeans();
+    const allBeans = getCoffeeBeanStore().beans;
     return allBeans.filter(bean => bean.sourceGreenBeanId === greenBeanId);
   },
 
@@ -372,10 +384,10 @@ export const RoastingManager = {
       const { greenBeanId, roastedAmount, roastedBeanId } = roastingRecord;
 
       if (greenBeanId && roastedAmount > 0) {
-        const greenBean = await CoffeeBeanManager.getBeanById(greenBeanId);
+        const greenBean = await getCoffeeBeanStore().getBeanById(greenBeanId);
         if (greenBean) {
           // 使用 increaseBeanRemaining 恢复容量
-          const restored = await CoffeeBeanManager.increaseBeanRemaining(
+          const restored = await increaseBeanRemaining(
             greenBeanId,
             roastedAmount
           );
@@ -388,9 +400,10 @@ export const RoastingManager = {
 
       // 3. 清除关联熟豆的 sourceGreenBeanId
       if (roastedBeanId) {
-        const roastedBean = await CoffeeBeanManager.getBeanById(roastedBeanId);
+        const roastedBean =
+          await getCoffeeBeanStore().getBeanById(roastedBeanId);
         if (roastedBean && roastedBean.sourceGreenBeanId) {
-          const updated = await CoffeeBeanManager.updateBean(roastedBeanId, {
+          const updated = await getCoffeeBeanStore().updateBean(roastedBeanId, {
             sourceGreenBeanId: undefined,
           });
           if (updated) {
@@ -475,7 +488,7 @@ export const RoastingManager = {
       // 1. 清除派生熟豆的 sourceGreenBeanId
       const derivedBeans = await this.getDerivedRoastedBeans(greenBeanId);
       for (const bean of derivedBeans) {
-        await CoffeeBeanManager.updateBean(bean.id, {
+        await getCoffeeBeanStore().updateBean(bean.id, {
           sourceGreenBeanId: undefined,
         });
       }
@@ -542,7 +555,8 @@ export const RoastingManager = {
       const { Storage } = await import('@/lib/core/storage');
 
       // 1. 获取原熟豆信息
-      const originalBean = await CoffeeBeanManager.getBeanById(roastedBeanId);
+      const originalBean =
+        await getCoffeeBeanStore().getBeanById(roastedBeanId);
       if (!originalBean) {
         return { success: false, error: '找不到咖啡豆记录' };
       }
@@ -625,7 +639,7 @@ export const RoastingManager = {
           purchaseDate: originalBean.roastDate,
         };
 
-        const greenBean = await CoffeeBeanManager.addBean(greenBeanData);
+        const greenBean = await getCoffeeBeanStore().addBean(greenBeanData);
 
         // 删除原熟豆关联的所有变动记录（虽然未使用通常没有，但保险起见）
         if (recordNotes.length > 0) {
@@ -637,14 +651,14 @@ export const RoastingManager = {
         }
 
         // 删除原熟豆
-        const beans = await CoffeeBeanManager.getAllBeans();
+        const beans = getCoffeeBeanStore().beans;
         const filteredBeans = beans.filter(bean => bean.id !== roastedBeanId);
         await Storage.set('coffeeBeans', JSON.stringify(filteredBeans));
 
         const { db } = await import('@/lib/core/db');
         await db.coffeeBeans.delete(roastedBeanId);
 
-        CoffeeBeanManager.clearCache();
+        getCoffeeBeanStore().refreshBeans();
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
@@ -680,7 +694,7 @@ export const RoastingManager = {
         purchaseDate: originalBean.roastDate,
       };
 
-      const greenBean = await CoffeeBeanManager.addBean(greenBeanData);
+      const greenBean = await getCoffeeBeanStore().addBean(greenBeanData);
 
       // 6. 创建新熟豆
       // 直接使用原熟豆名称，因为原熟豆会被删除，不会产生重名
@@ -699,8 +713,8 @@ export const RoastingManager = {
         name: roastedBeanName,
         beanState: 'roasted',
         beanType: originalBean.beanType,
-        capacity: CoffeeBeanManager.formatNumber(roastedAmount),
-        remaining: CoffeeBeanManager.formatNumber(newRoastedRemaining),
+        capacity: formatNumber(roastedAmount),
+        remaining: formatNumber(newRoastedRemaining),
         image: originalBean.image,
         roastLevel: originalBean.roastLevel,
         roastDate: originalBean.roastDate, // 保留原熟豆的烘焙日期
@@ -713,7 +727,7 @@ export const RoastingManager = {
       };
 
       const newRoastedBean =
-        await CoffeeBeanManager.addBean(newRoastedBeanData);
+        await getCoffeeBeanStore().addBean(newRoastedBeanData);
 
       // 7. 创建烘焙记录
       const roastingNote: BrewingNoteData = {
@@ -726,7 +740,7 @@ export const RoastingManager = {
         },
         rating: 0,
         taste: {},
-        notes: `从熟豆转换：烘焙了 ${CoffeeBeanManager.formatNumber(roastedAmount)}g 生豆 → ${newRoastedBean.name}`,
+        notes: `从熟豆转换：烘焙了 ${formatNumber(roastedAmount)}g 生豆 → ${newRoastedBean.name}`,
         source: 'roasting',
         beanId: greenBean.id,
         changeRecord: {
@@ -772,7 +786,7 @@ export const RoastingManager = {
       await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
 
       // 9. 删除原熟豆（不触发关联清理，因为我们已经手动处理了）
-      const beans = await CoffeeBeanManager.getAllBeans();
+      const beans = getCoffeeBeanStore().beans;
       const filteredBeans = beans.filter(bean => bean.id !== roastedBeanId);
       await Storage.set('coffeeBeans', JSON.stringify(filteredBeans));
 
@@ -781,7 +795,7 @@ export const RoastingManager = {
       await db.coffeeBeans.delete(roastedBeanId);
 
       // 清除缓存
-      CoffeeBeanManager.clearCache();
+      getCoffeeBeanStore().refreshBeans();
 
       // 10. 触发更新事件
       if (typeof window !== 'undefined') {
@@ -840,7 +854,8 @@ export const RoastingManager = {
       const { Storage } = await import('@/lib/core/storage');
 
       // 获取原熟豆信息
-      const originalBean = await CoffeeBeanManager.getBeanById(roastedBeanId);
+      const originalBean =
+        await getCoffeeBeanStore().getBeanById(roastedBeanId);
       if (!originalBean) {
         return { success: false, error: '找不到咖啡豆记录' };
       }

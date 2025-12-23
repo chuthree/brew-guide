@@ -9,6 +9,7 @@ import { SettingsOptions } from '@/components/settings/Settings';
 import { useEquipmentList } from '@/lib/equipment/useEquipmentList';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 interface EquipmentManagementDrawerProps {
   isOpen: boolean;
@@ -127,7 +128,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
 
       // 保存排序
       const { saveEquipmentOrder } = await import(
-        '@/lib/managers/customEquipments'
+        '@/lib/stores/settingsStore'
       );
       await saveEquipmentOrder(newEquipmentOrder);
 
@@ -171,21 +172,10 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
     // 隐藏操作对所有器具都可用
     if (action === 'hide') {
       try {
-        const { hideEquipment } = await import(
-          '@/lib/managers/hiddenEquipments'
-        );
-        const updatedSettings = await hideEquipment(equipment.id, settings);
-
-        // 更新设置
-        const { Storage } = await import('@/lib/core/storage');
-        await Storage.set('brewGuideSettings', JSON.stringify(updatedSettings));
+        // 使用 settingsStore 隐藏器具
+        await useSettingsStore.getState().hideEquipment(equipment.id);
 
         // 通知设置变更
-        window.dispatchEvent(
-          new CustomEvent('storageChange', {
-            detail: { key: 'brewGuideSettings' },
-          })
-        );
         window.dispatchEvent(new CustomEvent('settingsChanged'));
 
         // 从列表中移除隐藏的器具

@@ -6,8 +6,8 @@ import {
 } from '@/lib/core/config';
 import { Content } from './useBrewingState';
 import { SettingsOptions } from '@/components/settings/Settings';
-import { loadCustomMethodsForEquipment } from '@/lib/managers/customMethods';
-import { filterHiddenMethods } from '@/lib/managers/hiddenMethods';
+import { loadCustomMethodsForEquipment } from '@/lib/stores/customMethodStore';
+import { filterHiddenMethods } from '@/lib/stores/settingsStore';
 import { Stage } from '@/components/method/forms/components/types';
 import { MethodType } from '@/lib/types/method';
 
@@ -255,11 +255,10 @@ export function useBrewingContent({
         // 通用方案列表 - 过滤掉被隐藏的通用方案
         let filteredCommonMethods = commonMethodsForEquipment;
 
-        if (selectedEquipment && settings && settings.hiddenCommonMethods) {
+        if (selectedEquipment) {
           filteredCommonMethods = filterHiddenMethods(
             commonMethodsForEquipment,
-            selectedEquipment,
-            settings
+            selectedEquipment
           );
         }
 

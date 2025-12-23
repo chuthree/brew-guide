@@ -13,8 +13,8 @@ import {
 } from '@/lib/core/config';
 import {
   getAllHiddenMethods,
-  unhideCommonMethod,
-} from '@/lib/managers/hiddenMethods';
+  useSettingsStore,
+} from '@/lib/stores/settingsStore';
 
 interface HiddenMethodsSettingsProps {
   onClose: () => void;
@@ -69,7 +69,7 @@ const HiddenMethodsSettings: React.FC<HiddenMethodsSettingsProps> = ({
       });
     });
     // 加载隐藏的方案
-    const hidden = getAllHiddenMethods(settings);
+    const hidden = getAllHiddenMethods();
     setHiddenMethods(hidden);
   }, [settings]);
 
@@ -98,15 +98,10 @@ const HiddenMethodsSettings: React.FC<HiddenMethodsSettingsProps> = ({
   // 恢复单个方案
   const handleUnhideMethod = async (equipmentId: string, methodId: string) => {
     try {
-      const updatedSettings = await unhideCommonMethod(
-        equipmentId,
-        methodId,
-        settings
-      );
-      await onChange(updatedSettings);
+      await useSettingsStore.getState().unhideMethod(equipmentId, methodId);
 
       // 更新本地状态
-      const hidden = getAllHiddenMethods(updatedSettings);
+      const hidden = getAllHiddenMethods();
       setHiddenMethods(hidden);
 
       if (settings.hapticFeedback) {

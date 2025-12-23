@@ -10,7 +10,7 @@ import RoasterLogoManager, {
   RoasterConfig,
 } from '@/lib/managers/RoasterLogoManager';
 import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
 import { ChevronDown } from 'lucide-react';
 
@@ -123,8 +123,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
 
   const loadRoasters = async () => {
     try {
-      const beans =
-        (await CoffeeBeanManager.getAllBeans()) as ExtendedCoffeeBean[];
+      const beans = useCoffeeBeanStore.getState().beans as ExtendedCoffeeBean[];
       const uniqueRoasters = extractUniqueRoasters(beans);
       const filteredRoasters = uniqueRoasters.filter(r => r !== '未知烘焙商');
       setRoasters(filteredRoasters);

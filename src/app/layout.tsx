@@ -10,6 +10,7 @@ import { Suspense } from 'react';
 import CapacitorInit from '@/providers/CapacitorProvider';
 import StorageInit from '@/providers/StorageProvider';
 import ModalHistoryInit from '@/providers/ModalHistoryProvider';
+import { DataLayerProvider } from '@/providers/DataLayerProvider';
 
 import { BaiduAnalytics } from '@/components/common/BaiduAnalytics';
 import DevTools from '@/components/common/DevTools';
@@ -325,21 +326,23 @@ export default function RootLayout({
           enableColorScheme={false}
           disableTransitionOnChange
         >
-          <TauriDragRegion />
-          <DevTools />
-          <div className="h-dvh overflow-hidden bg-neutral-50 dark:bg-neutral-900">
-            <Suspense>
-              <CapacitorInit />
-              <StorageInit />
-              <ModalHistoryInit />
-              <KeyboardManager />
-            </Suspense>
-            <div className="mx-auto h-full w-full overflow-hidden">
-              {children}
+          <DataLayerProvider>
+            <TauriDragRegion />
+            <DevTools />
+            <div className="h-dvh overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+              <Suspense>
+                <CapacitorInit />
+                <StorageInit />
+                <ModalHistoryInit />
+                <KeyboardManager />
+              </Suspense>
+              <div className="mx-auto h-full w-full overflow-hidden">
+                {children}
+              </div>
+              <LightToast />
+              <ExitToast />
             </div>
-            <LightToast />
-            <ExitToast />
-          </div>
+          </DataLayerProvider>
         </ThemeProvider>
         <Analytics />
       </body>

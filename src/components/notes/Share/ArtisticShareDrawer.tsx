@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { BrewingNote, equipmentList, CustomEquipment } from '@/lib/core/config';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
-import { loadCustomEquipments } from '@/lib/managers/customEquipments';
+import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { CoffeeBean } from '@/types/app';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { showToast } from '@/components/common/feedback/LightToast';

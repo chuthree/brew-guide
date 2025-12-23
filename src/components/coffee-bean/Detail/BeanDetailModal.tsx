@@ -591,12 +591,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (!bean?.id) return;
 
     try {
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
+      const { getCoffeeBeanStore } = await import(
+        '@/lib/stores/coffeeBeanStore'
       );
 
       // 更新备注
-      await CoffeeBeanManager.updateBean(bean.id, {
+      await getCoffeeBeanStore().updateBean(bean.id, {
         notes: newNotes.trim(),
       });
 
@@ -625,11 +625,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (!bean?.id) return;
 
     try {
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
+      const { getCoffeeBeanStore } = await import(
+        '@/lib/stores/coffeeBeanStore'
       );
 
-      await CoffeeBeanManager.updateBean(bean.id, updates);
+      await getCoffeeBeanStore().updateBean(bean.id, updates);
 
       // 触发数据更新事件
       window.dispatchEvent(

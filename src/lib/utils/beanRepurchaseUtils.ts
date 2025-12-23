@@ -4,7 +4,7 @@
  */
 
 import { CoffeeBean } from '@/types/app';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
 /**
  * 从咖啡豆名称中提取基础名称和编号
@@ -70,8 +70,8 @@ export function getNextAvailableNumber(
 export async function createRepurchaseBean(
   bean: CoffeeBean
 ): Promise<Omit<CoffeeBean, 'id' | 'timestamp'>> {
-  // 获取所有咖啡豆以检测编号
-  const allBeans = await CoffeeBeanManager.getAllBeans();
+  // 从 Store 获取所有咖啡豆以检测编号
+  const allBeans = useCoffeeBeanStore.getState().beans;
 
   // 解析当前咖啡豆名称
   const { baseName } = parseBeanName(bean.name);

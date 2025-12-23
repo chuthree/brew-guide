@@ -372,14 +372,14 @@ export const DataManager = {
         );
       }
 
-      // 清理缓存，确保导入的数据能立即生效
+      // 刷新咖啡豆缓存，确保导入的数据能立即生效
       try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
+        const { getCoffeeBeanStore } = await import(
+          '@/lib/stores/coffeeBeanStore'
         );
-        CoffeeBeanManager.clearCache();
+        await getCoffeeBeanStore().refreshBeans();
       } catch (error) {
-        console.error('清理咖啡豆管理器缓存失败:', error);
+        console.error('刷新咖啡豆缓存失败:', error);
       }
 
       // 触发器具排序更新事件

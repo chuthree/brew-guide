@@ -8,8 +8,8 @@ import type { YearlyReportStats } from '@/lib/api/yearlyReport';
 import { generateYearlyReportStream } from '@/lib/api/yearlyReport';
 import { Storage } from '@/lib/core/storage';
 import {
-  YearlyReportStore,
-  type SavedYearlyReport,
+  useYearlyReportStore,
+  type YearlyReport,
 } from '@/lib/stores/yearlyReportStore';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
@@ -92,7 +92,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // 新增：已保存的报告和是否查看历史
-  const [savedReport, setSavedReport] = useState<SavedYearlyReport | null>(
+  const [savedReport, setSavedReport] = useState<YearlyReport | null>(
     null
   );
   const [isViewingSaved, setIsViewingSaved] = useState(false);
@@ -293,7 +293,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
           // 保存到本地
           if (fullText.trim()) {
             const currentYear = new Date().getFullYear();
-            const saved = await YearlyReportStore.save(
+            const saved = await useYearlyReportStore.getState().saveReport(
               currentYear,
               name,
               fullText
@@ -347,7 +347,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
 
         // 先检查本地是否有已保存的报告
         const currentYear = new Date().getFullYear();
-        const existingReport = await YearlyReportStore.getByYear(currentYear);
+        const existingReport = useYearlyReportStore.getState().getReportByYear(currentYear);
 
         if (existingReport) {
           // 有已保存的报告，直接显示

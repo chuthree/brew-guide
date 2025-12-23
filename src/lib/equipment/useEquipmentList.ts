@@ -53,11 +53,11 @@ export function useEquipmentList<
 
     try {
       const { loadEquipmentOrder } = await import(
-        '@/lib/managers/customEquipments'
+        '@/lib/stores/settingsStore'
       );
       const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
 
-      const equipmentOrder = await loadEquipmentOrder();
+      const equipmentOrder = loadEquipmentOrder();
       const sortedEquipments = equipmentUtils.getAllEquipments(
         customEquipments,
         equipmentOrder
@@ -67,9 +67,9 @@ export function useEquipmentList<
       let filteredEquipments = sortedEquipments;
       if (settings) {
         const { filterHiddenEquipments } = await import(
-          '@/lib/managers/hiddenEquipments'
+          '@/lib/stores/settingsStore'
         );
-        filteredEquipments = filterHiddenEquipments(sortedEquipments, settings);
+        filteredEquipments = filterHiddenEquipments(sortedEquipments);
       }
 
       // 应用转换函数（如果提供）
@@ -102,11 +102,11 @@ export function useEquipmentList<
   const handleEquipmentOrderUpdate = useCallback(async () => {
     try {
       const { loadEquipmentOrder } = await import(
-        '@/lib/managers/customEquipments'
+        '@/lib/stores/settingsStore'
       );
       const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
 
-      const equipmentOrder = await loadEquipmentOrder();
+      const equipmentOrder = loadEquipmentOrder();
       const sortedEquipments = equipmentUtils.getAllEquipments(
         customEquipments,
         equipmentOrder
@@ -116,9 +116,9 @@ export function useEquipmentList<
       let filteredEquipments = sortedEquipments;
       if (settings) {
         const { filterHiddenEquipments } = await import(
-          '@/lib/managers/hiddenEquipments'
+          '@/lib/stores/settingsStore'
         );
-        filteredEquipments = filterHiddenEquipments(sortedEquipments, settings);
+        filteredEquipments = filterHiddenEquipments(sortedEquipments);
       }
 
       const finalEquipments = transformItems

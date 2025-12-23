@@ -2,7 +2,7 @@ import { type CustomEquipment, type Method } from '@/lib/core/config';
 import {
   saveCustomMethod,
   loadCustomMethodsForEquipment,
-} from '@/lib/managers/customMethods';
+} from '@/lib/stores/customMethodStore';
 import { db } from '@/lib/core/db';
 // @ts-expect-error - keshi类型声明问题，目前仍在使用其默认导出
 import Keshi from 'keshi';

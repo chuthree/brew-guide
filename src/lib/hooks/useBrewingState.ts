@@ -10,8 +10,8 @@ import {
   loadCustomMethods,
   saveCustomMethod as apiSaveCustomMethod,
   deleteCustomMethod as apiDeleteCustomMethod,
-} from '@/lib/managers/customMethods';
-import { loadCustomEquipments } from '@/lib/managers/customEquipments';
+} from '@/lib/stores/customMethodStore';
+import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { NavigationOptions, STEP_RULES } from '../brewing/constants';
 import { updateParameterInfo } from '../brewing/parameters';
 import { getStringState, saveStringState } from '@/lib/core/statePersistence';
@@ -361,14 +361,11 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
           if (match) {
             const coffeeAmount = parseFloat(match[1]);
             if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-              // 动态导入 CoffeeBeanManager
-              const { CoffeeBeanManager } = await import(
-                '@/lib/managers/coffeeBeanManager'
+              // 动态导入 updateBeanRemaining
+              const { updateBeanRemaining } = await import(
+                '@/lib/stores/coffeeBeanStore'
               );
-              await CoffeeBeanManager.updateBeanRemaining(
-                selectedCoffeeBean,
-                coffeeAmount
-              );
+              await updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
             }
           }
         }
@@ -474,7 +471,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
       if (!window.confirm(`确定要删除方案"${method.name}"吗？`)) return;
 
       try {
-        await apiDeleteCustomMethod(method, selectedEquipment, customMethods);
+        const methodId = method.id || method.name;
+        await apiDeleteCustomMethod(selectedEquipment!, methodId);
         const methods = await loadCustomMethods();
         setCustomMethods(methods);
 
@@ -486,7 +484,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         alert('删除方案失败，请重试');
       }
     },
-    [selectedEquipment, customMethods, selectedMethod]
+    [selectedEquipment, selectedMethod]
   );
 
   // 隐藏通用方案
@@ -502,24 +500,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         return;
 
       try {
-        const { hideCommonMethod } = await import(
-          '@/lib/managers/hiddenMethods'
-        );
-        const { Storage } = await import('@/lib/core/storage');
-        const { defaultSettings } = await import(
-          '@/components/settings/Settings'
-        );
-
-        // 读取当前设置
-        const settingsStr = await Storage.get('brewGuideSettings');
-        let currentSettings = defaultSettings;
-        if (settingsStr) {
-          currentSettings = JSON.parse(settingsStr);
-        }
+        const { useSettingsStore } = await import('@/lib/stores/settingsStore');
 
         // 隐藏方案
         const methodId = method.id || method.name;
-        await hideCommonMethod(selectedEquipment, methodId, currentSettings);
+        await useSettingsStore
+          .getState()
+          .hideMethod(selectedEquipment, methodId);
 
         // 显示提示
         const { showToast } = await import(

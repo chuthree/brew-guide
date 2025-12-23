@@ -78,7 +78,7 @@ export const getEquipmentName = async (
   try {
     // 加载自定义设备列表
     const customEquipmentsModule = await import(
-      '@/lib/managers/customEquipments'
+      '@/lib/stores/customEquipmentStore'
     );
     const customEquipments =
       await customEquipmentsModule.loadCustomEquipments();
@@ -98,7 +98,7 @@ export const normalizeEquipmentId = async (
   try {
     // 加载自定义器具列表
     const customEquipmentsModule = await import(
-      '@/lib/managers/customEquipments'
+      '@/lib/stores/customEquipmentStore'
     );
     const customEquipments =
       await customEquipmentsModule.loadCustomEquipments();

@@ -824,7 +824,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
       try {
         const { loadCustomEquipments } = await import(
-          '@/lib/managers/customEquipments'
+          '@/lib/stores/customEquipmentStore'
         );
         const customEquipments = await loadCustomEquipments();
         updateParameterInfo(

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ButtonGroup } from '@/components/ui/ButtonGroup';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 布局设置接口
 export interface LayoutSettings {
@@ -65,27 +66,13 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
       // 调用父组件提供的回调
       onFlowRateSettingChange(showFlowRate);
 
-      // 将更新保存到 Storage 以确保持久化
-      const updateSettings = async () => {
-        try {
-          // 动态导入 Storage
-          const { Storage } = await import('@/lib/core/storage');
-          // 先获取当前设置
-          const currentSettingsStr = await Storage.get('brewGuideSettings');
-          if (currentSettingsStr) {
-            const currentSettings = JSON.parse(currentSettingsStr);
-            // 更新 showFlowRate 设置
-            const newSettings = { ...currentSettings, showFlowRate };
-            // 保存回存储
-            await Storage.set('brewGuideSettings', JSON.stringify(newSettings));
-            // 流速设置已保存
-          }
-        } catch (error) {
+      // 使用 settingsStore 保存设置
+      useSettingsStore
+        .getState()
+        .updateSettings({ showFlowRate })
+        .catch(error => {
           console.error('保存流速设置失败', error);
-        }
-      };
-
-      updateSettings();
+        });
     },
     [onFlowRateSettingChange]
   );

@@ -6,7 +6,7 @@ import React, {
   useMemo,
 } from 'react';
 import { CustomEquipment } from '@/lib/core/config';
-import { isEquipmentNameAvailable } from '@/lib/managers/customEquipments';
+import { isEquipmentNameAvailable } from '@/lib/stores/customEquipmentStore';
 import DrawingCanvas, { DrawingCanvasRef } from '../../common/ui/DrawingCanvas';
 import AnimationEditor, {
   AnimationEditorRef,

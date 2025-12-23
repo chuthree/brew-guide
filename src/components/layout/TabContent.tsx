@@ -299,13 +299,10 @@ const TabContent: React.FC<TabContentProps> = ({
         if (coffeeMatch) {
           const coffeeAmount = parseFloat(coffeeMatch[0]);
           if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-            const { CoffeeBeanManager } = await import(
-              '@/lib/managers/coffeeBeanManager'
+            const { updateBeanRemaining } = await import(
+              '@/lib/stores/coffeeBeanStore'
             );
-            await CoffeeBeanManager.updateBeanRemaining(
-              selectedCoffeeBean,
-              coffeeAmount
-            );
+            await updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
           }
         }
       }
@@ -410,7 +407,7 @@ const TabContent: React.FC<TabContentProps> = ({
     try {
       // 使用动态导入，但只导入一次模块
       const customEquipmentsModule = await import(
-        '@/lib/managers/customEquipments'
+        '@/lib/stores/customEquipmentStore'
       );
       const customEquipments =
         await customEquipmentsModule.loadCustomEquipments();
@@ -602,7 +599,7 @@ const TabContent: React.FC<TabContentProps> = ({
     async (method: Method) => {
       try {
         const { copyMethodToClipboard } = await import(
-          '@/lib/managers/customMethods'
+          '@/lib/stores/customMethodStore'
         );
         await copyMethodToClipboard(method, getSelectedCustomEquipment());
         showToast({
@@ -626,7 +623,7 @@ const TabContent: React.FC<TabContentProps> = ({
       try {
         const methods = customMethods[equipment.id || equipment.name] || [];
         const { copyEquipmentToClipboard } = await import(
-          '@/lib/managers/customMethods'
+          '@/lib/stores/customMethodStore'
         );
         await copyEquipmentToClipboard(equipment, methods);
         showToast({

@@ -12,7 +12,9 @@ interface DataManagementSectionProps {
   onDataChange?: () => void;
 }
 
-export const DataManagementSection: React.FC<DataManagementSectionProps> = ({ onDataChange }) => {
+export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
+  onDataChange,
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{
     type: 'success' | 'error' | 'info' | null;
@@ -116,7 +118,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({ on
 
     try {
       const reader = new FileReader();
-      reader.onload = async (event) => {
+      reader.onload = async event => {
         try {
           const jsonString = event.target?.result as string;
 
@@ -141,33 +143,37 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({ on
               await Storage.set('brewingNotes', JSON.stringify([]));
               await db.brewingNotes.clear();
 
-              const { CoffeeBeanManager } = await import('@/lib/managers/coffeeBeanManager');
-              CoffeeBeanManager.clearCache();
+              const { getCoffeeBeanStore } = await import(
+                '@/lib/stores/coffeeBeanStore'
+              );
+              const store = getCoffeeBeanStore();
+              await store.refreshBeans();
 
-              CoffeeBeanManager.startBatchOperation();
               try {
                 for (const bean of importResult.data.coffeeBeans) {
                   const { id: _id, timestamp: _timestamp, ...beanData } = bean;
-                  await CoffeeBeanManager.addBean(beanData);
+                  await store.addBean(beanData);
                 }
-                CoffeeBeanManager.endBatchOperation();
               } catch (error) {
-                CoffeeBeanManager.endBatchOperation();
                 throw error;
               }
 
               if (importResult.data.brewingNotes.length > 0) {
-                await Storage.set('brewingNotes', JSON.stringify(importResult.data.brewingNotes));
+                await Storage.set(
+                  'brewingNotes',
+                  JSON.stringify(importResult.data.brewingNotes)
+                );
 
                 try {
-                  const { globalCache, calculateTotalCoffeeConsumption } = await import(
-                    '@/components/notes/List/globalCache'
-                  );
+                  const { globalCache, calculateTotalCoffeeConsumption } =
+                    await import('@/components/notes/List/globalCache');
                   type BrewingNote = import('@/lib/core/config').BrewingNote;
-                  globalCache.notes = importResult.data.brewingNotes as unknown as BrewingNote[];
-                  globalCache.totalConsumption = calculateTotalCoffeeConsumption(
-                    importResult.data.brewingNotes as unknown as BrewingNote[]
-                  );
+                  globalCache.notes = importResult.data
+                    .brewingNotes as unknown as BrewingNote[];
+                  globalCache.totalConsumption =
+                    calculateTotalCoffeeConsumption(
+                      importResult.data.brewingNotes as unknown as BrewingNote[]
+                    );
                 } catch (cacheError) {
                   console.error('更新笔记缓存失败:', cacheError);
                 }
@@ -193,7 +199,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({ on
                 window.dispatchEvent(new CustomEvent('globalCacheReset'));
                 import('@/components/notes/List/globalCache')
                   .then(({ initializeGlobalCache }) => initializeGlobalCache())
-                  .catch((err) => console.error('重新初始化笔记缓存失败:', err));
+                  .catch(err => console.error('重新初始化笔记缓存失败:', err));
               } catch (cacheError) {
                 console.error('重置笔记缓存事件失败:', cacheError);
               }

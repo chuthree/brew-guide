@@ -174,7 +174,9 @@ export function useMethodManagement({
         if (selectedEquipment) {
           // 新版API尝试加载
           try {
-            const methodsModule = await import('@/lib/managers/customMethods');
+            const methodsModule = await import(
+              '@/lib/stores/customMethodStore'
+            );
             const methods =
               await methodsModule.loadCustomMethodsForEquipment(
                 selectedEquipment
@@ -257,7 +259,9 @@ export function useMethodManagement({
       ) {
         try {
           if (selectedEquipment) {
-            const methodsModule = await import('@/lib/managers/customMethods');
+            const methodsModule = await import(
+              '@/lib/stores/customMethodStore'
+            );
             const methods =
               await methodsModule.loadCustomMethodsForEquipment(
                 selectedEquipment

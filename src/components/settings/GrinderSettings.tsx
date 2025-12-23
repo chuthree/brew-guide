@@ -93,7 +93,6 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
     if (!newGrinderName.trim() || !newGrindSize.trim()) return;
 
     storeAddGrinder({
-      id: `grinder_${Date.now()}`,
       name: newGrinderName.trim(),
       currentGrindSize: newGrindSize.trim(),
     });

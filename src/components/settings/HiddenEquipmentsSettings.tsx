@@ -9,8 +9,8 @@ import { SettingPage } from './atomic';
 import { equipmentList, CustomEquipment } from '@/lib/core/config';
 import {
   getHiddenEquipmentIds,
-  unhideEquipment,
-} from '@/lib/managers/hiddenEquipments';
+  useSettingsStore,
+} from '@/lib/stores/settingsStore';
 
 interface HiddenEquipmentsSettingsProps {
   onClose: () => void;
@@ -63,7 +63,7 @@ const HiddenEquipmentsSettings: React.FC<HiddenEquipmentsSettingsProps> = ({
       });
     });
     // 加载隐藏的器具
-    const hidden = getHiddenEquipmentIds(settings);
+    const hidden = getHiddenEquipmentIds();
     setHiddenEquipmentIds(hidden);
   }, [settings]);
 
@@ -88,11 +88,10 @@ const HiddenEquipmentsSettings: React.FC<HiddenEquipmentsSettingsProps> = ({
   // 恢复单个器具
   const handleUnhideEquipment = async (equipmentId: string) => {
     try {
-      const updatedSettings = await unhideEquipment(equipmentId, settings);
-      await onChange(updatedSettings);
+      await useSettingsStore.getState().unhideEquipment(equipmentId);
 
       // 更新本地状态
-      const hidden = getHiddenEquipmentIds(updatedSettings);
+      const hidden = getHiddenEquipmentIds();
       setHiddenEquipmentIds(hidden);
 
       if (settings.hapticFeedback) {

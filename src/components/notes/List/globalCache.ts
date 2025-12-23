@@ -181,7 +181,7 @@ export const initializeGlobalCache = async (): Promise<void> => {
         const map: Record<string, string> = {};
         const { equipmentList } = await import('@/lib/core/config');
         const { loadCustomEquipments } = await import(
-          '@/lib/managers/customEquipments'
+          '@/lib/stores/customEquipmentStore'
         );
         const customEquipments = await loadCustomEquipments();
 

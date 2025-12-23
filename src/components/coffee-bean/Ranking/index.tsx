@@ -138,16 +138,15 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
       let ratedBeansData: CoffeeBean[] = [];
       let unratedBeansData: CoffeeBean[] = [];
 
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
-      );
+      const { getRatedBeans, getRatedBeansByType, getCoffeeBeanStore } =
+        await import('@/lib/stores/coffeeBeanStore');
       if (beanType === 'all') {
-        ratedBeansData = await CoffeeBeanManager.getRatedBeans();
+        ratedBeansData = await getRatedBeans();
       } else {
-        ratedBeansData = await CoffeeBeanManager.getRatedBeansByType(beanType);
+        ratedBeansData = await getRatedBeansByType(beanType);
       }
 
-      const allBeans = await CoffeeBeanManager.getAllBeans();
+      const allBeans = getCoffeeBeanStore().beans;
       const ratedIds = new Set(ratedBeansData.map(bean => bean.id));
 
       unratedBeansData = allBeans.filter(bean => {

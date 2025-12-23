@@ -1,16 +1,18 @@
 /**
- * 磨豆机状态管理 - 使用 Zustand 实现跨组件实时同步
+ * 磨豆机状态管理 - 使用 Zustand + IndexedDB 实现
+ *
+ * 架构重构：
+ * - 数据存储从 localStorage (brewGuideSettings) 迁移到 IndexedDB (grinders 表)
+ * - 通过 Zustand 管理内存状态
  */
 
 import { create } from 'zustand';
-import { Storage } from '@/lib/core/storage';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { db, Grinder } from '@/lib/core/db';
+import { nanoid } from 'nanoid';
 
-// 磨豆机接口
-export interface Grinder {
-  id: string;
-  name: string;
-  currentGrindSize?: string;
-}
+// 重新导出 Grinder 类型
+export type { Grinder } from '@/lib/core/db';
 
 // 磨豆机状态接口
 interface GrinderState {
@@ -20,26 +22,28 @@ interface GrinderState {
   // 是否已初始化
   initialized: boolean;
 
+  // 加载状态
+  isLoading: boolean;
+
   // 当前编辑的同步状态（用于保存时判断是否同步刻度）
   currentSyncState: {
     grinderId: string | null;
     isSyncEnabled: boolean;
   };
 
-  // 设置磨豆机列表
-  setGrinders: (grinders: Grinder[]) => void;
+  // 初始化（从 IndexedDB 加载）
+  initialize: () => Promise<void>;
 
-  // 添加磨豆机
-  addGrinder: (grinder: Grinder) => void;
+  // CRUD 操作
+  addGrinder: (grinder: Omit<Grinder, 'id'>) => Promise<Grinder>;
+  updateGrinder: (id: string, updates: Partial<Grinder>) => Promise<void>;
+  deleteGrinder: (id: string) => Promise<void>;
 
-  // 更新磨豆机
-  updateGrinder: (id: string, updates: Partial<Grinder>) => void;
-
-  // 删除磨豆机
-  deleteGrinder: (id: string) => void;
+  // 批量操作
+  setGrinders: (grinders: Grinder[]) => Promise<void>;
 
   // 更新磨豆机刻度（通过名称匹配）
-  updateGrinderScaleByName: (name: string, scale: string) => void;
+  updateGrinderScaleByName: (name: string, scale: string) => Promise<void>;
 
   // 设置当前同步状态
   setSyncState: (grinderId: string | null, isSyncEnabled: boolean) => void;
@@ -47,11 +51,8 @@ interface GrinderState {
   // 重置同步状态
   resetSyncState: () => void;
 
-  // 初始化（从 storage 加载）
-  initialize: () => Promise<void>;
-
-  // 持久化到 storage
-  persist: () => Promise<void>;
+  // 刷新
+  refreshGrinders: () => Promise<void>;
 }
 
 /**
@@ -89,115 +90,185 @@ export function parseGrinderFromGrindSize(
 /**
  * 磨豆机 Store
  */
-export const useGrinderStore = create<GrinderState>((set, get) => ({
-  grinders: [],
-  initialized: false,
-  currentSyncState: {
-    grinderId: null,
-    isSyncEnabled: true,
-  },
+export const useGrinderStore = create<GrinderState>()(
+  subscribeWithSelector((set, get) => ({
+    grinders: [],
+    initialized: false,
+    isLoading: false,
+    currentSyncState: {
+      grinderId: null,
+      isSyncEnabled: true,
+    },
 
-  setGrinders: (grinders: Grinder[]) => {
-    set({ grinders });
-    get().persist();
-  },
+    initialize: async () => {
+      if (get().initialized || get().isLoading) return;
 
-  addGrinder: (grinder: Grinder) => {
-    set(state => ({
-      grinders: [...state.grinders, grinder],
-    }));
-    get().persist();
-  },
+      set({ isLoading: true });
 
-  updateGrinder: (id: string, updates: Partial<Grinder>) => {
-    set(state => ({
-      grinders: state.grinders.map(g =>
-        g.id === id ? { ...g, ...updates } : g
-      ),
-    }));
-    get().persist();
-  },
+      try {
+        // 从 IndexedDB 加载
+        let grinders = await db.grinders.toArray();
 
-  deleteGrinder: (id: string) => {
-    set(state => ({
-      grinders: state.grinders.filter(g => g.id !== id),
-    }));
-    get().persist();
-  },
-
-  updateGrinderScaleByName: (name: string, scale: string) => {
-    const { grinders } = get();
-    const grinder = grinders.find(
-      g => g.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (grinder) {
-      set(state => ({
-        grinders: state.grinders.map(g =>
-          g.id === grinder.id ? { ...g, currentGrindSize: scale } : g
-        ),
-      }));
-      get().persist();
-    }
-  },
-
-  setSyncState: (grinderId: string | null, isSyncEnabled: boolean) => {
-    set({
-      currentSyncState: { grinderId, isSyncEnabled },
-    });
-  },
-
-  resetSyncState: () => {
-    set({
-      currentSyncState: { grinderId: null, isSyncEnabled: true },
-    });
-  },
-
-  initialize: async () => {
-    if (get().initialized) return;
-
-    try {
-      const settingsStr = await Storage.get('brewGuideSettings');
-      if (settingsStr) {
-        let settings = JSON.parse(settingsStr);
-        
-        // 处理 Zustand persist 格式
-        if (settings?.state?.settings) {
-          settings = settings.state.settings;
+        // 如果 IndexedDB 为空，尝试从 localStorage 迁移
+        if (grinders.length === 0) {
+          grinders = await migrateGrindersFromLocalStorage();
+          if (grinders.length > 0) {
+            await db.grinders.bulkPut(grinders);
+            console.log(`已迁移 ${grinders.length} 个磨豆机到 IndexedDB`);
+          }
         }
-        
-        if (settings.grinders && Array.isArray(settings.grinders)) {
-          set({ grinders: settings.grinders, initialized: true });
-          return;
+
+        set({ grinders, initialized: true, isLoading: false });
+      } catch (error) {
+        console.error('加载磨豆机数据失败:', error);
+        set({ initialized: true, isLoading: false });
+      }
+    },
+
+    addGrinder: async grinderData => {
+      const newGrinder: Grinder = {
+        ...grinderData,
+        id: nanoid(),
+      };
+
+      try {
+        await db.grinders.put(newGrinder);
+        set(state => ({ grinders: [...state.grinders, newGrinder] }));
+
+        // 触发变化事件
+        dispatchGrinderChanged();
+
+        return newGrinder;
+      } catch (error) {
+        console.error('添加磨豆机失败:', error);
+        throw error;
+      }
+    },
+
+    updateGrinder: async (id, updates) => {
+      const { grinders } = get();
+      const existing = grinders.find(g => g.id === id);
+      if (!existing) return;
+
+      const updated = { ...existing, ...updates };
+
+      try {
+        await db.grinders.put(updated);
+        set(state => ({
+          grinders: state.grinders.map(g => (g.id === id ? updated : g)),
+        }));
+
+        // 触发变化事件
+        dispatchGrinderChanged();
+      } catch (error) {
+        console.error('更新磨豆机失败:', error);
+        throw error;
+      }
+    },
+
+    deleteGrinder: async id => {
+      try {
+        await db.grinders.delete(id);
+        set(state => ({
+          grinders: state.grinders.filter(g => g.id !== id),
+        }));
+
+        // 触发变化事件
+        dispatchGrinderChanged();
+      } catch (error) {
+        console.error('删除磨豆机失败:', error);
+        throw error;
+      }
+    },
+
+    setGrinders: async grinders => {
+      try {
+        // 清空并重新写入
+        await db.grinders.clear();
+        if (grinders.length > 0) {
+          await db.grinders.bulkPut(grinders);
         }
+        set({ grinders });
+
+        // 触发变化事件
+        dispatchGrinderChanged();
+      } catch (error) {
+        console.error('设置磨豆机列表失败:', error);
+        throw error;
       }
-    } catch (error) {
-      console.error('加载磨豆机数据失败:', error);
+    },
+
+    updateGrinderScaleByName: async (name, scale) => {
+      const { grinders } = get();
+      const grinder = grinders.find(
+        g => g.name.toLowerCase() === name.toLowerCase()
+      );
+
+      if (grinder) {
+        await get().updateGrinder(grinder.id, { currentGrindSize: scale });
+      }
+    },
+
+    setSyncState: (grinderId, isSyncEnabled) => {
+      set({
+        currentSyncState: { grinderId, isSyncEnabled },
+      });
+    },
+
+    resetSyncState: () => {
+      set({
+        currentSyncState: { grinderId: null, isSyncEnabled: true },
+      });
+    },
+
+    refreshGrinders: async () => {
+      set({ initialized: false });
+      await get().initialize();
+    },
+  }))
+);
+
+/**
+ * 从 localStorage 迁移磨豆机数据
+ */
+async function migrateGrindersFromLocalStorage(): Promise<Grinder[]> {
+  try {
+    if (typeof localStorage === 'undefined') return [];
+
+    const settingsStr = localStorage.getItem('brewGuideSettings');
+    if (!settingsStr) return [];
+
+    let settings = JSON.parse(settingsStr);
+
+    // 处理 Zustand persist 格式
+    if (settings?.state?.settings) {
+      settings = settings.state.settings;
     }
 
-    set({ initialized: true });
-  },
-
-  persist: async () => {
-    try {
-      const settingsStr = await Storage.get('brewGuideSettings');
-      let settings = settingsStr ? JSON.parse(settingsStr) : {};
-      
-      // 处理 Zustand persist 格式
-      if (settings?.state?.settings) {
-        settings.state.settings.grinders = get().grinders;
-      } else {
-        settings.grinders = get().grinders;
-      }
-      
-      await Storage.set('brewGuideSettings', JSON.stringify(settings));
-    } catch (error) {
-      console.error('保存磨豆机数据失败:', error);
+    if (settings.grinders && Array.isArray(settings.grinders)) {
+      return settings.grinders;
     }
-  },
-}));
 
-// 导出便捷函数
+    return [];
+  } catch (error) {
+    console.error('迁移磨豆机数据失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 触发磨豆机变化事件
+ */
+function dispatchGrinderChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('grinderDataChanged'));
+  }
+}
+
+/**
+ * 获取 Store 实例（非 React 环境使用）
+ */
+export const getGrinderStore = () => useGrinderStore.getState();
 
 /**
  * 同步磨豆机刻度
@@ -224,7 +295,7 @@ export async function syncGrinderScale(grindSize: string): Promise<boolean> {
   const parsed = parseGrinderFromGrindSize(grindSize, grinderNames);
 
   if (parsed) {
-    store.updateGrinderScaleByName(parsed.grinderName, parsed.scale);
+    await store.updateGrinderScaleByName(parsed.grinderName, parsed.scale);
     // 重置同步状态
     store.resetSyncState();
     return true;

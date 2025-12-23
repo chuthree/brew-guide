@@ -9,7 +9,7 @@ import {
 } from '@/lib/hooks/useModalHistory';
 import MethodImportModal from '@/components/method/import/MethodImportModal';
 import { Method, CustomEquipment } from '@/lib/core/config';
-import { loadCustomEquipments } from '@/lib/managers/customEquipments';
+import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { v4 as uuidv4 } from 'uuid';
 
 interface CustomMethodFormModalProps {

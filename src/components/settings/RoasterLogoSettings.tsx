@@ -7,7 +7,7 @@ import RoasterLogoManager, {
   RoasterConfig,
 } from '@/lib/managers/RoasterLogoManager';
 import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
-import { CoffeeBeanManager } from '@/lib/managers/coffeeBeanManager';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
@@ -79,8 +79,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
 
   const loadRoasters = async () => {
     try {
-      const beans =
-        (await CoffeeBeanManager.getAllBeans()) as ExtendedCoffeeBean[];
+      const beans = useCoffeeBeanStore.getState().beans as ExtendedCoffeeBean[];
       const uniqueRoasters = extractUniqueRoasters(beans);
       // 过滤掉"未知烘焙商"
       const filteredRoasters = uniqueRoasters.filter(r => r !== '未知烘焙商');

@@ -21,8 +21,8 @@ import {
   type Method,
   type CustomEquipment,
 } from '@/lib/core/config';
-import { loadCustomEquipments } from '@/lib/managers/customEquipments';
-import { loadCustomMethods } from '@/lib/managers/customMethods';
+import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
+import { loadCustomMethods } from '@/lib/stores/customMethodStore';
 import {
   getEquipmentNameById,
   getEquipmentIdByName,
@@ -504,9 +504,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 过滤隐藏的器具
         if (settings) {
           const { filterHiddenEquipments } = await import(
-            '@/lib/managers/hiddenEquipments'
+            '@/lib/stores/settingsStore'
           );
-          allEquipments = filterHiddenEquipments(allEquipments, settings);
+          allEquipments = filterHiddenEquipments(allEquipments);
         }
 
         setAvailableEquipments(allEquipments);
@@ -1025,9 +1025,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       !isCopy
     ) {
       try {
-        const { CapacitySyncManager, CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
+        const {
+          CapacitySyncManager,
+          updateBeanRemaining,
+          increaseBeanRemaining,
+        } = await import('@/lib/stores/coffeeBeanStore');
         const currentCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
           methodParams.coffee
         );
@@ -1044,18 +1046,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
           // 恢复原咖啡豆的剩余量（如果原来有关联的咖啡豆）
           if (originalBeanId && originalCoffeeAmount > 0) {
-            await CoffeeBeanManager.increaseBeanRemaining(
-              originalBeanId,
-              originalCoffeeAmount
-            );
+            await increaseBeanRemaining(originalBeanId, originalCoffeeAmount);
           }
 
           // 扣除新咖啡豆的剩余量（如果选择了新的咖啡豆）
           if (currentBeanId && currentCoffeeAmount > 0) {
-            await CoffeeBeanManager.updateBeanRemaining(
-              currentBeanId,
-              currentCoffeeAmount
-            );
+            await updateBeanRemaining(currentBeanId, currentCoffeeAmount);
           }
         } else if (originalBeanId) {
           // 咖啡豆没有变化，但可能咖啡用量发生了变化
@@ -1066,15 +1062,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
           if (Math.abs(amountDiff) > 0.01) {
             if (amountDiff > 0) {
-              await CoffeeBeanManager.updateBeanRemaining(
-                originalBeanId,
-                amountDiff
-              );
+              await updateBeanRemaining(originalBeanId, amountDiff);
             } else {
-              await CoffeeBeanManager.increaseBeanRemaining(
-                originalBeanId,
-                Math.abs(amountDiff)
-              );
+              await increaseBeanRemaining(originalBeanId, Math.abs(amountDiff));
             }
           }
         }

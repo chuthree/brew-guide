@@ -83,7 +83,8 @@ import {
   loadCustomEquipments,
   saveCustomEquipment,
   deleteCustomEquipment,
-} from '@/lib/managers/customEquipments';
+} from '@/lib/stores/customEquipmentStore';
+import { useDataLayer } from '@/providers/DataLayerProvider';
 import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipmentFormModal';
 import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal';
 import EquipmentManagementDrawer from '@/components/equipment/EquipmentManagementDrawer';
@@ -153,7 +154,13 @@ const AppLoader = ({
 }: {
   onInitialized: (params: { hasBeans: boolean }) => void;
 }) => {
+  // 等待 DataLayerProvider 完成初始化
+  const { isInitialized: isDataLayerReady } = useDataLayer();
+
   useEffect(() => {
+    // 必须等待数据层初始化完成
+    if (!isDataLayerReady) return;
+
     const loadInitialData = async () => {
       // 确保只在客户端执行
       if (typeof window === 'undefined') {
@@ -163,13 +170,17 @@ const AppLoader = ({
 
       try {
         // 动态导入所有需要的模块
-        const [{ Storage }, { CoffeeBeanManager }] = await Promise.all([
+        const [{ Storage }, { getCoffeeBeanStore }] = await Promise.all([
           import('@/lib/core/storage'),
-          import('@/lib/managers/coffeeBeanManager'),
+          import('@/lib/stores/coffeeBeanStore'),
         ]);
 
         // 检查咖啡豆状态
-        const beans = await CoffeeBeanManager.getAllBeans();
+        const store = getCoffeeBeanStore();
+        if (!store.initialized) {
+          await store.loadBeans();
+        }
+        const beans = store.beans;
         const hasBeans = beans.length > 0;
 
         // 初始化版本和storage
@@ -206,7 +217,7 @@ const AppLoader = ({
     };
 
     loadInitialData();
-  }, [onInitialized]);
+  }, [isDataLayerReady, onInitialized]);
 
   // 加载过程中不显示任何内容
   return null;
@@ -1541,13 +1552,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       let importCount = 0;
       let lastImportedBean: ExtendedCoffeeBean | null = null;
 
-      // 动态导入 CoffeeBeanManager
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
+      // 动态导入 coffeeBeanStore
+      const { getCoffeeBeanStore } = await import(
+        '@/lib/stores/coffeeBeanStore'
       );
-
-      // 开始批量操作，禁用单个添加时的事件触发
-      CoffeeBeanManager.startBatchOperation();
+      const store = getCoffeeBeanStore();
 
       try {
         for (const beanData of beansToImport) {
@@ -1685,13 +1694,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           // beanType字段保持可选，不强制设置默认值
 
           // 添加到数据库
-          const newBean = await CoffeeBeanManager.addBean(bean);
+          const newBean = await store.addBean(bean);
           lastImportedBean = newBean;
           importCount++;
         }
       } finally {
-        // 结束批量操作，触发更新事件
-        CoffeeBeanManager.endBatchOperation();
+        // 批量操作完成
       }
 
       if (importCount === 0) {
@@ -1740,10 +1748,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 完全重写checkCoffeeBeans函数，简化逻辑
   const checkCoffeeBeans = useCallback(async () => {
     try {
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
+      const { getCoffeeBeanStore } = await import(
+        '@/lib/stores/coffeeBeanStore'
       );
-      const beans = await CoffeeBeanManager.getAllBeans();
+      const beans = getCoffeeBeanStore().beans;
       const hasAnyBeans = beans.length > 0;
       const wasHasBeans = hasCoffeeBeans;
       setHasCoffeeBeans(hasAnyBeans);
@@ -1876,10 +1884,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => {
     try {
-      const { CoffeeBeanManager } = await import(
-        '@/lib/managers/coffeeBeanManager'
+      const { getCoffeeBeanStore } = await import(
+        '@/lib/stores/coffeeBeanStore'
       );
-      const currentBeans = await CoffeeBeanManager.getAllBeans();
+      const store = getCoffeeBeanStore();
+      const currentBeans = store.beans;
       const isFirstBean = !editingBean?.id && currentBeans.length === 0;
 
       // 检查是否是烘焙操作（从生豆转换为熟豆）
@@ -1887,9 +1896,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 调用 RoastingManager 完成烘焙转熟豆流程
         const { RoastingManager } = await import(
           '@/lib/managers/roastingManager'
-        );
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
         );
         const { showToast } = await import(
           '@/components/common/feedback/LightToast'
@@ -1910,8 +1916,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 如果用户没有填写价格，自动根据生豆价格计算
         let finalBean = { ...bean };
         if (!bean.price || bean.price.trim() === '') {
-          const greenBean =
-            await CoffeeBeanManager.getBeanById(roastingSourceBeanId);
+          const greenBean = store.getBeanById(roastingSourceBeanId);
           if (greenBean?.price && greenBean?.capacity) {
             const greenPrice = parseFloat(greenBean.price);
             const greenCapacity = parseFloat(greenBean.capacity);
@@ -1949,10 +1954,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setRoastingSourceBeanId(null);
       } else if (editingBean?.id) {
         // 普通编辑操作
-        await CoffeeBeanManager.updateBean(editingBean.id, bean);
+        await store.updateBean(editingBean.id, bean);
       } else {
         // 普通新增操作
-        await CoffeeBeanManager.addBean(bean);
+        await store.addBean(bean);
       }
 
       setShowBeanForm(false);
@@ -2080,7 +2085,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }
 
     try {
-      const methods = await import('@/lib/managers/customMethods').then(
+      const methods = await import('@/lib/stores/customMethodStore').then(
         ({ loadCustomMethods }) => {
           return loadCustomMethods();
         }
@@ -2221,10 +2226,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       if (!beanName) return;
 
       try {
-        const { CoffeeBeanManager } = await import(
-          '@/lib/managers/coffeeBeanManager'
-        );
-        const bean = await CoffeeBeanManager.getBeanByName(beanName);
+        const { getBeanByName } = await import('@/lib/stores/coffeeBeanStore');
+        const bean = await getBeanByName(beanName);
         if (bean) {
           handleCoffeeBeanSelect(bean.id, bean);
         }
@@ -2526,17 +2529,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 如果是复制操作，需要扣除咖啡豆剩余量
         if (isBrewingNoteCopy && note.beanId && note.params?.coffee) {
           try {
-            const { CoffeeBeanManager } = await import(
-              '@/lib/managers/coffeeBeanManager'
+            const { updateBeanRemaining } = await import(
+              '@/lib/stores/coffeeBeanStore'
             );
             const coffeeMatch = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
             if (coffeeMatch) {
               const coffeeAmount = parseFloat(coffeeMatch[0]);
               if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-                await CoffeeBeanManager.updateBeanRemaining(
-                  note.beanId,
-                  coffeeAmount
-                );
+                await updateBeanRemaining(note.beanId, coffeeAmount);
               }
             } else {
               console.warn('无法从参数中提取咖啡量:', note.params.coffee);
@@ -2633,7 +2633,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     try {
       const methods = customMethods[equipment.id || equipment.name] || [];
       const { copyEquipmentToClipboard } = await import(
-        '@/lib/managers/customMethods'
+        '@/lib/stores/customMethodStore'
       );
       await copyEquipmentToClipboard(equipment, methods);
       showToast({
@@ -2654,11 +2654,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handleReorderEquipments = async (newOrder: CustomEquipment[]) => {
     try {
       const { saveEquipmentOrder, loadEquipmentOrder } = await import(
-        '@/lib/managers/customEquipments'
+        '@/lib/stores/settingsStore'
       );
       const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
 
-      const currentOrder = await loadEquipmentOrder();
+      const currentOrder = loadEquipmentOrder();
       const allCurrentEquipments = equipmentUtils.getAllEquipments(
         customEquipments,
         currentOrder
@@ -2716,7 +2716,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   useEffect(() => {
     const loadMethods = async () => {
       try {
-        const methods = await import('@/lib/managers/customMethods').then(
+        const methods = await import('@/lib/stores/customMethodStore').then(
           ({ loadCustomMethods }) => {
             return loadCustomMethods();
           }
@@ -2777,12 +2777,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
           // 如果有ID，尝试获取完整的咖啡豆信息
           if (tempBeanInfo.id) {
-            const { CoffeeBeanManager } = await import(
-              '@/lib/managers/coffeeBeanManager'
+            const { getCoffeeBeanStore } = await import(
+              '@/lib/stores/coffeeBeanStore'
             );
-            const fullBean = await CoffeeBeanManager.getBeanById(
-              tempBeanInfo.id
-            );
+            const fullBean = getCoffeeBeanStore().getBeanById(tempBeanInfo.id);
 
             if (fullBean) {
               // 创建笔记并预选该咖啡豆
@@ -3385,10 +3383,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   initialBeanState={beanDetailAddBeanState}
                   onSaveNew={async newBean => {
                     try {
-                      const { CoffeeBeanManager } = await import(
-                        '@/lib/managers/coffeeBeanManager'
+                      const { getCoffeeBeanStore } = await import(
+                        '@/lib/stores/coffeeBeanStore'
                       );
-                      await CoffeeBeanManager.addBean(newBean);
+                      await getCoffeeBeanStore().addBean(newBean);
                       handleBeanListChange();
                       setBeanDetailAddMode(false);
                     } catch (error) {
@@ -3402,10 +3400,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   onDelete={async bean => {
                     setBeanDetailOpen(false);
                     try {
-                      const { CoffeeBeanManager } = await import(
-                        '@/lib/managers/coffeeBeanManager'
+                      const { getCoffeeBeanStore } = await import(
+                        '@/lib/stores/coffeeBeanStore'
                       );
-                      await CoffeeBeanManager.deleteBean(bean.id);
+                      await getCoffeeBeanStore().deleteBean(bean.id);
                       handleBeanListChange();
                     } catch (error) {
                       console.error('删除咖啡豆失败:', error);
@@ -3588,12 +3586,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                               !isNaN(changeAmount) &&
                               changeAmount !== 0
                             ) {
-                              const { CoffeeBeanManager } = await import(
-                                '@/lib/managers/coffeeBeanManager'
+                              const { getCoffeeBeanStore } = await import(
+                                '@/lib/stores/coffeeBeanStore'
                               );
-
-                              const currentBean =
-                                await CoffeeBeanManager.getBeanById(beanId);
+                              const store = getCoffeeBeanStore();
+                              const currentBean = store.getBeanById(beanId);
                               if (currentBean) {
                                 const currentRemaining = parseFloat(
                                   currentBean.remaining || '0'
@@ -3620,11 +3617,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                                   }
                                 }
 
-                                const formattedRemaining =
-                                  CoffeeBeanManager.formatNumber(
-                                    finalRemaining
-                                  );
-                                await CoffeeBeanManager.updateBean(beanId, {
+                                const formattedRemaining = Number.isInteger(
+                                  finalRemaining
+                                )
+                                  ? finalRemaining.toString()
+                                  : finalRemaining.toFixed(1);
+                                await store.updateBean(beanId, {
                                   remaining: formattedRemaining,
                                 });
                               }
@@ -3640,13 +3638,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                           const beanId = getNoteAssociatedBeanId(noteToDelete);
 
                           if (beanId && coffeeAmount > 0) {
-                            const { CoffeeBeanManager } = await import(
-                              '@/lib/managers/coffeeBeanManager'
+                            const { increaseBeanRemaining } = await import(
+                              '@/lib/stores/coffeeBeanStore'
                             );
-                            await CoffeeBeanManager.increaseBeanRemaining(
-                              beanId,
-                              coffeeAmount
-                            );
+                            await increaseBeanRemaining(beanId, coffeeAmount);
                           }
                         }
                       } catch (error) {
@@ -4133,10 +4128,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           initialBeanState={beanDetailAddBeanState}
           onSaveNew={async newBean => {
             try {
-              const { CoffeeBeanManager } = await import(
-                '@/lib/managers/coffeeBeanManager'
+              const { getCoffeeBeanStore } = await import(
+                '@/lib/stores/coffeeBeanStore'
               );
-              await CoffeeBeanManager.addBean(newBean);
+              await getCoffeeBeanStore().addBean(newBean);
               handleBeanListChange();
               setBeanDetailAddMode(false);
             } catch (error) {
@@ -4151,10 +4146,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onDelete={async bean => {
             setBeanDetailOpen(false);
             try {
-              const { CoffeeBeanManager } = await import(
-                '@/lib/managers/coffeeBeanManager'
+              const { getCoffeeBeanStore } = await import(
+                '@/lib/stores/coffeeBeanStore'
               );
-              await CoffeeBeanManager.deleteBean(bean.id);
+              await getCoffeeBeanStore().deleteBean(bean.id);
               handleBeanListChange();
             } catch (error) {
               console.error('删除咖啡豆失败:', error);
@@ -4372,13 +4367,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                       !isNaN(changeAmount) &&
                       changeAmount !== 0
                     ) {
-                      const { CoffeeBeanManager } = await import(
-                        '@/lib/managers/coffeeBeanManager'
+                      const { getCoffeeBeanStore } = await import(
+                        '@/lib/stores/coffeeBeanStore'
                       );
+                      const store = getCoffeeBeanStore();
 
                       // 获取当前咖啡豆信息
-                      const currentBean =
-                        await CoffeeBeanManager.getBeanById(beanId);
+                      const currentBean = store.getBeanById(beanId);
                       if (currentBean) {
                         const currentRemaining = parseFloat(
                           currentBean.remaining || '0'
@@ -4400,9 +4395,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                           }
                         }
 
-                        const formattedRemaining =
-                          CoffeeBeanManager.formatNumber(finalRemaining);
-                        await CoffeeBeanManager.updateBean(beanId, {
+                        const formattedRemaining = Number.isInteger(
+                          finalRemaining
+                        )
+                          ? finalRemaining.toString()
+                          : finalRemaining.toFixed(1);
+                        await store.updateBean(beanId, {
                           remaining: formattedRemaining,
                         });
                       }
@@ -4425,13 +4423,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   const beanId = getNoteAssociatedBeanId(noteToDelete);
 
                   if (beanId && coffeeAmount > 0) {
-                    const { CoffeeBeanManager } = await import(
-                      '@/lib/managers/coffeeBeanManager'
+                    const { increaseBeanRemaining } = await import(
+                      '@/lib/stores/coffeeBeanStore'
                     );
-                    await CoffeeBeanManager.increaseBeanRemaining(
-                      beanId,
-                      coffeeAmount
-                    );
+                    await increaseBeanRemaining(beanId, coffeeAmount);
                   }
                 }
               } catch (error) {
