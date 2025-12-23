@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Upload, X, ImagePlus } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
-import RoasterLogoManager, {
-  RoasterConfig,
-} from '@/lib/managers/RoasterLogoManager';
+import {
+  getRoasterConfigsSync,
+  getSettingsStore,
+} from '@/lib/stores/settingsStore';
+import { RoasterConfig } from '@/lib/core/db';
 import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
@@ -69,15 +71,8 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     }
   }, [isOpen]);
 
-  // 加载烘焙商列表和配置
-  useEffect(() => {
-    if (isOpen) {
-      loadRoasters();
-      loadConfigs();
-    }
-  }, [isOpen]);
-
-  const loadRoasters = async () => {
+  // 加载烘焙商列表
+  const loadRoasters = useCallback(() => {
     try {
       const beans = useCoffeeBeanStore.getState().beans as ExtendedCoffeeBean[];
       const uniqueRoasters = extractUniqueRoasters(beans);
@@ -87,11 +82,12 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     } catch (error) {
       console.error('Failed to load roasters:', error);
     }
-  };
+  }, []);
 
-  const loadConfigs = async () => {
+  // 加载烘焙商配置
+  const loadConfigs = useCallback(() => {
     try {
-      const allConfigs = await RoasterLogoManager.getAllConfigs();
+      const allConfigs = getRoasterConfigsSync();
       const configMap = new Map<string, RoasterConfig>();
       allConfigs.forEach(config => {
         configMap.set(config.roasterName, config);
@@ -100,10 +96,28 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     } catch (error) {
       console.error('Failed to load configs:', error);
     }
-  };
+  }, []);
+
+  // 加载烘焙商列表和配置
+  useEffect(() => {
+    if (isOpen) {
+      loadRoasters();
+      loadConfigs();
+    }
+  }, [isOpen, loadRoasters, loadConfigs]);
 
   const handleClose = () => {
     modalHistory.back();
+  };
+
+  // 将文件转换为 base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleFileSelect = async (roasterName: string, file: File) => {
@@ -124,18 +138,14 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     setUploading(roasterName);
 
     try {
-      const success = await RoasterLogoManager.uploadLogo(roasterName, file);
-      if (success) {
-        // 重新加载配置
-        await loadConfigs();
-        if (hapticFeedback) {
-          hapticsUtils.success();
-        }
-      } else {
-        alert('添加失败，请重试');
-        if (hapticFeedback) {
-          hapticsUtils.error();
-        }
+      const base64 = await fileToBase64(file);
+      await getSettingsStore().updateRoasterConfig(roasterName, {
+        logoData: base64,
+      });
+      // 重新加载配置
+      loadConfigs();
+      if (hapticFeedback) {
+        hapticsUtils.success();
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -155,12 +165,18 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     }
 
     try {
-      const success = await RoasterLogoManager.deleteLogo(roasterName);
-      if (success) {
-        await loadConfigs();
-        if (hapticFeedback) {
-          hapticsUtils.success();
-        }
+      // 获取当前配置，只删除 logoData，保留其他配置
+      const currentConfig = roasterConfigs.get(roasterName);
+      if (currentConfig) {
+        await getSettingsStore().updateRoasterConfig(roasterName, {
+          logoData: undefined,
+          flavorPeriod: currentConfig.flavorPeriod,
+          detailedFlavorPeriod: currentConfig.detailedFlavorPeriod,
+        });
+      }
+      loadConfigs();
+      if (hapticFeedback) {
+        hapticsUtils.success();
       }
     } catch (error) {
       console.error('Delete error:', error);

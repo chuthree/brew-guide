@@ -36,7 +36,7 @@ import {
   useIsLargeScreen,
 } from '@/lib/navigation/pageTransition';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
+import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 import {
   DEFAULT_ORIGINS,
@@ -69,22 +69,18 @@ const BeanImageSmall: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
   const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadRoasterLogo = async () => {
-      if (!bean.name || bean.image) {
-        setRoasterLogo(null);
-        return;
-      }
+    if (!bean.name || bean.image) {
+      setRoasterLogo(null);
+      return;
+    }
 
-      const roasterName = extractRoasterFromName(bean.name);
-      if (roasterName && roasterName !== '未知烘焙商') {
-        const logo = await RoasterLogoManager.getLogoByRoaster(roasterName);
-        setRoasterLogo(logo);
-      } else {
-        setRoasterLogo(null);
-      }
-    };
-
-    loadRoasterLogo();
+    const roasterName = extractRoasterFromName(bean.name);
+    if (roasterName && roasterName !== '未知烘焙商') {
+      const logo = getRoasterLogoSync(roasterName);
+      setRoasterLogo(logo || null);
+    } else {
+      setRoasterLogo(null);
+    }
   }, [bean.name, bean.image]);
 
   return (
@@ -1119,23 +1115,19 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 加载烘焙商logo
   useEffect(() => {
-    const loadRoasterLogo = async () => {
-      if (!bean?.name || bean?.image) {
-        // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
-        setRoasterLogo(null);
-        return;
-      }
+    if (!bean?.name || bean?.image) {
+      // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
+      setRoasterLogo(null);
+      return;
+    }
 
-      const roasterName = extractRoasterFromName(bean.name);
-      if (roasterName && roasterName !== '未知烘焙商') {
-        const logo = await RoasterLogoManager.getLogoByRoaster(roasterName);
-        setRoasterLogo(logo);
-      } else {
-        setRoasterLogo(null);
-      }
-    };
-
-    loadRoasterLogo();
+    const roasterName = extractRoasterFromName(bean.name);
+    if (roasterName && roasterName !== '未知烘焙商') {
+      const logo = getRoasterLogoSync(roasterName);
+      setRoasterLogo(logo || null);
+    } else {
+      setRoasterLogo(null);
+    }
   }, [bean?.name, bean?.image]);
 
   // 获取相关的冲煮记录

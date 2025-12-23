@@ -368,14 +368,8 @@ export async function downloadAllData(): Promise<SyncResult> {
       );
       getCoffeeBeanStore().setBeans(beans);
       downloaded += beans.length;
-    } else {
-      // 云端没有数据，清空本地
-      await db.coffeeBeans.clear();
-      const { getCoffeeBeanStore } = await import(
-        '@/lib/stores/coffeeBeanStore'
-      );
-      getCoffeeBeanStore().setBeans([]);
     }
+    // 云端没有数据时保持本地不变
 
     // 处理冲煮笔记
     if (!notesResult.success) {
@@ -390,13 +384,8 @@ export async function downloadAllData(): Promise<SyncResult> {
       );
       getBrewingNoteStore().setNotes(notes);
       downloaded += notes.length;
-    } else {
-      await db.brewingNotes.clear();
-      const { getBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
-      getBrewingNoteStore().setNotes([]);
     }
+    // 云端没有数据时保持本地不变
 
     // 处理自定义器具
     if (!equipmentsResult.success) {
@@ -407,9 +396,8 @@ export async function downloadAllData(): Promise<SyncResult> {
       await db.customEquipments.clear();
       await db.customEquipments.bulkPut(equipments);
       downloaded += equipments.length;
-    } else {
-      await db.customEquipments.clear();
     }
+    // 云端没有数据时保持本地不变
 
     // 处理自定义方案
     if (!methodsResult.success) {
@@ -420,9 +408,8 @@ export async function downloadAllData(): Promise<SyncResult> {
       await db.customMethods.clear();
       await db.customMethods.bulkPut(methods);
       downloaded += methods.length;
-    } else {
-      await db.customMethods.clear();
     }
+    // 云端没有数据时保持本地不变
 
     // 处理设置（使用共享函数）
     const settingsResult = await downloadSettingsData(supabaseClient);

@@ -11,7 +11,7 @@ import { Virtuoso } from 'react-virtuoso';
 import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
-import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
+import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 import {
   getFlavorInfo,
@@ -27,20 +27,16 @@ const BeanImage: React.FC<{
   const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadRoasterLogo = async () => {
-      if (!bean.name || bean.image) {
-        // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
-        return;
-      }
+    if (!bean.name || bean.image) {
+      // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
+      return;
+    }
 
-      const roasterName = extractRoasterFromName(bean.name);
-      if (roasterName && roasterName !== '未知烘焙商') {
-        const logo = await RoasterLogoManager.getLogoByRoaster(roasterName);
-        setRoasterLogo(logo);
-      }
-    };
-
-    loadRoasterLogo();
+    const roasterName = extractRoasterFromName(bean.name);
+    if (roasterName && roasterName !== '未知烘焙商') {
+      const logo = getRoasterLogoSync(roasterName);
+      setRoasterLogo(logo || null);
+    }
   }, [bean.name, bean.image]);
 
   return (

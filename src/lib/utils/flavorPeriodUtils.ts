@@ -4,7 +4,7 @@ import {
   type SettingsOptions,
 } from '@/components/settings/Settings';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
-import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
+import { getRoasterConfigSync } from '@/lib/stores/settingsStore';
 
 // 赏味期信息接口
 export interface FlavorInfo {
@@ -175,8 +175,7 @@ export const getDefaultFlavorPeriodByRoastLevel = async (
 
   // 如果提供了有效的烘焙商名称，尝试获取烘焙商特定的配置
   if (roasterName && roasterName !== '未知烘焙商') {
-    const roasterConfig =
-      await RoasterLogoManager.getConfigByRoaster(roasterName);
+    const roasterConfig = getRoasterConfigSync(roasterName);
 
     // 详细模式下的处理
     if (detailedEnabled) {
@@ -350,8 +349,7 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
 
   // 如果提供了有效的烘焙商名称，尝试获取烘焙商特定的配置
   if (roasterName && roasterName !== '未知烘焙商') {
-    const roasterConfig =
-      RoasterLogoManager.getConfigByRoasterSync(roasterName);
+    const roasterConfig = getRoasterConfigSync(roasterName);
 
     // 详细模式下的处理
     if (effectiveDetailedEnabled) {

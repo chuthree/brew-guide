@@ -28,10 +28,13 @@ import {
   getEquipmentIdByName,
 } from '@/lib/utils/equipmentUtils';
 import { SettingsOptions } from '@/components/settings/Settings';
+import { FlavorDimension, DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/core/db';
 import {
-  CustomFlavorDimensionsManager,
-  FlavorDimension,
-} from '@/lib/managers/customFlavorDimensions';
+  getFlavorDimensionsSync,
+  getHistoricalLabelsSync,
+  createEmptyTasteRatings,
+  migrateTasteRatings,
+} from '@/lib/stores/settingsStore';
 import {
   Select,
   SelectTrigger,
@@ -386,12 +389,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   );
 
   // 创建显示维度（包含历史维度）
-  const createDisplayDimensions = async (
+  const createDisplayDimensions = (
     currentDimensions: FlavorDimension[],
     tasteData: Record<string, number>
   ) => {
-    const historicalLabels =
-      await CustomFlavorDimensionsManager.getHistoricalLabels();
+    const historicalLabels = getHistoricalLabelsSync();
     const displayDims = [...currentDimensions];
 
     // 检查笔记中是否有当前维度列表中不存在的风味评分
@@ -415,29 +417,26 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
   // 加载评分维度数据
   useEffect(() => {
-    const loadFlavorDimensions = async () => {
+    const loadFlavorDimensions = () => {
       try {
-        const dimensions =
-          await CustomFlavorDimensionsManager.getFlavorDimensions();
+        const dimensions = getFlavorDimensionsSync();
         setFlavorDimensions(dimensions);
 
         // 如果是新笔记或者现有笔记缺少风味数据，初始化风味评分
         if (!initialData.taste || Object.keys(initialData.taste).length === 0) {
-          const emptyTaste =
-            CustomFlavorDimensionsManager.createEmptyTasteRatings(dimensions);
+          const emptyTaste = createEmptyTasteRatings(dimensions);
           setFormData(prev => ({ ...prev, taste: emptyTaste }));
           setDisplayDimensions(dimensions);
         } else {
           // 迁移现有的风味评分数据以确保兼容性
-          const migratedTaste =
-            CustomFlavorDimensionsManager.migrateTasteRatings(
-              initialData.taste,
-              dimensions
-            );
+          const migratedTaste = migrateTasteRatings(
+            initialData.taste,
+            dimensions
+          );
           setFormData(prev => ({ ...prev, taste: migratedTaste }));
 
           // 创建包含历史维度的显示维度列表
-          const displayDims = await createDisplayDimensions(
+          const displayDims = createDisplayDimensions(
             dimensions,
             initialData.taste
           );
@@ -453,26 +452,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
   // 监听评分维度变化
   useEffect(() => {
-    const handleFlavorDimensionsChange = async (event: Event) => {
+    const handleFlavorDimensionsChange = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { dimensions } = customEvent.detail;
       setFlavorDimensions(dimensions);
 
       // 更新表单数据以匹配新的维度
       setFormData(prev => {
-        const migratedTaste = CustomFlavorDimensionsManager.migrateTasteRatings(
-          prev.taste,
-          dimensions
-        );
+        const migratedTaste = migrateTasteRatings(prev.taste, dimensions);
         return { ...prev, taste: migratedTaste };
       });
 
       // 重新创建显示维度列表
       const currentTaste = formData.taste;
-      const displayDims = await createDisplayDimensions(
-        dimensions,
-        currentTaste
-      );
+      const displayDims = createDisplayDimensions(dimensions, currentTaste);
       setDisplayDimensions(displayDims);
     };
 
@@ -745,10 +738,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         image: typeof current.image === 'string' ? current.image : prev.image,
         rating: current.rating ?? prev.rating,
         taste: current.taste
-          ? CustomFlavorDimensionsManager.migrateTasteRatings(
-              current.taste,
-              flavorDimensions
-            )
+          ? migrateTasteRatings(current.taste, flavorDimensions)
           : prev.taste,
         notes: current.notes || prev.notes,
       }));

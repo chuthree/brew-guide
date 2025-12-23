@@ -37,7 +37,26 @@ export {
   // 器具排序工具函数
   loadEquipmentOrder,
   saveEquipmentOrder,
+  // 烘焙商配置工具函数
+  getRoasterConfigsSync,
+  getRoasterConfigSync,
+  getRoasterLogoSync,
+  // 风味维度工具函数
+  getFlavorDimensionsSync,
+  getHistoricalLabelsSync,
+  createEmptyTasteRatings,
+  migrateTasteRatings,
 } from './settingsStore';
+
+// 类型重导出（从 db.ts）
+export type {
+  AppSettings,
+  FlavorDimension,
+  RoasterConfig,
+  RoasterFlavorPeriodSimple,
+  RoasterFlavorPeriodDetailed,
+} from '@/lib/core/db';
+export { DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/core/db';
 
 // 器具相关 Store
 export {
@@ -79,6 +98,3 @@ export type { YearlyReport } from './yearlyReportStore';
 
 // 同步状态 Store
 export { useSyncStatusStore } from './syncStatusStore';
-
-// 类型重新导出
-export type { AppSettings } from '@/lib/core/db';

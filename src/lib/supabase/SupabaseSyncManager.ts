@@ -281,12 +281,8 @@ export class SupabaseSyncManager implements ISyncManager {
         .getCoffeeBeanStore()
         .setBeans(beansResult.data);
       count += beansResult.data.length;
-    } else {
-      await db.coffeeBeans.clear();
-      (await import('@/lib/stores/coffeeBeanStore'))
-        .getCoffeeBeanStore()
-        .setBeans([]);
     }
+    // 云端没有数据时保持本地不变
 
     onProgress?.({
       phase: 'downloading',
@@ -302,12 +298,8 @@ export class SupabaseSyncManager implements ISyncManager {
         .getBrewingNoteStore()
         .setNotes(notesResult.data);
       count += notesResult.data.length;
-    } else {
-      await db.brewingNotes.clear();
-      (await import('@/lib/stores/brewingNoteStore'))
-        .getBrewingNoteStore()
-        .setNotes([]);
     }
+    // 云端没有数据时保持本地不变
 
     onProgress?.({
       phase: 'downloading',
@@ -320,9 +312,8 @@ export class SupabaseSyncManager implements ISyncManager {
       await db.customEquipments.clear();
       await db.customEquipments.bulkPut(equipmentsResult.data);
       count += equipmentsResult.data.length;
-    } else {
-      await db.customEquipments.clear();
     }
+    // 云端没有数据时保持本地不变
 
     onProgress?.({
       phase: 'downloading',
@@ -335,9 +326,8 @@ export class SupabaseSyncManager implements ISyncManager {
       await db.customMethods.clear();
       await db.customMethods.bulkPut(methodsResult.data);
       count += methodsResult.data.length;
-    } else {
-      await db.customMethods.clear();
     }
+    // 云端没有数据时保持本地不变
 
     onProgress?.({
       phase: 'downloading',

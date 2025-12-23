@@ -7,8 +7,11 @@ import { CoffeeBean as _CoffeeBean, BlendComponent } from '@/types/app';
 import { APP_VERSION } from '@/lib/core/config';
 import { SettingsOptions as _SettingsOptions } from '@/components/settings/Settings';
 import { LayoutSettings as _LayoutSettings } from '@/components/brewing/Timer/Settings';
-import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
-import { db } from '@/lib/core/db';
+import { db, RoasterConfig } from '@/lib/core/db';
+import {
+  getRoasterConfigsSync,
+  getSettingsStore,
+} from '@/lib/stores/settingsStore';
 
 // 检查是否在浏览器环境中
 const isBrowser = typeof window !== 'undefined';
@@ -39,18 +42,19 @@ interface ImportData {
 
 /**
  * 应用数据键名列表
+ * 注意：这些键名用于导入/导出兼容性
+ * - 新数据存储在 IndexedDB (appSettings, coffeeBeans, brewingNotes, customEquipments 等表)
+ * - 这里的键名主要用于处理旧版本数据导入和 Storage 层面的操作
  */
 export const APP_DATA_KEYS = [
   'customMethods', // 自定义冲煮方案
   'brewingNotes', // 冲煮记录
-  'brewGuideSettings', // 应用设置
+  'brewGuideSettings', // 应用设置（包含 flavorDimensions, roasterConfigs 等）
   'brewingNotesVersion', // 数据版本
   'coffeeBeans', // 咖啡豆数据
   'customEquipments', // 自定义器具
-  'equipmentOrder', // 器具排序信息
+  'equipmentOrder', // 器具排序信息（已迁移到 brewGuideSettings）
   'onboardingCompleted', // 引导完成标记
-  'customFlavorDimensions', // 自定义评分维度
-  'flavorDimensionHistoricalLabels', // 评分维度历史标签
   'backupReminderSettings', // 备份提醒设置
   'yearlyReports', // 年度报告
   'yearlyReviewReminderSettings', // 年度回顾提醒设置
@@ -221,14 +225,15 @@ export const DataManager = {
         // 错误处理：即使自定义预设导出失败，也继续导出其他数据
       }
 
-      // 导出烘焙商图标
+      // 注意：roasterConfigs 已包含在 brewGuideSettings 中，无需单独导出
+      // 为了向后兼容，仍然单独导出一份（使用新的 key 名称）
       try {
-        const roasterLogos = await RoasterLogoManager.getAllLogos();
-        if (roasterLogos.length > 0) {
-          exportData.data['roaster-logos'] = roasterLogos;
+        const roasterConfigs = getRoasterConfigsSync();
+        if (roasterConfigs.length > 0) {
+          exportData.data['roasterConfigs'] = roasterConfigs;
         }
       } catch (error) {
-        console.error('导出烘焙商图标失败:', error);
+        console.error('导出烘焙商配置失败:', error);
       }
 
       return JSON.stringify(exportData, null, 2);
@@ -362,14 +367,21 @@ export const DataManager = {
         }
       }
 
-      // 导入烘焙商图标
-      if (
-        importData.data['roaster-logos'] &&
-        Array.isArray(importData.data['roaster-logos'])
-      ) {
-        await RoasterLogoManager.importLogos(
-          JSON.stringify(importData.data['roaster-logos'])
-        );
+      // 导入烘焙商配置（兼容旧版 'roaster-logos' 和新版 'roasterConfigs'）
+      const importedRoasterConfigs =
+        importData.data['roasterConfigs'] || importData.data['roaster-logos'];
+      if (importedRoasterConfigs && Array.isArray(importedRoasterConfigs)) {
+        const roasterConfigs = importedRoasterConfigs as RoasterConfig[];
+        const store = getSettingsStore();
+        for (const config of roasterConfigs) {
+          if (config.roasterName) {
+            await store.updateRoasterConfig(config.roasterName, {
+              logoData: config.logoData,
+              flavorPeriod: config.flavorPeriod,
+              detailedFlavorPeriod: config.detailedFlavorPeriod,
+            });
+          }
+        }
       }
 
       // 刷新咖啡豆缓存，确保导入的数据能立即生效
@@ -447,85 +459,110 @@ export const DataManager = {
   },
 
   /**
-   * 重置数据
-   * @param completeReset 是否完全重置（包括所有设置和缓存）
+   * 重置所有数据（完全重置）
+   * 清除所有用户数据、设置和缓存，恢复到初始状态
    * @returns 重置结果
    */
-  async resetAllData(
-    completeReset = false
-  ): Promise<{ success: boolean; message: string }> {
+  async resetAllData(): Promise<{ success: boolean; message: string }> {
     try {
-      // 清除列表中的数据
       const storage = await getStorage();
 
-      // 清理Storage和IndexedDB数据
-      const indexedDBCleanupMap = {
-        brewingNotes: () => db.brewingNotes.clear(),
-        coffeeBeans: () => db.coffeeBeans.clear(),
-        customEquipments: () => db.customEquipments.clear(),
-      } as const;
+      // 清除所有 IndexedDB 数据
+      await db.brewingNotes.clear();
+      await db.coffeeBeans.clear();
+      await db.customEquipments.clear();
+      await db.customMethods.clear();
+      await db.grinders.clear();
+      await db.yearlyReports.clear();
+      await db.appSettings.clear();
+      await db.settings.clear();
 
+      // 清除 Storage 中的所有应用数据
       for (const key of APP_DATA_KEYS) {
         await storage.remove(key);
+      }
 
-        // 清理对应的IndexedDB表
-        if (key in indexedDBCleanupMap) {
-          await indexedDBCleanupMap[key as keyof typeof indexedDBCleanupMap]();
+      // 清除所有自定义方案
+      const allKeys = await storage.keys();
+      const methodKeys = allKeys.filter((key: string) =>
+        key.startsWith('customMethods_')
+      );
+      for (const key of methodKeys) {
+        await storage.remove(key);
+      }
+
+      // 清除浏览器端数据
+      if (isBrowser) {
+        // 清除所有自定义预设
+        for (const key of CUSTOM_PRESETS_KEYS) {
+          localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
+        }
+
+        // 清除所有状态持久化数据（brew-guide: 前缀的键）
+        const localStorageKeys = Object.keys(localStorage);
+        const stateKeys = localStorageKeys.filter(key =>
+          key.startsWith('brew-guide:')
+        );
+        for (const key of stateKeys) {
+          localStorage.removeItem(key);
+        }
+
+        // 清除冲煮相关的临时状态
+        const brewingStateKeys = [
+          'brewingNoteInProgress',
+          'dataMigrationSkippedThisSession',
+        ];
+        for (const key of brewingStateKeys) {
+          localStorage.removeItem(key);
+        }
+
+        // 清除 sessionStorage
+        try {
+          sessionStorage.clear();
+        } catch (error) {
+          console.warn('清除sessionStorage失败:', error);
         }
       }
 
-      // 如果是完全重置，还需要清除其他数据
-      if (completeReset) {
-        // 获取所有存储键
-        const allKeys = await storage.keys();
-
-        // 清除所有自定义方案
-        const methodKeys = allKeys.filter((key: string) =>
-          key.startsWith('customMethods_')
+      // 重新初始化 Store 状态
+      try {
+        // 写入默认设置到 IndexedDB 并重新加载
+        const { getSettingsStore, defaultSettings } = await import(
+          '@/lib/stores/settingsStore'
         );
-        for (const key of methodKeys) {
-          await storage.remove(key);
-        }
+        await db.appSettings.put({ id: 'main', data: defaultSettings });
+        await getSettingsStore().loadSettings();
 
-        // 同时清除IndexedDB数据
-        await db.customEquipments.clear();
-        await db.customMethods.clear();
-        await db.settings.clear(); // 清除设置表，包括迁移标记
+        // 重置数据 Store
+        const { getCoffeeBeanStore } = await import(
+          '@/lib/stores/coffeeBeanStore'
+        );
+        getCoffeeBeanStore().setBeans([]);
 
-        // 清除所有自定义预设
-        if (isBrowser) {
-          for (const key of CUSTOM_PRESETS_KEYS) {
-            localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
-          }
+        const { getBrewingNoteStore } = await import(
+          '@/lib/stores/brewingNoteStore'
+        );
+        getBrewingNoteStore().setNotes([]);
 
-          // 清除烘焙商图标
-          localStorage.removeItem('roaster-logos');
+        const { getCustomEquipmentStore } = await import(
+          '@/lib/stores/customEquipmentStore'
+        );
+        getCustomEquipmentStore().setEquipments([]);
 
-          // 清除所有状态持久化数据（brew-guide: 前缀的键）
-          const localStorageKeys = Object.keys(localStorage);
-          const stateKeys = localStorageKeys.filter(key =>
-            key.startsWith('brew-guide:')
-          );
-          for (const key of stateKeys) {
-            localStorage.removeItem(key);
-          }
+        const { getCustomMethodStore } = await import(
+          '@/lib/stores/customMethodStore'
+        );
+        await getCustomMethodStore().loadMethods();
 
-          // 清除冲煮相关的临时状态
-          const brewingStateKeys = [
-            'brewingNoteInProgress',
-            'dataMigrationSkippedThisSession',
-          ];
-          for (const key of brewingStateKeys) {
-            localStorage.removeItem(key);
-          }
+        const { getGrinderStore } = await import('@/lib/stores/grinderStore');
+        getGrinderStore().setGrinders([]);
 
-          // 清除sessionStorage中的临时数据
-          try {
-            sessionStorage.clear();
-          } catch (error) {
-            console.warn('清除sessionStorage失败:', error);
-          }
-        }
+        const { getYearlyReportStore } = await import(
+          '@/lib/stores/yearlyReportStore'
+        );
+        getYearlyReportStore().setReports([]);
+      } catch (error) {
+        console.error('重置 Store 状态失败:', error);
       }
 
       // 触发数据变更事件，通知应用中的组件重新加载数据
@@ -567,7 +604,7 @@ export const DataManager = {
 
       return {
         success: true,
-        message: completeReset ? '已完全重置数据和设置' : '已重置主要数据',
+        message: '已重置所有数据和设置',
       };
     } catch (_error) {
       console.error('重置数据失败:', _error);

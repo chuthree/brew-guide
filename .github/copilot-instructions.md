@@ -17,12 +17,11 @@ You are working on **Brew Guide**, a coffee brewing assistant app built with **N
 ### 1. Data Flow (Local-First)
 
 - **Read**: Components read from Zustand stores (e.g., `useCoffeeBeanStore`).
-- **Write**: Components call Store actions -> Store calls Manager (`src/lib/managers`) -> Manager updates DB -> Store updates local state.
+- **Write**: Components call Store actions -> Store updates IndexedDB -> Store updates local state.
 - **Example**: Adding a bean:
-  1. Component calls `addBean(bean)`.
-  2. Store calls `CoffeeBeanManager.addBean(bean)`.
-  3. Manager writes to `db.coffeeBeans`.
-  4. Store updates `state.beans`.
+  1. Component calls `store.addBean(bean)`.
+  2. Store writes to `db.coffeeBeans` (IndexedDB).
+  3. Store updates `state.beans`.
 
 ### 2. Database Schema (`src/lib/core/db.ts`)
 

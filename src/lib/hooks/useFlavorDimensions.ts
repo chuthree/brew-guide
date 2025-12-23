@@ -1,45 +1,33 @@
 import { useState, useEffect } from 'react';
+import { FlavorDimension, DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/core/db';
 import {
-  CustomFlavorDimensionsManager,
-  FlavorDimension,
-} from '@/lib/managers/customFlavorDimensions';
+  getFlavorDimensionsSync,
+  getHistoricalLabelsSync,
+} from '@/lib/stores/settingsStore';
 
 /**
  * 自定义Hook：获取评分维度数据
  */
 export const useFlavorDimensions = () => {
-  const [dimensions, setDimensions] = useState<FlavorDimension[]>([]);
+  const [dimensions, setDimensions] = useState<FlavorDimension[]>(() =>
+    getFlavorDimensionsSync()
+  );
   const [historicalLabels, setHistoricalLabels] = useState<
     Record<string, string>
-  >({});
-  const [loading, setLoading] = useState(true);
+  >(() => getHistoricalLabelsSync());
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [dims, labels] = await Promise.all([
-          CustomFlavorDimensionsManager.getFlavorDimensions(),
-          CustomFlavorDimensionsManager.getHistoricalLabels(),
-        ]);
-        setDimensions(dims);
-        setHistoricalLabels(labels);
-      } catch (error) {
-        console.error('加载评分维度数据失败:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // 初始化加载
+    setDimensions(getFlavorDimensionsSync());
+    setHistoricalLabels(getHistoricalLabelsSync());
 
     const handleFlavorDimensionsChange = (event: CustomEvent) => {
       const { dimensions: newDimensions } = event.detail;
       setDimensions(newDimensions);
       // 同时更新历史标签
-      CustomFlavorDimensionsManager.getHistoricalLabels().then(
-        setHistoricalLabels
-      );
+      setHistoricalLabels(getHistoricalLabelsSync());
     };
-
-    loadData();
 
     // 监听评分维度变化
     window.addEventListener(

@@ -10,7 +10,13 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { db, AppSettings } from '@/lib/core/db';
+import {
+  db,
+  AppSettings,
+  FlavorDimension,
+  RoasterConfig,
+  DEFAULT_FLAVOR_DIMENSIONS,
+} from '@/lib/core/db';
 import { LayoutSettings } from '@/components/brewing/Timer/Settings';
 import {
   ViewOption,
@@ -180,9 +186,14 @@ export const defaultSettings: AppSettings = {
   // 菜单栏图标设置
   showMenuBarIcon: true,
 
-  // 自定义数据
-  customFlavorDimensions: [],
-  roasterLogos: {},
+  // 风味维度设置
+  flavorDimensions: [...DEFAULT_FLAVOR_DIMENSIONS],
+  flavorDimensionHistoricalLabels: {},
+
+  // 烘焙商配置
+  roasterConfigs: [],
+
+  // 器具排序
   equipmentOrder: [],
 };
 
@@ -223,10 +234,28 @@ interface SettingsStore {
   hideMethod: (equipmentId: string, methodId: string) => Promise<void>;
   unhideMethod: (equipmentId: string, methodId: string) => Promise<void>;
 
-  // 自定义数据管理
-  setCustomFlavorDimensions: (dimensions: string[]) => Promise<void>;
-  setRoasterLogo: (roaster: string, logo: string) => Promise<void>;
-  removeRoasterLogo: (roaster: string) => Promise<void>;
+  // 风味维度管理
+  getFlavorDimensions: () => FlavorDimension[];
+  addFlavorDimension: (label: string) => Promise<FlavorDimension>;
+  updateFlavorDimension: (
+    id: string,
+    updates: Partial<Pick<FlavorDimension, 'label'>>
+  ) => Promise<void>;
+  deleteFlavorDimension: (id: string) => Promise<void>;
+  reorderFlavorDimensions: (dimensions: FlavorDimension[]) => Promise<void>;
+  resetFlavorDimensions: () => Promise<void>;
+  getHistoricalLabel: (id: string) => string | undefined;
+
+  // 烘焙商配置管理
+  getRoasterConfigs: () => RoasterConfig[];
+  getRoasterConfig: (roasterName: string) => RoasterConfig | undefined;
+  updateRoasterConfig: (
+    roasterName: string,
+    updates: Partial<Omit<RoasterConfig, 'roasterName' | 'updatedAt'>>
+  ) => Promise<void>;
+  deleteRoasterConfig: (roasterName: string) => Promise<void>;
+
+  // 器具排序
   setEquipmentOrder: (order: string[]) => Promise<void>;
 
   // 重置
@@ -265,25 +294,13 @@ export const useSettingsStore = create<SettingsStore>()(
             initialized: true,
           });
         } else {
-          // 尝试从 localStorage 迁移（兼容旧版本）
-          const legacySettings = await loadLegacySettings();
-          if (legacySettings) {
-            const mergedSettings = { ...defaultSettings, ...legacySettings };
-            await db.appSettings.put({ id: 'main', data: mergedSettings });
-            set({
-              settings: mergedSettings,
-              isLoading: false,
-              initialized: true,
-            });
-          } else {
-            // 使用默认设置
-            await db.appSettings.put({ id: 'main', data: defaultSettings });
-            set({
-              settings: defaultSettings,
-              isLoading: false,
-              initialized: true,
-            });
-          }
+          // 使用默认设置
+          await db.appSettings.put({ id: 'main', data: defaultSettings });
+          set({
+            settings: defaultSettings,
+            isLoading: false,
+            initialized: true,
+          });
         }
       } catch (error) {
         console.error('[SettingsStore] loadSettings failed:', error);
@@ -445,23 +462,148 @@ export const useSettingsStore = create<SettingsStore>()(
       await get().updateSettings({ hiddenCommonMethods });
     },
 
-    setCustomFlavorDimensions: async dimensions => {
-      await get().updateSettings({ customFlavorDimensions: dimensions });
+    // ==================== 风味维度管理 ====================
+
+    getFlavorDimensions: () => {
+      const settings = get().settings;
+      return settings.flavorDimensions || [...DEFAULT_FLAVOR_DIMENSIONS];
     },
 
-    setRoasterLogo: async (roaster, logo) => {
-      const currentSettings = get().settings;
-      const roasterLogos = { ...(currentSettings.roasterLogos || {}) };
-      roasterLogos[roaster] = logo;
-      await get().updateSettings({ roasterLogos });
+    addFlavorDimension: async label => {
+      const settings = get().settings;
+      const dimensions = [
+        ...(settings.flavorDimensions || DEFAULT_FLAVOR_DIMENSIONS),
+      ];
+      const maxOrder = Math.max(...dimensions.map(d => d.order), -1);
+
+      const newDimension: FlavorDimension = {
+        id: `custom_${Date.now()}`,
+        label,
+        order: maxOrder + 1,
+        isDefault: false,
+      };
+
+      dimensions.push(newDimension);
+
+      // 更新历史标签
+      const historicalLabels = {
+        ...(settings.flavorDimensionHistoricalLabels || {}),
+        [newDimension.id]: label,
+      };
+
+      await get().updateSettings({
+        flavorDimensions: dimensions,
+        flavorDimensionHistoricalLabels: historicalLabels,
+      });
+
+      dispatchFlavorDimensionsChanged(dimensions);
+      return newDimension;
     },
 
-    removeRoasterLogo: async roaster => {
-      const currentSettings = get().settings;
-      const roasterLogos = { ...(currentSettings.roasterLogos || {}) };
-      delete roasterLogos[roaster];
-      await get().updateSettings({ roasterLogos });
+    updateFlavorDimension: async (id, updates) => {
+      const settings = get().settings;
+      const dimensions = [
+        ...(settings.flavorDimensions || DEFAULT_FLAVOR_DIMENSIONS),
+      ];
+      const index = dimensions.findIndex(d => d.id === id);
+
+      if (index === -1) return;
+
+      dimensions[index] = { ...dimensions[index], ...updates };
+
+      // 更新历史标签
+      const historicalLabels = {
+        ...(settings.flavorDimensionHistoricalLabels || {}),
+      };
+      if (updates.label) {
+        historicalLabels[id] = updates.label;
+      }
+
+      await get().updateSettings({
+        flavorDimensions: dimensions,
+        flavorDimensionHistoricalLabels: historicalLabels,
+      });
+
+      dispatchFlavorDimensionsChanged(dimensions);
     },
+
+    deleteFlavorDimension: async id => {
+      const settings = get().settings;
+      const dimensions = (
+        settings.flavorDimensions || DEFAULT_FLAVOR_DIMENSIONS
+      ).filter(d => d.id !== id);
+
+      await get().updateSettings({ flavorDimensions: dimensions });
+      dispatchFlavorDimensionsChanged(dimensions);
+    },
+
+    reorderFlavorDimensions: async dimensions => {
+      // 更新 order 字段
+      const reorderedDimensions = dimensions.map((d, index) => ({
+        ...d,
+        order: index,
+      }));
+
+      await get().updateSettings({ flavorDimensions: reorderedDimensions });
+      dispatchFlavorDimensionsChanged(reorderedDimensions);
+    },
+
+    resetFlavorDimensions: async () => {
+      await get().updateSettings({
+        flavorDimensions: [...DEFAULT_FLAVOR_DIMENSIONS],
+      });
+      dispatchFlavorDimensionsChanged([...DEFAULT_FLAVOR_DIMENSIONS]);
+    },
+
+    getHistoricalLabel: id => {
+      const settings = get().settings;
+      return settings.flavorDimensionHistoricalLabels?.[id];
+    },
+
+    // ==================== 烘焙商配置管理 ====================
+
+    getRoasterConfigs: () => {
+      return get().settings.roasterConfigs || [];
+    },
+
+    getRoasterConfig: roasterName => {
+      const configs = get().settings.roasterConfigs || [];
+      return configs.find(c => c.roasterName === roasterName);
+    },
+
+    updateRoasterConfig: async (roasterName, updates) => {
+      const settings = get().settings;
+      const configs = [...(settings.roasterConfigs || [])];
+      const existingIndex = configs.findIndex(
+        c => c.roasterName === roasterName
+      );
+
+      if (existingIndex >= 0) {
+        configs[existingIndex] = {
+          ...configs[existingIndex],
+          ...updates,
+          updatedAt: Date.now(),
+        };
+      } else {
+        configs.push({
+          roasterName,
+          ...updates,
+          updatedAt: Date.now(),
+        });
+      }
+
+      await get().updateSettings({ roasterConfigs: configs });
+    },
+
+    deleteRoasterConfig: async roasterName => {
+      const settings = get().settings;
+      const configs = (settings.roasterConfigs || []).filter(
+        c => c.roasterName !== roasterName
+      );
+      await get().updateSettings({ roasterConfigs: configs });
+    },
+
+    // ==================== 器具排序 ====================
 
     setEquipmentOrder: async order => {
       await get().updateSettings({ equipmentOrder: order });
@@ -497,7 +639,7 @@ export const useSettingsStore = create<SettingsStore>()(
 );
 
 /**
- * 触发设置变化事件（兼容旧代码）
+ * 触发设置变化事件
  */
 function dispatchSettingsChanged(settings: AppSettings): void {
   if (typeof window !== 'undefined') {
@@ -506,68 +648,19 @@ function dispatchSettingsChanged(settings: AppSettings): void {
         detail: { settings },
       })
     );
-    // 兼容旧的事件名
-    window.dispatchEvent(
-      new CustomEvent('storageChange', {
-        detail: { key: 'brewGuideSettings' },
-      })
-    );
   }
 }
 
 /**
- * 从 localStorage 加载旧版设置（迁移用）
+ * 触发风味维度变化事件
  */
-async function loadLegacySettings(): Promise<Partial<AppSettings> | null> {
-  try {
-    if (typeof localStorage === 'undefined') return null;
-
-    const settingsStr = localStorage.getItem('brewGuideSettings');
-    if (!settingsStr) return null;
-
-    let settings = JSON.parse(settingsStr);
-
-    // 处理 Zustand persist 格式
-    if (settings?.state?.settings) {
-      settings = settings.state.settings;
-    }
-
-    // 移除磨豆机数据（已迁移到单独的表）
-    delete settings.grinders;
-
-    // 迁移其他分散的数据
-    const flavorDimensionsStr = localStorage.getItem('customFlavorDimensions');
-    if (flavorDimensionsStr) {
-      try {
-        settings.customFlavorDimensions = JSON.parse(flavorDimensionsStr);
-      } catch {
-        // 忽略
-      }
-    }
-
-    const roasterLogosStr = localStorage.getItem('roasterLogos');
-    if (roasterLogosStr) {
-      try {
-        settings.roasterLogos = JSON.parse(roasterLogosStr);
-      } catch {
-        // 忽略
-      }
-    }
-
-    const equipmentOrderStr = localStorage.getItem('equipmentOrder');
-    if (equipmentOrderStr) {
-      try {
-        const order = JSON.parse(equipmentOrderStr);
-        settings.equipmentOrder = order.equipmentIds || [];
-      } catch {
-        // 忽略
-      }
-    }
-
-    return settings;
-  } catch (error) {
-    console.error('加载旧版设置失败:', error);
-    return null;
+function dispatchFlavorDimensionsChanged(dimensions: FlavorDimension[]): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('flavorDimensionsChanged', {
+        detail: { dimensions },
+      })
+    );
   }
 }
 
@@ -690,4 +783,88 @@ export function loadEquipmentOrder(): EquipmentOrder {
  */
 export async function saveEquipmentOrder(order: EquipmentOrder): Promise<void> {
   await getSettingsStore().setEquipmentOrder(order.equipmentIds);
+}
+
+// ==================== 烘焙商配置工具函数 ====================
+
+/**
+ * 同步获取所有烘焙商配置
+ */
+export function getRoasterConfigsSync(): RoasterConfig[] {
+  return getSettingsStore().settings.roasterConfigs || [];
+}
+
+/**
+ * 同步获取指定烘焙商配置
+ */
+export function getRoasterConfigSync(
+  roasterName: string
+): RoasterConfig | undefined {
+  const configs = getRoasterConfigsSync();
+  return configs.find(c => c.roasterName === roasterName);
+}
+
+/**
+ * 获取烘焙商 Logo（同步）
+ */
+export function getRoasterLogoSync(roasterName: string): string | undefined {
+  const config = getRoasterConfigSync(roasterName);
+  return config?.logoData;
+}
+
+// ==================== 风味维度工具函数 ====================
+
+/**
+ * 同步获取所有风味维度
+ */
+export function getFlavorDimensionsSync(): FlavorDimension[] {
+  return (
+    getSettingsStore().settings.flavorDimensions || [
+      ...DEFAULT_FLAVOR_DIMENSIONS,
+    ]
+  );
+}
+
+/**
+ * 同步获取历史维度标签
+ */
+export function getHistoricalLabelsSync(): Record<string, string> {
+  return getSettingsStore().settings.flavorDimensionHistoricalLabels || {};
+}
+
+/**
+ * 创建空的风味评分对象
+ */
+export function createEmptyTasteRatings(
+  dimensions: FlavorDimension[]
+): Record<string, number> {
+  const ratings: Record<string, number> = {};
+  dimensions.forEach(dimension => {
+    ratings[dimension.id] = 0;
+  });
+  return ratings;
+}
+
+/**
+ * 迁移风味评分数据（确保向后兼容）
+ */
+export function migrateTasteRatings(
+  oldRatings: Record<string, number>,
+  dimensions: FlavorDimension[]
+): Record<string, number> {
+  const newRatings: Record<string, number> = {};
+
+  // 先设置所有维度的默认值
+  dimensions.forEach(dimension => {
+    newRatings[dimension.id] = 0;
+  });
+
+  // 然后用旧数据覆盖存在的维度
+  Object.entries(oldRatings).forEach(([key, value]) => {
+    if (dimensions.some(d => d.id === key)) {
+      newRatings[key] = value;
+    }
+  });
+
+  return newRatings;
 }

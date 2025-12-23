@@ -5,7 +5,7 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import type { CoffeeBean } from '@/types/app';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
-import RoasterLogoManager from '@/lib/managers/RoasterLogoManager';
+import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
 
 // 预加载图片的工具函数
 const preloadImages = (urls: string[]): Promise<void[]> => {
@@ -92,9 +92,8 @@ const FavoriteRoasterScreen: React.FC<FavoriteRoasterScreenProps> = ({
   // 加载烘焙商图标
   useEffect(() => {
     if (roasterName && roasterName !== '未知') {
-      RoasterLogoManager.getLogoByRoaster(roasterName).then(logo => {
-        setRoasterLogo(logo);
-      });
+      const logo = getRoasterLogoSync(roasterName);
+      setRoasterLogo(logo || null);
     }
   }, [roasterName]);
 

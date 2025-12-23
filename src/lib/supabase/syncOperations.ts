@@ -52,13 +52,12 @@ export const SYNC_TABLES = {
 export type SyncTableName = (typeof SYNC_TABLES)[keyof typeof SYNC_TABLES];
 
 // 需要同步的设置键（单一来源）
+// 注意：flavorDimensions 和 roasterConfigs 现在存储在 brewGuideSettings 中
 export const SETTINGS_KEYS = [
   'brewGuideSettings',
   'brewingNotesVersion',
   'equipmentOrder',
   'onboardingCompleted',
-  'customFlavorDimensions',
-  'flavorDimensionHistoricalLabels',
   'backupReminderSettings',
   'yearlyReports',
   'yearlyReviewReminderSettings',
@@ -72,7 +71,7 @@ export const PRESETS_KEYS = [
   'processes',
   'varieties',
 ] as const;
-export const ROASTER_LOGOS_KEY = 'roaster-logos';
+// 注意：roasterConfigs 现在存储在 brewGuideSettings.roasterConfigs 中，不再使用独立的 localStorage key
 
 // ============================================
 // 核心同步操作（原子化、可测试）
@@ -373,14 +372,7 @@ export async function uploadSettingsData(
           }
       }
       if (Object.keys(presets).length) data.customPresets = presets;
-
-      const logos = localStorage.getItem(ROASTER_LOGOS_KEY);
-      if (logos)
-        try {
-          data[ROASTER_LOGOS_KEY] = JSON.parse(logos);
-        } catch {
-          /* 忽略解析错误 */
-        }
+      // roasterConfigs 已包含在 brewGuideSettings 中，无需单独处理
     }
 
     const { error } = await client.from(SYNC_TABLES.USER_SETTINGS).upsert(
@@ -454,13 +446,7 @@ export async function downloadSettingsData(
             );
         }
       }
-
-      if (settingsData[ROASTER_LOGOS_KEY]) {
-        localStorage.setItem(
-          ROASTER_LOGOS_KEY,
-          JSON.stringify(settingsData[ROASTER_LOGOS_KEY])
-        );
-      }
+      // roasterConfigs 已包含在 brewGuideSettings 中，通过 Storage.set 自动恢复
 
       // 触发 UI 刷新
       window.dispatchEvent(new CustomEvent('settingsChanged'));

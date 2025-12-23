@@ -6,9 +6,11 @@ import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { SettingPage } from './atomic';
 import SettingSection from './atomic/SettingSection';
 import SettingRow from './atomic/SettingRow';
-import RoasterLogoManager, {
-  RoasterConfig,
-} from '@/lib/managers/RoasterLogoManager';
+import {
+  getRoasterConfigsSync,
+  getSettingsStore,
+} from '@/lib/stores/settingsStore';
+import { RoasterConfig } from '@/lib/core/db';
 import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
@@ -132,9 +134,9 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
     }
   };
 
-  const loadConfigs = async () => {
+  const loadConfigs = () => {
     try {
-      const allConfigs = await RoasterLogoManager.getAllConfigs();
+      const allConfigs = getRoasterConfigsSync();
       const configMap = new Map<string, RoasterConfig>();
       allConfigs.forEach(config => {
         configMap.set(config.roasterName, config);
@@ -170,8 +172,10 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
       },
     };
 
-    await RoasterLogoManager.setFlavorPeriod(roaster, newFlavorPeriod);
-    await loadConfigs();
+    await getSettingsStore().updateRoasterConfig(roaster, {
+      flavorPeriod: newFlavorPeriod,
+    });
+    loadConfigs();
   };
 
   // 处理详细模式下烘焙商赏味期变更
@@ -199,11 +203,10 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
       },
     };
 
-    await RoasterLogoManager.setDetailedFlavorPeriod(
-      roaster,
-      newDetailedPeriod
-    );
-    await loadConfigs();
+    await getSettingsStore().updateRoasterConfig(roaster, {
+      detailedFlavorPeriod: newDetailedPeriod,
+    });
+    loadConfigs();
   };
 
   // 辅助函数：更新简单模式的自定义赏味期设置

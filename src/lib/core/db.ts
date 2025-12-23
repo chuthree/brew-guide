@@ -23,6 +23,58 @@ export interface YearlyReport {
 }
 
 /**
+ * 风味评分维度类型定义
+ */
+export interface FlavorDimension {
+  id: string;
+  label: string;
+  order: number;
+  isDefault: boolean;
+}
+
+/**
+ * 默认风味评分维度
+ */
+export const DEFAULT_FLAVOR_DIMENSIONS: FlavorDimension[] = [
+  { id: 'acidity', label: '酸度', order: 0, isDefault: true },
+  { id: 'sweetness', label: '甜度', order: 1, isDefault: true },
+  { id: 'bitterness', label: '苦度', order: 2, isDefault: true },
+  { id: 'body', label: '口感', order: 3, isDefault: true },
+];
+
+/**
+ * 烘焙商赏味期设置（简单模式）
+ */
+export interface RoasterFlavorPeriodSimple {
+  light: { startDay: number; endDay: number };
+  medium: { startDay: number; endDay: number };
+  dark: { startDay: number; endDay: number };
+}
+
+/**
+ * 烘焙商赏味期设置（详细模式）
+ */
+export interface RoasterFlavorPeriodDetailed {
+  extraLight: { startDay: number; endDay: number };
+  light: { startDay: number; endDay: number };
+  mediumLight: { startDay: number; endDay: number };
+  medium: { startDay: number; endDay: number };
+  mediumDark: { startDay: number; endDay: number };
+  dark: { startDay: number; endDay: number };
+}
+
+/**
+ * 烘焙商配置类型定义
+ */
+export interface RoasterConfig {
+  roasterName: string;
+  logoData?: string;
+  flavorPeriod?: RoasterFlavorPeriodSimple;
+  detailedFlavorPeriod?: RoasterFlavorPeriodDetailed;
+  updatedAt: number;
+}
+
+/**
  * 应用设置类型定义
  * 统一管理所有用户设置，存储在 IndexedDB 中
  */
@@ -215,10 +267,11 @@ export interface AppSettings {
   showMenuBarIcon?: boolean;
 
   // 自定义风味维度
-  customFlavorDimensions?: string[];
+  flavorDimensions?: FlavorDimension[];
+  flavorDimensionHistoricalLabels?: Record<string, string>;
 
-  // 烘焙商 Logo
-  roasterLogos?: Record<string, string>;
+  // 烘焙商配置
+  roasterConfigs?: RoasterConfig[];
 
   // 器具排序
   equipmentOrder?: string[];
@@ -463,23 +516,34 @@ export const dbUtils = {
       // 移除磨豆机数据（已单独迁移到 grinders 表）
       delete settings.grinders;
 
-      // 迁移自定义风味维度
+      // 迁移自定义风味维度（旧版本数据迁移）
       const flavorDimensionsStr = localStorage.getItem(
         'customFlavorDimensions'
       );
       if (flavorDimensionsStr) {
         try {
-          settings.customFlavorDimensions = JSON.parse(flavorDimensionsStr);
+          settings.flavorDimensions = JSON.parse(flavorDimensionsStr);
         } catch {
           // 忽略解析错误
         }
       }
 
-      // 迁移烘焙商 Logo
+      // 迁移烘焙商配置（旧版本数据迁移）
       const roasterLogosStr = localStorage.getItem('roasterLogos');
       if (roasterLogosStr) {
         try {
-          settings.roasterLogos = JSON.parse(roasterLogosStr);
+          // 将旧版 roasterLogos 格式转换为新版 roasterConfigs 格式
+          const oldLogos = JSON.parse(roasterLogosStr) as Record<
+            string,
+            string
+          >;
+          settings.roasterConfigs = Object.entries(oldLogos).map(
+            ([roasterName, logoData]) => ({
+              roasterName,
+              logoData,
+              updatedAt: Date.now(),
+            })
+          );
         } catch {
           // 忽略解析错误
         }

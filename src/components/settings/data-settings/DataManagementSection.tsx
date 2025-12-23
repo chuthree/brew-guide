@@ -235,7 +235,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
   // 重置数据
   const handleReset = async () => {
     try {
-      const result = await DataManagerUtil.resetAllData(true);
+      const result = await DataManagerUtil.resetAllData();
 
       if (result.success) {
         setStatus({ type: 'success', message: result.message });

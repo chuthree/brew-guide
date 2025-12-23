@@ -5,10 +5,11 @@ import { Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
 
 import { SettingsOptions } from './Settings';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { FlavorDimension, DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/core/db';
 import {
-  CustomFlavorDimensionsManager,
-  FlavorDimension,
-} from '@/lib/managers/customFlavorDimensions';
+  getSettingsStore,
+  getFlavorDimensionsSync,
+} from '@/lib/stores/settingsStore';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { SettingPage } from './atomic';
@@ -76,10 +77,9 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
     loadDimensions();
   }, []);
 
-  const loadDimensions = async () => {
+  const loadDimensions = () => {
     try {
-      const loadedDimensions =
-        await CustomFlavorDimensionsManager.getFlavorDimensions();
+      const loadedDimensions = getFlavorDimensionsSync();
       setDimensions(loadedDimensions);
     } catch (error) {
       console.error('加载评分维度失败:', error);
@@ -91,10 +91,8 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
     if (!newDimensionLabel.trim()) return;
 
     try {
-      await CustomFlavorDimensionsManager.addFlavorDimension(
-        newDimensionLabel.trim()
-      );
-      await loadDimensions();
+      await getSettingsStore().addFlavorDimension(newDimensionLabel.trim());
+      loadDimensions();
       setNewDimensionLabel('');
       setShowAddForm(false);
 
@@ -118,10 +116,10 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
     if (!editingId || !editingLabel.trim()) return;
 
     try {
-      await CustomFlavorDimensionsManager.updateFlavorDimension(editingId, {
+      await getSettingsStore().updateFlavorDimension(editingId, {
         label: editingLabel.trim(),
       });
-      await loadDimensions();
+      loadDimensions();
       setEditingId(null);
       setEditingLabel('');
 
@@ -153,8 +151,8 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
     if (!confirm(`确定要删除"${dimension.label}"吗？`)) return;
 
     try {
-      await CustomFlavorDimensionsManager.deleteFlavorDimension(id);
-      await loadDimensions();
+      await getSettingsStore().deleteFlavorDimension(id);
+      loadDimensions();
 
       if (settings.hapticFeedback) {
         hapticsUtils.light();
@@ -171,8 +169,8 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
       return;
 
     try {
-      await CustomFlavorDimensionsManager.resetToDefault();
-      await loadDimensions();
+      await getSettingsStore().resetFlavorDimensions();
+      loadDimensions();
 
       if (settings.hapticFeedback) {
         hapticsUtils.medium();
@@ -187,8 +185,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
   const handleReorder = async (newOrder: FlavorDimension[]) => {
     try {
       setDimensions(newOrder);
-      const newOrderIds = newOrder.map(d => d.id);
-      await CustomFlavorDimensionsManager.reorderFlavorDimensions(newOrderIds);
+      await getSettingsStore().reorderFlavorDimensions(newOrder);
 
       if (settings.hapticFeedback) {
         hapticsUtils.light();
@@ -197,7 +194,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
       console.error('重新排序失败:', error);
       alert('重新排序失败，请重试');
       // 出错时恢复原有顺序
-      await loadDimensions();
+      loadDimensions();
     }
   };
 
