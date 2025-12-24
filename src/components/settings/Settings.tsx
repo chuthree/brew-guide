@@ -370,6 +370,7 @@ export const defaultSettings: SettingsOptions = {
   defaultExpandChangeLog: false,
   showFlavorRatingInForm: true,
   showOverallRatingInForm: true,
+  showUnitPriceInNote: false,
   artisticSharingEnabled: false,
   // 识图设置默认值
   autoFillRecognitionImage: false, // 默认不自动填充识图图片，需手动添加

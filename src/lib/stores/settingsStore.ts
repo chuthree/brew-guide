@@ -164,6 +164,7 @@ export const defaultSettings: AppSettings = {
   defaultExpandChangeLog: false,
   showFlavorRatingInForm: true,
   showOverallRatingInForm: true,
+  showUnitPriceInNote: false,
   artisticSharingEnabled: false,
 
   // 生豆库设置
