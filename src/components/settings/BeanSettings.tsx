@@ -211,48 +211,6 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
           />
         </SettingRow>
       </SettingSection>
-
-      <SettingSection
-        title="生豆库"
-        footer="在咖啡豆库存概要中点击「咖啡豆」来切换生豆/熟豆库"
-      >
-        <SettingRow label="生豆库" isLast>
-          <SettingToggle
-            checked={settings.enableGreenBeanInventory || false}
-            onChange={checked =>
-              handleChange('enableGreenBeanInventory', checked)
-            }
-          />
-        </SettingRow>
-      </SettingSection>
-
-      {settings.enableGreenBeanInventory && (
-        <SettingSection
-          footer={
-            <div className="space-y-2 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-              <p>
-                在生豆库功能上线前，你可能用熟豆记录来管理生豆。此功能可将这些旧数据转换为正确的生豆库格式。
-              </p>
-              <p>
-                转换后，已用掉的部分会变成「烘焙记录 +
-                新熟豆」，剩余部分保留在生豆中。原有的冲煮笔记会自动迁移到新熟豆，快捷扣除等变动记录会被清理。
-              </p>
-              <p className="text-neutral-400 dark:text-neutral-500">
-                仅限未关联生豆来源的熟豆使用，数据变动较大，建议先备份。
-              </p>
-            </div>
-          }
-        >
-          <SettingRow label="熟豆转生豆" isLast>
-            <SettingToggle
-              checked={settings.enableConvertToGreen || false}
-              onChange={checked =>
-                handleChange('enableConvertToGreen', checked)
-              }
-            />
-          </SettingRow>
-        </SettingSection>
-      )}
     </SettingPage>
   );
 };

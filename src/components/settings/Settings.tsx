@@ -48,6 +48,7 @@ import {
   ThumbsUp,
   Notebook,
   FlaskConical,
+  Box,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -65,6 +66,7 @@ export interface SubSettingsHandlers {
   onOpenNavigationSettings: () => void;
   onOpenStockSettings: () => void;
   onOpenBeanSettings: () => void;
+  onOpenGreenBeanSettings: () => void;
   onOpenFlavorPeriodSettings: () => void;
   onOpenTimerSettings: () => void;
   onOpenDataSettings: () => void;
@@ -659,6 +661,11 @@ const Settings: React.FC<SettingsProps> = ({
               icon: List,
               label: '咖啡豆',
               onClick: subSettingsHandlers.onOpenBeanSettings,
+            },
+            {
+              icon: Box,
+              label: '生豆库',
+              onClick: subSettingsHandlers.onOpenGreenBeanSettings,
             },
             {
               icon: Archive,

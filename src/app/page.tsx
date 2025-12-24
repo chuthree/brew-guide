@@ -41,6 +41,7 @@ import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
 import DisplaySettings from '@/components/settings/DisplaySettings';
 import StockSettings from '@/components/settings/StockSettings';
 import BeanSettings from '@/components/settings/BeanSettings';
+import GreenBeanSettings from '@/components/settings/GreenBeanSettings';
 import FlavorPeriodSettings from '@/components/settings/FlavorPeriodSettings';
 import TimerSettings from '@/components/settings/TimerSettings';
 import DataSettings from '@/components/settings/DataSettings';
@@ -257,6 +258,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [showNavigationSettings, setShowNavigationSettings] = useState(false);
   const [showStockSettings, setShowStockSettings] = useState(false);
   const [showBeanSettings, setShowBeanSettings] = useState(false);
+  const [showGreenBeanSettings, setShowGreenBeanSettings] = useState(false);
   const [showFlavorPeriodSettings, setShowFlavorPeriodSettings] =
     useState(false);
   const [showTimerSettings, setShowTimerSettings] = useState(false);
@@ -284,6 +286,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showNavigationSettings ||
     showStockSettings ||
     showBeanSettings ||
+    showGreenBeanSettings ||
     showFlavorPeriodSettings ||
     showTimerSettings ||
     showDataSettings ||
@@ -3789,6 +3792,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onOpenNavigationSettings: () => setShowNavigationSettings(true),
           onOpenStockSettings: () => setShowStockSettings(true),
           onOpenBeanSettings: () => setShowBeanSettings(true),
+          onOpenGreenBeanSettings: () => setShowGreenBeanSettings(true),
           onOpenFlavorPeriodSettings: () => setShowFlavorPeriodSettings(true),
           onOpenTimerSettings: () => setShowTimerSettings(true),
           onOpenDataSettings: () => setShowDataSettings(true),
@@ -3837,6 +3841,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         <BeanSettings
           settings={settings}
           onClose={() => setShowBeanSettings(false)}
+          handleChange={handleSubSettingChange}
+        />
+      )}
+
+      {showGreenBeanSettings && (
+        <GreenBeanSettings
+          settings={settings}
+          onClose={() => setShowGreenBeanSettings(false)}
           handleChange={handleSubSettingChange}
         />
       )}
