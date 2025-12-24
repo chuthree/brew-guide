@@ -197,7 +197,16 @@ export class InitialSyncManager {
       // 预处理：找出需要下载完整数据的记录 ID
       // 逻辑：如果远程记录比本地新（或本地不存在），且未删除，则需要下载 data
       const idsToDownload: string[] = [];
-      const localMap = new Map(localRecords.map(r => [r.id, r]));
+      const localMap = new Map(
+        localRecords.map(r => {
+          // 处理 customMethods 表的特殊情况：它使用 equipmentId 作为唯一标识
+          const id =
+            table === SYNC_TABLES.CUSTOM_METHODS
+              ? (r as { equipmentId: string }).equipmentId
+              : (r as { id: string }).id;
+          return [id, r];
+        })
+      );
 
       for (const remote of remoteMetaRecords) {
         if (remote.deleted_at) continue; // 已删除的不需要下载 data
@@ -209,7 +218,11 @@ export class InitialSyncManager {
           // 本地不存在 -> 需要下载
           idsToDownload.push(remote.id);
         } else {
-          const localTime = extractTimestamp(local as { timestamp?: number });
+          // 直接访问 timestamp 属性，避免类型复杂度
+          const localTime =
+            'timestamp' in local && typeof local.timestamp === 'number'
+              ? local.timestamp
+              : 0;
           // 远程比本地新 -> 需要下载
           if (remoteTime > localTime) {
             idsToDownload.push(remote.id);
