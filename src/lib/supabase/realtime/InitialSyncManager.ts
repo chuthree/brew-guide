@@ -35,6 +35,7 @@ import {
 } from './handlers/StoreNotifier';
 import type { RealtimeSyncTable } from './types';
 import type { Method } from '@/lib/core/config';
+import { showToast } from '@/components/common/feedback/LightToast';
 
 // 网络请求超时时间 (ms)
 const SYNC_TIMEOUT = 60000; // 增加到 60s 以适应移动端大文件传输
@@ -98,6 +99,12 @@ export class InitialSyncManager {
       `[InitialSync] 开始同步, lastSync=${lastSyncTime ? new Date(lastSyncTime).toLocaleString() : '首次'}`
     );
 
+    // 仅在首次同步时显示提示，避免后台静默同步打扰用户
+    // lastSyncTime 为 0 表示首次同步（或数据被重置）
+    if (typeof window !== 'undefined' && lastSyncTime === 0) {
+      showToast({ type: 'info', title: '正在同步云端数据...', duration: 3000 });
+    }
+
     // 并行同步所有表
     // 恢复并行同步：由于采用了“元数据优先”策略，初始请求非常小，并行执行不会造成带宽压力
     // 这将显著减少总同步时间
@@ -110,12 +117,15 @@ export class InitialSyncManager {
 
     // 统计结果
     const stats: SyncStats = { uploaded: 0, downloaded: 0, deleted: 0 };
+    let errorCount = 0;
+
     for (const result of results) {
       if (result.status === 'fulfilled') {
         stats.uploaded += result.value.uploaded;
         stats.downloaded += result.value.downloaded;
         stats.deleted += result.value.deleted;
       } else {
+        errorCount++;
         console.error('[InitialSync] 表同步失败:', result.reason);
       }
     }
@@ -125,6 +135,7 @@ export class InitialSyncManager {
       await this.syncSettings();
     } catch (e) {
       console.error('[InitialSync] 设置同步失败:', e);
+      // 设置同步失败不计入核心数据同步错误，但可以记录日志
     }
 
     // 刷新所有 Store
@@ -136,12 +147,46 @@ export class InitialSyncManager {
       window.dispatchEvent(new CustomEvent('syncCompleted'));
     }
 
-    // 更新同步时间
-    const now = Date.now();
-    setLastSyncTime(now);
+    // 同步完成提示
+    if (typeof window !== 'undefined') {
+      if (errorCount > 0) {
+        // 如果有错误发生
+        if (errorCount === results.length) {
+          showToast({ type: 'error', title: '同步失败，请检查网络' });
+        } else {
+          showToast({ type: 'warning', title: '部分数据同步失败' });
+        }
+      } else if (
+        stats.downloaded > 0 ||
+        stats.uploaded > 0 ||
+        stats.deleted > 0
+      ) {
+        const parts = [];
+        if (stats.downloaded > 0) parts.push(`↓${stats.downloaded}`);
+        if (stats.uploaded > 0) parts.push(`↑${stats.uploaded}`);
+        if (stats.deleted > 0) parts.push(`×${stats.deleted}`);
+
+        showToast({
+          type: 'success',
+          title: `同步完成 ${parts.join(' ')}`,
+        });
+      } else {
+        // 仅在首次同步时显示“数据已是最新”，避免日常使用中频繁打扰
+        if (lastSyncTime === 0) {
+          showToast({ type: 'success', title: '数据已是最新' });
+        }
+      }
+    }
+
+    // 只有在没有完全失败的情况下才更新时间戳
+    // 这样下次重试时可以再次尝试同步失败的部分
+    if (errorCount < results.length) {
+      const now = Date.now();
+      setLastSyncTime(now);
+    }
 
     console.log(
-      `[InitialSync] 完成 (${Date.now() - startTime}ms): ↑${stats.uploaded} ↓${stats.downloaded} ×${stats.deleted}`
+      `[InitialSync] 完成 (${Date.now() - startTime}ms): ↑${stats.uploaded} ↓${stats.downloaded} ×${stats.deleted}, Errors: ${errorCount}`
     );
 
     return stats;
@@ -176,7 +221,7 @@ export class InitialSyncManager {
           `[InitialSync] ${table} 拉取失败:`,
           remoteMetaResult.error
         );
-        return emptyResult;
+        throw new Error(remoteMetaResult.error || `拉取 ${table} 失败`);
       }
 
       const remoteMetaRecords = (remoteMetaResult.data || []).map(r => ({
@@ -217,6 +262,9 @@ export class InitialSyncManager {
         if (!local) {
           // 本地不存在 -> 需要下载
           idsToDownload.push(remote.id);
+          console.log(
+            `[InitialSync] ${table} 需下载 ${remote.id}: 本地缺失`
+          );
         } else {
           // 直接访问 timestamp 属性，避免类型复杂度
           const localTime =
@@ -226,6 +274,9 @@ export class InitialSyncManager {
           // 远程比本地新 -> 需要下载
           if (remoteTime > localTime) {
             idsToDownload.push(remote.id);
+            console.log(
+              `[InitialSync] ${table} 需下载 ${remote.id}: 远程更新 (Remote: ${remoteTime} > Local: ${localTime})`
+            );
           }
         }
       }
@@ -258,7 +309,14 @@ export class InitialSyncManager {
       // 组装完整的 remoteRecords
       const remoteRecords = remoteMetaRecords.map(r => {
         if (downloadedDataMap.has(r.id)) {
-          return { ...r, data: downloadedDataMap.get(r.id) };
+          const data = downloadedDataMap.get(r.id);
+          // PATCH: 确保数据有 timestamp，且不小于 updated_at
+          // 这防止了因数据时间戳滞后于 updated_at 导致无限循环下载
+          if (data) {
+            const updatedAtTime = new Date(r.updated_at).getTime();
+            data.timestamp = Math.max(data.timestamp || 0, updatedAtTime);
+          }
+          return { ...r, data };
         }
         return r;
       });
@@ -313,7 +371,7 @@ export class InitialSyncManager {
       };
     } catch (error) {
       console.error(`[InitialSync] ${table} 同步失败:`, error);
-      return emptyResult;
+      throw error;
     }
   }
 
@@ -326,12 +384,17 @@ export class InitialSyncManager {
     try {
       // 获取本地方案
       const localRecords = await db.customMethods.toArray();
-      const localWithId = localRecords.map(r => ({
-        id: r.equipmentId,
-        equipmentId: r.equipmentId,
-        methods: r.methods,
-        timestamp: Math.max(0, ...r.methods.map(m => m.timestamp || 0)),
-      }));
+      const localWithId = localRecords.map(r => {
+        const maxTimestamp = Math.max(0, ...r.methods.map(m => m.timestamp || 0));
+        // DEBUG: 打印本地记录的时间戳详情
+        // console.log(`[Debug] Local Method ${r.equipmentId}: maxTimestamp=${maxTimestamp}`);
+        return {
+          id: r.equipmentId,
+          equipmentId: r.equipmentId,
+          methods: r.methods,
+          timestamp: maxTimestamp,
+        };
+      });
 
       // 获取云端方案
       // 增加超时控制
@@ -349,21 +412,39 @@ export class InitialSyncManager {
           `[InitialSync] custom_methods 拉取失败:`,
           remoteResult.error
         );
-        return emptyResult;
+        throw new Error(remoteResult.error || '拉取 custom_methods 失败');
       }
 
-      const remoteRecords = (remoteResult.data || []).map(r => ({
-        id: r.id,
-        user_id: DEFAULT_USER_ID,
-        data: {
+      const remoteRecords = (remoteResult.data || []).map(r => {
+        const methods = (r.data as { methods?: Method[] })?.methods || [];
+        const updatedAtTime = new Date(r.updated_at).getTime();
+        
+        // PATCH: 确保 methods 中的每个 method 都有 timestamp，且不小于 updated_at
+        // 这防止了因 methods 时间戳滞后于 updated_at 导致计算出的 localTime 偏小，从而无限循环下载
+        const patchedMethods = methods.map(m => ({
+          ...m,
+          timestamp: Math.max(m.timestamp || 0, updatedAtTime)
+        }));
+
+        // DEBUG: 检查远程记录的时间戳差异
+        // const maxMethodTime = Math.max(0, ...patchedMethods.map(m => m.timestamp || 0));
+        // if (updatedAtTime > maxMethodTime) {
+        //   console.log(`[Debug] Remote Method ${r.id}: updatedAt(${updatedAtTime}) > maxMethodTime(${maxMethodTime})`);
+        // }
+
+        return {
           id: r.id,
-          equipmentId: r.id,
-          methods: (r.data as { methods?: Method[] })?.methods || [],
-          timestamp: 0,
-        },
-        updated_at: r.updated_at,
-        deleted_at: r.deleted_at,
-      }));
+          user_id: DEFAULT_USER_ID,
+          data: {
+            id: r.id,
+            equipmentId: r.id,
+            methods: patchedMethods,
+            timestamp: 0,
+          },
+          updated_at: r.updated_at,
+          deleted_at: r.deleted_at,
+        };
+      });
 
       // 冲突解决
       const { toUpload, toDownload, toDeleteLocal } = batchResolveConflicts(
@@ -371,6 +452,24 @@ export class InitialSyncManager {
         remoteRecords,
         lastSyncTime
       );
+
+      if (toDownload.length > 0) {
+        console.log(
+          `[InitialSync] custom_methods 需下载 ${toDownload.length} 条记录`
+        );
+        toDownload.forEach(item => {
+          // 查找对应的远程记录以获取更多调试信息
+          const remote = remoteRecords.find(r => r.id === item.equipmentId);
+          const local = localWithId.find(l => l.id === item.equipmentId);
+          
+          const remoteUpdatedAt = remote ? new Date(remote.updated_at).getTime() : 'N/A';
+          const localTimestamp = local ? local.timestamp : 'N/A';
+          
+          console.log(
+            `[InitialSync] custom_methods 下载详情: ${item.equipmentId} | Remote UpdatedAt: ${remoteUpdatedAt} | Local MaxTimestamp: ${localTimestamp}`
+          );
+        });
+      }
 
       // 执行上传
       if (toUpload.length > 0) {
@@ -410,7 +509,7 @@ export class InitialSyncManager {
       };
     } catch (error) {
       console.error(`[InitialSync] custom_methods 同步失败:`, error);
-      return emptyResult;
+      throw error;
     }
   }
 

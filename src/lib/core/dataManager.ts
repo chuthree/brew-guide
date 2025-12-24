@@ -565,6 +565,25 @@ export const DataManager = {
           '@/lib/stores/yearlyReportStore'
         );
         getYearlyReportStore().setReports([]);
+
+        // 重置同步状态
+        const { useSyncStatusStore } = await import(
+          '@/lib/stores/syncStatusStore'
+        );
+        useSyncStatusStore.getState().reset();
+        // 显式重置实时同步状态
+        useSyncStatusStore.setState({
+          realtimeStatus: 'disconnected',
+          realtimeEnabled: false,
+          pendingChangesCount: 0,
+          isInitialSyncing: false,
+        });
+
+        // 断开实时同步连接
+        const { getRealtimeSyncService } = await import(
+          '@/lib/supabase/realtime'
+        );
+        await getRealtimeSyncService().disconnect();
       } catch (error) {
         console.error('重置 Store 状态失败:', error);
       }

@@ -120,23 +120,22 @@ export function batchResolveConflicts<T extends SyncableRecord>(
 
     if (!remote) {
       // 本地有，云端没有
-      // 关键修复：区分“本地新建”和“云端物理删除”
-      // 如果本地记录比上次同步时间新，说明是本地新建的 -> 上传
-      // 如果本地记录比上次同步时间旧（或相等），说明它在上次同步前就存在，现在云端没了 -> 云端物理删除了 -> 本地也删除
-
-      // 注意：如果 lastSyncTime 为 0（首次同步），我们假设所有本地数据都是“新建”的，需要上传
-      // 除非我们有其他证据表明它是旧的。但在首次同步场景下，上传是安全的选择（云端会接受）。
+      // 修复 (2025-12-24): 防止误删本地数据
+      // 之前的逻辑是：如果 localTime <= lastSyncTime，则认为是云端物理删除，从而删除本地数据。
+      // 但这会导致严重 Bug：如果用户清空了云端库（或切换了库），但本地保留了旧的 lastSyncTime，
+      // 再次同步时会导致本地数据被全部清空。
+      //
+      // 新策略：只要云端没有记录（且没有 tombstone），我们就假设它是需要上传的数据。
+      // 即使这会导致“复活”一些真正被物理删除的数据，也比误删用户数据要安全得多。
 
       if (lastSyncTime > 0 && localTime <= lastSyncTime) {
         console.log(
-          `[Conflict] ${local.id}: 本地旧数据(${localTime} <= ${lastSyncTime})且云端缺失 -> 视为云端物理删除`
+          `[Conflict] ${local.id}: 本地旧数据(${localTime} <= ${lastSyncTime})且云端缺失 -> 重新上传 (防止误删)`
         );
-        toDeleteLocal.push(local.id);
-      } else {
-        // 本地新建或首次同步 -> 上传
-        merged.push(local);
-        toUpload.push(local);
       }
+
+      merged.push(local);
+      toUpload.push(local);
     } else if (remote.deleted_at) {
       // 云端已删除（有 deleted_at 标记）
       const deleteTime = new Date(remote.deleted_at).getTime();

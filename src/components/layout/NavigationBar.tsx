@@ -1076,7 +1076,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   className="-mt-3 -ml-3 flex cursor-pointer items-center pt-3 pr-4 pb-3 pl-3 text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400"
                 >
                   <div className="relative flex h-4 w-4 items-center justify-center">
-                    <AnimatePresence mode="wait" initial={false}>
+                    <AnimatePresence mode="popLayout" initial={false}>
                       {syncProvider === 'supabase' && isSyncing ? (
                         <motion.div
                           key="spinner"
