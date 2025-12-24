@@ -7,13 +7,14 @@ import React, {
   useRef,
   forwardRef,
   useImperativeHandle,
+  useCallback,
 } from 'react';
+import { Drawer } from 'vaul';
 import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { showToast } from '@/components/common/feedback/LightToast';
-import ResponsiveModal, {
-  ResponsiveModalHandle,
-} from '@/components/common/ui/ResponsiveModal';
+import { useModalHistory } from '@/lib/hooks/useModalHistory';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export interface Step {
   id: string;
@@ -35,7 +36,6 @@ interface NoteSteppedFormModalProps {
   onRandomBean?: (isLongPress?: boolean) => void;
 }
 
-// 暴露给父组件的方法
 export interface NoteSteppedFormHandle {
   handleBackStep: () => boolean;
 }
@@ -60,149 +60,137 @@ const NoteSteppedFormModal = forwardRef<
     ref
   ) => {
     const [internalStepIndex, setInternalStepIndex] = useState(initialStep);
-
-    // 使用外部或内部状态控制当前步骤
     const currentStepIndex =
       currentStep !== undefined ? currentStep : internalStepIndex;
     const setCurrentStepIndex = setCurrentStep || setInternalStepIndex;
 
-    // 搜索相关状态
     const [isSearching, setIsSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const searchInputRef = useRef<HTMLInputElement>(null);
-
-    // 添加高亮咖啡豆ID状态
     const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(
       null
     );
+    const [scrollContainer, setScrollContainer] =
+      useState<HTMLDivElement | null>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // 添加随机按钮禁用状态
-    const [isRandomButtonDisabled, setIsRandomButtonDisabled] = useState(false);
+    // callback ref: DOM 挂载时更新 state，触发重新渲染
+    const contentScrollRefCallback = useCallback(
+      (node: HTMLDivElement | null) => {
+        setScrollContainer(node);
+      },
+      []
+    );
 
-    // 从 Store 获取咖啡豆数据
     const allBeans = useCoffeeBeanStore(state => state.beans);
 
-    // 模态框DOM引用
-    const responsiveModalRef = useRef<ResponsiveModalHandle>(null);
-    const contentScrollRef = useRef<HTMLDivElement>(null);
+    // 历史栈和主题色管理
+    useThemeColor({ useOverlay: true, enabled: showForm });
+    useModalHistory({ id: 'note-stepped-form', isOpen: showForm, onClose });
 
-    // 暴露给父组件的方法
+    const handleOpenChange = useCallback(
+      (open: boolean) => {
+        if (!open) onClose();
+      },
+      [onClose]
+    );
+
     useImperativeHandle(
       ref,
       () => ({
-        // 返回 true 表示处理了返回（返回上一步），false 表示已在第一步
         handleBackStep: () => {
           if (currentStepIndex > 0) {
             const newIndex = currentStepIndex - 1;
             setCurrentStepIndex(newIndex);
-            if (onStepChange) {
-              onStepChange(newIndex);
-            }
-            // 重置搜索状态
+            onStepChange?.(newIndex);
             setIsSearching(false);
             setSearchQuery('');
-            // 重置高亮状态
             setHighlightedBeanId(null);
-            return true; // 处理了返回
+            return true;
           }
-          return false; // 已经在第一步，无法再返回
+          return false;
         },
       }),
       [currentStepIndex, setCurrentStepIndex, onStepChange]
     );
 
-    // 当初始化步骤变化时更新当前步骤
     useEffect(() => {
-      if (showForm) {
-        setCurrentStepIndex(initialStep);
-      }
+      if (showForm) setCurrentStepIndex(initialStep);
     }, [showForm, initialStep, setCurrentStepIndex]);
 
-    // 当不显示表单且不保持状态时，重置为初始步骤
     useEffect(() => {
       if (!showForm && !preserveState) {
         setCurrentStepIndex(initialStep);
         setIsSearching(false);
         setSearchQuery('');
         setHighlightedBeanId(null);
-        setIsRandomButtonDisabled(false);
       }
     }, [showForm, preserveState, initialStep, setCurrentStepIndex]);
 
-    // 获取当前步骤
     const currentStepContent = steps[currentStepIndex];
-
-    // 计算进度
     const progress = ((currentStepIndex + 1) / steps.length) * 100;
+    const isCoffeeBeanStep = currentStepContent?.id === 'coffeeBean';
 
-    // 渲染进度条
-    const renderProgressBar = () => {
-      return (
-        <div className="h-1 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
-          <div
-            className="h-full bg-neutral-800 transition-all duration-300 ease-in-out dark:bg-neutral-200"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      );
-    };
-
-    // 处理上一步/返回 - 始终调用 onClose() 让历史栈系统处理导航
     const handleBack = () => {
-      // 重置搜索状态
       setIsSearching(false);
       setSearchQuery('');
-      // 重置高亮状态
       setHighlightedBeanId(null);
-      // 让历史栈系统处理返回逻辑
       onClose();
     };
 
-    // 处理下一步
     const handleNext = () => {
       if (currentStepIndex < steps.length - 1) {
         const newIndex = currentStepIndex + 1;
         setCurrentStepIndex(newIndex);
-        if (onStepChange) {
-          onStepChange(newIndex);
-        }
-        // 重置搜索状态
+        onStepChange?.(newIndex);
         setIsSearching(false);
         setSearchQuery('');
-        // 重置高亮状态
         setHighlightedBeanId(null);
       } else {
         onComplete();
       }
     };
 
-    // 处理搜索按钮点击
     const handleSearchClick = () => {
       setIsSearching(true);
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
+      setTimeout(() => searchInputRef.current?.focus(), 100);
     };
 
-    // 处理关闭搜索
     const handleCloseSearch = (e?: React.MouseEvent) => {
       e?.stopPropagation();
       setIsSearching(false);
       setSearchQuery('');
     };
 
-    // 检查当前步骤是否为咖啡豆选择步骤
-    const isCoffeeBeanStep = currentStepContent?.id === 'coffeeBean';
-
-    // 通用按钮基础样式
     const buttonBaseClass =
       'rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100';
 
-    // 创建一个包含搜索字段的内容
-    const contentWithSearchProps = React.useMemo(() => {
-      if (!isCoffeeBeanStep) return currentStepContent.content;
+    // 随机选择咖啡豆
+    const handleRandomBean = (isLongPress = false) => {
+      if (onRandomBean) {
+        onRandomBean(isLongPress);
+        return;
+      }
 
-      // 为咖啡豆选择器添加搜索查询参数和高亮ID
+      const availableBeans = allBeans.filter(bean => {
+        if (bean.isInTransit) return false;
+        if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g')
+          return true;
+        return parseFloat(bean.remaining || '0') > 0;
+      });
+
+      if (availableBeans.length > 0) {
+        const randomBean =
+          availableBeans[Math.floor(Math.random() * availableBeans.length)];
+        setHighlightedBeanId(randomBean.id);
+        setTimeout(() => setHighlightedBeanId(null), 4000);
+      } else {
+        showToast({ type: 'info', title: '没有可用的咖啡豆', duration: 2000 });
+      }
+    };
+
+    // 为咖啡豆选择器添加搜索参数
+    const contentWithSearchProps = React.useMemo(() => {
+      if (!isCoffeeBeanStep) return currentStepContent?.content;
       return React.cloneElement(
         currentStepContent.content as React.ReactElement<{
           searchQuery?: string;
@@ -212,11 +200,7 @@ const NoteSteppedFormModal = forwardRef<
         {
           searchQuery,
           highlightedBeanId,
-          // 将内容区滚动容器传给虚拟列表，保证在模态内全高滚动
-          scrollParentRef:
-            contentScrollRef.current ||
-            responsiveModalRef.current?.getContentRef() ||
-            undefined,
+          scrollParentRef: scrollContainer || undefined,
         }
       );
     }, [
@@ -224,212 +208,128 @@ const NoteSteppedFormModal = forwardRef<
       isCoffeeBeanStep,
       searchQuery,
       highlightedBeanId,
+      scrollContainer,
     ]);
 
-    // 随机选择咖啡豆
-    const handleRandomBean = (isLongPress: boolean = false) => {
-      // 如果提供了自定义随机豆子方法，则调用它
-      if (onRandomBean) {
-        onRandomBean(isLongPress);
-        return;
-      }
+    const isLastStep = currentStepIndex === steps.length - 1;
+    const isValid = currentStepContent?.isValid !== false;
 
-      // 如果按钮被禁用，直接返回
-      if (isRandomButtonDisabled) return;
+    return (
+      <Drawer.Root open={showForm} onOpenChange={handleOpenChange}>
+        <Drawer.Portal>
+          <Drawer.Overlay
+            className="fixed inset-0 z-50 bg-black/50"
+            style={{ position: 'fixed' }}
+          />
+          <Drawer.Content
+            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[90vh] max-w-md flex-col rounded-t-3xl bg-white outline-none dark:bg-neutral-900"
+            aria-describedby={undefined}
+          >
+            <Drawer.Title className="sr-only">添加笔记</Drawer.Title>
 
-      // 过滤掉已经用完的豆子和在途状态的豆子
-      const availableBeans = allBeans.filter(bean => {
-        // 过滤掉在途状态的咖啡豆
-        if (bean.isInTransit) {
-          return false;
-        }
-
-        // 如果没有设置容量，则显示（因为无法判断是否用完）
-        if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
-          return true;
-        }
-
-        // 如果设置了容量，则检查剩余量是否大于0
-        const remaining = parseFloat(bean.remaining || '0');
-        return remaining > 0;
-      });
-
-      if (availableBeans.length > 0) {
-        const randomIndex = Math.floor(Math.random() * availableBeans.length);
-        const randomBean = availableBeans[randomIndex];
-
-        // 设置高亮豆子ID，而不是直接选择
-        setHighlightedBeanId(randomBean.id);
-
-        // 4秒后清除高亮状态
-        setTimeout(() => {
-          setHighlightedBeanId(null);
-        }, 4000);
-      } else {
-        showToast({
-          type: 'info',
-          title: '没有可用的咖啡豆',
-          duration: 2000,
-        });
-      }
-    };
-
-    // 渲染下一步按钮
-    const renderNextButton = () => {
-      const isLastStep = currentStepIndex === steps.length - 1;
-      const isValid = currentStepContent?.isValid !== false;
-
-      return (
-        <div className="modal-bottom-button flex items-center justify-center">
-          <div className="flex items-center justify-center gap-2">
-            {/* 搜索输入框 */}
-            {isValid && isCoffeeBeanStep && isSearching && (
-              <div className="flex items-center gap-2">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="搜索咖啡豆名称..."
-                  className="w-48 rounded-full border-none bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
-                  autoComplete="off"
-                  onKeyDown={e => {
-                    if (e.key === 'Escape') {
-                      handleCloseSearch();
-                    }
-                  }}
-                />
+            <div className="pb-safe-bottom flex h-full flex-col overflow-hidden px-6 pt-4">
+              {/* 顶部导航栏 */}
+              <div className="mb-6 flex shrink-0 items-center justify-between">
                 <button
                   type="button"
-                  onClick={handleCloseSearch}
-                  className={`${buttonBaseClass} shrink-0 p-4`}
+                  onClick={handleBack}
+                  className="-m-3 rounded-full p-3"
                 >
-                  <X className="h-4 w-4" strokeWidth="3" />
+                  <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
                 </button>
-              </div>
-            )}
-
-            {/* 下一步/完成按钮 */}
-            {isValid && !(isCoffeeBeanStep && isSearching) && (
-              <button
-                type="button"
-                onClick={isCoffeeBeanStep ? handleSearchClick : handleNext}
-                className={` ${buttonBaseClass} flex items-center justify-center ${isLastStep && !isCoffeeBeanStep ? 'px-6 py-3' : 'px-5 py-3'} `}
-              >
-                {isLastStep && !isCoffeeBeanStep ? (
-                  <span className="font-medium">保存笔记</span>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {isCoffeeBeanStep ? '搜索' : '下一步'}
-                    </span>
-                    {isCoffeeBeanStep ? (
-                      <Search className="h-4 w-4" strokeWidth="3" />
-                    ) : (
-                      <ArrowRight className="h-4 w-4" strokeWidth="3" />
-                    )}
+                <div className="w-full px-4">
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                    <div
+                      className="h-full bg-neutral-800 transition-all duration-300 ease-in-out dark:bg-neutral-200"
+                      style={{ width: `${progress}%` }}
+                    />
                   </div>
-                )}
-              </button>
-            )}
+                </div>
+                <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                  {currentStepIndex + 1}/{steps.length}
+                </div>
+              </div>
 
-            {/* 随机选择按钮 - 仅在咖啡豆步骤且未处于搜索状态时显示 */}
-            {isValid && isCoffeeBeanStep && !isSearching && (
-              <button
-                type="button"
-                onClick={() => handleRandomBean(false)}
-                onMouseDown={_e => {
-                  if (isRandomButtonDisabled) return;
-
-                  // 长按逻辑
-                  const timer = setTimeout(() => {
-                    handleRandomBean(true);
-                  }, 500); // 500ms 长按
-
-                  const handleMouseUp = () => {
-                    clearTimeout(timer);
-                    document.removeEventListener('mouseup', handleMouseUp);
-                  };
-                  document.addEventListener('mouseup', handleMouseUp);
-                }}
-                onTouchStart={_e => {
-                  if (isRandomButtonDisabled) return;
-
-                  // 触摸长按
-                  const timer = setTimeout(() => {
-                    handleRandomBean(true);
-                  }, 500);
-
-                  const handleTouchEnd = () => {
-                    clearTimeout(timer);
-                    document.removeEventListener('touchend', handleTouchEnd);
-                  };
-                  document.addEventListener('touchend', handleTouchEnd);
-                }}
-                className={`${buttonBaseClass} flex items-center justify-center p-4 ${
-                  isRandomButtonDisabled
-                    ? 'cursor-not-allowed bg-neutral-200 opacity-40 dark:bg-neutral-700'
-                    : ''
-                }`}
-                disabled={isRandomButtonDisabled}
+              {/* 步骤内容 */}
+              <div
+                className="min-h-0 flex-1 overflow-y-auto pb-4"
+                ref={contentScrollRefCallback}
               >
-                <Shuffle className="h-4 w-4" strokeWidth="3" />
-              </button>
-            )}
-          </div>
-        </div>
-      );
-    };
+                {currentStepContent && (
+                  <div className="space-y-6">{contentWithSearchProps}</div>
+                )}
+              </div>
 
-    // 渲染模态框内容
-    const renderContent = (isMediumScreen: boolean) => (
-      <div
-        className={`pb-safe-bottom flex h-full flex-col overflow-hidden px-6 ${
-          isMediumScreen ? 'pt-4' : 'pt-safe-top'
-        }`}
-      >
-        {/* 顶部导航栏 */}
-        <div className="mb-6 flex shrink-0 items-center justify-between">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="-m-3 rounded-full p-3"
-          >
-            <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
-          </button>
-          <div className="w-full px-4">{renderProgressBar()}</div>
-          <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-            {currentStepIndex + 1}/{steps.length}
-          </div>
-        </div>
+              {/* 底部按钮区域 */}
+              <div className="modal-bottom-button flex items-center justify-center">
+                <div className="flex items-center justify-center gap-2">
+                  {/* 搜索输入框 */}
+                  {isValid && isCoffeeBeanStep && isSearching && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="搜索咖啡豆名称..."
+                        className="w-48 rounded-full border-none bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
+                        autoComplete="off"
+                        onKeyDown={e =>
+                          e.key === 'Escape' && handleCloseSearch()
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCloseSearch}
+                        className={`${buttonBaseClass} shrink-0 p-4`}
+                      >
+                        <X className="h-4 w-4" strokeWidth="3" />
+                      </button>
+                    </div>
+                  )}
 
-        {/* 步骤内容 */}
-        <div
-          className="min-h-0 flex-1 overflow-y-auto pb-4"
-          ref={contentScrollRef}
-        >
-          {currentStepContent && (
-            <div className="space-y-6">{contentWithSearchProps}</div>
-          )}
-        </div>
+                  {/* 下一步/完成按钮 */}
+                  {isValid && !(isCoffeeBeanStep && isSearching) && (
+                    <button
+                      type="button"
+                      onClick={
+                        isCoffeeBeanStep ? handleSearchClick : handleNext
+                      }
+                      className={`${buttonBaseClass} flex items-center justify-center ${isLastStep && !isCoffeeBeanStep ? 'px-6 py-3' : 'px-5 py-3'}`}
+                    >
+                      {isLastStep && !isCoffeeBeanStep ? (
+                        <span className="font-medium">保存笔记</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {isCoffeeBeanStep ? '搜索' : '下一步'}
+                          </span>
+                          {isCoffeeBeanStep ? (
+                            <Search className="h-4 w-4" strokeWidth="3" />
+                          ) : (
+                            <ArrowRight className="h-4 w-4" strokeWidth="3" />
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  )}
 
-        {/* 底部按钮区域 */}
-        {renderNextButton()}
-      </div>
-    );
-
-    // 使用响应式模态框组件
-    return (
-      <ResponsiveModal
-        ref={responsiveModalRef}
-        isOpen={showForm}
-        onClose={onClose}
-        historyId="note-stepped-form"
-        drawerMaxWidth="480px"
-        drawerHeight="90vh"
-      >
-        {({ isMediumScreen }) => renderContent(isMediumScreen)}
-      </ResponsiveModal>
+                  {/* 随机选择按钮 */}
+                  {isValid && isCoffeeBeanStep && !isSearching && (
+                    <button
+                      type="button"
+                      onClick={() => handleRandomBean(false)}
+                      className={`${buttonBaseClass} flex items-center justify-center p-4`}
+                    >
+                      <Shuffle className="h-4 w-4" strokeWidth="3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
     );
   }
 );
