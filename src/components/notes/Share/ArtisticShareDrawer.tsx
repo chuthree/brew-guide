@@ -5,6 +5,7 @@ import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { BrewingNote, equipmentList, CustomEquipment } from '@/lib/core/config';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
+import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { CoffeeBean } from '@/types/app';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { showToast } from '@/components/common/feedback/LightToast';
@@ -34,6 +35,9 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
 
   // 从 Store 获取咖啡豆数据
   const allBeans = useCoffeeBeanStore(state => state.beans);
+
+  // 获取风味评分维度
+  const { getValidTasteRatings } = useFlavorDimensions();
 
   const handleTextClick = () => {
     if (textRef.current) {
@@ -262,26 +266,24 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
       parts.push(params.join('  |  '));
     }
 
-    // Taste - 2 columns
+    // Taste - 动态显示所有评分维度
     if (note.taste) {
-      // 检查是否有任何评分大于0
-      const hasAnyRating = Object.values(note.taste).some(value => value > 0);
+      const validRatings = getValidTasteRatings(note.taste);
 
-      if (hasAnyRating) {
+      if (validRatings.length > 0) {
         parts.push(''); // 在参数和风味之间加空行分组
-        const {
-          acidity = 0,
-          sweetness = 0,
-          bitterness = 0,
-          body = 0,
-        } = note.taste;
 
-        parts.push(
-          `酸度 ${'●'.repeat(acidity)}${'○'.repeat(5 - acidity)}   甜度 ${'●'.repeat(sweetness)}${'○'.repeat(5 - sweetness)}`
-        );
-        parts.push(
-          `苦度 ${'●'.repeat(bitterness)}${'○'.repeat(5 - bitterness)}   醇厚 ${'●'.repeat(body)}${'○'.repeat(5 - body)}`
-        );
+        // 每两个评分一行
+        for (let i = 0; i < validRatings.length; i += 2) {
+          const first = validRatings[i];
+          const second = validRatings[i + 1];
+
+          let line = `${first.label} ${'●'.repeat(first.value)}${'○'.repeat(5 - first.value)}`;
+          if (second) {
+            line += `   ${second.label} ${'●'.repeat(second.value)}${'○'.repeat(5 - second.value)}`;
+          }
+          parts.push(line);
+        }
       }
     }
 
