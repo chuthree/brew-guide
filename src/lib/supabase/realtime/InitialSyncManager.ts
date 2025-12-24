@@ -262,9 +262,7 @@ export class InitialSyncManager {
         if (!local) {
           // 本地不存在 -> 需要下载
           idsToDownload.push(remote.id);
-          console.log(
-            `[InitialSync] ${table} 需下载 ${remote.id}: 本地缺失`
-          );
+          console.log(`[InitialSync] ${table} 需下载 ${remote.id}: 本地缺失`);
         } else {
           // 直接访问 timestamp 属性，避免类型复杂度
           const localTime =
@@ -385,7 +383,10 @@ export class InitialSyncManager {
       // 获取本地方案
       const localRecords = await db.customMethods.toArray();
       const localWithId = localRecords.map(r => {
-        const maxTimestamp = Math.max(0, ...r.methods.map(m => m.timestamp || 0));
+        const maxTimestamp = Math.max(
+          0,
+          ...r.methods.map(m => m.timestamp || 0)
+        );
         // DEBUG: 打印本地记录的时间戳详情
         // console.log(`[Debug] Local Method ${r.equipmentId}: maxTimestamp=${maxTimestamp}`);
         return {
@@ -418,12 +419,12 @@ export class InitialSyncManager {
       const remoteRecords = (remoteResult.data || []).map(r => {
         const methods = (r.data as { methods?: Method[] })?.methods || [];
         const updatedAtTime = new Date(r.updated_at).getTime();
-        
+
         // PATCH: 确保 methods 中的每个 method 都有 timestamp，且不小于 updated_at
         // 这防止了因 methods 时间戳滞后于 updated_at 导致计算出的 localTime 偏小，从而无限循环下载
         const patchedMethods = methods.map(m => ({
           ...m,
-          timestamp: Math.max(m.timestamp || 0, updatedAtTime)
+          timestamp: Math.max(m.timestamp || 0, updatedAtTime),
         }));
 
         // DEBUG: 检查远程记录的时间戳差异
@@ -461,10 +462,12 @@ export class InitialSyncManager {
           // 查找对应的远程记录以获取更多调试信息
           const remote = remoteRecords.find(r => r.id === item.equipmentId);
           const local = localWithId.find(l => l.id === item.equipmentId);
-          
-          const remoteUpdatedAt = remote ? new Date(remote.updated_at).getTime() : 'N/A';
+
+          const remoteUpdatedAt = remote
+            ? new Date(remote.updated_at).getTime()
+            : 'N/A';
           const localTimestamp = local ? local.timestamp : 'N/A';
-          
+
           console.log(
             `[InitialSync] custom_methods 下载详情: ${item.equipmentId} | Remote UpdatedAt: ${remoteUpdatedAt} | Local MaxTimestamp: ${localTimestamp}`
           );
