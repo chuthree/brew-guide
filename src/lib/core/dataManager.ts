@@ -7,7 +7,7 @@ import { CoffeeBean as _CoffeeBean, BlendComponent } from '@/types/app';
 import { APP_VERSION } from '@/lib/core/config';
 import { SettingsOptions as _SettingsOptions } from '@/components/settings/Settings';
 import { LayoutSettings as _LayoutSettings } from '@/components/brewing/Timer/Settings';
-import { db, RoasterConfig } from '@/lib/core/db';
+import { db, RoasterConfig, Grinder } from '@/lib/core/db';
 import {
   getRoasterConfigsSync,
   getSettingsStore,
@@ -58,6 +58,7 @@ export const APP_DATA_KEYS = [
   'backupReminderSettings', // 备份提醒设置
   'yearlyReports', // 年度报告
   'yearlyReviewReminderSettings', // 年度回顾提醒设置
+  'grinders', // 磨豆机数据
 ];
 
 /**
@@ -82,6 +83,7 @@ const INDEXED_DB_SYNC_KEYS = [
   'customEquipments',
   'coffeeBeans',
   'brewingNotes',
+  'grinders',
 ] as const;
 
 /**
@@ -125,6 +127,32 @@ export const DataManager = {
         if (key === 'brewGuideSettings') {
           const settingsFromStore = getSettingsStore().settings;
           exportData.data[key] = settingsFromStore;
+          continue;
+        }
+
+        // 特殊处理 grinders - 从 IndexedDB 获取
+        if (key === 'grinders') {
+          const grinders = await db.grinders.toArray();
+          exportData.data[key] = grinders;
+          continue;
+        }
+
+        // 特殊处理 coffeeBeans - 从 IndexedDB 获取
+        if (key === 'coffeeBeans') {
+          exportData.data[key] = await db.coffeeBeans.toArray();
+          continue;
+        }
+
+        // 特殊处理 customEquipments - 从 IndexedDB 获取
+        if (key === 'customEquipments') {
+          exportData.data[key] = await db.customEquipments.toArray();
+          continue;
+        }
+
+        // 特殊处理 brewingNotes - 从 IndexedDB 获取
+        if (key === 'brewingNotes') {
+          const notes = await db.brewingNotes.toArray();
+          exportData.data[key] = this.cleanBrewingNotesForExport(notes);
           continue;
         }
 
@@ -280,6 +308,10 @@ export const DataManager = {
             await db.brewingNotes.clear();
             await db.brewingNotes.bulkPut(data as _BrewingNote[]);
             break;
+          case 'grinders':
+            await db.grinders.clear();
+            await db.grinders.bulkPut(data as Grinder[]);
+            break;
         }
       };
 
@@ -293,6 +325,36 @@ export const DataManager = {
             if ((valueToSave as any)?.state?.settings) {
               valueToSave = (valueToSave as any).state.settings;
             }
+
+            // 尝试迁移旧版 grinders 数据 (如果存在)
+            const settingsObj = valueToSave as any;
+            if (
+              settingsObj &&
+              Array.isArray(settingsObj.grinders) &&
+              settingsObj.grinders.length > 0
+            ) {
+              try {
+                const { getGrinderStore } = await import(
+                  '@/lib/stores/grinderStore'
+                );
+                // 简单的验证，确保是对象且有 id 和 name
+                const validGrinders = settingsObj.grinders.filter(
+                  (g: any) => g && typeof g === 'object' && g.id && g.name
+                );
+
+                if (validGrinders.length > 0) {
+                  await db.grinders.clear();
+                  await db.grinders.bulkPut(validGrinders);
+                  await getGrinderStore().refreshGrinders();
+                  console.log(
+                    `[DataManager] Migrated ${validGrinders.length} grinders from settings`
+                  );
+                }
+              } catch (e) {
+                console.error('[DataManager] Failed to migrate grinders:', e);
+              }
+            }
+
             // 使用 settingsStore 导入设置（会自动保存到 IndexedDB）
             await getSettingsStore().importSettings(valueToSave as any);
             continue; // 跳过后续的 Storage 保存
