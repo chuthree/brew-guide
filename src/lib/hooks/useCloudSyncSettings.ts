@@ -4,7 +4,7 @@
  * 2025-12-21 简化：移除未使用的 hook，只保留类型定义和辅助函数
  */
 
-import type { SettingsOptions } from '@/components/settings/Settings';
+import type { SettingsOptions } from '@/lib/core/db';
 
 // ============================================
 // 类型定义

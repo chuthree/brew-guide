@@ -5,7 +5,7 @@ import {
 } from '@/lib/core/config';
 import { CoffeeBean as _CoffeeBean, BlendComponent } from '@/types/app';
 import { APP_VERSION } from '@/lib/core/config';
-import { SettingsOptions as _SettingsOptions } from '@/components/settings/Settings';
+import type { SettingsOptions as _SettingsOptions } from '@/lib/core/db';
 import { LayoutSettings as _LayoutSettings } from '@/components/brewing/Timer/Settings';
 import { db, RoasterConfig, Grinder } from '@/lib/core/db';
 import {

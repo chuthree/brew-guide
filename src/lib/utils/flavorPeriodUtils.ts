@@ -1,13 +1,11 @@
 import { CoffeeBean } from '@/types/app';
+import { type SettingsOptions } from '@/lib/core/db';
 import {
   defaultSettings,
-  type SettingsOptions,
-} from '@/components/settings/Settings';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
-import {
   getRoasterConfigSync,
   getSettingsStore,
 } from '@/lib/stores/settingsStore';
+import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
 
 // 赏味期信息接口
 export interface FlavorInfo {

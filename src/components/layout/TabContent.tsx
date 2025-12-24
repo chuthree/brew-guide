@@ -10,6 +10,7 @@ import {
 import StageItem from '@/components/brewing/stages/StageItem';
 import StageDivider from '@/components/brewing/stages/StageDivider';
 import { SettingsOptions } from '../settings/Settings';
+import { LayoutSettings } from '@/components/brewing/Timer/Settings';
 import {
   TabType,
   MainTabType,
@@ -163,9 +164,8 @@ const TabContent: React.FC<TabContentProps> = ({
   );
 
   // 本地布局设置
-  const [localLayoutSettings, setLocalLayoutSettings] = useState(
-    settings.layoutSettings || {}
-  );
+  const [localLayoutSettings, setLocalLayoutSettings] =
+    useState<LayoutSettings>(settings.layoutSettings || {});
 
   // 添加高亮豆子ID状态
   const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(

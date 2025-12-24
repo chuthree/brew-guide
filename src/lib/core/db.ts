@@ -88,13 +88,13 @@ export interface AppSettings {
 
   // 布局设置
   layoutSettings?: {
-    stageInfoReversed: boolean;
-    progressBarHeight: number;
-    controlsReversed: boolean;
-    alwaysShowTimerInfo: boolean;
-    showStageDivider: boolean;
-    compactMode: boolean;
-    dataFontSize: string;
+    stageInfoReversed?: boolean;
+    progressBarHeight?: number;
+    controlsReversed?: boolean;
+    alwaysShowTimerInfo?: boolean;
+    showStageDivider?: boolean;
+    compactMode?: boolean;
+    dataFontSize?: '2xl' | '3xl' | '4xl';
   };
 
   // 咖啡豆显示设置
@@ -276,7 +276,18 @@ export interface AppSettings {
 
   // 器具排序
   equipmentOrder?: string[];
+
+  // 注意: grinders 字段已迁移到独立的 grinders 表
+  // 此字段仅用于兼容旧数据导入，运行时不使用
+  grinders?: Grinder[];
 }
+
+/**
+ * SettingsOptions 类型别名
+ * 为保持向后兼容，提供 AppSettings 的别名
+ * 新代码应使用 AppSettings
+ */
+export type SettingsOptions = AppSettings;
 
 /**
  * 应用数据库类 - 使用Dexie.js包装IndexedDB

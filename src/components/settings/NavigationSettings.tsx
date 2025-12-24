@@ -181,7 +181,8 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
       pinnedViews: [],
     };
 
-    const currentPinned = current.pinnedViews;
+    // 类型断言：pinnedViews 从 db 存储时为 string[]，运行时实际为 ViewOption[]
+    const currentPinned = current.pinnedViews as ViewOption[];
     let newPinned: ViewOption[];
     const isPinning = !currentPinned.includes(view); // 判断是固定还是取消固定
 

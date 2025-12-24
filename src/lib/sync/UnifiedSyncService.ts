@@ -2,7 +2,7 @@
  * 统一同步服务
  */
 
-import type { SettingsOptions } from '@/components/settings/Settings';
+import type { SettingsOptions } from '@/lib/core/db';
 import type { CloudProvider, SyncDirection, SyncProgress } from './types';
 import type { ISyncManager, ISyncResult, ISyncOptions } from './interfaces';
 import { createFailureResult, BaseSyncManagerAdapter } from './interfaces';

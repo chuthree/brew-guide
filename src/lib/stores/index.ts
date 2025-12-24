@@ -51,6 +51,7 @@ export {
 // 类型重导出（从 db.ts）
 export type {
   AppSettings,
+  SettingsOptions, // AppSettings 的别名，保持向后兼容
   FlavorDimension,
   RoasterConfig,
   RoasterFlavorPeriodSimple,

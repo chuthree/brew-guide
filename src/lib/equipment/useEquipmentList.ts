@@ -9,7 +9,7 @@ import {
   type CustomEquipment,
   type Equipment,
 } from '@/lib/core/config';
-import { type SettingsOptions } from '@/components/settings/Settings';
+import type { SettingsOptions } from '@/lib/core/db';
 
 export interface UseEquipmentListOptions {
   customEquipments: CustomEquipment[];
@@ -52,9 +52,7 @@ export function useEquipmentList<
     setError(null);
 
     try {
-      const { loadEquipmentOrder } = await import(
-        '@/lib/stores/settingsStore'
-      );
+      const { loadEquipmentOrder } = await import('@/lib/stores/settingsStore');
       const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
 
       const equipmentOrder = loadEquipmentOrder();
@@ -101,9 +99,7 @@ export function useEquipmentList<
   // 处理器具排序更新事件
   const handleEquipmentOrderUpdate = useCallback(async () => {
     try {
-      const { loadEquipmentOrder } = await import(
-        '@/lib/stores/settingsStore'
-      );
+      const { loadEquipmentOrder } = await import('@/lib/stores/settingsStore');
       const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
 
       const equipmentOrder = loadEquipmentOrder();

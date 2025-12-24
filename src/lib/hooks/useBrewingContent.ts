@@ -5,7 +5,7 @@ import {
   CustomEquipment,
 } from '@/lib/core/config';
 import { Content } from './useBrewingState';
-import { SettingsOptions } from '@/components/settings/Settings';
+import type { SettingsOptions } from '@/lib/core/db';
 import { loadCustomMethodsForEquipment } from '@/lib/stores/customMethodStore';
 import { filterHiddenMethods } from '@/lib/stores/settingsStore';
 import { Stage } from '@/components/method/forms/components/types';

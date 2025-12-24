@@ -3,7 +3,7 @@ import {
   getBeanFlavorPeriodStatus,
   FlavorPeriodStatus,
 } from '@/lib/utils/beanVarietyUtils';
-import { SettingsOptions } from '@/components/settings/Settings';
+import type { SettingsOptions } from '@/lib/core/db';
 import { getSettingsStore } from '@/lib/stores/settingsStore';
 
 /**

@@ -411,28 +411,31 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     },
   } = settings.navigationSettings || {};
 
+  // 类型断言：pinnedViews 从 db 存储时为 string[]，运行时实际为 ViewOption[]
+  const typedPinnedViews = pinnedViews as ViewOption[];
+
   // 计算可用视图数量
   const availableViewsCount = Object.values(VIEW_OPTIONS).filter(view => {
-    if (pinnedViews.includes(view)) return false;
+    if (typedPinnedViews.includes(view)) return false;
     return coffeeBeanViews[view] !== false;
   }).length;
 
   // 判断当前视图是否被固定
   const isCurrentViewPinned =
-    currentBeanView && pinnedViews.includes(currentBeanView);
+    currentBeanView && typedPinnedViews.includes(currentBeanView);
 
   // 获取第一个未被固定且允许显示的视图作为默认视图
   const getFirstAvailableView = useCallback(() => {
     const allViews = Object.values(VIEW_OPTIONS);
     const availableView = allViews.find(view => {
       // 必须未被固定
-      if (pinnedViews.includes(view)) return false;
+      if (typedPinnedViews.includes(view)) return false;
       // 必须允许显示 (默认为 true)
       return coffeeBeanViews[view] !== false;
     });
     // 如果没有可用的，回退到库存视图
     return availableView || VIEW_OPTIONS.INVENTORY;
-  }, [pinnedViews, coffeeBeanViews]);
+  }, [typedPinnedViews, coffeeBeanViews]);
 
   // 自动纠正当前视图：如果当前视图既未被固定，又被禁用，则切换到第一个可用视图
   useEffect(() => {
@@ -445,7 +448,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
     if (!currentBeanView) return;
 
-    const isPinned = pinnedViews.includes(currentBeanView);
+    const isPinned = typedPinnedViews.includes(currentBeanView);
     const isEnabled = coffeeBeanViews[currentBeanView] !== false;
 
     // 2. 如果当前视图既没被固定，也没被启用显示，且还有其他可用视图
@@ -457,7 +460,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     }
   }, [
     currentBeanView,
-    pinnedViews,
+    typedPinnedViews,
     coffeeBeanViews,
     availableViewsCount,
     getFirstAvailableView,
@@ -472,8 +475,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       availableViewsCount === 0
     ) {
       // 优先跳转到第一个固定的视图
-      if (pinnedViews.length > 0) {
-        onBeanViewChange?.(pinnedViews[0]);
+      if (typedPinnedViews.length > 0) {
+        onBeanViewChange?.(typedPinnedViews[0]);
       } else {
         // 如果没有固定视图，跳转到其他可见的主标签页
         if (visibleTabs.brewing) {
@@ -487,7 +490,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     activeMainTab,
     isCurrentViewPinned,
     availableViewsCount,
-    pinnedViews,
+    typedPinnedViews,
     visibleTabs,
     setActiveMainTab,
     onBeanViewChange,
@@ -501,7 +504,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     // 如果当前视图未被固定且启用，更新记录
     if (
       currentBeanView &&
-      !pinnedViews.includes(currentBeanView) &&
+      !typedPinnedViews.includes(currentBeanView) &&
       coffeeBeanViews[currentBeanView] !== false
     ) {
       lastUnpinnedViewRef.current = currentBeanView;
@@ -515,12 +518,17 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     // 这在 settings 异步加载完成后特别重要
     if (
       lastUnpinnedViewRef.current &&
-      (pinnedViews.includes(lastUnpinnedViewRef.current) ||
+      (typedPinnedViews.includes(lastUnpinnedViewRef.current) ||
         coffeeBeanViews[lastUnpinnedViewRef.current] === false)
     ) {
       lastUnpinnedViewRef.current = getFirstAvailableView();
     }
-  }, [currentBeanView, pinnedViews, coffeeBeanViews, getFirstAvailableView]);
+  }, [
+    currentBeanView,
+    typedPinnedViews,
+    coffeeBeanViews,
+    getFirstAvailableView,
+  ]);
 
   const navItemStyle = {
     opacity: !(canGoBack() && onBackClick) ? 1 : 0,
@@ -748,7 +756,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     // 检查 currentBeanView 是否有效（未被固定且启用）
     const isCurrentValid =
       currentBeanView &&
-      !pinnedViews.includes(currentBeanView) &&
+      !typedPinnedViews.includes(currentBeanView) &&
       coffeeBeanViews[currentBeanView] !== false;
 
     if (isCurrentValid) {
@@ -773,7 +781,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       // 找到另一个可用视图
       const allViews = Object.values(VIEW_OPTIONS);
       const enabledViews = allViews.filter(
-        v => !pinnedViews.includes(v) && coffeeBeanViews[v] !== false
+        v => !typedPinnedViews.includes(v) && coffeeBeanViews[v] !== false
       );
       if (enabledViews.length === 2 && currentBeanView) {
         const nextView = enabledViews.find(v => v !== currentBeanView);
@@ -1259,7 +1267,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   )}
 
                   {/* Pinned Views */}
-                  {pinnedViews.map(view => (
+                  {typedPinnedViews.map(view => (
                     <div key={view} style={navItemStyle}>
                       <TabButton
                         tab={

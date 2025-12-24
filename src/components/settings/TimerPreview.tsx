@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { SettingsOptions } from './Settings';
+import { LayoutSettings } from '@/components/brewing/Timer/Settings';
 
 interface TimerPreviewProps {
   settings: SettingsOptions;
@@ -88,7 +89,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
   const expandedStages = createSampleExpandedStages();
 
   // 设置默认值
-  const layoutSettings = settings.layoutSettings || {};
+  const layoutSettings: LayoutSettings = settings.layoutSettings || {};
   const showFlowRate = settings.showFlowRate ?? false;
   const stageInfoReversed = layoutSettings.stageInfoReversed ?? false;
   const controlsReversed = layoutSettings.controlsReversed ?? false;
