@@ -104,16 +104,9 @@ class UnifiedSyncService {
     config: object
   ): Promise<ISyncManager | null> {
     switch (provider) {
-      case 'supabase': {
-        const { SupabaseSyncManager } = await import(
-          '@/lib/supabase/SupabaseSyncManager'
-        );
-        const mgr = new SupabaseSyncManager();
-        const ok = await mgr.initialize(
-          config as { provider: 'supabase'; url: string; anonKey: string }
-        );
-        return ok ? mgr : null;
-      }
+      // Supabase 使用 RealtimeSyncService 自动同步，不再需要手动同步管理器
+      case 'supabase':
+        return null;
       case 's3': {
         const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
         const mgr = new S3SyncManager();

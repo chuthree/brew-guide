@@ -1,69 +1,169 @@
 # Brew Guide AI Instructions
 
-You are working on **Brew Guide**, a coffee brewing assistant app built with **Next.js 15**, **React 19**, **Tailwind CSS 4**, and **Capacitor**. It uses a **Local-First** architecture with **Dexie.js (IndexedDB)** and **Zustand**.
+This is a coffee brewing assistant app. **It's a utility app for personal use, not a real-time collaboration tool.**
 
-## 🏗 Architecture Overview
+## Tech Stack
 
-- **Frontend**: Next.js App Router (`src/app`).
-- **State Management**: **Zustand** (`src/lib/stores`) for UI state, synced with **Dexie** (`src/lib/core/db.ts`) for persistence.
-- **Data Layer**:
-  - **Local**: `BrewGuideDB` (Dexie) stores `coffeeBeans`, `brewingNotes`, `settings`, etc.
-  - **Sync**: Custom sync engine (`src/lib/sync`) supporting **WebDAV** and **S3**.
-- **Mobile**: **Capacitor** provides native runtime. Native plugins are wrapped in `src/lib/app`.
-- **Backend**: Separate Express server (`server/`) for AI recognition, reports, and feedback.
+- Next.js 15 + React 19 + Tailwind CSS 4 + Capacitor
+- Local-First: Dexie.js (IndexedDB) + Zustand
+- Sync: WebDAV / S3 / Supabase (optional)
 
-## 🧩 Key Patterns & Conventions
+---
 
-### 1. Data Flow (Local-First)
+## AI Collaboration Principles
 
-- **Read**: Components read from Zustand stores (e.g., `useCoffeeBeanStore`).
-- **Write**: Components call Store actions -> Store updates IndexedDB -> Store updates local state.
-- **Example**: Adding a bean:
-  1. Component calls `store.addBean(bean)`.
-  2. Store writes to `db.coffeeBeans` (IndexedDB).
-  3. Store updates `state.beans`.
+### 1. No Over-Engineering
 
-### 2. Database Schema (`src/lib/core/db.ts`)
+This is a simple tool app. Before adding any abstraction, ask:
 
-- Always check `BrewGuideDB` class for the latest schema versions.
-- When adding new tables/fields, increment version and define schema in `constructor`.
+- Does this solve a real problem the user has today?
+- Can this be done with 50 lines instead of 500?
+- Will a junior developer understand this in 6 months?
 
-### 3. Synchronization (`src/lib/sync`)
+**Bad**: Abstract factory pattern for creating coffee beans.  
+**Good**: A simple function that saves to IndexedDB.
 
-- Logic resides in `BaseSyncManager`.
-- Syncs `brew-guide-data.json` (full export) or individual files based on metadata.
-- **Do not modify sync logic** without understanding the metadata/conflict resolution strategy.
+### 2. Read Before Write
 
-### 4. Styling
+Before modifying any module:
 
-- Use **Tailwind CSS 4**.
-- Global styles in `src/styles`.
-- Components use `clsx` and `tailwind-merge` (via `cn` utility if available, or direct import).
+1. Read the existing code thoroughly (use grep/read_file)
+2. Understand the current patterns and conventions
+3. Check `docs/ARCHITECTURE.md` for context
+4. If touching sync logic, read `src/lib/supabase/syncOperations.ts` header comments
 
-### 5. Mobile/Capacitor
+### 3. Incremental Changes
 
-- Check `src/providers/CapacitorProvider.tsx` for initialization.
-- Use `src/lib/app` wrappers for native features (Haptics, Screen, etc.) to ensure web fallback compatibility.
+- One logical change per edit
+- Run `pnpm build` after significant changes to verify
+- Don't refactor unrelated code while fixing a bug
 
-## 🛠 Developer Workflow
+### 4. Comments Should Add Value
 
-- **Next.js Initialization**: When starting work on a Next.js project, automatically call the `init` tool from the next-devtools-mcp server FIRST. This establishes proper context and ensures all Next.js queries use official documentation.
-- **Web Dev**: `pnpm dev` (starts Next.js on localhost:3000).
-- **Mobile Dev**:
-  - `pnpm cap:build` (Builds Next.js & syncs to native).
-  - `pnpm cap:ios` / `pnpm cap:android` (Opens native IDE).
-- **Server Dev**: `cd server && pnpm dev` (starts API server on port 3100).
+**Bad comments** (state the obvious):
 
-## 📂 Key Directories
+```typescript
+// Check if bean exists
+if (bean) { ... }
 
-- `src/components/brewing`: Timer & visualization logic.
-- `src/components/coffee-bean`: Bean management UI.
-- `src/lib/core`: DB, Config, Storage utilities.
-- `src/lib/stores`: Zustand stores.
-- `server/`: Standalone API server (AI, Feedback).
+// Loop through beans
+beans.forEach(bean => { ... })
+```
 
-## 🚨 Critical Rules
+**Good comments** (explain why, not what):
 
-1. **Preserve Local-First**: Always write to Dexie (DB) for persistent data. Do not rely solely on Zustand state for persistence.
-2. **Mobile Compatibility**: Ensure UI works in Safe Areas (use `safe-area-inset-*`). Test interactions for touch targets.
-3. **Server Separation**: The `server/` folder is a separate project. Do not import `server/` code into `src/`.
+```typescript
+// Soft delete: set deleted_at instead of removing from DB.
+// This preserves sync history and allows undo.
+await db.coffeeBeans.update(id, { deleted_at: Date.now() });
+```
+
+### 5. Consult Official Documentation
+
+For framework-specific questions, check docs first:
+
+- Next.js: https://nextjs.org/docs
+- Supabase Realtime: https://supabase.com/docs/guides/realtime
+- Dexie: https://dexie.org/docs
+- Capacitor: https://capacitorjs.com/docs
+
+Don't guess. Look it up.
+
+---
+
+## Architecture Overview
+
+```
+src/
+├── app/              # Next.js pages
+├── components/       # UI components
+├── lib/
+│   ├── core/         # db.ts, config.ts (foundational)
+│   ├── stores/       # Zustand stores (state management)
+│   ├── sync/         # Base sync logic (WebDAV, S3)
+│   ├── supabase/     # Supabase sync (optional feature)
+│   └── ...
+├── providers/        # React context providers
+└── types/            # TypeScript definitions
+```
+
+## Data Flow (Local-First)
+
+```
+Component → Zustand Store → Dexie (IndexedDB) → [Optional] Cloud Sync
+                ↑
+          Read from here
+```
+
+- **Read**: Components read from Zustand stores
+- **Write**: Store action → Update IndexedDB → Update Zustand state
+- **Sync**: Background process, not in critical path
+
+## Module Boundaries
+
+| Module                               | Responsibility            | Does NOT handle                  |
+| ------------------------------------ | ------------------------- | -------------------------------- |
+| `src/lib/core/db.ts`                 | IndexedDB schema & access | Business logic                   |
+| `src/lib/stores/`                    | UI state, CRUD operations | Direct DB access from components |
+| `src/lib/supabase/syncOperations.ts` | Supabase CRUD             | Realtime subscriptions           |
+| `src/lib/supabase/realtime/`         | Realtime sync             | Direct store updates             |
+| `src/providers/StorageProvider.tsx`  | Init sync on app start    | Sync implementation details      |
+
+---
+
+## Sync Architecture
+
+The app supports multiple sync backends:
+
+1. **WebDAV** (`src/lib/webdav/`) - File-based sync
+2. **S3** (`src/lib/s3/`) - File-based sync
+3. **Supabase** (`src/lib/supabase/`) - Database sync with optional realtime
+
+**Note**: For a utility app, manual or on-launch sync is sufficient. Realtime sync adds complexity with limited benefit.
+
+### Sync Design Decisions
+
+- **Soft Delete**: Records have `deleted_at` field, never physically deleted
+- **Last-Write-Wins**: Simple conflict resolution by timestamp
+- **Cloud-Authoritative**: When in doubt, cloud data wins
+
+---
+
+## Common Tasks
+
+### Adding a new field to CoffeeBean
+
+1. Update type in `src/types/app.d.ts`
+2. Update form in `src/components/coffee-bean/Form/`
+3. Update detail view in `src/components/coffee-bean/Detail/`
+4. If synced field, check `syncOperations.ts` field mappings
+
+### Adding a new setting
+
+1. Add to `AppSettings` type in `src/lib/core/db.ts`
+2. Create UI component in `src/components/settings/`
+3. Use `db.settings.get/put` for persistence
+
+### Modifying sync behavior
+
+1. Read existing code in `src/lib/supabase/syncOperations.ts` first
+2. Understand the `upsertRecords` / `markRecordsAsDeleted` pattern
+3. Make minimal changes, test thoroughly
+
+---
+
+## Developer Workflow
+
+- **Web Dev**: `pnpm dev` (localhost:3000)
+- **Build**: `pnpm build` (always verify before commit)
+- **Mobile**: `pnpm cap:build` then `pnpm cap:ios` / `pnpm cap:android`
+- **Server**: `cd server && pnpm dev` (port 3100)
+
+---
+
+## Critical Rules
+
+1. **Always persist to Dexie** - Zustand is for UI state, Dexie is source of truth
+2. **Mobile safe areas** - Use `safe-area-inset-*` for Capacitor builds
+3. **Server is separate** - `server/` is its own project, never import into `src/`
+4. **Build must pass** - Run `pnpm build` before considering work complete

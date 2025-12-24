@@ -399,7 +399,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   const isInitialSyncing = useSyncStatusStore(state => state.isInitialSyncing);
 
   // 判断是否正在同步
-  const isSyncing = syncStatus === 'syncing';
+  const isSyncing = syncStatus === 'syncing' || isInitialSyncing;
 
   const {
     visibleTabs = { brewing: true, coffeeBean: true, notes: true },
@@ -1075,38 +1075,63 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   onClick={handleTitleClick}
                   className="-mt-3 -ml-3 flex cursor-pointer items-center pt-3 pr-4 pb-3 pl-3 text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400"
                 >
-                  {canGoBack() && onBackClick ? (
-                    <ArrowLeft className="mr-1 h-4 w-4" />
-                  ) : (
-                    <Equal className="h-4 w-4" />
-                  )}
-                  {/* 初始同步加载指示器 - Apple 备忘录风格 */}
-                  <AnimatePresence>
-                    {syncProvider === 'supabase' && isInitialSyncing && (
-                      <motion.div
-                        initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                        animate={{ opacity: 1, width: 'auto', marginLeft: 6 }}
-                        exit={{ opacity: 0, width: 0, marginLeft: 0 }}
-                        transition={{ duration: 0.2, ease: 'easeOut' }}
-                        className="flex items-center overflow-hidden"
-                      >
-                        <AppleSpinner className="h-3 w-3" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <div className="relative flex h-4 w-4 items-center justify-center">
+                    <AnimatePresence mode="wait" initial={false}>
+                      {syncProvider === 'supabase' && isSyncing ? (
+                        <motion.div
+                          key="spinner"
+                          initial={{
+                            opacity: 0,
+                            scale: 0.5,
+                            filter: 'blur(4px)',
+                          }}
+                          animate={{
+                            opacity: 1,
+                            scale: 1,
+                            filter: 'blur(0px)',
+                          }}
+                          exit={{ opacity: 0, scale: 0.5, filter: 'blur(4px)' }}
+                          transition={{
+                            duration: 0.3,
+                            ease: [0.23, 1, 0.32, 1], // cubic-bezier for smooth feel
+                          }}
+                          className="absolute inset-0 flex items-center justify-center"
+                        >
+                          <AppleSpinner className="h-3.5 w-3.5" />
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="icon"
+                          initial={{
+                            opacity: 0,
+                            scale: 0.5,
+                            filter: 'blur(4px)',
+                          }}
+                          animate={{
+                            opacity: 1,
+                            scale: 1,
+                            filter: 'blur(0px)',
+                          }}
+                          exit={{ opacity: 0, scale: 0.5, filter: 'blur(4px)' }}
+                          transition={{
+                            duration: 0.3,
+                            ease: [0.23, 1, 0.32, 1],
+                          }}
+                          className="absolute inset-0 flex items-center justify-center"
+                        >
+                          {canGoBack() && onBackClick ? (
+                            <ArrowLeft className="h-4 w-4" />
+                          ) : (
+                            <Equal className="h-4 w-4" />
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
 
                 {/* 主导航按钮 - 保持固定高度避免抖动 - 桌面端垂直排列 */}
                 <div className="flex items-center space-x-6 md:mt-2 md:flex-col md:items-start md:space-y-4 md:space-x-0">
-                  {/* 移动端同步指示器 - 放在 tab 左边 */}
-                  {syncProvider === 'supabase' && isSyncing && (
-                    <div style={navItemStyle} className="md:hidden">
-                      <div className="pb-3 text-neutral-400 dark:text-neutral-500">
-                        <AppleSpinner className="h-3 w-3" />
-                      </div>
-                    </div>
-                  )}
-
                   {visibleTabs.brewing && (
                     <div style={navItemStyle}>
                       <TabButton

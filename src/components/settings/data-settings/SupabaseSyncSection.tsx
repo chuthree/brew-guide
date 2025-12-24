@@ -3,24 +3,24 @@
 /**
  * Supabase 同步配置组件
  *
- * 支持两种模式：
- * 1. 手动同步：用户手动点击上传/下载按钮
- * 2. 实时同步：当 activeSyncType === 'supabase' 时自动启用
+ * 功能：
+ * 1. 配置 Supabase URL 和 Anon Key
+ * 2. 测试连接
+ * 3. 显示实时同步状态
+ *
+ * 注意：移除了手动上传/下载按钮，改为全自动实时同步
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { SupabaseSyncManager } from '@/lib/supabase/SupabaseSyncManager';
+import React, { useState, useRef, useEffect } from 'react';
 import { SUPABASE_SETUP_SQL } from '@/lib/supabase';
-import { useSyncSection } from '@/lib/hooks/useSyncSection';
-import { buildSyncErrorLogs } from '@/lib/sync/types';
-import { showToast } from '@/components/common/feedback/LightToast';
 import { SettingsOptions } from '../Settings';
 import { ExternalLink, Wifi, WifiOff, RefreshCw, Clock } from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
-import { SyncHeaderButton, SyncDebugDrawer, SyncButtons } from './shared';
+import { SyncHeaderButton } from './shared';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import { getRealtimeSyncService } from '@/lib/supabase/realtime';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 type SupabaseSyncSettings = NonNullable<SettingsOptions['supabaseSync']>;
 
@@ -41,226 +41,112 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   enabled,
   hapticFeedback,
   onSettingChange,
-  onSyncComplete,
   onEnable,
 }) => {
-  const {
-    status,
-    setStatus,
-    error,
-    setError,
-    expanded,
-    setExpanded,
-    isSyncing,
-    setIsSyncing,
-    syncProgress,
-    setSyncProgress,
-    debugLogs,
-    setDebugLogs,
-    showDebugDrawer,
-    setShowDebugDrawer,
-    textAreaRef: debugTextAreaRef,
-    copySuccess: debugCopySuccess,
-    handleCopyLogs,
-    handleSelectAll,
-    getStatusColor,
-    getStatusText,
-    notifyCloudSyncStatusChange,
-    triggerHaptic,
-  } = useSyncSection(enabled, { hapticFeedback, onSyncComplete });
-
+  const [expanded, setExpanded] = useState(false);
   const [showAnonKey, setShowAnonKey] = useState(false);
   const [showSQLDrawer, setShowSQLDrawer] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const managerRef = useRef<SupabaseSyncManager | null>(null);
 
   // 实时同步状态
-  const { realtimeStatus, realtimeEnabled, pendingChangesCount } =
-    useSyncStatusStore();
+  const { realtimeStatus, pendingChangesCount } = useSyncStatusStore();
 
-  useEffect(() => {
-    if (!enabled) {
-      setStatus('disconnected');
-      setError('');
-      managerRef.current?.disconnect();
-      managerRef.current = null;
-      return;
+  const triggerHaptic = (style: 'light' | 'medium' = 'light') => {
+    if (hapticFeedback) {
+      Haptics.impact({
+        style: style === 'light' ? ImpactStyle.Light : ImpactStyle.Medium,
+      }).catch(() => {});
     }
-
-    const isConfigComplete = settings.url && settings.anonKey;
-    if (!isConfigComplete) {
-      setStatus('disconnected');
-      return;
-    }
-
-    setStatus(settings.lastConnectionSuccess ? 'connected' : 'disconnected');
-  }, [enabled, settings.lastConnectionSuccess, setStatus, setError]);
-
-  const getManager = async (): Promise<SupabaseSyncManager | null> => {
-    if (managerRef.current?.isInitialized()) {
-      return managerRef.current;
-    }
-
-    const manager = new SupabaseSyncManager();
-    const initialized = await manager.initialize({
-      provider: 'supabase',
-      url: settings.url,
-      anonKey: settings.anonKey,
-    });
-
-    if (!initialized) return null;
-
-    managerRef.current = manager;
-    return manager;
   };
 
-  const testConnection = async () => {
+  // 根据实时同步状态确定显示状态
+  const getDisplayStatus = () => {
+    if (!enabled) return 'disconnected';
+    if (isConnecting) return 'connecting';
+    if (realtimeStatus === 'connected') return 'connected';
+    if (realtimeStatus === 'connecting') return 'connecting';
+    if (realtimeStatus === 'error') return 'error';
+    return settings.lastConnectionSuccess ? 'connected' : 'disconnected';
+  };
+
+  const status = getDisplayStatus();
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'connected':
+        return 'bg-green-500';
+      case 'connecting':
+        return 'bg-amber-500';
+      case 'error':
+        return 'bg-red-500';
+      default:
+        return 'bg-neutral-300 dark:bg-neutral-600';
+    }
+  };
+
+  const getStatusText = () => {
+    switch (status) {
+      case 'connected':
+        return '已连接';
+      case 'connecting':
+        return '连接中...';
+      case 'error':
+        return '连接失败';
+      default:
+        return '未连接';
+    }
+  };
+
+  // 连接/重连实时同步服务
+  const connectRealtimeSync = async () => {
     if (!settings.url || !settings.anonKey) {
       setError('请填写完整的配置信息');
-      setStatus('error');
       return;
     }
 
-    setStatus('connecting');
+    setIsConnecting(true);
     setError('');
 
     try {
-      const manager = await getManager();
-      if (!manager) {
-        setStatus('error');
-        setError('初始化失败：请检查 URL 格式');
-        return;
-      }
+      const service = getRealtimeSyncService();
+      const connected = await service.connect({
+        url: settings.url,
+        anonKey: settings.anonKey,
+        enableOfflineQueue: true,
+      });
 
-      const connected = await manager.testConnection();
       if (connected) {
-        setStatus('connected');
         onSettingChange('lastConnectionSuccess', true);
-        notifyCloudSyncStatusChange();
-        triggerHaptic('light');
+        triggerHaptic('medium');
       } else {
-        setStatus('error');
         setError('连接失败：请检查配置和网络，并确保已执行 SQL 初始化脚本');
       }
     } catch (err) {
-      setStatus('error');
       setError(`连接失败: ${err instanceof Error ? err.message : '未知错误'}`);
-    }
-  };
-
-  const performSync = async (direction: 'upload' | 'download') => {
-    if (isSyncing) {
-      setError('同步正在进行中');
-      return;
-    }
-
-    setIsSyncing(true);
-    setError('');
-    setDebugLogs([]);
-    setSyncProgress(null);
-
-    try {
-      const manager = await getManager();
-      if (!manager) {
-        const errorMsg = '初始化失败，请检查配置';
-        setStatus('error');
-        setError(errorMsg);
-        setDebugLogs(
-          buildSyncErrorLogs('Supabase', direction, errorMsg, [
-            'URL 格式可能不正确',
-          ])
-        );
-        setIsSyncing(false);
-        return;
-      }
-
-      const connected = await manager.testConnection();
-      if (!connected) {
-        const errorMsg = '连接失败，请检查配置';
-        setStatus('error');
-        setError(errorMsg);
-        setDebugLogs(
-          buildSyncErrorLogs('Supabase', direction, errorMsg, [
-            '请确认 Supabase URL 和 Anon Key 正确',
-            '请确认已执行 SQL 初始化脚本',
-          ])
-        );
-        setIsSyncing(false);
-        return;
-      }
-
-      setStatus('connected');
-      onSettingChange('lastConnectionSuccess', true);
-
-      const result = await manager.sync({
-        direction,
-        onProgress: progress => {
-          console.log(
-            `📊 [Supabase] 同步进度: ${progress.phase} - ${progress.message} (${progress.percentage}%)`
-          );
-          setSyncProgress({
-            phase: progress.phase,
-            message: progress.message,
-            percentage: progress.percentage,
-          });
-        },
-      });
-
-      if (result.success) {
-        const count =
-          direction === 'upload'
-            ? result.uploadedCount
-            : result.downloadedCount;
-
-        if (count > 0) {
-          showToast({
-            type: 'success',
-            title:
-              direction === 'upload'
-                ? `已上传 ${count} 项到云端`
-                : `已从云端下载 ${count} 项，即将重启...`,
-            duration: 2500,
-          });
-
-          if (direction === 'download') {
-            setTimeout(() => window.location.reload(), 2500);
-          }
-        } else {
-          showToast({
-            type: 'info',
-            title: '数据已是最新，无需同步',
-            duration: 2000,
-          });
-        }
-
-        triggerHaptic('medium');
-        onSyncComplete?.();
-      } else {
-        setError(result.message);
-        setDebugLogs(
-          buildSyncErrorLogs('Supabase', direction, result.message, [
-            ...result.errors,
-          ])
-        );
-        showToast({ type: 'error', title: result.message, duration: 3000 });
-      }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '同步失败';
-      setError(errorMsg);
-      setDebugLogs(
-        buildSyncErrorLogs('Supabase', direction, errorMsg, [errorMsg])
-      );
-      showToast({
-        type: 'error',
-        title: `同步失败: ${errorMsg}`,
-        duration: 3000,
-      });
     } finally {
-      setIsSyncing(false);
-      setSyncProgress(null);
+      setIsConnecting(false);
     }
   };
+
+  // 当配置完整且启用时，自动连接
+  useEffect(() => {
+    if (
+      enabled &&
+      settings.url &&
+      settings.anonKey &&
+      realtimeStatus === 'disconnected'
+    ) {
+      // 延迟一点避免频繁连接
+      const timer = setTimeout(() => {
+        connectRealtimeSync();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, settings.url, settings.anonKey]);
 
   const handleCopySQL = async () => {
     try {
@@ -357,101 +243,69 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           {error && (
             <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
               <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-              {debugLogs.length > 0 && (
-                <button
-                  onClick={() => setShowDebugDrawer(true)}
-                  className="mt-2 text-xs font-medium text-red-700 underline hover:text-red-800 dark:text-red-300 dark:hover:text-red-200"
-                >
-                  查看详细日志
-                </button>
-              )}
             </div>
           )}
 
-          <button
-            onClick={testConnection}
-            disabled={status === 'connecting'}
-            className="w-full rounded-md bg-neutral-800 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-900 disabled:bg-neutral-400 dark:bg-neutral-700 dark:hover:bg-neutral-600"
-          >
-            {status === 'connecting' ? '连接中...' : '测试连接'}
-          </button>
-
-          {/* 实时同步状态显示 */}
-          {realtimeEnabled && (
-            <div className="rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {realtimeStatus === 'connected' ? (
-                    <Wifi className="h-4 w-4 text-green-500" />
-                  ) : realtimeStatus === 'connecting' ? (
-                    <RefreshCw className="h-4 w-4 animate-spin text-amber-500" />
-                  ) : (
-                    <WifiOff className="h-4 w-4 text-neutral-400" />
-                  )}
-                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                    实时同步
-                  </span>
-                </div>
-                <span
-                  className={`text-xs font-medium ${
-                    realtimeStatus === 'connected'
-                      ? 'text-green-600 dark:text-green-400'
-                      : realtimeStatus === 'connecting'
-                        ? 'text-amber-600 dark:text-amber-400'
-                        : 'text-neutral-500'
-                  }`}
-                >
-                  {realtimeStatus === 'connected'
-                    ? '已连接'
-                    : realtimeStatus === 'connecting'
-                      ? '连接中...'
-                      : realtimeStatus === 'error'
-                        ? '连接失败'
-                        : '未连接'}
+          {/* 实时同步状态和控制 */}
+          <div className="rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {realtimeStatus === 'connected' ? (
+                  <Wifi className="h-4 w-4 text-green-500" />
+                ) : realtimeStatus === 'connecting' || isConnecting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin text-amber-500" />
+                ) : (
+                  <WifiOff className="h-4 w-4 text-neutral-400" />
+                )}
+                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                  实时同步
                 </span>
               </div>
-
-              {pendingChangesCount > 0 && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{pendingChangesCount} 个变更待同步</span>
-                </div>
-              )}
-
-              {realtimeStatus === 'connected' && pendingChangesCount === 0 && (
-                <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-                  本地变更将自动同步到云端
-                </p>
-              )}
-
-              {realtimeStatus !== 'connected' &&
-                realtimeStatus !== 'connecting' && (
-                  <button
-                    onClick={async () => {
-                      const service = getRealtimeSyncService();
-                      await service.connect({
-                        url: settings.url,
-                        anonKey: settings.anonKey,
-                        enableOfflineQueue: true,
-                      });
-                    }}
-                    className="mt-2 w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                  >
-                    重新连接
-                  </button>
-                )}
+              <span
+                className={`text-xs font-medium ${
+                  realtimeStatus === 'connected'
+                    ? 'text-green-600 dark:text-green-400'
+                    : realtimeStatus === 'connecting' || isConnecting
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-neutral-500'
+                }`}
+              >
+                {realtimeStatus === 'connected'
+                  ? '已连接'
+                  : realtimeStatus === 'connecting' || isConnecting
+                    ? '连接中...'
+                    : realtimeStatus === 'error'
+                      ? '连接失败'
+                      : '未连接'}
+              </span>
             </div>
-          )}
+
+            {pendingChangesCount > 0 && (
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{pendingChangesCount} 个变更待同步</span>
+              </div>
+            )}
+
+            {realtimeStatus === 'connected' && pendingChangesCount === 0 && (
+              <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                本地变更将自动同步到云端
+              </p>
+            )}
+
+            {realtimeStatus !== 'connected' &&
+              realtimeStatus !== 'connecting' &&
+              !isConnecting && (
+                <button
+                  onClick={connectRealtimeSync}
+                  className="mt-2 w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                >
+                  {settings.url && settings.anonKey ? '连接' : '请先填写配置'}
+                </button>
+              )}
+          </div>
         </div>
       )}
-
-      <SyncButtons
-        enabled={enabled}
-        isConnected={status === 'connected'}
-        isSyncing={isSyncing}
-        onUpload={() => performSync('upload')}
-        onDownload={() => performSync('download')}
-      />
 
       <ActionDrawer
         isOpen={showSQLDrawer}
@@ -484,19 +338,6 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           </ActionDrawer.PrimaryButton>
         </ActionDrawer.Actions>
       </ActionDrawer>
-
-      <SyncDebugDrawer
-        isOpen={showDebugDrawer}
-        onClose={() => setShowDebugDrawer(false)}
-        logs={debugLogs}
-        textAreaRef={debugTextAreaRef}
-        copySuccess={debugCopySuccess}
-        onCopy={handleCopyLogs}
-        onSelectAll={handleSelectAll}
-        title="Supabase 同步"
-      />
     </div>
   );
 };
-
-export default SupabaseSyncSection;

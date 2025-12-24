@@ -89,7 +89,6 @@ export default function StorageInit() {
 
         if (
           activeSyncType === 'supabase' &&
-          supabaseSettings?.enabled &&
           supabaseSettings?.url &&
           supabaseSettings?.anonKey
         ) {
@@ -100,39 +99,37 @@ export default function StorageInit() {
           console.log('[StorageProvider] 启动 Supabase 实时同步...');
           const realtimeService = getRealtimeSyncService();
 
-          // 订阅实时同步状态变更
-          realtimeService.subscribe(state => {
-            syncStatusStore.setRealtimeStatus(state.connectionStatus);
-            syncStatusStore.setPendingChangesCount(state.pendingChangesCount);
-            syncStatusStore.setInitialSyncing(state.isInitialSyncing);
-            if (state.lastSyncTime) {
-              syncStatusStore.setStatus('success');
-            }
-          });
-
-          // 连接实时同步（现在是非阻塞的）
-          const connected = await realtimeService.connect({
+          const config = {
             url: supabaseSettings.url,
             anonKey: supabaseSettings.anonKey,
             enableOfflineQueue: true,
-          });
+          };
+
+          // 先初始化服务（确保监听器启动，即使离线也能捕获变更）
+          realtimeService.initialize(config);
+
+          // 连接实时同步（RealtimeSyncService.setState 会直接更新 syncStatusStore）
+          const connected = await realtimeService.connect(config);
 
           if (connected) {
             console.log('[StorageProvider] Supabase 实时同步已连接');
-            syncStatusStore.setStatus('idle');
           } else {
             console.warn('[StorageProvider] Supabase 实时同步连接失败');
-            syncStatusStore.setStatus('error');
           }
-        } else if (
-          supabaseSettings?.enabled &&
-          supabaseSettings?.url &&
-          supabaseSettings?.anonKey
-        ) {
+        } else if (supabaseSettings?.url && supabaseSettings?.anonKey) {
           // Supabase 已配置但不是活动同步类型，设置为手动模式
           syncStatusStore.setProvider('supabase');
           syncStatusStore.setStatus('idle');
           console.log('[StorageProvider] Supabase 已配置，等待用户手动同步');
+        } else {
+          console.log(
+            '[StorageProvider] Supabase 实时同步未启动 (条件不满足):',
+            {
+              activeSyncType,
+              hasUrl: !!supabaseSettings?.url,
+              hasKey: !!supabaseSettings?.anonKey,
+            }
+          );
         }
 
         // 清理过期临时文件（异步执行，不阻塞）

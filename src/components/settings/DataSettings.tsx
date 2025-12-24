@@ -289,14 +289,14 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   /**
    * 切换云同步类型
-   * 只更新 activeSyncType，不修改各服务的 enabled 状态
-   * 这样不会触发各 SyncSection 的 useEffect 重新连接
+   * 同时更新对应服务的 enabled 状态，确保 StorageProvider 能正确识别
    */
   const switchSyncType = useCallback(
     (type: CloudSyncType) => {
       setActiveSyncType(type);
 
       (async () => {
+        // 如果之前是 Supabase，现在切走，断开连接
         if (syncType === 'supabase' && type !== 'supabase') {
           try {
             const { syncService } = await import(
@@ -308,7 +308,29 @@ const DataSettings: React.FC<DataSettingsProps> = ({
           }
         }
 
-        handleChange('activeSyncType', type);
+        // 如果切换到 Supabase，确保其 enabled 为 true
+        if (type === 'supabase') {
+          const newSettings = { ...supabaseSettingsRef.current, enabled: true };
+          supabaseSettingsRef.current = newSettings;
+          setSupabaseSettings(newSettings);
+          await handleChange('supabaseSync', newSettings);
+        }
+        // 如果切换到 S3
+        else if (type === 's3') {
+          const newSettings = { ...s3SettingsRef.current, enabled: true };
+          s3SettingsRef.current = newSettings;
+          setS3Settings(newSettings);
+          await handleChange('s3Sync', newSettings);
+        }
+        // 如果切换到 WebDAV
+        else if (type === 'webdav') {
+          const newSettings = { ...webdavSettingsRef.current, enabled: true };
+          webdavSettingsRef.current = newSettings;
+          setWebDAVSettings(newSettings);
+          await handleChange('webdavSync', newSettings);
+        }
+
+        await handleChange('activeSyncType', type);
       })();
 
       if (settings.hapticFeedback) {

@@ -119,9 +119,24 @@ export function batchResolveConflicts<T extends SyncableRecord>(
     const localTime = extractTimestamp(local);
 
     if (!remote) {
-      // 本地有，云端没有 → 上传（本地新增或云端物理删除了）
-      merged.push(local);
-      toUpload.push(local);
+      // 本地有，云端没有
+      // 关键修复：区分“本地新建”和“云端物理删除”
+      // 如果本地记录比上次同步时间新，说明是本地新建的 -> 上传
+      // 如果本地记录比上次同步时间旧（或相等），说明它在上次同步前就存在，现在云端没了 -> 云端物理删除了 -> 本地也删除
+
+      // 注意：如果 lastSyncTime 为 0（首次同步），我们假设所有本地数据都是“新建”的，需要上传
+      // 除非我们有其他证据表明它是旧的。但在首次同步场景下，上传是安全的选择（云端会接受）。
+
+      if (lastSyncTime > 0 && localTime <= lastSyncTime) {
+        console.log(
+          `[Conflict] ${local.id}: 本地旧数据(${localTime} <= ${lastSyncTime})且云端缺失 -> 视为云端物理删除`
+        );
+        toDeleteLocal.push(local.id);
+      } else {
+        // 本地新建或首次同步 -> 上传
+        merged.push(local);
+        toUpload.push(local);
+      }
     } else if (remote.deleted_at) {
       // 云端已删除（有 deleted_at 标记）
       const deleteTime = new Date(remote.deleted_at).getTime();
@@ -165,7 +180,14 @@ export function batchResolveConflicts<T extends SyncableRecord>(
         toDownload.push(remote.data);
       } else {
         // 两边都没修改 → 保持本地
-        merged.push(local);
+        // 修复：如果本地时间戳小于云端时间戳（即使未超过 lastSyncTime），也应该更新本地
+        // 这种情况可能发生在 lastSyncTime 丢失或重置的情况下
+        if (remoteTime > localTime) {
+          merged.push(remote.data);
+          toDownload.push(remote.data);
+        } else {
+          merged.push(local);
+        }
       }
     }
   }

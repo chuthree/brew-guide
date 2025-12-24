@@ -1,25 +1,20 @@
 /**
  * Supabase 模块导出
+ *
+ * 模块职责：
+ * - realtime/: 实时同步模块（自动双向同步）
+ * - syncOperations: 原子同步操作（upsert、软删除等）
+ * - schema: 数据库初始化 SQL
+ * - types: 类型定义
  */
 
-export { SupabaseSyncManager } from './SupabaseSyncManager';
-export type { SyncResult, SyncStatus } from './simpleSyncService';
-
-// 保留旧版 API 以保持向后兼容
-export {
-  simpleSyncService,
-  initializeSupabase,
-  testConnection,
-  uploadAllData,
-  downloadAllData,
-  disconnectSupabase,
-  isSupabaseInitialized,
-} from './simpleSyncService';
+// 数据库 Schema
+export { SUPABASE_SETUP_SQL } from './schema';
 
 // 类型导出
 export * from './types';
 
-// 实时同步模块导出
+// 实时同步模块
 export {
   RealtimeSyncService,
   getRealtimeSyncService,
@@ -33,134 +28,3 @@ export type {
   RealtimeSyncState,
   RealtimeConnectionStatus,
 } from './realtime';
-
-/**
- * Supabase 数据库初始化 SQL
- * 用户需要在 Supabase SQL Editor 中执行此脚本
- *
- * ⚠️ 同步删除策略说明：
- * - 所有数据表都有 deleted_at 字段用于软删除
- * - 上传时：本地不存在但云端存在的记录会被标记 deleted_at
- * - 下载时：只获取 deleted_at IS NULL 的记录
- * - 软删除的数据不会被物理删除，可以通过 SQL 查询历史数据
- */
-export const SUPABASE_SETUP_SQL = `-- Brew Guide Supabase 数据库初始化脚本
--- 版本: 2.0.0 (2025-12-22 更新)
--- 支持软删除同步策略
-
--- 咖啡豆表
-CREATE TABLE IF NOT EXISTS coffee_beans (
-  id TEXT NOT NULL,
-  user_id TEXT NOT NULL,
-  data JSONB NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  version INTEGER DEFAULT 1,
-  PRIMARY KEY (id, user_id)
-);
-
--- 冲煮笔记表
-CREATE TABLE IF NOT EXISTS brewing_notes (
-  id TEXT NOT NULL,
-  user_id TEXT NOT NULL,
-  data JSONB NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  version INTEGER DEFAULT 1,
-  PRIMARY KEY (id, user_id)
-);
-
--- 自定义器具表
-CREATE TABLE IF NOT EXISTS custom_equipments (
-  id TEXT NOT NULL,
-  user_id TEXT NOT NULL,
-  data JSONB NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  version INTEGER DEFAULT 1,
-  PRIMARY KEY (id, user_id)
-);
-
--- 自定义方案表
--- 注意：id 就是 equipmentId，每个器具只有一个方案集合
-CREATE TABLE IF NOT EXISTS custom_methods (
-  id TEXT NOT NULL,
-  user_id TEXT NOT NULL,
-  data JSONB NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  version INTEGER DEFAULT 1,
-  PRIMARY KEY (id, user_id)
-);
-
--- 用户设置表
-CREATE TABLE IF NOT EXISTS user_settings (
-  id TEXT NOT NULL,
-  user_id TEXT NOT NULL,
-  data JSONB NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (id, user_id)
-);
-
--- 索引（包含软删除过滤索引，优化查询性能）
-CREATE INDEX IF NOT EXISTS idx_coffee_beans_user_id ON coffee_beans(user_id);
-CREATE INDEX IF NOT EXISTS idx_coffee_beans_active ON coffee_beans(user_id) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_brewing_notes_user_id ON brewing_notes(user_id);
-CREATE INDEX IF NOT EXISTS idx_brewing_notes_active ON brewing_notes(user_id) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_custom_equipments_user_id ON custom_equipments(user_id);
-CREATE INDEX IF NOT EXISTS idx_custom_equipments_active ON custom_equipments(user_id) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_custom_methods_user_id ON custom_methods(user_id);
-CREATE INDEX IF NOT EXISTS idx_custom_methods_active ON custom_methods(user_id) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
-
--- RLS 策略（可选）
-ALTER TABLE coffee_beans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE brewing_notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE custom_equipments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE custom_methods ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow all on coffee_beans" ON coffee_beans FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on brewing_notes" ON brewing_notes FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on custom_equipments" ON custom_equipments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on custom_methods" ON custom_methods FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on user_settings" ON user_settings FOR ALL USING (true) WITH CHECK (true);
-
--- ==================== 启用 Realtime 实时同步 ====================
--- 将所有需要实时同步的表添加到 supabase_realtime 发布中
--- 注意：这是实时同步的关键配置！
-
--- 先尝试删除旧的发布（如果存在）
-DROP PUBLICATION IF EXISTS supabase_realtime;
-
--- 创建新的发布，包含所有需要实时同步的表
-CREATE PUBLICATION supabase_realtime FOR TABLE 
-  coffee_beans,
-  brewing_notes,
-  custom_equipments,
-  custom_methods,
-  user_settings;
-
--- 设置 replica identity 为 FULL，确保 UPDATE/DELETE 事件包含完整数据
-ALTER TABLE coffee_beans REPLICA IDENTITY FULL;
-ALTER TABLE brewing_notes REPLICA IDENTITY FULL;
-ALTER TABLE custom_equipments REPLICA IDENTITY FULL;
-ALTER TABLE custom_methods REPLICA IDENTITY FULL;
-ALTER TABLE user_settings REPLICA IDENTITY FULL;
-
--- 可选：定期清理软删除数据的函数（超过 30 天的软删除数据）
--- CREATE OR REPLACE FUNCTION cleanup_deleted_records()
--- RETURNS void AS $$
--- BEGIN
---   DELETE FROM coffee_beans WHERE deleted_at < NOW() - INTERVAL '30 days';
---   DELETE FROM brewing_notes WHERE deleted_at < NOW() - INTERVAL '30 days';
---   DELETE FROM custom_equipments WHERE deleted_at < NOW() - INTERVAL '30 days';
---   DELETE FROM custom_methods WHERE deleted_at < NOW() - INTERVAL '30 days';
--- END;
--- $$ LANGUAGE plpgsql;
-`;

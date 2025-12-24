@@ -3,9 +3,8 @@
  *
  * 设计原则（参考 CouchDB 复制模型 + RxDB 离线优先架构）:
  * 1. 软删除（Tombstone）：删除操作通过设置 deleted_at 实现，而不是物理删除
- * 2. 全量比对：上传时比对本地和云端数据，确保删除操作被正确同步
- * 3. 幂等性：相同操作多次执行结果一致
- * 4. 原子性：每个操作要么完全成功，要么完全失败
+ * 2. 幂等性：相同操作多次执行结果一致
+ * 3. 原子性：每个操作要么完全成功，要么完全失败
  *
  * 参考文档:
  * - CouchDB Replication: https://docs.couchdb.org/en/stable/replication/conflicts.html
@@ -27,20 +26,12 @@ export interface SyncOperationResult<T = unknown> {
   affectedCount: number;
 }
 
-export interface TableSyncState {
-  localIds: Set<string>;
-  remoteIds: string[];
-  toUpsert: string[];
-  toDelete: string[];
-}
-
 // ============================================
-// 常量（集中管理，避免重复定义）
+// 常量
 // ============================================
 
 export const DEFAULT_USER_ID = 'default_user';
 
-// 支持同步的表名
 export const SYNC_TABLES = {
   COFFEE_BEANS: 'coffee_beans',
   BREWING_NOTES: 'brewing_notes',
@@ -51,7 +42,7 @@ export const SYNC_TABLES = {
 
 export type SyncTableName = (typeof SYNC_TABLES)[keyof typeof SYNC_TABLES];
 
-// 自定义预设（仍存储在 localStorage 中）
+// 自定义预设键（存储在 localStorage）
 export const PRESETS_PREFIX = 'brew-guide:custom-presets:';
 export const PRESETS_KEYS = [
   'origins',
@@ -61,16 +52,11 @@ export const PRESETS_KEYS = [
 ] as const;
 
 // ============================================
-// 核心同步操作（原子化、可测试）
+// 核心同步操作
 // ============================================
 
 /**
  * 获取云端表的最新更新时间戳
- *
- * @description 用于判断是否需要拉取云端数据
- * @param client - Supabase 客户端
- * @param table - 表名
- * @returns 最新的 updated_at 时间戳（毫秒），如果没有数据返回 0
  */
 export async function fetchRemoteLatestTimestamp(
   client: SupabaseClient,
@@ -105,75 +91,13 @@ export async function fetchRemoteLatestTimestamp(
 }
 
 /**
- * 获取云端所有表的最新更新时间戳（取最大值）
- *
- * @param client - Supabase 客户端
- * @returns 所有表中最新的时间戳
- */
-export async function fetchAllTablesLatestTimestamp(
-  client: SupabaseClient
-): Promise<number> {
-  const tables = [
-    SYNC_TABLES.COFFEE_BEANS,
-    SYNC_TABLES.BREWING_NOTES,
-    SYNC_TABLES.CUSTOM_EQUIPMENTS,
-    SYNC_TABLES.CUSTOM_METHODS,
-  ];
-
-  let maxTimestamp = 0;
-
-  for (const table of tables) {
-    const result = await fetchRemoteLatestTimestamp(client, table);
-    if (result.success && result.data) {
-      maxTimestamp = Math.max(maxTimestamp, result.data);
-    }
-  }
-
-  return maxTimestamp;
-}
-
-/**
- * 获取云端表中所有未删除记录的 ID 列表
- *
- * @description 这是同步删除检测的基础操作
- * @param client - Supabase 客户端
- * @param table - 表名
- * @returns 未删除记录的 ID 数组
- */
-export async function fetchRemoteActiveIds(
-  client: SupabaseClient,
-  table: SyncTableName
-): Promise<SyncOperationResult<string[]>> {
-  try {
-    const { data, error } = await client
-      .from(table)
-      .select('id')
-      .eq('user_id', DEFAULT_USER_ID)
-      .is('deleted_at', null);
-
-    if (error) {
-      console.error(`[SyncOps] 获取 ${table} 远程ID失败:`, error.message);
-      return { success: false, error: error.message, affectedCount: 0 };
-    }
-
-    const ids = (data || []).map((row: { id: string }) => row.id);
-    return { success: true, data: ids, affectedCount: ids.length };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return { success: false, error: message, affectedCount: 0 };
-  }
-}
-
-/**
  * 获取云端所有记录（包括已删除的，用于冲突解决）
- *
- * @param client - Supabase 客户端
- * @param table - 表名
- * @returns 所有记录（包含 deleted_at 字段）
+ * 支持指定列以优化性能
  */
 export async function fetchRemoteAllRecords<T>(
   client: SupabaseClient,
-  table: SyncTableName
+  table: SyncTableName,
+  columns: string = 'id, data, updated_at, deleted_at'
 ): Promise<
   SyncOperationResult<
     Array<{
@@ -187,7 +111,7 @@ export async function fetchRemoteAllRecords<T>(
   try {
     const { data, error } = await client
       .from(table)
-      .select('id, data, updated_at, deleted_at')
+      .select(columns)
       .eq('user_id', DEFAULT_USER_ID);
 
     if (error) {
@@ -195,19 +119,12 @@ export async function fetchRemoteAllRecords<T>(
       return { success: false, error: error.message, affectedCount: 0 };
     }
 
-    const records = (data || []).map(
-      (row: {
-        id: string;
-        data: T;
-        updated_at: string;
-        deleted_at: string | null;
-      }) => ({
-        id: row.id,
-        data: row.data,
-        updated_at: row.updated_at,
-        deleted_at: row.deleted_at,
-      })
-    );
+    const records = (data || []).map((row: any) => ({
+      id: row.id,
+      data: row.data, // 如果 columns 不包含 data，这里可能是 undefined
+      updated_at: row.updated_at,
+      deleted_at: row.deleted_at,
+    }));
 
     return { success: true, data: records, affectedCount: records.length };
   } catch (err) {
@@ -217,51 +134,53 @@ export async function fetchRemoteAllRecords<T>(
 }
 
 /**
- * 获取云端自某个时间点之后更新的记录（增量拉取）
- *
- * @description 只拉取 updated_at > sinceTime 的记录，用于增量同步
+ * 根据 ID 列表批量获取云端记录
  */
-export async function fetchRemoteChangedRecords<T>(
+export async function fetchRemoteRecordsByIds<T>(
   client: SupabaseClient,
   table: SyncTableName,
-  sinceTime: number
-): Promise<
-  SyncOperationResult & {
-    data?: {
-      id: string;
-      data: T;
-      updated_at: string;
-      deleted_at: string | null;
-    }[];
+  ids: string[]
+): Promise<SyncOperationResult<Array<{ id: string; data: T }>>> {
+  if (ids.length === 0) {
+    return { success: true, data: [], affectedCount: 0 };
   }
-> {
-  try {
-    const sinceISO = new Date(sinceTime).toISOString();
-    const { data, error } = await client
-      .from(table)
-      .select('id, data, updated_at, deleted_at')
-      .eq('user_id', DEFAULT_USER_ID)
-      .gt('updated_at', sinceISO);
 
-    if (error) {
-      return { success: false, error: error.message, affectedCount: 0 };
+  try {
+    // Supabase URL 长度有限制，如果 ID 太多需要分批
+    // 优化：增大批次大小并使用并发请求，大幅提升下载速度
+    const BATCH_SIZE = 25;
+    const allRecords: Array<{ id: string; data: T }> = [];
+    const promises = [];
+
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const batchIds = ids.slice(i, i + BATCH_SIZE);
+      const promise = client
+        .from(table)
+        .select('id, data')
+        .eq('user_id', DEFAULT_USER_ID)
+        .in('id', batchIds)
+        .then(({ data, error }) => {
+          if (error) throw error;
+          return data as Array<{ id: string; data: T }>;
+        });
+      promises.push(promise);
     }
 
-    const records = (data || []).map(
-      (row: {
-        id: string;
-        data: T;
-        updated_at: string;
-        deleted_at: string | null;
-      }) => ({
-        id: row.id,
-        data: row.data,
-        updated_at: row.updated_at,
-        deleted_at: row.deleted_at,
-      })
-    );
+    // 并发执行所有批次请求
+    const results = await Promise.all(promises);
 
-    return { success: true, data: records, affectedCount: records.length };
+    // 合并结果
+    results.forEach(batchData => {
+      if (batchData) {
+        allRecords.push(...batchData);
+      }
+    });
+
+    return {
+      success: true,
+      data: allRecords,
+      affectedCount: allRecords.length,
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : '未知错误';
     return { success: false, error: message, affectedCount: 0 };
@@ -272,9 +191,6 @@ export async function fetchRemoteChangedRecords<T>(
  * 批量更新/插入记录到云端
  *
  * @description 使用 upsert 确保幂等性，同时重置 deleted_at 为 null
- * @param client - Supabase 客户端
- * @param table - 表名
- * @param records - 要上传的记录数组（必须包含 id 字段）
  */
 export async function upsertRecords<T extends { id: string }>(
   client: SupabaseClient,
@@ -290,7 +206,7 @@ export async function upsertRecords<T extends { id: string }>(
     const mappedRecords = records.map(record => ({
       ...mapFn(record),
       user_id: DEFAULT_USER_ID,
-      deleted_at: null, // 重要：明确设置为未删除状态
+      deleted_at: null,
     }));
 
     const { error } = await client
@@ -310,12 +226,7 @@ export async function upsertRecords<T extends { id: string }>(
 }
 
 /**
- * 软删除：标记云端记录为已删除
- *
- * @description 根据 CouchDB 的墓碑（Tombstone）模式，不物理删除数据
- * @param client - Supabase 客户端
- * @param table - 表名
- * @param ids - 要标记删除的 ID 数组
+ * 软删除：标记云端记录为已删除（Tombstone 模式）
  */
 export async function markRecordsAsDeleted(
   client: SupabaseClient,
@@ -347,143 +258,12 @@ export async function markRecordsAsDeleted(
   }
 }
 
-/**
- * 获取云端所有未删除的记录数据
- *
- * @param client - Supabase 客户端
- * @param table - 表名
- */
-export async function fetchRemoteActiveRecords<T>(
-  client: SupabaseClient,
-  table: SyncTableName
-): Promise<SyncOperationResult<T[]>> {
-  try {
-    const { data, error } = await client
-      .from(table)
-      .select('data')
-      .eq('user_id', DEFAULT_USER_ID)
-      .is('deleted_at', null);
-
-    if (error) {
-      console.error(`[SyncOps] 获取 ${table} 数据失败:`, error.message);
-      return { success: false, error: error.message, affectedCount: 0 };
-    }
-
-    const records = (data || []).map((row: { data: T }) => row.data);
-    return { success: true, data: records, affectedCount: records.length };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return { success: false, error: message, affectedCount: 0 };
-  }
-}
-
 // ============================================
-// 同步差异计算（纯函数，可测试）
-// ============================================
-
-/**
- * 计算需要删除的 ID（云端存在但本地不存在）
- *
- * @description 这是同步删除逻辑的核心
- * 当用户在本地删除数据后，该数据的 ID 不再存在于本地
- * 但云端仍然存在该 ID，此时需要将云端的该记录标记为已删除
- *
- * @param localIds - 本地当前存在的 ID 集合
- * @param remoteIds - 云端当前活跃的 ID 数组
- * @returns 需要在云端标记删除的 ID 数组
- */
-export function calculateIdsToDelete(
-  localIds: Set<string>,
-  remoteIds: string[]
-): string[] {
-  return remoteIds.filter(id => !localIds.has(id));
-}
-
-/**
- * 生成同步状态报告
- */
-export function createSyncStateReport(
-  tableName: string,
-  localCount: number,
-  remoteCount: number,
-  toDeleteCount: number
-): string {
-  return `[${tableName}] 本地: ${localCount}, 云端: ${remoteCount}, 待删除: ${toDeleteCount}`;
-}
-
-// ============================================
-// 高阶同步操作
-// ============================================
-
-/**
- * 执行完整的表同步上传操作
- *
- * @description 包含三个步骤：
- * 1. 获取云端活跃 ID
- * 2. Upsert 本地数据
- * 3. 软删除本地已删除的数据
- */
-export async function syncTableUpload<T extends { id: string }>(
-  client: SupabaseClient,
-  table: SyncTableName,
-  localRecords: T[],
-  mapFn: (record: T) => Record<string, unknown>
-): Promise<SyncOperationResult<{ upserted: number; deleted: number }>> {
-  const errors: string[] = [];
-  let upsertedCount = 0;
-  let deletedCount = 0;
-
-  // Step 1: 获取云端活跃 ID
-  const remoteIdsResult = await fetchRemoteActiveIds(client, table);
-  if (!remoteIdsResult.success) {
-    errors.push(`获取远程ID失败: ${remoteIdsResult.error}`);
-  }
-  const remoteIds = remoteIdsResult.data || [];
-
-  // Step 2: Upsert 本地数据
-  if (localRecords.length > 0) {
-    const upsertResult = await upsertRecords(
-      client,
-      table,
-      localRecords,
-      mapFn
-    );
-    if (!upsertResult.success) {
-      errors.push(`Upsert失败: ${upsertResult.error}`);
-    } else {
-      upsertedCount = upsertResult.affectedCount;
-    }
-  }
-
-  // Step 3: 计算并执行软删除
-  const localIds = new Set(localRecords.map(r => r.id));
-  const idsToDelete = calculateIdsToDelete(localIds, remoteIds);
-
-  if (idsToDelete.length > 0) {
-    const deleteResult = await markRecordsAsDeleted(client, table, idsToDelete);
-    if (!deleteResult.success) {
-      errors.push(`软删除失败: ${deleteResult.error}`);
-    } else {
-      deletedCount = deleteResult.affectedCount;
-    }
-  }
-
-  const success = errors.length === 0;
-  return {
-    success,
-    error: errors.join('; '),
-    data: { upserted: upsertedCount, deleted: deletedCount },
-    affectedCount: upsertedCount + deletedCount,
-  };
-}
-
-// ============================================
-// 设置同步操作（集中管理，避免重复代码）
+// 设置同步操作
 // ============================================
 
 /**
  * 上传设置数据到云端
- * 注意：设置数据现在完全存储在 IndexedDB appSettings 表中
  */
 export async function uploadSettingsData(
   client: SupabaseClient
@@ -491,29 +271,30 @@ export async function uploadSettingsData(
   try {
     const data: Record<string, unknown> = {};
 
-    // 从 IndexedDB appSettings 表收集设置（唯一数据来源）
+    // 从 IndexedDB appSettings 表收集设置
     const appSettingsRecord = await db.appSettings.get('main');
     if (appSettingsRecord?.data) {
       data.appSettings = appSettingsRecord.data;
     }
 
-    // 收集磨豆机数据（存储在 IndexedDB grinders 表中）
+    // 收集磨豆机数据
     const grinders = await db.grinders.toArray();
     if (grinders.length > 0) {
       data.grinders = grinders;
     }
 
-    // 收集自定义预设（仍存储在 localStorage 中）
+    // 收集自定义预设（localStorage）
     if (typeof window !== 'undefined') {
       const presets: Record<string, unknown> = {};
       for (const k of PRESETS_KEYS) {
         const v = localStorage.getItem(`${PRESETS_PREFIX}${k}`);
-        if (v)
+        if (v) {
           try {
             presets[k] = JSON.parse(v);
           } catch {
             /* 忽略解析错误 */
           }
+        }
       }
       if (Object.keys(presets).length) data.customPresets = presets;
     }
@@ -542,7 +323,6 @@ export async function uploadSettingsData(
 
 /**
  * 下载设置数据并应用到本地
- * 注意：设置数据现在完全存储在 IndexedDB appSettings 表中
  */
 export async function downloadSettingsData(
   client: SupabaseClient
@@ -567,28 +347,26 @@ export async function downloadSettingsData(
     const settingsData = row.data as Record<string, unknown>;
     let count = 0;
 
-    // 恢复 IndexedDB appSettings（唯一数据存储）
+    // 恢复 IndexedDB appSettings
     if (settingsData.appSettings) {
       const cloudAppSettings = settingsData.appSettings as AppSettings;
-      // 获取本地设置用于合并
       const localRecord = await db.appSettings.get('main');
       const localSettings = localRecord?.data || {};
 
-      // 合并设置：云端设置优先，但保留本地独有的字段
+      // 合并设置：云端优先，保留本地独有字段
       const mergedSettings = { ...localSettings, ...cloudAppSettings };
       await db.appSettings.put({ id: 'main', data: mergedSettings });
       console.log('[SyncOps] IndexedDB appSettings 已更新');
       count++;
     }
 
-    // 恢复磨豆机数据（存储在 IndexedDB grinders 表中）
+    // 恢复磨豆机数据
     if (settingsData.grinders && Array.isArray(settingsData.grinders)) {
       const cloudGrinders = settingsData.grinders as Array<{
         id: string;
         name: string;
         currentGrindSize?: string;
       }>;
-      // 直接替换本地磨豆机数据（云端优先）
       await db.grinders.clear();
       if (cloudGrinders.length > 0) {
         await db.grinders.bulkPut(cloudGrinders);
@@ -597,7 +375,7 @@ export async function downloadSettingsData(
       count++;
     }
 
-    // 恢复自定义预设（仍存储在 localStorage 中）
+    // 恢复自定义预设（localStorage）
     if (typeof window !== 'undefined') {
       if (settingsData.customPresets) {
         const presets = settingsData.customPresets as Record<string, unknown>;
@@ -613,7 +391,9 @@ export async function downloadSettingsData(
       }
 
       // 触发 UI 刷新
-      window.dispatchEvent(new CustomEvent('settingsChanged'));
+      window.dispatchEvent(
+        new CustomEvent('settingsChanged', { detail: { source: 'remote' } })
+      );
     }
 
     return { success: true, data: count, affectedCount: count };
