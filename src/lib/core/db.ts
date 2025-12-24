@@ -244,6 +244,7 @@ export interface AppSettings {
   defaultExpandChangeLog: boolean;
   showFlavorRatingInForm: boolean;
   showOverallRatingInForm: boolean;
+  showUnitPriceInNote: boolean;
   artisticSharingEnabled: boolean;
 
   // 生豆库设置

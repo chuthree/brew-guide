@@ -83,7 +83,20 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
 
   return (
     <SettingPage title="笔记设置" isVisible={isVisible} onClose={handleClose}>
-      <SettingSection title="表单显示" className="-mt-4">
+      <SettingSection title="详情显示" className="-mt-4">
+        <SettingRow
+          label="显示克价"
+          description="笔记详情中显示咖啡豆克价"
+          isLast
+        >
+          <SettingToggle
+            checked={settings.showUnitPriceInNote ?? false}
+            onChange={checked => handleChange('showUnitPriceInNote', checked)}
+          />
+        </SettingRow>
+      </SettingSection>
+
+      <SettingSection title="表单显示">
         <SettingRow
           label="显示总体评分"
           description="添加笔记时显示总体评分滑块"

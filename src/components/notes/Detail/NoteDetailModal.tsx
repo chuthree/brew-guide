@@ -21,6 +21,7 @@ import {
 import { ChevronLeft, Pen } from 'lucide-react';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 信息行组件
 interface InfoRowProps {
@@ -72,6 +73,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 }) => {
   // 检测是否为大屏幕（lg 断点）
   const isLargeScreen = useIsLargeScreen();
+
+  // 获取克价显示设置
+  const showUnitPriceInNote = useSettingsStore(
+    state => state.settings.showUnitPriceInNote ?? false
+  );
 
   const [imageError, setImageError] = useState(false);
   const [beanImageError, setBeanImageError] = useState(false); // 咖啡豆图片加载错误状态
@@ -499,33 +505,38 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
           {note ? (
             <div className="space-y-3 px-6">
-              {/* 咖啡豆信息 */}
+              {/* 咖啡豆信息：克价和风味 */}
               {beanInfo && (
                 <>
-                  {/* 产地、处理法、品种 */}
-                  {[
-                    {
-                      label: '产地',
-                      value: beanInfo.blendComponents?.[0]?.origin,
-                    },
-                    {
-                      label: '处理法',
-                      value: beanInfo.blendComponents?.[0]?.process,
-                    },
-                    {
-                      label: '品种',
-                      value: beanInfo.blendComponents?.[0]?.variety,
-                    },
-                  ].map(
-                    ({ label, value }) =>
-                      value && (
-                        <InfoRow key={label} label={label}>
-                          <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                            {value}
-                          </div>
-                        </InfoRow>
-                      )
-                  )}
+                  {/* 克价 - 从 beanInfo 计算 */}
+                  {showUnitPriceInNote &&
+                    (() => {
+                      if (beanInfo.price && beanInfo.capacity) {
+                        const priceMatch =
+                          beanInfo.price.match(/(\d+(?:\.\d+)?)/);
+                        const capacityMatch =
+                          beanInfo.capacity.match(/(\d+(?:\.\d+)?)/);
+                        if (priceMatch && capacityMatch) {
+                          const price = parseFloat(priceMatch[0]);
+                          const capacity = parseFloat(capacityMatch[0]);
+                          if (
+                            !isNaN(price) &&
+                            !isNaN(capacity) &&
+                            capacity > 0
+                          ) {
+                            const unitPrice = price / capacity;
+                            return (
+                              <InfoRow label="克价">
+                                <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                                  {unitPrice.toFixed(2)}元/克
+                                </div>
+                              </InfoRow>
+                            );
+                          }
+                        }
+                      }
+                      return null;
+                    })()}
 
                   {/* 风味 */}
                   {beanInfo.flavor && beanInfo.flavor.length > 0 && (
@@ -595,11 +606,6 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             </React.Fragment>
                           ))}
                         </div>
-                        {beanName && beanUnitPrice > 0 && (
-                          <div className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">
-                            {beanUnitPrice.toFixed(2)}元/克
-                          </div>
-                        )}
                       </div>
                     </InfoRow>
                   );

@@ -212,6 +212,7 @@ export interface SettingsOptions {
   defaultExpandChangeLog: boolean; // 笔记列表默认展开变动记录
   showFlavorRatingInForm: boolean; // 添加笔记时显示风味评分
   showOverallRatingInForm: boolean; // 添加笔记时显示总体评分
+  showUnitPriceInNote: boolean; // 笔记详情中显示克价
   artisticSharingEnabled: boolean; // 是否启用图文分享模式
   // 生豆库设置
   enableGreenBeanInventory?: boolean; // 是否启用生豆库功能
