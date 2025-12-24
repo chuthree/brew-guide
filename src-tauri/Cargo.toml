@@ -1,6 +1,6 @@
 [package]
 name = "brew-guide"
-version = "1.5.10-beta.1"
+version = "1.5.10-beta.2"
 description = "A coffee brewing assistant app"
 authors = ["Brew Guide Team"]
 license = "GPL-3.0"
