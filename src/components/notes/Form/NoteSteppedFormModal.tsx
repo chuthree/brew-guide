@@ -215,7 +215,11 @@ const NoteSteppedFormModal = forwardRef<
     const isValid = currentStepContent?.isValid !== false;
 
     return (
-      <Drawer.Root open={showForm} onOpenChange={handleOpenChange}>
+      <Drawer.Root
+        open={showForm}
+        onOpenChange={handleOpenChange}
+        repositionInputs={false}
+      >
         <Drawer.Portal>
           <Drawer.Overlay
             className="fixed inset-0 z-50 bg-black/50"
