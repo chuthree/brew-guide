@@ -1,6 +1,6 @@
 {
   "name": "brew-guide",
-  "version": "1.5.10-beta.5",
+  "version": "1.5.10.beta.6",
   "private": true,
   "license": "GPL-3.0",
   "type": "module",
