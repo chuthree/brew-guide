@@ -8,7 +8,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2
-        versionName "1.5.10-beta.4"
+        versionName "1.5.10-beta.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
         // 只保留中文和英文资源，减小 APK 体积
