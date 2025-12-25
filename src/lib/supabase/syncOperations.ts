@@ -152,7 +152,7 @@ export async function fetchRemoteRecordsByIds<T>(
     const BATCH_SIZE = 25;
     const CONCURRENCY_LIMIT = 4;
     const allRecords: Array<{ id: string; data: T }> = [];
-    
+
     // 1. 将 ID 分批
     const batches: string[][] = [];
     for (let i = 0; i < ids.length; i += BATCH_SIZE) {
@@ -174,7 +174,9 @@ export async function fetchRemoteRecordsByIds<T>(
         } catch (err) {
           if (attempt === retries) throw err;
           // 指数退避重试
-          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+          await new Promise(resolve =>
+            setTimeout(resolve, 1000 * Math.pow(2, attempt))
+          );
         }
       }
       return [];
@@ -183,11 +185,13 @@ export async function fetchRemoteRecordsByIds<T>(
     // 3. 分组并发执行
     for (let i = 0; i < batches.length; i += CONCURRENCY_LIMIT) {
       const currentBatches = batches.slice(i, i + CONCURRENCY_LIMIT);
-      const batchPromises = currentBatches.map(batchIds => fetchBatchWithRetry(batchIds));
-      
+      const batchPromises = currentBatches.map(batchIds =>
+        fetchBatchWithRetry(batchIds)
+      );
+
       // 等待当前组完成
       const batchResults = await Promise.all(batchPromises);
-      
+
       // 收集结果
       batchResults.forEach(batchData => {
         if (batchData) {
