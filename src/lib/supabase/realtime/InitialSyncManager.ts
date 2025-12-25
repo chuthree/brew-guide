@@ -305,19 +305,32 @@ export class InitialSyncManager {
       }
 
       // 组装完整的 remoteRecords
-      const remoteRecords = remoteMetaRecords.map(r => {
-        if (downloadedDataMap.has(r.id)) {
-          const data = downloadedDataMap.get(r.id);
-          // PATCH: 确保数据有 timestamp，且不小于 updated_at
-          // 这防止了因数据时间戳滞后于 updated_at 导致无限循环下载
-          if (data) {
-            const updatedAtTime = new Date(r.updated_at).getTime();
-            data.timestamp = Math.max(data.timestamp || 0, updatedAtTime);
+      const idsToDownloadSet = new Set(idsToDownload);
+      const remoteRecords = remoteMetaRecords
+        .map(r => {
+          if (downloadedDataMap.has(r.id)) {
+            const data = downloadedDataMap.get(r.id);
+            // PATCH: 确保数据有 timestamp，且不小于 updated_at
+            // 这防止了因数据时间戳滞后于 updated_at 导致无限循环下载
+            if (data) {
+              const updatedAtTime = new Date(r.updated_at).getTime();
+              data.timestamp = Math.max(data.timestamp || 0, updatedAtTime);
+            }
+            return { ...r, data };
           }
-          return { ...r, data };
-        }
-        return r;
-      });
+          return r;
+        })
+        .filter(r => {
+          // 安全检查：如果记录需要下载但数据缺失（下载失败），则跳过该记录
+          // 防止 batchResolveConflicts 处理 null 数据导致崩溃
+          if (idsToDownloadSet.has(r.id) && !r.data && !r.deleted_at) {
+            console.warn(
+              `[InitialSync] ${table} 记录 ${r.id} 下载失败，跳过本次同步`
+            );
+            return false;
+          }
+          return true;
+        });
 
       // 冲突解决
       const { toUpload, toDownload, toDeleteLocal } = batchResolveConflicts(

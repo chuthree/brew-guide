@@ -148,33 +148,53 @@ export async function fetchRemoteRecordsByIds<T>(
   try {
     // Supabase URL 长度有限制，如果 ID 太多需要分批
     // 优化：增大批次大小并使用并发请求，大幅提升下载速度
+    // 修复：添加并发限制和重试机制，防止移动端网络拥塞导致超时
     const BATCH_SIZE = 25;
+    const CONCURRENCY_LIMIT = 4;
     const allRecords: Array<{ id: string; data: T }> = [];
-    const promises = [];
-
+    
+    // 1. 将 ID 分批
+    const batches: string[][] = [];
     for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-      const batchIds = ids.slice(i, i + BATCH_SIZE);
-      const promise = client
-        .from(table)
-        .select('id, data')
-        .eq('user_id', DEFAULT_USER_ID)
-        .in('id', batchIds)
-        .then(({ data, error }) => {
-          if (error) throw error;
-          return data as Array<{ id: string; data: T }>;
-        });
-      promises.push(promise);
+      batches.push(ids.slice(i, i + BATCH_SIZE));
     }
 
-    // 并发执行所有批次请求
-    const results = await Promise.all(promises);
+    // 2. 定义带重试的获取函数
+    const fetchBatchWithRetry = async (batchIds: string[], retries = 2) => {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const { data, error } = await client
+            .from(table)
+            .select('id, data')
+            .eq('user_id', DEFAULT_USER_ID)
+            .in('id', batchIds);
 
-    // 合并结果
-    results.forEach(batchData => {
-      if (batchData) {
-        allRecords.push(...batchData);
+          if (error) throw error;
+          return data as Array<{ id: string; data: T }>;
+        } catch (err) {
+          if (attempt === retries) throw err;
+          // 指数退避重试
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+        }
       }
-    });
+      return [];
+    };
+
+    // 3. 分组并发执行
+    for (let i = 0; i < batches.length; i += CONCURRENCY_LIMIT) {
+      const currentBatches = batches.slice(i, i + CONCURRENCY_LIMIT);
+      const batchPromises = currentBatches.map(batchIds => fetchBatchWithRetry(batchIds));
+      
+      // 等待当前组完成
+      const batchResults = await Promise.all(batchPromises);
+      
+      // 收集结果
+      batchResults.forEach(batchData => {
+        if (batchData) {
+          allRecords.push(...batchData);
+        }
+      });
+    }
 
     return {
       success: true,
