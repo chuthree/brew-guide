@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { cn } from '@/lib/utils/classNameUtils';
 
 interface AutoResizeTextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -35,7 +36,10 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
     <textarea
       value={value}
       onChange={onChange}
-      className={`w-full resize-none rounded-none bg-transparent outline-hidden transition-colors ${className}`}
+      className={cn(
+        'w-full resize-none rounded-none bg-transparent outline-hidden transition-colors',
+        className
+      )}
       placeholder={placeholder}
       readOnly={readOnly}
       rows={rows}
