@@ -110,6 +110,27 @@ jobs:
           VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      # Patch version for Windows MSI (strip pre-release tag)
+      - name: Patch version for Windows
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          VERSION="${{ steps.app_version.outputs.version }}"
+          echo "Original version: $VERSION"
+
+          # Strip everything after the first hyphen to make it MSI compliant (Major.Minor.Build)
+          CLEAN_VERSION=$(echo $VERSION | sed -E 's/-.*//')
+          echo "Patched version for Windows: $CLEAN_VERSION"
+
+          # Update tauri.conf.json
+          node -e "
+            const fs = require('fs');
+            const path = './src-tauri/tauri.conf.json';
+            const conf = require(path);
+            conf.version = '$CLEAN_VERSION';
+            fs.writeFileSync(path, JSON.stringify(conf, null, 2));
+          "
+
       - name: Build Tauri app
         id: tauri
         uses: tauri-apps/tauri-action@v0.6
