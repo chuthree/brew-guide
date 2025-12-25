@@ -26,6 +26,7 @@ import {
   FlavorPeriodStatus,
   FLAVOR_PERIOD_LABELS,
 } from '@/lib/utils/beanVarietyUtils';
+import { TABLE_COLUMN_CONFIG, type TableColumnKey } from './TableView';
 
 // Apple风格动画配置
 const FILTER_ANIMATION = {
@@ -333,6 +334,12 @@ interface ViewSwitcherProps {
   isImageFlowMode?: boolean;
   onToggleImageFlowMode?: () => void;
   hasImageBeans?: boolean;
+  // 新增显示模式 props（替代 isImageFlowMode）
+  displayMode?: 'list' | 'imageFlow' | 'table';
+  onDisplayModeChange?: (mode: 'list' | 'imageFlow' | 'table') => void;
+  // 表格列配置相关 props
+  tableVisibleColumns?: TableColumnKey[];
+  onTableColumnsChange?: (columns: TableColumnKey[]) => void;
   // 新增分类相关props
   filterMode?: BeanFilterMode;
   onFilterModeChange?: (mode: BeanFilterMode) => void;
@@ -392,6 +399,12 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   isImageFlowMode = false,
   onToggleImageFlowMode,
   hasImageBeans = true,
+  // 新增显示模式参数
+  displayMode: externalDisplayMode,
+  onDisplayModeChange,
+  // 表格列配置参数
+  tableVisibleColumns = [],
+  onTableColumnsChange,
   // 新增分类相关参数
   filterMode = 'variety',
   onFilterModeChange,
@@ -961,7 +974,16 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     >
                       <span onDoubleClick={() => onToggleImageFlowMode?.()}>
                         全部
-                        {isImageFlowMode && <span> · 图片流</span>}
+                        {/* 显示当前显示模式 */}
+                        {externalDisplayMode === 'imageFlow' && (
+                          <span> · 图片流</span>
+                        )}
+                        {externalDisplayMode === 'table' && (
+                          <span> · 表格</span>
+                        )}
+                        {!externalDisplayMode && isImageFlowMode && (
+                          <span> · 图片流</span>
+                        )}
                       </span>
                     </TabButton>
 
@@ -1198,18 +1220,54 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             >
                               包含已用完
                             </FilterButton>
-                            {onToggleImageFlowMode && (
-                              <FilterButton
-                                isActive={isImageFlowMode}
-                                onClick={() => {
-                                  // 如果没有图片咖啡豆，不允许切换
-                                  if (!hasImageBeans) return;
-                                  onToggleImageFlowMode();
-                                }}
-                                disabled={!hasImageBeans}
-                              >
-                                图片流
-                              </FilterButton>
+                            <span className="mx-1 text-neutral-300/30 dark:text-neutral-600/50">
+                              ·
+                            </span>
+                            {/* 显示模式切换按钮 */}
+                            {onDisplayModeChange ? (
+                              <>
+                                <FilterButton
+                                  isActive={
+                                    externalDisplayMode === 'list' ||
+                                    (!externalDisplayMode && !isImageFlowMode)
+                                  }
+                                  onClick={() => onDisplayModeChange('list')}
+                                >
+                                  列表
+                                </FilterButton>
+                                <FilterButton
+                                  isActive={externalDisplayMode === 'table'}
+                                  onClick={() => onDisplayModeChange('table')}
+                                >
+                                  表格
+                                </FilterButton>
+                                <FilterButton
+                                  isActive={
+                                    externalDisplayMode === 'imageFlow' ||
+                                    (!externalDisplayMode && isImageFlowMode)
+                                  }
+                                  onClick={() => {
+                                    if (!hasImageBeans) return;
+                                    onDisplayModeChange('imageFlow');
+                                  }}
+                                  disabled={!hasImageBeans}
+                                >
+                                  图片流
+                                </FilterButton>
+                              </>
+                            ) : (
+                              onToggleImageFlowMode && (
+                                <FilterButton
+                                  isActive={isImageFlowMode}
+                                  onClick={() => {
+                                    if (!hasImageBeans) return;
+                                    onToggleImageFlowMode();
+                                  }}
+                                  disabled={!hasImageBeans}
+                                >
+                                  图片流
+                                </FilterButton>
+                              )
                             )}
                             <span className="mx-1 text-neutral-300/30 dark:text-neutral-600/50">
                               ·
@@ -1222,6 +1280,47 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             </FilterButton>
                           </div>
                         </div>
+
+                        {/* 表格列配置区域 - 仅在表格模式下显示 */}
+                        {externalDisplayMode === 'table' &&
+                          onTableColumnsChange && (
+                            <div>
+                              <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                                表格列
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {TABLE_COLUMN_CONFIG.map(col => (
+                                  <FilterButton
+                                    key={col.key}
+                                    isActive={tableVisibleColumns.includes(
+                                      col.key
+                                    )}
+                                    onClick={() => {
+                                      const isVisible =
+                                        tableVisibleColumns.includes(col.key);
+                                      if (isVisible) {
+                                        // 至少保留一列
+                                        if (tableVisibleColumns.length > 1) {
+                                          onTableColumnsChange(
+                                            tableVisibleColumns.filter(
+                                              k => k !== col.key
+                                            )
+                                          );
+                                        }
+                                      } else {
+                                        onTableColumnsChange([
+                                          ...tableVisibleColumns,
+                                          col.key,
+                                        ]);
+                                      }
+                                    }}
+                                  >
+                                    {col.label}
+                                  </FilterButton>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                       </div>
                     </div>
                   </motion.div>

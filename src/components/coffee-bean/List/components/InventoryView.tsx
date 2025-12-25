@@ -5,8 +5,12 @@ import { Virtuoso } from 'react-virtuoso';
 import { ExtendedCoffeeBean, BeanType, BeanState } from '../types';
 import BeanListItem from './BeanListItem';
 import ImageFlowView from './ImageFlowView';
+import TableView, { TableColumnKey } from './TableView';
 import RemainingEditor from './RemainingEditor';
 import { showToast } from '@/components/common/feedback/LightToast';
+
+// 显示模式类型
+export type DisplayMode = 'list' | 'imageFlow' | 'table';
 
 // 已移除手动分页，改用 react-virtuoso 虚拟列表
 
@@ -79,6 +83,10 @@ interface InventoryViewProps {
   isSearching?: boolean;
   searchQuery?: string;
   isImageFlowMode?: boolean;
+  // 新增显示模式 prop，优先级高于 isImageFlowMode
+  displayMode?: DisplayMode;
+  // 表格可见列配置
+  tableVisibleColumns?: TableColumnKey[];
   // 备注展开状态相关
   expandedNotes?: Record<string, boolean>;
   onNotesExpandToggle?: (beanId: string, expanded: boolean) => void;
@@ -117,6 +125,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   isSearching = false,
   searchQuery = '',
   isImageFlowMode = false,
+  displayMode: externalDisplayMode,
+  tableVisibleColumns,
   expandedNotes = {},
   onNotesExpandToggle,
   isShareMode = false,
@@ -250,8 +260,15 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     isGreenBean,
   });
 
+  // 确定当前显示模式：优先使用 externalDisplayMode，否则基于 isImageFlowMode 判断
+  const currentDisplayMode: DisplayMode = externalDisplayMode
+    ? externalDisplayMode
+    : isImageFlowMode
+      ? 'imageFlow'
+      : 'list';
+
   // 如果是图片流模式，直接返回图片流视图
-  if (isImageFlowMode) {
+  if (currentDisplayMode === 'imageFlow') {
     return (
       <ImageFlowView
         filteredBeans={filteredBeans}
@@ -261,6 +278,24 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         onDelete={onDelete}
         onShare={onShare}
         onRate={onRate}
+      />
+    );
+  }
+
+  // 如果是表格模式，返回表格视图
+  if (currentDisplayMode === 'table') {
+    return (
+      <TableView
+        filteredBeans={filteredBeans}
+        emptyBeans={emptyBeans}
+        showEmptyBeans={showEmptyBeans}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onShare={onShare}
+        onRate={onRate}
+        onRemainingClick={handleRemainingClick}
+        settings={settings}
+        visibleColumns={tableVisibleColumns}
       />
     );
   }

@@ -59,9 +59,8 @@ import {
   saveSelectedRoasterPreference,
   saveSelectedRoasterByStatePreference,
   getSelectedRoasterByStatePreference,
-  saveImageFlowModePreference,
-  saveImageFlowModeByStatePreference,
-  getImageFlowModeByStatePreference,
+  // 显示模式相关
+  type DisplayMode,
   isBeanEmpty,
   getSearchHistoryPreference,
   addSearchHistory,
@@ -83,6 +82,7 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import { exportListPreview } from './components/ListExporter';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import type { TableColumnKey } from './components/TableView';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -438,8 +438,79 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [rankingFilterCount, setRankingFilterCount] = useState<number>(0);
   const [rankingOmniCount, setRankingOmniCount] = useState<number>(0);
 
-  const [isImageFlowMode, setIsImageFlowMode] = useState<boolean>(
-    globalCache.isImageFlowMode
+  // 显示模式状态（持久化记忆 - 参考笔记模块的实现方式）
+  // 支持 list（列表）、imageFlow（图片流）、table（表格）三种模式
+  const [displayMode, setDisplayModeState] = useState<DisplayMode>(() => {
+    if (typeof window !== 'undefined') {
+      // 根据当前 beanState 读取对应的显示模式
+      const validState = getValidBeanState();
+      const storageKey = `brew-guide:coffee-beans:displayMode_${validState}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved === 'list' || saved === 'imageFlow' || saved === 'table') {
+        return saved;
+      }
+    }
+    return 'list';
+  });
+
+  // 图片流模式（向后兼容，从 displayMode 派生）
+  const isImageFlowMode = displayMode === 'imageFlow';
+
+  // 表格可见列配置（持久化）
+  const [tableVisibleColumns, setTableVisibleColumnsState] = useState<
+    TableColumnKey[]
+  >(() => {
+    if (typeof window !== 'undefined') {
+      const storageKey = 'brew-guide:coffee-beans:tableVisibleColumns';
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed as TableColumnKey[];
+          }
+        } catch {
+          // 忽略解析错误
+        }
+      }
+    }
+    // 默认可见列：名称/赏味期/容量/价格/类型/评分/备注
+    return [
+      'name',
+      'flavorPeriod',
+      'capacity',
+      'price',
+      'beanType',
+      'rating',
+      'notes',
+    ] as TableColumnKey[];
+  });
+
+  // 更新表格可见列（同时更新 state 和 localStorage）
+  const updateTableVisibleColumns = useCallback((columns: TableColumnKey[]) => {
+    setTableVisibleColumnsState(columns);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        'brew-guide:coffee-beans:tableVisibleColumns',
+        JSON.stringify(columns)
+      );
+    }
+  }, []);
+
+  // 显示模式更新函数（同时更新 state 和 localStorage）
+  const updateDisplayMode = useCallback(
+    (mode: DisplayMode) => {
+      setDisplayModeState(mode);
+      if (typeof window !== 'undefined') {
+        // 保存到按状态的存储
+        const storageKey = `brew-guide:coffee-beans:displayMode_${selectedBeanState}`;
+        localStorage.setItem(storageKey, mode);
+        // 同时更新 globalCache 保持一致
+        globalCache.displayMode = mode;
+        globalCache.displayModes[selectedBeanState] = mode;
+      }
+    },
+    [selectedBeanState]
   );
 
   // 生豆库启用设置 - 从 settingsStore 获取
@@ -461,16 +532,18 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     return beans.some(bean => bean.image && bean.image.trim() !== '');
   }, [beans]);
 
-  // 切换图片流模式
+  // 切换图片流模式（简化版，直接使用 updateDisplayMode）
   const handleToggleImageFlowMode = useCallback(() => {
-    const newMode = !isImageFlowMode;
-    setIsImageFlowMode(newMode);
-    // 保存到全局缓存和localStorage（同时保存到全局和按状态的存储）
-    globalCache.isImageFlowMode = newMode;
-    globalCache.isImageFlowModes[selectedBeanState] = newMode;
-    saveImageFlowModePreference(newMode);
-    saveImageFlowModeByStatePreference(selectedBeanState, newMode);
-  }, [isImageFlowMode, selectedBeanState]);
+    updateDisplayMode(isImageFlowMode ? 'list' : 'imageFlow');
+  }, [isImageFlowMode, updateDisplayMode]);
+
+  // 显示模式切换处理函数（直接使用 updateDisplayMode）
+  const handleDisplayModeChange = useCallback(
+    (mode: DisplayMode) => {
+      updateDisplayMode(mode);
+    },
+    [updateDisplayMode]
+  );
 
   // 当没有图片咖啡豆时，自动关闭图片流模式
   // 但只在数据已经加载完成后才执行此检查，避免初始化时误判
@@ -481,11 +554,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       !hasImageBeans &&
       beans.length > 0
     ) {
-      setIsImageFlowMode(false);
-      globalCache.isImageFlowMode = false;
-      saveImageFlowModePreference(false);
+      updateDisplayMode('list');
     }
-  }, [storeInitialized, isImageFlowMode, hasImageBeans, beans.length]);
+  }, [
+    storeInitialized,
+    isImageFlowMode,
+    hasImageBeans,
+    beans.length,
+    updateDisplayMode,
+  ]);
 
   // 从 Store beans 中筛选已评分的咖啡豆
   const loadRatedBeans = React.useCallback(() => {
@@ -682,9 +759,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       // 保存当前 beanState 的显示空豆子设置
       globalCache.showEmptyBeansSettings[currentBeanState] = showEmptyBeans;
       saveShowEmptyBeansByStatePreference(currentBeanState, showEmptyBeans);
-      // 保存当前 beanState 的图片流模式
-      globalCache.isImageFlowModes[currentBeanState] = isImageFlowMode;
-      saveImageFlowModeByStatePreference(currentBeanState, isImageFlowMode);
+      // 保存当前 beanState 的显示模式（使用新的 localStorage key）
+      globalCache.displayModes[currentBeanState] = displayMode;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          `brew-guide:coffee-beans:displayMode_${currentBeanState}`,
+          displayMode
+        );
+      }
       // 保存当前 beanState 的分类筛选值
       globalCache.selectedVarieties[currentBeanState] = selectedVariety;
       saveSelectedVarietyByStatePreference(currentBeanState, selectedVariety);
@@ -736,13 +818,23 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.showEmptyBeans = targetShowEmptyBeans;
       saveShowEmptyBeansPreference(targetShowEmptyBeans);
 
-      // 加载目标 beanState 的图片流模式
-      const targetImageFlowMode =
-        globalCache.isImageFlowModes[beanState] ??
-        getImageFlowModeByStatePreference(beanState);
-      setIsImageFlowMode(targetImageFlowMode);
-      globalCache.isImageFlowMode = targetImageFlowMode;
-      saveImageFlowModePreference(targetImageFlowMode);
+      // 加载目标 beanState 的显示模式（使用新的 localStorage key）
+      let targetDisplayMode: DisplayMode = 'list';
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem(
+          `brew-guide:coffee-beans:displayMode_${beanState}`
+        );
+        if (saved === 'list' || saved === 'imageFlow' || saved === 'table') {
+          targetDisplayMode = saved;
+        }
+      }
+      // 也检查 globalCache（可能已经在内存中）
+      if (globalCache.displayModes[beanState]) {
+        targetDisplayMode = globalCache.displayModes[beanState];
+      }
+      setDisplayModeState(targetDisplayMode);
+      globalCache.displayMode = targetDisplayMode;
+      globalCache.displayModes[beanState] = targetDisplayMode;
 
       // 加载目标 beanState 的分类筛选值
       const targetVariety =
@@ -779,7 +871,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       inventorySortOption,
       selectedBeanType,
       showEmptyBeans,
-      isImageFlowMode,
+      displayMode,
       selectedVariety,
       selectedOrigin,
       selectedFlavorPeriod,
@@ -1452,6 +1544,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         isImageFlowMode={isImageFlowMode}
         onToggleImageFlowMode={handleToggleImageFlowMode}
         hasImageBeans={hasImageBeans}
+        // 新增显示模式属性
+        displayMode={displayMode}
+        onDisplayModeChange={handleDisplayModeChange}
+        // 表格列配置属性
+        tableVisibleColumns={tableVisibleColumns}
+        onTableColumnsChange={updateTableVisibleColumns}
         // 新增分类相关属性
         filterMode={filterMode}
         onFilterModeChange={handleFilterModeChange}
@@ -1507,6 +1605,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               isSearching={isSearching}
               searchQuery={searchQuery}
               isImageFlowMode={isImageFlowMode}
+              displayMode={displayMode}
+              tableVisibleColumns={tableVisibleColumns}
               settings={settings}
               scrollParentRef={inventoryScrollEl ?? undefined}
               expandedNotes={expandedNotes}
