@@ -250,7 +250,7 @@ export async function exportSelectedBeans({
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 16px 24px 24px 24px;
+      padding: 0px 24px 24px 24px;
       font-size: 11px;
       font-weight: 400;
       letter-spacing: 0.025em;

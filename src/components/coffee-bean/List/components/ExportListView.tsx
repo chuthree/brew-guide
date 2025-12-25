@@ -111,7 +111,6 @@ const ExportListView: React.FC<ExportListViewProps> = ({
             }}
           >
             {settings?.simplifiedViewLabels ? '库存' : '咖啡豆库存'}
-            {/* 精细的活跃状态下划线 */}
             <div
               style={{
                 position: 'absolute',
@@ -139,14 +138,16 @@ const ExportListView: React.FC<ExportListViewProps> = ({
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '20px',
+            gap: '14px',
           }}
         >
           {filteredBeans.map((bean, index) => (
             <BeanListItem
               key={bean.id}
               bean={bean}
-              isLast={index === filteredBeans.length - 1 && emptyBeans.length === 0}
+              isLast={
+                index === filteredBeans.length - 1 && emptyBeans.length === 0
+              }
               onRemainingClick={handleRemainingClick}
               onDetailClick={handleDetailClick}
               searchQuery=""

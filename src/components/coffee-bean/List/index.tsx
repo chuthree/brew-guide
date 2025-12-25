@@ -77,6 +77,7 @@ import {
 } from '@/lib/utils/beanVarietyUtils';
 import ViewSwitcher from './components/ViewSwitcher';
 import InventoryView from './components/InventoryView';
+import BeanListItem from './components/BeanListItem';
 import StatsView from './components/StatsView';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { exportListPreview } from './components/ListExporter';
@@ -184,6 +185,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isLoadingRef = useRef<boolean>(false);
   const beansContainerRef = useRef<HTMLDivElement | null>(null);
+  const hiddenExportContainerRef = useRef<HTMLDivElement>(null);
 
   // 处理初始化参数 - 只在组件首次挂载时执行
   useEffect(() => {
@@ -1294,7 +1296,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       );
       await exportSelectedBeans({
         selectedBeans,
-        beansContainerRef,
+        beansContainerRef: hiddenExportContainerRef,
         onSuccess: message => {
           showToast({ type: 'success', title: message, duration: 2000 });
         },
@@ -1614,6 +1616,35 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         onClose={closeFailureModal}
         content={failureContent || ''}
       />
+
+      {/* 隐藏的导出容器 - 用于生成图片 */}
+      <div
+        ref={hiddenExportContainerRef}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          width: '375px',
+        }}
+      >
+        {isShareMode &&
+          selectedBeans.length > 0 &&
+          beans
+            .filter(bean => selectedBeans.includes(bean.id))
+            .map((bean, index) => (
+              <BeanListItem
+                key={bean.id}
+                bean={bean}
+                isLast={index === selectedBeans.length - 1}
+                onRemainingClick={() => {}}
+                settings={{
+                  ...settings,
+                  isExportMode: true,
+                }}
+                isShareMode={false}
+              />
+            ))}
+      </div>
     </div>
   );
 };
