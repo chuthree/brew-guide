@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Drawer } from 'vaul';
 import { ArrowLeft } from 'lucide-react';
 import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { Calendar } from '@/components/common/ui/Calendar';
-import ResponsiveModal from '@/components/common/ui/ResponsiveModal';
+import { useModalHistory } from '@/lib/hooks/useModalHistory';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface BrewingNoteEditModalProps {
   showModal: boolean;
@@ -125,101 +127,119 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     }
   }, [initialData]);
 
-  // 渲染内容
-  const renderContent = (isMediumScreen: boolean) => (
-    <div
-      className={`pb-safe-bottom flex h-full flex-col overflow-hidden px-6 ${
-        isMediumScreen ? 'pt-4' : 'pt-safe-top'
-      }`}
-    >
-      {/* 顶部标题栏 */}
-      <div className="flex shrink-0 items-center justify-between">
-        <button
-          type="button"
-          onClick={handleClose}
-          className="-m-3 p-3 text-neutral-800 dark:text-neutral-200"
-        >
-          <ArrowLeft size={16} />
-        </button>
-
-        {/* 中间的时间戳编辑区域 */}
-        <div className="flex items-baseline">
-          <span className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-            编辑记录 ·
-          </span>
-
-          {/* 可点击的日期部分 */}
-          <div className="relative ml-1" ref={datePickerRef}>
-            <button
-              type="button"
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              className="cursor-pointer border-b border-dashed border-neutral-400 text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:border-neutral-600 hover:text-neutral-700 dark:border-neutral-500 dark:text-neutral-400 dark:hover:border-neutral-400 dark:hover:text-neutral-300"
-            >
-              {`${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')}`}
-            </button>
-
-            {/* 日期选择器 */}
-            {showDatePicker && (
-              <div
-                className="absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 transform rounded-lg border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900"
-                style={{ width: '280px' }}
-              >
-                <Calendar
-                  selected={timestamp}
-                  onSelect={handleDateChange}
-                  locale="zh-CN"
-                  initialFocus
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 占位元素，保持布局平衡 */}
-        <div className="w-12"></div>
-      </div>
-
-      {/* 表单内容容器 */}
-      <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
-        {initialData && (
-          <BrewingNoteForm
-            id={initialData.id}
-            onClose={handleClose}
-            onSave={handleSave}
-            initialData={initialData}
-            inBrewPage={true}
-            showSaveButton={false}
-            hideHeader={true}
-            onTimestampChange={handleTimestampChange}
-            settings={settings}
-            isCopy={isCopy}
-          />
-        )}
-      </div>
-
-      {/* 底部保存按钮 */}
-      <div className="modal-bottom-button flex shrink-0 items-center justify-center">
-        <button
-          type="button"
-          onClick={handleSaveClick}
-          className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
-        >
-          <span className="font-medium">保存笔记</span>
-        </button>
-      </div>
-    </div>
+  // 处理抽屉状态变化
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) handleClose();
+    },
+    [handleClose]
   );
 
+  // 历史栈和主题色管理
+  useThemeColor({ useOverlay: true, enabled: showModal });
+  useModalHistory({
+    id: 'brewing-note-edit',
+    isOpen: showModal,
+    onClose: handleClose,
+  });
+
   return (
-    <ResponsiveModal
-      isOpen={showModal}
-      onClose={handleClose}
-      historyId="brewing-note-edit"
-      drawerMaxWidth="480px"
-      drawerHeight="90vh"
+    <Drawer.Root
+      open={showModal}
+      onOpenChange={handleOpenChange}
+      repositionInputs={false}
     >
-      {({ isMediumScreen }) => renderContent(isMediumScreen)}
-    </ResponsiveModal>
+      <Drawer.Portal>
+        <Drawer.Overlay
+          className="fixed inset-0 z-50 bg-black/50"
+          style={{ position: 'fixed' }}
+        />
+        <Drawer.Content
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[90vh] max-w-md flex-col rounded-t-3xl bg-white outline-none dark:bg-neutral-900"
+          aria-describedby={undefined}
+        >
+          <Drawer.Title className="sr-only">编辑笔记</Drawer.Title>
+
+          <div className="pb-safe-bottom flex h-full flex-col overflow-hidden px-6 pt-4">
+            {/* 顶部标题栏 */}
+            <div className="flex shrink-0 items-center justify-between">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="-m-3 rounded-full p-3"
+              >
+                <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
+              </button>
+
+              {/* 中间的时间戳编辑区域 */}
+              <div className="flex items-baseline">
+                <span className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                  编辑记录 ·
+                </span>
+
+                {/* 可点击的日期部分 */}
+                <div className="relative ml-1" ref={datePickerRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    className="cursor-pointer border-b border-dashed border-neutral-400 text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:border-neutral-600 hover:text-neutral-700 dark:border-neutral-500 dark:text-neutral-400 dark:hover:border-neutral-400 dark:hover:text-neutral-300"
+                  >
+                    {`${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')}`}
+                  </button>
+
+                  {/* 日期选择器 */}
+                  {showDatePicker && (
+                    <div
+                      className="absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 transform rounded-lg border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900"
+                      style={{ width: '280px' }}
+                    >
+                      <Calendar
+                        selected={timestamp}
+                        onSelect={handleDateChange}
+                        locale="zh-CN"
+                        initialFocus
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 占位元素，保持布局平衡 */}
+              <div className="w-12"></div>
+            </div>
+
+            {/* 表单内容容器 */}
+            <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+              {initialData && (
+                <BrewingNoteForm
+                  id={initialData.id}
+                  onClose={handleClose}
+                  onSave={handleSave}
+                  initialData={initialData}
+                  inBrewPage={true}
+                  showSaveButton={false}
+                  hideHeader={true}
+                  onTimestampChange={handleTimestampChange}
+                  settings={settings}
+                  isCopy={isCopy}
+                />
+              )}
+            </div>
+
+            {/* 底部保存按钮 */}
+            <div className="modal-bottom-button flex shrink-0 items-center justify-center">
+              <button
+                type="button"
+                onClick={handleSaveClick}
+                className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
+              >
+                <span className="font-medium">保存笔记</span>
+              </button>
+            </div>
+          </div>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 };
 
