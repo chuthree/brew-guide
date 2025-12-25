@@ -283,7 +283,6 @@ export const useSettingsStore = create<SettingsStore>()(
       set({ isLoading: true, error: null });
 
       try {
-        // 从 IndexedDB 加载设置
         const stored = await db.appSettings.get('main');
 
         if (stored && stored.data) {

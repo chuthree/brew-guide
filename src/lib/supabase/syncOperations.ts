@@ -287,6 +287,26 @@ export async function markRecordsAsDeleted(
 // ============================================
 
 /**
+ * 判断本地设置是否只有"同步配置"，没有其他用户数据
+ * 用于决定是否应该上传（避免用默认值覆盖云端有效数据）
+ *
+ * 场景：新设备首次配置 Supabase 同步时，本地只有 supabaseSync 配置，
+ * 其他都是默认值。此时不应该上传，否则会覆盖云端的用户数据。
+ */
+function shouldSkipUpload(settings: Partial<AppSettings>): boolean {
+  // 检查是否有实际的用户数据（不只是同步配置）
+  const hasUsername = !!settings.username;
+  const hasS3Data =
+    settings.s3Sync?.enabled === true && !!settings.s3Sync?.accessKeyId;
+  const hasWebDAVData =
+    settings.webdavSync?.enabled === true && !!settings.webdavSync?.url;
+
+  // 如果没有 username 且没有 S3/WebDAV 配置，说明这是一个"空"设备
+  // 只有 Supabase 配置（用于连接同步）不算有效数据
+  return !hasUsername && !hasS3Data && !hasWebDAVData;
+}
+
+/**
  * 上传设置数据到云端
  */
 export async function uploadSettingsData(
@@ -298,7 +318,21 @@ export async function uploadSettingsData(
     // 从 IndexedDB appSettings 表收集设置
     const appSettingsRecord = await db.appSettings.get('main');
     if (appSettingsRecord?.data) {
-      data.appSettings = appSettingsRecord.data;
+      const settings = appSettingsRecord.data as AppSettings;
+
+      // 关键检查：如果本地只有同步配置，没有其他用户数据，跳过上传
+      // 这可以防止新设备首次配置时用默认值覆盖云端数据
+      if (shouldSkipUpload(settings)) {
+        return {
+          success: true,
+          data: 0,
+          affectedCount: 0,
+        };
+      }
+
+      data.appSettings = settings;
+    } else {
+      return { success: true, data: 0, affectedCount: 0 };
     }
 
     // 收集磨豆机数据
@@ -346,6 +380,22 @@ export async function uploadSettingsData(
 }
 
 /**
+ * 判断本地设置是否为"空"或"默认"状态
+ * 用于决定是否应该完全使用云端数据
+ */
+function isLocalSettingsEmpty(localSettings: Partial<AppSettings>): boolean {
+  // 检查关键字段是否有用户数据
+  const hasUsername = !!localSettings.username;
+  const hasS3Config =
+    localSettings.s3Sync?.enabled === true ||
+    !!localSettings.s3Sync?.accessKeyId;
+  const hasWebDAVConfig = !!localSettings.webdavSync?.url;
+  const hasSupabaseConfig = localSettings.supabaseSync?.enabled === true;
+
+  return !hasUsername && !hasS3Config && !hasWebDAVConfig && !hasSupabaseConfig;
+}
+
+/**
  * 下载设置数据并应用到本地
  */
 export async function downloadSettingsData(
@@ -375,12 +425,25 @@ export async function downloadSettingsData(
     if (settingsData.appSettings) {
       const cloudAppSettings = settingsData.appSettings as AppSettings;
       const localRecord = await db.appSettings.get('main');
-      const localSettings = localRecord?.data || {};
+      const localSettings = (localRecord?.data || {}) as Partial<AppSettings>;
 
-      // 合并设置：云端优先，保留本地独有字段
-      const mergedSettings = { ...localSettings, ...cloudAppSettings };
+      // 如果本地是空/默认状态，完全使用云端数据
+      // 而不是合并（合并会保留本地的默认值）
+      let mergedSettings: AppSettings;
+      const localIsEmpty = isLocalSettingsEmpty(localSettings);
+
+      if (localIsEmpty) {
+        // 本地无用户数据，直接使用云端设置
+        mergedSettings = cloudAppSettings;
+      } else {
+        // 本地有用户数据，进行合并（云端优先）
+        mergedSettings = {
+          ...localSettings,
+          ...cloudAppSettings,
+        } as AppSettings;
+      }
+
       await db.appSettings.put({ id: 'main', data: mergedSettings });
-      console.log('[SyncOps] IndexedDB appSettings 已更新');
       count++;
     }
 
@@ -395,7 +458,6 @@ export async function downloadSettingsData(
       if (cloudGrinders.length > 0) {
         await db.grinders.bulkPut(cloudGrinders);
       }
-      console.log(`[SyncOps] 磨豆机已更新: ${cloudGrinders.length} 个`);
       count++;
     }
 

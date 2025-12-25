@@ -536,7 +536,6 @@ export class InitialSyncManager {
     try {
       const lastSyncTime = getLastSyncTime();
 
-      // 增加超时控制
       const remoteResult = await withTimeout(
         fetchRemoteLatestTimestamp(this.client, SYNC_TABLES.USER_SETTINGS),
         SYNC_TIMEOUT,
@@ -546,8 +545,7 @@ export class InitialSyncManager {
       const remoteTimestamp = remoteResult.success ? remoteResult.data || 0 : 0;
 
       if (remoteTimestamp > lastSyncTime || lastSyncTime === 0) {
-        // 云端更新，下载
-        // 修复：如果 lastSyncTime 为 0（首次同步或重置），也应该尝试下载
+        // 云端更新或首次同步，下载
         const result = await withTimeout(
           downloadSettingsData(this.client),
           SYNC_TIMEOUT,
@@ -557,7 +555,7 @@ export class InitialSyncManager {
           await refreshSettingsStores();
         }
       } else {
-        // 本地更新或首次，上传
+        // 本地更新，上传
         await withTimeout(
           uploadSettingsData(this.client),
           SYNC_TIMEOUT,
