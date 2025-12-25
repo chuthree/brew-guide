@@ -202,7 +202,7 @@ export function Calendar({
             <Popover.Portal>
               <Popover.Content
                 className={cn(
-                  'z-50 rounded-md border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900',
+                  'z-50 rounded-md border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900',
                   'max-h-64 overflow-y-auto',
                   'data-[state=open]:animate-in data-[state=closed]:animate-out',
                   'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -252,7 +252,7 @@ export function Calendar({
             <Popover.Portal>
               <Popover.Content
                 className={cn(
-                  'z-50 rounded-md border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900',
+                  'z-50 rounded-md border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900',
                   'data-[state=open]:animate-in data-[state=closed]:animate-out',
                   'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
                   'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
@@ -320,7 +320,7 @@ export function Calendar({
                   ? 'text-neutral-800 dark:text-white'
                   : 'text-neutral-400 dark:text-neutral-600',
                 isTodayDate &&
-                  'border border-neutral-200 dark:border-neutral-700',
+                  'border border-neutral-200/50 dark:border-neutral-700',
                 isSelectedDate
                   ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-900'
                   : isCurrentMonth &&

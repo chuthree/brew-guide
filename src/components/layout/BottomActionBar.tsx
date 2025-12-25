@@ -39,12 +39,12 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
     >
       <div className="pointer-events-none absolute right-0 bottom-full left-0 h-12 bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900"></div>
       <div className="pb-safe-bottom relative mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900">
-        <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+        <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
         <div className="mx-3 flex items-center space-x-3">
           {buttons.map((button, index) => (
             <React.Fragment key={index}>
               {index > 0 && (
-                <div className="w-4 border-t border-neutral-200 dark:border-neutral-800"></div>
+                <div className="w-4 border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
               )}
               <button
                 onClick={button.onClick}
@@ -56,7 +56,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
             </React.Fragment>
           ))}
         </div>
-        <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+        <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
       </div>
       {bottomHint && (
         <div className="mt-2 mb-2 text-center">

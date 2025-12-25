@@ -570,7 +570,7 @@ const SearchSortBar: React.FC<SearchSortBarProps> = ({
   }
 
   return (
-    <div className="border-b border-neutral-200 bg-neutral-50/30 px-6 py-3 dark:border-neutral-800 dark:bg-neutral-900/30">
+    <div className="border-b border-neutral-200/50 bg-neutral-50/30 px-6 py-3 dark:border-neutral-800/50 dark:bg-neutral-900/30">
       <div className="flex items-center">
         <span className="mr-2 flex-shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
           搜索排序:
@@ -936,7 +936,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   return (
     <div className="relative" ref={filterExpandRef}>
       {/* 整个分类栏容器 - 下边框在这里 */}
-      <div className="border-b border-neutral-200 dark:border-neutral-800">
+      <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
         <div className="relative px-6">
           {!isSearching ? (
             <div className="relative flex items-center">

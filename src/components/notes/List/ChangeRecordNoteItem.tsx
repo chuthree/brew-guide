@@ -71,7 +71,7 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
 
   return (
     <div
-      className={`group border-b border-neutral-200 px-6 py-3 last:border-b-0 dark:border-neutral-800 ${isShareMode ? 'cursor-pointer' : ''}`}
+      className={`group border-b border-neutral-200/50 px-6 py-3 last:border-b-0 dark:border-neutral-800/50 ${isShareMode ? 'cursor-pointer' : ''}`}
       onClick={isShareMode ? handleClick : undefined}
       data-note-id={note.id}
     >

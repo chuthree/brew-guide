@@ -64,19 +64,19 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
         </p>
       </div>
       <div className="w-full space-y-4 px-4">
-        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+        <div className="flex items-center justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">
             方案名称
           </span>
           <span className="text-sm font-medium">{methodName}</span>
         </div>
-        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+        <div className="flex items-center justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">
             咖啡粉量
           </span>
           <span className="text-sm font-medium">{coffee}</span>
         </div>
-        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+        <div className="flex items-center justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">
             水量
           </span>
@@ -90,13 +90,13 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
             <span className="text-sm font-medium">{water}</span>
           )}
         </div>
-        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+        <div className="flex items-center justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">
             粉水比
           </span>
           <span className="text-sm font-medium">{ratio}</span>
         </div>
-        <div className="flex items-center justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+        <div className="flex items-center justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">
             总时间
           </span>

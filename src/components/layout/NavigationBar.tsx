@@ -1003,8 +1003,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     <motion.div
       className={`pt-safe-top sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:w-36 md:shrink-0 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 ${
         activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'
-          ? 'border-transparent md:border-neutral-200 dark:md:border-neutral-800'
-          : 'border-neutral-200 dark:border-neutral-800'
+          ? 'border-transparent md:border-neutral-200/50 dark:md:border-neutral-800/50'
+          : 'border-neutral-200/50 dark:border-neutral-800/50'
       }`}
       transition={{ duration: 0.3 }}
       onTouchStart={handlePullTouchStart}

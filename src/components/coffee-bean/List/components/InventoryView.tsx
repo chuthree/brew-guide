@@ -303,7 +303,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                     return (
                       <div className="relative -mx-6 flex items-center justify-center">
                         <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-neutral-200 dark:border-neutral-800"></div>
+                          <div className="w-full border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
                         </div>
                         <div className="relative bg-neutral-50 px-4 text-xs font-medium text-neutral-400 dark:bg-neutral-900 dark:text-neutral-700">
                           用完的咖啡豆

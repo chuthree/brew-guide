@@ -2548,7 +2548,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             </span>
                             {/* 下拉选择框 */}
                             {showRoastLevelDropdown && (
-                              <div className="absolute top-full left-0 z-50 mt-1 min-w-[100px] rounded border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+                              <div className="absolute top-full left-0 z-50 mt-1 min-w-[100px] rounded border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
                                 {ROAST_LEVELS.map(level => (
                                   <div
                                     key={level}

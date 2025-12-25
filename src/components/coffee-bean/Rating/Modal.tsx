@@ -128,7 +128,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                 value={ratingNotes}
                 onChange={e => setRatingNotes(e.target.value)}
                 placeholder="添加对这款咖啡豆的备注"
-                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
                 minRows={2}
                 maxRows={6}
               />
@@ -138,7 +138,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
             <div className="flex space-x-3 pt-3">
               <button
                 onClick={handleClose}
-                className="flex-1 rounded-md border border-neutral-200 py-2 text-xs text-neutral-500 dark:border-neutral-700 dark:text-neutral-400"
+                className="flex-1 rounded-md border border-neutral-200/50 py-2 text-xs text-neutral-500 dark:border-neutral-700 dark:text-neutral-400"
               >
                 取消
               </button>

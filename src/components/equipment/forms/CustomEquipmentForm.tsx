@@ -1068,13 +1068,13 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                   setStrokeWidth(prev => Math.max(1, prev - 1));
                 }
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
               aria-label="减小线条粗细"
             >
               <span className="text-lg font-medium">−</span>
             </button>
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800">
               <div
                 className="rounded-full bg-neutral-900 dark:bg-white"
                 style={{
@@ -1093,7 +1093,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                   setStrokeWidth(prev => Math.min(10, prev + 1));
                 }
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
               aria-label="增加线条粗细"
             >
               <span className="text-lg font-medium">+</span>
@@ -1105,7 +1105,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             <button
               type="button"
               onClick={handleTogglePlayback}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
               aria-label={isPlaying ? '暂停' : '播放'}
             >
               {isPlaying ? (
@@ -1147,7 +1147,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             <button
               type="button"
               onClick={() => animationEditorRef.current?.undo()}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
               aria-label="撤销"
             >
               <svg
@@ -1170,7 +1170,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
             <button
               type="button"
               onClick={handleDeleteCurrentFrame}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
               aria-label="删除帧"
             >
               <svg
@@ -1242,13 +1242,13 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => handleStrokeWidthChange(strokeWidth - 1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label="减小线条粗细"
           >
             <span className="text-lg font-medium">−</span>
           </button>
 
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800">
             <div
               className="rounded-full bg-neutral-900 dark:bg-white"
               style={{
@@ -1262,7 +1262,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label="增加线条粗细"
           >
             <span className="text-lg font-medium">+</span>
@@ -1274,7 +1274,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => setShowReference(!showReference)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label={showReference ? '隐藏底图' : '显示底图'}
           >
             <svg
@@ -1307,7 +1307,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => canvasRef.current?.undo()}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label="撤销"
           >
             <svg
@@ -1330,7 +1330,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => canvasRef.current?.clear()}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label="清除"
           >
             <svg
@@ -1409,13 +1409,13 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => handleStrokeWidthChange(strokeWidth - 1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label="减小线条粗细"
           >
             <span className="text-lg font-medium">−</span>
           </button>
 
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800">
             <div
               className="rounded-full bg-neutral-900 dark:bg-white"
               style={{
@@ -1429,7 +1429,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label="增加线条粗细"
           >
             <span className="text-lg font-medium">+</span>
@@ -1458,7 +1458,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
               // 切换到另一个状态
               setValveEditMode(newMode);
             }}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label={`切换到${valveEditMode === 'closed' ? '开启' : '关闭'}状态`}
           >
             <svg
@@ -1484,7 +1484,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => setShowReference(!showReference)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label={showReference ? '隐藏底图' : '显示底图'}
           >
             <svg
@@ -1517,7 +1517,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => canvasRef.current?.undo()}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label="撤销"
           >
             <svg
@@ -1540,7 +1540,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
           <button
             type="button"
             onClick={() => canvasRef.current?.clear()}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800"
             aria-label="清除"
           >
             <svg
@@ -1603,8 +1603,8 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
       {/* 所有区域使用统一的卡片样式 */}
       <div className="space-y-4">
         {/* 基本信息区域 */}
-        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
-          <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-2.5 dark:border-neutral-700 dark:bg-neutral-800">
+        <div className="overflow-hidden rounded-lg border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+          <div className="border-b border-neutral-200/50 bg-neutral-50 px-4 py-2.5 dark:border-neutral-700 dark:bg-neutral-800">
             <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
               基本信息
             </h3>
@@ -1624,8 +1624,8 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
         </div>
 
         {/* 器具类型和杯型设置 */}
-        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
-          <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-2.5 dark:border-neutral-700 dark:bg-neutral-800">
+        <div className="overflow-hidden rounded-lg border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+          <div className="border-b border-neutral-200/50 bg-neutral-50 px-4 py-2.5 dark:border-neutral-700 dark:bg-neutral-800">
             <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
               器具设置
             </h3>
@@ -1643,7 +1643,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     className={`relative flex flex-col rounded-lg border p-3 ${
                       selectedPreset === preset.value
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-neutral-200 hover:border-blue-200 dark:border-neutral-700 dark:hover:border-blue-800'
+                        : 'border-neutral-200/50 hover:border-blue-200 dark:border-neutral-700 dark:hover:border-blue-800'
                     } cursor-pointer transition-all`}
                   >
                     <div className="mb-1.5 flex items-center">
@@ -1697,7 +1697,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                       className={`relative flex flex-col rounded-lg border p-3 ${
                         cupShapeType === 'default'
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-neutral-200 hover:border-blue-200 dark:border-neutral-700 dark:hover:border-blue-800'
+                          : 'border-neutral-200/50 hover:border-blue-200 dark:border-neutral-700 dark:hover:border-blue-800'
                       } cursor-pointer transition-all`}
                     >
                       <div className="mb-2 flex items-center">
@@ -1763,7 +1763,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                     className={`relative flex flex-col rounded-lg border p-3 ${
                       cupShapeType === 'custom'
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-neutral-200 hover:border-blue-200 dark:border-neutral-700 dark:hover:border-blue-800'
+                        : 'border-neutral-200/50 hover:border-blue-200 dark:border-neutral-700 dark:hover:border-blue-800'
                     } cursor-pointer transition-all`}
                   >
                     <input
@@ -1844,8 +1844,8 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
 
         {/* 注水方式管理 */}
         {selectedPreset === 'custom' && (
-          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
-            <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-2.5 dark:border-neutral-700 dark:bg-neutral-800">
+          <div className="overflow-hidden rounded-lg border border-neutral-200/50 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+            <div className="flex items-center justify-between border-b border-neutral-200/50 bg-neutral-50 px-4 py-2.5 dark:border-neutral-700 dark:bg-neutral-800">
               <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                 注水方式
               </h3>
@@ -1855,7 +1855,7 @@ const CustomEquipmentForm: React.FC<CustomEquipmentFormProps> = ({
                 {customPourAnimations.map(animation => (
                   <div
                     key={animation.id}
-                    className="relative flex flex-col rounded-lg border border-neutral-200 bg-white p-3 transition-colors hover:border-blue-200 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-blue-800"
+                    className="relative flex flex-col rounded-lg border border-neutral-200/50 bg-white p-3 transition-colors hover:border-blue-200 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-blue-800"
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <div className="flex items-center space-x-2">

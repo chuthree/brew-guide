@@ -354,7 +354,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
                 {/* 中间指示器 - 永远在中间 */}
                 {!isSingleBean && (
                   <div
-                    className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-neutral-800 dark:border-neutral-100"
+                    className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-neutral-800/50 dark:border-neutral-100"
                     style={{
                       width: `${cardDimensions.width}px`,
                       height: '132px', // 高度保持固定，因为它不受字体缩放影响
@@ -380,8 +380,8 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
                         ref={index === 0 ? cardRef : null}
                         className={`flex h-[132px] w-[160px] shrink-0 flex-col items-center justify-center rounded-lg border-2 bg-white p-3 dark:bg-neutral-800 ${
                           isSingleBean && animationState === 'selected'
-                            ? 'border-neutral-800 dark:border-neutral-100'
-                            : 'border-neutral-200 dark:border-neutral-700'
+                            ? 'border-neutral-800/50 dark:border-neutral-100'
+                            : 'border-neutral-200/50 dark:border-neutral-700'
                         }`}
                       >
                         {bean.image ? (

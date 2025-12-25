@@ -395,7 +395,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
                       }
                     }}
                     placeholder="醇厚度、香气、余韵..."
-                    className="flex-1 rounded border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                    className="flex-1 rounded border border-neutral-200/50 bg-neutral-100 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
                     autoFocus
                   />
                   <button

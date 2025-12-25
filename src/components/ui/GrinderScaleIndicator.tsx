@@ -31,7 +31,7 @@ const SPRING_TRANSITION = {
 const LONG_PRESS_DURATION = 500;
 
 const BUTTON_BASE_CLASS =
-  'rounded-full border border-neutral-200 dark:border-neutral-700/50 bg-neutral-100 dark:bg-neutral-800';
+  'rounded-full border border-neutral-200/50 dark:border-neutral-700/50 bg-neutral-100 dark:bg-neutral-800';
 
 // 字体大小映射
 const FONT_SIZE_MAP = [

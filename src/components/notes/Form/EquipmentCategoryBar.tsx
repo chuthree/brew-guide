@@ -85,7 +85,7 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
     <div className="relative mb-3 w-full overflow-hidden">
       <div
         ref={scrollContainerRef}
-        className="flex items-center gap-4 overflow-x-auto border-b border-neutral-200 dark:border-neutral-800"
+        className="flex items-center gap-4 overflow-x-auto border-b border-neutral-200/50 dark:border-neutral-800/50"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',

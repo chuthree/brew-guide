@@ -275,14 +275,14 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-100/60 p-3 dark:border-neutral-700 dark:bg-neutral-800/30">
+            <div className="space-y-2 rounded-lg border border-neutral-200/50 bg-neutral-100/60 p-3 dark:border-neutral-700 dark:bg-neutral-800/30">
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 将此提示词和你的冲煮方案一起发给 ChatGPT、Claude 等 AI
               </p>
               <textarea
                 readOnly
                 value={_templatePrompt}
-                className="h-24 w-full resize-none rounded border border-neutral-200 bg-white/60 p-2 text-[10px] leading-relaxed text-neutral-600 focus:outline-none dark:border-neutral-600 dark:bg-neutral-900/60 dark:text-neutral-400"
+                className="h-24 w-full resize-none rounded border border-neutral-200/50 bg-white/60 p-2 text-[10px] leading-relaxed text-neutral-600 focus:outline-none dark:border-neutral-600 dark:bg-neutral-900/60 dark:text-neutral-400"
                 onFocus={e => e.target.select()}
               />
               <button
@@ -374,7 +374,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
                 {/* 表单内容 */}
                 <div className="space-y-4 pb-4">
                   <textarea
-                    className="h-48 w-full resize-none rounded-lg border border-neutral-200 bg-neutral-100/60 p-3 text-sm text-neutral-800 placeholder-neutral-500 transition-colors focus:border-neutral-800 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800/30 dark:text-neutral-200 dark:placeholder-neutral-400 dark:focus:border-neutral-200"
+                    className="h-48 w-full resize-none rounded-lg border border-neutral-200/50 bg-neutral-100/60 p-3 text-sm text-neutral-800 placeholder-neutral-500 transition-colors focus:border-neutral-800/50 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800/30 dark:text-neutral-200 dark:placeholder-neutral-400 dark:focus:border-neutral-200"
                     placeholder="粘贴方案数据或朋友分享的 JSON"
                     value={importData}
                     onChange={e => setImportData(e.target.value)}

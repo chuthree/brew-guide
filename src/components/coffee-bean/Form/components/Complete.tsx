@@ -37,7 +37,7 @@ const Complete: React.FC<CompleteProps> = ({
         </p>
       </div>
       <div className="w-full space-y-4">
-        <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+        <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
           <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
             咖啡豆名称
           </span>
@@ -46,7 +46,7 @@ const Complete: React.FC<CompleteProps> = ({
           </span>
         </div>
         {!!bean.capacity && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               库存量
             </span>
@@ -56,7 +56,7 @@ const Complete: React.FC<CompleteProps> = ({
           </div>
         )}
         {!!bean.price && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               价格
             </span>
@@ -66,7 +66,7 @@ const Complete: React.FC<CompleteProps> = ({
           </div>
         )}
         {!!bean.roastLevel && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               烘焙度
             </span>
@@ -77,7 +77,7 @@ const Complete: React.FC<CompleteProps> = ({
         )}
         {/* 生豆显示购买日期，熟豆显示烘焙日期 */}
         {bean.beanState === 'green' && !!bean.purchaseDate && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               购买日期
             </span>
@@ -89,7 +89,7 @@ const Complete: React.FC<CompleteProps> = ({
         {bean.beanState !== 'green' &&
           !!bean.roastDate &&
           !bean.isInTransit && (
-            <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+            <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
               <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
                 烘焙日期
               </span>
@@ -99,7 +99,7 @@ const Complete: React.FC<CompleteProps> = ({
             </div>
           )}
         {!!bean.isInTransit && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               状态
             </span>
@@ -109,7 +109,7 @@ const Complete: React.FC<CompleteProps> = ({
           </div>
         )}
         {!!bean.beanType && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               咖啡豆类型
             </span>
@@ -125,7 +125,7 @@ const Complete: React.FC<CompleteProps> = ({
           </div>
         )}
         {blendComponents && blendComponents.length > 0 && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               咖啡豆成分
             </span>
@@ -160,7 +160,7 @@ const Complete: React.FC<CompleteProps> = ({
           !bean.isFrozen &&
           !!bean.startDay &&
           !!bean.endDay && (
-            <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+            <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
               <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
                 赏味期
               </span>
@@ -170,7 +170,7 @@ const Complete: React.FC<CompleteProps> = ({
             </div>
           )}
         {!!bean.isFrozen && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               状态
             </span>
@@ -180,7 +180,7 @@ const Complete: React.FC<CompleteProps> = ({
           </div>
         )}
         {bean.flavor && bean.flavor.length > 0 && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               风味
             </span>
@@ -190,7 +190,7 @@ const Complete: React.FC<CompleteProps> = ({
           </div>
         )}
         {bean.notes && bean.notes.trim() && (
-          <div className="flex justify-between border-b border-neutral-200 py-2 dark:border-neutral-700">
+          <div className="flex justify-between border-b border-neutral-200/50 py-2 dark:border-neutral-700">
             <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
               备注
             </span>

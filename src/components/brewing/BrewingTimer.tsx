@@ -1179,7 +1179,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       <div className="pb-safe-bottom relative shrink-0 bg-neutral-50 px-6 pt-6 dark:bg-neutral-900">
         {/* 添加设置点和边框 */}
         <div className="absolute top-0 right-0 left-0 flex items-center justify-center">
-          <div className="relative w-full border-t border-neutral-200 dark:border-neutral-800">
+          <div className="relative w-full border-t border-neutral-200/50 dark:border-neutral-800/50">
             <div className="absolute top-1/2 right-6 flex -translate-y-1/2 items-center">
               <button
                 onClick={() => setShowSettings(!showSettings)}
@@ -1275,7 +1275,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     }}
                   >
                     <div
-                      className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${
+                      className={`flex items-baseline border-l-2 border-neutral-800/50 pl-3 dark:border-neutral-100 ${
                         localLayoutSettings.stageInfoReversed
                           ? 'flex-row-reverse'
                           : 'flex-row'

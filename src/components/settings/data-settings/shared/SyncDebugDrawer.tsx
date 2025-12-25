@@ -55,7 +55,7 @@ export const SyncDebugDrawer: React.FC<SyncDebugDrawerProps> = ({
           value={logs.join('\n')}
           readOnly
           onClick={onSelectAll}
-          className="h-48 w-full resize-none rounded-md border border-neutral-200 bg-neutral-50 p-3 font-mono text-xs leading-relaxed text-neutral-700 focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+          className="h-48 w-full resize-none rounded-md border border-neutral-200/50 bg-neutral-50 p-3 font-mono text-xs leading-relaxed text-neutral-700 focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
         />
       </ActionDrawer.Content>
       <ActionDrawer.Actions>

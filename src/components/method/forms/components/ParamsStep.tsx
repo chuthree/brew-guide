@@ -79,7 +79,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
               value={params.coffee.replace('g', '')}
               onChange={onCoffeeChange}
               onFocus={e => e.target.select()}
-              className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+              className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
             />
             <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">
               g
@@ -104,7 +104,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
               value={params.ratio.replace('1:', '')}
               onChange={onRatioChange}
               onFocus={e => e.target.select()}
-              className="w-full border-b border-neutral-300 bg-transparent py-2 pl-6 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+              className="w-full border-b border-neutral-300 bg-transparent py-2 pl-6 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
             />
           </div>
         </div>
@@ -128,7 +128,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
                   }
                 }}
                 onFocus={e => e.target.select()}
-                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
               />
               <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">
                 g
@@ -156,7 +156,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
                   }
                 }}
                 onFocus={e => e.target.select()}
-                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
               />
               <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">
                 秒
@@ -176,7 +176,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
             placeholder={
               isEspresso ? '例如：特细、浓缩咖啡级' : '例如：中细、特细、中粗等'
             }
-            inputClassName="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+            inputClassName="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
             defaultSyncEnabled={grinderDefaultSyncEnabled}
           />
         </div>
@@ -197,7 +197,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
                 value={params.temp ? params.temp.replace('°C', '') : ''}
                 onChange={onTempChange}
                 onFocus={e => e.target.select()}
-                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
               />
               <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">
                 °C

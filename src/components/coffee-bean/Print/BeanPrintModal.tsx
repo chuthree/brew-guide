@@ -55,7 +55,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
 
   // 统一样式常量
   const INPUT_CLASS =
-    'w-full rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800';
+    'w-full rounded border border-neutral-200/50 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800';
   const LABEL_CLASS =
     'mb-1 block text-xs text-neutral-500 dark:text-neutral-400';
 
@@ -593,7 +593,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                           width: finalValue.toString(),
                         }));
                       }}
-                      className="flex-1 rounded border border-neutral-200 bg-white px-3 py-2 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                      className="flex-1 rounded border border-neutral-200/50 bg-white px-3 py-2 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
                       placeholder="宽度"
                       min="40"
                       max="200"
@@ -645,7 +645,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                           height: finalValue.toString(),
                         }));
                       }}
-                      className="flex-1 rounded border border-neutral-200 bg-white px-3 py-2 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                      className="flex-1 rounded border border-neutral-200/50 bg-white px-3 py-2 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
                       placeholder="高度"
                       min="30"
                       max="150"
@@ -883,7 +883,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                         {renderFlavorEditor()}
 
                         {/* 分隔线 */}
-                        <div className="my-2 border-t border-neutral-200 dark:border-neutral-700"></div>
+                        <div className="my-2 border-t border-neutral-200/50 dark:border-neutral-700"></div>
 
                         {renderTextInput('克数', 'weight', '例如：250')}
                         {renderDatePicker()}
@@ -964,7 +964,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
               </div>
 
               {/* 预览区域 */}
-              <div className="border-t border-neutral-200 pt-4 dark:border-neutral-800">
+              <div className="border-t border-neutral-200/50 pt-4 dark:border-neutral-800">
                 <div className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
                   预览
                 </div>

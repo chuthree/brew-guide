@@ -88,7 +88,7 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
           {/* 日期选择器 */}
           {showDatePicker && onTimestampChange && (
             <div
-              className="absolute top-full left-0 z-50 mt-2 rounded-lg border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+              className="absolute top-full left-0 z-50 mt-2 rounded-lg border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900"
               style={{ width: '280px' }}
             >
               <Calendar

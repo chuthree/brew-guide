@@ -231,7 +231,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                   >
                     <div className="flex items-center gap-3">
                       {/* 图标预览 */}
-                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded border border-neutral-200 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-900">
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded border border-neutral-200/50 bg-neutral-50/80 dark:border-neutral-700 dark:bg-neutral-900">
                         {hasLogo && logoData ? (
                           <Image
                             src={logoData}

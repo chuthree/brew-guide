@@ -435,7 +435,7 @@ const TabContent: React.FC<TabContentProps> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const buttonBaseClass =
-    'rounded-full border border-neutral-200 dark:border-neutral-700/50 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100';
+    'rounded-full border border-neutral-200/50 dark:border-neutral-700/50 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100';
   const springTransition = { stiffness: 500, damping: 25 };
 
   const handleSearchClick = async () => {
@@ -786,7 +786,7 @@ const TabContent: React.FC<TabContentProps> = ({
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="搜索咖啡豆名称..."
-                    className="w-48 rounded-full border border-neutral-200 bg-neutral-100 px-5 py-3.5 text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:border-neutral-700/50 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
+                    className="w-48 rounded-full border border-neutral-200/50 bg-neutral-100 px-5 py-3.5 text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:border-neutral-700/50 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
                     autoComplete="off"
                     onKeyDown={e => e.key === 'Escape' && handleCloseSearch()}
                   />

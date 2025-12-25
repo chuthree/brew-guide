@@ -350,7 +350,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
             placeholder={placeholder}
             disabled={disabled}
             className={cn(
-              'w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400',
+              'w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400',
               disabled && 'cursor-not-allowed opacity-60',
               className
             )}
@@ -380,7 +380,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
           <div
             ref={dropdownRef}
             onTouchStart={handleDropdownTouch}
-            className="absolute right-0 left-0 z-50 mt-1 max-h-[200px] overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+            className="absolute right-0 left-0 z-50 mt-1 max-h-[200px] overflow-auto rounded-md border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900"
           >
             <ul className="py-1">
               {filteredSuggestions.map((suggestion, index) => (

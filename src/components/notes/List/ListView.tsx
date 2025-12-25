@@ -182,7 +182,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                     className="relative mb-2 flex cursor-pointer items-center"
                     onClick={toggleShowQuickDecrementNotes}
                   >
-                    <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                    <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
                     <button className="mx-3 flex items-center justify-center rounded-sm px-2 py-0.5 text-xs font-medium tracking-wide text-neutral-600 transition-colors dark:text-neutral-400">
                       {changeRecordNotes.length}条变动记录
                       <svg
@@ -200,7 +200,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
                         />
                       </svg>
                     </button>
-                    <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                    <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
                   </div>
                   {showQuickDecrementNotes && (
                     <div className="opacity-80">

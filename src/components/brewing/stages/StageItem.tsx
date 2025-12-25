@@ -290,7 +290,7 @@ const StageItem: React.FC<StageItemProps> = React.memo(
             className="relative mb-4 flex cursor-pointer items-center"
             onClick={handleClick}
           >
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+            <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
             <button className="mx-3 flex items-center justify-center text-[10px] font-medium text-neutral-600 dark:text-neutral-400">
               {step.dividerText || ''}
               <svg
@@ -308,14 +308,14 @@ const StageItem: React.FC<StageItemProps> = React.memo(
                 />
               </svg>
             </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+            <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
           </div>
         );
       }
 
       return (
         <div
-          className={`group relative ${compactMode && activeTab === '注水' ? '' : `border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200 pl-6 dark:border-neutral-800`} ${textStyle} ${opacityStyle}`}
+          className={`group relative ${compactMode && activeTab === '注水' ? '' : `border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200/50 pl-6 dark:border-neutral-800`} ${textStyle} ${opacityStyle}`}
         >
           {isCurrentStage && !compactMode && (
             <motion.div

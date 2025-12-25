@@ -175,7 +175,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
           value={bean.notes || ''}
           onChange={e => onBeanChange('notes')(e.target.value)}
           placeholder="其他备注信息..."
-          className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800 dark:border-neutral-700 dark:focus:border-neutral-400"
+          className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
           minRows={2}
           maxRows={8}
         />

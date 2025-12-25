@@ -3238,7 +3238,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           <aside
             className={`h-full shrink-0 transition-[width,border-color] duration-350 ease-[cubic-bezier(0.4,0,0.2,1)] ${
               beanDetailOpen || noteDetailOpen
-                ? 'w-96 border-l border-neutral-200 dark:border-neutral-800'
+                ? 'w-96 border-l border-neutral-200/50 dark:border-neutral-800/50'
                 : 'w-0 border-l border-transparent'
             }`}
           >

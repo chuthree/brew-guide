@@ -215,7 +215,7 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
                       {/* 日期选择器 */}
                       {showDatePicker && (
                         <div
-                          className="absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 transform rounded-lg border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+                          className="absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 transform rounded-lg border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900"
                           style={{ width: '280px' }}
                         >
                           <Calendar

@@ -360,7 +360,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
                 ref={dropZoneRef}
                 className={`relative mb-4 rounded-lg border-2 border-dashed p-6 transition-colors ${
                   isDragging
-                    ? 'border-neutral-800 bg-neutral-100/60 dark:border-neutral-200 dark:bg-neutral-800/30'
+                    ? 'border-neutral-800/50 bg-neutral-100/60 dark:border-neutral-200/50 dark:bg-neutral-800/30'
                     : 'border-neutral-300 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-600'
                 }`}
               >
@@ -410,7 +410,7 @@ const EquipmentImportModal: React.FC<EquipmentImportModalProps> = ({
               {/* 文本输入区域 */}
               <div className="space-y-4">
                 <textarea
-                  className="h-40 w-full rounded-lg border border-neutral-200 bg-neutral-100/60 p-3 text-sm text-neutral-800 placeholder-neutral-500 transition-colors focus:border-neutral-800 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800/30 dark:text-neutral-200 dark:placeholder-neutral-400 dark:focus:border-neutral-200"
+                  className="h-40 w-full rounded-lg border border-neutral-200/50 bg-neutral-100/60 p-3 text-sm text-neutral-800 placeholder-neutral-500 transition-colors focus:border-neutral-800/50 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800/30 dark:text-neutral-200 dark:placeholder-neutral-400 dark:focus:border-neutral-200"
                   placeholder='粘贴器具数据，支持JSON格式，如{"name":"自定义V60","animationType":"v60",...}'
                   value={importData}
                   onChange={e => setImportData(e.target.value)}

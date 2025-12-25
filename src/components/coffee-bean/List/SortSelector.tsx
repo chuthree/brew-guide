@@ -650,7 +650,7 @@ const SortSelector: React.FC<SortSelectorProps> = ({
         </div>
         {shouldShowSortOrder(currentType) && (
           <>
-            <div className="border-t border-neutral-200 dark:border-neutral-800" />
+            <div className="border-t border-neutral-200/50 dark:border-neutral-800/50" />
             <div className="py-1">
               <div className="px-2 py-1.5 text-xs text-neutral-500 dark:text-neutral-400">
                 排序顺序

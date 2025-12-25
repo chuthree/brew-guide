@@ -139,14 +139,14 @@ const StatsExplainer: React.FC<StatsExplainerProps> = ({
         <div
           className={`h-3 w-3 rotate-45 border bg-white dark:bg-neutral-900 ${
             position.isAbove
-              ? 'border-t-0 border-l-0 border-neutral-200 dark:border-neutral-700'
-              : 'border-r-0 border-b-0 border-neutral-200 dark:border-neutral-700'
+              ? 'border-t-0 border-l-0 border-neutral-200/50 dark:border-neutral-700'
+              : 'border-r-0 border-b-0 border-neutral-200/50 dark:border-neutral-700'
           }`}
         />
       </div>
 
       {/* 卡片 */}
-      <div className="w-[200px] rounded-lg border border-neutral-200 bg-white shadow-lg shadow-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/20">
+      <div className="w-[200px] rounded-lg border border-neutral-200/50 bg-white shadow-lg shadow-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/20">
         <div className="space-y-1.5 px-3 py-2.5">
           {/* 公式 */}
           <div className="text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">

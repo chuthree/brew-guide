@@ -114,7 +114,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                           alt={bean.name || '咖啡豆图片'}
                           width={0}
                           height={0}
-                          className={`w-full cursor-pointer rounded-t-xs border border-b-0 border-neutral-200 transition-opacity dark:border-neutral-800 ${
+                          className={`w-full cursor-pointer rounded-t-xs border border-b-0 border-neutral-200/50 transition-opacity dark:border-neutral-800/50 ${
                             isEmpty ? 'opacity-40' : ''
                           }`}
                           style={{

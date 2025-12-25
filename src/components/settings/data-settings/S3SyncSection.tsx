@@ -318,7 +318,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
               value={settings.endpoint || ''}
               onChange={e => onSettingChange('endpoint', e.target.value)}
               placeholder="http(s)://bucket-name.s3.cn-south-1.qiniucs.com"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+              className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               七牛云示例: http(s)://bucket-name.s3.cn-south-1.qiniucs.com
@@ -335,7 +335,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
               value={settings.region}
               onChange={e => onSettingChange('region', e.target.value)}
               placeholder="cn-south-1"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+              className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               如不确定可填写: us-east-1 或 cn-south-1
@@ -352,7 +352,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
               value={settings.accessKeyId}
               onChange={e => onSettingChange('accessKeyId', e.target.value)}
               placeholder="AKIA..."
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+              className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
           </div>
 
@@ -369,7 +369,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
                   onSettingChange('secretAccessKey', e.target.value)
                 }
                 placeholder="密钥"
-                className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 pr-10 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 pr-10 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
               />
               <button
                 type="button"
@@ -412,7 +412,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
               value={settings.bucketName}
               onChange={e => onSettingChange('bucketName', e.target.value)}
               placeholder="bucket-name"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+              className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
           </div>
 
@@ -426,7 +426,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
               value={settings.prefix}
               onChange={e => onSettingChange('prefix', e.target.value)}
               placeholder="brew-guide-data/"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+              className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
           </div>
 

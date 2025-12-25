@@ -717,9 +717,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       {viewMode === VIEW_OPTIONS.RANKING &&
         rankingBeansCount &&
         rankingBeansCount > 0 && (
-          <div className="mb-1" ref={filterExpandRef}>
+          <div ref={filterExpandRef}>
             {/* 整个分类栏容器 - 下边框在这里 */}
-            <div className="border-b border-neutral-200 dark:border-neutral-800">
+            <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
               {/* 豆子筛选选项卡 */}
               <div className="relative px-6">
                 {!isSearching ? (
@@ -917,7 +917,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       {viewMode === VIEW_OPTIONS.INVENTORY ? (
         <div className="relative" ref={filterExpandRef}>
           {/* 整个分类栏容器 - 下边框在这里 */}
-          <div className="border-b border-neutral-200 dark:border-neutral-800">
+          <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
             <div className="relative px-6">
               {!isSearching ? (
                 <div className="relative flex items-center">

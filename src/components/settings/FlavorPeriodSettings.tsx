@@ -393,7 +393,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
           }}
           className={`${
             isSmall ? 'w-14' : 'w-12'
-          } rounded border border-neutral-200 bg-neutral-100 px-2 py-1 text-center text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800`}
+          } rounded border border-neutral-200/50 bg-neutral-100 px-2 py-1 text-center text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800`}
         />
         {!isSmall && (
           <span className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -421,7 +421,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
           }}
           className={`${
             isSmall ? 'w-14' : 'w-12'
-          } rounded border border-neutral-200 bg-neutral-100 px-2 py-1 text-center text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800`}
+          } rounded border border-neutral-200/50 bg-neutral-100 px-2 py-1 text-center text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800`}
         />
         {!isSmall && (
           <span className="text-sm text-neutral-500 dark:text-neutral-400">

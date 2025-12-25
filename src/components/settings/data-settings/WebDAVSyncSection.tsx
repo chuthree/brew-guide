@@ -325,7 +325,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
               value={settings.url}
               onChange={e => onSettingChange('url', e.target.value)}
               placeholder="https://dav.jianguoyun.com/dav/"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+              className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
             <div className="mt-1.5 flex items-center justify-between">
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -354,7 +354,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
               onChange={e => onSettingChange('username', e.target.value)}
               placeholder="username"
               autoComplete="username"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+              className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
           </div>
 
@@ -370,7 +370,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
                 onChange={e => onSettingChange('password', e.target.value)}
                 placeholder="password"
                 autoComplete="current-password"
-                className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 pr-10 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 pr-10 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
               />
               <button
                 type="button"
@@ -413,7 +413,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
               value={settings.remotePath}
               onChange={e => onSettingChange('remotePath', e.target.value)}
               placeholder="brew-guide-data/"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+              className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
           </div>
 

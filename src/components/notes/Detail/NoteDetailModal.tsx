@@ -557,7 +557,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   )}
 
                   {/* 分割线 */}
-                  <div className="border-t border-dashed border-neutral-200 dark:border-neutral-800"></div>
+                  <div className="border-t border-dashed border-neutral-200/50 dark:border-neutral-800/50"></div>
                 </>
               )}
 

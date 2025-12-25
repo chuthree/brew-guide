@@ -372,7 +372,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
           exit={{ opacity: 0, y: -5 }}
           transition={{ duration: 0.15 }}
           className={cn(
-            'fixed z-10 max-w-xs rounded-lg border border-neutral-200 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800',
+            'fixed z-10 max-w-xs rounded-lg border border-neutral-200/50 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800',
             className
           )}
           style={positionStyle}

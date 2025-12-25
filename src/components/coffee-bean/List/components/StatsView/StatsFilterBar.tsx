@@ -330,7 +330,7 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
       )}
 
       {/* 整个分类栏容器 */}
-      <div className="border-b border-neutral-200 dark:border-neutral-800">
+      <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
         <div className="relative px-6">
           <div className="relative flex items-center">
             {/* 固定在左侧的"全部"和筛选按钮 */}

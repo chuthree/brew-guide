@@ -198,8 +198,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         <div
           className={`group relative border-l ${
             isSelected
-              ? 'border-neutral-800 dark:border-white'
-              : 'border-neutral-200 dark:border-neutral-800'
+              ? 'border-neutral-800/50 dark:border-white'
+              : 'border-neutral-200/50 dark:border-neutral-800/50'
           } cursor-pointer pl-6`}
           onClick={() => onMethodSelect(methodId)}
         >
@@ -235,7 +235,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
             </div>
           ) : (
             <div
-              className="mt-2 border-t border-dashed border-neutral-200 pt-2 dark:border-neutral-700"
+              className="mt-2 border-t border-dashed border-neutral-200/50 pt-2 dark:border-neutral-700"
               onClick={e => e.stopPropagation()}
             >
               <div className="space-y-2">
@@ -329,11 +329,11 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   return (
     <div className="py-3">
       {!selectedEquipment ? (
-        <div className="border-l border-neutral-200 pl-6 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
+        <div className="border-l border-neutral-200/50 pl-6 text-xs text-neutral-500 dark:border-neutral-800/50 dark:text-neutral-400">
           请先选择器具
         </div>
       ) : !hasMethods ? (
-        <div className="border-l border-neutral-200 pl-6 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
+        <div className="border-l border-neutral-200/50 pl-6 text-xs text-neutral-500 dark:border-neutral-800/50 dark:text-neutral-400">
           没有可用的冲煮方案，请前往&ldquo;冲煮&rdquo;页面添加
         </div>
       ) : (

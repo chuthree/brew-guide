@@ -1202,9 +1202,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             {initialData.id &&
               coffeeBeans.length > 0 &&
               showCoffeeBeanSelector && (
-                <div className="rounded-lg border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
+                <div className="rounded-lg border border-neutral-200/50 bg-neutral-50 dark:border-neutral-800/50 dark:bg-neutral-900">
                   {/* 搜索框 */}
-                  <div className="border-b border-neutral-200 p-3 dark:border-neutral-800">
+                  <div className="border-b border-neutral-200/50 p-3 dark:border-neutral-800">
                     <input
                       id="coffee-bean-search"
                       name="coffeeBeanSearch"
@@ -1212,7 +1212,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                       value={coffeeBeanSearchQuery}
                       onChange={e => setCoffeeBeanSearchQuery(e.target.value)}
                       placeholder="搜索咖啡豆..."
-                      className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-xs placeholder:text-neutral-400 focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:placeholder:text-neutral-500 dark:focus:ring-neutral-500"
+                      className="w-full rounded-md border border-neutral-200/50 bg-white px-3 py-2 text-xs placeholder:text-neutral-400 focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:placeholder:text-neutral-500 dark:focus:ring-neutral-500"
                     />
                   </div>
                   {/* 选择器内容：限制高度并启用滚动 */}
@@ -1319,7 +1319,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             {/* 器具和方案选择下拉框 */}
             {showEquipmentMethodSelector && (
               <div
-                className="space-y-4 rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900"
+                className="space-y-4 rounded-lg border border-neutral-200/50 bg-neutral-50 p-4 dark:border-neutral-800/50 dark:bg-neutral-900"
                 data-equipment-method-selector
               >
                 {/* 器具选择 */}
@@ -1335,8 +1335,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         onClick={() => handleEquipmentSelect(equipment.id)}
                         className={`rounded border p-2 text-left text-xs ${
                           selectedEquipment === equipment.id
-                            ? 'border-neutral-800 bg-neutral-100 dark:border-white dark:bg-neutral-800'
-                            : 'border-neutral-200 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500'
+                            ? 'border-neutral-800/50 bg-neutral-100 dark:border-white dark:bg-neutral-800'
+                            : 'border-neutral-200/50 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500'
                         }`}
                       >
                         {equipment.name}
@@ -1367,8 +1367,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                             onClick={() => handleMethodSelect(methodIdentifier)}
                             className={`w-full rounded border p-2 text-left text-xs ${
                               selectedMethod === methodIdentifier
-                                ? 'border-neutral-800 bg-neutral-100 dark:border-white dark:bg-neutral-800'
-                                : 'border-neutral-200 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500'
+                                ? 'border-neutral-800/50 bg-neutral-100 dark:border-white dark:bg-neutral-800'
+                                : 'border-neutral-200/50 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500'
                             }`}
                           >
                             {method.name}
@@ -1389,7 +1389,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                   inputMode="decimal"
                   value={numericValues.coffee}
                   onChange={e => handleCoffeeChange(e.target.value)}
-                  className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                  className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
                   placeholder="15"
                 />
                 <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
@@ -1409,7 +1409,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         })
                       }
                       placeholder="中细"
-                      inputClassName="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      inputClassName="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
                       defaultSyncEnabled={
                         id
                           ? (settings?.grinderDefaultSync?.noteEdit ?? false)
@@ -1425,7 +1425,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                       inputMode="decimal"
                       value={totalTimeStr}
                       onChange={e => setTotalTimeStr(e.target.value)}
-                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
                       placeholder="25"
                     />
                     <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
@@ -1440,7 +1440,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                       inputMode="decimal"
                       value={numericValues.water}
                       onChange={e => handleWaterChange(e.target.value)}
-                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
                       placeholder="30"
                     />
                     <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
@@ -1462,7 +1462,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         inputMode="decimal"
                         value={numericValues.ratio}
                         onChange={e => handleRatioChange(e.target.value)}
-                        className="min-w-0 flex-1 rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                        className="min-w-0 flex-1 rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
                         placeholder="15"
                       />
                     </div>
@@ -1477,7 +1477,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         })
                       }
                       placeholder="中细"
-                      inputClassName="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      inputClassName="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
                       defaultSyncEnabled={
                         id
                           ? (settings?.grinderDefaultSync?.noteEdit ?? false)
@@ -1493,7 +1493,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                       inputMode="decimal"
                       value={numericValues.temp}
                       onChange={e => handleTempChange(e.target.value)}
-                      className="w-full rounded-none border-b border-neutral-200 bg-transparent py-2 pr-8 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+                      className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 pr-8 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
                       placeholder="92"
                     />
                     <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
@@ -1620,7 +1620,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 notes: e.target.value,
               })
             }
-            className="border-b border-neutral-200 pb-4 text-xs font-medium text-neutral-800 placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+            className="border-b border-neutral-200/50 pb-4 text-xs font-medium text-neutral-800 placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
             placeholder="记录一下这次冲煮的感受、改进点等..."
             minRows={7}
             maxRows={12}

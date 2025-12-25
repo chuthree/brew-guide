@@ -168,7 +168,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
               onClick={() => {
                 setIsIncrease(!isIncrease);
               }}
-              className="flex cursor-pointer items-center border-b border-neutral-200 bg-transparent py-2 text-sm font-medium text-neutral-800 transition-colors outline-none hover:border-neutral-400 focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-neutral-600 dark:focus:border-neutral-600"
+              className="flex cursor-pointer items-center border-b border-neutral-200/50 bg-transparent py-2 text-sm font-medium text-neutral-800 transition-colors outline-none hover:border-neutral-400 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:hover:border-neutral-600 dark:focus:border-neutral-600"
             >
               {isIncrease ? '增加' : '减少'}
               <svg
@@ -196,7 +196,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
                   changeAmount: e.target.value,
                 });
               }}
-              className="flex-1 border-b border-neutral-200 bg-transparent py-2 text-sm font-medium text-neutral-800 outline-none focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:focus:border-neutral-600"
+              className="flex-1 border-b border-neutral-200/50 bg-transparent py-2 text-sm font-medium text-neutral-800 outline-none focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:focus:border-neutral-600"
               placeholder="变化量"
             />
             <span className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -216,7 +216,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
                 notes: e.target.value,
               })
             }
-            className="w-full border-b border-neutral-200 bg-transparent py-2 text-sm font-medium text-neutral-800 outline-none focus:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300 dark:focus:border-neutral-600"
+            className="w-full border-b border-neutral-200/50 bg-transparent py-2 text-sm font-medium text-neutral-800 outline-none focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:focus:border-neutral-600"
             placeholder="备注（如：快捷扣除）"
           />
         </div>

@@ -185,7 +185,7 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
               value={settings.url}
               onChange={e => onSettingChange('url', e.target.value)}
               placeholder="https://xxx.supabase.co"
-              className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+              className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
           </div>
 
@@ -199,7 +199,7 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
                 value={settings.anonKey}
                 onChange={e => onSettingChange('anonKey', e.target.value)}
                 placeholder="eyJhbGciOiJIUzI1NiIsInR..."
-                className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 pr-10 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 pr-10 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
               />
               <button
                 type="button"
@@ -234,7 +234,7 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
 
           <button
             onClick={() => setShowSQLDrawer(true)}
-            className="flex w-full items-center justify-between rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+            className="flex w-full items-center justify-between rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
           >
             <span>查看初始化 SQL 脚本</span>
             <ExternalLink className="h-4 w-4" />
@@ -247,7 +247,7 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           )}
 
           {/* 实时同步状态和控制 */}
-          <div className="rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
+          <div className="rounded-md border border-neutral-200/50 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {realtimeStatus === 'connected' ? (
@@ -326,7 +326,7 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
             readOnly
             onClick={() => textAreaRef.current?.select()}
             value={SUPABASE_SETUP_SQL}
-            className="h-48 w-full resize-none rounded-md border border-neutral-200 bg-neutral-50 p-3 font-mono text-xs leading-relaxed text-neutral-700 focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+            className="h-48 w-full resize-none rounded-md border border-neutral-200/50 bg-neutral-50 p-3 font-mono text-xs leading-relaxed text-neutral-700 focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
           />
         </ActionDrawer.Content>
         <ActionDrawer.Actions>

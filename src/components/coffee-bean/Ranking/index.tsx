@@ -285,9 +285,9 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     <div className="coffee-bean-ranking-container pb-16">
       {/* 头部 - 只在hideFilters为false时显示 */}
       {!hideFilters && (
-        <div className="mb-1">
+        <>
           {/* 豆子筛选选项卡 */}
-          <div className="flex justify-between border-b border-neutral-200 px-3 dark:border-neutral-800">
+          <div className="flex justify-between border-b border-neutral-200/50 px-3 dark:border-neutral-800">
             <div className="flex">
               <button
                 className={`relative px-3 pb-1.5 text-xs ${beanType === 'all' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
@@ -330,7 +330,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* 已评分咖啡豆区域 */}
@@ -434,7 +434,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
             className="relative mb-4 flex cursor-pointer items-center"
             onClick={toggleShowUnrated}
           >
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+            <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
             <button className="mx-3 flex items-center justify-center text-[10px] text-neutral-600 dark:text-neutral-400">
               {isSearching &&
               filteredUnratedBeans.length !== unratedBeans.length
@@ -455,7 +455,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                 />
               </svg>
             </button>
-            <div className="grow border-t border-neutral-200 dark:border-neutral-800"></div>
+            <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
           </div>
 
           {/* 未评分咖啡豆列表 */}

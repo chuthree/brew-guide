@@ -625,7 +625,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               </div>
 
               {/* 分割线 */}
-              <div className="my-3 border-t border-neutral-200 dark:border-neutral-700"></div>
+              <div className="my-3 border-t border-neutral-200/50 dark:border-neutral-700"></div>
 
               <div className="text-xs text-neutral-600 dark:text-neutral-400">
                 <p>
@@ -700,7 +700,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                         {storageEstimate.usageFormatted}
                       </span>
                     </div>
-                    <div className="flex justify-between border-t border-neutral-200 pt-1 dark:border-neutral-700">
+                    <div className="flex justify-between border-t border-neutral-200/50 pt-1 dark:border-neutral-700">
                       <span className="text-neutral-500 dark:text-neutral-500">
                         使用率
                       </span>
@@ -732,7 +732,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               </div>
 
               {/* 分割线 */}
-              <div className="my-3 border-t border-neutral-200 dark:border-neutral-700"></div>
+              <div className="my-3 border-t border-neutral-200/50 dark:border-neutral-700"></div>
 
               <div className="text-xs text-neutral-600 dark:text-neutral-400">
                 <p>

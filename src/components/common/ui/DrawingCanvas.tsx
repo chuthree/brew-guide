@@ -856,7 +856,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
     return (
       <div
         ref={containerRef}
-        className="relative overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-700"
+        className="relative overflow-hidden rounded-lg border border-neutral-200/50 dark:border-neutral-700"
         style={{ touchAction: 'none' }} // 防止触摸手势引起的页面滚动
       >
         <canvas
