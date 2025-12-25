@@ -281,7 +281,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
               <div
                 ref={ref}
                 style={style}
-                className="mx-6 flex flex-col gap-y-4"
+                className="mx-6 flex flex-col gap-y-3.5"
                 {...props}
               >
                 {children}
