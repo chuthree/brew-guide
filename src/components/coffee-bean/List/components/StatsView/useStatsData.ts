@@ -361,7 +361,7 @@ export const useStatsData = (
     let beanBasedConsumption = 0;
     let beanBasedCost = 0;
     let earliestBeanTime = Infinity;
-    let earliestNoteTime = Infinity; // 新增：记录最早的笔记时间
+    let earliestNoteTime = Infinity;
     const beanBasedTypeConsumption: Record<BeanType, number> = {
       espresso: 0,
       filter: 0,
@@ -469,12 +469,12 @@ export const useStatsData = (
         if (selectedDate) {
           noteBasedConsumption += amount;
           noteBasedCost += cost;
+        }
 
-          // 按类型统计
-          const beanType = bean?.beanType;
-          if (beanType && beanType in noteBasedTypeConsumption) {
-            noteBasedTypeConsumption[beanType] += amount;
-          }
+        // 按类型统计：用于库存预测的日均消耗计算（基于实际冲煮记录）
+        const beanType = bean?.beanType;
+        if (beanType && beanType in noteBasedTypeConsumption) {
+          noteBasedTypeConsumption[beanType] += amount;
         }
 
         // 记录参与计算的咖啡豆
@@ -559,10 +559,10 @@ export const useStatsData = (
         );
       }
     } else {
-      // 全部视图：使用容量变化统计
+      // 全部视图：总消耗用容量变化（准确），类型消耗用笔记（反映真实习惯）
       totalConsumption = beanBasedConsumption;
       totalCost = beanBasedCost;
-      typeConsumption = beanBasedTypeConsumption;
+      typeConsumption = noteBasedTypeConsumption;
 
       // 计算日期范围（同时考虑咖啡豆创建时间和笔记时间，取较早的时间）
       const earliestTime = Math.min(earliestBeanTime, earliestNoteTime);
