@@ -48,8 +48,6 @@ import {
   remoteChangeHandler,
 } from './handlers';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
-import { App } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
 import type {
   RealtimeSyncConfig,
   RealtimeSyncState,
@@ -102,21 +100,13 @@ export class RealtimeSyncService {
       window.addEventListener('online', this.handleOnline);
       window.addEventListener('offline', this.handleOffline);
 
-      // 优先使用 Capacitor App 状态监听
-      if (Capacitor.isNativePlatform()) {
-        App.addListener('appStateChange', ({ isActive }) => {
-          if (isActive) {
-            this.handleVisibilityChange();
-          }
-        });
-      } else {
-        // Web 环境使用 visibilitychange
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') {
-            this.handleVisibilityChange();
-          }
-        });
-      }
+      // 统一使用 Web 标准 API 监听可见性变化
+      // Capacitor WebView 也支持此 API，且比 App 插件更稳定
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          this.handleVisibilityChange();
+        }
+      });
     }
   }
 
