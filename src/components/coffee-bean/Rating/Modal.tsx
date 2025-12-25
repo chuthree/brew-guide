@@ -136,7 +136,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
       isOpen={showModal}
       onClose={onClose}
       historyId="bean-rating"
-      repositionInputs
+      repositionInputs={false}
     >
       {/* 图标区域 */}
       {/* <div className="mb-6 text-neutral-800 dark:text-neutral-200">
