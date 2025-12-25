@@ -326,8 +326,47 @@ export const DataManager = {
               valueToSave = (valueToSave as any).state.settings;
             }
 
-            // 尝试迁移旧版 grinders 数据 (如果存在)
             const settingsObj = valueToSave as any;
+
+            // 迁移旧版评分维度数据：从顶层 customFlavorDimensions 迁移到 settings.flavorDimensions
+            // 旧版本中评分维度存储在 data.customFlavorDimensions，新版本存储在 brewGuideSettings.flavorDimensions
+            if (
+              importData.data.customFlavorDimensions &&
+              Array.isArray(importData.data.customFlavorDimensions)
+            ) {
+              // 只有当 settings 中没有 flavorDimensions 或为空时才迁移
+              if (
+                !settingsObj.flavorDimensions ||
+                settingsObj.flavorDimensions.length === 0
+              ) {
+                settingsObj.flavorDimensions =
+                  importData.data.customFlavorDimensions;
+                console.log(
+                  `[DataManager] Migrated ${(importData.data.customFlavorDimensions as any[]).length} flavor dimensions from legacy format`
+                );
+              }
+            }
+
+            // 迁移旧版历史标签数据
+            if (
+              importData.data.flavorDimensionHistoricalLabels &&
+              typeof importData.data.flavorDimensionHistoricalLabels ===
+                'object'
+            ) {
+              // 合并历史标签（旧数据优先，因为可能包含更完整的历史记录）
+              settingsObj.flavorDimensionHistoricalLabels = {
+                ...(settingsObj.flavorDimensionHistoricalLabels || {}),
+                ...(importData.data.flavorDimensionHistoricalLabels as Record<
+                  string,
+                  string
+                >),
+              };
+              console.log(
+                '[DataManager] Migrated flavor dimension historical labels from legacy format'
+              );
+            }
+
+            // 尝试迁移旧版 grinders 数据 (如果存在)
             if (
               settingsObj &&
               Array.isArray(settingsObj.grinders) &&
@@ -458,6 +497,14 @@ export const DataManager = {
         await getCoffeeBeanStore().refreshBeans();
       } catch (error) {
         console.error('刷新咖啡豆缓存失败:', error);
+      }
+
+      // 刷新磨豆机缓存，确保导入的数据能立即生效
+      try {
+        const { getGrinderStore } = await import('@/lib/stores/grinderStore');
+        await getGrinderStore().refreshGrinders();
+      } catch (error) {
+        console.error('刷新磨豆机缓存失败:', error);
       }
 
       // 触发器具排序更新事件

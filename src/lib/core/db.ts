@@ -567,6 +567,19 @@ export const dbUtils = {
         }
       }
 
+      // 迁移风味维度历史标签（旧版本数据迁移）
+      const historicalLabelsStr = localStorage.getItem(
+        'flavorDimensionHistoricalLabels'
+      );
+      if (historicalLabelsStr) {
+        try {
+          settings.flavorDimensionHistoricalLabels =
+            JSON.parse(historicalLabelsStr);
+        } catch {
+          // 忽略解析错误
+        }
+      }
+
       // 迁移烘焙商配置（旧版本数据迁移）
       const roasterLogosStr = localStorage.getItem('roasterLogos');
       if (roasterLogosStr) {
