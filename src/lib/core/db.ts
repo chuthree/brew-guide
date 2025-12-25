@@ -581,21 +581,32 @@ export const dbUtils = {
       }
 
       // 迁移烘焙商配置（旧版本数据迁移）
-      const roasterLogosStr = localStorage.getItem('roasterLogos');
+      // 旧版本使用 'roaster-logos' 存储 RoasterConfig[]
+      const roasterLogosStr = localStorage.getItem('roaster-logos');
       if (roasterLogosStr) {
         try {
-          // 将旧版 roasterLogos 格式转换为新版 roasterConfigs 格式
-          const oldLogos = JSON.parse(roasterLogosStr) as Record<
-            string,
-            string
-          >;
-          settings.roasterConfigs = Object.entries(oldLogos).map(
-            ([roasterName, logoData]) => ({
-              roasterName,
-              logoData,
-              updatedAt: Date.now(),
-            })
-          );
+          const oldConfigs = JSON.parse(roasterLogosStr);
+          if (Array.isArray(oldConfigs) && oldConfigs.length > 0) {
+            // 新版格式：直接使用 RoasterConfig[] 数组
+            settings.roasterConfigs = oldConfigs.map(
+              (config: {
+                roasterName: string;
+                logoData?: string;
+                flavorPeriod?: RoasterFlavorPeriodSimple;
+                detailedFlavorPeriod?: RoasterFlavorPeriodDetailed;
+                updatedAt?: number;
+              }) => ({
+                roasterName: config.roasterName,
+                logoData: config.logoData,
+                flavorPeriod: config.flavorPeriod,
+                detailedFlavorPeriod: config.detailedFlavorPeriod,
+                updatedAt: config.updatedAt || Date.now(),
+              })
+            );
+            console.log(
+              `已迁移 ${settings.roasterConfigs.length} 个烘焙商配置`
+            );
+          }
         } catch {
           // 忽略解析错误
         }
