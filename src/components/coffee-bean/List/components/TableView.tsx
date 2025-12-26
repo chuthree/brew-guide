@@ -642,7 +642,7 @@ const TableView: React.FC<TableViewProps> = ({
     <div className="relative h-full w-full">
       {/* 横向滚动容器 */}
       <div
-        className="scroll-with-bottom-bar h-full overflow-x-auto overflow-y-auto pb-20 overscroll-none"
+        className="scroll-with-bottom-bar h-full overflow-x-auto overflow-y-auto overscroll-none pb-20"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
       >
         <table className="w-full min-w-max border-separate border-spacing-0">
