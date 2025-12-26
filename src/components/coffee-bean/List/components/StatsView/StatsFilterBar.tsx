@@ -304,28 +304,47 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
 
   return (
     <div className="relative pt-6 md:pt-0" ref={filterExpandRef}>
-      {/* 时间范围文案 - 可点击切换时间分组 */}
+      {/* 时间范围文案 - 可点击切换时间分组和豆子类型 */}
       {dateRangeLabel && (
         <div className="mb-6 flex items-center justify-between px-6">
-          <button
-            onClick={() => {
-              const availableModes = getAvailableGroupingModes(
-                availableDates,
-                dateGroupingMode
-              );
-              const currentIndex = availableModes.indexOf(dateGroupingMode);
-              const nextIndex = (currentIndex + 1) % availableModes.length;
-              onDateGroupingModeChange(availableModes[nextIndex]);
-            }}
-            className="text-left leading-none"
-          >
-            <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600">
+          <div className="text-left leading-none">
+            <button
+              onClick={() => {
+                const availableModes = getAvailableGroupingModes(
+                  availableDates,
+                  dateGroupingMode
+                );
+                const currentIndex = availableModes.indexOf(dateGroupingMode);
+                const nextIndex = (currentIndex + 1) % availableModes.length;
+                onDateGroupingModeChange(availableModes[nextIndex]);
+              }}
+              className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+            >
               {DATE_GROUPING_LABELS[dateGroupingMode]}
-            </span>
+            </button>
             <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-              ，数据周期 {dateRangeLabel}
+              ，
             </span>
-          </button>
+            {showBeanStateSwitch && onBeanStateTypeChange ? (
+              <button
+                onClick={() =>
+                  onBeanStateTypeChange(
+                    beanStateType === 'roasted' ? 'green' : 'roasted'
+                  )
+                }
+                className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+              >
+                {beanStateType === 'roasted' ? '咖啡豆' : '生豆'}
+              </button>
+            ) : (
+              <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                咖啡豆
+              </span>
+            )}
+            <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+              数据周期 {dateRangeLabel}
+            </span>
+          </div>
         </div>
       )}
 
