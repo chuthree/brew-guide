@@ -650,19 +650,11 @@ export const RoastingManager = {
           await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
         }
 
-        // 删除原熟豆
-        const beans = getCoffeeBeanStore().beans;
-        const filteredBeans = beans.filter(bean => bean.id !== roastedBeanId);
-        await Storage.set('coffeeBeans', JSON.stringify(filteredBeans));
-
-        const { db } = await import('@/lib/core/db');
-        await db.coffeeBeans.delete(roastedBeanId);
-
-        getCoffeeBeanStore().refreshBeans();
+        // 删除原熟豆 - 使用 store 的 deleteBean 方法确保触发同步事件
+        await getCoffeeBeanStore().deleteBean(roastedBeanId);
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
-          window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
         }
 
         return {
@@ -785,22 +777,12 @@ export const RoastingManager = {
       // 保存笔记
       await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
 
-      // 9. 删除原熟豆（不触发关联清理，因为我们已经手动处理了）
-      const beans = getCoffeeBeanStore().beans;
-      const filteredBeans = beans.filter(bean => bean.id !== roastedBeanId);
-      await Storage.set('coffeeBeans', JSON.stringify(filteredBeans));
+      // 9. 删除原熟豆 - 使用 store 的 deleteBean 方法确保触发同步事件
+      await getCoffeeBeanStore().deleteBean(roastedBeanId);
 
-      // 从 IndexedDB 删除
-      const { db } = await import('@/lib/core/db');
-      await db.coffeeBeans.delete(roastedBeanId);
-
-      // 清除缓存
-      getCoffeeBeanStore().refreshBeans();
-
-      // 10. 触发更新事件
+      // 10. 触发笔记更新事件（咖啡豆事件已由 deleteBean 触发）
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
-        window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
       }
 
       return {
