@@ -401,6 +401,12 @@ pub fn run() {
                                 // 托盘图标可见时：阻止关闭，隐藏窗口
                                 api.prevent_close();
                                 let _ = app_handle.get_webview_window("main").unwrap().hide();
+                                
+                                // macOS: 窗口隐藏后重新隐藏 Dock 图标
+                                #[cfg(target_os = "macos")]
+                                {
+                                    let _ = app_handle.set_activation_policy(ActivationPolicy::Accessory);
+                                }
                             }
                             // 托盘图标不可见时：允许关闭（退出应用）
                         }
@@ -504,6 +510,15 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![update_tray_menu, set_tray_visible])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // macOS: 点击 Dock 图标时重新显示窗口
+            if let tauri::RunEvent::Reopen { .. } = event {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        });
 }
