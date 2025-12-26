@@ -86,6 +86,7 @@ import {
   type TableColumnKey,
   getDefaultVisibleColumns,
 } from './components/TableView';
+import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -167,6 +168,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     {}
   );
 
+  // 删除确认抽屉状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingBean, setDeletingBean] = useState<ExtendedCoffeeBean | null>(
+    null
+  );
+
   // 新增分类相关状态
   const [filterMode, setFilterMode] = useState<BeanFilterMode>(
     globalCache.filterMode
@@ -205,11 +212,17 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   // 使用自定义钩子处理咖啡豆操作
   const {
     handleSaveBean,
-    handleDelete,
+    handleDelete: executeDelete,
     handleSaveRating,
     handleQuickDecrement: baseHandleQuickDecrement,
     handleShare,
   } = useBeanOperations();
+
+  // 包装删除函数，添加确认抽屉
+  const handleDelete = useCallback((bean: ExtendedCoffeeBean) => {
+    setDeletingBean(bean);
+    setShowDeleteConfirm(true);
+  }, []);
 
   const handleQuickDecrement = async (
     beanId: string,
@@ -1774,6 +1787,20 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               />
             ))}
       </div>
+
+      {/* 删除确认抽屉 */}
+      <DeleteConfirmDrawer
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          if (deletingBean) {
+            executeDelete(deletingBean);
+          }
+        }}
+        itemName={deletingBean?.name || ''}
+        itemType="咖啡豆"
+        onExitComplete={() => setDeletingBean(null)}
+      />
     </div>
   );
 };

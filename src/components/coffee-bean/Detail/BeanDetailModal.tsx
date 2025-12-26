@@ -48,6 +48,7 @@ import {
   addCustomPreset,
   getFullPresets,
 } from '@/components/coffee-bean/Form/constants';
+import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 
 // 烘焙度选项
 const ROAST_LEVELS = [
@@ -348,6 +349,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 烘焙度下拉状态
   const [showRoastLevelDropdown, setShowRoastLevelDropdown] = useState(false);
+
+  // 删除确认抽屉状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const roastLevelRef = useRef<HTMLDivElement>(null);
 
   // 成分编辑 refs（产地、庄园、处理法、品种）
@@ -1432,8 +1436,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             id: 'delete',
                             label: '删除',
                             onClick: () => {
-                              onDelete(bean);
-                              handleClose();
+                              setShowDeleteConfirm(true);
                             },
                             color: 'danger' as const,
                           },
@@ -3574,6 +3577,20 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
             console.error('保存评分失败:', error);
           }
         }}
+      />
+
+      {/* 删除确认抽屉 */}
+      <DeleteConfirmDrawer
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          if (bean && onDelete) {
+            onDelete(bean);
+            handleClose();
+          }
+        }}
+        itemName={bean?.name || ''}
+        itemType="咖啡豆"
       />
     </>
   );

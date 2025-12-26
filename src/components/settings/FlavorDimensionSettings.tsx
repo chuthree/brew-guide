@@ -14,6 +14,7 @@ import {
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { SettingPage } from './atomic';
+import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 
 interface FlavorDimensionSettingsProps {
   settings: SettingsOptions;
@@ -87,6 +88,13 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
   const [editingLabel, setEditingLabel] = useState('');
   const [newDimensionLabel, setNewDimensionLabel] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+
+  // 删除确认抽屉状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmData, setDeleteConfirmData] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
 
   // 加载评分维度数据
   useEffect(() => {
@@ -164,8 +172,12 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
       return;
     }
 
-    if (!confirm(`确定要删除"${dimension.label}"吗？`)) return;
+    setDeleteConfirmData({ id, label: dimension.label });
+    setShowDeleteConfirm(true);
+  };
 
+  // 执行删除维度
+  const executeDeleteDimension = async (id: string) => {
     try {
       await getSettingsStore().deleteFlavorDimension(id);
       loadDimensions();
@@ -181,9 +193,12 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
 
   // 重置为默认
   const handleResetToDefault = async () => {
-    if (!confirm('确定要重置为默认评分维度吗？这将删除所有自定义维度。'))
-      return;
+    setDeleteConfirmData({ id: '__reset__', label: '所有自定义维度' });
+    setShowDeleteConfirm(true);
+  };
 
+  // 执行重置
+  const executeResetToDefault = async () => {
     try {
       await getSettingsStore().resetFlavorDimensions();
       loadDimensions();
@@ -224,20 +239,6 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
     >
       {/* 滚动内容区域 */}
       <div className="-mt-4 space-y-6 px-6">
-        {/* 说明文字 */}
-        <div className="space-y-3 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
-          <div className="text-xs text-neutral-600 dark:text-neutral-400">
-            <p className="mb-3">
-              自定义笔记中的风味评分维度。可以添加、编辑、删除和重新排序维度。
-            </p>
-            <ul className="ml-3 space-y-1">
-              <li>• 默认维度可以重命名但不能删除</li>
-              <li>• 拖拽图标可以重新排序</li>
-              <li>• 删除维度不会影响已有笔记中的评分数据</li>
-            </ul>
-          </div>
-        </div>
-
         {/* 维度列表 */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -431,6 +432,24 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
         {/* 底部空间 */}
         <div className="h-20" />
       </div>
+
+      {/* 删除确认抽屉 */}
+      <DeleteConfirmDrawer
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          if (deleteConfirmData) {
+            if (deleteConfirmData.id === '__reset__') {
+              executeResetToDefault();
+            } else {
+              executeDeleteDimension(deleteConfirmData.id);
+            }
+          }
+        }}
+        itemName={deleteConfirmData?.label || ''}
+        itemType="评分维度"
+        onExitComplete={() => setDeleteConfirmData(null)}
+      />
     </SettingPage>
   );
 };

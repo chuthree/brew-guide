@@ -115,6 +115,8 @@ import ImageViewer from '@/components/common/ui/ImageViewer';
 import NavigationSettings from '@/components/settings/NavigationSettings';
 import ConvertToGreenDrawer from '@/components/coffee-bean/ConvertToGreenDrawer';
 import type { ConvertToGreenPreview } from '@/components/coffee-bean/ConvertToGreenDrawer';
+import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
+import ConfirmDrawer from '@/components/common/ui/ConfirmDrawer';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -449,10 +451,44 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     handleCoffeeBeanSelect,
     handleSaveCustomMethod,
     handleEditCustomMethod,
-    handleDeleteCustomMethod,
-    handleHideMethod,
+    handleDeleteCustomMethod: executeDeleteCustomMethod,
+    handleHideMethod: executeHideMethod,
     navigateToStep,
   } = brewingState;
+
+  // 包装删除方案函数，添加确认抽屉
+  const handleDeleteCustomMethod = useCallback(
+    async (method: Method) => {
+      setDeleteConfirmData({
+        itemName: method.name,
+        itemType: '方案',
+        onConfirm: () => executeDeleteCustomMethod(method),
+      });
+      setShowDeleteConfirm(true);
+    },
+    [executeDeleteCustomMethod]
+  );
+
+  // 包装隐藏方案函数，添加确认抽屉
+  const handleHideMethod = useCallback(
+    async (method: Method) => {
+      setConfirmDrawerData({
+        message: (
+          <>
+            确定要隐藏方案
+            <span className="text-neutral-800 dark:text-neutral-200">
+              「{method.name}」
+            </span>
+            吗？隐藏的方案可以在设置中恢复。
+          </>
+        ),
+        confirmText: '确认隐藏',
+        onConfirm: () => executeHideMethod(method),
+      });
+      setShowConfirmDrawer(true);
+    },
+    [executeHideMethod]
+  );
 
   const parameterHooks = useBrewingParameters();
   const {
@@ -498,6 +534,22 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     useState(false);
   const [convertToGreenPreview, setConvertToGreenPreview] =
     useState<ConvertToGreenPreview | null>(null);
+
+  // 删除确认抽屉状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmData, setDeleteConfirmData] = useState<{
+    itemName: string;
+    itemType: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  // 通用确认抽屉状态（用于隐藏方案等非删除操作）
+  const [showConfirmDrawer, setShowConfirmDrawer] = useState(false);
+  const [confirmDrawerData, setConfirmDrawerData] = useState<{
+    message: React.ReactNode;
+    confirmText: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   // 加载自定义器具
   useEffect(() => {
@@ -2478,19 +2530,23 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   };
 
   const handleDeleteEquipment = async (equipment: CustomEquipment) => {
-    if (window.confirm('确定要删除这个器具吗？')) {
-      try {
-        await deleteCustomEquipment(equipment.id);
-        const updatedEquipments = await loadCustomEquipments();
-        setCustomEquipments(updatedEquipments);
-      } catch (error) {
-        // Log error in development only
-        if (process.env.NODE_ENV === 'development') {
-          console.error('删除器具失败:', error);
+    setDeleteConfirmData({
+      itemName: equipment.name,
+      itemType: '器具',
+      onConfirm: async () => {
+        try {
+          await deleteCustomEquipment(equipment.id);
+          const updatedEquipments = await loadCustomEquipments();
+          setCustomEquipments(updatedEquipments);
+        } catch (error) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('删除器具失败:', error);
+          }
+          alert('删除器具失败，请重试');
         }
-        alert('删除器具失败，请重试');
-      }
-    }
+      },
+    });
+    setShowDeleteConfirm(true);
   };
 
   // 器具管理抽屉相关处理函数
@@ -4448,6 +4504,26 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           // 注意：数据清理已统一由 onExitComplete 处理
         }}
         preview={convertToGreenPreview}
+      />
+
+      {/* 统一删除确认抽屉 */}
+      <DeleteConfirmDrawer
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => deleteConfirmData?.onConfirm()}
+        itemName={deleteConfirmData?.itemName || ''}
+        itemType={deleteConfirmData?.itemType || '项目'}
+        onExitComplete={() => setDeleteConfirmData(null)}
+      />
+
+      {/* 通用确认抽屉（用于隐藏方案等非删除操作） */}
+      <ConfirmDrawer
+        isOpen={showConfirmDrawer}
+        onClose={() => setShowConfirmDrawer(false)}
+        onConfirm={() => confirmDrawerData?.onConfirm()}
+        message={confirmDrawerData?.message || ''}
+        confirmText={confirmDrawerData?.confirmText || '确认'}
+        onExitComplete={() => setConfirmDrawerData(null)}
       />
 
       {/* ImageViewer 独立渲染在最外层，避免受到父组件透明度影响 */}

@@ -63,6 +63,7 @@ import {
   getEquipmentIdByName,
 } from '@/lib/utils/equipmentUtils';
 import ArtisticShareDrawer from '../Share/ArtisticShareDrawer';
+import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   isOpen,
@@ -117,6 +118,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+
+  // 删除确认抽屉状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmData, setDeleteConfirmData] = useState<{
+    noteId: string;
+    noteName: string;
+  } | null>(null);
 
   // 加载搜索历史
   useEffect(() => {
@@ -578,7 +586,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         return;
       }
 
-      // 添加确认对话框
+      // 获取笔记名称用于确认对话框
       let noteName = '此笔记';
       if (noteToDelete.source === 'quick-decrement') {
         noteName = `${noteToDelete.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`;
@@ -588,9 +596,25 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         noteName = noteToDelete.method || '此笔记';
       }
 
-      if (!window.confirm(`确认要删除"${noteName}"吗？`)) {
-        return;
-      }
+      // 显示删除确认抽屉
+      setDeleteConfirmData({ noteId, noteName });
+      setShowDeleteConfirm(true);
+    } catch (error) {
+      console.error('删除笔记失败:', error);
+      showToastMessage('删除笔记失败', 'error');
+    }
+  };
+
+  // 执行删除笔记
+  const executeDeleteNote = async (noteId: string) => {
+    try {
+      const { Storage } = await import('@/lib/core/storage');
+      const savedNotes = await Storage.get('brewingNotes');
+      if (!savedNotes) return;
+
+      const notes = JSON.parse(savedNotes) as BrewingNote[];
+      const noteToDelete = notes.find(note => note.id === noteId);
+      if (!noteToDelete) return;
 
       // 恢复咖啡豆容量（根据笔记类型采用不同的恢复策略）
       try {
@@ -654,7 +678,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }
       } catch (error) {
         console.error('恢复咖啡豆容量失败:', error);
-        // 容量恢复失败不应阻止笔记删除，但需要记录错误
       }
 
       // 删除笔记 - 使用 Zustand store
@@ -1524,6 +1547,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           note={artisticShareNote}
         />
       )}
+
+      {/* 删除确认抽屉 */}
+      <DeleteConfirmDrawer
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          if (deleteConfirmData) {
+            executeDeleteNote(deleteConfirmData.noteId);
+          }
+        }}
+        itemName={deleteConfirmData?.noteName || ''}
+        itemType="笔记"
+        onExitComplete={() => setDeleteConfirmData(null)}
+      />
     </>
   );
 };

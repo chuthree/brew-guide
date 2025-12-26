@@ -14,6 +14,7 @@ import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { SettingPage } from './atomic';
+import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 
 interface RoasterLogoSettingsProps {
   isOpen: boolean;
@@ -34,6 +35,12 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
   >(new Map());
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+
+  // 删除确认抽屉状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteRoasterName, setDeleteRoasterName] = useState<string | null>(
+    null
+  );
 
   // 用于保存最新的 onClose 引用
   const onCloseRef = useRef(onClose);
@@ -160,12 +167,12 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
 
   const handleDeleteLogo = async (roasterName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`确定要删除 ${roasterName} 的图标吗？`)) {
-      return;
-    }
+    setDeleteRoasterName(roasterName);
+    setShowDeleteConfirm(true);
+  };
 
+  const executeDeleteLogo = async (roasterName: string) => {
     try {
-      // 获取当前配置，只删除 logoData，保留其他配置
       const currentConfig = roasterConfigs.get(roasterName);
       if (currentConfig) {
         await getSettingsStore().updateRoasterConfig(roasterName, {
@@ -328,6 +335,20 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
         {/* 底部空间 */}
         <div className="h-16" />
       </div>
+
+      {/* 删除确认抽屉 */}
+      <DeleteConfirmDrawer
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          if (deleteRoasterName) {
+            executeDeleteLogo(deleteRoasterName);
+          }
+        }}
+        itemName={`${deleteRoasterName || ''} 的图标`}
+        itemType=""
+        onExitComplete={() => setDeleteRoasterName(null)}
+      />
     </SettingPage>
   );
 };

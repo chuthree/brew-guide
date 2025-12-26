@@ -22,6 +22,7 @@ import { ChevronLeft, Pen } from 'lucide-react';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 
 // 信息行组件
 interface InfoRowProps {
@@ -93,6 +94,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
   // 备注编辑状态
   const notesRef = useRef<HTMLDivElement>(null);
+
+  // 删除确认抽屉状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // 使用评分维度hook
   const { getValidTasteRatings } = useFlavorDimensions();
@@ -274,20 +278,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         id: 'delete',
         label: '删除',
         onClick: () => {
-          // 添加确认对话框
-          let noteName = '此笔记';
-          if (note.source === 'quick-decrement') {
-            noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`;
-          } else if (note.source === 'capacity-adjustment') {
-            noteName = `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的容量调整记录`;
-          } else {
-            noteName = note.method || '此笔记';
-          }
-
-          if (window.confirm(`确认要删除"${noteName}"吗？`)) {
-            onDelete(note.id);
-            onClose();
-          }
+          setShowDeleteConfirm(true);
         },
         color: 'danger' as const,
       });
@@ -679,6 +670,26 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           }}
         />
       )}
+
+      {/* 删除确认抽屉 */}
+      <DeleteConfirmDrawer
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          if (note && onDelete) {
+            onDelete(note.id);
+            onClose();
+          }
+        }}
+        itemName={
+          note?.source === 'quick-decrement'
+            ? `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`
+            : note?.source === 'capacity-adjustment'
+              ? `${note?.coffeeBeanInfo?.name || '未知咖啡豆'}的容量调整记录`
+              : note?.method || '此笔记'
+        }
+        itemType="笔记"
+      />
     </>
   );
 };

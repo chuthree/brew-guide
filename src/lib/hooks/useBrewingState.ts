@@ -482,11 +482,9 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     setShowCustomForm(true);
   }, []);
 
-  // 删除自定义方案
+  // 删除自定义方案（不含确认，由调用方处理）
   const handleDeleteCustomMethod = useCallback(
     async (method: Method) => {
-      if (!window.confirm(`确定要删除方案"${method.name}"吗？`)) return;
-
       try {
         const methodId = method.id || method.name;
         await apiDeleteCustomMethod(selectedEquipment!, methodId);
@@ -504,17 +502,10 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     [selectedEquipment, selectedMethod]
   );
 
-  // 隐藏通用方案
+  // 隐藏通用方案（不含确认，由调用方处理）
   const handleHideMethod = useCallback(
     async (method: Method) => {
       if (!selectedEquipment) return;
-
-      if (
-        !window.confirm(
-          `确定要隐藏方案"${method.name}"吗？\n\n隐藏的方案可以在设置中恢复。`
-        )
-      )
-        return;
 
       try {
         const { useSettingsStore } = await import('@/lib/stores/settingsStore');

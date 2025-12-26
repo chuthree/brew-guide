@@ -26,10 +26,6 @@ export const useBeanOperations = () => {
   };
 
   const handleDelete = async (bean: ExtendedCoffeeBean) => {
-    if (!window.confirm(`确认要删除咖啡豆"${bean.name}"吗？`)) {
-      return { success: false, canceled: true };
-    }
-
     try {
       const success = await store.deleteBean(bean.id);
       if (!success) {
