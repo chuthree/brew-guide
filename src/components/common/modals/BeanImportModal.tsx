@@ -50,25 +50,22 @@ interface ImportedBean {
   [key: string]: unknown;
 }
 
-// 咖啡豆识别提示词
-const BEAN_RECOGNITION_PROMPT = `从咖啡豆包装图片提取信息，返回JSON。
+// 咖啡豆识别提示词（2025 简洁增强版）
+const BEAN_RECOGNITION_PROMPT = `提取图片中的咖啡豆信息，直接返回JSON（单豆返回对象{}，多豆返回数组[]）。
 
-{
-  "name": "string // 必填，格式：烘焙商 豆名",
-  "blendComponents": [{"origin": "string", "estate": "string", "process": "string", "variety": "string"}],
-  "flavor": ["string"],
-  "roastLevel": "极浅烘焙|浅度烘焙|中浅烘焙|中度烘焙|中深烘焙|深度烘焙",
-  "roastDate": "YYYY-MM-DD // 缺年份补2025",
-  "capacity": "number // 克，不带单位",
-  "price": "number // 元，不带单位",
-  "beanType": "filter|espresso|omni",
-  "notes": "string // 海拔/处理站/批次号等其他信息(用/分隔)"
-}
+必填: name（品牌+豆名，如“西可 洪都拉斯水洗瑰夏”）
 
-- 图片有多款(支)咖啡豆时，返回数组[{},{}]
-- 只提取图片中可见的信息，未知字段不填
-- blendComponents必须是数组，单品豆也用数组包裹
-- beanType判断：≥300g/深烘/拼配→espresso；≤200g/浅烘/单品→filter；标注全能→omni；默认filter`;
+可选（图片有明确信息才填）：
+- capacity/remaining/price: 纯数字
+- roastDate: YYYY-MM-DD
+- roastLevel: 极浅烘焙|浅度烘焙|中浅烘焙|中度烘焙|中深烘焙|深度烘焙
+- beanType: filter|espresso|omni（≤200g/浅烘/单品→filter，≥300g/深烘/拼配→espresso，标注全能→omni，默认filter）
+- flavor: 风味数组["橘子","荔枝"]
+- startDay/endDay: 养豆期/赏味期天数
+- blendComponents: 产地/庄园/处理法/品种 [{origin:"埃塞俄比亚",estate:"赏花",process:"日晒",variety:"原生种"}]
+- notes: 处理站/海拔/批次号等补充信息（产地和庄园信息放 blendComponents，这里只放补充信息）
+
+规则：数值不带单位/不编造/不确定不填/直接返回JSON`;
 
 // 步骤类型定义
 type ImportStep = 'main' | 'json-input' | 'recognizing' | 'multi-preview';
