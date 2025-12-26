@@ -712,12 +712,10 @@ const TableView: React.FC<TableViewProps> = ({
                         key={cell.id}
                         className={`${cellClass} ${paddingClass} ${widthClass} border-b border-neutral-200/50 dark:border-neutral-800/50`}
                         onClick={
-                          isCapacity
+                          isCapacity && !isEmpty
                             ? e => {
-                                if (bean.capacity && bean.remaining) {
-                                  e.stopPropagation();
-                                  onRemainingClick?.(bean, e);
-                                }
+                                e.stopPropagation();
+                                onRemainingClick?.(bean, e);
                               }
                             : undefined
                         }

@@ -285,18 +285,28 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   // 如果是表格模式，返回表格视图
   if (currentDisplayMode === 'table') {
     return (
-      <TableView
-        filteredBeans={filteredBeans}
-        emptyBeans={emptyBeans}
-        showEmptyBeans={showEmptyBeans}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onShare={onShare}
-        onRate={onRate}
-        onRemainingClick={handleRemainingClick}
-        settings={settings}
-        visibleColumns={tableVisibleColumns}
-      />
+      <>
+        <TableView
+          filteredBeans={filteredBeans}
+          emptyBeans={emptyBeans}
+          showEmptyBeans={showEmptyBeans}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onShare={onShare}
+          onRate={onRate}
+          onRemainingClick={handleRemainingClick}
+          settings={settings}
+          visibleColumns={tableVisibleColumns}
+        />
+        <RemainingEditor
+          targetElement={editingRemaining?.targetElement || null}
+          isOpen={!!editingRemaining}
+          onOpenChange={open => !open && setEditingRemaining(null)}
+          onCancel={() => setEditingRemaining(null)}
+          onQuickDecrement={handleQuickDecrement}
+          coffeeBean={editingRemaining?.bean}
+        />
+      </>
     );
   }
 
