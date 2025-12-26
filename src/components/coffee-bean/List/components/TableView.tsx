@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -63,6 +63,35 @@ export const TABLE_COLUMN_CONFIG: {
 // 获取默认可见列
 export const getDefaultVisibleColumns = (): TableColumnKey[] =>
   TABLE_COLUMN_CONFIG.filter(c => c.defaultVisible).map(c => c.key);
+
+// 默认排序状态（空数组，跟随列表排序）
+const DEFAULT_SORTING: SortingState = [];
+const SORTING_STORAGE_KEY = 'brew-guide:coffee-beans:tableSorting';
+
+// 从 localStorage 读取排序状态
+const loadSorting = (): SortingState => {
+  if (typeof window === 'undefined') return DEFAULT_SORTING;
+  try {
+    const saved = localStorage.getItem(SORTING_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return DEFAULT_SORTING;
+};
+
+// 保存排序状态到 localStorage
+const saveSorting = (sorting: SortingState) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(SORTING_STORAGE_KEY, JSON.stringify(sorting));
+};
+
+// 重置排序状态
+export const resetTableSorting = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(SORTING_STORAGE_KEY);
+};
 
 interface TableViewProps {
   filteredBeans: ExtendedCoffeeBean[];
@@ -374,8 +403,32 @@ const TableView: React.FC<TableViewProps> = ({
   const showOnlyBeanName = settings?.showOnlyBeanName ?? true;
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
 
-  // 多重排序状态
-  const [sorting, setSorting] = useState<SortingState>([]);
+  // 多重排序状态（持久化）
+  const [sorting, setSorting] = useState<SortingState>(loadSorting);
+
+  // 排序变化时持久化
+  const handleSortingChange = useCallback(
+    (updater: SortingState | ((old: SortingState) => SortingState)) => {
+      setSorting(old => {
+        const newSorting = typeof updater === 'function' ? updater(old) : updater;
+        saveSorting(newSorting);
+        return newSorting;
+      });
+    },
+    []
+  );
+
+  // 列配置变化时，检查排序列是否仍可见，不可见则重置
+  useEffect(() => {
+    const sortingColumnIds = sorting.map(s => s.id);
+    const hasInvisibleSortColumn = sortingColumnIds.some(
+      id => !visibleColumns.includes(id as TableColumnKey)
+    );
+    if (hasInvisibleSortColumn) {
+      setSorting(DEFAULT_SORTING);
+      saveSorting(DEFAULT_SORTING);
+    }
+  }, [visibleColumns, sorting]);
 
   const [roasterLogos, setRoasterLogos] = useState<
     Record<string, string | null>
@@ -616,7 +669,7 @@ const TableView: React.FC<TableViewProps> = ({
     data: allBeans,
     columns,
     state: { sorting },
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     enableMultiSort: true,

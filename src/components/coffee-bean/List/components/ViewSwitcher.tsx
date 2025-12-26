@@ -1247,24 +1247,14 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           omniCount={omniCount}
                         />
 
-                        {/* 显示选项区域 */}
+                        {/* 显示选项 */}
                         <div>
                           <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
                             显示
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <FilterButton
-                              isActive={showEmptyBeans || false}
-                              onClick={() => onToggleShowEmptyBeans?.()}
-                            >
-                              包含已用完
-                            </FilterButton>
-                            <span className="mx-1 text-neutral-300/30 dark:text-neutral-600/50">
-                              ·
-                            </span>
-                            {/* 显示模式切换按钮 */}
-                            {onDisplayModeChange ? (
-                              <>
+                          <div className="space-y-2">
+                            {onDisplayModeChange && (
+                              <div className="flex flex-wrap items-center gap-2">
                                 <FilterButton
                                   isActive={
                                     externalDisplayMode === 'list' ||
@@ -1293,30 +1283,22 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 >
                                   图片流
                                 </FilterButton>
-                              </>
-                            ) : (
-                              onToggleImageFlowMode && (
-                                <FilterButton
-                                  isActive={isImageFlowMode}
-                                  onClick={() => {
-                                    if (!hasImageBeans) return;
-                                    onToggleImageFlowMode();
-                                  }}
-                                  disabled={!hasImageBeans}
-                                >
-                                  图片流
-                                </FilterButton>
-                              )
+                              </div>
                             )}
-                            <span className="mx-1 text-neutral-300/30 dark:text-neutral-600/50">
-                              ·
-                            </span>
-                            <FilterButton
-                              isActive={false}
-                              onClick={() => onExportPreview?.()}
-                            >
-                              导出预览图
-                            </FilterButton>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <FilterButton
+                                isActive={showEmptyBeans || false}
+                                onClick={() => onToggleShowEmptyBeans?.()}
+                              >
+                                包含已用完
+                              </FilterButton>
+                              <FilterButton
+                                isActive={false}
+                                onClick={() => onExportPreview?.()}
+                              >
+                                导出预览图
+                              </FilterButton>
+                            </div>
                           </div>
                         </div>
 

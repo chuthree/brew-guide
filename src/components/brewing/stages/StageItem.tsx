@@ -315,7 +315,7 @@ const StageItem: React.FC<StageItemProps> = React.memo(
 
       return (
         <div
-          className={`group relative ${compactMode && activeTab === '注水' ? '' : `border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200/50 pl-6 dark:border-neutral-800`} ${textStyle} ${opacityStyle}`}
+          className={`group relative ${compactMode && activeTab === '注水' ? '' : `border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200/50 pl-6 dark:border-neutral-800/50`} ${textStyle} ${opacityStyle}`}
         >
           {isCurrentStage && !compactMode && (
             <motion.div
