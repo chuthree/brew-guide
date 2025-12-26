@@ -868,9 +868,16 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-6 bg-gradient-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
                     </div>
 
-                    {/* 固定在右侧的操作按钮 */}
+                    {/* 固定在右侧的搜索按钮 */}
                     <div className="relative z-10 flex flex-shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
-                      {/* 年份选择器已移至标题中 */}
+                      {/* 竖直分割线 */}
+                      <div className="mr-3 mb-1.5 h-3 w-px bg-neutral-200 dark:bg-neutral-800"></div>
+                      <button
+                        onClick={handleSearchClick}
+                        className="flex items-center pb-1.5 text-xs font-medium whitespace-nowrap text-neutral-600 dark:text-neutral-400"
+                      >
+                        <span className="relative">搜索</span>
+                      </button>
 
                       {/* 右侧固定按钮的左侧渐变遮罩 */}
                       <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-gradient-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
