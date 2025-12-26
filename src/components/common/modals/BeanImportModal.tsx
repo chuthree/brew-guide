@@ -51,13 +51,13 @@ interface ImportedBean {
 }
 
 // 咖啡豆识别提示词（2025 简洁增强版）
-const BEAN_RECOGNITION_PROMPT = `提取图片中的咖啡豆信息，直接返回JSON（单豆返回对象{}，多豆返回数组[]）。
+const BEAN_RECOGNITION_PROMPT = `你是OCR工具，提取图片中的咖啡豆信息，直接返回JSON（单豆返回对象{}，多豆返回数组[]）。
 
 必填: name（品牌+豆名，如“西可 洪都拉斯水洗瑰夏”）
 
 可选（图片有明确信息才填）：
 - capacity/remaining/price: 纯数字
-- roastDate: YYYY-MM-DD
+- roastDate: YYYY-MM-DD (缺年份补2025)
 - roastLevel: 极浅烘焙|浅度烘焙|中浅烘焙|中度烘焙|中深烘焙|深度烘焙
 - beanType: filter|espresso|omni（≤200g/浅烘/单品→filter，≥300g/深烘/拼配→espresso，标注全能→omni，默认filter）
 - flavor: 风味数组["橘子","荔枝"]
