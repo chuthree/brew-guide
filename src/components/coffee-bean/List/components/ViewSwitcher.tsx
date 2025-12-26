@@ -736,7 +736,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   {totalWeight ? `，剩余 ${totalWeight}` : ''}
                   {showBeanSummary &&
                     selectedBeanState === 'roasted' &&
-                    (espressoCount > 0 || filterCount > 0 || omniCount > 0) &&
+                    (!selectedBeanType || selectedBeanType === 'all') &&
+                    [espressoCount > 0, filterCount > 0, omniCount > 0].filter(
+                      Boolean
+                    ).length > 1 &&
                     `（${[
                       espressoCount > 0 &&
                         `意式 ${formatWeight(espressoRemaining)}`,

@@ -1309,6 +1309,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   const [isExportingPreview, setIsExportingPreview] = useState(false);
 
+  // 格式化重量显示
+  const formatWeight = (weight: number): string => {
+    if (weight < 1000) {
+      return `${Math.round(weight)} g`;
+    }
+    return `${(weight / 1000).toFixed(2)} kg`;
+  };
+
   // 处理预览图导出
   const handleExportPreview = async () => {
     if (isExportingPreview) return;
@@ -1333,15 +1341,44 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       // 根据豆子状态决定显示文本
       const beanTypeName = selectedBeanState === 'green' ? '生豆' : '咖啡豆';
 
+      // 获取showBeanSummary设置
+      const showBeanSummary =
+        useSettingsStore.getState().settings.showBeanSummary ?? false;
+
       // 生成概要文本，与界面显示保持一致
       const summaryText = (() => {
         if (beansToExport.length === 0) return '';
 
+        let text = '';
         if (showEmptyBeans) {
-          return `${beansToExport.length} 款${beanTypeName}，总共 ${originalTotalWeightText}，剩余 ${totalWeightText}`;
+          text = `${beansToExport.length} 款${beanTypeName}，总共 ${originalTotalWeightText}，剩余 ${totalWeightText}`;
         } else {
-          return `${beansToExport.length} 款${beanTypeName}，剩余 ${totalWeightText}`;
+          text = `${beansToExport.length} 款${beanTypeName}，剩余 ${totalWeightText}`;
         }
+
+        // 添加详细剩余量信息（仅当选择"全部"类型且有多种类型时显示）
+        const typeCount = [
+          espressoCount > 0,
+          filterCount > 0,
+          omniCount > 0,
+        ].filter(Boolean).length;
+        if (
+          showBeanSummary &&
+          selectedBeanState === 'roasted' &&
+          selectedBeanType === 'all' &&
+          typeCount > 1
+        ) {
+          const details = [
+            espressoCount > 0 && `意式 ${formatWeight(espressoRemaining)}`,
+            filterCount > 0 && `手冲 ${formatWeight(filterRemaining)}`,
+            omniCount > 0 && `全能 ${formatWeight(omniRemaining)}`,
+          ].filter(Boolean);
+          if (details.length > 0) {
+            text += `（${details.join('，')}）`;
+          }
+        }
+
+        return text;
       })();
 
       const result = await exportListPreview(
@@ -1426,6 +1463,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       );
       await exportSelectedBeans({
         selectedBeans,
+        beansData: beans,
         beansContainerRef: hiddenExportContainerRef,
         onSuccess: message => {
           showToast({ type: 'success', title: message, duration: 2000 });

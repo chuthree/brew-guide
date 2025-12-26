@@ -3,9 +3,11 @@
 import { toPng } from 'html-to-image';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { getSettingsStore } from '@/lib/stores/settingsStore';
+import type { CoffeeBean } from '@/types/app';
 
 interface BeansExporterProps {
   selectedBeans: string[];
+  beansData: CoffeeBean[];
   beansContainerRef: React.RefObject<HTMLDivElement | null>;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
@@ -47,11 +49,71 @@ const waitForImages = (element: HTMLElement): Promise<void> => {
 };
 
 /**
+ * 格式化重量显示
+ */
+const formatWeight = (grams: number): string => {
+  if (grams >= 1000) {
+    return `${(grams / 1000).toFixed(2)} kg`;
+  }
+  return `${grams.toFixed(0)}g`;
+};
+
+/**
+ * 计算选中咖啡豆的分类剩余量
+ */
+const calculateBeansSummary = (
+  selectedBeanIds: string[],
+  beansData: CoffeeBean[]
+) => {
+  const selectedBeansData = beansData.filter(bean =>
+    selectedBeanIds.includes(bean.id)
+  );
+
+  let espressoRemaining = 0;
+  let filterRemaining = 0;
+  let omniRemaining = 0;
+  let totalRemaining = 0;
+
+  selectedBeansData.forEach(bean => {
+    const remaining = parseFloat(bean.remaining || '0') || 0;
+    totalRemaining += remaining;
+
+    switch (bean.beanType) {
+      case 'espresso':
+        espressoRemaining += remaining;
+        break;
+      case 'filter':
+        filterRemaining += remaining;
+        break;
+      case 'omni':
+        omniRemaining += remaining;
+        break;
+      default:
+        filterRemaining += remaining;
+    }
+  });
+
+  return {
+    total: totalRemaining,
+    espresso: espressoRemaining,
+    filter: filterRemaining,
+    omni: omniRemaining,
+    espressoCount: selectedBeansData.filter(b => b.beanType === 'espresso')
+      .length,
+    filterCount: selectedBeansData.filter(
+      b => b.beanType === 'filter' || !b.beanType
+    ).length,
+    omniCount: selectedBeansData.filter(b => b.beanType === 'omni').length,
+  };
+};
+
+/**
  * 导出选中的咖啡豆为图片
  * 采用与笔记导出相同的方式 - 克隆已渲染的 DOM 元素
  */
 export async function exportSelectedBeans({
   selectedBeans,
+  beansData,
   beansContainerRef,
   onSuccess,
   onError,
@@ -88,6 +150,37 @@ export async function exportSelectedBeans({
       tempContainer.classList.add('dark');
     }
 
+    // 获取用户设置
+    const settings = getSettingsStore().settings;
+    const showBeanSummary = settings.showBeanSummary ?? false;
+
+    // 计算分类剩余量
+    const beansSummary = calculateBeansSummary(selectedBeans, beansData);
+
+    // 构建概要文本
+    let summaryText = `${selectedBeans.length} 款咖啡豆`;
+    if (beansSummary.total > 0) {
+      summaryText += `，剩余 ${formatWeight(beansSummary.total)}`;
+      const typeCount = [
+        beansSummary.espressoCount > 0,
+        beansSummary.filterCount > 0,
+        beansSummary.omniCount > 0,
+      ].filter(Boolean).length;
+      if (showBeanSummary && typeCount > 1) {
+        const details = [
+          beansSummary.espressoCount > 0 &&
+            `意式 ${formatWeight(beansSummary.espresso)}`,
+          beansSummary.filterCount > 0 &&
+            `手冲 ${formatWeight(beansSummary.filter)}`,
+          beansSummary.omniCount > 0 &&
+            `全能 ${formatWeight(beansSummary.omni)}`,
+        ].filter(Boolean);
+        if (details.length > 0) {
+          summaryText += `（${details.join('，')}）`;
+        }
+      }
+    }
+
     // 添加概要信息
     const summary = document.createElement('div');
     summary.style.cssText = `
@@ -97,7 +190,7 @@ export async function exportSelectedBeans({
       letter-spacing: 0.025em;
       color: ${isDarkMode ? '#f5f5f5' : '#262626'};
     `;
-    summary.innerText = `共 ${selectedBeans.length} 款咖啡豆`;
+    summary.innerText = summaryText;
     tempContainer.appendChild(summary);
 
     // 添加简化的器具栏
@@ -240,8 +333,7 @@ export async function exportSelectedBeans({
     // 等待所有图片加载完成
     await waitForImages(tempContainer);
 
-    // 从 settingsStore 获取用户名
-    const settings = getSettingsStore().settings;
+    // 获取用户名（settings 已在前面获取）
     const username = settings.username?.trim() || '';
 
     // 添加底部标记
