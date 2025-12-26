@@ -910,12 +910,15 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     >
                       <div className="px-6 py-4">
                         <div className="space-y-4">
-                          <SortSection
-                            viewMode={viewMode}
-                            sortOption={sortOption}
-                            onSortChange={onSortChange}
-                            selectedBeanState={selectedBeanState}
-                          />
+                          {/* 表格视图下隐藏排序，因为表格有列头排序 */}
+                          {externalDisplayMode !== 'table' && (
+                            <SortSection
+                              viewMode={viewMode}
+                              sortOption={sortOption}
+                              onSortChange={onSortChange}
+                              selectedBeanState={selectedBeanState}
+                            />
+                          )}
                         </div>
                       </div>
                     </motion.div>
@@ -1192,12 +1195,15 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             />
                           )}
 
-                        <SortSection
-                          viewMode={viewMode}
-                          sortOption={sortOption}
-                          onSortChange={onSortChange}
-                          selectedBeanState={selectedBeanState}
-                        />
+                        {/* 表格视图下隐藏排序，因为表格有列头排序 */}
+                        {externalDisplayMode !== 'table' && (
+                          <SortSection
+                            viewMode={viewMode}
+                            sortOption={sortOption}
+                            onSortChange={onSortChange}
+                            selectedBeanState={selectedBeanState}
+                          />
+                        )}
 
                         <BeanTypeFilter
                           selectedBeanType={selectedBeanType}

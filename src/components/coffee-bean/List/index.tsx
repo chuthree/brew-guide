@@ -82,7 +82,10 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import { exportListPreview } from './components/ListExporter';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-import type { TableColumnKey } from './components/TableView';
+import {
+  type TableColumnKey,
+  getDefaultVisibleColumns,
+} from './components/TableView';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -474,16 +477,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }
       }
     }
-    // 默认可见列：名称/赏味期/容量/价格/类型/评分/备注
-    return [
-      'name',
-      'flavorPeriod',
-      'capacity',
-      'price',
-      'beanType',
-      'rating',
-      'notes',
-    ] as TableColumnKey[];
+    // 默认可见列
+    return getDefaultVisibleColumns();
   });
 
   // 更新表格可见列（同时更新 state 和 localStorage）
