@@ -111,8 +111,10 @@ export interface AppSettings {
   showBeanNotes: boolean;
   limitNotesLines: boolean;
   notesMaxLines: number;
+  showPrice: boolean;
   showTotalPrice: boolean;
   showStatusDots: boolean;
+  showBeanSummary: boolean;
   noteDisplayStyle: 'list' | 'card';
 
   // 安全区域设置

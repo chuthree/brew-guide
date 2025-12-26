@@ -59,8 +59,10 @@ export const defaultSettings: AppSettings = {
   showBeanNotes: true,
   limitNotesLines: true,
   notesMaxLines: 3,
+  showPrice: true,
   showTotalPrice: false,
   showStatusDots: false,
+  showBeanSummary: false,
   noteDisplayStyle: 'list',
 
   // 安全区域设置

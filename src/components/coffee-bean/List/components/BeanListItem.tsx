@@ -34,6 +34,7 @@ interface BeanListItemProps {
     showBeanNotes?: boolean;
     limitNotesLines?: boolean;
     notesMaxLines?: number;
+    showPrice?: boolean;
     showTotalPrice?: boolean;
     showStatusDots?: boolean;
     isExportMode?: boolean;
@@ -85,6 +86,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   const showBeanNotes = settings?.showBeanNotes !== false;
   const limitNotesLines = settings?.limitNotesLines ?? true;
   const notesMaxLines = settings?.notesMaxLines ?? 3;
+  const showPrice = settings?.showPrice !== false;
   const showTotalPrice = settings?.showTotalPrice ?? false;
   const showStatusDots = settings?.showStatusDots ?? true;
 
@@ -502,7 +504,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                     </span>
                     /{formatNumber(bean.capacity)}克
                   </span>
-                  {bean.price && bean.capacity && (
+                  {showPrice && bean.price && bean.capacity && (
                     <span className="mx-2 text-neutral-400 dark:text-neutral-600">
                       ·
                     </span>
@@ -510,7 +512,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 </span>
               )}
 
-              {bean.price && bean.capacity && (
+              {showPrice && bean.price && bean.capacity && (
                 <span className="inline whitespace-nowrap">
                   {formatPrice(bean.price, bean.capacity)}
                 </span>

@@ -142,6 +142,7 @@ const BeanPreviewItem: React.FC<{
   const showBeanNotes = settings?.showBeanNotes !== false;
   const limitNotesLines = settings?.limitNotesLines ?? true;
   const notesMaxLines = settings?.notesMaxLines ?? 3;
+  const showPrice = settings?.showPrice !== false;
   const showTotalPrice = settings?.showTotalPrice ?? false;
   const showStatusDots = settings?.showStatusDots ?? true;
 
@@ -326,7 +327,7 @@ const BeanPreviewItem: React.FC<{
                   {formatNumber(bean.remaining)}
                 </span>
                 /{formatNumber(bean.capacity)}克
-                {bean.price && bean.capacity && (
+                {showPrice && bean.price && bean.capacity && (
                   <span className="mx-2 text-neutral-400 dark:text-neutral-600">
                     ·
                   </span>
@@ -334,7 +335,7 @@ const BeanPreviewItem: React.FC<{
               </span>
             )}
 
-            {bean.price && bean.capacity && (
+            {showPrice && bean.price && bean.capacity && (
               <span className="inline">
                 {formatPrice(bean.price, bean.capacity)}
               </span>

@@ -44,6 +44,7 @@ export interface CoffeeBeansProps {
     showBeanNotes?: boolean;
     limitNotesLines?: boolean;
     notesMaxLines?: number;
+    showPrice?: boolean;
     showTotalPrice?: boolean;
     showStatusDots?: boolean;
     simplifiedViewLabels?: boolean;

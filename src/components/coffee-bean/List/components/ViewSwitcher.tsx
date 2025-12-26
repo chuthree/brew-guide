@@ -27,7 +27,7 @@ import {
   FLAVOR_PERIOD_LABELS,
 } from '@/lib/utils/beanVarietyUtils';
 import { TABLE_COLUMN_CONFIG, type TableColumnKey } from './TableView';
-
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 // Apple风格动画配置
 const FILTER_ANIMATION = {
   initial: {
@@ -358,6 +358,10 @@ interface ViewSwitcherProps {
   espressoCount?: number;
   filterCount?: number;
   omniCount?: number;
+  // 新增类型剩余量props
+  espressoRemaining?: number;
+  filterRemaining?: number;
+  omniRemaining?: number;
   // 新增搜索历史相关props
   searchHistory?: string[];
   onSearchHistoryClick?: (query: string) => void;
@@ -423,12 +427,29 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   espressoCount = 0,
   filterCount = 0,
   omniCount = 0,
+  // 新增类型剩余量参数
+  espressoRemaining = 0,
+  filterRemaining = 0,
+  omniRemaining = 0,
   // 新增搜索历史参数
   searchHistory = [],
   onSearchHistoryClick,
   // 生豆库启用设置
   enableGreenBeanInventory = false,
 }) => {
+  // 获取概要显示设置
+  const showBeanSummary = useSettingsStore(
+    state => state.settings.showBeanSummary
+  );
+
+  // 格式化重量显示
+  const formatWeight = (weight: number): string => {
+    if (weight < 1000) {
+      return `${Math.round(weight)} g`;
+    }
+    return `${(weight / 1000).toFixed(2)} kg`;
+  };
+
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const filterExpandRef = useRef<HTMLDivElement>(null);
@@ -713,6 +734,18 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </span>
                   )}
                   {totalWeight ? `，剩余 ${totalWeight}` : ''}
+                  {showBeanSummary &&
+                    selectedBeanState === 'roasted' &&
+                    (espressoCount > 0 || filterCount > 0 || omniCount > 0) &&
+                    `（${[
+                      espressoCount > 0 &&
+                        `意式 ${formatWeight(espressoRemaining)}`,
+                      filterCount > 0 &&
+                        `手冲 ${formatWeight(filterRemaining)}`,
+                      omniCount > 0 && `全能 ${formatWeight(omniRemaining)}`,
+                    ]
+                      .filter(Boolean)
+                      .join('，')}）`}
                 </span>
               )
             ) : rankingBeansCount === 0 ? (

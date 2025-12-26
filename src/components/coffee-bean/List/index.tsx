@@ -319,7 +319,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   }, [beans, selectedBeanState]);
 
   // 计算每种类型的咖啡豆数量（用于类型筛选显示）
-  const { espressoCount, filterCount, omniCount } = useMemo(() => {
+  const {
+    espressoCount,
+    filterCount,
+    omniCount,
+    espressoRemaining,
+    filterRemaining,
+    omniRemaining,
+  } = useMemo(() => {
     // 根据当前的筛选条件计算不同类型的豆子数量
     let beansToCount = beans;
 
@@ -366,16 +373,39 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         break;
     }
 
-    // 统计不同类型的豆子数量
-    const espresso = beansToCount.filter(
+    // 统计不同类型的豆子数量和剩余量
+    const espressoBeans = beansToCount.filter(
       bean => bean.beanType === 'espresso'
-    ).length;
-    const filter = beansToCount.filter(
-      bean => bean.beanType === 'filter'
-    ).length;
-    const omni = beansToCount.filter(bean => bean.beanType === 'omni').length;
+    );
+    const filterBeans = beansToCount.filter(bean => bean.beanType === 'filter');
+    const omniBeans = beansToCount.filter(bean => bean.beanType === 'omni');
 
-    return { espressoCount: espresso, filterCount: filter, omniCount: omni };
+    const espresso = espressoBeans.length;
+    const filter = filterBeans.length;
+    const omni = omniBeans.length;
+
+    // 计算每种类型的剩余量
+    const espressoRemaining = espressoBeans.reduce(
+      (sum, bean) => sum + parseFloat(bean.remaining || '0'),
+      0
+    );
+    const filterRemaining = filterBeans.reduce(
+      (sum, bean) => sum + parseFloat(bean.remaining || '0'),
+      0
+    );
+    const omniRemaining = omniBeans.reduce(
+      (sum, bean) => sum + parseFloat(bean.remaining || '0'),
+      0
+    );
+
+    return {
+      espressoCount: espresso,
+      filterCount: filter,
+      omniCount: omni,
+      espressoRemaining,
+      filterRemaining,
+      omniRemaining,
+    };
   }, [
     beans,
     selectedBeanState,
@@ -1566,6 +1596,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         espressoCount={espressoCount}
         filterCount={filterCount}
         omniCount={omniCount}
+        // 新增类型剩余量属性
+        espressoRemaining={espressoRemaining}
+        filterRemaining={filterRemaining}
+        omniRemaining={omniRemaining}
         // 新增搜索历史属性
         searchHistory={searchHistory}
         onSearchHistoryClick={handleSearchHistoryClick}

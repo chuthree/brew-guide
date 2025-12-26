@@ -3160,6 +3160,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 showBeanNotes: settings.showBeanNotes,
                 limitNotesLines: settings.limitNotesLines,
                 notesMaxLines: settings.notesMaxLines,
+                showPrice: settings.showPrice,
                 showTotalPrice: settings.showTotalPrice,
                 showStatusDots: settings.showStatusDots,
                 immersiveAdd: settings.immersiveAdd,

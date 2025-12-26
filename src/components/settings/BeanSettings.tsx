@@ -94,8 +94,17 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       {/* 预览区域 */}
       <BeanPreview settings={settings} />
 
-      <SettingSection title="列表显示" className="mt-6">
-        <SettingRow label="简化豆名">
+      <SettingSection title="概要" className="mt-6">
+        <SettingRow label="详细剩余量" isLast>
+          <SettingToggle
+            checked={settings.showBeanSummary || false}
+            onChange={checked => handleChange('showBeanSummary', checked)}
+          />
+        </SettingRow>
+      </SettingSection>
+
+      <SettingSection title="列表">
+        <SettingRow label="简化名称">
           <SettingToggle
             checked={settings.showOnlyBeanName || false}
             onChange={checked => handleChange('showOnlyBeanName', checked)}
@@ -121,12 +130,21 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
           </div>
         </SettingRow>
 
-        <SettingRow label="总价格">
+        <SettingRow label="价格">
           <SettingToggle
-            checked={settings.showTotalPrice || false}
-            onChange={checked => handleChange('showTotalPrice', checked)}
+            checked={settings.showPrice !== false}
+            onChange={checked => handleChange('showPrice', checked)}
           />
         </SettingRow>
+
+        {settings.showPrice !== false && (
+          <SettingRow label="总价">
+            <SettingToggle
+              checked={settings.showTotalPrice || false}
+              onChange={checked => handleChange('showTotalPrice', checked)}
+            />
+          </SettingRow>
+        )}
 
         <SettingRow label="状态点">
           <SettingToggle
@@ -135,7 +153,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
           />
         </SettingRow>
 
-        <SettingRow label="备注区域" isLast={settings.showBeanNotes === false}>
+        <SettingRow label="备注" isLast={settings.showBeanNotes === false}>
           <SettingToggle
             checked={settings.showBeanNotes !== false}
             onChange={checked => handleChange('showBeanNotes', checked)}
@@ -144,7 +162,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
 
         {settings.showBeanNotes !== false && (
           <>
-            <SettingRow label="风味信息">
+            <SettingRow label="风味">
               <SettingToggle
                 checked={settings.showFlavorInfo || false}
                 onChange={checked => handleChange('showFlavorInfo', checked)}
@@ -181,7 +199,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             onChange={checked => handleChange('enableBeanPrint', checked)}
           />
         </SettingRow>
-        <SettingRow label="信息分割线">
+        <SettingRow label="分割线">
           <SettingToggle
             checked={settings.showBeanInfoDivider !== false}
             onChange={checked => handleChange('showBeanInfoDivider', checked)}
@@ -196,7 +214,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       </SettingSection>
 
       <SettingSection title="添加">
-        <SettingRow label="识图自动填充">
+        <SettingRow label="自动填充图片">
           <SettingToggle
             checked={settings.autoFillRecognitionImage || false}
             onChange={checked =>
@@ -204,7 +222,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             }
           />
         </SettingRow>
-        <SettingRow label="庄园字段" isLast>
+        <SettingRow label="庄园" isLast>
           <SettingToggle
             checked={settings.showEstateField || false}
             onChange={checked => handleChange('showEstateField', checked)}
