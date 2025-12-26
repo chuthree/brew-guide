@@ -512,10 +512,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![update_tray_menu, set_tray_visible])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app, event| {
-            // macOS: 点击 Dock 图标时重新显示窗口
-            if let tauri::RunEvent::Reopen { .. } = event {
-                if let Some(window) = app.get_webview_window("main") {
+        .run(|_app, _event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {
+                if let Some(window) = _app.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
