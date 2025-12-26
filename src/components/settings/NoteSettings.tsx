@@ -83,12 +83,8 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
 
   return (
     <SettingPage title="笔记设置" isVisible={isVisible} onClose={handleClose}>
-      <SettingSection title="详情显示" className="-mt-4">
-        <SettingRow
-          label="显示克价"
-          description="笔记详情中显示咖啡豆克价"
-          isLast
-        >
+      <SettingSection title="详情" className="-mt-4">
+        <SettingRow label="价格" isLast>
           <SettingToggle
             checked={settings.showUnitPriceInNote ?? false}
             onChange={checked => handleChange('showUnitPriceInNote', checked)}
@@ -96,11 +92,8 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="表单显示">
-        <SettingRow
-          label="显示总体评分"
-          description="添加笔记时显示总体评分滑块"
-        >
+      <SettingSection title="表单">
+        <SettingRow label="总体评分">
           <SettingToggle
             checked={settings.showOverallRatingInForm ?? true}
             onChange={checked =>
@@ -108,11 +101,7 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
             }
           />
         </SettingRow>
-        <SettingRow
-          label="显示风味评分"
-          description="添加笔记时显示风味评分区域"
-          isLast
-        >
+        <SettingRow label="风味评分" isLast>
           <SettingToggle
             checked={settings.showFlavorRatingInForm ?? true}
             onChange={checked =>
@@ -125,7 +114,7 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
       <SettingSection title="默认行为">
         {(settings.showFlavorRatingInForm ?? true) && (
           <SettingRow
-            label="默认展开风味评分"
+            label="展开风味评分"
             description="添加笔记时自动展开风味评分滑块"
           >
             <SettingToggle
@@ -136,8 +125,8 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
         )}
 
         <SettingRow
-          label="默认展开变动记录"
-          description="在列表中自动显示库存变动详情"
+          label="展开变动记录"
+          description="在列表中自动显示库存变动记录"
           isLast
         >
           <SettingToggle

@@ -499,7 +499,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               {/* 咖啡豆信息：克价和风味 */}
               {beanInfo && (
                 <>
-                  {/* 克价 - 从 beanInfo 计算 */}
+                  {/* 价格 - 计算这杯咖啡的价格和克价 */}
                   {showUnitPriceInNote &&
                     (() => {
                       if (beanInfo.price && beanInfo.capacity) {
@@ -516,10 +516,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             capacity > 0
                           ) {
                             const unitPrice = price / capacity;
+                            const coffeeMatch =
+                              note.params?.coffee?.match(/(\d+(?:\.\d+)?)/);
+                            const coffeeWeight = coffeeMatch
+                              ? parseFloat(coffeeMatch[0])
+                              : 0;
+                            const cupPrice = coffeeWeight * unitPrice;
                             return (
-                              <InfoRow label="克价">
+                              <InfoRow label="价格">
                                 <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                                  {unitPrice.toFixed(2)}元/克
+                                  {cupPrice.toFixed(2)}元（
+                                  {unitPrice.toFixed(2)}元/克）
                                 </div>
                               </InfoRow>
                             );
