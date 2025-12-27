@@ -38,7 +38,6 @@ const CopyFailureModal: React.FC<CopyFailureModalProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{
-              
               ease: [0.33, 1, 0.68, 1],
               duration: 0.265,
             }}
@@ -57,8 +56,6 @@ const CopyFailureModal: React.FC<CopyFailureModalProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                
-                
                 duration: 0.265,
                 delay: 0.05,
               }}

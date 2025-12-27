@@ -127,9 +127,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
       const newEquipmentOrder = equipmentUtils.generateEquipmentOrder(newOrder);
 
       // 保存排序
-      const { saveEquipmentOrder } = await import(
-        '@/lib/stores/settingsStore'
-      );
+      const { saveEquipmentOrder } = await import('@/lib/stores/settingsStore');
       await saveEquipmentOrder(newEquipmentOrder);
 
       // 传递自定义器具给父组件以保持向后兼容

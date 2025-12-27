@@ -27,7 +27,12 @@ const StarIcon = ({
             </clipPath>
           </defs>
           <path fill="currentColor" clipPath="url(#leftHalf)" d={starPath} />
-          <path fill="currentColor" clipPath="url(#rightHalf)" d={starPath} className={halfClass} />
+          <path
+            fill="currentColor"
+            clipPath="url(#rightHalf)"
+            d={starPath}
+            className={halfClass}
+          />
         </>
       ) : (
         <path fill="currentColor" d={starPath} />
@@ -127,7 +132,11 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                 className="cursor-pointer p-2"
               >
                 <StarIcon
-                  halfClass={isHalf ? 'text-neutral-200 dark:text-neutral-700' : undefined}
+                  halfClass={
+                    isHalf
+                      ? 'text-neutral-200 dark:text-neutral-700'
+                      : undefined
+                  }
                   className={`h-8 w-8 ${
                     isFull || isHalf
                       ? 'text-amber-400'

@@ -205,7 +205,6 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
             }}
             transition={{
               duration: 0.15,
-              
             }}
             style={{
               pointerEvents: open ? 'none' : 'auto',
@@ -224,7 +223,6 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
             transition={{
               duration: 0.2,
               delay: open ? 0.1 : 0,
-              
             }}
             style={{
               pointerEvents: open ? 'auto' : 'none',
@@ -246,7 +244,6 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
                 transition={{
                   duration: 0.2,
                   delay: open ? 0.12 + index * 0.03 : 0,
-                  
                 }}
               >
                 {item.renderContent || item.label}

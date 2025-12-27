@@ -410,7 +410,8 @@ const TableView: React.FC<TableViewProps> = ({
   const handleSortingChange = useCallback(
     (updater: SortingState | ((old: SortingState) => SortingState)) => {
       setSorting(old => {
-        const newSorting = typeof updater === 'function' ? updater(old) : updater;
+        const newSorting =
+          typeof updater === 'function' ? updater(old) : updater;
         saveSorting(newSorting);
         return newSorting;
       });
