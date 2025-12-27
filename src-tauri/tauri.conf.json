@@ -4,10 +4,10 @@
   "version": "1.5.10-beta.7",
   "identifier": "com.brewguide.desktop",
   "build": {
-    "frontendDist": "../out",
+    "frontendDist": "https://coffee.chu3.top",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build:next"
+    "beforeBuildCommand": ""
   },
   "app": {
     "withGlobalTauri": true,
