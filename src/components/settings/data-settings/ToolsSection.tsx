@@ -28,14 +28,14 @@ export const ToolsSection: React.FC<ToolsSectionProps> = ({ onDataChange }) => {
 
       const { Storage } = await import('@/lib/core/storage');
       const coffeeBeansData = await Storage.get('coffeeBeans');
-      
+
       if (!coffeeBeansData) {
         setStatus({ type: 'info', message: '没有找到咖啡豆数据' });
         return;
       }
 
       const coffeeBeans = JSON.parse(coffeeBeansData);
-      
+
       if (!Array.isArray(coffeeBeans)) {
         setStatus({ type: 'error', message: '咖啡豆数据格式错误' });
         return;
@@ -50,7 +50,10 @@ export const ToolsSection: React.FC<ToolsSectionProps> = ({ onDataChange }) => {
       );
 
       if (beansNeedCompression.length === 0) {
-        setStatus({ type: 'success', message: '所有图片都已经是压缩状态，无需处理' });
+        setStatus({
+          type: 'success',
+          message: '所有图片都已经是压缩状态，无需处理',
+        });
         return;
       }
 
@@ -68,13 +71,15 @@ export const ToolsSection: React.FC<ToolsSectionProps> = ({ onDataChange }) => {
 
         try {
           const compressedImage = await compressBase64Image(bean.image!);
-          const beanIndex = coffeeBeans.findIndex((b: { id: string }) => b.id === bean.id);
-          
+          const beanIndex = coffeeBeans.findIndex(
+            (b: { id: string }) => b.id === bean.id
+          );
+
           if (beanIndex !== -1) {
             coffeeBeans[beanIndex].image = compressedImage;
           }
 
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           console.error(`压缩图片失败: ${bean.name}`, error);
         }

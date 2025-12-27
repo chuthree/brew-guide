@@ -9,11 +9,17 @@
 import React, { useState, useEffect } from 'react';
 import { WebDAVSyncManager } from '@/lib/webdav/syncManager';
 import type { SyncResult as WebDAVSyncResult } from '@/lib/webdav/types';
+import type { BackupRecord } from '@/lib/s3/types';
 import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { SettingsOptions } from '../Settings';
 import WebDAVTutorialModal from './WebDAVTutorialModal';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { SyncHeaderButton, SyncDebugDrawer, SyncButtons } from './shared';
+import {
+  SyncHeaderButton,
+  SyncDebugDrawer,
+  SyncButtons,
+  BackupHistoryDrawer,
+} from './shared';
 
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
 
@@ -75,6 +81,10 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     null
   );
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showBackupDrawer, setShowBackupDrawer] = useState(false);
+  const [backups, setBackups] = useState<BackupRecord[]>([]);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
 
   // ============================================
   // 状态初始化（不自动连接，连接在用户操作时按需建立）
@@ -187,17 +197,21 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     setSyncProgress(null);
 
     try {
-      // 按需建立连接
+      // 按需建立连接（已验证过的连接跳过测试）
       let manager = syncManager;
-      if (!manager) {
+      if (!manager || !manager.isInitialized()) {
         manager = new WebDAVSyncManager();
-        const connected = await manager.initialize({
-          url: settings.url,
-          username: settings.username,
-          password: settings.password,
-          remotePath: settings.remotePath,
-          useProxy: settings.useProxy,
-        });
+        const skipTest = settings.lastConnectionSuccess === true;
+        const connected = await manager.initialize(
+          {
+            url: settings.url,
+            username: settings.username,
+            password: settings.password,
+            remotePath: settings.remotePath,
+            useProxy: settings.useProxy,
+          },
+          skipTest
+        );
         if (!connected) {
           setStatus('error');
           setError('连接失败，请检查配置');
@@ -212,9 +226,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       const result: WebDAVSyncResult = await manager.sync({
         preferredDirection: direction,
         onProgress: progress => {
-          console.log(
-            `📊 [WebDAV] 同步进度: ${progress.phase} - ${progress.message} (${progress.percentage}%)`
-          );
           setSyncProgress({
             phase: progress.phase,
             message: progress.message,
@@ -287,6 +298,59 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     } finally {
       setIsSyncing(false);
       setSyncProgress(null);
+    }
+  };
+
+  const handleShowBackups = async () => {
+    setIsLoadingBackups(true);
+    try {
+      let manager = syncManager;
+      if (!manager || !manager.isInitialized()) {
+        manager = new WebDAVSyncManager();
+        const connected = await manager.initialize(
+          {
+            url: settings.url,
+            username: settings.username,
+            password: settings.password,
+            remotePath: settings.remotePath,
+            useProxy: settings.useProxy,
+          },
+          true
+        );
+        if (!connected) {
+          showToast({ type: 'error', title: '连接失败', duration: 2000 });
+          return;
+        }
+        setSyncManager(manager);
+      }
+
+      const list = await manager.listBackups();
+      setBackups(list);
+      setShowBackupDrawer(true);
+    } finally {
+      setIsLoadingBackups(false);
+    }
+  };
+
+  const handleRestoreBackup = async (backupKey: string): Promise<boolean> => {
+    if (!syncManager) return false;
+    setIsRestoring(true);
+    try {
+      const success = await syncManager.restoreFromBackup(backupKey);
+      if (success) {
+        showToast({
+          type: 'success',
+          title: '恢复成功，即将重启...',
+          duration: 2000,
+        });
+        setTimeout(() => window.location.reload(), 2000);
+        return true;
+      } else {
+        showToast({ type: 'error', title: '恢复失败', duration: 2000 });
+        return false;
+      }
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -442,6 +506,17 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         isSyncing={isSyncing}
         onUpload={() => performSync('upload')}
         onDownload={() => performSync('download')}
+        onShowBackups={handleShowBackups}
+        isLoadingBackups={isLoadingBackups}
+      />
+
+      {/* 备份历史抽屉 */}
+      <BackupHistoryDrawer
+        isOpen={showBackupDrawer}
+        onClose={() => setShowBackupDrawer(false)}
+        backups={backups}
+        onRestore={handleRestoreBackup}
+        isRestoring={isRestoring}
       />
 
       {/* WebDAV 配置教程 */}

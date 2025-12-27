@@ -35,36 +35,48 @@ class S3MetadataManagerAdapter implements IMetadataManager {
 export class S3SyncManager extends BaseSyncManager {
   private config: S3Config | null = null;
   private s3Client: S3Client | null = null;
+  private _initialized = false;
 
   getServiceName(): string {
     return 'S3';
   }
 
+  isInitialized(): boolean {
+    return this._initialized && this.client !== null;
+  }
+
   /**
    * 初始化同步管理器
    */
-  async initialize(config: S3Config): Promise<boolean> {
+  async initialize(
+    config: S3Config,
+    skipConnectionTest = false
+  ): Promise<boolean> {
+    if (this._initialized && this.config?.bucketName === config.bucketName) {
+      return true;
+    }
+
     try {
       this.config = config;
       this.s3Client = new S3Client(config);
       this.client = this.s3Client;
-
-      // 生成或获取设备 ID
       this.deviceId = await this.getOrCreateDeviceId();
 
-      // 初始化元数据管理器
       const metadataManager = new MetadataManager(this.s3Client, this.deviceId);
       this.metadataManager = new S3MetadataManagerAdapter(metadataManager);
 
-      // 测试连接
-      const connected = await this.s3Client.testConnection();
-      if (!connected) {
-        throw new Error('无法连接到 S3 服务');
+      if (!skipConnectionTest) {
+        const connected = await this.s3Client.testConnection();
+        if (!connected) {
+          throw new Error('无法连接到 S3 服务');
+        }
       }
 
+      this._initialized = true;
       return true;
     } catch (error) {
-      console.error('❌ S3 同步管理器初始化失败:', error);
+      console.error('❌ S3 初始化失败:', error);
+      this._initialized = false;
       return false;
     }
   }

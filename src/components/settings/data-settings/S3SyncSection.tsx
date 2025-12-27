@@ -11,13 +11,19 @@ import { S3SyncManager } from '@/lib/s3/syncManagerV2';
 import type {
   SyncResult,
   SyncMetadataV2 as SyncMetadata,
+  BackupRecord,
 } from '@/lib/s3/types';
 import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { SettingsOptions } from '../Settings';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { SyncHeaderButton, SyncDebugDrawer, SyncButtons } from './shared';
+import {
+  SyncHeaderButton,
+  SyncDebugDrawer,
+  SyncButtons,
+  BackupHistoryDrawer,
+} from './shared';
 
 type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>;
 
@@ -78,6 +84,10 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
 
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [syncManager, setSyncManager] = useState<S3SyncManager | null>(null);
+  const [showBackupDrawer, setShowBackupDrawer] = useState(false);
+  const [backups, setBackups] = useState<BackupRecord[]>([]);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
 
   // ============================================
   // 自动连接
@@ -169,18 +179,22 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
     setSyncProgress(null);
 
     try {
-      // 按需建立连接
+      // 按需建立连接（已验证过的连接跳过测试）
       let manager = syncManager;
-      if (!manager) {
+      if (!manager || !manager.isInitialized()) {
         manager = new S3SyncManager();
-        const connected = await manager.initialize({
-          region: settings.region,
-          accessKeyId: settings.accessKeyId,
-          secretAccessKey: settings.secretAccessKey,
-          bucketName: settings.bucketName,
-          prefix: settings.prefix,
-          endpoint: settings.endpoint || undefined,
-        });
+        const skipTest = settings.lastConnectionSuccess === true;
+        const connected = await manager.initialize(
+          {
+            region: settings.region,
+            accessKeyId: settings.accessKeyId,
+            secretAccessKey: settings.secretAccessKey,
+            bucketName: settings.bucketName,
+            prefix: settings.prefix,
+            endpoint: settings.endpoint || undefined,
+          },
+          skipTest
+        );
         if (!connected) {
           setStatus('error');
           setError('连接失败，请检查配置');
@@ -280,6 +294,60 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
     } finally {
       setIsSyncing(false);
       setSyncProgress(null);
+    }
+  };
+
+  const handleShowBackups = async () => {
+    setIsLoadingBackups(true);
+    try {
+      let manager = syncManager;
+      if (!manager || !manager.isInitialized()) {
+        manager = new S3SyncManager();
+        const connected = await manager.initialize(
+          {
+            region: settings.region,
+            accessKeyId: settings.accessKeyId,
+            secretAccessKey: settings.secretAccessKey,
+            bucketName: settings.bucketName,
+            prefix: settings.prefix,
+            endpoint: settings.endpoint || undefined,
+          },
+          true
+        );
+        if (!connected) {
+          showToast({ type: 'error', title: '连接失败', duration: 2000 });
+          return;
+        }
+        setSyncManager(manager);
+      }
+
+      const list = await manager.listBackups();
+      setBackups(list);
+      setShowBackupDrawer(true);
+    } finally {
+      setIsLoadingBackups(false);
+    }
+  };
+
+  const handleRestoreBackup = async (backupKey: string): Promise<boolean> => {
+    if (!syncManager) return false;
+    setIsRestoring(true);
+    try {
+      const success = await syncManager.restoreFromBackup(backupKey);
+      if (success) {
+        showToast({
+          type: 'success',
+          title: '恢复成功，即将重启...',
+          duration: 2000,
+        });
+        setTimeout(() => window.location.reload(), 2000);
+        return true;
+      } else {
+        showToast({ type: 'error', title: '恢复失败', duration: 2000 });
+        return false;
+      }
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -455,6 +523,17 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         isSyncing={isSyncing}
         onUpload={() => performSync('upload')}
         onDownload={() => performSync('download')}
+        onShowBackups={handleShowBackups}
+        isLoadingBackups={isLoadingBackups}
+      />
+
+      {/* 备份历史抽屉 */}
+      <BackupHistoryDrawer
+        isOpen={showBackupDrawer}
+        onClose={() => setShowBackupDrawer(false)}
+        backups={backups}
+        onRestore={handleRestoreBackup}
+        isRestoring={isRestoring}
       />
 
       {/* 调试日志抽屉 */}

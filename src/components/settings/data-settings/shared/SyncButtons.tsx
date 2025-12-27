@@ -1,29 +1,25 @@
 /**
  * 同步操作按钮组件
  *
- * 共享组件，用于 S3、WebDAV、Supabase 的上传/下载按钮
- * 同步时显示动态点数动画
+ * 共享组件，用于 S3、WebDAV 的上传/下载/备份按钮
  */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Upload, Download } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, Download, History } from 'lucide-react';
 
 interface SyncButtonsProps {
-  /** 是否已启用 */
   enabled?: boolean;
-  /** 是否已连接 */
   isConnected: boolean;
-  /** 是否正在同步 */
   isSyncing: boolean;
-  /** 上传回调 */
   onUpload: () => void;
-  /** 下载回调 */
   onDownload: () => void;
+  onShowBackups?: () => void;
+  isLoadingBackups?: boolean;
 }
 
-/** 动态点数组件 */
 const AnimatedDots: React.FC = () => {
   const [dotCount, setDotCount] = useState(1);
 
@@ -39,14 +35,58 @@ const AnimatedDots: React.FC = () => {
   );
 };
 
+/** Apple 风格的加载指示器 */
+const AppleSpinner: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const lines = 8;
+  return (
+    <div className={`relative ${className}`}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute top-1/2 left-1/2 h-[30%] w-[8%] origin-[center_170%] rounded-full bg-current"
+          style={{
+            transform: `translateX(-50%) translateY(-170%) rotate(${i * (360 / lines)}deg)`,
+            opacity: 1 - (i / lines) * 0.75,
+            animation: `apple-spinner ${lines * 0.1}s linear infinite`,
+            animationDelay: `${-i * 0.1}s`,
+          }}
+        />
+      ))}
+      <style jsx>{`
+        @keyframes apple-spinner {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0.25;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+/** 图标切换动画配置 */
+const iconTransition = {
+  duration: 0.25,
+  ease: [0.23, 1, 0.32, 1] as const,
+};
+
+const iconVariants = {
+  initial: { opacity: 0, scale: 0.5, filter: 'blur(4px)' },
+  animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+  exit: { opacity: 0, scale: 0.5, filter: 'blur(4px)' },
+};
+
 export const SyncButtons: React.FC<SyncButtonsProps> = ({
   enabled = true,
   isConnected,
   isSyncing,
   onUpload,
   onDownload,
+  onShowBackups,
+  isLoadingBackups = false,
 }) => {
-  // 记录当前同步方向
   const [syncDirection, setSyncDirection] = useState<
     'upload' | 'download' | null
   >(null);
@@ -61,7 +101,6 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
     onDownload();
   };
 
-  // 同步结束后重置方向
   useEffect(() => {
     if (!isSyncing) {
       setSyncDirection(null);
@@ -74,20 +113,23 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
 
   const isUploading = isSyncing && syncDirection === 'upload';
   const isDownloading = isSyncing && syncDirection === 'download';
+  const isDisabled = isSyncing || isLoadingBackups;
+
+  const buttonClass =
+    'flex flex-1 items-center justify-center gap-1.5 rounded bg-neutral-100 px-3 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700';
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {/* 上传按钮 */}
+    <div className="flex gap-2">
       <button
         onClick={handleUpload}
-        disabled={isSyncing}
-        className={`flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${isSyncing ? 'opacity-60' : ''}`}
+        disabled={isDisabled}
+        className={buttonClass}
       >
         <Upload className={`h-4 w-4 ${isUploading ? 'animate-pulse' : ''}`} />
         <span>
           {isUploading ? (
             <>
-              上传中
+              上传
               <AnimatedDots />
             </>
           ) : (
@@ -96,11 +138,10 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
         </span>
       </button>
 
-      {/* 下载按钮 */}
       <button
         onClick={handleDownload}
-        disabled={isSyncing}
-        className={`flex items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${isSyncing ? 'opacity-60' : ''}`}
+        disabled={isDisabled}
+        className={buttonClass}
       >
         <Download
           className={`h-4 w-4 ${isDownloading ? 'animate-pulse' : ''}`}
@@ -108,7 +149,7 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
         <span>
           {isDownloading ? (
             <>
-              下载中
+              下载
               <AnimatedDots />
             </>
           ) : (
@@ -116,6 +157,45 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
           )}
         </span>
       </button>
+
+      {onShowBackups && (
+        <button
+          onClick={onShowBackups}
+          disabled={isDisabled}
+          className={buttonClass}
+        >
+          <div className="relative flex h-4 w-4 items-center justify-center">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {isLoadingBackups ? (
+                <motion.div
+                  key="loader"
+                  variants={iconVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={iconTransition}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <AppleSpinner className="h-4 w-4" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="history"
+                  variants={iconVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={iconTransition}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <History className="h-4 w-4" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <span>备份</span>
+        </button>
+      )}
     </div>
   );
 };

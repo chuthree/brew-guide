@@ -304,6 +304,57 @@ export class S3Client {
   }
 
   /**
+   * 列出目录文件（IStorageClient 接口实现）
+   */
+  async listFilesSimple(
+    prefix: string
+  ): Promise<{ key: string; lastModified?: Date }[]> {
+    try {
+      const files = await this.listObjects(prefix);
+      return files.map(f => ({
+        key: f.key,
+        lastModified: f.lastModified,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 服务器端复制文件（不消耗客户端带宽）
+   */
+  async copyFile(source: string, destination: string): Promise<boolean> {
+    try {
+      const sourceFullKey = this.getFullKey(source);
+      const destFullKey = this.getFullKey(destination);
+      const url = this.buildUrl(`/${destFullKey}`);
+
+      const copySource = `/${this.config.bucketName}/${sourceFullKey}`;
+
+      const { requestUrl, headers } = await this.prepareRequest('PUT', url, {
+        'x-amz-copy-source': copySource,
+      });
+
+      const response = await fetch(requestUrl, {
+        method: 'PUT',
+        headers,
+      });
+
+      this.logSummary('copy', {
+        source,
+        destination,
+        status: response.status,
+        ok: response.ok,
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('复制文件失败:', error);
+      return false;
+    }
+  }
+
+  /**
    * 删除文件
    */
   async deleteFile(key: string): Promise<boolean> {

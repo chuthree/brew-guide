@@ -52,6 +52,7 @@ class WebDAVMetadataManagerAdapter implements IMetadataManager {
 export class WebDAVSyncManager extends BaseSyncManager {
   private config: WebDAVConfig | null = null;
   private webdavClient: WebDAVClient | null = null;
+  private _initialized = false;
 
   /**
    * 获取服务名称（用于日志标识）
@@ -61,60 +62,64 @@ export class WebDAVSyncManager extends BaseSyncManager {
   }
 
   /**
+   * 检查是否已初始化
+   */
+  isInitialized(): boolean {
+    return this._initialized && this.client !== null;
+  }
+
+  /**
    * 初始化同步管理器
    * @param config - WebDAV 配置对象
+   * @param skipConnectionTest - 跳过连接测试（用于已验证过的连接）
    * @returns 初始化是否成功
    */
-  async initialize(config: WebDAVConfig): Promise<boolean> {
+  async initialize(
+    config: WebDAVConfig,
+    skipConnectionTest = false
+  ): Promise<boolean> {
+    // 如果已初始化且配置相同，直接返回
+    if (this._initialized && this.config?.url === config.url) {
+      return true;
+    }
+
     try {
-      // 参数验证
-      if (!config) {
-        throw new Error('WebDAV 配置不能为空');
+      if (!config?.url || !config.username || !config.password) {
+        throw new Error('WebDAV 配置缺少必要字段');
       }
 
-      if (!config.url || !config.username || !config.password) {
-        throw new Error('WebDAV 配置缺少必要字段: url, username, password');
-      }
-
-      // 保存配置
       this.config = config;
-
-      // 初始化 WebDAV 客户端
       this.webdavClient = new WebDAVClient(config);
       this.client = this.webdavClient;
-
-      // 生成或获取设备 ID
       this.deviceId = await this.getOrCreateDeviceId();
 
-      console.log(`📱 [WebDAV] 设备 ID: ${this.deviceId}`);
+      console.warn(`📱 [WebDAV] 设备 ID: ${this.deviceId}`);
 
-      // 初始化元数据管理器
       const metadataManager = new MetadataManager(
         this.webdavClient,
         this.deviceId
       );
       this.metadataManager = new WebDAVMetadataManagerAdapter(metadataManager);
 
-      // 测试连接
-      console.log(`🔗 [WebDAV] 正在测试连接到 ${config.url}...`);
-      const connected = await this.webdavClient.testConnection();
-
-      if (!connected) {
-        throw new Error('无法连接到 WebDAV 服务，请检查配置和网络');
+      // 仅在需要时测试连接
+      if (!skipConnectionTest) {
+        console.warn(`🔗 [WebDAV] 正在测试连接到 ${config.url}...`);
+        const connected = await this.webdavClient.testConnection();
+        if (!connected) {
+          throw new Error('无法连接到 WebDAV 服务');
+        }
+        console.warn(`✅ [WebDAV] 连接成功`);
       }
 
-      console.log(`✅ [WebDAV] 连接成功`);
+      this._initialized = true;
       return true;
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error('❌ WebDAV 同步管理器初始化失败:', errorMsg);
-
-      // 清理状态
+      console.error('❌ WebDAV 初始化失败:', error);
       this.config = null;
       this.webdavClient = null;
       this.client = null;
       this.metadataManager = null;
-
+      this._initialized = false;
       return false;
     }
   }

@@ -22,6 +22,18 @@ export interface FileMetadata {
 }
 
 /**
+ * 备份记录
+ */
+export interface BackupRecord {
+  /** 备份时间戳 */
+  timestamp: number;
+  /** 备份文件路径 */
+  key: string;
+  /** 数据哈希（用于判断是否需要新备份） */
+  hash: string;
+}
+
+/**
  * 同步元数据 V2 - 文件级别追踪
  */
 export interface SyncMetadataV2 {
@@ -35,6 +47,8 @@ export interface SyncMetadataV2 {
   files: Record<string, FileMetadata>;
   /** 已删除的文件列表 */
   deletedFiles?: string[];
+  /** 备份历史记录（最近 5 个） */
+  backupHistory?: BackupRecord[];
 }
 
 /**
