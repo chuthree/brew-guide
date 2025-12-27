@@ -9,7 +9,7 @@ import React, {
   useImperativeHandle,
   useCallback,
 } from 'react';
-import { Drawer } from 'vaul';
+import { Capacitor } from '@capacitor/core';
 import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { showToast } from '@/components/common/feedback/LightToast';
@@ -64,6 +64,13 @@ const NoteSteppedFormModal = forwardRef<
       currentStep !== undefined ? currentStep : internalStepIndex;
     const setCurrentStepIndex = setCurrentStep || setInternalStepIndex;
 
+    // 动画状态管理
+    const [shouldRender, setShouldRender] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
+
+    // 平台检测
+    const [isIOS, setIsIOS] = useState(false);
+
     const [isSearching, setIsSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(
@@ -72,6 +79,7 @@ const NoteSteppedFormModal = forwardRef<
     const [scrollContainer, setScrollContainer] =
       useState<HTMLDivElement | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
 
     // callback ref: DOM 挂载时更新 state，触发重新渲染
     const contentScrollRefCallback = useCallback(
@@ -83,16 +91,75 @@ const NoteSteppedFormModal = forwardRef<
 
     const allBeans = useCoffeeBeanStore(state => state.beans);
 
-    // 历史栈和主题色管理
+    // 同步顶部安全区颜色
     useThemeColor({ useOverlay: true, enabled: showForm });
+
+    // 历史栈管理
     useModalHistory({ id: 'note-stepped-form', isOpen: showForm, onClose });
 
-    const handleOpenChange = useCallback(
-      (open: boolean) => {
-        if (!open) onClose();
-      },
-      [onClose]
-    );
+    // 处理显示/隐藏动画
+    useEffect(() => {
+      if (showForm) {
+        setShouldRender(true);
+        setCurrentStepIndex(initialStep);
+        const timer = setTimeout(() => setIsVisible(true), 10);
+        return () => clearTimeout(timer);
+      } else {
+        setIsVisible(false);
+        const timer = setTimeout(() => {
+          setShouldRender(false);
+          if (!preserveState) {
+            setCurrentStepIndex(initialStep);
+            setIsSearching(false);
+            setSearchQuery('');
+            setHighlightedBeanId(null);
+          }
+        }, 400);
+        return () => clearTimeout(timer);
+      }
+    }, [showForm, initialStep, preserveState, setCurrentStepIndex]);
+
+    // 检测平台
+    useEffect(() => {
+      if (Capacitor.isNativePlatform()) {
+        const platform = Capacitor.getPlatform();
+        setIsIOS(platform === 'ios');
+      }
+    }, []);
+
+    // 监听输入框聚焦，确保在iOS上输入框可见
+    useEffect(() => {
+      if (!shouldRender) return;
+
+      const modalElement = modalRef.current;
+      if (!modalElement) return;
+
+      const handleInputFocus = (e: Event) => {
+        const target = e.target as HTMLElement;
+
+        if (
+          target &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT')
+        ) {
+          if (isIOS) {
+            setTimeout(() => {
+              target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+              });
+            }, 300);
+          }
+        }
+      };
+
+      modalElement.addEventListener('focusin', handleInputFocus);
+
+      return () => {
+        modalElement.removeEventListener('focusin', handleInputFocus);
+      };
+    }, [shouldRender, isIOS]);
 
     useImperativeHandle(
       ref,
@@ -112,19 +179,6 @@ const NoteSteppedFormModal = forwardRef<
       }),
       [currentStepIndex, setCurrentStepIndex, onStepChange]
     );
-
-    useEffect(() => {
-      if (showForm) setCurrentStepIndex(initialStep);
-    }, [showForm, initialStep, setCurrentStepIndex]);
-
-    useEffect(() => {
-      if (!showForm && !preserveState) {
-        setCurrentStepIndex(initialStep);
-        setIsSearching(false);
-        setSearchQuery('');
-        setHighlightedBeanId(null);
-      }
-    }, [showForm, preserveState, initialStep, setCurrentStepIndex]);
 
     const currentStepContent = steps[currentStepIndex];
     const progress = ((currentStepIndex + 1) / steps.length) * 100;
@@ -214,126 +268,119 @@ const NoteSteppedFormModal = forwardRef<
     const isLastStep = currentStepIndex === steps.length - 1;
     const isValid = currentStepContent?.isValid !== false;
 
+    if (!shouldRender) return null;
+
     return (
-      <Drawer.Root
-        open={showForm}
-        onOpenChange={handleOpenChange}
-        repositionInputs={false}
-      >
-        <Drawer.Portal>
-          <Drawer.Overlay
-            className="fixed inset-0 z-50 bg-black/50"
-            style={{ position: 'fixed' }}
-          />
-          <Drawer.Content
-            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[90vh] max-w-md flex-col rounded-t-3xl bg-white outline-none dark:bg-neutral-900"
-            aria-describedby={undefined}
-          >
-            <Drawer.Title className="sr-only">添加笔记</Drawer.Title>
+      <>
+        {/* 背景遮罩 */}
+        <div
+          className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+          onClick={onClose}
+        />
 
-            <div className="pb-safe-bottom flex h-full flex-col overflow-hidden px-6 pt-4">
-              {/* 顶部导航栏 */}
-              <div className="mb-6 flex shrink-0 items-center justify-between">
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="-m-3 rounded-full p-3"
-                >
-                  <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
-                </button>
-                <div className="w-full px-4">
-                  <div className="h-1 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
-                    <div
-                      className="h-full bg-neutral-800 transition-all duration-300 ease-in-out dark:bg-neutral-200"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                  {currentStepIndex + 1}/{steps.length}
-                </div>
-              </div>
-
-              {/* 步骤内容 */}
-              <div
-                className="min-h-0 flex-1 overflow-y-auto pb-4"
-                ref={contentScrollRefCallback}
+        {/* 抽屉内容 */}
+        <div
+          ref={modalRef}
+          className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[90vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
+        >
+          <div className="pb-safe-bottom flex h-full flex-col overflow-hidden px-6 pt-4">
+            {/* 顶部导航栏 */}
+            <div className="mb-6 flex shrink-0 items-center justify-between">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="-m-3 rounded-full p-3"
               >
-                {currentStepContent && (
-                  <div className="space-y-6">{contentWithSearchProps}</div>
-                )}
-              </div>
-
-              {/* 底部按钮区域 */}
-              <div className="modal-bottom-button flex items-center justify-center">
-                <div className="flex items-center justify-center gap-2">
-                  {/* 搜索输入框 */}
-                  {isValid && isCoffeeBeanStep && isSearching && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="搜索咖啡豆名称..."
-                        className="w-48 rounded-full border-none bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
-                        autoComplete="off"
-                        onKeyDown={e =>
-                          e.key === 'Escape' && handleCloseSearch()
-                        }
-                      />
-                      <button
-                        type="button"
-                        onClick={handleCloseSearch}
-                        className={`${buttonBaseClass} shrink-0 p-4`}
-                      >
-                        <X className="h-4 w-4" strokeWidth="3" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* 下一步/完成按钮 */}
-                  {isValid && !(isCoffeeBeanStep && isSearching) && (
-                    <button
-                      type="button"
-                      onClick={
-                        isCoffeeBeanStep ? handleSearchClick : handleNext
-                      }
-                      className={`${buttonBaseClass} flex items-center justify-center ${isLastStep && !isCoffeeBeanStep ? 'px-6 py-3' : 'px-5 py-3'}`}
-                    >
-                      {isLastStep && !isCoffeeBeanStep ? (
-                        <span className="font-medium">保存笔记</span>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {isCoffeeBeanStep ? '搜索' : '下一步'}
-                          </span>
-                          {isCoffeeBeanStep ? (
-                            <Search className="h-4 w-4" strokeWidth="3" />
-                          ) : (
-                            <ArrowRight className="h-4 w-4" strokeWidth="3" />
-                          )}
-                        </div>
-                      )}
-                    </button>
-                  )}
-
-                  {/* 随机选择按钮 */}
-                  {isValid && isCoffeeBeanStep && !isSearching && (
-                    <button
-                      type="button"
-                      onClick={() => handleRandomBean(false)}
-                      className={`${buttonBaseClass} flex items-center justify-center p-4`}
-                    >
-                      <Shuffle className="h-4 w-4" strokeWidth="3" />
-                    </button>
-                  )}
+                <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
+              </button>
+              <div className="w-full px-4">
+                <div className="h-1 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                  <div
+                    className="h-full bg-neutral-800 transition-all duration-300 ease-in-out dark:bg-neutral-200"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
+              </div>
+              <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                {currentStepIndex + 1}/{steps.length}
               </div>
             </div>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+
+            {/* 步骤内容 */}
+            <div
+              className="min-h-0 flex-1 overflow-y-auto pb-4"
+              ref={contentScrollRefCallback}
+            >
+              {currentStepContent && (
+                <div className="space-y-6">{contentWithSearchProps}</div>
+              )}
+            </div>
+
+            {/* 底部按钮区域 */}
+            <div className="modal-bottom-button flex items-center justify-center">
+              <div className="flex items-center justify-center gap-2">
+                {/* 搜索输入框 */}
+                {isValid && isCoffeeBeanStep && isSearching && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="搜索咖啡豆名称..."
+                      className="w-48 rounded-full border-none bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
+                      autoComplete="off"
+                      onKeyDown={e => e.key === 'Escape' && handleCloseSearch()}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCloseSearch}
+                      className={`${buttonBaseClass} shrink-0 p-4`}
+                    >
+                      <X className="h-4 w-4" strokeWidth="3" />
+                    </button>
+                  </div>
+                )}
+
+                {/* 下一步/完成按钮 */}
+                {isValid && !(isCoffeeBeanStep && isSearching) && (
+                  <button
+                    type="button"
+                    onClick={isCoffeeBeanStep ? handleSearchClick : handleNext}
+                    className={`${buttonBaseClass} flex items-center justify-center ${isLastStep && !isCoffeeBeanStep ? 'px-6 py-3' : 'px-5 py-3'}`}
+                  >
+                    {isLastStep && !isCoffeeBeanStep ? (
+                      <span className="font-medium">保存笔记</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {isCoffeeBeanStep ? '搜索' : '下一步'}
+                        </span>
+                        {isCoffeeBeanStep ? (
+                          <Search className="h-4 w-4" strokeWidth="3" />
+                        ) : (
+                          <ArrowRight className="h-4 w-4" strokeWidth="3" />
+                        )}
+                      </div>
+                    )}
+                  </button>
+                )}
+
+                {/* 随机选择按钮 */}
+                {isValid && isCoffeeBeanStep && !isSearching && (
+                  <button
+                    type="button"
+                    onClick={() => handleRandomBean(false)}
+                    className={`${buttonBaseClass} flex items-center justify-center p-4`}
+                  >
+                    <Shuffle className="h-4 w-4" strokeWidth="3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
     );
   }
 );
