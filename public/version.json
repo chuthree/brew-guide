@@ -1,5 +1,5 @@
 {
-  "version": "1.5.10-beta.7",
+  "version": "1.5.10",
   "downloadUrl": "https://gitee.com/chu3/brew-guide/releases",
-  "releaseNotes": "适配平板与桌面端，咖啡豆支持双面图，上线基于 Supabase 的实时云同步"
+  "releaseNotes": "实时同步数据，咖啡豆表格形式和多图支持，适配大屏幕以及多处UI重构"
 }
