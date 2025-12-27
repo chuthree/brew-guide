@@ -55,6 +55,7 @@ import HiddenEquipmentsSettings from '@/components/settings/HiddenEquipmentsSett
 import RoasterLogoSettings from '@/components/settings/RoasterLogoSettings';
 import GrinderSettings from '@/components/settings/GrinderSettings';
 import ExperimentalSettings from '@/components/settings/ExperimentalSettings';
+import AboutSettings from '@/components/settings/AboutSettings';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
 import Onboarding from '@/components/onboarding/Onboarding';
@@ -281,6 +282,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [showGrinderSettings, setShowGrinderSettings] = useState(false);
   const [showExperimentalSettings, setShowExperimentalSettings] =
     useState(false);
+  const [showAboutSettings, setShowAboutSettings] = useState(false);
 
   // 计算是否有任何子设置页面打开
   const hasSubSettingsOpen =
@@ -301,7 +303,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showHiddenEquipmentsSettings ||
     showRoasterLogoSettings ||
     showGrinderSettings ||
-    showExperimentalSettings;
+    showExperimentalSettings ||
+    showAboutSettings;
 
   // 使用 Zustand settingsStore 管理设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
@@ -3866,6 +3869,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onOpenRoasterLogoSettings: () => setShowRoasterLogoSettings(true),
           onOpenGrinderSettings: () => setShowGrinderSettings(true),
           onOpenExperimentalSettings: () => setShowExperimentalSettings(true),
+          onOpenAboutSettings: () => setShowAboutSettings(true),
         }}
       />
 
@@ -4015,6 +4019,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onClose={() => setShowExperimentalSettings(false)}
           handleChange={handleSubSettingChange}
         />
+      )}
+
+      {showAboutSettings && (
+        <AboutSettings onClose={() => setShowAboutSettings(false)} />
       )}
 
       {/* 咖啡豆表单模态框独立渲染，与 Settings 同级 */}

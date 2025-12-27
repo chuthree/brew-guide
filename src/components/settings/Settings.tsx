@@ -41,8 +41,7 @@ import {
   Settings2,
   Layout,
   CircleHelp,
-  Users,
-  Heart,
+  Info,
   User,
   MessageCircle,
   ThumbsUp,
@@ -80,6 +79,7 @@ export interface SubSettingsHandlers {
   onOpenRoasterLogoSettings: () => void;
   onOpenGrinderSettings: () => void;
   onOpenExperimentalSettings: () => void;
+  onOpenAboutSettings: () => void;
 }
 
 interface SettingsProps {
@@ -199,8 +199,6 @@ const Settings: React.FC<SettingsProps> = ({
     downloadUrl: string;
     releaseNotes?: string;
   } | null>(null);
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const versionLongPressRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // 计算是否有隐藏的方案和器具
   const hasHiddenMethods = React.useMemo(() => {
@@ -741,161 +739,59 @@ const Settings: React.FC<SettingsProps> = ({
           ]}
         />
 
-        {/* 版本信息 */}
-        <div className="px-6 pt-12 text-center text-xs text-neutral-400 select-none dark:text-neutral-600">
-          <p>[版本号]</p>
-          <button
-            onClick={async () => {
-              if (isCheckingUpdate) return;
+        {/* 关于 */}
+        <SettingGroup
+          items={[
+            {
+              icon: Info,
+              label: '关于',
+              value: `v${APP_VERSION}`,
+              onClick: subSettingsHandlers.onOpenAboutSettings,
+            },
+          ]}
+        />
 
-              setIsCheckingUpdate(true);
-              try {
-                const result = await checkForUpdates();
-                await saveCheckTime();
+        {/* 感谢名单 */}
+        <div className="px-8 pt-18 pb-8">
+          <div className="text-left text-xs text-neutral-400 select-none dark:text-neutral-600">
+            <p>
+              感谢各位一直以来的支持。自 2025 年 2 月 1
+              日首次发布至今，项目已持续运行{' '}
+              {Math.floor(
+                (Date.now() - new Date('2025-02-01').getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )}{' '}
+              天，你们的每一次鼓励与贡献，都是它不断成长的重要动力。
+            </p>
+            <div className="mt-8 grid grid-cols-[auto_auto_auto] justify-between gap-y-1 sm:grid-cols-[auto_auto_auto_auto_auto]">
+              {sponsorsList
+                .sort((a, b) => {
+                  const isAEnglish = /^[A-Za-z0-9\s:]+$/.test(a.charAt(0));
+                  const isBEnglish = /^[A-Za-z0-9\s:]+$/.test(b.charAt(0));
 
-                if (
-                  result.hasUpdate &&
-                  result.latestVersion &&
-                  result.downloadUrl
-                ) {
-                  setUpdateInfo({
-                    latestVersion: result.latestVersion!,
-                    downloadUrl: result.downloadUrl!,
-                    releaseNotes: result.releaseNotes ?? '',
-                  });
-                  setIsAutoCheckUpdate(false); // 手动检测，不是自动检测
-                  setShowUpdateDrawer(true);
-                } else {
-                  const { showToast } = await import(
-                    '@/components/common/feedback/LightToast'
-                  );
-                  showToast({
-                    type: 'info',
-                    title: '已是最新版本',
-                    duration: 2000,
-                  });
-                }
-
-                if (settings.hapticFeedback) {
-                  hapticsUtils.light();
-                }
-              } catch (error) {
-                console.error('检查更新失败:', error);
-                const { showToast } = await import(
-                  '@/components/common/feedback/LightToast'
-                );
-                showToast({
-                  type: 'error',
-                  title: '检查更新失败，请检查网络连接',
-                  duration: 2500,
-                });
-              } finally {
-                setIsCheckingUpdate(false);
-              }
-            }}
-            onPointerDown={() => {
-              // 长按处理：0.5秒后显示版本信息
-              versionLongPressRef.current = setTimeout(async () => {
-                try {
-                  const result = await checkForUpdates();
-                  setUpdateInfo({
-                    latestVersion: result.latestVersion ?? '',
-                    downloadUrl: result.downloadUrl ?? '',
-                    releaseNotes: result.releaseNotes,
-                  });
-                  setIsAutoCheckUpdate(false); // 长按查看详情，不是自动检测
-                  setShowUpdateDrawer(true);
-                  if (settings.hapticFeedback) {
-                    hapticsUtils.light();
-                  }
-                } catch (error) {
-                  console.error('获取版本信息失败:', error);
-                }
-              }, 500);
-            }}
-            onPointerUp={() => {
-              // 清除长按计时
-              if (versionLongPressRef.current) {
-                clearTimeout(versionLongPressRef.current);
-              }
-            }}
-            onPointerLeave={() => {
-              // 离开按钮时清除长按计时
-              if (versionLongPressRef.current) {
-                clearTimeout(versionLongPressRef.current);
-              }
-            }}
-            disabled={isCheckingUpdate}
-            className="cursor-pointer underline transition-colors hover:text-neutral-500 active:text-neutral-600 disabled:opacity-50 dark:hover:text-neutral-500 dark:active:text-neutral-400"
-            title="点击检查更新，长按查看版本详情"
-          >
-            {isCheckingUpdate ? '检测中...' : `v${APP_VERSION}`}
-          </button>
-
-          <p className="mt-12">[感谢]</p>
-
-          <p>感谢以下赞助者的支持</p>
-          <p className="mx-auto mt-4 max-w-48 text-left leading-relaxed">
-            {sponsorsList
-              .sort((a, b) => {
-                const isAEnglish = /^[A-Za-z0-9\s:]+$/.test(a.charAt(0));
-                const isBEnglish = /^[A-Za-z0-9\s:]+$/.test(b.charAt(0));
-
-                if (isAEnglish && !isBEnglish) return -1;
-                if (!isAEnglish && isBEnglish) return 1;
-                return a.localeCompare(b, 'zh-CN');
-              })
-              .map(name => {
-                // 检测是否为纯 emoji（检查字符串长度和是否包含普通字符）
-                const hasOnlyEmoji =
-                  name.length <= 2 && !/[a-zA-Z0-9\u4e00-\u9fa5]/.test(name);
-                if (hasOnlyEmoji) {
-                  // 给纯 emoji 添加样式
+                  if (isAEnglish && !isBEnglish) return -1;
+                  if (!isAEnglish && isBEnglish) return 1;
+                  return a.localeCompare(b, 'zh-CN');
+                })
+                .map(name => {
+                  const hasOnlyEmoji =
+                    name.length <= 2 && !/[a-zA-Z0-9\u4e00-\u9fa5]/.test(name);
                   return (
                     <span
                       key={name}
-                      style={{ opacity: 0.5, filter: 'grayscale(0.4)' }}
+                      style={
+                        hasOnlyEmoji
+                          ? { opacity: 0.5, filter: 'grayscale(0.4)' }
+                          : undefined
+                      }
                     >
                       {name}
                     </span>
                   );
-                }
-                return name;
-              })
-              .reduce((acc, curr, idx) => {
-                if (idx === 0) return [curr];
-                return [...acc, '、', curr];
-              }, [] as React.ReactNode[])}
-            、and You
-          </p>
-          <p className="mx-auto mt-12 max-w-48 text-left">
-            <a
-              href="https://github.com/chuthree/brew-guide"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              GitHub
-            </a>
-            {' / '}
-            <a
-              href="https://gitee.com/chu3/brew-guide"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              Gitee
-            </a>
-            {' / '}
-            <a
-              href="https://status.chu3.top/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              状态页
-            </a>
-          </p>
+                })}
+              <span>and You</span>
+            </div>
+          </div>
         </div>
       </div>
 
