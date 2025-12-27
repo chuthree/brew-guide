@@ -448,10 +448,12 @@ export const dbUtils = {
       // 检查是否已完成 v4 迁移
       const v4Migrated = await db.settings.get('v4_migrated');
       if (v4Migrated && v4Migrated.value === 'true') {
+        // 即使已标记迁移完成，也要检查补充迁移（修复数据丢失问题）
+        await this.migrateAppSettings();
         return;
       }
 
-      console.log('开始 v4 数据迁移...');
+      console.warn('开始 v4 数据迁移...');
 
       // 1. 迁移磨豆机数据
       await this.migrateGrinders();
@@ -539,8 +541,104 @@ export const dbUtils = {
 
       // 检查是否已有数据
       const existing = await db.appSettings.get('main');
+
+      // 即使已有设置，也要检查是否需要补充迁移遗漏的数据
       if (existing) {
-        console.log('应用设置已存在，跳过迁移');
+        let needsUpdate = false;
+
+        // 补充迁移 roaster-logos
+        const roasterLogosStr = localStorage.getItem('roaster-logos');
+        if (
+          roasterLogosStr &&
+          (!existing.data.roasterConfigs ||
+            existing.data.roasterConfigs.length === 0)
+        ) {
+          try {
+            const oldConfigs = JSON.parse(roasterLogosStr);
+            if (Array.isArray(oldConfigs) && oldConfigs.length > 0) {
+              existing.data.roasterConfigs = oldConfigs.map(
+                (config: {
+                  roasterName: string;
+                  logoData?: string;
+                  flavorPeriod?: RoasterFlavorPeriodSimple;
+                  detailedFlavorPeriod?: RoasterFlavorPeriodDetailed;
+                  updatedAt?: number;
+                }) => ({
+                  roasterName: config.roasterName,
+                  logoData: config.logoData,
+                  flavorPeriod: config.flavorPeriod,
+                  detailedFlavorPeriod: config.detailedFlavorPeriod,
+                  updatedAt: config.updatedAt || Date.now(),
+                })
+              );
+              needsUpdate = true;
+              console.warn(
+                `已补充迁移 ${existing.data.roasterConfigs.length} 个烘焙商配置`
+              );
+            }
+          } catch {
+            // 忽略解析错误
+          }
+        }
+
+        // 补充迁移 customFlavorDimensions
+        const flavorDimensionsStr = localStorage.getItem(
+          'customFlavorDimensions'
+        );
+        if (
+          flavorDimensionsStr &&
+          (!existing.data.flavorDimensions ||
+            existing.data.flavorDimensions.length === 0)
+        ) {
+          try {
+            existing.data.flavorDimensions = JSON.parse(flavorDimensionsStr);
+            needsUpdate = true;
+            console.warn('已补充迁移自定义风味维度');
+          } catch {
+            // 忽略解析错误
+          }
+        }
+
+        // 补充迁移 flavorDimensionHistoricalLabels
+        const historicalLabelsStr = localStorage.getItem(
+          'flavorDimensionHistoricalLabels'
+        );
+        if (
+          historicalLabelsStr &&
+          (!existing.data.flavorDimensionHistoricalLabels ||
+            Object.keys(existing.data.flavorDimensionHistoricalLabels)
+              .length === 0)
+        ) {
+          try {
+            existing.data.flavorDimensionHistoricalLabels =
+              JSON.parse(historicalLabelsStr);
+            needsUpdate = true;
+            console.warn('已补充迁移风味维度历史标签');
+          } catch {
+            // 忽略解析错误
+          }
+        }
+
+        // 补充迁移 equipmentOrder
+        const equipmentOrderStr = localStorage.getItem('equipmentOrder');
+        if (
+          equipmentOrderStr &&
+          (!existing.data.equipmentOrder ||
+            existing.data.equipmentOrder.length === 0)
+        ) {
+          try {
+            const order = JSON.parse(equipmentOrderStr);
+            existing.data.equipmentOrder = order.equipmentIds || [];
+            needsUpdate = true;
+            console.warn('已补充迁移器具排序');
+          } catch {
+            // 忽略解析错误
+          }
+        }
+
+        if (needsUpdate) {
+          await db.appSettings.put(existing);
+        }
         return;
       }
 
