@@ -17,7 +17,7 @@ Brew Guide API Server 是 Brew Guide 应用的后端服务，提供咖啡豆包�
 - **Runtime**: Node.js v25+
 - **Framework**: Express.js 4.x
 - **Logger**: Winston 3.x
-- **AI API**: 阿里云通义千问（qwen3-vl-flash）、DeepSeek-V3.1
+- **AI API**: 七牛云 qwen-vl-max（咖啡豆识别）、阿里云 DeepSeek-V3.1（报告/审核）
 - **Package Manager**: pnpm
 
 ## 项目结构
@@ -79,7 +79,8 @@ cp .env.example .env
 
 **必需配置：**
 
-- `SILICONFLOW_API_KEY` - 阿里云硅基流动 API 密钥
+- `SILICONFLOW_API_KEY` - 阿里云百炼 API 密钥（年度报告、反馈审核）
+- `QINIU_API_KEY` - 七牛云 API 密钥（咖啡豆识别）
 
 **可选配置：**
 

@@ -19,7 +19,7 @@ dotenv.config();
  * @throws {Error} 如果缺少必需的环境变量
  */
 function validateEnv() {
-  const required = ['SILICONFLOW_API_KEY'];
+  const required = ['SILICONFLOW_API_KEY', 'QINIU_API_KEY'];
   const missing = required.filter(key => !process.env[key]);
 
   if (missing.length > 0) {
@@ -47,6 +47,7 @@ export const serverConfig = {
  */
 export const apiKeys = {
   siliconflow: process.env.SILICONFLOW_API_KEY,
+  qiniu: process.env.QINIU_API_KEY,
   admin: process.env.ADMIN_KEY || 'brew-guide-admin-2025',
 };
 
@@ -134,12 +135,11 @@ export const rateLimitConfig = {
  * AI 配置
  */
 export const aiConfig = {
-  // 咖啡豆识别
+  // 咖啡豆识别 (七牛云)
   beanRecognition: {
-    baseURL:
-      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    model: 'qwen3-vl-flash',
-    temperature: 0.1,
+    baseURL: 'https://api.qnaigc.com/v1/chat/completions',
+    model: 'qwen-vl-max-2025-01-25',
+    temperature: 0,
     maxTokens: 2000,
     timeout: 120000,
     maxRetries: 2,

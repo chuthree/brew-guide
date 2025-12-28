@@ -62,12 +62,10 @@ export async function recognizeBeanStreaming(imageUrl) {
     {
       model: aiConfig.beanRecognition.model,
       messages: [
+        { role: 'system', content: aiPrompts.beanRecognition },
         {
           role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: imageUrl } },
-            { type: 'text', text: aiPrompts.beanRecognition },
-          ],
+          content: [{ type: 'image_url', image_url: { url: imageUrl } }],
         },
       ],
       stream: true,
@@ -77,7 +75,7 @@ export async function recognizeBeanStreaming(imageUrl) {
     },
     {
       headers: {
-        Authorization: `Bearer ${apiKeys.siliconflow}`,
+        Authorization: `Bearer ${apiKeys.qiniu}`,
         'Content-Type': 'application/json',
       },
       timeout: aiConfig.beanRecognition.timeout,
@@ -110,12 +108,10 @@ export async function recognizeBean(imageUrl) {
     data: {
       model: aiConfig.beanRecognition.model,
       messages: [
+        { role: 'system', content: aiPrompts.beanRecognition },
         {
           role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: imageUrl } },
-            { type: 'text', text: aiPrompts.beanRecognition },
-          ],
+          content: [{ type: 'image_url', image_url: { url: imageUrl } }],
         },
       ],
       temperature: aiConfig.beanRecognition.temperature,
@@ -123,7 +119,7 @@ export async function recognizeBean(imageUrl) {
       response_format: { type: 'json_object' },
     },
     headers: {
-      Authorization: `Bearer ${apiKeys.siliconflow}`,
+      Authorization: `Bearer ${apiKeys.qiniu}`,
       'Content-Type': 'application/json',
     },
     timeout: aiConfig.beanRecognition.timeout,
