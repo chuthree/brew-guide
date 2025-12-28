@@ -742,7 +742,7 @@ const TableView: React.FC<TableViewProps> = ({
               return (
                 <tr
                   key={row.id}
-                  className={`cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30 ${isEmpty ? 'opacity-50' : ''}`}
+                  className={`cursor-pointer transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800/30 ${isEmpty ? 'opacity-50' : ''}`}
                   onClick={() => handleDetailClick(bean)}
                 >
                   {row.getVisibleCells().map((cell, index) => {
