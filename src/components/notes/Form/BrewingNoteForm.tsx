@@ -1153,86 +1153,97 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
       {/* Form content - 更新内容区域样式以确保正确滚动 */}
       <div className="grow space-y-6 pb-20">
-        {/* 咖啡豆信息 - 有选中咖啡豆、传入咖啡豆或编辑已有记录时显示 */}
-        {(selectedCoffeeBean ||
+        {/* 咖啡豆信息 */}
+        <div className="space-y-4">
+          {selectedCoffeeBean ||
           initialData.coffeeBean ||
-          (initialData.id && formData.coffeeBeanInfo.name)) && (
-          <div className="space-y-4">
+          (initialData.id && formData.coffeeBeanInfo.name) ? (
             <div className="mb-3 text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-              {/* 显示选择的咖啡豆信息，只在咖啡豆名称部分添加下划线 */}
-              <>
-                {initialData.id && coffeeBeans.length > 0 ? (
-                  <span
-                    onClick={() => {
-                      setShowCoffeeBeanSelector(!showCoffeeBeanSelector);
-                      if (!showCoffeeBeanSelector) {
-                        setCoffeeBeanSearchQuery(''); // 打开时清空搜索
-                      }
-                    }}
-                    className="cursor-pointer border-b border-dashed border-neutral-400 text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:border-neutral-600 hover:text-neutral-700 dark:border-neutral-500 dark:text-neutral-400 dark:hover:border-neutral-400 dark:hover:text-neutral-300"
-                  >
-                    {selectedCoffeeBean?.name ||
-                      formData.coffeeBeanInfo.name ||
-                      '未知咖啡豆'}
-                  </span>
-                ) : (
-                  <>
-                    {selectedCoffeeBean?.name ||
-                      formData.coffeeBeanInfo.name ||
-                      '未知咖啡豆'}
-                  </>
-                )}
-                {/* 风味入口 - 直接跟在咖啡豆名称后面，仅当有风味信息时显示 */}
-                {selectedCoffeeBean?.flavor &&
-                  selectedCoffeeBean.flavor.length > 0 && (
-                    <span
-                      onClick={() => setShowFlavorInfo(!showFlavorInfo)}
-                      className="ml-1 cursor-pointer text-xs text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
-                    >
-                      /{' '}
-                      {showFlavorInfo
-                        ? selectedCoffeeBean.flavor.join(' · ')
-                        : '显示风味'}
-                    </span>
-                  )}
-              </>
-            </div>
-
-            {/* 咖啡豆选择器 - 直接在咖啡豆信息下面 */}
-            {initialData.id &&
-              coffeeBeans.length > 0 &&
-              showCoffeeBeanSelector && (
-                <div className="rounded-lg border border-neutral-200/50 bg-neutral-50 dark:border-neutral-800/50 dark:bg-neutral-900">
-                  {/* 搜索框 */}
-                  <div className="border-b border-neutral-200/50 p-3 dark:border-neutral-800">
-                    <input
-                      id="coffee-bean-search"
-                      name="coffeeBeanSearch"
-                      type="text"
-                      value={coffeeBeanSearchQuery}
-                      onChange={e => setCoffeeBeanSearchQuery(e.target.value)}
-                      placeholder="搜索咖啡豆..."
-                      className="w-full rounded-md border border-neutral-200/50 bg-white px-3 py-2 text-xs placeholder:text-neutral-400 focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:placeholder:text-neutral-500 dark:focus:ring-neutral-500"
-                    />
-                  </div>
-                  {/* 选择器内容：限制高度并启用滚动 */}
-                  <div
-                    ref={setCoffeeBeanScrollContainer}
-                    className="max-h-60 overflow-y-auto px-3"
-                  >
-                    <CoffeeBeanSelector
-                      coffeeBeans={coffeeBeans}
-                      selectedCoffeeBean={selectedCoffeeBean}
-                      onSelect={handleCoffeeBeanSelect}
-                      searchQuery={coffeeBeanSearchQuery}
-                      showStatusDots={settings?.showStatusDots}
-                      scrollParentRef={coffeeBeanScrollContainer ?? undefined}
-                    />
-                  </div>
-                </div>
+              {initialData.id && coffeeBeans.length > 0 ? (
+                <span
+                  onClick={() => {
+                    setShowCoffeeBeanSelector(!showCoffeeBeanSelector);
+                    if (!showCoffeeBeanSelector) {
+                      setCoffeeBeanSearchQuery('');
+                    }
+                  }}
+                  className="cursor-pointer border-b border-dashed border-neutral-400 text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:border-neutral-600 hover:text-neutral-700 dark:border-neutral-500 dark:text-neutral-400 dark:hover:border-neutral-400 dark:hover:text-neutral-300"
+                >
+                  {selectedCoffeeBean?.name ||
+                    formData.coffeeBeanInfo.name ||
+                    '未知咖啡豆'}
+                </span>
+              ) : (
+                <>
+                  {selectedCoffeeBean?.name ||
+                    formData.coffeeBeanInfo.name ||
+                    '未知咖啡豆'}
+                </>
               )}
-          </div>
-        )}
+              {selectedCoffeeBean?.flavor &&
+                selectedCoffeeBean.flavor.length > 0 && (
+                  <span
+                    onClick={() => setShowFlavorInfo(!showFlavorInfo)}
+                    className="ml-1 cursor-pointer text-xs text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
+                  >
+                    /{' '}
+                    {showFlavorInfo
+                      ? selectedCoffeeBean.flavor.join(' · ')
+                      : '显示风味'}
+                  </span>
+                )}
+            </div>
+          ) : (
+            <input
+              id="custom-bean-name"
+              name="customBeanName"
+              type="text"
+              value={formData.coffeeBeanInfo.name}
+              onChange={e =>
+                setFormData(prev => ({
+                  ...prev,
+                  coffeeBeanInfo: {
+                    ...prev.coffeeBeanInfo,
+                    name: e.target.value,
+                  },
+                }))
+              }
+              placeholder="输入咖啡豆名称..."
+              className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+            />
+          )}
+
+          {initialData.id &&
+            coffeeBeans.length > 0 &&
+            showCoffeeBeanSelector && (
+              <div className="rounded-lg border border-neutral-200/50 bg-neutral-50 dark:border-neutral-800/50 dark:bg-neutral-900">
+                <div className="border-b border-neutral-200/50 p-3 dark:border-neutral-800">
+                  <input
+                    id="coffee-bean-search"
+                    name="coffeeBeanSearch"
+                    type="text"
+                    value={coffeeBeanSearchQuery}
+                    onChange={e => setCoffeeBeanSearchQuery(e.target.value)}
+                    placeholder="搜索咖啡豆..."
+                    className="w-full rounded-md border border-neutral-200/50 bg-white px-3 py-2 text-xs placeholder:text-neutral-400 focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:placeholder:text-neutral-500 dark:focus:ring-neutral-500"
+                  />
+                </div>
+                <div
+                  ref={setCoffeeBeanScrollContainer}
+                  className="max-h-60 overflow-y-auto px-3"
+                >
+                  <CoffeeBeanSelector
+                    coffeeBeans={coffeeBeans}
+                    selectedCoffeeBean={selectedCoffeeBean}
+                    onSelect={handleCoffeeBeanSelect}
+                    searchQuery={coffeeBeanSearchQuery}
+                    showStatusDots={settings?.showStatusDots}
+                    scrollParentRef={coffeeBeanScrollContainer ?? undefined}
+                  />
+                </div>
+              </div>
+            )}
+        </div>
         {/* 笔记图片 */}
         <div className="flex w-full items-center gap-2">
           {formData.image ? (
