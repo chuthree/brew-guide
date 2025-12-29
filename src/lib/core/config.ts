@@ -950,5 +950,7 @@ export const sponsorsList = [
   '一拂',
   '章本振',
   '橙成姜成橙',
-  'fragile',
+  'fragile:)',
+  'keyball',
+  'yoyo',
 ];
