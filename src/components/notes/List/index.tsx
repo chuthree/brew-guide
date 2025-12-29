@@ -1453,33 +1453,33 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           className="scroll-with-bottom-bar h-full w-full overflow-y-auto"
           ref={notesContainerRef}
         >
-        {/* 笔记列表视图 - 始终传递正确的笔记数据 */}
-        <ListView
-          selectedEquipment={selectedEquipment}
-          selectedBean={selectedBean}
-          filterMode={filterMode}
-          onNoteClick={handleNoteClick}
-          onDeleteNote={handleDelete}
-          onCopyNote={handleCopyNote}
-          isShareMode={isShareMode}
-          selectedNotes={selectedNotes}
-          onToggleSelect={handleToggleSelect}
-          searchQuery={searchQuery}
-          isSearching={isSearching}
-          preFilteredNotes={
-            isSearching && searchQuery.trim()
-              ? searchFilteredNotes
-              : filteredNotes
-          }
-          viewMode={viewMode}
-          isDateImageFlowMode={isDateImageFlowMode}
-          scrollParentRef={notesContainerRef.current || undefined}
-          equipmentNames={equipmentNames}
-          beanPrices={{}}
-          coffeeBeans={coffeeBeans}
-          noteDisplayStyle={noteDisplayStyle}
-          settings={settings}
-        />
+          {/* 笔记列表视图 - 始终传递正确的笔记数据 */}
+          <ListView
+            selectedEquipment={selectedEquipment}
+            selectedBean={selectedBean}
+            filterMode={filterMode}
+            onNoteClick={handleNoteClick}
+            onDeleteNote={handleDelete}
+            onCopyNote={handleCopyNote}
+            isShareMode={isShareMode}
+            selectedNotes={selectedNotes}
+            onToggleSelect={handleToggleSelect}
+            searchQuery={searchQuery}
+            isSearching={isSearching}
+            preFilteredNotes={
+              isSearching && searchQuery.trim()
+                ? searchFilteredNotes
+                : filteredNotes
+            }
+            viewMode={viewMode}
+            isDateImageFlowMode={isDateImageFlowMode}
+            scrollParentRef={notesContainerRef.current || undefined}
+            equipmentNames={equipmentNames}
+            beanPrices={{}}
+            coffeeBeans={coffeeBeans}
+            noteDisplayStyle={noteDisplayStyle}
+            settings={settings}
+          />
         </div>
       </div>
 
