@@ -81,7 +81,8 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         ...existingNote,
         ...updates,
         id,
-        timestamp: Date.now(),
+        // 保留传入的 timestamp，如果没有传入则保持原有的 timestamp
+        timestamp: updates.timestamp ?? existingNote.timestamp,
       };
       await db.brewingNotes.put(updatedNote);
       set(state => ({

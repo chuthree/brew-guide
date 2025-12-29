@@ -93,7 +93,7 @@ const ChangeRecordEditModal: React.FC<ChangeRecordEditModalProps> = ({
   // 处理保存
   const handleSave = useCallback(
     (updatedData: BrewingNote) => {
-      // 确保使用最新的时间戳
+      // 确保使用最新的时间戳（来自 Modal 的日期选择器）
       const finalData = {
         ...updatedData,
         timestamp: timestamp.getTime(),
