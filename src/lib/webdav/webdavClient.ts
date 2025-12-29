@@ -349,6 +349,17 @@ export class WebDAVClient {
    */
   async copyFile(source: string, destination: string): Promise<boolean> {
     try {
+      // 🔧 复制前确保目标目录存在（如 backups/）
+      const pathParts = destination.split('/');
+      if (pathParts.length > 1) {
+        const dirPath = pathParts.slice(0, -1).join('/');
+        const remotePath = this.config.remotePath
+          .replace(/^\/+/, '')
+          .replace(/\/+$/, '');
+        const fullDirPath = remotePath ? `${remotePath}/${dirPath}` : dirPath;
+        await this.ensureDirectoryExists(fullDirPath);
+      }
+
       const sourceUrl = this.buildUrl(source);
       const destUrl = this.buildUrl(destination);
       const proxiedUrl = this.getProxiedUrl(sourceUrl);
