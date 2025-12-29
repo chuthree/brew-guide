@@ -630,10 +630,17 @@ export const useStatsData = (
     const dailyConsumption = actualDays > 0 ? totalConsumption / actualDays : 0;
     const dailyCost = actualDays > 0 ? totalCost / actualDays : 0;
 
+    // 库存预测使用基于笔记的消耗（排除容量调整等不计入统计的记录）
+    // 而不是基于容量差值的消耗（会包含容量调整）
+    const noteBasedTotalConsumption =
+      typeConsumption.espresso + typeConsumption.filter + typeConsumption.omni;
+    const dailyConsumptionForInventory =
+      actualDays > 0 ? noteBasedTotalConsumption / actualDays : 0;
+
     // 库存数据（仅全部视图）- 只统计熟豆
     const inventory = isHistoricalView
       ? null
-      : calculateInventory(roastedBeans, dailyConsumption);
+      : calculateInventory(roastedBeans, dailyConsumptionForInventory);
 
     const inventoryByType = isHistoricalView
       ? null
