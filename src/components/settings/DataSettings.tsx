@@ -555,7 +555,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             </button>
           )}
 
-          {/* 下拉上传开关 - 仅在 S3/WebDAV 已选择且已成功连接时显示（Supabase 只支持手动同步） */}
+          {/* 下拉上传开关 - 仅在 S3/WebDAV 已选择且已成功连接时显示（Supabase 是自动实时同步，无需手动操作） */}
           {((syncType === 's3' && s3Settings.lastConnectionSuccess) ||
             (syncType === 'webdav' &&
               webdavSettings.lastConnectionSuccess)) && (

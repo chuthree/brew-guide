@@ -14,13 +14,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SUPABASE_SETUP_SQL } from '@/lib/supabase';
 import { SettingsOptions } from '../Settings';
-import { ExternalLink, Wifi, WifiOff, RefreshCw, Clock } from 'lucide-react';
+import { ExternalLink, Wifi, WifiOff, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
 import { SyncHeaderButton } from './shared';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import { getRealtimeSyncService } from '@/lib/supabase/realtime';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Download } from 'lucide-react';
 
 type SupabaseSyncSettings = NonNullable<SettingsOptions['supabaseSync']>;
 
@@ -52,7 +53,12 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   // 实时同步状态
-  const { realtimeStatus, pendingChangesCount } = useSyncStatusStore();
+  const { realtimeStatus, pendingChangesCount, isInitialSyncing, syncProgress, syncErrorLogs, status: syncStatus } = useSyncStatusStore();
+
+  // 错误日志抽屉状态
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorCopySuccess, setErrorCopySuccess] = useState(false);
+  const errorTextAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const triggerHaptic = (style: 'light' | 'medium' = 'light') => {
     if (hapticFeedback) {
@@ -156,6 +162,18 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
       setTimeout(() => setCopySuccess(false), 2000);
     } catch {
       textAreaRef.current?.select();
+    }
+  };
+
+  // 复制错误日志
+  const handleCopyErrorLogs = async () => {
+    try {
+      await navigator.clipboard.writeText(syncErrorLogs.join('\n'));
+      setErrorCopySuccess(true);
+      triggerHaptic('light');
+      setTimeout(() => setErrorCopySuccess(false), 2000);
+    } catch {
+      errorTextAreaRef.current?.select();
     }
   };
 
@@ -287,7 +305,46 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
               </div>
             )}
 
-            {realtimeStatus === 'connected' && pendingChangesCount === 0 && (
+            {/* 同步进度显示 */}
+            {isInitialSyncing && syncProgress && (
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+                  <Download className="h-3.5 w-3.5 animate-bounce" />
+                  <span>
+                    正在同步{syncProgress.tableName} ({syncProgress.current}/{syncProgress.total})
+                  </span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                    style={{
+                      width: `${Math.round((syncProgress.current / syncProgress.total) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 同步中但无具体进度时显示一般提示 */}
+            {isInitialSyncing && !syncProgress && (
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <span>正在同步数据...</span>
+              </div>
+            )}
+
+            {/* 同步错误显示 */}
+            {syncStatus === 'error' && syncErrorLogs.length > 0 && (
+              <button
+                onClick={() => setShowErrorDrawer(true)}
+                className="mt-2 flex w-full items-center gap-1.5 rounded-md bg-red-50 p-2 text-xs text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>同步失败，点击查看详细日志</span>
+              </button>
+            )}
+
+            {realtimeStatus === 'connected' && pendingChangesCount === 0 && !isInitialSyncing && syncStatus !== 'error' && (
               <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
                 本地变更将自动同步到云端
               </p>
@@ -335,6 +392,35 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           </ActionDrawer.SecondaryButton>
           <ActionDrawer.PrimaryButton onClick={handleCopySQL}>
             {copySuccess ? '已复制' : '复制脚本'}
+          </ActionDrawer.PrimaryButton>
+        </ActionDrawer.Actions>
+      </ActionDrawer>
+
+      {/* 错误日志抽屉 */}
+      <ActionDrawer
+        isOpen={showErrorDrawer}
+        onClose={() => setShowErrorDrawer(false)}
+        historyId="supabase-error-drawer"
+      >
+        <ActionDrawer.Icon icon={DataAlertIcon} />
+        <ActionDrawer.Content>
+          <p className="mb-3 text-neutral-500 dark:text-neutral-400">
+            同步过程中遇到了问题。请复制以下日志发送给开发者以帮助排查问题。
+          </p>
+          <textarea
+            ref={errorTextAreaRef}
+            readOnly
+            onClick={() => errorTextAreaRef.current?.select()}
+            value={syncErrorLogs.join('\n')}
+            className="h-48 w-full resize-none rounded-md border border-neutral-200/50 bg-neutral-50 p-3 font-mono text-xs leading-relaxed text-neutral-700 focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+          />
+        </ActionDrawer.Content>
+        <ActionDrawer.Actions>
+          <ActionDrawer.SecondaryButton onClick={() => setShowErrorDrawer(false)}>
+            关闭
+          </ActionDrawer.SecondaryButton>
+          <ActionDrawer.PrimaryButton onClick={handleCopyErrorLogs}>
+            {errorCopySuccess ? '已复制' : '复制日志'}
           </ActionDrawer.PrimaryButton>
         </ActionDrawer.Actions>
       </ActionDrawer>
