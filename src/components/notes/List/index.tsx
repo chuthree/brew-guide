@@ -1374,9 +1374,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   if (!isOpen) return null;
 
   return (
-    <>
+    <div className="flex h-full flex-col overflow-hidden">
       {/* 主要内容区域 - 始终显示笔记列表 */}
-      <div className="sticky top-0 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
+      <div className="sticky top-0 z-10 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
         {/* 数量显示 */}
         <div className="mb-6 flex items-center justify-between px-6">
           <div className="text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
@@ -1447,10 +1447,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         />
       </div>
 
-      <div
-        className="scroll-with-bottom-bar h-full w-full overflow-y-auto"
-        ref={notesContainerRef}
-      >
+      {/* 内容区域 - 可滚动 */}
+      <div className="flex-1 overflow-hidden">
+        <div
+          className="scroll-with-bottom-bar h-full w-full overflow-y-auto"
+          ref={notesContainerRef}
+        >
         {/* 笔记列表视图 - 始终传递正确的笔记数据 */}
         <ListView
           selectedEquipment={selectedEquipment}
@@ -1478,6 +1480,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           noteDisplayStyle={noteDisplayStyle}
           settings={settings}
         />
+        </div>
       </div>
 
       {/* 底部操作栏 - 分享模式下显示保存和取消按钮，图片流模式下隐藏添加按钮 */}
@@ -1561,7 +1564,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         itemType="笔记"
         onExitComplete={() => setDeleteConfirmData(null)}
       />
-    </>
+    </div>
   );
 };
 
