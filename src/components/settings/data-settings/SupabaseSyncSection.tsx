@@ -14,7 +14,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SUPABASE_SETUP_SQL } from '@/lib/supabase';
 import { SettingsOptions } from '../Settings';
-import { ExternalLink, Wifi, WifiOff, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
+import {
+  ExternalLink,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Clock,
+  AlertTriangle,
+} from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
 import { SyncHeaderButton } from './shared';
@@ -53,7 +60,14 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   // 实时同步状态
-  const { realtimeStatus, pendingChangesCount, isInitialSyncing, syncProgress, syncErrorLogs, status: syncStatus } = useSyncStatusStore();
+  const {
+    realtimeStatus,
+    pendingChangesCount,
+    isInitialSyncing,
+    syncProgress,
+    syncErrorLogs,
+    status: syncStatus,
+  } = useSyncStatusStore();
 
   // 错误日志抽屉状态
   const [showErrorDrawer, setShowErrorDrawer] = useState(false);
@@ -311,7 +325,8 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
                 <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
                   <Download className="h-3.5 w-3.5 animate-bounce" />
                   <span>
-                    正在同步{syncProgress.tableName} ({syncProgress.current}/{syncProgress.total})
+                    正在同步{syncProgress.tableName} ({syncProgress.current}/
+                    {syncProgress.total})
                   </span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
@@ -344,11 +359,14 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
               </button>
             )}
 
-            {realtimeStatus === 'connected' && pendingChangesCount === 0 && !isInitialSyncing && syncStatus !== 'error' && (
-              <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-                本地变更将自动同步到云端
-              </p>
-            )}
+            {realtimeStatus === 'connected' &&
+              pendingChangesCount === 0 &&
+              !isInitialSyncing &&
+              syncStatus !== 'error' && (
+                <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                  本地变更将自动同步到云端
+                </p>
+              )}
 
             {realtimeStatus !== 'connected' &&
               realtimeStatus !== 'connecting' &&
@@ -416,7 +434,9 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
           />
         </ActionDrawer.Content>
         <ActionDrawer.Actions>
-          <ActionDrawer.SecondaryButton onClick={() => setShowErrorDrawer(false)}>
+          <ActionDrawer.SecondaryButton
+            onClick={() => setShowErrorDrawer(false)}
+          >
             关闭
           </ActionDrawer.SecondaryButton>
           <ActionDrawer.PrimaryButton onClick={handleCopyErrorLogs}>

@@ -30,7 +30,9 @@ export function useCloudSyncConnection(
   // Supabase 是自动实时同步，不需要手动同步按钮，所以返回 disconnected
   // 只有 S3 和 WebDAV 才需要手动同步功能
   const status: CloudSyncStatus =
-    provider !== 'none' && provider !== 'supabase' ? 'connected' : 'disconnected';
+    provider !== 'none' && provider !== 'supabase'
+      ? 'connected'
+      : 'disconnected';
   const [isSyncing, setIsSyncing] = useState(false);
 
   const performSync = useCallback(

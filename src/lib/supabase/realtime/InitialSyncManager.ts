@@ -36,7 +36,10 @@ import {
 import type { RealtimeSyncTable } from './types';
 import type { Method } from '@/lib/core/config';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { useSyncStatusStore, type SyncProgressInfo } from '@/lib/stores/syncStatusStore';
+import {
+  useSyncStatusStore,
+  type SyncProgressInfo,
+} from '@/lib/stores/syncStatusStore';
 
 // 网络请求超时时间 (ms)
 const SYNC_TIMEOUT = 60000; // 增加到 60s 以适应移动端大文件传输
@@ -151,12 +154,15 @@ export class InitialSyncManager {
         stats.uploaded += result.value.uploaded;
         stats.downloaded += result.value.downloaded;
         stats.deleted += result.value.deleted;
-        errorLogs.push(`✓ ${tableName}: ↑${result.value.uploaded} ↓${result.value.downloaded} ×${result.value.deleted}`);
+        errorLogs.push(
+          `✓ ${tableName}: ↑${result.value.uploaded} ↓${result.value.downloaded} ×${result.value.deleted}`
+        );
       } else {
         errorCount++;
-        const errorMsg = result.reason instanceof Error
-          ? result.reason.message
-          : String(result.reason);
+        const errorMsg =
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason);
         console.error(`[InitialSync] ${tableName} 同步失败:`, result.reason);
         errorLogs.push(`✗ ${tableName}: ${errorMsg}`);
       }
@@ -193,15 +199,27 @@ export class InitialSyncManager {
     if (typeof window !== 'undefined') {
       if (errorCount > 0) {
         // 如果有错误发生，存储详细日志
-        useSyncStatusStore.getState().setSyncError(
-          errorCount === results.length ? '同步失败，请检查网络' : '部分数据同步失败',
-          errorLogs
-        );
+        useSyncStatusStore
+          .getState()
+          .setSyncError(
+            errorCount === results.length
+              ? '同步失败，请检查网络'
+              : '部分数据同步失败',
+            errorLogs
+          );
 
         if (errorCount === results.length) {
-          showToast({ type: 'error', title: '同步失败，点击查看详情', duration: 5000 });
+          showToast({
+            type: 'error',
+            title: '同步失败，点击查看详情',
+            duration: 5000,
+          });
         } else {
-          showToast({ type: 'warning', title: '部分数据同步失败，点击查看详情', duration: 5000 });
+          showToast({
+            type: 'warning',
+            title: '部分数据同步失败，点击查看详情',
+            duration: 5000,
+          });
         }
       } else if (
         stats.downloaded > 0 ||
@@ -344,16 +362,21 @@ export class InitialSyncManager {
         });
 
         const fetchResult = await withTimeout(
-          fetchRemoteRecordsByIds(this.client, table, idsToDownload, (current, total) => {
-            // 进度回调：更新下载进度
-            useSyncStatusStore.getState().setSyncProgress({
-              table,
-              tableName,
-              current,
-              total,
-              phase: 'download',
-            });
-          }),
+          fetchRemoteRecordsByIds(
+            this.client,
+            table,
+            idsToDownload,
+            (current, total) => {
+              // 进度回调：更新下载进度
+              useSyncStatusStore.getState().setSyncProgress({
+                table,
+                tableName,
+                current,
+                total,
+                phase: 'download',
+              });
+            }
+          ),
           DOWNLOAD_TIMEOUT, // 使用更长的超时时间
           `下载 ${tableName} 详情超时 (共 ${idsToDownload.length} 条)`
         );
