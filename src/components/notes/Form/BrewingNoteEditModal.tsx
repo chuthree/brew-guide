@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Drawer } from 'vaul';
+import { Capacitor } from '@capacitor/core';
 import { ArrowLeft } from 'lucide-react';
 import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
@@ -27,6 +27,16 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   settings,
   isCopy = false, // 默认不是复制操作
 }) => {
+  // 动画状态管理
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // 平台检测
+  const [isIOS, setIsIOS] = useState(false);
+
+  // Modal ref
+  const modalRef = useRef<HTMLDivElement>(null);
+
   // 时间戳状态管理
   const [timestamp, setTimestamp] = useState<Date>(
     new Date(initialData?.timestamp || Date.now())
@@ -35,6 +45,63 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   // 日期选择器状态
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // 处理显示/隐藏动画
+  useEffect(() => {
+    if (showModal) {
+      setShouldRender(true);
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [showModal]);
+
+  // 检测平台
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      const platform = Capacitor.getPlatform();
+      setIsIOS(platform === 'ios');
+    }
+  }, []);
+
+  // 监听输入框聚焦，确保在iOS上输入框可见
+  useEffect(() => {
+    if (!shouldRender) return;
+
+    const modalElement = modalRef.current;
+    if (!modalElement) return;
+
+    const handleInputFocus = (e: Event) => {
+      const target = e.target as HTMLElement;
+
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT')
+      ) {
+        if (isIOS) {
+          setTimeout(() => {
+            target.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+            });
+          }, 300);
+        }
+      }
+    };
+
+    modalElement.addEventListener('focusin', handleInputFocus);
+
+    return () => {
+      modalElement.removeEventListener('focusin', handleInputFocus);
+    };
+  }, [shouldRender, isIOS]);
 
   // 重置时间戳当初始数据变化时
   useEffect(() => {
@@ -127,14 +194,6 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     }
   }, [initialData]);
 
-  // 处理抽屉状态变化
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) handleClose();
-    },
-    [handleClose]
-  );
-
   // 历史栈和主题色管理
   useThemeColor({ useOverlay: true, enabled: showModal });
   useModalHistory({
@@ -143,103 +202,100 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     onClose: handleClose,
   });
 
+  if (!shouldRender) return null;
+
   return (
-    <Drawer.Root
-      open={showModal}
-      onOpenChange={handleOpenChange}
-      repositionInputs={false}
-    >
-      <Drawer.Portal>
-        <Drawer.Overlay
-          className="fixed inset-0 z-50 bg-black/50"
-          style={{ position: 'fixed' }}
-        />
-        <Drawer.Content
-          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[90vh] max-w-md flex-col rounded-t-3xl bg-white outline-none dark:bg-neutral-900"
-          aria-describedby={undefined}
-        >
-          <Drawer.Title className="sr-only">编辑笔记</Drawer.Title>
+    <>
+      {/* 背景遮罩 */}
+      <div
+        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        onClick={handleClose}
+      />
 
-          <div className="pb-safe-bottom flex h-full flex-col overflow-hidden px-6 pt-4">
-            {/* 顶部标题栏 */}
-            <div className="flex shrink-0 items-center justify-between">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="-m-3 rounded-full p-3"
-              >
-                <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
-              </button>
+      {/* 抽屉内容 */}
+      <div
+        ref={modalRef}
+        className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[90vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
+      >
+        <div className="pb-safe-bottom flex h-full flex-col overflow-hidden px-6 pt-4">
+          {/* 顶部标题栏 */}
+          <div className="flex shrink-0 items-center justify-between">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="-m-3 rounded-full p-3"
+            >
+              <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
+            </button>
 
-              {/* 中间的时间戳编辑区域 */}
-              <div className="flex items-baseline">
-                <span className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                  编辑记录 ·
-                </span>
+            {/* 中间的时间戳编辑区域 */}
+            <div className="flex items-baseline">
+              <span className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                编辑记录 ·
+              </span>
 
-                {/* 可点击的日期部分 */}
-                <div className="relative ml-1" ref={datePickerRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowDatePicker(!showDatePicker)}
-                    className="cursor-pointer border-b border-dashed border-neutral-400 text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:border-neutral-600 hover:text-neutral-700 dark:border-neutral-500 dark:text-neutral-400 dark:hover:border-neutral-400 dark:hover:text-neutral-300"
+              {/* 可点击的日期部分 */}
+              <div className="relative ml-1" ref={datePickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className="cursor-pointer border-b border-dashed border-neutral-400 text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:border-neutral-600 hover:text-neutral-700 dark:border-neutral-500 dark:text-neutral-400 dark:hover:border-neutral-400 dark:hover:text-neutral-300"
+                >
+                  {`${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')}`}
+                </button>
+
+                {/* 日期选择器 */}
+                {showDatePicker && (
+                  <div
+                    className="absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 transform rounded-lg border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900"
+                    style={{ width: '280px' }}
                   >
-                    {`${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')}`}
-                  </button>
-
-                  {/* 日期选择器 */}
-                  {showDatePicker && (
-                    <div
-                      className="absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 transform rounded-lg border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900"
-                      style={{ width: '280px' }}
-                    >
-                      <Calendar
-                        selected={timestamp}
-                        onSelect={handleDateChange}
-                        locale="zh-CN"
-                        initialFocus
-                      />
-                    </div>
-                  )}
-                </div>
+                    <Calendar
+                      selected={timestamp}
+                      onSelect={handleDateChange}
+                      locale="zh-CN"
+                      initialFocus
+                    />
+                  </div>
+                )}
               </div>
-
-              {/* 占位元素，保持布局平衡 */}
-              <div className="w-12"></div>
             </div>
 
-            {/* 表单内容容器 */}
-            <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
-              {initialData && (
-                <BrewingNoteForm
-                  id={initialData.id}
-                  onClose={handleClose}
-                  onSave={handleSave}
-                  initialData={initialData}
-                  inBrewPage={true}
-                  showSaveButton={false}
-                  hideHeader={true}
-                  onTimestampChange={handleTimestampChange}
-                  settings={settings}
-                  isCopy={isCopy}
-                />
-              )}
-            </div>
-
-            {/* 底部保存按钮 */}
-            <div className="modal-bottom-button flex shrink-0 items-center justify-center">
-              <button
-                type="button"
-                onClick={handleSaveClick}
-                className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
-              >
-                <span className="font-medium">保存笔记</span>
-              </button>
-            </div>
+            {/* 占位元素，保持布局平衡 */}
+            <div className="w-12"></div>
           </div>
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
+
+          {/* 表单内容容器 */}
+          <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+            {initialData && (
+              <BrewingNoteForm
+                id={initialData.id}
+                onClose={handleClose}
+                onSave={handleSave}
+                initialData={initialData}
+                inBrewPage={true}
+                showSaveButton={false}
+                hideHeader={true}
+                onTimestampChange={handleTimestampChange}
+                settings={settings}
+                isCopy={isCopy}
+              />
+            )}
+          </div>
+
+          {/* 底部保存按钮 */}
+          <div className="modal-bottom-button flex shrink-0 items-center justify-center">
+            <button
+              type="button"
+              onClick={handleSaveClick}
+              className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
+            >
+              <span className="font-medium">保存笔记</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 
