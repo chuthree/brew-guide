@@ -369,22 +369,25 @@ export const getDefaultAmountPerCup = (
 
 /**
  * 逐个咖啡豆计算预计杯数
- * 
+ *
  * 算法说明：
  * 对于每个咖啡豆，判断其剩余量是否足够冲泡一杯：
  * - 每个豆子的杯数 = floor(remaining / amountPerCup)
  * - 总杯数 = 各个豆子杯数之和
- * 
+ *
  * 这样可以更准确地反映实际可冲泡杯数。
  * 例如：3款豆子分别剩余 15g/15g/16g，按 15g/杯计算：
  * - 旧算法：floor(46 / 平均用量) 可能因历史记录被拉高而不准确
  * - 新算法：floor(15/15) + floor(15/15) + floor(16/15) = 1 + 1 + 1 = 3 杯
- * 
+ *
  * @param beans 咖啡豆数组（需包含 remaining 和 beanType 字段）
  * @returns 预计杯数
  */
 export const calculateEstimatedCupsPerBean = (
-  beans: Array<{ remaining?: string; beanType?: 'espresso' | 'filter' | 'omni' }>
+  beans: Array<{
+    remaining?: string;
+    beanType?: 'espresso' | 'filter' | 'omni';
+  }>
 ): number => {
   if (!beans || beans.length === 0) {
     return 0;
