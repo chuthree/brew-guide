@@ -36,23 +36,9 @@ import {
 import type { RealtimeSyncTable } from './types';
 import type { Method } from '@/lib/core/config';
 import { showToast } from '@/components/common/feedback/LightToast';
-import {
-  useSyncStatusStore,
-  type SyncProgressInfo,
-} from '@/lib/stores/syncStatusStore';
 
 // 网络请求超时时间 (ms)
 const SYNC_TIMEOUT = 60000; // 增加到 60s 以适应移动端大文件传输
-const DOWNLOAD_TIMEOUT = 180000; // 下载详情超时增加到 180s，适应大数据量
-
-// 表名到友好名称的映射
-const TABLE_DISPLAY_NAMES: Record<string, string> = {
-  [SYNC_TABLES.COFFEE_BEANS]: '咖啡豆',
-  [SYNC_TABLES.BREWING_NOTES]: '冲煮笔记',
-  [SYNC_TABLES.CUSTOM_EQUIPMENTS]: '自定义器具',
-  [SYNC_TABLES.CUSTOM_METHODS]: '自定义方案',
-  [SYNC_TABLES.USER_SETTINGS]: '设置',
-};
 
 /**
  * 带超时的 Promise 包装器
@@ -129,42 +115,18 @@ export class InitialSyncManager {
       this.syncTableMethods(lastSyncTime),
     ]);
 
-    // 统计结果并收集错误日志
+    // 统计结果
     const stats: SyncStats = { uploaded: 0, downloaded: 0, deleted: 0 };
     let errorCount = 0;
-    const tableNames = [
-      SYNC_TABLES.COFFEE_BEANS,
-      SYNC_TABLES.BREWING_NOTES,
-      SYNC_TABLES.CUSTOM_EQUIPMENTS,
-      SYNC_TABLES.CUSTOM_METHODS,
-    ];
-    const errorLogs: string[] = [
-      `=== Supabase 同步日志 ===`,
-      '',
-      `时间: ${new Date().toLocaleString('zh-CN')}`,
-      `上次同步: ${lastSyncTime ? new Date(lastSyncTime).toLocaleString('zh-CN') : '首次'}`,
-      '',
-    ];
 
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      const tableName = TABLE_DISPLAY_NAMES[tableNames[i]] || tableNames[i];
-
+    for (const result of results) {
       if (result.status === 'fulfilled') {
         stats.uploaded += result.value.uploaded;
         stats.downloaded += result.value.downloaded;
         stats.deleted += result.value.deleted;
-        errorLogs.push(
-          `✓ ${tableName}: ↑${result.value.uploaded} ↓${result.value.downloaded} ×${result.value.deleted}`
-        );
       } else {
         errorCount++;
-        const errorMsg =
-          result.reason instanceof Error
-            ? result.reason.message
-            : String(result.reason);
-        console.error(`[InitialSync] ${tableName} 同步失败:`, result.reason);
-        errorLogs.push(`✗ ${tableName}: ${errorMsg}`);
+        console.error('[InitialSync] 表同步失败:', result.reason);
       }
     }
 
@@ -185,41 +147,14 @@ export class InitialSyncManager {
       window.dispatchEvent(new CustomEvent('syncCompleted'));
     }
 
-    // 添加环境信息到日志
-    if (typeof window !== 'undefined') {
-      errorLogs.push(
-        '',
-        '--- 环境信息 ---',
-        `URL: ${window.location.href}`,
-        `User Agent: ${navigator.userAgent.substring(0, 100)}...`
-      );
-    }
-
     // 同步完成提示
     if (typeof window !== 'undefined') {
       if (errorCount > 0) {
-        // 如果有错误发生，存储详细日志
-        useSyncStatusStore
-          .getState()
-          .setSyncError(
-            errorCount === results.length
-              ? '同步失败，请检查网络'
-              : '部分数据同步失败',
-            errorLogs
-          );
-
+        // 如果有错误发生
         if (errorCount === results.length) {
-          showToast({
-            type: 'error',
-            title: '同步失败，点击查看详情',
-            duration: 5000,
-          });
+          showToast({ type: 'error', title: '同步失败，请检查网络' });
         } else {
-          showToast({
-            type: 'warning',
-            title: '部分数据同步失败，点击查看详情',
-            duration: 5000,
-          });
+          showToast({ type: 'warning', title: '部分数据同步失败' });
         }
       } else if (
         stats.downloaded > 0 ||
@@ -350,35 +285,10 @@ export class InitialSyncManager {
         console.log(
           `[InitialSync] ${table} 需要下载 ${idsToDownload.length} 条完整记录`
         );
-
-        // 更新进度状态：开始下载
-        const tableName = TABLE_DISPLAY_NAMES[table] || table;
-        useSyncStatusStore.getState().setSyncProgress({
-          table,
-          tableName,
-          current: 0,
-          total: idsToDownload.length,
-          phase: 'download',
-        });
-
         const fetchResult = await withTimeout(
-          fetchRemoteRecordsByIds(
-            this.client,
-            table,
-            idsToDownload,
-            (current, total) => {
-              // 进度回调：更新下载进度
-              useSyncStatusStore.getState().setSyncProgress({
-                table,
-                tableName,
-                current,
-                total,
-                phase: 'download',
-              });
-            }
-          ),
-          DOWNLOAD_TIMEOUT, // 使用更长的超时时间
-          `下载 ${tableName} 详情超时 (共 ${idsToDownload.length} 条)`
+          fetchRemoteRecordsByIds(this.client, table, idsToDownload),
+          SYNC_TIMEOUT * 2, // 下载数据给予更多时间
+          `下载 ${table} 详情超时`
         );
 
         if (fetchResult.success && fetchResult.data) {
@@ -392,9 +302,6 @@ export class InitialSyncManager {
           );
           // 如果下载失败，我们仍然继续，但这些记录将无法更新
         }
-
-        // 清空进度（该表下载完成）
-        useSyncStatusStore.getState().setSyncProgress(null);
       }
 
       // 组装完整的 remoteRecords

@@ -28,25 +28,11 @@ export type RealtimeStatus =
   | 'connected'
   | 'error';
 
-// 同步进度信息（用于大数据量同步时显示进度）
-export interface SyncProgressInfo {
-  /** 当前正在同步的表名 */
-  table: string;
-  /** 表的友好名称（用于 UI 显示） */
-  tableName: string;
-  /** 当前已完成数量 */
-  current: number;
-  /** 总数量 */
-  total: number;
-  /** 阶段：meta=拉取元数据, download=下载详情, upload=上传 */
-  phase: 'meta' | 'download' | 'upload';
-}
-
 // 状态自动重置配置
 const STATUS_AUTO_RESET_CONFIG = {
   success: 500, // 成功后快速重置
   error: 3000, // 错误状态保持 3 秒
-  syncing: 120000, // 同步超时保护，增加到 120 秒以支持大数据量
+  syncing: 30000, // 同步超时保护
 };
 
 interface SyncStatusState {
@@ -61,12 +47,6 @@ interface SyncStatusState {
   pendingChangesCount: number;
   isInitialSyncing: boolean;
 
-  // 同步进度（用于大数据量同步时显示详细进度）
-  syncProgress: SyncProgressInfo | null;
-
-  // 详细错误日志（用于用户复制排查问题）
-  syncErrorLogs: string[];
-
   // 内部状态
   _resetTimer: ReturnType<typeof setTimeout> | null;
   _syncingTimeout: ReturnType<typeof setTimeout> | null;
@@ -75,7 +55,7 @@ interface SyncStatusState {
   setStatus: (status: SyncStatus) => void;
   setProvider: (provider: SyncProvider) => void;
   setSyncSuccess: () => void;
-  setSyncError: (message: string, logs?: string[]) => void;
+  setSyncError: (message: string) => void;
   setSyncing: () => void;
   reset: () => void;
 
@@ -84,9 +64,6 @@ interface SyncStatusState {
   setRealtimeEnabled: (enabled: boolean) => void;
   setPendingChangesCount: (count: number) => void;
   setInitialSyncing: (syncing: boolean) => void;
-
-  // 进度更新方法
-  setSyncProgress: (progress: SyncProgressInfo | null) => void;
 
   // 内部方法
   _clearTimers: () => void;
@@ -105,12 +82,6 @@ export const useSyncStatusStore = create<SyncStatusState>()(
     realtimeEnabled: false,
     pendingChangesCount: 0,
     isInitialSyncing: false,
-
-    // 同步进度初始状态
-    syncProgress: null,
-
-    // 详细错误日志初始状态
-    syncErrorLogs: [],
 
     _resetTimer: null,
     _syncingTimeout: null,
@@ -156,20 +127,18 @@ export const useSyncStatusStore = create<SyncStatusState>()(
         status: 'success',
         lastSyncTime: Date.now(),
         errorMessage: null,
-        syncErrorLogs: [], // 清空错误日志
       });
 
       _scheduleReset(STATUS_AUTO_RESET_CONFIG.success);
     },
 
-    setSyncError: (message, logs) => {
+    setSyncError: message => {
       const { _clearTimers, _scheduleReset } = get();
       _clearTimers();
 
       set({
         status: 'error',
         errorMessage: message,
-        syncErrorLogs: logs || [],
       });
 
       _scheduleReset(STATUS_AUTO_RESET_CONFIG.error);
@@ -224,15 +193,6 @@ export const useSyncStatusStore = create<SyncStatusState>()(
 
     setInitialSyncing: (syncing: boolean) => {
       set({ isInitialSyncing: syncing });
-      // 开始/结束同步时清空进度
-      if (!syncing) {
-        set({ syncProgress: null });
-      }
-    },
-
-    // 进度更新方法
-    setSyncProgress: (progress: SyncProgressInfo | null) => {
-      set({ syncProgress: progress });
     },
   }))
 );

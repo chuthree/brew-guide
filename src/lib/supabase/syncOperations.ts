@@ -135,14 +135,11 @@ export async function fetchRemoteAllRecords<T>(
 
 /**
  * 根据 ID 列表批量获取云端记录
- *
- * @param onProgress 可选的进度回调，用于在批量下载时报告进度
  */
 export async function fetchRemoteRecordsByIds<T>(
   client: SupabaseClient,
   table: SyncTableName,
-  ids: string[],
-  onProgress?: (current: number, total: number) => void
+  ids: string[]
 ): Promise<SyncOperationResult<Array<{ id: string; data: T }>>> {
   if (ids.length === 0) {
     return { success: true, data: [], affectedCount: 0 };
@@ -152,11 +149,9 @@ export async function fetchRemoteRecordsByIds<T>(
     // Supabase URL 长度有限制，如果 ID 太多需要分批
     // 优化：增大批次大小并使用并发请求，大幅提升下载速度
     // 修复：添加并发限制和重试机制，防止移动端网络拥塞导致超时
-    // 针对大数据量场景降低批次大小，提高成功率
-    const BATCH_SIZE = 15; // 从 25 降到 15，减少单次请求压力
-    const CONCURRENCY_LIMIT = 3; // 从 4 降到 3，减少并发压力
+    const BATCH_SIZE = 25;
+    const CONCURRENCY_LIMIT = 4;
     const allRecords: Array<{ id: string; data: T }> = [];
-    let downloadedCount = 0;
 
     // 1. 将 ID 分批
     const batches: string[][] = [];
@@ -165,7 +160,7 @@ export async function fetchRemoteRecordsByIds<T>(
     }
 
     // 2. 定义带重试的获取函数
-    const fetchBatchWithRetry = async (batchIds: string[], retries = 3) => {
+    const fetchBatchWithRetry = async (batchIds: string[], retries = 2) => {
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
           const { data, error } = await client
@@ -197,18 +192,12 @@ export async function fetchRemoteRecordsByIds<T>(
       // 等待当前组完成
       const batchResults = await Promise.all(batchPromises);
 
-      // 收集结果并更新进度
+      // 收集结果
       batchResults.forEach(batchData => {
         if (batchData) {
           allRecords.push(...batchData);
-          downloadedCount += batchData.length;
         }
       });
-
-      // 报告进度
-      if (onProgress) {
-        onProgress(downloadedCount, ids.length);
-      }
     }
 
     return {

@@ -397,7 +397,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   const syncStatus = useSyncStatusStore(state => state.status);
   const syncProvider = useSyncStatusStore(state => state.provider);
   const isInitialSyncing = useSyncStatusStore(state => state.isInitialSyncing);
-  const syncProgress = useSyncStatusStore(state => state.syncProgress);
 
   // 判断是否正在同步
   const isSyncing = syncStatus === 'syncing' || isInitialSyncing;
@@ -1635,11 +1634,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         <div className="mt-auto hidden px-6 pb-6 md:block">
           <div className="flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500">
             <AppleSpinner className="h-3 w-3" />
-            <span>
-              {syncProgress
-                ? `同步${syncProgress.tableName} ${syncProgress.current}/${syncProgress.total}`
-                : '同步中'}
-            </span>
+            <span>同步中</span>
           </div>
         </div>
       )}
