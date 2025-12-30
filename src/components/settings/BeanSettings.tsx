@@ -95,10 +95,16 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       <BeanPreview settings={settings} />
 
       <SettingSection title="概要" className="mt-6">
-        <SettingRow label="详细剩余量" isLast>
+        <SettingRow label="详细剩余量">
           <SettingToggle
             checked={settings.showBeanSummary || false}
             onChange={checked => handleChange('showBeanSummary', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="预计杯数" isLast>
+          <SettingToggle
+            checked={settings.showEstimatedCups || false}
+            onChange={checked => handleChange('showEstimatedCups', checked)}
           />
         </SettingRow>
       </SettingSection>

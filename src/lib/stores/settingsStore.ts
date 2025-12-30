@@ -63,6 +63,7 @@ export const defaultSettings: AppSettings = {
   showTotalPrice: false,
   showStatusDots: false,
   showBeanSummary: false,
+  showEstimatedCups: false,
   noteDisplayStyle: 'list',
 
   // 安全区域设置

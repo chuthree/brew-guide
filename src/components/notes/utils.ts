@@ -354,3 +354,61 @@ export const formatConsumption = (amount: number): string => {
     return `${(amount / 1000).toFixed(2)}kg`;
   }
 };
+
+/**
+ * 获取咖啡豆类型对应的默认每杯用量
+ * @param beanType 咖啡豆类型
+ * @returns 默认每杯用量(g)
+ */
+export const getDefaultAmountPerCup = (
+  beanType: 'espresso' | 'filter' | 'omni' | undefined
+): number => {
+  // 意式默认 18g，手冲/全能默认 15g
+  return beanType === 'espresso' ? 18 : 15;
+};
+
+/**
+ * 逐个咖啡豆计算预计杯数
+ * 
+ * 算法说明：
+ * 对于每个咖啡豆，判断其剩余量是否足够冲泡一杯：
+ * - 每个豆子的杯数 = floor(remaining / amountPerCup)
+ * - 总杯数 = 各个豆子杯数之和
+ * 
+ * 这样可以更准确地反映实际可冲泡杯数。
+ * 例如：3款豆子分别剩余 15g/15g/16g，按 15g/杯计算：
+ * - 旧算法：floor(46 / 平均用量) 可能因历史记录被拉高而不准确
+ * - 新算法：floor(15/15) + floor(15/15) + floor(16/15) = 1 + 1 + 1 = 3 杯
+ * 
+ * @param beans 咖啡豆数组（需包含 remaining 和 beanType 字段）
+ * @returns 预计杯数
+ */
+export const calculateEstimatedCupsPerBean = (
+  beans: Array<{ remaining?: string; beanType?: 'espresso' | 'filter' | 'omni' }>
+): number => {
+  if (!beans || beans.length === 0) {
+    return 0;
+  }
+
+  let totalCups = 0;
+
+  for (const bean of beans) {
+    // 解析剩余量
+    const remainingStr = bean.remaining || '0';
+    const remainingMatch = remainingStr.match(/(\d+(?:\.\d+)?)/);
+    const remaining = remainingMatch ? parseFloat(remainingMatch[1]) : 0;
+
+    if (remaining <= 0) {
+      continue;
+    }
+
+    // 使用豆子类型的默认值：意式 18g，手冲/全能 15g
+    const amountPerCup = getDefaultAmountPerCup(bean.beanType);
+
+    // 计算该豆子可冲泡的杯数
+    const cupsFromBean = Math.floor(remaining / amountPerCup);
+    totalCups += cupsFromBean;
+  }
+
+  return totalCups;
+};

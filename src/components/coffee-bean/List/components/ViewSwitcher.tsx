@@ -367,6 +367,8 @@ interface ViewSwitcherProps {
   onSearchHistoryClick?: (query: string) => void;
   // 生豆库启用设置
   enableGreenBeanInventory?: boolean;
+  // 预计杯数
+  estimatedCups?: number;
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -436,10 +438,15 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   onSearchHistoryClick,
   // 生豆库启用设置
   enableGreenBeanInventory = false,
+  // 预计杯数
+  estimatedCups,
 }) => {
   // 获取概要显示设置
   const showBeanSummary = useSettingsStore(
     state => state.settings.showBeanSummary
+  );
+  const showEstimatedCups = useSettingsStore(
+    state => state.settings.showEstimatedCups
   );
 
   // 格式化重量显示
@@ -711,6 +718,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   )}
                   ，总共 {originalTotalWeight || '0g'}
                   {totalWeight ? `，剩余 ${totalWeight}` : ''}
+                  {showEstimatedCups &&
+                    selectedBeanState === 'roasted' &&
+                    estimatedCups !== undefined &&
+                    estimatedCups > 0 &&
+                    `，约 ${estimatedCups} 杯`}
                 </span>
               ) : (
                 <span className="flex items-baseline">
@@ -734,6 +746,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </span>
                   )}
                   {totalWeight ? `，剩余 ${totalWeight}` : ''}
+                  {showEstimatedCups &&
+                    selectedBeanState === 'roasted' &&
+                    estimatedCups !== undefined &&
+                    estimatedCups > 0 &&
+                    `，约 ${estimatedCups} 杯`}
                   {showBeanSummary &&
                     selectedBeanState === 'roasted' &&
                     (!selectedBeanType || selectedBeanType === 'all') &&

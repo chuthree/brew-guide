@@ -87,6 +87,7 @@ import {
   getDefaultVisibleColumns,
 } from './components/TableView';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
+import { calculateEstimatedCupsPerBean } from '@/components/notes/utils';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -556,6 +557,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     state => state.settings.enableGreenBeanInventory === true
   );
 
+  // 预计杯数设置
+  const showEstimatedCups = useSettingsStore(
+    state => state.settings.showEstimatedCups === true
+  );
+
   // 当生豆库被禁用且当前在生豆库视图时，切换回熟豆库
   useEffect(() => {
     if (!enableGreenBeanInventory && selectedBeanState === 'green') {
@@ -569,6 +575,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const hasImageBeans = useMemo(() => {
     return beans.some(bean => bean.image && bean.image.trim() !== '');
   }, [beans]);
+
+  // 计算预计杯数（使用逐豆计算算法，更准确地反映实际可冲泡杯数）
+  const estimatedCups = useMemo(() => {
+    // 只在显示预计杯数设置开启且是熟豆时计算
+    if (!showEstimatedCups || selectedBeanState !== 'roasted') {
+      return undefined;
+    }
+
+    return calculateEstimatedCupsPerBean(filteredBeans);
+  }, [showEstimatedCups, selectedBeanState, filteredBeans]);
 
   // 切换图片流模式（简化版，直接使用 updateDisplayMode）
   const handleToggleImageFlowMode = useCallback(() => {
@@ -1344,6 +1360,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       // 获取showBeanSummary设置
       const showBeanSummary =
         useSettingsStore.getState().settings.showBeanSummary ?? false;
+      const showEstimatedCupsForExport =
+        useSettingsStore.getState().settings.showEstimatedCups ?? false;
 
       // 生成概要文本，与界面显示保持一致
       const summaryText = (() => {
@@ -1354,6 +1372,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           text = `${beansToExport.length} 款${beanTypeName}，总共 ${originalTotalWeightText}，剩余 ${totalWeightText}`;
         } else {
           text = `${beansToExport.length} 款${beanTypeName}，剩余 ${totalWeightText}`;
+        }
+
+        // 添加预计杯数（仅熟豆）
+        if (
+          showEstimatedCupsForExport &&
+          selectedBeanState === 'roasted' &&
+          estimatedCups !== undefined &&
+          estimatedCups > 0
+        ) {
+          text += `，约 ${estimatedCups} 杯`;
         }
 
         // 添加详细剩余量信息（仅当选择"全部"类型且有多种类型时显示）
@@ -1656,6 +1684,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         onSearchHistoryClick={handleSearchHistoryClick}
         // 生豆库启用设置
         enableGreenBeanInventory={enableGreenBeanInventory}
+        // 预计杯数
+        estimatedCups={estimatedCups}
       />
 
       {/* 内容区域 - 可滚动 */}
