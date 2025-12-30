@@ -322,27 +322,25 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
             >
               {DATE_GROUPING_LABELS[dateGroupingMode]}
             </button>
-            <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-              ，
-            </span>
-            {showBeanStateSwitch && onBeanStateTypeChange ? (
-              <button
-                onClick={() =>
-                  onBeanStateTypeChange(
-                    beanStateType === 'roasted' ? 'green' : 'roasted'
-                  )
-                }
-                className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-              >
-                {beanStateType === 'roasted' ? '咖啡豆' : '生豆'}
-              </button>
-            ) : (
-              <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-                咖啡豆
-              </span>
+            {showBeanStateSwitch && onBeanStateTypeChange && (
+              <>
+                <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                  ，
+                </span>
+                <button
+                  onClick={() =>
+                    onBeanStateTypeChange(
+                      beanStateType === 'roasted' ? 'green' : 'roasted'
+                    )
+                  }
+                  className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                >
+                  {beanStateType === 'roasted' ? '咖啡豆' : '生豆'}
+                </button>
+              </>
             )}
             <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-              数据周期 {dateRangeLabel}
+              {showBeanStateSwitch ? '' : '，'}数据周期 {dateRangeLabel}
             </span>
           </div>
         </div>
