@@ -50,15 +50,7 @@ const DeleteConfirmDrawer: React.FC<DeleteConfirmDrawerProps> = ({
           <span className="text-neutral-800 dark:text-neutral-200">
             「{itemName}」
           </span>
-          吗？此操作不可撤销。
-          {extraWarning && (
-            <>
-              <br />
-              <span className="text-neutral-800 dark:text-neutral-200">
-                {extraWarning}
-              </span>
-            </>
-          )}
+          吗？{extraWarning || '此操作不可撤销。'}
         </p>
       </ActionDrawer.Content>
       <ActionDrawer.Actions>

@@ -696,6 +696,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               : note?.method || '此笔记'
         }
         itemType="笔记"
+        extraWarning="删除后咖啡豆库存将恢复。"
       />
     </>
   );

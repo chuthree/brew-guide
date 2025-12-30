@@ -1562,6 +1562,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }}
         itemName={deleteConfirmData?.noteName || ''}
         itemType="笔记"
+        extraWarning="删除后咖啡豆库存将恢复。"
         onExitComplete={() => setDeleteConfirmData(null)}
       />
     </div>
