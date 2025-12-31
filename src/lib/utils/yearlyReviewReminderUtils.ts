@@ -106,12 +106,11 @@ export class YearlyReviewReminderUtils {
   }
 
   /**
-   * 检查当前年份是否已生成过年度报告
+   * 检查2025年是否已生成过年度报告
    * 如果已生成，说明用户肯定已经看过年度回顾了
    */
   static async hasGeneratedCurrentYearReport(): Promise<boolean> {
     try {
-      const currentYear = new Date().getFullYear();
       const yearlyReportsStr = await Storage.get('yearlyReports');
       if (!yearlyReportsStr) {
         return false;
@@ -121,7 +120,7 @@ export class YearlyReviewReminderUtils {
       return (
         yearlyReports &&
         typeof yearlyReports === 'object' &&
-        yearlyReports[currentYear.toString()]
+        yearlyReports['2025']
       );
     } catch (error) {
       console.error('检查年度报告失败:', error);
@@ -130,21 +129,19 @@ export class YearlyReviewReminderUtils {
   }
 
   /**
-   * 检查当前年份是否已查看过年度回顾
+   * 检查2025年是否已查看过年度回顾
    */
   static async hasViewedCurrentYearReview(): Promise<boolean> {
-    const currentYear = new Date().getFullYear();
     const settings = await this.getSettings();
-    return settings.viewedYears.includes(currentYear);
+    return settings.viewedYears.includes(2025);
   }
 
   /**
-   * 检查当前年份是否已跳过年度回顾提醒
+   * 检查2025年是否已跳过年度回顾提醒
    */
   static async hasSkippedCurrentYearReminder(): Promise<boolean> {
-    const currentYear = new Date().getFullYear();
     const settings = await this.getSettings();
-    return settings.skippedYears.includes(currentYear);
+    return settings.skippedYears.includes(2025);
   }
 
   /**
@@ -192,28 +189,26 @@ export class YearlyReviewReminderUtils {
   }
 
   /**
-   * 标记当前年份的年度回顾已查看
+   * 标记2025年的年度回顾已查看
    */
   static async markAsViewed(): Promise<void> {
-    const currentYear = new Date().getFullYear();
     const settings = await this.getSettings();
 
-    if (!settings.viewedYears.includes(currentYear)) {
-      settings.viewedYears.push(currentYear);
+    if (!settings.viewedYears.includes(2025)) {
+      settings.viewedYears.push(2025);
     }
 
     await this.saveSettings(settings);
   }
 
   /**
-   * 标记当前年份的年度回顾提醒已跳过（点击"看过了"）
+   * 标记2025年的年度回顾提醒已跳过（点击"看过了"）
    */
   static async markAsSkipped(): Promise<void> {
-    const currentYear = new Date().getFullYear();
     const settings = await this.getSettings();
 
-    if (!settings.skippedYears.includes(currentYear)) {
-      settings.skippedYears.push(currentYear);
+    if (!settings.skippedYears.includes(2025)) {
+      settings.skippedYears.push(2025);
     }
 
     settings.lastReminderDate = new Date().toISOString();
@@ -221,9 +216,9 @@ export class YearlyReviewReminderUtils {
   }
 
   /**
-   * 获取当前年份
+   * 获取年度回顾的年份（固定为2025）
    */
   static getCurrentYear(): number {
-    return new Date().getFullYear();
+    return 2025;
   }
 }

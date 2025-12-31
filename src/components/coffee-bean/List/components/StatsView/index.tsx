@@ -61,8 +61,6 @@ const YearlyReviewPreviewCard: React.FC<YearlyReviewPreviewCardProps> = ({
   onClick,
   onDismiss,
 }) => {
-  const currentYear = new Date().getFullYear();
-
   const handleDismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDismiss();
@@ -111,7 +109,7 @@ const YearlyReviewPreviewCard: React.FC<YearlyReviewPreviewCardProps> = ({
       <div className="relative z-1 flex h-full items-center px-4">
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-bold tracking-tight text-white">
-            Replay'{String(currentYear).slice(-2)}
+            Replay'25
           </span>
         </div>
       </div>

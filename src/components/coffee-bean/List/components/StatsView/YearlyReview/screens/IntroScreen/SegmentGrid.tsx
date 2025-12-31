@@ -32,12 +32,11 @@ const SegmentGrid: React.FC<SegmentGridProps> = ({
   const lastXRef = useRef<number>(0);
   const velocityRef = useRef<number>(0);
 
-  // 计算今年购买的咖啡豆款数
+  // 计算2025年购买的咖啡豆款数
   const beanCount = useMemo(() => {
-    const currentYear = new Date().getFullYear();
     return beans.filter(bean => {
       const beanYear = new Date(bean.timestamp).getFullYear();
-      return beanYear === currentYear;
+      return beanYear === 2025;
     }).length;
   }, [beans]);
 

@@ -75,13 +75,12 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
     return images;
   }, [beans]);
 
-  // 计算今年购买的咖啡豆总重量（克）
+  // 计算2025年购买的咖啡豆总重量（克）
   const totalWeight = useMemo(() => {
-    const currentYear = new Date().getFullYear();
     return beans
       .filter(bean => {
         const beanYear = new Date(bean.timestamp).getFullYear();
-        return beanYear === currentYear;
+        return beanYear === 2025;
       })
       .reduce((total, bean) => {
         if (bean.capacity) {

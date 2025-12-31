@@ -27,11 +27,10 @@ const IntroScreen: React.FC<BeanScreenProps> = ({
   // 当前显示的段落索引（0, 1, 1.5, 2, 3, 4, 5）
   const [currentSegment, setCurrentSegment] = useState<number>(0);
 
-  // 计算今年咖啡豆总花费
+  // 计算2025年咖啡豆总花费
   const totalCost = useMemo(() => {
-    const currentYear = new Date().getFullYear();
     return beans
-      .filter(bean => new Date(bean.timestamp).getFullYear() === currentYear)
+      .filter(bean => new Date(bean.timestamp).getFullYear() === 2025)
       .reduce((sum, bean) => {
         // 解析价格字符串，支持 "98", "¥98", "98元" 等格式
         const priceStr = bean.price || '0';

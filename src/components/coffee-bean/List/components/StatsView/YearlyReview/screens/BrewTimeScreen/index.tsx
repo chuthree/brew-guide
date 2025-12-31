@@ -77,10 +77,9 @@ const getExtremeBrewTime = (
     return { hour: 0, minute: 0, note: null };
   }
 
-  const currentYear = new Date().getFullYear();
   const thisYearNotes = notes.filter(note => {
     const date = new Date(note.timestamp);
-    return date.getFullYear() === currentYear;
+    return date.getFullYear() === 2025;
   });
 
   if (thisYearNotes.length === 0) {

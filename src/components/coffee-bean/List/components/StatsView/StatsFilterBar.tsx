@@ -493,7 +493,7 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                         isActive={false}
                         onClick={() => setIsYearlyReviewOpen(true)}
                       >
-                        年度回顾
+                        2025年度回顾
                       </FilterButton>
                     </div>
                   </div>

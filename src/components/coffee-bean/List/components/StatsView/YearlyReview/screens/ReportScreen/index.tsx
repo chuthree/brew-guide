@@ -101,7 +101,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
 
   // 计算统计数据
   const stats = useMemo<YearlyReportStats>(() => {
-    const currentYear = new Date().getFullYear();
+    const currentYear = 2025;
 
     // 烘焙商统计
     const roasterCount = new Map<string, number>();
@@ -268,7 +268,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
     let fullText = '';
 
     try {
-      const currentYear = new Date().getFullYear();
+      const currentYear = 2025;
       await generateYearlyReportStream(
         name,
         currentYear,
@@ -291,7 +291,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
 
           // 保存到本地
           if (fullText.trim()) {
-            const currentYear = new Date().getFullYear();
+            const currentYear = 2025;
             const saved = await useYearlyReportStore
               .getState()
               .saveReport(currentYear, name, fullText);
@@ -340,7 +340,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
         setDailyUsed(used);
 
         // 先检查本地是否有已保存的报告
-        const currentYear = new Date().getFullYear();
+        const currentYear = 2025;
         const existingReport = useYearlyReportStore
           .getState()
           .getReportByYear(currentYear);
@@ -402,7 +402,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
       const titleDiv = document.createElement('div');
       titleDiv.style.cssText =
         'font-size: 20px; font-weight: 500; color: #262626;';
-      titleDiv.textContent = '2025 年度咖啡报告';
+      titleDiv.textContent = `${2025} 年度咖啡报告`;
       header.appendChild(titleDiv);
 
       tempContainer.appendChild(header);
@@ -466,11 +466,16 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
       document.body.removeChild(tempContainer);
 
       // 分享图片
-      await TempFileManager.shareImageFile(imageData, 'yearly-report-2025', {
-        title: '2025年度咖啡报告',
-        text: '我的2025年度咖啡报告',
-        dialogTitle: '分享年度咖啡报告',
-      });
+      const currentYear = 2025;
+      await TempFileManager.shareImageFile(
+        imageData,
+        `yearly-report-${currentYear}`,
+        {
+          title: `${currentYear}年度咖啡报告`,
+          text: `我的${currentYear}年度咖啡报告`,
+          dialogTitle: '分享年度咖啡报告',
+        }
+      );
 
       showToast({
         type: 'success',
