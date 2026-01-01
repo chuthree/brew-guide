@@ -18,6 +18,7 @@ import { notFoundHandler, errorHandler } from './middlewares/error.js';
 // 路由
 import healthRouter from './routes/health.js';
 import beanRouter from './routes/bean.js';
+import methodRouter from './routes/method.js';
 import reportRouter from './routes/report.js';
 import feedbackRouter from './routes/feedback.js';
 
@@ -31,6 +32,7 @@ app.use(express.json({ limit: '10mb' }));
 // ==================== 路由注册 ====================
 app.use('/', healthRouter);
 app.use('/api', beanRouter);
+app.use('/api', methodRouter);
 app.use('/api', reportRouter);
 app.use('/api', feedbackRouter);
 
@@ -47,6 +49,7 @@ const server = app.listen(serverConfig.port, serverConfig.host, () => {
 ║   📡 Address: http://${serverConfig.host}:${serverConfig.port.toString().padEnd(4)} ║
 ║   🏥 Health:  http://${serverConfig.host}:${serverConfig.port}/health       ║
 ║   🌿 Bean:    POST /api/recognize-bean            ║
+║   🧪 Method:  POST /api/recognize-method          ║
 ║   📊 Report:  POST /api/yearly-report             ║
 ║   💬 Feedback: GET/POST /api/feedbacks            ║
 ║                                                   ║

@@ -145,6 +145,16 @@ export const aiConfig = {
     maxRetries: 2,
     retryDelay: 1000,
   },
+  // 冲煮方案识别 (七牛云)
+  methodRecognition: {
+    baseURL: 'https://api.qnaigc.com/v1/chat/completions',
+    model: 'qwen-vl-max-2025-01-25',
+    temperature: 0,
+    maxTokens: 2000,
+    timeout: 120000,
+    maxRetries: 2,
+    retryDelay: 1000,
+  },
   // 年度报告生成
   yearlyReport: {
     baseURL:
@@ -184,6 +194,32 @@ export const aiPrompts = {
 - startDay/endDay: 养豆期/赏味期天数
 - blendComponents: 产地/庄园/处理法/品种 [{origin:"埃塞俄比亚",estate:"赏花",process:"日晒",variety:"原生种"}]
 - notes: 处理站/海拔/批次号等补充信息（产地和庄园信息放 blendComponents，这里只放补充信息）
+
+规则：数值不带单位/不编造/不确定不填/直接返回JSON`,
+
+  methodRecognition: `你是OCR工具，提取图片中的咖啡冲煮方案，直接返回JSON。
+
+关键规则：
+1. 每个注水动作是独立步骤，duration=注水时长（秒）
+2. 焖蒸/等待必须拆成两步：注水步骤 + wait步骤
+   例：焖蒸30秒注水50g(10秒注完) → 注水10秒50g + 等待20秒
+3. wait步骤只有label和duration字段，无water和detail
+4. 闷蒸步骤一般是circle注水
+
+JSON格式：
+{
+  "name":"方案名",
+  "params":{
+    "coffee":"咖啡粉量如15g",
+    "water":"总水量如225g",
+    "ratio":"粉水比如1:15",
+    "grindSize":"研磨度如中细",
+    "temp":"水温如92°C",
+    "stages":[
+      {"pourType":"center|circle|ice|bypass|wait|other","label":"步骤名","water":"注水量(纯数字)","duration":用时(纯数字),"detail":"说明"}
+    ]
+  }
+}
 
 规则：数值不带单位/不编造/不确定不填/直接返回JSON`,
 

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Sigma, Hash } from 'lucide-react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { CustomEquipment } from '@/lib/core/config';
 import { Stage } from './types';
@@ -12,8 +12,16 @@ import {
   calculateTotalDuration,
   calculateTotalWater,
 } from '@/lib/brewing/stageUtils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/coffee-bean/ui/select';
 
 const PRESET_BEVERAGES = ['饮用水', '冰块', '纯牛奶', '厚椰乳', '燕麦奶'];
+const CUMULATIVE_MODE_STORAGE_KEY = 'stagesStepCumulativeMode';
 
 const pageVariants = {
   initial: { opacity: 0 },
@@ -50,6 +58,9 @@ interface StagesStepProps {
   setEditingWater: React.Dispatch<
     React.SetStateAction<{ index: number; value: string } | null>
   >;
+  // 累计模式相关
+  useCumulativeMode?: boolean;
+  onCumulativeModeChange?: (value: boolean) => void;
 }
 
 const StagesStep: React.FC<StagesStepProps> = ({
@@ -71,10 +82,69 @@ const StagesStep: React.FC<StagesStepProps> = ({
   setEditingDuration,
   editingWater,
   setEditingWater,
+  useCumulativeMode: externalCumulativeMode,
+  onCumulativeModeChange,
 }) => {
   const innerNewStageRef = useRef<HTMLDivElement>(null);
   const [beverageSuggestions, setBeverageSuggestions] =
     useState<string[]>(PRESET_BEVERAGES);
+
+  // 累计模式状态（如果外部没有控制，则使用内部状态，带持久化）
+  const [internalCumulativeMode, setInternalCumulativeMode] = useState(() => {
+    // 初始化时从 localStorage 读取
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(CUMULATIVE_MODE_STORAGE_KEY);
+        return saved === 'true';
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+  const useCumulativeMode = externalCumulativeMode ?? internalCumulativeMode;
+  const handleCumulativeModeChange = (value: boolean) => {
+    if (onCumulativeModeChange) {
+      onCumulativeModeChange(value);
+    } else {
+      setInternalCumulativeMode(value);
+      // 持久化到 localStorage
+      try {
+        localStorage.setItem(CUMULATIVE_MODE_STORAGE_KEY, String(value));
+      } catch (error) {
+        console.error('Failed to save cumulative mode:', error);
+      }
+    }
+  };
+
+  // 计算累计时长和水量
+  const cumulativeData = useMemo(() => {
+    const result: { cumulativeDuration: number; cumulativeWater: number }[] = [];
+    let totalDuration = 0;
+    let totalWaterAmount = 0;
+
+    stages.forEach(stage => {
+      // 累计时长（排除 bypass 和 beverage）
+      if (stage.pourType !== 'bypass' && stage.pourType !== 'beverage') {
+        totalDuration += stage.duration || 0;
+      }
+      // 累计水量（排除 wait）
+      if (stage.pourType !== 'wait') {
+        const waterValue = stage.water
+          ? typeof stage.water === 'number'
+            ? stage.water
+            : parseInt(stage.water.toString().replace('g', '') || '0')
+          : 0;
+        totalWaterAmount += waterValue;
+      }
+      result.push({
+        cumulativeDuration: totalDuration,
+        cumulativeWater: totalWaterAmount,
+      });
+    });
+
+    return result;
+  }, [stages]);
 
   useEffect(() => {
     try {
@@ -252,10 +322,15 @@ const StagesStep: React.FC<StagesStepProps> = ({
     const percentMatch = value.match(/^(\d+(\.\d+)?)%$/);
     if (percentMatch) {
       const percentValue = parseFloat(percentMatch[1]);
-      const calculatedWater =
+      let calculatedWater =
         totalWaterValue > 0
           ? Math.round((percentValue / 100) * totalWaterValue)
           : Math.round(percentValue);
+      // 累计模式下需要减去前面阶段的水量
+      if (useCumulativeMode && index > 0) {
+        const previousCumulative = cumulativeData[index - 1]?.cumulativeWater || 0;
+        calculatedWater = Math.max(0, calculatedWater - previousCumulative);
+      }
       onStageChange(index, 'water', `${calculatedWater}`);
       return;
     }
@@ -267,31 +342,99 @@ const StagesStep: React.FC<StagesStepProps> = ({
       const multipleValue = parseFloat(multipleMatch[1]);
       const coffeeMatch = coffeeDosage.match(/(\d+(\.\d+)?)/);
       const coffeeAmount = coffeeMatch ? parseFloat(coffeeMatch[1]) : 15;
-      onStageChange(
-        index,
-        'water',
-        `${Math.round(multipleValue * coffeeAmount)}`
-      );
+      let calculatedWater = Math.round(multipleValue * coffeeAmount);
+      // 累计模式下需要减去前面阶段的水量
+      if (useCumulativeMode && index > 0) {
+        const previousCumulative = cumulativeData[index - 1]?.cumulativeWater || 0;
+        calculatedWater = Math.max(0, calculatedWater - previousCumulative);
+      }
+      onStageChange(index, 'water', `${calculatedWater}`);
       return;
     }
 
-    const water = value.includes('.')
+    let water = value.includes('.')
       ? Math.round(parseFloat(value))
       : parseInt(value) || 0;
+    // 累计模式下，输入的是累计值，需要转换为独立值
+    if (useCumulativeMode && index > 0) {
+      const previousCumulative = cumulativeData[index - 1]?.cumulativeWater || 0;
+      water = Math.max(0, water - previousCumulative);
+    }
     onStageChange(index, 'water', `${water}`);
   };
 
   const getWaterDisplayValue = (stage: Stage, index: number) => {
     if (editingWater && editingWater.index === index) return editingWater.value;
-    if (!stage.water) return '';
-    if (typeof stage.water === 'number') return String(stage.water);
-    return String(parseInt((stage.water as string).replace('g', '')));
+    if (!stage.water) return useCumulativeMode ? String(cumulativeData[index]?.cumulativeWater || 0) : '';
+    const independentValue = typeof stage.water === 'number'
+      ? stage.water
+      : parseInt((stage.water as string).replace('g', '') || '0');
+    // 累计模式显示累计值
+    if (useCumulativeMode) {
+      return String(cumulativeData[index]?.cumulativeWater || independentValue);
+    }
+    return String(independentValue);
+  };
+
+  // 格式化时长显示（支持分秒格式）
+  const formatDurationDisplay = (seconds: number): string => {
+    if (!seconds) return '';
+    if (seconds >= 60) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return secs === 0 ? `${mins}′` : `${mins}′${secs}″`;
+    }
+    return `${seconds}″`;
   };
 
   const getDurationDisplayValue = (stage: Stage, index: number) => {
+    // 编辑状态显示纯数字
     if (editingDuration && editingDuration.index === index)
       return editingDuration.value;
-    return stage.duration ?? '';
+    // 非编辑状态显示格式化时间
+    const seconds = useCumulativeMode
+      ? cumulativeData[index]?.cumulativeDuration || 0
+      : stage.duration || 0;
+    return formatDurationDisplay(seconds);
+  };
+
+  // 获取当前秒数（用于聚焦时设置编辑值）
+  const getDurationSeconds = (stage: Stage, index: number): number => {
+    return useCumulativeMode
+      ? cumulativeData[index]?.cumulativeDuration || 0
+      : stage.duration || 0;
+  };
+
+  // 处理时长变更（支持累计模式）
+  const handleDurationChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    setEditingDuration({ index, value });
+    let val = parseInt(value) || 0;
+    // 累计模式下，输入的是累计值，需要转换为独立值
+    if (useCumulativeMode && index > 0) {
+      const previousCumulative = cumulativeData[index - 1]?.cumulativeDuration || 0;
+      val = Math.max(0, val - previousCumulative);
+    }
+    onStageChange(index, 'duration', val);
+  };
+
+  // 处理水量变更（支持累计模式）
+  const handleWaterChange = (index: number, value: string) => {
+    setEditingWater({ index, value });
+    if (!value.trim()) {
+      onStageChange(index, 'water', '');
+      return;
+    }
+    if (value.endsWith('%')) return;
+    let water = value.includes('.')
+      ? Math.round(parseFloat(value))
+      : parseInt(value) || 0;
+    // 累计模式下，输入的是累计值，需要转换为独立值
+    if (useCumulativeMode && index > 0) {
+      const previousCumulative = cumulativeData[index - 1]?.cumulativeWater || 0;
+      water = Math.max(0, water - previousCumulative);
+    }
+    onStageChange(index, 'water', `${water}`);
   };
 
   const pourTypeOptions = getPourTypeOptions();
@@ -304,9 +447,6 @@ const StagesStep: React.FC<StagesStepProps> = ({
     showWater: pourType !== 'wait',
   });
 
-  const cellClass =
-    'text-xs leading-relaxed font-medium text-neutral-600 dark:text-neutral-400';
-
   return (
     <motion.div
       key="stages-step"
@@ -318,27 +458,47 @@ const StagesStep: React.FC<StagesStepProps> = ({
       className="relative mx-auto"
     >
       {/* 顶部固定导航 */}
-      <div className="sticky top-0 z-10 border-b border-neutral-200 bg-neutral-50 pt-2 pb-3 dark:border-neutral-700 dark:bg-neutral-900">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-base font-medium text-neutral-800 dark:text-neutral-200">
-            冲煮步骤
-          </h3>
-          <button
-            type="button"
-            onClick={addStage}
-            className="text-sm text-neutral-600 dark:text-neutral-400"
-          >
-            + 添加步骤
-          </button>
-        </div>
-        <div className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400">
-          <span>总时间: {formatTime(calculateTotalTime())}</span>
-          <span className={isEspresso ? 'truncate' : ''}>
-            总水量:{' '}
-            {isEspresso
-              ? formatEspressoTotalWater()
-              : `${calculateCurrentWater()}/ ${parseInt(totalWater)} 克`}
-          </span>
+      <div className="sticky top-0 z-10 border-b border-neutral-200 bg-neutral-50 py-2.5 dark:border-neutral-700 dark:bg-neutral-900">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            <span className="text-neutral-900 dark:text-neutral-100">
+              总时间: {formatTime(calculateTotalTime())}
+            </span>
+            <span className="h-3 w-px bg-neutral-300 dark:bg-neutral-700" />
+            <span
+              className={`${
+                isEspresso ? 'truncate max-w-[150px]' : ''
+              } text-neutral-900 dark:text-neutral-100`}
+            >
+              总水量:{' '}
+              {isEspresso
+                ? formatEspressoTotalWater()
+                : `${calculateCurrentWater()}/${parseInt(totalWater) || 0}g`}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* 累计/独立模式切换 */}
+            <button
+              type="button"
+              onClick={() => handleCumulativeModeChange(!useCumulativeMode)}
+              className="flex items-center gap-0.5 text-xs font-medium text-neutral-900 hover:text-neutral-700 dark:text-neutral-100 dark:hover:text-neutral-300"
+              title={useCumulativeMode ? '当前：累计模式（点击切换为独立模式）' : '当前：独立模式（点击切换为累计模式）'}
+            >
+              {useCumulativeMode ? (
+                <><Sigma className="h-3 w-3" /> 累计</>
+              ) : (
+                <><Hash className="h-3 w-3" /> 独立</>
+              )}
+            </button>
+            <span className="h-3 w-px bg-neutral-300 dark:bg-neutral-700" />
+            <button
+              type="button"
+              onClick={addStage}
+              className="text-xs font-medium text-neutral-900 hover:text-neutral-700 dark:text-neutral-100 dark:hover:text-neutral-300"
+            >
+              + 添加步骤
+            </button>
+          </div>
         </div>
         <div className="pointer-events-none absolute right-0 -bottom-6 left-0 h-6 bg-linear-to-b from-neutral-50 to-transparent dark:from-neutral-900" />
       </div>
@@ -366,13 +526,13 @@ const StagesStep: React.FC<StagesStepProps> = ({
               className="group py-2.5"
             >
               {/* 第一行：核心信息 */}
-              <div className={`${cellClass} flex items-center gap-2`}>
+              <div className="flex items-center gap-2 text-xs font-medium leading-relaxed text-neutral-900 dark:text-neutral-100">
                 {/* 序号/删除 */}
                 {stages.length > 1 ? (
                   <button
                     type="button"
                     onClick={() => removeStage(index)}
-                    className="w-4 shrink-0 text-neutral-300 tabular-nums hover:text-red-500 dark:text-neutral-600"
+                    className="w-4 shrink-0 text-neutral-400 tabular-nums hover:text-red-500 dark:text-neutral-500"
                     title="删除此步骤"
                   >
                     {isWaitStage ? '−' : stageNumber}
@@ -384,20 +544,25 @@ const StagesStep: React.FC<StagesStepProps> = ({
                 )}
 
                 {/* 方式 */}
-                <select
-                  value={stage.pourType || ''}
-                  onChange={e => onPourTypeChange(index, e.target.value)}
-                  className="shrink-0 appearance-none bg-transparent outline-hidden"
-                >
-                  <option value="" disabled>
-                    选择
-                  </option>
-                  {pourTypeOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                <span className="shrink-0">
+                  <span className="text-neutral-500 dark:text-neutral-500">[</span>
+                  <Select
+                    value={stage.pourType || ''}
+                    onValueChange={value => onPourTypeChange(index, value)}
+                  >
+                    <SelectTrigger variant="minimal" className="inline-flex w-auto border-none p-0 shadow-none focus:ring-0">
+                      <SelectValue placeholder="选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pourTypeOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-neutral-500 dark:text-neutral-500">]</span>
+                </span>
 
                 {/* 名称 */}
                 {showLabel ? (
@@ -421,7 +586,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                         onChange={value => handleBeverageChange(index, value)}
                         suggestions={beverageSuggestions}
                         placeholder="饮料"
-                        className="min-w-0 flex-1 truncate bg-transparent outline-hidden"
+                        className="min-w-0 flex-1 truncate border-none bg-transparent py-0 outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                         onRemovePreset={handleRemoveBeverage}
                         isCustomPreset={isCustomBeverage}
                       />
@@ -433,7 +598,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                           onStageChange(index, 'label', e.target.value)
                         }
                         placeholder="名称"
-                        className="min-w-0 flex-1 truncate bg-transparent outline-hidden"
+                        className="min-w-0 flex-1 truncate bg-transparent outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                       />
                     )}
                   </div>
@@ -445,23 +610,24 @@ const StagesStep: React.FC<StagesStepProps> = ({
                 {showDuration ? (
                   <span className="shrink-0 tabular-nums">
                     <input
-                      type="number"
-                      min="0"
-                      step="1"
+                      type="text"
+                      inputMode="numeric"
                       value={getDurationDisplayValue(stage, index)}
-                      onChange={e => {
-                        setEditingDuration({ index, value: e.target.value });
-                        const val = parseInt(e.target.value) || 0;
-                        if (val >= 0) onStageChange(index, 'duration', val);
+                      onChange={e => handleDurationChange(index, e.target.value)}
+                      onFocus={() => {
+                        const seconds = getDurationSeconds(stage, index);
+                        setEditingDuration({ index, value: seconds ? String(seconds) : '' });
                       }}
                       onBlur={() => setEditingDuration(null)}
-                      placeholder="0"
-                      className="w-8 bg-transparent text-right outline-hidden"
+                      placeholder="0″"
+                      className="w-12 bg-transparent text-right outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
-                    <span className="text-neutral-400">&quot;</span>
+                    {editingDuration?.index === index && (
+                      <span className="text-neutral-500 dark:text-neutral-500">″</span>
+                    )}
                   </span>
                 ) : (
-                  <span className="w-10 shrink-0" />
+                  <span className="w-14 shrink-0" />
                 )}
 
                 {/* 水量 */}
@@ -470,24 +636,14 @@ const StagesStep: React.FC<StagesStepProps> = ({
                     <input
                       type="text"
                       value={getWaterDisplayValue(stage, index)}
-                      onChange={e => {
-                        setEditingWater({ index, value: e.target.value });
-                        if (!e.target.value.trim()) {
-                          onStageChange(index, 'water', '');
-                          return;
-                        }
-                        if (e.target.value.endsWith('%')) return;
-                        const water = e.target.value.includes('.')
-                          ? Math.round(parseFloat(e.target.value))
-                          : parseInt(e.target.value) || 0;
-                        onStageChange(index, 'water', `${water}`);
-                      }}
+                      onChange={e => handleWaterChange(index, e.target.value)}
                       onBlur={e => handleWaterBlur(index, e.target.value)}
-                      onFocus={e => e.target.select()}
                       placeholder="0"
-                      className="w-8 bg-transparent text-right outline-hidden"
+                      className="w-8 bg-transparent text-right outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
-                    <span className="text-neutral-400">g</span>
+                    <span className="text-neutral-500 dark:text-neutral-500">
+                      g
+                    </span>
                   </span>
                 ) : (
                   <span className="w-10 shrink-0" />
@@ -495,13 +651,12 @@ const StagesStep: React.FC<StagesStepProps> = ({
               </div>
 
               {/* 第二行：说明 */}
-              <div className="mt-1 flex items-center gap-2 pl-6">
-                <input
-                  type="text"
+              <div className="mt-1 flex items-start gap-2 pl-6">
+                <textarea
                   value={stage.detail}
                   onChange={e => onStageChange(index, 'detail', e.target.value)}
                   placeholder="输入说明"
-                  className={`${cellClass} min-w-0 flex-1 bg-transparent text-neutral-400 outline-hidden placeholder:text-neutral-300 dark:text-neutral-500 dark:placeholder:text-neutral-600`}
+                  className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-xs font-medium leading-relaxed text-neutral-500 outline-hidden placeholder:text-neutral-400 dark:text-neutral-400 dark:placeholder:text-neutral-600"
                 />
               </div>
             </div>

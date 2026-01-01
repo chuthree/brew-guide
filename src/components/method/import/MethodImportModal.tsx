@@ -1,11 +1,71 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { type Method, type CustomEquipment } from '@/lib/core/config';
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import { useModalHistory } from '@/lib/hooks/useModalHistory';
+import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
+import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
+import { type Method, type CustomEquipment } from '@/lib/core/config';
+
+// 模拟 API 开关 - 设置为 true 时使用模拟数据
+const USE_MOCK_API = false;
+
+// 模拟识别延迟时间（毫秒）
+const MOCK_RECOGNITION_DELAY = 100;
+
+// 模拟返回的方案数据
+const MOCK_METHOD_DATA = {
+  name: '四六法',
+  params: {
+    coffee: '20g',
+    water: '300g',
+    ratio: '1:15',
+    grindSize: '中细',
+    temp: '92°C',
+    stages: [
+      {
+        pourType: 'center',
+        label: '焖蒸',
+        water: '50',
+        duration: 45,
+        detail: '小水流注水',
+      },
+      {
+        pourType: 'circle',
+        label: '第一段',
+        water: '70',
+        duration: 10,
+        detail: '绕圈注水',
+      },
+      { pourType: 'wait', label: '等待', duration: 35 },
+      {
+        pourType: 'circle',
+        label: '第二段',
+        water: '60',
+        duration: 10,
+        detail: '绕圈注水',
+      },
+      { pourType: 'wait', label: '等待', duration: 35 },
+      {
+        pourType: 'circle',
+        label: '第三段',
+        water: '60',
+        duration: 10,
+        detail: '绕圈注水',
+      },
+      { pourType: 'wait', label: '等待', duration: 35 },
+      {
+        pourType: 'circle',
+        label: '第四段',
+        water: '60',
+        duration: 10,
+        detail: '绕圈注水',
+      },
+    ],
+  },
+};
 
 interface MethodImportModalProps {
   showForm: boolean;
@@ -15,6 +75,91 @@ interface MethodImportModalProps {
   customEquipment?: CustomEquipment;
 }
 
+// 冲煮方案识别提示词
+const METHOD_RECOGNITION_PROMPT = `你是OCR工具，提取图片中的咖啡冲煮方案，直接返回JSON。
+
+关键规则：
+1. 每个注水动作是独立步骤，duration=注水时长（秒）
+2. 焖蒸/等待必须拆成两步：注水步骤 + wait步骤
+   例：焖蒸30秒注水50g(10秒注完) → 注水10秒50g + 等待20秒
+3. wait步骤只有label和duration字段，无water和detail
+
+JSON格式：
+{
+  "name":"方案名",
+  "params":{
+    "coffee":"咖啡粉量如15g",
+    "water":"总水量如225g",
+    "ratio":"粉水比如1:15",
+    "grindSize":"研磨度如中细",
+    "temp":"水温如92°C",
+    "stages":[
+      {"pourType":"center|circle|ice|bypass|wait|other","label":"步骤名","water":"注水量(纯数字)","duration":秒数,"detail":"说明"}
+    ]
+  }
+}
+
+规则：数值不带单位/不编造/不确定不填/直接返回JSON`;
+
+// 步骤类型定义
+type ImportStep = 'main' | 'json-input' | 'recognizing';
+
+// 扫描线动画组件
+const CornerBorder: React.FC<{
+  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+}> = ({ position }) => {
+  const baseClasses = 'absolute w-6 h-6 border-white/80';
+  const positionClasses = {
+    'top-left': 'top-0 left-0 border-t-2 border-l-2 rounded-tl-xl',
+    'top-right': 'top-0 right-0 border-t-2 border-r-2 rounded-tr-xl',
+    'bottom-left': 'bottom-0 left-0 border-b-2 border-l-2 rounded-bl-xl',
+    'bottom-right': 'bottom-0 right-0 border-b-2 border-r-2 rounded-br-xl',
+  };
+
+  return <div className={`${baseClasses} ${positionClasses[position]}`} />;
+};
+
+const ScanningOverlay: React.FC<{ imageUrl: string }> = ({ imageUrl }) => {
+  return (
+    <div className="relative w-full overflow-hidden rounded-3xl bg-neutral-900">
+      {/* 背景图片 - 保持原始比例，变暗处理 */}
+      <img
+        src={imageUrl}
+        alt="正在识别的图片"
+        className="w-full rounded-3xl brightness-75"
+        style={{ maxHeight: '50vh', objectFit: 'cover' }}
+      />
+
+      {/* 四角边框装饰 */}
+      <div className="absolute inset-4">
+        <CornerBorder position="top-left" />
+        <CornerBorder position="top-right" />
+        <CornerBorder position="bottom-left" />
+        <CornerBorder position="bottom-right" />
+      </div>
+
+      {/* 扫描线效果 - 简洁的白色扫描线 */}
+      <motion.div
+        className="absolute right-0 left-0 h-px"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.6) 20%, rgba(255, 255, 255, 0.9) 50%, rgba(255, 255, 255, 0.6) 80%, transparent 100%)',
+          boxShadow: '0 0 12px 2px rgba(255, 255, 255, 0.3)',
+        }}
+        initial={{ top: '0%' }}
+        animate={{
+          top: ['0%', '100%', '0%'],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      />
+    </div>
+  );
+};
+
 const MethodImportModal: React.FC<MethodImportModalProps> = ({
   showForm,
   onImport,
@@ -22,104 +167,256 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
   existingMethods = [],
   customEquipment,
 }) => {
-  // 动画状态管理
-  const [shouldRender, setShouldRender] = useState(false);
+  // 当前步骤
+  const [currentStep, setCurrentStep] = useState<ImportStep>('main');
+  // 图片识别加载状态
+  const [isRecognizing, setIsRecognizing] = useState(false);
+  // 识别中的图片 URL
+  const [recognizingImageUrl, setRecognizingImageUrl] = useState<string | null>(
+    null
+  );
+  // JSON 输入内容
+  const [jsonInputValue, setJsonInputValue] = useState('');
+  // 图片输入 ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // JSON 输入框 ref
+  const jsonTextareaRef = useRef<HTMLTextAreaElement>(null);
+  // 剪贴板识别状态
+  const [clipboardStatus, setClipboardStatus] = useState<'idle' | 'error'>(
+    'idle'
+  );
 
-  // 同步顶部安全区颜色
-  useThemeColor({ useOverlay: true, enabled: showForm });
-
-  // 导入数据的状态
-  const [importData, setImportData] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
-
-  // 清除所有状态消息
-  const clearMessages = () => {
-    setError(null);
-  };
-
-  // 处理显示/隐藏动画
-  useEffect(() => {
-    if (showForm) {
-      setShouldRender(true);
-    } else {
-      const timer = setTimeout(() => setShouldRender(false), 300);
-      return () => clearTimeout(timer);
+  // 返回主界面
+  const goBackToMain = useCallback(() => {
+    setCurrentStep('main');
+    setJsonInputValue('');
+    // 清理图片 URL
+    if (recognizingImageUrl) {
+      URL.revokeObjectURL(recognizingImageUrl);
+      setRecognizingImageUrl(null);
     }
-  }, [showForm]);
+    setIsRecognizing(false);
+  }, [recognizingImageUrl]);
 
-  // 监听showForm变化，当表单关闭时清除输入框内容
-  React.useEffect(() => {
-    if (!showForm) {
-      setImportData('');
-      clearMessages();
-    }
-  }, [showForm]);
-
-  // 使用新的历史栈管理系统
+  // 使用 modalHistory 管理 JSON 输入步骤的返回行为
   useModalHistory({
-    id: 'method-import',
-    isOpen: showForm,
-    onClose,
+    id: 'method-import-json-input',
+    isOpen: showForm && currentStep === 'json-input',
+    onClose: goBackToMain,
   });
 
-  // 关闭并清除输入（使用新的历史栈系统）
-  const handleClose = useCallback(() => {
-    setImportData('');
-    clearMessages();
-    modalHistory.back();
+  // 重置状态（当弹窗关闭或重新打开时）
+  useEffect(() => {
+    if (showForm) {
+      setClipboardStatus('idle');
+      setCurrentStep('main');
+      setJsonInputValue('');
+      setIsRecognizing(false);
+      if (recognizingImageUrl) {
+        URL.revokeObjectURL(recognizingImageUrl);
+        setRecognizingImageUrl(null);
+      }
+    }
+  }, [showForm]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 处理添加数据（通用）
+  const handleImportData = useCallback(
+    async (data: unknown) => {
+      try {
+        const methodData = data as Record<string, unknown>;
+
+        // 验证数据 - 检查是否有名称和参数
+        if (!methodData.name) {
+          // 尝试从 method 字段获取名称
+          if (typeof methodData.method === 'string') {
+            methodData.name = methodData.method;
+          } else {
+            showToast({ type: 'error', title: '方案缺少名称' });
+            return;
+          }
+        }
+
+        if (!methodData.params) {
+          showToast({ type: 'error', title: '方案缺少参数' });
+          return;
+        }
+
+        const params = methodData.params as Record<string, unknown>;
+        if (!params.stages || !Array.isArray(params.stages)) {
+          showToast({ type: 'error', title: '方案缺少冲煮步骤' });
+          return;
+        }
+
+        // 检查是否已存在同名方案
+        const existingMethod = existingMethods.find(
+          m => m.name === methodData.name
+        );
+        if (existingMethod) {
+          showToast({
+            type: 'error',
+            title: `已存在同名方案"${methodData.name}"`,
+          });
+          return;
+        }
+
+        // 构建有效的方案对象
+        const validMethod: Method = {
+          id:
+            (methodData.id as string) ||
+            `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: methodData.name as string,
+          params: {
+            coffee: (params.coffee as string) || '15g',
+            water: (params.water as string) || '225g',
+            ratio: (params.ratio as string) || '1:15',
+            grindSize: (params.grindSize as string) || '中细',
+            temp: (params.temp as string) || '92°C',
+            stages: params.stages as Method['params']['stages'],
+          },
+        };
+
+        onImport(validMethod);
+        onClose();
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : '未知错误';
+        showToast({ type: 'error', title: `添加失败: ${errorMessage}` });
+      }
+    },
+    [existingMethods, onImport, onClose]
+  );
+
+  // 处理输入JSON - 进入 JSON 输入步骤
+  const handleInputJSON = useCallback(() => {
+    setCurrentStep('json-input');
+    // 等待动画完成后聚焦输入框
+    setTimeout(() => {
+      jsonTextareaRef.current?.focus();
+    }, 300);
   }, []);
 
-  // 生成模板提示词
-  const _templatePrompt = (() => {
-    return `提取咖啡冲煮方案数据，返回JSON格式。
+  // 处理剪贴板识别
+  const handleClipboardRecognition = useCallback(async () => {
+    // 如果当前是错误状态，切换到 JSON 输入模式
+    if (clipboardStatus === 'error') {
+      setClipboardStatus('idle');
+      handleInputJSON();
+      return;
+    }
 
-格式要求：
-{
-  "name": "方案名称",
-  "params": {
-    "coffee": "咖啡粉量，如15g",
-    "water": "水量，如225g",
-    "ratio": "比例，如1:15",
-    "grindSize": "研磨度，如中细",
-    "temp": "水温，如92°C",
-    "stages": [
-      {
-        "time": 分钟*60+秒钟，纯数字,
-        "pourTime": 注水时间，纯数字，单位秒,
-        "label": "步骤操作简述（如焖蒸(绕圈注水)、绕圈注水、中心注水）",
-        "water": "该步骤水量，如40g",
-        "detail": "描述注水方式，如中心向外缓慢画圈注水，均匀萃取咖啡风味",
-        "pourType": "注水方式严格按照center（中心注水）、circle（绕圈注水）、ice（冰水）、bypass（Bypass）、other（其他）"
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      if (!clipboardText.trim()) {
+        setClipboardStatus('error');
+        return;
       }
-    ]
-  }
-}
 
-要求：
-0. 所有字段必须填写
-1. stages数组必须包含至少一个步骤
-2. time表示该步骤从开始到结束的总时间（秒），pourTime表示注水时长（秒）
-3. 步骤的time值必须按递增顺序排列
-4. 确保JSON格式有效，数值字段不包含单位
+      // 尝试提取JSON数据
+      const { extractJsonFromText } = await import('@/lib/utils/jsonUtils');
+      const methodData = extractJsonFromText(clipboardText, customEquipment);
 
-提示：一般焖蒸注水方式是center，label就是"焖蒸(绕圈注水)"，
-`;
-  })();
+      if (methodData && 'params' in methodData && 'name' in methodData) {
+        await handleImportData(methodData);
+      } else {
+        setClipboardStatus('error');
+      }
+    } catch (_error) {
+      setClipboardStatus('error');
+    }
+  }, [handleImportData, clipboardStatus, handleInputJSON, customEquipment]);
 
-  // 兼容性更好的复制文本方法
-  const _copyTextToClipboard = async (text: string) => {
+  // 识别单张图片的核心函数
+  const recognizeSingleImage = useCallback(
+    async (file: File, _imageUrl: string): Promise<{ data: unknown }> => {
+      let methodData: unknown;
+
+      if (USE_MOCK_API) {
+        await new Promise(resolve =>
+          setTimeout(resolve, MOCK_RECOGNITION_DELAY)
+        );
+        methodData = MOCK_METHOD_DATA;
+      } else {
+        const { smartCompress } = await import('@/lib/utils/imageCompression');
+        const compressedFile = await smartCompress(file);
+        const { recognizeMethodImage } = await import(
+          '@/lib/api/methodRecognition'
+        );
+        methodData = await recognizeMethodImage(compressedFile);
+      }
+
+      return { data: methodData };
+    },
+    []
+  );
+
+  // 处理图片上传识别
+  const handleImageUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+
+      const file = files[0];
+      if (!file.type.startsWith('image/')) {
+        showToast({ type: 'error', title: '请上传有效的图片文件' });
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast({ type: 'error', title: '图片大小不能超过10MB' });
+        return;
+      }
+
+      const imageUrl = URL.createObjectURL(file);
+      setRecognizingImageUrl(imageUrl);
+      setCurrentStep('recognizing');
+      setIsRecognizing(true);
+
+      try {
+        const { data: methodData } = await recognizeSingleImage(file, imageUrl);
+
+        setIsRecognizing(false);
+        URL.revokeObjectURL(imageUrl);
+        setRecognizingImageUrl(null);
+        setCurrentStep('main');
+
+        await handleImportData(methodData);
+      } catch (error) {
+        console.error('图片识别失败:', error);
+        showToast({
+          type: 'error',
+          title: error instanceof Error ? error.message : '图片识别失败',
+        });
+        setIsRecognizing(false);
+        URL.revokeObjectURL(imageUrl);
+        setRecognizingImageUrl(null);
+        setCurrentStep('main');
+      }
+
+      // 清除文件输入，以便可以再次选择同一文件
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [handleImportData, recognizeSingleImage]
+  );
+
+  // 触发图片选择
+  const handleUploadImageClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  // 复制提示词 - 使用兼容性更好的方法
+  const handleCopyPrompt = useCallback(async () => {
     try {
       // 首先尝试使用现代API
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        showToast({ type: 'success', title: '复制成功' });
+        await navigator.clipboard.writeText(METHOD_RECOGNITION_PROMPT);
+        showToast({ type: 'success', title: '提示词已复制' });
         return;
       }
 
       // 回退方法：创建临时textarea元素
       const textArea = document.createElement('textarea');
-      textArea.value = text;
+      textArea.value = METHOD_RECOGNITION_PROMPT;
 
       // 设置样式使其不可见
       textArea.style.position = 'fixed';
@@ -133,283 +430,230 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
       const successful = document.execCommand('copy');
       if (successful) {
-        showToast({ type: 'success', title: '复制成功' });
+        showToast({ type: 'success', title: '提示词已复制' });
       } else {
         showToast({ type: 'error', title: '复制失败' });
       }
-    } catch (_err) {
-      showToast({ type: 'error', title: '复制失败' });
-    } finally {
-      if (document.querySelector('textarea[style*="-999999px"]')) {
-        document.body.removeChild(
-          document.querySelector('textarea[style*="-999999px"]')!
-        );
-      }
-    }
-  };
 
-  // 处理导入数据
-  const handleImport = () => {
-    if (!importData) {
-      setError('请输入要导入的数据');
+      // 清理临时元素
+      document.body.removeChild(textArea);
+    } catch (error) {
+      console.error('复制提示词失败:', error);
+      showToast({ type: 'error', title: '复制失败' });
+    }
+  }, []);
+
+  // 提交 JSON 输入
+  const handleSubmitJson = useCallback(async () => {
+    if (!jsonInputValue.trim()) {
+      showToast({ type: 'error', title: '请输入方案数据' });
       return;
     }
 
     try {
-      // 尝试从文本中提取数据
-      import('@/lib/utils/jsonUtils')
-        .then(async ({ extractJsonFromText }) => {
-          setError(null);
-          // 解析导入数据，传递自定义器具配置
-          const method = extractJsonFromText(
-            importData,
-            customEquipment
-          ) as Method;
+      const { extractJsonFromText } = await import('@/lib/utils/jsonUtils');
+      const methodData = extractJsonFromText(jsonInputValue, customEquipment);
 
-          if (!method) {
-            setError('无法从输入中提取有效数据');
-            return;
-          }
+      if (methodData && 'params' in methodData && 'name' in methodData) {
+        await handleImportData(methodData);
+        setJsonInputValue('');
+        setCurrentStep('main');
+      } else {
+        showToast({ type: 'error', title: '无法解析输入的数据' });
+      }
+    } catch (_error) {
+      showToast({ type: 'error', title: '数据格式错误' });
+    }
+  }, [jsonInputValue, handleImportData, customEquipment]);
 
-          // 验证方法对象是否有必要的字段
-          if (!method.name) {
-            // 尝试获取method字段，使用接口扩展
-            interface ExtendedMethod extends Method {
-              method?: string;
-            }
-            const extendedMethod = method as ExtendedMethod;
-            if (typeof extendedMethod.method === 'string') {
-              // 如果有method字段，使用它作为name
-              method.name = extendedMethod.method;
-            } else {
-              setError('冲煮方案缺少名称');
-              return;
-            }
-          }
+  // 取消输入 - 返回主界面
+  const handleCancelJsonInput = useCallback(() => {
+    goBackToMain();
+  }, [goBackToMain]);
 
-          // 验证params
-          if (!method.params) {
-            setError('冲煮方案格式不完整，缺少参数字段');
-            return;
-          }
+  // 关闭时重置状态
+  const handleClose = useCallback(() => {
+    setCurrentStep('main');
+    setJsonInputValue('');
+    setIsRecognizing(false);
+    if (recognizingImageUrl) {
+      URL.revokeObjectURL(recognizingImageUrl);
+      setRecognizingImageUrl(null);
+    }
+    onClose();
+  }, [onClose, recognizingImageUrl]);
 
-          // 验证stages
-          if (!method.params.stages || method.params.stages.length === 0) {
-            setError('冲煮方案格式不完整，缺少冲煮步骤');
-            return;
-          }
+  // 操作项配置
+  const actions = [
+    {
+      id: 'image',
+      label: '图片识别冲煮方案（推荐）',
+      onClick: handleUploadImageClick,
+    },
+    {
+      id: 'clipboard',
+      label: clipboardStatus === 'error' ? '识别失败，再试一次' : '识别剪切板',
+      onClick: handleClipboardRecognition,
+    },
+    {
+      id: 'json',
+      label: '输入 JSON',
+      onClick: handleInputJSON,
+    },
+  ];
 
-          // 检查是否已存在同名方案
-          const existingMethod = existingMethods.find(
-            m => m.name === method.name
-          );
-          if (existingMethod) {
-            setError(`已存在同名方案"${method.name}"，请修改后再导入`);
-            return;
-          }
+  // 主界面内容
+  const mainContent = (
+    <>
+      {/* 图标区域 */}
+      <div className="mb-6 text-neutral-800 dark:text-neutral-200">
+        <AddCircleIcon width={128} height={128} />
+      </div>
 
-          // 确保method对象完全符合Method接口
-          const validMethod: Method = {
-            id:
-              method.id ||
-              `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: method.name,
-            params: {
-              coffee: method.params.coffee || '15g',
-              water: method.params.water || '225g',
-              ratio: method.params.ratio || '1:15',
-              grindSize: method.params.grindSize || '中细',
-              temp: method.params.temp || '92°C',
-              stages: method.params.stages,
-            },
-          };
+      {/* 内容区域 */}
+      <ActionDrawer.Content>
+        <p className="text-neutral-500 dark:text-neutral-400">
+          推荐使用
+          <span className="text-neutral-800 dark:text-neutral-200">
+            图片识别
+          </span>
+          添加冲煮方案，也可将图片和
+          <button
+            onClick={handleCopyPrompt}
+            className="mx-0.5 text-neutral-800 underline decoration-neutral-400 underline-offset-2 hover:opacity-80 dark:text-neutral-200"
+          >
+            提示词
+          </button>
+          发给 AI 生成 JSON 后粘贴导入。
+        </p>
+      </ActionDrawer.Content>
 
-          // 导入方案
-          onImport(validMethod);
-          // 导入成功后清空输入框和错误信息
-          setImportData('');
-          setError(null);
-          // 关闭模态框
-          handleClose();
-        })
-        .catch(err => {
-          setError(
-            '解析数据失败: ' + (err instanceof Error ? err.message : '未知错误')
-          );
-        });
-    } catch (err) {
-      setError(
-        '导入失败: ' + (err instanceof Error ? err.message : '未知错误')
-      );
+      {/* 操作按钮列表 */}
+      <div className="flex flex-col gap-2">
+        {actions.map(action => (
+          <motion.button
+            key={action.id}
+            whileTap={{ scale: 0.98 }}
+            onClick={action.onClick}
+            className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
+          >
+            {action.label}
+          </motion.button>
+        ))}
+      </div>
+    </>
+  );
+
+  // JSON 输入界面内容
+  const jsonInputContent = (
+    <>
+      {/* 图标区域 */}
+      <div className="mb-6 text-neutral-800 dark:text-neutral-200">
+        <AddBoxIcon width={128} height={128} />
+      </div>
+
+      {/* 内容区域 */}
+      <ActionDrawer.Content>
+        <p className="text-neutral-500 dark:text-neutral-400">
+          粘贴
+          <span className="text-neutral-800 dark:text-neutral-200">
+            {' '}
+            AI 生成或他人分享
+          </span>
+          的冲煮方案 JSON 数据。
+        </p>
+      </ActionDrawer.Content>
+
+      {/* JSON 输入区域 */}
+      <div className="flex flex-col gap-2">
+        <textarea
+          ref={jsonTextareaRef}
+          value={jsonInputValue}
+          onChange={e => setJsonInputValue(e.target.value)}
+          placeholder='{"name": "方案名称", "params": {...}}'
+          className="h-24 w-full resize-none rounded-2xl bg-neutral-100 px-4 py-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-600"
+        />
+        <div className="flex gap-2">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={handleCancelJsonInput}
+            className="flex-1 rounded-full bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+          >
+            取消
+          </motion.button>
+          <motion.button
+            whileTap={!jsonInputValue.trim() ? undefined : { scale: 0.98 }}
+            onClick={handleSubmitJson}
+            disabled={!jsonInputValue.trim()}
+            className={`flex-1 rounded-full px-4 py-3 text-sm font-medium transition-colors ${
+              jsonInputValue.trim()
+                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                : 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500'
+            }`}
+          >
+            确认导入
+          </motion.button>
+        </div>
+      </div>
+    </>
+  );
+
+  // 识别中界面内容
+  const recognizingContent = (
+    <>
+      {/* 图片扫描区域 */}
+      <div className="mb-6">
+        {recognizingImageUrl && (
+          <ScanningOverlay imageUrl={recognizingImageUrl} />
+        )}
+      </div>
+
+      {/* 内容区域 */}
+      <ActionDrawer.Content>
+        <p className="text-neutral-500 dark:text-neutral-400">
+          正在
+          <span className="text-neutral-800 dark:text-neutral-200">
+            识别冲煮方案
+          </span>
+          ，请稍候...
+        </p>
+      </ActionDrawer.Content>
+    </>
+  );
+
+  // 根据步骤渲染内容
+  const renderContent = () => {
+    switch (currentStep) {
+      case 'recognizing':
+        return recognizingContent;
+      case 'json-input':
+        return jsonInputContent;
+      default:
+        return mainContent;
     }
   };
 
-  // 渲染提示词部分
-  const renderPromptSection = () => (
-    <div className="space-y-3">
-      <button
-        onClick={() => setShowPrompt(!showPrompt)}
-        className="flex w-full items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400"
-      >
-        <svg
-          className={`h-3.5 w-3.5 transition-transform ${showPrompt ? 'rotate-90' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5l7 7-7 7"
-          />
-        </svg>
-        <span>使用提示词生成方案</span>
-      </button>
-      <AnimatePresence>
-        {showPrompt && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="space-y-2 rounded-lg border border-neutral-200/50 bg-neutral-100/60 p-3 dark:border-neutral-700 dark:bg-neutral-800/30">
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                将此提示词和你的冲煮方案一起发给 ChatGPT、Claude 等 AI
-              </p>
-              <textarea
-                readOnly
-                value={_templatePrompt}
-                className="h-24 w-full resize-none rounded border border-neutral-200/50 bg-white/60 p-2 text-[10px] leading-relaxed text-neutral-600 focus:outline-none dark:border-neutral-600 dark:bg-neutral-900/60 dark:text-neutral-400"
-                onFocus={e => e.target.select()}
-              />
-              <button
-                onClick={() => {
-                  clearMessages();
-                  _copyTextToClipboard(_templatePrompt);
-                }}
-                className="w-full rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-white transition-opacity hover:opacity-80 dark:bg-neutral-200 dark:text-neutral-800"
-              >
-                复制提示词
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-
-  if (!shouldRender) return null;
-
   return (
-    <AnimatePresence>
-      {showForm && (
-        <motion.div
-          data-modal={showForm ? 'method-import' : undefined}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.265 }}
-          className="fixed inset-0 z-50 bg-black/50"
-        >
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{
-              ease: [0.33, 1, 0.68, 1],
-              duration: 0.265,
-            }}
-            style={{ willChange: 'transform' }}
-            className="absolute inset-x-0 bottom-0 mx-auto max-h-[90vh] max-w-md overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl dark:bg-neutral-900"
-          >
-            {/* 拖动条 */}
-            <div className="sticky top-0 z-10 flex justify-center bg-neutral-50 py-2 dark:bg-neutral-900">
-              <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
-            </div>
+    <>
+      <ActionDrawer
+        isOpen={showForm}
+        onClose={handleClose}
+        historyId="method-import"
+      >
+        <ActionDrawer.Switcher activeKey={currentStep}>
+          {renderContent()}
+        </ActionDrawer.Switcher>
+      </ActionDrawer>
 
-            {/* 表单内容 */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.265,
-                delay: 0.05,
-              }}
-              style={{ willChange: 'opacity, transform' }}
-              className="pb-safe-bottom max-h-[calc(90vh-40px)] overflow-auto px-6"
-            >
-              <div className="flex flex-col">
-                {/* 顶部标题 */}
-                <div className="mb-4 flex items-center justify-between py-4">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M19 12H5M5 12L12 19M5 12L12 5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-                  <h3 className="text-base font-medium text-neutral-900 dark:text-neutral-100">
-                    导入冲煮方案
-                  </h3>
-                  <div className="w-8"></div>
-                </div>
-
-                {/* 表单内容 */}
-                <div className="space-y-4 pb-4">
-                  <textarea
-                    className="h-48 w-full resize-none rounded-lg border border-neutral-200/50 bg-neutral-100/60 p-3 text-sm text-neutral-800 placeholder-neutral-500 transition-colors focus:border-neutral-800/50 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800/30 dark:text-neutral-200 dark:placeholder-neutral-400 dark:focus:border-neutral-200"
-                    placeholder="粘贴方案数据或朋友分享的 JSON"
-                    value={importData}
-                    onChange={e => setImportData(e.target.value)}
-                  />
-
-                  {renderPromptSection()}
-
-                  {error && (
-                    <div className="rounded-lg bg-red-100/60 p-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                      {error}
-                    </div>
-                  )}
-
-                  {/* 导入按钮 - 固定位置，根据输入内容改变透明度和模糊度 */}
-                  <motion.button
-                    initial={{
-                      opacity: 0,
-                    }}
-                    animate={{
-                      opacity: importData.trim() ? 1 : 0,
-                    }}
-                    transition={{ duration: 0.2 }}
-                    onClick={handleImport}
-                    disabled={!importData.trim()}
-                    className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-neutral-100 transition-opacity hover:opacity-80 disabled:pointer-events-none dark:bg-neutral-200 dark:text-neutral-800"
-                  >
-                    导入
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      {/* 隐藏的文件输入 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
+    </>
   );
 };
 

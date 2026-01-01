@@ -134,6 +134,48 @@ export async function recognizeBean(imageUrl) {
 }
 
 /**
+ * 调用 AI 识别冲煮方案（非流式）
+ *
+ * @param {string} imageUrl - 图片 Base64 URL
+ * @returns {Promise<string>} AI 响应内容
+ */
+export async function recognizeMethod(imageUrl) {
+  const startTime = Date.now();
+
+  logger.info('🤖 Starting AI method recognition...');
+
+  const response = await axiosWithRetry({
+    method: 'post',
+    url: aiConfig.methodRecognition.baseURL,
+    data: {
+      model: aiConfig.methodRecognition.model,
+      messages: [
+        { role: 'system', content: aiPrompts.methodRecognition },
+        {
+          role: 'user',
+          content: [{ type: 'image_url', image_url: { url: imageUrl } }],
+        },
+      ],
+      temperature: aiConfig.methodRecognition.temperature,
+      max_tokens: aiConfig.methodRecognition.maxTokens,
+      response_format: { type: 'json_object' },
+    },
+    headers: {
+      Authorization: `Bearer ${apiKeys.qiniu}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: aiConfig.methodRecognition.timeout,
+    maxContentLength: 50 * 1024 * 1024,
+    maxBodyLength: 50 * 1024 * 1024,
+  });
+
+  const duration = Date.now() - startTime;
+  logger.logAI(aiConfig.methodRecognition.model, duration);
+
+  return response.data.choices[0]?.message?.content || '';
+}
+
+/**
  * 调用 AI 生成年度报告（流式）
  *
  * @param {string} dataSummary - 数据摘要
@@ -228,6 +270,7 @@ export async function moderateFeedback(content) {
 export default {
   recognizeBeanStreaming,
   recognizeBean,
+  recognizeMethod,
   generateYearlyReportStreaming,
   moderateFeedback,
 };
