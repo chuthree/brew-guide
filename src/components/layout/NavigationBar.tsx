@@ -272,7 +272,7 @@ interface NavigationBarProps {
       stages: Array<{
         label: string;
         time: number;
-        water: string;
+        water?: string;
         detail: string;
         pourType?: string;
       }>;

@@ -162,7 +162,7 @@ export function useBrewingParameters() {
             calculatedWater / extractNumber(selectedMethod.params.water);
           const updatedStages = selectedMethod.params.stages.map(stage => ({
             ...stage,
-            water: `${Math.round(extractNumber(stage.water) * waterRatio)}g`,
+            water: `${Math.round(extractNumber(stage.water || '0') * waterRatio)}g`,
           }));
           updateBrewingSteps(updatedStages);
           const updatedMethod = {
@@ -189,7 +189,7 @@ export function useBrewingParameters() {
             calculatedWater / extractNumber(selectedMethod.params.water);
           const updatedStages = selectedMethod.params.stages.map(stage => ({
             ...stage,
-            water: `${Math.round(extractNumber(stage.water) * waterRatio)}g`,
+            water: `${Math.round(extractNumber(stage.water || '0') * waterRatio)}g`,
           }));
           updateBrewingSteps(updatedStages);
           const updatedMethod = {
@@ -220,7 +220,7 @@ export function useBrewingParameters() {
 
           const updatedStages = selectedMethod.params.stages.map(stage => ({
             ...stage,
-            water: `${Math.round(extractNumber(stage.water) * waterRatio)}g`,
+            water: `${Math.round(extractNumber(stage.water || '0') * waterRatio)}g`,
           }));
           updateBrewingSteps(updatedStages);
           const updatedMethod = {

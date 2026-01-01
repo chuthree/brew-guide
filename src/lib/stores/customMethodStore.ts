@@ -13,6 +13,10 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { db } from '@/lib/core/db';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
 import { nanoid } from 'nanoid';
+import {
+  isLegacyFormat,
+  autoMigrateStages,
+} from '@/lib/brewing/stageMigration';
 
 /**
  * 方案数据结构
@@ -73,13 +77,53 @@ function generateMethodId(): string {
 }
 
 /**
- * 确保方案有唯一ID
+ * 迁移方案中的旧版 stages 到新格式
+ * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5
+ *
+ * @param method 方案对象
+ * @returns 迁移后的方案对象（如果需要迁移）
+ */
+function migrateMethodStages(method: Method): Method {
+  if (!method.params?.stages || method.params.stages.length === 0) {
+    return method;
+  }
+
+  // 检测是否为旧格式
+  if (isLegacyFormat(method.params.stages)) {
+    // 使用自动迁移函数转换 stages
+    const migratedStages = autoMigrateStages(method.params.stages);
+
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        `[CustomMethodStore] 迁移方案 "${method.name}" 的 stages 从旧格式到新格式`
+      );
+    }
+
+    return {
+      ...method,
+      params: {
+        ...method.params,
+        stages: migratedStages,
+      },
+    };
+  }
+
+  return method;
+}
+
+/**
+ * 确保方案有唯一ID，并迁移旧版 stages
  */
 function ensureMethodId(method: Method): Method {
-  if (!method.id) {
-    return { ...method, id: generateMethodId() };
+  // 先迁移 stages
+  let processedMethod = migrateMethodStages(method);
+
+  // 确保有 ID
+  if (!processedMethod.id) {
+    processedMethod = { ...processedMethod, id: generateMethodId() };
   }
-  return method;
+
+  return processedMethod;
 }
 
 /**
@@ -119,11 +163,51 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         // 从 IndexedDB 加载所有方案
         const methodsData = await db.customMethods.toArray();
 
-        // 转换为记录格式
+        // 转换为记录格式，同时检测并迁移旧格式数据
         const methodsByEquipment: Record<string, Method[]> = {};
+        const equipmentsToUpdate: Array<{
+          equipmentId: string;
+          methods: Method[];
+        }> = [];
+
         for (const item of methodsData) {
-          methodsByEquipment[item.equipmentId] =
-            item.methods.map(ensureMethodId);
+          const originalMethods = item.methods;
+          const processedMethods = originalMethods.map(ensureMethodId);
+
+          // 检查是否有任何方案被迁移（通过比较 stages 结构）
+          const hasMigration = originalMethods.some((original, index) => {
+            const processed = processedMethods[index];
+            // 如果原始数据有 time 字段但处理后没有，说明发生了迁移
+            if (original.params?.stages && processed.params?.stages) {
+              return isLegacyFormat(original.params.stages);
+            }
+            return false;
+          });
+
+          methodsByEquipment[item.equipmentId] = processedMethods;
+
+          // 如果发生了迁移，记录需要更新的数据
+          if (hasMigration) {
+            equipmentsToUpdate.push({
+              equipmentId: item.equipmentId,
+              methods: processedMethods,
+            });
+          }
+        }
+
+        // 批量更新已迁移的数据到 IndexedDB
+        if (equipmentsToUpdate.length > 0) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(
+              `[CustomMethodStore] 正在持久化 ${equipmentsToUpdate.length} 个器具的迁移数据`
+            );
+          }
+
+          await db.transaction('rw', db.customMethods, async () => {
+            for (const { equipmentId, methods } of equipmentsToUpdate) {
+              await db.customMethods.put({ equipmentId, methods });
+            }
+          });
         }
 
         set({ methodsByEquipment, isLoading: false, initialized: true });
@@ -146,7 +230,27 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         // 从数据库加载
         const data = await db.customMethods.get(equipmentId);
         if (data && data.methods) {
-          const methods = data.methods.map(ensureMethodId);
+          const originalMethods = data.methods;
+          const methods = originalMethods.map(ensureMethodId);
+
+          // 检查是否发生了迁移
+          const hasMigration = originalMethods.some((original, index) => {
+            const processed = methods[index];
+            if (original.params?.stages && processed.params?.stages) {
+              return isLegacyFormat(original.params.stages);
+            }
+            return false;
+          });
+
+          // 如果发生了迁移，持久化更新
+          if (hasMigration) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(
+                `[CustomMethodStore] 迁移并持久化器具 ${equipmentId} 的方案数据`
+              );
+            }
+            await db.customMethods.put({ equipmentId, methods });
+          }
 
           set(state => ({
             methodsByEquipment: {

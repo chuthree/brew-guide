@@ -56,6 +56,7 @@ export interface Step {
   items?: string[];
   note?: string;
   time?: number;
+  duration?: number; // 新格式：阶段用时
   pourTime?: number;
   water?: string;
   detail?: string;
@@ -596,7 +597,9 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         newStageSteps = currentBrewingMethod.params.stages.map(
           (stage, index) => ({
             title: stage.label,
+            // 支持新旧格式：新格式使用 duration，旧格式使用 time
             time: stage.time,
+            duration: stage.duration,
             pourTime: stage.pourTime,
             water: stage.water,
             detail: stage.detail,

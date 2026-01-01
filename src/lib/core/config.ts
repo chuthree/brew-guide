@@ -1,14 +1,52 @@
 export const APP_VERSION = '1.5.11-beta.2';
 
 // Types
+
+/**
+ * 注水方式类型
+ * - center: 中心注水
+ * - circle: 绕圈注水
+ * - ice: 添加冰块
+ * - bypass: Bypass
+ * - wait: 等待（新增）
+ * - other: 其他
+ * - extraction: 意式萃取
+ * - beverage: 意式饮料
+ * - string: 自定义注水方式 ID
+ */
+export type PourType =
+  | 'center'
+  | 'circle'
+  | 'ice'
+  | 'bypass'
+  | 'wait'
+  | 'other'
+  | 'extraction'
+  | 'beverage'
+  | string;
+
+/**
+ * 冲煮步骤接口
+ *
+ * 新数据模型使用 duration（阶段用时）和 water（阶段注水量）
+ * 旧数据模型使用 time（累计时间）和 pourTime（注水时间）
+ *
+ * 迁移期间两种格式共存，旧数据在读取时自动转换为新格式
+ */
 export interface Stage {
-  time?: number; // 对于饮料（beverage）类型是可选的
-  label: string;
-  water: string;
-  detail: string;
-  pourTime?: number;
-  pourType?: string; // 支持自定义注水方式和意式机类型，包括'extraction'和'beverage'等
-  valveStatus?: 'open' | 'closed';
+  // 核心字段
+  pourType?: PourType; // 注水方式
+  label: string; // 步骤标题
+  water?: string; // 阶段注水量（克），等待步骤可选
+  duration?: number; // 阶段用时（秒），bypass/beverage 可选
+  detail: string; // 备注说明
+
+  // 特殊字段
+  valveStatus?: 'open' | 'closed'; // 阀门状态（聪明杯等）
+
+  // 旧版兼容字段（用于迁移过渡期，读取旧数据时使用）
+  time?: number; // 旧版累计时间（秒）
+  pourTime?: number; // 旧版注水时间（秒）
 }
 
 export interface MethodParams {
@@ -151,7 +189,7 @@ export const equipmentList: Equipment[] = [
   // 可以在这里添加更多器具
 ];
 
-// Brewing Methods Data
+// Brewing Methods Data (新格式：使用 duration 和阶段水量，等待作为独立步骤)
 export const brewingMethods: BrewingMethods = {
   V60: [
     {
@@ -163,21 +201,33 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细',
         temp: '92°C',
         stages: [
+          // 原: time=25, pourTime=10, water=30g → duration=10, wait=15
           {
-            time: 25,
-            pourTime: 10,
-            label: '焖蒸(绕圈注水)',
-            water: '30g',
-            detail: '中心向外绕圈，确保均匀萃取',
             pourType: 'circle',
+            label: '焖蒸(绕圈注水)',
+            water: '30',
+            duration: 10,
+            detail: '中心向外绕圈，确保均匀萃取',
           },
           {
-            time: 120,
-            pourTime: 65,
-            label: '绕圈注水',
-            water: '225g',
-            detail: '中心向外缓慢画圈注水，均匀萃取咖啡风味',
+            pourType: 'wait',
+            label: '等待',
+            duration: 15,
+            detail: '',
+          },
+          // 原: time=120, pourTime=65, water=225g → duration=65, wait=30, stageWater=195
+          {
             pourType: 'circle',
+            label: '绕圈注水',
+            water: '195',
+            duration: 65,
+            detail: '中心向外缓慢画圈注水，均匀萃取咖啡风味',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 30,
+            detail: '',
           },
         ],
       },
@@ -191,29 +241,41 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细',
         temp: '92°C',
         stages: [
+          // 原: time=25, pourTime=10, water=30g → duration=10, wait=15
           {
-            time: 25,
-            pourTime: 10,
+            pourType: 'circle',
             label: '焖蒸(绕圈注水)',
-            water: '30g',
+            water: '30',
+            duration: 10,
             detail: '中心向外绕圈，确保均匀萃取',
-            pourType: 'circle',
           },
           {
-            time: 50,
-            pourTime: 25,
+            pourType: 'wait',
+            label: '等待',
+            duration: 15,
+            detail: '',
+          },
+          // 原: time=50, pourTime=25, water=140g → duration=25, stageWater=110
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '140g',
+            water: '110',
+            duration: 25,
             detail: '中心向外缓慢画圈注水，均匀萃取咖啡风味',
-            pourType: 'circle',
+          },
+          // 原: time=120, pourTime=40, water=225g → duration=40, wait=30, stageWater=85
+          {
+            pourType: 'center',
+            label: '中心注水',
+            water: '85',
+            duration: 40,
+            detail: '中心定点注水，降低萃取率',
           },
           {
-            time: 120,
-            pourTime: 40,
-            label: '中心注水',
-            water: '225g',
-            detail: '中心定点注水，降低萃取率',
-            pourType: 'center',
+            pourType: 'wait',
+            label: '等待',
+            duration: 30,
+            detail: '',
           },
         ],
       },
@@ -227,45 +289,75 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细偏粗',
         temp: '96°C',
         stages: [
+          // 原: time=45, pourTime=10, water=50g → duration=10, wait=35
           {
-            time: 45,
-            pourTime: 10,
+            pourType: 'circle',
             label: '绕圈注水 (1/2)',
-            water: '50g',
+            water: '50',
+            duration: 10,
             detail: '甜度控制，中心圆形注水，确保均匀浸润',
-            pourType: 'circle',
           },
           {
-            time: 90,
-            pourTime: 7,
+            pourType: 'wait',
+            label: '等待',
+            duration: 35,
+            detail: '',
+          },
+          // 原: time=90, pourTime=7, water=120g → duration=7, wait=38, stageWater=70
+          {
+            pourType: 'circle',
             label: '绕圈注水 (2/2)',
-            water: '120g',
+            water: '70',
+            duration: 7,
             detail: '甜度控制，大水流中心圆形注水',
-            pourType: 'circle',
           },
           {
-            time: 130,
-            pourTime: 4,
+            pourType: 'wait',
+            label: '等待',
+            duration: 38,
+            detail: '',
+          },
+          // 原: time=130, pourTime=4, water=180g → duration=4, wait=36, stageWater=60
+          {
+            pourType: 'circle',
             label: '绕圈注水 (1/3)',
-            water: '180g',
+            water: '60',
+            duration: 4,
             detail: '酸度控制，大水流中心向外螺旋注水',
-            pourType: 'circle',
           },
           {
-            time: 165,
-            pourTime: 4,
+            pourType: 'wait',
+            label: '等待',
+            duration: 36,
+            detail: '',
+          },
+          // 原: time=165, pourTime=4, water=240g → duration=4, wait=31, stageWater=60
+          {
+            pourType: 'circle',
             label: '绕圈注水 (2/3)',
-            water: '240g',
+            water: '60',
+            duration: 4,
             detail: '酸度控制，大水流中心向外螺旋注水',
-            pourType: 'circle',
           },
           {
-            time: 210,
-            pourTime: 4,
-            label: '绕圈注水 (3/3)',
-            water: '300g',
-            detail: '酸度控制，大水流中心向外螺旋注水',
+            pourType: 'wait',
+            label: '等待',
+            duration: 31,
+            detail: '',
+          },
+          // 原: time=210, pourTime=4, water=300g → duration=4, wait=41, stageWater=60
+          {
             pourType: 'circle',
+            label: '绕圈注水 (3/3)',
+            water: '60',
+            duration: 4,
+            detail: '酸度控制，大水流中心向外螺旋注水',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 41,
+            detail: '',
           },
         ],
       },
@@ -279,30 +371,42 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细偏粗',
         temp: '92°C',
         stages: [
+          // 原: time=30, pourTime=10, water=30g → duration=10, wait=20
           {
-            time: 30,
-            pourTime: 10,
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '30g',
+            water: '30',
+            duration: 10,
             detail: '（1:2）中心向外绕圈，确保均匀萃取',
-            pourType: 'circle',
           },
           {
-            time: 60,
-            pourTime: 30,
+            pourType: 'wait',
+            label: '等待',
+            duration: 20,
+            detail: '',
+          },
+          // 原: time=60, pourTime=30, water=120g → duration=30, stageWater=90
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '120g',
+            water: '90',
+            duration: 30,
             detail: '（1:6）中心向外缓慢画圈注水，均匀萃取咖啡风味',
-            pourType: 'circle',
           },
+          // 原: time=100, pourTime=30, water=225g → duration=30, wait=10, stageWater=105
           {
-            time: 100,
-            pourTime: 30,
+            pourType: 'center',
             label: '中心注水',
-            water: '225g',
+            water: '105',
+            duration: 30,
             detail:
               '（1:X）中心定点注水，初始X值建议5(1:5)，可根据风味调整：过淡用4(1:4)，过浓用6(1:6)',
-            pourType: 'center',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 10,
+            detail: '',
           },
         ],
       },
@@ -316,31 +420,49 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '细（摩卡壶研磨度）',
         temp: '45°C',
         stages: [
+          // 原: time=90, pourTime=20, water=36g → duration=20, wait=70
           {
-            time: 90,
-            pourTime: 20,
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '36g',
+            water: '36',
+            duration: 20,
             detail:
               '平铺表面，相当于闷蒸 - 快速湿润与尽量不搅动粉层的方式来进行类闷蒸处理',
-            pourType: 'circle',
           },
           {
-            time: 240,
-            pourTime: 42,
+            pourType: 'wait',
+            label: '等待',
+            duration: 70,
+            detail: '',
+          },
+          // 原: time=240, pourTime=42, water=116g → duration=42, wait=108, stageWater=80
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '116g',
+            water: '80',
+            duration: 42,
             detail: '第一段注水后等液面降至粉下后，再进行第二段注水',
-            pourType: 'circle',
           },
           {
-            time: 360,
-            pourTime: 60,
+            pourType: 'wait',
+            label: '等待',
+            duration: 108,
+            detail: '',
+          },
+          // 原: time=360, pourTime=60, water=200g → duration=60, wait=60, stageWater=84
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '200g',
+            water: '84',
+            duration: 60,
             detail:
               '第二段注水后等液面降至粉下后，再进行第三段注水。注水完成后等待滴落状态至滴水时，即完成，之后可依据习惯添加水至喜欢的浓淡即可',
-            pourType: 'circle',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 60,
+            detail: '',
           },
         ],
       },
@@ -354,37 +476,61 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细',
         temp: '92°C',
         stages: [
+          // 原: time=25, pourTime=15, water=40g → duration=15, wait=10
           {
-            time: 25,
-            pourTime: 15,
+            pourType: 'circle',
             label: '焖蒸（绕圈注水）',
-            water: '40g',
+            water: '40',
+            duration: 15,
             detail: '中心向外绕圈，确保均匀萃取',
-            pourType: 'circle',
           },
           {
-            time: 55,
-            pourTime: 20,
+            pourType: 'wait',
+            label: '等待',
+            duration: 10,
+            detail: '',
+          },
+          // 原: time=55, pourTime=20, water=120g → duration=20, wait=10, stageWater=80
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '120g',
+            water: '80',
+            duration: 20,
             detail: '中心向外缓慢画圈注水，均匀萃取咖啡风味',
-            pourType: 'circle',
           },
           {
-            time: 70,
-            pourTime: 10,
+            pourType: 'wait',
+            label: '等待',
+            duration: 10,
+            detail: '',
+          },
+          // 原: time=70, pourTime=10, water=190g → duration=10, wait=5, stageWater=70
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '190g',
+            water: '70',
+            duration: 10,
             detail: '中心向外缓慢画圈注水，均匀萃取咖啡风味',
-            pourType: 'circle',
           },
           {
-            time: 95,
-            pourTime: 5,
-            label: '中心注水',
-            water: '240g',
-            detail: '中心定点大水流注水',
+            pourType: 'wait',
+            label: '等待',
+            duration: 5,
+            detail: '',
+          },
+          // 原: time=95, pourTime=5, water=240g → duration=5, wait=20, stageWater=50
+          {
             pourType: 'center',
+            label: '中心注水',
+            water: '50',
+            duration: 5,
+            detail: '中心定点大水流注水',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 20,
+            detail: '',
           },
         ],
       },
@@ -398,29 +544,47 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细',
         temp: '96°C',
         stages: [
+          // 原: time=40, pourTime=10, water=40g → duration=10, wait=30
           {
-            time: 40,
-            pourTime: 10,
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '40g',
+            water: '40',
+            duration: 10,
             detail: '(分享壶中预先放入50g冰块) 绕圈注水，确保均匀萃取',
-            pourType: 'circle',
           },
           {
-            time: 70,
-            pourTime: 10,
+            pourType: 'wait',
+            label: '等待',
+            duration: 30,
+            detail: '',
+          },
+          // 原: time=70, pourTime=10, water=120g → duration=10, wait=20, stageWater=80
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '120g',
+            water: '80',
+            duration: 10,
             detail: '绕圈注水，继续萃取',
-            pourType: 'circle',
           },
           {
-            time: 120,
-            pourTime: 10,
-            label: '绕圈注水',
-            water: '200g',
-            detail: '绕圈注水至边缘，完成后杯中加满新鲜冰块',
+            pourType: 'wait',
+            label: '等待',
+            duration: 20,
+            detail: '',
+          },
+          // 原: time=120, pourTime=10, water=200g → duration=10, wait=40, stageWater=80
+          {
             pourType: 'circle',
+            label: '绕圈注水',
+            water: '80',
+            duration: 10,
+            detail: '绕圈注水至边缘，完成后杯中加满新鲜冰块',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 40,
+            detail: '',
           },
         ],
       },
@@ -435,12 +599,11 @@ export const brewingMethods: BrewingMethods = {
         temp: '0°C',
         stages: [
           {
-            time: 0,
-            pourTime: 0,
-            label: '(略)',
-            water: '0g',
-            detail: '(略)',
             pourType: 'other',
+            label: '(略)',
+            water: '0',
+            duration: 0,
+            detail: '(略)',
           },
         ],
       },
@@ -456,22 +619,28 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细',
         temp: '97°C',
         stages: [
+          // 原: time=180, pourTime=10, water=240g → duration=10, wait=170
           {
-            time: 180,
-            pourTime: 10,
-            label: '[关阀]加水',
-            water: '240g',
-            detail: '关闭阀门，加入热水',
             pourType: 'circle',
+            label: '[关阀]加水',
+            water: '240',
+            duration: 10,
+            detail: '关闭阀门，加入热水',
             valveStatus: 'closed',
           },
           {
-            time: 240,
-            pourTime: 0,
-            label: '[开阀]等待过滤完成',
-            water: '240g',
-            detail: '打开阀门，等待过滤完成即可饮用',
+            pourType: 'wait',
+            label: '等待',
+            duration: 170,
+            detail: '',
+          },
+          // 原: time=240, pourTime=0, water=240g → duration=60 (开阀等待过滤)
+          {
             pourType: 'other',
+            label: '[开阀]等待过滤完成',
+            water: '0',
+            duration: 60,
+            detail: '打开阀门，等待过滤完成即可饮用',
             valveStatus: 'open',
           },
         ],
@@ -487,12 +656,11 @@ export const brewingMethods: BrewingMethods = {
         temp: '0°C',
         stages: [
           {
-            time: 0,
-            pourTime: 0,
-            label: '(略)',
-            water: '0g',
-            detail: '(略)',
             pourType: 'other',
+            label: '(略)',
+            water: '0',
+            duration: 0,
+            detail: '(略)',
             valveStatus: 'open',
           },
         ],
@@ -509,29 +677,47 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细',
         temp: '92°C',
         stages: [
+          // 原: time=30, pourTime=10, water=30g → duration=10, wait=20
           {
-            time: 30,
-            pourTime: 10,
+            pourType: 'circle',
             label: '焖蒸(绕圈注水)',
-            water: '30g',
+            water: '30',
+            duration: 10,
             detail: '中心向外绕圈，确保均匀萃取',
-            pourType: 'circle',
           },
           {
-            time: 70,
-            pourTime: 10,
+            pourType: 'wait',
+            label: '等待',
+            duration: 20,
+            detail: '',
+          },
+          // 原: time=70, pourTime=10, water=140g → duration=10, wait=30, stageWater=110
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '140g',
+            water: '110',
+            duration: 10,
             detail: '中心向外缓慢画圈注水，均匀萃取咖啡风味',
-            pourType: 'circle',
           },
           {
-            time: 120,
-            pourTime: 40,
-            label: '中心注水',
-            water: '225g',
-            detail: '中心定点注水，降低萃取率',
+            pourType: 'wait',
+            label: '等待',
+            duration: 30,
+            detail: '',
+          },
+          // 原: time=120, pourTime=40, water=225g → duration=40, wait=10, stageWater=85
+          {
             pourType: 'center',
+            label: '中心注水',
+            water: '85',
+            duration: 40,
+            detail: '中心定点注水，降低萃取率',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 10,
+            detail: '',
           },
         ],
       },
@@ -545,31 +731,49 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '细（摩卡壶研磨度）',
         temp: '45°C',
         stages: [
+          // 原: time=90, pourTime=20, water=36g → duration=20, wait=70
           {
-            time: 90,
-            pourTime: 20,
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '36g',
+            water: '36',
+            duration: 20,
             detail:
               '平铺表面，相当于闷蒸 - 快速湿润与尽量不搅动粉层的方式来进行类闷蒸处理',
-            pourType: 'circle',
           },
           {
-            time: 240,
-            pourTime: 42,
+            pourType: 'wait',
+            label: '等待',
+            duration: 70,
+            detail: '',
+          },
+          // 原: time=240, pourTime=42, water=116g → duration=42, wait=108, stageWater=80
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '116g',
+            water: '80',
+            duration: 42,
             detail: '第一段注水后等液面降至粉下后，再进行第二段注水',
-            pourType: 'circle',
           },
           {
-            time: 360,
-            pourTime: 60,
+            pourType: 'wait',
+            label: '等待',
+            duration: 108,
+            detail: '',
+          },
+          // 原: time=360, pourTime=60, water=200g → duration=60, wait=60, stageWater=84
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '200g',
+            water: '84',
+            duration: 60,
             detail:
               '第二段注水后等液面降至粉下后，再进行第三段注水。注水完成后等待滴落状态至滴水时，即完成，之后可依据习惯添加水至喜欢的浓淡即可',
-            pourType: 'circle',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 60,
+            detail: '',
           },
         ],
       },
@@ -583,30 +787,42 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细偏粗',
         temp: '92°C',
         stages: [
+          // 原: time=30, pourTime=10, water=30g → duration=10, wait=20
           {
-            time: 30,
-            pourTime: 10,
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '30g',
+            water: '30',
+            duration: 10,
             detail: '（1:2）中心向外绕圈，确保均匀萃取',
-            pourType: 'circle',
           },
           {
-            time: 60,
-            pourTime: 30,
+            pourType: 'wait',
+            label: '等待',
+            duration: 20,
+            detail: '',
+          },
+          // 原: time=60, pourTime=30, water=120g → duration=30, stageWater=90
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '120g',
+            water: '90',
+            duration: 30,
             detail: '（1:6）中心向外缓慢画圈注水，均匀萃取咖啡风味',
-            pourType: 'circle',
           },
+          // 原: time=100, pourTime=30, water=225g → duration=30, wait=10, stageWater=105
           {
-            time: 100,
-            pourTime: 30,
+            pourType: 'center',
             label: '中心注水',
-            water: '225g',
+            water: '105',
+            duration: 30,
             detail:
               '（1:X）中心定点注水，初始X值建议5(1:5)，可根据风味调整：过淡用4(1:4)，过浓用6(1:6)',
-            pourType: 'center',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 10,
+            detail: '',
           },
         ],
       },
@@ -621,12 +837,11 @@ export const brewingMethods: BrewingMethods = {
         temp: '0°C',
         stages: [
           {
-            time: 0,
-            pourTime: 0,
-            label: '(略)',
-            water: '0g',
-            detail: '(略)',
             pourType: 'other',
+            label: '(略)',
+            water: '0',
+            duration: 0,
+            detail: '(略)',
           },
         ],
       },
@@ -642,29 +857,47 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细',
         temp: '92°C',
         stages: [
+          // 原: time=30, pourTime=10, water=30g → duration=10, wait=20
           {
-            time: 30,
-            pourTime: 10,
+            pourType: 'circle',
             label: '焖蒸(绕圈注水)',
-            water: '30g',
+            water: '30',
+            duration: 10,
             detail: '中心向外绕圈，确保均匀萃取',
-            pourType: 'circle',
           },
           {
-            time: 70,
-            pourTime: 15,
+            pourType: 'wait',
+            label: '等待',
+            duration: 20,
+            detail: '',
+          },
+          // 原: time=70, pourTime=15, water=140g → duration=15, wait=25, stageWater=110
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '140g',
+            water: '110',
+            duration: 15,
             detail: '中心向外缓慢画圈注水，均匀萃取咖啡风味',
-            pourType: 'circle',
           },
           {
-            time: 120,
-            pourTime: 20,
-            label: '中心注水',
-            water: '225g',
-            detail: '中心定点注水，降低萃取率',
+            pourType: 'wait',
+            label: '等待',
+            duration: 25,
+            detail: '',
+          },
+          // 原: time=120, pourTime=20, water=225g → duration=20, wait=30, stageWater=85
+          {
             pourType: 'center',
+            label: '中心注水',
+            water: '85',
+            duration: 20,
+            detail: '中心定点注水，降低萃取率',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 30,
+            detail: '',
           },
         ],
       },
@@ -678,31 +911,49 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '细（摩卡壶研磨度）',
         temp: '45°C',
         stages: [
+          // 原: time=90, pourTime=20, water=36g → duration=20, wait=70
           {
-            time: 90,
-            pourTime: 20,
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '36g',
+            water: '36',
+            duration: 20,
             detail:
               '平铺表面，相当于闷蒸 - 快速湿润与尽量不搅动粉层的方式来进行类闷蒸处理',
-            pourType: 'circle',
           },
           {
-            time: 240,
-            pourTime: 42,
+            pourType: 'wait',
+            label: '等待',
+            duration: 70,
+            detail: '',
+          },
+          // 原: time=240, pourTime=42, water=116g → duration=42, wait=108, stageWater=80
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '116g',
+            water: '80',
+            duration: 42,
             detail: '第一段注水后等液面降至粉下后，再进行第二段注水',
-            pourType: 'circle',
           },
           {
-            time: 360,
-            pourTime: 60,
+            pourType: 'wait',
+            label: '等待',
+            duration: 108,
+            detail: '',
+          },
+          // 原: time=360, pourTime=60, water=200g → duration=60, wait=60, stageWater=84
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '200g',
+            water: '84',
+            duration: 60,
             detail:
               '第二段注水后等液面降至粉下后，再进行第三段注水。注水完成后等待滴落状态至滴水时，即完成，之后可依据习惯添加水至喜欢的浓淡即可',
-            pourType: 'circle',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 60,
+            detail: '',
           },
         ],
       },
@@ -716,30 +967,42 @@ export const brewingMethods: BrewingMethods = {
         grindSize: '中细偏粗',
         temp: '92°C',
         stages: [
+          // 原: time=30, pourTime=10, water=30g → duration=10, wait=20
           {
-            time: 30,
-            pourTime: 10,
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '30g',
+            water: '30',
+            duration: 10,
             detail: '（1:2）中心向外绕圈，确保均匀萃取',
-            pourType: 'circle',
           },
           {
-            time: 60,
-            pourTime: 30,
+            pourType: 'wait',
+            label: '等待',
+            duration: 20,
+            detail: '',
+          },
+          // 原: time=60, pourTime=30, water=120g → duration=30, stageWater=90
+          {
+            pourType: 'circle',
             label: '绕圈注水',
-            water: '120g',
+            water: '90',
+            duration: 30,
             detail: '（1:6）中心向外缓慢画圈注水，均匀萃取咖啡风味',
-            pourType: 'circle',
           },
+          // 原: time=100, pourTime=30, water=225g → duration=30, wait=10, stageWater=105
           {
-            time: 100,
-            pourTime: 30,
+            pourType: 'center',
             label: '中心注水',
-            water: '225g',
+            water: '105',
+            duration: 30,
             detail:
               '（1:X）中心定点注水，初始X值建议5(1:5)，可根据风味调整：过淡用4(1:4)，过浓用6(1:6)',
-            pourType: 'center',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 10,
+            detail: '',
           },
         ],
       },
@@ -754,12 +1017,11 @@ export const brewingMethods: BrewingMethods = {
         temp: '0°C',
         stages: [
           {
-            time: 0,
-            pourTime: 0,
-            label: '(略)',
-            water: '0g',
-            detail: '(略)',
             pourType: 'other',
+            label: '(略)',
+            water: '0',
+            duration: 0,
+            detail: '(略)',
           },
         ],
       },
@@ -776,11 +1038,11 @@ export const brewingMethods: BrewingMethods = {
         temp: '93°C',
         stages: [
           {
-            time: 25,
-            label: '萃取浓缩',
-            water: '36g',
-            detail: '标准意式浓缩，风味平衡',
             pourType: 'extraction',
+            label: '萃取浓缩',
+            water: '36',
+            duration: 25,
+            detail: '标准意式浓缩，风味平衡',
           },
         ],
       },
@@ -795,23 +1057,23 @@ export const brewingMethods: BrewingMethods = {
         temp: '93°C',
         stages: [
           {
-            time: 25,
-            label: '萃取浓缩',
-            water: '36g',
-            detail: '标准意式浓缩',
             pourType: 'extraction',
+            label: '萃取浓缩',
+            water: '36',
+            duration: 25,
+            detail: '标准意式浓缩',
           },
           {
+            pourType: 'beverage',
             label: '加入饮用水',
-            water: '70g',
+            water: '70',
             detail: '',
-            pourType: 'beverage',
           },
           {
-            label: '加入冰块',
-            water: '180g',
-            detail: '',
             pourType: 'beverage',
+            label: '加入冰块',
+            water: '180',
+            detail: '',
           },
         ],
       },
@@ -826,23 +1088,23 @@ export const brewingMethods: BrewingMethods = {
         temp: '93°C',
         stages: [
           {
-            time: 25,
-            label: '萃取浓缩',
-            water: '36g',
-            detail: '标准意式浓缩',
             pourType: 'extraction',
+            label: '萃取浓缩',
+            water: '36',
+            duration: 25,
+            detail: '标准意式浓缩',
           },
           {
+            pourType: 'beverage',
             label: '加入牛奶',
-            water: '200g',
+            water: '200',
             detail: '',
-            pourType: 'beverage',
           },
           {
-            label: '加入糖浆',
-            water: '10g',
-            detail: '',
             pourType: 'beverage',
+            label: '加入糖浆',
+            water: '10',
+            detail: '',
           },
         ],
       },

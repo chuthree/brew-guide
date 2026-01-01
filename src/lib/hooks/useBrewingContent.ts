@@ -3,13 +3,20 @@ import {
   Method,
   brewingMethods as commonMethods,
   CustomEquipment,
+  Stage,
 } from '@/lib/core/config';
 import { Content } from './useBrewingState';
 import type { SettingsOptions } from '@/lib/core/db';
 import { loadCustomMethodsForEquipment } from '@/lib/stores/customMethodStore';
 import { filterHiddenMethods } from '@/lib/stores/settingsStore';
-import { Stage } from '@/components/method/forms/components/types';
 import { MethodType } from '@/lib/types/method';
+import { isLegacyFormat } from '@/lib/brewing/stageMigration';
+import {
+  calculateTotalDuration,
+  calculateTotalWater,
+  calculateCumulativeTime,
+  calculateCumulativeWater,
+} from '@/lib/brewing/stageUtils';
 
 // 增强 Content.注水.steps 接口以支持 pourType
 declare module './useBrewingState' {
@@ -208,18 +215,34 @@ export function useBrewingContent({
               stage.pourType === 'extraction' || stage.pourType === 'beverage'
           );
 
-          // 计算总时长
+          // 计算总时长 - 支持新旧格式
           let totalTime = 0;
           if (isEspressoMethod) {
             // 对于意式咖啡，只计算萃取步骤的时间
             const extractionStage = method.params.stages.find(
               stage => stage.pourType === 'extraction'
             );
-            totalTime = extractionStage?.time || 0;
+            // 支持新旧格式：优先使用 duration，否则使用 time
+            totalTime = extractionStage?.duration ?? extractionStage?.time ?? 0;
           } else {
-            // 对于常规方法，使用最后一个步骤的时间
-            totalTime =
-              method.params.stages[method.params.stages.length - 1]?.time || 0;
+            // 检测是否为新格式
+            const useNewFormat =
+              !isLegacyFormat(method.params.stages) &&
+              method.params.stages.some(
+                stage =>
+                  typeof stage.duration === 'number' ||
+                  stage.pourType === 'wait'
+              );
+
+            if (useNewFormat) {
+              // 新格式：累加所有阶段的 duration
+              totalTime = calculateTotalDuration(method.params.stages);
+            } else {
+              // 旧格式：使用最后一个步骤的累计时间
+              totalTime =
+                method.params.stages[method.params.stages.length - 1]?.time ||
+                0;
+            }
           }
 
           // 针对不同类型的方案显示不同的信息
@@ -277,18 +300,34 @@ export function useBrewingContent({
               stage.pourType === 'extraction' || stage.pourType === 'beverage'
           );
 
-          // 计算总时长
+          // 计算总时长 - 支持新旧格式
           let totalTime = 0;
           if (isEspressoMethod) {
             // 对于意式咖啡，只计算萃取步骤的时间
             const extractionStage = method.params.stages.find(
               stage => stage.pourType === 'extraction'
             );
-            totalTime = extractionStage?.time || 0;
+            // 支持新旧格式：优先使用 duration，否则使用 time
+            totalTime = extractionStage?.duration ?? extractionStage?.time ?? 0;
           } else {
-            // 对于常规方法，使用最后一个步骤的时间
-            totalTime =
-              method.params.stages[method.params.stages.length - 1]?.time || 0;
+            // 检测是否为新格式
+            const useNewFormat =
+              !isLegacyFormat(method.params.stages) &&
+              method.params.stages.some(
+                stage =>
+                  typeof stage.duration === 'number' ||
+                  stage.pourType === 'wait'
+              );
+
+            if (useNewFormat) {
+              // 新格式：累加所有阶段的 duration
+              totalTime = calculateTotalDuration(method.params.stages);
+            } else {
+              // 旧格式：使用最后一个步骤的累计时间
+              totalTime =
+                method.params.stages[method.params.stages.length - 1]?.time ||
+                0;
+            }
           }
 
           // 针对不同类型的方案显示不同的信息
@@ -374,13 +413,23 @@ export function useBrewingContent({
     if (isEspressoStages) {
       // 意式机的步骤不需要拆分注水和等待
       const espressoSteps = stages.map(stage => {
+        // 支持新旧格式：优先使用 duration，否则使用 time
+        const stageDuration = stage.duration ?? stage.time ?? 0;
+
+        // 格式化水量，确保有 g 单位
+        const waterWithUnit = stage.water
+          ? stage.water.endsWith('g')
+            ? stage.water
+            : `${stage.water}g`
+          : '';
+
         // 基本步骤信息
         const baseStep = {
           title: stage.label,
           items:
             stage.pourType === 'other'
               ? [stage.detail] // other类型只显示说明
-              : [`${stage.water}`, stage.detail], // 其他类型显示水量和说明
+              : [waterWithUnit, stage.detail], // 其他类型显示水量和说明
           originalIndex: stages.indexOf(stage), // 保留原始索引以便于参考
           pourType: stage.pourType, // 使用统一的pourType字段
         };
@@ -389,10 +438,10 @@ export function useBrewingContent({
         if (stage.pourType === 'extraction') {
           return {
             ...baseStep,
-            note: `${stage.time}秒`, // 萃取类型显示时间
+            note: `${stageDuration}秒`, // 萃取类型显示时间
             type: 'pour' as const, // 使用有效的类型
             startTime: 0, // 萃取从0开始
-            endTime: stage.time, // 萃取结束时间
+            endTime: stageDuration, // 萃取结束时间
           };
         } else {
           // beverage或其他类型不参与计时
@@ -417,6 +466,126 @@ export function useBrewingContent({
       return;
     }
 
+    // 检测是否为新格式数据
+    const useNewFormat =
+      !isLegacyFormat(stages) &&
+      stages.some(
+        stage => typeof stage.duration === 'number' || stage.pourType === 'wait'
+      );
+
+    if (useNewFormat) {
+      // 新格式处理逻辑
+      updateBrewingStepsNewFormat(stages);
+    } else {
+      // 旧格式处理逻辑（保持向后兼容）
+      updateBrewingStepsLegacyFormat(stages);
+    }
+  };
+
+  // 新格式处理逻辑
+  const updateBrewingStepsNewFormat = (stages: Stage[]) => {
+    const expandedStages: {
+      type: 'pour' | 'wait';
+      label: string;
+      water: string;
+      detail: string;
+      startTime: number;
+      endTime: number;
+      time: number;
+      pourTime?: number;
+      originalIndex: number;
+      pourType?: string;
+      valveStatus?: 'open' | 'closed';
+    }[] = [];
+
+    let cumulativeTime = 0;
+    let cumulativeWater = 0;
+    let stageIndex = 0; // 用于跟踪实际的阶段编号（等待步骤与前一个注水步骤共享）
+
+    stages.forEach((stage, index) => {
+      // Bypass 类型的步骤不参与主要计时，单独处理
+      if (stage.pourType === 'bypass') {
+        expandedStages.push({
+          type: 'pour',
+          label: stage.label,
+          water: stage.water || '0',
+          detail: stage.detail,
+          startTime: -1,
+          endTime: -1,
+          time: 0,
+          pourType: stage.pourType,
+          originalIndex: stageIndex,
+        });
+        stageIndex++; // bypass 是独立阶段
+        return;
+      }
+
+      const stageDuration = stage.duration || 0;
+      const stageWater = parseFloat(stage.water || '0') || 0;
+      const startTime = cumulativeTime;
+      const endTime = cumulativeTime + stageDuration;
+
+      // 等待阶段（pourType === 'wait'）
+      if (stage.pourType === 'wait') {
+        // 等待步骤与前一个注水步骤共享相同的 originalIndex
+        // 如果是第一个步骤就是等待，则使用当前 stageIndex
+        const waitOriginalIndex = stageIndex > 0 ? stageIndex - 1 : stageIndex;
+
+        expandedStages.push({
+          type: 'wait',
+          label: stage.label || '等待',
+          water: String(cumulativeWater),
+          detail: stage.detail || '',
+          startTime,
+          endTime,
+          time: stageDuration,
+          pourType: 'wait',
+          valveStatus: stage.valveStatus,
+          originalIndex: waitOriginalIndex, // 与前一个注水步骤共享阶段编号
+        });
+      } else {
+        // 注水阶段
+        cumulativeWater += stageWater;
+
+        expandedStages.push({
+          type: 'pour',
+          label: stage.label || `阶段 ${stageIndex + 1}`,
+          water: String(cumulativeWater),
+          detail: stage.detail || '',
+          startTime,
+          endTime,
+          time: stageDuration,
+          pourTime: stageDuration,
+          pourType: stage.pourType,
+          valveStatus: stage.valveStatus,
+          originalIndex: stageIndex,
+        });
+        stageIndex++; // 只有注水步骤才增加阶段编号
+      }
+
+      cumulativeTime = endTime;
+    });
+
+    // 更新content的注水部分
+    setContent(prev => ({
+      ...prev,
+      注水: {
+        steps: expandedStages.map(stage => ({
+          title: stage.label,
+          items: [`${stage.water}g`, stage.detail], // 添加 g 单位
+          note: stage.pourType === 'bypass' ? '' : stage.time + '秒',
+          type: stage.type,
+          originalIndex: stage.originalIndex,
+          startTime: stage.startTime,
+          endTime: stage.endTime,
+          pourType: stage.pourType,
+        })),
+      },
+    }));
+  };
+
+  // 旧格式处理逻辑（保持向后兼容）
+  const updateBrewingStepsLegacyFormat = (stages: Stage[]) => {
     // 创建扩展阶段数组
     const expandedStages: {
       type: 'pour' | 'wait';
@@ -439,7 +608,7 @@ export function useBrewingContent({
         expandedStages.push({
           type: 'pour', // 标记为注水类型，但不参与计时
           label: stage.label,
-          water: stage.water,
+          water: stage.water || '0',
           detail: stage.detail,
           startTime: -1, // 特殊标记，表示不参与计时
           endTime: -1,
@@ -462,7 +631,7 @@ export function useBrewingContent({
         expandedStages.push({
           type: 'wait',
           label: stage.label,
-          water: stage.water,
+          water: stage.water || '0',
           detail: stage.detail,
           startTime: prevStageTime,
           endTime: stageTime,
@@ -478,7 +647,7 @@ export function useBrewingContent({
         expandedStages.push({
           type: 'pour',
           label: stage.label,
-          water: stage.water,
+          water: stage.water || '0',
           detail: stage.detail,
           startTime: prevStageTime,
           endTime: prevStageTime + stagePourTime,
@@ -495,7 +664,7 @@ export function useBrewingContent({
           expandedStages.push({
             type: 'wait',
             label: '等待',
-            water: stage.water, // 水量与前一阶段相同
+            water: stage.water || '0', // 水量与前一阶段相同
             detail: '',
             startTime: prevStageTime + stagePourTime,
             endTime: stageTime,
@@ -510,7 +679,7 @@ export function useBrewingContent({
         expandedStages.push({
           type: 'wait',
           label: '等待',
-          water: stage.water,
+          water: stage.water || '0',
           detail: '',
           startTime: prevStageTime,
           endTime: stageTime,
@@ -528,7 +697,7 @@ export function useBrewingContent({
       注水: {
         steps: expandedStages.map(stage => ({
           title: stage.label,
-          items: [`${stage.water}`, stage.detail],
+          items: [`${stage.water}g`, stage.detail], // 添加 g 单位
           note:
             stage.pourType === 'bypass'
               ? '' // Bypass 步骤不显示时间

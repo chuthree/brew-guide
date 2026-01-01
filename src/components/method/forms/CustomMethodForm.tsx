@@ -153,11 +153,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     [onStepChange]
   );
 
-  const [editingCumulativeTime, setEditingCumulativeTime] = useState<{
+  // 阶段用时编辑状态（新数据模型）
+  const [editingDuration, setEditingDuration] = useState<{
     index: number;
     value: string;
   } | null>(null);
-  const [editingCumulativeWater, setEditingCumulativeWater] = useState<{
+  // 阶段注水量编辑状态（新数据模型）
+  const [editingWater, setEditingWater] = useState<{
     index: number;
     value: string;
   } | null>(null);
@@ -190,7 +192,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       };
     }
 
-    // 意式机类型
+    // 意式机类型（使用新数据模型）
     if (isEspresso) {
       return {
         name: '',
@@ -202,9 +204,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
           temp: '93°C',
           stages: [
             {
-              time: 25,
+              duration: 25,
               label: '萃取浓缩',
-              water: '36g',
+              water: '36',
               detail: '标准意式浓缩',
               pourType: 'extraction',
             },
@@ -216,18 +218,28 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     // 手冲类型 - 获取默认注水方式
     const defaultPourType = getDefaultPourType(customEquipment);
 
-    // 创建初始步骤
-    const initialStage: Stage = {
-      time: 25,
-      pourTime: 10,
-      label: '焖蒸',
-      water: '30g',
-      detail: '使咖啡粉充分吸水并释放气体，提升萃取效果',
-      pourType: defaultPourType,
-      ...(customEquipment.hasValve
-        ? { valveStatus: 'closed' as 'closed' | 'open' }
-        : {}),
-    };
+    // 创建初始步骤（使用新数据模型：预浸泡 + 等待）
+    // Requirements 6.1, 6.2, 6.3: 手冲器具默认预浸泡阶段 + 等待阶段
+    const initialStages: Stage[] = [
+      {
+        // Requirement 6.2: pourType="circle", label="预浸泡", water="30", duration="10", detail=""
+        duration: 10,
+        label: '预浸泡',
+        water: '30',
+        detail: '',
+        pourType: defaultPourType, // 使用器具默认注水方式以提供更好的用户体验
+        ...(customEquipment.hasValve
+          ? { valveStatus: 'closed' as 'closed' | 'open' }
+          : {}),
+      },
+      {
+        // Requirement 6.3: pourType="wait", label="等待", duration="20", detail=""
+        duration: 20,
+        label: '等待',
+        detail: '',
+        pourType: 'wait',
+      },
+    ];
 
     return {
       name: '',
@@ -237,7 +249,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         ratio: '1:15',
         grindSize: '中细',
         temp: '92°C',
-        stages: [initialStage],
+        stages: initialStages,
       },
     };
   }, [customEquipment]);
@@ -408,7 +420,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
   // ===== 数据计算函数 =====
 
-  // 计算总冲泡时间
+  // 计算总冲泡时间（使用新数据模型的 duration 字段）
   const calculateTotalTime = () => {
     if (method.params.stages.length === 0) return 0;
 
@@ -420,43 +432,38 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       const extractionStage = method.params.stages.find(
         stage => stage.pourType === 'extraction'
       );
-      return extractionStage?.time || 0;
+      // 优先使用 duration，兼容旧数据的 time
+      return extractionStage?.duration ?? extractionStage?.time ?? 0;
     } else {
-      // 常规方案返回最后一个有时间的步骤的时间
-      for (let i = method.params.stages.length - 1; i >= 0; i--) {
-        if (method.params.stages[i].time !== undefined) {
-          return method.params.stages[i].time as number;
-        }
-      }
+      // 常规方案：累加所有阶段的 duration
+      return method.params.stages.reduce((total, stage) => {
+        // 优先使用 duration，兼容旧数据的 time
+        const stageDuration = stage.duration ?? stage.time ?? 0;
+        return total + stageDuration;
+      }, 0);
     }
-
-    return 0;
   };
 
-  // 计算当前已使用的水量（排除 Bypass 步骤）
+  // 计算当前已使用的水量（排除 Bypass 和等待步骤）
   const calculateCurrentWater = () => {
     if (method.params.stages.length === 0) return 0;
 
-    // 找到最后一个有水量的步骤，但排除 Bypass 类型
-    for (let i = method.params.stages.length - 1; i >= 0; i--) {
-      const stage = method.params.stages[i];
-      // 跳过 Bypass 步骤，因为它们不计入主要冲煮水量
-      if (stage.pourType === 'bypass') continue;
+    // 累加所有非等待、非 Bypass 步骤的水量
+    return method.params.stages.reduce((total, stage) => {
+      // 跳过等待和 Bypass 步骤
+      if (stage.pourType === 'wait' || stage.pourType === 'bypass') {
+        return total;
+      }
 
       if (stage.water) {
-        if (typeof stage.water === 'number') {
-          return stage.water;
-        } else if (typeof stage.water === 'string') {
-          const waterValue = parseInt(stage.water.replace('g', '') || '0');
-          // 只返回有效的水量值（大于0）
-          if (waterValue > 0) {
-            return waterValue;
-          }
-        }
+        const waterValue =
+          typeof stage.water === 'number'
+            ? stage.water
+            : parseInt(stage.water.replace('g', '') || '0');
+        return total + (waterValue > 0 ? waterValue : 0);
       }
-    }
-
-    return 0;
+      return total;
+    }, 0);
   };
 
   // ===== 事件处理函数 =====
@@ -471,8 +478,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const stage = { ...newStages[index] };
 
     // 根据字段类型处理值
-    if (field === 'time' || field === 'pourTime') {
-      // 数值类型
+    if (field === 'duration') {
+      // 新数据模型：阶段用时
+      const durationValue =
+        typeof value === 'number' ? value : parseInt(value.toString()) || 0;
+      stage.duration = Math.max(0, durationValue); // 确保非负
+    } else if (field === 'time' || field === 'pourTime') {
+      // 旧数据模型兼容：数值类型
       stage[field] = value as number;
 
       // 当更新累计时间时，自动更新注水时间为阶段时间长度（当前阶段时间与上一阶段时间的差值）
@@ -505,7 +517,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     } else if (field === 'label' || field === 'detail' || field === 'water') {
       // 字符串类型
       if (field === 'water' && typeof value === 'string' && value) {
-        stage[field] = `${value}g`;
+        // 新数据模型：阶段注水量（不带 g 后缀存储）
+        const waterValue = value.replace('g', '');
+        stage[field] = waterValue;
       } else {
         stage[field] = value as string;
       }
@@ -575,60 +589,46 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       defaultPourType = 'beverage';
     }
 
-    // 根据器具类型和阶段设置默认时间
-    const defaultTime = (() => {
+    // 根据器具类型和阶段设置默认阶段用时（新数据模型使用 duration）
+    const defaultDuration = (() => {
       if (isEspresso) {
-        // 意式咖啡机：只有萃取类型有时间，饮料类型时间为0
-        return defaultPourType === 'extraction' ? 25 : 0;
+        // 意式咖啡机：只有萃取类型有时间，饮料类型没有 duration
+        return defaultPourType === 'extraction' ? 25 : undefined;
+      } else if (defaultPourType === 'bypass') {
+        // Bypass 类型没有 duration
+        return undefined;
       } else if (method.params.stages.length === 0) {
-        return 30; // 第一个阶段默认30秒
+        return 10; // 第一个阶段默认10秒
       } else {
         // 新增步骤不预设时间，让用户自行输入
         return undefined;
       }
     })();
 
-    // 创建新阶段
+    // 创建新阶段（使用新数据模型）
     const newStage: Stage = {
-      time: defaultTime,
+      duration: defaultDuration,
       // 当是意式机且为饮料类型时，不自动设置标签名称，留空让用户自行填写
       // 非意式机则使用默认的步骤名称
-      label: isEspresso
-        ? defaultPourType === 'beverage'
-          ? ''
-          : getPourTypeName(defaultPourType)
-        : getDefaultStageLabel(defaultPourType),
-      water: '',
+      // 等待类型使用固定标签
+      label:
+        defaultPourType === 'wait'
+          ? '等待'
+          : isEspresso
+            ? defaultPourType === 'beverage'
+              ? ''
+              : getPourTypeName(defaultPourType)
+            : getDefaultStageLabel(defaultPourType),
+      // 等待类型不需要水量
+      water: defaultPourType === 'wait' ? '' : '',
       // 非意式机设置默认的详细说明
       detail: isEspresso ? '' : getDefaultStageDetail(defaultPourType),
       pourType: defaultPourType,
     };
 
-    // 为意式机和非意式机配置特殊属性
-    if (isEspresso) {
-      // 如果是饮料类型，清除时间
-      if (defaultPourType !== 'extraction') {
-        newStage.time = 0;
-        newStage.pourTime = undefined;
-      }
-    } else {
-      // 非意式机，注水时间设置为该阶段的时间长度
-      if (method.params.stages.length > 0) {
-        // 获取上一个阶段的时间
-        const previousStage =
-          method.params.stages[method.params.stages.length - 1];
-        const previousTime = previousStage.time || 0;
-
-        // 计算阶段时间长度（当前阶段时间与上一阶段时间的差值）
-        const currentTime = defaultTime || 0;
-        const stageDuration = currentTime - previousTime;
-
-        // 将注水时间设置为阶段时间长度
-        newStage.pourTime = stageDuration > 0 ? stageDuration : 0;
-      } else {
-        // 第一个阶段，注水时间等于当前时间（因为从0开始）
-        newStage.pourTime = defaultTime;
-      }
+    // 为聪明杯添加阀门状态
+    if (customEquipment.hasValve) {
+      newStage.valveStatus = 'closed';
     }
 
     // 更新方法
@@ -1241,13 +1241,13 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       stage => stage.pourType === 'extraction'
     );
     const extractionAmount = extractionStage
-      ? parseFloat(extractionStage.water) || 0
+      ? parseFloat(extractionStage.water || '0') || 0
       : 0;
 
     // 找到饮料步骤
     const beverageStages = allStages
       .filter(stage => stage.pourType === 'beverage')
-      .map(stage => parseFloat(stage.water) || 0);
+      .map(stage => parseFloat(stage.water || '0') || 0);
     const beverageAmount =
       beverageStages.length > 0 ? Math.max(...beverageStages) : 0;
 
@@ -1332,18 +1332,16 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             toggleValveStatus={toggleValveStatus}
             addStage={addStage}
             removeStage={removeStage}
-            calculateTotalTime={calculateTotalTime}
-            calculateCurrentWater={calculateCurrentWater}
             formatTime={formatTime}
-            editingCumulativeTime={editingCumulativeTime}
-            setEditingCumulativeTime={setEditingCumulativeTime}
-            editingCumulativeWater={editingCumulativeWater}
-            setEditingCumulativeWater={setEditingCumulativeWater}
             showWaterTooltip={showWaterTooltip}
             setShowWaterTooltip={setShowWaterTooltip}
             stagesContainerRef={stagesContainerRef}
             newStageRef={newStageRef}
             coffeeDosage={method.params.coffee}
+            editingDuration={editingDuration}
+            setEditingDuration={setEditingDuration}
+            editingWater={editingWater}
+            setEditingWater={setEditingWater}
           />
         );
 
@@ -1384,6 +1382,24 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     const isCustomPreset = customEquipment.animationType === 'custom';
     const isEspresso = isEspressoMachine(customEquipment);
 
+    // 验证 duration 是否为非负整数
+    const isValidDuration = (duration: number | undefined): boolean => {
+      if (duration === undefined) return true; // duration 可选
+      return Number.isInteger(duration) && duration >= 0;
+    };
+
+    // 验证 water 是否为非负整数（非等待步骤）
+    const isValidWater = (
+      water: string | undefined,
+      pourType: string | undefined
+    ): boolean => {
+      // 等待步骤不需要水量
+      if (pourType === 'wait') return true;
+      if (!water || !water.trim()) return false;
+      const waterValue = parseInt(water.replace('g', '') || '0');
+      return Number.isInteger(waterValue) && waterValue >= 0;
+    };
+
     // 验证当前步骤是否可进行下一步
     const isStepValid = () => {
       switch (currentStep) {
@@ -1407,14 +1423,18 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             // 意式机特殊验证
             if (isEspresso) {
               switch (stage.pourType) {
-                case 'extraction': // 萃取类型
+                case 'extraction': // 萃取类型 - 需要 duration 和 water
                   return (
-                    (stage.time ?? 0) > 0 &&
+                    isValidDuration(stage.duration) &&
+                    (stage.duration ?? 0) > 0 &&
                     !!stage.label.trim() &&
-                    !!stage.water.trim()
+                    isValidWater(stage.water, stage.pourType)
                   );
-                case 'beverage': // 饮料类型
-                  return !!stage.label.trim() && !!stage.water.trim();
+                case 'beverage': // 饮料类型 - 不需要 duration，只需要 water
+                  return (
+                    !!stage.label.trim() &&
+                    isValidWater(stage.water, stage.pourType)
+                  );
                 case 'other': // 其他类型
                   return true;
                 default:
@@ -1424,8 +1444,17 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
             // 自定义预设验证
             if (isCustomPreset) {
+              // 等待类型只需要 duration
+              if (stage.pourType === 'wait') {
+                return (
+                  isValidDuration(stage.duration) && (stage.duration ?? 0) > 0
+                );
+              }
+
               const basicValidation =
-                (stage.time ?? 0) > 0 && !!stage.water.trim();
+                isValidDuration(stage.duration) &&
+                (stage.duration ?? 0) > 0 &&
+                isValidWater(stage.water, stage.pourType);
 
               // 聪明杯验证阀门状态
               if (customEquipment.hasValve) {
@@ -1439,18 +1468,28 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
               return basicValidation;
             }
 
-            // Bypass 类型特殊验证（不需要时间）
+            // 等待类型特殊验证（只需要 duration）
+            if (stage.pourType === 'wait') {
+              return (
+                isValidDuration(stage.duration) && (stage.duration ?? 0) > 0
+              );
+            }
+
+            // Bypass 类型特殊验证（不需要 duration，只需要 water）
             if (stage.pourType === 'bypass') {
               return (
-                !!stage.label.trim() && !!stage.water.trim() && !!stage.pourType
+                !!stage.label.trim() &&
+                isValidWater(stage.water, stage.pourType) &&
+                !!stage.pourType
               );
             }
 
             // 标准器具验证
             const basicValidation =
-              (stage.time ?? 0) > 0 &&
+              isValidDuration(stage.duration) &&
+              (stage.duration ?? 0) > 0 &&
               !!stage.label.trim() &&
-              !!stage.water.trim() &&
+              isValidWater(stage.water, stage.pourType) &&
               !!stage.pourType;
 
             // 聪明杯验证阀门状态
