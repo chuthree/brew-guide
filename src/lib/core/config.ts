@@ -1217,4 +1217,5 @@ export const sponsorsList = [
   'keyball',
   'yoyo',
   '别处咖啡',
+  '黑糖曲奇',
 ];
