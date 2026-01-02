@@ -691,6 +691,36 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     });
   };
 
+  // 批量删除多个阶段（时间模式需要同时删除注水阶段和等待阶段）
+  const removeStages = (indices: number[]) => {
+    // 按索引从大到小排序，这样删除时不会影响前面的索引
+    const sortedIndices = [...indices].sort((a, b) => b - a);
+    const newStages = [...method.params.stages];
+    sortedIndices.forEach(idx => {
+      newStages.splice(idx, 1);
+    });
+    setMethod({
+      ...method,
+      params: {
+        ...method.params,
+        stages: newStages,
+      },
+    });
+  };
+
+  // 在指定位置插入阶段（时间模式需要插入等待阶段）
+  const insertStage = (index: number, stage: Stage) => {
+    const newStages = [...method.params.stages];
+    newStages.splice(index, 0, stage);
+    setMethod({
+      ...method,
+      params: {
+        ...method.params,
+        stages: newStages,
+      },
+    });
+  };
+
   const handleSubmit = async () => {
     // 创建一个方法的深拷贝，以便修改
     const finalMethod = JSON.parse(JSON.stringify(method)) as MethodWithStages;
@@ -1332,6 +1362,8 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             toggleValveStatus={toggleValveStatus}
             addStage={addStage}
             removeStage={removeStage}
+            removeStages={removeStages}
+            insertStage={insertStage}
             formatTime={formatTime}
             showWaterTooltip={showWaterTooltip}
             setShowWaterTooltip={setShowWaterTooltip}

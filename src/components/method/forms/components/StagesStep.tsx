@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, Sigma, Hash } from 'lucide-react';
+import { Sigma, Hash, Clock } from 'lucide-react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { CustomEquipment } from '@/lib/core/config';
 import { Stage } from './types';
@@ -21,7 +21,10 @@ import {
 } from '@/components/coffee-bean/ui/select';
 
 const PRESET_BEVERAGES = ['饮用水', '冰块', '纯牛奶', '厚椰乳', '燕麦奶'];
-const CUMULATIVE_MODE_STORAGE_KEY = 'stagesStepCumulativeMode';
+const DISPLAY_MODE_STORAGE_KEY = 'stagesStepDisplayMode';
+
+// 显示模式：independent(独立) / cumulative(累计) / time(时间)
+type DisplayMode = 'independent' | 'cumulative' | 'time';
 
 const pageVariants = {
   initial: { opacity: 0 },
@@ -44,6 +47,8 @@ interface StagesStepProps {
   toggleValveStatus: (index: number) => void;
   addStage: () => void;
   removeStage: (index: number) => void;
+  removeStages?: (indices: number[]) => void;
+  insertStage?: (index: number, stage: Stage) => void;
   formatTime: (seconds: number) => string;
   showWaterTooltip: number | null;
   setShowWaterTooltip: React.Dispatch<React.SetStateAction<number | null>>;
@@ -58,7 +63,8 @@ interface StagesStepProps {
   setEditingWater: React.Dispatch<
     React.SetStateAction<{ index: number; value: string } | null>
   >;
-  // 累计模式相关
+  displayMode?: DisplayMode;
+  onDisplayModeChange?: (value: DisplayMode) => void;
   useCumulativeMode?: boolean;
   onCumulativeModeChange?: (value: boolean) => void;
 }
@@ -72,6 +78,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
   toggleValveStatus,
   addStage,
   removeStage,
+  removeStages,
+  insertStage,
   formatTime,
   showWaterTooltip: _showWaterTooltip,
   setShowWaterTooltip: _setShowWaterTooltip,
@@ -82,6 +90,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
   setEditingDuration,
   editingWater,
   setEditingWater,
+  displayMode: externalDisplayMode,
+  onDisplayModeChange,
   useCumulativeMode: externalCumulativeMode,
   onCumulativeModeChange,
 }) => {
@@ -89,46 +99,73 @@ const StagesStep: React.FC<StagesStepProps> = ({
   const [beverageSuggestions, setBeverageSuggestions] =
     useState<string[]>(PRESET_BEVERAGES);
 
-  // 累计模式状态（如果外部没有控制，则使用内部状态，带持久化）
-  const [internalCumulativeMode, setInternalCumulativeMode] = useState(() => {
-    // 初始化时从 localStorage 读取
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(CUMULATIVE_MODE_STORAGE_KEY);
-        return saved === 'true';
-      } catch {
-        return false;
+  // 显示模式状态
+  const [internalDisplayMode, setInternalDisplayMode] = useState<DisplayMode>(
+    () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const saved = localStorage.getItem(DISPLAY_MODE_STORAGE_KEY);
+          if (
+            saved === 'independent' ||
+            saved === 'cumulative' ||
+            saved === 'time'
+          ) {
+            return saved;
+          }
+          const oldSaved = localStorage.getItem('stagesStepCumulativeMode');
+          if (oldSaved === 'true') return 'cumulative';
+        } catch {
+          return 'independent';
+        }
       }
+      return 'independent';
     }
-    return false;
-  });
-  const useCumulativeMode = externalCumulativeMode ?? internalCumulativeMode;
-  const handleCumulativeModeChange = (value: boolean) => {
-    if (onCumulativeModeChange) {
-      onCumulativeModeChange(value);
+  );
+
+  const displayMode: DisplayMode =
+    externalDisplayMode ??
+    (externalCumulativeMode ? 'cumulative' : undefined) ??
+    internalDisplayMode;
+
+  const useCumulativeMode = displayMode === 'cumulative';
+  const useTimeMode = displayMode === 'time';
+
+  const handleDisplayModeChange = (newMode: DisplayMode) => {
+    if (onDisplayModeChange) {
+      onDisplayModeChange(newMode);
+    } else if (onCumulativeModeChange) {
+      onCumulativeModeChange(newMode === 'cumulative');
     } else {
-      setInternalCumulativeMode(value);
-      // 持久化到 localStorage
+      setInternalDisplayMode(newMode);
       try {
-        localStorage.setItem(CUMULATIVE_MODE_STORAGE_KEY, String(value));
+        localStorage.setItem(DISPLAY_MODE_STORAGE_KEY, newMode);
       } catch (error) {
-        console.error('Failed to save cumulative mode:', error);
+        console.error('Failed to save display mode:', error);
       }
     }
   };
 
+  const cycleDisplayMode = () => {
+    const nextMode: DisplayMode =
+      displayMode === 'independent'
+        ? 'cumulative'
+        : displayMode === 'cumulative'
+          ? 'time'
+          : 'independent';
+    handleDisplayModeChange(nextMode);
+  };
+
   // 计算累计时长和水量
   const cumulativeData = useMemo(() => {
-    const result: { cumulativeDuration: number; cumulativeWater: number }[] = [];
+    const result: { cumulativeDuration: number; cumulativeWater: number }[] =
+      [];
     let totalDuration = 0;
     let totalWaterAmount = 0;
 
     stages.forEach(stage => {
-      // 累计时长（排除 bypass 和 beverage）
       if (stage.pourType !== 'bypass' && stage.pourType !== 'beverage') {
         totalDuration += stage.duration || 0;
       }
-      // 累计水量（排除 wait）
       if (stage.pourType !== 'wait') {
         const waterValue = stage.water
           ? typeof stage.water === 'number'
@@ -141,6 +178,84 @@ const StagesStep: React.FC<StagesStepProps> = ({
         cumulativeDuration: totalDuration,
         cumulativeWater: totalWaterAmount,
       });
+    });
+
+    return result;
+  }, [stages]);
+
+  // 时间模式数据
+  const timeModeData = useMemo(() => {
+    const result: {
+      originalIndex: number;
+      isWait: boolean;
+      startTime: number;
+      endTime: number | null; // null 表示未设置（新步骤）
+      cumulativeWater: number;
+      prevWaitIndex: number | null;
+      pourStageNumber: number | null;
+      hasDuration: boolean; // 是否有设置 duration
+    }[] = [];
+
+    let currentTime = 0;
+    let cumulativeWater = 0;
+    let lastWaitIndex: number | null = null;
+    let pourStageCount = 0;
+
+    stages.forEach((stage, index) => {
+      const hasDuration = stage.duration !== undefined && stage.duration > 0;
+
+      if (stage.pourType === 'wait') {
+        const startTime = currentTime;
+        const duration = stage.duration || 0;
+        const endTime = hasDuration ? currentTime + duration : null;
+        if (hasDuration) currentTime = currentTime + duration;
+
+        result.push({
+          originalIndex: index,
+          isWait: true,
+          startTime,
+          endTime,
+          cumulativeWater,
+          prevWaitIndex: null,
+          pourStageNumber: null,
+          hasDuration,
+        });
+
+        lastWaitIndex = index;
+      } else if (stage.pourType !== 'bypass' && stage.pourType !== 'beverage') {
+        pourStageCount++;
+        const startTime = currentTime;
+        const duration = stage.duration || 0;
+        const endTime = hasDuration ? currentTime + duration : null;
+        if (hasDuration) currentTime = currentTime + duration;
+
+        const waterValue = stage.water
+          ? typeof stage.water === 'number'
+            ? stage.water
+            : parseInt(stage.water.toString().replace('g', '') || '0')
+          : 0;
+        cumulativeWater += waterValue;
+
+        result.push({
+          originalIndex: index,
+          isWait: false,
+          startTime,
+          endTime,
+          cumulativeWater,
+          prevWaitIndex: lastWaitIndex,
+          pourStageNumber: pourStageCount,
+          hasDuration,
+        });
+
+        lastWaitIndex = null;
+      } else {
+        const waterValue = stage.water
+          ? typeof stage.water === 'number'
+            ? stage.water
+            : parseInt(stage.water.toString().replace('g', '') || '0')
+          : 0;
+        cumulativeWater += waterValue;
+      }
     });
 
     return result;
@@ -326,9 +441,9 @@ const StagesStep: React.FC<StagesStepProps> = ({
         totalWaterValue > 0
           ? Math.round((percentValue / 100) * totalWaterValue)
           : Math.round(percentValue);
-      // 累计模式下需要减去前面阶段的水量
       if (useCumulativeMode && index > 0) {
-        const previousCumulative = cumulativeData[index - 1]?.cumulativeWater || 0;
+        const previousCumulative =
+          cumulativeData[index - 1]?.cumulativeWater || 0;
         calculatedWater = Math.max(0, calculatedWater - previousCumulative);
       }
       onStageChange(index, 'water', `${calculatedWater}`);
@@ -343,9 +458,9 @@ const StagesStep: React.FC<StagesStepProps> = ({
       const coffeeMatch = coffeeDosage.match(/(\d+(\.\d+)?)/);
       const coffeeAmount = coffeeMatch ? parseFloat(coffeeMatch[1]) : 15;
       let calculatedWater = Math.round(multipleValue * coffeeAmount);
-      // 累计模式下需要减去前面阶段的水量
       if (useCumulativeMode && index > 0) {
-        const previousCumulative = cumulativeData[index - 1]?.cumulativeWater || 0;
+        const previousCumulative =
+          cumulativeData[index - 1]?.cumulativeWater || 0;
         calculatedWater = Math.max(0, calculatedWater - previousCumulative);
       }
       onStageChange(index, 'water', `${calculatedWater}`);
@@ -355,9 +470,9 @@ const StagesStep: React.FC<StagesStepProps> = ({
     let water = value.includes('.')
       ? Math.round(parseFloat(value))
       : parseInt(value) || 0;
-    // 累计模式下，输入的是累计值，需要转换为独立值
     if (useCumulativeMode && index > 0) {
-      const previousCumulative = cumulativeData[index - 1]?.cumulativeWater || 0;
+      const previousCumulative =
+        cumulativeData[index - 1]?.cumulativeWater || 0;
       water = Math.max(0, water - previousCumulative);
     }
     onStageChange(index, 'water', `${water}`);
@@ -365,18 +480,18 @@ const StagesStep: React.FC<StagesStepProps> = ({
 
   const getWaterDisplayValue = (stage: Stage, index: number) => {
     if (editingWater && editingWater.index === index) return editingWater.value;
-    if (!stage.water) return useCumulativeMode ? String(cumulativeData[index]?.cumulativeWater || 0) : '';
-    const independentValue = typeof stage.water === 'number'
-      ? stage.water
-      : parseInt((stage.water as string).replace('g', '') || '0');
-    // 累计模式显示累计值
+    // 如果没有设置水量，显示空（不预设）
+    if (!stage.water) return '';
+    const independentValue =
+      typeof stage.water === 'number'
+        ? stage.water
+        : parseInt((stage.water as string).replace('g', '') || '0');
     if (useCumulativeMode) {
       return String(cumulativeData[index]?.cumulativeWater || independentValue);
     }
     return String(independentValue);
   };
 
-  // 格式化时长显示（支持分秒格式）
   const formatDurationDisplay = (seconds: number): string => {
     if (!seconds) return '';
     if (seconds >= 60) {
@@ -387,38 +502,239 @@ const StagesStep: React.FC<StagesStepProps> = ({
     return `${seconds}″`;
   };
 
+  const parseTimeToSeconds = (mins: number, secs: number): number => {
+    return mins * 60 + secs;
+  };
+
+  // 时间模式：处理开始时间编辑完成（直接从 DOM 读取值）
+  const handleTimeModeStartBlurWithValues = (
+    timeModeIndex: number,
+    mins: number,
+    secs: number
+  ) => {
+    const timeData = timeModeData[timeModeIndex];
+    if (!timeData || timeData.isWait) return;
+
+    const newStartTime = parseTimeToSeconds(mins, secs);
+
+    // 找到上一个注水阶段
+    let prevPourTimeData: typeof timeData | null = null;
+    for (let i = timeModeIndex - 1; i >= 0; i--) {
+      if (!timeModeData[i].isWait) {
+        prevPourTimeData = timeModeData[i];
+        break;
+      }
+    }
+    // 上一个注水阶段的结束时间（如果没有设置 duration，则用 startTime）
+    const minStartTime = prevPourTimeData
+      ? (prevPourTimeData.endTime ?? prevPourTimeData.startTime)
+      : 0;
+
+    // 验证：新开始时间不能小于上一个注水阶段的结束时间
+    if (newStartTime < minStartTime) return;
+
+    // 验证：如果当前步骤有结束时间，新开始时间不能大于等于结束时间
+    if (timeData.endTime !== null && newStartTime >= timeData.endTime) return;
+
+    // 计算需要的等待时间
+    const requiredWaitDuration = newStartTime - minStartTime;
+
+    if (requiredWaitDuration === 0) {
+      // 不需要等待时间，删除已有的等待阶段
+      if (timeData.prevWaitIndex !== null) {
+        removeStage(timeData.prevWaitIndex);
+      }
+    } else if (timeData.prevWaitIndex !== null) {
+      // 已有等待阶段，更新其时长
+      onStageChange(timeData.prevWaitIndex, 'duration', requiredWaitDuration);
+    } else if (insertStage) {
+      // 没有等待阶段，需要插入一个新的
+      const newWaitStage: Stage = {
+        duration: requiredWaitDuration,
+        label: '等待',
+        detail: '',
+        pourType: 'wait',
+      };
+      insertStage(timeData.originalIndex, newWaitStage);
+    }
+  };
+
+  // 时间模式：处理结束时间编辑完成（直接从 DOM 读取值）
+  const handleTimeModeEndBlurWithValues = (
+    timeModeIndex: number,
+    mins: number,
+    secs: number
+  ) => {
+    const timeData = timeModeData[timeModeIndex];
+    if (!timeData) return;
+
+    const newEndTime = parseTimeToSeconds(mins, secs);
+
+    // 结束时间必须大于开始时间
+    if (newEndTime <= timeData.startTime) return;
+
+    // 计算新的 duration
+    const newDuration = newEndTime - timeData.startTime;
+    onStageChange(timeData.originalIndex, 'duration', newDuration);
+  };
+
+  // 时间模式：获取水量显示值（累计值）
+  const getTimeModeWaterDisplayValue = (
+    stage: Stage,
+    timeModeIndex: number
+  ): string => {
+    const timeData = timeModeData[timeModeIndex];
+    if (!timeData || timeData.isWait) return '';
+
+    if (editingWater && editingWater.index === timeData.originalIndex) {
+      return editingWater.value;
+    }
+    // 如果当前阶段没有设置水量，显示空（不预设）
+    if (!stage.water) return '';
+    return String(timeData.cumulativeWater || 0);
+  };
+
+  // 时间模式：处理水量变更
+  const handleTimeModeWaterChange = (timeModeIndex: number, value: string) => {
+    const timeData = timeModeData[timeModeIndex];
+    if (!timeData || timeData.isWait) return;
+
+    setEditingWater({ index: timeData.originalIndex, value });
+
+    if (!value.trim()) {
+      onStageChange(timeData.originalIndex, 'water', '');
+      return;
+    }
+    if (value.endsWith('%')) return;
+
+    const inputCumulative = value.includes('.')
+      ? Math.round(parseFloat(value))
+      : parseInt(value) || 0;
+
+    let prevCumulative = 0;
+    for (let i = timeModeIndex - 1; i >= 0; i--) {
+      if (!timeModeData[i].isWait) {
+        prevCumulative = timeModeData[i].cumulativeWater || 0;
+        break;
+      }
+    }
+
+    const independentWater = Math.max(0, inputCumulative - prevCumulative);
+    onStageChange(timeData.originalIndex, 'water', `${independentWater}`);
+  };
+
+  // 时间模式：处理水量失焦
+  const handleTimeModeWaterBlur = (timeModeIndex: number, value: string) => {
+    setEditingWater(null);
+
+    const timeData = timeModeData[timeModeIndex];
+    if (!timeData || timeData.isWait) return;
+
+    if (!value.trim()) {
+      onStageChange(timeData.originalIndex, 'water', '');
+      return;
+    }
+
+    const totalWaterValue = parseInt(totalWater.replace('g', '') || '0');
+
+    let prevCumulative = 0;
+    for (let i = timeModeIndex - 1; i >= 0; i--) {
+      if (!timeModeData[i].isWait) {
+        prevCumulative = timeModeData[i].cumulativeWater || 0;
+        break;
+      }
+    }
+
+    const percentMatch = value.match(/^(\d+(\.\d+)?)%$/);
+    if (percentMatch) {
+      const percentValue = parseFloat(percentMatch[1]);
+      const calculatedCumulative =
+        totalWaterValue > 0
+          ? Math.round((percentValue / 100) * totalWaterValue)
+          : Math.round(percentValue);
+      const independentWater = Math.max(
+        0,
+        calculatedCumulative - prevCumulative
+      );
+      onStageChange(timeData.originalIndex, 'water', `${independentWater}`);
+      return;
+    }
+
+    const multipleMatch =
+      value.match(/^(\d+(\.\d+)?)(倍|[xX])$/) ||
+      value.match(/^[xX][\s]*(\d+(\.\d+)?)[\s]*$/);
+    if (multipleMatch) {
+      const multipleValue = parseFloat(multipleMatch[1]);
+      const coffeeMatch = coffeeDosage.match(/(\d+(\.\d+)?)/);
+      const coffeeAmount = coffeeMatch ? parseFloat(coffeeMatch[1]) : 15;
+      const calculatedCumulative = Math.round(multipleValue * coffeeAmount);
+      const independentWater = Math.max(
+        0,
+        calculatedCumulative - prevCumulative
+      );
+      onStageChange(timeData.originalIndex, 'water', `${independentWater}`);
+      return;
+    }
+
+    const inputCumulative = value.includes('.')
+      ? Math.round(parseFloat(value))
+      : parseInt(value) || 0;
+    const independentWater = Math.max(0, inputCumulative - prevCumulative);
+    onStageChange(timeData.originalIndex, 'water', `${independentWater}`);
+  };
+
+  // 时间模式：删除阶段
+  const handleTimeModeRemoveStage = (timeModeIndex: number) => {
+    const timeData = timeModeData[timeModeIndex];
+    if (!timeData) return;
+
+    const indicesToRemove: number[] = [timeData.originalIndex];
+
+    if (!timeData.isWait && timeData.prevWaitIndex !== null) {
+      indicesToRemove.push(timeData.prevWaitIndex);
+    }
+
+    if (removeStages) {
+      removeStages(indicesToRemove);
+    } else {
+      indicesToRemove.sort((a, b) => b - a);
+      indicesToRemove.forEach(idx => {
+        removeStage(idx);
+      });
+    }
+  };
+
   const getDurationDisplayValue = (stage: Stage, index: number) => {
-    // 编辑状态显示纯数字
     if (editingDuration && editingDuration.index === index)
       return editingDuration.value;
-    // 非编辑状态显示格式化时间
+    // 如果没有设置时长，显示空（不预设）
+    if (!stage.duration) return '';
     const seconds = useCumulativeMode
       ? cumulativeData[index]?.cumulativeDuration || 0
       : stage.duration || 0;
     return formatDurationDisplay(seconds);
   };
 
-  // 获取当前秒数（用于聚焦时设置编辑值）
   const getDurationSeconds = (stage: Stage, index: number): number => {
+    // 如果没有设置时长，返回 0
+    if (!stage.duration) return 0;
     return useCumulativeMode
       ? cumulativeData[index]?.cumulativeDuration || 0
       : stage.duration || 0;
   };
 
-  // 处理时长变更（支持累计模式）
   const handleDurationChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
     setEditingDuration({ index, value });
     let val = parseInt(value) || 0;
-    // 累计模式下，输入的是累计值，需要转换为独立值
     if (useCumulativeMode && index > 0) {
-      const previousCumulative = cumulativeData[index - 1]?.cumulativeDuration || 0;
+      const previousCumulative =
+        cumulativeData[index - 1]?.cumulativeDuration || 0;
       val = Math.max(0, val - previousCumulative);
     }
     onStageChange(index, 'duration', val);
   };
 
-  // 处理水量变更（支持累计模式）
   const handleWaterChange = (index: number, value: string) => {
     setEditingWater({ index, value });
     if (!value.trim()) {
@@ -429,9 +745,9 @@ const StagesStep: React.FC<StagesStepProps> = ({
     let water = value.includes('.')
       ? Math.round(parseFloat(value))
       : parseInt(value) || 0;
-    // 累计模式下，输入的是累计值，需要转换为独立值
     if (useCumulativeMode && index > 0) {
-      const previousCumulative = cumulativeData[index - 1]?.cumulativeWater || 0;
+      const previousCumulative =
+        cumulativeData[index - 1]?.cumulativeWater || 0;
       water = Math.max(0, water - previousCumulative);
     }
     onStageChange(index, 'water', `${water}`);
@@ -467,7 +783,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
             <span className="h-3 w-px bg-neutral-300 dark:bg-neutral-700" />
             <span
               className={`${
-                isEspresso ? 'truncate max-w-[150px]' : ''
+                isEspresso ? 'max-w-[150px] truncate' : ''
               } text-neutral-900 dark:text-neutral-100`}
             >
               总水量:{' '}
@@ -477,17 +793,31 @@ const StagesStep: React.FC<StagesStepProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {/* 累计/独立模式切换 */}
+            {/* 显示模式切换 */}
             <button
               type="button"
-              onClick={() => handleCumulativeModeChange(!useCumulativeMode)}
+              onClick={cycleDisplayMode}
               className="flex items-center gap-0.5 text-xs font-medium text-neutral-900 hover:text-neutral-700 dark:text-neutral-100 dark:hover:text-neutral-300"
-              title={useCumulativeMode ? '当前：累计模式（点击切换为独立模式）' : '当前：独立模式（点击切换为累计模式）'}
+              title={
+                displayMode === 'independent'
+                  ? '当前：独立模式（点击切换为累计模式）'
+                  : displayMode === 'cumulative'
+                    ? '当前：累计模式（点击切换为时间模式）'
+                    : '当前：时间模式（点击切换为独立模式）'
+              }
             >
-              {useCumulativeMode ? (
-                <><Sigma className="h-3 w-3" /> 累计</>
+              {displayMode === 'cumulative' ? (
+                <>
+                  <Sigma className="h-3 w-3" /> 累计
+                </>
+              ) : displayMode === 'time' ? (
+                <>
+                  <Clock className="h-3 w-3" /> 时间
+                </>
               ) : (
-                <><Hash className="h-3 w-3" /> 独立</>
+                <>
+                  <Hash className="h-3 w-3" /> 独立
+                </>
               )}
             </button>
             <span className="h-3 w-px bg-neutral-300 dark:bg-neutral-700" />
@@ -508,160 +838,528 @@ const StagesStep: React.FC<StagesStepProps> = ({
         className="mt-4 divide-y divide-neutral-200/50 dark:divide-neutral-800/50"
         ref={stagesContainerRef}
       >
-        {stages.map((stage, index) => {
-          const { showLabel, showDuration, showWater } = getFieldVisibility(
-            stage.pourType
-          );
-          const stageNumber = stageNumbers[index];
-          const isWaitStage = stage.pourType === 'wait';
+        {useTimeMode
+          ? // 时间模式
+            timeModeData.map((timeData, timeModeIndex) => {
+              const stage = stages[timeData.originalIndex];
 
-          return (
-            <div
-              key={index}
-              ref={
-                index === stages.length - 1
-                  ? newStageRef || innerNewStageRef
-                  : null
+              // 等待阶段：简化的一行显示
+              if (timeData.isWait) {
+                const waitDuration =
+                  timeData.endTime !== null
+                    ? timeData.endTime - timeData.startTime
+                    : 0;
+                return (
+                  <div
+                    key={timeData.originalIndex}
+                    ref={
+                      timeData.originalIndex === stages.length - 1
+                        ? newStageRef || innerNewStageRef
+                        : null
+                    }
+                    className="group py-1.5"
+                  >
+                    <div className="flex items-center gap-2 text-xs leading-relaxed text-neutral-400 dark:text-neutral-500">
+                      {timeModeData.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleTimeModeRemoveStage(timeModeIndex)
+                          }
+                          className="w-4 shrink-0 tabular-nums hover:text-red-500"
+                          title="删除等待"
+                        >
+                          −
+                        </button>
+                      ) : (
+                        <span className="w-4 shrink-0" />
+                      )}
+                      <span className="text-neutral-400 dark:text-neutral-500">
+                        等待 {formatDurationDisplay(waitDuration)}
+                      </span>
+                    </div>
+                  </div>
+                );
               }
-              className="group py-2.5"
-            >
-              {/* 第一行：核心信息 */}
-              <div className="flex items-center gap-2 text-xs font-medium leading-relaxed text-neutral-900 dark:text-neutral-100">
-                {/* 序号/删除 */}
-                {stages.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => removeStage(index)}
-                    className="w-4 shrink-0 text-neutral-400 tabular-nums hover:text-red-500 dark:text-neutral-500"
-                    title="删除此步骤"
-                  >
-                    {isWaitStage ? '−' : stageNumber}
-                  </button>
-                ) : (
-                  <span className="w-4 shrink-0 tabular-nums">
-                    {isWaitStage ? '' : stageNumber}
-                  </span>
-                )}
 
-                {/* 方式 */}
-                <span className="shrink-0">
-                  <span className="text-neutral-500 dark:text-neutral-500">[</span>
-                  <Select
-                    value={stage.pourType || ''}
-                    onValueChange={value => onPourTypeChange(index, value)}
-                  >
-                    <SelectTrigger variant="minimal" className="inline-flex w-auto border-none p-0 shadow-none focus:ring-0">
-                      <SelectValue placeholder="选择" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pourTypeOptions.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-neutral-500 dark:text-neutral-500">]</span>
-                </span>
+              // 注水阶段
+              const { showLabel, showWater } = getFieldVisibility(
+                stage.pourType
+              );
+              const stageNumber = timeData.pourStageNumber;
 
-                {/* 名称 */}
-                {showLabel ? (
-                  <div className="flex min-w-0 flex-1 items-center">
-                    {hasValve && (
+              return (
+                <div
+                  key={timeData.originalIndex}
+                  ref={
+                    timeData.originalIndex === stages.length - 1
+                      ? newStageRef || innerNewStageRef
+                      : null
+                  }
+                  className="group py-2.5"
+                >
+                  {/* 第一行：核心信息 */}
+                  <div className="flex items-center gap-2 text-xs leading-relaxed font-medium text-neutral-900 dark:text-neutral-100">
+                    {/* 序号/删除 */}
+                    {timeModeData.filter(d => !d.isWait).length > 1 ? (
                       <button
                         type="button"
-                        onClick={() => toggleValveStatus(index)}
-                        className={`mr-1 shrink-0 ${
-                          stage.valveStatus === 'open'
-                            ? 'text-green-600 dark:text-green-400'
-                            : 'text-red-600 dark:text-red-400'
-                        }`}
+                        onClick={() => handleTimeModeRemoveStage(timeModeIndex)}
+                        className="w-4 shrink-0 text-neutral-400 tabular-nums hover:text-red-500 dark:text-neutral-500"
+                        title="删除此步骤"
                       >
-                        [{stage.valveStatus === 'open' ? '开阀' : '关阀'}]
+                        {stageNumber}
                       </button>
-                    )}
-                    {isEspresso && stage.pourType === 'beverage' ? (
-                      <AutocompleteInput
-                        value={stage.label}
-                        onChange={value => handleBeverageChange(index, value)}
-                        suggestions={beverageSuggestions}
-                        placeholder="饮料"
-                        className="min-w-0 flex-1 truncate border-none bg-transparent py-0 outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
-                        onRemovePreset={handleRemoveBeverage}
-                        isCustomPreset={isCustomBeverage}
-                      />
                     ) : (
-                      <input
-                        type="text"
-                        value={stage.label}
-                        onChange={e =>
-                          onStageChange(index, 'label', e.target.value)
+                      <span className="w-4 shrink-0 tabular-nums">
+                        {stageNumber}
+                      </span>
+                    )}
+
+                    {/* 方式 */}
+                    <span className="shrink-0">
+                      <span className="text-neutral-500 dark:text-neutral-500">
+                        [
+                      </span>
+                      <Select
+                        value={stage.pourType || ''}
+                        onValueChange={value =>
+                          onPourTypeChange(timeData.originalIndex, value)
                         }
-                        placeholder="名称"
-                        className="min-w-0 flex-1 truncate bg-transparent outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
-                      />
+                      >
+                        <SelectTrigger
+                          variant="minimal"
+                          className="inline-flex w-auto border-none p-0 shadow-none focus:ring-0"
+                        >
+                          <SelectValue placeholder="选择" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pourTypeOptions
+                            .filter(opt => opt.value !== 'wait')
+                            .map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-neutral-500 dark:text-neutral-500">
+                        ]
+                      </span>
+                    </span>
+
+                    {/* 名称 */}
+                    {showLabel ? (
+                      <div className="flex min-w-0 flex-1 items-center">
+                        {hasValve && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleValveStatus(timeData.originalIndex)
+                            }
+                            className={`mr-1 shrink-0 ${
+                              stage.valveStatus === 'open'
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-red-600 dark:text-red-400'
+                            }`}
+                          >
+                            [{stage.valveStatus === 'open' ? '开阀' : '关阀'}]
+                          </button>
+                        )}
+                        {isEspresso && stage.pourType === 'beverage' ? (
+                          <AutocompleteInput
+                            value={stage.label}
+                            onChange={value =>
+                              handleBeverageChange(
+                                timeData.originalIndex,
+                                value
+                              )
+                            }
+                            suggestions={beverageSuggestions}
+                            placeholder="饮料"
+                            className="min-w-0 flex-1 truncate border-none bg-transparent py-0 outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                            onRemovePreset={handleRemoveBeverage}
+                            isCustomPreset={isCustomBeverage}
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={stage.label}
+                            onChange={e =>
+                              onStageChange(
+                                timeData.originalIndex,
+                                'label',
+                                e.target.value
+                              )
+                            }
+                            placeholder="名称"
+                            className="min-w-0 flex-1 truncate bg-transparent outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <span className="min-w-0 flex-1" />
+                    )}
+
+                    {/* 时间：开始-结束格式，无感输入 */}
+                    <span className="flex shrink-0 items-center tabular-nums">
+                      {/* 开始时间 */}
+                      <span
+                        className="flex items-center"
+                        onBlur={e => {
+                          if (!e.currentTarget.contains(e.relatedTarget)) {
+                            const spans =
+                              e.currentTarget.querySelectorAll(
+                                '[contenteditable]'
+                              );
+                            const mins = parseInt(spans[0]?.textContent || '0');
+                            const secs = parseInt(spans[1]?.textContent || '0');
+                            // 格式化秒数显示为两位数
+                            if (spans[1]) {
+                              spans[1].textContent = String(secs).padStart(
+                                2,
+                                '0'
+                              );
+                            }
+                            handleTimeModeStartBlurWithValues(
+                              timeModeIndex,
+                              mins,
+                              secs
+                            );
+                          }
+                        }}
+                      >
+                        <span
+                          contentEditable
+                          suppressContentEditableWarning
+                          inputMode="numeric"
+                          onInput={e => {
+                            const text = e.currentTarget.textContent || '';
+                            const val = text.replace(/\D/g, '');
+                            if (val !== text) {
+                              e.currentTarget.textContent = val;
+                            }
+                          }}
+                          className="min-w-[0.5em] cursor-text text-right outline-none hover:text-neutral-600 dark:hover:text-neutral-300"
+                        >
+                          {Math.floor(timeData.startTime / 60)}
+                        </span>
+                        <span className="text-neutral-500">′</span>
+                        <span
+                          contentEditable
+                          suppressContentEditableWarning
+                          inputMode="numeric"
+                          onInput={e => {
+                            const text = e.currentTarget.textContent || '';
+                            const val = text.replace(/\D/g, '');
+                            if (parseInt(val) > 59) return;
+                            if (val !== text) {
+                              e.currentTarget.textContent = val;
+                            }
+                          }}
+                          className="min-w-[1em] cursor-text text-right outline-none hover:text-neutral-600 dark:hover:text-neutral-300"
+                        >
+                          {String(timeData.startTime % 60).padStart(2, '0')}
+                        </span>
+                        <span className="text-neutral-500">″</span>
+                      </span>
+
+                      <span className="mx-0.5 text-neutral-400">-</span>
+
+                      {/* 结束时间 */}
+                      <span
+                        className="flex items-center"
+                        onBlur={e => {
+                          if (!e.currentTarget.contains(e.relatedTarget)) {
+                            const spans =
+                              e.currentTarget.querySelectorAll(
+                                '[contenteditable]'
+                              );
+                            const mins = parseInt(spans[0]?.textContent || '0');
+                            const secs = parseInt(spans[1]?.textContent || '0');
+                            // 格式化秒数显示为两位数
+                            if (spans[1] && spans[1].textContent) {
+                              spans[1].textContent = String(secs).padStart(
+                                2,
+                                '0'
+                              );
+                            }
+                            handleTimeModeEndBlurWithValues(
+                              timeModeIndex,
+                              mins,
+                              secs
+                            );
+                          }
+                        }}
+                      >
+                        <span
+                          contentEditable
+                          suppressContentEditableWarning
+                          inputMode="numeric"
+                          data-placeholder="0"
+                          onInput={e => {
+                            const text = e.currentTarget.textContent || '';
+                            const val = text.replace(/\D/g, '');
+                            if (val !== text) {
+                              e.currentTarget.textContent = val;
+                            }
+                          }}
+                          className={`min-w-[0.5em] cursor-text text-right outline-none empty:text-neutral-400 empty:before:content-[attr(data-placeholder)] hover:text-neutral-600 dark:empty:text-neutral-600 dark:hover:text-neutral-300`}
+                        >
+                          {timeData.endTime !== null
+                            ? Math.floor(timeData.endTime / 60)
+                            : ''}
+                        </span>
+                        <span className="text-neutral-500">′</span>
+                        <span
+                          contentEditable
+                          suppressContentEditableWarning
+                          inputMode="numeric"
+                          data-placeholder="00"
+                          onInput={e => {
+                            const text = e.currentTarget.textContent || '';
+                            const val = text.replace(/\D/g, '');
+                            if (parseInt(val) > 59) return;
+                            if (val !== text) {
+                              e.currentTarget.textContent = val;
+                            }
+                          }}
+                          className={`min-w-[1em] cursor-text text-right outline-none empty:text-neutral-400 empty:before:content-[attr(data-placeholder)] hover:text-neutral-600 dark:empty:text-neutral-600 dark:hover:text-neutral-300`}
+                        >
+                          {timeData.endTime !== null
+                            ? String(timeData.endTime % 60).padStart(2, '0')
+                            : ''}
+                        </span>
+                        <span className="text-neutral-500">″</span>
+                      </span>
+                    </span>
+
+                    {/* 水量（累计值） */}
+                    {showWater ? (
+                      <span className="shrink-0 tabular-nums">
+                        <input
+                          type="text"
+                          value={getTimeModeWaterDisplayValue(
+                            stage,
+                            timeModeIndex
+                          )}
+                          onChange={e =>
+                            handleTimeModeWaterChange(
+                              timeModeIndex,
+                              e.target.value
+                            )
+                          }
+                          onBlur={e =>
+                            handleTimeModeWaterBlur(
+                              timeModeIndex,
+                              e.target.value
+                            )
+                          }
+                          placeholder="0"
+                          className="w-8 bg-transparent text-right outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                        />
+                        <span className="text-neutral-500 dark:text-neutral-500">
+                          g
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="w-10 shrink-0" />
                     )}
                   </div>
-                ) : (
-                  <span className="min-w-0 flex-1" />
-                )}
 
-                {/* 时间 */}
-                {showDuration ? (
-                  <span className="shrink-0 tabular-nums">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={getDurationDisplayValue(stage, index)}
-                      onChange={e => handleDurationChange(index, e.target.value)}
-                      onFocus={() => {
-                        const seconds = getDurationSeconds(stage, index);
-                        setEditingDuration({ index, value: seconds ? String(seconds) : '' });
-                      }}
-                      onBlur={() => setEditingDuration(null)}
-                      placeholder="0″"
-                      className="w-12 bg-transparent text-right outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                  {/* 第二行：说明 */}
+                  <div className="mt-1 flex items-start gap-2 pl-6">
+                    <textarea
+                      value={stage.detail}
+                      onChange={e =>
+                        onStageChange(
+                          timeData.originalIndex,
+                          'detail',
+                          e.target.value
+                        )
+                      }
+                      placeholder="输入说明"
+                      className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-xs leading-relaxed font-medium text-neutral-500 outline-hidden placeholder:text-neutral-400 dark:text-neutral-400 dark:placeholder:text-neutral-600"
                     />
-                    {editingDuration?.index === index && (
-                      <span className="text-neutral-500 dark:text-neutral-500">″</span>
+                  </div>
+                </div>
+              );
+            })
+          : // 独立/累计模式
+            stages.map((stage, index) => {
+              const { showLabel, showDuration, showWater } = getFieldVisibility(
+                stage.pourType
+              );
+              const stageNumber = stageNumbers[index];
+              const isWaitStage = stage.pourType === 'wait';
+
+              return (
+                <div
+                  key={index}
+                  ref={
+                    index === stages.length - 1
+                      ? newStageRef || innerNewStageRef
+                      : null
+                  }
+                  className="group py-2.5"
+                >
+                  {/* 第一行：核心信息 */}
+                  <div className="flex items-center gap-2 text-xs leading-relaxed font-medium text-neutral-900 dark:text-neutral-100">
+                    {/* 序号/删除 */}
+                    {stages.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => removeStage(index)}
+                        className="w-4 shrink-0 text-neutral-400 tabular-nums hover:text-red-500 dark:text-neutral-500"
+                        title="删除此步骤"
+                      >
+                        {isWaitStage ? '−' : stageNumber}
+                      </button>
+                    ) : (
+                      <span className="w-4 shrink-0 tabular-nums">
+                        {isWaitStage ? '' : stageNumber}
+                      </span>
                     )}
-                  </span>
-                ) : (
-                  <span className="w-14 shrink-0" />
-                )}
 
-                {/* 水量 */}
-                {showWater ? (
-                  <span className="shrink-0 tabular-nums">
-                    <input
-                      type="text"
-                      value={getWaterDisplayValue(stage, index)}
-                      onChange={e => handleWaterChange(index, e.target.value)}
-                      onBlur={e => handleWaterBlur(index, e.target.value)}
-                      placeholder="0"
-                      className="w-8 bg-transparent text-right outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
-                    />
-                    <span className="text-neutral-500 dark:text-neutral-500">
-                      g
+                    {/* 方式 */}
+                    <span className="shrink-0">
+                      <span className="text-neutral-500 dark:text-neutral-500">
+                        [
+                      </span>
+                      <Select
+                        value={stage.pourType || ''}
+                        onValueChange={value => onPourTypeChange(index, value)}
+                      >
+                        <SelectTrigger
+                          variant="minimal"
+                          className="inline-flex w-auto border-none p-0 shadow-none focus:ring-0"
+                        >
+                          <SelectValue placeholder="选择" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pourTypeOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-neutral-500 dark:text-neutral-500">
+                        ]
+                      </span>
                     </span>
-                  </span>
-                ) : (
-                  <span className="w-10 shrink-0" />
-                )}
-              </div>
 
-              {/* 第二行：说明 */}
-              <div className="mt-1 flex items-start gap-2 pl-6">
-                <textarea
-                  value={stage.detail}
-                  onChange={e => onStageChange(index, 'detail', e.target.value)}
-                  placeholder="输入说明"
-                  className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-xs font-medium leading-relaxed text-neutral-500 outline-hidden placeholder:text-neutral-400 dark:text-neutral-400 dark:placeholder:text-neutral-600"
-                />
-              </div>
-            </div>
-          );
-        })}
+                    {/* 名称 */}
+                    {showLabel ? (
+                      <div className="flex min-w-0 flex-1 items-center">
+                        {hasValve && (
+                          <button
+                            type="button"
+                            onClick={() => toggleValveStatus(index)}
+                            className={`mr-1 shrink-0 ${
+                              stage.valveStatus === 'open'
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-red-600 dark:text-red-400'
+                            }`}
+                          >
+                            [{stage.valveStatus === 'open' ? '开阀' : '关阀'}]
+                          </button>
+                        )}
+                        {isEspresso && stage.pourType === 'beverage' ? (
+                          <AutocompleteInput
+                            value={stage.label}
+                            onChange={value =>
+                              handleBeverageChange(index, value)
+                            }
+                            suggestions={beverageSuggestions}
+                            placeholder="饮料"
+                            className="min-w-0 flex-1 truncate border-none bg-transparent py-0 outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                            onRemovePreset={handleRemoveBeverage}
+                            isCustomPreset={isCustomBeverage}
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={stage.label}
+                            onChange={e =>
+                              onStageChange(index, 'label', e.target.value)
+                            }
+                            placeholder="名称"
+                            className="min-w-0 flex-1 truncate bg-transparent outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <span className="min-w-0 flex-1" />
+                    )}
+
+                    {/* 时间 */}
+                    {showDuration ? (
+                      <span className="shrink-0 tabular-nums">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={getDurationDisplayValue(stage, index)}
+                          onChange={e =>
+                            handleDurationChange(index, e.target.value)
+                          }
+                          onFocus={() => {
+                            const seconds = getDurationSeconds(stage, index);
+                            setEditingDuration({
+                              index,
+                              value: seconds ? String(seconds) : '',
+                            });
+                          }}
+                          onBlur={() => setEditingDuration(null)}
+                          placeholder="0″"
+                          className="w-12 bg-transparent text-right outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                        />
+                        {editingDuration?.index === index && (
+                          <span className="text-neutral-500 dark:text-neutral-500">
+                            ″
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="w-14 shrink-0" />
+                    )}
+
+                    {/* 水量 */}
+                    {showWater ? (
+                      <span className="shrink-0 tabular-nums">
+                        <input
+                          type="text"
+                          value={getWaterDisplayValue(stage, index)}
+                          onChange={e =>
+                            handleWaterChange(index, e.target.value)
+                          }
+                          onBlur={e => handleWaterBlur(index, e.target.value)}
+                          placeholder="0"
+                          className="w-8 bg-transparent text-right outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                        />
+                        <span className="text-neutral-500 dark:text-neutral-500">
+                          g
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="w-10 shrink-0" />
+                    )}
+                  </div>
+
+                  {/* 第二行：说明 */}
+                  <div className="mt-1 flex items-start gap-2 pl-6">
+                    <textarea
+                      value={stage.detail}
+                      onChange={e =>
+                        onStageChange(index, 'detail', e.target.value)
+                      }
+                      placeholder="输入说明"
+                      className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-xs leading-relaxed font-medium text-neutral-500 outline-hidden placeholder:text-neutral-400 dark:text-neutral-400 dark:placeholder:text-neutral-600"
+                    />
+                  </div>
+                </div>
+              );
+            })}
       </div>
 
       {/* 底部渐变 */}
