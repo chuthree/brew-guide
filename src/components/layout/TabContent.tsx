@@ -1076,6 +1076,7 @@ const TabContent: React.FC<TabContentProps> = ({
                     showFlowRate={localShowFlowRate}
                     allSteps={content[activeTab]?.steps || []}
                     compactMode={localLayoutSettings.compactMode || false}
+                    stepDisplayMode={localLayoutSettings.stepDisplayMode || 'cumulative'}
                   />
                 </React.Fragment>
               );

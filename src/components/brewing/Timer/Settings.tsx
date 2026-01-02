@@ -12,6 +12,7 @@ export interface LayoutSettings {
   showStageDivider?: boolean; // 是否显示阶段分隔线
   compactMode?: boolean; // 是否启用简洁模式
   dataFontSize?: '2xl' | '3xl' | '4xl'; // 数据显示字体大小
+  stepDisplayMode?: 'independent' | 'cumulative' | 'time'; // 步骤时间显示模式：独立、累计、时间
 }
 
 interface BrewingTimerSettingsProps {
@@ -278,6 +279,27 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                     const newSettings = {
                       ...localLayoutSettings,
                       dataFontSize: value as '2xl' | '3xl' | '4xl',
+                    };
+                    handleLayoutChange(newSettings);
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                  步骤时间显示
+                </span>
+                <ButtonGroup
+                  value={localLayoutSettings?.stepDisplayMode || 'cumulative'}
+                  options={[
+                    { value: 'independent', label: '独立' },
+                    { value: 'cumulative', label: '累计' },
+                    { value: 'time', label: '时间' },
+                  ]}
+                  onChange={value => {
+                    const newSettings = {
+                      ...localLayoutSettings,
+                      stepDisplayMode: value as 'independent' | 'cumulative' | 'time',
                     };
                     handleLayoutChange(newSettings);
                   }}

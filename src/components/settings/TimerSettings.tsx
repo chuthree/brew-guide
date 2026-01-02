@@ -187,7 +187,7 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
             }}
           />
         </SettingRow>
-        <SettingRow label="简洁模式" isLast>
+        <SettingRow label="简洁模式">
           <SettingToggle
             checked={settings.layoutSettings?.compactMode || false}
             onChange={checked => {
@@ -198,6 +198,25 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
               handleChange('layoutSettings', newLayoutSettings);
             }}
           />
+        </SettingRow>
+        <SettingRow label="步骤时间显示" isLast>
+          <div className="flex h-0 items-center">
+            <ButtonGroup
+              value={settings.layoutSettings?.stepDisplayMode || 'cumulative'}
+              options={[
+                { value: 'independent', label: '独立' },
+                { value: 'cumulative', label: '累计' },
+                { value: 'time', label: '时间' },
+              ]}
+              onChange={value => {
+                const newLayoutSettings = {
+                  ...settings.layoutSettings,
+                  stepDisplayMode: value as 'independent' | 'cumulative' | 'time',
+                };
+                handleChange('layoutSettings', newLayoutSettings);
+              }}
+            />
+          </div>
         </SettingRow>
       </SettingSection>
     </SettingPage>

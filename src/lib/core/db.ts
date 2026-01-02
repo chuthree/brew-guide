@@ -95,6 +95,7 @@ export interface AppSettings {
     showStageDivider?: boolean;
     compactMode?: boolean;
     dataFontSize?: '2xl' | '3xl' | '4xl';
+    stepDisplayMode?: 'independent' | 'cumulative' | 'time'; // 步骤时间显示模式
   };
 
   // 咖啡豆显示设置

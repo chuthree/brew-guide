@@ -32,6 +32,7 @@ interface StageItemProps {
   showFlowRate?: boolean;
   allSteps?: Step[];
   compactMode?: boolean;
+  stepDisplayMode?: 'independent' | 'cumulative' | 'time';
 }
 
 // 辅助函数：格式化时间
@@ -49,6 +50,18 @@ const formatTime = (seconds: number, compact: boolean = false) => {
   }
   // 完整模式: 1:20 (用于主计时器显示)
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// 辅助函数：格式化时间范围 (用于 time 模式)
+// 格式：0′00″ - 0′15″
+const formatTimeRange = (startSeconds: number, endSeconds: number) => {
+  const formatSingle = (seconds: number) => {
+    const positiveSeconds = Math.max(0, seconds);
+    const mins = Math.floor(positiveSeconds / 60);
+    const secs = positiveSeconds % 60;
+    return `${mins}′${secs.toString().padStart(2, '0')}″`;
+  };
+  return `${formatSingle(startSeconds)} - ${formatSingle(endSeconds)}`;
 };
 
 // 辅助函数：计算流速
@@ -195,6 +208,7 @@ const StageItem: React.FC<StageItemProps> = React.memo(
     showFlowRate = false,
     allSteps = [],
     compactMode = false,
+    stepDisplayMode = 'cumulative',
   }) => {
     // 添加用于管理分隔符折叠状态的 state
     const [isCommonSectionCollapsed, setIsCommonSectionCollapsed] =
@@ -313,6 +327,11 @@ const StageItem: React.FC<StageItemProps> = React.memo(
         );
       }
 
+      // 时间模式下，非简洁模式也隐藏等待步骤
+      if (stepDisplayMode === 'time' && isWaitingStage && activeTab === '注水') {
+        return null;
+      }
+
       return (
         <div
           className={`group relative ${compactMode && activeTab === '注水' ? '' : `border-l ${isWaitingStage ? 'border-dashed' : ''} border-neutral-200/50 pl-6 dark:border-neutral-800/50`} ${textStyle} ${opacityStyle}`}
@@ -335,6 +354,8 @@ const StageItem: React.FC<StageItemProps> = React.memo(
             step.originalIndex !== undefined &&
             step.items ? (
               // 简洁模式渲染
+              // 时间模式下跳过等待步骤
+              stepDisplayMode === 'time' && step.type === 'wait' ? null :
               (() => {
                 const compactDesc = generateCompactDescription(
                   step,
@@ -390,8 +411,8 @@ const StageItem: React.FC<StageItemProps> = React.memo(
                             {compactDesc.title}
                           </span>
 
-                          {/* 时间信息 */}
-                          {compactDesc.timeInfo && (
+                          {/* 时间信息 - 根据 stepDisplayMode 显示不同内容 */}
+                          {compactDesc.timeInfo && stepDisplayMode !== 'time' && (
                             <>
                               <span className="opacity-80">，在 </span>
                               {compactDesc.timeInfo.minutes !== '0' && (
@@ -406,6 +427,15 @@ const StageItem: React.FC<StageItemProps> = React.memo(
                                 {compactDesc.timeInfo.seconds}
                               </span>
                               <span className="opacity-80"> 秒时</span>
+                            </>
+                          )}
+                          {/* 时间模式：显示时间范围 */}
+                          {stepDisplayMode === 'time' && step.startTime !== undefined && step.endTime !== undefined && (
+                            <>
+                              <span className="opacity-80">，</span>
+                              <span className="opacity-100">
+                                {formatTimeRange(step.startTime, step.endTime)}
+                              </span>
                             </>
                           )}
 
@@ -468,22 +498,52 @@ const StageItem: React.FC<StageItemProps> = React.memo(
                       step.items && (
                         <div className="flex shrink-0 items-baseline gap-3 text-xs font-medium text-neutral-800 dark:text-neutral-100">
                           {/* Bypass 步骤不显示时间，其他步骤显示时间 */}
+                          {/* 时间模式下，等待步骤不显示 */}
                           {!isBypassStep &&
+                            !(stepDisplayMode === 'time' && isWaitingStage) &&
                             (step.endTime !== undefined ||
                               step.note ||
                               step.time !== undefined) && (
                               <>
                                 <span>
-                                  {step.endTime !== undefined
-                                    ? formatTime(step.endTime, true)
-                                    : step.note
-                                      ? formatTime(
-                                          parseInt(String(step.note)),
-                                          true
-                                        )
-                                      : step.time !== undefined
+                                  {(() => {
+                                    // 根据显示模式决定时间显示方式
+                                    if (stepDisplayMode === 'time') {
+                                      // 时间模式：显示开始-结束时间范围
+                                      if (step.startTime !== undefined && step.endTime !== undefined) {
+                                        return formatTimeRange(step.startTime, step.endTime);
+                                      }
+                                      // 降级处理
+                                      return step.endTime !== undefined
+                                        ? formatTime(step.endTime, true)
+                                        : '';
+                                    } else if (stepDisplayMode === 'independent') {
+                                      // 独立模式：只显示该步骤的时长
+                                      if (step.note) {
+                                        const duration = parseInt(String(step.note));
+                                        return formatTime(duration, true);
+                                      }
+                                      // 尝试从startTime和endTime计算
+                                      if (step.startTime !== undefined && step.endTime !== undefined) {
+                                        return formatTime(step.endTime - step.startTime, true);
+                                      }
+                                      return step.time !== undefined
                                         ? formatTime(step.time, true)
-                                        : ''}
+                                        : '';
+                                    } else {
+                                      // 累计模式（默认）：显示累计时间
+                                      return step.endTime !== undefined
+                                        ? formatTime(step.endTime, true)
+                                        : step.note
+                                          ? formatTime(
+                                              parseInt(String(step.note)),
+                                              true
+                                            )
+                                          : step.time !== undefined
+                                            ? formatTime(step.time, true)
+                                            : '';
+                                    }
+                                  })()}
                                 </span>
                                 {/* 等待步骤不显示分隔符和水量 */}
                                 {!isWaitingStage && <span>·</span>}
@@ -574,6 +634,7 @@ const StageItem: React.FC<StageItemProps> = React.memo(
       prevProps.selectedMethod === nextProps.selectedMethod &&
       prevProps.showFlowRate === nextProps.showFlowRate &&
       prevProps.compactMode === nextProps.compactMode &&
+      prevProps.stepDisplayMode === nextProps.stepDisplayMode &&
       prevProps.onEdit === nextProps.onEdit &&
       prevProps.onDelete === nextProps.onDelete &&
       prevProps.onShare === nextProps.onShare
