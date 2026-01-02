@@ -13,6 +13,14 @@ export interface BlendComponent {
   variety?: string; // 品种
 }
 
+// 待创建的咖啡豆（尚未持久化到数据库）
+// 用于笔记表单中"创建并选择"功能，仅在笔记保存时才真正创建咖啡豆
+export interface PendingCoffeeBean {
+  id?: undefined; // 明确标识为未持久化状态
+  name: string; // 咖啡豆名称
+  isPending: true; // 类型判别标记
+}
+
 // 咖啡豆数据模型 - 重构优化版
 export interface CoffeeBean {
   // 核心标识
@@ -57,6 +65,14 @@ export interface CoffeeBean {
   // 拼配成分
   blendComponents?: BlendComponent[];
 }
+
+// 咖啡豆选择器使用的联合类型：已有豆子或待创建豆子
+export type SelectableCoffeeBean = CoffeeBean | PendingCoffeeBean;
+
+// 类型守卫：判断是否为待创建的咖啡豆
+export function isPendingCoffeeBean(
+  bean: SelectableCoffeeBean | null | undefined
+): bean is PendingCoffeeBean;
 
 // ExtendedCoffeeBean 已移除，直接使用 CoffeeBean（已包含 blendComponents）
 

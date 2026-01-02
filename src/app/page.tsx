@@ -233,6 +233,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [showGreenBeanSettings, setShowGreenBeanSettings] = useState(false);
   const [showFlavorPeriodSettings, setShowFlavorPeriodSettings] =
     useState(false);
+  const [showBrewingSettings, setShowBrewingSettings] = useState(false);
   const [showTimerSettings, setShowTimerSettings] = useState(false);
   const [showDataSettings, setShowDataSettings] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] =
@@ -261,6 +262,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showBeanSettings ||
     showGreenBeanSettings ||
     showFlavorPeriodSettings ||
+    showBrewingSettings ||
     showTimerSettings ||
     showDataSettings ||
     showNotificationSettings ||
@@ -562,6 +564,26 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     confirmText: string;
     onConfirm: () => void;
   } | null>(null);
+
+  // 在 settings 加载完成后，根据 showCoffeeBeanSelectionStep 设置调整初始步骤
+  // 这是为了处理初始化时 settings 还未加载的情况
+  const hasAdjustedInitialStep = useRef(false);
+  useEffect(() => {
+    // 只在 settings 初始化完成后执行一次
+    if (!storeInitialized || hasAdjustedInitialStep.current) return;
+    hasAdjustedInitialStep.current = true;
+
+    // 如果设置关闭了咖啡豆选择步骤，且当前在咖啡豆步骤，则跳转到方案步骤
+    const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
+    if (!showBeanStep && activeBrewingStep === 'coffeeBean') {
+      navigateToStep('method');
+    }
+  }, [
+    storeInitialized,
+    settings.showCoffeeBeanSelectionStep,
+    activeBrewingStep,
+    navigateToStep,
+  ]);
 
   // 加载自定义器具
   useEffect(() => {
@@ -1049,12 +1071,22 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const shouldStartFromCoffeeBeanStep = localStorage.getItem(
       'shouldStartFromCoffeeBeanStep'
     );
-    if (shouldStartFromCoffeeBeanStep === 'true' && hasCoffeeBeans) {
+    // 只有当设置开启且有咖啡豆时才从咖啡豆步骤开始
+    const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
+    if (
+      shouldStartFromCoffeeBeanStep === 'true' &&
+      hasCoffeeBeans &&
+      showBeanStep
+    ) {
       localStorage.removeItem('shouldStartFromCoffeeBeanStep');
       resetBrewingState(false);
       navigateToStep('coffeeBean');
       prevMainTabRef.current = activeMainTab;
       return;
+    }
+    // 如果设置关闭，清除标记
+    if (shouldStartFromCoffeeBeanStep === 'true' && !showBeanStep) {
+      localStorage.removeItem('shouldStartFromCoffeeBeanStep');
     }
 
     // 只有从其他标签切换过来时才重置到初始步骤
@@ -1072,8 +1104,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }
 
     // 只在确实需要时才重置到初始步骤
+    // 根据设置决定是否从咖啡豆步骤开始
     resetBrewingState(false);
-    navigateToStep(hasCoffeeBeans ? 'coffeeBean' : 'method');
+    navigateToStep(hasCoffeeBeans && showBeanStep ? 'coffeeBean' : 'method');
     prevMainTabRef.current = activeMainTab;
   }, [
     activeMainTab,
@@ -1083,6 +1116,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     setShowHistory,
     navigateToStep,
     hasCoffeeBeans,
+    settings.showCoffeeBeanSelectionStep,
   ]);
 
   const handleMethodTypeChange = useCallback(
@@ -1311,10 +1345,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 简化的返回按钮处理 - 使用统一的步骤流程
   const handleBackClick = useCallback(() => {
+    // 根据设置决定是否显示咖啡豆选择步骤
+    const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
     // 定义步骤返回映射
     const BACK_STEPS: Record<BrewingStep, BrewingStep | null> = {
       brewing: 'method',
-      method: hasCoffeeBeans ? 'coffeeBean' : null,
+      method: hasCoffeeBeans && showBeanStep ? 'coffeeBean' : null,
       coffeeBean: null,
       notes: 'brewing',
     };
@@ -1351,6 +1387,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     setShowComplete,
     setIsCoffeeBrewed,
     setHasAutoNavigatedToNotes,
+    settings.showCoffeeBeanSelectionStep,
   ]);
 
   const handleMethodSelectWrapper = useCallback(
@@ -1816,15 +1853,29 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       const shouldStartFromCoffeeBeanStep = localStorage.getItem(
         'shouldStartFromCoffeeBeanStep'
       );
-      if (shouldStartFromCoffeeBeanStep === 'true' && hasCoffeeBeans) {
+      const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
+      if (
+        shouldStartFromCoffeeBeanStep === 'true' &&
+        hasCoffeeBeans &&
+        showBeanStep
+      ) {
         // 重置标记
         localStorage.removeItem('shouldStartFromCoffeeBeanStep');
         // 设置步骤为咖啡豆
         setActiveBrewingStep('coffeeBean');
         setActiveTab('咖啡豆');
+      } else if (shouldStartFromCoffeeBeanStep === 'true' && !showBeanStep) {
+        // 如果设置关闭，清除标记
+        localStorage.removeItem('shouldStartFromCoffeeBeanStep');
       }
     }
-  }, [activeMainTab, hasCoffeeBeans, setActiveBrewingStep, setActiveTab]);
+  }, [
+    activeMainTab,
+    hasCoffeeBeans,
+    setActiveBrewingStep,
+    setActiveTab,
+    settings.showCoffeeBeanSelectionStep,
+  ]);
 
   const handleSaveBean = async (
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
@@ -2311,14 +2362,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   ]);
 
   // 冲煮页面历史栈管理 - 使用统一的多步骤历史栈系统
-  // 将冲煮步骤映射为数字步骤（根据是否有咖啡豆调整）：
-  // 有豆时：coffeeBean=0(起点), method=1, brewing=2, notes=3
-  // 无豆时：method=0(起点), brewing=1, notes=2
+  // 将冲煮步骤映射为数字步骤（根据是否有咖啡豆和设置调整）：
+  // 有豆且设置开启时：coffeeBean=0(起点), method=1, brewing=2, notes=3
+  // 无豆或设置关闭时：method=0(起点), brewing=1, notes=2
   const getBrewingStepNumber = (): number => {
     if (activeMainTab !== '冲煮') return 0;
 
-    if (hasCoffeeBeans) {
-      // 有咖啡豆的流程
+    const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
+
+    if (hasCoffeeBeans && showBeanStep) {
+      // 有咖啡豆且设置开启的流程
       switch (activeBrewingStep) {
         case 'coffeeBean':
           return 0; // 起点，不添加历史
@@ -2332,7 +2385,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           return 0;
       }
     } else {
-      // 无咖啡豆的流程
+      // 无咖啡豆或设置关闭的流程
       switch (activeBrewingStep) {
         case 'method':
           return 0; // 起点，不添加历史
@@ -3874,6 +3927,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setShowGreenBeanSettings={setShowGreenBeanSettings}
         showFlavorPeriodSettings={showFlavorPeriodSettings}
         setShowFlavorPeriodSettings={setShowFlavorPeriodSettings}
+        showBrewingSettings={showBrewingSettings}
+        setShowBrewingSettings={setShowBrewingSettings}
         showTimerSettings={showTimerSettings}
         setShowTimerSettings={setShowTimerSettings}
         showDataSettings={showDataSettings}

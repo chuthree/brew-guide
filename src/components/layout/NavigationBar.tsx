@@ -327,7 +327,8 @@ const NAVIGABLE_STEPS: Record<BrewingStep, BrewingStep | null> = {
 const useNavigation = (
   activeBrewingStep: BrewingStep,
   activeMainTab: MainTabType,
-  hasCoffeeBeans?: boolean
+  hasCoffeeBeans?: boolean,
+  showCoffeeBeanSelectionStep?: boolean
 ) => {
   const canGoBack = useCallback((): boolean => {
     // 如果当前在笔记页面，不显示返回按钮
@@ -342,12 +343,21 @@ const useNavigation = (
     // 咖啡豆步骤是第一步，不显示返回按钮
     if (activeBrewingStep === 'coffeeBean') return false;
 
-    // 如果在方案步骤但没有咖啡豆，也是第一步，不显示返回按钮
-    if (activeBrewingStep === 'method' && !hasCoffeeBeans) return false;
+    // 根据设置决定是否显示咖啡豆选择步骤
+    const showBeanStep = showCoffeeBeanSelectionStep !== false;
+
+    // 如果在方案步骤但没有咖啡豆或设置关闭，也是第一步，不显示返回按钮
+    if (activeBrewingStep === 'method' && (!hasCoffeeBeans || !showBeanStep))
+      return false;
 
     // 其他步骤检查是否有上一步
     return NAVIGABLE_STEPS[activeBrewingStep] !== null;
-  }, [activeBrewingStep, activeMainTab, hasCoffeeBeans]);
+  }, [
+    activeBrewingStep,
+    activeMainTab,
+    hasCoffeeBeans,
+    showCoffeeBeanSelectionStep,
+  ]);
 
   return { canGoBack };
 };
@@ -390,7 +400,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   const { canGoBack } = useNavigation(
     activeBrewingStep,
     activeMainTab,
-    hasCoffeeBeans
+    hasCoffeeBeans,
+    settings.showCoffeeBeanSelectionStep
   );
 
   // 获取同步状态（只在同步时显示转圈）

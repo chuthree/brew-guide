@@ -358,44 +358,15 @@ const TabContent: React.FC<TabContentProps> = ({
     return undefined;
   }, [selectedEquipment, customEquipments]);
 
-  // 笔记表单包装组件
-  const NoteFormWrapper = () => {
-    const [equipmentName, setEquipmentName] = useState('');
+  // 笔记表单的设备名称状态 - 移到组件顶层避免重新挂载问题
+  const [noteEquipmentName, setNoteEquipmentName] = useState('');
 
-    React.useEffect(() => {
-      if (selectedEquipment) {
-        getEquipmentNameForNote(selectedEquipment).then(setEquipmentName);
-      }
-    }, []);
-
-    return (
-      <BrewingNoteForm
-        id={undefined}
-        onClose={handleCloseNoteForm}
-        onSave={handleSaveNote}
-        inBrewPage={true}
-        initialData={{
-          equipment: equipmentName || selectedEquipment || '',
-          method: currentBrewingMethod?.name || '',
-          params: currentBrewingMethod?.params || {
-            coffee: '15g',
-            water: '225g',
-            ratio: '1:15',
-            grindSize: '中细',
-            temp: '92°C',
-            stages: [],
-          },
-          totalTime:
-            showComplete && currentBrewingMethod
-              ? currentBrewingMethod.params.stages[
-                  currentBrewingMethod.params.stages.length - 1
-                ].time
-              : 0,
-          coffeeBean: selectedCoffeeBeanData || undefined,
-        }}
-      />
-    );
-  };
+  // 获取设备名称用于笔记表单
+  useEffect(() => {
+    if (selectedEquipment) {
+      getEquipmentNameForNote(selectedEquipment).then(setNoteEquipmentName);
+    }
+  }, [selectedEquipment]);
 
   // 获取设备名称
   const getEquipmentNameForNote = async (
@@ -838,7 +809,31 @@ const TabContent: React.FC<TabContentProps> = ({
   if (activeTab === '记录') {
     return (
       <div className="px-6 pt-3">
-        <NoteFormWrapper />
+        <BrewingNoteForm
+          id={undefined}
+          onClose={handleCloseNoteForm}
+          onSave={handleSaveNote}
+          inBrewPage={true}
+          initialData={{
+            equipment: noteEquipmentName || selectedEquipment || '',
+            method: currentBrewingMethod?.name || '',
+            params: currentBrewingMethod?.params || {
+              coffee: '15g',
+              water: '225g',
+              ratio: '1:15',
+              grindSize: '中细',
+              temp: '92°C',
+              stages: [],
+            },
+            totalTime:
+              showComplete && currentBrewingMethod
+                ? currentBrewingMethod.params.stages[
+                    currentBrewingMethod.params.stages.length - 1
+                  ].time
+                : 0,
+            coffeeBean: selectedCoffeeBeanData || undefined,
+          }}
+        />
       </div>
     );
   }
@@ -1076,7 +1071,9 @@ const TabContent: React.FC<TabContentProps> = ({
                     showFlowRate={localShowFlowRate}
                     allSteps={content[activeTab]?.steps || []}
                     compactMode={localLayoutSettings.compactMode || false}
-                    stepDisplayMode={localLayoutSettings.stepDisplayMode || 'cumulative'}
+                    stepDisplayMode={
+                      localLayoutSettings.stepDisplayMode || 'cumulative'
+                    }
                   />
                 </React.Fragment>
               );

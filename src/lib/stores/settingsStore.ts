@@ -199,6 +199,9 @@ export const defaultSettings: AppSettings = {
 
   // 器具排序
   equipmentOrder: [],
+
+  // 冲煮设置
+  showCoffeeBeanSelectionStep: false, // 默认显示咖啡豆选择步骤
 };
 
 /**

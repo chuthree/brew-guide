@@ -411,11 +411,12 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
               </div>
 
               {/* 底部按钮 - 使用固定高度避免布局抖动 */}
-              <div className="mt-12 flex h-[56px] items-center justify-center gap-4">
+              <div className="mt-12 flex h-14 items-center justify-center gap-4">
                 <AnimatePresence>
                   {animationState === 'selected' && (
                     <>
                       <motion.button
+                        type="button"
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
@@ -427,6 +428,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
                       </motion.button>
 
                       <motion.button
+                        type="button"
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
@@ -445,6 +447,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
 
           {/* 关闭按钮 */}
           <motion.button
+            type="button"
             className="absolute top-[calc(env(safe-area-inset-top)+36px)] right-6 rounded-full bg-neutral-100 p-2 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
             onClick={onClose}
             initial={{ opacity: 0 }}

@@ -3,6 +3,7 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import Image from 'next/image';
+import { Plus } from 'lucide-react';
 import type { CoffeeBean } from '@/types/app';
 import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
 import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
@@ -15,6 +16,8 @@ interface CoffeeBeanSelectorProps {
   coffeeBeans: CoffeeBean[];
   selectedCoffeeBean: CoffeeBean | null;
   onSelect: (bean: CoffeeBean | null) => void;
+  /** 创建待定咖啡豆的回调（延迟到笔记保存时才真正创建） */
+  onCreatePendingBean?: (name: string) => void;
   searchQuery?: string;
   highlightedBeanId?: string | null;
   scrollParentRef?: HTMLElement;
@@ -22,7 +25,9 @@ interface CoffeeBeanSelectorProps {
 }
 
 // 定义列表项类型
-type VirtuosoItem = { __type: 'none' } | { __type: 'bean'; bean: CoffeeBean };
+type VirtuosoItem =
+  | { __type: 'create'; name: string }
+  | { __type: 'bean'; bean: CoffeeBean };
 
 // 咖啡豆图片组件（支持烘焙商图标）
 const BeanImage: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
@@ -31,7 +36,6 @@ const BeanImage: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
 
   useEffect(() => {
     if (!bean.name || bean.image) {
-      // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
       return;
     }
 
@@ -77,15 +81,14 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   coffeeBeans,
   selectedCoffeeBean: _selectedCoffeeBean,
   onSelect,
+  onCreatePendingBean,
   searchQuery = '',
   highlightedBeanId = null,
   scrollParentRef,
   showStatusDots = true,
 }) => {
-  // 添加ref用于存储咖啡豆元素列表
   const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // 设置ref的回调函数
   const setItemRef = React.useCallback(
     (id: string) => (node: HTMLDivElement | null) => {
       if (node) {
@@ -97,10 +100,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
     []
   );
 
-  // 滚动到高亮的咖啡豆
   useEffect(() => {
     if (highlightedBeanId && beanItemsRef.current.has(highlightedBeanId)) {
-      // 滚动到高亮的咖啡豆
       const node = beanItemsRef.current.get(highlightedBeanId);
       node?.scrollIntoView({
         behavior: 'smooth',
@@ -109,57 +110,212 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
     }
   }, [highlightedBeanId]);
 
-  // 过滤出未用完的咖啡豆，并按赏味期排序
   const availableBeans = useMemo(() => {
-    // 首先过滤掉剩余量为0(且设置了容量)的咖啡豆，排除生豆，但保留在途状态的咖啡豆
-    const filteredBeans = coffeeBeans.filter(bean => {
-      // 排除生豆
+    const filtered = coffeeBeans.filter(bean => {
       if (bean.beanState === 'green') {
         return false;
       }
-
-      // 如果没有设置容量，则直接显示
       if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
         return true;
       }
-
-      // 考虑remaining可能是字符串或者数字
       const remaining =
         typeof bean.remaining === 'string'
           ? parseFloat(bean.remaining)
           : Number(bean.remaining);
-
-      // 只过滤掉有容量设置且剩余量为0的咖啡豆
       return remaining > 0;
     });
-
-    // 使用统一的排序函数
-    return sortBeansByFlavorPeriod(filteredBeans);
+    return sortBeansByFlavorPeriod(filtered);
   }, [coffeeBeans]);
 
-  // 搜索过滤
   const filteredBeans = useMemo(() => {
     if (!searchQuery?.trim()) return availableBeans;
-
     const query = searchQuery.toLowerCase().trim();
     return availableBeans.filter(bean =>
       bean.name?.toLowerCase().includes(query)
     );
   }, [availableBeans, searchQuery]);
 
-  // 构造用于渲染的数据：把“不要使用咖啡豆”作为第一个虚拟项，与豆子列表一起滚动
-  const virtuosoData = useMemo(() => {
-    return [
-      { __type: 'none' } as const,
-      ...filteredBeans.map(b => ({ __type: 'bean' as const, bean: b })),
-    ];
-  }, [filteredBeans]);
+  // 构造用于渲染的数据：当搜索无结果时显示"创建并选择"选项
+  const virtuosoData = useMemo((): VirtuosoItem[] => {
+    const trimmedQuery = searchQuery?.trim() || '';
+
+    // 如果有搜索内容但没有匹配结果，显示创建选项
+    if (trimmedQuery && filteredBeans.length === 0 && onCreatePendingBean) {
+      return [{ __type: 'create', name: trimmedQuery }];
+    }
+
+    return filteredBeans.map(b => ({ __type: 'bean' as const, bean: b }));
+  }, [filteredBeans, searchQuery, onCreatePendingBean]);
+
+  // 渲染创建选项
+  const renderCreateItem = (name: string) => (
+    <div
+      className="group relative cursor-pointer pb-5 text-neutral-500 transition-all duration-300 dark:text-neutral-400"
+      onClick={() => onCreatePendingBean?.(name)}
+    >
+      <div className="cursor-pointer">
+        <div className="flex gap-3">
+          <div className="relative self-start">
+            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
+              <Plus className="h-5 w-5 text-neutral-400 dark:text-neutral-500" />
+            </div>
+          </div>
+          <div className="flex flex-col justify-center gap-y-1.5">
+            <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
+              {name}
+            </div>
+            <div className="text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+              <span className="inline">新建咖啡豆</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // 渲染咖啡豆选项
+  const renderBeanItem = (bean: CoffeeBean) => {
+    let freshStatus = '';
+    let statusClass = 'text-neutral-500 dark:text-neutral-400';
+
+    if (bean.isInTransit) {
+      freshStatus = '(在途)';
+      statusClass = 'text-neutral-600 dark:text-neutral-400';
+    } else if (bean.isFrozen) {
+      freshStatus = '(冷冻)';
+      statusClass = 'text-blue-400 dark:text-blue-300';
+    } else if (bean.roastDate) {
+      const { phase } = getFlavorInfo(bean);
+      if (phase === '养豆期') {
+        freshStatus = '(养豆期)';
+        statusClass = 'text-neutral-500 dark:text-neutral-400';
+      } else if (phase === '赏味期') {
+        freshStatus = '(赏味期)';
+        statusClass = 'text-emerald-500 dark:text-emerald-400';
+      } else {
+        freshStatus = '(衰退期)';
+        statusClass = 'text-neutral-500 dark:text-neutral-400';
+      }
+    }
+
+    const formatNumber = (value: string | undefined): string =>
+      !value
+        ? '0'
+        : Number.isInteger(parseFloat(value))
+          ? Math.floor(parseFloat(value)).toString()
+          : value;
+
+    const formatDateShort = (dateStr: string): string => {
+      const date = new Date(dateStr);
+      const year = date.getFullYear().toString().slice(-2);
+      return `${year}-${date.getMonth() + 1}-${date.getDate()}`;
+    };
+
+    const formatPricePerGram = (price: string, capacity: string): string => {
+      const priceNum = parseFloat(price);
+      const capacityNum = parseFloat(capacity.replace('g', ''));
+      if (isNaN(priceNum) || isNaN(capacityNum) || capacityNum === 0) return '';
+      const pricePerGram = priceNum / capacityNum;
+      return `${pricePerGram.toFixed(2)}元/克`;
+    };
+
+    const infoItems = [];
+
+    if (bean.roastDate && !bean.isInTransit) {
+      infoItems.push(formatDateShort(bean.roastDate));
+    }
+
+    const remaining =
+      typeof bean.remaining === 'string'
+        ? parseFloat(bean.remaining)
+        : (bean.remaining ?? 0);
+    const capacity =
+      typeof bean.capacity === 'string'
+        ? parseFloat(bean.capacity)
+        : (bean.capacity ?? 0);
+    if (remaining > 0 && capacity > 0) {
+      infoItems.push(
+        `${formatNumber(bean.remaining)}/${formatNumber(bean.capacity)}克`
+      );
+    }
+
+    if (bean.price && bean.capacity) {
+      infoItems.push(formatPricePerGram(bean.price, bean.capacity));
+    }
+
+    const getStatusDotColor = (phase: string): string => {
+      switch (phase) {
+        case '养豆期':
+          return 'bg-amber-400';
+        case '赏味期':
+          return 'bg-green-400';
+        case '衰退期':
+          return 'bg-red-400';
+        case '在途':
+          return 'bg-blue-400';
+        case '冷冻':
+          return 'bg-cyan-400';
+        case '未知':
+        default:
+          return 'bg-neutral-400';
+      }
+    };
+
+    const { phase } = getFlavorInfo(bean);
+
+    return (
+      <div
+        className="group relative cursor-pointer pb-5 text-neutral-500 transition-all duration-300 dark:text-neutral-400"
+        onClick={() => onSelect(bean)}
+        ref={setItemRef(bean.id)}
+      >
+        <div className="cursor-pointer">
+          <div className="flex gap-3">
+            <div className="relative self-start">
+              <div className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
+                <BeanImage bean={bean} />
+              </div>
+              {showStatusDots &&
+                bean.roastDate &&
+                (bean.startDay || bean.endDay || bean.roastLevel) && (
+                  <div
+                    className={`absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`}
+                  />
+                )}
+            </div>
+            <div className="flex flex-col justify-center gap-y-1.5">
+              <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
+                {bean.name}
+                {bean.roastLevel && ` ${bean.roastLevel}`}
+                <span className={statusClass}> {freshStatus}</span>
+              </div>
+              <div className="text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                {infoItems.map((item, i) => (
+                  <React.Fragment key={i}>
+                    <span className="inline">{item}</span>
+                    {i < infoItems.length - 1 && (
+                      <span className="mx-2 text-neutral-400 dark:text-neutral-600">
+                        ·
+                      </span>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // 当有数据时显示列表，否则显示空状态
+  const hasData = virtuosoData.length > 0;
 
   return (
     <div className="py-3">
       <div>
         <div className="space-y-5">
-          {filteredBeans.length > 0 ? (
+          {hasData ? (
             <Virtuoso
               {...(scrollParentRef
                 ? { customScrollParent: scrollParentRef }
@@ -178,201 +334,15 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
                 return { List: ListCmp };
               })()}
               itemContent={(_index, item: VirtuosoItem) => {
-                if (item.__type === 'none') {
-                  return (
-                    <div
-                      className="group relative cursor-pointer pb-5 text-neutral-500 transition-all duration-300 dark:text-neutral-400"
-                      onClick={() => onSelect(null)}
-                    >
-                      <div className="cursor-pointer">
-                        <div className="flex gap-3">
-                          <div className="relative self-start">
-                            <div className="relative h-14 w-14 shrink-0 rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20" />
-                          </div>
-                          <div className="flex flex-col justify-center gap-y-1.5">
-                            <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
-                              不使用咖啡豆
-                            </div>
-                            <div className="text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                              <span className="inline">跳过咖啡豆选择</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
+                if (item.__type === 'create') {
+                  return renderCreateItem(item.name);
                 }
-                const bean = item.bean;
-                // 获取赏味期状态
-                let freshStatus = '';
-                let statusClass = 'text-neutral-500 dark:text-neutral-400';
-
-                if (bean.isInTransit) {
-                  // 在途状态处理
-                  freshStatus = '(在途)';
-                  statusClass = 'text-neutral-600 dark:text-neutral-400';
-                } else if (bean.isFrozen) {
-                  // 冷冻状态处理
-                  freshStatus = '(冷冻)';
-                  statusClass = 'text-blue-400 dark:text-blue-300';
-                } else if (bean.roastDate) {
-                  const { phase } = getFlavorInfo(bean);
-
-                  if (phase === '养豆期') {
-                    freshStatus = `(养豆期)`;
-                    statusClass = 'text-neutral-500 dark:text-neutral-400';
-                  } else if (phase === '赏味期') {
-                    freshStatus = `(赏味期)`;
-                    statusClass = 'text-emerald-500 dark:text-emerald-400';
-                  } else {
-                    freshStatus = '(衰退期)';
-                    statusClass = 'text-neutral-500 dark:text-neutral-400';
-                  }
-                }
-
-                // 格式化数字显示，整数时不显示小数点
-                const formatNumber = (value: string | undefined): string =>
-                  !value
-                    ? '0'
-                    : Number.isInteger(parseFloat(value))
-                      ? Math.floor(parseFloat(value)).toString()
-                      : value;
-
-                // 格式化日期显示
-                const formatDateShort = (dateStr: string): string => {
-                  const date = new Date(dateStr);
-                  const year = date.getFullYear().toString().slice(-2); // 获取年份的最后两位
-                  return `${year}-${date.getMonth() + 1}-${date.getDate()}`;
-                };
-
-                // 格式化克价显示（只显示每克价格）
-                const formatPricePerGram = (
-                  price: string,
-                  capacity: string
-                ): string => {
-                  const priceNum = parseFloat(price);
-                  const capacityNum = parseFloat(capacity.replace('g', ''));
-                  if (
-                    isNaN(priceNum) ||
-                    isNaN(capacityNum) ||
-                    capacityNum === 0
-                  )
-                    return '';
-                  const pricePerGram = priceNum / capacityNum;
-                  return `${pricePerGram.toFixed(2)}元/克`;
-                };
-
-                // 构建参数信息项（使用与咖啡豆库存列表相同的格式）
-                const infoItems = [];
-
-                // 添加烘焙日期（在途状态不显示）
-                if (bean.roastDate && !bean.isInTransit) {
-                  infoItems.push(formatDateShort(bean.roastDate));
-                }
-
-                // 添加容量信息
-                const remaining =
-                  typeof bean.remaining === 'string'
-                    ? parseFloat(bean.remaining)
-                    : (bean.remaining ?? 0);
-                const capacity =
-                  typeof bean.capacity === 'string'
-                    ? parseFloat(bean.capacity)
-                    : (bean.capacity ?? 0);
-                if (remaining > 0 && capacity > 0) {
-                  infoItems.push(
-                    `${formatNumber(bean.remaining)}/${formatNumber(bean.capacity)}克`
-                  );
-                }
-
-                // 添加价格信息
-                if (bean.price && bean.capacity) {
-                  infoItems.push(formatPricePerGram(bean.price, bean.capacity));
-                }
-
-                // 获取状态圆点的颜色
-                const getStatusDotColor = (phase: string): string => {
-                  switch (phase) {
-                    case '养豆期':
-                      return 'bg-amber-400'; // 黄色
-                    case '赏味期':
-                      return 'bg-green-400'; // 绿色
-                    case '衰退期':
-                      return 'bg-red-400'; // 红色
-                    case '在途':
-                      return 'bg-blue-400'; // 蓝色
-                    case '冷冻':
-                      return 'bg-cyan-400'; // 冰蓝色
-                    case '未知':
-                    default:
-                      return 'bg-neutral-400'; // 灰色
-                  }
-                };
-
-                // 获取当前豆子的状态阶段
-                const { phase } = getFlavorInfo(bean);
-
-                return (
-                  <div
-                    className="group relative cursor-pointer pb-5 text-neutral-500 transition-all duration-300 dark:text-neutral-400"
-                    onClick={() => onSelect(bean)}
-                    ref={setItemRef(bean.id)}
-                  >
-                    <div className="cursor-pointer">
-                      <div className="flex gap-3">
-                        {/* 左侧图片区域 - 固定显示，缩小尺寸 */}
-                        <div className="relative self-start">
-                          <div className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
-                            <BeanImage bean={bean} />
-                          </div>
-
-                          {/* 状态圆点 - 右下角，边框超出图片边界 - 只有当有赏味期数据时才显示 */}
-                          {showStatusDots &&
-                            bean.roastDate &&
-                            (bean.startDay ||
-                              bean.endDay ||
-                              bean.roastLevel) && (
-                              <div
-                                className={`absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`}
-                              />
-                            )}
-                        </div>
-
-                        {/* 右侧内容区域 - 与图片等高 */}
-                        <div className="flex flex-col justify-center gap-y-1.5">
-                          {/* 咖啡豆名称和烘焙度 */}
-                          <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
-                            {bean.name}
-                            {bean.roastLevel && ` ${bean.roastLevel}`}
-                            <span className={statusClass}> {freshStatus}</span>
-                          </div>
-
-                          {/* 其他信息 */}
-                          <div className="text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                            {infoItems.map((item, i) => (
-                              <React.Fragment key={i}>
-                                <span className="inline">{item}</span>
-                                {i < infoItems.length - 1 && (
-                                  <span className="mx-2 text-neutral-400 dark:text-neutral-600">
-                                    ·
-                                  </span>
-                                )}
-                              </React.Fragment>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
+                return renderBeanItem(item.bean);
               }}
             />
           ) : (
             <div className="flex gap-3">
-              {/* 左侧占位区域 - 与咖啡豆图片保持一致的尺寸 */}
               <div className="h-14 w-14 shrink-0"></div>
-
-              {/* 右侧内容区域 */}
               <div className="flex h-14 min-w-0 flex-1 flex-col justify-center">
                 <div className="text-xs text-neutral-500 dark:text-neutral-400">
                   {searchQuery.trim()

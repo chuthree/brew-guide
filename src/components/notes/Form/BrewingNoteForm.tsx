@@ -10,7 +10,12 @@ import React, {
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 
-import type { BrewingNoteData, CoffeeBean } from '@/types/app';
+import type {
+  BrewingNoteData,
+  CoffeeBean,
+  SelectableCoffeeBean,
+} from '@/types/app';
+import { isPendingCoffeeBean } from '@/lib/utils/coffeeBeanUtils';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
 import NoteFormHeader from '@/components/notes/ui/NoteFormHeader';
 import { captureImage, compressBase64Image } from '@/lib/utils/imageCapture';
@@ -43,6 +48,7 @@ import {
   SelectItem,
 } from '@/components/coffee-bean/ui/select';
 import CoffeeBeanSelector from './CoffeeBeanSelector';
+import CoffeeBeanPickerDrawer from './CoffeeBeanPickerDrawer';
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData';
 import ImagePreview from '@/components/common/ImagePreview';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
@@ -233,14 +239,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   );
 
   // 咖啡豆数据和状态管理
+  // 支持已有豆子(CoffeeBean)和待创建豆子(PendingCoffeeBean)
   const { beans: coffeeBeans } = useCoffeeBeanData();
   const [selectedCoffeeBean, setSelectedCoffeeBean] =
-    useState<CoffeeBean | null>(initialData.coffeeBean || null);
+    useState<SelectableCoffeeBean | null>(initialData.coffeeBean || null);
   const [showCoffeeBeanSelector, setShowCoffeeBeanSelector] = useState(false);
+  const [showCoffeeBeanPickerDrawer, setShowCoffeeBeanPickerDrawer] =
+    useState(false);
   const [coffeeBeanSearchQuery, setCoffeeBeanSearchQuery] = useState('');
   const [originalBeanId] = useState<string | undefined>(initialData.beanId); // 记录原始的beanId用于容量同步
   const [showFlavorInfo, setShowFlavorInfo] = useState(false); // 控制风味信息的显示
   const [showImagePreview, setShowImagePreview] = useState(false); // 控制图片预览
+  // 🔥 标记用户是否主动选择了咖啡豆（用于防止 initialData 变化覆盖用户选择）
+  const userSelectedBeanRef = useRef(false);
 
   const [formData, setFormData] = useState<FormData>({
     coffeeBeanInfo: getInitialCoffeeBeanInfo(initialData),
@@ -699,6 +710,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const prev = prevInitialDataRef.current;
     const current = initialData;
 
+    // 如果用户已经主动选择了咖啡豆，不要让 initialData 的变化覆盖用户的选择
+    if (userSelectedBeanRef.current) {
+      // 只更新 prevInitialDataRef，不更新状态
+      prevInitialDataRef.current = current;
+      return;
+    }
+
     // 检查咖啡豆信息变化
     const beanChanged =
       prev.coffeeBean?.id !== current.coffeeBean?.id ||
@@ -974,92 +992,138 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     []
   );
 
-  // 处理咖啡豆选择变化
-  const handleCoffeeBeanSelect = useCallback((bean: CoffeeBean | null) => {
-    setSelectedCoffeeBean(bean);
-    setShowCoffeeBeanSelector(false);
-    setCoffeeBeanSearchQuery(''); // 清空搜索
+  // 处理咖啡豆选择变化（支持已有豆子和待创建豆子）
+  const handleCoffeeBeanSelect = useCallback(
+    (bean: SelectableCoffeeBean | null) => {
+      // 标记用户已主动选择咖啡豆，防止 initialData 变化覆盖用户选择
+      userSelectedBeanRef.current = true;
 
-    // 更新表单中的咖啡豆信息
-    if (bean) {
-      setFormData(prev => ({
-        ...prev,
-        coffeeBeanInfo: {
-          name: bean.name || '',
-          roastLevel: normalizeRoastLevel(bean.roastLevel),
-          roastDate: bean.roastDate || '',
-        },
-      }));
-    } else {
-      // 如果取消选择咖啡豆，清空咖啡豆信息
-      setFormData(prev => ({
-        ...prev,
-        coffeeBeanInfo: {
-          name: '',
-          roastLevel: '中度烘焙',
-          roastDate: '',
-        },
-      }));
-    }
-  }, []);
+      setSelectedCoffeeBean(bean);
+      setShowCoffeeBeanSelector(false);
+      setCoffeeBeanSearchQuery(''); // 清空搜索
+
+      // 更新表单中的咖啡豆信息
+      if (bean) {
+        // 待创建的豆子只有名称，其他信息为空
+        const isPending = isPendingCoffeeBean(bean);
+        setFormData(prev => ({
+          ...prev,
+          coffeeBeanInfo: {
+            name: bean.name || '',
+            roastLevel: isPending
+              ? '中度烘焙'
+              : normalizeRoastLevel((bean as CoffeeBean).roastLevel),
+            roastDate: isPending ? '' : (bean as CoffeeBean).roastDate || '',
+          },
+        }));
+      } else {
+        // 如果取消选择咖啡豆，清空咖啡豆信息
+        setFormData(prev => ({
+          ...prev,
+          coffeeBeanInfo: {
+            name: '',
+            roastLevel: '中度烘焙',
+            roastDate: '',
+          },
+        }));
+      }
+    },
+    []
+  );
 
   // 保存笔记的处理函数
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 处理咖啡豆变化和容量同步（容量调整记录除外）
-    // 注意：对于复制的笔记，不执行容量同步，让 page.tsx 直接扣除
-    if (
-      initialData.id &&
-      initialData.source !== 'capacity-adjustment' &&
-      !isCopy
-    ) {
+    // 提取当前咖啡用量（用于容量计算和新建豆子）
+    const { CapacitySyncManager, updateBeanRemaining, increaseBeanRemaining } =
+      await import('@/lib/stores/coffeeBeanStore');
+    const currentCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
+      methodParams.coffee
+    );
+
+    // 处理待创建的咖啡豆
+    // 如果选中的是 PendingCoffeeBean，在保存笔记时创建它
+    let finalBeanId: string | undefined;
+
+    if (selectedCoffeeBean && isPendingCoffeeBean(selectedCoffeeBean)) {
       try {
-        const {
-          CapacitySyncManager,
-          updateBeanRemaining,
-          increaseBeanRemaining,
-        } = await import('@/lib/stores/coffeeBeanStore');
-        const currentCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
-          methodParams.coffee
+        const { useCoffeeBeanStore } = await import(
+          '@/lib/stores/coffeeBeanStore'
         );
+        const addBean = useCoffeeBeanStore.getState().addBean;
 
-        // 检查咖啡豆是否发生变化
-        const currentBeanId = selectedCoffeeBean?.id;
-        const beanChanged = originalBeanId !== currentBeanId;
+        // 创建新咖啡豆，容量和剩余量基于本次冲煮用量
+        // 容量 = 咖啡用量（首次使用的量即为总容量）
+        // 剩余量 = 0（本次冲煮已用完）
+        const coffeeAmountStr =
+          currentCoffeeAmount > 0 ? `${currentCoffeeAmount}g` : '';
+        const newBean = await addBean({
+          name: selectedCoffeeBean.name,
+          capacity: coffeeAmountStr,
+          remaining: '0',
+        });
 
-        if (beanChanged) {
-          // 咖啡豆发生变化，需要处理双向容量同步
-          const originalCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
-            initialData.params?.coffee || '0g'
-          );
+        finalBeanId = newBean.id;
 
-          // 恢复原咖啡豆的剩余量（如果原来有关联的咖啡豆）
-          if (originalBeanId && originalCoffeeAmount > 0) {
-            await increaseBeanRemaining(originalBeanId, originalCoffeeAmount);
-          }
+        // 更新 selectedCoffeeBean 为真实的豆子（用于后续逻辑）
+        setSelectedCoffeeBean(newBean);
+      } catch (error) {
+        console.error('创建咖啡豆失败:', error);
+        alert('创建咖啡豆失败，请重试');
+        return;
+      }
+    } else if (selectedCoffeeBean && !isPendingCoffeeBean(selectedCoffeeBean)) {
+      // 已有豆子，使用其 ID
+      finalBeanId = selectedCoffeeBean.id;
 
-          // 扣除新咖啡豆的剩余量（如果选择了新的咖啡豆）
-          if (currentBeanId && currentCoffeeAmount > 0) {
-            await updateBeanRemaining(currentBeanId, currentCoffeeAmount);
-          }
-        } else if (originalBeanId) {
-          // 咖啡豆没有变化，但可能咖啡用量发生了变化
-          const oldCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
-            initialData.params?.coffee || '0g'
-          );
-          const amountDiff = currentCoffeeAmount - oldCoffeeAmount;
+      // 处理已有咖啡豆的容量同步（编辑模式且非容量调整记录、非复制）
+      if (
+        initialData.id &&
+        initialData.source !== 'capacity-adjustment' &&
+        !isCopy
+      ) {
+        try {
+          const currentBeanId = selectedCoffeeBean.id;
+          const beanChanged = originalBeanId !== currentBeanId;
 
-          if (Math.abs(amountDiff) > 0.01) {
-            if (amountDiff > 0) {
-              await updateBeanRemaining(originalBeanId, amountDiff);
-            } else {
-              await increaseBeanRemaining(originalBeanId, Math.abs(amountDiff));
+          if (beanChanged) {
+            // 咖啡豆发生变化，需要处理双向容量同步
+            const originalCoffeeAmount =
+              CapacitySyncManager.extractCoffeeAmount(
+                initialData.params?.coffee || '0g'
+              );
+
+            // 恢复原咖啡豆的剩余量（如果原来有关联的咖啡豆）
+            if (originalBeanId && originalCoffeeAmount > 0) {
+              await increaseBeanRemaining(originalBeanId, originalCoffeeAmount);
+            }
+
+            // 扣除新咖啡豆的剩余量（如果选择了新的咖啡豆）
+            if (currentBeanId && currentCoffeeAmount > 0) {
+              await updateBeanRemaining(currentBeanId, currentCoffeeAmount);
+            }
+          } else if (originalBeanId) {
+            // 咖啡豆没有变化，但可能咖啡用量发生了变化
+            const oldCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
+              initialData.params?.coffee || '0g'
+            );
+            const amountDiff = currentCoffeeAmount - oldCoffeeAmount;
+
+            if (Math.abs(amountDiff) > 0.01) {
+              if (amountDiff > 0) {
+                await updateBeanRemaining(originalBeanId, amountDiff);
+              } else {
+                await increaseBeanRemaining(
+                  originalBeanId,
+                  Math.abs(amountDiff)
+                );
+              }
             }
           }
+        } catch (error) {
+          console.error('同步咖啡豆容量失败:', error);
         }
-      } catch (error) {
-        console.error('同步咖啡豆容量失败:', error);
       }
     }
 
@@ -1088,8 +1152,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       totalTime: isEspresso
         ? parseFloat(totalTimeStr) || 0
         : initialData.totalTime,
-      // 使用当前选中的咖啡豆ID
-      beanId: selectedCoffeeBean?.id,
+      // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
+      beanId: finalBeanId,
       // 保留容量调整记录的特殊属性
       ...(initialData.source === 'capacity-adjustment'
         ? {
@@ -1157,9 +1221,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         <div className="space-y-4">
           {selectedCoffeeBean ||
           initialData.coffeeBean ||
+          formData.coffeeBeanInfo.name ||
           (initialData.id && formData.coffeeBeanInfo.name) ? (
             <div className="mb-3 text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
               {initialData.id && coffeeBeans.length > 0 ? (
+                // 编辑模式：点击展开内联选择器
                 <span
                   onClick={() => {
                     setShowCoffeeBeanSelector(!showCoffeeBeanSelector);
@@ -1167,28 +1233,36 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                       setCoffeeBeanSearchQuery('');
                     }
                   }}
-                  className="cursor-pointer border-b border-dashed border-neutral-400 text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:border-neutral-600 hover:text-neutral-700 dark:border-neutral-500 dark:text-neutral-400 dark:hover:border-neutral-400 dark:hover:text-neutral-300"
+                  className="cursor-pointer text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
                 >
                   {selectedCoffeeBean?.name ||
                     formData.coffeeBeanInfo.name ||
                     '未知咖啡豆'}
                 </span>
               ) : (
+                // 新建模式：点击打开抽屉重新选择
                 <>
-                  {selectedCoffeeBean?.name ||
-                    formData.coffeeBeanInfo.name ||
-                    '未知咖啡豆'}
+                  <span
+                    onClick={() => setShowCoffeeBeanPickerDrawer(true)}
+                    className="cursor-pointer text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                  >
+                    {selectedCoffeeBean?.name ||
+                      formData.coffeeBeanInfo.name ||
+                      '未知咖啡豆'}
+                  </span>
                 </>
               )}
-              {selectedCoffeeBean?.flavor &&
-                selectedCoffeeBean.flavor.length > 0 && (
+              {selectedCoffeeBean &&
+                !isPendingCoffeeBean(selectedCoffeeBean) &&
+                (selectedCoffeeBean as CoffeeBean).flavor &&
+                (selectedCoffeeBean as CoffeeBean).flavor!.length > 0 && (
                   <span
                     onClick={() => setShowFlavorInfo(!showFlavorInfo)}
                     className="ml-1 cursor-pointer text-xs text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
                   >
                     /{' '}
                     {showFlavorInfo
-                      ? selectedCoffeeBean.flavor.join(' · ')
+                      ? (selectedCoffeeBean as CoffeeBean).flavor!.join(' · ')
                       : '显示风味'}
                   </span>
                 )}
@@ -1199,17 +1273,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               name="customBeanName"
               type="text"
               value={formData.coffeeBeanInfo.name}
-              onChange={e =>
-                setFormData(prev => ({
-                  ...prev,
-                  coffeeBeanInfo: {
-                    ...prev.coffeeBeanInfo,
-                    name: e.target.value,
-                  },
-                }))
-              }
-              placeholder="输入咖啡豆名称..."
-              className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+              readOnly
+              onClick={() => setShowCoffeeBeanPickerDrawer(true)}
+              placeholder="点击选择咖啡豆..."
+              className="w-full cursor-pointer rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
             />
           )}
 
@@ -1234,7 +1301,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 >
                   <CoffeeBeanSelector
                     coffeeBeans={coffeeBeans}
-                    selectedCoffeeBean={selectedCoffeeBean}
+                    selectedCoffeeBean={
+                      selectedCoffeeBean &&
+                      !isPendingCoffeeBean(selectedCoffeeBean)
+                        ? selectedCoffeeBean
+                        : null
+                    }
                     onSelect={handleCoffeeBeanSelect}
                     searchQuery={coffeeBeanSearchQuery}
                     showStatusDots={settings?.showStatusDots}
@@ -1661,6 +1733,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           layoutId="note-image-preview"
         />
       )}
+
+      {/* 咖啡豆选择抽屉 */}
+      <CoffeeBeanPickerDrawer
+        isOpen={showCoffeeBeanPickerDrawer}
+        onClose={() => setShowCoffeeBeanPickerDrawer(false)}
+        onSelect={handleCoffeeBeanSelect}
+        selectedBean={selectedCoffeeBean}
+        showStatusDots={settings?.showStatusDots}
+        hapticFeedback={settings?.hapticFeedback}
+      />
     </form>
   );
 };

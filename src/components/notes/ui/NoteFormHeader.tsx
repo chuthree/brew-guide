@@ -77,7 +77,7 @@ const NoteFormHeader: React.FC<NoteFormHeaderProps> = ({
             }
             className={`text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400 ${
               onTimestampChange
-                ? 'cursor-pointer border-b border-dashed border-neutral-400 transition-colors hover:border-neutral-600 hover:text-neutral-700 dark:border-neutral-500 dark:hover:border-neutral-400 dark:hover:text-neutral-300'
+                ? 'cursor-pointer transition-colors hover:text-neutral-700 dark:hover:text-neutral-300'
                 : 'cursor-default'
             }`}
             disabled={!onTimestampChange}

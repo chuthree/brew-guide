@@ -48,6 +48,7 @@ import {
   Notebook,
   FlaskConical,
   Box,
+  Play,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -67,6 +68,7 @@ export interface SubSettingsHandlers {
   onOpenBeanSettings: () => void;
   onOpenGreenBeanSettings: () => void;
   onOpenFlavorPeriodSettings: () => void;
+  onOpenBrewingSettings: () => void;
   onOpenTimerSettings: () => void;
   onOpenDataSettings: () => void;
   onOpenNotificationSettings: () => void;
@@ -616,6 +618,11 @@ const Settings: React.FC<SettingsProps> = ({
         {/* 功能设置 */}
         <SettingGroup
           items={[
+            {
+              icon: Play,
+              label: '冲煮',
+              onClick: subSettingsHandlers.onOpenBrewingSettings,
+            },
             {
               icon: Timer,
               label: '计时器',

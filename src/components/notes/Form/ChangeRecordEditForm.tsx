@@ -93,12 +93,6 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
       notes: formData.notes,
     };
 
-    console.warn(
-      '[ChangeRecordEditForm] updatedRecord.timestamp:',
-      updatedRecord.timestamp,
-      new Date(updatedRecord.timestamp).toISOString()
-    );
-
     // 根据记录类型更新相应字段
     if (initialData.source === 'quick-decrement') {
       updatedRecord.quickDecrementAmount = Math.abs(finalChangeAmount);

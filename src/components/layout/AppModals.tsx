@@ -29,6 +29,7 @@ import GrinderSettings from '@/components/settings/GrinderSettings';
 import ExperimentalSettings from '@/components/settings/ExperimentalSettings';
 import AboutSettings from '@/components/settings/AboutSettings';
 import NavigationSettings from '@/components/settings/NavigationSettings';
+import BrewingSettings from '@/components/settings/BrewingSettings';
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal';
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
 import ImportModal from '@/components/common/modals/BeanImportModal';
@@ -76,6 +77,8 @@ export interface AppModalsProps {
   setShowGreenBeanSettings: (show: boolean) => void;
   showFlavorPeriodSettings: boolean;
   setShowFlavorPeriodSettings: (show: boolean) => void;
+  showBrewingSettings: boolean;
+  setShowBrewingSettings: (show: boolean) => void;
   showTimerSettings: boolean;
   setShowTimerSettings: (show: boolean) => void;
   showDataSettings: boolean;
@@ -259,6 +262,8 @@ const AppModals: React.FC<AppModalsProps> = ({
   setShowGreenBeanSettings,
   showFlavorPeriodSettings,
   setShowFlavorPeriodSettings,
+  showBrewingSettings,
+  setShowBrewingSettings,
   showTimerSettings,
   setShowTimerSettings,
   showDataSettings,
@@ -393,6 +398,7 @@ const AppModals: React.FC<AppModalsProps> = ({
           onOpenBeanSettings: () => setShowBeanSettings(true),
           onOpenGreenBeanSettings: () => setShowGreenBeanSettings(true),
           onOpenFlavorPeriodSettings: () => setShowFlavorPeriodSettings(true),
+          onOpenBrewingSettings: () => setShowBrewingSettings(true),
           onOpenTimerSettings: () => setShowTimerSettings(true),
           onOpenDataSettings: () => setShowDataSettings(true),
           onOpenNotificationSettings: () => setShowNotificationSettings(true),
@@ -458,6 +464,13 @@ const AppModals: React.FC<AppModalsProps> = ({
           settings={settings}
           onClose={() => setShowFlavorPeriodSettings(false)}
           handleChange={handleSubSettingChange}
+        />
+      )}
+
+      {showBrewingSettings && (
+        <BrewingSettings
+          isVisible={showBrewingSettings}
+          onClose={() => setShowBrewingSettings(false)}
         />
       )}
 
