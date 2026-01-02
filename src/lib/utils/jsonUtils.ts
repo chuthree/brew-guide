@@ -1283,104 +1283,110 @@ function parseMethodText(
         // 匹配不带时间的格式：1. [饮料] 加入牛奶 - 120g
         const noTimePattern = /^\d+\.\s*\[(.*?)\]\s*(.*?)\s*-\s*(.*?)(?:\n|$)/;
 
-        // 先尝试 v2 格式（新：时间在前用″）
-        let v2Match = line.match(v2Pattern);
-        if (v2Match) {
-          const pourTypeText = v2Match[1].trim();
-          const label = v2Match[2].trim();
-          const duration = parseInt(v2Match[3]);
-          const water = v2Match[4];
+        // 检测是否为传统旧格式行（包含 [X分X秒] 累计时间格式）
+        // 这类行需要走 legacyFormatPattern 处理，不能被 v2 格式错误匹配
+        const isLegacyLine = /^\d+\.\s*\[\d+分\d+秒\]/.test(line);
 
-          const stage: ParsedStage = {
-            label,
-            water,
-            duration,
-            detail: '',
-            pourType: mapPourTypeName(pourTypeText, customEquipment),
-          };
+        // 先尝试 v2 格式（新：时间在前用″）- 仅当不是传统旧格式时
+        if (!isLegacyLine) {
+          const v2Match = line.match(v2Pattern);
+          if (v2Match) {
+            const pourTypeText = v2Match[1].trim();
+            const label = v2Match[2].trim();
+            const duration = parseInt(v2Match[3]);
+            const water = v2Match[4];
 
-          // 检查下一行是否是详细信息
-          if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
-            stage.detail = stageLines[i + 1].trim();
-            i++;
+            const stage: ParsedStage = {
+              label,
+              water,
+              duration,
+              detail: '',
+              pourType: mapPourTypeName(pourTypeText, customEquipment),
+            };
+
+            // 检查下一行是否是详细信息
+            if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
+              stage.detail = stageLines[i + 1].trim();
+              i++;
+            }
+
+            method.params.stages.push(stage as Stage);
+            continue;
           }
 
-          method.params.stages.push(stage as Stage);
-          continue;
-        }
+          // 兼容旧 v2 格式（水量在前）：1. [绕圈注水] 焖蒸注水 60g 12秒
+          const v2OldMatch = line.match(v2OldPattern);
+          if (v2OldMatch) {
+            const pourTypeText = v2OldMatch[1].trim();
+            const label = v2OldMatch[2].trim();
+            const water = v2OldMatch[3];
+            const duration = parseInt(v2OldMatch[4]);
 
-        // 兼容旧 v2 格式（水量在前）：1. [绕圈注水] 焖蒸注水 60g 12秒
-        const v2OldMatch = line.match(v2OldPattern);
-        if (v2OldMatch) {
-          const pourTypeText = v2OldMatch[1].trim();
-          const label = v2OldMatch[2].trim();
-          const water = v2OldMatch[3];
-          const duration = parseInt(v2OldMatch[4]);
+            const stage: ParsedStage = {
+              label,
+              water,
+              duration,
+              detail: '',
+              pourType: mapPourTypeName(pourTypeText, customEquipment),
+            };
 
-          const stage: ParsedStage = {
-            label,
-            water,
-            duration,
-            detail: '',
-            pourType: mapPourTypeName(pourTypeText, customEquipment),
-          };
+            if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
+              stage.detail = stageLines[i + 1].trim();
+              i++;
+            }
 
-          if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
-            stage.detail = stageLines[i + 1].trim();
-            i++;
+            method.params.stages.push(stage as Stage);
+            continue;
           }
 
-          method.params.stages.push(stage as Stage);
-          continue;
-        }
+          // v2 无水量格式（等待步骤）
+          const v2NoWaterMatch = line.match(v2NoWaterPattern);
+          // 兼容旧格式
+          const v2OldNoWaterMatch = !v2NoWaterMatch ? line.match(v2OldNoWaterPattern) : null;
+          const noWaterMatch = v2NoWaterMatch || v2OldNoWaterMatch;
+          if (noWaterMatch) {
+            const pourTypeText = noWaterMatch[1].trim();
+            const label = noWaterMatch[2].trim();
+            const duration = parseInt(noWaterMatch[3]);
 
-        // v2 无水量格式（等待步骤）
-        const v2NoWaterMatch = line.match(v2NoWaterPattern);
-        // 兼容旧格式
-        const v2OldNoWaterMatch = !v2NoWaterMatch ? line.match(v2OldNoWaterPattern) : null;
-        const noWaterMatch = v2NoWaterMatch || v2OldNoWaterMatch;
-        if (noWaterMatch) {
-          const pourTypeText = noWaterMatch[1].trim();
-          const label = noWaterMatch[2].trim();
-          const duration = parseInt(noWaterMatch[3]);
+            const stage: ParsedStage = {
+              label,
+              duration,
+              detail: '',
+              pourType: mapPourTypeName(pourTypeText, customEquipment),
+            };
 
-          const stage: ParsedStage = {
-            label,
-            duration,
-            detail: '',
-            pourType: mapPourTypeName(pourTypeText, customEquipment),
-          };
+            if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
+              stage.detail = stageLines[i + 1].trim();
+              i++;
+            }
 
-          if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
-            stage.detail = stageLines[i + 1].trim();
-            i++;
+            method.params.stages.push(stage as Stage);
+            continue;
           }
 
-          method.params.stages.push(stage as Stage);
-          continue;
-        }
+          // v2 无时间格式（bypass/beverage）
+          const v2NoTimeMatch = line.match(v2NoTimePattern);
+          if (v2NoTimeMatch) {
+            const pourTypeText = v2NoTimeMatch[1].trim();
+            const label = v2NoTimeMatch[2].trim();
+            const water = v2NoTimeMatch[3];
 
-        // v2 无时间格式（bypass/beverage）
-        const v2NoTimeMatch = line.match(v2NoTimePattern);
-        if (v2NoTimeMatch) {
-          const pourTypeText = v2NoTimeMatch[1].trim();
-          const label = v2NoTimeMatch[2].trim();
-          const water = v2NoTimeMatch[3];
+            const stage: ParsedStage = {
+              label,
+              water,
+              detail: '',
+              pourType: mapPourTypeName(pourTypeText, customEquipment),
+            };
 
-          const stage: ParsedStage = {
-            label,
-            water,
-            detail: '',
-            pourType: mapPourTypeName(pourTypeText, customEquipment),
-          };
+            if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
+              stage.detail = stageLines[i + 1].trim();
+              i++;
+            }
 
-          if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
-            stage.detail = stageLines[i + 1].trim();
-            i++;
+            method.params.stages.push(stage as Stage);
+            continue;
           }
-
-          method.params.stages.push(stage as Stage);
-          continue;
         }
 
         if (isNewFormat) {

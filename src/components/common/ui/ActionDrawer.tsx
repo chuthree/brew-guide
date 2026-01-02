@@ -37,6 +37,11 @@ export interface ActionDrawerProps {
    */
   historyId?: string;
   /**
+   * 禁用内部 history 管理
+   * 当外层组件已经管理 history 时，设为 true 避免重复注册
+   */
+  disableHistory?: boolean;
+  /**
    * 退出动画完成后的回调
    * 适合在此时机清理数据，避免内容在动画播放时突然消失
    */
@@ -206,6 +211,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   onClose,
   children,
   historyId,
+  disableHistory = false,
   onExitComplete,
   repositionInputs = false,
 }) => {
@@ -220,9 +226,10 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   useThemeColor({ useOverlay: true, enabled: isOpen });
 
   // 集成历史栈管理，支持返回键关闭
+  // 当 disableHistory 为 true 时，传入空 id 和 false 来禁用
   useModalHistory({
-    id: modalId,
-    isOpen,
+    id: disableHistory ? '' : modalId,
+    isOpen: disableHistory ? false : isOpen,
     onClose,
   });
 

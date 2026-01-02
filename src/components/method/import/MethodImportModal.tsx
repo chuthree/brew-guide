@@ -4,7 +4,6 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
 import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
@@ -198,12 +197,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
     setIsRecognizing(false);
   }, [recognizingImageUrl]);
 
-  // 使用 modalHistory 管理 JSON 输入步骤的返回行为
-  useModalHistory({
-    id: 'method-import-json-input',
-    isOpen: showForm && currentStep === 'json-input',
-    onClose: goBackToMain,
-  });
 
   // 重置状态（当弹窗关闭或重新打开时）
   useEffect(() => {
@@ -218,6 +211,16 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       }
     }
   }, [showForm]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 关闭抽屉
+  const handleClose = useCallback(() => {
+    // 清理图片 URL 资源
+    if (recognizingImageUrl) {
+      URL.revokeObjectURL(recognizingImageUrl);
+      setRecognizingImageUrl(null);
+    }
+    onClose();
+  }, [onClose, recognizingImageUrl]);
 
   // 处理添加数据（通用）
   const handleImportData = useCallback(
@@ -372,12 +375,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
       try {
         const { data: methodData } = await recognizeSingleImage(file, imageUrl);
-
-        setIsRecognizing(false);
-        URL.revokeObjectURL(imageUrl);
-        setRecognizingImageUrl(null);
-        setCurrentStep('main');
-
+        // 成功后 handleImportData 会调用 handleClose 处理状态重置和资源清理
         await handleImportData(methodData);
       } catch (error) {
         console.error('图片识别失败:', error);
@@ -456,8 +454,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
       if (methodData && 'params' in methodData && 'name' in methodData) {
         await handleImportData(methodData);
-        setJsonInputValue('');
-        setCurrentStep('main');
       } else {
         showToast({ type: 'error', title: '无法解析输入的数据' });
       }
@@ -470,18 +466,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
   const handleCancelJsonInput = useCallback(() => {
     goBackToMain();
   }, [goBackToMain]);
-
-  // 关闭时重置状态
-  const handleClose = useCallback(() => {
-    setCurrentStep('main');
-    setJsonInputValue('');
-    setIsRecognizing(false);
-    if (recognizingImageUrl) {
-      URL.revokeObjectURL(recognizingImageUrl);
-      setRecognizingImageUrl(null);
-    }
-    onClose();
-  }, [onClose, recognizingImageUrl]);
 
   // 操作项配置
   const actions = [
@@ -638,7 +622,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       <ActionDrawer
         isOpen={showForm}
         onClose={handleClose}
-        historyId="method-import"
+        disableHistory
       >
         <ActionDrawer.Switcher activeKey={currentStep}>
           {renderContent()}

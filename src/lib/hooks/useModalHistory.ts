@@ -104,6 +104,9 @@ export function useModalHistory(options: UseModalHistoryOptions): void {
       // 需要清理浏览器历史
       modalHistory.close(id);
       wasOpenRef.current = false;
+    } else if (wasOpenRef.current && closedByPopstateRef.current) {
+      // 通过 popstate 关闭的，只重置标志
+      wasOpenRef.current = false;
     }
   }, [id, isOpen, replace]);
 }
