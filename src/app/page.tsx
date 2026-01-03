@@ -377,9 +377,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 自动跳转到笔记的状态
   const [hasAutoNavigatedToNotes, setHasAutoNavigatedToNotes] = useState(false);
 
-  const initialStep: BrewingStep = initialHasBeans ? 'coffeeBean' : 'method';
+  // 始终从 method 步骤开始，避免在设置加载前进入咖啡豆步骤
+  // 后续的 useEffect 会根据设置和咖啡豆状态调整到正确的步骤
   const [isStageWaiting, setIsStageWaiting] = useState(false);
-  const brewingState = useBrewingState(initialStep);
+  const brewingState = useBrewingState('method');
   const {
     activeMainTab,
     setActiveMainTab,
@@ -573,9 +574,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     if (!storeInitialized || hasAdjustedInitialStep.current) return;
     hasAdjustedInitialStep.current = true;
 
-    // 如果设置关闭了咖啡豆选择步骤，且当前在咖啡豆步骤，则跳转到方案步骤
     const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
-    if (!showBeanStep && activeBrewingStep === 'coffeeBean') {
+
+    // 如果设置开启了咖啡豆步骤且有咖啡豆，且当前在 method 步骤，则跳转到咖啡豆步骤
+    if (showBeanStep && initialHasBeans && activeBrewingStep === 'method') {
+      navigateToStep('coffeeBean');
+    }
+    // 如果设置关闭了咖啡豆步骤，且当前在咖啡豆步骤，则跳转到方案步骤
+    else if (!showBeanStep && activeBrewingStep === 'coffeeBean') {
       navigateToStep('method');
     }
   }, [
@@ -583,6 +589,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     settings.showCoffeeBeanSelectionStep,
     activeBrewingStep,
     navigateToStep,
+    initialHasBeans,
   ]);
 
   // 加载自定义器具
