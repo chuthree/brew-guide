@@ -123,6 +123,71 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                  显示阶段分隔线
+                </span>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={localLayoutSettings?.showStageDivider || false}
+                    onChange={e => {
+                      const newSettings = {
+                        ...localLayoutSettings,
+                        showStageDivider: e.target.checked,
+                      };
+                      handleLayoutChange(newSettings);
+                    }}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                  简洁模式
+                </span>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={localLayoutSettings?.compactMode || false}
+                    onChange={e => {
+                      const newSettings = {
+                        ...localLayoutSettings,
+                        compactMode: e.target.checked,
+                      };
+                      handleLayoutChange(newSettings);
+                    }}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                  步骤时间显示
+                </span>
+                <ButtonGroup
+                  value={localLayoutSettings?.stepDisplayMode || 'cumulative'}
+                  options={[
+                    { value: 'independent', label: '独立' },
+                    { value: 'cumulative', label: '累计' },
+                    { value: 'time', label: '时间' },
+                  ]}
+                  onChange={value => {
+                    const newSettings = {
+                      ...localLayoutSettings,
+                      stepDisplayMode: value as
+                        | 'independent'
+                        | 'cumulative'
+                        | 'time',
+                    };
+                    handleLayoutChange(newSettings);
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-neutral-700 dark:text-neutral-300">
                   阶段信息布局反转
                 </span>
                 <label className="relative inline-flex cursor-pointer items-center">
@@ -186,27 +251,6 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                  显示阶段分隔线
-                </span>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={localLayoutSettings?.showStageDivider || false}
-                    onChange={e => {
-                      const newSettings = {
-                        ...localLayoutSettings,
-                        showStageDivider: e.target.checked,
-                      };
-                      handleLayoutChange(newSettings);
-                    }}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-700 dark:text-neutral-300">
                   显示流速
                 </span>
                 <label className="relative inline-flex cursor-pointer items-center">
@@ -221,28 +265,6 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
                 </label>
               </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                  简洁模式
-                </span>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={localLayoutSettings?.compactMode || false}
-                    onChange={e => {
-                      const newSettings = {
-                        ...localLayoutSettings,
-                        compactMode: e.target.checked,
-                      };
-                      handleLayoutChange(newSettings);
-                    }}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
-                </label>
-              </div>
-
               <div className="space-y-2">
                 <span className="text-sm text-neutral-700 dark:text-neutral-300">
                   进度条高度：{localLayoutSettings?.progressBarHeight || 4}px
@@ -279,27 +301,6 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                     const newSettings = {
                       ...localLayoutSettings,
                       dataFontSize: value as '2xl' | '3xl' | '4xl',
-                    };
-                    handleLayoutChange(newSettings);
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                  步骤时间显示
-                </span>
-                <ButtonGroup
-                  value={localLayoutSettings?.stepDisplayMode || 'cumulative'}
-                  options={[
-                    { value: 'independent', label: '独立' },
-                    { value: 'cumulative', label: '累计' },
-                    { value: 'time', label: '时间' },
-                  ]}
-                  onChange={value => {
-                    const newSettings = {
-                      ...localLayoutSettings,
-                      stepDisplayMode: value as 'independent' | 'cumulative' | 'time',
                     };
                     handleLayoutChange(newSettings);
                   }}
