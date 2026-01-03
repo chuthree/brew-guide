@@ -2502,27 +2502,27 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         '@/lib/stores/brewingNoteStore'
       );
 
-      // 🔥 解构排除变动记录的特有字段，确保转换后的笔记不会被识别为变动记录
-      const { source, quickDecrementAmount, changeRecord, ...cleanNote } =
-        note as any;
-
-      // 🔥 修复：复制操作应该被视为新笔记，即使它有 id
+      // 复制操作应该被视为新笔记，即使它有 id
       const isNewNote = isBrewingNoteCopy || !note.id;
 
+      // 构建保存数据，显式移除变动记录字段（设为 undefined 触发 updateNote 删除逻辑）
       const noteToSave = {
-        ...cleanNote,
-        // 🔥 关键修复：复制模式下强制生成新 ID 和新时间戳
-        id: isNewNote ? Date.now().toString() : cleanNote.id,
-        timestamp: isNewNote ? Date.now() : cleanNote.timestamp || Date.now(),
-        equipment: cleanNote.equipment || '',
-        method: cleanNote.method || '',
-        params: cleanNote.params || {
+        ...note,
+        id: isNewNote ? Date.now().toString() : note.id,
+        timestamp: isNewNote ? Date.now() : note.timestamp || Date.now(),
+        equipment: note.equipment || '',
+        method: note.method || '',
+        params: note.params || {
           coffee: '',
           water: '',
           ratio: '',
           grindSize: '',
           temp: '',
         },
+        // 显式移除变动记录字段，确保快捷扣除/容量调整记录转为普通笔记
+        source: undefined,
+        quickDecrementAmount: undefined,
+        changeRecord: undefined,
       } as BrewingNote;
 
       if (isNewNote) {

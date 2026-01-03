@@ -1154,20 +1154,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         : initialData.totalTime,
       // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
       beanId: finalBeanId,
-      // 保留容量调整记录的特殊属性
-      ...(initialData.source === 'capacity-adjustment'
-        ? {
-            source: initialData.source,
-            changeRecord: initialData.changeRecord,
-          }
-        : {}),
-      // 保留快捷扣除记录的特殊属性
-      ...(initialData.source === 'quick-decrement'
-        ? {
-            source: initialData.source,
-            quickDecrementAmount: initialData.quickDecrementAmount,
-          }
-        : {}),
     };
 
     try {

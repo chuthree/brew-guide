@@ -77,13 +77,28 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
       const existingNote = get().notes.find(n => n.id === id);
       if (!existingNote) return null;
 
+      // 检测需要移除的变动记录字段（显式设为 undefined 表示要删除）
+      const shouldRemoveSource =
+        'source' in updates && updates.source === undefined;
+      const shouldRemoveQuickDecrement =
+        'quickDecrementAmount' in updates &&
+        updates.quickDecrementAmount === undefined;
+      const shouldRemoveChangeRecord =
+        'changeRecord' in updates && updates.changeRecord === undefined;
+
       const updatedNote: BrewingNote = {
         ...existingNote,
         ...updates,
         id,
-        // 保留传入的 timestamp，如果没有传入则保持原有的 timestamp
         timestamp: updates.timestamp ?? existingNote.timestamp,
       };
+
+      // 移除变动记录字段
+      if (shouldRemoveSource) delete (updatedNote as any).source;
+      if (shouldRemoveQuickDecrement)
+        delete (updatedNote as any).quickDecrementAmount;
+      if (shouldRemoveChangeRecord) delete (updatedNote as any).changeRecord;
+
       await db.brewingNotes.put(updatedNote);
       set(state => ({
         notes: state.notes.map(n => (n.id === id ? updatedNote : n)),
