@@ -122,14 +122,14 @@ const NotesListView: React.FC<NotesListViewProps> = ({
 
   if (notes.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
+      <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
         {isSearching && searchQuery.trim()
           ? `[ 没有找到匹配"${searchQuery.trim()}"的冲煮记录 ]`
           : selectedEquipment && filterMode === 'equipment'
             ? `[ 没有使用${equipmentNames[selectedEquipment] || selectedEquipment}的冲煮记录 ]`
             : selectedBean && filterMode === 'bean'
               ? `[ 没有使用${selectedBean}的冲煮记录 ]`
-              : '[ 暂无冲煮记录 ]'}
+              : '[ 暂无冲煮记录，请点击下方按钮添加 ]'}
       </div>
     );
   }

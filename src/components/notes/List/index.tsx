@@ -1375,77 +1375,74 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* 主要内容区域 - 始终显示笔记列表 */}
-      <div className="sticky top-0 z-10 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
-        {/* 数量显示 */}
-        <div className="mb-6 flex items-center justify-between px-6">
-          <div className="text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
-            {(() => {
-              // 图片流模式下显示有图片的记录统计
-              if (imageFlowStats) {
-                return imageFlowStats.count === 0
-                  ? ''
-                  : `${imageFlowStats.count} 条图片记录，已消耗 ${formatConsumption(imageFlowStats.consumption)}`;
-              }
+      {/* 笔记筛选分类栏 - 只有当有笔记数据时才显示 */}
+      {notes.length > 0 && (
+        <div className="sticky top-0 z-10 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
+          {/* 数量显示 */}
+          <div className="mb-6 flex items-center justify-between px-6">
+            <div className="text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
+              {(() => {
+                // 图片流模式下显示有图片的记录统计
+                if (imageFlowStats) {
+                  return imageFlowStats.count === 0
+                    ? ''
+                    : `${imageFlowStats.count} 条图片记录，已消耗 ${formatConsumption(imageFlowStats.consumption)}`;
+                }
 
-              // 如果没有任何笔记数据，不显示统计信息
-              if (notes.length === 0) {
-                return '';
-              }
+                // 普通模式下显示总记录统计
+                // 搜索模式：显示搜索结果的统计
+                if (isSearching && searchQuery.trim()) {
+                  return `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
+                }
 
-              // 普通模式下显示总记录统计
-              // 搜索模式：显示搜索结果的统计
-              if (isSearching && searchQuery.trim()) {
-                return `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
-              }
-
-              // 普通模式：显示当前筛选结果的统计
-              return `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
-            })()}
+                // 普通模式：显示当前筛选结果的统计
+                return `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
+              })()}
+            </div>
           </div>
-        </div>
 
-        {/* 设备筛选选项卡 */}
-        <FilterTabs
-          filterMode={filterMode}
-          selectedEquipment={selectedEquipment}
-          selectedBean={selectedBean}
-          selectedDate={selectedDate}
-          dateGroupingMode={dateGroupingMode}
-          availableEquipments={imageFlowAvailableOptions.equipments}
-          availableBeans={imageFlowAvailableOptions.beans}
-          availableDates={availableDates}
-          equipmentNames={equipmentNames}
-          onFilterModeChange={handleFilterModeChange}
-          onEquipmentClick={handleEquipmentClick}
-          onBeanClick={handleBeanClick}
-          onDateClick={handleDateClick}
-          onDateGroupingModeChange={handleDateGroupingModeChange}
-          isSearching={isSearching}
-          searchQuery={searchQuery}
-          onSearchClick={handleSearchClick}
-          onSearchChange={handleSearchChange}
-          onSearchKeyDown={handleSearchKeyDown}
-          sortOption={sortOption}
-          onSortChange={handleSortChange}
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
-          isImageFlowMode={isImageFlowMode}
-          onToggleImageFlowMode={handleToggleImageFlowMode}
-          isDateImageFlowMode={isDateImageFlowMode}
-          onToggleDateImageFlowMode={handleToggleDateImageFlowMode}
-          onSmartToggleImageFlow={handleSmartToggleImageFlow}
-          hasImageNotes={hasImageNotes}
-          settings={settings}
-          hasExtractionTimeData={hasExtractionTimeData}
-          searchSortOption={searchSortOption || undefined}
-          onSearchSortChange={handleSearchSortChange}
-          searchHistory={searchHistory}
-          onSearchHistoryClick={handleSearchHistoryClick}
-          noteDisplayStyle={noteDisplayStyle}
-          onNoteDisplayStyleChange={updateNoteDisplayStyle}
-        />
-      </div>
+          {/* 设备筛选选项卡 */}
+          <FilterTabs
+            filterMode={filterMode}
+            selectedEquipment={selectedEquipment}
+            selectedBean={selectedBean}
+            selectedDate={selectedDate}
+            dateGroupingMode={dateGroupingMode}
+            availableEquipments={imageFlowAvailableOptions.equipments}
+            availableBeans={imageFlowAvailableOptions.beans}
+            availableDates={availableDates}
+            equipmentNames={equipmentNames}
+            onFilterModeChange={handleFilterModeChange}
+            onEquipmentClick={handleEquipmentClick}
+            onBeanClick={handleBeanClick}
+            onDateClick={handleDateClick}
+            onDateGroupingModeChange={handleDateGroupingModeChange}
+            isSearching={isSearching}
+            searchQuery={searchQuery}
+            onSearchClick={handleSearchClick}
+            onSearchChange={handleSearchChange}
+            onSearchKeyDown={handleSearchKeyDown}
+            sortOption={sortOption}
+            onSortChange={handleSortChange}
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
+            isImageFlowMode={isImageFlowMode}
+            onToggleImageFlowMode={handleToggleImageFlowMode}
+            isDateImageFlowMode={isDateImageFlowMode}
+            onToggleDateImageFlowMode={handleToggleDateImageFlowMode}
+            onSmartToggleImageFlow={handleSmartToggleImageFlow}
+            hasImageNotes={hasImageNotes}
+            settings={settings}
+            hasExtractionTimeData={hasExtractionTimeData}
+            searchSortOption={searchSortOption || undefined}
+            onSearchSortChange={handleSearchSortChange}
+            searchHistory={searchHistory}
+            onSearchHistoryClick={handleSearchHistoryClick}
+            noteDisplayStyle={noteDisplayStyle}
+            onNoteDisplayStyleChange={updateNoteDisplayStyle}
+          />
+        </div>
+      )}
 
       {/* 内容区域 - 可滚动 */}
       <div className="flex-1 overflow-hidden">
