@@ -497,7 +497,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
     if (seconds >= 60) {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
-      return secs === 0 ? `${mins}′` : `${mins}′${secs}″`;
+      return `${mins}′${String(secs).padStart(2, '0')}″`;
     }
     return `${seconds}″`;
   };
@@ -1014,17 +1014,16 @@ const StagesStep: React.FC<StagesStepProps> = ({
                               );
                             const mins = parseInt(spans[0]?.textContent || '0');
                             const secs = parseInt(spans[1]?.textContent || '0');
-                            // 格式化秒数显示为两位数
-                            if (spans[1]) {
-                              spans[1].textContent = String(secs).padStart(
-                                2,
-                                '0'
-                              );
-                            }
+                            // 自动进位
+                            const totalSecs = mins * 60 + secs;
+                            const newMins = Math.floor(totalSecs / 60);
+                            const newSecs = totalSecs % 60;
+                            if (spans[0]) spans[0].textContent = String(newMins);
+                            if (spans[1]) spans[1].textContent = String(newSecs).padStart(2, '0');
                             handleTimeModeStartBlurWithValues(
                               timeModeIndex,
-                              mins,
-                              secs
+                              newMins,
+                              newSecs
                             );
                           }
                         }}
@@ -1052,7 +1051,6 @@ const StagesStep: React.FC<StagesStepProps> = ({
                           onInput={e => {
                             const text = e.currentTarget.textContent || '';
                             const val = text.replace(/\D/g, '');
-                            if (parseInt(val) > 59) return;
                             if (val !== text) {
                               e.currentTarget.textContent = val;
                             }
@@ -1077,17 +1075,16 @@ const StagesStep: React.FC<StagesStepProps> = ({
                               );
                             const mins = parseInt(spans[0]?.textContent || '0');
                             const secs = parseInt(spans[1]?.textContent || '0');
-                            // 格式化秒数显示为两位数
-                            if (spans[1] && spans[1].textContent) {
-                              spans[1].textContent = String(secs).padStart(
-                                2,
-                                '0'
-                              );
-                            }
+                            // 自动进位
+                            const totalSecs = mins * 60 + secs;
+                            const newMins = Math.floor(totalSecs / 60);
+                            const newSecs = totalSecs % 60;
+                            if (spans[0]) spans[0].textContent = String(newMins);
+                            if (spans[1]) spans[1].textContent = String(newSecs).padStart(2, '0');
                             handleTimeModeEndBlurWithValues(
                               timeModeIndex,
-                              mins,
-                              secs
+                              newMins,
+                              newSecs
                             );
                           }
                         }}
@@ -1119,7 +1116,6 @@ const StagesStep: React.FC<StagesStepProps> = ({
                           onInput={e => {
                             const text = e.currentTarget.textContent || '';
                             const val = text.replace(/\D/g, '');
-                            if (parseInt(val) > 59) return;
                             if (val !== text) {
                               e.currentTarget.textContent = val;
                             }
@@ -1295,30 +1291,79 @@ const StagesStep: React.FC<StagesStepProps> = ({
 
                     {/* 时间 */}
                     {showDuration ? (
-                      <span className="shrink-0 tabular-nums">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={getDurationDisplayValue(stage, index)}
-                          onChange={e =>
-                            handleDurationChange(index, e.target.value)
+                      <span
+                        className="flex shrink-0 items-center tabular-nums"
+                        onBlur={e => {
+                          if (!e.currentTarget.contains(e.relatedTarget)) {
+                            const spans = e.currentTarget.querySelectorAll('[contenteditable]');
+                            const hasMins = spans.length === 2;
+                            const mins = hasMins ? parseInt(spans[0]?.textContent || '0') : 0;
+                            const secs = parseInt(spans[hasMins ? 1 : 0]?.textContent || '0');
+                            // 自动进位
+                            let totalSecs = mins * 60 + secs;
+                            if (useCumulativeMode && index > 0) {
+                              const previousCumulative = cumulativeData[index - 1]?.cumulativeDuration || 0;
+                              totalSecs = Math.max(0, totalSecs - previousCumulative);
+                            }
+                            onStageChange(index, 'duration', totalSecs);
                           }
-                          onFocus={() => {
-                            const seconds = getDurationSeconds(stage, index);
-                            setEditingDuration({
-                              index,
-                              value: seconds ? String(seconds) : '',
-                            });
-                          }}
-                          onBlur={() => setEditingDuration(null)}
-                          placeholder="0″"
-                          className="w-12 bg-transparent text-right outline-hidden placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
-                        />
-                        {editingDuration?.index === index && (
-                          <span className="text-neutral-500 dark:text-neutral-500">
-                            ″
-                          </span>
-                        )}
+                        }}
+                      >
+                        {(() => {
+                          const seconds = getDurationSeconds(stage, index);
+                          const hasDuration = !!stage.duration; // 当前步骤是否有设置时长
+                          // 累计模式：如果前面累计已>=60秒，当前也显示分钟格式
+                          const cumulativeSecs = useCumulativeMode 
+                            ? (cumulativeData[index]?.cumulativeDuration || 0)
+                            : seconds;
+                          const showMins = useCumulativeMode 
+                            ? (cumulativeSecs >= 60 || (index > 0 && (cumulativeData[index - 1]?.cumulativeDuration || 0) >= 60))
+                            : seconds >= 60;
+                          const displaySecs = hasDuration ? (useCumulativeMode ? cumulativeSecs : seconds) : 0;
+                          const mins = Math.floor(displaySecs / 60);
+                          const secs = displaySecs % 60;
+                          return (
+                            <>
+                              {showMins && (
+                                <>
+                                  <span
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    inputMode="numeric"
+                                    data-placeholder="0"
+                                    onInput={e => {
+                                      const text = e.currentTarget.textContent || '';
+                                      const val = text.replace(/\D/g, '');
+                                      if (val !== text) {
+                                        e.currentTarget.textContent = val;
+                                      }
+                                    }}
+                                    className="min-w-[0.5em] cursor-text text-right outline-none empty:text-neutral-400 empty:before:content-[attr(data-placeholder)] hover:text-neutral-600 dark:empty:text-neutral-600 dark:hover:text-neutral-300"
+                                  >
+                                    {hasDuration ? mins : ''}
+                                  </span>
+                                  <span className="text-neutral-500">′</span>
+                                </>                              )}
+                              <span
+                                contentEditable
+                                suppressContentEditableWarning
+                                inputMode="numeric"
+                                data-placeholder={showMins ? '00' : '0'}
+                                onInput={e => {
+                                  const text = e.currentTarget.textContent || '';
+                                  const val = text.replace(/\D/g, '');
+                                  if (val !== text) {
+                                    e.currentTarget.textContent = val;
+                                  }
+                                }}
+                                className={`min-w-[${showMins ? '1em' : '0.5em'}] cursor-text text-right outline-none empty:text-neutral-400 empty:before:content-[attr(data-placeholder)] hover:text-neutral-600 dark:empty:text-neutral-600 dark:hover:text-neutral-300`}
+                              >
+                                {hasDuration ? (showMins ? String(secs).padStart(2, '0') : secs) : ''}
+                              </span>
+                              <span className="text-neutral-500">″</span>
+                            </>
+                          );
+                        })()}
                       </span>
                     ) : (
                       <span className="w-14 shrink-0" />
