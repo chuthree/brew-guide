@@ -22,6 +22,8 @@ interface CoffeeBeanSelectorProps {
   highlightedBeanId?: string | null;
   scrollParentRef?: HTMLElement;
   showStatusDots?: boolean;
+  /** 是否显示顶部的“跳过咖啡豆选择 / 不使用咖啡豆”选项，默认 true */
+  showSkipOption?: boolean;
 }
 
 // 定义列表项类型
@@ -86,6 +88,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   highlightedBeanId = null,
   scrollParentRef,
   showStatusDots = true,
+  showSkipOption = true,
 }) => {
   const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -315,6 +318,31 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
     <div className="py-3">
       <div>
         <div className="space-y-5">
+          {showSkipOption && (
+            <div
+              className="group relative cursor-pointer text-neutral-500 transition-all duration-300 dark:text-neutral-400"
+              onClick={() => onSelect(null)}
+            >
+              <div className="cursor-pointer">
+                <div className="flex gap-3">
+                  <div className="relative self-start">
+                    <div className="relative h-14 w-14 shrink-0 rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
+                      {/* 空内容，表示不选择 */}
+                    </div>
+                  </div>
+                  <div className="flex flex-col justify-center gap-y-1.5">
+                    <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
+                      不使用咖啡豆
+                    </div>
+                    <div className="text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                      <span className="inline">跳过咖啡豆选择</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {hasData ? (
             <Virtuoso
               {...(scrollParentRef
