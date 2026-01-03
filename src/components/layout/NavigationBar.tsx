@@ -1057,19 +1057,15 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       />
 
       {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 */}
-      {/* 桌面端：只在没有咖啡豆且在方案步骤时，才需要额外高度（因为此时只有导航TAB和器具栏） */}
-      <div
-        className={`relative min-h-[30px] w-full md:min-h-0 ${
-          activeBrewingStep === 'method' && !hasCoffeeBeans ? 'md:min-h-30' : ''
-        }`}
-      >
+      {/* 移动端使用 min-h 和绝对定位实现切换动画，桌面端使用常规流式布局 */}
+      <div className="relative min-h-[30px] w-full md:static md:min-h-0">
         {/* 修改：将AnimatePresence用于透明度变化而非高度变化 */}
         <AnimatePresence mode="wait">
           {showAlternativeHeader ? (
-            // 替代头部 - 使用绝对定位
+            // 替代头部 - 移动端绝对定位，桌面端相对定位
             <motion.div
               key="alternative-header"
-              className="absolute top-0 right-0 left-0 w-full px-6"
+              className="absolute top-0 right-0 left-0 w-full px-6 md:relative md:inset-auto"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1078,10 +1074,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
               {alternativeHeader}
             </motion.div>
           ) : (
-            // 默认头部 - 使用绝对定位
+            // 默认头部 - 移动端绝对定位，桌面端相对定位
             <motion.div
               key="default-header"
-              className="absolute top-0 right-0 left-0 w-full px-6"
+              className="absolute top-0 right-0 left-0 w-full px-6 md:relative md:inset-auto"
               initial={{ opacity: shouldHideHeader ? 0 : 1 }}
               animate={{ opacity: shouldHideHeader ? 0 : 1 }}
               exit={{ opacity: 0 }}
@@ -1150,7 +1146,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                 </div>
 
                 {/* 主导航按钮 - 保持固定高度避免抖动 - 桌面端垂直排列 */}
-                <div className="flex items-center space-x-6 md:mt-2 md:flex-col md:items-start md:space-y-4 md:space-x-0">
+                {/* 桌面端：当显示返回按钮时（进入方案后），完全隐藏导航 tab 容器 */}
+                <div
+                  className={`flex items-center space-x-6 md:mt-2 md:flex-col md:items-start md:space-y-4 md:space-x-0 ${
+                    canGoBack() && onBackClick ? 'md:hidden' : ''
+                  }`}
+                >
                   {visibleTabs.brewing && (
                     <div style={navItemStyle}>
                       <TabButton
