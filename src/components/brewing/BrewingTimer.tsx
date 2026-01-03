@@ -1275,7 +1275,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     }}
                   >
                     <div
-                      className={`flex items-baseline border-l-2 border-neutral-800/50 pl-3 dark:border-neutral-100 ${
+                      className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${
                         localLayoutSettings.stageInfoReversed
                           ? 'flex-row-reverse'
                           : 'flex-row'

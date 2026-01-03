@@ -117,7 +117,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
             <div className="space-y-3">
               {/* 当前阶段信息 */}
               <div
-                className={`flex items-baseline border-l-2 border-neutral-800/50 pl-3 dark:border-neutral-100 ${
+                className={`flex items-baseline border-l-2 border-neutral-800 pl-3 dark:border-neutral-100 ${
                   stageInfoReversed ? 'flex-row-reverse' : 'flex-row'
                 } justify-between`}
               >
