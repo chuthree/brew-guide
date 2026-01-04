@@ -575,18 +575,26 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     hasAdjustedInitialStep.current = true;
 
     const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
+    // 检查冲煮 tab 是否可见
+    const isBrewingTabVisible =
+      settings.navigationSettings?.visibleTabs?.brewing !== false;
 
-    // 如果设置开启了咖啡豆步骤且有咖啡豆，且当前在 method 步骤，则跳转到咖啡豆步骤
-    if (showBeanStep && initialHasBeans && activeBrewingStep === 'method') {
-      navigateToStep('coffeeBean');
-    }
-    // 如果设置关闭了咖啡豆步骤，且当前在咖啡豆步骤，则跳转到方案步骤
-    else if (!showBeanStep && activeBrewingStep === 'coffeeBean') {
-      navigateToStep('method');
+    // 只有当冲煮 tab 可见且当前在冲煮 tab 时，才调整冲煮步骤
+    if (isBrewingTabVisible && activeMainTab === '冲煮') {
+      // 如果设置开启了咖啡豆步骤且有咖啡豆，且当前在 method 步骤，则跳转到咖啡豆步骤
+      if (showBeanStep && initialHasBeans && activeBrewingStep === 'method') {
+        navigateToStep('coffeeBean');
+      }
+      // 如果设置关闭了咖啡豆步骤，且当前在咖啡豆步骤，则跳转到方案步骤
+      else if (!showBeanStep && activeBrewingStep === 'coffeeBean') {
+        navigateToStep('method');
+      }
     }
   }, [
     storeInitialized,
     settings.showCoffeeBeanSelectionStep,
+    settings.navigationSettings?.visibleTabs?.brewing,
+    activeMainTab,
     activeBrewingStep,
     navigateToStep,
     initialHasBeans,
