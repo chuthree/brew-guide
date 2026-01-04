@@ -7,6 +7,7 @@ interface SettingRowProps {
   isLast?: boolean;
   className?: string;
   vertical?: boolean; // 是否垂直布局（用于复杂控件）
+  isSubSetting?: boolean; // 是否为子设置项（显示半透明横杆前缀）
 }
 
 /**
@@ -21,6 +22,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
   isLast = false,
   className = '',
   vertical = false,
+  isSubSetting = false,
 }) => {
   if (vertical) {
     return (
@@ -58,6 +60,11 @@ const SettingRow: React.FC<SettingRowProps> = ({
         {label && (
           <div className="mr-4 flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+              {isSubSetting && (
+                <span className="mr-1.5 inline-block text-neutral-500 opacity-50 dark:text-neutral-400">
+                  —
+                </span>
+              )}
               {label}
             </span>
             {description && (

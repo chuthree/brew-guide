@@ -232,11 +232,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage
-      title="评分维度设置"
-      isVisible={isVisible}
-      onClose={handleClose}
-    >
+    <SettingPage title="评分维度" isVisible={isVisible} onClose={handleClose}>
       {/* 滚动内容区域 */}
       <div className="-mt-4 space-y-6 px-6">
         {/* 维度列表 */}

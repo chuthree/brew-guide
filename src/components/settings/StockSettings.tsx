@@ -153,7 +153,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="预设扣除值管理">
+      <SettingSection title="预设快捷扣除量">
         <div className="p-4">
           <div className="mb-3 flex flex-wrap gap-2">
             {decrementPresets.map(value => (

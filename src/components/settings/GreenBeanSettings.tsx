@@ -126,7 +126,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage title="生豆库设置" isVisible={isVisible} onClose={handleClose}>
+    <SettingPage title="生豆库" isVisible={isVisible} onClose={handleClose}>
       <SettingSection
         title="生豆库"
         footer="在咖啡豆库存概要中点击「咖啡豆」来切换生豆/熟豆库"
@@ -176,7 +176,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({
             </SettingRow>
           </SettingSection>
 
-          <SettingSection title="预设烘焙量管理">
+          <SettingSection title="预设快捷烘焙量">
             <div className="p-4">
               <div className="mb-3 flex flex-wrap gap-2">
                 {greenBeanRoastPresets.map(value => (

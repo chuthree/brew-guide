@@ -82,7 +82,7 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage title="笔记设置" isVisible={isVisible} onClose={handleClose}>
+    <SettingPage title="笔记" isVisible={isVisible} onClose={handleClose}>
       <SettingSection title="详情" className="-mt-4">
         <SettingRow label="价格" isLast>
           <SettingToggle
@@ -113,10 +113,7 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
 
       <SettingSection title="默认行为">
         {(settings.showFlavorRatingInForm ?? true) && (
-          <SettingRow
-            label="展开风味评分"
-            description="添加笔记时自动展开风味评分滑块"
-          >
+          <SettingRow label="展开风味评分">
             <SettingToggle
               checked={settings.defaultExpandRating ?? false}
               onChange={checked => handleChange('defaultExpandRating', checked)}
@@ -124,11 +121,7 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
           </SettingRow>
         )}
 
-        <SettingRow
-          label="展开变动记录"
-          description="在列表中自动显示库存变动记录"
-          isLast
-        >
+        <SettingRow label="展开变动记录" isLast>
           <SettingToggle
             checked={settings.defaultExpandChangeLog ?? false}
             onChange={checked =>

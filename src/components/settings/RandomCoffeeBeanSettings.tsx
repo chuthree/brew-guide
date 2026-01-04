@@ -120,12 +120,8 @@ const RandomCoffeeBeanSettings: React.FC<RandomCoffeeBeanSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage
-      title="随机咖啡豆设置"
-      isVisible={isVisible}
-      onClose={handleClose}
-    >
-      <SettingSection title="随机类型">
+    <SettingPage title="随机咖啡豆" isVisible={isVisible} onClose={handleClose}>
+      <SettingSection title="类型">
         <SettingRow
           label="长按随机不同类型咖啡豆"
           isLast={!randomSettings.enableLongPressRandomType}
@@ -162,7 +158,7 @@ const RandomCoffeeBeanSettings: React.FC<RandomCoffeeBeanSettingsProps> = ({
         )}
       </SettingSection>
 
-      <SettingSection title="随机范围">
+      <SettingSection title="范围">
         <SettingRow label="养豆期">
           <SettingToggle
             checked={randomSettings.flavorPeriodRanges.aging}

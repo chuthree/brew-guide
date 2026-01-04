@@ -243,7 +243,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage title="通知设置" isVisible={isVisible} onClose={handleClose}>
+    <SettingPage title="通知" isVisible={isVisible} onClose={handleClose}>
       {/* 通用设置 */}
       <SettingSection title="通用" className="-mt-4">
         <SettingRow label="提示音">

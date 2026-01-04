@@ -73,7 +73,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
   }, []);
 
   return (
-    <SettingPage title="咖啡豆设置" isVisible={isVisible} onClose={handleClose}>
+    <SettingPage title="咖啡豆" isVisible={isVisible} onClose={handleClose}>
       {/* 预览区域 */}
       <BeanPreview settings={settings} />
 
@@ -120,7 +120,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         </SettingRow>
 
         {settings.showPrice !== false && (
-          <SettingRow label="总价">
+          <SettingRow label="总价" isSubSetting>
             <SettingToggle
               checked={settings.showTotalPrice || false}
               onChange={checked => handleChange('showTotalPrice', checked)}
@@ -144,13 +144,17 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
 
         {settings.showBeanNotes !== false && (
           <>
-            <SettingRow label="风味">
+            <SettingRow label="风味" isSubSetting>
               <SettingToggle
                 checked={settings.showFlavorInfo || false}
                 onChange={checked => handleChange('showFlavorInfo', checked)}
               />
             </SettingRow>
-            <SettingRow label="备注行数限制" isLast={!settings.limitNotesLines}>
+            <SettingRow
+              label="备注行数限制"
+              isLast={!settings.limitNotesLines}
+              isSubSetting
+            >
               <SettingToggle
                 checked={settings.limitNotesLines || false}
                 onChange={checked => handleChange('limitNotesLines', checked)}

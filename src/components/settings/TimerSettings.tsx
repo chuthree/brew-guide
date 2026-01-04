@@ -85,11 +85,11 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage title="计时器设置" isVisible={isVisible} onClose={handleClose}>
+    <SettingPage title="计时器" isVisible={isVisible} onClose={handleClose}>
       {/* 预览区域 */}
       <TimerPreview settings={settings} />
 
-      <SettingSection title="布局设置" className="mt-6">
+      <SettingSection title="布局" className="mt-6">
         <SettingRow label="阶段信息布局反转">
           <SettingToggle
             checked={settings.layoutSettings?.stageInfoReversed || false}
@@ -116,7 +116,7 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="显示设置">
+      <SettingSection title="显示">
         <SettingRow label="始终显示计时器信息">
           <SettingToggle
             checked={settings.layoutSettings?.alwaysShowTimerInfo || false}
@@ -174,7 +174,7 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="方案列表设置">
+      <SettingSection title="列表">
         <SettingRow label="步骤时间显示" isLast>
           <div className="flex h-0 items-center">
             <ButtonGroup

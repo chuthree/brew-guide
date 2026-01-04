@@ -155,7 +155,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage title="磨豆机设置" isVisible={isVisible} onClose={handleClose}>
+    <SettingPage title="磨豆机" isVisible={isVisible} onClose={handleClose}>
       {/* 顶部渐变阴影 */}
       <div className="-mt-4 space-y-4 px-6">
         {/* 使用指南 - 可展开收起（仅在有磨豆机时显示） */}

@@ -82,11 +82,7 @@ const SearchSortSettings: React.FC<SearchSortSettingsProps> = ({
   if (!shouldRender) return null;
 
   return (
-    <SettingPage
-      title="搜索排序设置"
-      isVisible={isVisible}
-      onClose={handleClose}
-    >
+    <SettingPage title="搜索排序" isVisible={isVisible} onClose={handleClose}>
       <SettingSection className="-mt-4">
         <SettingRow
           label="启用搜索排序"

@@ -247,7 +247,7 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
   };
 
   return (
-    <SettingPage title="导航栏设置" isVisible={isVisible} onClose={handleClose}>
+    <SettingPage title="导航栏" isVisible={isVisible} onClose={handleClose}>
       {/* 通用设置 */}
       <SettingSection title="通用" className="-mt-4">
         <SettingRow label="简化标签名称" isLast>
