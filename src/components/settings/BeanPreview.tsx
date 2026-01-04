@@ -136,7 +136,6 @@ const BeanPreviewItem: React.FC<{
   settings: SettingsOptions;
 }> = ({ bean, settings }) => {
   // 设置默认值
-  const showOnlyBeanName = settings?.showOnlyBeanName ?? true;
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
   const showFlavorInfo = settings?.showFlavorInfo ?? false;
   const showBeanNotes = settings?.showBeanNotes !== false;
@@ -146,31 +145,8 @@ const BeanPreviewItem: React.FC<{
   const showTotalPrice = settings?.showTotalPrice ?? false;
   const showStatusDots = settings?.showStatusDots ?? true;
 
-  // 生成显示标题
-  const generateBeanTitle = (
-    bean: ExtendedCoffeeBean,
-    showOnlyName: boolean = false
-  ): string => {
-    if (showOnlyName) {
-      return bean.name;
-    }
-
-    const additionalParams: string[] = [];
-
-    if (bean.roastLevel) {
-      additionalParams.push(bean.roastLevel);
-    }
-
-    if (bean.blendComponents?.[0]?.origin) {
-      additionalParams.push(bean.blendComponents[0].origin);
-    }
-
-    return additionalParams.length > 0
-      ? `${bean.name} ${additionalParams.join(' ')}`
-      : bean.name;
-  };
-
-  const displayTitle = generateBeanTitle(bean, showOnlyBeanName);
+  // 直接使用咖啡豆名称
+  const displayTitle = bean.name;
 
   const formatNumber = (value: string | undefined): string =>
     !value

@@ -289,7 +289,6 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
             <div className="flex flex-col justify-center gap-y-1.5">
               <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
                 {bean.name}
-                {bean.roastLevel && ` ${bean.roastLevel}`}
                 <span className={statusClass}> {freshStatus}</span>
               </div>
               <div className="text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">

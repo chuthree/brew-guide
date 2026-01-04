@@ -92,7 +92,6 @@ export interface AppSettings {
   greenBeanRoastPresets: number[];
   enableAllGreenBeanRoastOption: boolean;
   enableCustomGreenBeanRoastInput: boolean;
-  showOnlyBeanName: boolean;
   simplifiedViewLabels: boolean;
   dateDisplayMode: 'date' | 'flavorPeriod' | 'agingDays';
   showFlavorInfo: boolean;

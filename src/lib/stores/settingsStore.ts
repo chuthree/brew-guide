@@ -49,7 +49,6 @@ export const defaultSettings: AppSettings = {
   greenBeanRoastPresets: [50, 100, 200],
   enableAllGreenBeanRoastOption: false,
   enableCustomGreenBeanRoastInput: true,
-  showOnlyBeanName: true,
   simplifiedViewLabels: false,
   dateDisplayMode: 'agingDays',
   showFlavorInfo: false,

@@ -96,7 +96,6 @@ interface InventoryViewProps {
   onToggleSelect?: (beanId: string) => void;
   settings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
-    showOnlyBeanName?: boolean;
     showFlavorInfo?: boolean;
     showBeanNotes?: boolean;
     limitNotesLines?: boolean;

@@ -29,11 +29,9 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
   onClose,
   handleChange: _handleChange,
 }) => {
-  // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);
 
-  // 使用 settingsStore 的 handleChange
   const handleChange = React.useCallback(
     async <K extends keyof SettingsOptions>(
       key: K,
@@ -44,41 +42,28 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
     [updateSettings]
   );
 
-  // 控制动画状态
-  const [shouldRender, setShouldRender] = React.useState(true);
   const [isVisible, setIsVisible] = React.useState(false);
-
-  // 用于保存最新的 onClose 引用
   const onCloseRef = React.useRef(onClose);
   onCloseRef.current = onClose;
 
-  // 关闭处理函数（带动画）
   const handleCloseWithAnimation = React.useCallback(() => {
-    // 立即触发退出动画
     setIsVisible(false);
-
-    // 立即通知父组件子设置正在关闭
     window.dispatchEvent(new CustomEvent('subSettingsClosing'));
-
-    // 等待动画完成后真正关闭
     setTimeout(() => {
       onCloseRef.current();
-    }, 350); // 与 IOS_TRANSITION_CONFIG.duration 一致
+    }, 350);
   }, []);
 
-  // 使用统一的历史栈管理系统
   useModalHistory({
     id: 'bean-settings',
-    isOpen: true, // 子设置页面挂载即为打开状态
+    isOpen: true,
     onClose: handleCloseWithAnimation,
   });
 
-  // UI 返回按钮点击处理
   const handleClose = () => {
     modalHistory.back();
   };
 
-  // 处理显示/隐藏动画（入场动画）
   React.useEffect(() => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -86,8 +71,6 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       });
     });
   }, []);
-
-  if (!shouldRender) return null;
 
   return (
     <SettingPage title="咖啡豆设置" isVisible={isVisible} onClose={handleClose}>
@@ -110,13 +93,6 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       </SettingSection>
 
       <SettingSection title="列表">
-        <SettingRow label="简化名称">
-          <SettingToggle
-            checked={settings.showOnlyBeanName || false}
-            onChange={checked => handleChange('showOnlyBeanName', checked)}
-          />
-        </SettingRow>
-
         <SettingRow label="日期模式">
           <div className="flex h-0 items-center">
             <ButtonGroup

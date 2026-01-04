@@ -107,7 +107,6 @@ interface TableViewProps {
   ) => void;
   settings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
-    showOnlyBeanName?: boolean;
   };
   visibleColumns?: TableColumnKey[];
 }
@@ -397,7 +396,6 @@ const TableView: React.FC<TableViewProps> = ({
   settings,
   visibleColumns = getDefaultVisibleColumns(),
 }) => {
-  const showOnlyBeanName = settings?.showOnlyBeanName ?? true;
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
 
   // 多重排序状态（持久化）
@@ -474,7 +472,7 @@ const TableView: React.FC<TableViewProps> = ({
       ),
       name: columnHelper.accessor(
         row => {
-          const title = generateBeanTitle(row, showOnlyBeanName);
+          const title = generateBeanTitle(row);
           return showRoasterColumn ? removeRoasterFromName(title) : title;
         },
         {
@@ -660,7 +658,7 @@ const TableView: React.FC<TableViewProps> = ({
     return TABLE_COLUMN_CONFIG.filter(col =>
       visibleColumns.includes(col.key)
     ).map(col => allColumns[col.key]);
-  }, [visibleColumns, showOnlyBeanName, dateDisplayMode]);
+  }, [visibleColumns, dateDisplayMode]);
 
   // 创建表格实例
   const table = useReactTable({

@@ -29,7 +29,6 @@ interface BeanListItemProps {
   onToggleSelect?: (beanId: string) => void;
   settings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
-    showOnlyBeanName?: boolean;
     showFlavorInfo?: boolean;
     showBeanNotes?: boolean;
     limitNotesLines?: boolean;
@@ -80,7 +79,6 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   }, [bean.name, bean.image]);
 
   // 设置默认值
-  const showOnlyBeanName = settings?.showOnlyBeanName ?? true;
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
   const showFlavorInfo = settings?.showFlavorInfo ?? false;
   const showBeanNotes = settings?.showBeanNotes !== false;
@@ -211,7 +209,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   }, [bean]);
 
   const isEmpty = isBeanEmpty(bean);
-  const displayTitle = title || generateBeanTitle(bean, showOnlyBeanName);
+  const displayTitle = title || generateBeanTitle(bean);
 
   const formatNumber = (value: string | undefined): string =>
     !value

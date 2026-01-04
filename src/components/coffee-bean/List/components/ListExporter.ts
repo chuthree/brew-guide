@@ -98,7 +98,6 @@ export const exportListPreview = async (
   expandedNotes: Record<string, boolean> = {},
   userSettings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
-    showOnlyBeanName?: boolean;
     showFlavorInfo?: boolean;
     limitNotesLines?: boolean;
     notesMaxLines?: number;
@@ -143,7 +142,6 @@ export const exportListPreview = async (
           expandedNotes,
           settings: userSettings || {
             dateDisplayMode: 'date',
-            showOnlyBeanName: true,
             showFlavorInfo: false, // 默认不显示风味
             limitNotesLines: true,
             notesMaxLines: 1, // 默认只显示一行
