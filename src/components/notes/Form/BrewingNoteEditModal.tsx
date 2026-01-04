@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Capacitor } from '@capacitor/core';
 import { ArrowLeft } from 'lucide-react';
 import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { Calendar } from '@/components/common/ui/Calendar';
-import { useModalHistory } from '@/lib/hooks/useModalHistory';
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import AdaptiveModal from '@/components/common/ui/AdaptiveModal';
 
 interface BrewingNoteEditModalProps {
   showModal: boolean;
@@ -27,16 +25,6 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   settings,
   isCopy = false, // 默认不是复制操作
 }) => {
-  // 动画状态管理
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  // 平台检测
-  const [isIOS, setIsIOS] = useState(false);
-
-  // Modal ref
-  const modalRef = useRef<HTMLDivElement>(null);
-
   // 时间戳状态管理
   const [timestamp, setTimestamp] = useState<Date>(
     new Date(initialData?.timestamp || Date.now())
@@ -45,63 +33,6 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   // 日期选择器状态
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
-
-  // 处理显示/隐藏动画
-  useEffect(() => {
-    if (showModal) {
-      setShouldRender(true);
-      const timer = setTimeout(() => setIsVisible(true), 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsVisible(false);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-      }, 400);
-      return () => clearTimeout(timer);
-    }
-  }, [showModal]);
-
-  // 检测平台
-  useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      const platform = Capacitor.getPlatform();
-      setIsIOS(platform === 'ios');
-    }
-  }, []);
-
-  // 监听输入框聚焦，确保在iOS上输入框可见
-  useEffect(() => {
-    if (!shouldRender) return;
-
-    const modalElement = modalRef.current;
-    if (!modalElement) return;
-
-    const handleInputFocus = (e: Event) => {
-      const target = e.target as HTMLElement;
-
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT')
-      ) {
-        if (isIOS) {
-          setTimeout(() => {
-            target.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-            });
-          }, 300);
-        }
-      }
-    };
-
-    modalElement.addEventListener('focusin', handleInputFocus);
-
-    return () => {
-      modalElement.removeEventListener('focusin', handleInputFocus);
-    };
-  }, [shouldRender, isIOS]);
 
   // 重置时间戳当初始数据变化时
   useEffect(() => {
@@ -194,30 +125,24 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     }
   }, [initialData]);
 
-  // 历史栈和主题色管理
-  useThemeColor({ useOverlay: true, enabled: showModal });
-  useModalHistory({
-    id: 'brewing-note-edit',
-    isOpen: showModal,
-    onClose: handleClose,
-  });
-
-  if (!shouldRender) return null;
+  // 处理退出动画完成后的清理
+  const handleExitComplete = useCallback(() => {
+    setShowDatePicker(false);
+  }, []);
 
   return (
-    <>
-      {/* 背景遮罩 */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={handleClose}
-      />
-
-      {/* 抽屉内容 */}
-      <div
-        ref={modalRef}
-        className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[90vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
-      >
-        <div className="pb-safe-bottom flex h-full flex-col overflow-hidden px-6 pt-4">
+    <AdaptiveModal
+      isOpen={showModal}
+      onClose={handleClose}
+      historyId="brewing-note-edit"
+      onExitComplete={handleExitComplete}
+      drawerMaxWidth="448px"
+      drawerHeight="90vh"
+    >
+      {({ isMediumScreen }) => (
+        <div
+          className={`flex h-full flex-col overflow-hidden px-6 ${isMediumScreen ? 'pt-4' : 'pt-2'}`}
+        >
           {/* 顶部标题栏 */}
           <div className="flex shrink-0 items-center justify-between">
             <button
@@ -294,8 +219,8 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
             </button>
           </div>
         </div>
-      </div>
-    </>
+      )}
+    </AdaptiveModal>
   );
 };
 

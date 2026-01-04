@@ -3315,18 +3315,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             }
           />
 
-          <BrewingNoteFormModal
-            key="note-form-modal"
-            showForm={showNoteFormModal}
-            initialNote={currentEditingNote}
-            onSave={handleSaveBrewingNote}
-            onClose={() => {
-              setShowNoteFormModal(false);
-              setCurrentEditingNote({});
-            }}
-            settings={settings}
-          />
-
           {migrationData && (
             <DataMigrationModal
               isOpen={showDataMigration}
@@ -3893,6 +3881,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       </AnimatePresence>
 
       {/* 所有模态框组件 */}
+      <BrewingNoteFormModal
+        key="note-form-modal"
+        showForm={showNoteFormModal}
+        initialNote={currentEditingNote}
+        onSave={handleSaveBrewingNote}
+        onClose={() => {
+          setShowNoteFormModal(false);
+          setCurrentEditingNote({});
+        }}
+        settings={settings}
+      />
+
       <AppModals
         // Settings 相关
         isSettingsOpen={isSettingsOpen}

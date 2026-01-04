@@ -9,12 +9,10 @@ import React, {
   useImperativeHandle,
   useCallback,
 } from 'react';
-import { Capacitor } from '@capacitor/core';
 import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { useModalHistory } from '@/lib/hooks/useModalHistory';
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import AdaptiveModal from '@/components/common/ui/AdaptiveModal';
 
 export interface Step {
   id: string;
@@ -64,13 +62,6 @@ const NoteSteppedFormModal = forwardRef<
       currentStep !== undefined ? currentStep : internalStepIndex;
     const setCurrentStepIndex = setCurrentStep || setInternalStepIndex;
 
-    // 动画状态管理
-    const [shouldRender, setShouldRender] = useState(false);
-    const [isVisible, setIsVisible] = useState(false);
-
-    // 平台检测
-    const [isIOS, setIsIOS] = useState(false);
-
     const [isSearching, setIsSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [highlightedBeanId, setHighlightedBeanId] = useState<string | null>(
@@ -79,7 +70,6 @@ const NoteSteppedFormModal = forwardRef<
     const [scrollContainer, setScrollContainer] =
       useState<HTMLDivElement | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const modalRef = useRef<HTMLDivElement>(null);
 
     // callback ref: DOM 挂载时更新 state，触发重新渲染
     const contentScrollRefCallback = useCallback(
@@ -91,75 +81,22 @@ const NoteSteppedFormModal = forwardRef<
 
     const allBeans = useCoffeeBeanStore(state => state.beans);
 
-    // 同步顶部安全区颜色
-    useThemeColor({ useOverlay: true, enabled: showForm });
-
-    // 历史栈管理
-    useModalHistory({ id: 'note-stepped-form', isOpen: showForm, onClose });
-
-    // 处理显示/隐藏动画
+    // 当 showForm 变化时重置步骤
     useEffect(() => {
       if (showForm) {
-        setShouldRender(true);
         setCurrentStepIndex(initialStep);
-        const timer = setTimeout(() => setIsVisible(true), 10);
-        return () => clearTimeout(timer);
-      } else {
-        setIsVisible(false);
-        const timer = setTimeout(() => {
-          setShouldRender(false);
-          if (!preserveState) {
-            setCurrentStepIndex(initialStep);
-            setIsSearching(false);
-            setSearchQuery('');
-            setHighlightedBeanId(null);
-          }
-        }, 400);
-        return () => clearTimeout(timer);
       }
-    }, [showForm, initialStep, preserveState, setCurrentStepIndex]);
+    }, [showForm, initialStep, setCurrentStepIndex]);
 
-    // 检测平台
-    useEffect(() => {
-      if (Capacitor.isNativePlatform()) {
-        const platform = Capacitor.getPlatform();
-        setIsIOS(platform === 'ios');
+    // 处理退出动画完成后的清理
+    const handleExitComplete = useCallback(() => {
+      if (!preserveState) {
+        setCurrentStepIndex(initialStep);
+        setIsSearching(false);
+        setSearchQuery('');
+        setHighlightedBeanId(null);
       }
-    }, []);
-
-    // 监听输入框聚焦，确保在iOS上输入框可见
-    useEffect(() => {
-      if (!shouldRender) return;
-
-      const modalElement = modalRef.current;
-      if (!modalElement) return;
-
-      const handleInputFocus = (e: Event) => {
-        const target = e.target as HTMLElement;
-
-        if (
-          target &&
-          (target.tagName === 'INPUT' ||
-            target.tagName === 'TEXTAREA' ||
-            target.tagName === 'SELECT')
-        ) {
-          if (isIOS) {
-            setTimeout(() => {
-              target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-              });
-            }, 300);
-          }
-        }
-      };
-
-      modalElement.addEventListener('focusin', handleInputFocus);
-
-      return () => {
-        modalElement.removeEventListener('focusin', handleInputFocus);
-      };
-    }, [shouldRender, isIOS]);
+    }, [preserveState, initialStep, setCurrentStepIndex]);
 
     useImperativeHandle(
       ref,
@@ -268,22 +205,19 @@ const NoteSteppedFormModal = forwardRef<
     const isLastStep = currentStepIndex === steps.length - 1;
     const isValid = currentStepContent?.isValid !== false;
 
-    if (!shouldRender) return null;
-
     return (
-      <>
-        {/* 背景遮罩 */}
-        <div
-          className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-          onClick={onClose}
-        />
-
-        {/* 抽屉内容 */}
-        <div
-          ref={modalRef}
-          className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[90vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
-        >
-          <div className="pb-safe-bottom flex h-full flex-col overflow-hidden px-6 pt-4">
+      <AdaptiveModal
+        isOpen={showForm}
+        onClose={onClose}
+        historyId="note-stepped-form"
+        onExitComplete={handleExitComplete}
+        drawerMaxWidth="448px"
+        drawerHeight="90vh"
+      >
+        {({ isMediumScreen }) => (
+          <div
+            className={`flex h-full flex-col overflow-hidden px-6 ${isMediumScreen ? 'pt-4' : 'pt-2'}`}
+          >
             {/* 顶部导航栏 */}
             <div className="mb-6 flex shrink-0 items-center justify-between">
               <button
@@ -379,8 +313,8 @@ const NoteSteppedFormModal = forwardRef<
               </div>
             </div>
           </div>
-        </div>
-      </>
+        )}
+      </AdaptiveModal>
     );
   }
 );
