@@ -47,7 +47,6 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/coffee-bean/ui/select';
-import CoffeeBeanSelector from './CoffeeBeanSelector';
 import CoffeeBeanPickerDrawer from './CoffeeBeanPickerDrawer';
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData';
 import ImagePreview from '@/components/common/ImagePreview';
@@ -243,10 +242,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const { beans: coffeeBeans } = useCoffeeBeanData();
   const [selectedCoffeeBean, setSelectedCoffeeBean] =
     useState<SelectableCoffeeBean | null>(initialData.coffeeBean || null);
-  const [showCoffeeBeanSelector, setShowCoffeeBeanSelector] = useState(false);
   const [showCoffeeBeanPickerDrawer, setShowCoffeeBeanPickerDrawer] =
     useState(false);
-  const [coffeeBeanSearchQuery, setCoffeeBeanSearchQuery] = useState('');
   const [originalBeanId] = useState<string | undefined>(initialData.beanId); // 记录原始的beanId用于容量同步
   const [showFlavorInfo, setShowFlavorInfo] = useState(false); // 控制风味信息的显示
   const [showImagePreview, setShowImagePreview] = useState(false); // 控制图片预览
@@ -357,9 +354,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   }, [initialData.totalTime]);
 
   const formRef = useRef<HTMLFormElement>(null);
-  // 使用 state 存储滚动容器元素，确保 Virtuoso 能正确获取滚动父元素
-  const [coffeeBeanScrollContainer, setCoffeeBeanScrollContainer] =
-    useState<HTMLDivElement | null>(null);
   const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(
     null
   );
@@ -999,8 +993,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       userSelectedBeanRef.current = true;
 
       setSelectedCoffeeBean(bean);
-      setShowCoffeeBeanSelector(false);
-      setCoffeeBeanSearchQuery(''); // 清空搜索
 
       // 更新表单中的咖啡豆信息
       if (bean) {
@@ -1210,34 +1202,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           formData.coffeeBeanInfo.name ||
           (initialData.id && formData.coffeeBeanInfo.name) ? (
             <div className="mb-3 text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-              {initialData.id && coffeeBeans.length > 0 ? (
-                // 编辑模式：点击展开内联选择器
-                <span
-                  onClick={() => {
-                    setShowCoffeeBeanSelector(!showCoffeeBeanSelector);
-                    if (!showCoffeeBeanSelector) {
-                      setCoffeeBeanSearchQuery('');
-                    }
-                  }}
-                  className="cursor-pointer text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                >
-                  {selectedCoffeeBean?.name ||
-                    formData.coffeeBeanInfo.name ||
-                    '未知咖啡豆'}
-                </span>
-              ) : (
-                // 新建模式：点击打开抽屉重新选择
-                <>
-                  <span
-                    onClick={() => setShowCoffeeBeanPickerDrawer(true)}
-                    className="cursor-pointer text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                  >
-                    {selectedCoffeeBean?.name ||
-                      formData.coffeeBeanInfo.name ||
-                      '未知咖啡豆'}
-                  </span>
-                </>
-              )}
+              <span
+                onClick={() => setShowCoffeeBeanPickerDrawer(true)}
+                className="cursor-pointer text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+              >
+                {selectedCoffeeBean?.name ||
+                  formData.coffeeBeanInfo.name ||
+                  '未知咖啡豆'}
+              </span>
               {selectedCoffeeBean &&
                 !isPendingCoffeeBean(selectedCoffeeBean) &&
                 (selectedCoffeeBean as CoffeeBean).flavor &&
@@ -1265,42 +1237,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               className="w-full cursor-pointer rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
             />
           )}
-
-          {initialData.id &&
-            coffeeBeans.length > 0 &&
-            showCoffeeBeanSelector && (
-              <div className="rounded-lg border border-neutral-200/50 bg-neutral-50 dark:border-neutral-800/50 dark:bg-neutral-900">
-                <div className="border-b border-neutral-200/50 p-3 dark:border-neutral-800">
-                  <input
-                    id="coffee-bean-search"
-                    name="coffeeBeanSearch"
-                    type="text"
-                    value={coffeeBeanSearchQuery}
-                    onChange={e => setCoffeeBeanSearchQuery(e.target.value)}
-                    placeholder="搜索咖啡豆..."
-                    className="w-full rounded-md border border-neutral-200/50 bg-white px-3 py-2 text-xs placeholder:text-neutral-400 focus:ring-1 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:placeholder:text-neutral-500 dark:focus:ring-neutral-500"
-                  />
-                </div>
-                <div
-                  ref={setCoffeeBeanScrollContainer}
-                  className="max-h-60 overflow-y-auto px-3"
-                >
-                  <CoffeeBeanSelector
-                    coffeeBeans={coffeeBeans}
-                    selectedCoffeeBean={
-                      selectedCoffeeBean &&
-                      !isPendingCoffeeBean(selectedCoffeeBean)
-                        ? selectedCoffeeBean
-                        : null
-                    }
-                    onSelect={handleCoffeeBeanSelect}
-                    searchQuery={coffeeBeanSearchQuery}
-                    showStatusDots={settings?.showStatusDots}
-                    scrollParentRef={coffeeBeanScrollContainer ?? undefined}
-                  />
-                </div>
-              </div>
-            )}
         </div>
         {/* 笔记图片 */}
         <div className="flex w-full items-center gap-2">
