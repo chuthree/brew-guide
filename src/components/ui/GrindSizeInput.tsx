@@ -114,16 +114,6 @@ type OptionItem = {
   grinderId?: string;
 };
 
-/** 计算文本宽度：中文字符按2倍计算，英文字符按1倍计算 */
-const calculateTextWidth = (str: string): number => {
-  let width = 0;
-  for (const char of str) {
-    // 检测中文字符（包括中文标点）
-    width += /[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/.test(char) ? 2 : 1;
-  }
-  return Math.max(width, 2);
-};
-
 /** 格式化磨豆机显示文本 */
 const formatGrinderOption = (grinder: Grinder): string =>
   grinder.currentGrindSize
@@ -264,7 +254,11 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
     ]);
 
     // 构建选项列表（使用 useMemo 缓存）
+    // 只有在有磨豆机的情况下才显示选项
     const allOptions = useMemo<OptionItem[]>(() => {
+      // 没有磨豆机时不显示任何选项
+      if (grinders.length === 0) return [];
+
       const options: OptionItem[] = [];
 
       // 1. 当前选中的磨豆机
@@ -292,7 +286,7 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
         }
       });
 
-      // 3. 还原选项
+      // 3. 还原选项（仅在有磨豆机时才显示）
       if (
         initialValue &&
         initialValue !== value &&
