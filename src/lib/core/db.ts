@@ -199,7 +199,6 @@ export interface AppSettings {
   // 打印设置
   enableBeanPrint?: boolean;
   showBeanRating?: boolean;
-  showBeanInfoDivider?: boolean;
 
   // 隐藏的通用方案设置
   hiddenCommonMethods?: Record<string, string[]>;

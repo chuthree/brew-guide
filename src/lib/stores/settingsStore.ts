@@ -136,7 +136,6 @@ export const defaultSettings: AppSettings = {
   // 其他设置
   enableBeanPrint: false,
   showBeanRating: false,
-  showBeanInfoDivider: true,
   hiddenCommonMethods: {},
   hiddenEquipments: [],
   grinderDefaultSync: {

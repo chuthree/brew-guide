@@ -181,12 +181,6 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             onChange={checked => handleChange('enableBeanPrint', checked)}
           />
         </SettingRow>
-        <SettingRow label="分割线">
-          <SettingToggle
-            checked={settings.showBeanInfoDivider !== false}
-            onChange={checked => handleChange('showBeanInfoDivider', checked)}
-          />
-        </SettingRow>
         <SettingRow label="评分" isLast>
           <SettingToggle
             checked={settings.showBeanRating || false}

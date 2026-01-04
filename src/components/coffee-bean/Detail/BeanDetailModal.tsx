@@ -145,7 +145,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
   const [isTitleVisible, setIsTitleVisible] = useState(true);
   const [showBeanRating, setShowBeanRating] = useState(false);
-  const [showBeanInfoDivider, setShowBeanInfoDivider] = useState(true);
   const [showEstateField, setShowEstateField] = useState(false);
   const [showChangeRecords, setShowChangeRecords] = useState(false);
   const [showGreenBeanRecords, setShowGreenBeanRecords] = useState(false);
@@ -214,12 +213,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (storeSettings) {
       setPrintEnabled(storeSettings.enableBeanPrint === true);
       setShowBeanRating(storeSettings.showBeanRating === true);
-      setShowBeanInfoDivider(storeSettings.showBeanInfoDivider !== false);
       setShowEstateField(storeSettings.showEstateField === true);
     } else {
       setPrintEnabled(false);
       setShowBeanRating(false);
-      setShowBeanInfoDivider(true);
       setShowEstateField(false);
     }
   }, [isOpen, storeSettings]);
@@ -586,7 +583,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 isAddMode={isAddMode}
                 isGreenBean={isGreenBean}
                 searchQuery={searchQuery}
-                showBeanInfoDivider={showBeanInfoDivider}
                 editingCapacity={editingCapacity}
                 editingRemaining={editingRemaining}
                 editingPrice={editingPrice}

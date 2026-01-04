@@ -17,7 +17,6 @@ interface BasicInfoSectionProps {
   isAddMode: boolean;
   isGreenBean: boolean;
   searchQuery: string;
-  showBeanInfoDivider: boolean;
   editingCapacity: boolean;
   editingRemaining: boolean;
   editingPrice: boolean;
@@ -37,7 +36,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   isAddMode,
   isGreenBean,
   searchQuery,
-  showBeanInfoDivider,
   editingCapacity,
   editingRemaining,
   editingPrice,
@@ -330,9 +328,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
       </div>
 
       {/* 虚线分割线 */}
-      {showBeanInfoDivider && (
-        <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
-      )}
+      <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
     </>
   );
 };
