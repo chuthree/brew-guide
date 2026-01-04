@@ -243,8 +243,8 @@ const getSortOrderLabel = (type: string, order: string) => {
 
 // 筛选模式选择组件
 interface FilterModeSectionProps {
-  filterMode: 'equipment' | 'bean' | 'date';
-  onFilterModeChange: (mode: 'equipment' | 'bean' | 'date') => void;
+  filterMode: 'equipment' | 'date';
+  onFilterModeChange: (mode: 'equipment' | 'date') => void;
 }
 
 const FilterModeSection: React.FC<FilterModeSectionProps> = ({
@@ -254,7 +254,7 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
   return (
     <div>
       <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-        分类方式
+        分类
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <FilterButton
@@ -262,12 +262,6 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
           onClick={() => onFilterModeChange('equipment')}
         >
           按器具
-        </FilterButton>
-        <FilterButton
-          isActive={filterMode === 'bean'}
-          onClick={() => onFilterModeChange('bean')}
-        >
-          按豆子
         </FilterButton>
         <FilterButton
           isActive={filterMode === 'date'}
@@ -346,7 +340,7 @@ const ViewModeSection: React.FC<ViewModeSectionProps> = ({
   return (
     <div>
       <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-        显示模式
+        显示
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <FilterButton
@@ -744,16 +738,13 @@ const SearchSortBar: React.FC<SearchSortBarProps> = ({
 const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   filterMode,
   selectedEquipment,
-  selectedBean,
   selectedDate,
   dateGroupingMode,
   availableEquipments,
-  availableBeans,
   availableDates,
   equipmentNames,
   onFilterModeChange,
   onEquipmentClick,
-  onBeanClick,
   onDateClick,
   onDateGroupingModeChange,
   isSearching = false,
@@ -805,11 +796,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     if (!scrollContainerRef.current) return;
 
     let selectedId =
-      filterMode === 'equipment'
-        ? selectedEquipment
-        : filterMode === 'bean'
-          ? selectedBean
-          : selectedDate;
+      filterMode === 'equipment' ? selectedEquipment : selectedDate;
     if (!selectedId) return;
 
     // 特殊处理日期模式下的快捷选项，确保能滚动到对应的快捷按钮
@@ -854,26 +841,14 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
       left: Math.max(0, targetScrollLeft),
       behavior: 'smooth',
     });
-  }, [
-    filterMode,
-    selectedEquipment,
-    selectedBean,
-    selectedDate,
-    dateGroupingMode,
-  ]);
+  }, [filterMode, selectedEquipment, selectedDate, dateGroupingMode]);
 
   // 当选中项变化时滚动到选中项
   useEffect(() => {
     // 延迟执行以确保DOM已更新
     const timer = setTimeout(scrollToSelected, 100);
     return () => clearTimeout(timer);
-  }, [
-    selectedEquipment,
-    selectedBean,
-    selectedDate,
-    filterMode,
-    scrollToSelected,
-  ]);
+  }, [selectedEquipment, selectedDate, filterMode, scrollToSelected]);
 
   // 添加滚动事件监听
   useEffect(() => {
@@ -925,12 +900,8 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     };
   }, [isFilterExpanded]);
 
-  // 如果没有可筛选的设备或咖啡豆或日期，不渲染任何内容
-  if (
-    availableEquipments.length === 0 &&
-    availableBeans.length === 0 &&
-    availableDates.length === 0
-  )
+  // 如果没有可筛选的设备或日期，不渲染任何内容
+  if (availableEquipments.length === 0 && availableDates.length === 0)
     return null;
 
   return (
@@ -946,14 +917,11 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                   isActive={
                     (filterMode === 'equipment' &&
                       selectedEquipment === null) ||
-                    (filterMode === 'bean' && selectedBean === null) ||
                     (filterMode === 'date' && selectedDate === null)
                   }
                   onClick={() => {
                     if (filterMode === 'equipment') {
                       onEquipmentClick(null);
-                    } else if (filterMode === 'bean') {
-                      onBeanClick(null);
                     } else {
                       onDateClick(null);
                     }
@@ -1019,21 +987,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                         layoutId="notes-equipment-underline"
                       >
                         {equipmentNames[equipment] || equipment}
-                      </TabButton>
-                    ))
-                  ) : filterMode === 'bean' ? (
-                    availableBeans.map(bean => (
-                      <TabButton
-                        key={bean}
-                        isActive={selectedBean === bean}
-                        onClick={() =>
-                          selectedBean !== bean && onBeanClick(bean)
-                        }
-                        className="mr-3"
-                        dataTab={bean}
-                        layoutId="notes-bean-underline"
-                      >
-                        {bean}
                       </TabButton>
                     ))
                   ) : (
@@ -1258,6 +1211,12 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                       />
                     )}
 
+                    <SortSection
+                      sortOption={sortOption}
+                      onSortChange={onSortChange}
+                      settings={settings}
+                    />
+
                     {onViewModeChange && (
                       <ViewModeSection
                         viewMode={viewMode}
@@ -1271,12 +1230,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                         onNoteDisplayStyleChange={onNoteDisplayStyleChange}
                       />
                     )}
-
-                    <SortSection
-                      sortOption={sortOption}
-                      onSortChange={onSortChange}
-                      settings={settings}
-                    />
                   </div>
                 </div>
               </motion.div>

@@ -36,7 +36,6 @@ import { BrewingNoteData } from '@/types/app';
 import {
   globalCache,
   saveSelectedEquipmentPreference,
-  saveSelectedBeanPreference,
   saveSelectedDatePreference,
   saveFilterModePreference,
   saveSortOptionPreference,
@@ -44,7 +43,6 @@ import {
   calculateTotalCoffeeConsumption,
   formatConsumption,
   getSelectedEquipmentPreference,
-  getSelectedBeanPreference,
   getSelectedDatePreference,
   getFilterModePreference,
   getSortOptionPreference,
@@ -77,14 +75,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const [sortOption, setSortOption] = useState<SortOption>(
     getSortOptionPreference()
   );
-  const [filterMode, setFilterMode] = useState<'equipment' | 'bean' | 'date'>(
+  const [filterMode, setFilterMode] = useState<'equipment' | 'date'>(
     getFilterModePreference()
   );
   const [selectedEquipment, setSelectedEquipment] = useState<string | null>(
     getSelectedEquipmentPreference()
-  );
-  const [selectedBean, setSelectedBean] = useState<string | null>(
-    getSelectedBeanPreference()
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(
     getSelectedDatePreference()
@@ -313,10 +308,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           customEquipments
         );
       });
-    } else if (filterMode === 'bean' && selectedBean) {
-      return sortedNotes.filter(
-        (note: BrewingNote) => note.coffeeBeanInfo?.name === selectedBean
-      );
     } else if (filterMode === 'date' && selectedDate) {
       return sortedNotes.filter((note: BrewingNote) => {
         if (!note.timestamp) return false;
@@ -361,13 +352,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     sortOption,
     filterMode,
     selectedEquipment,
-    selectedBean,
     selectedDate,
     dateGroupingMode,
     customEquipments,
   ]);
 
-  // � 计算可用的设备、豆子、日期列表
+  // � 计算可用的设备、日期列表
   const availableEquipments = useMemo(() => {
     const equipmentSet = new Set<string>();
     notes.forEach((note: BrewingNote) => {
@@ -381,16 +371,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     });
     return Array.from(equipmentSet).sort();
   }, [notes, customEquipments]);
-
-  const availableBeans = useMemo(() => {
-    const beanSet = new Set<string>();
-    notes.forEach((note: BrewingNote) => {
-      if (note.coffeeBeanInfo?.name) {
-        beanSet.add(note.coffeeBeanInfo.name);
-      }
-    });
-    return Array.from(beanSet).sort();
-  }, [notes]);
 
   const availableDates = useMemo(() => {
     const dateSet = new Set<string>();
@@ -1080,19 +1060,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   ]);
 
   // 处理过滤模式变化
-  const handleFilterModeChange = (mode: 'equipment' | 'bean' | 'date') => {
+  const handleFilterModeChange = (mode: 'equipment' | 'date') => {
     setFilterMode(mode);
     saveFilterModePreference(mode);
     // 已保存到本地存储
     // 切换模式时清空选择
     setSelectedEquipment(null);
-    setSelectedBean(null);
     setSelectedDate(null);
     saveSelectedEquipmentPreference(null);
-    saveSelectedBeanPreference(null);
     saveSelectedDatePreference(null);
     globalCache.selectedEquipment = null;
-    globalCache.selectedBean = null;
     globalCache.selectedDate = null;
   };
 
@@ -1100,12 +1077,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const handleEquipmentClick = useCallback((equipment: string | null) => {
     setSelectedEquipment(equipment);
     saveSelectedEquipmentPreference(equipment);
-  }, []);
-
-  // 处理咖啡豆选择变化
-  const handleBeanClick = useCallback((bean: string | null) => {
-    setSelectedBean(bean);
-    saveSelectedBeanPreference(bean);
   }, []);
 
   // 处理日期选择变化
@@ -1276,12 +1247,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     return notes.some(note => note.image && note.image.trim() !== '');
   }, [notes]); // 依赖notes以便在笔记数据变化时重新计算
 
-  // 计算图片流模式下的可用设备和豆子列表
+  // 计算图片流模式下的可用设备列表
   const imageFlowAvailableOptions = useMemo(() => {
     if (!isImageFlowMode && !isDateImageFlowMode) {
       return {
         equipments: availableEquipments,
-        beans: availableBeans,
       };
     }
 
@@ -1305,17 +1275,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       }
     });
 
-    // 获取有图片记录的豆子列表
-    const beanSet = new Set<string>();
-    allNotesWithImages.forEach(note => {
-      if (note.coffeeBeanInfo?.name) {
-        beanSet.add(note.coffeeBeanInfo.name);
-      }
-    });
-
     return {
       equipments: Array.from(equipmentSet).sort(),
-      beans: Array.from(beanSet).sort(),
     };
   }, [
     isImageFlowMode,
@@ -1324,14 +1285,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     searchQuery,
     searchFilteredNotes,
     availableEquipments,
-    availableBeans,
   ]);
 
-  // 在图片流模式下，如果当前选中的设备或豆子没有图片记录，自动切换到"全部"
+  // 在图片流模式下，如果当前选中的设备没有图片记录，自动切换到"全部"
   useEffect(() => {
     if (!imageFlowStats) return;
 
-    const { equipments, beans } = imageFlowAvailableOptions;
+    const { equipments } = imageFlowAvailableOptions;
 
     // 检查当前选中的设备是否在有图片的设备列表中
     if (
@@ -1341,23 +1301,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     ) {
       handleEquipmentClick(null);
     }
-
-    // 检查当前选中的豆子是否在有图片的豆子列表中
-    if (
-      filterMode === 'bean' &&
-      selectedBean &&
-      !beans.includes(selectedBean)
-    ) {
-      handleBeanClick(null);
-    }
   }, [
     imageFlowStats,
     imageFlowAvailableOptions,
     filterMode,
     selectedEquipment,
-    selectedBean,
     handleEquipmentClick,
-    handleBeanClick,
   ]);
 
   // 当没有图片笔记时，自动关闭图片流模式并切换回列表模式
@@ -1405,16 +1354,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           <FilterTabs
             filterMode={filterMode}
             selectedEquipment={selectedEquipment}
-            selectedBean={selectedBean}
             selectedDate={selectedDate}
             dateGroupingMode={dateGroupingMode}
             availableEquipments={imageFlowAvailableOptions.equipments}
-            availableBeans={imageFlowAvailableOptions.beans}
             availableDates={availableDates}
             equipmentNames={equipmentNames}
             onFilterModeChange={handleFilterModeChange}
             onEquipmentClick={handleEquipmentClick}
-            onBeanClick={handleBeanClick}
             onDateClick={handleDateClick}
             onDateGroupingModeChange={handleDateGroupingModeChange}
             isSearching={isSearching}
@@ -1453,7 +1399,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           {/* 笔记列表视图 - 始终传递正确的笔记数据 */}
           <ListView
             selectedEquipment={selectedEquipment}
-            selectedBean={selectedBean}
             filterMode={filterMode}
             onNoteClick={handleNoteClick}
             onDeleteNote={handleDelete}

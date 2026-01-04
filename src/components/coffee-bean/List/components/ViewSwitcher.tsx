@@ -264,7 +264,7 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
   return (
     <div>
       <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-        分类方式
+        分类
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <FilterButton

@@ -74,18 +74,15 @@ export interface NoteItemProps {
 
 // 筛选标签页属性
 export interface FilterTabsProps {
-  filterMode: 'equipment' | 'bean' | 'date';
+  filterMode: 'equipment' | 'date';
   selectedEquipment: string | null;
-  selectedBean: string | null;
   selectedDate: string | null;
   dateGroupingMode: DateGroupingMode;
   availableEquipments: string[];
-  availableBeans: string[];
   availableDates: string[];
   equipmentNames: Record<string, string>;
-  onFilterModeChange: (mode: 'equipment' | 'bean' | 'date') => void;
+  onFilterModeChange: (mode: 'equipment' | 'date') => void;
   onEquipmentClick: (equipment: string | null) => void;
-  onBeanClick: (bean: string | null) => void;
   onDateClick: (date: string | null) => void;
   onDateGroupingModeChange: (mode: DateGroupingMode) => void;
   isSearching?: boolean;

@@ -14,8 +14,7 @@ import { SettingsOptions } from '@/components/settings/Settings';
 // 定义组件属性接口
 interface NotesListViewProps {
   selectedEquipment: string | null;
-  selectedBean: string | null;
-  filterMode: 'equipment' | 'bean' | 'date';
+  filterMode: 'equipment' | 'date';
   onNoteClick: (note: BrewingNote) => void;
   onDeleteNote: (noteId: string) => Promise<void>;
   onCopyNote?: (noteId: string) => Promise<void>;
@@ -42,7 +41,6 @@ interface NotesListViewProps {
 
 const NotesListView: React.FC<NotesListViewProps> = ({
   selectedEquipment,
-  selectedBean,
   filterMode,
   onNoteClick,
   onDeleteNote,
@@ -127,9 +125,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
           ? `[ 没有找到匹配"${searchQuery.trim()}"的冲煮记录 ]`
           : selectedEquipment && filterMode === 'equipment'
             ? `[ 没有使用${equipmentNames[selectedEquipment] || selectedEquipment}的冲煮记录 ]`
-            : selectedBean && filterMode === 'bean'
-              ? `[ 没有使用${selectedBean}的冲煮记录 ]`
-              : '[ 暂无冲煮记录，请点击下方按钮添加 ]'}
+            : '[ 暂无冲煮记录，请点击下方按钮添加 ]'}
       </div>
     );
   }

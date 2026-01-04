@@ -43,31 +43,27 @@ export const globalCache: {
   equipmentNames: Record<string, string>;
   beanPrices: Record<string, number>;
   selectedEquipment: string | null;
-  selectedBean: string | null;
   selectedDate: string | null;
-  filterMode: 'equipment' | 'bean' | 'date';
+  filterMode: 'equipment' | 'date';
   dateGroupingMode: DateGroupingMode;
   sortOption: SortOption;
   availableEquipments: string[];
-  availableBeans: string[];
   availableDates: string[];
   initialized: boolean;
   totalConsumption: number;
   isLoading: boolean;
-  lastUpdated: number; // 🔥 添加最后更新时间戳
+  lastUpdated: number;
 } = {
   notes: [],
   filteredNotes: [],
   equipmentNames: {},
   beanPrices: {},
   selectedEquipment: null,
-  selectedBean: null,
   selectedDate: null,
   filterMode: 'date',
   dateGroupingMode: 'day', // 默认按日分组
   sortOption: SORT_OPTIONS.TIME_DESC,
   availableEquipments: [],
-  availableBeans: [],
   availableDates: [],
   initialized: false,
   totalConsumption: 0,
@@ -86,17 +82,6 @@ export const saveSelectedEquipmentPreference = (value: string | null): void => {
   saveStringState(MODULE_NAME, 'selectedEquipment', value || '');
 };
 
-// 从localStorage读取选中的咖啡豆
-export const getSelectedBeanPreference = (): string | null => {
-  const value = getStringState(MODULE_NAME, 'selectedBean', '');
-  return value === '' ? null : value;
-};
-
-// 保存选中的咖啡豆到localStorage
-export const saveSelectedBeanPreference = (value: string | null): void => {
-  saveStringState(MODULE_NAME, 'selectedBean', value || '');
-};
-
 // 从localStorage读取选中的日期
 export const getSelectedDatePreference = (): string | null => {
   const value = getStringState(MODULE_NAME, 'selectedDate', '');
@@ -109,15 +94,15 @@ export const saveSelectedDatePreference = (value: string | null): void => {
 };
 
 // 从localStorage读取过滤模式
-export const getFilterModePreference = (): 'equipment' | 'bean' | 'date' => {
+export const getFilterModePreference = (): 'equipment' | 'date' => {
   const value = getStringState(MODULE_NAME, 'filterMode', 'date');
-  return value as 'equipment' | 'bean' | 'date';
+  // 如果是旧的 'bean' 模式，返回默认的 'date'
+  if (value === 'bean') return 'date';
+  return value as 'equipment' | 'date';
 };
 
 // 保存过滤模式到localStorage
-export const saveFilterModePreference = (
-  value: 'equipment' | 'bean' | 'date'
-): void => {
+export const saveFilterModePreference = (value: 'equipment' | 'date'): void => {
   saveStringState(MODULE_NAME, 'filterMode', value);
 };
 
@@ -158,7 +143,6 @@ export const initializeGlobalCache = async (): Promise<void> => {
 
     // 初始化首选项
     globalCache.selectedEquipment = getSelectedEquipmentPreference();
-    globalCache.selectedBean = getSelectedBeanPreference();
     globalCache.selectedDate = getSelectedDatePreference();
     globalCache.filterMode = getFilterModePreference();
     globalCache.sortOption = getSortOptionPreference();
@@ -175,7 +159,7 @@ export const initializeGlobalCache = async (): Promise<void> => {
     globalCache.totalConsumption = totalConsumption;
 
     // 并行加载设备数据和收集ID
-    const [namesMap, equipmentIds, beanNames, datesList] = await Promise.all([
+    const [namesMap, equipmentIds, datesList] = await Promise.all([
       // 获取设备名称映射
       (async () => {
         const map: Record<string, string> = {};
@@ -206,17 +190,6 @@ export const initializeGlobalCache = async (): Promise<void> => {
         );
       })(),
 
-      // 收集咖啡豆名称
-      (async () => {
-        return Array.from(
-          new Set(
-            parsedNotes
-              .map(note => note.coffeeBeanInfo?.name)
-              .filter(Boolean) as string[]
-          )
-        );
-      })(),
-
       // 收集日期列表（按年-月）
       (async () => {
         const dateSet = new Set<string>();
@@ -235,7 +208,6 @@ export const initializeGlobalCache = async (): Promise<void> => {
     // 更新全局缓存
     globalCache.equipmentNames = namesMap;
     globalCache.availableEquipments = equipmentIds;
-    globalCache.availableBeans = beanNames;
     globalCache.availableDates = datesList;
 
     // 应用过滤器设置过滤后的笔记
@@ -246,10 +218,6 @@ export const initializeGlobalCache = async (): Promise<void> => {
     ) {
       filteredNotes = parsedNotes.filter(
         note => note.equipment === globalCache.selectedEquipment
-      );
-    } else if (globalCache.filterMode === 'bean' && globalCache.selectedBean) {
-      filteredNotes = parsedNotes.filter(
-        note => note.coffeeBeanInfo?.name === globalCache.selectedBean
       );
     } else if (globalCache.filterMode === 'date' && globalCache.selectedDate) {
       filteredNotes = parsedNotes.filter(note => {
@@ -286,7 +254,6 @@ if (typeof window !== 'undefined') {
 
 // 初始化全局缓存的状态
 globalCache.selectedEquipment = getSelectedEquipmentPreference();
-globalCache.selectedBean = getSelectedBeanPreference();
 globalCache.filterMode = getFilterModePreference();
 globalCache.sortOption = getSortOptionPreference();
 
