@@ -11,7 +11,7 @@ import {
   ColumnDef,
 } from '@tanstack/react-table';
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
-import { ExtendedCoffeeBean, generateBeanTitle } from '../types';
+import { ExtendedCoffeeBean } from '../types';
 import { isBeanEmpty } from '../preferences';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import {
@@ -19,8 +19,15 @@ import {
   getFlavorPeriodSettings,
   getDefaultFlavorPeriodByRoastLevelSync,
 } from '@/lib/utils/flavorPeriodUtils';
-import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import {
+  getRoasterLogoSync,
+  useSettingsStore,
+} from '@/lib/stores/settingsStore';
+import {
+  extractRoasterFromName,
+  formatBeanDisplayName,
+  getRoasterName,
+} from '@/lib/utils/beanVarietyUtils';
 
 // 表格列配置
 export type TableColumnKey =
@@ -110,18 +117,6 @@ interface TableViewProps {
   };
   visibleColumns?: TableColumnKey[];
 }
-
-// 从名称中移除烘焙商前缀
-const removeRoasterFromName = (name: string): string => {
-  if (!name) return name;
-  const roaster = extractRoasterFromName(name);
-  if (roaster === '未知烘焙商') return name;
-  const trimmedName = name.trim();
-  if (trimmedName.startsWith(roaster)) {
-    return trimmedName.slice(roaster.length).trim();
-  }
-  return name;
-};
 
 // 格式化工具函数
 const formatDateShort = (dateStr: string): string => {
@@ -398,6 +393,21 @@ const TableView: React.FC<TableViewProps> = ({
 }) => {
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
 
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   // 多重排序状态（持久化）
   const [sorting, setSorting] = useState<SortingState>(loadSorting);
 
@@ -441,7 +451,7 @@ const TableView: React.FC<TableViewProps> = ({
     const logos: Record<string, string | null> = {};
     allBeans.forEach(bean => {
       if (!bean.image && bean.name) {
-        const roasterName = extractRoasterFromName(bean.name);
+        const roasterName = getRoasterName(bean, roasterSettings);
         if (roasterName && roasterName !== '未知烘焙商') {
           const logo = getRoasterLogoSync(roasterName);
           logos[bean.id] = logo || null;
@@ -449,7 +459,7 @@ const TableView: React.FC<TableViewProps> = ({
       }
     });
     setRoasterLogos(logos);
-  }, [allBeans]);
+  }, [allBeans, roasterSettings]);
 
   // 定义所有列
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -462,7 +472,7 @@ const TableView: React.FC<TableViewProps> = ({
       ColumnDef<ExtendedCoffeeBean, any>
     > = {
       roaster: columnHelper.accessor(
-        row => extractRoasterFromName(row.name || '') || '-',
+        row => getRoasterName(row, roasterSettings) || '-',
         {
           id: 'roaster',
           header: '烘焙商',
@@ -472,8 +482,9 @@ const TableView: React.FC<TableViewProps> = ({
       ),
       name: columnHelper.accessor(
         row => {
-          const title = generateBeanTitle(row);
-          return showRoasterColumn ? removeRoasterFromName(title) : title;
+          const title = formatBeanDisplayName(row, roasterSettings);
+          // If roaster column is shown separately, just show the bean name without roaster
+          return showRoasterColumn ? row.name : title;
         },
         {
           id: 'name',

@@ -5,8 +5,14 @@ import { Virtuoso } from 'react-virtuoso';
 import Image from 'next/image';
 import { Plus } from 'lucide-react';
 import type { CoffeeBean } from '@/types/app';
-import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import {
+  getRoasterLogoSync,
+  useSettingsStore,
+} from '@/lib/stores/settingsStore';
+import {
+  formatBeanDisplayName,
+  getRoasterName,
+} from '@/lib/utils/beanVarietyUtils';
 import {
   getFlavorInfo,
   sortBeansByFlavorPeriod,
@@ -36,17 +42,34 @@ const BeanImage: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
   const [imageError, setImageError] = useState(false);
   const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   useEffect(() => {
     if (!bean.name || bean.image) {
       return;
     }
 
-    const roasterName = extractRoasterFromName(bean.name);
+    const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
       const logo = getRoasterLogoSync(roasterName);
       setRoasterLogo(logo || null);
     }
-  }, [bean.name, bean.image]);
+  }, [bean.name, bean.image, bean.roaster, roasterSettings]);
+
+  const roasterName = getRoasterName(bean, roasterSettings);
 
   return (
     <>
@@ -63,7 +86,7 @@ const BeanImage: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
       ) : roasterLogo && !imageError ? (
         <Image
           src={roasterLogo}
-          alt={extractRoasterFromName(bean.name) || '烘焙商图标'}
+          alt={roasterName || '烘焙商图标'}
           width={56}
           height={56}
           className="h-full w-full object-cover"
@@ -91,6 +114,21 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   showSkipOption = true,
 }) => {
   const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
 
   const setItemRef = React.useCallback(
     (id: string) => (node: HTMLDivElement | null) => {
@@ -288,7 +326,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
             </div>
             <div className="flex flex-col justify-center gap-y-1.5">
               <div className="line-clamp-2 text-justify text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
-                {bean.name}
+                {formatBeanDisplayName(bean, roasterSettings)}
                 <span className={statusClass}> {freshStatus}</span>
               </div>
               <div className="text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">

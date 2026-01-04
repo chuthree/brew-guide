@@ -153,6 +153,7 @@ interface FormData {
   coffeeBeanInfo: {
     name: string;
     roastLevel: string;
+    roaster?: string; // 烘焙商名称（可选）
   };
   image?: string;
   rating: number;
@@ -204,6 +205,7 @@ const getInitialCoffeeBeanInfo = (
   return {
     name: beanInfo?.name || '',
     roastLevel: normalizeRoastLevel(beanInfo?.roastLevel),
+    roaster: (beanInfo as any)?.roaster,
   };
 };
 
@@ -998,14 +1000,25 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       if (bean) {
         // 待创建的豆子只有名称，其他信息为空
         const isPending = isPendingCoffeeBean(bean);
+
+        // 分别存储 name 和 roaster，不在这里格式化
+        // 显示时根据当前设置动态格式化
+        const beanName = isPending
+          ? bean.name || ''
+          : (bean as CoffeeBean).name;
+        const beanRoaster = isPending
+          ? undefined
+          : (bean as CoffeeBean).roaster;
+
         setFormData(prev => ({
           ...prev,
           coffeeBeanInfo: {
-            name: bean.name || '',
+            name: beanName,
             roastLevel: isPending
               ? '中度烘焙'
               : normalizeRoastLevel((bean as CoffeeBean).roastLevel),
             roastDate: isPending ? '' : (bean as CoffeeBean).roastDate || '',
+            roaster: beanRoaster,
           },
         }));
       } else {
@@ -1016,6 +1029,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             name: '',
             roastLevel: '中度烘焙',
             roastDate: '',
+            roaster: undefined,
           },
         }));
       }

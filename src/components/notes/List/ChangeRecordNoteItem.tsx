@@ -4,6 +4,8 @@ import React from 'react';
 import { formatDate } from '../utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { BrewingNote } from '@/lib/core/config';
+import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 interface ChangeRecordNoteItemProps {
   note: BrewingNote;
@@ -24,8 +26,20 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
   isSelected = false,
   onToggleSelect,
 }) => {
-  // 获取笔记的关键信息
-  const beanName = note.coffeeBeanInfo?.name || '未知咖啡豆';
+  // 获取烘焙商相关设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+
+  // 使用格式化函数动态显示咖啡豆名称
+  const beanName =
+    formatNoteBeanDisplayName(note.coffeeBeanInfo, {
+      roasterFieldEnabled,
+      roasterSeparator,
+    }) || '未知咖啡豆';
   const dateFormatted = note.timestamp ? formatDate(note.timestamp) : '';
 
   // 判断是否是烘焙记录

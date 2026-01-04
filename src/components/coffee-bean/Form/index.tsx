@@ -34,7 +34,11 @@ import {
   getRoasterLogoSync,
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import {
+  extractRoasterFromName,
+  getRoasterName,
+} from '@/lib/utils/beanVarietyUtils';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
 interface CoffeeBeanFormProps {
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
@@ -185,6 +189,43 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
     // 烘焙商图标状态（仅用于显示，不存储到咖啡豆数据）
     const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
+
+    // 获取设置和所有咖啡豆用于烘焙商建议
+    const settings = useSettingsStore(state => state.settings);
+    const allBeans = useCoffeeBeanStore(state => state.beans);
+
+    // 计算烘焙商建议列表 - 从所有咖啡豆中提取唯一烘焙商，按使用频率排序，排除"未知烘焙商"
+    const roasterSuggestions = React.useMemo(() => {
+      if (!settings.roasterFieldEnabled) return [];
+
+      const roasterCount = new Map<string, number>();
+
+      // 统计每个烘焙商的咖啡豆数量
+      allBeans.forEach(b => {
+        // 优先使用 roaster 字段，否则从名称中提取
+        const roaster = getRoasterName(b, {
+          roasterFieldEnabled: settings.roasterFieldEnabled,
+          roasterSeparator: settings.roasterSeparator,
+        });
+
+        // 排除"未知烘焙商"
+        if (roaster && roaster !== '未知烘焙商') {
+          roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
+        }
+      });
+
+      // 按数量排序，数量多的在前
+      return Array.from(roasterCount.entries())
+        .sort((a, b) => {
+          // 按数量降序排列
+          if (a[1] !== b[1]) {
+            return b[1] - a[1];
+          }
+          // 数量相同时按名称字母顺序排列
+          return a[0].localeCompare(b[0], 'zh-CN');
+        })
+        .map(entry => entry[0]);
+    }, [allBeans, settings.roasterFieldEnabled, settings.roasterSeparator]);
 
     // 加载烘焙商图标 - 当咖啡豆名称变化时
     useEffect(() => {
@@ -926,6 +967,8 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
               recognitionImage={recognitionImage}
               onCapacityChange={handleCapacityChangeForTypeInference}
               roasterLogo={roasterLogo}
+              roasterFieldEnabled={settings.roasterFieldEnabled}
+              roasterSuggestions={roasterSuggestions}
             />
           );
 

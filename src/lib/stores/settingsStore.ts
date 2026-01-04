@@ -186,6 +186,11 @@ export const defaultSettings: AppSettings = {
 
   // 冲煮设置
   showCoffeeBeanSelectionStep: false, // 默认显示咖啡豆选择步骤
+
+  // 烘焙商字段设置
+  roasterFieldEnabled: false, // 是否启用独立烘焙商字段
+  roasterSeparator: ' ', // 烘焙商分隔符，默认空格
+  roasterMigrationCompleted: false, // 迁移是否已完成
 };
 
 /**

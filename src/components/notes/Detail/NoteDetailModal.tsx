@@ -22,6 +22,7 @@ import { ChevronLeft, Pen } from 'lucide-react';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 
 // 信息行组件
@@ -246,7 +247,19 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     return false;
   }, [note]);
 
-  const beanName = note?.coffeeBeanInfo?.name;
+  // 获取烘焙商相关设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+
+  // 使用格式化函数动态显示咖啡豆名称
+  const beanName = formatNoteBeanDisplayName(note?.coffeeBeanInfo, {
+    roasterFieldEnabled,
+    roasterSeparator,
+  });
   const validTasteRatings = useMemo(
     () => (note ? getValidTasteRatings(note.taste) : []),
     [note, getValidTasteRatings]

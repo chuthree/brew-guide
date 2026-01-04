@@ -4,12 +4,15 @@ import React, { useState, useRef } from 'react';
 import type { BrewingNote } from '@/lib/core/config';
 import type { ChangeRecordDetails } from '@/types/app';
 import NoteFormHeader from '@/components/notes/ui/NoteFormHeader';
+import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 interface ChangeRecordFormData {
   coffeeBeanInfo: {
     name: string;
     roastLevel: string;
     roastDate?: string;
+    roaster?: string;
   };
   changeAmount: string; // 变化量输入值(字符串形式)
   notes: string; // 备注
@@ -34,6 +37,14 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
   hideHeader = false,
   onTimestampChange,
 }) => {
+  // 获取烘焙商相关设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+
   const formRef = useRef<HTMLFormElement>(null);
   const [timestamp, setTimestamp] = useState<Date>(
     initialData?.timestamp ? new Date(initialData.timestamp) : new Date()
@@ -156,7 +167,10 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
         {/* 咖啡豆信息 */}
         <div className="space-y-4">
           <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-            {formData.coffeeBeanInfo.name}
+            {formatNoteBeanDisplayName(formData.coffeeBeanInfo, {
+              roasterFieldEnabled,
+              roasterSeparator,
+            }) || formData.coffeeBeanInfo.name}
           </div>
         </div>
 

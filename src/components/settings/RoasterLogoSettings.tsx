@@ -8,7 +8,10 @@ import {
   getSettingsStore,
 } from '@/lib/stores/settingsStore';
 import { RoasterConfig } from '@/lib/core/db';
-import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
+import {
+  extractUniqueRoasters,
+  RoasterSettings,
+} from '@/lib/utils/beanVarietyUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
 import hapticsUtils from '@/lib/ui/haptics';
@@ -82,7 +85,12 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
   const loadRoasters = useCallback(() => {
     try {
       const beans = useCoffeeBeanStore.getState().beans as ExtendedCoffeeBean[];
-      const uniqueRoasters = extractUniqueRoasters(beans);
+      const settings = getSettingsStore().settings;
+      const roasterSettings: RoasterSettings = {
+        roasterFieldEnabled: settings.roasterFieldEnabled,
+        roasterSeparator: settings.roasterSeparator,
+      };
+      const uniqueRoasters = extractUniqueRoasters(beans, roasterSettings);
       // 过滤掉"未知烘焙商"
       const filteredRoasters = uniqueRoasters.filter(r => r !== '未知烘焙商');
       setRoasters(filteredRoasters);

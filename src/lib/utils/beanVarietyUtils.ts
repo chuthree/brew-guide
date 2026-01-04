@@ -52,7 +52,7 @@ export const getBeanVarieties = (bean: CoffeeBean): string[] => {
  * @param bean 咖啡豆对象
  * @returns 主要品种名称，如果没有则返回null
  */
-const getBeanPrimaryVariety = (bean: ExtendedCoffeeBean): string | null => {
+const _getBeanPrimaryVariety = (bean: ExtendedCoffeeBean): string | null => {
   const varieties = getBeanVarieties(bean);
   return varieties.length > 0 ? varieties[0] : null;
 };
@@ -77,7 +77,7 @@ export const beanHasVariety = (
  * @param bean 咖啡豆对象
  * @returns 品种显示文本或null
  */
-const getBeanVarietyDisplay = (bean: ExtendedCoffeeBean): string | null => {
+const _getBeanVarietyDisplay = (bean: ExtendedCoffeeBean): string | null => {
   const varieties = getBeanVarieties(bean);
   return varieties.length > 0 ? varieties.join('、') : null;
 };
@@ -153,7 +153,7 @@ export const extractUniqueOrigins = (beans: CoffeeBean[]): string[] => {
  * @param beans 咖啡豆数组
  * @returns 排序后的唯一处理法数组
  */
-const extractUniqueProcesses = (beans: CoffeeBean[]): string[] => {
+const _extractUniqueProcesses = (beans: CoffeeBean[]): string[] => {
   const processesSet = new Set<string>();
 
   beans.forEach(bean => {
@@ -181,7 +181,10 @@ export const beanHasOrigin = (bean: CoffeeBean, origin: string): boolean => {
  * @param process 要检查的处理法名称
  * @returns 是否包含该处理法
  */
-const beanHasProcess = (bean: ExtendedCoffeeBean, process: string): boolean => {
+const _beanHasProcess = (
+  bean: ExtendedCoffeeBean,
+  process: string
+): boolean => {
   const processes = getBeanProcesses(bean);
   return processes.includes(process);
 };
@@ -401,12 +404,65 @@ export const extractAvailableFlavorPeriodStatuses = (
 };
 
 /**
+ * 烘焙商相关设置接口
+ */
+export interface RoasterSettings {
+  roasterFieldEnabled?: boolean;
+  roasterSeparator?: ' ' | '/';
+}
+
+/**
+ * 获取烘焙商名称
+ * 优先使用 roaster 字段，否则从名称中提取
+ * @param bean 咖啡豆对象
+ * @param settings 烘焙商相关设置
+ * @returns 烘焙商名称
+ */
+export const getRoasterName = (
+  bean: CoffeeBean,
+  settings: RoasterSettings
+): string => {
+  // 如果启用了烘焙商字段且有值，直接返回
+  if (settings.roasterFieldEnabled && bean.roaster) {
+    return bean.roaster;
+  }
+
+  // 否则从名称中提取
+  return extractRoasterFromName(bean.name, settings.roasterSeparator);
+};
+
+/**
+ * 格式化咖啡豆显示名称
+ * 根据设置和分隔符格式化显示
+ * @param bean 咖啡豆对象
+ * @param settings 烘焙商相关设置
+ * @returns 格式化后的显示名称
+ */
+export const formatBeanDisplayName = (
+  bean: CoffeeBean,
+  settings: RoasterSettings
+): string => {
+  // 如果未启用烘焙商字段或没有 roaster 字段值，直接返回名称
+  if (!settings.roasterFieldEnabled || !bean.roaster) {
+    return bean.name;
+  }
+
+  // 根据分隔符设置格式化显示
+  const separator = settings.roasterSeparator === '/' ? '/' : ' ';
+  return `${bean.roaster}${separator}${bean.name}`;
+};
+
+/**
  * 从咖啡豆名称中提取烘焙商名称
- * 假设烘焙商名称在咖啡豆名称的最前面，用空格分隔
+ * 假设烘焙商名称在咖啡豆名称的最前面，用分隔符分隔
  * @param beanName 咖啡豆名称
+ * @param separator 分隔符，默认为空格，支持 "/" 分隔符
  * @returns 烘焙商名称，如果无法识别则返回"未知烘焙商"
  */
-export const extractRoasterFromName = (beanName: string): string => {
+export const extractRoasterFromName = (
+  beanName: string,
+  separator: ' ' | '/' = ' '
+): string => {
   if (!beanName || typeof beanName !== 'string') {
     return '未知烘焙商';
   }
@@ -416,8 +472,9 @@ export const extractRoasterFromName = (beanName: string): string => {
     return '未知烘焙商';
   }
 
-  // 按空格分割名称
-  const parts = trimmedName.split(/\s+/);
+  // 根据分隔符分割名称
+  const parts =
+    separator === '/' ? trimmedName.split('/') : trimmedName.split(/\s+/);
 
   // 如果只有一个词，可能整个就是烘焙商名称，或者没有烘焙商信息
   if (parts.length === 1) {
@@ -446,18 +503,76 @@ export const extractRoasterFromName = (beanName: string): string => {
 };
 
 /**
+ * 从咖啡豆名称中移除烘焙商部分，返回纯咖啡豆名称
+ * @param beanName 完整的咖啡豆名称（包含烘焙商）
+ * @param separator 分隔符，默认为空格
+ * @returns 移除烘焙商后的咖啡豆名称
+ */
+export const removeRoasterFromName = (
+  beanName: string,
+  separator: ' ' | '/' = ' '
+): string => {
+  if (!beanName || typeof beanName !== 'string') {
+    return beanName || '';
+  }
+
+  const trimmedName = beanName.trim();
+  if (!trimmedName) {
+    return '';
+  }
+
+  // 根据分隔符分割名称
+  const parts =
+    separator === '/' ? trimmedName.split('/') : trimmedName.split(/\s+/);
+
+  // 如果只有一个词，无法分离烘焙商和名称
+  if (parts.length === 1) {
+    return trimmedName;
+  }
+
+  // 检查第一个词是否是烘焙商（使用与 extractRoasterFromName 相同的逻辑）
+  const firstPart = parts[0];
+  const excludeWords = ['豆', 'bean', 'beans', '手冲', '意式', '咖啡豆'];
+
+  // 如果第一个词是排除词，则整个名称都是咖啡豆名称
+  if (
+    excludeWords.some(word => firstPart.toLowerCase() === word.toLowerCase()) ||
+    firstPart.toLowerCase() === 'coffee'
+  ) {
+    return trimmedName;
+  }
+
+  // 移除第一个词（烘焙商），返回剩余部分
+  const remainingParts = parts.slice(1);
+  return separator === '/'
+    ? remainingParts.join('/')
+    : remainingParts.join(' ');
+};
+
+/**
  * 从咖啡豆数组中提取所有唯一的烘焙商
  * @param beans 咖啡豆数组
+ * @param settings 烘焙商相关设置（可选）
  * @returns 按数量排序的唯一烘焙商数组（数量多的在前）
  */
 export const extractUniqueRoasters = (
-  beans: ExtendedCoffeeBean[]
+  beans: ExtendedCoffeeBean[],
+  settings?: RoasterSettings
 ): string[] => {
   const roasterCount = new Map<string, number>();
 
   // 统计每个烘焙商的咖啡豆数量
   beans.forEach(bean => {
-    const roaster = extractRoasterFromName(bean.name);
+    let roaster: string;
+
+    // 如果启用了烘焙商字段，优先使用 roaster 字段
+    if (settings?.roasterFieldEnabled && bean.roaster) {
+      roaster = bean.roaster;
+    } else {
+      // 否则从名称中提取
+      roaster = extractRoasterFromName(bean.name, settings?.roasterSeparator);
+    }
+
     roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
   });
 
@@ -485,12 +600,56 @@ export const extractUniqueRoasters = (
  * 检查咖啡豆是否属于指定的烘焙商
  * @param bean 咖啡豆对象
  * @param roaster 要检查的烘焙商名称
+ * @param settings 烘焙商相关设置（可选）
  * @returns 是否属于该烘焙商
  */
 export const beanHasRoaster = (
   bean: ExtendedCoffeeBean,
-  roaster: string
+  roaster: string,
+  settings?: RoasterSettings
 ): boolean => {
-  const beanRoaster = extractRoasterFromName(bean.name);
+  let beanRoaster: string;
+
+  // 如果启用了烘焙商字段，优先检查 roaster 字段
+  if (settings?.roasterFieldEnabled && bean.roaster) {
+    beanRoaster = bean.roaster;
+  } else {
+    // 否则从名称中提取
+    beanRoaster = extractRoasterFromName(bean.name, settings?.roasterSeparator);
+  }
+
   return beanRoaster === roaster;
+};
+
+/**
+ * 笔记中咖啡豆信息的接口
+ */
+export interface NoteCoffeeBeanInfo {
+  name: string;
+  roaster?: string;
+}
+
+/**
+ * 格式化笔记中的咖啡豆显示名称
+ * 根据当前设置动态组合 roaster 和 name
+ * @param beanInfo 笔记中存储的咖啡豆信息
+ * @param settings 烘焙商相关设置
+ * @returns 格式化后的显示名称
+ */
+export const formatNoteBeanDisplayName = (
+  beanInfo: NoteCoffeeBeanInfo | undefined | null,
+  settings?: RoasterSettings
+): string => {
+  if (!beanInfo?.name) {
+    return '';
+  }
+
+  // 如果未启用烘焙商字段或没有 roaster 值，直接返回名称
+  if (!settings?.roasterFieldEnabled || !beanInfo.roaster) {
+    return beanInfo.name;
+  }
+
+  // 根据分隔符设置格式化显示
+  const separator = settings.roasterSeparator === '/' ? '/' : ' ';
+  return `${beanInfo.roaster}${separator}${beanInfo.name}`;
 };

@@ -73,7 +73,9 @@ import {
   beanHasOrigin,
   beanHasFlavorPeriodStatus,
   beanHasRoaster,
+  RoasterSettings,
 } from '@/lib/utils/beanVarietyUtils';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import ViewSwitcher from './components/ViewSwitcher';
 import InventoryView from './components/InventoryView';
 import BeanListItem from './components/BeanListItem';
@@ -81,7 +83,6 @@ import StatsView from './components/StatsView';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { exportListPreview } from './components/ListExporter';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
-import { useSettingsStore } from '@/lib/stores/settingsStore';
 import {
   type TableColumnKey,
   getDefaultVisibleColumns,
@@ -333,6 +334,21 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   }, [beans, selectedBeanState]);
 
   // 计算每种类型的咖啡豆数量（用于类型筛选显示）
+  // 获取烘焙商相关设置 - 使用单独的选择器避免无限循环
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo<RoasterSettings>(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   const {
     espressoCount,
     filterCount,
@@ -381,7 +397,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       case 'roaster':
         if (selectedRoaster) {
           beansToCount = beansToCount.filter(bean =>
-            beanHasRoaster(bean, selectedRoaster)
+            beanHasRoaster(bean, selectedRoaster, roasterSettings)
           );
         }
         break;
@@ -429,6 +445,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     selectedOrigin,
     selectedFlavorPeriod,
     selectedRoaster,
+    roasterSettings,
   ]);
 
   const updateFilteredBeansAndCategories = useCallback(

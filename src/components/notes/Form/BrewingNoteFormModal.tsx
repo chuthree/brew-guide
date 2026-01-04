@@ -335,10 +335,12 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       completeNote['beanId'] = selectedCoffeeBean.id;
 
       // 始终设置咖啡豆信息，无论是否已存在
+      // 分别存储 name 和 roaster，显示时根据设置动态格式化
       completeNote.coffeeBeanInfo = {
         name: selectedCoffeeBean.name || '',
         roastLevel: selectedCoffeeBean.roastLevel || '中度烘焙',
         roastDate: selectedCoffeeBean.roastDate || '',
+        roaster: selectedCoffeeBean.roaster,
       };
 
       // 注意：咖啡豆剩余量的扣除已在 BrewingNoteForm.handleSubmit 中处理

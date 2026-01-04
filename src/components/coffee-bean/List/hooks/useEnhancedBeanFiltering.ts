@@ -17,7 +17,9 @@ import {
   beanHasRoaster,
   extractUniqueRoasters,
   FlavorPeriodStatus,
+  RoasterSettings,
 } from '@/lib/utils/beanVarietyUtils';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 interface UseEnhancedBeanFilteringProps {
   beans: ExtendedCoffeeBean[];
@@ -57,6 +59,23 @@ export const useEnhancedBeanFiltering = ({
   showEmptyBeans,
   sortOption,
 }: UseEnhancedBeanFilteringProps): UseEnhancedBeanFilteringReturn => {
+  // 获取烘焙商相关设置 - 使用单独的选择器避免无限循环
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+
+  // 使用 useMemo 缓存 roasterSettings 对象
+  const roasterSettings = useMemo<RoasterSettings>(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   // 提取通用的筛选和排序逻辑
   const filterAndSortBeans = useCallback(
     (beanList: ExtendedCoffeeBean[], isEmptyFilter: boolean) => {
@@ -106,7 +125,7 @@ export const useEnhancedBeanFiltering = ({
         case 'roaster':
           if (selectedRoaster) {
             filtered = filtered.filter(bean =>
-              beanHasRoaster(bean, selectedRoaster)
+              beanHasRoaster(bean, selectedRoaster, roasterSettings)
             );
           }
           break;
@@ -151,6 +170,7 @@ export const useEnhancedBeanFiltering = ({
       selectedBeanType,
       selectedBeanState,
       sortOption,
+      roasterSettings,
     ]
   );
 
@@ -208,8 +228,8 @@ export const useEnhancedBeanFiltering = ({
 
   // 使用useMemo缓存可用烘焙商列表
   const availableRoasters = useMemo(() => {
-    return extractUniqueRoasters(baseFilteredBeans);
-  }, [baseFilteredBeans]);
+    return extractUniqueRoasters(baseFilteredBeans, roasterSettings);
+  }, [baseFilteredBeans, roasterSettings]);
 
   return {
     filteredBeans,

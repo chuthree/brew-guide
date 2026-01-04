@@ -29,6 +29,7 @@ export interface CoffeeBean {
   name: string; // 咖啡豆名称
 
   // 基本信息
+  roaster?: string; // 烘焙商名称（可选）
   image?: string; // 正面图片
   backImage?: string; // 背面图片
   capacity?: string; // 容量
@@ -114,6 +115,7 @@ export interface BrewingNoteData {
     name: string;
     roastLevel: string;
     roastDate?: string;
+    roaster?: string; // 烘焙商名称（可选，用于动态显示）
   };
   rating: number;
   taste: TasteRatings;

@@ -5,6 +5,8 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { NoteItemProps } from '../types';
 import { formatDate, formatRating } from '../utils';
+import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(
@@ -29,6 +31,14 @@ const NoteItemCard: React.FC<NoteItemProps> = ({
   getValidTasteRatings,
   coffeeBeans = [],
 }) => {
+  // 获取烘焙商相关设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+
   // 图片查看器状态和错误状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -47,7 +57,12 @@ const NoteItemCard: React.FC<NoteItemProps> = ({
     note.equipment && note.equipment.trim() !== ''
       ? equipmentNames[note.equipment] || note.equipment
       : '未知器具';
-  const beanName = note.coffeeBeanInfo?.name;
+
+  // 使用格式化函数动态显示咖啡豆名称
+  const beanName = formatNoteBeanDisplayName(note.coffeeBeanInfo, {
+    roasterFieldEnabled,
+    roasterSeparator,
+  });
   const beanUnitPrice = beanName ? unitPriceCache[beanName] || 0 : 0;
 
   // 检测内容是否溢出

@@ -4,6 +4,8 @@ import React, { useRef, useEffect } from 'react';
 import { CoffeeBean } from '@/types/app';
 import { DatePicker } from '@/components/common/ui/DatePicker';
 import HighlightText from '@/components/common/ui/HighlightText';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import {
   formatNumber,
   formatDateString,
@@ -52,9 +54,24 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   const remainingInputRef = useRef<HTMLInputElement>(null);
   const priceInputRef = useRef<HTMLInputElement>(null);
 
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = {
+    roasterFieldEnabled,
+    roasterSeparator,
+  };
+
   const currentBean = isAddMode ? tempBean : bean;
   const isGreenBeanType = currentBean?.beanState === 'green';
   const flavorInfo = getFlavorInfo(bean);
+
+  // 获取格式化后的显示名称
+  const displayName = bean ? formatBeanDisplayName(bean, roasterSettings) : '';
 
   // 日期相关
   const dateField = isGreenBeanType ? 'purchaseDate' : 'roastDate';
@@ -102,12 +119,9 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           ) : (
             <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
               {searchQuery ? (
-                <HighlightText
-                  text={bean?.name || ''}
-                  highlight={searchQuery}
-                />
+                <HighlightText text={displayName} highlight={searchQuery} />
               ) : (
-                bean?.name
+                displayName
               )}
             </div>
           )}

@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { BrewingNote } from '@/lib/core/config';
+import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 动态导入 ImageViewer 组件
 const ImageViewer = dynamic(
@@ -28,6 +30,14 @@ const GalleryView: React.FC<GalleryViewProps> = ({
   selectedNotes = [],
   onToggleSelect,
 }) => {
+  // 获取烘焙商相关设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{
     url: string;
@@ -40,9 +50,14 @@ const GalleryView: React.FC<GalleryViewProps> = ({
   const handleImageClick = (note: BrewingNote, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isShareMode && note.image) {
+      const beanName =
+        formatNoteBeanDisplayName(note.coffeeBeanInfo, {
+          roasterFieldEnabled,
+          roasterSeparator,
+        }) || '笔记图片';
       setSelectedImage({
         url: note.image,
-        alt: note.coffeeBeanInfo?.name || '笔记图片',
+        alt: beanName,
       });
       setImageViewerOpen(true);
     }
@@ -68,7 +83,11 @@ const GalleryView: React.FC<GalleryViewProps> = ({
       {/* 图片网格 - 响应式布局，简洁的相册风格 */}
       <div className="grid grid-cols-3 gap-1 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {notesWithImages.map(note => {
-          const beanName = note.coffeeBeanInfo?.name || '未知豆子';
+          const beanName =
+            formatNoteBeanDisplayName(note.coffeeBeanInfo, {
+              roasterFieldEnabled,
+              roasterSeparator,
+            }) || '未知豆子';
 
           return (
             <div

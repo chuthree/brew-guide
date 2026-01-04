@@ -12,7 +12,10 @@ import {
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
 import { RoasterConfig } from '@/lib/core/db';
-import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
+import {
+  extractUniqueRoasters,
+  RoasterSettings,
+} from '@/lib/utils/beanVarietyUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
 import { ChevronDown } from 'lucide-react';
@@ -100,7 +103,12 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
   const loadRoasters = async () => {
     try {
       const beans = useCoffeeBeanStore.getState().beans as ExtendedCoffeeBean[];
-      const uniqueRoasters = extractUniqueRoasters(beans);
+      const settingsData = getSettingsStore().settings;
+      const roasterSettings: RoasterSettings = {
+        roasterFieldEnabled: settingsData.roasterFieldEnabled,
+        roasterSeparator: settingsData.roasterSeparator,
+      };
+      const uniqueRoasters = extractUniqueRoasters(beans, roasterSettings);
       const filteredRoasters = uniqueRoasters.filter(r => r !== '未知烘焙商');
       setRoasters(filteredRoasters);
     } catch (error) {

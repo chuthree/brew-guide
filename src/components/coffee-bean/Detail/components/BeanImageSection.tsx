@@ -1,13 +1,27 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
 import { Camera, Image as ImageIcon } from 'lucide-react';
 import { captureImage } from '@/lib/utils/imageCapture';
 import { compressImage } from '@/lib/utils/imageCompression';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
-import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
+import { getRoasterName, RoasterSettings } from '@/lib/utils/beanVarietyUtils';
+import {
+  getRoasterLogoSync,
+  useSettingsStore,
+} from '@/lib/stores/settingsStore';
+
+// 获取烘焙商名称用于 alt 文本的辅助函数
+const getRoasterAltText = (
+  beanData: CoffeeBean | Partial<CoffeeBean> | null,
+  roasterSettings: RoasterSettings
+): string => {
+  if (!beanData) return '烘焙商图标';
+  return (
+    getRoasterName(beanData as CoffeeBean, roasterSettings) || '烘焙商图标'
+  );
+};
 
 interface BeanImageSectionProps {
   bean: CoffeeBean | null;
@@ -26,20 +40,37 @@ export const BeanImageSmall: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
   const [imageError, setImageError] = useState(false);
   const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   useEffect(() => {
     if (!bean.name || bean.image) {
       setRoasterLogo(null);
       return;
     }
 
-    const roasterName = extractRoasterFromName(bean.name);
+    const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
       const logo = getRoasterLogoSync(roasterName);
       setRoasterLogo(logo || null);
     } else {
       setRoasterLogo(null);
     }
-  }, [bean.name, bean.image]);
+  }, [bean.name, bean.image, bean.roaster, roasterSettings]);
+
+  const roasterName = getRoasterName(bean, roasterSettings);
 
   return (
     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xs bg-neutral-200/30 dark:bg-neutral-800/40">
@@ -54,7 +85,7 @@ export const BeanImageSmall: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
       ) : roasterLogo && !imageError ? (
         <Image
           src={roasterLogo}
-          alt={extractRoasterFromName(bean.name) || '烘焙商图标'}
+          alt={roasterName || '烘焙商图标'}
           fill
           className="object-cover"
           onError={() => setImageError(true)}
@@ -79,6 +110,21 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
   handleUpdateField,
   onImageClick,
 }) => {
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   // 处理图片选择
   const handleImageSelect = async (
     source: 'camera' | 'gallery',
@@ -139,6 +185,7 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
             setTempBean={setTempBean}
             handleImageSelect={handleImageSelect}
             onImageClick={onImageClick}
+            roasterSettings={roasterSettings}
           />
         ) : (
           <ViewModeImages
@@ -147,6 +194,7 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
             imageError={imageError}
             setImageError={setImageError}
             onImageClick={onImageClick}
+            roasterSettings={roasterSettings}
           />
         )}
       </div>
@@ -166,6 +214,7 @@ const AddModeImages: React.FC<{
     imageType: 'front' | 'back'
   ) => void;
   onImageClick: (imageUrl: string, backImageUrl?: string) => void;
+  roasterSettings: RoasterSettings;
 }> = ({
   tempBean,
   roasterLogo,
@@ -174,6 +223,7 @@ const AddModeImages: React.FC<{
   setTempBean,
   handleImageSelect,
   onImageClick,
+  roasterSettings,
 }) => {
   // 状态: 用户正面图 + 用户背面图
   if (tempBean.image && tempBean.backImage) {
@@ -287,7 +337,7 @@ const AddModeImages: React.FC<{
         >
           <Image
             src={roasterLogo}
-            alt={extractRoasterFromName(tempBean.name || '') || '烘焙商图标'}
+            alt={getRoasterAltText(tempBean, roasterSettings)}
             height={192}
             width={192}
             className="h-full w-auto object-cover"
@@ -416,7 +466,15 @@ const ViewModeImages: React.FC<{
   imageError: boolean;
   setImageError: (error: boolean) => void;
   onImageClick: (imageUrl: string, backImageUrl?: string) => void;
-}> = ({ bean, roasterLogo, imageError, setImageError, onImageClick }) => {
+  roasterSettings: RoasterSettings;
+}> = ({
+  bean,
+  roasterLogo,
+  imageError,
+  setImageError,
+  onImageClick,
+  roasterSettings,
+}) => {
   if (bean?.image && !imageError) {
     return (
       <>
@@ -462,7 +520,7 @@ const ViewModeImages: React.FC<{
         <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <Image
             src={roasterLogo}
-            alt={extractRoasterFromName(bean?.name || '') || '烘焙商图标'}
+            alt={getRoasterAltText(bean, roasterSettings)}
             height={192}
             width={192}
             className="h-full w-auto object-cover"

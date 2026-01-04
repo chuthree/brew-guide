@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { ExtendedCoffeeBean, generateBeanTitle } from '../types';
+import { ExtendedCoffeeBean } from '../types';
 import { isBeanEmpty } from '../preferences';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import HighlightText from '@/components/common/ui/HighlightText';
@@ -10,8 +10,14 @@ import {
   calculateFlavorInfo,
   getDefaultFlavorPeriodByRoastLevelSync,
 } from '@/lib/utils/flavorPeriodUtils';
-import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import {
+  getRoasterLogoSync,
+  useSettingsStore,
+} from '@/lib/stores/settingsStore';
+import {
+  formatBeanDisplayName,
+  getRoasterName,
+} from '@/lib/utils/beanVarietyUtils';
 
 interface BeanListItemProps {
   bean: ExtendedCoffeeBean;
@@ -58,6 +64,21 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   const [internalNotesExpanded, setInternalNotesExpanded] = useState(false);
   const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   // 使用外部状态或内部状态
   const isNotesExpanded =
     externalNotesExpanded !== undefined
@@ -71,12 +92,12 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
       return;
     }
 
-    const roasterName = extractRoasterFromName(bean.name);
+    const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
       const logo = getRoasterLogoSync(roasterName);
       setRoasterLogo(logo || null);
     }
-  }, [bean.name, bean.image]);
+  }, [bean.name, bean.image, bean.roaster, roasterSettings]);
 
   // 设置默认值
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
@@ -161,7 +182,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
     // 如果没有自定义值，从flavorInfo中获取默认值
     if (startDay === 0 && endDay === 0) {
-      const roasterName = extractRoasterFromName(bean.name);
+      const roasterName = getRoasterName(bean, roasterSettings);
       const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
         bean.roastLevel || '',
         undefined,
@@ -206,10 +227,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
       isFrozen: bean.isFrozen || false,
       isInTransit: bean.isInTransit || false,
     };
-  }, [bean]);
+  }, [bean, roasterSettings]);
 
   const isEmpty = isBeanEmpty(bean);
-  const displayTitle = title || generateBeanTitle(bean);
+  const displayTitle = title || formatBeanDisplayName(bean, roasterSettings);
 
   const formatNumber = (value: string | undefined): string =>
     !value
@@ -375,7 +396,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                       url: bean.image || roasterLogo || '',
                       alt: bean.image
                         ? bean.name || '咖啡豆图片'
-                        : extractRoasterFromName(bean.name) + ' 烘焙商图标',
+                        : getRoasterName(bean, roasterSettings) + ' 烘焙商图标',
                       backUrl: bean.backImage,
                     },
                   })
@@ -404,7 +425,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
               // 显示烘焙商图标
               <Image
                 src={roasterLogo}
-                alt={extractRoasterFromName(bean.name) || '烘焙商图标'}
+                alt={getRoasterName(bean, roasterSettings) || '烘焙商图标'}
                 height={48}
                 width={48}
                 unoptimized

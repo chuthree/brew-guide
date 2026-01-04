@@ -11,8 +11,11 @@ import { Virtuoso } from 'react-virtuoso';
 import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
-import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import {
+  getRoasterLogoSync,
+  useSettingsStore,
+} from '@/lib/stores/settingsStore';
+import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
 import {
   getFlavorInfo,
   sortBeansByFlavorPeriod,
@@ -26,18 +29,35 @@ const BeanImage: React.FC<{
   const [imageError, setImageError] = useState(false);
   const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   useEffect(() => {
     if (!bean.name || bean.image) {
       // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
       return;
     }
 
-    const roasterName = extractRoasterFromName(bean.name);
+    const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
       const logo = getRoasterLogoSync(roasterName);
       setRoasterLogo(logo || null);
     }
-  }, [bean.name, bean.image]);
+  }, [bean.name, bean.image, bean.roaster, roasterSettings]);
+
+  const roasterName = getRoasterName(bean, roasterSettings);
 
   return (
     <>
@@ -55,7 +75,7 @@ const BeanImage: React.FC<{
       ) : roasterLogo && !imageError ? (
         <Image
           src={roasterLogo}
-          alt={extractRoasterFromName(bean.name) || '烘焙商图标'}
+          alt={roasterName || '烘焙商图标'}
           width={56}
           height={56}
           className="h-full w-full object-cover"

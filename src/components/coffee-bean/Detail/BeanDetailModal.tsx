@@ -19,7 +19,7 @@ import {
   getRoasterLogoSync,
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 
 import {
@@ -296,14 +296,24 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       return;
     }
 
-    const roasterName = extractRoasterFromName(bean.name);
+    const roasterSettings = {
+      roasterFieldEnabled: storeSettings?.roasterFieldEnabled,
+      roasterSeparator: storeSettings?.roasterSeparator,
+    };
+    const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
       const logo = getRoasterLogoSync(roasterName);
       setRoasterLogo(logo || null);
     } else {
       setRoasterLogo(null);
     }
-  }, [bean?.name, bean?.image]);
+  }, [
+    bean?.name,
+    bean?.image,
+    bean?.roaster,
+    storeSettings?.roasterFieldEnabled,
+    storeSettings?.roasterSeparator,
+  ]);
 
   // 加载相关记录
   useEffect(() => {
@@ -388,8 +398,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       const customFlavorPeriod =
         settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
 
-      const beanName = isAddMode ? tempBean.name : bean?.name;
-      const roasterName = extractRoasterFromName(beanName || '');
+      const currentBean = isAddMode ? tempBean : bean;
+      const roasterSettings = {
+        roasterFieldEnabled: settings.roasterFieldEnabled,
+        roasterSeparator: settings.roasterSeparator,
+      };
+      const roasterName = getRoasterName(
+        currentBean as CoffeeBean,
+        roasterSettings
+      );
 
       const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
         level,

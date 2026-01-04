@@ -40,6 +40,10 @@ interface BasicInfoProps {
   onCapacityChange?: (capacity: string) => void;
   /** 烘焙商图标（自动从烘焙商名称匹配获取） */
   roasterLogo?: string | null;
+  /** 是否启用烘焙商字段 */
+  roasterFieldEnabled?: boolean;
+  /** 烘焙商建议列表 */
+  roasterSuggestions?: string[];
 }
 
 // 判断是否为生豆
@@ -75,6 +79,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   recognitionImage,
   onCapacityChange,
   roasterLogo,
+  roasterFieldEnabled = false,
+  roasterSuggestions = [],
 }) => {
   // 处理容量和剩余容量的状态
   const [capacityValue, setCapacityValue] = useState('');
@@ -418,28 +424,66 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         </div>
       </div>
 
-      <div className="w-full space-y-2">
-        <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-          咖啡豆名称 <span className="text-red-500">*</span>{' '}
-          <span className="ml-1 text-xs text-neutral-400 dark:text-neutral-500">
-            (可用：{isGreenBean(bean) ? '生豆商' : '烘焙商'} 咖啡豆名称)
-          </span>
-        </label>
-        <AutocompleteInput
-          value={bean.name || ''}
-          onChange={onBeanChange('name')}
-          placeholder="输入咖啡豆名称"
-          suggestions={[]}
-          required
-          clearable
-          inputMode="text"
-          onBlur={() => {
-            if (!bean.name?.trim()) {
-              onBeanChange('name')('未命名咖啡豆');
-            }
-          }}
-        />
-      </div>
+      {/* 烘焙商和咖啡豆名称 - 启用烘焙商字段时并排显示 */}
+      {roasterFieldEnabled ? (
+        <div className="grid w-full grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              烘焙商
+            </label>
+            <AutocompleteInput
+              value={bean.roaster || ''}
+              onChange={onBeanChange('roaster')}
+              placeholder="烘焙商名称"
+              suggestions={roasterSuggestions}
+              clearable
+              inputMode="text"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              咖啡豆名称 <span className="text-red-500">*</span>
+            </label>
+            <AutocompleteInput
+              value={bean.name || ''}
+              onChange={onBeanChange('name')}
+              placeholder="咖啡豆名称"
+              suggestions={[]}
+              required
+              clearable
+              inputMode="text"
+              onBlur={() => {
+                if (!bean.name?.trim()) {
+                  onBeanChange('name')('未命名咖啡豆');
+                }
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="w-full space-y-2">
+          <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            咖啡豆名称 <span className="text-red-500">*</span>{' '}
+            <span className="ml-1 text-xs text-neutral-400 dark:text-neutral-500">
+              (可用：{isGreenBean(bean) ? '生豆商' : '烘焙商'} 咖啡豆名称)
+            </span>
+          </label>
+          <AutocompleteInput
+            value={bean.name || ''}
+            onChange={onBeanChange('name')}
+            placeholder="输入咖啡豆名称"
+            suggestions={[]}
+            required
+            clearable
+            inputMode="text"
+            onBlur={() => {
+              if (!bean.name?.trim()) {
+                onBeanChange('name')('未命名咖啡豆');
+              }
+            }}
+          />
+        </div>
+      )}
 
       <div className="grid w-full grid-cols-2 gap-6">
         <div className="space-y-2">

@@ -6,10 +6,12 @@ import { BrewingNote, equipmentList, CustomEquipment } from '@/lib/core/config';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { CoffeeBean } from '@/types/app';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { copyToClipboard } from '@/lib/utils/exportUtils';
+import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { Loader2 } from 'lucide-react';
 
 interface ArtisticShareDrawerProps {
@@ -35,6 +37,14 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
 
   // 从 Store 获取咖啡豆数据
   const allBeans = useCoffeeBeanStore(state => state.beans);
+
+  // 获取烘焙商相关设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
 
   // 获取风味评分维度
   const { getValidTasteRatings } = useFlavorDimensions();
@@ -217,8 +227,13 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
   const generateShareText = () => {
     const parts = [];
 
-    // Title - 单独一行作为标题
-    parts.push(`${note.coffeeBeanInfo?.name || '咖啡分享'}`);
+    // Title - 单独一行作为标题，使用格式化函数
+    const beanName =
+      formatNoteBeanDisplayName(note.coffeeBeanInfo, {
+        roasterFieldEnabled,
+        roasterSeparator,
+      }) || '咖啡分享';
+    parts.push(`${beanName}`);
     parts.push(''); // 空行分隔标题和内容
 
     // Basic Info - Combine Equipment and Method

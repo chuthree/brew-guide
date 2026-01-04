@@ -12,6 +12,7 @@ import {
   SettingToggle,
   SettingSlider,
 } from './atomic';
+import { migrateRoasterField } from '@/lib/utils/roasterMigration';
 
 import BeanPreview from './BeanPreview';
 
@@ -202,6 +203,34 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             }
           />
         </SettingRow>
+        <SettingRow label="烘焙商">
+          <SettingToggle
+            checked={settings.roasterFieldEnabled || false}
+            onChange={async checked => {
+              await handleChange('roasterFieldEnabled', checked);
+              // 首次启用时执行迁移
+              if (checked && !settings.roasterMigrationCompleted) {
+                await migrateRoasterField();
+              }
+            }}
+          />
+        </SettingRow>
+        {settings.roasterFieldEnabled && (
+          <SettingRow label="烘焙商分隔符" isSubSetting>
+            <div className="flex h-0 items-center">
+              <ButtonGroup
+                value={settings.roasterSeparator || ' '}
+                options={[
+                  { value: ' ', label: '空格' },
+                  { value: '/', label: '/' },
+                ]}
+                onChange={value => {
+                  handleChange('roasterSeparator', value as ' ' | '/');
+                }}
+              />
+            </div>
+          </SettingRow>
+        )}
         <SettingRow label="庄园" isLast>
           <SettingToggle
             checked={settings.showEstateField || false}

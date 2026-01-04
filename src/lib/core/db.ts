@@ -258,6 +258,11 @@ export interface AppSettings {
   // 冲煮设置
   showCoffeeBeanSelectionStep?: boolean; // 是否显示咖啡豆选择步骤，默认 true
 
+  // 烘焙商字段设置
+  roasterFieldEnabled?: boolean; // 是否启用独立烘焙商字段，默认 false
+  roasterSeparator?: ' ' | '/'; // 烘焙商分隔符，默认空格
+  roasterMigrationCompleted?: boolean; // 迁移是否已完成
+
   // 注意: grinders 字段已迁移到独立的 grinders 表
   // 此字段仅用于兼容旧数据导入，运行时不使用
   grinders?: Grinder[];
