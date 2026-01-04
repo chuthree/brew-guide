@@ -107,19 +107,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
           />
         </SettingRow>
       </SettingSection>
-      <SettingSection
-        title="赏味期"
-        footer="每种烘焙度（极浅、浅、中浅、中、中深、深）单独设置赏味期预设。"
-      >
-        <SettingRow label="详细烘焙度设置" isLast>
-          <SettingToggle
-            checked={settings.detailedFlavorPeriodEnabled ?? false}
-            onChange={checked =>
-              handleChange('detailedFlavorPeriodEnabled', checked)
-            }
-          />
-        </SettingRow>
-      </SettingSection>
     </SettingPage>
   );
 };

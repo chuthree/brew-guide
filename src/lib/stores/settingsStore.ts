@@ -18,10 +18,7 @@ import {
   DEFAULT_FLAVOR_DIMENSIONS,
 } from '@/lib/core/db';
 import { LayoutSettings } from '@/components/brewing/Timer/Settings';
-import {
-  ViewOption,
-  VIEW_OPTIONS,
-} from '@/components/coffee-bean/List/constants';
+import { VIEW_OPTIONS } from '@/components/coffee-bean/List/constants';
 
 /**
  * 默认设置值
@@ -91,15 +88,6 @@ export const defaultSettings: AppSettings = {
   customFlavorPeriod: {
     light: { startDay: 0, endDay: 0 },
     medium: { startDay: 0, endDay: 0 },
-    dark: { startDay: 0, endDay: 0 },
-  },
-  detailedFlavorPeriodEnabled: false,
-  detailedFlavorPeriod: {
-    extraLight: { startDay: 0, endDay: 0 },
-    light: { startDay: 0, endDay: 0 },
-    mediumLight: { startDay: 0, endDay: 0 },
-    medium: { startDay: 0, endDay: 0 },
-    mediumDark: { startDay: 0, endDay: 0 },
     dark: { startDay: 0, endDay: 0 },
   },
 

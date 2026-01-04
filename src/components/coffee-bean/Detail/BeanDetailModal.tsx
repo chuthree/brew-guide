@@ -390,9 +390,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       const settings = useSettingsStore.getState().settings;
       const customFlavorPeriod =
         settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
-      const detailedEnabled = settings.detailedFlavorPeriodEnabled ?? false;
-      const detailedFlavorPeriod =
-        settings.detailedFlavorPeriod || defaultSettings.detailedFlavorPeriod;
 
       const beanName = isAddMode ? tempBean.name : bean?.name;
       const roasterName = extractRoasterFromName(beanName || '');
@@ -400,9 +397,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
         level,
         customFlavorPeriod,
-        roasterName,
-        detailedEnabled,
-        detailedFlavorPeriod
+        roasterName
       );
       startDay = flavorPeriod.startDay;
       endDay = flavorPeriod.endDay;

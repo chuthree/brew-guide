@@ -178,7 +178,6 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
         await getSettingsStore().updateRoasterConfig(roasterName, {
           logoData: undefined,
           flavorPeriod: currentConfig.flavorPeriod,
-          detailedFlavorPeriod: currentConfig.detailedFlavorPeriod,
         });
       }
       loadConfigs();

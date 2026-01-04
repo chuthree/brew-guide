@@ -483,7 +483,6 @@ export const DataManager = {
             await store.updateRoasterConfig(config.roasterName, {
               logoData: config.logoData,
               flavorPeriod: config.flavorPeriod,
-              detailedFlavorPeriod: config.detailedFlavorPeriod,
             });
           }
         }

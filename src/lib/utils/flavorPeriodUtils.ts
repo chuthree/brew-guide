@@ -14,18 +14,6 @@ export interface FlavorInfo {
   status?: string;
 }
 
-// 详细烘焙度类型
-type DetailedRoastLevel =
-  | 'extraLight'
-  | 'light'
-  | 'mediumLight'
-  | 'medium'
-  | 'mediumDark'
-  | 'dark';
-
-// 简单烘焙度类型
-type SimpleRoastLevel = 'light' | 'medium' | 'dark';
-
 // 预设值常量
 const PRESET_VALUES = {
   light: { startDay: 7, endDay: 60 },
@@ -33,49 +21,7 @@ const PRESET_VALUES = {
   dark: { startDay: 14, endDay: 90 },
 };
 
-// 烘焙度字符串到详细类型的精确映射
-const ROAST_LEVEL_TO_DETAILED: Record<string, DetailedRoastLevel> = {
-  极浅烘焙: 'extraLight',
-  浅度烘焙: 'light',
-  中浅烘焙: 'mediumLight',
-  中度烘焙: 'medium',
-  中深烘焙: 'mediumDark',
-  深度烘焙: 'dark',
-};
-
-// 详细烘焙度到简单烘焙度的映射
-const DETAILED_TO_SIMPLE: Record<DetailedRoastLevel, SimpleRoastLevel> = {
-  extraLight: 'light',
-  light: 'light',
-  mediumLight: 'light',
-  medium: 'medium',
-  mediumDark: 'dark',
-  dark: 'dark',
-};
-
-// 解析烘焙度字符串为详细类型
-const parseRoastLevel = (
-  roastLevel: string | undefined | null
-): DetailedRoastLevel | null => {
-  if (!roastLevel) return null;
-
-  // 精确匹配
-  if (ROAST_LEVEL_TO_DETAILED[roastLevel]) {
-    return ROAST_LEVEL_TO_DETAILED[roastLevel];
-  }
-
-  // 模糊匹配：根据关键字判断
-  if (roastLevel.includes('极浅')) return 'extraLight';
-  if (roastLevel.includes('中浅')) return 'mediumLight';
-  if (roastLevel.includes('中深')) return 'mediumDark';
-  if (roastLevel.includes('浅')) return 'light';
-  if (roastLevel.includes('深')) return 'dark';
-  if (roastLevel.includes('中')) return 'medium';
-
-  return null;
-};
-
-// 根据烘焙度选择对应的配置类型（简单模式）
+// 根据烘焙度选择对应的配置类型
 const selectPeriodByRoastLevel = (
   roastLevel: string | undefined | null,
   periods: { light: any; medium: any; dark: any }
@@ -91,29 +37,21 @@ const isValidPeriod = (period: { startDay: number; endDay: number }) => {
   return period.startDay > 0 || period.endDay > 0;
 };
 
-// 获取完整的赏味期设置（包括详细模式）
+// 获取赏味期设置
 export const getFlavorPeriodSettings = (): {
-  detailedEnabled: boolean;
   customFlavorPeriod: SettingsOptions['customFlavorPeriod'];
-  detailedFlavorPeriod: SettingsOptions['detailedFlavorPeriod'];
 } => {
   try {
     const settings = getSettingsStore().settings;
     return {
-      detailedEnabled: settings.detailedFlavorPeriodEnabled ?? false,
       customFlavorPeriod:
         (settings.customFlavorPeriod as SettingsOptions['customFlavorPeriod']) ||
         defaultSettings.customFlavorPeriod,
-      detailedFlavorPeriod:
-        (settings.detailedFlavorPeriod as SettingsOptions['detailedFlavorPeriod']) ||
-        defaultSettings.detailedFlavorPeriod,
     };
   } catch (error) {
     console.error('获取赏味期设置失败:', error);
     return {
-      detailedEnabled: false,
       customFlavorPeriod: defaultSettings.customFlavorPeriod,
-      detailedFlavorPeriod: defaultSettings.detailedFlavorPeriod,
     };
   }
 };
@@ -124,119 +62,19 @@ export const getCustomFlavorPeriodSettings = () => {
   return settings.customFlavorPeriod;
 };
 
-// 根据详细烘焙度获取赏味期（同步版本）
-const getDetailedFlavorPeriodSync = (
-  detailedLevel: DetailedRoastLevel,
-  detailedFlavorPeriod: SettingsOptions['detailedFlavorPeriod'],
-  customFlavorPeriod: SettingsOptions['customFlavorPeriod']
-): { startDay: number; endDay: number } => {
-  // 1. 尝试从详细设置中获取
-  const detailedPeriod = detailedFlavorPeriod?.[detailedLevel];
-  if (detailedPeriod && isValidPeriod(detailedPeriod)) {
-    // 如果只有部分值，需要从简单设置或预设中补充
-    const simpleType = DETAILED_TO_SIMPLE[detailedLevel];
-    const simplePeriod = customFlavorPeriod?.[simpleType];
-    const preset = PRESET_VALUES[simpleType];
-
-    return {
-      startDay:
-        detailedPeriod.startDay || simplePeriod?.startDay || preset.startDay,
-      endDay: detailedPeriod.endDay || simplePeriod?.endDay || preset.endDay,
-    };
-  }
-
-  // 2. 回退到简单设置
-  const simpleType = DETAILED_TO_SIMPLE[detailedLevel];
-  const simplePeriod = customFlavorPeriod?.[simpleType];
-  const preset = PRESET_VALUES[simpleType];
-
-  return {
-    startDay: simplePeriod?.startDay || preset.startDay,
-    endDay: simplePeriod?.endDay || preset.endDay,
-  };
-};
-
 // 根据烘焙度获取默认赏味期参数
 export const getDefaultFlavorPeriodByRoastLevel = (
   roastLevel: string | undefined | null,
   roasterName?: string
 ) => {
   const flavorSettings = getFlavorPeriodSettings();
-  const { detailedEnabled, customFlavorPeriod, detailedFlavorPeriod } =
-    flavorSettings;
+  const { customFlavorPeriod } = flavorSettings;
 
   // 如果提供了有效的烘焙商名称，尝试获取烘焙商特定的配置
   if (roasterName && roasterName !== '未知烘焙商') {
     const roasterConfig = getRoasterConfigSync(roasterName);
 
-    // 详细模式下的处理
-    if (detailedEnabled) {
-      const detailedLevel = parseRoastLevel(roastLevel);
-      if (detailedLevel) {
-        const simpleType = DETAILED_TO_SIMPLE[detailedLevel];
-
-        // 1. 优先检查烘焙商的详细设置
-        if (roasterConfig?.detailedFlavorPeriod) {
-          const roasterDetailedPeriod =
-            roasterConfig.detailedFlavorPeriod[detailedLevel];
-          if (roasterDetailedPeriod && isValidPeriod(roasterDetailedPeriod)) {
-            // 回退优先级：烘焙商简单设置 → 全局详细设置 → 全局简单设置 → 预设
-            const roasterSimplePeriod =
-              roasterConfig?.flavorPeriod?.[simpleType];
-            const globalDetailedPeriod = detailedFlavorPeriod?.[detailedLevel];
-            const globalSimplePeriod = customFlavorPeriod?.[simpleType];
-            const preset = PRESET_VALUES[simpleType];
-
-            return {
-              startDay:
-                roasterDetailedPeriod.startDay ||
-                roasterSimplePeriod?.startDay ||
-                globalDetailedPeriod?.startDay ||
-                globalSimplePeriod?.startDay ||
-                preset.startDay,
-              endDay:
-                roasterDetailedPeriod.endDay ||
-                roasterSimplePeriod?.endDay ||
-                globalDetailedPeriod?.endDay ||
-                globalSimplePeriod?.endDay ||
-                preset.endDay,
-            };
-          }
-        }
-
-        // 2. 如果没有烘焙商详细设置，检查烘焙商的简单设置（继承映射）
-        if (roasterConfig?.flavorPeriod) {
-          const roasterSimplePeriod = roasterConfig.flavorPeriod[simpleType];
-          if (roasterSimplePeriod && isValidPeriod(roasterSimplePeriod)) {
-            const globalDetailedPeriod = detailedFlavorPeriod?.[detailedLevel];
-            const globalSimplePeriod = customFlavorPeriod?.[simpleType];
-            const preset = PRESET_VALUES[simpleType];
-
-            return {
-              startDay:
-                roasterSimplePeriod.startDay ||
-                globalDetailedPeriod?.startDay ||
-                globalSimplePeriod?.startDay ||
-                preset.startDay,
-              endDay:
-                roasterSimplePeriod.endDay ||
-                globalDetailedPeriod?.endDay ||
-                globalSimplePeriod?.endDay ||
-                preset.endDay,
-            };
-          }
-        }
-
-        // 3. 烘焙商没有任何设置，使用全局详细设置
-        return getDetailedFlavorPeriodSync(
-          detailedLevel,
-          detailedFlavorPeriod,
-          customFlavorPeriod
-        );
-      }
-    }
-
-    // 简单模式下，使用烘焙商的简单设置
+    // 使用烘焙商的简单设置
     if (roasterConfig?.flavorPeriod) {
       const specificPeriod = selectPeriodByRoastLevel(
         roastLevel,
@@ -264,19 +102,7 @@ export const getDefaultFlavorPeriodByRoastLevel = (
     }
   }
 
-  // 如果启用了详细模式，使用详细设置
-  if (detailedEnabled) {
-    const detailedLevel = parseRoastLevel(roastLevel);
-    if (detailedLevel) {
-      return getDetailedFlavorPeriodSync(
-        detailedLevel,
-        detailedFlavorPeriod,
-        customFlavorPeriod
-      );
-    }
-  }
-
-  // 使用全局自定义配置或预设值（简单模式）
+  // 使用全局自定义配置或预设值
   const selectedPeriod = selectPeriodByRoastLevel(
     roastLevel,
     customFlavorPeriod!
@@ -289,42 +115,22 @@ export const getDefaultFlavorPeriodByRoastLevel = (
   };
 };
 
-// 同步版本的赏味期参数获取（扩展版本，支持详细模式）
+// 同步版本的赏味期参数获取
 export const getDefaultFlavorPeriodByRoastLevelSync = (
   roastLevel: string | undefined | null,
   customFlavorPeriod?: SettingsOptions['customFlavorPeriod'],
-  roasterName?: string,
-  detailedEnabled?: boolean,
-  detailedFlavorPeriod?: SettingsOptions['detailedFlavorPeriod']
+  roasterName?: string
 ) => {
-  // 如果没有传递详细模式参数，尝试从 localStorage 同步读取
-  let effectiveDetailedEnabled = detailedEnabled;
-  let effectiveDetailedFlavorPeriod = detailedFlavorPeriod;
   let effectiveCustomFlavorPeriod = customFlavorPeriod;
 
-  if (
-    effectiveDetailedEnabled === undefined ||
-    effectiveDetailedFlavorPeriod === undefined ||
-    effectiveCustomFlavorPeriod === undefined
-  ) {
+  if (effectiveCustomFlavorPeriod === undefined) {
     try {
       if (typeof window !== 'undefined') {
         // 使用 settingsStore 同步获取设置
         const storeSettings = getSettingsStore().settings;
-        if (effectiveDetailedEnabled === undefined) {
-          effectiveDetailedEnabled =
-            storeSettings.detailedFlavorPeriodEnabled ?? false;
-        }
-        if (effectiveDetailedFlavorPeriod === undefined) {
-          effectiveDetailedFlavorPeriod =
-            (storeSettings.detailedFlavorPeriod as SettingsOptions['detailedFlavorPeriod']) ||
-            defaultSettings.detailedFlavorPeriod;
-        }
-        if (effectiveCustomFlavorPeriod === undefined) {
-          effectiveCustomFlavorPeriod =
-            (storeSettings.customFlavorPeriod as SettingsOptions['customFlavorPeriod']) ||
-            defaultSettings.customFlavorPeriod;
-        }
+        effectiveCustomFlavorPeriod =
+          (storeSettings.customFlavorPeriod as SettingsOptions['customFlavorPeriod']) ||
+          defaultSettings.customFlavorPeriod;
       }
     } catch {
       // 静默处理错误，使用默认值
@@ -332,9 +138,6 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
   }
 
   // 确保有默认值
-  effectiveDetailedEnabled = effectiveDetailedEnabled ?? false;
-  effectiveDetailedFlavorPeriod =
-    effectiveDetailedFlavorPeriod || defaultSettings.detailedFlavorPeriod;
   effectiveCustomFlavorPeriod =
     effectiveCustomFlavorPeriod || defaultSettings.customFlavorPeriod;
 
@@ -342,78 +145,7 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
   if (roasterName && roasterName !== '未知烘焙商') {
     const roasterConfig = getRoasterConfigSync(roasterName);
 
-    // 详细模式下的处理
-    if (effectiveDetailedEnabled) {
-      const detailedLevel = parseRoastLevel(roastLevel);
-      if (detailedLevel) {
-        const simpleType = DETAILED_TO_SIMPLE[detailedLevel];
-        const globalDetailedSettings = effectiveDetailedFlavorPeriod;
-        const globalSimpleSettings = effectiveCustomFlavorPeriod;
-
-        // 1. 优先检查烘焙商的详细设置
-        if (roasterConfig?.detailedFlavorPeriod) {
-          const roasterDetailedPeriod =
-            roasterConfig.detailedFlavorPeriod[detailedLevel];
-          if (roasterDetailedPeriod && isValidPeriod(roasterDetailedPeriod)) {
-            // 回退优先级：烘焙商简单设置 → 全局详细设置 → 全局简单设置 → 预设
-            const roasterSimplePeriod =
-              roasterConfig?.flavorPeriod?.[simpleType];
-            const globalDetailedPeriod =
-              globalDetailedSettings?.[detailedLevel];
-            const globalSimplePeriod = globalSimpleSettings?.[simpleType];
-            const preset = PRESET_VALUES[simpleType];
-
-            return {
-              startDay:
-                roasterDetailedPeriod.startDay ||
-                roasterSimplePeriod?.startDay ||
-                globalDetailedPeriod?.startDay ||
-                globalSimplePeriod?.startDay ||
-                preset.startDay,
-              endDay:
-                roasterDetailedPeriod.endDay ||
-                roasterSimplePeriod?.endDay ||
-                globalDetailedPeriod?.endDay ||
-                globalSimplePeriod?.endDay ||
-                preset.endDay,
-            };
-          }
-        }
-
-        // 2. 如果没有烘焙商详细设置，检查烘焙商的简单设置（继承映射）
-        if (roasterConfig?.flavorPeriod) {
-          const roasterSimplePeriod = roasterConfig.flavorPeriod[simpleType];
-          if (roasterSimplePeriod && isValidPeriod(roasterSimplePeriod)) {
-            const globalDetailedPeriod =
-              globalDetailedSettings?.[detailedLevel];
-            const globalSimplePeriod = globalSimpleSettings?.[simpleType];
-            const preset = PRESET_VALUES[simpleType];
-
-            return {
-              startDay:
-                roasterSimplePeriod.startDay ||
-                globalDetailedPeriod?.startDay ||
-                globalSimplePeriod?.startDay ||
-                preset.startDay,
-              endDay:
-                roasterSimplePeriod.endDay ||
-                globalDetailedPeriod?.endDay ||
-                globalSimplePeriod?.endDay ||
-                preset.endDay,
-            };
-          }
-        }
-
-        // 3. 烘焙商没有任何设置，使用全局详细设置
-        return getDetailedFlavorPeriodSync(
-          detailedLevel,
-          globalDetailedSettings,
-          globalSimpleSettings
-        );
-      }
-    }
-
-    // 简单模式下，使用烘焙商的简单设置
+    // 使用烘焙商的简单设置
     if (roasterConfig?.flavorPeriod) {
       const specificPeriod = selectPeriodByRoastLevel(
         roastLevel,
@@ -441,19 +173,7 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
     }
   }
 
-  // 如果启用了详细模式，使用详细设置
-  if (effectiveDetailedEnabled) {
-    const detailedLevel = parseRoastLevel(roastLevel);
-    if (detailedLevel) {
-      return getDetailedFlavorPeriodSync(
-        detailedLevel,
-        effectiveDetailedFlavorPeriod,
-        effectiveCustomFlavorPeriod
-      );
-    }
-  }
-
-  // 使用全局自定义配置或预设值（简单模式）
+  // 使用全局自定义配置或预设值
   const selectedPeriod = selectPeriodByRoastLevel(
     roastLevel,
     effectiveCustomFlavorPeriod!
@@ -466,12 +186,10 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
   };
 };
 
-// 计算咖啡豆的赏味期信息（扩展版本，支持详细模式）
+// 计算咖啡豆的赏味期信息
 export const calculateFlavorInfo = (
   bean: CoffeeBean,
-  customFlavorPeriod?: SettingsOptions['customFlavorPeriod'],
-  detailedEnabled?: boolean,
-  detailedFlavorPeriod?: SettingsOptions['detailedFlavorPeriod']
+  customFlavorPeriod?: SettingsOptions['customFlavorPeriod']
 ): FlavorInfo => {
   // 处理特殊状态
   if (bean.isInTransit) {
@@ -513,9 +231,7 @@ export const calculateFlavorInfo = (
     const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
       bean.roastLevel || '',
       customFlavorPeriod,
-      roasterName,
-      detailedEnabled,
-      detailedFlavorPeriod
+      roasterName
     );
     startDay = defaultPeriod.startDay;
     endDay = defaultPeriod.endDay;

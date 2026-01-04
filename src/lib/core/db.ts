@@ -43,23 +43,11 @@ export const DEFAULT_FLAVOR_DIMENSIONS: FlavorDimension[] = [
 ];
 
 /**
- * 烘焙商赏味期设置（简单模式）
+ * 烘焙商赏味期设置
  */
-export interface RoasterFlavorPeriodSimple {
+export interface RoasterFlavorPeriod {
   light: { startDay: number; endDay: number };
   medium: { startDay: number; endDay: number };
-  dark: { startDay: number; endDay: number };
-}
-
-/**
- * 烘焙商赏味期设置（详细模式）
- */
-export interface RoasterFlavorPeriodDetailed {
-  extraLight: { startDay: number; endDay: number };
-  light: { startDay: number; endDay: number };
-  mediumLight: { startDay: number; endDay: number };
-  medium: { startDay: number; endDay: number };
-  mediumDark: { startDay: number; endDay: number };
   dark: { startDay: number; endDay: number };
 }
 
@@ -69,8 +57,7 @@ export interface RoasterFlavorPeriodDetailed {
 export interface RoasterConfig {
   roasterName: string;
   logoData?: string;
-  flavorPeriod?: RoasterFlavorPeriodSimple;
-  detailedFlavorPeriod?: RoasterFlavorPeriodDetailed;
+  flavorPeriod?: RoasterFlavorPeriod;
   updatedAt: number;
 }
 
@@ -140,15 +127,6 @@ export interface AppSettings {
   customFlavorPeriod?: {
     light: { startDay: number; endDay: number };
     medium: { startDay: number; endDay: number };
-    dark: { startDay: number; endDay: number };
-  };
-  detailedFlavorPeriodEnabled?: boolean;
-  detailedFlavorPeriod?: {
-    extraLight: { startDay: number; endDay: number };
-    light: { startDay: number; endDay: number };
-    mediumLight: { startDay: number; endDay: number };
-    medium: { startDay: number; endDay: number };
-    mediumDark: { startDay: number; endDay: number };
     dark: { startDay: number; endDay: number };
   };
 
@@ -565,14 +543,12 @@ export const dbUtils = {
                 (config: {
                   roasterName: string;
                   logoData?: string;
-                  flavorPeriod?: RoasterFlavorPeriodSimple;
-                  detailedFlavorPeriod?: RoasterFlavorPeriodDetailed;
+                  flavorPeriod?: RoasterFlavorPeriod;
                   updatedAt?: number;
                 }) => ({
                   roasterName: config.roasterName,
                   logoData: config.logoData,
                   flavorPeriod: config.flavorPeriod,
-                  detailedFlavorPeriod: config.detailedFlavorPeriod,
                   updatedAt: config.updatedAt || Date.now(),
                 })
               );
@@ -697,14 +673,12 @@ export const dbUtils = {
               (config: {
                 roasterName: string;
                 logoData?: string;
-                flavorPeriod?: RoasterFlavorPeriodSimple;
-                detailedFlavorPeriod?: RoasterFlavorPeriodDetailed;
+                flavorPeriod?: RoasterFlavorPeriod;
                 updatedAt?: number;
               }) => ({
                 roasterName: config.roasterName,
                 logoData: config.logoData,
                 flavorPeriod: config.flavorPeriod,
-                detailedFlavorPeriod: config.detailedFlavorPeriod,
                 updatedAt: config.updatedAt || Date.now(),
               })
             );
