@@ -2529,25 +2529,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 添加新笔记
         await useBrewingNoteStore.getState().addNote(noteToSave);
 
-        // 如果是复制操作，需要扣除咖啡豆剩余量
-        if (isBrewingNoteCopy && note.beanId && note.params?.coffee) {
-          try {
-            const { updateBeanRemaining } = await import(
-              '@/lib/stores/coffeeBeanStore'
-            );
-            const coffeeMatch = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
-            if (coffeeMatch) {
-              const coffeeAmount = parseFloat(coffeeMatch[0]);
-              if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-                await updateBeanRemaining(note.beanId, coffeeAmount);
-              }
-            } else {
-              console.warn('无法从参数中提取咖啡量:', note.params.coffee);
-            }
-          } catch (error) {
-            console.error('扣除咖啡豆剩余量失败:', error);
-          }
-        }
+        // 注意：咖啡豆剩余量的扣除已在 BrewingNoteForm.handleSubmit 中处理
+        // 这里不再重复扣除，避免重复减少剩余量
       } else {
         // 🔥 更新现有笔记 - 使用 Store 方法
         const { useBrewingNoteStore } = await import(

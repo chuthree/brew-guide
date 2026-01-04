@@ -1069,12 +1069,23 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       // 已有豆子，使用其 ID
       finalBeanId = selectedCoffeeBean.id;
 
-      // 处理已有咖啡豆的容量同步（编辑模式且非容量调整记录、非复制）
-      if (
-        initialData.id &&
-        initialData.source !== 'capacity-adjustment' &&
-        !isCopy
-      ) {
+      // 判断是否是新建笔记（没有ID或是复制操作）
+      const isNewNote = !initialData.id || isCopy;
+
+      if (isNewNote) {
+        // 新建笔记：直接扣除咖啡豆剩余量
+        if (currentCoffeeAmount > 0) {
+          try {
+            await updateBeanRemaining(
+              selectedCoffeeBean.id,
+              currentCoffeeAmount
+            );
+          } catch (error) {
+            console.error('扣除咖啡豆剩余量失败:', error);
+          }
+        }
+      } else if (initialData.source !== 'capacity-adjustment') {
+        // 编辑模式且非容量调整记录：处理容量同步
         try {
           const currentBeanId = selectedCoffeeBean.id;
           const beanChanged = originalBeanId !== currentBeanId;
