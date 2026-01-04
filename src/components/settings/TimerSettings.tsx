@@ -175,30 +175,6 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
       </SettingSection>
 
       <SettingSection title="方案列表设置">
-        <SettingRow label="显示阶段分隔线">
-          <SettingToggle
-            checked={settings.layoutSettings?.showStageDivider || false}
-            onChange={checked => {
-              const newLayoutSettings = {
-                ...settings.layoutSettings,
-                showStageDivider: checked,
-              };
-              handleChange('layoutSettings', newLayoutSettings);
-            }}
-          />
-        </SettingRow>
-        <SettingRow label="简洁模式">
-          <SettingToggle
-            checked={settings.layoutSettings?.compactMode || false}
-            onChange={checked => {
-              const newLayoutSettings = {
-                ...settings.layoutSettings,
-                compactMode: checked,
-              };
-              handleChange('layoutSettings', newLayoutSettings);
-            }}
-          />
-        </SettingRow>
         <SettingRow label="步骤时间显示" isLast>
           <div className="flex h-0 items-center">
             <ButtonGroup
@@ -211,7 +187,10 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
               onChange={value => {
                 const newLayoutSettings = {
                   ...settings.layoutSettings,
-                  stepDisplayMode: value as 'independent' | 'cumulative' | 'time',
+                  stepDisplayMode: value as
+                    | 'independent'
+                    | 'cumulative'
+                    | 'time',
                 };
                 handleChange('layoutSettings', newLayoutSettings);
               }}

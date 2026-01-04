@@ -908,7 +908,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 return null;
               }
 
-              // 如果是注水标签，检查originalIndex变化来添加阶段分隔线
+              // 如果是注水标签，检查originalIndex变化来添加阶段分隔线（始终显示）
               const showStageDivider =
                 activeTab === '注水' &&
                 index > 0 &&
@@ -916,9 +916,7 @@ const TabContent: React.FC<TabContentProps> = ({
                 content[activeTab]?.steps[index - 1]?.originalIndex !==
                   undefined &&
                 step.originalIndex !==
-                  content[activeTab]?.steps[index - 1]?.originalIndex &&
-                settings?.layoutSettings?.showStageDivider !== false &&
-                !localLayoutSettings.compactMode; // 简洁模式下不显示阶段分隔线
+                  content[activeTab]?.steps[index - 1]?.originalIndex;
 
               // 简化的编辑处理函数
               let editHandler;
@@ -1070,7 +1068,6 @@ const TabContent: React.FC<TabContentProps> = ({
                     setActionMenuStates={setActionMenuStates}
                     showFlowRate={localShowFlowRate}
                     allSteps={content[activeTab]?.steps || []}
-                    compactMode={localLayoutSettings.compactMode || false}
                     stepDisplayMode={
                       localLayoutSettings.stepDisplayMode || 'cumulative'
                     }

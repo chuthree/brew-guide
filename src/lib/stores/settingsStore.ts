@@ -37,8 +37,6 @@ export const defaultSettings: AppSettings = {
     progressBarHeight: 12,
     controlsReversed: false,
     alwaysShowTimerInfo: true,
-    showStageDivider: true,
-    compactMode: false,
     dataFontSize: '2xl',
   },
 
@@ -345,14 +343,6 @@ export const useSettingsStore = create<SettingsStore>()(
           layout.alwaysShowTimerInfo ??
           currentLayout?.alwaysShowTimerInfo ??
           defaultLayout.alwaysShowTimerInfo,
-        showStageDivider:
-          layout.showStageDivider ??
-          currentLayout?.showStageDivider ??
-          defaultLayout.showStageDivider,
-        compactMode:
-          layout.compactMode ??
-          currentLayout?.compactMode ??
-          defaultLayout.compactMode,
         dataFontSize:
           layout.dataFontSize ??
           currentLayout?.dataFontSize ??

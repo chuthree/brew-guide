@@ -9,8 +9,6 @@ export interface LayoutSettings {
   progressBarHeight?: number; // 进度条高度（像素）
   controlsReversed?: boolean; // 是否反转底部控制区布局
   alwaysShowTimerInfo?: boolean; // 是否始终显示计时器信息区域
-  showStageDivider?: boolean; // 是否显示阶段分隔线
-  compactMode?: boolean; // 是否启用简洁模式
   dataFontSize?: '2xl' | '3xl' | '4xl'; // 数据显示字体大小
   stepDisplayMode?: 'independent' | 'cumulative' | 'time'; // 步骤时间显示模式：独立、累计、时间
 }
@@ -121,48 +119,6 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                  显示阶段分隔线
-                </span>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={localLayoutSettings?.showStageDivider || false}
-                    onChange={e => {
-                      const newSettings = {
-                        ...localLayoutSettings,
-                        showStageDivider: e.target.checked,
-                      };
-                      handleLayoutChange(newSettings);
-                    }}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                  简洁模式
-                </span>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={localLayoutSettings?.compactMode || false}
-                    onChange={e => {
-                      const newSettings = {
-                        ...localLayoutSettings,
-                        compactMode: e.target.checked,
-                      };
-                      handleLayoutChange(newSettings);
-                    }}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
-                </label>
-              </div>
-
               <div className="flex items-center justify-between">
                 <span className="text-sm text-neutral-700 dark:text-neutral-300">
                   步骤时间显示

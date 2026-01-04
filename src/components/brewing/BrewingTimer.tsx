@@ -1529,13 +1529,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                       transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
                       className="relative mb-3"
                     >
+                      {/* 阶段分隔线 - 始终显示 */}
                       {expandedStagesRef.current.map((stage, index) => {
                         const totalTime =
                           expandedStagesRef.current[
                             expandedStagesRef.current.length - 1
                           ].endTime;
                         const percentage = (stage.endTime / totalTime) * 100;
-                        return localLayoutSettings?.showStageDivider ? (
+                        return (
                           <div
                             key={`divider-end-${stage.endTime}-${index}`}
                             className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
@@ -1546,7 +1547,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                               transform: 'translateZ(0)',
                             }}
                           />
-                        ) : null;
+                        );
                       })}
 
                       <div

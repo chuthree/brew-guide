@@ -94,7 +94,6 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
   const stageInfoReversed = layoutSettings.stageInfoReversed ?? false;
   const controlsReversed = layoutSettings.controlsReversed ?? false;
   const alwaysShowTimerInfo = layoutSettings.alwaysShowTimerInfo ?? true;
-  const showStageDivider = layoutSettings.showStageDivider ?? false;
   const progressBarHeight = layoutSettings.progressBarHeight ?? 4;
 
   // 获取字体大小类名 - 使用明确的类名以确保 Tailwind 包含这些样式
@@ -239,12 +238,12 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
 
               {/* 进度条 */}
               <div className="relative mb-3">
-                {/* 阶段分隔线 */}
+                {/* 阶段分隔线 - 始终显示 */}
                 {expandedStages.map((stage, index) => {
                   const totalTime =
                     expandedStages[expandedStages.length - 1].endTime;
                   const percentage = (stage.endTime / totalTime) * 100;
-                  return showStageDivider ? (
+                  return (
                     <div
                       key={`divider-end-${stage.endTime}-${index}`}
                       className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
@@ -254,7 +253,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                         opacity: 0.8,
                       }}
                     />
-                  ) : null;
+                  );
                 })}
 
                 <div

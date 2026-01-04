@@ -79,8 +79,6 @@ export interface AppSettings {
     progressBarHeight?: number;
     controlsReversed?: boolean;
     alwaysShowTimerInfo?: boolean;
-    showStageDivider?: boolean;
-    compactMode?: boolean;
     dataFontSize?: '2xl' | '3xl' | '4xl';
     stepDisplayMode?: 'independent' | 'cumulative' | 'time'; // 步骤时间显示模式
   };
