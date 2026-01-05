@@ -1,7 +1,7 @@
 /**
  * 烘焙商字段迁移模块
  *
- * 当用户首次启用烘焙商字段功能时，执行一次性迁移：
+ * 用户升级后自动执行一次性迁移：
  * - 从现有咖啡豆名称中提取烘焙商信息
  * - 填充到新的 roaster 字段
  * - 从 name 中移除烘焙商部分
@@ -27,6 +27,8 @@ import { getCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
  * - 使用当前分隔符设置提取烘焙商
  * - 提取成功后从 name 中移除烘焙商部分
  * - 迁移完成后标记 roasterMigrationCompleted
+ *
+ * 注意：此函数会在应用启动时自动调用（如果尚未完成迁移）
  */
 export async function migrateRoasterField(): Promise<void> {
   const settingsStore = getSettingsStore();

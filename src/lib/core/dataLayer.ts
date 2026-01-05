@@ -14,6 +14,7 @@ import { useCustomMethodStore } from '@/lib/stores/customMethodStore';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 import { useGrinderStore } from '@/lib/stores/grinderStore';
 import { useYearlyReportStore } from '@/lib/stores/yearlyReportStore';
+import { migrateRoasterField } from '@/lib/utils/roasterMigration';
 
 /**
  * 初始化状态
@@ -72,6 +73,10 @@ export async function initializeDataLayer(): Promise<void> {
 
     // 4. 同步初始化 UI 状态 Store（不需要 await，不涉及异步操作）
     useEquipmentStore.getState().initialize();
+
+    // 5. 执行烘焙商字段迁移（如果尚未完成）
+    console.log('📦 Step 4: 检查烘焙商字段迁移...');
+    await migrateRoasterField();
 
     initState.isInitialized = true;
     initState.error = null;

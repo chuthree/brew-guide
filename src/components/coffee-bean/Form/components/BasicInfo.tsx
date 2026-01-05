@@ -424,8 +424,9 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         </div>
       </div>
 
-      {/* 烘焙商和咖啡豆名称 - 启用烘焙商字段时并排显示 */}
+      {/* 烘焙商和咖啡豆名称 */}
       {roasterFieldEnabled ? (
+        /* 启用独立输入：两个并排的输入框 */
         <div className="grid w-full grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -461,17 +462,18 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
           </div>
         </div>
       ) : (
+        /* 关闭独立输入：单个输入框，用户输入完整名称 */
         <div className="w-full space-y-2">
           <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
             咖啡豆名称 <span className="text-red-500">*</span>{' '}
             <span className="ml-1 text-xs text-neutral-400 dark:text-neutral-500">
-              (可用：{isGreenBean(bean) ? '生豆商' : '烘焙商'} 咖啡豆名称)
+              (格式：{isGreenBean(bean) ? '生豆商' : '烘焙商'} 咖啡豆名称)
             </span>
           </label>
           <AutocompleteInput
             value={bean.name || ''}
             onChange={onBeanChange('name')}
-            placeholder="输入咖啡豆名称"
+            placeholder="例如：辛鹿 瑰夏红蜜处理"
             suggestions={[]}
             required
             clearable

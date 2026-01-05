@@ -36,7 +36,7 @@ import {
 } from '@/lib/stores/settingsStore';
 import {
   extractRoasterFromName,
-  getRoasterName,
+  removeRoasterFromName,
 } from '@/lib/utils/beanVarietyUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
@@ -121,8 +121,19 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     const [bean, setBean] = useState<
       Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
     >(() => {
+      // 获取当前设置
+      const currentSettings = useSettingsStore.getState().settings;
+      const roasterFieldEnabled = currentSettings.roasterFieldEnabled;
+
       if (initialBean) {
         const { id: _id, timestamp: _timestamp, ...beanData } = initialBean;
+
+        // 如果关闭了独立烘焙商输入，且有 roaster 字段，将其合并到名称中
+        if (!roasterFieldEnabled && beanData.roaster && beanData.name) {
+          // 始终使用空格作为分隔符（关闭独立输入时的默认行为）
+          beanData.name = `${beanData.roaster} ${beanData.name}`;
+          beanData.roaster = '';
+        }
 
         // 不预设烘焙度默认值，保持数据严谨性
 
@@ -196,19 +207,17 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
     // 计算烘焙商建议列表 - 从所有咖啡豆中提取唯一烘焙商，按使用频率排序，排除"未知烘焙商"
     const roasterSuggestions = React.useMemo(() => {
+      // 只有启用独立输入时才需要建议列表
       if (!settings.roasterFieldEnabled) return [];
 
       const roasterCount = new Map<string, number>();
 
       // 统计每个烘焙商的咖啡豆数量
       allBeans.forEach(b => {
-        // 优先使用 roaster 字段，否则从名称中提取
-        const roaster = getRoasterName(b, {
-          roasterFieldEnabled: settings.roasterFieldEnabled,
-          roasterSeparator: settings.roasterSeparator,
-        });
+        // 直接使用 roaster 字段
+        const roaster = b.roaster;
 
-        // 排除"未知烘焙商"
+        // 排除空值和"未知烘焙商"
         if (roaster && roaster !== '未知烘焙商') {
           roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
         }
@@ -225,7 +234,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
           return a[0].localeCompare(b[0], 'zh-CN');
         })
         .map(entry => entry[0]);
-    }, [allBeans, settings.roasterFieldEnabled, settings.roasterSeparator]);
+    }, [allBeans, settings.roasterFieldEnabled]);
 
     // 加载烘焙商图标 - 当咖啡豆名称变化时
     useEffect(() => {
@@ -772,11 +781,25 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       // 先清理历史栈（关闭所有 bean-form 相关的历史记录）
       modalHistory.closeAllByPrefix('bean-form');
 
-      // 然后调用保存回调
-      onSave({
-        ...bean,
-        blendComponents: blendComponents,
-      });
+      // 准备保存的数据
+      let finalBean = { ...bean, blendComponents };
+
+      // 如果未启用独立烘焙商输入，从名称中自动提取烘焙商
+      if (!settings.roasterFieldEnabled && bean.name && !bean.roaster) {
+        // 关闭独立输入时，始终使用空格作为分隔符
+        const extractedRoaster = extractRoasterFromName(bean.name, ' ');
+        if (extractedRoaster !== '未知烘焙商') {
+          const nameWithoutRoaster = removeRoasterFromName(bean.name, ' ');
+          finalBean = {
+            ...finalBean,
+            roaster: extractedRoaster,
+            name: nameWithoutRoaster,
+          };
+        }
+      }
+
+      // 调用保存回调
+      onSave(finalBean);
     };
 
     // 根据烘焙度自动设置赏味期参数

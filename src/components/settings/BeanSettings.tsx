@@ -12,7 +12,6 @@ import {
   SettingToggle,
   SettingSlider,
 } from './atomic';
-import { migrateRoasterField } from '@/lib/utils/roasterMigration';
 
 import BeanPreview from './BeanPreview';
 
@@ -203,15 +202,11 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             }
           />
         </SettingRow>
-        <SettingRow label="烘焙商">
+        <SettingRow label="烘焙商独立输入">
           <SettingToggle
             checked={settings.roasterFieldEnabled || false}
             onChange={async checked => {
               await handleChange('roasterFieldEnabled', checked);
-              // 首次启用时执行迁移
-              if (checked && !settings.roasterMigrationCompleted) {
-                await migrateRoasterField();
-              }
             }}
           />
         </SettingRow>

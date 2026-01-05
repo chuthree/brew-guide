@@ -413,42 +413,40 @@ export interface RoasterSettings {
 
 /**
  * 获取烘焙商名称
- * 优先使用 roaster 字段，否则从名称中提取
+ * 优先使用 roaster 字段，否则返回空字符串
  * @param bean 咖啡豆对象
- * @param settings 烘焙商相关设置
+ * @param _settings 烘焙商相关设置（保留参数以保持API兼容性）
  * @returns 烘焙商名称
  */
 export const getRoasterName = (
   bean: CoffeeBean,
-  settings: RoasterSettings
+  _settings?: RoasterSettings
 ): string => {
-  // 如果启用了烘焙商字段且有值，直接返回
-  if (settings.roasterFieldEnabled && bean.roaster) {
-    return bean.roaster;
-  }
-
-  // 否则从名称中提取
-  return extractRoasterFromName(bean.name, settings.roasterSeparator);
+  // 直接返回 roaster 字段值，如果没有则返回空字符串
+  return bean.roaster || '';
 };
 
 /**
  * 格式化咖啡豆显示名称
- * 根据设置和分隔符格式化显示
+ * 始终使用 roaster + name 组合显示（如果有 roaster）
  * @param bean 咖啡豆对象
  * @param settings 烘焙商相关设置
  * @returns 格式化后的显示名称
  */
 export const formatBeanDisplayName = (
   bean: CoffeeBean,
-  settings: RoasterSettings
+  settings?: RoasterSettings
 ): string => {
-  // 如果未启用烘焙商字段或没有 roaster 字段值，直接返回名称
-  if (!settings.roasterFieldEnabled || !bean.roaster) {
+  // 如果没有 roaster 字段值，直接返回名称
+  if (!bean.roaster) {
     return bean.name;
   }
 
-  // 根据分隔符设置格式化显示
-  const separator = settings.roasterSeparator === '/' ? '/' : ' ';
+  // 只有开启独立输入时才使用用户设置的分隔符，否则使用空格
+  const separator =
+    settings?.roasterFieldEnabled && settings?.roasterSeparator === '/'
+      ? '/'
+      : ' ';
   return `${bean.roaster}${separator}${bean.name}`;
 };
 
@@ -552,27 +550,19 @@ export const removeRoasterFromName = (
 /**
  * 从咖啡豆数组中提取所有唯一的烘焙商
  * @param beans 咖啡豆数组
- * @param settings 烘焙商相关设置（可选）
+ * @param _settings 烘焙商相关设置（保留参数以保持API兼容性）
  * @returns 按数量排序的唯一烘焙商数组（数量多的在前）
  */
 export const extractUniqueRoasters = (
   beans: ExtendedCoffeeBean[],
-  settings?: RoasterSettings
+  _settings?: RoasterSettings
 ): string[] => {
   const roasterCount = new Map<string, number>();
 
   // 统计每个烘焙商的咖啡豆数量
   beans.forEach(bean => {
-    let roaster: string;
-
-    // 如果启用了烘焙商字段，优先使用 roaster 字段
-    if (settings?.roasterFieldEnabled && bean.roaster) {
-      roaster = bean.roaster;
-    } else {
-      // 否则从名称中提取
-      roaster = extractRoasterFromName(bean.name, settings?.roasterSeparator);
-    }
-
+    // 直接使用 roaster 字段
+    const roaster = bean.roaster || '未知烘焙商';
     roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
   });
 
@@ -600,24 +590,16 @@ export const extractUniqueRoasters = (
  * 检查咖啡豆是否属于指定的烘焙商
  * @param bean 咖啡豆对象
  * @param roaster 要检查的烘焙商名称
- * @param settings 烘焙商相关设置（可选）
+ * @param _settings 烘焙商相关设置（保留参数以保持API兼容性）
  * @returns 是否属于该烘焙商
  */
 export const beanHasRoaster = (
   bean: ExtendedCoffeeBean,
   roaster: string,
-  settings?: RoasterSettings
+  _settings?: RoasterSettings
 ): boolean => {
-  let beanRoaster: string;
-
-  // 如果启用了烘焙商字段，优先检查 roaster 字段
-  if (settings?.roasterFieldEnabled && bean.roaster) {
-    beanRoaster = bean.roaster;
-  } else {
-    // 否则从名称中提取
-    beanRoaster = extractRoasterFromName(bean.name, settings?.roasterSeparator);
-  }
-
+  // 直接使用 roaster 字段
+  const beanRoaster = bean.roaster || '未知烘焙商';
   return beanRoaster === roaster;
 };
 
@@ -631,7 +613,7 @@ export interface NoteCoffeeBeanInfo {
 
 /**
  * 格式化笔记中的咖啡豆显示名称
- * 根据当前设置动态组合 roaster 和 name
+ * 始终使用 roaster + name 组合显示（如果有 roaster）
  * @param beanInfo 笔记中存储的咖啡豆信息
  * @param settings 烘焙商相关设置
  * @returns 格式化后的显示名称
@@ -644,12 +626,15 @@ export const formatNoteBeanDisplayName = (
     return '';
   }
 
-  // 如果未启用烘焙商字段或没有 roaster 值，直接返回名称
-  if (!settings?.roasterFieldEnabled || !beanInfo.roaster) {
+  // 如果没有 roaster 值，直接返回名称
+  if (!beanInfo.roaster) {
     return beanInfo.name;
   }
 
-  // 根据分隔符设置格式化显示
-  const separator = settings.roasterSeparator === '/' ? '/' : ' ';
+  // 只有开启独立输入时才使用用户设置的分隔符，否则使用空格
+  const separator =
+    settings?.roasterFieldEnabled && settings?.roasterSeparator === '/'
+      ? '/'
+      : ' ';
   return `${beanInfo.roaster}${separator}${beanInfo.name}`;
 };
