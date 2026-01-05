@@ -200,14 +200,13 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
           <div className="mb-4 flex shrink-0 items-center gap-2">
             {/* 胶囊搜索输入框 */}
             <div className="relative flex-1">
-              <Search className="absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-neutral-400 dark:text-neutral-500" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="输入咖啡豆名称..."
-                className="w-full rounded-full border-none bg-neutral-100 px-3 py-3 pl-11 text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
+                className="w-full rounded-full border-none bg-neutral-100 px-3 py-3 pl-11 text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-none dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
                 autoComplete="off"
                 onKeyDown={e => {
                   if (e.key === 'Escape') {
@@ -216,11 +215,12 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
                   }
                 }}
               />
+              <Search className="pointer-events-none absolute top-1/2 left-4 z-20 h-4 w-4 -translate-y-1/2 text-neutral-400 dark:text-neutral-500" />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+                  className="absolute top-1/2 right-3 z-20 -translate-y-1/2 rounded-full p-1 text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
                 >
                   <X className="h-4 w-4" strokeWidth="2.5" />
                 </button>

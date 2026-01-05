@@ -1018,8 +1018,13 @@ const StagesStep: React.FC<StagesStepProps> = ({
                             const totalSecs = mins * 60 + secs;
                             const newMins = Math.floor(totalSecs / 60);
                             const newSecs = totalSecs % 60;
-                            if (spans[0]) spans[0].textContent = String(newMins);
-                            if (spans[1]) spans[1].textContent = String(newSecs).padStart(2, '0');
+                            if (spans[0])
+                              spans[0].textContent = String(newMins);
+                            if (spans[1])
+                              spans[1].textContent = String(newSecs).padStart(
+                                2,
+                                '0'
+                              );
                             handleTimeModeStartBlurWithValues(
                               timeModeIndex,
                               newMins,
@@ -1079,8 +1084,13 @@ const StagesStep: React.FC<StagesStepProps> = ({
                             const totalSecs = mins * 60 + secs;
                             const newMins = Math.floor(totalSecs / 60);
                             const newSecs = totalSecs % 60;
-                            if (spans[0]) spans[0].textContent = String(newMins);
-                            if (spans[1]) spans[1].textContent = String(newSecs).padStart(2, '0');
+                            if (spans[0])
+                              spans[0].textContent = String(newMins);
+                            if (spans[1])
+                              spans[1].textContent = String(newSecs).padStart(
+                                2,
+                                '0'
+                              );
                             handleTimeModeEndBlurWithValues(
                               timeModeIndex,
                               newMins,
@@ -1295,15 +1305,27 @@ const StagesStep: React.FC<StagesStepProps> = ({
                         className="flex shrink-0 items-center tabular-nums"
                         onBlur={e => {
                           if (!e.currentTarget.contains(e.relatedTarget)) {
-                            const spans = e.currentTarget.querySelectorAll('[contenteditable]');
+                            const spans =
+                              e.currentTarget.querySelectorAll(
+                                '[contenteditable]'
+                              );
                             const hasMins = spans.length === 2;
-                            const mins = hasMins ? parseInt(spans[0]?.textContent || '0') : 0;
-                            const secs = parseInt(spans[hasMins ? 1 : 0]?.textContent || '0');
+                            const mins = hasMins
+                              ? parseInt(spans[0]?.textContent || '0')
+                              : 0;
+                            const secs = parseInt(
+                              spans[hasMins ? 1 : 0]?.textContent || '0'
+                            );
                             // 自动进位
                             let totalSecs = mins * 60 + secs;
                             if (useCumulativeMode && index > 0) {
-                              const previousCumulative = cumulativeData[index - 1]?.cumulativeDuration || 0;
-                              totalSecs = Math.max(0, totalSecs - previousCumulative);
+                              const previousCumulative =
+                                cumulativeData[index - 1]?.cumulativeDuration ||
+                                0;
+                              totalSecs = Math.max(
+                                0,
+                                totalSecs - previousCumulative
+                              );
                             }
                             onStageChange(index, 'duration', totalSecs);
                           }
@@ -1313,13 +1335,20 @@ const StagesStep: React.FC<StagesStepProps> = ({
                           const seconds = getDurationSeconds(stage, index);
                           const hasDuration = !!stage.duration; // 当前步骤是否有设置时长
                           // 累计模式：如果前面累计已>=60秒，当前也显示分钟格式
-                          const cumulativeSecs = useCumulativeMode 
-                            ? (cumulativeData[index]?.cumulativeDuration || 0)
+                          const cumulativeSecs = useCumulativeMode
+                            ? cumulativeData[index]?.cumulativeDuration || 0
                             : seconds;
-                          const showMins = useCumulativeMode 
-                            ? (cumulativeSecs >= 60 || (index > 0 && (cumulativeData[index - 1]?.cumulativeDuration || 0) >= 60))
+                          const showMins = useCumulativeMode
+                            ? cumulativeSecs >= 60 ||
+                              (index > 0 &&
+                                (cumulativeData[index - 1]
+                                  ?.cumulativeDuration || 0) >= 60)
                             : seconds >= 60;
-                          const displaySecs = hasDuration ? (useCumulativeMode ? cumulativeSecs : seconds) : 0;
+                          const displaySecs = hasDuration
+                            ? useCumulativeMode
+                              ? cumulativeSecs
+                              : seconds
+                            : 0;
                           const mins = Math.floor(displaySecs / 60);
                           const secs = displaySecs % 60;
                           return (
@@ -1332,7 +1361,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
                                     inputMode="numeric"
                                     data-placeholder="0"
                                     onInput={e => {
-                                      const text = e.currentTarget.textContent || '';
+                                      const text =
+                                        e.currentTarget.textContent || '';
                                       const val = text.replace(/\D/g, '');
                                       if (val !== text) {
                                         e.currentTarget.textContent = val;
@@ -1343,14 +1373,16 @@ const StagesStep: React.FC<StagesStepProps> = ({
                                     {hasDuration ? mins : ''}
                                   </span>
                                   <span className="text-neutral-500">′</span>
-                                </>                              )}
+                                </>
+                              )}
                               <span
                                 contentEditable
                                 suppressContentEditableWarning
                                 inputMode="numeric"
                                 data-placeholder={showMins ? '00' : '0'}
                                 onInput={e => {
-                                  const text = e.currentTarget.textContent || '';
+                                  const text =
+                                    e.currentTarget.textContent || '';
                                   const val = text.replace(/\D/g, '');
                                   if (val !== text) {
                                     e.currentTarget.textContent = val;
@@ -1358,7 +1390,11 @@ const StagesStep: React.FC<StagesStepProps> = ({
                                 }}
                                 className={`min-w-[${showMins ? '1em' : '0.5em'}] cursor-text text-right outline-none empty:text-neutral-400 empty:before:content-[attr(data-placeholder)] hover:text-neutral-600 dark:empty:text-neutral-600 dark:hover:text-neutral-300`}
                               >
-                                {hasDuration ? (showMins ? String(secs).padStart(2, '0') : secs) : ''}
+                                {hasDuration
+                                  ? showMins
+                                    ? String(secs).padStart(2, '0')
+                                    : secs
+                                  : ''}
                               </span>
                               <span className="text-neutral-500">″</span>
                             </>

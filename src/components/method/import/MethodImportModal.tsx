@@ -197,7 +197,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
     setIsRecognizing(false);
   }, [recognizingImageUrl]);
 
-
   // 重置状态（当弹窗关闭或重新打开时）
   useEffect(() => {
     if (showForm) {
@@ -619,11 +618,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
   return (
     <>
-      <ActionDrawer
-        isOpen={showForm}
-        onClose={handleClose}
-        disableHistory
-      >
+      <ActionDrawer isOpen={showForm} onClose={handleClose} disableHistory>
         <ActionDrawer.Switcher activeKey={currentStep}>
           {renderContent()}
         </ActionDrawer.Switcher>

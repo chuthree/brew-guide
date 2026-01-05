@@ -251,66 +251,64 @@ const NoteSteppedFormModal = forwardRef<
             </div>
 
             {/* 底部按钮区域 */}
-            <div className="modal-bottom-button flex items-center justify-center">
-              <div className="flex items-center justify-center gap-2">
-                {/* 搜索输入框 */}
-                {isValid && isCoffeeBeanStep && isSearching && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      placeholder="搜索咖啡豆名称..."
-                      className="w-48 rounded-full border-none bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
-                      autoComplete="off"
-                      onKeyDown={e => e.key === 'Escape' && handleCloseSearch()}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCloseSearch}
-                      className={`${buttonBaseClass} shrink-0 p-4`}
-                    >
-                      <X className="h-4 w-4" strokeWidth="3" />
-                    </button>
-                  </div>
-                )}
-
-                {/* 下一步/完成按钮 */}
-                {isValid && !(isCoffeeBeanStep && isSearching) && (
+            <div className="flex items-center justify-center gap-2 pt-3">
+              {/* 搜索输入框 */}
+              {isValid && isCoffeeBeanStep && isSearching && (
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="搜索咖啡豆名称..."
+                    className="w-48 rounded-full border-none bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
+                    autoComplete="off"
+                    onKeyDown={e => e.key === 'Escape' && handleCloseSearch()}
+                  />
                   <button
                     type="button"
-                    onClick={isCoffeeBeanStep ? handleSearchClick : handleNext}
-                    className={`${buttonBaseClass} flex items-center justify-center ${isLastStep && !isCoffeeBeanStep ? 'px-6 py-3' : 'px-5 py-3'}`}
+                    onClick={handleCloseSearch}
+                    className={`${buttonBaseClass} shrink-0 p-4`}
                   >
-                    {isLastStep && !isCoffeeBeanStep ? (
-                      <span className="font-medium">保存笔记</span>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {isCoffeeBeanStep ? '搜索' : '下一步'}
-                        </span>
-                        {isCoffeeBeanStep ? (
-                          <Search className="h-4 w-4" strokeWidth="3" />
-                        ) : (
-                          <ArrowRight className="h-4 w-4" strokeWidth="3" />
-                        )}
-                      </div>
-                    )}
+                    <X className="h-4 w-4" strokeWidth="3" />
                   </button>
-                )}
+                </div>
+              )}
 
-                {/* 随机选择按钮 */}
-                {isValid && isCoffeeBeanStep && !isSearching && (
-                  <button
-                    type="button"
-                    onClick={() => handleRandomBean(false)}
-                    className={`${buttonBaseClass} flex items-center justify-center p-4`}
-                  >
-                    <Shuffle className="h-4 w-4" strokeWidth="3" />
-                  </button>
-                )}
-              </div>
+              {/* 下一步/完成按钮 */}
+              {isValid && !(isCoffeeBeanStep && isSearching) && (
+                <button
+                  type="button"
+                  onClick={isCoffeeBeanStep ? handleSearchClick : handleNext}
+                  className={`${buttonBaseClass} flex items-center justify-center ${isLastStep && !isCoffeeBeanStep ? 'px-6 py-3' : 'px-5 py-3'}`}
+                >
+                  {isLastStep && !isCoffeeBeanStep ? (
+                    <span className="font-medium">保存笔记</span>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {isCoffeeBeanStep ? '搜索' : '下一步'}
+                      </span>
+                      {isCoffeeBeanStep ? (
+                        <Search className="h-4 w-4" strokeWidth="3" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4" strokeWidth="3" />
+                      )}
+                    </div>
+                  )}
+                </button>
+              )}
+
+              {/* 随机选择按钮 */}
+              {isValid && isCoffeeBeanStep && !isSearching && (
+                <button
+                  type="button"
+                  onClick={() => handleRandomBean(false)}
+                  className={`${buttonBaseClass} flex items-center justify-center p-4`}
+                >
+                  <Shuffle className="h-4 w-4" strokeWidth="3" />
+                </button>
+              )}
             </div>
           </div>
         )}

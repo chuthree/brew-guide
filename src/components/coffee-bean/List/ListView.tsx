@@ -15,34 +15,28 @@ import {
   getRoasterLogoSync,
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
-import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
 import {
-  getFlavorInfo,
-  sortBeansByFlavorPeriod,
-} from '@/lib/utils/beanSortUtils';
+  formatBeanDisplayName,
+  getRoasterName,
+} from '@/lib/utils/beanVarietyUtils';
+import { sortBeansByFlavorPeriod } from '@/lib/utils/beanSortUtils';
+import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
+import {
+  calculateFlavorInfo,
+  getDefaultFlavorPeriodByRoastLevelSync,
+} from '@/lib/utils/flavorPeriodUtils';
 
 // 咖啡豆图片组件（支持烘焙商图标）
 const BeanImage: React.FC<{
   bean: CoffeeBean;
   forceRefreshKey: number;
-}> = ({ bean, forceRefreshKey }) => {
+  roasterSettings: {
+    roasterFieldEnabled?: boolean;
+    roasterSeparator?: ' ' | '/';
+  };
+}> = ({ bean, forceRefreshKey, roasterSettings }) => {
   const [imageError, setImageError] = useState(false);
   const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
-
-  // 获取烘焙商字段设置
-  const roasterFieldEnabled = useSettingsStore(
-    state => state.settings.roasterFieldEnabled
-  );
-  const roasterSeparator = useSettingsStore(
-    state => state.settings.roasterSeparator
-  );
-  const roasterSettings = useMemo(
-    () => ({
-      roasterFieldEnabled,
-      roasterSeparator,
-    }),
-    [roasterFieldEnabled, roasterSeparator]
-  );
 
   useEffect(() => {
     if (!bean.name || bean.image) {
@@ -117,6 +111,32 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
   const [forceRefreshKey, setForceRefreshKey] = useState(0);
   const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
+  // 获取日期显示模式设置
+  const dateDisplayMode = useSettingsStore(
+    state => state.settings.dateDisplayMode ?? 'date'
+  );
+  const showPrice = useSettingsStore(
+    state => state.settings.showPrice !== false
+  );
+  const showTotalPrice = useSettingsStore(
+    state => state.settings.showTotalPrice ?? false
+  );
+
   // 初始化加载
   useEffect(() => {
     if (!storeInitialized) {
@@ -179,6 +199,145 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
       bean.name?.toLowerCase().includes(query)
     );
   }, [availableBeans, searchQuery]);
+
+  // 计算赏味期信息
+  const getFlavorInfo = useCallback(
+    (bean: CoffeeBean) => {
+      if (bean.isInTransit) {
+        return { phase: '在途', status: '在途' };
+      }
+
+      if (!bean.roastDate) {
+        return { phase: '未知', status: '未知' };
+      }
+
+      if (bean.isFrozen) {
+        return { phase: '冷冻', status: '冷冻' };
+      }
+
+      const flavorInfo = calculateFlavorInfo(bean);
+      const today = new Date();
+      const roastTimestamp = parseDateToTimestamp(bean.roastDate);
+      const roastDate = new Date(roastTimestamp);
+      const todayDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+      const roastDateOnly = new Date(
+        roastDate.getFullYear(),
+        roastDate.getMonth(),
+        roastDate.getDate()
+      );
+      const daysSinceRoast = Math.ceil(
+        (todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      let startDay = bean.startDay || 0;
+      let endDay = bean.endDay || 0;
+
+      if (startDay === 0 && endDay === 0) {
+        const roasterName = getRoasterName(bean, roasterSettings);
+        const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
+          bean.roastLevel || '',
+          undefined,
+          roasterName
+        );
+        startDay = defaultPeriod.startDay;
+        endDay = defaultPeriod.endDay;
+      }
+
+      const phase = flavorInfo.phase;
+      const remainingDays = flavorInfo.remainingDays;
+      let status = '';
+
+      if (phase === '养豆期') {
+        status = `养豆 ${remainingDays}天`;
+      } else if (phase === '赏味期') {
+        status = `赏味 ${remainingDays}天`;
+      } else if (phase === '衰退期') {
+        status = '已衰退';
+      } else {
+        status = '未知';
+      }
+
+      return { phase, status, daysSinceRoast };
+    },
+    [roasterSettings]
+  );
+
+  const formatNumber = useCallback(
+    (value: string | undefined): string =>
+      !value
+        ? '0'
+        : Number.isInteger(parseFloat(value))
+          ? Math.floor(parseFloat(value)).toString()
+          : value,
+    []
+  );
+
+  const formatDateShort = useCallback((dateStr: string): string => {
+    try {
+      const timestamp = parseDateToTimestamp(dateStr);
+      const date = new Date(timestamp);
+      const year = date.getFullYear().toString().slice(-2);
+      return `${year}-${date.getMonth() + 1}-${date.getDate()}`;
+    } catch {
+      return dateStr;
+    }
+  }, []);
+
+  const getAgingDaysText = useCallback((dateStr: string): string => {
+    try {
+      const timestamp = parseDateToTimestamp(dateStr);
+      const roastDate = new Date(timestamp);
+      const today = new Date();
+      const todayDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+      const roastDateOnly = new Date(
+        roastDate.getFullYear(),
+        roastDate.getMonth(),
+        roastDate.getDate()
+      );
+      const daysSinceRoast = Math.ceil(
+        (todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return `养豆${daysSinceRoast}天`;
+    } catch {
+      return '养豆0天';
+    }
+  }, []);
+
+  const formatPrice = useCallback(
+    (price: string, capacity: string): string => {
+      const priceNum = parseFloat(price);
+      const capacityNum = parseFloat(capacity.replace('g', ''));
+      if (isNaN(priceNum) || isNaN(capacityNum) || capacityNum === 0) return '';
+
+      const pricePerGram = (priceNum / capacityNum).toFixed(2);
+
+      if (showTotalPrice) {
+        return `${priceNum}元(${pricePerGram}元/克)`;
+      } else {
+        return `${pricePerGram}元/克`;
+      }
+    },
+    [showTotalPrice]
+  );
+
+  const getStatusDotColor = useCallback((phase: string): string => {
+    const colors: Record<string, string> = {
+      养豆期: 'bg-amber-400',
+      赏味期: 'bg-green-400',
+      衰退期: 'bg-red-400',
+      在途: 'bg-blue-400',
+      冷冻: 'bg-cyan-400',
+    };
+    return colors[phase] || 'bg-neutral-400';
+  }, []);
 
   // 移除IntersectionObserver和分页状态
 
@@ -274,156 +433,90 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
         data={filteredBeans}
         components={{ List: VirtList }}
         itemContent={(_index, bean) => {
-          // 预计算所有需要的数据，避免在渲染中重复计算
           const flavorInfo = getFlavorInfo(bean);
-          const { phase } = flavorInfo;
-
-          // 获取赏味期状态
-          let freshStatus = '';
-          let statusClass = 'text-neutral-500 dark:text-neutral-400';
-
-          if (bean.isInTransit) {
-            freshStatus = '(在途)';
-            statusClass = 'text-neutral-600 dark:text-neutral-400';
-          } else if (bean.isFrozen) {
-            freshStatus = '(冷冻)';
-            statusClass = 'text-blue-400 dark:text-blue-300';
-          } else if (phase === '其他') {
-            // 没有烘焙日期的豆子
-            freshStatus = '';
-            statusClass = 'text-neutral-500 dark:text-neutral-400';
-          } else if (bean.roastDate) {
-            if (phase === '养豆期') {
-              freshStatus = `(养豆期)`;
-              statusClass = 'text-neutral-500 dark:text-neutral-400';
-            } else if (phase === '赏味期') {
-              freshStatus = `(赏味期)`;
-              statusClass = 'text-emerald-500 dark:text-emerald-400';
-            } else {
-              freshStatus = '(衰退期)';
-              statusClass = 'text-neutral-500 dark:text-neutral-400';
-            }
-          }
-
-          // 预计算格式化函数
-          const formatNumber = (value: string | undefined): string =>
-            !value
-              ? '0'
-              : Number.isInteger(parseFloat(value))
-                ? Math.floor(parseFloat(value)).toString()
-                : value;
-
-          const formatDateShort = (dateStr: string): string => {
-            const date = new Date(dateStr);
-            const year = date.getFullYear().toString().slice(-2); // 获取年份的最后两位
-            return `${year}-${date.getMonth() + 1}-${date.getDate()}`;
-          };
-
-          const formatPricePerGram = (
-            price: string,
-            capacity: string
-          ): string => {
-            const priceNum = parseFloat(price);
-            const capacityNum = parseFloat(capacity.replace('g', ''));
-            if (isNaN(priceNum) || isNaN(capacityNum) || capacityNum === 0)
-              return '';
-            return `${(priceNum / capacityNum).toFixed(2)}元/克`;
-          };
-
-          // 构建参数信息项
-          const infoItems = [];
-          // 生豆显示购买日期，熟豆显示烘焙日期
-          const isGreenBean = bean.beanState === 'green';
-          const displayDate = isGreenBean ? bean.purchaseDate : bean.roastDate;
-          if (displayDate && !bean.isInTransit) {
-            infoItems.push(formatDateShort(displayDate));
-          }
-
-          const remaining =
-            typeof bean.remaining === 'string'
-              ? parseFloat(bean.remaining)
-              : (bean.remaining ?? 0);
-          const capacity =
-            typeof bean.capacity === 'string'
-              ? parseFloat(bean.capacity)
-              : (bean.capacity ?? 0);
-          if (remaining > 0 && capacity > 0) {
-            infoItems.push(
-              `${formatNumber(bean.remaining)}/${formatNumber(bean.capacity)}克`
-            );
-          }
-
-          if (bean.price && bean.capacity) {
-            infoItems.push(formatPricePerGram(bean.price, bean.capacity));
-          }
-
-          // 获取状态圆点的颜色
-          const getStatusDotColor = (phase: string): string => {
-            switch (phase) {
-              case '养豆期':
-                return 'bg-amber-400';
-              case '赏味期':
-                return 'bg-green-400';
-              case '衰退期':
-                return 'bg-red-400';
-              case '在途':
-                return 'bg-blue-400';
-              case '冷冻':
-                return 'bg-cyan-400';
-              default:
-                return 'bg-neutral-400';
-            }
-          };
+          const displayTitle = formatBeanDisplayName(bean, roasterSettings);
 
           return (
             <div
               ref={setItemRef(bean.id)}
-              className="group relative cursor-pointer pb-5 text-neutral-500 transition-all duration-300 dark:text-neutral-400"
+              className="group cursor-pointer pb-3.5 transition-colors"
               onClick={() => onSelect(bean.id, bean)}
             >
-              <div className="cursor-pointer">
-                <div className="flex gap-3">
-                  {/* 左侧图片区域 - 固定显示，缩小尺寸 */}
-                  <div className="relative self-start">
-                    <div className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
-                      <BeanImage
-                        bean={bean}
-                        forceRefreshKey={forceRefreshKey}
-                      />
-                    </div>
-
-                    {/* 状态圆点 - 右下角，边框超出图片边界 - 只有当有赏味期数据时才显示 */}
-                    {showStatusDots &&
-                      bean.roastDate &&
-                      (bean.startDay || bean.endDay || bean.roastLevel) && (
-                        <div
-                          className={`absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ${getStatusDotColor(phase)} border-2 border-neutral-50 dark:border-neutral-900`}
-                        />
-                      )}
+              <div className="flex gap-3">
+                <div className="relative self-start">
+                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
+                    <BeanImage
+                      bean={bean}
+                      forceRefreshKey={forceRefreshKey}
+                      roasterSettings={roasterSettings}
+                    />
                   </div>
 
-                  {/* 右侧内容区域 - 与图片等高 */}
-                  <div className="flex flex-col justify-center gap-y-1.5">
-                    {/* 咖啡豆名称和烘焙度 */}
-                    <div className="line-clamp-2 text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
-                      {bean.name}
-                      {bean.roastLevel && ` ${bean.roastLevel}`}
-                      <span className={statusClass}> {freshStatus}</span>
-                    </div>
+                  {showStatusDots &&
+                    bean.roastDate &&
+                    (bean.startDay || bean.endDay || bean.roastLevel) && (
+                      <div
+                        className={`absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ${getStatusDotColor(flavorInfo.phase)} border-2 border-neutral-50 dark:border-neutral-900`}
+                      />
+                    )}
+                </div>
 
-                    {/* 其他信息 */}
-                    <div className="text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                      {infoItems.map((item, i) => (
-                        <React.Fragment key={i}>
-                          <span className="inline">{item}</span>
-                          {i < infoItems.length - 1 && (
-                            <span className="bg-red mx-2 text-neutral-400 dark:text-neutral-600">
+                <div className="flex min-w-0 flex-1 flex-col justify-center gap-y-1">
+                  <div className="line-clamp-2 text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
+                    {displayTitle}
+                  </div>
+
+                  <div className="overflow-hidden text-xs leading-relaxed font-medium text-neutral-600 dark:text-neutral-400">
+                    {/* 生豆显示购买日期，熟豆显示烘焙日期 */}
+                    {(() => {
+                      const isGreenBean = bean.beanState === 'green';
+                      const displayDate = isGreenBean
+                        ? bean.purchaseDate
+                        : bean.roastDate;
+                      return displayDate || bean.isInTransit ? (
+                        <span className="inline whitespace-nowrap">
+                          {bean.isInTransit
+                            ? '在途'
+                            : bean.isFrozen
+                              ? '冷冻'
+                              : !isGreenBean &&
+                                  displayDate &&
+                                  dateDisplayMode === 'flavorPeriod'
+                                ? flavorInfo.status
+                                : !isGreenBean &&
+                                    displayDate &&
+                                    dateDisplayMode === 'agingDays'
+                                  ? getAgingDaysText(displayDate)
+                                  : displayDate
+                                    ? formatDateShort(displayDate)
+                                    : ''}
+                          {((bean.capacity && bean.remaining) ||
+                            (bean.price && bean.capacity)) && (
+                            <span className="mx-2 text-neutral-400 dark:text-neutral-600">
                               ·
                             </span>
                           )}
-                        </React.Fragment>
-                      ))}
-                    </div>
+                        </span>
+                      ) : null;
+                    })()}
+
+                    {bean.capacity && bean.remaining && (
+                      <span className="inline whitespace-nowrap">
+                        {formatNumber(bean.remaining)}/
+                        {formatNumber(bean.capacity)}克
+                        {showPrice && bean.price && bean.capacity && (
+                          <span className="mx-2 text-neutral-400 dark:text-neutral-600">
+                            ·
+                          </span>
+                        )}
+                      </span>
+                    )}
+
+                    {showPrice && bean.price && bean.capacity && (
+                      <span className="inline whitespace-nowrap">
+                        {formatPrice(bean.price, bean.capacity)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

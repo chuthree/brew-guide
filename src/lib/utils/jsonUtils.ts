@@ -1238,7 +1238,10 @@ function parseMethodText(
       (line, idx) => idx > 0 && /^\d+\./.test(line.trim())
     );
     if (stageStartIndex > 0) {
-      stagesSection = lines.slice(stageStartIndex).join('\n').split('@DATA_TYPE')[0];
+      stagesSection = lines
+        .slice(stageStartIndex)
+        .join('\n')
+        .split('@DATA_TYPE')[0];
     }
   }
 
@@ -1260,7 +1263,8 @@ function parseMethodText(
           /^\d+\.\s*\[(.*?)\]\s*(.*?)\s+(\d+)[″"]\s+(\d+)g(?:\n|$)/;
 
         // v2 无水量格式（等待步骤）：1. [等待] 焖蒸等待 18″
-        const v2NoWaterPattern = /^\d+\.\s*\[(.*?)\]\s*(.*?)\s+(\d+)[″"](?:\n|$)/;
+        const v2NoWaterPattern =
+          /^\d+\.\s*\[(.*?)\]\s*(.*?)\s+(\d+)[″"](?:\n|$)/;
 
         // v2 无时间格式（bypass/beverage）：1. [Bypass] 加水 50g
         const v2NoTimePattern = /^\d+\.\s*\[(.*?)\]\s*(.*?)\s+(\d+)g(?:\n|$)/;
@@ -1270,7 +1274,8 @@ function parseMethodText(
           /^\d+\.\s*\[(.*?)\]\s*(.*?)\s+(\d+)g\s+(\d+)秒(?:\n|$)/;
 
         // 兼容旧 v2 无水量格式：1. [等待] 焖蒸等待 18秒
-        const v2OldNoWaterPattern = /^\d+\.\s*\[(.*?)\]\s*(.*?)\s+(\d+)秒(?:\n|$)/;
+        const v2OldNoWaterPattern =
+          /^\d+\.\s*\[(.*?)\]\s*(.*?)\s+(\d+)秒(?:\n|$)/;
 
         // 旧新格式匹配：1. (用时10秒) [绕圈注水] 焖蒸 - 30g
         const oldNewFormatPattern =
@@ -1305,7 +1310,10 @@ function parseMethodText(
             };
 
             // 检查下一行是否是详细信息
-            if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
+            if (
+              i + 1 < stageLines.length &&
+              stageLines[i + 1].startsWith('   ')
+            ) {
               stage.detail = stageLines[i + 1].trim();
               i++;
             }
@@ -1330,7 +1338,10 @@ function parseMethodText(
               pourType: mapPourTypeName(pourTypeText, customEquipment),
             };
 
-            if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
+            if (
+              i + 1 < stageLines.length &&
+              stageLines[i + 1].startsWith('   ')
+            ) {
               stage.detail = stageLines[i + 1].trim();
               i++;
             }
@@ -1342,7 +1353,9 @@ function parseMethodText(
           // v2 无水量格式（等待步骤）
           const v2NoWaterMatch = line.match(v2NoWaterPattern);
           // 兼容旧格式
-          const v2OldNoWaterMatch = !v2NoWaterMatch ? line.match(v2OldNoWaterPattern) : null;
+          const v2OldNoWaterMatch = !v2NoWaterMatch
+            ? line.match(v2OldNoWaterPattern)
+            : null;
           const noWaterMatch = v2NoWaterMatch || v2OldNoWaterMatch;
           if (noWaterMatch) {
             const pourTypeText = noWaterMatch[1].trim();
@@ -1356,7 +1369,10 @@ function parseMethodText(
               pourType: mapPourTypeName(pourTypeText, customEquipment),
             };
 
-            if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
+            if (
+              i + 1 < stageLines.length &&
+              stageLines[i + 1].startsWith('   ')
+            ) {
               stage.detail = stageLines[i + 1].trim();
               i++;
             }
@@ -1379,7 +1395,10 @@ function parseMethodText(
               pourType: mapPourTypeName(pourTypeText, customEquipment),
             };
 
-            if (i + 1 < stageLines.length && stageLines[i + 1].startsWith('   ')) {
+            if (
+              i + 1 < stageLines.length &&
+              stageLines[i + 1].startsWith('   ')
+            ) {
               stage.detail = stageLines[i + 1].trim();
               i++;
             }
