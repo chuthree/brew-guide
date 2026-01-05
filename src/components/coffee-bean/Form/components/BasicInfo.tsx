@@ -302,7 +302,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
               </button>
             </>
           ) : !bean.image && roasterLogo ? (
-            /* 状态: 烘焙商图标作为正面（仅显示，不存储） */
+            /* 状态: 烘焙商图标作为底图（半透明，提示可替换） */
             <>
               <div
                 className="relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
@@ -312,13 +312,13 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 <Image
                   src={roasterLogo}
                   alt="烘焙商图标"
-                  className="object-cover"
+                  className="object-cover opacity-40"
                   fill
                   sizes="64px"
                 />
-                {/* 半透明遮罩提示可替换 */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity hover:opacity-100">
-                  <Camera className="h-4 w-4 text-white drop-shadow-md" />
+                {/* 居中的相机图标，始终显示 */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Camera className="h-5 w-5 text-neutral-400 dark:text-neutral-500" />
                 </div>
               </div>
               {bean.backImage ? (
@@ -473,7 +473,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
           <AutocompleteInput
             value={bean.name || ''}
             onChange={onBeanChange('name')}
-            placeholder="例如：辛鹿 瑰夏红蜜处理"
+            placeholder="输入咖啡豆名称"
             suggestions={[]}
             required
             clearable
