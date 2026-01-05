@@ -202,15 +202,15 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             }
           />
         </SettingRow>
-        <SettingRow label="烘焙商独立输入">
+        <SettingRow label="烘焙商">
           <SettingToggle
-            checked={settings.roasterFieldEnabled || false}
+            checked={settings.roasterFieldEnabled !== false}
             onChange={async checked => {
               await handleChange('roasterFieldEnabled', checked);
             }}
           />
         </SettingRow>
-        {settings.roasterFieldEnabled && (
+        {settings.roasterFieldEnabled !== false && (
           <SettingRow label="烘焙商分隔符" isSubSetting>
             <div className="flex h-0 items-center">
               <ButtonGroup
