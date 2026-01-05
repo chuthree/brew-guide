@@ -184,6 +184,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
   }, [stages]);
 
   // 时间模式数据
+  // 时间模式下隐藏"等待"步骤（等待时间通过开始/结束时间推算）
+  // 但保留所有其他步骤类型，包括 bypass 和 beverage
   const timeModeData = useMemo(() => {
     const result: {
       originalIndex: number;
@@ -194,6 +196,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
       prevWaitIndex: number | null;
       pourStageNumber: number | null;
       hasDuration: boolean; // 是否有设置 duration
+      isTimeless: boolean; // 是否是无时间步骤（bypass/beverage）
     }[] = [];
 
     let currentTime = 0;
@@ -203,8 +206,11 @@ const StagesStep: React.FC<StagesStepProps> = ({
 
     stages.forEach((stage, index) => {
       const hasDuration = stage.duration !== undefined && stage.duration > 0;
+      const isTimeless =
+        stage.pourType === 'bypass' || stage.pourType === 'beverage';
 
       if (stage.pourType === 'wait') {
+        // 等待步骤：在时间模式下仍然记录，但渲染时会简化显示
         const startTime = currentTime;
         const duration = stage.duration || 0;
         const endTime = hasDuration ? currentTime + duration : null;
@@ -219,10 +225,35 @@ const StagesStep: React.FC<StagesStepProps> = ({
           prevWaitIndex: null,
           pourStageNumber: null,
           hasDuration,
+          isTimeless: false,
         });
 
         lastWaitIndex = index;
-      } else if (stage.pourType !== 'bypass' && stage.pourType !== 'beverage') {
+      } else if (isTimeless) {
+        // bypass/beverage 步骤：没有时间概念，但需要显示
+        pourStageCount++;
+        const waterValue = stage.water
+          ? typeof stage.water === 'number'
+            ? stage.water
+            : parseInt(stage.water.toString().replace('g', '') || '0')
+          : 0;
+        cumulativeWater += waterValue;
+
+        result.push({
+          originalIndex: index,
+          isWait: false,
+          startTime: currentTime, // 使用当前时间点
+          endTime: null, // 无时间步骤没有结束时间
+          cumulativeWater,
+          prevWaitIndex: lastWaitIndex,
+          pourStageNumber: pourStageCount,
+          hasDuration: false,
+          isTimeless: true,
+        });
+
+        lastWaitIndex = null;
+      } else {
+        // 普通注水步骤
         pourStageCount++;
         const startTime = currentTime;
         const duration = stage.duration || 0;
@@ -245,16 +276,10 @@ const StagesStep: React.FC<StagesStepProps> = ({
           prevWaitIndex: lastWaitIndex,
           pourStageNumber: pourStageCount,
           hasDuration,
+          isTimeless: false,
         });
 
         lastWaitIndex = null;
-      } else {
-        const waterValue = stage.water
-          ? typeof stage.water === 'number'
-            ? stage.water
-            : parseInt(stage.water.toString().replace('g', '') || '0')
-          : 0;
-        cumulativeWater += waterValue;
       }
     });
 
@@ -315,42 +340,19 @@ const StagesStep: React.FC<StagesStepProps> = ({
 
   const formatEspressoTotalWater = () => {
     if (!stages || stages.length === 0) return '0g';
-    const waterByName: Record<
-      string,
-      { label: string; water: number; count: number }
-    > = {};
 
-    stages.forEach(stage => {
-      if (!stage.water) return;
-      const waterValue =
-        typeof stage.water === 'number'
-          ? stage.water
-          : parseInt(stage.water.toString().replace('g', '') || '0');
-      if (waterValue <= 0) return;
+    // 只显示萃取步骤的液重
+    const extractionStage = stages.find(
+      stage => stage.pourType === 'extraction'
+    );
+    if (!extractionStage || !extractionStage.water) return '0g';
 
-      const displayLabel =
-        stage.pourType === 'extraction'
-          ? '萃取浓缩'
-          : stage.label || (stage.pourType === 'beverage' ? '饮料' : '其他');
-      const key = `${stage.pourType}_${displayLabel}`;
+    const waterValue =
+      typeof extractionStage.water === 'number'
+        ? extractionStage.water
+        : parseInt(extractionStage.water.toString().replace('g', '') || '0');
 
-      if (waterByName[key]) {
-        waterByName[key].water += waterValue;
-        waterByName[key].count += 1;
-      } else {
-        waterByName[key] = { label: displayLabel, water: waterValue, count: 1 };
-      }
-    });
-
-    const waterItems = Object.values(waterByName);
-    if (waterItems.length === 0) return '0g';
-
-    return waterItems
-      .map(item => {
-        const countSuffix = item.count > 1 ? `×${item.count}` : '';
-        return `${item.water}g(${item.label}${countSuffix})`;
-      })
-      .join(' + ');
+    return `${waterValue}g`;
   };
 
   const calculateTotalTime = () => calculateTotalDuration(stages);
@@ -786,7 +788,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                 isEspresso ? 'max-w-[150px] truncate' : ''
               } text-neutral-900 dark:text-neutral-100`}
             >
-              总水量:{' '}
+              {isEspresso ? '浓缩液重' : '总水量'}:{' '}
               {isEspresso
                 ? formatEspressoTotalWater()
                 : `${calculateCurrentWater()}/${parseInt(totalWater) || 0}g`}
@@ -1002,143 +1004,156 @@ const StagesStep: React.FC<StagesStepProps> = ({
                     )}
 
                     {/* 时间：开始-结束格式，无感输入 */}
-                    <span className="flex shrink-0 items-center tabular-nums">
-                      {/* 开始时间 */}
-                      <span
-                        className="flex items-center"
-                        onBlur={e => {
-                          if (!e.currentTarget.contains(e.relatedTarget)) {
-                            const spans =
-                              e.currentTarget.querySelectorAll(
-                                '[contenteditable]'
-                              );
-                            const mins = parseInt(spans[0]?.textContent || '0');
-                            const secs = parseInt(spans[1]?.textContent || '0');
-                            // 自动进位
-                            const totalSecs = mins * 60 + secs;
-                            const newMins = Math.floor(totalSecs / 60);
-                            const newSecs = totalSecs % 60;
-                            if (spans[0])
-                              spans[0].textContent = String(newMins);
-                            if (spans[1])
-                              spans[1].textContent = String(newSecs).padStart(
-                                2,
-                                '0'
-                              );
-                            handleTimeModeStartBlurWithValues(
-                              timeModeIndex,
-                              newMins,
-                              newSecs
-                            );
-                          }
-                        }}
-                      >
+                    {/* 对于无时间步骤（bypass/beverage），不显示时间输入 */}
+                    {timeData.isTimeless ? (
+                      <span className="w-24 shrink-0" />
+                    ) : (
+                      <span className="flex shrink-0 items-center tabular-nums">
+                        {/* 开始时间 */}
                         <span
-                          contentEditable
-                          suppressContentEditableWarning
-                          inputMode="numeric"
-                          onInput={e => {
-                            const text = e.currentTarget.textContent || '';
-                            const val = text.replace(/\D/g, '');
-                            if (val !== text) {
-                              e.currentTarget.textContent = val;
+                          className="flex items-center"
+                          onBlur={e => {
+                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                              const spans =
+                                e.currentTarget.querySelectorAll(
+                                  '[contenteditable]'
+                                );
+                              const mins = parseInt(
+                                spans[0]?.textContent || '0'
+                              );
+                              const secs = parseInt(
+                                spans[1]?.textContent || '0'
+                              );
+                              // 自动进位
+                              const totalSecs = mins * 60 + secs;
+                              const newMins = Math.floor(totalSecs / 60);
+                              const newSecs = totalSecs % 60;
+                              if (spans[0])
+                                spans[0].textContent = String(newMins);
+                              if (spans[1])
+                                spans[1].textContent = String(newSecs).padStart(
+                                  2,
+                                  '0'
+                                );
+                              handleTimeModeStartBlurWithValues(
+                                timeModeIndex,
+                                newMins,
+                                newSecs
+                              );
                             }
                           }}
-                          className="min-w-[0.5em] cursor-text text-right outline-none hover:text-neutral-600 dark:hover:text-neutral-300"
                         >
-                          {Math.floor(timeData.startTime / 60)}
+                          <span
+                            contentEditable
+                            suppressContentEditableWarning
+                            inputMode="numeric"
+                            onInput={e => {
+                              const text = e.currentTarget.textContent || '';
+                              const val = text.replace(/\D/g, '');
+                              if (val !== text) {
+                                e.currentTarget.textContent = val;
+                              }
+                            }}
+                            className="min-w-[0.5em] cursor-text text-right outline-none hover:text-neutral-600 dark:hover:text-neutral-300"
+                          >
+                            {Math.floor(timeData.startTime / 60)}
+                          </span>
+                          <span className="text-neutral-500">′</span>
+                          <span
+                            contentEditable
+                            suppressContentEditableWarning
+                            inputMode="numeric"
+                            onInput={e => {
+                              const text = e.currentTarget.textContent || '';
+                              const val = text.replace(/\D/g, '');
+                              if (val !== text) {
+                                e.currentTarget.textContent = val;
+                              }
+                            }}
+                            className="min-w-[1em] cursor-text text-right outline-none hover:text-neutral-600 dark:hover:text-neutral-300"
+                          >
+                            {String(timeData.startTime % 60).padStart(2, '0')}
+                          </span>
+                          <span className="text-neutral-500">″</span>
                         </span>
-                        <span className="text-neutral-500">′</span>
-                        <span
-                          contentEditable
-                          suppressContentEditableWarning
-                          inputMode="numeric"
-                          onInput={e => {
-                            const text = e.currentTarget.textContent || '';
-                            const val = text.replace(/\D/g, '');
-                            if (val !== text) {
-                              e.currentTarget.textContent = val;
-                            }
-                          }}
-                          className="min-w-[1em] cursor-text text-right outline-none hover:text-neutral-600 dark:hover:text-neutral-300"
-                        >
-                          {String(timeData.startTime % 60).padStart(2, '0')}
-                        </span>
-                        <span className="text-neutral-500">″</span>
-                      </span>
 
-                      <span className="mx-0.5 text-neutral-400">-</span>
+                        <span className="mx-0.5 text-neutral-400">-</span>
 
-                      {/* 结束时间 */}
-                      <span
-                        className="flex items-center"
-                        onBlur={e => {
-                          if (!e.currentTarget.contains(e.relatedTarget)) {
-                            const spans =
-                              e.currentTarget.querySelectorAll(
-                                '[contenteditable]'
-                              );
-                            const mins = parseInt(spans[0]?.textContent || '0');
-                            const secs = parseInt(spans[1]?.textContent || '0');
-                            // 自动进位
-                            const totalSecs = mins * 60 + secs;
-                            const newMins = Math.floor(totalSecs / 60);
-                            const newSecs = totalSecs % 60;
-                            if (spans[0])
-                              spans[0].textContent = String(newMins);
-                            if (spans[1])
-                              spans[1].textContent = String(newSecs).padStart(
-                                2,
-                                '0'
-                              );
-                            handleTimeModeEndBlurWithValues(
-                              timeModeIndex,
-                              newMins,
-                              newSecs
-                            );
-                          }
-                        }}
-                      >
+                        {/* 结束时间 */}
                         <span
-                          contentEditable
-                          suppressContentEditableWarning
-                          inputMode="numeric"
-                          data-placeholder="0"
-                          onInput={e => {
-                            const text = e.currentTarget.textContent || '';
-                            const val = text.replace(/\D/g, '');
-                            if (val !== text) {
-                              e.currentTarget.textContent = val;
+                          className="flex items-center"
+                          onBlur={e => {
+                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                              const spans =
+                                e.currentTarget.querySelectorAll(
+                                  '[contenteditable]'
+                                );
+                              const mins = parseInt(
+                                spans[0]?.textContent || '0'
+                              );
+                              const secs = parseInt(
+                                spans[1]?.textContent || '0'
+                              );
+                              // 自动进位
+                              const totalSecs = mins * 60 + secs;
+                              const newMins = Math.floor(totalSecs / 60);
+                              const newSecs = totalSecs % 60;
+                              if (spans[0])
+                                spans[0].textContent = String(newMins);
+                              if (spans[1])
+                                spans[1].textContent = String(newSecs).padStart(
+                                  2,
+                                  '0'
+                                );
+                              handleTimeModeEndBlurWithValues(
+                                timeModeIndex,
+                                newMins,
+                                newSecs
+                              );
                             }
                           }}
-                          className={`min-w-[0.5em] cursor-text text-right outline-none empty:text-neutral-400 empty:before:content-[attr(data-placeholder)] hover:text-neutral-600 dark:empty:text-neutral-600 dark:hover:text-neutral-300`}
                         >
-                          {timeData.endTime !== null
-                            ? Math.floor(timeData.endTime / 60)
-                            : ''}
+                          <span
+                            contentEditable
+                            suppressContentEditableWarning
+                            inputMode="numeric"
+                            data-placeholder="0"
+                            onInput={e => {
+                              const text = e.currentTarget.textContent || '';
+                              const val = text.replace(/\D/g, '');
+                              if (val !== text) {
+                                e.currentTarget.textContent = val;
+                              }
+                            }}
+                            className={`min-w-[0.5em] cursor-text text-right outline-none empty:text-neutral-400 empty:before:content-[attr(data-placeholder)] hover:text-neutral-600 dark:empty:text-neutral-600 dark:hover:text-neutral-300`}
+                          >
+                            {timeData.endTime !== null
+                              ? Math.floor(timeData.endTime / 60)
+                              : ''}
+                          </span>
+                          <span className="text-neutral-500">′</span>
+                          <span
+                            contentEditable
+                            suppressContentEditableWarning
+                            inputMode="numeric"
+                            data-placeholder="00"
+                            onInput={e => {
+                              const text = e.currentTarget.textContent || '';
+                              const val = text.replace(/\D/g, '');
+                              if (val !== text) {
+                                e.currentTarget.textContent = val;
+                              }
+                            }}
+                            className={`min-w-[1em] cursor-text text-right outline-none empty:text-neutral-400 empty:before:content-[attr(data-placeholder)] hover:text-neutral-600 dark:empty:text-neutral-600 dark:hover:text-neutral-300`}
+                          >
+                            {timeData.endTime !== null
+                              ? String(timeData.endTime % 60).padStart(2, '0')
+                              : ''}
+                          </span>
+                          <span className="text-neutral-500">″</span>
                         </span>
-                        <span className="text-neutral-500">′</span>
-                        <span
-                          contentEditable
-                          suppressContentEditableWarning
-                          inputMode="numeric"
-                          data-placeholder="00"
-                          onInput={e => {
-                            const text = e.currentTarget.textContent || '';
-                            const val = text.replace(/\D/g, '');
-                            if (val !== text) {
-                              e.currentTarget.textContent = val;
-                            }
-                          }}
-                          className={`min-w-[1em] cursor-text text-right outline-none empty:text-neutral-400 empty:before:content-[attr(data-placeholder)] hover:text-neutral-600 dark:empty:text-neutral-600 dark:hover:text-neutral-300`}
-                        >
-                          {timeData.endTime !== null
-                            ? String(timeData.endTime % 60).padStart(2, '0')
-                            : ''}
-                        </span>
-                        <span className="text-neutral-500">″</span>
                       </span>
-                    </span>
+                    )}
 
                     {/* 水量（累计值） */}
                     {showWater ? (

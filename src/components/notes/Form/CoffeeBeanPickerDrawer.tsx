@@ -190,12 +190,7 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
         ref={modalRef}
         className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[85vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
       >
-        <div className="pb-safe-bottom flex h-full flex-col overflow-hidden px-6 pt-4">
-          {/* 拖拽手柄 */}
-          <div className="mb-4 flex shrink-0 justify-center">
-            <div className="h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-          </div>
-
+        <div className="flex h-full flex-col overflow-hidden px-6 pt-4">
           {/* 顶部搜索区域 */}
           <div className="mb-4 flex shrink-0 items-center gap-2">
             {/* 胶囊搜索输入框 */}

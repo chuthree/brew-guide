@@ -1029,7 +1029,7 @@ export const brewingMethods: BrewingMethods = {
   ],
   Espresso: [
     {
-      name: '意式浓缩',
+      name: '浓缩',
       params: {
         coffee: '18g',
         water: '36g',
@@ -1048,7 +1048,7 @@ export const brewingMethods: BrewingMethods = {
       },
     },
     {
-      name: '冰美式',
+      name: '美式',
       params: {
         coffee: '18g',
         water: '36g',
@@ -1066,13 +1066,7 @@ export const brewingMethods: BrewingMethods = {
           {
             pourType: 'beverage',
             label: '加入饮用水',
-            water: '70',
-            detail: '',
-          },
-          {
-            pourType: 'beverage',
-            label: '加入冰块',
-            water: '180',
+            water: '160',
             detail: '',
           },
         ],
@@ -1097,13 +1091,7 @@ export const brewingMethods: BrewingMethods = {
           {
             pourType: 'beverage',
             label: '加入牛奶',
-            water: '200',
-            detail: '',
-          },
-          {
-            pourType: 'beverage',
-            label: '加入糖浆',
-            water: '10',
+            water: '160',
             detail: '',
           },
         ],

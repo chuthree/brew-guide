@@ -109,34 +109,6 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
           </div>
         </div>
 
-        {/* 意式机特有字段 - 液重 */}
-        {isEspresso && (
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              液重
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                placeholder="例如：36"
-                value={(params.liquidWeight || params.water).replace('g', '')}
-                onChange={e => {
-                  if (onLiquidWeightChange) {
-                    onLiquidWeightChange(`${e.target.value}g`);
-                  }
-                }}
-                onFocus={e => e.target.select()}
-                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
-              />
-              <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">
-                g
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* 意式机特有字段 - 萃取时间 */}
         {isEspresso && (
           <div className="space-y-2">
@@ -160,6 +132,34 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
               />
               <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">
                 秒
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 意式机特有字段 - 液重 */}
+        {isEspresso && (
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              液重
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                placeholder="例如：36"
+                value={(params.liquidWeight || params.water).replace('g', '')}
+                onChange={e => {
+                  if (onLiquidWeightChange) {
+                    onLiquidWeightChange(`${e.target.value}g`);
+                  }
+                }}
+                onFocus={e => e.target.select()}
+                className="w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400"
+              />
+              <span className="absolute right-0 bottom-2 text-neutral-500 dark:text-neutral-400">
+                g
               </span>
             </div>
           </div>

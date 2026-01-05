@@ -974,10 +974,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     )
       return;
 
-    // 更新第一个萃取步骤的时间
+    // 更新第一个萃取步骤的时间（使用 duration 字段）
     const newStages = [...method.params.stages];
     const firstStage = { ...newStages[0] };
-    firstStage.time = time;
+    firstStage.duration = time;
     newStages[0] = firstStage;
 
     setMethod({
@@ -1086,9 +1086,9 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
           if (isLabelDefault) {
             stage.label = pourTypeName;
           }
-          // 确保有时间字段，萃取模式需要
-          if (!stage.time) {
-            stage.time = 25;
+          // 确保有 duration 字段，萃取模式需要
+          if (!stage.duration) {
+            stage.duration = 25;
           }
           break;
         case 'beverage':
@@ -1097,8 +1097,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             stage.label = pourTypeName;
           }
           // 饮料阶段不需要时间
-          stage.time = 0;
-          stage.pourTime = undefined;
+          stage.duration = undefined;
           break;
         default:
           // 其他模式，根据实际情况设置
@@ -1315,9 +1314,10 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
               ratio: method.params.ratio,
               grindSize: method.params.grindSize,
               temp: method.params.temp,
-              // 添加意式机特有参数
+              // 添加意式机特有参数（使用 duration 字段）
               extractionTime: isEspressoMachine(customEquipment)
-                ? method.params.stages[0]?.time
+                ? (method.params.stages[0]?.duration ??
+                  method.params.stages[0]?.time)
                 : undefined,
               liquidWeight: isEspressoMachine(customEquipment)
                 ? method.params.stages[0]?.water

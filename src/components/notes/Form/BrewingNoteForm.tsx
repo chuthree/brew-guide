@@ -562,7 +562,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 同步时间
         if (params.stages && params.stages.length > 0) {
           const totalTime = params.stages.reduce(
-            (acc: number, stage: any) => acc + (stage.time || 0),
+            (acc: number, stage: any) => acc + (stage.duration || 0),
             0
           );
           if (totalTime > 0) {
@@ -690,7 +690,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     if (params.stages && params.stages.length > 0) {
       // 计算所有阶段的时间总和
       const totalTime = params.stages.reduce(
-        (acc, stage) => acc + (stage.time || 0),
+        (acc, stage) => acc + (stage.duration || 0),
         0
       );
       if (totalTime > 0) {
@@ -1166,9 +1166,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         grindSize: methodParams.grindSize,
         temp: methodParams.temp,
       },
-      totalTime: isEspresso
-        ? parseFloat(totalTimeStr) || 0
-        : initialData.totalTime,
+      totalTime: parseFloat(totalTimeStr) || initialData.totalTime || 0,
       // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
       beanId: finalBeanId,
     };

@@ -123,6 +123,16 @@ export function useBrewingParameters() {
     }
   }, [handleMethodSelectedEvent]);
 
+  // 检查是否是意式咖啡方案
+  const isEspressoMethod = (method: Method | null): boolean => {
+    return (
+      method?.params?.stages?.some(
+        stage =>
+          stage.pourType === 'extraction' || stage.pourType === 'beverage'
+      ) || false
+    );
+  };
+
   // 处理参数变更
   const handleParamChange = useCallback(
     async (
@@ -149,6 +159,9 @@ export function useBrewingParameters() {
       // 记录新咖啡量
       let newCoffeeAmount = currentCoffee;
 
+      // 检查是否是意式方案
+      const isEspresso = isEspressoMethod(selectedMethod);
+
       switch (type) {
         case 'coffee': {
           newCoffeeAmount = parsedValue;
@@ -158,12 +171,28 @@ export function useBrewingParameters() {
             coffee: `${parsedValue}g`,
             water: `${calculatedWater}g`,
           };
-          const waterRatio =
-            calculatedWater / extractNumber(selectedMethod.params.water);
-          const updatedStages = selectedMethod.params.stages.map(stage => ({
-            ...stage,
-            water: `${Math.round(extractNumber(stage.water || '0') * waterRatio)}g`,
-          }));
+
+          let updatedStages: Stage[];
+          if (isEspresso) {
+            // 意式方案：只更新第一个 extraction 步骤的 water
+            let extractionUpdated = false;
+            updatedStages = currentBrewingMethod.params.stages.map(stage => {
+              if (stage.pourType === 'extraction' && !extractionUpdated) {
+                extractionUpdated = true;
+                return { ...stage, water: `${calculatedWater}` };
+              }
+              return stage;
+            });
+          } else {
+            // 手冲方案：按比例更新所有步骤
+            const waterRatio =
+              calculatedWater / extractNumber(selectedMethod.params.water);
+            updatedStages = selectedMethod.params.stages.map(stage => ({
+              ...stage,
+              water: `${Math.round(extractNumber(stage.water || '0') * waterRatio)}g`,
+            }));
+          }
+
           updateBrewingSteps(updatedStages);
           const updatedMethod = {
             ...currentBrewingMethod,
@@ -185,12 +214,28 @@ export function useBrewingParameters() {
             ratio: `1:${newRatio}`,
             water: `${calculatedWater}g`,
           };
-          const waterRatio =
-            calculatedWater / extractNumber(selectedMethod.params.water);
-          const updatedStages = selectedMethod.params.stages.map(stage => ({
-            ...stage,
-            water: `${Math.round(extractNumber(stage.water || '0') * waterRatio)}g`,
-          }));
+
+          let updatedStages: Stage[];
+          if (isEspresso) {
+            // 意式方案：只更新第一个 extraction 步骤的 water
+            let extractionUpdated = false;
+            updatedStages = currentBrewingMethod.params.stages.map(stage => {
+              if (stage.pourType === 'extraction' && !extractionUpdated) {
+                extractionUpdated = true;
+                return { ...stage, water: `${calculatedWater}` };
+              }
+              return stage;
+            });
+          } else {
+            // 手冲方案：按比例更新所有步骤
+            const waterRatio =
+              calculatedWater / extractNumber(selectedMethod.params.water);
+            updatedStages = selectedMethod.params.stages.map(stage => ({
+              ...stage,
+              water: `${Math.round(extractNumber(stage.water || '0') * waterRatio)}g`,
+            }));
+          }
+
           updateBrewingSteps(updatedStages);
           const updatedMethod = {
             ...currentBrewingMethod,
@@ -215,13 +260,27 @@ export function useBrewingParameters() {
             ratio: `1:${formatRatio(newRatio)}`,
           };
 
-          const oldWater = extractNumber(selectedMethod.params.water);
-          const waterRatio = oldWater > 0 ? newWater / oldWater : 1;
+          let updatedStages: Stage[];
+          if (isEspresso) {
+            // 意式方案：只更新第一个 extraction 步骤的 water
+            let extractionUpdated = false;
+            updatedStages = currentBrewingMethod.params.stages.map(stage => {
+              if (stage.pourType === 'extraction' && !extractionUpdated) {
+                extractionUpdated = true;
+                return { ...stage, water: `${newWater}` };
+              }
+              return stage;
+            });
+          } else {
+            // 手冲方案：按比例更新所有步骤
+            const oldWater = extractNumber(selectedMethod.params.water);
+            const waterRatio = oldWater > 0 ? newWater / oldWater : 1;
+            updatedStages = selectedMethod.params.stages.map(stage => ({
+              ...stage,
+              water: `${Math.round(extractNumber(stage.water || '0') * waterRatio)}g`,
+            }));
+          }
 
-          const updatedStages = selectedMethod.params.stages.map(stage => ({
-            ...stage,
-            water: `${Math.round(extractNumber(stage.water || '0') * waterRatio)}g`,
-          }));
           updateBrewingSteps(updatedStages);
           const updatedMethod = {
             ...currentBrewingMethod,

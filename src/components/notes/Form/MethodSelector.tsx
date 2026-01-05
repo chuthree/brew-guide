@@ -221,7 +221,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                   {renderParamDisplay('研磨度', method.params.grindSize)}
                   {renderParamDisplay(
                     '萃取时长',
-                    (method.params.stages?.[0]?.time || 0) + 's'
+                    (method.params.stages?.[0]?.duration || 0) + 's'
                   )}
                   {renderParamDisplay('液重', method.params.water)}
                 </>

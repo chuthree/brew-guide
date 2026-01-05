@@ -86,14 +86,17 @@ const espressoUtils = {
       params?: {
         stages?: Array<{
           pourType?: string;
-          time?: number;
+          duration?: number;
           [key: string]: unknown;
         }>;
       };
     } | null
-  ) =>
-    method?.params?.stages?.find(stage => stage.pourType === 'extraction')
-      ?.time || 0,
+  ) => {
+    const extractionStage = method?.params?.stages?.find(
+      stage => stage.pourType === 'extraction'
+    );
+    return extractionStage?.duration ?? 0;
+  },
 
   formatTime: (seconds: number) => `${seconds}`,
 };
@@ -271,7 +274,7 @@ interface NavigationBarProps {
       temp: string;
       stages: Array<{
         label: string;
-        time: number;
+        duration?: number;
         water?: string;
         detail: string;
         pourType?: string;
@@ -994,6 +997,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     if (handleExtractionTimeChange && selectedMethod) {
       const time = parseInt(value, 10) || 0;
       handleExtractionTimeChange(time);
+      // 同步更新 editableParams.time
+      if (editableParams) {
+        setEditableParams({
+          ...editableParams,
+          time: `${time}`,
+        });
+      }
     }
   };
 

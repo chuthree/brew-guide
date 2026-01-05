@@ -252,7 +252,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       );
       if (methodObj && methodObj.params.stages) {
         totalTime = methodObj.params.stages.reduce(
-          (acc, stage) => acc + (stage.time || 0),
+          (acc, stage) => acc + (stage.duration || 0),
           0
         );
       }

@@ -795,6 +795,15 @@ const TabContent: React.FC<TabContentProps> = ({
 
   // 渲染笔记表单
   if (activeTab === '记录') {
+    // 计算总时间：累加所有阶段的 duration
+    const calculateTotalTime = () => {
+      if (!showComplete || !currentBrewingMethod?.params?.stages) return 0;
+      return currentBrewingMethod.params.stages.reduce(
+        (acc, stage) => acc + (stage.duration || 0),
+        0
+      );
+    };
+
     return (
       <div className="px-6 pt-3">
         <BrewingNoteForm
@@ -813,12 +822,7 @@ const TabContent: React.FC<TabContentProps> = ({
               temp: '92°C',
               stages: [],
             },
-            totalTime:
-              showComplete && currentBrewingMethod
-                ? currentBrewingMethod.params.stages[
-                    currentBrewingMethod.params.stages.length - 1
-                  ].time
-                : 0,
+            totalTime: calculateTotalTime(),
             coffeeBean: selectedCoffeeBeanData || undefined,
           }}
         />

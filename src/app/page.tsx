@@ -1045,9 +1045,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       params: {
         ...baseMethod.params,
         stages: baseMethod.params.stages.map(stage => {
-          // 只更新萃取类型的步骤时间
+          // 只更新萃取类型的步骤时间（使用 duration 字段）
           if (stage.pourType === 'extraction') {
-            return { ...stage, time };
+            return { ...stage, duration: time };
           }
           return stage;
         }),
@@ -2277,7 +2277,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             temp: method.params.temp,
             stages: method.params.stages.map(stage => ({
               label: stage.label,
-              time: stage.time || 0,
+              duration: stage.duration,
               water: stage.water,
               detail: stage.detail,
               pourType: stage.pourType,
@@ -3092,7 +3092,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     temp: currentBrewingMethod.params.temp,
                     stages: currentBrewingMethod.params.stages.map(stage => ({
                       label: stage.label,
-                      time: stage.time || 0,
+                      duration: stage.duration,
                       water: stage.water,
                       detail: stage.detail,
                       pourType: stage.pourType,
