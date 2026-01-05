@@ -696,7 +696,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
           <div className="text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
             {viewMode === VIEW_OPTIONS.INVENTORY ? (
               showEmptyBeans ? (
-                <span className="flex items-baseline">
+                <span>
                   {beansCount} 款
                   {enableGreenBeanInventory ? (
                     <span
@@ -725,7 +725,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     `，约 ${estimatedCups} 杯`}
                 </span>
               ) : (
-                <span className="flex items-baseline">
+                <span>
                   {beansCount} 款
                   {enableGreenBeanInventory ? (
                     <span
