@@ -50,9 +50,9 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   handlePriceBlur,
   handleDateChange,
 }) => {
-  const capacityInputRef = useRef<HTMLInputElement>(null);
-  const remainingInputRef = useRef<HTMLInputElement>(null);
-  const priceInputRef = useRef<HTMLInputElement>(null);
+  const capacityInputRef = useRef<HTMLDivElement>(null);
+  const remainingInputRef = useRef<HTMLDivElement>(null);
+  const priceInputRef = useRef<HTMLDivElement>(null);
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -84,49 +84,69 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   useEffect(() => {
     if (editingCapacity && capacityInputRef.current) {
       capacityInputRef.current.focus();
+      // 将光标移到末尾
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(capacityInputRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
     }
   }, [editingCapacity]);
 
   useEffect(() => {
     if (editingRemaining && remainingInputRef.current) {
       remainingInputRef.current.focus();
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(remainingInputRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
     }
   }, [editingRemaining]);
 
   useEffect(() => {
     if (editingPrice && priceInputRef.current) {
       priceInputRef.current.focus();
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(priceInputRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
     }
   }, [editingPrice]);
 
   return (
     <>
+      {/* 标题区域 */}
+      <div>
+        {isAddMode ? (
+          <input
+            id="bean-detail-title"
+            type="text"
+            value={tempBean.name || ''}
+            onChange={e => handleUpdateField({ name: e.target.value })}
+            placeholder="输入咖啡豆名称"
+            className="w-full border-b border-dashed border-neutral-300 bg-transparent pb-1 text-sm font-medium text-neutral-800 outline-none placeholder:text-neutral-400 focus:border-neutral-500 dark:border-neutral-600 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
+          />
+        ) : (
+          <h2
+            id="bean-detail-title"
+            className="text-sm font-medium text-neutral-800 dark:text-neutral-100"
+          >
+            {searchQuery ? (
+              <HighlightText text={displayName} highlight={searchQuery} />
+            ) : (
+              displayName
+            )}
+          </h2>
+        )}
+      </div>
+
       {/* 基础信息区域 */}
       <div className="space-y-3">
-        {/* 名称 - 添加模式可编辑 */}
-        <div id="bean-detail-title" className="flex items-start">
-          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            名称
-          </div>
-          {isAddMode ? (
-            <input
-              type="text"
-              value={tempBean.name || ''}
-              onChange={e => handleUpdateField({ name: e.target.value })}
-              placeholder="输入咖啡豆名称"
-              className="flex-1 bg-transparent text-xs font-medium text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
-            />
-          ) : (
-            <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-              {searchQuery ? (
-                <HighlightText text={displayName} highlight={searchQuery} />
-              ) : (
-                displayName
-              )}
-            </div>
-          )}
-        </div>
-
         {/* 容量/剩余量 */}
         {(isAddMode || (currentBean?.capacity && currentBean?.remaining)) && (
           <div className="flex items-start">
@@ -136,19 +156,26 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             <div className="flex items-center gap-1 text-xs font-medium">
               {/* 剩余量 */}
               {editingRemaining ? (
-                <input
+                <div
                   ref={remainingInputRef}
-                  type="number"
+                  contentEditable
+                  suppressContentEditableWarning
                   inputMode="decimal"
-                  defaultValue={currentBean?.remaining || ''}
-                  onBlur={e => handleRemainingBlur(e.target.value)}
+                  onBlur={e => {
+                    handleRemainingBlur(e.currentTarget.textContent || '');
+                    setEditingRemaining(false);
+                  }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
-                      handleRemainingBlur(e.currentTarget.value);
+                      e.preventDefault();
+                      handleRemainingBlur(e.currentTarget.textContent || '');
+                      setEditingRemaining(false);
                     }
                   }}
-                  className="w-12 bg-neutral-100 px-1 text-center text-xs font-medium text-neutral-800 outline-none dark:bg-neutral-800 dark:text-neutral-100"
-                />
+                  className="min-w-[1ch] cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                >
+                  {currentBean?.remaining || ''}
+                </div>
               ) : (
                 <span
                   onClick={() => setEditingRemaining(true)}
@@ -168,19 +195,26 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               <span className="text-neutral-400 dark:text-neutral-500">/</span>
               {/* 总容量 */}
               {editingCapacity ? (
-                <input
+                <div
                   ref={capacityInputRef}
-                  type="number"
+                  contentEditable
+                  suppressContentEditableWarning
                   inputMode="decimal"
-                  defaultValue={currentBean?.capacity || ''}
-                  onBlur={e => handleCapacityBlur(e.target.value)}
+                  onBlur={e => {
+                    handleCapacityBlur(e.currentTarget.textContent || '');
+                    setEditingCapacity(false);
+                  }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
-                      handleCapacityBlur(e.currentTarget.value);
+                      e.preventDefault();
+                      handleCapacityBlur(e.currentTarget.textContent || '');
+                      setEditingCapacity(false);
                     }
                   }}
-                  className="w-12 bg-neutral-100 px-1 text-center text-xs font-medium text-neutral-800 outline-none dark:bg-neutral-800 dark:text-neutral-100"
-                />
+                  className="min-w-[1ch] cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                >
+                  {currentBean?.capacity || ''}
+                </div>
               ) : (
                 <span
                   onClick={() => setEditingCapacity(true)}
@@ -210,19 +244,26 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             </div>
             <div className="flex items-center gap-1 text-xs font-medium">
               {editingPrice ? (
-                <input
+                <div
                   ref={priceInputRef}
-                  type="number"
+                  contentEditable
+                  suppressContentEditableWarning
                   inputMode="decimal"
-                  defaultValue={currentBean?.price || ''}
-                  onBlur={e => handlePriceBlur(e.target.value)}
+                  onBlur={e => {
+                    handlePriceBlur(e.currentTarget.textContent || '');
+                    setEditingPrice(false);
+                  }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
-                      handlePriceBlur(e.currentTarget.value);
+                      e.preventDefault();
+                      handlePriceBlur(e.currentTarget.textContent || '');
+                      setEditingPrice(false);
                     }
                   }}
-                  className="w-16 bg-neutral-100 px-1 text-center text-xs font-medium text-neutral-800 outline-none dark:bg-neutral-800 dark:text-neutral-100"
-                />
+                  className="min-w-[1ch] cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                >
+                  {currentBean?.price || ''}
+                </div>
               ) : (
                 <span
                   onClick={() => setEditingPrice(true)}
@@ -236,21 +277,11 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 </span>
               )}
               {currentBean?.price && (
-                <>
-                  <span className="text-neutral-800 dark:text-neutral-100">
-                    元
-                  </span>
-                  {currentBean?.capacity && (
-                    <span className="text-neutral-500 dark:text-neutral-400">
-                      (
-                      {(
-                        parseFloat(currentBean.price) /
-                        parseFloat(currentBean.capacity)
-                      ).toFixed(2)}{' '}
-                      元/克)
-                    </span>
-                  )}
-                </>
+                <span className="text-neutral-800 dark:text-neutral-100">
+                  元
+                  {currentBean?.capacity &&
+                    ` (${(parseFloat(currentBean.price) / parseFloat(currentBean.capacity)).toFixed(2)} 元/克)`}
+                </span>
               )}
             </div>
           </div>
@@ -324,18 +355,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             </div>
             <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
               {flavorInfo.status}
-            </div>
-          </div>
-        )}
-
-        {/* 冷冻状态（非添加模式下，冷冻时显示） */}
-        {!isAddMode && bean?.isFrozen && (
-          <div className="flex items-start">
-            <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              状态
-            </div>
-            <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-              冷冻
             </div>
           </div>
         )}
