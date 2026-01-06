@@ -1,5 +1,5 @@
 {
-  "version": "1.5.10",
+  "version": "1.5.11",
   "downloadUrl": "https://gitee.com/chu3/brew-guide/releases",
-  "releaseNotes": "实时同步数据，咖啡豆表格形式和多图支持，适配大屏幕以及多处UI重构"
+  "releaseNotes": "冲煮流程与方案重新设计，独立烘焙商字段，烘焙商图标分享导入"
 }
