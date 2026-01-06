@@ -106,7 +106,7 @@ export async function recognizeBeanImage(
       error instanceof TypeError &&
       error.message.includes('Failed to fetch')
     ) {
-      throw new Error('网络连接失败，请检查网络或稍后重试');
+      throw new Error('请求失败，请检查网络连接或尝试更新应用');
     }
 
     throw error;
