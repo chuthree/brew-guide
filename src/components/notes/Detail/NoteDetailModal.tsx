@@ -702,13 +702,19 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           }
         }}
         itemName={
-          note?.source === 'quick-decrement'
-            ? `${note.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`
-            : note?.source === 'capacity-adjustment'
-              ? `${note?.coffeeBeanInfo?.name || '未知咖啡豆'}的容量调整记录`
-              : note?.method || '此笔记'
+          note?.source === 'quick-decrement' ||
+          note?.source === 'capacity-adjustment'
+            ? note.coffeeBeanInfo?.name || '未知咖啡豆'
+            : note?.method || '此笔记'
         }
         itemType="笔记"
+        itemSuffix={
+          note?.source === 'quick-decrement'
+            ? '的快捷扣除记录'
+            : note?.source === 'capacity-adjustment'
+              ? '的容量调整记录'
+              : undefined
+        }
         extraWarning="删除后咖啡豆库存将恢复。"
       />
     </>

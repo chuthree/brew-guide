@@ -12,6 +12,8 @@ export interface DeleteConfirmDrawerProps {
   itemName: string;
   /** 项目类型描述，如"咖啡豆"、"冲煮笔记"等 */
   itemType?: string;
+  /** 项目名称后缀，如"的快捷扣除记录"，用于特殊记录类型 */
+  itemSuffix?: string;
   /** 额外的警告信息 */
   extraWarning?: string;
   /** 退出动画完成后的回调 */
@@ -28,6 +30,7 @@ const DeleteConfirmDrawer: React.FC<DeleteConfirmDrawerProps> = ({
   onConfirm,
   itemName,
   itemType = '项目',
+  itemSuffix,
   extraWarning,
   onExitComplete,
 }) => {
@@ -50,7 +53,7 @@ const DeleteConfirmDrawer: React.FC<DeleteConfirmDrawerProps> = ({
           <span className="text-neutral-800 dark:text-neutral-200">
             「{itemName}」
           </span>
-          吗？{extraWarning || '此操作不可撤销。'}
+          {itemSuffix}吗？{extraWarning || '此操作不可撤销。'}
         </p>
       </ActionDrawer.Content>
       <ActionDrawer.Actions>

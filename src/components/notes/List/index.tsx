@@ -119,6 +119,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const [deleteConfirmData, setDeleteConfirmData] = useState<{
     noteId: string;
     noteName: string;
+    noteSuffix?: string;
   } | null>(null);
 
   // 加载搜索历史
@@ -568,16 +569,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
       // 获取笔记名称用于确认对话框
       let noteName = '此笔记';
+      let noteSuffix: string | undefined;
       if (noteToDelete.source === 'quick-decrement') {
-        noteName = `${noteToDelete.coffeeBeanInfo?.name || '未知咖啡豆'}的快捷扣除记录`;
+        noteName = noteToDelete.coffeeBeanInfo?.name || '未知咖啡豆';
+        noteSuffix = '的快捷扣除记录';
       } else if (noteToDelete.source === 'capacity-adjustment') {
-        noteName = `${noteToDelete.coffeeBeanInfo?.name || '未知咖啡豆'}的容量调整记录`;
+        noteName = noteToDelete.coffeeBeanInfo?.name || '未知咖啡豆';
+        noteSuffix = '的容量调整记录';
       } else {
         noteName = noteToDelete.method || '此笔记';
       }
 
       // 显示删除确认抽屉
-      setDeleteConfirmData({ noteId, noteName });
+      setDeleteConfirmData({ noteId, noteName, noteSuffix });
       setShowDeleteConfirm(true);
     } catch (error) {
       console.error('删除笔记失败:', error);
@@ -1504,6 +1508,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         }}
         itemName={deleteConfirmData?.noteName || ''}
         itemType="笔记"
+        itemSuffix={deleteConfirmData?.noteSuffix}
         extraWarning="删除后咖啡豆库存将恢复。"
         onExitComplete={() => setDeleteConfirmData(null)}
       />
