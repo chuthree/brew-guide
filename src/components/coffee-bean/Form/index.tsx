@@ -236,21 +236,18 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         .map(entry => entry[0]);
     }, [allBeans, settings.roasterFieldEnabled]);
 
-    // 加载烘焙商图标 - 当咖啡豆名称变化时
+    // 加载烘焙商图标 - 当烘焙商名称变化时
     useEffect(() => {
-      if (!bean.name) {
-        setRoasterLogo(null);
-        return;
-      }
+      // 优先使用独立的 roaster 字段，否则从名称中提取
+      const roasterName = bean.roaster || extractRoasterFromName(bean.name);
 
-      const roasterName = extractRoasterFromName(bean.name);
       if (roasterName && roasterName !== '未知烘焙商') {
         const logo = getRoasterLogoSync(roasterName);
         setRoasterLogo(logo || null);
       } else {
         setRoasterLogo(null);
       }
-    }, [bean.name]);
+    }, [bean.name, bean.roaster]);
 
     // 自动填充识图图片 - 在表单加载时检查设置，如果开启了自动填充且有识图图片，则自动填充
     useEffect(() => {

@@ -316,9 +316,9 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                   fill
                   sizes="64px"
                 />
-                {/* 居中的相机图标，始终显示 */}
+                {/* 居中的相册图标，始终显示 */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Camera className="h-5 w-5 text-neutral-400 dark:text-neutral-500" />
+                  <ImageIcon className="h-5 w-5 text-neutral-400 dark:text-neutral-500" />
                 </div>
               </div>
               {bean.backImage ? (
