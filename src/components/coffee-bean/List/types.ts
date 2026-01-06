@@ -8,12 +8,18 @@ export type ExtendedCoffeeBean = CoffeeBean;
 export { VIEW_OPTIONS, VIEW_LABELS, type ViewOption };
 
 // 咖啡豆分类模式
-export type BeanFilterMode = 'roaster' | 'origin' | 'variety' | 'flavorPeriod';
+export type BeanFilterMode =
+  | 'roaster'
+  | 'origin'
+  | 'processingMethod'
+  | 'variety'
+  | 'flavorPeriod';
 
 // 分类模式显示名称
 const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
   roaster: '按烘焙商',
   origin: '按产地',
+  processingMethod: '按处理法',
   variety: '按品种',
   flavorPeriod: '按赏味期',
 };

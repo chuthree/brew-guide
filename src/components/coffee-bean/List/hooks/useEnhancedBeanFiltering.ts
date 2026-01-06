@@ -12,6 +12,8 @@ import {
   extractUniqueVarieties,
   beanHasOrigin,
   extractUniqueOrigins,
+  beanHasProcess,
+  extractUniqueProcesses,
   beanHasFlavorPeriodStatus,
   extractAvailableFlavorPeriodStatuses,
   beanHasRoaster,
@@ -26,6 +28,7 @@ interface UseEnhancedBeanFilteringProps {
   filterMode: BeanFilterMode;
   selectedVariety: string | null;
   selectedOrigin: string | null;
+  selectedProcessingMethod: string | null;
   selectedFlavorPeriod: FlavorPeriodStatus | null;
   selectedRoaster: string | null;
   selectedBeanType: BeanType;
@@ -39,6 +42,7 @@ interface UseEnhancedBeanFilteringReturn {
   emptyBeans: ExtendedCoffeeBean[]; // 已用完的豆子
   availableVarieties: string[];
   availableOrigins: string[];
+  availableProcessingMethods: string[];
   availableFlavorPeriods: FlavorPeriodStatus[];
   availableRoasters: string[];
 }
@@ -52,6 +56,7 @@ export const useEnhancedBeanFiltering = ({
   filterMode,
   selectedVariety,
   selectedOrigin,
+  selectedProcessingMethod,
   selectedFlavorPeriod,
   selectedRoaster,
   selectedBeanType,
@@ -115,6 +120,13 @@ export const useEnhancedBeanFiltering = ({
             );
           }
           break;
+        case 'processingMethod':
+          if (selectedProcessingMethod) {
+            filtered = filtered.filter(bean =>
+              beanHasProcess(bean, selectedProcessingMethod)
+            );
+          }
+          break;
         case 'flavorPeriod':
           if (selectedFlavorPeriod) {
             filtered = filtered.filter(bean =>
@@ -165,6 +177,7 @@ export const useEnhancedBeanFiltering = ({
       filterMode,
       selectedVariety,
       selectedOrigin,
+      selectedProcessingMethod,
       selectedFlavorPeriod,
       selectedRoaster,
       selectedBeanType,
@@ -221,6 +234,11 @@ export const useEnhancedBeanFiltering = ({
     return extractUniqueOrigins(baseFilteredBeans);
   }, [baseFilteredBeans]);
 
+  // 使用useMemo缓存可用处理法列表
+  const availableProcessingMethods = useMemo(() => {
+    return extractUniqueProcesses(baseFilteredBeans);
+  }, [baseFilteredBeans]);
+
   // 使用useMemo缓存可用赏味期状态列表
   const availableFlavorPeriods = useMemo(() => {
     return extractAvailableFlavorPeriodStatuses(baseFilteredBeans);
@@ -236,6 +254,7 @@ export const useEnhancedBeanFiltering = ({
     emptyBeans,
     availableVarieties,
     availableOrigins,
+    availableProcessingMethods,
     availableFlavorPeriods,
     availableRoasters,
   };

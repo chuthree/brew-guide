@@ -273,18 +273,6 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
         >
           {isGreenBean ? '按生豆商' : '按烘焙商'}
         </FilterButton>
-        <FilterButton
-          isActive={filterMode === 'origin'}
-          onClick={() => onFilterModeChange('origin')}
-        >
-          按产地
-        </FilterButton>
-        <FilterButton
-          isActive={filterMode === 'variety'}
-          onClick={() => onFilterModeChange('variety')}
-        >
-          按品种
-        </FilterButton>
         {/* 赏味期筛选仅对熟豆显示 */}
         {!isGreenBean && (
           <FilterButton
@@ -294,6 +282,24 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
             按赏味期
           </FilterButton>
         )}
+        <FilterButton
+          isActive={filterMode === 'origin'}
+          onClick={() => onFilterModeChange('origin')}
+        >
+          按产地
+        </FilterButton>
+        <FilterButton
+          isActive={filterMode === 'processingMethod'}
+          onClick={() => onFilterModeChange('processingMethod')}
+        >
+          按处理法
+        </FilterButton>
+        <FilterButton
+          isActive={filterMode === 'variety'}
+          onClick={() => onFilterModeChange('variety')}
+        >
+          按品种
+        </FilterButton>
       </div>
     </div>
   );
@@ -349,7 +355,10 @@ interface ViewSwitcherProps {
   onFlavorPeriodClick?: (status: FlavorPeriodStatus | null) => void;
   selectedRoaster?: string | null;
   onRoasterClick?: (roaster: string | null) => void;
+  selectedProcessingMethod?: string | null;
+  onProcessingMethodClick?: (method: string | null) => void;
   availableOrigins?: string[];
+  availableProcessingMethods?: string[];
   availableFlavorPeriods?: FlavorPeriodStatus[];
   availableRoasters?: string[];
   // 新增导出相关props
@@ -420,7 +429,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   onFlavorPeriodClick,
   selectedRoaster,
   onRoasterClick,
+  selectedProcessingMethod,
+  onProcessingMethodClick,
   availableOrigins = [],
+  availableProcessingMethods = [],
   availableFlavorPeriods = [],
   availableRoasters = [],
   // 新增导出相关参数
@@ -1006,7 +1018,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         (filterMode === 'origin' && selectedOrigin === null) ||
                         (filterMode === 'flavorPeriod' &&
                           selectedFlavorPeriod === null) ||
-                        (filterMode === 'roaster' && selectedRoaster === null)
+                        (filterMode === 'roaster' &&
+                          selectedRoaster === null) ||
+                        (filterMode === 'processingMethod' &&
+                          selectedProcessingMethod === null)
                       }
                       onClick={() => {
                         if (
@@ -1019,6 +1034,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           selectedOrigin !== null
                         ) {
                           onOriginClick?.(null);
+                        } else if (
+                          filterMode === 'processingMethod' &&
+                          selectedProcessingMethod !== null
+                        ) {
+                          onProcessingMethodClick?.(null);
                         } else if (
                           filterMode === 'flavorPeriod' &&
                           selectedFlavorPeriod !== null
@@ -1117,6 +1137,23 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             layoutId="inventory-origin-underline"
                           >
                             {origin}
+                          </TabButton>
+                        ))}
+
+                      {filterMode === 'processingMethod' &&
+                        availableProcessingMethods?.map((method: string) => (
+                          <TabButton
+                            key={method}
+                            isActive={selectedProcessingMethod === method}
+                            onClick={() =>
+                              selectedProcessingMethod !== method &&
+                              onProcessingMethodClick?.(method)
+                            }
+                            className="mr-3"
+                            dataTab={method}
+                            layoutId="inventory-processingMethod-underline"
+                          >
+                            {method}
                           </TabButton>
                         ))}
 

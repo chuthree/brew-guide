@@ -151,17 +151,33 @@ export const extractUniqueOrigins = (beans: CoffeeBean[]): string[] => {
 /**
  * 从咖啡豆数组中提取所有唯一的处理法
  * @param beans 咖啡豆数组
- * @returns 排序后的唯一处理法数组
+ * @returns 按数量排序的唯一处理法数组（数量多的在前）
  */
-const _extractUniqueProcesses = (beans: CoffeeBean[]): string[] => {
-  const processesSet = new Set<string>();
+export const extractUniqueProcesses = (beans: CoffeeBean[]): string[] => {
+  const processCount = new Map<string, number>();
 
+  // 统计每个处理法的咖啡豆数量
   beans.forEach(bean => {
     const processes = getBeanProcesses(bean);
-    processes.forEach(process => processesSet.add(process));
+    processes.forEach(process => {
+      processCount.set(process, (processCount.get(process) || 0) + 1);
+    });
   });
 
-  return Array.from(processesSet).sort();
+  // 按数量排序，数量多的在前
+  const processes = Array.from(processCount.entries())
+    .sort((a, b) => {
+      // 按数量降序排列
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+
+      // 数量相同时按名称字母顺序排列
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(entry => entry[0]);
+
+  return processes;
 };
 
 /**
@@ -181,7 +197,7 @@ export const beanHasOrigin = (bean: CoffeeBean, origin: string): boolean => {
  * @param process 要检查的处理法名称
  * @returns 是否包含该处理法
  */
-const _beanHasProcess = (
+export const beanHasProcess = (
   bean: ExtendedCoffeeBean,
   process: string
 ): boolean => {

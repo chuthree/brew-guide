@@ -30,10 +30,12 @@ export const globalCache: {
   filterMode: BeanFilterMode;
   filterModes: { green: BeanFilterMode; roasted: BeanFilterMode };
   selectedOrigin: string | null;
+  selectedProcessingMethod: string | null;
   selectedFlavorPeriod: FlavorPeriodStatus | null;
   selectedRoaster: string | null;
   selectedVarieties: { green: string | null; roasted: string | null };
   selectedOrigins: { green: string | null; roasted: string | null };
+  selectedProcessingMethods: { green: string | null; roasted: string | null };
   selectedFlavorPeriods: {
     green: FlavorPeriodStatus | null;
     roasted: FlavorPeriodStatus | null;
@@ -82,10 +84,12 @@ export const globalCache: {
   filterMode: 'variety',
   filterModes: { green: 'variety', roasted: 'variety' },
   selectedOrigin: null,
+  selectedProcessingMethod: null,
   selectedFlavorPeriod: null,
   selectedRoaster: null,
   selectedVarieties: { green: null, roasted: null },
   selectedOrigins: { green: null, roasted: null },
+  selectedProcessingMethods: { green: null, roasted: null },
   selectedFlavorPeriods: { green: null, roasted: null },
   selectedRoasters: { green: null, roasted: null },
   showEmptyBeans: false,
@@ -259,6 +263,18 @@ export const saveSelectedOriginByStatePreference = (
   v: string | null
 ) => saveStringState(MODULE_NAME, `selectedOrigin_${s}`, v || '');
 
+// 处理法筛选
+export const getSelectedProcessingMethodPreference = () =>
+  getStringState(MODULE_NAME, 'selectedProcessingMethod', '') || null;
+export const saveSelectedProcessingMethodPreference = (v: string | null) =>
+  saveStringState(MODULE_NAME, 'selectedProcessingMethod', v || '');
+export const getSelectedProcessingMethodByStatePreference = (s: BeanState) =>
+  getStringState(MODULE_NAME, `selectedProcessingMethod_${s}`, '') || null;
+export const saveSelectedProcessingMethodByStatePreference = (
+  s: BeanState,
+  v: string | null
+) => saveStringState(MODULE_NAME, `selectedProcessingMethod_${s}`, v || '');
+
 // 赏味期筛选
 export const getSelectedFlavorPeriodPreference = () =>
   (getStringState(MODULE_NAME, 'selectedFlavorPeriod', '') ||
@@ -424,6 +440,8 @@ const initGlobalCache = () => {
     roasted: getFilterModeByStatePreference('roasted'),
   };
   globalCache.selectedOrigin = getSelectedOriginPreference();
+  globalCache.selectedProcessingMethod =
+    getSelectedProcessingMethodPreference();
   globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
   globalCache.selectedRoaster = getSelectedRoasterPreference();
   globalCache.selectedVarieties = {
@@ -433,6 +451,10 @@ const initGlobalCache = () => {
   globalCache.selectedOrigins = {
     green: getSelectedOriginByStatePreference('green'),
     roasted: getSelectedOriginByStatePreference('roasted'),
+  };
+  globalCache.selectedProcessingMethods = {
+    green: getSelectedProcessingMethodByStatePreference('green'),
+    roasted: getSelectedProcessingMethodByStatePreference('roasted'),
   };
   globalCache.selectedFlavorPeriods = {
     green: getSelectedFlavorPeriodByStatePreference('green'),

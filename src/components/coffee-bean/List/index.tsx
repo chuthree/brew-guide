@@ -53,6 +53,9 @@ import {
   saveSelectedOriginPreference,
   saveSelectedOriginByStatePreference,
   getSelectedOriginByStatePreference,
+  saveSelectedProcessingMethodPreference,
+  saveSelectedProcessingMethodByStatePreference,
+  getSelectedProcessingMethodByStatePreference,
   saveSelectedFlavorPeriodPreference,
   saveSelectedFlavorPeriodByStatePreference,
   getSelectedFlavorPeriodByStatePreference,
@@ -183,6 +186,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(
     globalCache.selectedOrigin
   );
+  const [selectedProcessingMethod, setSelectedProcessingMethod] = useState<
+    string | null
+  >(globalCache.selectedProcessingMethod);
   const [selectedFlavorPeriod, setSelectedFlavorPeriod] =
     useState<FlavorPeriodStatus | null>(globalCache.selectedFlavorPeriod);
   const [selectedRoaster, setSelectedRoaster] = useState<string | null>(
@@ -307,6 +313,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     emptyBeans,
     availableVarieties,
     availableOrigins,
+    availableProcessingMethods,
     availableFlavorPeriods,
     availableRoasters,
   } = useEnhancedBeanFiltering({
@@ -314,6 +321,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     filterMode,
     selectedVariety,
     selectedOrigin,
+    selectedProcessingMethod,
     selectedFlavorPeriod,
     selectedRoaster,
     selectedBeanType,
@@ -843,6 +851,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       saveSelectedVarietyByStatePreference(currentBeanState, selectedVariety);
       globalCache.selectedOrigins[currentBeanState] = selectedOrigin;
       saveSelectedOriginByStatePreference(currentBeanState, selectedOrigin);
+      globalCache.selectedProcessingMethods[currentBeanState] =
+        selectedProcessingMethod;
+      saveSelectedProcessingMethodByStatePreference(
+        currentBeanState,
+        selectedProcessingMethod
+      );
       globalCache.selectedFlavorPeriods[currentBeanState] =
         selectedFlavorPeriod;
       saveSelectedFlavorPeriodByStatePreference(
@@ -922,6 +936,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.selectedOrigin = targetOrigin;
       saveSelectedOriginPreference(targetOrigin);
 
+      const targetProcessingMethod =
+        globalCache.selectedProcessingMethods[beanState] ??
+        getSelectedProcessingMethodByStatePreference(beanState);
+      setSelectedProcessingMethod(targetProcessingMethod);
+      globalCache.selectedProcessingMethod = targetProcessingMethod;
+      saveSelectedProcessingMethodPreference(targetProcessingMethod);
+
       const targetFlavorPeriod =
         globalCache.selectedFlavorPeriods[beanState] ??
         getSelectedFlavorPeriodByStatePreference(beanState);
@@ -945,6 +966,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       displayMode,
       selectedVariety,
       selectedOrigin,
+      selectedProcessingMethod,
       selectedFlavorPeriod,
       selectedRoaster,
     ]
@@ -1075,14 +1097,17 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       // 清除当前选中的分类项
       setSelectedVariety(null);
       setSelectedOrigin(null);
+      setSelectedProcessingMethod(null);
       setSelectedFlavorPeriod(null);
       setSelectedRoaster(null);
       globalCache.selectedVariety = null;
       globalCache.selectedOrigin = null;
+      globalCache.selectedProcessingMethod = null;
       globalCache.selectedFlavorPeriod = null;
       globalCache.selectedRoaster = null;
       saveSelectedVarietyPreference(null);
       saveSelectedOriginPreference(null);
+      saveSelectedProcessingMethodPreference(null);
       saveSelectedFlavorPeriodPreference(null);
       saveSelectedRoasterPreference(null);
     },
@@ -1098,6 +1123,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.selectedOrigins[selectedBeanState] = origin;
       saveSelectedOriginPreference(origin);
       saveSelectedOriginByStatePreference(selectedBeanState, origin);
+    },
+    [selectedBeanState]
+  );
+
+  // 处理处理法点击
+  const handleProcessingMethodClick = useCallback(
+    (method: string | null) => {
+      setSelectedProcessingMethod(method);
+      // 更新全局缓存并保存到本地存储（同时保存到全局和按状态的存储）
+      globalCache.selectedProcessingMethod = method;
+      globalCache.selectedProcessingMethods[selectedBeanState] = method;
+      saveSelectedProcessingMethodPreference(method);
+      saveSelectedProcessingMethodByStatePreference(selectedBeanState, method);
     },
     [selectedBeanState]
   );
@@ -1677,11 +1715,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         onFilterModeChange={handleFilterModeChange}
         selectedOrigin={selectedOrigin}
         onOriginClick={handleOriginClick}
+        selectedProcessingMethod={selectedProcessingMethod}
+        onProcessingMethodClick={handleProcessingMethodClick}
         selectedFlavorPeriod={selectedFlavorPeriod}
         onFlavorPeriodClick={handleFlavorPeriodClick}
         selectedRoaster={selectedRoaster}
         onRoasterClick={handleRoasterClick}
         availableOrigins={availableOrigins}
+        availableProcessingMethods={availableProcessingMethods}
         availableFlavorPeriods={availableFlavorPeriods}
         availableRoasters={availableRoasters}
         originalTotalWeight={calculateOriginalTotalWeight(
