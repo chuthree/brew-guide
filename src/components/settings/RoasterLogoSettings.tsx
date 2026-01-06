@@ -18,6 +18,7 @@ import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { SettingPage } from './atomic';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
+import RoasterLogoImportExport from './RoasterLogoImportExport';
 
 interface RoasterLogoSettingsProps {
   isOpen: boolean;
@@ -43,6 +44,12 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteRoasterName, setDeleteRoasterName] = useState<string | null>(
     null
+  );
+
+  // 导入导出抽屉状态
+  const [showImportExport, setShowImportExport] = useState(false);
+  const [importExportMode, setImportExportMode] = useState<'import' | 'export'>(
+    'export'
   );
 
   // 用于保存最新的 onClose 引用
@@ -208,6 +215,23 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     }
   };
 
+  // 打开导出抽屉
+  const handleOpenExport = useCallback(() => {
+    setImportExportMode('export');
+    setShowImportExport(true);
+  }, []);
+
+  // 打开导入抽屉
+  const handleOpenImport = useCallback(() => {
+    setImportExportMode('import');
+    setShowImportExport(true);
+  }, []);
+
+  // 导入完成后刷新配置
+  const handleImportComplete = useCallback(() => {
+    loadConfigs();
+  }, [loadConfigs]);
+
   if (!shouldRender) return null;
 
   return (
@@ -314,7 +338,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
           </div>
         )}
 
-        {/* 使用说明 */}
+        {/* 使用说明和导入导出 */}
         {roasters.length > 0 && (
           <div className="mt-6 space-y-3">
             <h3 className="text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
@@ -336,6 +360,22 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                 </li>
               </ul>
             </div>
+
+            {/* 导入导出 */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleOpenImport}
+                className="rounded bg-neutral-100 px-3 py-2 text-xs text-neutral-600 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
+              >
+                导入图标
+              </button>
+              <button
+                onClick={handleOpenExport}
+                className="rounded bg-neutral-100 px-3 py-2 text-xs text-neutral-600 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
+              >
+                导出图标
+              </button>
+            </div>
           </div>
         )}
 
@@ -355,6 +395,16 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
         itemName={`${deleteRoasterName || ''} 的图标`}
         itemType=""
         onExitComplete={() => setDeleteRoasterName(null)}
+      />
+
+      {/* 导入导出抽屉 */}
+      <RoasterLogoImportExport
+        isOpen={showImportExport}
+        onClose={() => setShowImportExport(false)}
+        mode={importExportMode}
+        hapticFeedback={hapticFeedback}
+        existingRoasters={roasters}
+        onImportComplete={handleImportComplete}
       />
     </SettingPage>
   );
