@@ -18,6 +18,7 @@ import {
 } from './components';
 import type { Step } from './components';
 import { MethodWithStages } from '@/lib/types/method';
+import { showToast } from '@/components/common/feedback/LightToast';
 
 // 数据规范化辅助函数
 const normalizeMethodData = (
@@ -1546,8 +1547,129 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     // 检查步骤有效性
     const stepValid = isStepValid();
 
+    // 获取验证错误提示信息
+    const getValidationErrorMessage = (): string | null => {
+      switch (currentStep) {
+        case 'name':
+          if (!method.name.trim()) return '请输入方案名称';
+          return null;
+
+        case 'params':
+          if (!method.params.coffee.trim()) return '请输入咖啡粉量';
+          if (!method.params.water.trim()) return '请输入水量';
+          if (!method.params.ratio.trim()) return '请输入水粉比';
+          if (!method.params.temp.trim()) return '请输入水温';
+          if (!method.params.grindSize.trim()) return '请输入研磨度';
+          return null;
+
+        case 'stages':
+          if (method.params.stages.length === 0)
+            return '请添加至少一个冲泡步骤';
+
+          for (let i = 0; i < method.params.stages.length; i++) {
+            const stage = method.params.stages[i];
+            const stageNum = i + 1;
+
+            // 意式机特殊验证
+            if (isEspresso) {
+              switch (stage.pourType) {
+                case 'extraction':
+                  if (
+                    !isValidDuration(stage.duration) ||
+                    (stage.duration ?? 0) <= 0
+                  )
+                    return `步骤${stageNum}：请输入萃取时间`;
+                  if (!stage.label.trim())
+                    return `步骤${stageNum}：请输入步骤名称`;
+                  if (!isValidWater(stage.water, stage.pourType))
+                    return `步骤${stageNum}：请输入液重`;
+                  break;
+                case 'beverage':
+                  if (!stage.label.trim())
+                    return `步骤${stageNum}：请输入饮料名称`;
+                  if (!isValidWater(stage.water, stage.pourType))
+                    return `步骤${stageNum}：请输入液量`;
+                  break;
+              }
+              continue;
+            }
+
+            // 自定义预设验证
+            if (isCustomPreset) {
+              if (stage.pourType === 'wait') {
+                if (
+                  !isValidDuration(stage.duration) ||
+                  (stage.duration ?? 0) <= 0
+                )
+                  return `步骤${stageNum}：请输入等待时间`;
+                continue;
+              }
+              if (
+                !isValidDuration(stage.duration) ||
+                (stage.duration ?? 0) <= 0
+              )
+                return `步骤${stageNum}：请输入阶段用时`;
+              if (!isValidWater(stage.water, stage.pourType))
+                return `步骤${stageNum}：请输入注水量`;
+              if (
+                customEquipment.hasValve &&
+                stage.valveStatus !== 'open' &&
+                stage.valveStatus !== 'closed'
+              )
+                return `步骤${stageNum}：请设置阀门状态`;
+              continue;
+            }
+
+            // 等待类型
+            if (stage.pourType === 'wait') {
+              if (
+                !isValidDuration(stage.duration) ||
+                (stage.duration ?? 0) <= 0
+              )
+                return `步骤${stageNum}：请输入等待时间`;
+              continue;
+            }
+
+            // Bypass 类型
+            if (stage.pourType === 'bypass') {
+              if (!stage.label.trim()) return `步骤${stageNum}：请输入步骤名称`;
+              if (!isValidWater(stage.water, stage.pourType))
+                return `步骤${stageNum}：请输入水量`;
+              continue;
+            }
+
+            // 标准器具验证
+            if (!isValidDuration(stage.duration) || (stage.duration ?? 0) <= 0)
+              return `步骤${stageNum}：请输入阶段用时`;
+            if (!stage.label.trim()) return `步骤${stageNum}：请输入步骤名称`;
+            if (!isValidWater(stage.water, stage.pourType))
+              return `步骤${stageNum}：请输入注水量`;
+            if (!stage.pourType) return `步骤${stageNum}：请选择注水方式`;
+            if (
+              customEquipment.hasValve &&
+              stage.valveStatus !== 'open' &&
+              stage.valveStatus !== 'closed'
+            )
+              return `步骤${stageNum}：请设置阀门状态`;
+          }
+          return null;
+
+        default:
+          return null;
+      }
+    };
+
     // 按钮点击处理
     const handleButtonClick = () => {
+      if (!stepValid) {
+        // 显示验证错误提示
+        const errorMessage = getValidationErrorMessage();
+        if (errorMessage) {
+          showToast({ type: 'error', title: errorMessage });
+        }
+        return;
+      }
+
       if (isLastStep) {
         try {
           handleSubmit();
@@ -1567,7 +1689,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         <button
           type="button"
           onClick={handleButtonClick}
-          disabled={!stepValid}
           className={`flex items-center justify-center p-4 ${!stepValid ? 'cursor-not-allowed opacity-50' : ''} ${isLastStep ? 'rounded-full bg-neutral-800 px-6 py-3 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-800' : ''} `}
         >
           {isLastStep ? (
