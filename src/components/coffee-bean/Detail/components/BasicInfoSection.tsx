@@ -348,16 +348,19 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         )}
 
         {/* 赏味期（仅熟豆且有烘焙日期时显示，添加模式下不显示因为下面有设置） */}
-        {!isGreenBeanType && flavorInfo && !isAddMode && (
-          <div className="flex items-start">
-            <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              赏味期
+        {!isGreenBeanType &&
+          flavorInfo &&
+          flavorInfo.phase !== '未知' &&
+          !isAddMode && (
+            <div className="flex items-start">
+              <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                赏味期
+              </div>
+              <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                {flavorInfo.status}
+              </div>
             </div>
-            <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-              {flavorInfo.status}
-            </div>
-          </div>
-        )}
+          )}
       </div>
 
       {/* 虚线分割线 */}

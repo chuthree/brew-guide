@@ -197,7 +197,7 @@ export const calculateFlavorInfo = (
   }
 
   if (bean.isFrozen) {
-    return { phase: '冷冻', remainingDays: 0, status: '冷冻保存' };
+    return { phase: '冷冻', remainingDays: 0, status: '冷冻' };
   }
 
   if (!bean.roastDate) {
