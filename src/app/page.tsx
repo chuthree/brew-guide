@@ -1599,6 +1599,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           bean.beanState = importingBeanState;
 
           // 只在字段存在时才设置其他可选字段
+          if (beanData.roaster !== undefined) bean.roaster = beanData.roaster;
           if (beanData.startDay !== undefined)
             bean.startDay = beanData.startDay;
           if (beanData.endDay !== undefined) bean.endDay = beanData.endDay;

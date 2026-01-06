@@ -91,6 +91,7 @@ export const useBeanOperations = () => {
     try {
       const shareableBean = {
         name: bean.name,
+        roaster: bean.roaster,
         capacity: bean.capacity,
         roastLevel: bean.roastLevel,
         roastDate: bean.roastDate,

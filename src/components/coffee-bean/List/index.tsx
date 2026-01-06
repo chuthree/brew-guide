@@ -1544,6 +1544,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       const texts = beansToShare.map(bean => {
         const shareableBean = {
           name: bean.name,
+          roaster: bean.roaster,
           capacity: bean.capacity,
           roastLevel: bean.roastLevel,
           roastDate: bean.roastDate,

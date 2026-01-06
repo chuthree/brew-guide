@@ -607,6 +607,11 @@ export function beanToReadableText(
   const { includeMetadata = true } = options || {};
   let text = `【咖啡豆信息】${bean.name}\n`;
 
+  // 烘焙商信息
+  if (bean.roaster) {
+    text += `烘焙商: ${bean.roaster}\n`;
+  }
+
   // 确定豆子类型（单品/拼配）
   const isBlend =
     bean.blendComponents &&
@@ -940,6 +945,12 @@ function parseCoffeeBeanText(text: string): Partial<CoffeeBean> | null {
     text.match(/【咖啡豆信息】(.*?)(?:\n|$)/);
   if (nameMatch && nameMatch[1]) {
     bean.name = nameMatch[1].trim();
+  }
+
+  // 提取烘焙商
+  const roasterMatch = text.match(/烘焙商:\s*(.*?)(?:\n|$)/);
+  if (roasterMatch && roasterMatch[1] && roasterMatch[1].trim() !== '') {
+    bean.roaster = roasterMatch[1].trim();
   }
 
   // 提取容量和剩余容量
