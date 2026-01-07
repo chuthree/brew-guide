@@ -64,12 +64,12 @@ export interface UseModalHistoryOptions {
 export function useModalHistory(options: UseModalHistoryOptions): void {
   const { id, isOpen, onClose, replace = false } = options;
 
-  // 使用 ref 保存最新的回调，避免重复注册
+  // 使用 ref 保存最新的回调
   const onCloseRef = useRef(onClose);
-  // 跟踪上一次的 isOpen 状态，用于检测是否是主动关闭
-  const wasOpenRef = useRef(false);
   // 标记是否是通过 popstate 关闭的
   const closedByPopstateRef = useRef(false);
+  // 用于取消延迟清理的 timer
+  const cleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 更新 ref
   useEffect(() => {
@@ -78,45 +78,59 @@ export function useModalHistory(options: UseModalHistoryOptions): void {
 
   // 注册/注销模态框
   useEffect(() => {
+    // 取消之前的延迟清理（如果有）
+    // 这处理 StrictMode 的情况：清理函数设置了延迟清理，但组件立即重新挂载
+    if (cleanupTimerRef.current) {
+      clearTimeout(cleanupTimerRef.current);
+      cleanupTimerRef.current = null;
+    }
+
     if (isOpen) {
-      // 打开时注册
-      wasOpenRef.current = true;
+      // isOpen 为 true，检查是否已经在栈中
+      if (modalHistory.isOpen(id)) {
+        // 已经注册过，不需要重复注册
+        // 但需要更新回调（因为 onCloseRef 可能已经更新）
+        return;
+      }
+
+      // 注册模态框
       closedByPopstateRef.current = false;
 
       const entry: ModalEntry = {
         id,
         onClose: () => {
-          // 标记为通过 popstate 关闭
           closedByPopstateRef.current = true;
           onCloseRef.current();
         },
       };
 
-      // 根据模式选择注册方式
       if (replace) {
         modalHistory.replace(entry);
       } else {
         modalHistory.register(entry);
       }
-
-      // 清理函数：组件卸载时清理历史栈
-      return () => {
-        // 组件卸载时，如果还在栈中，需要清理
-        if (modalHistory.isOpen(id) && !closedByPopstateRef.current) {
-          modalHistory.close(id);
-        }
-        wasOpenRef.current = false;
-      };
-    } else if (wasOpenRef.current && !closedByPopstateRef.current) {
-      // isOpen 从 true 变为 false，且不是通过 popstate 关闭的
-      // 这意味着是主动关闭（如表单提交、点击关闭按钮直接设置 isOpen=false）
-      // 需要清理浏览器历史
-      modalHistory.close(id);
-      wasOpenRef.current = false;
-    } else if (wasOpenRef.current && closedByPopstateRef.current) {
-      // 通过 popstate 关闭的，只重置标志
-      wasOpenRef.current = false;
+    } else {
+      // isOpen 为 false，需要清理
+      if (!closedByPopstateRef.current && modalHistory.isOpen(id)) {
+        modalHistory.close(id);
+      }
+      closedByPopstateRef.current = false;
     }
+
+    // 清理函数
+    return () => {
+      // 使用延迟清理来处理 StrictMode 的情况
+      // 如果是 StrictMode 的模拟卸载，组件会立即重新挂载，
+      // 新的 effect 会取消这个延迟清理
+      if (isOpen && !closedByPopstateRef.current && modalHistory.isOpen(id)) {
+        cleanupTimerRef.current = setTimeout(() => {
+          if (modalHistory.isOpen(id)) {
+            modalHistory.close(id);
+          }
+          cleanupTimerRef.current = null;
+        }, 0);
+      }
+    };
   }, [id, isOpen, replace]);
 }
 
