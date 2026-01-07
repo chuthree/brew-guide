@@ -90,7 +90,7 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         ...existingNote,
         ...updates,
         id,
-        timestamp: updates.timestamp ?? existingNote.timestamp,
+        timestamp: Date.now(),
       };
 
       // 移除变动记录字段
