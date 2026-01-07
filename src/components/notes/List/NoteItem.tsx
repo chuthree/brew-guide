@@ -139,6 +139,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
           {/* 图片查看器 - 只有当需要显示时才渲染 */}
           {note.image && !imageError && imageViewerOpen && (
             <ImageViewer
+              id={`note-item-image-${note.id}`}
               isOpen={imageViewerOpen}
               imageUrl={note.image}
               alt={beanName || '笔记图片'}

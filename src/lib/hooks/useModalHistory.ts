@@ -98,6 +98,15 @@ export function useModalHistory(options: UseModalHistoryOptions): void {
       } else {
         modalHistory.register(entry);
       }
+
+      // 清理函数：组件卸载时清理历史栈
+      return () => {
+        // 组件卸载时，如果还在栈中，需要清理
+        if (modalHistory.isOpen(id) && !closedByPopstateRef.current) {
+          modalHistory.close(id);
+        }
+        wasOpenRef.current = false;
+      };
     } else if (wasOpenRef.current && !closedByPopstateRef.current) {
       // isOpen 从 true 变为 false，且不是通过 popstate 关闭的
       // 这意味着是主动关闭（如表单提交、点击关闭按钮直接设置 isOpen=false）

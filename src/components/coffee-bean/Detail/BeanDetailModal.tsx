@@ -664,6 +664,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       {/* 图片查看器 */}
       {currentImageUrl && imageViewerOpen && (
         <ImageViewer
+          id="bean-detail-image"
           isOpen={imageViewerOpen}
           imageUrl={currentImageUrl}
           backImageUrl={currentBackImageUrl}

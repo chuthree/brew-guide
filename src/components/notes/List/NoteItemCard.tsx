@@ -254,6 +254,7 @@ const NoteItemCard: React.FC<NoteItemProps> = ({
         {/* 图片查看器 */}
         {note.image && !imageError && imageViewerOpen && (
           <ImageViewer
+            id={`note-card-image-${note.id}`}
             isOpen={imageViewerOpen}
             imageUrl={note.image}
             alt={beanName || '笔记图片'}

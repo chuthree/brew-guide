@@ -222,6 +222,7 @@ const DateImageFlowView: React.FC<DateImageFlowViewProps> = ({
       {/* 图片查看器 */}
       {selectedImage && (
         <ImageViewer
+          id="date-flow-image"
           isOpen={imageViewerOpen}
           imageUrl={selectedImage.url}
           alt={selectedImage.alt}

@@ -117,6 +117,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
       {/* 图片查看器 */}
       {selectedImage && (
         <ImageViewer
+          id="gallery-image"
           isOpen={imageViewerOpen}
           imageUrl={selectedImage.url}
           alt={selectedImage.alt}

@@ -681,6 +681,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       {/* 图片查看器 */}
       {currentImageUrl && imageViewerOpen && (
         <ImageViewer
+          id="note-detail-image"
           isOpen={imageViewerOpen}
           imageUrl={currentImageUrl}
           alt="图片"

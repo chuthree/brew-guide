@@ -1020,6 +1020,7 @@ const AppModals: React.FC<AppModalsProps> = ({
       {/* ImageViewer */}
       {imageViewerOpen && imageViewerData && (
         <ImageViewer
+          id="app-image-viewer"
           isOpen={imageViewerOpen}
           imageUrl={imageViewerData.url}
           backImageUrl={imageViewerData.backUrl}
