@@ -50,9 +50,12 @@ export async function migrateRoasterField(): Promise<void> {
     }
 
     const updates = beansToMigrate.map(bean => {
-      const roaster = extractRoasterFromName(bean.name, separator);
+      const extractedRoaster = extractRoasterFromName(bean.name, separator);
+      // 识别不到烘焙商时保持为空（可选字段）
+      const roaster =
+        extractedRoaster !== '未知烘焙商' ? extractedRoaster : undefined;
       const name =
-        roaster !== '未知烘焙商'
+        extractedRoaster !== '未知烘焙商'
           ? removeRoasterFromName(bean.name, separator)
           : bean.name;
 
