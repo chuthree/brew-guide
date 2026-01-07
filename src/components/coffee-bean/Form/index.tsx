@@ -238,8 +238,12 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
     // 加载烘焙商图标 - 当烘焙商名称变化时
     useEffect(() => {
-      // 优先使用独立的 roaster 字段，否则从名称中提取
-      const roasterName = bean.roaster || extractRoasterFromName(bean.name);
+      // 根据是否启用独立烘焙商字段决定如何获取烘焙商名称
+      // 启用独立输入时：只从 roaster 字段获取
+      // 关闭独立输入时：从名称中提取
+      const roasterName = settings.roasterFieldEnabled
+        ? bean.roaster
+        : extractRoasterFromName(bean.name);
 
       if (roasterName && roasterName !== '未知烘焙商') {
         const logo = getRoasterLogoSync(roasterName);
@@ -247,7 +251,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       } else {
         setRoasterLogo(null);
       }
-    }, [bean.name, bean.roaster]);
+    }, [bean.name, bean.roaster, settings.roasterFieldEnabled]);
 
     // 自动填充识图图片 - 在表单加载时检查设置，如果开启了自动填充且有识图图片，则自动填充
     useEffect(() => {
