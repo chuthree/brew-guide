@@ -65,6 +65,15 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const [isRandomPickerOpen, setIsRandomPickerOpen] = useState(false);
   const [isLongPressRandom, setIsLongPressRandom] = useState(false);
 
+  // 用户修改后的方案参数
+  const [modifiedParams, setModifiedParams] = useState<{
+    coffee?: string;
+    water?: string;
+    ratio?: string;
+    grindSize?: string;
+    temp?: string;
+  } | null>(null);
+
   // 使用新的多步骤历史栈管理
   // 步骤从 1 开始，但内部 currentStep 从 0 开始，所以需要 +1
   useMultiStepModalHistory({
@@ -79,6 +88,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       // 关闭时重置状态
       setSelectedCoffeeBean(null);
       setSelectedMethod('');
+      setModifiedParams(null); // 重置修改的参数
       onClose();
     },
   });
@@ -190,26 +200,77 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     setCurrentStep(prev => prev + 1);
   }, []);
 
-  // 处理方法参数变化 - 使用useCallback优化并延迟事件触发
+  // 处理方法参数变化 - 保存修改后的参数
   const _handleMethodParamsChange = useCallback(
     (method: Method) => {
-      // 统一使用ID优先的方式标识方案
       const methodIdentifier = method.id || method.name;
       setSelectedMethod(methodIdentifier);
 
+      // 保存用户修改后的参数
+      setModifiedParams({
+        coffee: method.params.coffee,
+        water: method.params.water,
+        ratio: method.params.ratio,
+        grindSize: method.params.grindSize,
+        temp: method.params.temp,
+      });
+
       // 延迟触发事件，避免在渲染期间触发
       setTimeout(() => {
+        // 触发 methodParamsChanged 事件给 BrewingNoteForm
         const event = new CustomEvent('methodParamsChanged', {
           detail: { params: method.params },
         });
         document.dispatchEvent(event);
+
+        // 同时触发 brewing:updateNavbarDisplay 事件给 NavigationBar
+        const params = method.params;
+        if (params.coffee) {
+          window.dispatchEvent(
+            new CustomEvent('brewing:updateNavbarDisplay', {
+              detail: { type: 'coffee', value: params.coffee.replace('g', '') },
+            })
+          );
+        }
+        if (params.ratio) {
+          window.dispatchEvent(
+            new CustomEvent('brewing:updateNavbarDisplay', {
+              detail: { type: 'ratio', value: params.ratio.replace('1:', '') },
+            })
+          );
+        }
+        if (params.grindSize) {
+          window.dispatchEvent(
+            new CustomEvent('brewing:updateNavbarDisplay', {
+              detail: { type: 'grindSize', value: params.grindSize },
+            })
+          );
+        }
+        if (params.temp) {
+          window.dispatchEvent(
+            new CustomEvent('brewing:updateNavbarDisplay', {
+              detail: { type: 'temp', value: params.temp.replace('°C', '') },
+            })
+          );
+        }
       }, 0);
     },
     [setSelectedMethod]
   );
 
-  // 获取方案参数
+  // 获取方案参数 - 优先使用用户修改后的参数
   const getMethodParams = () => {
+    // 如果有用户修改后的参数，优先使用
+    if (modifiedParams) {
+      return {
+        coffee: modifiedParams.coffee || '15g',
+        water: modifiedParams.water || '225g',
+        ratio: modifiedParams.ratio || '1:15',
+        grindSize: modifiedParams.grindSize || '中细',
+        temp: modifiedParams.temp || '92°C',
+      };
+    }
+
     if (selectedEquipment && selectedMethod) {
       // 合并所有方案列表以确保查找全面
       const allMethods = [...commonMethodsOnly, ...customMethods];
@@ -302,19 +363,14 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   // 处理保存笔记
   const handleSaveNote = (note: BrewingNoteData) => {
     // 获取方案名称
-    let methodName = selectedMethod || ''; // 如果没有选择方案，使用空字符串
+    let methodName = selectedMethod || '';
 
     if (selectedMethod) {
-      // 合并所有方案以便查找
       const allMethods = [...commonMethodsOnly, ...customMethods];
-
-      // 在所有方案中查找匹配的方案
       const methodObj = allMethods.find(
         m => m.id === selectedMethod || m.name === selectedMethod
       );
-
       if (methodObj) {
-        // 如果找到匹配的方案，始终使用其名称
         methodName = methodObj.name;
       }
     }
@@ -324,27 +380,19 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       ...note,
       equipment: selectedEquipment,
       method: methodName,
-      // 移除完整的coffeeBean对象，避免可能引起的问题
       coffeeBean: undefined,
-      // 重新设置参数以确保使用最新的方案参数
-      params: note.params || getMethodParams(),
+      params: note.params,
     };
 
     // 处理咖啡豆关联
     if (selectedCoffeeBean?.id) {
       completeNote['beanId'] = selectedCoffeeBean.id;
-
-      // 始终设置咖啡豆信息，无论是否已存在
-      // 分别存储 name 和 roaster，显示时根据设置动态格式化
       completeNote.coffeeBeanInfo = {
         name: selectedCoffeeBean.name || '',
         roastLevel: selectedCoffeeBean.roastLevel || '中度烘焙',
         roastDate: selectedCoffeeBean.roastDate || '',
         roaster: selectedCoffeeBean.roaster,
       };
-
-      // 注意：咖啡豆剩余量的扣除已在 BrewingNoteForm.handleSubmit 中处理
-      // 这里不再重复扣除，避免重复减少剩余量
     }
 
     // 保存笔记
@@ -402,7 +450,11 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
               selectedMethod={selectedMethod}
               customMethods={customMethods}
               commonMethods={commonMethodsOnly}
-              onMethodSelect={setSelectedMethod}
+              onMethodSelect={(methodId: string) => {
+                // 选择新方案时重置修改的参数
+                setModifiedParams(null);
+                setSelectedMethod(methodId);
+              }}
               onParamsChange={_handleMethodParamsChange}
               grinderDefaultSyncEnabled={
                 settings?.grinderDefaultSync?.manualNote ?? true

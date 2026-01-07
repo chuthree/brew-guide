@@ -100,44 +100,68 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     if (!method) return;
 
     // 更新本地编辑状态
-    setEditingValues(prev => (prev ? { ...prev, [key]: value } : null));
+    const newEditingValues = editingValues
+      ? { ...editingValues, [key]: value }
+      : null;
+    setEditingValues(newEditingValues);
 
-    // 直接更新方法参数
-    if (key === 'coffee') {
-      method.params.coffee = `${value}g`;
-      if (!isEspresso) {
-        const ratio =
-          editingValues?.ratio || extractRatioNumber(method.params.ratio);
-        const water = calculateWater(value, ratio);
-        if (water) method.params.water = water;
-      }
-    } else if (key === 'ratio') {
-      method.params.ratio = `1:${value}`;
-      const coffee =
-        editingValues?.coffee || extractNumber(method.params.coffee);
-      const water = calculateWater(coffee, value);
-      if (water) method.params.water = water;
-    } else if (key === 'grindSize') {
-      method.params.grindSize = value;
-    } else if (key === 'water') {
-      method.params.water = `${value}g`;
-    } else if (key === 'time') {
-      if (!method.params.stages) method.params.stages = [];
-      if (method.params.stages.length === 0) {
-        method.params.stages.push({
-          time: 0,
-          label: '萃取',
-          water: method.params.water,
-          detail: '',
-          pourType: 'extraction',
-        });
-      }
-      method.params.stages[0].time = parseFloat(value) || 0;
-    } else if (key === 'temp') {
-      method.params.temp = `${value}°C`;
+    // 🔥 使用 editingValues 中已修改的值来构建完整参数
+    // 这样可以保留之前的修改
+    const currentCoffee =
+      key === 'coffee'
+        ? value
+        : newEditingValues?.coffee || extractNumber(method.params.coffee);
+    const currentRatio =
+      key === 'ratio'
+        ? value
+        : newEditingValues?.ratio || extractRatioNumber(method.params.ratio);
+    const currentGrindSize =
+      key === 'grindSize'
+        ? value
+        : newEditingValues?.grindSize || method.params.grindSize;
+    const currentTemp =
+      key === 'temp'
+        ? value
+        : newEditingValues?.temp || extractNumber(method.params.temp || '');
+    const currentTime =
+      key === 'time'
+        ? value
+        : newEditingValues?.time ||
+          method.params.stages?.[0]?.time?.toString() ||
+          '';
+
+    // 计算水量
+    let currentWater =
+      key === 'water'
+        ? value
+        : newEditingValues?.water || extractNumber(method.params.water);
+
+    // 如果修改了咖啡粉或粉水比，重新计算水量（非意式）
+    if (!isEspresso && (key === 'coffee' || key === 'ratio')) {
+      const water = calculateWater(currentCoffee, currentRatio);
+      if (water) currentWater = extractNumber(water);
     }
 
-    onParamsChange(method);
+    // 创建方法的深拷贝
+    const updatedMethod: Method = {
+      ...method,
+      params: {
+        coffee: `${currentCoffee}g`,
+        water: `${currentWater}g`,
+        ratio: `1:${currentRatio}`,
+        grindSize: currentGrindSize,
+        temp: currentTemp ? `${currentTemp}°C` : method.params.temp,
+        stages: method.params.stages
+          ? method.params.stages.map((s, i) => ({
+              ...s,
+              time:
+                i === 0 && currentTime ? parseFloat(currentTime) || 0 : s.time,
+            }))
+          : [],
+      },
+    };
+
+    onParamsChange(updatedMethod);
   };
 
   const isMethodSelected = (method: Method): boolean => {

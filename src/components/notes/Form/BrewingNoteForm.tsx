@@ -559,6 +559,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           temp: params.temp || prev.temp,
         }));
 
+        // 同步更新 numericValues 以确保输入框显示正确
+        setNumericValues(prev => ({
+          coffee: extractNumericValue(params.coffee || prev.coffee),
+          water: extractNumericValue(params.water || prev.water),
+          temp: extractNumericValue(params.temp || prev.temp),
+          ratio: extractNumericValue(
+            (params.ratio || prev.ratio).split(':')[1]
+          ),
+        }));
+
         // 同步时间
         if (params.stages && params.stages.length > 0) {
           const totalTime = params.stages.reduce(
