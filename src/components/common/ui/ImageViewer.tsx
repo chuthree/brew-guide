@@ -27,7 +27,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
 }) => {
   const [frontError, setFrontError] = useState(false);
   const [backError, setBackError] = useState(false);
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [_isFlipped, setIsFlipped] = useState(false);
 
   // GSAP refs
   const cardRef = useRef<HTMLDivElement>(null);
@@ -143,7 +143,14 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
             exit={{ scale: 0.96 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="relative max-h-[90vh] overflow-visible"
-            onClick={e => e.stopPropagation()}
+            onClick={e => {
+              // 单图模式：点击任意位置关闭；双图模式：阻止冒泡（由图片处理翻转）
+              if (!hasBackImage) {
+                onClose();
+              } else {
+                e.stopPropagation();
+              }
+            }}
           >
             {hasBackImage ? (
               /* 有背面图片时：使用3D翻转效果 */
