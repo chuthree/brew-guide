@@ -190,7 +190,7 @@ export const defaultSettings: AppSettings = {
   // 烘焙商字段设置
   roasterFieldEnabled: false, // 是否启用独立烘焙商字段
   roasterSeparator: ' ', // 烘焙商分隔符，默认空格
-  roasterMigrationCompleted: false, // 迁移是否已完成
+  roasterMigrationCompleted: false, // @deprecated 已废弃，按需迁移策略不再使用此标记
 };
 
 /**

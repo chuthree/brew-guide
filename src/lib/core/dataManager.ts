@@ -498,6 +498,16 @@ export const DataManager = {
         console.error('刷新咖啡豆缓存失败:', error);
       }
 
+      // 执行烘焙商字段迁移（按需迁移导入的数据）
+      try {
+        const { migrateRoasterField } = await import(
+          '@/lib/utils/roasterMigration'
+        );
+        await migrateRoasterField();
+      } catch (error) {
+        console.error('烘焙商字段迁移失败:', error);
+      }
+
       // 刷新磨豆机缓存，确保导入的数据能立即生效
       try {
         const { getGrinderStore } = await import('@/lib/stores/grinderStore');

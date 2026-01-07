@@ -142,6 +142,16 @@ export class InitialSyncManager {
     console.log('[InitialSync] 刷新所有 Store...');
     await refreshAllStores();
 
+    // 执行烘焙商字段迁移（按需迁移同步下载的数据）
+    try {
+      const { migrateRoasterField } = await import(
+        '@/lib/utils/roasterMigration'
+      );
+      await migrateRoasterField();
+    } catch (e) {
+      console.error('[InitialSync] 烘焙商字段迁移失败:', e);
+    }
+
     // 强制触发一次全局 UI 更新事件，确保组件重绘
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('syncCompleted'));

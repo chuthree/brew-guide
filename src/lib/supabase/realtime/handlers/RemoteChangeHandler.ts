@@ -18,6 +18,12 @@ import { getDbTable } from '../dbUtils';
 import { notifyStoreDelete, notifyStoreUpsert } from './StoreNotifier';
 import type { RealtimeSyncTable, CloudRecord } from '../types';
 import type { Method } from '@/lib/core/config';
+import type { CoffeeBean } from '@/types/app';
+import {
+  extractRoasterFromName,
+  removeRoasterFromName,
+} from '@/lib/utils/beanVarietyUtils';
+import { getSettingsStore } from '@/lib/stores/settingsStore';
 
 type PostgresPayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
@@ -138,6 +144,14 @@ export class RemoteChangeHandler {
       // custom_methods 需要特殊处理
       if (table === SYNC_TABLES.CUSTOM_METHODS) {
         await this.handleMethodsUpsert(recordId, remoteData);
+      } else if (table === SYNC_TABLES.COFFEE_BEANS) {
+        // 咖啡豆需要检查烘焙商字段迁移
+        const beanData = await this.migrateRoasterIfNeeded(
+          remoteData as unknown as CoffeeBean
+        );
+        await (dbTable as { put: (data: unknown) => Promise<unknown> }).put(
+          beanData
+        );
       } else {
         await (dbTable as { put: (data: unknown) => Promise<unknown> }).put(
           remoteData
@@ -160,6 +174,36 @@ export class RemoteChangeHandler {
       equipmentId,
       methods: remoteMethods,
     });
+  }
+
+  /**
+   * 为咖啡豆执行烘焙商字段迁移（如果需要）
+   * 确保实时同步接收到的旧格式数据也能正确迁移
+   */
+  private async migrateRoasterIfNeeded(bean: CoffeeBean): Promise<CoffeeBean> {
+    // 如果已有 roaster 字段，无需迁移
+    if (bean.roaster) {
+      return bean;
+    }
+
+    // 获取分隔符设置
+    const { roasterSeparator } = getSettingsStore().settings;
+    const separator = roasterSeparator || ' ';
+
+    // 提取烘焙商
+    const extractedRoaster = extractRoasterFromName(bean.name, separator);
+
+    // 识别不到烘焙商时保持原样
+    if (extractedRoaster === '未知烘焙商') {
+      return bean;
+    }
+
+    // 迁移：填充 roaster 字段，从 name 中移除烘焙商部分
+    return {
+      ...bean,
+      roaster: extractedRoaster,
+      name: removeRoasterFromName(bean.name, separator),
+    };
   }
 }
 

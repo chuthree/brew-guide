@@ -261,7 +261,7 @@ export interface AppSettings {
   // 烘焙商字段设置
   roasterFieldEnabled?: boolean; // 是否启用独立烘焙商字段，默认 false
   roasterSeparator?: ' ' | '/'; // 烘焙商分隔符，默认空格
-  roasterMigrationCompleted?: boolean; // 迁移是否已完成
+  roasterMigrationCompleted?: boolean; // @deprecated 已废弃，按需迁移策略不再使用此标记
 
   // 注意: grinders 字段已迁移到独立的 grinders 表
   // 此字段仅用于兼容旧数据导入，运行时不使用
