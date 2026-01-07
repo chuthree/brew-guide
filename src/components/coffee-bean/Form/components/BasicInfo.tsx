@@ -171,6 +171,16 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     onBeanChange('remaining')(value);
   };
 
+  // 根据脱水率推断烘焙度
+  const getRoastLevelFromMoistureLoss = (loss: number): string | null => {
+    if (loss >= 8 && loss <= 10) return '极浅烘焙';
+    if (loss >= 11 && loss <= 13) return '浅度烘焙';
+    if (loss >= 14 && loss <= 16) return '中度烘焙';
+    if (loss >= 17 && loss < 18) return '中深烘焙';
+    if (loss >= 18) return '深度烘焙';
+    return null;
+  };
+
   // 处理脱水率变化（实时计算）
   const handleMoistureChange = (value: string) => {
     setMoistureLoss(value);
@@ -185,6 +195,14 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
       const newRemStr = formatDecimal(newRem);
       setRemainingValue(newRemStr);
       onBeanChange('remaining')(newRemStr);
+    }
+
+    // 根据脱水率自动设置烘焙度
+    if (!isNaN(loss)) {
+      const suggestedRoastLevel = getRoastLevelFromMoistureLoss(loss);
+      if (suggestedRoastLevel) {
+        onBeanChange('roastLevel')(suggestedRoastLevel);
+      }
     }
   };
 
