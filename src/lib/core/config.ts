@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.5.12-beta.1';
+export const APP_VERSION = '1.5.12-beta.2';
 
 // Types
 
