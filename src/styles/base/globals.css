@@ -195,6 +195,16 @@ body {
   background: transparent;
 }
 
+/* 隐藏滚动条的工具类 */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 /* 底部间距容器 */
 .scroll-with-bottom-bar,
 .content-area {

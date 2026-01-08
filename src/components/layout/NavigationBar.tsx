@@ -14,6 +14,10 @@ import {
 import EquipmentBar from '@/components/equipment/EquipmentBar';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
+import {
+  useScrollToSelected,
+  useScrollBorder,
+} from '@/lib/equipment/useScrollToSelected';
 
 import { Equal, ArrowLeft, ChevronsUpDown, Upload } from 'lucide-react';
 
@@ -437,6 +441,39 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   // 判断当前视图是否被固定
   const isCurrentViewPinned =
     currentBeanView && typedPinnedViews.includes(currentBeanView);
+
+  // 计算当前选中的 tab 标识（用于滚动定位）
+  const getSelectedTabId = useCallback(() => {
+    if (activeMainTab === '咖啡豆') {
+      if (isCurrentViewPinned && currentBeanView) {
+        return currentBeanView;
+      }
+      return 'bean-view-selector';
+    }
+    return activeMainTab;
+  }, [activeMainTab, currentBeanView, isCurrentViewPinned]);
+
+  // 计算 tab 数量
+  const tabCount =
+    (visibleTabs.brewing ? 1 : 0) +
+    (visibleTabs.coffeeBean && availableViewsCount > 0 ? 1 : 0) +
+    typedPinnedViews.length +
+    (visibleTabs.notes ? 1 : 0);
+
+  // 可滚动导航栏
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 使用现有的滚动 hooks
+  useScrollToSelected({
+    selectedItem: getSelectedTabId(),
+    containerRef: scrollContainerRef,
+    delay: 100,
+  });
+
+  const { showLeftBorder, showRightBorder } = useScrollBorder({
+    containerRef: scrollContainerRef,
+    itemCount: tabCount,
+  });
 
   // 获取第一个未被固定且允许显示的视图作为默认视图
   const getFirstAvailableView = useCallback(() => {
@@ -1155,166 +1192,201 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   </div>
                 </div>
 
-                {/* 主导航按钮 - 保持固定高度避免抖动 - 桌面端垂直排列 */}
+                {/* 主导航按钮 - 移动端可滚动，桌面端垂直排列 */}
                 {/* 桌面端：当显示返回按钮时（进入方案后），完全隐藏导航 tab 容器 */}
                 <div
-                  className={`flex items-center space-x-6 md:mt-2 md:flex-col md:items-start md:space-y-4 md:space-x-0 ${
+                  className={`relative flex min-w-0 flex-1 items-center md:mt-2 md:min-w-0 md:flex-none md:flex-col md:items-start ${
                     canGoBack() && onBackClick ? 'md:hidden' : ''
                   }`}
+                  style={navItemStyle}
                 >
-                  {visibleTabs.brewing && (
-                    <div style={navItemStyle}>
-                      <TabButton
-                        tab="冲煮"
-                        isActive={activeMainTab === '冲煮'}
-                        onClick={() => handleMainTabClick('冲煮')}
-                        dataTab="冲煮"
-                      />
-                    </div>
-                  )}
+                  {/* 左侧渐变阴影 - 仅移动端 */}
+                  <div
+                    className={`pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 transition-opacity duration-200 md:hidden ${
+                      showLeftBorder ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    style={{
+                      background:
+                        'linear-gradient(to right, var(--background), transparent)',
+                    }}
+                  />
 
-                  {visibleTabs.coffeeBean && availableViewsCount > 0 && (
-                    <div style={navItemStyle} className="relative">
-                      {/* 咖啡豆按钮 - 带下拉菜单 */}
-                      <div
-                        ref={el => {
-                          // 将按钮引用传递给父组件
-                          if (el && typeof window !== 'undefined') {
-                            (
-                              window as Window & {
-                                beanButtonRef?: HTMLDivElement;
-                              }
-                            ).beanButtonRef = el;
-                          }
-                        }}
-                        onClick={handleBeanTabClick}
-                        className="flex cursor-pointer items-center pb-3 text-xs font-medium tracking-widest whitespace-nowrap transition-opacity duration-100 md:pb-0"
-                        style={{
-                          opacity:
-                            showViewDropdown &&
-                            activeMainTab === '咖啡豆' &&
-                            !isCurrentViewPinned
-                              ? 0
-                              : 1,
-                          pointerEvents:
-                            showViewDropdown &&
-                            activeMainTab === '咖啡豆' &&
-                            !isCurrentViewPinned
-                              ? 'none'
-                              : 'auto',
-                          ...(showViewDropdown &&
-                          activeMainTab === '咖啡豆' &&
-                          !isCurrentViewPinned
-                            ? { visibility: 'hidden' as const }
-                            : {}),
-                        }}
-                        data-view-selector
-                      >
-                        <span
-                          className={`relative inline-block ${
-                            activeMainTab === '咖啡豆' && !isCurrentViewPinned
-                              ? 'text-neutral-800 dark:text-neutral-100'
-                              : 'text-neutral-500 dark:text-neutral-400'
-                          }`}
-                        >
-                          {getCurrentViewLabel()}
-                        </span>
-
-                        {/* 下拉图标容器 - 使用动画宽度避免布局抖动 */}
-                        <motion.div
-                          className="flex items-center justify-center overflow-hidden"
-                          initial={false}
-                          animate={{
-                            width:
-                              activeMainTab === '咖啡豆' &&
-                              !isCurrentViewPinned &&
-                              availableViewsCount > 1
-                                ? '12px'
-                                : '0px',
-                            marginLeft:
-                              activeMainTab === '咖啡豆' &&
-                              !isCurrentViewPinned &&
-                              availableViewsCount > 1
-                                ? '4px'
-                                : '0px',
-                            transition: {
-                              duration: 0.35,
-                              ease: [0.25, 0.46, 0.45, 0.94], // Apple的标准缓动
-                            },
-                          }}
-                        >
-                          <AnimatePresence mode="wait">
-                            {activeMainTab === '咖啡豆' &&
-                              !isCurrentViewPinned &&
-                              availableViewsCount > 1 && (
-                                <motion.div
-                                  key="chevron-icon"
-                                  initial={{
-                                    opacity: 0,
-                                    scale: 0.8,
-                                  }}
-                                  animate={{
-                                    opacity: 1,
-                                    scale: 1,
-                                    transition: {
-                                      duration: 0.35,
-                                      ease: [0.25, 0.46, 0.45, 0.94], // Apple的标准缓动
-                                      opacity: { duration: 0.25, delay: 0.1 }, // 稍微延迟透明度动画
-                                      scale: { duration: 0.35 },
-                                    },
-                                  }}
-                                  exit={{
-                                    opacity: 0,
-                                    scale: 0.8,
-                                    transition: {
-                                      duration: 0.15,
-                                      ease: [0.4, 0.0, 1, 1], // Apple的退出缓动
-                                      opacity: { duration: 0.15 },
-                                      scale: { duration: 0.15 },
-                                    },
-                                  }}
-                                  className="flex h-3 w-3 shrink-0 items-center justify-center"
-                                >
-                                  <ChevronsUpDown
-                                    size={12}
-                                    className="text-neutral-400 dark:text-neutral-600"
-                                    color="currentColor"
-                                  />
-                                </motion.div>
-                              )}
-                          </AnimatePresence>
-                        </motion.div>
+                  {/* 可滚动容器 - 仅移动端滚动，默认右对齐 */}
+                  <div
+                    ref={scrollContainerRef}
+                    className="scrollbar-hide ml-auto flex items-center space-x-6 overflow-x-auto md:ml-0 md:flex-col md:items-start md:space-y-4 md:space-x-0 md:overflow-visible"
+                    style={{
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                    }}
+                  >
+                    {visibleTabs.brewing && (
+                      <div className="shrink-0">
+                        <TabButton
+                          tab="冲煮"
+                          isActive={activeMainTab === '冲煮'}
+                          onClick={() => handleMainTabClick('冲煮')}
+                          dataTab="冲煮"
+                        />
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Pinned Views */}
-                  {typedPinnedViews.map(view => (
-                    <div key={view} style={navItemStyle}>
-                      <TabButton
-                        tab={
-                          settings.simplifiedViewLabels
-                            ? SIMPLIFIED_VIEW_LABELS[view]
-                            : VIEW_LABELS[view]
-                        }
-                        isActive={
-                          activeMainTab === '咖啡豆' && currentBeanView === view
-                        }
-                        onClick={() => handlePinnedViewClick(view)}
-                      />
-                    </div>
-                  ))}
+                    {visibleTabs.coffeeBean && availableViewsCount > 0 && (
+                      <div className="relative shrink-0">
+                        {/* 咖啡豆按钮 - 带下拉菜单 */}
+                        <div
+                          ref={el => {
+                            // 将按钮引用传递给父组件
+                            if (el && typeof window !== 'undefined') {
+                              (
+                                window as Window & {
+                                  beanButtonRef?: HTMLDivElement;
+                                }
+                              ).beanButtonRef = el;
+                            }
+                          }}
+                          onClick={handleBeanTabClick}
+                          className="flex cursor-pointer items-center pb-3 text-xs font-medium tracking-widest whitespace-nowrap transition-opacity duration-100 md:pb-0"
+                          style={{
+                            opacity:
+                              showViewDropdown &&
+                              activeMainTab === '咖啡豆' &&
+                              !isCurrentViewPinned
+                                ? 0
+                                : 1,
+                            pointerEvents:
+                              showViewDropdown &&
+                              activeMainTab === '咖啡豆' &&
+                              !isCurrentViewPinned
+                                ? 'none'
+                                : 'auto',
+                            ...(showViewDropdown &&
+                            activeMainTab === '咖啡豆' &&
+                            !isCurrentViewPinned
+                              ? { visibility: 'hidden' as const }
+                              : {}),
+                          }}
+                          data-tab="bean-view-selector"
+                        >
+                          <span
+                            className={`relative inline-block ${
+                              activeMainTab === '咖啡豆' && !isCurrentViewPinned
+                                ? 'text-neutral-800 dark:text-neutral-100'
+                                : 'text-neutral-500 dark:text-neutral-400'
+                            }`}
+                          >
+                            {getCurrentViewLabel()}
+                          </span>
 
-                  {visibleTabs.notes && (
-                    <div style={navItemStyle}>
-                      <TabButton
-                        tab="笔记"
-                        isActive={activeMainTab === '笔记'}
-                        onClick={() => handleMainTabClick('笔记')}
-                        dataTab="笔记"
-                      />
-                    </div>
-                  )}
+                          {/* 下拉图标容器 - 使用动画宽度避免布局抖动 */}
+                          <motion.div
+                            className="flex items-center justify-center overflow-hidden"
+                            initial={false}
+                            animate={{
+                              width:
+                                activeMainTab === '咖啡豆' &&
+                                !isCurrentViewPinned &&
+                                availableViewsCount > 1
+                                  ? '12px'
+                                  : '0px',
+                              marginLeft:
+                                activeMainTab === '咖啡豆' &&
+                                !isCurrentViewPinned &&
+                                availableViewsCount > 1
+                                  ? '4px'
+                                  : '0px',
+                              transition: {
+                                duration: 0.35,
+                                ease: [0.25, 0.46, 0.45, 0.94], // Apple的标准缓动
+                              },
+                            }}
+                          >
+                            <AnimatePresence mode="wait">
+                              {activeMainTab === '咖啡豆' &&
+                                !isCurrentViewPinned &&
+                                availableViewsCount > 1 && (
+                                  <motion.div
+                                    key="chevron-icon"
+                                    initial={{
+                                      opacity: 0,
+                                      scale: 0.8,
+                                    }}
+                                    animate={{
+                                      opacity: 1,
+                                      scale: 1,
+                                      transition: {
+                                        duration: 0.35,
+                                        ease: [0.25, 0.46, 0.45, 0.94], // Apple的标准缓动
+                                        opacity: { duration: 0.25, delay: 0.1 }, // 稍微延迟透明度动画
+                                        scale: { duration: 0.35 },
+                                      },
+                                    }}
+                                    exit={{
+                                      opacity: 0,
+                                      scale: 0.8,
+                                      transition: {
+                                        duration: 0.15,
+                                        ease: [0.4, 0.0, 1, 1], // Apple的退出缓动
+                                        opacity: { duration: 0.15 },
+                                        scale: { duration: 0.15 },
+                                      },
+                                    }}
+                                    className="flex h-3 w-3 shrink-0 items-center justify-center"
+                                  >
+                                    <ChevronsUpDown
+                                      size={12}
+                                      className="text-neutral-400 dark:text-neutral-600"
+                                      color="currentColor"
+                                    />
+                                  </motion.div>
+                                )}
+                            </AnimatePresence>
+                          </motion.div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pinned Views */}
+                    {typedPinnedViews.map(view => (
+                      <div key={view} className="shrink-0">
+                        <TabButton
+                          tab={
+                            settings.simplifiedViewLabels
+                              ? SIMPLIFIED_VIEW_LABELS[view]
+                              : VIEW_LABELS[view]
+                          }
+                          isActive={
+                            activeMainTab === '咖啡豆' &&
+                            currentBeanView === view
+                          }
+                          onClick={() => handlePinnedViewClick(view)}
+                          dataTab={view}
+                        />
+                      </div>
+                    ))}
+
+                    {visibleTabs.notes && (
+                      <div className="shrink-0">
+                        <TabButton
+                          tab="笔记"
+                          isActive={activeMainTab === '笔记'}
+                          onClick={() => handleMainTabClick('笔记')}
+                          dataTab="笔记"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 右侧渐变阴影 - 仅移动端 */}
+                  <div
+                    className={`pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-6 transition-opacity duration-200 md:hidden ${
+                      showRightBorder ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    style={{
+                      background:
+                        'linear-gradient(to left, var(--background), transparent)',
+                    }}
+                  />
                 </div>
               </div>
             </motion.div>
