@@ -323,11 +323,18 @@ export class InitialSyncManager {
         .map(r => {
           if (downloadedDataMap.has(r.id)) {
             const data = downloadedDataMap.get(r.id);
-            // PATCH: 确保数据有 timestamp，且不小于 updated_at
+            // PATCH: 确保数据的修改时间不小于 updated_at
             // 这防止了因数据时间戳滞后于 updated_at 导致无限循环下载
+            // 注意：对于 BrewingNote，应该更新 updatedAt 而不是 timestamp（创建时间）
             if (data) {
               const updatedAtTime = new Date(r.updated_at).getTime();
-              data.timestamp = Math.max(data.timestamp || 0, updatedAtTime);
+              if ('updatedAt' in data || table === SYNC_TABLES.BREWING_NOTES) {
+                // BrewingNote: 更新 updatedAt，保留 timestamp（创建时间）
+                data.updatedAt = Math.max(data.updatedAt || 0, updatedAtTime);
+              } else {
+                // CoffeeBean 等其他类型: 更新 timestamp
+                data.timestamp = Math.max(data.timestamp || 0, updatedAtTime);
+              }
             }
             return { ...r, data };
           }

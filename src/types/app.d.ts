@@ -100,6 +100,7 @@ export interface ChangeRecordDetails {
 export interface BrewingNoteData {
   id: string;
   timestamp: number;
+  updatedAt?: number; // 最后修改时间（用于同步，向后兼容）
   equipment?: string;
   method?: string;
   params?: {

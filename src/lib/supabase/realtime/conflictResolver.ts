@@ -55,7 +55,14 @@ export function extractTimestamp(record: SyncableRecord | CloudRecord): number {
     return new Date(record.updated_at).getTime();
   }
 
-  // 如果都没有，返回 0（最旧）
+  // 如果都没有，返回 0（最旧）并记录警告
+  const recordId = 'id' in record ? record.id : 'unknown';
+  console.warn(
+    `[ConflictResolver] Record missing timestamp: id=${recordId}, ` +
+      `hasUpdatedAt=${'updatedAt' in record}, ` +
+      `hasTimestamp=${'timestamp' in record}, ` +
+      `hasUpdated_at=${'updated_at' in record}`
+  );
   return 0;
 }
 

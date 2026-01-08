@@ -54,10 +54,13 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
 
     addNote: async noteData => {
       const inputNote = noteData as BrewingNote;
+      const now = Date.now();
+      const timestamp = inputNote.timestamp || now;
       const newNote: BrewingNote = {
         ...noteData,
         id: inputNote.id || nanoid(),
-        timestamp: inputNote.timestamp || Date.now(),
+        timestamp,
+        updatedAt: inputNote.updatedAt || timestamp, // 创建时也设置 updatedAt，与 timestamp 相同
       };
 
       await db.brewingNotes.put(newNote);

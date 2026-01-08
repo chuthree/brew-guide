@@ -56,6 +56,7 @@ interface BrewingNote {
   };
   brewTime?: string;
   timestamp: number;
+  updatedAt?: number; // 最后修改时间（用于同步，向后兼容）
 }
 
 // BlendComponent 类型现在从 @/types/app 导入，移除本地定义
