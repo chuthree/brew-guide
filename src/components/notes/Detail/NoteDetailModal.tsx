@@ -24,6 +24,7 @@ import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
+import RatingRadarDrawer from './RatingRadarDrawer';
 
 // 信息行组件
 interface InfoRowProps {
@@ -98,6 +99,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
   // 删除确认抽屉状态
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // 评分雷达图抽屉状态
+  const [showRatingRadar, setShowRatingRadar] = useState(false);
 
   // 使用评分维度hook
   const { getValidTasteRatings } = useFlavorDimensions();
@@ -622,20 +626,23 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   );
                 })()}
 
-              {/* 风味评分 */}
+              {/* 风味评分 - 点击展开雷达图 */}
               {hasTasteRatings && (
                 <InfoRow label="评分">
-                  <div className="flex flex-wrap items-center gap-1">
+                  <button
+                    onClick={() => setShowRatingRadar(true)}
+                    className="flex flex-wrap items-center gap-1 text-left"
+                  >
                     {validTasteRatings.map(rating => (
                       <span
                         key={rating.id}
-                        className="bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
+                        className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
                       >
                         {rating.label}
                         {rating.value}
                       </span>
                     ))}
-                  </div>
+                  </button>
                 </InfoRow>
               )}
 
@@ -717,6 +724,16 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               : undefined
         }
         extraWarning="删除后咖啡豆库存将恢复。"
+      />
+
+      {/* 评分雷达图抽屉 */}
+      <RatingRadarDrawer
+        isOpen={showRatingRadar}
+        onClose={() => setShowRatingRadar(false)}
+        ratings={validTasteRatings}
+        overallRating={note?.rating}
+        beanName={beanName}
+        note={note?.notes}
       />
     </>
   );
