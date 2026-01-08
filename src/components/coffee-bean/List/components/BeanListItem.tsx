@@ -444,7 +444,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             )}
           </div>
 
+          {/* 用完的豆子不显示状态点 */}
           {showStatusDots &&
+            !isEmpty &&
             bean.roastDate &&
             (bean.startDay || bean.endDay || bean.roastLevel) && (
               <div
@@ -473,6 +475,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
               }`}
             >
               {/* 生豆显示购买日期，熟豆显示烘焙日期 */}
+              {/* 用完的豆子固定显示日期格式，不显示赏味期/冷冻状态 */}
               {(() => {
                 const isGreenBean = bean.beanState === 'green';
                 const displayDate = isGreenBean
@@ -480,21 +483,27 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                   : bean.roastDate;
                 return displayDate || bean.isInTransit ? (
                   <span className="inline whitespace-nowrap">
-                    {bean.isInTransit
-                      ? '在途'
-                      : bean.isFrozen
-                        ? '冷冻'
-                        : !isGreenBean &&
-                            displayDate &&
-                            dateDisplayMode === 'flavorPeriod'
-                          ? flavorInfo.status
+                    {isEmpty
+                      ? // 用完的豆子固定显示日期
+                        displayDate
+                        ? formatDateShort(displayDate)
+                        : ''
+                      : // 未用完的豆子按设置显示
+                        bean.isInTransit
+                        ? '在途'
+                        : bean.isFrozen
+                          ? '冷冻'
                           : !isGreenBean &&
                               displayDate &&
-                              dateDisplayMode === 'agingDays'
-                            ? getAgingDaysText(displayDate)
-                            : displayDate
-                              ? formatDateShort(displayDate)
-                              : ''}
+                              dateDisplayMode === 'flavorPeriod'
+                            ? flavorInfo.status
+                            : !isGreenBean &&
+                                displayDate &&
+                                dateDisplayMode === 'agingDays'
+                              ? getAgingDaysText(displayDate)
+                              : displayDate
+                                ? formatDateShort(displayDate)
+                                : ''}
                     {((bean.capacity && bean.remaining) ||
                       (bean.price && bean.capacity)) && (
                       <span className="mx-2 text-neutral-400 dark:text-neutral-600">

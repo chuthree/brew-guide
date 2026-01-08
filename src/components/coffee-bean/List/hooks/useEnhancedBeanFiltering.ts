@@ -160,7 +160,23 @@ export const useEnhancedBeanFiltering = ({
         isFrozen: bean.isFrozen,
       }));
 
-      const sortedBeans = sortBeans(compatibleBeans, sortOption);
+      // 用完的豆子在使用"剩余量"或"赏味期"排序时，按最近喝完时间（timestamp）从新到旧排序
+      const shouldUseTimestampSort =
+        isEmptyFilter &&
+        (sortOption === 'remaining_amount_asc' ||
+          sortOption === 'remaining_amount_desc' ||
+          sortOption === 'remaining_days_asc' ||
+          sortOption === 'remaining_days_desc');
+
+      let sortedBeans;
+      if (shouldUseTimestampSort) {
+        // 用完的豆子按 timestamp 降序排列（最近喝完的在前）
+        sortedBeans = [...compatibleBeans].sort(
+          (a, b) => b.timestamp - a.timestamp
+        );
+      } else {
+        sortedBeans = sortBeans(compatibleBeans, sortOption);
+      }
 
       // 按照排序后的顺序收集原始豆子
       const resultBeans: ExtendedCoffeeBean[] = [];
