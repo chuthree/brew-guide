@@ -153,6 +153,7 @@ export const defaultSettings: AppSettings = {
   showOverallRatingInForm: true,
   showUnitPriceInNote: false,
   artisticSharingEnabled: false,
+  showCapacityAdjustmentRecords: true,
 
   // 生豆库设置
   enableGreenBeanInventory: false,

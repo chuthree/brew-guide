@@ -83,13 +83,38 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   const notes = preFilteredNotes || [];
 
   // 判断笔记是否为变动记录 - 纯函数，不需要缓存
-  const isChangeRecord = (note: BrewingNote) => {
-    return (
-      note.source === 'quick-decrement' ||
-      note.source === 'capacity-adjustment' ||
-      note.source === 'roasting'
-    );
-  };
+  const isChangeRecord = useCallback(
+    (note: BrewingNote) => {
+      // 如果设置中关闭了容量调整记录显示，则不将其视为变动记录（直接过滤掉）
+      if (
+        note.source === 'capacity-adjustment' &&
+        !(settings?.showCapacityAdjustmentRecords ?? true)
+      ) {
+        return false;
+      }
+      return (
+        note.source === 'quick-decrement' ||
+        note.source === 'capacity-adjustment' ||
+        note.source === 'roasting'
+      );
+    },
+    [settings?.showCapacityAdjustmentRecords]
+  );
+
+  // 判断笔记是否应该被过滤掉（不显示）
+  const shouldFilterOut = useCallback(
+    (note: BrewingNote) => {
+      // 如果设置中关闭了容量调整记录显示，则过滤掉
+      if (
+        note.source === 'capacity-adjustment' &&
+        !(settings?.showCapacityAdjustmentRecords ?? true)
+      ) {
+        return true;
+      }
+      return false;
+    },
+    [settings?.showCapacityAdjustmentRecords]
+  );
 
   // 🔥 使用 useMemo 缓存分离后的笔记,避免重复计算
   const { regularNotes, changeRecordNotes } = useMemo(() => {
@@ -97,6 +122,11 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     const changeRecords: BrewingNote[] = [];
 
     notes.forEach(note => {
+      // 先检查是否应该被过滤掉
+      if (shouldFilterOut(note)) {
+        return;
+      }
+
       if (isChangeRecord(note)) {
         changeRecords.push(note);
       } else {
@@ -105,7 +135,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     });
 
     return { regularNotes: regular, changeRecordNotes: changeRecords };
-  }, [notes]);
+  }, [notes, isChangeRecord, shouldFilterOut]);
 
   const handleToggleSelect = useCallback(
     (noteId: string, enterShareMode?: boolean) => {

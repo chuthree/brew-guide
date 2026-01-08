@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
 import { BrewingNote } from '@/lib/core/config';
@@ -9,6 +9,7 @@ import { formatDate, formatRating } from '@/components/notes/utils';
 import { BeanImageSmall } from './BeanImageSection';
 import { formatNumber } from '../utils';
 import { isSimpleChangeRecord, isRoastingRecord } from '../types';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 interface RelatedRecordsSectionProps {
   relatedNotes: BrewingNote[];
@@ -42,12 +43,27 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = ({
     Record<string, boolean>
   >({});
 
+  // 获取设置：是否显示容量调整记录
+  const showCapacityAdjustmentRecords = useSettingsStore(
+    state => state.settings.showCapacityAdjustmentRecords ?? true
+  );
+
+  // 过滤后的笔记（根据设置过滤容量调整记录）
+  const filteredNotes = useMemo(() => {
+    if (showCapacityAdjustmentRecords) {
+      return relatedNotes;
+    }
+    return relatedNotes.filter(note => note.source !== 'capacity-adjustment');
+  }, [relatedNotes, showCapacityAdjustmentRecords]);
+
   // 分类记录
-  const roastingRecords = relatedNotes.filter(note => isRoastingRecord(note));
-  const brewingRecords = relatedNotes.filter(
+  const roastingRecords = filteredNotes.filter(note => isRoastingRecord(note));
+  const brewingRecords = filteredNotes.filter(
     note => !isSimpleChangeRecord(note) && !isRoastingRecord(note)
   );
-  const changeRecords = relatedNotes.filter(note => isSimpleChangeRecord(note));
+  const changeRecords = filteredNotes.filter(note =>
+    isSimpleChangeRecord(note)
+  );
 
   const primaryRecords = isGreenBean ? roastingRecords : brewingRecords;
   const secondaryRecords = changeRecords;

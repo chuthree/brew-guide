@@ -130,6 +130,17 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
           />
         </SettingRow>
       </SettingSection>
+
+      <SettingSection title="记录">
+        <SettingRow label="容量调整记录" isLast>
+          <SettingToggle
+            checked={settings.showCapacityAdjustmentRecords ?? true}
+            onChange={checked =>
+              handleChange('showCapacityAdjustmentRecords', checked)
+            }
+          />
+        </SettingRow>
+      </SettingSection>
     </SettingPage>
   );
 };

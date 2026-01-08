@@ -224,6 +224,7 @@ export interface AppSettings {
   showOverallRatingInForm: boolean;
   showUnitPriceInNote: boolean;
   artisticSharingEnabled: boolean;
+  showCapacityAdjustmentRecords: boolean;
 
   // 生豆库设置
   enableGreenBeanInventory?: boolean;
