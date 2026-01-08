@@ -270,9 +270,8 @@ export class InitialSyncManager {
         const remoteTime = extractTimestamp(remote);
 
         if (!local) {
-          // 本地不存在 -> 需要下载
+          // 本地不存在 -> 需要下载（云端新增）
           idsToDownload.push(remote.id);
-          console.log(`[InitialSync] ${table} 需下载 ${remote.id}: 本地缺失`);
         } else {
           // 直接访问 timestamp 属性，避免类型复杂度
           const localTime =
@@ -282,11 +281,15 @@ export class InitialSyncManager {
           // 远程比本地新 -> 需要下载
           if (remoteTime > localTime) {
             idsToDownload.push(remote.id);
-            console.log(
-              `[InitialSync] ${table} 需下载 ${remote.id}: 远程更新 (Remote: ${remoteTime} > Local: ${localTime})`
-            );
           }
         }
+      }
+
+      // 调试日志：汇总需要下载的记录数量
+      if (idsToDownload.length > 0) {
+        console.log(
+          `[InitialSync] ${table} 需要下载 ${idsToDownload.length} 条记录`
+        );
       }
 
       // 批量下载需要的数据
@@ -331,11 +334,11 @@ export class InitialSyncManager {
           return r;
         })
         .filter(r => {
-          // 安全检查：如果记录需要下载但数据缺失（下载失败），则跳过该记录
+          // 安全检查：如果记录需要下载但数据缺失（下载失败或数据库中为 null），则跳过该记录
           // 防止 batchResolveConflicts 处理 null 数据导致崩溃
           if (idsToDownloadSet.has(r.id) && !r.data && !r.deleted_at) {
             console.warn(
-              `[InitialSync] ${table} 记录 ${r.id} 下载失败，跳过本次同步`
+              `[InitialSync] ${table} 记录 ${r.id} 数据缺失，跳过本次同步`
             );
             return false;
           }
@@ -364,19 +367,30 @@ export class InitialSyncManager {
 
       // 执行下载
       if (toDownload.length > 0) {
-        console.log(
-          `[InitialSync] ${table} 写入 ${toDownload.length} 条记录到本地 DB`
-        );
-        const putRecord = dbTable.put.bind(dbTable) as (
-          item: unknown
-        ) => Promise<unknown>;
-
-        // 批量写入以提高性能
-        await db.transaction('rw', dbTable, async () => {
-          for (const record of toDownload) {
-            await putRecord(record);
+        // 过滤掉 null 或无效的记录，防止写入失败
+        const validRecords = toDownload.filter(record => {
+          if (!record || !record.id) {
+            console.warn(`[InitialSync] ${table} 跳过无效记录:`, record);
+            return false;
           }
+          return true;
         });
+
+        if (validRecords.length > 0) {
+          console.warn(
+            `[InitialSync] ${table} 写入 ${validRecords.length} 条记录到本地 DB`
+          );
+          const putRecord = dbTable.put.bind(dbTable) as (
+            item: unknown
+          ) => Promise<unknown>;
+
+          // 批量写入以提高性能
+          await db.transaction('rw', dbTable, async () => {
+            for (const record of validRecords) {
+              await putRecord(record);
+            }
+          });
+        }
       }
 
       // 执行本地删除

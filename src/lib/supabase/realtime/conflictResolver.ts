@@ -170,23 +170,31 @@ export function batchResolveConflicts<T extends SyncableRecord>(
         if (localTime >= remoteTime) {
           merged.push(local);
           toUpload.push(local);
-        } else {
+        } else if (remote.data) {
+          // 只有当 remote.data 存在时才下载
           merged.push(remote.data);
           toDownload.push(remote.data);
+        } else {
+          // remote.data 为 null，保持本地数据
+          merged.push(local);
         }
       } else if (localModified) {
         // 只有本地修改 → 上传
         merged.push(local);
         toUpload.push(local);
       } else if (remoteModified) {
-        // 只有云端修改 → 下载
-        merged.push(remote.data);
-        toDownload.push(remote.data);
+        // 只有云端修改 → 下载（仅当 data 存在时）
+        if (remote.data) {
+          merged.push(remote.data);
+          toDownload.push(remote.data);
+        } else {
+          merged.push(local);
+        }
       } else {
         // 两边都没修改 → 保持本地
         // 修复：如果本地时间戳小于云端时间戳（即使未超过 lastSyncTime），也应该更新本地
         // 这种情况可能发生在 lastSyncTime 丢失或重置的情况下
-        if (remoteTime > localTime) {
+        if (remoteTime > localTime && remote.data) {
           merged.push(remote.data);
           toDownload.push(remote.data);
         } else {
@@ -198,7 +206,7 @@ export function batchResolveConflicts<T extends SyncableRecord>(
 
   // 2. 处理只在云端存在的记录（云端新增）
   for (const remote of remoteRecords) {
-    if (!localMap.has(remote.id) && !remote.deleted_at) {
+    if (!localMap.has(remote.id) && !remote.deleted_at && remote.data) {
       merged.push(remote.data);
       toDownload.push(remote.data);
     }
