@@ -49,11 +49,17 @@ export type TableColumnKey =
 export const TABLE_COLUMN_CONFIG: {
   key: TableColumnKey;
   label: string;
+  greenBeanLabel?: string; // 生豆模式下的标签名称
   defaultVisible: boolean;
 }[] = [
   { key: 'roaster', label: '烘焙商', defaultVisible: false },
   { key: 'name', label: '名称', defaultVisible: true },
-  { key: 'flavorPeriod', label: '赏味期', defaultVisible: true },
+  {
+    key: 'flavorPeriod',
+    label: '赏味期',
+    greenBeanLabel: '购买日期',
+    defaultVisible: true,
+  },
   { key: 'capacity', label: '容量', defaultVisible: true },
   { key: 'price', label: '价格', defaultVisible: true },
   { key: 'beanType', label: '类型', defaultVisible: false },
@@ -461,6 +467,12 @@ const TableView: React.FC<TableViewProps> = ({
     setRoasterLogos(logos);
   }, [allBeans, roasterSettings]);
 
+  // 检查是否有生豆
+  const hasGreenBeans = useMemo(
+    () => allBeans.some(bean => bean.beanState === 'green'),
+    [allBeans]
+  );
+
   // 定义所有列
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columns = useMemo<ColumnDef<ExtendedCoffeeBean, any>[]>(() => {
@@ -514,7 +526,7 @@ const TableView: React.FC<TableViewProps> = ({
         },
         {
           id: 'flavorPeriod',
-          header: '赏味期',
+          header: hasGreenBeans ? '购买日期' : '赏味期',
           cell: ({ row }) => {
             const bean = row.original;
             const isGreenBean = bean.beanState === 'green';
@@ -669,7 +681,7 @@ const TableView: React.FC<TableViewProps> = ({
     return TABLE_COLUMN_CONFIG.filter(col =>
       visibleColumns.includes(col.key)
     ).map(col => allColumns[col.key]);
-  }, [visibleColumns, dateDisplayMode]);
+  }, [visibleColumns, dateDisplayMode, hasGreenBeans, roasterSettings]);
 
   // 创建表格实例
   const table = useReactTable({

@@ -378,6 +378,8 @@ interface ViewSwitcherProps {
   enableGreenBeanInventory?: boolean;
   // 预计杯数
   estimatedCups?: number;
+  // 是否有生豆（用于动态调整列标签）
+  hasGreenBeans?: boolean;
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -452,6 +454,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   enableGreenBeanInventory = false,
   // 预计杯数
   estimatedCups,
+  // 是否有生豆（用于动态调整列标签）
+  hasGreenBeans = false,
 }) => {
   // 获取概要显示设置
   const showBeanSummary = useSettingsStore(
@@ -1392,35 +1396,43 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 表格列
                               </div>
                               <div className="flex flex-wrap items-center gap-2">
-                                {TABLE_COLUMN_CONFIG.map(col => (
-                                  <FilterButton
-                                    key={col.key}
-                                    isActive={tableVisibleColumns.includes(
-                                      col.key
-                                    )}
-                                    onClick={() => {
-                                      const isVisible =
-                                        tableVisibleColumns.includes(col.key);
-                                      if (isVisible) {
-                                        // 至少保留一列
-                                        if (tableVisibleColumns.length > 1) {
-                                          onTableColumnsChange(
-                                            tableVisibleColumns.filter(
-                                              k => k !== col.key
-                                            )
-                                          );
+                                {TABLE_COLUMN_CONFIG.map(col => {
+                                  // 根据是否有生豆动态显示标签
+                                  const displayLabel =
+                                    hasGreenBeans && col.greenBeanLabel
+                                      ? col.greenBeanLabel
+                                      : col.label;
+
+                                  return (
+                                    <FilterButton
+                                      key={col.key}
+                                      isActive={tableVisibleColumns.includes(
+                                        col.key
+                                      )}
+                                      onClick={() => {
+                                        const isVisible =
+                                          tableVisibleColumns.includes(col.key);
+                                        if (isVisible) {
+                                          // 至少保留一列
+                                          if (tableVisibleColumns.length > 1) {
+                                            onTableColumnsChange(
+                                              tableVisibleColumns.filter(
+                                                k => k !== col.key
+                                              )
+                                            );
+                                          }
+                                        } else {
+                                          onTableColumnsChange([
+                                            ...tableVisibleColumns,
+                                            col.key,
+                                          ]);
                                         }
-                                      } else {
-                                        onTableColumnsChange([
-                                          ...tableVisibleColumns,
-                                          col.key,
-                                        ]);
-                                      }
-                                    }}
-                                  >
-                                    {col.label}
-                                  </FilterButton>
-                                ))}
+                                      }}
+                                    >
+                                      {displayLabel}
+                                    </FilterButton>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}

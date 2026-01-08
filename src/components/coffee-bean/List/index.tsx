@@ -1745,6 +1745,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         enableGreenBeanInventory={enableGreenBeanInventory}
         // 预计杯数
         estimatedCups={estimatedCups}
+        // 是否有生豆（用于动态调整列标签）
+        hasGreenBeans={(isSearching ? searchFilteredBeans : filteredBeans).some(
+          bean => bean.beanState === 'green'
+        )}
       />
 
       {/* 内容区域 - 可滚动 */}
