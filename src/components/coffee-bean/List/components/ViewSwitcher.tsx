@@ -473,6 +473,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   // 展开的筛选下拉区域 ref
   const filterDropdownRef = useRef<HTMLDivElement>(null);
+  // 筛选按钮 ref
+  const filterToggleButtonRef = useRef<HTMLButtonElement>(null);
 
   // 检查是否在浏览器环境（用于 Portal）
   const [isMounted, setIsMounted] = useState(false);
@@ -672,6 +674,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       if (filterDropdownRef.current?.contains(target)) {
         return;
       }
+      // 检查点击是否在筛选按钮上（避免点击按钮时先关闭再展开）
+      if (filterToggleButtonRef.current?.contains(target)) {
+        return;
+      }
       setIsFilterExpanded(false);
     };
 
@@ -824,6 +830,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
 
                       {/* 筛选图标按钮 */}
                       <button
+                        ref={filterToggleButtonRef}
                         onClick={handleFilterToggle}
                         className="mr-1 flex items-center pb-1.5 text-xs font-medium text-neutral-400 dark:text-neutral-600"
                       >
@@ -1081,6 +1088,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
 
                     {/* 筛选图标按钮 */}
                     <button
+                      ref={filterToggleButtonRef}
                       onClick={handleFilterToggle}
                       className="mr-1 flex items-center pb-1.5 text-xs font-medium text-neutral-400 dark:text-neutral-600"
                     >
