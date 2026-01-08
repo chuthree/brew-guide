@@ -355,7 +355,9 @@ export class InitialSyncManager {
           id: record.id,
           data: record,
           updated_at: new Date(
-            (record as { timestamp?: number }).timestamp || Date.now()
+            (record as { updatedAt?: number; timestamp?: number }).updatedAt ||
+              (record as { timestamp?: number }).timestamp ||
+              Date.now()
           ).toISOString(),
         }));
       }

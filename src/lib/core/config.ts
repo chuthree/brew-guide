@@ -128,7 +128,8 @@ interface ChangeRecordDetails {
 
 export interface BrewingNote {
   id: string;
-  timestamp: number;
+  timestamp: number; // 创建时间（不变）
+  updatedAt?: number; // 最后修改时间（用于同步）
   equipment: string;
   method: string;
   params: {

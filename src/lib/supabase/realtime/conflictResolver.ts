@@ -40,6 +40,11 @@ export function setLastSyncTime(time: number): void {
  * @returns 时间戳（毫秒）
  */
 export function extractTimestamp(record: SyncableRecord | CloudRecord): number {
+  // 优先使用 updatedAt（用于 BrewingNote 等区分创建时间和更新时间的记录）
+  if ('updatedAt' in record && typeof record.updatedAt === 'number') {
+    return record.updatedAt;
+  }
+
   // 本地记录使用 timestamp 字段
   if ('timestamp' in record && typeof record.timestamp === 'number') {
     return record.timestamp;
