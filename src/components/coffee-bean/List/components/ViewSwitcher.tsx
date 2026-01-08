@@ -471,7 +471,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
 
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-  const filterExpandRef = useRef<HTMLDivElement>(null);
+  // 展开的筛选下拉区域 ref
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
 
   // 检查是否在浏览器环境（用于 Portal）
   const [isMounted, setIsMounted] = useState(false);
@@ -661,23 +662,30 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     setIsFilterExpanded(!isFilterExpanded);
   };
 
-  // 点击外部关闭筛选展开栏
+  // 点击外部关闭筛选展开栏 - 只检测展开的下拉区域
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        filterExpandRef.current &&
-        !filterExpandRef.current.contains(event.target as Node)
-      ) {
-        setIsFilterExpanded(false);
+    if (!isFilterExpanded) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      // 检查点击是否在展开的下拉筛选区域内
+      if (filterDropdownRef.current?.contains(target)) {
+        return;
       }
+      setIsFilterExpanded(false);
     };
 
-    if (isFilterExpanded) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    // 使用 capture 阶段确保事件能被捕获
+    // 延迟添加监听器，避免当前点击事件触发关闭
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside, true);
+      document.addEventListener('touchstart', handleClickOutside, true);
+    }, 0);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('touchstart', handleClickOutside, true);
     };
   }, [isFilterExpanded]);
 
@@ -795,7 +803,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       {viewMode === VIEW_OPTIONS.RANKING &&
         rankingBeansCount &&
         rankingBeansCount > 0 && (
-          <div ref={filterExpandRef}>
+          <div>
             {/* 整个分类栏容器 - 下边框在这里 */}
             <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
               {/* 豆子筛选选项卡 */}
@@ -973,6 +981,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     <div className="border-t border-neutral-200/50 dark:border-neutral-700/50"></div>
 
                     <motion.div
+                      ref={filterDropdownRef}
                       initial={FILTER_ANIMATION.initial}
                       animate={FILTER_ANIMATION.animate}
                       exit={FILTER_ANIMATION.exit}
@@ -1003,7 +1012,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
 
       {/* 库存视图的品种标签筛选 - 仅在库存视图中显示 */}
       {viewMode === VIEW_OPTIONS.INVENTORY ? (
-        <div className="relative" ref={filterExpandRef}>
+        <div className="relative">
           {/* 整个分类栏容器 - 下边框在这里 */}
           <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
             <div className="relative px-6">
@@ -1273,6 +1282,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   <div className="border-t border-neutral-200/50 dark:border-neutral-700/50"></div>
 
                   <motion.div
+                    ref={filterDropdownRef}
                     initial={FILTER_ANIMATION.initial}
                     animate={FILTER_ANIMATION.animate}
                     exit={FILTER_ANIMATION.exit}

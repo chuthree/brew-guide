@@ -776,7 +776,8 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
 
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-  const filterExpandRef = useRef<HTMLDivElement>(null);
+  // 展开的筛选下拉区域 ref
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
 
   // 滚动容器引用
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -880,23 +881,30 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     setIsFilterExpanded(!isFilterExpanded);
   };
 
-  // 点击外部关闭筛选展开栏
+  // 点击外部关闭筛选展开栏 - 只检测展开的下拉区域
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        filterExpandRef.current &&
-        !filterExpandRef.current.contains(event.target as Node)
-      ) {
-        setIsFilterExpanded(false);
+    if (!isFilterExpanded) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      // 检查点击是否在展开的下拉筛选区域内
+      if (filterDropdownRef.current?.contains(target)) {
+        return;
       }
+      setIsFilterExpanded(false);
     };
 
-    if (isFilterExpanded) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    // 使用 capture 阶段确保事件能被捕获
+    // 延迟添加监听器，避免当前点击事件触发关闭
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside, true);
+      document.addEventListener('touchstart', handleClickOutside, true);
+    }, 0);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('touchstart', handleClickOutside, true);
     };
   }, [isFilterExpanded]);
 
@@ -905,7 +913,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     return null;
 
   return (
-    <div className="relative" ref={filterExpandRef}>
+    <div className="relative">
       {/* 整个分类栏容器 - 下边框在这里 */}
       <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
         <div className="relative px-6">
@@ -1189,6 +1197,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
               <div className="border-t border-neutral-200/50 dark:border-neutral-700/50"></div>
 
               <motion.div
+                ref={filterDropdownRef}
                 initial={FILTER_ANIMATION.initial}
                 animate={FILTER_ANIMATION.animate}
                 exit={FILTER_ANIMATION.exit}
