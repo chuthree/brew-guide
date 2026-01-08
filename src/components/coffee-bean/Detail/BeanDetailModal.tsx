@@ -35,8 +35,13 @@ import {
   BlendComponentsSection,
   FlavorNotesSection,
   RatingSection,
-  RelatedRecordsSection,
 } from './components';
+
+// 延迟加载记录部分，因为它通常在页面下方
+const RelatedRecordsSection = dynamic(
+  () => import('./components/RelatedRecordsSection'),
+  { ssr: false }
+);
 
 // 动态导入
 const ImageViewer = dynamic(
@@ -107,11 +112,16 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     }
   }, [isAddMode, isOpen, initialBeanState]);
 
-  // Store 数据
-  const storeBean = useCoffeeBeanStore(state => {
-    if (!propBean) return null;
-    return state.beans.find(b => b.id === propBean.id) || null;
-  });
+  // Store 数据（优化：使用 useMemo 避免每次渲染都查找）
+  const storeBean = useCoffeeBeanStore(
+    React.useCallback(
+      state => {
+        if (!propBean) return null;
+        return state.beans.find(b => b.id === propBean.id) || null;
+      },
+      [propBean]
+    )
+  );
 
   const bean = isAddMode ? (tempBean as CoffeeBean) : storeBean || propBean;
   const allBeans = useCoffeeBeanStore(state => state.beans);
@@ -155,15 +165,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   const isGreenBean = bean?.beanState === 'green';
 
-  // 动画处理
+  // 动画处理（优化：使用 flushSync 确保立即渲染，然后触发动画）
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-      });
+      // 使用 setTimeout(0) 让浏览器先完成 DOM 渲染，然后立即触发动画
+      // 比 requestAnimationFrame 更快（~4ms vs ~16ms）
+      setTimeout(() => {
+        setIsVisible(true);
+      }, 0);
     } else {
       setIsVisible(false);
       setPrintModalOpen(false);
@@ -206,7 +216,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     }
   }, [bean?.id, bean?.beanState, relatedNotes, relatedBeans, isOpen]);
 
-  // 设置加载
+  // 设置加载（优化：移除 isOpen 依赖，避免每次打开都重新设置）
   const storeSettings = useSettingsStore(state => state.settings);
 
   useEffect(() => {
@@ -219,9 +229,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       setShowBeanRating(false);
       setShowEstateField(false);
     }
-  }, [isOpen, storeSettings]);
+  }, [storeSettings]);
 
-  // 标题可见性
+  // 标题可见性（优化：减少延迟）
   useEffect(() => {
     if (!isOpen || !isVisible) {
       setIsTitleVisible(true);
@@ -230,6 +240,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     let observer: IntersectionObserver | null = null;
 
+    // 减少延迟从 100ms 到 50ms
     const timer = setTimeout(() => {
       const titleElement = document.getElementById('bean-detail-title');
       if (!titleElement) return;
@@ -243,7 +254,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       );
 
       observer.observe(titleElement);
-    }, 100);
+    }, 50);
 
     return () => {
       clearTimeout(timer);
@@ -289,17 +300,21 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (bean?.image) setImageError(false);
   }, [bean?.image]);
 
-  // 烘焙商 logo
+  // 烘焙商 logo（优化：使用 useMemo 缓存 roasterSettings）
+  const roasterSettings = React.useMemo(
+    () => ({
+      roasterFieldEnabled: storeSettings?.roasterFieldEnabled,
+      roasterSeparator: storeSettings?.roasterSeparator,
+    }),
+    [storeSettings?.roasterFieldEnabled, storeSettings?.roasterSeparator]
+  );
+
   useEffect(() => {
     if (!bean?.name || bean?.image) {
       setRoasterLogo(null);
       return;
     }
 
-    const roasterSettings = {
-      roasterFieldEnabled: storeSettings?.roasterFieldEnabled,
-      roasterSeparator: storeSettings?.roasterSeparator,
-    };
     const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
       const logo = getRoasterLogoSync(roasterName);
@@ -307,31 +322,42 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     } else {
       setRoasterLogo(null);
     }
-  }, [
-    bean?.name,
-    bean?.image,
-    bean?.roaster,
-    storeSettings?.roasterFieldEnabled,
-    storeSettings?.roasterSeparator,
-  ]);
+  }, [bean?.name, bean?.image, bean?.roaster, roasterSettings]);
 
-  // 加载相关记录
+  // 加载相关记录（优化：避免切换时闪烁，关闭时由动画 useEffect 清空）
   useEffect(() => {
-    const loadRelatedNotes = async () => {
-      if (!bean?.id || !isOpen) return;
+    // 如果没有 bean 或未打开，直接返回，不清空数据
+    // 数据清空由动画 useEffect 在 350ms 后处理
+    if (!bean?.id || !isOpen) {
+      return;
+    }
 
+    let isCancelled = false;
+
+    const loadRelatedNotes = async () => {
       try {
-        const { Storage } = await import('@/lib/core/storage');
-        const notesStr = await Storage.get('brewingNotes');
-        if (!notesStr) {
-          setRelatedNotes([]);
-          return;
+        // 使用 store 获取笔记，避免每次都读取 Storage
+        const { useBrewingNoteStore } = await import(
+          '@/lib/stores/brewingNoteStore'
+        );
+        const allNotes = useBrewingNoteStore.getState().notes;
+
+        // 如果 store 为空，尝试加载
+        if (allNotes.length === 0) {
+          await useBrewingNoteStore.getState().loadNotes();
         }
 
-        const allNotes: BrewingNote[] = JSON.parse(notesStr);
-        const beanNotes = allNotes.filter(note => note.beanId === bean.id);
+        if (isCancelled) return;
+
+        const beanNotes = useBrewingNoteStore
+          .getState()
+          .notes.filter(note => note.beanId === bean.id);
         const sortedNotes = beanNotes.sort((a, b) => b.timestamp - a.timestamp);
 
+        // 立即设置笔记数据
+        setRelatedNotes(sortedNotes);
+
+        // 异步加载设备名称
         const equipmentIds = Array.from(
           new Set(
             sortedNotes
@@ -340,28 +366,44 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           )
         );
 
-        const namesMap: Record<string, string> = {};
-        await Promise.all(
-          equipmentIds.map(async equipmentId => {
-            try {
-              namesMap[equipmentId] = await getEquipmentName(equipmentId);
-            } catch (error) {
-              console.error(`获取设备名称失败: ${equipmentId}`, error);
-              namesMap[equipmentId] = equipmentId;
-            }
-          })
-        );
+        if (equipmentIds.length > 0) {
+          const namesMap: Record<string, string> = {};
 
-        setEquipmentNames(namesMap);
-        setRelatedNotes(sortedNotes);
+          // 并行获取所有设备名称
+          const results = await Promise.allSettled(
+            equipmentIds.map(async equipmentId => {
+              const name = await getEquipmentName(equipmentId);
+              return { equipmentId, name };
+            })
+          );
+
+          if (isCancelled) return;
+
+          results.forEach(result => {
+            if (result.status === 'fulfilled') {
+              namesMap[result.value.equipmentId] = result.value.name;
+            }
+          });
+
+          setEquipmentNames(namesMap);
+        } else {
+          // 如果没有设备，清空设备名称映射
+          setEquipmentNames({});
+        }
       } catch (error) {
-        console.error('加载冲煮记录失败:', error);
-        setRelatedNotes([]);
+        if (!isCancelled) {
+          console.error('加载冲煮记录失败:', error);
+          setRelatedNotes([]);
+        }
       }
     };
 
     loadRelatedNotes();
-  }, [bean?.id, bean?.name, isOpen]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [bean?.id, isOpen]);
 
   // 通用字段更新
   const handleUpdateField = async (updates: Partial<CoffeeBean>) => {
