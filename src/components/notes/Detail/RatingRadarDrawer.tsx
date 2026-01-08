@@ -345,7 +345,7 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
         </div>
 
         {/* 咖啡豆信息和笔记 */}
-        <div className="mt-6 space-y-1 text-sm text-neutral-600 dark:text-neutral-400">
+        <div className="mt-6 space-y-3 text-sm text-neutral-600 dark:text-neutral-400">
           {beanName && (
             <p>
               <span className="text-neutral-800 dark:text-neutral-200">
@@ -356,7 +356,7 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
               )}
             </p>
           )}
-          {note && <p>{note}</p>}
+          {note && <p className="whitespace-pre-wrap">{note}</p>}
         </div>
       </div>
 
