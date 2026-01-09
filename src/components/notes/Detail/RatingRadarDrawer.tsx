@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 
 interface RatingItem {
@@ -18,8 +18,8 @@ interface RatingRadarDrawerProps {
   note?: string;
 }
 
-// 估算文字宽度（基于 12px 字体大小的实际测量值）
-const estimateTextWidth = (text: string, fontSize: number = 12): number => {
+// 估算文字宽度（基于字体大小的实际测量值）
+const estimateTextWidth = (text: string, fontSize: number): number => {
   let width = 0;
   for (const char of text) {
     if (/[\u4e00-\u9fa5]/.test(char)) {
@@ -39,19 +39,71 @@ const estimateTextWidth = (text: string, fontSize: number = 12): number => {
   return width;
 };
 
+// 获取实际的字体缩放比例
+const useFontScale = (): number => {
+  const [scale, setScale] = useState(1);
+  const measureRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    // 创建一个隐藏的测量元素
+    const measureEl = document.createElement('span');
+    measureEl.style.cssText =
+      'position:absolute;visibility:hidden;font-size:1rem;pointer-events:none;';
+    measureEl.textContent = 'M';
+    document.body.appendChild(measureEl);
+    measureRef.current = measureEl;
+
+    const updateScale = () => {
+      if (measureRef.current) {
+        const computedSize = parseFloat(
+          getComputedStyle(measureRef.current).fontSize
+        );
+        // 基准是 16px (1rem)
+        setScale(computedSize / 16);
+      }
+    };
+
+    updateScale();
+
+    // 监听字体大小变化（通过 resize 事件或 MutationObserver）
+    window.addEventListener('resize', updateScale);
+
+    // 监听 html 元素的 style 变化（动态字体大小调整）
+    const observer = new MutationObserver(updateScale);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['style', 'class'],
+    });
+
+    return () => {
+      window.removeEventListener('resize', updateScale);
+      observer.disconnect();
+      if (measureRef.current) {
+        document.body.removeChild(measureRef.current);
+      }
+    };
+  }, []);
+
+  return scale;
+};
+
 /**
  * 雷达图组件
  * 使用 SVG 绘制，支持任意数量的维度
- * viewBox 会根据标签内容动态调整大小
+ * viewBox 会根据标签内容和字体缩放动态调整大小
  */
 const RadarChart: React.FC<{
   ratings: RatingItem[];
   maxValue?: number;
 }> = ({ ratings, maxValue = 5 }) => {
-  const radarSize = 220; // 雷达图本身的尺寸（增大以更好利用空间）
+  const fontScale = useFontScale();
+
+  // 基础尺寸，会根据字体缩放调整
+  const baseFontSize = 12;
+  const fontSize = baseFontSize * fontScale;
+  const radarSize = 220; // 雷达图本身的尺寸
   const radius = radarSize / 2; // 雷达图半径
-  const labelDistance = 14; // 标签到雷达图边缘的距离
-  const fontSize = 12;
+  const labelDistance = 14 * fontScale; // 标签到雷达图边缘的距离也随字体缩放
 
   // 计算每个维度的角度、坐标和标签信息
   const { points, viewBox } = useMemo(() => {
@@ -159,7 +211,7 @@ const RadarChart: React.FC<{
       points: finalPoints,
       viewBox: { x: 0, y: 0, w: width, h: height, centerX, centerY },
     };
-  }, [ratings, radius, maxValue]);
+  }, [ratings, radius, maxValue, fontSize, labelDistance]);
 
   // 生成带圆角的多边形路径
   const createRoundedPolygonPath = (
@@ -285,15 +337,15 @@ const RadarChart: React.FC<{
         let dy = 0;
 
         if (point.isTop) {
-          dy = -4;
+          dy = -4 * fontScale;
         } else if (point.isBottom) {
-          dy = 14;
+          dy = fontSize + 2 * fontScale;
         } else if (point.isLeft) {
           textAnchor = 'end';
-          dy = 4;
+          dy = fontSize * 0.35;
         } else {
           textAnchor = 'start';
-          dy = 4;
+          dy = fontSize * 0.35;
         }
 
         return (
@@ -303,7 +355,8 @@ const RadarChart: React.FC<{
             y={point.labelY}
             dy={dy}
             textAnchor={textAnchor}
-            className="fill-neutral-500 text-xs dark:fill-neutral-400"
+            fontSize={fontSize}
+            className="fill-neutral-500 dark:fill-neutral-400"
           >
             {point.label}
             <tspan className="fill-neutral-700 dark:fill-neutral-300">
