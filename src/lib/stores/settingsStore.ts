@@ -186,7 +186,7 @@ export const defaultSettings: AppSettings = {
   equipmentOrder: [],
 
   // 冲煮设置
-  showCoffeeBeanSelectionStep: false, // 默认显示咖啡豆选择步骤
+  showCoffeeBeanSelectionStep: false, // 默认不显示咖啡豆选择步骤
 
   // 烘焙商字段设置
   roasterFieldEnabled: false, // 是否启用独立烘焙商字段

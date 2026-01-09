@@ -590,6 +590,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         navigateToStep('method');
       }
     }
+
+    // 标记首次初始化完成，更新 prevMainTabRef 以避免主 tab 切换 useEffect 重复处理
+    prevMainTabRef.current = activeMainTab;
   }, [
     storeInitialized,
     settings.showCoffeeBeanSelectionStep,
@@ -1068,6 +1071,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 只在从其他标签切换到冲煮标签时处理
     if (activeMainTab !== '冲煮' || prevMainTabRef.current === '冲煮') {
       prevMainTabRef.current = activeMainTab;
+      return;
+    }
+
+    // 首次加载时（prevMainTabRef.current === null），由 hasAdjustedInitialStep useEffect 处理
+    // 等待它完成初始化后再处理后续的标签切换
+    if (prevMainTabRef.current === null) {
       return;
     }
 
