@@ -255,6 +255,33 @@ interface SettingsStore {
   // 器具排序
   setEquipmentOrder: (order: string[]) => Promise<void>;
 
+  // 方案参数覆盖管理
+  setMethodParamOverride: (
+    equipmentId: string,
+    methodId: string,
+    params: {
+      coffee?: string;
+      water?: string;
+      ratio?: string;
+      grindSize?: string;
+      temp?: string;
+    }
+  ) => Promise<void>;
+  clearMethodParamOverride: (
+    equipmentId: string,
+    methodId: string
+  ) => Promise<void>;
+  getMethodParamOverride: (
+    equipmentId: string,
+    methodId: string
+  ) => {
+    coffee?: string;
+    water?: string;
+    ratio?: string;
+    grindSize?: string;
+    temp?: string;
+  } | null;
+
   // 重置
   resetSettings: () => Promise<void>;
 
@@ -597,6 +624,52 @@ export const useSettingsStore = create<SettingsStore>()(
       await get().updateSettings({ equipmentOrder: order });
     },
 
+    // ==================== 方案参数覆盖管理 ====================
+
+    setMethodParamOverride: async (equipmentId, methodId, params) => {
+      const settings = get().settings;
+      const overrides = { ...(settings.methodParamOverrides || {}) };
+      const key = `${equipmentId}:${methodId}`;
+
+      overrides[key] = {
+        ...params,
+        modifiedAt: Date.now(),
+      };
+
+      await get().updateSettings({ methodParamOverrides: overrides });
+
+      // 触发方案参数覆盖变化事件
+      dispatchMethodParamOverrideChanged(equipmentId, methodId, params);
+    },
+
+    clearMethodParamOverride: async (equipmentId, methodId) => {
+      const settings = get().settings;
+      const overrides = { ...(settings.methodParamOverrides || {}) };
+      const key = `${equipmentId}:${methodId}`;
+
+      if (overrides[key]) {
+        delete overrides[key];
+        await get().updateSettings({ methodParamOverrides: overrides });
+
+        // 触发方案参数覆盖清除事件
+        dispatchMethodParamOverrideChanged(equipmentId, methodId, null);
+      }
+    },
+
+    getMethodParamOverride: (equipmentId, methodId) => {
+      const settings = get().settings;
+      const overrides = settings.methodParamOverrides || {};
+      const key = `${equipmentId}:${methodId}`;
+      const override = overrides[key];
+
+      if (override) {
+        // 返回时排除 modifiedAt 字段
+        const { modifiedAt: _, ...params } = override;
+        return params;
+      }
+      return null;
+    },
+
     resetSettings: async () => {
       try {
         await db.appSettings.put({ id: 'main', data: defaultSettings });
@@ -647,6 +720,29 @@ function dispatchFlavorDimensionsChanged(dimensions: FlavorDimension[]): void {
     window.dispatchEvent(
       new CustomEvent('flavorDimensionsChanged', {
         detail: { dimensions },
+      })
+    );
+  }
+}
+
+/**
+ * 触发方案参数覆盖变化事件
+ */
+function dispatchMethodParamOverrideChanged(
+  equipmentId: string,
+  methodId: string,
+  params: {
+    coffee?: string;
+    water?: string;
+    ratio?: string;
+    grindSize?: string;
+    temp?: string;
+  } | null
+): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('methodParamOverrideChanged', {
+        detail: { equipmentId, methodId, params },
       })
     );
   }
@@ -855,4 +951,32 @@ export function migrateTasteRatings(
   });
 
   return newRatings;
+}
+
+// ==================== 方案参数覆盖工具函数 ====================
+
+/**
+ * 同步获取方案参数覆盖
+ */
+export function getMethodParamOverrideSync(
+  equipmentId: string,
+  methodId: string
+): {
+  coffee?: string;
+  water?: string;
+  ratio?: string;
+  grindSize?: string;
+  temp?: string;
+} | null {
+  return getSettingsStore().getMethodParamOverride(equipmentId, methodId);
+}
+
+/**
+ * 检查方案是否有参数覆盖
+ */
+export function hasMethodParamOverride(
+  equipmentId: string,
+  methodId: string
+): boolean {
+  return getMethodParamOverrideSync(equipmentId, methodId) !== null;
 }

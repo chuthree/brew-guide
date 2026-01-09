@@ -256,6 +256,20 @@ export interface AppSettings {
   // 器具排序
   equipmentOrder?: string[];
 
+  // 方案参数覆盖（用户临时修改的参数，可还原）
+  // key 格式: `${equipmentId}:${methodId}`
+  methodParamOverrides?: Record<
+    string,
+    {
+      coffee?: string;
+      water?: string;
+      ratio?: string;
+      grindSize?: string;
+      temp?: string;
+      modifiedAt: number;
+    }
+  >;
+
   // 冲煮设置
   showCoffeeBeanSelectionStep?: boolean; // 是否显示咖啡豆选择步骤，默认 true
 
