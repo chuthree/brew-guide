@@ -99,7 +99,7 @@ const BeanPreview: React.FC<BeanPreviewProps> = ({ settings }) => {
   return (
     <>
       {/* 预览标识 - 位于预览区域上方 */}
-      <div className="relative mb-8 h-48 overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+      <div className="pointer-events-none relative mb-8 h-48 overflow-hidden bg-neutral-50 select-none dark:bg-neutral-900">
         {/* 咖啡豆列表容器 */}
         <div className="absolute inset-0 px-6 py-6">
           <div className="flex h-full flex-col justify-center space-y-5">

@@ -105,7 +105,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
         : 'text-2xl';
 
   return (
-    <div className="relative mb-8 min-h-12 overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+    <div className="pointer-events-none relative mb-8 min-h-12 overflow-hidden bg-neutral-50 select-none dark:bg-neutral-900">
       {/* 预览标识 */}
 
       {/* 计时器界面预览 */}
