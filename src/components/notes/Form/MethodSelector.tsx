@@ -376,18 +376,15 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               </h3>
               {isSelected && hasOverride(methodId) && (
                 <>
-                  <span className="text-xs text-neutral-400 dark:text-neutral-500">
-                    -
-                  </span>
                   <button
                     type="button"
                     onClick={e => {
                       e.stopPropagation();
                       handleResetParams(method);
                     }}
-                    className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                    className="text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
                   >
-                    还原
+                    [还原]
                   </button>
                 </>
               )}
