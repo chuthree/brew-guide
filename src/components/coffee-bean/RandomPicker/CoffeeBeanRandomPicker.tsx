@@ -15,6 +15,8 @@ import {
   getRandomCoffeeBeanSettings,
 } from '@/lib/utils/randomCoffeeBeanUtils';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 interface CoffeeBeanRandomPickerProps {
   beans: CoffeeBean[];
@@ -31,6 +33,18 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   onSelect,
   isLongPress = false,
 }) => {
+  // 获取烘焙商显示设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({ roasterFieldEnabled, roasterSeparator }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   // 历史栈管理
   useModalHistory({
     id: 'random-picker',
@@ -402,7 +416,9 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
                           </div>
                         )}
                         <div className="w-full text-center">
-                          <h3 className="text-sm font-medium">{bean.name}</h3>
+                          <h3 className="text-sm font-medium">
+                            {formatBeanDisplayName(bean, roasterSettings)}
+                          </h3>
                         </div>
                       </div>
                     ))}

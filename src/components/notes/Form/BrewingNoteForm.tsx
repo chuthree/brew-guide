@@ -39,7 +39,12 @@ import {
   getHistoricalLabelsSync,
   createEmptyTasteRatings,
   migrateTasteRatings,
+  useSettingsStore,
 } from '@/lib/stores/settingsStore';
+import {
+  formatBeanDisplayName,
+  formatNoteBeanDisplayName,
+} from '@/lib/utils/beanVarietyUtils';
 import {
   Select,
   SelectTrigger,
@@ -231,6 +236,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   settings,
   isCopy = false, // 默认不是复制操作
 }) => {
+  // 获取烘焙商显示设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({ roasterFieldEnabled, roasterSeparator }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   // 评分维度数据
   const [flavorDimensions, setFlavorDimensions] = useState<FlavorDimension[]>(
     []
@@ -1239,9 +1256,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 onClick={() => setShowCoffeeBeanPickerDrawer(true)}
                 className="cursor-pointer text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
               >
-                {selectedCoffeeBean?.name ||
-                  formData.coffeeBeanInfo.name ||
-                  '未知咖啡豆'}
+                {selectedCoffeeBean && !isPendingCoffeeBean(selectedCoffeeBean)
+                  ? formatBeanDisplayName(
+                      selectedCoffeeBean as CoffeeBean,
+                      roasterSettings
+                    )
+                  : selectedCoffeeBean?.name ||
+                    formatNoteBeanDisplayName(
+                      formData.coffeeBeanInfo,
+                      roasterSettings
+                    ) ||
+                    '未知咖啡豆'}
               </span>
               {selectedCoffeeBean &&
                 !isPendingCoffeeBean(selectedCoffeeBean) &&

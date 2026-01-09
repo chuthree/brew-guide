@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Virtuoso } from 'react-virtuoso';
 import { CoffeeBean } from '@/types/app';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 // 下划线动画配置
 const UNDERLINE_TRANSITION = {
@@ -59,6 +61,18 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
   searchQuery = '',
   scrollParentRef,
 }) => {
+  // 获取烘焙商显示设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({ roasterFieldEnabled, roasterSeparator }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
   const [ratedBeans, setRatedBeans] = useState<CoffeeBean[]>([]);
   const [unratedBeans, setUnratedBeans] = useState<CoffeeBean[]>([]);
   const [beanType, setBeanType] = useState<
@@ -367,7 +381,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                   >
                     <div className="flex items-center leading-none">
                       <div className="truncate text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                        {bean.name}
+                        {formatBeanDisplayName(bean, roasterSettings)}
                       </div>
                       <div className="ml-2 shrink-0 text-xs font-medium text-neutral-800 dark:text-neutral-100">
                         +
@@ -472,7 +486,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                       <div className="cursor-pointer">
                         <div className="flex items-center">
                           <div className="text-xs text-neutral-800 dark:text-neutral-100">
-                            {bean.name}
+                            {formatBeanDisplayName(bean, roasterSettings)}
                           </div>
                         </div>
                         <div className="mt-0.5 text-justify text-xs text-neutral-600 dark:text-neutral-400">
