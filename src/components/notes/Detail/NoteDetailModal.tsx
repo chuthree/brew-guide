@@ -626,23 +626,37 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   );
                 })()}
 
-              {/* 风味评分 - 点击展开雷达图 */}
+              {/* 风味评分 - 5个及以上维度时可点击展开雷达图 */}
               {hasTasteRatings && (
                 <InfoRow label="评分">
-                  <button
-                    onClick={() => setShowRatingRadar(true)}
-                    className="flex flex-wrap items-center gap-1 text-left"
-                  >
-                    {validTasteRatings.map(rating => (
-                      <span
-                        key={rating.id}
-                        className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
-                      >
-                        {rating.label}
-                        {rating.value}
-                      </span>
-                    ))}
-                  </button>
+                  {validTasteRatings.length > 4 ? (
+                    <button
+                      onClick={() => setShowRatingRadar(true)}
+                      className="flex cursor-pointer flex-wrap items-center gap-1 text-left"
+                    >
+                      {validTasteRatings.map(rating => (
+                        <span
+                          key={rating.id}
+                          className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
+                        >
+                          {rating.label}
+                          {rating.value}
+                        </span>
+                      ))}
+                    </button>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-1">
+                      {validTasteRatings.map(rating => (
+                        <span
+                          key={rating.id}
+                          className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
+                        >
+                          {rating.label}
+                          {rating.value}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </InfoRow>
               )}
 

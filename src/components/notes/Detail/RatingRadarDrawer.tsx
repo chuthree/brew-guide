@@ -18,39 +18,6 @@ interface RatingRadarDrawerProps {
   note?: string;
 }
 
-/**
- * 圆点评分组件
- * 当评分维度少于 5 个时使用，每行显示标签 + 5 个圆点
- */
-const RatingDots: React.FC<{
-  ratings: RatingItem[];
-  maxValue?: number;
-}> = ({ ratings, maxValue = 5 }) => {
-  return (
-    <div className="space-y-4">
-      {ratings.map(rating => (
-        <div key={rating.id} className="flex items-center justify-between">
-          <span className="text-sm text-neutral-600 dark:text-neutral-400">
-            {rating.label}
-          </span>
-          <div className="flex gap-2">
-            {Array.from({ length: maxValue }).map((_, dotIndex) => (
-              <div
-                key={dotIndex}
-                className={`h-3 w-3 rounded-full ${
-                  dotIndex < rating.value
-                    ? 'bg-neutral-700 dark:bg-neutral-300'
-                    : 'bg-neutral-200 dark:bg-neutral-700'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
 // 估算文字宽度（基于 12px 字体大小的实际测量值）
 const estimateTextWidth = (text: string, fontSize: number = 12): number => {
   let width = 0;
@@ -352,7 +319,7 @@ const RadarChart: React.FC<{
 
 /**
  * 评分雷达图抽屉组件
- * 5 个及以上维度显示雷达图，少于 5 个维度显示条形图
+ * 仅在 4 个及以上维度时使用，显示雷达图
  */
 const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
   isOpen,
@@ -362,8 +329,6 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
   beanName,
   note,
 }) => {
-  const useBarChart = ratings.length < 5;
-
   return (
     <ActionDrawer
       isOpen={isOpen}
@@ -371,17 +336,10 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
       historyId="rating-radar-drawer"
     >
       <div className="flex flex-col">
-        {/* 图表区域 */}
-        {useBarChart ? (
-          <>
-            <RatingDots ratings={ratings} maxValue={5} />
-            <div className="mt-4 border-t border-dashed border-neutral-200/50 dark:border-neutral-800/50" />
-          </>
-        ) : (
-          <div className="-mx-4 mb-2 w-[calc(100%+2rem)]">
-            <RadarChart ratings={ratings} maxValue={5} />
-          </div>
-        )}
+        {/* 雷达图区域 */}
+        <div className="-mx-4 mb-2 w-[calc(100%+2rem)]">
+          <RadarChart ratings={ratings} maxValue={5} />
+        </div>
 
         {/* 咖啡豆信息和笔记 */}
         <div className="mt-4 space-y-3 text-sm tracking-wide whitespace-pre-line">
