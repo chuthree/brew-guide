@@ -20,7 +20,7 @@ router.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    service: 'brew-guide-api',
+    service: 'cafedaily-api',
     environment: serverConfig.env,
     concurrency: {
       current: status.current,

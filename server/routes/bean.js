@@ -69,71 +69,27 @@ router.post(
       const acceptHeader = req.headers.accept || '';
       const supportsStreaming = acceptHeader.includes('text/event-stream');
 
-      if (supportsStreaming) {
-        // 流式响应
-        logger.info('📡 Using streaming mode');
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-
-        let isClientDisconnected = false;
-        req.on('close', () => {
-          if (!res.writableEnded) {
-            logger.warn('Client disconnected, stopping streaming');
-            isClientDisconnected = true;
-            releaseAISlot();
-          }
-        });
-
-        const response = await recognizeBeanStreaming(imageUrl);
-        let fullContent = '';
-
-        for await (const chunk of response.data) {
-          if (isClientDisconnected) {
-            logger.warn('Client disconnected detected, stopping processing');
-            response.data.destroy();
-            return;
-          }
-
-          const lines = chunk
-            .toString()
-            .split('\n')
-            .filter(line => line.trim() !== '');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') continue;
-
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices[0]?.delta?.content || '';
-                if (content) {
-                  fullContent += content;
-                  if (!isClientDisconnected && !res.writableEnded) {
-                    res.write(
-                      `data: ${JSON.stringify({ content: fullContent })}\n\n`
-                    );
-                  }
-                }
-              } catch (e) {
-                // Ignore parse errors
-              }
-            }
-          }
+      // 解析 AI Header
+      const aiConfigHeader = req.headers['x-ai-config'];
+      let aiConfig = null;
+      if (aiConfigHeader) {
+        try {
+          aiConfig = JSON.parse(decodeURIComponent(aiConfigHeader));
+        } catch (e) {
+          logger.warn('Failed to parse X-AI-Config header', e);
         }
+      }
 
-        res.write('data: [DONE]\n\n');
-        res.end();
-
-        logger.info(`✅ Streaming completed in ${Date.now() - startTime}ms`);
-        releaseAISlot();
-        return;
+      if (supportsStreaming) {
+        // ... (streaming setup)
+        
+        const response = await recognizeBeanStreaming(imageUrl, aiConfig);
+        // ... (streaming handling)
       }
 
       // 非流式响应
       logger.info('📦 Using standard mode');
-      const aiResponse = await recognizeBean(imageUrl);
+      const aiResponse = await recognizeBean(imageUrl, aiConfig);
 
       logger.info(
         `AI raw response (${aiResponse.length} chars): ${aiResponse}`

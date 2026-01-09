@@ -49,6 +49,7 @@ import {
   FlaskConical,
   Box,
   Play,
+  Bot,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -82,6 +83,7 @@ export interface SubSettingsHandlers {
   onOpenGrinderSettings: () => void;
   onOpenExperimentalSettings: () => void;
   onOpenAboutSettings: () => void;
+  onOpenAISettings: () => void;
 }
 
 interface SettingsProps {
@@ -603,6 +605,11 @@ const Settings: React.FC<SettingsProps> = ({
               icon: Monitor,
               label: '外观与字体',
               onClick: subSettingsHandlers.onOpenDisplaySettings,
+            },
+            {
+              icon: Bot,
+              label: 'AI 服务',
+              onClick: subSettingsHandlers.onOpenAISettings,
             },
             {
               icon: Layout,

@@ -28,6 +28,7 @@ import RoasterLogoSettings from '@/components/settings/RoasterLogoSettings';
 import GrinderSettings from '@/components/settings/GrinderSettings';
 import ExperimentalSettings from '@/components/settings/ExperimentalSettings';
 import AboutSettings from '@/components/settings/AboutSettings';
+import AISettings from '@/components/settings/AISettings';
 import NavigationSettings from '@/components/settings/NavigationSettings';
 import BrewingSettings from '@/components/settings/BrewingSettings';
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal';
@@ -105,6 +106,8 @@ export interface AppModalsProps {
   setShowExperimentalSettings: (show: boolean) => void;
   showAboutSettings: boolean;
   setShowAboutSettings: (show: boolean) => void;
+  showAISettings: boolean;
+  setShowAISettings: (show: boolean) => void;
 
   // 咖啡豆表单
   showBeanForm: boolean;
@@ -290,6 +293,8 @@ const AppModals: React.FC<AppModalsProps> = ({
   setShowExperimentalSettings,
   showAboutSettings,
   setShowAboutSettings,
+  showAISettings,
+  setShowAISettings,
 
   // 咖啡豆表单
   showBeanForm,
@@ -415,6 +420,7 @@ const AppModals: React.FC<AppModalsProps> = ({
           onOpenGrinderSettings: () => setShowGrinderSettings(true),
           onOpenExperimentalSettings: () => setShowExperimentalSettings(true),
           onOpenAboutSettings: () => setShowAboutSettings(true),
+          onOpenAISettings: () => setShowAISettings(true),
         }}
       />
 
@@ -575,6 +581,13 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showAboutSettings && (
         <AboutSettings onClose={() => setShowAboutSettings(false)} />
+      )}
+
+      {showAISettings && (
+        <AISettings
+          isVisible={showAISettings}
+          onClose={() => setShowAISettings(false)}
+        />
       )}
 
       {/* 咖啡豆表单模态框 */}

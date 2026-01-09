@@ -15,6 +15,8 @@ import {
   getRandomCoffeeBeanSettings,
 } from '@/lib/utils/randomCoffeeBeanUtils';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
+import { Sparkles, X, Shuffle, Calendar } from 'lucide-react';
+import DailyRecommendation from './DailyRecommendation';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
@@ -77,6 +79,9 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
   // 随机咖啡豆设置
   const [randomSettings, setRandomSettings] =
     useState<ReturnType<typeof getRandomCoffeeBeanSettings>>(undefined);
+
+  // Mode state
+  const [mode, setMode] = useState<'random' | 'daily'>('daily');
 
   // 动画过渡参数
   const springTransition = { stiffness: 500, damping: 25 };
@@ -325,7 +330,7 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
     cardDimensionsReady,
   ]);
 
-  // 为动画准备数据 - 单豆时只显示一个，多豆时创建足够长的序列用于滚动动画
+  // 为动画准备数据
   const displayBeans = isSingleBean
     ? validBeans
     : [
@@ -335,6 +340,58 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
         ...validBeans,
         ...validBeans,
       ];
+
+  // ==================== 渲染逻辑 ====================
+
+  if (mode === 'daily') {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="pt-safe-top fixed inset-0 z-60 flex items-center justify-center bg-neutral-50/90 backdrop-blur-xs dark:bg-neutral-900/90"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-neutral-900">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-neutral-100 p-4 dark:border-neutral-800">
+                <div className="flex gap-2 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
+                  <button
+                    onClick={() => setMode('random')}
+                    className="rounded-md px-3 py-1.5 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400"
+                  >
+                    随机抽取
+                  </button>
+                  <button
+                    onClick={() => setMode('daily')}
+                    className="flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-amber-600 shadow-sm transition-colors dark:bg-neutral-700 dark:text-amber-400"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    每日豆卡
+                  </button>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="rounded-full p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-800"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <DailyRecommendation beans={beans} onSelect={(bean) => {
+                  onSelect(bean);
+                  onClose();
+                }} />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence>
@@ -462,30 +519,40 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
           )}
 
           {/* 关闭按钮 */}
+          {/* 关闭按钮 - 只在 random 模式下显示在右上角，daily 模式有自己的 header */}
           <motion.button
             type="button"
-            className="absolute top-[calc(env(safe-area-inset-top)+36px)] right-6 rounded-full bg-neutral-100 p-2 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
+            className="absolute top-[calc(env(safe-area-inset-top)+36px)] right-6 flex items-center justify-center gap-2 rounded-full bg-neutral-100/80 p-2 text-neutral-800 backdrop-blur-md dark:bg-neutral-800/80 dark:text-neutral-100"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+            <X className="h-5 w-5" />
           </motion.button>
+
+          {/* 模式切换 - 悬浮在顶部中间 */}
+          <motion.div
+             className="absolute top-[calc(env(safe-area-inset-top)+36px)] left-1/2 flex -translate-x-1/2 gap-1 rounded-full bg-neutral-100/80 p-1 backdrop-blur-md dark:bg-neutral-800/80"
+             initial={{ opacity: 0, y: -20 }}
+             animate={{ opacity: 1, y: 0 }}
+             exit={{ opacity: 0, y: -20 }}
+          >
+             <button
+               onClick={() => setMode('random')}
+               className="rounded-full bg-white px-4 py-1.5 text-sm font-medium text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100"
+             >
+               随机抽取
+             </button>
+             <button
+               onClick={() => setMode('daily')}
+               className="flex items-center gap-1 rounded-full px-4 py-1.5 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
+             >
+               <Sparkles className="h-3.5 w-3.5" />
+               每日豆卡
+             </button>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

@@ -62,6 +62,46 @@ export interface RoasterConfig {
 }
 
 /**
+ * AI 模型信息
+ */
+export interface ModelInfo {
+  modelId: string;
+  nickname?: string;
+  type?: 'chat' | 'embedding' | 'rerank';
+  capabilities?: ('vision' | 'reasoning' | 'tool_use')[];
+  contextWindow?: number;
+  maxOutput?: number;
+}
+
+/**
+ * AI 提供方配置
+ */
+export interface ProviderConfig {
+  id: string;
+  name: string;
+  type: 'openai' | 'anthropic' | 'gemini';
+  iconUrl: string;
+  urls: {
+    website: string;
+    getApiKey?: string;
+    docs?: string;
+    models?: string;
+  };
+  settings: {
+    apiHost: string;
+    apiPath?: string;
+    apiKey?: string;
+    models: ModelInfo[];
+    // Feature-specific model mapping
+    modelMapping?: {
+      chat?: string;      // Default model for chat
+      vision?: string;    // Model for image analysis
+      reasoning?: string; // Model for complex tasks
+    };
+  };
+}
+
+/**
  * 应用设置类型定义
  * 统一管理所有用户设置，存储在 IndexedDB 中
  */
@@ -263,6 +303,39 @@ export interface AppSettings {
   roasterFieldEnabled?: boolean; // 是否启用独立烘焙商字段，默认 false
   roasterSeparator?: ' ' | '/'; // 烘焙商分隔符，默认空格
   roasterMigrationCompleted?: boolean; // @deprecated 已废弃，按需迁移策略不再使用此标记
+
+  // AI 设置
+  aiSettings?: {
+    providers: ProviderConfig[];
+    activeProviderId?: string;
+    featureBindings?: {
+      dailyRecommendation?: {
+        providerId?: string;
+        modelId?: string;
+        prompt?: string;
+      };
+      beanRecognition?: {
+        providerId?: string;
+        modelId?: string;
+        prompt?: string;
+      };
+      yearlyReport?: {
+        providerId?: string;
+        modelId?: string;
+        prompt?: string;
+      };
+      methodRecognition?: {
+        providerId?: string;
+        modelId?: string;
+        prompt?: string;
+      };
+      feedbackModeration?: {
+        providerId?: string;
+        modelId?: string;
+        prompt?: string;
+      };
+    };
+  };
 
   // 注意: grinders 字段已迁移到独立的 grinders 表
   // 此字段仅用于兼容旧数据导入，运行时不使用

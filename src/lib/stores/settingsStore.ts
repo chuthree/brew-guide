@@ -16,6 +16,7 @@ import {
   FlavorDimension,
   RoasterConfig,
   DEFAULT_FLAVOR_DIMENSIONS,
+  ProviderConfig,
 } from '@/lib/core/db';
 import { LayoutSettings } from '@/components/brewing/Timer/Settings';
 import { VIEW_OPTIONS } from '@/components/coffee-bean/List/constants';
@@ -24,6 +25,11 @@ import { VIEW_OPTIONS } from '@/components/coffee-bean/List/constants';
  * 默认设置值
  */
 export const defaultSettings: AppSettings = {
+  // AI 设置
+  aiSettings: {
+    providers: [],
+    activeProviderId: undefined,
+  },
   // 通用设置
   notificationSound: true,
   hapticFeedback: true,
@@ -254,6 +260,15 @@ interface SettingsStore {
 
   // 器具排序
   setEquipmentOrder: (order: string[]) => Promise<void>;
+
+  // AI 设置管理
+  addAIProvider: (provider: ProviderConfig) => Promise<void>;
+  updateAIProvider: (
+    id: string,
+    updates: Partial<ProviderConfig>
+  ) => Promise<void>;
+  removeAIProvider: (id: string) => Promise<void>;
+  setActiveAIProvider: (id: string | undefined) => Promise<void>;
 
   // 重置
   resetSettings: () => Promise<void>;
@@ -595,6 +610,75 @@ export const useSettingsStore = create<SettingsStore>()(
 
     setEquipmentOrder: async order => {
       await get().updateSettings({ equipmentOrder: order });
+    },
+
+    // ==================== AI 设置管理 ====================
+
+    addAIProvider: async provider => {
+      const settings = get().settings;
+      const providers = [...(settings.aiSettings?.providers || [])];
+      
+      // 检查 ID 是否重复
+      if (providers.some(p => p.id === provider.id)) {
+        throw new Error(`Provider with id ${provider.id} already exists`);
+      }
+
+      providers.push(provider);
+
+      await get().updateSettings({
+        aiSettings: {
+          ...settings.aiSettings,
+          providers,
+        },
+      });
+    },
+
+    updateAIProvider: async (id, updates) => {
+      const settings = get().settings;
+      const providers = [...(settings.aiSettings?.providers || [])];
+      
+      const index = providers.findIndex(p => p.id === id);
+      if (index === -1) return;
+
+      providers[index] = { ...providers[index], ...updates };
+
+      await get().updateSettings({
+        aiSettings: {
+          ...settings.aiSettings,
+          providers,
+        },
+      });
+    },
+
+    removeAIProvider: async id => {
+      const settings = get().settings;
+      const providers = (settings.aiSettings?.providers || []).filter(
+        p => p.id !== id
+      );
+
+      // 如果删除的是当前激活的 Provider，重置 activeProviderId
+      const activeProviderId =
+        settings.aiSettings?.activeProviderId === id
+          ? undefined
+          : settings.aiSettings?.activeProviderId;
+
+      await get().updateSettings({
+        aiSettings: {
+          providers,
+          activeProviderId,
+        },
+      });
+    },
+
+    setActiveAIProvider: async id => {
+      const settings = get().settings;
+      await get().updateSettings({
+        aiSettings: {
+          ...settings.aiSettings,
+          providers: settings.aiSettings?.providers || [],
+          activeProviderId: id,
+        },
+      });
     },
 
     resetSettings: async () => {

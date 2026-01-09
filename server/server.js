@@ -1,9 +1,9 @@
 /**
- * 🚀 Brew Guide API Server
+ * 🚀 CafeDaily API Server
  *
  * 模块化、高性能、安全的 Express 服务器
  *
- * @author Brew Guide Team
+ * @author CafeDaily Team
  * @version 2.0.0
  */
 
@@ -21,6 +21,8 @@ import beanRouter from './routes/bean.js';
 import methodRouter from './routes/method.js';
 import reportRouter from './routes/report.js';
 import feedbackRouter from './routes/feedback.js';
+import recommendationRouter from './routes/recommendation.js';
+import promptRouter from './routes/prompts.js';
 
 // 创建 Express 应用
 const app = express();
@@ -35,6 +37,8 @@ app.use('/api', beanRouter);
 app.use('/api', methodRouter);
 app.use('/api', reportRouter);
 app.use('/api', feedbackRouter);
+app.use('/api', recommendationRouter);
+app.use('/api/ai', promptRouter);
 
 // ==================== 错误处理 ====================
 app.use(notFoundHandler);
@@ -44,10 +48,10 @@ app.use(errorHandler);
 const server = app.listen(serverConfig.port, serverConfig.host, () => {
   logger.info(`
 ╔═══════════════════════════════════════════════════╗
-║   🚀 Brew Guide API Server v2.0.0                 ║
+║   🚀 CafeDaily API Server v2.0.0                  ║
 ║                                                   ║
-║   📡 Address: http://${serverConfig.host}:${serverConfig.port.toString().padEnd(4)} ║
-║   🏥 Health:  http://${serverConfig.host}:${serverConfig.port}/health       ║
+║   📡 Address: http://${serverConfig.host}:${serverConfig.port.toString().padEnd(5)} ║
+║   🏥 Health:  http://${serverConfig.host}:${serverConfig.port}/health      ║
 ║   🌿 Bean:    POST /api/recognize-bean            ║
 ║   🧪 Method:  POST /api/recognize-method          ║
 ║   📊 Report:  POST /api/yearly-report             ║

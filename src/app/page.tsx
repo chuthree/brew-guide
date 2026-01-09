@@ -253,6 +253,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [showExperimentalSettings, setShowExperimentalSettings] =
     useState(false);
   const [showAboutSettings, setShowAboutSettings] = useState(false);
+  const [showAISettings, setShowAISettings] = useState(false);
 
   // 计算是否有任何子设置页面打开
   const hasSubSettingsOpen =
@@ -275,7 +276,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showRoasterLogoSettings ||
     showGrinderSettings ||
     showExperimentalSettings ||
-    showAboutSettings;
+    showAboutSettings ||
+    showAISettings;
 
   // 使用 Zustand settingsStore 管理设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
@@ -3953,6 +3955,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setShowExperimentalSettings={setShowExperimentalSettings}
         showAboutSettings={showAboutSettings}
         setShowAboutSettings={setShowAboutSettings}
+        showAISettings={showAISettings}
+        setShowAISettings={setShowAISettings}
         // 咖啡豆表单
         showBeanForm={showBeanForm}
         setShowBeanForm={setShowBeanForm}

@@ -91,7 +91,18 @@ router.post(
         }
       });
 
-      const response = await generateYearlyReportStreaming(dataSummary);
+      // 解析 AI Header
+      const aiConfigHeader = req.headers['x-ai-config'];
+      let aiConfig = null;
+      if (aiConfigHeader) {
+        try {
+          aiConfig = JSON.parse(decodeURIComponent(aiConfigHeader));
+        } catch (e) {
+          logger.warn('Failed to parse X-AI-Config header', e);
+        }
+      }
+
+      const response = await generateYearlyReportStreaming(dataSummary, aiConfig);
       let fullContent = '';
 
       response.data.on('data', chunk => {

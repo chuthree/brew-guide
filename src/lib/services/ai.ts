@@ -1,195 +1,22 @@
-/**
- * 🔧 服务器核心配置模块
- *
- * 职责：
- * - 环境变量加载与验证
- * - 配置常量定义
- * - 配置项统一管理
- *
- * @module config
- */
-
-import dotenv from 'dotenv';
-
-// 加载环境变量
-dotenv.config();
 
 /**
- * 验证必需的环境变量
- * @throws {Error} 如果缺少必需的环境变量
+ * AI Service for Next.js App
  */
-function validateEnv() {
-  const required = ['SILICONFLOW_API_KEY', 'QINIU_API_KEY'];
-  const missing = required.filter(key => !process.env[key]);
-  if (missing.length > 0) {
-    console.warn(
-      `⚠️  未配置可选的环境变量: ${missing.join(', ')}\n` +
-      `   相关 AI 功能 (如反馈审核) 将不可用，除非客户端提供 API Key。`
-    );
-  }
+
+export interface AIConfig {
+    apiKey: string;
+    apiHost?: string;
+    model?: string;
+    type?: string;
+    timeout?: number;
+    maxTokens?: number;
+    temperature?: number;
+    prompt?: string;
 }
 
-// 执行验证
-validateEnv();
-
-/**
- * 服务器配置
- */
-export const serverConfig = {
-  port: parseInt(process.env.PORT, 10) || 13141,
-  env: process.env.NODE_ENV || 'development',
-  host: '0.0.0.0',
-};
-
-/**
- * API 密钥配置
- */
-export const apiKeys = {
-  siliconflow: process.env.SILICONFLOW_API_KEY,
-  qiniu: process.env.QINIU_API_KEY,
-  admin: process.env.ADMIN_KEY || 'brew-guide-admin-2025',
-};
-
-/**
- * 安全配置
- */
-export const securityConfig = {
-  ipHashSalt: process.env.IP_HASH_SALT || 'brew-guide-salt-2025-secure',
-};
-
-/**
- * CORS 配置
- */
-export const corsConfig = {
-  allowedOrigins: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS === '*'
-      ? '*'
-      : process.env.ALLOWED_ORIGINS.split(',')
-        .map(o => o.trim())
-        .filter(o => o)
-    : ['http://localhost:3000', 'http://localhost:3001'],
-  credentials: true,
-  methods: ['POST', 'GET', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'x-admin-key',
-  ],
-};
-
-/**
- * 文件上传配置
- */
-export const uploadConfig = {
-  maxFileSize: 5 * 1024 * 1024, // 5MB
-  allowedMimeTypes: [
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'image/heic',
-    'image/heif',
-  ],
-  magicNumbers: {
-    'image/jpeg': [[0xff, 0xd8, 0xff]],
-    'image/png': [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]],
-    'image/gif': [
-      [0x47, 0x49, 0x46, 0x38, 0x37, 0x61], // GIF87a
-      [0x47, 0x49, 0x46, 0x38, 0x39, 0x61], // GIF89a
-    ],
-    'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF
-    'image/heic': [[0x00, 0x00, 0x00]], // ftyp box
-    'image/heif': [[0x00, 0x00, 0x00]], // ftyp box
-  },
-};
-
-/**
- * 速率限制配置
- */
-export const rateLimitConfig = {
-  // 通用限流
-  general: {
-    windowMs: 60 * 1000, // 1 分钟
-    maxRequests: 30,
-  },
-  // 年度报告限流
-  yearlyReport: {
-    windowMs: 24 * 60 * 60 * 1000, // 24 小时
-    maxRequests: 5,
-  },
-  // 反馈提交限流
-  feedbackSubmit: {
-    windowMs: 60 * 60 * 1000, // 1 小时
-    maxSubmissions: 5,
-  },
-  // 投票限流
-  vote: {
-    windowMs: 60 * 1000, // 1 分钟
-    maxVotes: 10,
-  },
-};
-
-/**
- * AI 配置
- */
-export const aiConfig = {
-  // 咖啡豆识别 (七牛云)
-  beanRecognition: {
-    baseURL: 'https://api.qnaigc.com/v1/chat/completions',
-    model: 'qwen-vl-max-2025-01-25',
-    temperature: 0,
-    maxTokens: 2000,
-    timeout: 120000,
-    maxRetries: 2,
-    retryDelay: 1000,
-  },
-  // 冲煮方案识别 (七牛云)
-  methodRecognition: {
-    baseURL: 'https://api.qnaigc.com/v1/chat/completions',
-    model: 'qwen-vl-max-2025-01-25',
-    temperature: 0,
-    maxTokens: 2000,
-    timeout: 120000,
-    maxRetries: 2,
-    retryDelay: 1000,
-  },
-  // 年度报告生成
-  yearlyReport: {
-    baseURL:
-      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    model: 'deepseek-v3.2',
-    temperature: 0.7,
-    maxTokens: 2000,
-    timeout: 60000,
-  },
-  // 反馈审核
-  feedbackModeration: {
-    baseURL:
-      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    model: 'deepseek-v3.2',
-    temperature: 0.1, // 低温度以获得确定性结果
-    maxTokens: 500,
-    timeout: 10000,
-  },
-  // 每日推荐
-  dailyRecommendation: {
-    baseURL:
-      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    model: 'deepseek-v3.2',
-    temperature: 0.7,
-    maxTokens: 500,
-    timeout: 50000,
-  },
-  // 并发控制
-  maxConcurrentRequests: 3,
-};
-
-/**
- * AI 提示词
- */
-export const aiPrompts = {
-  beanRecognition: `你是OCR工具，提取图片中的咖啡豆信息，直接返回JSON（单豆返回对象{}，多豆返回数组[]）。
+// Default Prompts
+export const DEFAULT_PROMPTS = {
+    beanRecognition: `你是OCR工具，提取图片中的咖啡豆信息，直接返回JSON（单豆返回对象{}，多豆返回数组[]）。
 
 必填: name（豆名，如"埃塞俄比亚赏花日晒原生种"）
 
@@ -206,7 +33,7 @@ export const aiPrompts = {
 
 规则：数值不带单位/不编造/不确定不填/直接返回JSON`,
 
-  methodRecognition: `你是OCR工具，提取图片中的咖啡冲煮方案，直接返回JSON。
+    methodRecognition: `你是OCR工具，提取图片中的咖啡冲煮方案，直接返回JSON。
 
 关键规则：
 1. 每个注水动作是独立步骤，duration=注水时长（秒）
@@ -232,7 +59,7 @@ JSON格式：
 
 规则：数值不带单位/不编造/不确定不填/直接返回JSON`,
 
-  yearlyReport: `你是一位专业的咖啡品鉴师和文案作家。请根据用户一年的咖啡消费数据，撰写一份温暖、有趣、个性化的年度咖啡报告。
+    yearlyReport: `你是一位专业的咖啡品鉴师和文案作家。请根据用户一年的咖啡消费数据，撰写一份温暖、有趣、个性化的年度咖啡报告。
 
 ## 写作风格
 - 温暖亲切，像老朋友聊天
@@ -258,7 +85,7 @@ JSON格式：
 3. 保持积极温暖的语调
 4. 纯文本输出，不要 JSON、不要 markdown`,
 
-  feedbackModeration: `你是内容审核助手。请检查以下用户反馈内容是否包含违规信息（如仇恨言论、暴力、色情、垃圾广告、政治敏感、人身攻击等）。
+    feedbackModeration: `你是内容审核助手。请检查以下用户反馈内容是否包含违规信息（如仇恨言论、暴力、色情、垃圾广告、政治敏感、人身攻击等）。
 
 ## 输出格式（严格遵守 JSON）
 {
@@ -276,7 +103,7 @@ JSON格式：
 
 请只返回 JSON，不要包含其他文本。`,
 
-  dailyRecommendation: `
+    dailyRecommendation: `
 你是一位经验丰富的咖啡师，擅长根据顾客的冲煮偏好和风味倾向，从当前库存中选出最合适的一支豆子进行每日推荐。请仔细分析用户的历史冲煮记录与当前库存，然后输出你的推荐。
 
 用户历史记录：
@@ -328,46 +155,144 @@ JSON格式：
     "reason": "推荐理由 (生动有趣，融入产地/风味特色，50-100字)",
     "luckyMessage": "今日咖啡祝福语 (温馨、有趣)"
 }
-请确保返回的是纯 JSON 字符串，不要包含 Markdown 标记。`,
-
+请确保返回的是纯 JSON 字符串，不要包含 Markdown 标记。`
 };
 
 /**
- * 数据验证规则
+ * Mock of server-side recommendation logic adapted for Next.js Route Handler
  */
-export const validationRules = {
-  roastLevels: [
-    '极浅烘焙',
-    '浅度烘焙',
-    '中浅烘焙',
-    '中度烘焙',
-    '中深烘焙',
-    '深度烘焙',
-  ],
-  beanTypes: ['espresso', 'filter', 'omni'],
-  feedbackStatuses: [
-    'pending',
-    'open',
-    'accepted',
-    'rejected',
-    'done',
-    'pinned',
-    'deleted',
-  ],
-  feedbackMinLength: 5,
-  feedbackMaxLength: 200,
-  replyMaxLength: 500,
-  filenameMaxLength: 255,
-};
+export async function recommendBean(
+    history: any[],
+    inventory: any[],
+    aiConfig: AIConfig | null
+) {
+    // Determine info
+    let apiKey = aiConfig?.apiKey;
+    let baseURL = aiConfig?.apiHost;
+    let model = aiConfig?.model;
+    let type = aiConfig?.type || 'openai';
+    const customPrompt = aiConfig?.prompt;
 
-export default {
-  serverConfig,
-  apiKeys,
-  securityConfig,
-  corsConfig,
-  uploadConfig,
-  rateLimitConfig,
-  aiConfig,
-  aiPrompts,
-  validationRules,
-};
+    // Fallback logic
+    // Fallback logic
+    if (!apiKey) {
+        if (process.env.SILICONFLOW_API_KEY) {
+            apiKey = process.env.SILICONFLOW_API_KEY;
+            // The key in .env named SILICONFLOW_API_KEY is actually a DashScope key
+            baseURL = baseURL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+            model = model || 'deepseek-v3';
+        } else {
+            // If no client config and no server env var, we cannot proceed
+            throw new Error('AI Configuration missing');
+        }
+    } else {
+        // Defaults if provided but incomplete
+        baseURL = baseURL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+        model = model || 'deepseek-v3';
+    }
+
+    // Construct Prompt
+    let promptText = '';
+
+    if (customPrompt) {
+        promptText = customPrompt
+            .replace('{{history}}', history.map((h: any) => `- ${h.beanName} (${h.method}): ${h.rating || '无评分'}`).join('\n'))
+            .replace('{{inventory}}', inventory.map((b: any) => `- ${b.name} (id: ${b.id}, ${b.roastLevel || '未知烘焙度'}, ${b.process || '未知处理法'}, ${b.flavors ? '风味:' + b.flavors.join(',') : ''}, 剩余:${b.remaining})`).join('\n'));
+    } else {
+        promptText = DEFAULT_PROMPTS.dailyRecommendation
+            .replace('{{history}}', history.map((h: any) => `- ${h.beanName} (${h.method}): ${h.rating || '无评分'}`).join('\n'))
+            .replace('{{inventory}}', inventory.map((b: any) => `- ${b.name} (id: ${b.id}, ${b.roastLevel || '未知烘焙度'}, ${b.process || '未知处理法'}, ${b.flavors ? '风味:' + b.flavors.join(',') : ''}, 剩余:${b.remaining})`).join('\n'));
+    }
+
+    // Call AI Provider
+    let url = baseURL.replace(/\/+$/, '');
+    const prompt = promptText;
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+
+    let body = {};
+
+    if (type === 'anthropic') {
+        url = `${url}/v1/messages`;
+        headers['x-api-key'] = apiKey;
+        headers['anthropic-version'] = '2023-06-01';
+        body = {
+            model: model,
+            max_tokens: 1000,
+            messages: [{ role: 'user', content: prompt }]
+        };
+    } else if (type === 'gemini') {
+        url = `${url}/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        body = {
+            contents: [{ parts: [{ text: prompt }] }]
+        };
+    } else {
+        // OpenAI Compatible
+        // Check if URL already ends with chat/completions
+        if (!url.endsWith('chat/completions')) {
+            const versionPattern = /\/v\d+(?:beta)?(?:\/|$)/;
+            if (!versionPattern.test(url)) {
+                if (!url.endsWith('/')) { url += '/'; }
+                url += 'v1';
+            }
+            if (!url.endsWith('/')) { url += '/'; }
+            url += 'chat/completions';
+        }
+
+        headers['Authorization'] = `Bearer ${apiKey}`;
+        body = {
+            model: model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+            response_format: { type: 'json_object' }
+        };
+    }
+
+    console.log(`[AI Service] Recommending bean using ${type} at ${url}`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: controller.signal
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`AI Provider reported error: ${response.status} ${text}`);
+        }
+
+        const data = await response.json();
+        clearTimeout(timeoutId);
+
+        let content = '';
+
+        if (type === 'anthropic') {
+            content = data.content?.[0]?.text || '';
+        } else if (type === 'gemini') {
+            content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        } else {
+            content = data.choices?.[0]?.message?.content || '';
+        }
+
+        // Clean and Parse JSON
+        try {
+            const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
+            return JSON.parse(jsonStr);
+        } catch (e) {
+            console.error('Failed to parse AI response:', content);
+            throw new Error('AI returned invalid format');
+        }
+    } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('AI request timed out (30s)');
+        }
+        throw error;
+    }
+}
