@@ -285,6 +285,9 @@ export interface AppSettings {
   roasterSeparator?: ' ' | '/'; // 烘焙商分隔符，默认空格
   roasterMigrationCompleted?: boolean; // @deprecated 已废弃，按需迁移策略不再使用此标记
 
+  // 提示显示状态
+  emptyBeanTipShown?: boolean; // 用完咖啡豆提示是否已显示
+
   // 注意: grinders 字段已迁移到独立的 grinders 表
   // 此字段仅用于兼容旧数据导入，运行时不使用
   grinders?: Grinder[];

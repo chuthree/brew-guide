@@ -93,6 +93,9 @@ import {
 } from './components/TableView';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import { calculateEstimatedCupsPerBean } from '@/components/notes/utils';
+import EmptyBeanTipDrawer, {
+  shouldShowEmptyBeanTip,
+} from './components/EmptyBeanTipDrawer';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -178,6 +181,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [deletingBean, setDeletingBean] = useState<ExtendedCoffeeBean | null>(
     null
   );
+
+  // 用完咖啡豆提示抽屉状态
+  const [showEmptyBeanTip, setShowEmptyBeanTip] = useState(false);
 
   // 新增分类相关状态
   const [filterMode, setFilterMode] = useState<BeanFilterMode>(
@@ -1085,6 +1091,28 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     saveShowEmptyBeansByStatePreference(selectedBeanState, newShowEmptyBeans);
   }, [showEmptyBeans, selectedBeanState]);
 
+  // 开启显示空豆子状态（用于提示抽屉的"帮我开启"按钮）
+  const enableShowEmptyBeans = useCallback(() => {
+    if (showEmptyBeans) return; // 已经开启了，不需要再开启
+    setShowEmptyBeans(true);
+    globalCache.showEmptyBeans = true;
+    globalCache.showEmptyBeansSettings[selectedBeanState] = true;
+    saveShowEmptyBeansPreference(true);
+    saveShowEmptyBeansByStatePreference(selectedBeanState, true);
+  }, [showEmptyBeans, selectedBeanState]);
+
+  // 处理咖啡豆用完事件 - 显示提示抽屉
+  const handleBeanReducedToZero = useCallback(() => {
+    // 只在库存视图、未开启【包含已用完】、且未显示过提示时显示
+    if (
+      viewMode === VIEW_OPTIONS.INVENTORY &&
+      !showEmptyBeans &&
+      shouldShowEmptyBeanTip()
+    ) {
+      setShowEmptyBeanTip(true);
+    }
+  }, [viewMode, showEmptyBeans]);
+
   // 处理分类模式变更
   const handleFilterModeChange = useCallback(
     (mode: BeanFilterMode) => {
@@ -1777,6 +1805,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               onShare={bean => handleShare(bean, copyText)}
               onRate={bean => handleShowRatingForm(bean)}
               onQuickDecrement={handleQuickDecrement}
+              onBeanReducedToZero={handleBeanReducedToZero}
               isSearching={isSearching}
               searchQuery={searchQuery}
               isImageFlowMode={isImageFlowMode}
@@ -1929,6 +1958,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         itemName={deletingBean?.name || ''}
         itemType="咖啡豆"
         onExitComplete={() => setDeletingBean(null)}
+      />
+
+      {/* 用完咖啡豆提示抽屉 */}
+      <EmptyBeanTipDrawer
+        isOpen={showEmptyBeanTip}
+        onClose={() => setShowEmptyBeanTip(false)}
+        onEnableShowEmptyBeans={enableShowEmptyBeans}
       />
     </div>
   );

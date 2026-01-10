@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { ExtendedCoffeeBean, BeanType, BeanState } from '../types';
 import BeanListItem from './BeanListItem';
@@ -80,6 +80,8 @@ interface InventoryViewProps {
     reducedToZero?: boolean;
     error?: Error;
   }>;
+  /** 当咖啡豆用完时的回调 */
+  onBeanReducedToZero?: () => void;
   isSearching?: boolean;
   searchQuery?: string;
   isImageFlowMode?: boolean;
@@ -121,6 +123,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   onShare,
   onRate,
   onQuickDecrement,
+  onBeanReducedToZero,
   isSearching = false,
   searchQuery = '',
   isImageFlowMode = false,
@@ -192,6 +195,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({
           // 乐观更新本地对象并触发一次重新渲染
           updatedBean.remaining = result.value || '0';
           setRerenderTick(t => t + 1);
+        }
+        // 如果咖啡豆用完了，通知父组件
+        if (result.reducedToZero && onBeanReducedToZero) {
+          onBeanReducedToZero();
         }
       } else if (result.error) {
         // 显示错误提示
