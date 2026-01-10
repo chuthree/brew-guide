@@ -227,6 +227,8 @@ export interface AppSettings {
   defaultExpandChangeLog: boolean;
   showFlavorRatingInForm: boolean;
   showOverallRatingInForm: boolean;
+  flavorRatingFollowOverall: boolean;
+  flavorRatingHalfStep: boolean;
   showUnitPriceInNote: boolean;
   artisticSharingEnabled: boolean;
   showCapacityAdjustmentRecords: boolean;

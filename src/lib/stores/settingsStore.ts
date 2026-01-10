@@ -156,6 +156,8 @@ export const defaultSettings: AppSettings = {
   defaultExpandChangeLog: false,
   showFlavorRatingInForm: true,
   showOverallRatingInForm: true,
+  flavorRatingFollowOverall: false,
+  flavorRatingHalfStep: false,
   showUnitPriceInNote: false,
   artisticSharingEnabled: false,
   showCapacityAdjustmentRecords: true,

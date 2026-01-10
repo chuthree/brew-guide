@@ -101,7 +101,10 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
             }
           />
         </SettingRow>
-        <SettingRow label="风味评分" isLast>
+        <SettingRow
+          label="风味评分"
+          isLast={!(settings.showFlavorRatingInForm ?? true)}
+        >
           <SettingToggle
             checked={settings.showFlavorRatingInForm ?? true}
             onChange={checked =>
@@ -109,6 +112,26 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
             }
           />
         </SettingRow>
+        {(settings.showFlavorRatingInForm ?? true) && (
+          <>
+            <SettingRow label="初始值跟随总评" isSubSetting>
+              <SettingToggle
+                checked={settings.flavorRatingFollowOverall ?? false}
+                onChange={checked =>
+                  handleChange('flavorRatingFollowOverall', checked)
+                }
+              />
+            </SettingRow>
+            <SettingRow label="半分制" isSubSetting isLast>
+              <SettingToggle
+                checked={settings.flavorRatingHalfStep ?? false}
+                onChange={checked =>
+                  handleChange('flavorRatingHalfStep', checked)
+                }
+              />
+            </SettingRow>
+          </>
+        )}
       </SettingSection>
 
       <SettingSection title="默认行为">

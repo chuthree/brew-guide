@@ -808,22 +808,71 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     prevInitialDataRef.current = current;
   }, [initialData, selectedCoffeeBean?.id, flavorDimensions]);
 
-  // 创建评分更新函数
-  const updateRating = (value: number) => {
-    setFormData(prev => ({ ...prev, rating: value }));
-  };
+  // 判断是否是添加模式（提前声明，供 updateRating 使用）
+  const isAdding = !id || isCopy;
 
-  const updateTasteRating = (key: string) => (value: number) => {
-    setFormData(prev => ({
-      ...prev,
-      taste: { ...prev.taste, [key]: value },
-    }));
-  };
+  // 创建评分更新函数
+  // 总体评分更新函数，支持风味评分跟随设置
+  const updateRating = useCallback(
+    (value: number) => {
+      setFormData(prev => {
+        const newFormData = { ...prev, rating: value };
+
+        // 判断是否需要同步风味评分
+        // 条件：1) 是添加模式 2) 开启了跟随设置 3) 用户未手动修改过风味评分
+        const shouldSyncFlavor =
+          isAdding &&
+          settings?.flavorRatingFollowOverall &&
+          !userModifiedFlavorRatingsRef.current;
+
+        if (shouldSyncFlavor && flavorDimensions.length > 0) {
+          // 将总评(0-5, step 0.5)映射到风味评分
+          // 如果开启半星精度，保留0.5；否则向下取整
+          const syncedFlavorValue = settings?.flavorRatingHalfStep
+            ? value
+            : Math.floor(value);
+
+          // 更新所有风味维度的评分
+          const syncedTaste: Record<string, number> = {};
+          flavorDimensions.forEach(dimension => {
+            syncedTaste[dimension.id] = syncedFlavorValue;
+          });
+          newFormData.taste = syncedTaste;
+        }
+
+        return newFormData;
+      });
+    },
+    [
+      isAdding,
+      settings?.flavorRatingFollowOverall,
+      settings?.flavorRatingHalfStep,
+      flavorDimensions,
+    ]
+  );
+
+  // 风味评分更新函数，标记用户已手动修改
+  const updateTasteRating = useCallback(
+    (key: string) => (value: number) => {
+      // 标记用户已手动修改风味评分
+      userModifiedFlavorRatingsRef.current = true;
+      // 标记风味评分不再是仅同步状态
+      flavorRatingsOnlySyncedRef.current = false;
+
+      setFormData(prev => ({
+        ...prev,
+        taste: { ...prev.taste, [key]: value },
+      }));
+    },
+    []
+  );
 
   // 创建滑块处理器
   const ratingHandlers = createSliderHandlers(updateRating, 0, 5, 0.5);
+  // 风味评分步进：开启半星精度时为0.5，否则为1
+  const flavorStep = settings?.flavorRatingHalfStep ? 0.5 : 1;
   const tasteHandlers = (key: string) =>
-    createSliderHandlers(updateTasteRating(key), 0, 5, 1);
+    createSliderHandlers(updateTasteRating(key), 0, 5, flavorStep);
 
   // 计算水量
   const calculateWater = useCallback(
@@ -953,14 +1002,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     return method?.name || selectedMethod || '未知方案';
   }, [availableMethods, selectedMethod]);
 
-  // 判断是否是添加模式
-  const isAdding = !id || isCopy;
-
   // 根据设置决定是否显示部分区域
   const showFlavorSection =
     !isAdding || (settings?.showFlavorRatingInForm ?? true);
   const showOverallSection =
     !isAdding || (settings?.showOverallRatingInForm ?? true);
+
+  // 🎯 风味评分跟随总评功能相关状态
+  // 标记用户是否手动修改过风味评分（一旦手动修改，总评变化不再影响风味评分）
+  const userModifiedFlavorRatingsRef = useRef(false);
+  // 标记风味评分是否仅来自于总评同步（用于保存时判断是否要保存风味评分）
+  const flavorRatingsOnlySyncedRef = useRef(true);
 
   // Inside the component, add a new state for showing/hiding flavor ratings
   const [showFlavorRatings, setShowFlavorRatings] = useState(() => {
@@ -970,7 +1022,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       Object.values(initialData.taste).some(value => value > 0);
 
     // 如果有风味评分，默认展开
-    if (hasTasteValues) return true;
+    if (hasTasteValues) {
+      // 如果初始数据有风味评分，标记为非仅同步状态
+      flavorRatingsOnlySyncedRef.current = false;
+      return true;
+    }
 
     // 如果是添加新笔记（没有ID或是复制操作）且设置中开启了默认展开
     if (isAdding && settings?.defaultExpandRating) return true;
@@ -978,15 +1034,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     return false;
   });
 
-  // 监听风味评分变化
+  // 监听风味评分变化（仅用于用户手动修改时自动展开）
   useEffect(() => {
     // 检查任何风味评分是否大于0
     const hasTasteValues = Object.values(formData.taste).some(
       value => value > 0
     );
 
-    // 如果有任何风味评分大于0，自动展开风味评分区域
-    if (hasTasteValues && !showFlavorRatings) {
+    // 只有在用户手动修改了风味评分后，才自动展开
+    // 如果只是通过总评同步的，不自动展开
+    if (
+      hasTasteValues &&
+      !showFlavorRatings &&
+      userModifiedFlavorRatingsRef.current
+    ) {
       setShowFlavorRatings(true);
     }
   }, [formData.taste, showFlavorRatings]);
@@ -1177,12 +1238,26 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       selectedEquipment || initialData.equipment || ''
     );
 
+    // 处理风味评分数据
+    // 如果用户只变更了总体评分，但风味评分完全没有手动修改过，
+    // 则不保存风味评分（视为未选择风味评分）
+    let finalTaste = formData.taste;
+    if (
+      isAdding &&
+      settings?.flavorRatingFollowOverall &&
+      flavorRatingsOnlySyncedRef.current
+    ) {
+      // 风味评分仅来自同步，用户未手动修改过，不保存风味评分
+      finalTaste = {};
+    }
+
     // 创建完整的笔记数据
     const noteData: BrewingNoteData = {
       id: id || Date.now().toString(),
       // 使用当前的时间戳状态
       timestamp: timestamp.getTime(),
       ...formData,
+      taste: finalTaste, // 使用处理后的风味评分
       equipment: normalizedEquipmentId,
       method: selectedMethod || initialData.method,
       params: {
@@ -1600,7 +1675,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                           )}
                         </div>
                         <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                          [ {value || 0} ]
+                          [{' '}
+                          {settings?.flavorRatingHalfStep
+                            ? (value || 0).toFixed(1)
+                            : value || 0}{' '}
+                          ]
                         </div>
                       </div>
                       <input
@@ -1609,17 +1688,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                         type="range"
                         min="0"
                         max="5"
-                        step="1"
+                        step={settings?.flavorRatingHalfStep ? '0.5' : '1'}
                         value={value || 0}
-                        onChange={e =>
+                        onChange={e => {
+                          // 标记用户已手动修改风味评分
+                          userModifiedFlavorRatingsRef.current = true;
+                          flavorRatingsOnlySyncedRef.current = false;
                           setFormData({
                             ...formData,
                             taste: {
                               ...formData.taste,
-                              [dimension.id]: parseInt(e.target.value),
+                              [dimension.id]: parseFloat(e.target.value),
                             },
-                          })
-                        }
+                          });
+                        }}
                         onTouchStart={tasteHandlers(dimension.id).onTouchStart(
                           value
                         )}
@@ -1654,12 +1736,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 max="5"
                 step="0.5"
                 value={formData.rating}
-                onChange={e =>
-                  setFormData({
-                    ...formData,
-                    rating: parseFloat(e.target.value),
-                  })
-                }
+                onChange={e => updateRating(parseFloat(e.target.value))}
                 onTouchStart={ratingHandlers.onTouchStart(formData.rating)}
                 onTouchMove={ratingHandlers.onTouchMove}
                 onTouchEnd={ratingHandlers.onTouchEnd}
