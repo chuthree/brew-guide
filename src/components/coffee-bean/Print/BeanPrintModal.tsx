@@ -8,12 +8,10 @@ import { DatePicker } from '@/components/common/ui/DatePicker';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import {
   PrintConfig,
+  PresetSize,
   getPrintConfigPreference,
-  getShowCustomSizePreference,
-  saveShowCustomSizePreference,
   resetConfigToDefault,
   toggleConfigField,
-  updateConfigSize,
   toggleConfigOrientation,
   updateConfigMargin,
   updateConfigFontSize,
@@ -21,9 +19,15 @@ import {
   updateConfigTemplate,
   updateConfigBrandName,
   setPresetSize,
+  getCustomPresetSizes,
+  addCustomPresetSize,
+  removeCustomPresetSize,
+  resetPresetSizesToDefault,
 } from './printConfig';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
 import ResponsiveModal from '@/components/common/ui/ResponsiveModal';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 interface BeanPrintModalProps {
   isOpen: boolean;
@@ -52,6 +56,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     const initialConfig = getPrintConfigPreference();
     return initialConfig;
   });
+
+  // 获取烘焙商设置
+  const settings = useSettingsStore(state => state.settings);
+  const roasterSettings = {
+    roasterFieldEnabled: settings.roasterFieldEnabled,
+    roasterSeparator: settings.roasterSeparator,
+  };
 
   // 统一样式常量
   const INPUT_CLASS =
@@ -159,22 +170,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     return parts.join(' / ');
   };
 
-  // 同步自定义尺寸输入状态与config
-  useEffect(() => {
-    setCustomSizeInputs({
-      width: config.width.toString(),
-      height: config.height.toString(),
-    });
-  }, [config.width, config.height]);
-  const [showCustomSize, setShowCustomSize] = useState(() =>
-    getShowCustomSizePreference()
-  );
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isSizeEditMode, setIsSizeEditMode] = useState(false);
+  const [presetSizes, setPresetSizes] = useState<PresetSize[]>(() =>
+    getCustomPresetSizes()
+  );
+  const [newSizeInputs, setNewSizeInputs] = useState({ width: '', height: '' });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [customSizeInputs, setCustomSizeInputs] = useState({
-    width: '',
-    height: '',
-  });
   const [editableContent, setEditableContent] = useState<EditableContent>({
     name: '',
     origin: '',
@@ -191,7 +193,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   useEffect(() => {
     if (bean) {
       setEditableContent({
-        name: bean.name || '',
+        name: formatBeanDisplayName(bean, roasterSettings),
         origin: extractBeanComponentInfo(bean, 'origin'),
         roastLevel: bean.roastLevel || '',
         roastDate: bean.roastDate || '',
@@ -202,7 +204,11 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
         weight: '',
       });
     }
-  }, [bean]);
+  }, [
+    bean,
+    roasterSettings.roasterFieldEnabled,
+    roasterSettings.roasterSeparator,
+  ]);
 
   // 关闭处理
   const handleClose = () => {
@@ -311,13 +317,6 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     setShowResetConfirm(false);
   };
 
-  // 预设尺寸 - 常用标签尺寸
-  const presetSizes = [
-    { label: '50×80', width: 50, height: 80 },
-    { label: '40×30', width: 40, height: 30 },
-    { label: '40×60', width: 40, height: 60 },
-  ];
-
   // 布局方向切换
   const toggleOrientation = () => {
     const newConfig = toggleConfigOrientation(config);
@@ -345,17 +344,43 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     setIsEditMode(!isEditMode);
   };
 
-  // 处理自定义尺寸显示状态变化
-  const handleShowCustomSizeChange = (show: boolean) => {
-    setShowCustomSize(show);
-    saveShowCustomSizePreference(show);
+  // 切换尺寸编辑模式
+  const toggleSizeEditMode = () => {
+    setIsSizeEditMode(!isSizeEditMode);
+    if (isSizeEditMode) {
+      // 退出编辑模式时清空输入
+      setNewSizeInputs({ width: '', height: '' });
+    }
+  };
+
+  // 添加新预设尺寸
+  const handleAddPresetSize = () => {
+    const width = parseInt(newSizeInputs.width);
+    const height = parseInt(newSizeInputs.height);
+    if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
+      const newSizes = addCustomPresetSize(presetSizes, width, height);
+      setPresetSizes(newSizes);
+      setNewSizeInputs({ width: '', height: '' });
+    }
+  };
+
+  // 删除预设尺寸
+  const handleRemovePresetSize = (index: number) => {
+    const newSizes = removeCustomPresetSize(presetSizes, index);
+    setPresetSizes(newSizes);
+  };
+
+  // 重置预设尺寸
+  const handleResetPresetSizes = () => {
+    const defaultSizes = resetPresetSizesToDefault();
+    setPresetSizes(defaultSizes);
   };
 
   // 重置编辑内容为原始数据
   const resetEditableContent = () => {
     if (bean) {
       setEditableContent({
-        name: bean.name || '',
+        name: formatBeanDisplayName(bean, roasterSettings),
         origin: extractBeanComponentInfo(bean, 'origin'),
         roastLevel: bean.roastLevel || '',
         roastDate: bean.roastDate || '',
@@ -503,162 +528,124 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
             <div className="space-y-4 p-4">
               {/* 尺寸设置 */}
               <div className="space-y-3">
-                <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
-                  尺寸设置
-                </div>
-
-                <div className="grid grid-cols-4 gap-2">
-                  {/* 预设尺寸按钮 */}
-                  {presetSizes.map(size => (
-                    <button
-                      key={size.label}
-                      onClick={() => {
-                        const newConfig = setPresetSize(
-                          config,
-                          size.width,
-                          size.height
-                        );
-                        setConfig(newConfig);
-                      }}
-                      className={`rounded px-3 py-2 text-xs font-medium transition-all ${
-                        config.width === size.width &&
-                        config.height === size.height
-                          ? 'bg-neutral-800 text-white dark:bg-neutral-700'
-                          : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700'
-                      }`}
-                    >
-                      {size.label}
-                    </button>
-                  ))}
-
-                  {/* 自定义按钮 */}
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                    尺寸设置
+                  </div>
                   <button
-                    onClick={() => handleShowCustomSizeChange(!showCustomSize)}
-                    className={`rounded px-3 py-2 text-xs font-medium transition-all ${
-                      showCustomSize
-                        ? 'bg-neutral-800 text-white dark:bg-neutral-700'
-                        : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700'
+                    onClick={toggleSizeEditMode}
+                    className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-all ${
+                      isSizeEditMode
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700'
                     }`}
                   >
-                    自定义
+                    {isSizeEditMode ? (
+                      <>
+                        <Check className="h-3 w-3" />
+                        完成
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="h-3 w-3" />
+                        编辑
+                      </>
+                    )}
                   </button>
                 </div>
 
-                {/* 自定义尺寸输入框 - 仅在点击自定义后显示 */}
-                {showCustomSize && (
-                  <div className="flex items-center gap-2 rounded bg-neutral-50 p-3 dark:bg-neutral-800/50">
-                    <input
-                      type="number"
-                      value={customSizeInputs.width}
-                      onChange={e => {
-                        const value = e.target.value;
-                        // 更新本地输入状态，允许空值
-                        setCustomSizeInputs(prev => ({
-                          ...prev,
-                          width: value,
-                        }));
-
-                        // 如果是有效数字，即时更新config用于预览
-                        if (value !== '') {
-                          const numValue = parseInt(value);
-                          if (
-                            !isNaN(numValue) &&
-                            numValue >= 40 &&
-                            numValue <= 200
-                          ) {
-                            setConfig(prev => ({ ...prev, width: numValue }));
+                {/* 预设尺寸按钮 */}
+                <div className="flex flex-wrap gap-2">
+                  {presetSizes.map((size, index) => (
+                    <div key={size.label} className="relative">
+                      <button
+                        onClick={() => {
+                          if (!isSizeEditMode) {
+                            const newConfig = setPresetSize(
+                              config,
+                              size.width,
+                              size.height
+                            );
+                            setConfig(newConfig);
                           }
+                        }}
+                        className={`rounded px-3 py-2 text-xs font-medium transition-all ${
+                          config.width === size.width &&
+                          config.height === size.height &&
+                          !isSizeEditMode
+                            ? 'bg-neutral-800 text-white dark:bg-neutral-700'
+                            : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700'
+                        } ${isSizeEditMode ? 'pr-7' : ''}`}
+                        disabled={isSizeEditMode}
+                      >
+                        {size.label}
+                      </button>
+                      {isSizeEditMode && (
+                        <button
+                          onClick={() => handleRemovePresetSize(index)}
+                          className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 编辑模式下的添加和重置 */}
+                {isSizeEditMode && (
+                  <div className="space-y-2 rounded bg-neutral-50 p-3 dark:bg-neutral-800/50">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={newSizeInputs.width}
+                        onChange={e =>
+                          setNewSizeInputs(prev => ({
+                            ...prev,
+                            width: e.target.value,
+                          }))
                         }
-                      }}
-                      onBlur={e => {
-                        // 失去焦点时验证并保存
-                        const value = e.target.value;
-                        let finalValue = 80; // 默认值
-
-                        if (value !== '') {
-                          const numValue = parseInt(value);
-                          if (!isNaN(numValue)) {
-                            finalValue = Math.max(40, Math.min(200, numValue)); // 限制在范围内
-                          }
+                        className="w-16 rounded border border-neutral-200/50 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                        placeholder="宽"
+                      />
+                      <span className="text-xs text-neutral-400">×</span>
+                      <input
+                        type="number"
+                        value={newSizeInputs.height}
+                        onChange={e =>
+                          setNewSizeInputs(prev => ({
+                            ...prev,
+                            height: e.target.value,
+                          }))
                         }
-
-                        const newConfig = updateConfigSize(
-                          config,
-                          'width',
-                          finalValue
-                        );
-                        setConfig(newConfig);
-                        setCustomSizeInputs(prev => ({
-                          ...prev,
-                          width: finalValue.toString(),
-                        }));
-                      }}
-                      className="flex-1 rounded border border-neutral-200/50 bg-white px-3 py-2 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                      placeholder="宽度"
-                      min="40"
-                      max="200"
-                    />
-                    <span className="text-xs text-neutral-400">×</span>
-                    <input
-                      type="number"
-                      value={customSizeInputs.height}
-                      onChange={e => {
-                        const value = e.target.value;
-                        // 更新本地输入状态，允许空值
-                        setCustomSizeInputs(prev => ({
-                          ...prev,
-                          height: value,
-                        }));
-
-                        // 如果是有效数字，即时更新config用于预览
-                        if (value !== '') {
-                          const numValue = parseInt(value);
-                          if (
-                            !isNaN(numValue) &&
-                            numValue >= 30 &&
-                            numValue <= 150
-                          ) {
-                            setConfig(prev => ({ ...prev, height: numValue }));
-                          }
-                        }
-                      }}
-                      onBlur={e => {
-                        // 失去焦点时验证并保存
-                        const value = e.target.value;
-                        let finalValue = 50; // 默认值
-
-                        if (value !== '') {
-                          const numValue = parseInt(value);
-                          if (!isNaN(numValue)) {
-                            finalValue = Math.max(30, Math.min(150, numValue)); // 限制在范围内
-                          }
-                        }
-
-                        const newConfig = updateConfigSize(
-                          config,
-                          'height',
-                          finalValue
-                        );
-                        setConfig(newConfig);
-                        setCustomSizeInputs(prev => ({
-                          ...prev,
-                          height: finalValue.toString(),
-                        }));
-                      }}
-                      className="flex-1 rounded border border-neutral-200/50 bg-white px-3 py-2 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
-                      placeholder="高度"
-                      min="30"
-                      max="150"
-                    />
-                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                      mm
-                    </span>
+                        className="w-16 rounded border border-neutral-200/50 bg-white px-2 py-1.5 text-xs transition-all focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+                        placeholder="高"
+                      />
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                        mm
+                      </span>
+                      <button
+                        onClick={handleAddPresetSize}
+                        disabled={!newSizeInputs.width || !newSizeInputs.height}
+                        className="flex h-7 items-center gap-1 rounded bg-neutral-800 px-2 text-xs font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-700 dark:hover:bg-neutral-600"
+                      >
+                        <Plus className="h-3 w-3" />
+                        添加
+                      </button>
+                    </div>
+                    <button
+                      onClick={handleResetPresetSizes}
+                      className="flex items-center gap-1 text-xs text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      重置为默认
+                    </button>
                   </div>
                 )}
               </div>
 
               {/* 布局与字体设置 */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
                     布局设置
@@ -668,113 +655,97 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                     className="flex items-center gap-1 px-2 py-1 text-xs text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
                   >
                     <RotateCcw className="h-3 w-3" />
-                    重置配置
+                    重置
                   </button>
                 </div>
 
-                {/* 方向选择 */}
-                <div>
-                  <div className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
-                    方向
-                  </div>
+                {/* 方向和模板选择 - 合并为一行 */}
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={toggleOrientation}
-                    className="w-full rounded bg-neutral-100 px-3 py-2 text-xs font-medium transition-all hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                    className="rounded bg-neutral-100 px-3 py-2 text-xs font-medium transition-all hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                   >
                     {config.orientation === 'landscape' ? '横向 ↔' : '纵向 ↕'}
                   </button>
-                </div>
-
-                {/* 模板选择 */}
-                <div>
-                  <div className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
-                    模板
-                  </div>
-                  <select
-                    value={config.template}
-                    onChange={e => {
+                  <button
+                    onClick={() => {
+                      const newTemplate =
+                        config.template === 'detailed' ? 'minimal' : 'detailed';
                       const newConfig = updateConfigTemplate(
                         config,
-                        e.target.value as PrintConfig['template']
+                        newTemplate
                       );
                       setConfig(newConfig);
                     }}
-                    className="w-full cursor-pointer rounded bg-neutral-100 px-3 py-2 text-xs font-medium transition-all hover:bg-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                    className="rounded bg-neutral-100 px-3 py-2 text-xs font-medium transition-all hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                   >
-                    <option value="detailed">详细模板</option>
-                    <option value="minimal">简洁模板</option>
-                  </select>
+                    {config.template === 'detailed' ? '详细模板' : '简洁模板'}
+                  </button>
                 </div>
 
                 {/* 滑块设置 */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   {/* 边距 */}
                   <div>
-                    <div className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
-                      边距 {config.margin}mm
+                    <div className="mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                      边距 {config.margin}
                     </div>
-                    <div className="px-1">
-                      <input
-                        type="range"
-                        min="1"
-                        max="8"
-                        value={config.margin}
-                        onChange={e => {
-                          const newConfig = updateConfigMargin(
-                            config,
-                            parseInt(e.target.value)
-                          );
-                          setConfig(newConfig);
-                        }}
-                        className="slider h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
-                      />
-                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="8"
+                      value={config.margin}
+                      onChange={e => {
+                        const newConfig = updateConfigMargin(
+                          config,
+                          parseInt(e.target.value)
+                        );
+                        setConfig(newConfig);
+                      }}
+                      className="slider h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
+                    />
                   </div>
 
                   {/* 字体大小 */}
                   <div>
-                    <div className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
-                      字体 {config.fontSize}px
+                    <div className="mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                      字号 {config.fontSize}
                     </div>
-                    <div className="px-1">
-                      <input
-                        type="range"
-                        min="6"
-                        max="24"
-                        value={config.fontSize}
-                        onChange={e => {
-                          const size = parseInt(e.target.value);
-                          const newConfig = updateConfigFontSize(config, size);
-                          setConfig(newConfig);
-                        }}
-                        className="slider h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
-                      />
-                    </div>
+                    <input
+                      type="range"
+                      min="6"
+                      max="24"
+                      value={config.fontSize}
+                      onChange={e => {
+                        const size = parseInt(e.target.value);
+                        const newConfig = updateConfigFontSize(config, size);
+                        setConfig(newConfig);
+                      }}
+                      className="slider h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
+                    />
                   </div>
 
                   {/* 字体粗细 */}
                   <div>
-                    <div className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
-                      粗细 {config.fontWeight}
+                    <div className="mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                      字重 {config.fontWeight}
                     </div>
-                    <div className="px-1">
-                      <input
-                        type="range"
-                        min="300"
-                        max="900"
-                        step="100"
-                        value={config.fontWeight}
-                        onChange={e => {
-                          const weight = parseInt(e.target.value);
-                          const newConfig = updateConfigFontWeight(
-                            config,
-                            weight
-                          );
-                          setConfig(newConfig);
-                        }}
-                        className="slider h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
-                      />
-                    </div>
+                    <input
+                      type="range"
+                      min="300"
+                      max="900"
+                      step="100"
+                      value={config.fontWeight}
+                      onChange={e => {
+                        const weight = parseInt(e.target.value);
+                        const newConfig = updateConfigFontWeight(
+                          config,
+                          weight
+                        );
+                        setConfig(newConfig);
+                      }}
+                      className="slider h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
+                    />
                   </div>
                 </div>
               </div>

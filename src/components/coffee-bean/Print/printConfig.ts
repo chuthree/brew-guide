@@ -8,6 +8,20 @@ import {
 // 模块名称
 const MODULE_NAME = 'bean-print';
 
+// 预设尺寸接口
+export interface PresetSize {
+  label: string;
+  width: number;
+  height: number;
+}
+
+// 默认预设尺寸
+export const defaultPresetSizes: PresetSize[] = [
+  { label: '50×80', width: 50, height: 80 },
+  { label: '40×30', width: 40, height: 30 },
+  { label: '40×60', width: 40, height: 60 },
+];
+
 // PrintConfig 接口定义
 export interface PrintConfig {
   width: number; // mm
@@ -227,4 +241,62 @@ export const setPresetSize = (
   const newConfig = { ...currentConfig, width, height };
   savePrintConfigPreference(newConfig);
   return newConfig;
+};
+
+/**
+ * 获取自定义预设尺寸列表
+ */
+export const getCustomPresetSizes = (): PresetSize[] => {
+  return getObjectState<PresetSize[]>(
+    MODULE_NAME,
+    'customPresetSizes',
+    defaultPresetSizes
+  );
+};
+
+/**
+ * 保存自定义预设尺寸列表
+ */
+export const saveCustomPresetSizes = (sizes: PresetSize[]): void => {
+  saveObjectState(MODULE_NAME, 'customPresetSizes', sizes);
+};
+
+/**
+ * 添加自定义预设尺寸
+ */
+export const addCustomPresetSize = (
+  currentSizes: PresetSize[],
+  width: number,
+  height: number
+): PresetSize[] => {
+  const label = `${width}×${height}`;
+  // 检查是否已存在相同尺寸
+  const exists = currentSizes.some(
+    s => s.width === width && s.height === height
+  );
+  if (exists) return currentSizes;
+
+  const newSizes = [...currentSizes, { label, width, height }];
+  saveCustomPresetSizes(newSizes);
+  return newSizes;
+};
+
+/**
+ * 删除自定义预设尺寸
+ */
+export const removeCustomPresetSize = (
+  currentSizes: PresetSize[],
+  index: number
+): PresetSize[] => {
+  const newSizes = currentSizes.filter((_, i) => i !== index);
+  saveCustomPresetSizes(newSizes);
+  return newSizes;
+};
+
+/**
+ * 重置预设尺寸为默认值
+ */
+export const resetPresetSizesToDefault = (): PresetSize[] => {
+  saveCustomPresetSizes(defaultPresetSizes);
+  return defaultPresetSizes;
 };
