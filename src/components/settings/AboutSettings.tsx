@@ -8,55 +8,15 @@ import { SettingPage } from './atomic';
 
 const CollapsibleSection: React.FC<{
   title: string;
-  children: string;
+  children: React.ReactNode;
 }> = ({ title, children }) => {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [displayedText, setDisplayedText] = React.useState('');
-  const [isAnimating, setIsAnimating] = React.useState(false);
-  const textRef = React.useRef<HTMLSpanElement>(null);
-
-  React.useEffect(() => {
-    if (isOpen) {
-      setIsAnimating(true);
-      let i = 0;
-      const timer = setInterval(() => {
-        if (i < children.length) {
-          setDisplayedText(children.slice(0, i + 1));
-          i++;
-        } else {
-          clearInterval(timer);
-          setIsAnimating(false);
-        }
-      }, 30);
-      return () => clearInterval(timer);
-    }
-  }, [isOpen, children]);
-
-  const handleToggle = () => {
-    if (isOpen && !isAnimating) {
-      // 用原生 Selection API 选中文字
-      const selection = window.getSelection();
-      const range = document.createRange();
-      if (textRef.current && selection) {
-        range.selectNodeContents(textRef.current);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-      setTimeout(() => {
-        window.getSelection()?.removeAllRanges();
-        setDisplayedText('');
-        setIsOpen(false);
-      }, 300);
-    } else if (!isOpen) {
-      setIsOpen(true);
-    }
-  };
 
   return (
     <div>
       <p
-        onClick={handleToggle}
-        className={`flex cursor-pointer items-center gap-1 select-none ${isAnimating ? 'pointer-events-none' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex cursor-pointer items-center gap-1 select-none"
       >
         {isOpen ? <Minus size={16} /> : <Plus size={16} />}
         {title}
@@ -66,13 +26,11 @@ const CollapsibleSection: React.FC<{
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            exit={{}}
-            transition={{ duration: 0.3 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <p className="mt-2 ml-4 whitespace-pre-line">
-              <span ref={textRef}>{displayedText}</span>
-            </p>
+            <div className="mt-2 ml-4 space-y-2">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -170,20 +128,80 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
             </p>
           )}
           <hr className="my-6" />
-          <CollapsibleSection title="故事">
-            {`🤔 不瞒你说，这个项目最初是我用来记录辛鹿方案的...
-
-            有天，鼓起勇气发到群里，得到了很大的支持，才有了不断迭代的动力。
-             
-            库存功能是后来才加的，现在也慢慢变的比我预想中的要复杂。
-            
-            不过这也让我明白，这个应用不必做大，定位就是一个小工具，好用，顺手足够了。
-            `}
+          <CollapsibleSection title="隐私政策">
+            <p>
+              本应用使用百度统计收集匿名使用数据，包括页面访问、设备类型等基本信息，用于改进产品体验。
+            </p>
+            <p>
+              所有咖啡豆和冲煮记录均存储在您的设备本地。如启用云同步，数据将同步至您自行配置的服务器（WebDAV/S3/Supabase），我们不会访问或存储这些数据。
+            </p>
+            <p>
+              使用图片识别功能（咖啡豆/冲煮方案）时，图片会上传至服务器进行 AI
+              分析，处理完成后立即删除，不会保存。
+            </p>
+            <p>
+              想法收集功能会记录您的 IP
+              哈希值（匿名化处理）用于防止重复投票，不会关联到您的真实身份。
+            </p>
           </CollapsibleSection>
-          <CollapsibleSection title="个人">
-            {`一位独立开发者(?)，毕业一年正处于迷茫期，开发这个项目，也成为让在过程中不迷失自己的方式。
-
-            我喜欢简洁，安静，不被打扰的感觉。`}
+          <CollapsibleSection title="开源致谢">
+            <p>
+              本项目使用了{' '}
+              <a
+                href="https://www.isocons.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-800 underline dark:text-neutral-200"
+              >
+                Isometric Icons
+              </a>{' '}
+              图标库，采用{' '}
+              <a
+                href="https://creativecommons.org/licenses/by/4.0/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-800 underline dark:text-neutral-200"
+              >
+                CC BY 4.0
+              </a>{' '}
+              协议授权。
+            </p>
+          </CollapsibleSection>
+          <CollapsibleSection title="相关链接">
+            <p className="flex flex-col gap-1.5">
+              <a
+                href="https://chu3.top/brewguide"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-800 underline dark:text-neutral-200"
+              >
+                官网
+              </a>
+              <a
+                href="https://help.chu3.top/docs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-800 underline dark:text-neutral-200"
+              >
+                帮助
+              </a>
+              <a
+                href="https://chu3.top/brew2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-800 underline dark:text-neutral-200"
+              >
+                Brew2 计划
+              </a>
+              <a
+                href="https://chu3.top/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-800 underline dark:text-neutral-200"
+              >
+                开发者
+              </a>
+            </p>
           </CollapsibleSection>
           {/* <p>
             你好，我是{' '}

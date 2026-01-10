@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { APP_VERSION, sponsorsList } from '@/lib/core/config';
+import { pinyin } from 'pinyin-pro';
 import hapticsUtils from '@/lib/ui/haptics';
 import { restoreDefaultThemeColor } from '@/lib/hooks/useThemeColor';
 import {
@@ -90,6 +91,85 @@ interface SettingsProps {
   onDataChange?: () => void;
   subSettingsHandlers: SubSettingsHandlers;
   hasSubSettingsOpen: boolean; // 是否有子设置页面打开
+}
+
+// 获取名字的首字母（支持中文拼音）
+function getFirstLetter(name: string): string {
+  const first = name.charAt(0);
+  // 英文字母直接返回大写
+  if (/^[A-Za-z]$/.test(first)) {
+    return first.toUpperCase();
+  }
+  // 数字
+  if (/^[0-9]$/.test(first)) {
+    return '0-9';
+  }
+  // 中文取拼音首字母
+  const py = pinyin(first, { pattern: 'first', toneType: 'none' });
+  if (py && /^[a-z]$/i.test(py)) {
+    return py.toUpperCase();
+  }
+  return '#';
+}
+
+// 按首字母分组
+function groupByFirstLetter(names: string[]) {
+  // 先排序：英文/数字在前，中文在后，同类按 zh-CN locale 排序
+  const sorted = [...names].sort((a, b) => {
+    const isAEnglish = /^[A-Za-z0-9]/.test(a.charAt(0));
+    const isBEnglish = /^[A-Za-z0-9]/.test(b.charAt(0));
+    if (isAEnglish && !isBEnglish) return -1;
+    if (!isAEnglish && isBEnglish) return 1;
+    return a.localeCompare(b, 'zh-CN');
+  });
+
+  const groups: Record<string, string[]> = {};
+
+  sorted.forEach(name => {
+    const key = getFirstLetter(name);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(name);
+  });
+
+  // 排序：字母 A-Z，然后 0-9，最后 #
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    if (a === '#') return 1;
+    if (b === '#') return -1;
+    if (a === '0-9') return b === '#' ? -1 : 1;
+    if (b === '0-9') return a === '#' ? 1 : -1;
+    return a.localeCompare(b);
+  });
+
+  return sortedKeys.map(key => ({ letter: key, names: groups[key] }));
+}
+
+// 赞助者名单组件
+function SponsorList() {
+  const grouped = useMemo(() => groupByFirstLetter(sponsorsList), []);
+
+  return (
+    <div className="mt-8 divide-y divide-neutral-100 dark:divide-neutral-800">
+      {grouped.map(({ letter, names }) => (
+        <div
+          key={letter}
+          className="flex py-1.5 text-neutral-800 dark:text-neutral-200"
+        >
+          <span className="w-6 shrink-0 text-neutral-300 dark:text-neutral-600">
+            {letter}
+          </span>
+          <span className="flex-1 text-left">{names.join('、')}</span>
+        </div>
+      ))}
+      <div className="flex py-1.5">
+        <span className="w-6 shrink-0 text-neutral-300 dark:text-neutral-600">
+          &
+        </span>
+        <span className="flex-1 text-left text-neutral-800 dark:text-neutral-200">
+          You
+        </span>
+      </div>
+    </div>
+  );
 }
 
 const Settings: React.FC<SettingsProps> = ({
@@ -761,44 +841,16 @@ const Settings: React.FC<SettingsProps> = ({
 
         {/* 感谢名单 */}
         <div className="px-8 pt-18 pb-8">
-          <div className="text-left text-xs text-neutral-400 select-none dark:text-neutral-600">
-            <p>
-              感谢各位一直以来的支持。自 2025 年 2 月 1
-              日首次发布至今，项目已持续运行{' '}
+          <div className="text-left text-xs select-none">
+            <p className="font-medium text-neutral-800 dark:text-neutral-200">
+              感谢你们的支持，自 2025 年 2 月 1 日首次发布至今，项目已持续运行{' '}
               {Math.floor(
                 (Date.now() - new Date('2025-02-01').getTime()) /
                   (1000 * 60 * 60 * 24)
               )}{' '}
-              天，你们的每一次鼓励与贡献，都是它不断成长的重要动力。
+              天。
             </p>
-            <div className="mt-8 grid grid-cols-[auto_auto_auto] justify-between gap-y-1 sm:grid-cols-[auto_auto_auto_auto_auto]">
-              {sponsorsList
-                .sort((a, b) => {
-                  const isAEnglish = /^[A-Za-z0-9\s:]+$/.test(a.charAt(0));
-                  const isBEnglish = /^[A-Za-z0-9\s:]+$/.test(b.charAt(0));
-
-                  if (isAEnglish && !isBEnglish) return -1;
-                  if (!isAEnglish && isBEnglish) return 1;
-                  return a.localeCompare(b, 'zh-CN');
-                })
-                .map(name => {
-                  const hasOnlyEmoji =
-                    name.length <= 2 && !/[a-zA-Z0-9\u4e00-\u9fa5]/.test(name);
-                  return (
-                    <span
-                      key={name}
-                      style={
-                        hasOnlyEmoji
-                          ? { opacity: 0.5, filter: 'grayscale(0.4)' }
-                          : undefined
-                      }
-                    >
-                      {name}
-                    </span>
-                  );
-                })}
-              <span>and You</span>
-            </div>
+            <SponsorList />
           </div>
         </div>
       </div>
