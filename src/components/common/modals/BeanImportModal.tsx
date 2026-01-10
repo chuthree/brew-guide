@@ -4,6 +4,8 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { useCopy } from '@/lib/hooks/useCopy';
+import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
 import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
@@ -151,6 +153,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   onRecognitionImage,
   settings,
 }) => {
+  // 统一的复制功能
+  const { copyText, failureDrawerProps } = useCopy({
+    successMessage: '提示词已复制',
+  });
+
   // 当前步骤
   const [currentStep, setCurrentStep] = useState<ImportStep>('main');
   // 图片识别加载状态
@@ -648,44 +655,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     fileInputRef.current?.click();
   }, []);
 
-  // 复制提示词 - 使用兼容性更好的方法
+  // 复制提示词 - 使用统一的 useCopy hook
   const handleCopyPrompt = useCallback(async () => {
-    try {
-      // 首先尝试使用现代API
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(BEAN_RECOGNITION_PROMPT);
-        showToast({ type: 'success', title: '提示词已复制' });
-        return;
-      }
-
-      // 回退方法：创建临时textarea元素
-      const textArea = document.createElement('textarea');
-      textArea.value = BEAN_RECOGNITION_PROMPT;
-
-      // 设置样式使其不可见
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      textArea.style.top = '-999999px';
-      document.body.appendChild(textArea);
-
-      // 选择文本并复制
-      textArea.focus();
-      textArea.select();
-
-      const successful = document.execCommand('copy');
-      if (successful) {
-        showToast({ type: 'success', title: '提示词已复制' });
-      } else {
-        showToast({ type: 'error', title: '复制失败' });
-      }
-
-      // 清理临时元素
-      document.body.removeChild(textArea);
-    } catch (error) {
-      console.error('复制提示词失败:', error);
-      showToast({ type: 'error', title: '复制失败' });
-    }
-  }, []);
+    await copyText(BEAN_RECOGNITION_PROMPT);
+  }, [copyText]);
 
   // 提交 JSON 输入
   const handleSubmitJson = useCallback(async () => {
@@ -1046,6 +1019,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         className="hidden"
         onChange={handleImageUpload}
       />
+
+      {/* 复制失败抽屉 */}
+      <CopyFailureDrawer {...failureDrawerProps} />
     </>
   );
 };

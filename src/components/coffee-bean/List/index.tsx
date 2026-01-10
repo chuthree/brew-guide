@@ -12,7 +12,8 @@ import CoffeeBeanRatingModal from '../Rating/Modal';
 import _CoffeeBeanRanking from '../Ranking';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import { useCopy } from '@/lib/hooks/useCopy';
-import CopyFailureModal from '../ui/copy-failure-modal';
+import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
+import { beanToReadableText } from '@/lib/utils/jsonUtils';
 import {
   type SortOption,
   sortBeans,
@@ -107,8 +108,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   initialViewMode,
   settings,
 }) => {
-  const { copyText, showFailureModal, failureContent, closeFailureModal } =
-    useCopy();
+  const { copyText, failureDrawerProps } = useCopy();
 
   // 直接从 Store 订阅数据
   const beans = useCoffeeBeanStore(
@@ -1575,8 +1575,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         selectedBeans.includes(bean.id)
       );
 
-      // 生成文本
-      const { beanToReadableText } = await import('@/lib/utils/jsonUtils');
+      // 生成文本（同步操作，避免打破用户手势调用链）
       const isSingleBean = beansToShare.length === 1;
 
       const texts = beansToShare.map(bean => {
@@ -1609,8 +1608,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         fullText = texts.join('\n---\n') + '\n---\n@DATA_TYPE:COFFEE_BEAN@\n';
       }
 
-      copyText(fullText);
-      handleCancelShare();
+      // 等待复制完成，只有成功才退出分享模式
+      const success = await copyText(fullText);
+      if (success) {
+        handleCancelShare();
+      }
     } catch (error) {
       console.error('分享文本失败:', error);
       showToast({ type: 'error', title: '分享文本失败', duration: 3000 });
@@ -1883,12 +1885,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         />
       )}
 
-      {/* 复制失败模态框 */}
-      <CopyFailureModal
-        isOpen={showFailureModal}
-        onClose={closeFailureModal}
-        content={failureContent || ''}
-      />
+      {/* 复制失败抽屉 */}
+      <CopyFailureDrawer {...failureDrawerProps} />
 
       {/* 隐藏的导出容器 - 用于生成图片 */}
       <div

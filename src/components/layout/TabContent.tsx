@@ -27,6 +27,8 @@ import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
 import { MethodStepConfig } from '@/lib/types/method';
 import GrinderScaleIndicator from '@/components/ui/GrinderScaleIndicator';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { useCopy } from '@/lib/hooks/useCopy';
+import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
 
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -180,7 +182,8 @@ const TabContent: React.FC<TabContentProps> = ({
   const loadBeansFromStore = useCoffeeBeanStore(state => state.loadBeans);
   const [isLongPressRandom, setIsLongPressRandom] = useState(false);
 
-  // 分享功能已简化为直接复制到剪贴板，不再需要模态框状态
+  // 统一的复制功能（带失败抽屉）
+  const { copyText, failureDrawerProps } = useCopy();
 
   // 监听流速显示设置变化
   useEffect(() => {
@@ -553,28 +556,19 @@ const TabContent: React.FC<TabContentProps> = ({
     [onEditMethod, customEquipments]
   );
 
-  // 简化的分享处理函数 - 直接复制到剪贴板 - 使用 useCallback 优化
+  // 简化的分享处理函数 - 使用统一的 useCopy hook
   const handleShareMethod = useCallback(
     async (method: Method) => {
-      try {
-        const { copyMethodToClipboard } = await import(
-          '@/lib/stores/customMethodStore'
-        );
-        await copyMethodToClipboard(method, getSelectedCustomEquipment());
-        showToast({
-          type: 'success',
-          title: '已复制到剪贴板',
-          duration: 2000,
-        });
-      } catch (_error) {
-        showToast({
-          type: 'error',
-          title: '复制失败，请重试',
-          duration: 2000,
-        });
-      }
+      const { generateMethodShareText } = await import(
+        '@/lib/stores/customMethodStore'
+      );
+      const text = await generateMethodShareText(
+        method,
+        getSelectedCustomEquipment()
+      );
+      await copyText(text);
     },
-    [getSelectedCustomEquipment]
+    [getSelectedCustomEquipment, copyText]
   );
 
   const handleShareEquipment = useCallback(
@@ -1089,7 +1083,8 @@ const TabContent: React.FC<TabContentProps> = ({
         />
       )}
 
-      {/* 分享功能已简化为直接复制到剪贴板，不再需要模态框 */}
+      {/* 复制失败抽屉 */}
+      <CopyFailureDrawer {...failureDrawerProps} />
     </>
   );
 };

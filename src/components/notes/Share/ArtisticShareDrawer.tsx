@@ -7,10 +7,11 @@ import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useCopy } from '@/lib/hooks/useCopy';
+import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
 import { CoffeeBean } from '@/types/app';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { showToast } from '@/components/common/feedback/LightToast';
-import { copyToClipboard } from '@/lib/utils/exportUtils';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { Loader2 } from 'lucide-react';
 
@@ -34,6 +35,11 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
+
+  // 统一的复制功能
+  const { copyText, failureDrawerProps } = useCopy({
+    successMessage: '文案已复制',
+  });
 
   // 从 Store 获取咖啡豆数据
   const allBeans = useCoffeeBeanStore(state => state.beans);
@@ -215,13 +221,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
 
   const handleCopyText = async () => {
     const text = generateShareText();
-    const result = await copyToClipboard(text);
-
-    if (result.success) {
-      showToast({ type: 'success', title: '文案已复制' });
-    } else {
-      showToast({ type: 'error', title: '复制失败' });
-    }
+    await copyText(text);
   };
 
   const generateShareText = () => {
@@ -404,6 +404,9 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
           </div>
         </>
       )}
+
+      {/* 复制失败抽屉 */}
+      <CopyFailureDrawer {...failureDrawerProps} />
     </ActionDrawer>
   );
 };

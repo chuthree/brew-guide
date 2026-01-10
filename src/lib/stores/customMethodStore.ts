@@ -589,74 +589,76 @@ export async function copyMethodToEquipment(
   return store.addMethod(targetEquipmentId, newMethod);
 }
 
-// ==================== 剪贴板/导出工具函数 ====================
+// ==================== 文本生成/导出工具函数 ====================
 
 /**
- * 复制冲煮方案到剪贴板
+ * 生成冲煮方案的可读文本
+ * 用于复制分享，UI 层使用 useCopy hook 处理实际复制逻辑
+ */
+export async function generateMethodShareText(
+  method: Method,
+  customEquipment?: CustomEquipment
+): Promise<string> {
+  const { methodToReadableText } = await import('@/lib/utils/jsonUtils');
+  return methodToReadableText(method, customEquipment);
+}
+
+/**
+ * 导出器具配置为 JSON 文件（下载）
+ */
+export async function exportEquipmentToFile(
+  equipment: CustomEquipment,
+  methods?: Method[]
+): Promise<void> {
+  // 准备导出数据
+  const exportData = {
+    equipment: {
+      ...equipment,
+      customPourAnimations: equipment.customPourAnimations || [],
+      id: equipment.id,
+    },
+    methods:
+      methods && methods.length > 0
+        ? methods.map(method => ({
+            ...method,
+            id: method.id,
+          }))
+        : [],
+  };
+
+  // 转换为JSON格式
+  const jsonData = JSON.stringify(exportData, null, 2);
+
+  // 创建 Blob 并下载为文件
+  const blob = new Blob([jsonData], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${equipment.name}_器具配置.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// ==================== 向后兼容的别名 ====================
+
+/**
+ * @deprecated 使用 generateMethodShareText 代替，配合 useCopy hook 使用
  */
 export async function copyMethodToClipboard(
   method: Method,
   customEquipment?: CustomEquipment
 ): Promise<void> {
-  try {
-    const { methodToReadableText } = await import('@/lib/utils/jsonUtils');
-    const text = methodToReadableText(method, customEquipment);
-
-    // 尝试使用现代API
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      // 降级方案
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    }
-  } catch (err) {
-    throw err;
+  const { copyToClipboard } = await import('@/lib/utils/exportUtils');
+  const text = await generateMethodShareText(method, customEquipment);
+  const result = await copyToClipboard(text);
+  if (!result.success) {
+    throw new Error('复制失败');
   }
 }
 
 /**
- * 导出器具配置为 JSON 文件
+ * @deprecated 使用 exportEquipmentToFile 代替
  */
-export async function copyEquipmentToClipboard(
-  equipment: CustomEquipment,
-  methods?: Method[]
-): Promise<void> {
-  try {
-    // 准备导出数据
-    const exportData = {
-      equipment: {
-        ...equipment,
-        customPourAnimations: equipment.customPourAnimations || [],
-        id: equipment.id,
-      },
-      methods:
-        methods && methods.length > 0
-          ? methods.map(method => ({
-              ...method,
-              id: method.id,
-            }))
-          : [],
-    };
-
-    // 转换为JSON格式
-    const jsonData = JSON.stringify(exportData, null, 2);
-
-    // 创建 Blob 并下载为文件
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${equipment.name}_器具配置.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    throw err;
-  }
-}
+export const copyEquipmentToClipboard = exportEquipmentToFile;
