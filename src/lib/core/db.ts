@@ -83,6 +83,9 @@ export interface AppSettings {
     stepDisplayMode?: 'independent' | 'cumulative' | 'time'; // 步骤时间显示模式
   };
 
+  // 雷达图设置
+  radarChartScale?: number; // 雷达图缩放比例 (0.5 - 1.1)
+
   // 咖啡豆显示设置
   decrementPresets: number[];
   enableAllDecrementOption: boolean;

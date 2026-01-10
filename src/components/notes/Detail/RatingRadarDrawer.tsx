@@ -2,6 +2,9 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import { Expand, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { db } from '@/lib/core/db';
 
 interface RatingItem {
   id: string;
@@ -371,6 +374,75 @@ const RadarChart: React.FC<{
 };
 
 /**
+ * 自定义滑块组件
+ * 支持胶囊形滑块和自定义颜色
+ */
+const RadarSlider: React.FC<{
+  value: number;
+  min: number;
+  max: number;
+  onChange: (val: number) => void;
+  className?: string;
+}> = ({ value, min, max, onChange, className }) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const handleMove = (clientX: number) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const percentage = x / rect.width;
+    const rawValue = min + percentage * (max - min);
+    // 步进 0.05
+    const step = 0.05;
+    const steppedValue = Math.round(rawValue / step) * step;
+    const finalValue = Math.max(min, Math.min(max, steppedValue));
+
+    onChange(finalValue);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    handleMove(e.clientX);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (e.buttons > 0) {
+      handleMove(e.clientX);
+    }
+  };
+
+  const percent = ((value - min) / (max - min)) * 100;
+
+  return (
+    <div
+      ref={ref}
+      className={`relative flex h-full cursor-pointer touch-none items-center select-none ${className}`}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+    >
+      {/* 刻度背景 - 放在底层 */}
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-between px-0.5 opacity-20">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+          <div
+            key={i}
+            className="h-1 w-0.5 rounded-full bg-neutral-900 dark:bg-white"
+          />
+        ))}
+      </div>
+
+      {/* 轨道背景 */}
+      <div className="absolute inset-x-0 h-1 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+
+      {/* 胶囊滑块 */}
+      <div
+        className="absolute top-1/2 h-3.5 w-5.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-xs dark:bg-neutral-300"
+        style={{ left: `${percent}%` }}
+      />
+    </div>
+  );
+};
+
+/**
  * 评分雷达图抽屉组件
  * 仅在 4 个及以上维度时使用，显示雷达图
  */
@@ -382,6 +454,49 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
   beanName,
   note,
 }) => {
+  const [scale, setScale] = useState(1);
+  const [isAdjusting, setIsAdjusting] = useState(false);
+
+  // 从 settings 加载保存的缩放值
+  useEffect(() => {
+    const loadScale = async () => {
+      try {
+        const settings = await db.appSettings.get('default');
+        if (settings?.data?.radarChartScale) {
+          setScale(settings.data.radarChartScale);
+        }
+      } catch (error) {
+        console.error('Failed to load radar chart scale:', error);
+      }
+    };
+    loadScale();
+  }, []);
+
+  // 保存缩放值到 settings
+  const handleScaleChange = async (newScale: number) => {
+    setScale(newScale);
+    try {
+      const settings = await db.appSettings.get('default');
+      if (settings) {
+        await db.appSettings.put({
+          id: 'default',
+          data: {
+            ...settings.data,
+            radarChartScale: newScale,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save radar chart scale:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsAdjusting(false);
+    }
+  }, [isOpen]);
+
   return (
     <ActionDrawer
       isOpen={isOpen}
@@ -389,9 +504,14 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
       historyId="rating-radar-drawer"
     >
       <div className="flex flex-col">
-        {/* 雷达图区域 */}
-        <div className="-mx-4 mb-2 w-[calc(100%+2rem)]">
-          <RadarChart ratings={ratings} maxValue={5} />
+        {/* 雷达图区域 - 支持缩放 */}
+        <div className="-mx-4 mb-2 flex w-[calc(100%+2rem)] justify-center overflow-hidden">
+          <div
+            className="origin-top transition-all duration-300 ease-out"
+            style={{ width: `${scale * 100}%` }}
+          >
+            <RadarChart ratings={ratings} maxValue={5} />
+          </div>
         </div>
 
         {/* 咖啡豆信息和笔记 */}
@@ -413,9 +533,64 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
       </div>
 
       <ActionDrawer.Actions className="mt-6">
-        <ActionDrawer.SecondaryButton onClick={onClose}>
-          关闭
-        </ActionDrawer.SecondaryButton>
+        <AnimatePresence mode="popLayout" initial={false}>
+          {!isAdjusting ? (
+            <motion.div
+              key="normal"
+              className="flex w-full gap-3"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+            >
+              <button
+                className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-neutral-100 text-neutral-600 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-neutral-400"
+                onClick={() => setIsAdjusting(true)}
+              >
+                <Expand size={18} />
+              </button>
+              <ActionDrawer.SecondaryButton
+                onClick={onClose}
+                className="flex-1"
+              >
+                关闭
+              </ActionDrawer.SecondaryButton>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="adjusting"
+              className="flex w-full gap-3"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="relative flex h-11 flex-1 items-center gap-3 rounded-full bg-neutral-100 px-4 dark:bg-neutral-800">
+                <span className="relative z-10 text-xs font-medium text-neutral-400">
+                  小
+                </span>
+
+                <RadarSlider
+                  value={scale}
+                  min={0.5}
+                  max={1.1}
+                  onChange={handleScaleChange}
+                  className="flex-1"
+                />
+
+                <span className="relative z-10 text-xs font-medium text-neutral-400">
+                  大
+                </span>
+              </div>
+              <button
+                className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-neutral-300"
+                onClick={() => setIsAdjusting(false)}
+              >
+                <Check size={20} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </ActionDrawer.Actions>
     </ActionDrawer>
   );
