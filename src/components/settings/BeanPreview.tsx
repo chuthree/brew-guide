@@ -3,6 +3,7 @@
 import React from 'react';
 import { ExtendedCoffeeBean } from '../coffee-bean/List/types';
 import { SettingsOptions } from './Settings';
+import { getBeanDisplayInitial } from '@/lib/utils/beanVarietyUtils';
 
 interface BeanPreviewProps {
   settings: SettingsOptions;
@@ -263,7 +264,7 @@ const BeanPreviewItem: React.FC<{
       <div className="relative self-start">
         <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
           <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
-            {bean.name ? bean.name.charAt(0) : '豆'}
+            {getBeanDisplayInitial(bean)}
           </div>
         </div>
 

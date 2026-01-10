@@ -1277,6 +1277,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       const beansWithScores = beansToFilter.map(bean => {
         // 基本信息搜索
         const name = bean.name?.toLowerCase() || '';
+        const roaster = bean.roaster?.toLowerCase() || '';
         // 从 blendComponents 获取产地、庄园和处理法信息（用于向后兼容搜索）
         const origin =
           bean.blendComponents
@@ -1328,6 +1329,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 组合所有可搜索文本到一个数组，为不同字段分配权重
         const searchableTexts = [
           { text: name, weight: 3 }, // 名称权重最高
+          { text: roaster, weight: 3 }, // 烘焙商权重最高
           { text: origin, weight: 2 }, // 产地权重较高
           { text: estate, weight: 2 }, // 庄园权重较高
           { text: process, weight: 2 }, // 处理法权重较高

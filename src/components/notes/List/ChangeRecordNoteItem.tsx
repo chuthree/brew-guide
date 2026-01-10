@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { formatDate } from '../utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { BrewingNote } from '@/lib/core/config';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
 interface ChangeRecordNoteItemProps {
   note: BrewingNote;
@@ -34,9 +35,41 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
     state => state.settings.roasterSeparator
   );
 
+  // 通过 beanId 获取咖啡豆信息（用于旧数据兼容）
+  const beans = useCoffeeBeanStore(state => state.beans);
+  const linkedBean = useMemo(() => {
+    if (!note.beanId) return null;
+    return beans.find(b => b.id === note.beanId) || null;
+  }, [note.beanId, beans]);
+
+  // 获取烘焙记录中的熟豆信息（用于显示格式化的熟豆名称）
+  const roastingRecord = note.changeRecord?.roastingRecord;
+  const roastedBean = useMemo(() => {
+    if (!roastingRecord?.roastedBeanId) return null;
+    return beans.find(b => b.id === roastingRecord.roastedBeanId) || null;
+  }, [roastingRecord?.roastedBeanId, beans]);
+
+  // 构建用于显示的咖啡豆信息，优先使用笔记中的 roaster，否则从关联咖啡豆获取
+  const displayBeanInfo = useMemo(() => {
+    if (!note.coffeeBeanInfo) return null;
+    return {
+      name: note.coffeeBeanInfo.name,
+      roaster: note.coffeeBeanInfo.roaster || linkedBean?.roaster,
+    };
+  }, [note.coffeeBeanInfo, linkedBean?.roaster]);
+
+  // 构建用于显示的熟豆信息（烘焙记录用）
+  const displayRoastedBeanInfo = useMemo(() => {
+    if (!roastingRecord?.roastedBeanName) return null;
+    return {
+      name: roastingRecord.roastedBeanName,
+      roaster: roastedBean?.roaster,
+    };
+  }, [roastingRecord?.roastedBeanName, roastedBean?.roaster]);
+
   // 使用格式化函数动态显示咖啡豆名称
   const beanName =
-    formatNoteBeanDisplayName(note.coffeeBeanInfo, {
+    formatNoteBeanDisplayName(displayBeanInfo, {
       roasterFieldEnabled,
       roasterSeparator,
     }) || '未知咖啡豆';
@@ -44,7 +77,15 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
 
   // 判断是否是烘焙记录
   const isRoastingRecord = note.source === 'roasting';
-  const roastingRecord = note.changeRecord?.roastingRecord;
+
+  // 格式化熟豆显示名称
+  const roastedBeanDisplayName = formatNoteBeanDisplayName(
+    displayRoastedBeanInfo,
+    {
+      roasterFieldEnabled,
+      roasterSeparator,
+    }
+  );
 
   // 根据记录类型生成显示标签
   const getDisplayLabel = () => {
@@ -106,14 +147,14 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
           </div>
 
           {/* 烘焙记录：显示转换后的熟豆名称 */}
-          {isRoastingRecord && roastingRecord?.roastedBeanName && (
+          {isRoastingRecord && roastedBeanDisplayName && (
             <div className="flex min-w-0 flex-1 items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
               <span className="text-neutral-400 dark:text-neutral-600">→</span>
               <span
                 className="truncate text-neutral-600 dark:text-neutral-300"
-                title={roastingRecord.roastedBeanName}
+                title={roastedBeanDisplayName}
               >
-                {roastingRecord.roastedBeanName}
+                {roastedBeanDisplayName}
               </span>
             </div>
           )}
@@ -215,10 +256,12 @@ export default React.memo(ChangeRecordNoteItem, (prevProps, nextProps) => {
     return false;
   }
 
-  // 检查咖啡豆信息
+  // 检查咖啡豆信息（包括烘焙商字段，用于名称显示）
   if (
     prevNote.coffeeBeanInfo?.name !== nextNote.coffeeBeanInfo?.name ||
-    prevNote.coffeeBeanInfo?.roastLevel !== nextNote.coffeeBeanInfo?.roastLevel
+    prevNote.coffeeBeanInfo?.roastLevel !==
+      nextNote.coffeeBeanInfo?.roastLevel ||
+    prevNote.coffeeBeanInfo?.roaster !== nextNote.coffeeBeanInfo?.roaster
   ) {
     return false;
   }

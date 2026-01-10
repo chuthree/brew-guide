@@ -262,6 +262,7 @@ function convertBrew(
       name: coffeeBean.name,
       roastLevel: coffeeBean.roastLevel || '',
       roastDate: coffeeBean.roastDate,
+      roaster: coffeeBean.roaster,
     },
     rating: brew.rating || 0,
     taste: {},

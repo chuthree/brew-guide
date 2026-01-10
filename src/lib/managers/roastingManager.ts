@@ -1,7 +1,6 @@
 import { CoffeeBean, BrewingNoteData } from '@/types/app';
 import {
   getCoffeeBeanStore,
-  updateBeanRemaining,
   increaseBeanRemaining,
 } from '@/lib/stores/coffeeBeanStore';
 import { nanoid } from 'nanoid';
@@ -130,6 +129,7 @@ export const RoastingManager = {
         // 基于生豆信息创建熟豆，但使用提供的数据覆盖
         const newRoastedBean: Omit<CoffeeBean, 'id' | 'timestamp'> = {
           name: roastedBeanName,
+          roaster: roastedBeanData.roaster || greenBean.roaster,
           beanState: 'roasted',
           beanType: roastedBeanData.beanType || greenBean.beanType,
           capacity: formatNumber(userCapacity),
@@ -160,6 +160,7 @@ export const RoastingManager = {
               name: roastedBean.name,
               roastLevel: roastedBean.roastLevel || '未知',
               roastDate: roastedBean.roastDate,
+              roaster: roastedBean.roaster,
             },
             rating: 0,
             taste: {},
@@ -186,6 +187,7 @@ export const RoastingManager = {
           name: greenBean.name,
           roastLevel: greenBean.roastLevel || '未知',
           roastDate: greenBean.roastDate,
+          roaster: greenBean.roaster,
         },
         rating: 0,
         taste: {},
@@ -625,6 +627,7 @@ export const RoastingManager = {
         // 直接创建生豆，不需要烘焙记录和新熟豆
         const greenBeanData: Omit<CoffeeBean, 'id' | 'timestamp'> = {
           name: originalBean.name,
+          roaster: originalBean.roaster,
           beanState: 'green',
           beanType: originalBean.beanType,
           capacity: originalBean.capacity,
@@ -671,6 +674,7 @@ export const RoastingManager = {
       // 6. 创建生豆（有使用记录的情况）
       const greenBeanData: Omit<CoffeeBean, 'id' | 'timestamp'> = {
         name: originalBean.name,
+        roaster: originalBean.roaster,
         beanState: 'green',
         beanType: originalBean.beanType,
         capacity: originalBean.capacity,
@@ -703,6 +707,7 @@ export const RoastingManager = {
 
       const newRoastedBeanData: Omit<CoffeeBean, 'id' | 'timestamp'> = {
         name: roastedBeanName,
+        roaster: originalBean.roaster,
         beanState: 'roasted',
         beanType: originalBean.beanType,
         capacity: formatNumber(roastedAmount),
@@ -729,6 +734,7 @@ export const RoastingManager = {
           name: greenBean.name,
           roastLevel: greenBean.roastLevel || '未知',
           roastDate: greenBean.purchaseDate,
+          roaster: greenBean.roaster,
         },
         rating: 0,
         taste: {},

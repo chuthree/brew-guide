@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CoffeeBean } from '@/types/app';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 const StarIcon = ({
   className,
@@ -56,6 +58,12 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
   onSave,
   onAfterSave,
 }) => {
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
   const [beanType, setBeanType] = useState<'espresso' | 'filter' | 'omni'>(
     'filter'
   );
@@ -114,7 +122,10 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
         <p className="font-medium text-neutral-500 dark:text-neutral-400">
           为
           <span className="mx-1 text-neutral-800 dark:text-neutral-200">
-            {coffeeBean.name}
+            {formatBeanDisplayName(coffeeBean, {
+              roasterFieldEnabled,
+              roasterSeparator,
+            })}
           </span>
           评分
         </p>

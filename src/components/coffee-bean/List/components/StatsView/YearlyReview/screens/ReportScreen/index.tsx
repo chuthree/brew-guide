@@ -106,8 +106,9 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
     // 烘焙商统计
     const roasterCount = new Map<string, number>();
     beans.forEach(bean => {
-      const roaster = extractRoasterFromName(bean.name);
-      if (roaster !== '未知烘焙商') {
+      // 优先使用 roaster 字段，否则从名称中提取
+      const roaster = bean.roaster || extractRoasterFromName(bean.name);
+      if (roaster && roaster !== '未知烘焙商') {
         roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
       }
     });

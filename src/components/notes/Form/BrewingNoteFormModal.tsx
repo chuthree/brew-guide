@@ -328,11 +328,13 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
             name: selectedCoffeeBean.name || '',
             roastLevel: selectedCoffeeBean.roastLevel || '中度烘焙',
             roastDate: selectedCoffeeBean.roastDate || '',
+            roaster: selectedCoffeeBean.roaster,
           }
         : {
             name: initialNote?.coffeeBeanInfo?.name || '',
             roastLevel: initialNote?.coffeeBeanInfo?.roastLevel || '中度烘焙',
             roastDate: initialNote?.coffeeBeanInfo?.roastDate || '',
+            roaster: initialNote?.coffeeBeanInfo?.roaster,
           },
       params: initialNote?.params || params,
       totalTime: totalTime,

@@ -68,6 +68,7 @@ const ChangeRecordEditForm: React.FC<ChangeRecordEditFormProps> = ({
       name: initialData.coffeeBeanInfo?.name || '',
       roastLevel: initialData.coffeeBeanInfo?.roastLevel || '',
       roastDate: initialData.coffeeBeanInfo?.roastDate,
+      roaster: initialData.coffeeBeanInfo?.roaster,
     },
     changeAmount: String(Math.abs(getInitialChangeAmount())),
     notes: initialData.notes || '',

@@ -6,7 +6,11 @@ import { CoffeeBean } from '@/types/app';
 import { Camera, Image as ImageIcon } from 'lucide-react';
 import { captureImage } from '@/lib/utils/imageCapture';
 import { compressImage } from '@/lib/utils/imageCompression';
-import { getRoasterName, RoasterSettings } from '@/lib/utils/beanVarietyUtils';
+import {
+  getBeanDisplayInitial,
+  getRoasterName,
+  RoasterSettings,
+} from '@/lib/utils/beanVarietyUtils';
 import {
   getRoasterLogoSync,
   useSettingsStore,
@@ -92,7 +96,7 @@ export const BeanImageSmall: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-[10px] font-medium text-neutral-400 dark:text-neutral-600">
-          {bean.name ? bean.name.charAt(0) : '豆'}
+          {getBeanDisplayInitial(bean)}
         </div>
       )}
     </div>

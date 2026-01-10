@@ -16,6 +16,7 @@ import {
 } from '@/lib/stores/settingsStore';
 import {
   formatBeanDisplayName,
+  getBeanDisplayInitial,
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
 
@@ -439,7 +440,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             ) : (
               // 默认显示首字符
               <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
-                {bean.name ? bean.name.charAt(0) : '豆'}
+                {getBeanDisplayInitial(bean)}
               </div>
             )}
           </div>

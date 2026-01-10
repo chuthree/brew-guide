@@ -11,6 +11,7 @@ import {
 } from '@/lib/stores/settingsStore';
 import {
   formatBeanDisplayName,
+  getBeanDisplayInitial,
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
 import { sortBeansByFlavorPeriod } from '@/lib/utils/beanSortUtils';
@@ -98,7 +99,7 @@ const BeanImage: React.FC<{
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
-          {bean.name ? bean.name.charAt(0) : '豆'}
+          {getBeanDisplayInitial(bean)}
         </div>
       )}
     </>
@@ -185,8 +186,10 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   const filteredBeans = useMemo(() => {
     if (!searchQuery?.trim()) return availableBeans;
     const query = searchQuery.toLowerCase().trim();
-    return availableBeans.filter(bean =>
-      bean.name?.toLowerCase().includes(query)
+    return availableBeans.filter(
+      bean =>
+        bean.name?.toLowerCase().includes(query) ||
+        bean.roaster?.toLowerCase().includes(query)
     );
   }, [availableBeans, searchQuery]);
 

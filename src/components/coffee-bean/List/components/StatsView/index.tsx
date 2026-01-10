@@ -31,6 +31,7 @@ import {
   getBeanProcesses,
   getBeanFlavors,
   getBeanEstates,
+  extractRoasterFromName,
 } from '@/lib/utils/beanVarietyUtils';
 import { ExtendedCoffeeBean } from '../../types';
 import GreenBeanStatsView from './GreenBeanStatsView';
@@ -723,6 +724,19 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     return Array.from(originCount.entries()).sort((a, b) => b[1] - a[1]);
   }, [filteredBeans]);
 
+  // 计算烘焙商统计
+  const roasterStats = useMemo(() => {
+    const roasterCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      // 优先使用 roaster 字段，否则从名称中提取
+      const roaster = bean.roaster || extractRoasterFromName(bean.name);
+      if (roaster && roaster !== '未知烘焙商') {
+        roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
+      }
+    });
+    return Array.from(roasterCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
   // 计算庄园统计
   const estateStats = useMemo(() => {
     const estateCount = new Map<string, number>();
@@ -774,6 +788,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
   // 如果所有统计都为空，不显示
   if (
     originStats.length === 0 &&
+    roasterStats.length === 0 &&
     estateStats.length === 0 &&
     varietyStats.length === 0 &&
     processStats.length === 0 &&
@@ -797,6 +812,11 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
       <div className="space-y-3">
         {/* 咖啡豆数量统计 */}
         <BeanCountStats beans={filteredBeans} onExplain={onExplain} />
+
+        {/* 烘焙商 */}
+        {roasterStats.length > 0 && (
+          <AttributeCard title="烘焙商" data={roasterStats} />
+        )}
 
         {/* 咖啡产区地图 */}
         {originStats.length > 0 && (

@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { ExtendedCoffeeBean, BlendComponent } from '../types';
 import { pageVariants, pageTransition } from '../constants';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 interface CompleteProps {
   bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -15,6 +17,27 @@ const Complete: React.FC<CompleteProps> = ({
   blendComponents,
   isEdit,
 }) => {
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
+  // 格式化显示名称
+  const displayName = formatBeanDisplayName(
+    bean as Parameters<typeof formatBeanDisplayName>[0],
+    roasterSettings
+  );
+
   return (
     <motion.div
       key="complete-step"
@@ -42,7 +65,7 @@ const Complete: React.FC<CompleteProps> = ({
             咖啡豆名称
           </span>
           <span className="ml-4 max-w-[60%] truncate text-right text-sm font-medium">
-            {bean.name}
+            {displayName}
           </span>
         </div>
         {!!bean.capacity && (

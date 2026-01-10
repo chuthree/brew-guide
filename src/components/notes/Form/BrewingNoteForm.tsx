@@ -762,6 +762,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           name: beanInfo?.name || '',
           roastLevel: normalizeRoastLevel(beanInfo?.roastLevel),
           roastDate: beanInfo?.roastDate || '',
+          roaster: beanInfo?.roaster,
         },
       }));
     }

@@ -825,6 +825,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           name: string;
           roastLevel: string;
           roastDate: string;
+          roaster?: string;
         } | null;
       }>
     ) => {
@@ -888,6 +889,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             name: e.detail.coffeeBean.name || '',
             roastLevel: normalizeRoastLevel(e.detail.coffeeBean.roastLevel),
             roastDate: e.detail.coffeeBean.roastDate || '',
+            roaster: e.detail.coffeeBean.roaster,
           };
         }
 

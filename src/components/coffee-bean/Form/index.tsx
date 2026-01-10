@@ -675,6 +675,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
           name: initialBean!.name || '',
           roastLevel: initialBean!.roastLevel || '中度烘焙',
           roastDate: initialBean!.roastDate,
+          roaster: initialBean!.roaster,
         },
         notes: noteContent,
         rating: 0,

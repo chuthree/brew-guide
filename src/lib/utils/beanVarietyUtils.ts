@@ -620,6 +620,30 @@ export const beanHasRoaster = (
 };
 
 /**
+ * 获取咖啡豆显示用的首字母
+ * 优先使用烘焙商首字母，如果没有烘焙商则使用名称首字母
+ * @param bean 咖啡豆对象（可以是完整对象或部分对象）
+ * @returns 首字母，如果都没有则返回 '豆'
+ */
+export const getBeanDisplayInitial = (
+  bean: { name?: string; roaster?: string } | null | undefined
+): string => {
+  if (!bean) return '豆';
+
+  // 优先使用烘焙商首字母
+  if (bean.roaster && bean.roaster.trim()) {
+    return bean.roaster.trim().charAt(0);
+  }
+
+  // 其次使用名称首字母
+  if (bean.name && bean.name.trim()) {
+    return bean.name.trim().charAt(0);
+  }
+
+  return '豆';
+};
+
+/**
  * 笔记中咖啡豆信息的接口
  */
 export interface NoteCoffeeBeanInfo {

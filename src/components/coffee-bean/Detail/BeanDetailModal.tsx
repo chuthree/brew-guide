@@ -562,6 +562,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const today = new Date().toISOString().split('T')[0];
     const roastedBeanTemplate: Omit<CoffeeBean, 'id' | 'timestamp'> = {
       name: bean.name,
+      roaster: bean.roaster,
       beanState: 'roasted',
       beanType: bean.beanType,
       capacity: '',

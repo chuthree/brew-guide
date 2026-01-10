@@ -284,6 +284,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
           name: coffeeBean.name || '',
           roastLevel: coffeeBean.roastLevel || '中度烘焙',
           roastDate: coffeeBean.roastDate,
+          roaster: coffeeBean.roaster,
         },
         notes: '快捷扣除',
         rating: 0,

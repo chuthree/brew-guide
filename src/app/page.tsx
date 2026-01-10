@@ -87,6 +87,7 @@ import {
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
 import NoteDetailModal from '@/components/notes/Detail/NoteDetailModal';
 import type { ConvertToGreenPreview } from '@/components/coffee-bean/ConvertToGreenDrawer';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -2879,6 +2880,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   name: fullBean.name,
                   roastLevel: fullBean.roastLevel || '中度烘焙',
                   roastDate: fullBean.roastDate || '',
+                  roaster: fullBean.roaster,
                 },
                 taste: {
                   acidity: 0,
@@ -2901,6 +2903,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               name: tempBeanInfo.name || '',
               roastLevel: tempBeanInfo.roastLevel || '中度烘焙',
               roastDate: tempBeanInfo.roastDate || '',
+              roaster: tempBeanInfo.roaster,
             },
             taste: {
               acidity: 0,
@@ -3600,7 +3603,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                             setConvertToGreenPreview({
                               beanId: bean.id,
-                              beanName: p.originalBean.name,
+                              beanName: formatBeanDisplayName(bean, {
+                                roasterFieldEnabled:
+                                  settings.roasterFieldEnabled,
+                                roasterSeparator: settings.roasterSeparator,
+                              }),
                               originalBean: {
                                 capacity: p.originalBean.capacity,
                                 remaining: p.originalBean.remaining,

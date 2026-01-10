@@ -7,6 +7,7 @@ import type { BrewingNote, CustomEquipment, Method } from '@/lib/core/config';
 import type { SettingsOptions } from '@/components/settings/Settings';
 import type { BrewingNoteData } from '@/types/app';
 import type { ConvertToGreenPreview } from '@/components/coffee-bean/ConvertToGreenDrawer';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 // 导入所有模态框组件
 import Settings from '@/components/settings/Settings';
@@ -737,7 +738,10 @@ const AppModals: React.FC<AppModalsProps> = ({
 
                     setConvertToGreenPreview({
                       beanId: bean.id,
-                      beanName: p.originalBean.name,
+                      beanName: formatBeanDisplayName(bean, {
+                        roasterFieldEnabled: settings.roasterFieldEnabled,
+                        roasterSeparator: settings.roasterSeparator,
+                      }),
                       originalBean: {
                         capacity: p.originalBean.capacity,
                         remaining: p.originalBean.remaining,

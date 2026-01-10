@@ -143,6 +143,7 @@ export interface BrewingNote {
     name: string;
     roastLevel: string;
     roastDate?: string;
+    roaster?: string; // 烘焙商名称（独立字段）
   };
   image?: string; // 添加可选的图片字段
   rating: number;

@@ -222,6 +222,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
 
     return ratedBeans.filter(bean => {
       const nameMatch = bean.name?.toLowerCase().includes(query);
+      const roasterMatch = bean.roaster?.toLowerCase().includes(query);
       const roastLevelMatch = bean.roastLevel?.toLowerCase().includes(query);
       const notesMatch =
         bean.notes?.toLowerCase().includes(query) ||
@@ -230,13 +231,20 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
       const multiTermMatch = queryTerms.every(term => {
         return (
           bean.name?.toLowerCase().includes(term) ||
+          bean.roaster?.toLowerCase().includes(term) ||
           bean.roastLevel?.toLowerCase().includes(term) ||
           bean.notes?.toLowerCase().includes(term) ||
           bean.ratingNotes?.toLowerCase().includes(term)
         );
       });
 
-      return nameMatch || roastLevelMatch || notesMatch || multiTermMatch;
+      return (
+        nameMatch ||
+        roasterMatch ||
+        roastLevelMatch ||
+        notesMatch ||
+        multiTermMatch
+      );
     });
   }, [ratedBeans, isSearching, searchQuery]);
 
@@ -251,6 +259,9 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     return unratedBeans.filter(bean => {
       // 检查豆子名称
       const nameMatch = bean.name?.toLowerCase().includes(query);
+
+      // 检查烘焙商
+      const roasterMatch = bean.roaster?.toLowerCase().includes(query);
 
       // 检查烘焙度
       const roastLevelMatch = bean.roastLevel?.toLowerCase().includes(query);
@@ -267,6 +278,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
       const multiTermMatch = queryTerms.every(term => {
         return (
           bean.name?.toLowerCase().includes(term) ||
+          bean.roaster?.toLowerCase().includes(term) ||
           bean.roastLevel?.toLowerCase().includes(term) ||
           bean.notes?.toLowerCase().includes(term) ||
           bean.flavor?.some(f => f.toLowerCase().includes(term))
@@ -275,6 +287,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
 
       return (
         nameMatch ||
+        roasterMatch ||
         roastLevelMatch ||
         notesMatch ||
         flavorMatch ||

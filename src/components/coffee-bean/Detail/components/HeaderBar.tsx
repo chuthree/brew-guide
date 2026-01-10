@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { CoffeeBean } from '@/types/app';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { ArrowRight, ChevronLeft } from 'lucide-react';
@@ -10,6 +10,8 @@ import {
   DEFAULT_VARIETIES,
   addCustomPreset,
 } from '@/components/coffee-bean/Form/constants';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 interface HeaderBarProps {
   isAddMode: boolean;
@@ -57,6 +59,26 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
 }) => {
   const canSave = !!tempBean.name?.trim();
 
+  // 获取烘焙商字段设置
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
+
+  // 获取显示名称
+  const displayName = bean
+    ? formatBeanDisplayName(bean, roasterSettings)
+    : tempBean.name || '添加咖啡豆';
+
   const handleSave = () => {
     if (!canSave) return;
 
@@ -103,7 +125,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         }}
       >
         <h2 className="max-w-full truncate px-2 text-center text-sm font-medium text-neutral-800 dark:text-neutral-100">
-          {isAddMode ? tempBean.name || '添加咖啡豆' : bean?.name || '未命名'}
+          {isAddMode ? tempBean.name || '添加咖啡豆' : displayName || '未命名'}
         </h2>
       </div>
 
