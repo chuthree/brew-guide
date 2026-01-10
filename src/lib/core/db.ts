@@ -85,6 +85,8 @@ export interface AppSettings {
 
   // 雷达图设置
   radarChartScale?: number; // 雷达图缩放比例 (0.5 - 1.1)
+  radarChartShape?: 'polygon' | 'circle'; // 雷达图形状
+  radarChartAlign?: 'left' | 'center'; // 雷达图对齐方式
 
   // 咖啡豆显示设置
   decrementPresets: number[];

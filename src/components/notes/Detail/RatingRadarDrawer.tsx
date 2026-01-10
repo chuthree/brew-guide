@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { Expand, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from '@/lib/core/db';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 interface RatingItem {
   id: string;
@@ -98,7 +98,8 @@ const useFontScale = (): number => {
 const RadarChart: React.FC<{
   ratings: RatingItem[];
   maxValue?: number;
-}> = ({ ratings, maxValue = 5 }) => {
+  shape?: 'polygon' | 'circle';
+}> = ({ ratings, maxValue = 5, shape = 'polygon' }) => {
   const fontScale = useFontScale();
 
   // 基础尺寸，会根据字体缩放调整
@@ -278,10 +279,15 @@ const RadarChart: React.FC<{
     return createRoundedPolygonPath(pts, 4);
   }, [points]);
 
-  // 生成网格线（同心多边形，带圆角）
+  // 生成网格线（同心多边形或圆形）
   const gridLevels = [0.2, 0.4, 0.6, 0.8, 1];
   const gridPaths = useMemo(() => {
     if (points.length < 3) return [];
+
+    if (shape === 'circle') {
+      // 圆形网格：返回空数组，使用 circle 元素渲染
+      return [];
+    }
 
     return gridLevels.map(level => {
       const pts = points.map(p => ({
@@ -290,7 +296,7 @@ const RadarChart: React.FC<{
       }));
       return createRoundedPolygonPath(pts, 3 * level);
     });
-  }, [points, centerX, centerY, radius]);
+  }, [points, centerX, centerY, radius, shape]);
 
   if (ratings.length < 3) {
     return null; // 少于 3 个维度时不渲染雷达图，由父组件决定展示方式
@@ -299,16 +305,29 @@ const RadarChart: React.FC<{
   return (
     <svg viewBox={`0 0 ${viewBox.w} ${viewBox.h}`} className="h-auto w-full">
       {/* 网格线 */}
-      {gridPaths.map((path, index) => (
-        <path
-          key={index}
-          d={path}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={index === gridPaths.length - 1 ? 1 : 0.5}
-          className="text-neutral-200 dark:text-neutral-700"
-        />
-      ))}
+      {shape === 'circle'
+        ? gridLevels.map((level, index) => (
+            <circle
+              key={index}
+              cx={centerX}
+              cy={centerY}
+              r={radius * level}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={index === gridLevels.length - 1 ? 1 : 0.5}
+              className="text-neutral-200 dark:text-neutral-700"
+            />
+          ))
+        : gridPaths.map((path, index) => (
+            <path
+              key={index}
+              d={path}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={index === gridPaths.length - 1 ? 1 : 0.5}
+              className="text-neutral-200 dark:text-neutral-700"
+            />
+          ))}
 
       {/* 轴线 */}
       {points.map((point, index) => (
@@ -454,41 +473,23 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
   beanName,
   note,
 }) => {
-  const [scale, setScale] = useState(1);
+  // 使用 settingsStore 管理雷达图设置
+  const { settings, updateSettings } = useSettingsStore();
+  const scale = settings.radarChartScale ?? 1;
+  const shape = settings.radarChartShape ?? 'polygon';
+  const align = settings.radarChartAlign ?? 'center';
   const [isAdjusting, setIsAdjusting] = useState(false);
 
-  // 从 settings 加载保存的缩放值
-  useEffect(() => {
-    const loadScale = async () => {
-      try {
-        const settings = await db.appSettings.get('default');
-        if (settings?.data?.radarChartScale) {
-          setScale(settings.data.radarChartScale);
-        }
-      } catch (error) {
-        console.error('Failed to load radar chart scale:', error);
-      }
-    };
-    loadScale();
-  }, []);
+  const handleScaleChange = (newScale: number) => {
+    updateSettings({ radarChartScale: newScale });
+  };
 
-  // 保存缩放值到 settings
-  const handleScaleChange = async (newScale: number) => {
-    setScale(newScale);
-    try {
-      const settings = await db.appSettings.get('default');
-      if (settings) {
-        await db.appSettings.put({
-          id: 'default',
-          data: {
-            ...settings.data,
-            radarChartScale: newScale,
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Failed to save radar chart scale:', error);
-    }
+  const handleShapeChange = (newShape: 'polygon' | 'circle') => {
+    updateSettings({ radarChartShape: newShape });
+  };
+
+  const handleAlignChange = (newAlign: 'left' | 'center') => {
+    updateSettings({ radarChartAlign: newAlign });
   };
 
   useEffect(() => {
@@ -504,13 +505,19 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
       historyId="rating-radar-drawer"
     >
       <div className="flex flex-col">
-        {/* 雷达图区域 - 支持缩放 */}
-        <div className="-mx-4 mb-2 flex w-[calc(100%+2rem)] justify-center overflow-hidden">
+        {/* 雷达图区域 - 支持缩放和对齐 */}
+        <div
+          className={`-mx-4 mb-2 flex w-[calc(100%+2rem)] overflow-hidden ${
+            align === 'left' ? 'justify-start pl-4' : 'justify-center'
+          }`}
+        >
           <div
-            className="origin-top transition-all duration-300 ease-out"
+            className={`transition-all duration-300 ease-out ${
+              align === 'left' ? 'origin-top-left' : 'origin-top'
+            }`}
             style={{ width: `${scale * 100}%` }}
           >
-            <RadarChart ratings={ratings} maxValue={5} />
+            <RadarChart ratings={ratings} maxValue={5} shape={shape} />
           </div>
         </div>
 
@@ -559,35 +566,90 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
           ) : (
             <motion.div
               key="adjusting"
-              className="flex w-full gap-3"
+              className="flex w-full flex-col gap-3"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="relative flex h-11 flex-1 items-center gap-3 rounded-full bg-neutral-100 px-4 dark:bg-neutral-800">
-                <span className="relative z-10 text-xs font-medium text-neutral-400">
-                  小
-                </span>
+              {/* 第一行：大小调整 */}
+              <div className="flex w-full gap-3">
+                <div className="relative flex h-11 flex-1 items-center gap-3 rounded-full bg-neutral-100 px-4 dark:bg-neutral-800">
+                  <span className="relative z-10 text-xs font-medium text-neutral-400">
+                    小
+                  </span>
 
-                <RadarSlider
-                  value={scale}
-                  min={0.5}
-                  max={1.1}
-                  onChange={handleScaleChange}
-                  className="flex-1"
-                />
+                  <RadarSlider
+                    value={scale}
+                    min={0.5}
+                    max={1.1}
+                    onChange={handleScaleChange}
+                    className="flex-1"
+                  />
 
-                <span className="relative z-10 text-xs font-medium text-neutral-400">
-                  大
-                </span>
+                  <span className="relative z-10 text-xs font-medium text-neutral-400">
+                    大
+                  </span>
+                </div>
               </div>
-              <button
-                className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-neutral-300"
-                onClick={() => setIsAdjusting(false)}
-              >
-                <Check size={20} />
-              </button>
+
+              {/* 第二行：形状和对齐 */}
+              <div className="flex w-full gap-3">
+                {/* 形状切换 */}
+                <div className="flex h-11 flex-1 items-center gap-1 rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
+                  <button
+                    className={`flex h-9 flex-1 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                      shape === 'polygon'
+                        ? 'bg-white text-neutral-700 shadow-sm dark:bg-neutral-700 dark:text-neutral-200'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    }`}
+                    onClick={() => handleShapeChange('polygon')}
+                  >
+                    矩形
+                  </button>
+                  <button
+                    className={`flex h-9 flex-1 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                      shape === 'circle'
+                        ? 'bg-white text-neutral-700 shadow-sm dark:bg-neutral-700 dark:text-neutral-200'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    }`}
+                    onClick={() => handleShapeChange('circle')}
+                  >
+                    圆形
+                  </button>
+                </div>
+
+                {/* 对齐切换 */}
+                <div className="flex h-11 flex-1 items-center gap-1 rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
+                  <button
+                    className={`flex h-9 flex-1 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                      align === 'left'
+                        ? 'bg-white text-neutral-700 shadow-sm dark:bg-neutral-700 dark:text-neutral-200'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    }`}
+                    onClick={() => handleAlignChange('left')}
+                  >
+                    左
+                  </button>
+                  <button
+                    className={`flex h-9 flex-1 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                      align === 'center'
+                        ? 'bg-white text-neutral-700 shadow-sm dark:bg-neutral-700 dark:text-neutral-200'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    }`}
+                    onClick={() => handleAlignChange('center')}
+                  >
+                    中
+                  </button>
+                </div>
+
+                <button
+                  className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-neutral-300"
+                  onClick={() => setIsAdjusting(false)}
+                >
+                  <Check size={20} />
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -40,6 +40,11 @@ export const defaultSettings: AppSettings = {
     dataFontSize: '2xl',
   },
 
+  // 雷达图设置
+  radarChartScale: 1,
+  radarChartShape: 'polygon',
+  radarChartAlign: 'center',
+
   // 咖啡豆显示设置
   decrementPresets: [15, 16, 18],
   enableAllDecrementOption: false,
