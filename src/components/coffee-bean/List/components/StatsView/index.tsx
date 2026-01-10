@@ -706,10 +706,16 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
       endTime = new Date(year, month - 1, day + 1).getTime();
     }
 
-    // 过滤咖啡豆（基于日期范围）
+    // 过滤咖啡豆（基于烘焙日期）
     return roastedBeans.filter(bean => {
-      const beanTime = bean.timestamp;
-      return beanTime >= startTime && beanTime < endTime;
+      // 优先使用烘焙日期，如果没有则跳过该豆子
+      if (!bean.roastDate) return false;
+
+      // 将 roastDate 字符串（YYYY-MM-DD 格式）转换为时间戳
+      const roastTime = new Date(bean.roastDate).getTime();
+      if (isNaN(roastTime)) return false;
+
+      return roastTime >= startTime && roastTime < endTime;
     });
   }, [roastedBeans, selectedDate, dateGroupingMode]);
   // 计算产地统计

@@ -533,8 +533,14 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
     }
 
     return greenBeans.filter(bean => {
-      const beanTime = bean.timestamp;
-      return beanTime >= startTime && beanTime < endTime;
+      // 生豆使用购买日期进行过滤，如果没有则跳过
+      if (!bean.purchaseDate) return false;
+
+      // 将 purchaseDate 字符串（YYYY-MM-DD 格式）转换为时间戳
+      const purchaseTime = new Date(bean.purchaseDate).getTime();
+      if (isNaN(purchaseTime)) return false;
+
+      return purchaseTime >= startTime && purchaseTime < endTime;
     });
   }, [greenBeans, selectedDate, dateGroupingMode]);
 

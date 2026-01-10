@@ -30,7 +30,13 @@ const IntroScreen: React.FC<BeanScreenProps> = ({
   // 计算2025年咖啡豆总花费
   const totalCost = useMemo(() => {
     return beans
-      .filter(bean => new Date(bean.timestamp).getFullYear() === 2025)
+      .filter(bean => {
+        // 熟豆使用烘焙日期，生豆使用购买日期
+        const dateStr =
+          bean.beanState === 'green' ? bean.purchaseDate : bean.roastDate;
+        if (!dateStr) return false;
+        return new Date(dateStr).getFullYear() === 2025;
+      })
       .reduce((sum, bean) => {
         // 解析价格字符串，支持 "98", "¥98", "98元" 等格式
         const priceStr = bean.price || '0';

@@ -35,7 +35,11 @@ const SegmentGrid: React.FC<SegmentGridProps> = ({
   // 计算2025年购买的咖啡豆款数
   const beanCount = useMemo(() => {
     return beans.filter(bean => {
-      const beanYear = new Date(bean.timestamp).getFullYear();
+      // 熟豆使用烘焙日期，生豆使用购买日期
+      const dateStr =
+        bean.beanState === 'green' ? bean.purchaseDate : bean.roastDate;
+      if (!dateStr) return false;
+      const beanYear = new Date(dateStr).getFullYear();
       return beanYear === 2025;
     }).length;
   }, [beans]);
