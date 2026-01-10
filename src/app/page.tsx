@@ -348,6 +348,86 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     beanInfo?: CoffeeBean | null;
   } | null>(null);
 
+  // 详情面板宽度拖动状态（大屏幕）
+  const DETAIL_PANEL_MIN_WIDTH = 320; // 最小宽度
+  const DETAIL_PANEL_MAX_WIDTH = 640; // 最大宽度
+  const DETAIL_PANEL_DEFAULT_WIDTH = 384; // 默认宽度 (w-96)
+  const DETAIL_PANEL_STORAGE_KEY = 'detailPanelWidth';
+
+  const [detailPanelWidth, setDetailPanelWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(DETAIL_PANEL_STORAGE_KEY);
+      if (saved) {
+        const width = parseInt(saved, 10);
+        if (
+          !isNaN(width) &&
+          width >= DETAIL_PANEL_MIN_WIDTH &&
+          width <= DETAIL_PANEL_MAX_WIDTH
+        ) {
+          return width;
+        }
+      }
+    }
+    return DETAIL_PANEL_DEFAULT_WIDTH;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartXRef = useRef(0);
+  const resizeStartWidthRef = useRef(DETAIL_PANEL_DEFAULT_WIDTH);
+
+  // 拖动处理函数
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      resizeStartXRef.current = clientX;
+      resizeStartWidthRef.current = detailPanelWidth;
+    },
+    [detailPanelWidth]
+  );
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      // 从右向左拖动增加宽度，所以是起始位置减去当前位置
+      const delta = resizeStartXRef.current - clientX;
+      const newWidth = Math.min(
+        DETAIL_PANEL_MAX_WIDTH,
+        Math.max(DETAIL_PANEL_MIN_WIDTH, resizeStartWidthRef.current + delta)
+      );
+      setDetailPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      // 保存到 localStorage
+      localStorage.setItem(
+        DETAIL_PANEL_STORAGE_KEY,
+        detailPanelWidth.toString()
+      );
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleMouseMove);
+    document.addEventListener('touchend', handleMouseUp);
+
+    // 拖动时禁用文本选择
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleMouseMove);
+      document.removeEventListener('touchend', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isResizing, detailPanelWidth]);
+
   // ImageViewer 状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageViewerData, setImageViewerData] = useState<{
@@ -3350,20 +3430,54 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           )}
         </main>
 
-        {/* 大屏幕详情面板区域 - 三栏布局的右侧，带过渡动画 */}
+        {/* 大屏幕详情面板区域 - 三栏布局的右侧，支持拖动调整宽度 */}
         {isLargeScreen && (
           <aside
-            className={`h-full shrink-0 transition-[width,border-color] duration-350 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+            className={`relative h-full shrink-0 ${
+              isResizing
+                ? ''
+                : 'transition-[width,border-color] duration-350 ease-[cubic-bezier(0.4,0,0.2,1)]'
+            } ${
               beanDetailOpen || noteDetailOpen
-                ? 'w-96 border-l border-neutral-200/50 dark:border-neutral-800/50'
+                ? 'border-l border-neutral-200/50 dark:border-neutral-800/50'
                 : 'w-0 border-l border-transparent'
             }`}
+            style={{
+              width:
+                beanDetailOpen || noteDetailOpen ? `${detailPanelWidth}px` : 0,
+            }}
           >
-            {/* 内部容器保持固定宽度，避免内容在动画时变形 */}
+            {/* 拖动条 - 居中跨越左边界 */}
+            {(beanDetailOpen || noteDetailOpen) && (
+              <div
+                className="group absolute top-0 left-0 z-10 h-full w-0 -translate-x-1/2 cursor-col-resize select-none"
+                onMouseDown={handleResizeStart}
+                onTouchStart={handleResizeStart}
+              >
+                {/* 可视化拖动指示器 - 居中显示 */}
+                <div
+                  className={`absolute top-1/2 left-1/2 h-12 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-200 ${
+                    isResizing
+                      ? 'scale-y-150 bg-neutral-400 dark:bg-neutral-500'
+                      : 'bg-transparent group-hover:bg-neutral-300 dark:group-hover:bg-neutral-600'
+                  }`}
+                />
+                {/* 扩大触摸区域 - 左右各扩展8px */}
+                <div className="absolute inset-y-0 -right-2 -left-2" />
+              </div>
+            )}
+            {/* 内部容器使用动态宽度 */}
             <div
-              className={`h-full w-96 overflow-hidden transition-opacity duration-350 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+              className={`h-full overflow-hidden ${
+                isResizing
+                  ? ''
+                  : 'transition-opacity duration-350 ease-[cubic-bezier(0.4,0,0.2,1)]'
+              } ${
                 beanDetailOpen || noteDetailOpen ? 'opacity-100' : 'opacity-0'
               }`}
+              style={{
+                width: `${detailPanelWidth}px`,
+              }}
             >
               {/* 咖啡豆详情 */}
               {beanDetailOpen && (
