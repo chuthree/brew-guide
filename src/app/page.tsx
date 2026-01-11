@@ -355,6 +355,32 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const DETAIL_PANEL_DEFAULT_WIDTH = 384; // 默认宽度 (w-96)
   const DETAIL_PANEL_STORAGE_KEY = 'detailPanelWidth';
 
+  // 导航栏宽度拖动状态（大屏幕）
+  const NAV_PANEL_MIN_WIDTH = 120; // 最小宽度
+  const NAV_PANEL_MAX_WIDTH = 280; // 最大宽度
+  const NAV_PANEL_DEFAULT_WIDTH = 144; // 默认宽度 (w-36 = 9rem = 144px)
+  const NAV_PANEL_STORAGE_KEY = 'navPanelWidth';
+
+  const [navPanelWidth, setNavPanelWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(NAV_PANEL_STORAGE_KEY);
+      if (saved) {
+        const width = parseInt(saved, 10);
+        if (
+          !isNaN(width) &&
+          width >= NAV_PANEL_MIN_WIDTH &&
+          width <= NAV_PANEL_MAX_WIDTH
+        ) {
+          return width;
+        }
+      }
+    }
+    return NAV_PANEL_DEFAULT_WIDTH;
+  });
+  const [isNavResizing, setIsNavResizing] = useState(false);
+  const navResizeStartXRef = useRef(0);
+  const navResizeStartWidthRef = useRef(NAV_PANEL_DEFAULT_WIDTH);
+
   const [detailPanelWidth, setDetailPanelWidth] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(DETAIL_PANEL_STORAGE_KEY);
@@ -428,6 +454,57 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       document.body.style.cursor = '';
     };
   }, [isResizing, detailPanelWidth]);
+
+  // 导航栏拖动处理函数
+  const handleNavResizeStart = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      e.preventDefault();
+      setIsNavResizing(true);
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      navResizeStartXRef.current = clientX;
+      navResizeStartWidthRef.current = navPanelWidth;
+    },
+    [navPanelWidth]
+  );
+
+  useEffect(() => {
+    if (!isNavResizing) return;
+
+    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      // 从左向右拖动增加宽度
+      const delta = clientX - navResizeStartXRef.current;
+      const newWidth = Math.min(
+        NAV_PANEL_MAX_WIDTH,
+        Math.max(NAV_PANEL_MIN_WIDTH, navResizeStartWidthRef.current + delta)
+      );
+      setNavPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsNavResizing(false);
+      // 保存到 localStorage
+      localStorage.setItem(NAV_PANEL_STORAGE_KEY, navPanelWidth.toString());
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleMouseMove);
+    document.addEventListener('touchend', handleMouseUp);
+
+    // 拖动时禁用文本选择
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleMouseMove);
+      document.removeEventListener('touchend', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isNavResizing, navPanelWidth]);
 
   // ImageViewer 状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -3158,9 +3235,19 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       {/* 小屏幕时：所有模态框都需要主页动画 */}
       <div
         className="flex h-full flex-col md:flex-row"
-        style={getParentPageStyle(
-          isLargeScreen ? hasOverlayModalOpen : hasModalOpen
-        )}
+        style={
+          {
+            ...getParentPageStyle(
+              isLargeScreen ? hasOverlayModalOpen : hasModalOpen
+            ),
+            // CSS 变量用于 BottomActionBar 等组件
+            '--nav-panel-width': isLargeScreen ? `${navPanelWidth}px` : '0px',
+            '--detail-panel-width':
+              isLargeScreen && (beanDetailOpen || noteDetailOpen)
+                ? `${detailPanelWidth}px`
+                : '0px',
+          } as React.CSSProperties
+        }
       >
         <NavigationBar
           activeMainTab={activeMainTab}
@@ -3221,7 +3308,29 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           }
           cloudSyncEnabled={isCloudSyncEnabled()}
           onPullToSync={handlePullToSync}
+          width={isLargeScreen ? navPanelWidth : undefined}
+          isResizing={isNavResizing}
         />
+
+        {/* 导航栏拖动条 - 大屏幕时显示，放在 NavigationBar 和 main 之间避免被裁切 */}
+        {isLargeScreen && (
+          <div
+            className="group relative z-10 hidden h-full w-0 cursor-col-resize select-none md:block"
+            onMouseDown={handleNavResizeStart}
+            onTouchStart={handleNavResizeStart}
+          >
+            {/* 可视化拖动指示器 - 居中显示 */}
+            <div
+              className={`absolute top-1/2 left-1/2 h-12 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-200 ${
+                isNavResizing
+                  ? 'scale-y-150 bg-neutral-400 dark:bg-neutral-500'
+                  : 'bg-transparent group-hover:bg-neutral-300 dark:group-hover:bg-neutral-600'
+              }`}
+            />
+            {/* 扩大触摸区域 - 左右各扩展8px */}
+            <div className="absolute inset-y-0 -right-2 -left-2" />
+          </div>
+        )}
 
         {/* 主内容区域 - 桌面端独立滚动 */}
         <main

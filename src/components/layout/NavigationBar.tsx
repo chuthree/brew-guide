@@ -308,6 +308,9 @@ interface NavigationBarProps {
   // 下拉上传相关 props
   cloudSyncEnabled?: boolean;
   onPullToSync?: () => Promise<{ success: boolean; message?: string }>;
+  // 大屏幕宽度调整相关 props
+  width?: number;
+  isResizing?: boolean;
 }
 
 // 意式咖啡相关工具函数 - 优化为更简洁的实现
@@ -403,6 +406,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   onBackClick,
   cloudSyncEnabled = false,
   onPullToSync,
+  width,
+  isResizing,
 }) => {
   const { canGoBack } = useNavigation(
     activeBrewingStep,
@@ -1059,11 +1064,18 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   return (
     <motion.div
-      className={`pt-safe-top sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:w-36 md:shrink-0 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 ${
+      className={`pt-safe-top sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:shrink-0 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 ${
+        isResizing
+          ? ''
+          : 'md:transition-[width,border-color] md:duration-350 md:ease-[cubic-bezier(0.4,0,0.2,1)]'
+      } ${
         activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'
           ? 'border-transparent md:border-neutral-200/50 dark:md:border-neutral-800/50'
           : 'border-neutral-200/50 dark:border-neutral-800/50'
       }`}
+      style={{
+        width: width ? `${width}px` : undefined,
+      }}
       transition={{ duration: 0.3 }}
       onTouchStart={handlePullTouchStart}
       onTouchMove={handlePullTouchMove}
