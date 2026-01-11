@@ -3,9 +3,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Virtuoso } from 'react-virtuoso';
-import { CoffeeBean } from '@/types/app';
+import { CoffeeBean, BrewingNoteData } from '@/types/app';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import {
+  getBeanRatingInfo,
+  hasBeanRating,
+  type BeanRatingInfo,
+} from '@/lib/utils/beanRatingUtils';
 
 // 下划线动画配置
 const UNDERLINE_TRANSITION = {
@@ -28,16 +34,10 @@ export const SORT_OPTIONS = {
 export type RankingSortOption =
   (typeof SORT_OPTIONS)[keyof typeof SORT_OPTIONS];
 
-// 排序选项的显示名称（导出给其他组件使用）
-const SORT_LABELS: Record<RankingSortOption, string> = {
-  [SORT_OPTIONS.ORIGINAL]: '原始',
-  [SORT_OPTIONS.RATING_DESC]: '评分 (高→低)',
-  [SORT_OPTIONS.RATING_ASC]: '评分 (低→高)',
-  [SORT_OPTIONS.NAME_ASC]: '名称 (A→Z)',
-  [SORT_OPTIONS.NAME_DESC]: '名称 (Z→A)',
-  [SORT_OPTIONS.PRICE_ASC]: '价格 (低→高)',
-  [SORT_OPTIONS.PRICE_DESC]: '价格 (高→低)',
-};
+// 带评分信息的咖啡豆类型
+interface RatedCoffeeBean extends CoffeeBean {
+  ratingInfo: BeanRatingInfo;
+}
 
 interface CoffeeBeanRankingProps {
   onClose?: () => void;
@@ -73,7 +73,10 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     [roasterFieldEnabled, roasterSeparator]
   );
 
-  const [ratedBeans, setRatedBeans] = useState<CoffeeBean[]>([]);
+  // 获取笔记数据用于计算自动评分
+  const notes = useBrewingNoteStore(state => state.notes);
+
+  const [ratedBeans, setRatedBeans] = useState<RatedCoffeeBean[]>([]);
   const [unratedBeans, setUnratedBeans] = useState<CoffeeBean[]>([]);
   const [beanType, setBeanType] = useState<
     'all' | 'espresso' | 'filter' | 'omni'
@@ -88,9 +91,12 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     }
   }, [externalBeanType]);
 
-  // 排序咖啡豆的函数
+  // 排序咖啡豆的函数（使用综合评分信息）
   const sortBeans = useCallback(
-    (beansToSort: CoffeeBean[], option: RankingSortOption): CoffeeBean[] => {
+    (
+      beansToSort: RatedCoffeeBean[],
+      option: RankingSortOption
+    ): RatedCoffeeBean[] => {
       const sorted = [...beansToSort];
 
       switch (option) {
@@ -99,12 +105,12 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
 
         case SORT_OPTIONS.RATING_DESC:
           return sorted.sort((a, b) => {
-            return (b.overallRating || 0) - (a.overallRating || 0);
+            return b.ratingInfo.rating - a.ratingInfo.rating;
           });
 
         case SORT_OPTIONS.RATING_ASC:
           return sorted.sort((a, b) => {
-            return (a.overallRating || 0) - (b.overallRating || 0);
+            return a.ratingInfo.rating - b.ratingInfo.rating;
           });
 
         case SORT_OPTIONS.NAME_ASC:
@@ -115,7 +121,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
 
         case SORT_OPTIONS.PRICE_ASC:
           return sorted.sort((a, b) => {
-            // 提取数字部分并转换为浮点数
             const aPrice = a.price
               ? parseFloat(a.price.replace(/[^\d.]/g, ''))
               : 0;
@@ -127,7 +132,6 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
 
         case SORT_OPTIONS.PRICE_DESC:
           return sorted.sort((a, b) => {
-            // 提取数字部分并转换为浮点数
             const aPrice = a.price
               ? parseFloat(a.price.replace(/[^\d.]/g, ''))
               : 0;
@@ -149,31 +153,33 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     if (!isOpen) return;
 
     try {
-      let ratedBeansData: CoffeeBean[] = [];
-      let unratedBeansData: CoffeeBean[] = [];
+      const { getCoffeeBeanStore } = await import(
+        '@/lib/stores/coffeeBeanStore'
+      );
+      const allBeans = getCoffeeBeanStore().beans;
 
-      const { getRatedBeans, getRatedBeansByType, getCoffeeBeanStore } =
-        await import('@/lib/stores/coffeeBeanStore');
-      if (beanType === 'all') {
-        ratedBeansData = await getRatedBeans();
-      } else {
-        ratedBeansData = await getRatedBeansByType(beanType);
+      // 按类型筛选
+      let filteredBeans = allBeans;
+      if (beanType !== 'all') {
+        filteredBeans = allBeans.filter(bean => bean.beanType === beanType);
       }
 
-      const allBeans = getCoffeeBeanStore().beans;
-      const ratedIds = new Set(ratedBeansData.map(bean => bean.id));
+      // 计算每个豆子的评分信息，区分有评分和无评分
+      const ratedBeansData: RatedCoffeeBean[] = [];
+      const unratedBeansData: CoffeeBean[] = [];
 
-      unratedBeansData = allBeans.filter(bean => {
-        const isUnrated =
-          !ratedIds.has(bean.id) &&
-          (!bean.overallRating || bean.overallRating === 0);
-        if (beanType === 'all') return isUnrated;
-        if (beanType === 'espresso')
-          return isUnrated && bean.beanType === 'espresso';
-        if (beanType === 'filter')
-          return isUnrated && bean.beanType === 'filter';
-        return isUnrated;
-      });
+      for (const bean of filteredBeans) {
+        const hasRating = hasBeanRating(bean, notes as BrewingNoteData[]);
+        if (hasRating) {
+          const ratingInfo = getBeanRatingInfo(
+            bean,
+            notes as BrewingNoteData[]
+          );
+          ratedBeansData.push({ ...bean, ratingInfo });
+        } else {
+          unratedBeansData.push(bean);
+        }
+      }
 
       setRatedBeans(sortBeans(ratedBeansData, sortOption));
       setUnratedBeans(
@@ -184,7 +190,7 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
       setRatedBeans([]);
       setUnratedBeans([]);
     }
-  }, [isOpen, beanType, sortOption, sortBeans]);
+  }, [isOpen, beanType, sortOption, sortBeans, notes]);
 
   // 在组件挂载、isOpen变化、beanType变化、sortOption变化或refreshTrigger变化时重新加载数据
   useEffect(() => {
@@ -397,10 +403,10 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
                         {formatBeanDisplayName(bean, roasterSettings)}
                       </div>
                       <div className="ml-2 shrink-0 text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                        +
-                        {bean.overallRating !== undefined
-                          ? bean.overallRating
-                          : 0}
+                        {bean.ratingInfo.isAutoCalculated && (
+                          <span className="mr-0.5 opacity-30">≈</span>
+                        )}
+                        +{bean.ratingInfo.rating}
                       </div>
                     </div>
                     <div className="mt-1.5 text-justify text-xs font-medium text-neutral-600 dark:text-neutral-400">

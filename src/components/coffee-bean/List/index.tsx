@@ -87,6 +87,9 @@ import StatsView from './components/StatsView';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { exportListPreview } from './components/ListExporter';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
+import { hasBeanRating } from '@/lib/utils/beanRatingUtils';
+import { BrewingNoteData } from '@/types/app';
 import {
   type TableColumnKey,
   getDefaultVisibleColumns,
@@ -119,6 +122,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   ) as ExtendedCoffeeBean[];
   const storeInitialized = useCoffeeBeanStore(state => state.initialized);
   const loadBeansFromStore = useCoffeeBeanStore(state => state.loadBeans);
+
+  // 获取笔记数据用于计算自动评分
+  const notes = useBrewingNoteStore(state => state.notes);
 
   const [_ratedBeans, setRatedBeans] = useState<ExtendedCoffeeBean[]>(
     globalCache.ratedBeans
@@ -204,6 +210,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [rankingBeanType, setRankingBeanType] = useState<BeanType>(
     globalCache.rankingBeanType
   );
+
+  // 榜单时间筛选状态
+  const [rankingTimeFilter, setRankingTimeFilter] = useState<{
+    type: 'all' | 'year' | 'month';
+    year?: number;
+    month?: number;
+  }>({ type: 'all' });
+  const [availableTimeOptions, setAvailableTimeOptions] = useState<
+    Array<{
+      label: string;
+      filter: { type: 'all' | 'year' | 'month'; year?: number; month?: number };
+    }>
+  >([{ label: '全部时间', filter: { type: 'all' } }]);
 
   const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!storeInitialized);
   const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -649,13 +668,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     updateDisplayMode,
   ]);
 
-  // 从 Store beans 中筛选已评分的咖啡豆
+  // 从 Store beans 中筛选已评分的咖啡豆（包含手动评分和自动评分）
   const loadRatedBeans = React.useCallback(() => {
     if (viewMode !== VIEW_OPTIONS.RANKING) return;
 
-    // 直接从 Store 的 beans 筛选有评分的豆子
-    const ratedBeansData = beans.filter(
-      bean => bean.overallRating !== undefined && bean.overallRating > 0
+    // 筛选有评分的豆子（手动评分或有笔记评分）
+    const ratedBeansData = beans.filter(bean =>
+      hasBeanRating(bean, notes as BrewingNoteData[])
     );
 
     let filteredRatedBeans = ratedBeansData;
@@ -694,7 +713,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     }
 
     globalCache.ratedBeans = filteredRatedBeans;
-  }, [viewMode, rankingBeanType, beans]);
+  }, [viewMode, rankingBeanType, beans, notes]);
 
   // 组件打开时加载榜单数据
   useEffect(() => {
