@@ -680,7 +680,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     return beans.filter(bean => (bean.beanState || 'roasted') === 'roasted');
   }, [beans]);
 
-  // 根据日期范围过滤咖啡豆（基于添加时间）
+  // 根据日期范围过滤咖啡豆（基于添加时间 timestamp）
   const filteredBeans = useMemo(() => {
     if (!selectedDate) {
       // 全部视图：不过滤
@@ -706,16 +706,10 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
       endTime = new Date(year, month - 1, day + 1).getTime();
     }
 
-    // 过滤咖啡豆（基于烘焙日期）
+    // 过滤咖啡豆（基于 timestamp 添加时间）
     return roastedBeans.filter(bean => {
-      // 优先使用烘焙日期，如果没有则跳过该豆子
-      if (!bean.roastDate) return false;
-
-      // 将 roastDate 字符串（YYYY-MM-DD 格式）转换为时间戳
-      const roastTime = new Date(bean.roastDate).getTime();
-      if (isNaN(roastTime)) return false;
-
-      return roastTime >= startTime && roastTime < endTime;
+      if (!bean.timestamp) return false;
+      return bean.timestamp >= startTime && bean.timestamp < endTime;
     });
   }, [roastedBeans, selectedDate, dateGroupingMode]);
   // 计算产地统计

@@ -511,7 +511,7 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
     return beans.filter(bean => bean.beanState === 'green');
   }, [beans]);
 
-  // 根据日期范围过滤
+  // 根据日期范围过滤（基于 timestamp 添加时间）
   const filteredBeans = useMemo(() => {
     if (!selectedDate) return greenBeans;
 
@@ -533,14 +533,8 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
     }
 
     return greenBeans.filter(bean => {
-      // 生豆使用购买日期进行过滤，如果没有则跳过
-      if (!bean.purchaseDate) return false;
-
-      // 将 purchaseDate 字符串（YYYY-MM-DD 格式）转换为时间戳
-      const purchaseTime = new Date(bean.purchaseDate).getTime();
-      if (isNaN(purchaseTime)) return false;
-
-      return purchaseTime >= startTime && purchaseTime < endTime;
+      if (!bean.timestamp) return false;
+      return bean.timestamp >= startTime && bean.timestamp < endTime;
     });
   }, [greenBeans, selectedDate, dateGroupingMode]);
 
