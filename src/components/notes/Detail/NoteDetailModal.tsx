@@ -270,6 +270,27 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   );
   const hasTasteRatings = validTasteRatings.length > 0;
 
+  // 获取所有笔记用于对比
+  const allNotes = useBrewingNoteStore(state => state.notes);
+
+  // 获取该咖啡豆的所有有风味评分的笔记（用于对比）
+  const compareNotes = useMemo(() => {
+    if (!note?.beanId) return [];
+    return allNotes
+      .filter(
+        n =>
+          n.beanId === note.beanId &&
+          n.taste &&
+          Object.values(n.taste).some(v => v > 0)
+      )
+      .map(n => ({
+        id: n.id,
+        timestamp: n.timestamp,
+        taste: n.taste,
+        method: n.method,
+      }));
+  }, [note?.beanId, allNotes]);
+
   // 构建标题文本 - 只显示咖啡豆名称（使用 useMemo 缓存）
   const titleText = useMemo(() => {
     if (!note) return '未命名';
@@ -748,6 +769,8 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         overallRating={note?.rating}
         beanName={beanName}
         note={note?.notes}
+        currentNoteId={note?.id}
+        compareNotes={compareNotes}
       />
     </>
   );

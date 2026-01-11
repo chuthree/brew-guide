@@ -12,6 +12,13 @@ interface RatingItem {
   value: number;
 }
 
+interface CompareNote {
+  id: string;
+  timestamp: number;
+  taste: Record<string, number>;
+  method?: string;
+}
+
 interface RatingRadarDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -19,6 +26,8 @@ interface RatingRadarDrawerProps {
   overallRating?: number;
   beanName?: string;
   note?: string;
+  currentNoteId?: string; // 当前笔记ID
+  compareNotes?: CompareNote[]; // 可对比的笔记列表
 }
 
 // 估算文字宽度（基于字体大小的实际测量值）
@@ -99,7 +108,8 @@ const RadarChart: React.FC<{
   ratings: RatingItem[];
   maxValue?: number;
   shape?: 'polygon' | 'circle';
-}> = ({ ratings, maxValue = 5, shape = 'polygon' }) => {
+  compareRatings?: Record<string, number>; // 对比笔记的评分
+}> = ({ ratings, maxValue = 5, shape = 'polygon', compareRatings }) => {
   const fontScale = useFontScale();
 
   // 基础尺寸，会根据字体缩放调整
@@ -279,6 +289,27 @@ const RadarChart: React.FC<{
     return createRoundedPolygonPath(pts, 4);
   }, [points]);
 
+  // 生成对比笔记的路径
+  const comparePath = useMemo(() => {
+    if (!compareRatings || points.length < 3) return '';
+
+    // 根据当前评分维度生成对比笔记的点
+    const comparePts = points.map(p => {
+      const compareValue = compareRatings[p.id] ?? 0;
+      const normalizedCompare = compareValue / maxValue;
+      return {
+        x: centerX + Math.cos(p.angle) * radius * normalizedCompare,
+        y: centerY + Math.sin(p.angle) * radius * normalizedCompare,
+      };
+    });
+
+    // 检查是否有有效数据
+    const hasValidData = points.some(p => (compareRatings[p.id] ?? 0) > 0);
+    if (!hasValidData) return '';
+
+    return createRoundedPolygonPath(comparePts, 4);
+  }, [points, compareRatings, maxValue, centerX, centerY, radius]);
+
   // 生成网格线（同心多边形或圆形）
   const gridLevels = [0.2, 0.4, 0.6, 0.8, 1];
   const gridPaths = useMemo(() => {
@@ -343,6 +374,26 @@ const RadarChart: React.FC<{
         />
       ))}
 
+      {/* 对比笔记区域 */}
+      <AnimatePresence>
+        {comparePath && (
+          <motion.path
+            d={comparePath}
+            fill="currentColor"
+            fillOpacity={0.05}
+            stroke="currentColor"
+            strokeWidth={1}
+            strokeOpacity={0.15}
+            strokeDasharray="4 3"
+            className="text-neutral-600 dark:text-neutral-300"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, d: comparePath }}
+            exit={{ opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* 数据区域 */}
       <path
         d={dataPath}
@@ -378,10 +429,10 @@ const RadarChart: React.FC<{
             dy={dy}
             textAnchor={textAnchor}
             fontSize={fontSize}
-            className="fill-neutral-500 dark:fill-neutral-400"
+            className="fill-neutral-600 dark:fill-neutral-400"
           >
             {point.label}
-            <tspan className="fill-neutral-700 dark:fill-neutral-300">
+            <tspan className="fill-neutral-800 dark:fill-neutral-200">
               {' '}
               {point.value}
             </tspan>
@@ -472,6 +523,8 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
   overallRating,
   beanName,
   note,
+  currentNoteId,
+  compareNotes = [],
 }) => {
   // 使用 settingsStore 管理雷达图设置
   const { settings, updateSettings } = useSettingsStore();
@@ -479,6 +532,47 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
   const shape = settings.radarChartShape ?? 'polygon';
   const align = settings.radarChartAlign ?? 'center';
   const [isAdjusting, setIsAdjusting] = useState(false);
+  const [isComparing, setIsComparing] = useState(false);
+  const [selectedCompareId, setSelectedCompareId] = useState<string | null>(
+    null
+  );
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // 过滤掉当前笔记，获取可对比的笔记
+  const availableCompareNotes = useMemo(() => {
+    return compareNotes
+      .filter(n => n.id !== currentNoteId)
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }, [compareNotes, currentNoteId]);
+
+  // 获取选中的对比笔记的评分
+  const compareRatings = useMemo(() => {
+    if (!selectedCompareId) return undefined;
+    const n = availableCompareNotes.find(n => n.id === selectedCompareId);
+    return n?.taste;
+  }, [selectedCompareId, availableCompareNotes]);
+
+  // 格式化日期
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
+
+  // 长按处理
+  const handleLongPressStart = () => {
+    if (availableCompareNotes.length === 0) return;
+    longPressTimer.current = setTimeout(() => {
+      setIsComparing(true);
+      setIsAdjusting(false);
+    }, 500);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   const handleScaleChange = (newScale: number) => {
     updateSettings({ radarChartScale: newScale });
@@ -495,6 +589,7 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setIsAdjusting(false);
+      setIsComparing(false);
     }
   }, [isOpen]);
 
@@ -517,7 +612,12 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
             }`}
             style={{ width: `${scale * 100}%` }}
           >
-            <RadarChart ratings={ratings} maxValue={5} shape={shape} />
+            <RadarChart
+              ratings={ratings}
+              maxValue={5}
+              shape={shape}
+              compareRatings={compareRatings}
+            />
           </div>
         </div>
 
@@ -541,7 +641,7 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
 
       <ActionDrawer.Actions className="mt-6">
         <AnimatePresence mode="popLayout" initial={false}>
-          {!isAdjusting ? (
+          {!isAdjusting && !isComparing ? (
             <motion.div
               key="normal"
               className="flex w-full gap-3"
@@ -551,8 +651,16 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
               transition={{ duration: 0.2 }}
             >
               <button
-                className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-neutral-100 text-neutral-600 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-neutral-400"
+                className={`flex h-11 w-11 flex-none touch-none items-center justify-center rounded-full transition-transform select-none active:scale-95 ${
+                  availableCompareNotes.length > 0
+                    ? 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+                    : 'bg-neutral-100 text-neutral-300 dark:bg-neutral-800 dark:text-neutral-600'
+                }`}
                 onClick={() => setIsAdjusting(true)}
+                onPointerDown={handleLongPressStart}
+                onPointerUp={handleLongPressEnd}
+                onPointerLeave={handleLongPressEnd}
+                onContextMenu={e => e.preventDefault()}
               >
                 <Expand size={18} />
               </button>
@@ -562,6 +670,68 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
               >
                 关闭
               </ActionDrawer.SecondaryButton>
+            </motion.div>
+          ) : isComparing ? (
+            <motion.div
+              key="comparing"
+              className="flex w-full flex-col gap-3"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* 对比选择器 */}
+              <div className="flex w-full gap-3">
+                <div className="relative flex h-11 flex-1 items-center gap-1 overflow-x-auto rounded-full bg-neutral-100 p-1 select-none dark:bg-neutral-800">
+                  {/* 滑动背景 */}
+                  <motion.div
+                    className="absolute h-9 rounded-full bg-white shadow-sm dark:bg-neutral-700"
+                    layoutId="compare-selector-bg"
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    style={{
+                      width: 64,
+                      left:
+                        selectedCompareId === null
+                          ? 4
+                          : 4 +
+                            (availableCompareNotes
+                              .slice(0, 4)
+                              .findIndex(n => n.id === selectedCompareId) +
+                              1) *
+                              68,
+                    }}
+                  />
+                  <button
+                    className={`relative z-10 flex h-9 min-w-16 shrink-0 items-center justify-center rounded-full px-3 text-xs font-medium transition-colors ${
+                      selectedCompareId === null
+                        ? 'text-neutral-700 dark:text-neutral-200'
+                        : 'text-neutral-500 dark:text-neutral-400'
+                    }`}
+                    onClick={() => setSelectedCompareId(null)}
+                  >
+                    无
+                  </button>
+                  {availableCompareNotes.slice(0, 4).map(n => (
+                    <button
+                      key={n.id}
+                      className={`relative z-10 flex h-9 min-w-16 shrink-0 items-center justify-center rounded-full px-3 text-xs font-medium transition-colors ${
+                        selectedCompareId === n.id
+                          ? 'text-neutral-700 dark:text-neutral-200'
+                          : 'text-neutral-500 dark:text-neutral-400'
+                      }`}
+                      onClick={() => setSelectedCompareId(n.id)}
+                    >
+                      {formatDate(n.timestamp)}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-neutral-300"
+                  onClick={() => setIsComparing(false)}
+                >
+                  <Check size={20} />
+                </button>
+              </div>
             </motion.div>
           ) : (
             <motion.div
