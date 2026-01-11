@@ -2,6 +2,8 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import SegmentedControl from '@/components/ui/SegmentedControl';
+import Slider from '@/components/ui/Slider';
 import { Expand, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
@@ -444,75 +446,6 @@ const RadarChart: React.FC<{
 };
 
 /**
- * 自定义滑块组件
- * 支持胶囊形滑块和自定义颜色
- */
-const RadarSlider: React.FC<{
-  value: number;
-  min: number;
-  max: number;
-  onChange: (val: number) => void;
-  className?: string;
-}> = ({ value, min, max, onChange, className }) => {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const handleMove = (clientX: number) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
-    const percentage = x / rect.width;
-    const rawValue = min + percentage * (max - min);
-    // 步进 0.05
-    const step = 0.05;
-    const steppedValue = Math.round(rawValue / step) * step;
-    const finalValue = Math.max(min, Math.min(max, steppedValue));
-
-    onChange(finalValue);
-  };
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    handleMove(e.clientX);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (e.buttons > 0) {
-      handleMove(e.clientX);
-    }
-  };
-
-  const percent = ((value - min) / (max - min)) * 100;
-
-  return (
-    <div
-      ref={ref}
-      className={`relative flex h-full cursor-pointer touch-none items-center select-none ${className}`}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-    >
-      {/* 刻度背景 - 放在底层 */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-between px-0.5 opacity-20">
-        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-          <div
-            key={i}
-            className="h-1 w-0.5 rounded-full bg-neutral-900 dark:bg-white"
-          />
-        ))}
-      </div>
-
-      {/* 轨道背景 */}
-      <div className="absolute inset-x-0 h-1 rounded-full bg-neutral-200 dark:bg-neutral-700" />
-
-      {/* 胶囊滑块 */}
-      <div
-        className="absolute top-1/2 h-3.5 w-5.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-xs dark:bg-neutral-300"
-        style={{ left: `${percent}%` }}
-      />
-    </div>
-  );
-};
-
-/**
  * 评分雷达图抽屉组件
  * 仅在 4 个及以上维度时使用，显示雷达图
  */
@@ -682,49 +615,18 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
             >
               {/* 对比选择器 */}
               <div className="flex w-full gap-3">
-                <div className="relative flex h-11 flex-1 items-center gap-1 overflow-x-auto rounded-full bg-neutral-100 p-1 select-none dark:bg-neutral-800">
-                  {/* 滑动背景 */}
-                  <motion.div
-                    className="absolute h-9 rounded-full bg-white shadow-sm dark:bg-neutral-700"
-                    layoutId="compare-selector-bg"
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    style={{
-                      width: 64,
-                      left:
-                        selectedCompareId === null
-                          ? 4
-                          : 4 +
-                            (availableCompareNotes
-                              .slice(0, 4)
-                              .findIndex(n => n.id === selectedCompareId) +
-                              1) *
-                              68,
-                    }}
-                  />
-                  <button
-                    className={`relative z-10 flex h-9 min-w-16 shrink-0 items-center justify-center rounded-full px-3 text-xs font-medium transition-colors ${
-                      selectedCompareId === null
-                        ? 'text-neutral-700 dark:text-neutral-200'
-                        : 'text-neutral-500 dark:text-neutral-400'
-                    }`}
-                    onClick={() => setSelectedCompareId(null)}
-                  >
-                    无
-                  </button>
-                  {availableCompareNotes.slice(0, 4).map(n => (
-                    <button
-                      key={n.id}
-                      className={`relative z-10 flex h-9 min-w-16 shrink-0 items-center justify-center rounded-full px-3 text-xs font-medium transition-colors ${
-                        selectedCompareId === n.id
-                          ? 'text-neutral-700 dark:text-neutral-200'
-                          : 'text-neutral-500 dark:text-neutral-400'
-                      }`}
-                      onClick={() => setSelectedCompareId(n.id)}
-                    >
-                      {formatDate(n.timestamp)}
-                    </button>
-                  ))}
-                </div>
+                <SegmentedControl
+                  options={[
+                    { value: null, label: '无' },
+                    ...availableCompareNotes.slice(0, 4).map(n => ({
+                      value: n.id,
+                      label: formatDate(n.timestamp),
+                    })),
+                  ]}
+                  value={selectedCompareId}
+                  onChange={setSelectedCompareId}
+                  className="flex-1 overflow-x-auto"
+                />
                 <button
                   className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-neutral-300"
                   onClick={() => setIsComparing(false)}
@@ -744,74 +646,42 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
             >
               {/* 第一行：大小调整 */}
               <div className="flex w-full gap-3">
-                <div className="relative flex h-11 flex-1 items-center gap-3 rounded-full bg-neutral-100 px-4 dark:bg-neutral-800">
-                  <span className="relative z-10 text-xs font-medium text-neutral-400">
-                    小
-                  </span>
-
-                  <RadarSlider
-                    value={scale}
-                    min={0.5}
-                    max={1.1}
-                    onChange={handleScaleChange}
-                    className="flex-1"
-                  />
-
-                  <span className="relative z-10 text-xs font-medium text-neutral-400">
-                    大
-                  </span>
-                </div>
+                <Slider
+                  value={scale}
+                  min={0.5}
+                  max={1.1}
+                  onChange={handleScaleChange}
+                  minLabel="小"
+                  maxLabel="大"
+                  className="flex-1"
+                />
               </div>
 
               {/* 第二行：形状和对齐 */}
               <div className="flex w-full gap-3">
                 {/* 形状切换 */}
-                <div className="flex h-11 flex-1 items-center gap-1 rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
-                  <button
-                    className={`flex h-9 flex-1 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                      shape === 'polygon'
-                        ? 'bg-white text-neutral-700 shadow-sm dark:bg-neutral-700 dark:text-neutral-200'
-                        : 'text-neutral-500 dark:text-neutral-400'
-                    }`}
-                    onClick={() => handleShapeChange('polygon')}
-                  >
-                    矩形
-                  </button>
-                  <button
-                    className={`flex h-9 flex-1 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                      shape === 'circle'
-                        ? 'bg-white text-neutral-700 shadow-sm dark:bg-neutral-700 dark:text-neutral-200'
-                        : 'text-neutral-500 dark:text-neutral-400'
-                    }`}
-                    onClick={() => handleShapeChange('circle')}
-                  >
-                    圆形
-                  </button>
-                </div>
+                <SegmentedControl
+                  options={[
+                    { value: 'polygon' as const, label: '矩形' },
+                    { value: 'circle' as const, label: '圆形' },
+                  ]}
+                  value={shape}
+                  onChange={handleShapeChange}
+                  className="flex-1"
+                  equalWidth
+                />
 
                 {/* 对齐切换 */}
-                <div className="flex h-11 flex-1 items-center gap-1 rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
-                  <button
-                    className={`flex h-9 flex-1 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                      align === 'left'
-                        ? 'bg-white text-neutral-700 shadow-sm dark:bg-neutral-700 dark:text-neutral-200'
-                        : 'text-neutral-500 dark:text-neutral-400'
-                    }`}
-                    onClick={() => handleAlignChange('left')}
-                  >
-                    左
-                  </button>
-                  <button
-                    className={`flex h-9 flex-1 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                      align === 'center'
-                        ? 'bg-white text-neutral-700 shadow-sm dark:bg-neutral-700 dark:text-neutral-200'
-                        : 'text-neutral-500 dark:text-neutral-400'
-                    }`}
-                    onClick={() => handleAlignChange('center')}
-                  >
-                    中
-                  </button>
-                </div>
+                <SegmentedControl
+                  options={[
+                    { value: 'left' as const, label: '左' },
+                    { value: 'center' as const, label: '中' },
+                  ]}
+                  value={align}
+                  onChange={handleAlignChange}
+                  className="flex-1"
+                  equalWidth
+                />
 
                 <button
                   className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-transform active:scale-95 dark:bg-neutral-800 dark:text-neutral-300"
