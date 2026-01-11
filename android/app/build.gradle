@@ -7,8 +7,8 @@ android {
         applicationId "com.brewguide.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7
-        versionName "1.5.12-rc.2"
+        versionCode 8
+        versionName "1.5.12"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
         // 只保留中文和英文资源，减小 APK 体积

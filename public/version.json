@@ -1,5 +1,5 @@
 {
-  "version": "1.5.11",
+  "version": "1.5.12",
   "downloadUrl": "https://chu3.top/brewguide",
-  "releaseNotes": "冲煮流程与方案重新设计，独立烘焙商字段，烘焙商图标分享导入"
+  "releaseNotes": "笔记雷达图上线，评分与烘焙度逻辑优化，烘焙商体系完善及多项稳定性修复"
 }
