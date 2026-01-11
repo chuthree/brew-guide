@@ -843,12 +843,13 @@ const Settings: React.FC<SettingsProps> = ({
         <div className="px-8 pt-18 pb-8">
           <div className="text-left text-xs select-none">
             <p className="font-medium text-neutral-800 dark:text-neutral-200">
-              感谢你们的支持，自 2025 年 2 月 1 日首次发布至今，项目已持续运行{' '}
+              感谢各位一直以来的支持，自 2025 年 2 月 1
+              日首次发布至今，项目已持续运行{' '}
               {Math.floor(
                 (Date.now() - new Date('2025-02-01').getTime()) /
                   (1000 * 60 * 60 * 24)
               )}{' '}
-              天。
+              天，你们的每一次鼓励与贡献，都是它不断成长的重要动力。
             </p>
             <SponsorList />
           </div>
