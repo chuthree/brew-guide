@@ -8,6 +8,7 @@ import {
   parseBeanName,
   getNextAvailableNumber,
 } from '@/lib/utils/beanRepurchaseUtils';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 // 辅助函数：格式化数字
 function formatNumber(value: number): string {
@@ -191,16 +192,18 @@ export const RoastingManager = {
         },
         rating: 0,
         taste: {},
-        notes: `烘焙了 ${roastedAmount}g 生豆${roastedBean ? ` → ${roastedBean.name}` : ''}`,
+        notes: `烘焙了 ${roastedAmount}g 生豆${roastedBean ? ` → ${formatBeanDisplayName(roastedBean)}` : ''}`,
         source: 'roasting',
         beanId: greenBeanId,
         changeRecord: {
           roastingRecord: {
             greenBeanId,
-            greenBeanName: greenBean.name,
+            greenBeanName: formatBeanDisplayName(greenBean),
             roastedAmount,
             roastedBeanId: roastedBean?.id,
-            roastedBeanName: roastedBean?.name,
+            roastedBeanName: roastedBean
+              ? formatBeanDisplayName(roastedBean)
+              : undefined,
           },
         },
       };
@@ -738,16 +741,16 @@ export const RoastingManager = {
         },
         rating: 0,
         taste: {},
-        notes: `从熟豆转换：烘焙了 ${formatNumber(roastedAmount)}g 生豆 → ${newRoastedBean.name}`,
+        notes: `从熟豆转换：烘焙了 ${formatNumber(roastedAmount)}g 生豆 → ${formatBeanDisplayName(newRoastedBean)}`,
         source: 'roasting',
         beanId: greenBean.id,
         changeRecord: {
           roastingRecord: {
             greenBeanId: greenBean.id,
-            greenBeanName: greenBean.name,
+            greenBeanName: formatBeanDisplayName(greenBean),
             roastedAmount,
             roastedBeanId: newRoastedBean.id,
-            roastedBeanName: newRoastedBean.name,
+            roastedBeanName: formatBeanDisplayName(newRoastedBean),
           },
         },
       };

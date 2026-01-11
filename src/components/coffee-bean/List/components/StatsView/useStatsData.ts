@@ -9,6 +9,7 @@ import {
   BeanType,
   BrewingDetailItem,
 } from './types';
+import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 // ============================================================================
 // 类型定义
@@ -484,10 +485,16 @@ export const useStatsData = (
 
         // 收集冲煮明细（单日视图）
         if (isSingleDayView) {
+          // 格式化咖啡豆名称（包含烘焙商）
+          const displayName = bean
+            ? formatBeanDisplayName(bean)
+            : note.coffeeBeanInfo?.roaster && note.coffeeBeanInfo?.name
+              ? `${note.coffeeBeanInfo.roaster} ${note.coffeeBeanInfo.name}`
+              : note.coffeeBeanInfo?.name || '未知咖啡豆';
           brewingDetails.push({
             id: note.id,
             timestamp: ts,
-            beanName: bean?.name || note.coffeeBeanInfo?.name || '未知咖啡豆',
+            beanName: displayName,
             amount,
             cost,
           });
@@ -515,10 +522,16 @@ export const useStatsData = (
           todayNotesCount++;
 
           // 收集今日冲煮明细
+          // 格式化咖啡豆名称（包含烘焙商）
+          const displayName = bean
+            ? formatBeanDisplayName(bean)
+            : note.coffeeBeanInfo?.roaster && note.coffeeBeanInfo?.name
+              ? `${note.coffeeBeanInfo.roaster} ${note.coffeeBeanInfo.name}`
+              : note.coffeeBeanInfo?.name || '未知咖啡豆';
           todayBrewingDetails.push({
             id: note.id,
             timestamp: ts,
-            beanName: bean?.name || note.coffeeBeanInfo?.name || '未知咖啡豆',
+            beanName: displayName,
             amount,
             cost,
           });
