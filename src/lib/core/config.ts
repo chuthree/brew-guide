@@ -1216,4 +1216,5 @@ export const sponsorsList = [
   '唔咦咦啊',
   '阳阳:-*',
   '王猛',
+  'KinWai_',
 ];
