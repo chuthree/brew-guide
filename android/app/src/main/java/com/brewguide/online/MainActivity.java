@@ -1,4 +1,4 @@
-package com.brewguide.app;
+package com.brewguide.online;
 
 import com.getcapacitor.BridgeActivity;
 
