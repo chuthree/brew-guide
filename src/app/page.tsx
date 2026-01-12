@@ -1271,24 +1271,24 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       localStorage.removeItem('shouldStartFromCoffeeBeanStep');
     }
 
-    // 只有从其他标签切换过来时才重置到初始步骤
-    // 添加检查：如果当前已经在有效的冲煮步骤中，不强制重置
-    const isValidBrewingStep = [
-      'coffeeBean',
-      'method',
-      'brewing',
-      'notes',
-    ].includes(activeBrewingStep);
-    if (isValidBrewingStep && prevMainTabRef.current !== null) {
-      // 如果已经在有效的冲煮步骤中，只更新引用，不强制重置
+    // 从其他标签切换到冲煮标签时，根据设置决定起始步骤
+    // 如果开启了咖啡豆选择步骤且有咖啡豆，应该从咖啡豆步骤开始
+    // 如果关闭了咖啡豆选择步骤，应该从方案步骤开始
+    const targetStep = hasCoffeeBeans && showBeanStep ? 'coffeeBean' : 'method';
+
+    // 只有当当前步骤不是目标起始步骤时才需要重置
+    // 例如：如果已经在 brewing 或 notes 步骤，说明用户正在进行冲煮流程，不应该打断
+    const isInActiveBrewingFlow =
+      activeBrewingStep === 'brewing' || activeBrewingStep === 'notes';
+    if (isInActiveBrewingFlow) {
+      // 用户正在冲煮流程中，不打断
       prevMainTabRef.current = activeMainTab;
       return;
     }
 
-    // 只在确实需要时才重置到初始步骤
-    // 根据设置决定是否从咖啡豆步骤开始
+    // 重置到正确的起始步骤
     resetBrewingState(false);
-    navigateToStep(hasCoffeeBeans && showBeanStep ? 'coffeeBean' : 'method');
+    navigateToStep(targetStep);
     prevMainTabRef.current = activeMainTab;
   }, [
     activeMainTab,
@@ -2029,36 +2029,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     navigateToStep,
   ]);
 
-  // 添加从咖啡豆页面切换回冲煮页面的特殊处理
-  useEffect(() => {
-    if (activeMainTab === '冲煮') {
-      // 检查是否应该从咖啡豆步骤开始
-      const shouldStartFromCoffeeBeanStep = localStorage.getItem(
-        'shouldStartFromCoffeeBeanStep'
-      );
-      const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
-      if (
-        shouldStartFromCoffeeBeanStep === 'true' &&
-        hasCoffeeBeans &&
-        showBeanStep
-      ) {
-        // 重置标记
-        localStorage.removeItem('shouldStartFromCoffeeBeanStep');
-        // 设置步骤为咖啡豆
-        setActiveBrewingStep('coffeeBean');
-        setActiveTab('咖啡豆');
-      } else if (shouldStartFromCoffeeBeanStep === 'true' && !showBeanStep) {
-        // 如果设置关闭，清除标记
-        localStorage.removeItem('shouldStartFromCoffeeBeanStep');
-      }
-    }
-  }, [
-    activeMainTab,
-    hasCoffeeBeans,
-    setActiveBrewingStep,
-    setActiveTab,
-    settings.showCoffeeBeanSelectionStep,
-  ]);
+  // 注意：从咖啡豆页面切换回冲煮页面的特殊处理已在上面的 useEffect 中统一处理
+  // shouldStartFromCoffeeBeanStep 标记会在主 Tab 切换逻辑中被检查和清除
 
   const handleSaveBean = async (
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
