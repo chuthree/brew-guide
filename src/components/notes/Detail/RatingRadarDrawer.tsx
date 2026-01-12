@@ -584,11 +584,7 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
               transition={{ duration: 0.2 }}
             >
               <button
-                className={`flex h-11 w-11 flex-none touch-none items-center justify-center rounded-full transition-transform select-none active:scale-95 ${
-                  availableCompareNotes.length > 0
-                    ? 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
-                    : 'bg-neutral-100 text-neutral-300 dark:bg-neutral-800 dark:text-neutral-600'
-                }`}
+                className="flex h-11 w-11 flex-none touch-none items-center justify-center rounded-full bg-neutral-100 text-neutral-600 transition-transform select-none active:scale-95 dark:bg-neutral-800 dark:text-neutral-400"
                 onClick={() => setIsAdjusting(true)}
                 onPointerDown={handleLongPressStart}
                 onPointerUp={handleLongPressEnd}
