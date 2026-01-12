@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.brewguide.app"
+    namespace "com.brewguide.online"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.brewguide.app"
+        applicationId "com.brewguide.online"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.5.12"
+        versionCode 1
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
         // 只保留中文和英文资源，减小 APK 体积

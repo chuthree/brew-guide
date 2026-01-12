@@ -4,13 +4,15 @@ import type { CapacitorConfig } from '@capacitor/cli';
 import { KeyboardResize, KeyboardStyle } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
-  appId: 'com.brewguide.app',
-  appName: 'Brew Guide',
+  appId: 'com.brewguide.online',
+  appName: 'BrewGuide(OL)',
   webDir: 'out',
   server: {
+    url: 'https://coffee.chu3.top/',
+    cleartext: false,
     androidScheme: 'https',
     iosScheme: 'https',
-    hostname: 'app',
+    allowNavigation: ['coffee.chu3.top', '*.chu3.top'],
   },
   plugins: {
     Keyboard: {
