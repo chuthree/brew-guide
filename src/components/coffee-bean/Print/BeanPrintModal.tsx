@@ -243,9 +243,13 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
       const { toPng } = await import('html-to-image');
 
       // 生成图片数据URL
+      // 计算精确的 pixelRatio：
+      // 目标是 40x30mm → 960x720px
+      // 浏览器默认 96 DPI，40mm ≈ 151.2px
+      // 经过实测微调：pixelRatio = 6.37
       const dataUrl = await toPng(previewElement, {
         backgroundColor: '#ffffff',
-        pixelRatio: 3, // 提高分辨率
+        pixelRatio: 6.37, // 精确匹配官方标准（40x30mm → 960x720px）
         quality: 0.95,
       });
 
