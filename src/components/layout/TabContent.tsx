@@ -819,6 +819,7 @@ const TabContent: React.FC<TabContentProps> = ({
             totalTime: calculateTotalTime(),
             coffeeBean: selectedCoffeeBeanData || undefined,
           }}
+          settings={settings}
         />
       </div>
     );

@@ -1983,6 +1983,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                 totalTime: currentTime,
               }
             }
+            settings={settings}
           />
         </div>
       )}
