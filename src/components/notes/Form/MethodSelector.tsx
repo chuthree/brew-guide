@@ -12,56 +12,49 @@ interface MethodSelectorProps {
   commonMethods: Method[];
   onMethodSelect: (methodId: string) => void;
   onParamsChange: (method: Method) => void;
-  /** 磨豆机同步默认开关状态 */
   grinderDefaultSyncEnabled?: boolean;
 }
 
-// 工具函数
+interface EditingValues {
+  coffee: string;
+  ratio: string;
+  grindSize: string;
+  water: string;
+  time: string;
+  temp: string;
+}
+
+// 从带单位的字符串中提取数字
 const extractNumber = (str: string): string => {
   const match = str.match(/(\d+(\.\d+)?)/);
   return match ? match[0] : '';
 };
 
+// 从 "1:15" 格式中提取比例数字
 const extractRatioNumber = (ratio: string): string => {
   const match = ratio.match(/1:(\d+(\.\d+)?)/);
   return match ? match[1] : '';
 };
 
+// 根据粉量和比例计算水量
 const calculateWater = (coffee: string, ratio: string): string => {
-  if (!coffee || !ratio || coffee === '.' || ratio === '.') return '';
-  const coffeeValue = parseFloat(coffee);
-  const ratioValue = parseFloat(ratio);
-  if (isNaN(coffeeValue) || isNaN(ratioValue) || coffeeValue <= 0) return '';
-  return `${Math.round(coffeeValue * ratioValue)}g`;
+  if (!coffee || !ratio) return '';
+  const coffeeVal = parseFloat(coffee);
+  const ratioVal = parseFloat(ratio);
+  if (isNaN(coffeeVal) || isNaN(ratioVal) || coffeeVal <= 0 || ratioVal <= 0)
+    return '';
+  return String(Math.round(coffeeVal * ratioVal));
 };
 
-/**
- * 根据原始方案和覆盖参数，构建完整的方案对象
- */
-const buildMethodWithOverride = (
-  method: Method,
-  override: {
-    coffee?: string;
-    water?: string;
-    ratio?: string;
-    grindSize?: string;
-    temp?: string;
-  } | null
-): Method => {
-  if (!override) return method;
-
-  return {
-    ...method,
-    params: {
-      ...method.params,
-      coffee: override.coffee || method.params.coffee,
-      water: override.water || method.params.water,
-      ratio: override.ratio || method.params.ratio,
-      grindSize: override.grindSize || method.params.grindSize,
-      temp: override.temp || method.params.temp,
-    },
-  };
-};
+// 从 Method 提取编辑值
+const extractEditingValues = (method: Method): EditingValues => ({
+  coffee: extractNumber(method.params.coffee),
+  ratio: extractRatioNumber(method.params.ratio),
+  grindSize: method.params.grindSize || '',
+  water: extractNumber(method.params.water),
+  time: method.params.stages?.[0]?.time?.toString() ?? '',
+  temp: extractNumber(method.params.temp || ''),
+});
 
 const MethodSelector: React.FC<MethodSelectorProps> = ({
   selectedEquipment,
@@ -76,87 +69,115 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     selectedEquipment.toLowerCase().includes('espresso') ||
     selectedEquipment.includes('意式');
 
-  // 编辑值状态
-  const [editingValues, setEditingValues] = useState<{
-    coffee: string;
-    ratio: string;
-    grindSize: string;
-    water?: string;
-    time?: string;
-    temp?: string;
-  } | null>(null);
+  const [editingValues, setEditingValues] = useState<EditingValues | null>(
+    null
+  );
 
-  // 用于跟踪是否是首次加载（避免重复触发 onParamsChange）
-  const isInitialMount = useRef(true);
-  const lastNotifiedMethodId = useRef<string | null>(null);
+  // 记录当前初始化的方案，避免重复初始化
+  const initializedMethodRef = useRef<string | null>(null);
 
-  // Store 方法
+  // Store 方法 - 使用 stable selector
   const setMethodParamOverride = useSettingsStore(
     state => state.setMethodParamOverride
   );
   const clearMethodParamOverride = useSettingsStore(
     state => state.clearMethodParamOverride
   );
-  const getMethodParamOverride = useSettingsStore(
-    state => state.getMethodParamOverride
+  // 直接获取 methodParamOverrides 对象
+  const methodParamOverrides = useSettingsStore(
+    state => state.settings.methodParamOverrides
   );
 
-  // 获取所有方案
   const allMethods = [...customMethods, ...commonMethods];
 
-  // 根据 ID 或名称查找方案
   const findMethod = useCallback(
-    (methodId: string): Method | undefined => {
-      return allMethods.find(m => m.id === methodId || m.name === methodId);
-    },
+    (methodId: string): Method | undefined =>
+      allMethods.find(m => m.id === methodId || m.name === methodId),
     [allMethods]
   );
 
-  // 检查方案是否有覆盖参数
+  // 检查是否有覆盖参数
   const hasOverride = useCallback(
     (methodId: string): boolean => {
       if (!selectedEquipment || !methodId) return false;
-      return getMethodParamOverride(selectedEquipment, methodId) !== null;
+      const key = `${selectedEquipment}:${methodId}`;
+      return methodParamOverrides?.[key] != null;
     },
-    [selectedEquipment, getMethodParamOverride]
+    [selectedEquipment, methodParamOverrides]
   );
 
-  // 获取方案的有效参数（合并覆盖）
-  const getEffectiveMethod = useCallback(
-    (method: Method): Method => {
-      const methodId = method.id || method.name;
-      const override = getMethodParamOverride(selectedEquipment, methodId);
-      return buildMethodWithOverride(method, override);
+  // 获取覆盖参数
+  const getOverride = useCallback(
+    (methodId: string) => {
+      if (!selectedEquipment || !methodId) return null;
+      const key = `${selectedEquipment}:${methodId}`;
+      return methodParamOverrides?.[key] ?? null;
     },
-    [selectedEquipment, getMethodParamOverride]
+    [selectedEquipment, methodParamOverrides]
   );
 
-  // 通知父组件参数变化
-  const notifyParamsChange = useCallback(
-    (method: Method) => {
-      const effectiveMethod = getEffectiveMethod(method);
-      onParamsChange(effectiveMethod);
-    },
-    [getEffectiveMethod, onParamsChange]
-  );
+  // 初始化编辑值 - 仅在方案变化时执行
+  useEffect(() => {
+    if (!selectedMethod || !selectedEquipment) return;
+
+    // 如果已经初始化过这个方案，不再重复
+    const initKey = `${selectedEquipment}:${selectedMethod}`;
+    if (initializedMethodRef.current === initKey) return;
+
+    const method = findMethod(selectedMethod);
+    if (!method) return;
+
+    initializedMethodRef.current = initKey;
+
+    const override = getOverride(selectedMethod);
+    if (override) {
+      // 有覆盖参数，使用覆盖值（包括空字符串）
+      setEditingValues({
+        coffee: extractNumber(override.coffee ?? method.params.coffee),
+        ratio: extractRatioNumber(override.ratio ?? method.params.ratio),
+        grindSize: override.grindSize ?? method.params.grindSize ?? '',
+        water: extractNumber(override.water ?? method.params.water),
+        time: method.params.stages?.[0]?.time?.toString() ?? '',
+        temp: extractNumber(override.temp ?? method.params.temp ?? ''),
+      });
+    } else {
+      // 无覆盖，使用原始值
+      setEditingValues(extractEditingValues(method));
+    }
+
+    // 通知父组件
+    const effectiveMethod = override
+      ? {
+          ...method,
+          params: {
+            ...method.params,
+            coffee: override.coffee ?? method.params.coffee,
+            water: override.water ?? method.params.water,
+            ratio: override.ratio ?? method.params.ratio,
+            grindSize: override.grindSize ?? method.params.grindSize,
+            temp: override.temp ?? method.params.temp,
+          },
+        }
+      : method;
+    onParamsChange(effectiveMethod);
+  }, [
+    selectedMethod,
+    selectedEquipment,
+    findMethod,
+    getOverride,
+    onParamsChange,
+  ]);
 
   // 处理方案选择
   const handleMethodClick = useCallback(
     (methodId: string) => {
-      const method = findMethod(methodId);
-      if (!method) return;
+      if (methodId === selectedMethod) return;
 
-      // 先通知选择变化
+      // 重置初始化标记，允许新方案初始化
+      initializedMethodRef.current = null;
       onMethodSelect(methodId);
-
-      // 然后通知参数变化（带覆盖参数）
-      const effectiveMethod = getEffectiveMethod(method);
-      onParamsChange(effectiveMethod);
-
-      // 记录已通知的方案
-      lastNotifiedMethodId.current = methodId;
     },
-    [findMethod, onMethodSelect, getEffectiveMethod, onParamsChange]
+    [selectedMethod, onMethodSelect]
   );
 
   // 还原方案参数
@@ -164,155 +185,80 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     async (method: Method) => {
       const methodId = method.id || method.name;
       await clearMethodParamOverride(selectedEquipment, methodId);
-
-      // 重置编辑值为原始方案参数
-      setEditingValues({
-        coffee: extractNumber(method.params.coffee),
-        ratio: extractRatioNumber(method.params.ratio),
-        grindSize: method.params.grindSize,
-        water: extractNumber(method.params.water),
-        time: method.params.stages?.[0]?.time?.toString() ?? '',
-        temp: extractNumber(method.params.temp || ''),
-      });
-
-      // 通知父组件使用原始参数
+      setEditingValues(extractEditingValues(method));
       onParamsChange(method);
     },
     [selectedEquipment, clearMethodParamOverride, onParamsChange]
   );
 
-  // 当选中方案改变时，初始化编辑值并通知父组件
-  useEffect(() => {
-    if (!selectedMethod || !selectedEquipment) return;
+  // 参数更新 - 简单直接，不做过多干涉
+  const updateParam = useCallback(
+    (key: keyof EditingValues, value: string) => {
+      const method = findMethod(selectedMethod);
+      if (!method || !editingValues) return;
 
-    const method = findMethod(selectedMethod);
-    if (!method) return;
+      // 直接更新编辑值
+      const newValues = { ...editingValues, [key]: value };
 
-    const methodId = method.id || method.name;
-    const override = getMethodParamOverride(selectedEquipment, methodId);
+      // 非意式：修改粉量或比例时自动计算水量
+      if (!isEspresso && (key === 'coffee' || key === 'ratio')) {
+        const water = calculateWater(newValues.coffee, newValues.ratio);
+        if (water) newValues.water = water;
+      }
 
-    // 设置编辑值
-    if (override) {
-      setEditingValues({
-        coffee: override.coffee
-          ? extractNumber(override.coffee)
-          : extractNumber(method.params.coffee),
-        ratio: override.ratio
-          ? extractRatioNumber(override.ratio)
-          : extractRatioNumber(method.params.ratio),
-        grindSize: override.grindSize || method.params.grindSize,
-        water: override.water
-          ? extractNumber(override.water)
-          : extractNumber(method.params.water),
-        time: method.params.stages?.[0]?.time?.toString() ?? '',
-        temp: override.temp
-          ? extractNumber(override.temp)
-          : extractNumber(method.params.temp || ''),
+      setEditingValues(newValues);
+
+      // 构建方案参数
+      const updatedMethod: Method = {
+        ...method,
+        params: {
+          ...method.params,
+          coffee: newValues.coffee ? `${newValues.coffee}g` : '',
+          water: newValues.water ? `${newValues.water}g` : '',
+          ratio: newValues.ratio ? `1:${newValues.ratio}` : '',
+          grindSize: newValues.grindSize,
+          temp: newValues.temp ? `${newValues.temp}°C` : '',
+          stages: method.params.stages?.map((s, i) => ({
+            ...s,
+            time:
+              i === 0 && newValues.time
+                ? parseFloat(newValues.time) || 0
+                : s.time,
+          })),
+        },
+      };
+
+      // 保存覆盖参数
+      const methodId = method.id || method.name;
+      setMethodParamOverride(selectedEquipment, methodId, {
+        coffee: updatedMethod.params.coffee,
+        water: updatedMethod.params.water,
+        ratio: updatedMethod.params.ratio,
+        grindSize: updatedMethod.params.grindSize,
+        temp: updatedMethod.params.temp,
       });
-    } else {
-      setEditingValues({
-        coffee: extractNumber(method.params.coffee),
-        ratio: extractRatioNumber(method.params.ratio),
-        grindSize: method.params.grindSize,
-        water: extractNumber(method.params.water),
-        time: method.params.stages?.[0]?.time?.toString() ?? '',
-        temp: extractNumber(method.params.temp || ''),
-      });
-    }
 
-    // 首次加载或方案变化时，通知父组件当前有效参数
-    // 避免重复通知同一个方案
-    if (
-      isInitialMount.current ||
-      lastNotifiedMethodId.current !== selectedMethod
-    ) {
-      const effectiveMethod = buildMethodWithOverride(method, override);
-      onParamsChange(effectiveMethod);
-      lastNotifiedMethodId.current = selectedMethod;
-      isInitialMount.current = false;
-    }
-  }, [
-    selectedMethod,
-    selectedEquipment,
-    findMethod,
-    getMethodParamOverride,
-    onParamsChange,
-  ]);
+      onParamsChange(updatedMethod);
+    },
+    [
+      findMethod,
+      selectedMethod,
+      editingValues,
+      isEspresso,
+      selectedEquipment,
+      setMethodParamOverride,
+      onParamsChange,
+    ]
+  );
 
-  // 参数更新处理
-  const updateParam = (
-    key: 'coffee' | 'ratio' | 'grindSize' | 'water' | 'time' | 'temp',
-    value: string
-  ) => {
-    const method = findMethod(selectedMethod);
-    if (!method || !editingValues) return;
-
-    // 更新本地编辑状态
-    const newEditingValues = { ...editingValues, [key]: value };
-    setEditingValues(newEditingValues);
-
-    // 构建完整参数
-    const currentCoffee = key === 'coffee' ? value : newEditingValues.coffee;
-    const currentRatio = key === 'ratio' ? value : newEditingValues.ratio;
-    const currentGrindSize =
-      key === 'grindSize' ? value : newEditingValues.grindSize;
-    const currentTemp = key === 'temp' ? value : newEditingValues.temp || '';
-    const currentTime = key === 'time' ? value : newEditingValues.time || '';
-
-    // 计算水量
-    let currentWater = key === 'water' ? value : newEditingValues.water || '';
-    if (!isEspresso && (key === 'coffee' || key === 'ratio')) {
-      const water = calculateWater(currentCoffee, currentRatio);
-      if (water) currentWater = extractNumber(water);
-    }
-
-    // 构建更新后的方案
-    const updatedMethod: Method = {
-      ...method,
-      params: {
-        ...method.params,
-        coffee: `${currentCoffee}g`,
-        water: `${currentWater}g`,
-        ratio: `1:${currentRatio}`,
-        grindSize: currentGrindSize,
-        temp: currentTemp ? `${currentTemp}°C` : method.params.temp,
-        stages: method.params.stages
-          ? method.params.stages.map((s, i) => ({
-              ...s,
-              time:
-                i === 0 && currentTime ? parseFloat(currentTime) || 0 : s.time,
-            }))
-          : [],
-      },
-    };
-
-    // 保存覆盖参数
-    const methodId = method.id || method.name;
-    setMethodParamOverride(selectedEquipment, methodId, {
-      coffee: updatedMethod.params.coffee,
-      water: updatedMethod.params.water,
-      ratio: updatedMethod.params.ratio,
-      grindSize: updatedMethod.params.grindSize,
-      temp: updatedMethod.params.temp,
-    });
-
-    // 通知父组件
-    onParamsChange(updatedMethod);
-  };
-
-  const isMethodSelected = (method: Method): boolean => {
-    return selectedMethod === method.id || selectedMethod === method.name;
-  };
-
-  // 渲染参数输入
-  const renderParamInput = (
+  // 渲染参数输入框
+  const renderInput = (
     label: string,
     value: string,
-    onChange: (value: string) => void,
+    onChange: (v: string) => void,
     unit?: string,
-    width: string = 'w-12',
-    prefix?: string,
-    isNumber: boolean = true
+    width = 'w-12',
+    prefix?: string
   ) => (
     <div className="flex items-center">
       <label className="w-14 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -326,7 +272,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         )}
         <input
           type="text"
-          inputMode={isNumber ? 'decimal' : 'text'}
+          inputMode="decimal"
           value={value}
           onChange={e => onChange(e.target.value)}
           className={`${width} rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-left text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100`}
@@ -341,19 +287,30 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   );
 
   // 渲染参数显示
-  const renderParamDisplay = (label: string, value: string) => (
+  const renderDisplay = (label: string, value: string) => (
     <div className="flex items-center">
       <span className="w-14 text-xs font-medium">{label}:</span>
-      <span className="text-xs font-medium">{value}</span>
+      <span className="text-xs font-medium">{value || '-'}</span>
     </div>
   );
 
-  // 渲染单个方案
+  // 渲染方案
   const renderMethod = (method: Method) => {
-    const isSelected = isMethodSelected(method);
     const methodId = method.id || method.name;
-    const effectiveMethod = getEffectiveMethod(method);
-    const displayParams = effectiveMethod.params;
+    const isSelected =
+      selectedMethod === methodId || selectedMethod === method.name;
+    const override = getOverride(methodId);
+
+    // 显示参数：优先使用覆盖值（包括空字符串）
+    const displayParams = override
+      ? {
+          coffee: override.coffee ?? method.params.coffee,
+          water: override.water ?? method.params.water,
+          ratio: override.ratio ?? method.params.ratio,
+          grindSize: override.grindSize ?? method.params.grindSize,
+          temp: override.temp ?? method.params.temp,
+        }
+      : method.params;
 
     return (
       <div key={methodId} className="group relative">
@@ -375,39 +332,37 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                 {method.name}
               </h3>
               {isSelected && hasOverride(methodId) && (
-                <>
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.stopPropagation();
-                      handleResetParams(method);
-                    }}
-                    className="text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-                  >
-                    [还原]
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleResetParams(method);
+                  }}
+                  className="text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                >
+                  [还原]
+                </button>
               )}
             </div>
           </div>
 
           {!isSelected ? (
             <div className="mt-1.5 space-y-0.5 text-neutral-500 dark:text-neutral-400">
-              {renderParamDisplay('咖啡粉', displayParams.coffee)}
+              {renderDisplay('咖啡粉', displayParams.coffee)}
               {isEspresso ? (
                 <>
-                  {renderParamDisplay('研磨度', displayParams.grindSize)}
-                  {renderParamDisplay(
+                  {renderDisplay('研磨度', displayParams.grindSize)}
+                  {renderDisplay(
                     '萃取时长',
-                    (method.params.stages?.[0]?.duration || 0) + 's'
+                    `${method.params.stages?.[0]?.duration || 0}s`
                   )}
-                  {renderParamDisplay('液重', displayParams.water)}
+                  {renderDisplay('液重', displayParams.water)}
                 </>
               ) : (
                 <>
-                  {renderParamDisplay('粉水比', displayParams.ratio)}
-                  {renderParamDisplay('研磨度', displayParams.grindSize)}
-                  {renderParamDisplay('水温', displayParams.temp || '-')}
+                  {renderDisplay('粉水比', displayParams.ratio)}
+                  {renderDisplay('研磨度', displayParams.grindSize)}
+                  {renderDisplay('水温', displayParams.temp || '-')}
                 </>
               )}
             </div>
@@ -417,10 +372,10 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               onClick={e => e.stopPropagation()}
             >
               <div className="space-y-2">
-                {renderParamInput(
+                {renderInput(
                   '咖啡粉',
                   editingValues?.coffee ?? '',
-                  value => updateParam('coffee', value),
+                  v => updateParam('coffee', v),
                   'g'
                 )}
                 {isEspresso ? (
@@ -431,7 +386,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       </label>
                       <GrindSizeInput
                         value={editingValues?.grindSize ?? ''}
-                        onChange={value => updateParam('grindSize', value)}
+                        onChange={v => updateParam('grindSize', v)}
                         className="flex items-center"
                         inputClassName="min-w-12 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-left text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                         autoWidth
@@ -439,25 +394,25 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                         dropdownPlacement="right"
                       />
                     </div>
-                    {renderParamInput(
+                    {renderInput(
                       '萃取时长',
                       editingValues?.time ?? '',
-                      value => updateParam('time', value),
+                      v => updateParam('time', v),
                       's'
                     )}
-                    {renderParamInput(
+                    {renderInput(
                       '液重',
                       editingValues?.water ?? '',
-                      value => updateParam('water', value),
+                      v => updateParam('water', v),
                       'g'
                     )}
                   </>
                 ) : (
                   <>
-                    {renderParamInput(
+                    {renderInput(
                       '粉水比',
                       editingValues?.ratio ?? '',
-                      value => updateParam('ratio', value),
+                      v => updateParam('ratio', v),
                       undefined,
                       'w-10',
                       '1:'
@@ -468,7 +423,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                       </label>
                       <GrindSizeInput
                         value={editingValues?.grindSize ?? ''}
-                        onChange={value => updateParam('grindSize', value)}
+                        onChange={v => updateParam('grindSize', v)}
                         className="flex items-center"
                         inputClassName="min-w-12 rounded-sm border border-neutral-300 bg-white px-1 py-0.5 text-left text-xs font-medium text-neutral-800 focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
                         autoWidth
@@ -476,10 +431,10 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                         dropdownPlacement="right"
                       />
                     </div>
-                    {renderParamInput(
+                    {renderInput(
                       '水温',
                       editingValues?.temp ?? '',
-                      value => updateParam('temp', value),
+                      v => updateParam('temp', v),
                       '°C'
                     )}
                   </>
@@ -507,8 +462,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         </div>
       ) : (
         <div className="space-y-5">
-          {customMethods.map(method => renderMethod(method))}
-
+          {customMethods.map(renderMethod)}
           {showDivider && (
             <div className="flex items-center py-3">
               <div className="h-px grow bg-neutral-200 dark:bg-neutral-800" />
@@ -518,8 +472,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               <div className="h-px grow bg-neutral-200 dark:bg-neutral-800" />
             </div>
           )}
-
-          {commonMethods.map(method => renderMethod(method))}
+          {commonMethods.map(renderMethod)}
         </div>
       )}
     </div>
