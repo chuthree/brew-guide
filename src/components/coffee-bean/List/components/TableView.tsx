@@ -263,7 +263,7 @@ const FlavorStatusRing: React.FC<{ bean: ExtendedCoffeeBean }> = ({ bean }) => {
 
   if (startDay === 0 && endDay === 0) {
     const { customFlavorPeriod } = getFlavorPeriodSettings();
-    const roasterName = extractRoasterFromName(bean.name);
+    const roasterName = extractRoasterFromName(bean.name) ?? undefined;
     const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
       bean.roastLevel || '',
       customFlavorPeriod,

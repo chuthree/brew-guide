@@ -109,8 +109,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
         roasterSeparator: settingsData.roasterSeparator,
       };
       const uniqueRoasters = extractUniqueRoasters(beans, roasterSettings);
-      const filteredRoasters = uniqueRoasters.filter(r => r !== '未知烘焙商');
-      setRoasters(filteredRoasters);
+      setRoasters(uniqueRoasters);
     } catch (error) {
       console.error('Failed to load roasters:', error);
     }

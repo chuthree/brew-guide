@@ -245,7 +245,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         ? bean.roaster
         : extractRoasterFromName(bean.name);
 
-      if (roasterName && roasterName !== '未知烘焙商') {
+      if (roasterName) {
         const logo = getRoasterLogoSync(roasterName);
         setRoasterLogo(logo || null);
       } else {
@@ -305,7 +305,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         const customFlavorPeriod =
           settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
 
-        const roasterName = extractRoasterFromName(bean.name);
+        const roasterName = extractRoasterFromName(bean.name) ?? undefined;
 
         const { startDay, endDay } = getDefaultFlavorPeriodByRoastLevelSync(
           bean.roastLevel,
@@ -790,7 +790,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       if (!settings.roasterFieldEnabled && bean.name && !bean.roaster) {
         // 关闭独立输入时，始终使用空格作为分隔符
         const extractedRoaster = extractRoasterFromName(bean.name, ' ');
-        if (extractedRoaster !== '未知烘焙商') {
+        if (extractedRoaster) {
           const nameWithoutRoaster = removeRoasterFromName(bean.name, ' ');
           finalBean = {
             ...finalBean,
@@ -820,7 +820,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
         // 从咖啡豆名称中提取烘焙商名称
         const roasterName = bean.name
-          ? extractRoasterFromName(bean.name)
+          ? (extractRoasterFromName(bean.name) ?? undefined)
           : undefined;
 
         // 使用工具函数获取烘焙度对应的赏味期设置，传入烘焙商名称

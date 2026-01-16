@@ -194,7 +194,7 @@ export class RemoteChangeHandler {
     const extractedRoaster = extractRoasterFromName(bean.name, separator);
 
     // 识别不到烘焙商时保持原样
-    if (extractedRoaster === '未知烘焙商') {
+    if (!extractedRoaster) {
       return bean;
     }
 

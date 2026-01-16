@@ -471,46 +471,40 @@ export const formatBeanDisplayName = (
  * 假设烘焙商名称在咖啡豆名称的最前面，用分隔符分隔
  * @param beanName 咖啡豆名称
  * @param separator 分隔符，默认为空格，支持 "/" 分隔符
- * @returns 烘焙商名称，如果无法识别则返回"未知烘焙商"
+ * @returns 烘焙商名称，如果无法识别则返回 null
  */
 export const extractRoasterFromName = (
   beanName: string,
   separator: ' ' | '/' = ' '
-): string => {
+): string | null => {
   if (!beanName || typeof beanName !== 'string') {
-    return '未知烘焙商';
+    return null;
   }
 
   const trimmedName = beanName.trim();
   if (!trimmedName) {
-    return '未知烘焙商';
+    return null;
   }
 
   // 根据分隔符分割名称
   const parts =
     separator === '/' ? trimmedName.split('/') : trimmedName.split(/\s+/);
 
-  // 如果只有一个词，可能整个就是烘焙商名称，或者没有烘焙商信息
+  // 如果只有一个词，无法区分是烘焙商还是咖啡豆名称
   if (parts.length === 1) {
-    // 如果名称很短（可能是简称），直接作为烘焙商
-    if (parts[0].length <= 6) {
-      return parts[0];
-    }
-    // 如果名称较长，可能是完整的咖啡豆描述，没有单独的烘焙商
-    return '未知烘焙商';
+    return null;
   }
 
   // 取第一个词作为烘焙商
   const firstPart = parts[0];
 
-  // 过滤掉一些明显不是烘焙商的词（但保留包含"咖啡"的烘焙商名称）
+  // 过滤掉一些明显不是烘焙商的词
   const excludeWords = ['豆', 'bean', 'beans', '手冲', '意式', '咖啡豆'];
-  // 只过滤完全匹配或者是纯粹的描述词，不过滤包含"咖啡"的烘焙商名称
   if (
     excludeWords.some(word => firstPart.toLowerCase() === word.toLowerCase()) ||
     firstPart.toLowerCase() === 'coffee'
   ) {
-    return '未知烘焙商';
+    return null;
   }
 
   return firstPart;
@@ -577,23 +571,19 @@ export const extractUniqueRoasters = (
 
   // 统计每个烘焙商的咖啡豆数量
   beans.forEach(bean => {
-    // 直接使用 roaster 字段
-    const roaster = bean.roaster || '未知烘焙商';
-    roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
+    // 直接使用 roaster 字段，跳过没有烘焙商的豆子
+    if (bean.roaster) {
+      roasterCount.set(bean.roaster, (roasterCount.get(bean.roaster) || 0) + 1);
+    }
   });
 
-  // 按数量排序，数量多的在前，"未知烘焙商"放在最后
+  // 按数量排序，数量多的在前
   const roasters = Array.from(roasterCount.entries())
     .sort((a, b) => {
-      // "未知烘焙商"始终排在最后
-      if (a[0] === '未知烘焙商') return 1;
-      if (b[0] === '未知烘焙商') return -1;
-
       // 按数量降序排列
       if (a[1] !== b[1]) {
         return b[1] - a[1];
       }
-
       // 数量相同时按名称字母顺序排列
       return a[0].localeCompare(b[0], 'zh-CN');
     })
@@ -614,9 +604,7 @@ export const beanHasRoaster = (
   roaster: string,
   _settings?: RoasterSettings
 ): boolean => {
-  // 直接使用 roaster 字段
-  const beanRoaster = bean.roaster || '未知烘焙商';
-  return beanRoaster === roaster;
+  return bean.roaster === roaster;
 };
 
 /**

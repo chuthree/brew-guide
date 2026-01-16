@@ -98,9 +98,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
         roasterSeparator: settings.roasterSeparator,
       };
       const uniqueRoasters = extractUniqueRoasters(beans, roasterSettings);
-      // 过滤掉"未知烘焙商"
-      const filteredRoasters = uniqueRoasters.filter(r => r !== '未知烘焙商');
-      setRoasters(filteredRoasters);
+      setRoasters(uniqueRoasters);
     } catch (error) {
       console.error('Failed to load roasters:', error);
     }

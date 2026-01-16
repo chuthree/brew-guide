@@ -57,7 +57,7 @@ const FavoriteRoasterScreen: React.FC<FavoriteRoasterScreenProps> = ({
     beans.forEach(bean => {
       // 优先使用 roaster 字段，否则从名称中提取
       const roaster = bean.roaster || extractRoasterFromName(bean.name);
-      if (roaster && roaster !== '未知烘焙商') {
+      if (roaster) {
         roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
         if (!roasterBeans.has(roaster)) {
           roasterBeans.set(roaster, []);

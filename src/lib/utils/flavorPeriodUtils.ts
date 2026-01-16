@@ -227,7 +227,7 @@ export const calculateFlavorInfo = (
 
   // 如果没有自定义值，则根据烘焙度设置默认值
   if (startDay === 0 && endDay === 0) {
-    const roasterName = extractRoasterFromName(bean.name);
+    const roasterName = extractRoasterFromName(bean.name) ?? undefined;
     const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
       bean.roastLevel || '',
       customFlavorPeriod,

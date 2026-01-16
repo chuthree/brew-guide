@@ -35,7 +35,7 @@ const SummaryScreen: React.FC<SummaryScreenProps> = ({ beans, onComplete }) => {
     beans.forEach(bean => {
       // 烘焙商 - 优先使用 roaster 字段，否则从名称中提取
       const roaster = bean.roaster || extractRoasterFromName(bean.name);
-      if (roaster && roaster !== '未知烘焙商') {
+      if (roaster) {
         if (!roasterCount.has(roaster)) {
           roasterCount.set(roaster, { count: 0, images: [] });
         }
