@@ -1218,4 +1218,5 @@ export const sponsorsList = [
   '阳阳:-*',
   '王猛',
   'KinWai_',
+  '之鹿',
 ];
