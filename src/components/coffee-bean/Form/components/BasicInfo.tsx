@@ -496,18 +496,18 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         </div>
       </div>
 
-      {/* 烘焙商和咖啡豆名称 */}
+      {/* 烘焙商/生豆商和咖啡豆名称 */}
       {roasterFieldEnabled ? (
         /* 启用独立输入：两个并排的输入框 */
         <div className="grid w-full grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              烘焙商
+              {isGreenBean(bean) ? '生豆商' : '烘焙商'}
             </label>
             <AutocompleteInput
               value={bean.roaster || ''}
               onChange={onBeanChange('roaster')}
-              placeholder="烘焙商名称"
+              placeholder={isGreenBean(bean) ? '生豆商名称' : '烘焙商名称'}
               suggestions={roasterSuggestions}
               clearable
               inputMode="text"
