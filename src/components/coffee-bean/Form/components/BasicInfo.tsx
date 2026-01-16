@@ -88,6 +88,44 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   // 处理脱水率状态
   const [moistureLoss, setMoistureLoss] = useState('');
   const [isMoistureFocused, setIsMoistureFocused] = useState(false);
+  // 追踪剩余量输入框是否正在输入（用于延迟计算脱水率和烘焙度）
+  const [isRemainingFocused, setIsRemainingFocused] = useState(false);
+
+  // 根据脱水率推断烘焙度
+  const getRoastLevelFromMoistureLoss = (loss: number): string | null => {
+    if (loss >= 8 && loss <= 10) return '极浅烘焙';
+    if (loss > 10 && loss <= 13) return '浅度烘焙';
+    if (loss > 13 && loss <= 16) return '中度烘焙';
+    if (loss > 16 && loss < 18) return '中深烘焙';
+    if (loss >= 18) return '深度烘焙';
+    return null;
+  };
+
+  // 计算脱水率并更新烘焙度的核心函数
+  // 在失焦时调用，避免输入过程中频繁触发
+  // 只有当烘焙度为空时才自动设置，已有值则不覆盖
+  const calculateAndUpdateMoistureLoss = (
+    capacity: string,
+    remaining: string
+  ) => {
+    if (!capacity || !remaining) return;
+
+    const cap = parseFloat(capacity);
+    const rem = parseFloat(remaining);
+
+    if (cap > 0 && !isNaN(rem)) {
+      const loss = ((cap - rem) / cap) * 100;
+      setMoistureLoss(formatDecimal(loss));
+
+      // 只有当烘焙度为空时才自动设置，用户已设置则不覆盖
+      if (!bean.roastLevel) {
+        const suggestedRoastLevel = getRoastLevelFromMoistureLoss(loss);
+        if (suggestedRoastLevel) {
+          onBeanChange('roastLevel')(suggestedRoastLevel);
+        }
+      }
+    }
+  };
 
   // 初始化和同步容量值
   useEffect(() => {
@@ -97,22 +135,33 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     );
   }, [bean.capacity, bean.remaining, editingRemaining]);
 
-  // 同步脱水率
+  // 判断是否为烘焙模式（用于 useEffect 依赖）
+  const isInRoastingMode = isRoastingMode(bean);
+
+  // 同步脱水率显示：仅在非编辑状态下同步显示
+  // 注意：这里只更新显示值，不触发烘焙度设置（烘焙度在失焦时设置）
   useEffect(() => {
-    if (
-      !isMoistureFocused &&
-      capacityValue &&
-      remainingValue &&
-      parseFloat(capacityValue) > 0
-    ) {
+    // 如果用户正在输入脱水率或剩余量，不要覆盖
+    if (isMoistureFocused || isRemainingFocused) return;
+
+    // 仅在烘焙模式下执行
+    if (!isInRoastingMode) return;
+
+    if (capacityValue && remainingValue && parseFloat(capacityValue) > 0) {
       const cap = parseFloat(capacityValue);
       const rem = parseFloat(remainingValue);
       const loss = ((cap - rem) / cap) * 100;
       setMoistureLoss(formatDecimal(loss));
-    } else if (!isMoistureFocused && (!capacityValue || !remainingValue)) {
+    } else {
       setMoistureLoss('');
     }
-  }, [capacityValue, remainingValue, isMoistureFocused]);
+  }, [
+    capacityValue,
+    remainingValue,
+    isMoistureFocused,
+    isRemainingFocused,
+    isInRoastingMode,
+  ]);
 
   // 处理日期变化 - 根据豆子状态决定更新哪个字段
   const handleDateChange = (date: Date) => {
@@ -161,7 +210,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     // 不再实时调用 onBeanChange，只在失焦时处理
   };
 
-  // 处理剩余容量变化
+  // 处理剩余容量变化 - 只更新本地状态，不触发烘焙度计算
   const handleRemainingChange = (value: string) => {
     // 确保剩余容量不大于总容量
     if (capacityValue && parseFloat(value) > parseFloat(capacityValue)) {
@@ -169,45 +218,50 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     }
     setRemainingValue(value);
     onBeanChange('remaining')(value);
+    // 注意：不在这里计算烘焙度，等失焦时再计算
   };
 
-  // 根据脱水率推断烘焙度
-  const getRoastLevelFromMoistureLoss = (loss: number): string | null => {
-    if (loss >= 8 && loss <= 10) return '极浅烘焙';
-    if (loss >= 11 && loss <= 13) return '浅度烘焙';
-    if (loss >= 14 && loss <= 16) return '中度烘焙';
-    if (loss >= 17 && loss < 18) return '中深烘焙';
-    if (loss >= 18) return '深度烘焙';
-    return null;
+  // 处理剩余容量输入框失焦 - 此时才计算脱水率和烘焙度
+  const handleRemainingBlur = () => {
+    setIsRemainingFocused(false);
+
+    // 仅在烘焙模式下计算
+    if (isInRoastingMode) {
+      calculateAndUpdateMoistureLoss(capacityValue, remainingValue);
+    }
   };
 
-  // 处理脱水率变化（实时计算）
+  // 处理脱水率手动输入变化 - 只更新本地状态
   const handleMoistureChange = (value: string) => {
     setMoistureLoss(value);
 
     const loss = parseFloat(value);
     const cap = parseFloat(capacityValue);
 
+    // 根据脱水率反算熟豆量（实时更新，方便用户看到效果）
     if (!isNaN(loss) && !isNaN(cap) && cap > 0) {
-      // 熟豆 = 生豆 * (1 - loss/100)
       const newRem = cap * (1 - loss / 100);
-      // 保留一位小数，并去除末尾的0
       const newRemStr = formatDecimal(newRem);
       setRemainingValue(newRemStr);
       onBeanChange('remaining')(newRemStr);
     }
-
-    // 根据脱水率自动设置烘焙度
-    if (!isNaN(loss)) {
-      const suggestedRoastLevel = getRoastLevelFromMoistureLoss(loss);
-      if (suggestedRoastLevel) {
-        onBeanChange('roastLevel')(suggestedRoastLevel);
-      }
-    }
+    // 注意：不在这里设置烘焙度，等失焦时再设置
   };
 
+  // 处理脱水率输入框失焦 - 此时才设置烘焙度
   const handleMoistureBlur = () => {
     setIsMoistureFocused(false);
+
+    // 只有当烘焙度为空时才自动设置
+    if (!bean.roastLevel) {
+      const loss = parseFloat(moistureLoss);
+      if (!isNaN(loss)) {
+        const suggestedRoastLevel = getRoastLevelFromMoistureLoss(loss);
+        if (suggestedRoastLevel) {
+          onBeanChange('roastLevel')(suggestedRoastLevel);
+        }
+      }
+    }
   };
 
   // 处理图片选择逻辑 (相册或拍照)
@@ -518,9 +572,13 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 step="0.1"
                 value={remainingValue}
                 onChange={e => handleRemainingChange(e.target.value)}
+                onFocus={() => setIsRemainingFocused(true)}
+                onBlur={() => {
+                  handleRemainingBlur();
+                  validateRemaining();
+                }}
                 placeholder={isRoastingMode(bean) ? '熟豆量' : '剩余量'}
                 className="w-full border-b border-neutral-300 bg-transparent py-2 text-center outline-none dark:border-neutral-700"
-                onBlur={validateRemaining}
               />
             </div>
             <span className="text-neutral-300 dark:text-neutral-700">/</span>
@@ -546,6 +604,14 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                   ) {
                     setRemainingValue(capacityValue);
                     onBeanChange('remaining')(capacityValue);
+                  }
+
+                  // 烘焙模式下，如果已有剩余量，计算脱水率和烘焙度
+                  if (isRoastingMode(bean) && remainingValue) {
+                    calculateAndUpdateMoistureLoss(
+                      capacityValue,
+                      remainingValue
+                    );
                   }
 
                   // 触发容量变化回调，用于类型推断
