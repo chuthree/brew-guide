@@ -122,9 +122,29 @@ export function Calendar({
   const [showYearPicker, setShowYearPicker] = React.useState(false);
   const [showMonthPicker, setShowMonthPicker] = React.useState(false);
 
-  // 生成年份选项（当前年份往前10年，共11年）
-  const currentYear = currentMonth.getFullYear();
-  const years = Array.from({ length: 11 }, (_, i) => currentYear - 10 + i);
+  // 生成年份选项
+  // 基于实际当前年份，范围为前10年到后1年，同时确保包含显示月份的年份
+  const actualCurrentYear = new Date().getFullYear();
+  const displayYear = currentMonth.getFullYear();
+
+  const years = React.useMemo(() => {
+    // 基础范围：实际当前年份前10年到后1年
+    let startYear = actualCurrentYear - 10;
+    let endYear = actualCurrentYear + 1;
+
+    // 如果显示的年份超出基础范围，则扩展范围
+    if (displayYear < startYear) {
+      startYear = displayYear;
+    }
+    if (displayYear > endYear) {
+      endYear = displayYear;
+    }
+
+    return Array.from(
+      { length: endYear - startYear + 1 },
+      (_, i) => startYear + i
+    );
+  }, [actualCurrentYear, displayYear]);
 
   // 生成月份选项
   const monthNames =
@@ -217,7 +237,7 @@ export function Calendar({
                       onClick={() => handleYearSelect(year)}
                       className={cn(
                         'rounded px-3 py-2 text-sm transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800',
-                        year === currentYear
+                        year === displayYear
                           ? 'bg-neutral-800 font-medium text-white dark:bg-white dark:text-neutral-900'
                           : 'text-neutral-800 dark:text-white'
                       )}
