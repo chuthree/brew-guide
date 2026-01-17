@@ -1689,7 +1689,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         <button
           type="button"
           onClick={handleButtonClick}
-          className={`flex items-center justify-center p-4 ${!stepValid ? 'cursor-not-allowed opacity-50' : ''} ${isLastStep ? 'rounded-full bg-neutral-800 px-6 py-3 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-800' : ''} `}
+          className={`flex cursor-pointer items-center justify-center p-4 ${!stepValid ? 'cursor-not-allowed opacity-50' : ''} ${isLastStep ? 'rounded-full bg-neutral-800 px-6 py-3 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-800' : ''} `}
         >
           {isLastStep ? (
             <span className="font-medium">完成</span>

@@ -33,7 +33,11 @@ const Steps: React.FC<StepsProps> = ({ steps, currentStep, onBack }) => {
 
   return (
     <div className="mt-3 mb-6 flex items-center justify-between">
-      <button type="button" onClick={onBack} className="-m-3 rounded-full p-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="-m-3 cursor-pointer rounded-full p-3"
+      >
         <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
       </button>
       <div className="w-full px-4">{renderProgressBar()}</div>

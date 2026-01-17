@@ -799,7 +799,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
             <button
               type="button"
               onClick={cycleDisplayMode}
-              className="flex items-center gap-0.5 text-xs font-medium text-neutral-900 hover:text-neutral-700 dark:text-neutral-100 dark:hover:text-neutral-300"
+              className="flex cursor-pointer items-center gap-0.5 text-xs font-medium text-neutral-900 hover:text-neutral-700 dark:text-neutral-100 dark:hover:text-neutral-300"
               title={
                 displayMode === 'independent'
                   ? '当前：独立模式（点击切换为累计模式）'
@@ -826,7 +826,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
             <button
               type="button"
               onClick={addStage}
-              className="text-xs font-medium text-neutral-900 hover:text-neutral-700 dark:text-neutral-100 dark:hover:text-neutral-300"
+              className="cursor-pointer text-xs font-medium text-neutral-900 hover:text-neutral-700 dark:text-neutral-100 dark:hover:text-neutral-300"
             >
               + 添加步骤
             </button>
@@ -907,7 +907,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       <button
                         type="button"
                         onClick={() => handleTimeModeRemoveStage(timeModeIndex)}
-                        className="w-4 shrink-0 text-neutral-400 tabular-nums hover:text-red-500 dark:text-neutral-500"
+                        className="w-4 shrink-0 cursor-pointer text-neutral-400 tabular-nums hover:text-red-500 dark:text-neutral-500"
                         title="删除此步骤"
                       >
                         {stageNumber}
@@ -1231,7 +1231,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
                       <button
                         type="button"
                         onClick={() => removeStage(index)}
-                        className="w-4 shrink-0 text-neutral-400 tabular-nums hover:text-red-500 dark:text-neutral-500"
+                        className="w-4 shrink-0 cursor-pointer text-neutral-400 tabular-nums hover:text-red-500 dark:text-neutral-500"
                         title="删除此步骤"
                       >
                         {isWaitStage ? '−' : stageNumber}
