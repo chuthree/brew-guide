@@ -219,22 +219,22 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
     // 手冲类型 - 获取默认注水方式
     const defaultPourType = getDefaultPourType(customEquipment);
 
-    // 创建初始步骤（使用新数据模型：预浸泡 + 等待）
-    // Requirements 6.1, 6.2, 6.3: 手冲器具默认预浸泡阶段 + 等待阶段
+    // 创建初始步骤（使用新数据模型：焖蒸 + 等待）
+    // Requirements 6.1, 6.2, 6.3: 手冲器具默认焖蒸阶段 + 等待阶段
     const initialStages: Stage[] = [
       {
-        // Requirement 6.2: pourType="circle", label="预浸泡", water="30", duration="10", detail=""
+        // Requirement 6.2: pourType="circle", label="焖蒸(绕圈注水)", water="30", duration="10"
         duration: 10,
-        label: '预浸泡',
+        label: '焖蒸(绕圈注水)',
         water: '30',
-        detail: '',
+        detail: '中心向外绕圈，确保均匀萃取',
         pourType: defaultPourType, // 使用器具默认注水方式以提供更好的用户体验
         ...(customEquipment.hasValve
           ? { valveStatus: 'closed' as 'closed' | 'open' }
           : {}),
       },
       {
-        // Requirement 6.3: pourType="wait", label="等待", duration="20", detail=""
+        // Requirement 6.3: pourType="wait", label="等待", duration="15", detail=""
         duration: 20,
         label: '等待',
         detail: '',
