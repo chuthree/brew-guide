@@ -179,12 +179,8 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
                 }
               }
 
-              setStatus({
-                type: 'success',
-                message: `成功从 Beanconqueror 导入 ${importResult.stats?.beansCount || 0} 个咖啡豆${importResult.stats?.brewsCount ? `和 ${importResult.stats.brewsCount} 条冲煮记录` : ''}`,
-              });
-
               onDataChange?.();
+              window.location.reload();
             } else {
               setStatus({ type: 'error', message: importResult.message });
             }
@@ -192,17 +188,8 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
             const result = await DataManagerUtil.importAllData(jsonString);
 
             if (result.success) {
-              setStatus({ type: 'success', message: result.message });
               onDataChange?.();
-
-              try {
-                window.dispatchEvent(new CustomEvent('globalCacheReset'));
-                import('@/components/notes/List/globalCache')
-                  .then(({ initializeGlobalCache }) => initializeGlobalCache())
-                  .catch(err => console.error('重新初始化笔记缓存失败:', err));
-              } catch (cacheError) {
-                console.error('重置笔记缓存事件失败:', cacheError);
-              }
+              window.location.reload();
             } else {
               setStatus({ type: 'error', message: result.message });
             }
