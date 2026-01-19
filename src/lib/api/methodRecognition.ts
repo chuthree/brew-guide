@@ -7,11 +7,10 @@ export const API_CONFIG = {
 
 // 文件上传安全配置
 const UPLOAD_CONFIG = {
-  // 允许的图片类型
+  // 允许的图片类型（不支持 GIF，因为无法有效压缩动图）
   allowedTypes: [
     'image/jpeg',
     'image/png',
-    'image/gif',
     'image/webp',
     'image/heic',
     'image/heif',
@@ -24,7 +23,7 @@ const UPLOAD_CONFIG = {
 function validateImageFile(file: File): void {
   // 验证文件类型
   if (!UPLOAD_CONFIG.allowedTypes.includes(file.type)) {
-    throw new Error('不支持的文件类型，请上传 JPG、PNG、GIF 或 WebP 图片');
+    throw new Error('不支持的文件类型，请上传 JPG、PNG 或 HEIF 图片');
   }
 
   // 验证文件大小
