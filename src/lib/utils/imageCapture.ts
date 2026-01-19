@@ -67,7 +67,8 @@ function captureImageWithHtmlInput(
     try {
       const fileInput = document.createElement('input');
       fileInput.type = 'file';
-      fileInput.accept = 'image/*';
+      // 仅支持 JPG、PNG、WebP、HEIC 格式
+      fileInput.accept = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
       fileInput.style.display = 'none';
 
       // 根据来源设置不同的capture属性
@@ -114,10 +115,12 @@ function captureImageWithHtmlInput(
           const file = input.files[0];
 
           // 验证文件类型
-          if (!file.type.startsWith('image/')) {
+          // 仅支持 JPG、PNG、WebP、HEIC 格式
+          const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+          if (!allowedTypes.includes(file.type)) {
             isResolved = true;
             cleanup();
-            reject(new Error('请选择图片文件'));
+            reject(new Error('请上传 JPG、PNG 或 WebP 格式的图片'));
             return;
           }
 

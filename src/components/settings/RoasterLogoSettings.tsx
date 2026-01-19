@@ -143,9 +143,10 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
   const handleFileSelect = async (roasterName: string, file: File) => {
     if (!file) return;
 
-    // 验证文件类型
-    if (!file.type.startsWith('image/')) {
-      alert('请选择图片文件');
+    // 仅支持 JPG、PNG、WebP、HEIC 格式
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('请上传 JPG、PNG 或 WebP 格式的图片');
       return;
     }
 
@@ -318,7 +319,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                           }
                         }}
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                         className="hidden"
                         onChange={e => {
                           const file = e.target.files?.[0];

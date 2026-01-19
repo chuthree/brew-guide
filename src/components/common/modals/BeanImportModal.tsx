@@ -356,11 +356,12 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       const files = event.target.files;
       if (!files || files.length === 0) return;
 
-      // 过滤有效图片文件
+      // 过滤有效图片文件（仅支持 JPG、PNG、WebP、HEIC）
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
       const validFiles: File[] = [];
       for (let i = 0; i < Math.min(files.length, MAX_IMAGES); i++) {
         const file = files[i];
-        if (!file.type.startsWith('image/')) {
+        if (!allowedTypes.includes(file.type)) {
           continue;
         }
         if (file.size > 10 * 1024 * 1024) {
@@ -370,7 +371,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       }
 
       if (validFiles.length === 0) {
-        showToast({ type: 'error', title: '请上传有效的图片文件' });
+        showToast({ type: 'error', title: '请上传 JPG、PNG 或 WebP 格式的图片' });
         return;
       }
 
@@ -1014,7 +1015,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
         multiple
         className="hidden"
         onChange={handleImageUpload}

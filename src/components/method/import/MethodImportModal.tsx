@@ -365,8 +365,10 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       if (!files || files.length === 0) return;
 
       const file = files[0];
-      if (!file.type.startsWith('image/')) {
-        showToast({ type: 'error', title: '请上传有效的图片文件' });
+      // 仅支持 JPG、PNG、WebP、HEIC 格式
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+      if (!allowedTypes.includes(file.type)) {
+        showToast({ type: 'error', title: '请上传 JPG、PNG 或 WebP 格式的图片' });
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
@@ -601,7 +603,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
         className="hidden"
         onChange={handleImageUpload}
       />

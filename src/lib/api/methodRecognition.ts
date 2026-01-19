@@ -7,7 +7,7 @@ export const API_CONFIG = {
 
 // 文件上传安全配置
 const UPLOAD_CONFIG = {
-  // 允许的图片类型（不支持 GIF，因为无法有效压缩动图）
+  // 允许的图片类型
   allowedTypes: [
     'image/jpeg',
     'image/png',
