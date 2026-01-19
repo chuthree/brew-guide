@@ -42,6 +42,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
               '"Noto Sans SC Print", "Noto Sans SC", "Microsoft YaHei", "SimHei", "PingFang SC", Arial, sans-serif',
             fontWeight: config.fontWeight,
             letterSpacing: '0.02em',
+            wordBreak: 'keep-all',
           }}
           className="overflow-hidden"
         >

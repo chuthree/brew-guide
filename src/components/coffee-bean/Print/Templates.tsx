@@ -61,7 +61,7 @@ const FieldRow: React.FC<{
   return (
     <div className="flex w-full gap-1">
       <span className="shrink-0">{label}:</span>
-      <span className="wrap-break-word">{value}</span>
+      <span style={{ wordBreak: 'keep-all' }}>{value}</span>
     </div>
   );
 };
