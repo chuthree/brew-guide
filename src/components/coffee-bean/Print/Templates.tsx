@@ -30,13 +30,17 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({
   };
 
   return (
-    <div className="flex h-full flex-col justify-between">
-      <div className="space-y-1">
+    <div
+      style={{
+        display: 'flex',
+        height: '100%',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
         {brandName && (
-          <div
-            style={{ ...textStyle, letterSpacing: '0.05em' }}
-            className="text-center"
-          >
+          <div style={{ ...textStyle, letterSpacing: '0.05em', textAlign: 'center' }}>
             [ {brandName} ]
           </div>
         )}
@@ -59,8 +63,8 @@ const FieldRow: React.FC<{
 }> = ({ show, label, value }) => {
   if (!show || !value) return null;
   return (
-    <div className="flex w-full gap-1">
-      <span className="shrink-0">{label}:</span>
+    <div style={{ display: 'flex', width: '100%', gap: '0.25rem' }}>
+      <span style={{ flexShrink: 0 }}>{label}:</span>
       <span style={{ wordBreak: 'keep-all' }}>{value}</span>
     </div>
   );
@@ -81,10 +85,16 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
   const validFlavors = content.flavor.filter(f => f.trim());
 
   return (
-    <div className="flex h-full flex-col">
+    <div style={{ display: 'flex', height: '100%', flexDirection: 'column' }}>
       {/* 标题 */}
       {shouldShow(config, 'name', content.name) && (
-        <div className="mb-1.5 shrink-0 pb-1">
+        <div
+          style={{
+            marginBottom: '0.375rem',
+            flexShrink: 0,
+            paddingBottom: '0.25rem',
+          }}
+        >
           <div
             style={{
               fontSize: `${titleFontSize}px`,
@@ -95,16 +105,22 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
             {content.name}
           </div>
           <div
-            className="mt-1 w-full"
-            style={{ borderBottom: '1.5px solid #000' }}
+            style={{
+              marginTop: '0.25rem',
+              width: '100%',
+              borderBottom: '1.5px solid #000',
+            }}
           />
         </div>
       )}
 
       {/* 字段列表 */}
       <div
-        className="flex flex-1 flex-wrap content-start"
         style={{
+          display: 'flex',
+          flex: '1 1 0%',
+          flexWrap: 'wrap',
+          alignContent: 'flex-start',
           fontSize: `${fontSize}px`,
           gap: `${Math.max(fontSize * 0.4, 4)}px`,
           lineHeight: 1.3,

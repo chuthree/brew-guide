@@ -108,6 +108,67 @@ export const createInitialContent = (
   };
 };
 
+// 等待字体加载完成
+const waitForFonts = async (): Promise<void> => {
+  if (typeof document === 'undefined') return;
+  try {
+    // 等待所有字体加载，最多等待 2 秒
+    await Promise.race([
+      document.fonts.ready,
+      new Promise(resolve => setTimeout(resolve, 2000)),
+    ]);
+  } catch {
+    // 字体加载 API 不支持时忽略
+  }
+};
+
+// 将 Tailwind 类名转换为内联样式的映射表
+// 这确保了在所有设备上样式的一致性
+const inlineStylesFromClasses = (element: HTMLElement): void => {
+  const classMap: Record<string, Partial<CSSStyleDeclaration>> = {
+    // Flex 布局
+    flex: { display: 'flex' },
+    'flex-col': { flexDirection: 'column' },
+    'flex-1': { flex: '1 1 0%' },
+    'flex-wrap': { flexWrap: 'wrap' },
+    'content-start': { alignContent: 'flex-start' },
+    'justify-between': { justifyContent: 'space-between' },
+    'h-full': { height: '100%' },
+    'w-full': { width: '100%' },
+    // 间距
+    'space-y-1': { gap: '0.25rem' },
+    'gap-1': { gap: '0.25rem' },
+    'mb-1': { marginBottom: '0.25rem' },
+    'mb-1.5': { marginBottom: '0.375rem' },
+    'mt-1': { marginTop: '0.25rem' },
+    'pb-1': { paddingBottom: '0.25rem' },
+    // 文本
+    'text-center': { textAlign: 'center' },
+    'overflow-hidden': { overflow: 'hidden' },
+    'shrink-0': { flexShrink: '0' },
+  };
+
+  // 递归处理所有子元素
+  const processElement = (el: HTMLElement) => {
+    if (el.classList) {
+      el.classList.forEach(className => {
+        const styles = classMap[className];
+        if (styles) {
+          Object.assign(el.style, styles);
+        }
+      });
+    }
+    // 处理子元素
+    Array.from(el.children).forEach(child => {
+      if (child instanceof HTMLElement) {
+        processElement(child);
+      }
+    });
+  };
+
+  processElement(element);
+};
+
 // 保存预览为图片
 export async function savePreviewAsImage(
   elementId: string,
@@ -116,31 +177,102 @@ export async function savePreviewAsImage(
   const el = document.getElementById(elementId);
   if (!el) throw new Error('预览元素未找到');
 
-  const { toPng } = await import('html-to-image');
-  const dataUrl = await toPng(el, {
-    backgroundColor: '#ffffff',
-    pixelRatio: 6.37,
-    quality: 0.95,
-  });
+  // 1. 等待字体加载完成
+  await waitForFonts();
 
-  const { Capacitor } = await import('@capacitor/core');
-  const { showToast } = await import('@/components/common/feedback/LightToast');
+  // 2. 等待浏览器渲染完成
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  await new Promise(resolve => setTimeout(resolve, 100));
 
-  if (Capacitor.isNativePlatform()) {
-    try {
+  // 3. 克隆元素以避免修改原始 DOM
+  const clonedEl = el.cloneNode(true) as HTMLElement;
+
+  // 4. 将 Tailwind 类名转换为内联样式，确保跨设备一致性
+  inlineStylesFromClasses(clonedEl);
+
+  // 5. 复制原始元素的计算样式到克隆元素
+  const computedStyle = window.getComputedStyle(el);
+  clonedEl.style.width = computedStyle.width;
+  clonedEl.style.height = computedStyle.height;
+  clonedEl.style.padding = computedStyle.padding;
+  clonedEl.style.fontSize = computedStyle.fontSize;
+  clonedEl.style.fontWeight = computedStyle.fontWeight;
+  clonedEl.style.fontFamily = computedStyle.fontFamily;
+  clonedEl.style.lineHeight = computedStyle.lineHeight;
+  clonedEl.style.letterSpacing = computedStyle.letterSpacing;
+  clonedEl.style.wordBreak = computedStyle.wordBreak;
+  clonedEl.style.backgroundColor = '#ffffff';
+  clonedEl.style.color = '#000000';
+
+  // 6. 创建离屏容器
+  const offscreenContainer = document.createElement('div');
+  offscreenContainer.style.cssText = `
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    z-index: -1;
+    pointer-events: none;
+    visibility: visible;
+  `;
+  offscreenContainer.appendChild(clonedEl);
+  document.body.appendChild(offscreenContainer);
+
+  // 7. 再次等待渲染
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  try {
+    const { toPng } = await import('html-to-image');
+    const dataUrl = await toPng(clonedEl, {
+      backgroundColor: '#ffffff',
+      pixelRatio: 6.37,
+      quality: 0.95,
+      // 跳过隐藏元素
+      filter: node => {
+        if (node instanceof HTMLElement) {
+          const style = getComputedStyle(node);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            return false;
+          }
+        }
+        return true;
+      },
+      // 确保样式被正确捕获
+      style: {
+        transform: 'none',
+      },
+    });
+
+    // 清理离屏容器
+    document.body.removeChild(offscreenContainer);
+
+    const { Capacitor } = await import('@capacitor/core');
+    const { showToast } = await import(
+      '@/components/common/feedback/LightToast'
+    );
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await TempFileManager.saveImageToGallery(dataUrl);
+        showToast({ type: 'success', title: '已保存到相册' });
+      } catch (error) {
+        console.error('保存到相册失败:', error);
+        const fileName = `${bean?.name || '咖啡豆标签'}-${new Date().toISOString().split('T')[0]}`;
+        await TempFileManager.shareImageFile(dataUrl, fileName, {
+          title: '咖啡豆标签',
+          text: `${bean?.name || '咖啡豆'}标签图片`,
+          dialogTitle: '保存标签图片',
+        });
+      }
+    } else {
       await TempFileManager.saveImageToGallery(dataUrl);
-      showToast({ type: 'success', title: '已保存到相册' });
-    } catch (error) {
-      console.error('保存到相册失败:', error);
-      const fileName = `${bean?.name || '咖啡豆标签'}-${new Date().toISOString().split('T')[0]}`;
-      await TempFileManager.shareImageFile(dataUrl, fileName, {
-        title: '咖啡豆标签',
-        text: `${bean?.name || '咖啡豆'}标签图片`,
-        dialogTitle: '保存标签图片',
-      });
+      showToast({ type: 'success', title: '图片已保存' });
     }
-  } else {
-    await TempFileManager.saveImageToGallery(dataUrl);
-    showToast({ type: 'success', title: '图片已保存' });
+  } catch (error) {
+    // 确保清理离屏容器
+    if (document.body.contains(offscreenContainer)) {
+      document.body.removeChild(offscreenContainer);
+    }
+    throw error;
   }
 }

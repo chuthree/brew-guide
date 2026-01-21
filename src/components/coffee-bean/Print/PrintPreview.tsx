@@ -43,8 +43,8 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
             fontWeight: config.fontWeight,
             letterSpacing: '0.02em',
             wordBreak: 'keep-all',
+            overflow: 'hidden',
           }}
-          className="overflow-hidden"
         >
           <TemplateComponent
             config={config}
