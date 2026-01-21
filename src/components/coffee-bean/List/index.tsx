@@ -1427,6 +1427,50 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     return filterBeansBySearch(emptyBeans);
   }, [emptyBeans, showEmptyBeans, filterBeansBySearch]);
 
+  // 基于搜索结果的类型统计（搜索时使用搜索过滤后的数据）
+  const searchAwareTypeStats = React.useMemo(() => {
+    const beansToCount = isSearching ? searchFilteredBeans : filteredBeans;
+
+    const espressoBeans = beansToCount.filter(
+      bean => bean.beanType === 'espresso'
+    );
+    const filterBeans = beansToCount.filter(bean => bean.beanType === 'filter');
+    const omniBeans = beansToCount.filter(bean => bean.beanType === 'omni');
+
+    return {
+      espressoCount: espressoBeans.length,
+      filterCount: filterBeans.length,
+      omniCount: omniBeans.length,
+      espressoRemaining: espressoBeans.reduce(
+        (sum, bean) => sum + parseFloat(bean.remaining || '0'),
+        0
+      ),
+      filterRemaining: filterBeans.reduce(
+        (sum, bean) => sum + parseFloat(bean.remaining || '0'),
+        0
+      ),
+      omniRemaining: omniBeans.reduce(
+        (sum, bean) => sum + parseFloat(bean.remaining || '0'),
+        0
+      ),
+    };
+  }, [isSearching, searchFilteredBeans, filteredBeans]);
+
+  // 基于搜索结果的预计杯数
+  const searchAwareEstimatedCups = React.useMemo(() => {
+    if (!showEstimatedCups || selectedBeanState !== 'roasted') {
+      return undefined;
+    }
+    const beansToCount = isSearching ? searchFilteredBeans : filteredBeans;
+    return calculateEstimatedCupsPerBean(beansToCount);
+  }, [
+    showEstimatedCups,
+    selectedBeanState,
+    isSearching,
+    searchFilteredBeans,
+    filteredBeans,
+  ]);
+
   const [isExportingPreview, setIsExportingPreview] = useState(false);
 
   // 格式化重量显示
@@ -1478,21 +1522,21 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           text = `${beansToExport.length} 款${beanTypeName}，剩余 ${totalWeightText}`;
         }
 
-        // 添加预计杯数（仅熟豆）
+        // 添加预计杯数（仅熟豆）- 使用搜索感知的统计值
         if (
           showEstimatedCupsForExport &&
           selectedBeanState === 'roasted' &&
-          estimatedCups !== undefined &&
-          estimatedCups > 0
+          searchAwareEstimatedCups !== undefined &&
+          searchAwareEstimatedCups > 0
         ) {
-          text += `，约 ${estimatedCups} 杯`;
+          text += `，约 ${searchAwareEstimatedCups} 杯`;
         }
 
-        // 添加详细剩余量信息（仅当选择"全部"类型且有多种类型时显示）
+        // 添加详细剩余量信息（仅当选择"全部"类型且有多种类型时显示）- 使用搜索感知的统计值
         const typeCount = [
-          espressoCount > 0,
-          filterCount > 0,
-          omniCount > 0,
+          searchAwareTypeStats.espressoCount > 0,
+          searchAwareTypeStats.filterCount > 0,
+          searchAwareTypeStats.omniCount > 0,
         ].filter(Boolean).length;
         if (
           showBeanSummary &&
@@ -1501,9 +1545,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           typeCount > 1
         ) {
           const details = [
-            espressoCount > 0 && `意式 ${formatWeight(espressoRemaining)}`,
-            filterCount > 0 && `手冲 ${formatWeight(filterRemaining)}`,
-            omniCount > 0 && `全能 ${formatWeight(omniRemaining)}`,
+            searchAwareTypeStats.espressoCount > 0 &&
+              `意式 ${formatWeight(searchAwareTypeStats.espressoRemaining)}`,
+            searchAwareTypeStats.filterCount > 0 &&
+              `手冲 ${formatWeight(searchAwareTypeStats.filterRemaining)}`,
+            searchAwareTypeStats.omniCount > 0 &&
+              `全能 ${formatWeight(searchAwareTypeStats.omniRemaining)}`,
           ].filter(Boolean);
           if (details.length > 0) {
             text += `（${details.join('，')}）`;
@@ -1781,21 +1828,21 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         )}
         // 新增导出相关属性
         onExportPreview={handleExportPreview}
-        // 新增类型统计属性
-        espressoCount={espressoCount}
-        filterCount={filterCount}
-        omniCount={omniCount}
-        // 新增类型剩余量属性
-        espressoRemaining={espressoRemaining}
-        filterRemaining={filterRemaining}
-        omniRemaining={omniRemaining}
+        // 新增类型统计属性（基于搜索结果）
+        espressoCount={searchAwareTypeStats.espressoCount}
+        filterCount={searchAwareTypeStats.filterCount}
+        omniCount={searchAwareTypeStats.omniCount}
+        // 新增类型剩余量属性（基于搜索结果）
+        espressoRemaining={searchAwareTypeStats.espressoRemaining}
+        filterRemaining={searchAwareTypeStats.filterRemaining}
+        omniRemaining={searchAwareTypeStats.omniRemaining}
         // 新增搜索历史属性
         searchHistory={searchHistory}
         onSearchHistoryClick={handleSearchHistoryClick}
         // 生豆库启用设置
         enableGreenBeanInventory={enableGreenBeanInventory}
-        // 预计杯数
-        estimatedCups={estimatedCups}
+        // 预计杯数（基于搜索结果）
+        estimatedCups={searchAwareEstimatedCups}
         // 是否有生豆（用于动态调整列标签）
         hasGreenBeans={(isSearching ? searchFilteredBeans : filteredBeans).some(
           bean => bean.beanState === 'green'
