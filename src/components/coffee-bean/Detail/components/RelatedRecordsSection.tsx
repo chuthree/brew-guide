@@ -465,33 +465,66 @@ const BrewingRecordItem: React.FC<{
               </div>
 
               {/* 参数信息 */}
-              {note.params && (
-                <div className="mt-1.5 space-x-1 text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-                  {beanDisplayName && (
-                    <>
-                      <span>
-                        {note.equipment
-                          ? equipmentNames[note.equipment] || note.equipment
-                          : '未知器具'}
-                      </span>
-                      <span>·</span>
-                    </>
-                  )}
-                  <span>{note.params.coffee}</span>
-                  <span>·</span>
-                  <span>{note.params.ratio}</span>
-                  {(note.params.grindSize || note.params.temp) && (
-                    <>
-                      <span>·</span>
-                      <span>
-                        {[note.params.grindSize, note.params.temp]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
+              {note.params &&
+                (() => {
+                  // 判断是否为意式咖啡笔记
+                  const isEspresso =
+                    note.equipment &&
+                    (note.equipment.toLowerCase().includes('espresso') ||
+                      note.equipment.includes('意式'));
+
+                  return (
+                    <div className="mt-1.5 space-x-1 text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                      {beanDisplayName &&
+                        note.method &&
+                        note.method.trim() !== '' && (
+                          <>
+                            <span>
+                              {note.equipment
+                                ? equipmentNames[note.equipment] ||
+                                  note.equipment
+                                : '未知器具'}
+                            </span>
+                            <span>·</span>
+                          </>
+                        )}
+
+                      {isEspresso ? (
+                        // 意式参数：粉量 · 研磨度 · 时间 · 液重
+                        <>
+                          <span>{note.params.coffee}</span>
+                          <span className="shrink-0">·</span>
+                          <span>{note.params.grindSize || '-'}</span>
+                          {note.totalTime > 0 && (
+                            <>
+                              <span className="shrink-0">·</span>
+                              <span>{note.totalTime}s</span>
+                            </>
+                          )}
+                          <span className="shrink-0">·</span>
+                          <span>{note.params.water}</span>
+                        </>
+                      ) : (
+                        // 手冲参数：粉量 · 粉水比 · 研磨度 · 温度
+                        <>
+                          <span>{note.params.coffee}</span>
+                          <span>·</span>
+                          <span>{note.params.ratio}</span>
+                          {(note.params.grindSize || note.params.temp) && (
+                            <>
+                              <span>·</span>
+                              <span>
+                                {[note.params.grindSize, note.params.temp]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </span>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
             </div>
           </div>
         </div>
