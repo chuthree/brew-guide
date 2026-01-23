@@ -273,6 +273,7 @@ export interface AppSettings {
       ratio?: string;
       grindSize?: string;
       temp?: string;
+      extractionTime?: number; // 意式萃取时长（秒）
       modifiedAt: number;
     }
   >;

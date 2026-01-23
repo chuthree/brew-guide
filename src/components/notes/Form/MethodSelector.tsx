@@ -52,7 +52,7 @@ const extractEditingValues = (method: Method): EditingValues => ({
   ratio: extractRatioNumber(method.params.ratio),
   grindSize: method.params.grindSize || '',
   water: extractNumber(method.params.water),
-  time: method.params.stages?.[0]?.time?.toString() ?? '',
+  time: method.params.stages?.[0]?.duration?.toString() ?? '',
   temp: extractNumber(method.params.temp || ''),
 });
 
@@ -137,7 +137,10 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         ratio: extractRatioNumber(override.ratio ?? method.params.ratio),
         grindSize: override.grindSize ?? method.params.grindSize ?? '',
         water: extractNumber(override.water ?? method.params.water),
-        time: method.params.stages?.[0]?.time?.toString() ?? '',
+        time:
+          override.extractionTime?.toString() ??
+          method.params.stages?.[0]?.duration?.toString() ??
+          '',
         temp: extractNumber(override.temp ?? method.params.temp ?? ''),
       });
     } else {
@@ -156,6 +159,13 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
             ratio: override.ratio ?? method.params.ratio,
             grindSize: override.grindSize ?? method.params.grindSize,
             temp: override.temp ?? method.params.temp,
+            // 如果有覆盖的萃取时长，更新 stages
+            stages:
+              override.extractionTime !== undefined
+                ? method.params.stages?.map((s, i) =>
+                    i === 0 ? { ...s, duration: override.extractionTime } : s
+                  )
+                : method.params.stages,
           },
         }
       : method;
@@ -220,10 +230,10 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
           temp: newValues.temp ? `${newValues.temp}°C` : '',
           stages: method.params.stages?.map((s, i) => ({
             ...s,
-            time:
+            duration:
               i === 0 && newValues.time
                 ? parseFloat(newValues.time) || 0
-                : s.time,
+                : s.duration,
           })),
         },
       };
@@ -236,6 +246,10 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         ratio: updatedMethod.params.ratio,
         grindSize: updatedMethod.params.grindSize,
         temp: updatedMethod.params.temp,
+        extractionTime:
+          isEspresso && updatedMethod.params.stages?.[0]?.duration
+            ? updatedMethod.params.stages[0].duration
+            : undefined,
       });
 
       onParamsChange(updatedMethod);
@@ -354,7 +368,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                   {renderDisplay('研磨度', displayParams.grindSize)}
                   {renderDisplay(
                     '萃取时长',
-                    `${method.params.stages?.[0]?.duration || 0}s`
+                    `${override?.extractionTime ?? method.params.stages?.[0]?.duration ?? 0}s`
                   )}
                   {renderDisplay('液重', displayParams.water)}
                 </>

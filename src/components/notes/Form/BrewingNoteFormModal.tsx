@@ -72,6 +72,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     ratio?: string;
     grindSize?: string;
     temp?: string;
+    stages?: Method['params']['stages']; // 添加 stages 支持
   } | null>(null);
 
   // 使用新的多步骤历史栈管理
@@ -213,6 +214,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         ratio: method.params.ratio,
         grindSize: method.params.grindSize,
         temp: method.params.temp,
+        stages: method.params.stages, // 保存 stages
       });
 
       // 延迟触发事件，避免在渲染期间触发
@@ -268,6 +270,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         ratio: modifiedParams.ratio || '1:15',
         grindSize: modifiedParams.grindSize || '中细',
         temp: modifiedParams.temp || '92°C',
+        stages: modifiedParams.stages || [], // 返回 stages
       };
     }
 
@@ -287,6 +290,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           ratio: methodObj.params.ratio,
           grindSize: methodObj.params.grindSize,
           temp: methodObj.params.temp,
+          stages: methodObj.params.stages || [], // 返回 stages
         };
       }
     }
@@ -296,6 +300,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       ratio: '1:15',
       grindSize: '中细',
       temp: '92°C',
+      stages: [], // 默认空 stages
     };
   };
 
@@ -304,9 +309,16 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     const params = getMethodParams();
     const isNewNote = !initialNote?.id;
 
-    // 计算总时间
+    // 计算总时间 - 优先使用 modifiedParams 中的 stages
     let totalTime = initialNote?.totalTime || 0;
-    if (selectedMethod && !totalTime) {
+    if (params.stages && params.stages.length > 0) {
+      // 从 params.stages 计算总时间（包含用户修改）
+      totalTime = params.stages.reduce(
+        (acc, stage) => acc + (stage.duration || 0),
+        0
+      );
+    } else if (selectedMethod && !totalTime) {
+      // 如果没有 stages，从原始方法计算
       const allMethods = [...commonMethodsOnly, ...customMethods];
       const methodObj = allMethods.find(
         m => m.id === selectedMethod || m.name === selectedMethod
@@ -336,7 +348,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
             roastDate: initialNote?.coffeeBeanInfo?.roastDate || '',
             roaster: initialNote?.coffeeBeanInfo?.roaster,
           },
-      params: initialNote?.params || params,
+      params: params, // 始终使用最新的 params（包含用户修改）
       totalTime: totalTime,
       rating: initialNote?.rating ?? 0,
       taste: initialNote?.taste || {
