@@ -1220,4 +1220,7 @@ export const sponsorsList = [
   'KinWai_',
   '之鹿',
   'Cc',
+  '大葱葱葱葱葱葱葱头',
+  'Hans',
+  '杨源',
 ];
