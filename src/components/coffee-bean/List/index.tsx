@@ -382,6 +382,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     [roasterFieldEnabled, roasterSeparator]
   );
 
+  // 计算类型统计 - 用于显示剩余量等信息（基于当前所有筛选条件）
   const {
     espressoCount,
     filterCount,
@@ -480,6 +481,82 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     selectedRoaster,
     roasterSettings,
   ]);
+
+  // 计算总体类型统计 - 用于判断按钮是否应该禁用（考虑分类栏选择，但不考虑类型本身的选择）
+  const { totalEspressoCount, totalFilterCount, totalOmniCount } =
+    useMemo(() => {
+      let beansToCount = beans;
+
+      // 按 beanState 筛选
+      beansToCount = beansToCount.filter(bean => {
+        const beanState = bean.beanState || 'roasted';
+        return beanState === selectedBeanState;
+      });
+
+      // 如果不显示空豆子，先过滤掉空豆子
+      if (!showEmptyBeans) {
+        beansToCount = beansToCount.filter(bean => !isBeanEmpty(bean));
+      }
+
+      // 根据当前的分类模式和选择进行筛选（但不考虑类型筛选）
+      switch (filterMode) {
+        case 'variety':
+          if (selectedVariety) {
+            beansToCount = beansToCount.filter(bean =>
+              beanHasVariety(bean, selectedVariety)
+            );
+          }
+          break;
+        case 'origin':
+          if (selectedOrigin) {
+            beansToCount = beansToCount.filter(bean =>
+              beanHasOrigin(bean, selectedOrigin)
+            );
+          }
+          break;
+        case 'flavorPeriod':
+          if (selectedFlavorPeriod) {
+            beansToCount = beansToCount.filter(bean =>
+              beanHasFlavorPeriodStatus(bean, selectedFlavorPeriod)
+            );
+          }
+          break;
+        case 'roaster':
+          if (selectedRoaster) {
+            beansToCount = beansToCount.filter(bean =>
+              beanHasRoaster(bean, selectedRoaster, roasterSettings)
+            );
+          }
+          break;
+      }
+
+      // 统计不同类型的豆子数量（不考虑类型筛选）
+      const totalEspresso = beansToCount.filter(
+        bean => bean.beanType === 'espresso'
+      ).length;
+      const totalFilter = beansToCount.filter(
+        bean => bean.beanType === 'filter'
+      ).length;
+      const totalOmni = beansToCount.filter(
+        bean => bean.beanType === 'omni'
+      ).length;
+
+      return {
+        totalEspressoCount: totalEspresso,
+        totalFilterCount: totalFilter,
+        totalOmniCount: totalOmni,
+      };
+    }, [
+      beans,
+      selectedBeanState,
+      showEmptyBeans,
+      filterMode,
+      selectedVariety,
+      selectedOrigin,
+      selectedFlavorPeriod,
+      selectedRoaster,
+      roasterSettings,
+    ]);
 
   const updateFilteredBeansAndCategories = useCallback(
     (_beansToSort: ExtendedCoffeeBean[]) => {
@@ -1836,6 +1913,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         espressoRemaining={searchAwareTypeStats.espressoRemaining}
         filterRemaining={searchAwareTypeStats.filterRemaining}
         omniRemaining={searchAwareTypeStats.omniRemaining}
+        // 总体类型统计（用于判断按钮禁用状态）
+        totalEspressoCount={totalEspressoCount}
+        totalFilterCount={totalFilterCount}
+        totalOmniCount={totalOmniCount}
         // 新增搜索历史属性
         searchHistory={searchHistory}
         onSearchHistoryClick={handleSearchHistoryClick}

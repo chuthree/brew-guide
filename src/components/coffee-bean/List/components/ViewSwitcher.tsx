@@ -199,6 +199,10 @@ interface BeanTypeFilterProps {
   espressoCount?: number;
   filterCount?: number;
   omniCount?: number;
+  // 总体统计（用于判断按钮是否应该禁用）
+  totalEspressoCount?: number;
+  totalFilterCount?: number;
+  totalOmniCount?: number;
 }
 
 const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
@@ -208,6 +212,9 @@ const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
   espressoCount = 0,
   filterCount = 0,
   omniCount = 0,
+  totalEspressoCount = 0,
+  totalFilterCount = 0,
+  totalOmniCount = 0,
 }) => (
   <div>
     <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
@@ -224,22 +231,22 @@ const BeanTypeFilter: React.FC<BeanTypeFilterProps> = ({
       )}
       <FilterButton
         isActive={selectedBeanType === 'espresso'}
-        onClick={() => espressoCount > 0 && onBeanTypeChange?.('espresso')}
-        className={espressoCount === 0 ? 'cursor-not-allowed opacity-30' : ''}
+        onClick={() => totalEspressoCount > 0 && onBeanTypeChange?.('espresso')}
+        disabled={totalEspressoCount === 0}
       >
         {showAll ? '意式' : '意式豆'}
       </FilterButton>
       <FilterButton
         isActive={selectedBeanType === 'filter'}
-        onClick={() => filterCount > 0 && onBeanTypeChange?.('filter')}
-        className={filterCount === 0 ? 'cursor-not-allowed opacity-30' : ''}
+        onClick={() => totalFilterCount > 0 && onBeanTypeChange?.('filter')}
+        disabled={totalFilterCount === 0}
       >
         {showAll ? '手冲' : '手冲豆'}
       </FilterButton>
       <FilterButton
         isActive={selectedBeanType === 'omni'}
-        onClick={() => omniCount > 0 && onBeanTypeChange?.('omni')}
-        className={omniCount === 0 ? 'cursor-not-allowed opacity-30' : ''}
+        onClick={() => totalOmniCount > 0 && onBeanTypeChange?.('omni')}
+        disabled={totalOmniCount === 0}
       >
         {showAll ? '全能' : '全能豆'}
       </FilterButton>
@@ -363,7 +370,7 @@ interface ViewSwitcherProps {
   availableRoasters?: string[];
   // 新增导出相关props
   onExportPreview?: () => void;
-  // 新增类型统计props
+  // 新增类型统计props（基于当前筛选条件）
   espressoCount?: number;
   filterCount?: number;
   omniCount?: number;
@@ -371,6 +378,10 @@ interface ViewSwitcherProps {
   espressoRemaining?: number;
   filterRemaining?: number;
   omniRemaining?: number;
+  // 总体类型统计props（用于判断按钮禁用状态）
+  totalEspressoCount?: number;
+  totalFilterCount?: number;
+  totalOmniCount?: number;
   // 新增搜索历史相关props
   searchHistory?: string[];
   onSearchHistoryClick?: (query: string) => void;
@@ -439,7 +450,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   availableRoasters = [],
   // 新增导出相关参数
   onExportPreview,
-  // 新增类型统计参数
+  // 新增类型统计参数（基于当前筛选条件）
   espressoCount = 0,
   filterCount = 0,
   omniCount = 0,
@@ -447,6 +458,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   espressoRemaining = 0,
   filterRemaining = 0,
   omniRemaining = 0,
+  // 总体类型统计参数（用于判断按钮禁用状态）
+  totalEspressoCount = 0,
+  totalFilterCount = 0,
+  totalOmniCount = 0,
   // 新增搜索历史参数
   searchHistory = [],
   onSearchHistoryClick,
@@ -1333,6 +1348,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           espressoCount={espressoCount}
                           filterCount={filterCount}
                           omniCount={omniCount}
+                          totalEspressoCount={totalEspressoCount}
+                          totalFilterCount={totalFilterCount}
+                          totalOmniCount={totalOmniCount}
                         />
 
                         {/* 显示选项 */}
