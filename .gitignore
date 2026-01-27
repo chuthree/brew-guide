@@ -68,6 +68,7 @@ android/app/release/
 # IDE specific
 .idea/
 .vscode/
+.kiro/
 *.swp
 *.swo
 
