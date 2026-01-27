@@ -232,6 +232,38 @@ select:focus,
   scroll-margin-bottom: 100px;
 }
 
+/* iOS 网页版键盘处理 */
+.ios-web input:focus,
+.ios-web textarea:focus,
+.ios-web select:focus,
+.ios-web [contenteditable]:focus {
+  /* 强制触发重排，帮助 iOS 正确计算位置 */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* iOS 中文输入法优化 */
+.ios-web input,
+.ios-web textarea {
+  /* 确保输入框在键盘弹出时可见 */
+  scroll-snap-align: center;
+}
+
+/* iOS 网页版：防止键盘遮挡 */
+@supports (-webkit-touch-callout: none) {
+  /* 仅在 iOS Safari 中生效 */
+  body {
+    /* 使用 100dvh 而不是 100vh，动态视口高度会随键盘调整 */
+    min-height: 100dvh;
+  }
+  
+  /* 输入框聚焦时的额外间距 */
+  input:focus,
+  textarea:focus {
+    scroll-margin-bottom: 50vh;
+  }
+}
+
 /* 修复 vaul drawer 滚动锁定时的 body 样式问题 */
 body[data-scroll-locked] {
   overflow: hidden !important;
