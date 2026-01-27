@@ -1223,4 +1223,5 @@ export const sponsorsList = [
   '大葱葱葱葱葱葱葱头',
   'Hans',
   '杨源',
+  'Jerry_li',
 ];
