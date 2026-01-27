@@ -789,7 +789,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       // 同步磨豆机刻度到设置
       if (finalMethod.params.grindSize) {
         const { syncGrinderToSettings } = await import('@/lib/grinder');
-        await syncGrinderToSettings(finalMethod.params.grindSize);
+        await syncGrinderToSettings(
+          finalMethod.params.grindSize,
+          customEquipment.id,
+          finalMethod.name
+        );
       }
 
       // 保存方法

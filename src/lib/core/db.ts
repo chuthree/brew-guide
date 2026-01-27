@@ -3,12 +3,25 @@ import { BrewingNote, Method, CustomEquipment } from './config';
 import { CoffeeBean } from '@/types/app';
 
 /**
+ * 研磨度历史记录
+ */
+export interface GrindSizeHistory {
+  grindSize: string;
+  timestamp: number;
+  equipment?: string; // 器具名称
+  method?: string; // 冲煮方案名称
+  coffeeBean?: string; // 咖啡豆名称
+}
+
+/**
  * 磨豆机类型定义
  */
 export interface Grinder {
   id: string;
   name: string;
   currentGrindSize?: string;
+  /** 研磨度历史记录（最多保留最近10条） */
+  grindSizeHistory?: GrindSizeHistory[];
 }
 
 /**

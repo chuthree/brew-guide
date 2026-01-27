@@ -11,8 +11,8 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { db, Grinder } from '@/lib/core/db';
 import { nanoid } from 'nanoid';
 
-// 重新导出 Grinder 类型
-export type { Grinder } from '@/lib/core/db';
+// 重新导出 Grinder 类型和历史记录类型
+export type { Grinder, GrindSizeHistory } from '@/lib/core/db';
 
 // 磨豆机状态接口
 interface GrinderState {
@@ -205,7 +205,17 @@ export const useGrinderStore = create<GrinderState>()(
       );
 
       if (grinder) {
-        await get().updateGrinder(grinder.id, { currentGrindSize: scale });
+        // 更新历史记录
+        const history = grinder.grindSizeHistory || [];
+        const newHistory = [
+          { grindSize: scale, timestamp: Date.now() },
+          ...history.filter(h => h.grindSize !== scale), // 去重
+        ].slice(0, 10); // 最多保留10条
+
+        await get().updateGrinder(grinder.id, {
+          currentGrindSize: scale,
+          grindSizeHistory: newHistory,
+        });
       }
     },
 
@@ -273,9 +283,17 @@ export const getGrinderStore = () => useGrinderStore.getState();
 /**
  * 同步磨豆机刻度
  * @param grindSize 研磨度字符串，如 "C40 24"
+ * @param equipment 器具名称（可选）
+ * @param method 冲煮方案名称（可选）
+ * @param coffeeBean 咖啡豆名称（可选）
  * @returns 是否成功同步
  */
-export async function syncGrinderScale(grindSize: string): Promise<boolean> {
+export async function syncGrinderScale(
+  grindSize: string,
+  equipment?: string,
+  method?: string,
+  coffeeBean?: string
+): Promise<boolean> {
   const store = useGrinderStore.getState();
 
   // 确保已初始化
@@ -295,7 +313,30 @@ export async function syncGrinderScale(grindSize: string): Promise<boolean> {
   const parsed = parseGrinderFromGrindSize(grindSize, grinderNames);
 
   if (parsed) {
-    await store.updateGrinderScaleByName(parsed.grinderName, parsed.scale);
+    const grinder = store.grinders.find(
+      g => g.name.toLowerCase() === parsed.grinderName.toLowerCase()
+    );
+
+    if (grinder) {
+      // 更新历史记录，包含器具、方案和咖啡豆信息
+      const history = grinder.grindSizeHistory || [];
+      const newHistory = [
+        {
+          grindSize: parsed.scale,
+          timestamp: Date.now(),
+          equipment,
+          method,
+          coffeeBean,
+        },
+        ...history.filter(h => h.grindSize !== parsed.scale), // 去重
+      ].slice(0, 3); // 最多保留3条
+
+      await store.updateGrinder(grinder.id, {
+        currentGrindSize: parsed.scale,
+        grindSizeHistory: newHistory,
+      });
+    }
+
     // 重置同步状态
     store.resetSyncState();
     return true;

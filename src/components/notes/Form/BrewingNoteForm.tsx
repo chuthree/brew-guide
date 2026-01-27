@@ -1278,7 +1278,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       // 同步磨豆机刻度到设置
       if (methodParams.grindSize) {
         const { syncGrinderToSettings } = await import('@/lib/grinder');
-        await syncGrinderToSettings(methodParams.grindSize);
+        // 获取咖啡豆名称
+        const coffeeBeanName = selectedCoffeeBean
+          ? 'name' in selectedCoffeeBean
+            ? selectedCoffeeBean.name
+            : formData.coffeeBeanInfo.name
+          : undefined;
+        
+        await syncGrinderToSettings(
+          methodParams.grindSize,
+          normalizedEquipmentId,
+          selectedMethod || initialData.method,
+          coffeeBeanName
+        );
       }
 
       // 保存笔记
