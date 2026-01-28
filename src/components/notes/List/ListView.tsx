@@ -261,6 +261,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             isShareMode={isShareMode}
             isSelected={selectedNotes.includes(note.id)}
             onToggleSelect={handleToggleSelect}
+            isFirst={index === 0}
             isLast={index === regularNotes.length - 1}
             getValidTasteRatings={getValidTasteRatings}
             coffeeBeans={coffeeBeans}

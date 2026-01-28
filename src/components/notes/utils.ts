@@ -62,8 +62,70 @@ export const extractExtractionTime = (notes: string): number | null => {
 
 // 日期格式化函数
 export const formatDate = (timestamp: number): string => {
+  const now = Date.now();
   const date = new Date(timestamp);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const diff = now - timestamp;
+
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  // 1分钟内：刚刚
+  if (seconds < 60) {
+    return '刚刚';
+  }
+  // 1小时内：N分钟前
+  else if (minutes < 60) {
+    return `${minutes}分钟前`;
+  }
+  // 今天：N小时前
+  else if (isToday(date)) {
+    return `${hours}小时前`;
+  }
+  // 昨天：昨天 HH:mm
+  else if (isYesterday(date)) {
+    return `昨天 ${formatTime(date)}`;
+  }
+  // 今年内：MM月DD日 HH:mm
+  else if (isThisYear(date)) {
+    return `${date.getMonth() + 1}月${date.getDate()}日 ${formatTime(date)}`;
+  }
+  // 更早：YYYY年MM月DD日 HH:mm
+  else {
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${formatTime(date)}`;
+  }
+};
+
+// 辅助函数：判断是否是今天
+const isToday = (date: Date): boolean => {
+  const today = new Date();
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+};
+
+// 辅助函数：判断是否是昨天
+const isYesterday = (date: Date): boolean => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return (
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear()
+  );
+};
+
+// 辅助函数：判断是否是今年
+const isThisYear = (date: Date): boolean => {
+  const today = new Date();
+  return date.getFullYear() === today.getFullYear();
+};
+
+// 辅助函数：格式化时间为 HH:mm
+const formatTime = (date: Date): string => {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
 // 评分格式化函数
@@ -77,9 +139,8 @@ export const getEquipmentName = async (
 ): Promise<string> => {
   try {
     // 加载自定义设备列表
-    const customEquipmentsModule = await import(
-      '@/lib/stores/customEquipmentStore'
-    );
+    const customEquipmentsModule =
+      await import('@/lib/stores/customEquipmentStore');
     const customEquipments =
       await customEquipmentsModule.loadCustomEquipments();
 
@@ -97,9 +158,8 @@ export const normalizeEquipmentId = async (
 ): Promise<string> => {
   try {
     // 加载自定义器具列表
-    const customEquipmentsModule = await import(
-      '@/lib/stores/customEquipmentStore'
-    );
+    const customEquipmentsModule =
+      await import('@/lib/stores/customEquipmentStore');
     const customEquipments =
       await customEquipmentsModule.loadCustomEquipments();
 

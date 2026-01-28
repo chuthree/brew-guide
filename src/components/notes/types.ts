@@ -62,6 +62,8 @@ export interface NoteItemProps {
   isShareMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void;
+  // 是否为列表中的第一项（用于控制顶部间距）
+  isFirst?: boolean;
   // 是否为列表中的最后一项（用于虚拟化下控制分割线）
   isLast?: boolean;
   // 评分维度评分处理函数（从父组件传入，避免每个子组件重复调用）
