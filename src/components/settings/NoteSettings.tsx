@@ -83,7 +83,18 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
 
   return (
     <SettingPage title="笔记" isVisible={isVisible} onClose={handleClose}>
-      <SettingSection title="详情" className="-mt-4">
+      <SettingSection title="列表" className="-mt-4">
+        <SettingRow label="评分维度入口" isLast>
+          <SettingToggle
+            checked={settings.showRatingDimensionsEntry ?? false}
+            onChange={checked =>
+              handleChange('showRatingDimensionsEntry', checked)
+            }
+          />
+        </SettingRow>
+      </SettingSection>
+
+      <SettingSection title="详情">
         <SettingRow label="价格" isLast>
           <SettingToggle
             checked={settings.showUnitPriceInNote ?? false}

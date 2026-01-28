@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { ChevronRight } from 'lucide-react';
 import { NoteItemProps } from '../types';
 import { formatDate, formatRating } from '../utils';
 import {
@@ -11,10 +12,19 @@ import {
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 
 // 动态导入 ImageViewer 组件 - 移除加载占位符
 const ImageViewer = dynamic(
   () => import('@/components/common/ui/ImageViewer'),
+  {
+    ssr: false,
+  }
+);
+
+// 动态导入 RatingRadarDrawer 组件
+const RatingRadarDrawer = dynamic(
+  () => import('@/components/notes/Detail/RatingRadarDrawer'),
   {
     ssr: false,
   }
@@ -48,11 +58,40 @@ const NoteItem: React.FC<NoteItemProps> = ({
     roasterSeparator,
   };
 
+  // 获取评分维度入口显示设置
+  const showRatingDimensionsEntry = useSettingsStore(
+    state => state.settings.showRatingDimensionsEntry ?? false
+  );
+
   // 图片查看器状态和错误状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [noteImageViewerOpen, setNoteImageViewerOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [noteImageError, setNoteImageError] = useState(false);
+
+  // 评分雷达图抽屉状态
+  const [showRatingRadar, setShowRatingRadar] = useState(false);
+
+  // 获取所有笔记用于对比
+  const allNotes = useBrewingNoteStore(state => state.notes);
+
+  // 获取该咖啡豆的所有有风味评分的笔记（用于对比）
+  const compareNotes = React.useMemo(() => {
+    if (!note.beanId) return [];
+    return allNotes
+      .filter(
+        n =>
+          n.beanId === note.beanId &&
+          n.taste &&
+          Object.values(n.taste).some(v => v > 0)
+      )
+      .map(n => ({
+        id: n.id,
+        timestamp: n.timestamp,
+        taste: n.taste,
+        method: n.method,
+      }));
+  }, [note.beanId, allNotes]);
 
   // 预先计算一些条件，避免在JSX中重复计算
   const validTasteRatings = getValidTasteRatings
@@ -118,176 +157,213 @@ const NoteItem: React.FC<NoteItemProps> = ({
   };
 
   return (
-    <div
-      className={`group px-6 ${isFirst ? 'pt-5' : 'pt-3.5'} pb-3.5 ${!isLast ? 'border-b border-neutral-200/50 dark:border-neutral-800/50' : ''} ${!isShareMode ? 'cursor-pointer' : 'cursor-pointer'} note-item`}
-      onClick={handleNoteClick}
-      data-note-id={note.id}
-    >
-      <div className="flex gap-3.5">
-        {/* 咖啡豆图片 - 方形带圆角，固定在左侧 */}
-        <div
-          className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
-          onClick={e => {
-            e.stopPropagation();
-            if ((beanInfo?.image || roasterLogo) && !imageError)
-              setImageViewerOpen(true);
-          }}
-        >
-          {beanInfo?.image && !imageError ? (
-            <Image
-              src={beanInfo.image}
-              alt={beanName || '咖啡豆图片'}
-              height={48}
-              width={48}
-              unoptimized
-              style={{ width: '100%', height: '100%' }}
-              className="object-cover"
-              sizes="48px"
-              priority={false}
-              loading="lazy"
-              placeholder="blur"
-              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-              onError={() => setImageError(true)}
-            />
-          ) : roasterLogo && !imageError ? (
-            <Image
-              src={roasterLogo}
-              alt={
-                beanInfo
-                  ? getRoasterName(beanInfo, roasterSettings) + ' 烘焙商图标'
-                  : '烘焙商图标'
-              }
-              height={48}
-              width={48}
-              unoptimized
-              style={{ width: '100%', height: '100%' }}
-              className="object-cover"
-              sizes="48px"
-              priority={false}
-              loading="lazy"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
-              {beanInfo
-                ? getBeanDisplayInitial(beanInfo)
-                : beanName?.charAt(0) || '?'}
-            </div>
-          )}
-        </div>
-
-        {/* 图片查看器 - 只有当需要显示时才渲染 */}
-        {(beanInfo?.image || roasterLogo) && !imageError && imageViewerOpen && (
-          <ImageViewer
-            id={`note-item-image-${note.id}`}
-            isOpen={imageViewerOpen}
-            imageUrl={beanInfo?.image || roasterLogo || ''}
-            alt={
-              beanInfo?.image
-                ? beanName || '咖啡豆图片'
-                : beanInfo
-                  ? getRoasterName(beanInfo, roasterSettings) + ' 烘焙商图标'
-                  : '烘焙商图标'
-            }
-            onClose={() => setImageViewerOpen(false)}
-          />
-        )}
-
-        {/* 内容区域 - 垂直排列，使用统一的间距系统 */}
-        <div className="min-w-0 flex-1 space-y-1.5">
-          {/* 咖啡豆名称 */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1 truncate text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
-              {beanName || '未知咖啡豆'}
-            </div>
-            {isShareMode && (
-              <div className="relative h-[16.5px]">
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={e => {
-                    e.stopPropagation();
-                    if (onToggleSelect) onToggleSelect(note.id);
-                  }}
-                  onClick={e => e.stopPropagation()}
-                  className="relative h-4 w-4 appearance-none rounded-sm border border-neutral-300 text-xs checked:bg-neutral-800 checked:after:absolute checked:after:top-1/2 checked:after:left-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:text-white checked:after:content-['✓'] dark:border-neutral-700 dark:checked:bg-neutral-200 dark:checked:after:text-black"
-                />
+    <>
+      <div
+        className={`group px-6 ${isFirst ? 'pt-5' : 'pt-3.5'} pb-3.5 ${!isLast ? 'border-b border-neutral-200/50 dark:border-neutral-800/50' : ''} ${!isShareMode ? 'cursor-pointer' : 'cursor-pointer'} note-item`}
+        onClick={handleNoteClick}
+        data-note-id={note.id}
+      >
+        <div className="flex gap-3.5">
+          {/* 咖啡豆图片 - 方形带圆角，固定在左侧 */}
+          <div
+            className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
+            onClick={e => {
+              e.stopPropagation();
+              if ((beanInfo?.image || roasterLogo) && !imageError)
+                setImageViewerOpen(true);
+            }}
+          >
+            {beanInfo?.image && !imageError ? (
+              <Image
+                src={beanInfo.image}
+                alt={beanName || '咖啡豆图片'}
+                height={48}
+                width={48}
+                unoptimized
+                style={{ width: '100%', height: '100%' }}
+                className="object-cover"
+                sizes="48px"
+                priority={false}
+                loading="lazy"
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                onError={() => setImageError(true)}
+              />
+            ) : roasterLogo && !imageError ? (
+              <Image
+                src={roasterLogo}
+                alt={
+                  beanInfo
+                    ? getRoasterName(beanInfo, roasterSettings) + ' 烘焙商图标'
+                    : '烘焙商图标'
+                }
+                height={48}
+                width={48}
+                unoptimized
+                style={{ width: '100%', height: '100%' }}
+                className="object-cover"
+                sizes="48px"
+                priority={false}
+                loading="lazy"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-400 dark:text-neutral-600">
+                {beanInfo
+                  ? getBeanDisplayInitial(beanInfo)
+                  : beanName?.charAt(0) || '?'}
               </div>
             )}
           </div>
 
-          {/* 备注信息 */}
-          {hasNotes && (
-            <div className="text-xs font-medium tracking-wide whitespace-pre-line text-neutral-600 dark:text-neutral-400">
-              {note.notes}
-            </div>
-          )}
+          {/* 图片查看器 - 只有当需要显示时才渲染 */}
+          {(beanInfo?.image || roasterLogo) &&
+            !imageError &&
+            imageViewerOpen && (
+              <ImageViewer
+                id={`note-item-image-${note.id}`}
+                isOpen={imageViewerOpen}
+                imageUrl={beanInfo?.image || roasterLogo || ''}
+                alt={
+                  beanInfo?.image
+                    ? beanName || '咖啡豆图片'
+                    : beanInfo
+                      ? getRoasterName(beanInfo, roasterSettings) +
+                        ' 烘焙商图标'
+                      : '烘焙商图标'
+                }
+                onClose={() => setImageViewerOpen(false)}
+              />
+            )}
 
-          {/* 笔记图片 - 仿微信朋友圈样式，固定容器防止抖动 */}
-          {note.image && (
-            <div
-              className="mt-2 block max-w-fit cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
-              style={{ minHeight: '96px', minWidth: '96px' }}
-              onClick={e => {
-                e.stopPropagation();
-                if (!noteImageError) setNoteImageViewerOpen(true);
-              }}
-            >
-              {noteImageError ? (
-                <div className="flex h-24 w-24 items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
-                  加载失败
+          {/* 内容区域 - 垂直排列，使用统一的间距系统 */}
+          <div className="min-w-0 flex-1 space-y-1.5">
+            {/* 咖啡豆名称 */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 truncate text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
+                {beanName || '未知咖啡豆'}
+              </div>
+              {isShareMode && (
+                <div className="relative h-[16.5px]">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={e => {
+                      e.stopPropagation();
+                      if (onToggleSelect) onToggleSelect(note.id);
+                    }}
+                    onClick={e => e.stopPropagation()}
+                    className="relative h-4 w-4 appearance-none rounded-sm border border-neutral-300 text-xs checked:bg-neutral-800 checked:after:absolute checked:after:top-1/2 checked:after:left-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:text-white checked:after:content-['✓'] dark:border-neutral-700 dark:checked:bg-neutral-200 dark:checked:after:text-black"
+                  />
                 </div>
-              ) : (
-                <Image
-                  src={note.image}
-                  alt="笔记图片"
-                  width={150}
-                  height={225}
-                  unoptimized
-                  style={{
-                    width: 'auto',
-                    height: 'auto',
-                    maxWidth: '150px',
-                    maxHeight: '225px',
-                    display: 'block',
-                  }}
-                  className="object-contain"
-                  sizes="150px"
-                  priority={false}
-                  loading="lazy"
-                  placeholder="blur"
-                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-                  onError={() => setNoteImageError(true)}
-                />
               )}
             </div>
-          )}
 
-          {/* 笔记图片查看器 */}
-          {note.image && !noteImageError && noteImageViewerOpen && (
-            <ImageViewer
-              id={`note-image-${note.id}`}
-              isOpen={noteImageViewerOpen}
-              imageUrl={note.image}
-              alt="笔记图片"
-              onClose={() => setNoteImageViewerOpen(false)}
-            />
-          )}
+            {/* 备注信息 */}
+            {hasNotes && (
+              <div className="text-xs font-medium tracking-wide whitespace-pre-line text-neutral-600 dark:text-neutral-400">
+                {note.notes}
+              </div>
+            )}
 
-          {/* 时间和评分 */}
-          <div className="text-xs leading-tight font-medium text-neutral-500/60 dark:text-neutral-500/60">
-            {formatDate(note.timestamp)}
-            {note.rating > 0 && (
-              <>
-                {' · '}
-                {note.rating}
-                /5分
-              </>
+            {/* 笔记图片 - 仿微信朋友圈样式，固定容器防止抖动 */}
+            {note.image && (
+              <div
+                className="mt-2 block max-w-fit cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
+                style={{ minHeight: '96px', minWidth: '96px' }}
+                onClick={e => {
+                  e.stopPropagation();
+                  if (!noteImageError) setNoteImageViewerOpen(true);
+                }}
+              >
+                {noteImageError ? (
+                  <div className="flex h-24 w-24 items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
+                    加载失败
+                  </div>
+                ) : (
+                  <Image
+                    src={note.image}
+                    alt="笔记图片"
+                    width={150}
+                    height={225}
+                    unoptimized
+                    style={{
+                      width: 'auto',
+                      height: 'auto',
+                      maxWidth: '150px',
+                      maxHeight: '225px',
+                      display: 'block',
+                    }}
+                    className="object-contain"
+                    sizes="150px"
+                    priority={false}
+                    loading="lazy"
+                    placeholder="blur"
+                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                    onError={() => setNoteImageError(true)}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* 笔记图片查看器 */}
+            {note.image && !noteImageError && noteImageViewerOpen && (
+              <ImageViewer
+                id={`note-image-${note.id}`}
+                isOpen={noteImageViewerOpen}
+                imageUrl={note.image}
+                alt="笔记图片"
+                onClose={() => setNoteImageViewerOpen(false)}
+              />
+            )}
+
+            {/* 时间和评分 */}
+            <div className="text-xs leading-tight font-medium text-neutral-500/60 dark:text-neutral-500/60">
+              {formatDate(note.timestamp)}
+              {note.rating > 0 && (
+                <>
+                  {' · '}
+                  {note.rating}
+                  /5分
+                </>
+              )}
+            </div>
+
+            {/* 评分维度入口 - 仿微信朋友圈样式 */}
+            {showRatingDimensionsEntry && hasTasteRatings && (
+              <div className="mt-2 -mr-6 border-t border-neutral-200/50 pt-2 pr-6 dark:border-neutral-800/50">
+                <div
+                  className="dark:text-neutral-00 flex cursor-pointer items-center text-xs text-neutral-500 transition-colors"
+                  onClick={e => {
+                    e.stopPropagation();
+                    setShowRatingRadar(true);
+                  }}
+                >
+                  <span className="">
+                    评分维度 {validTasteRatings.length} 项
+                  </span>
+                  <ChevronRight className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-600" />
+                </div>
+              </div>
             )}
           </div>
         </div>
       </div>
-    </div>
+
+      {/* 评分雷达图抽屉 */}
+      {hasTasteRatings && (
+        <RatingRadarDrawer
+          isOpen={showRatingRadar}
+          onClose={() => setShowRatingRadar(false)}
+          ratings={validTasteRatings}
+          overallRating={note.rating}
+          beanName={beanName}
+          note={note.notes}
+          currentNoteId={note.id}
+          compareNotes={compareNotes}
+        />
+      )}
+    </>
   );
 };
 

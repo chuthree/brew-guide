@@ -242,6 +242,7 @@ export interface AppSettings {
   showOverallRatingInForm: boolean;
   flavorRatingFollowOverall: boolean;
   flavorRatingHalfStep: boolean;
+  showRatingDimensionsEntry: boolean;
   showUnitPriceInNote: boolean;
   artisticSharingEnabled: boolean;
   showCapacityAdjustmentRecords: boolean;
