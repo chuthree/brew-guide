@@ -95,7 +95,9 @@ export interface EquipmentMethodPickerDrawerProps {
  * 复用 EquipmentCategoryBar + MethodSelector 组件
  * 设计模式参考 CoffeeBeanPickerDrawer
  */
-const EquipmentMethodPickerDrawer: React.FC<EquipmentMethodPickerDrawerProps> = ({
+const EquipmentMethodPickerDrawer: React.FC<
+  EquipmentMethodPickerDrawerProps
+> = ({
   isOpen,
   onClose,
   onSelect,
@@ -110,15 +112,25 @@ const EquipmentMethodPickerDrawer: React.FC<EquipmentMethodPickerDrawerProps> = 
   const [isVisible, setIsVisible] = useState(false);
 
   // 数据状态
-  const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>([]);
-  const [customMethodsByEquipment, setCustomMethodsByEquipment] = useState<Record<string, Method[]>>({});
+  const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>(
+    []
+  );
+  const [customMethodsByEquipment, setCustomMethodsByEquipment] = useState<
+    Record<string, Method[]>
+  >({});
   const [dataLoaded, setDataLoaded] = useState(false);
 
   // 选择状态 - 内部临时状态
-  const [tempEquipmentId, setTempEquipmentId] = useState<string>(selectedEquipmentId || '');
-  const [tempMethodId, setTempMethodId] = useState<string>(selectedMethodId || '');
+  const [tempEquipmentId, setTempEquipmentId] = useState<string>(
+    selectedEquipmentId || ''
+  );
+  const [tempMethodId, setTempMethodId] = useState<string>(
+    selectedMethodId || ''
+  );
   // 保存最后选择的方案对象，用于回调
-  const [lastSelectedMethod, setLastSelectedMethod] = useState<Method | undefined>();
+  const [lastSelectedMethod, setLastSelectedMethod] = useState<
+    Method | undefined
+  >();
 
   // 同步顶部安全区颜色
   useThemeColor({ useOverlay: true, enabled: isOpen });
@@ -176,7 +188,9 @@ const EquipmentMethodPickerDrawer: React.FC<EquipmentMethodPickerDrawerProps> = 
 
     // 过滤隐藏的器具
     if (settings?.hiddenEquipments?.length) {
-      return allEquipments.filter(eq => !settings.hiddenEquipments?.includes(eq.id));
+      return allEquipments.filter(
+        eq => !settings.hiddenEquipments?.includes(eq.id)
+      );
     }
 
     return allEquipments;
@@ -185,7 +199,11 @@ const EquipmentMethodPickerDrawer: React.FC<EquipmentMethodPickerDrawerProps> = 
   // 获取当前器具的通用方案
   const commonMethodsForEquipment = React.useMemo(() => {
     if (!tempEquipmentId) return [];
-    return getCommonMethodsForEquipment(tempEquipmentId, availableEquipments, settings);
+    return getCommonMethodsForEquipment(
+      tempEquipmentId,
+      availableEquipments,
+      settings
+    );
   }, [tempEquipmentId, availableEquipments, settings]);
 
   // 获取当前器具的自定义方案
@@ -195,24 +213,35 @@ const EquipmentMethodPickerDrawer: React.FC<EquipmentMethodPickerDrawerProps> = 
   }, [tempEquipmentId, customMethodsByEquipment]);
 
   // 处理器具选择
-  const handleEquipmentSelect = useCallback((equipmentId: string) => {
-    triggerHaptic();
-    setTempEquipmentId(equipmentId);
-    // 切换器具时清空方案选择
-    setTempMethodId('');
-    setLastSelectedMethod(undefined);
-  }, [triggerHaptic]);
+  const handleEquipmentSelect = useCallback(
+    (equipmentId: string) => {
+      triggerHaptic();
+      setTempEquipmentId(equipmentId);
+      // 切换器具时清空方案选择
+      setTempMethodId('');
+      setLastSelectedMethod(undefined);
+    },
+    [triggerHaptic]
+  );
 
   // 处理方案选择 - MethodSelector 内部选择方案时触发（只选中，不关闭）
-  const handleMethodSelect = useCallback((methodId: string) => {
-    triggerHaptic();
-    setTempMethodId(methodId);
+  const handleMethodSelect = useCallback(
+    (methodId: string) => {
+      triggerHaptic();
+      setTempMethodId(methodId);
 
-    // 找到选中的方案
-    const allMethods = [...customMethodsForEquipment, ...commonMethodsForEquipment];
-    const selectedMethod = allMethods.find(m => m.id === methodId || m.name === methodId);
-    setLastSelectedMethod(selectedMethod);
-  }, [triggerHaptic, customMethodsForEquipment, commonMethodsForEquipment]);
+      // 找到选中的方案
+      const allMethods = [
+        ...customMethodsForEquipment,
+        ...commonMethodsForEquipment,
+      ];
+      const selectedMethod = allMethods.find(
+        m => m.id === methodId || m.name === methodId
+      );
+      setLastSelectedMethod(selectedMethod);
+    },
+    [triggerHaptic, customMethodsForEquipment, commonMethodsForEquipment]
+  );
 
   // 处理方案参数变化（MethodSelector 内部编辑参数时）
   const handleParamsChange = useCallback((method: Method) => {
@@ -225,7 +254,9 @@ const EquipmentMethodPickerDrawer: React.FC<EquipmentMethodPickerDrawerProps> = 
     if (!tempEquipmentId || !tempMethodId) return;
 
     triggerHaptic();
-    const selectedEquipment = availableEquipments.find(eq => eq.id === tempEquipmentId);
+    const selectedEquipment = availableEquipments.find(
+      eq => eq.id === tempEquipmentId
+    );
 
     // 回调选择结果（使用 lastSelectedMethod 包含修改后的参数）
     onSelect({
@@ -238,7 +269,15 @@ const EquipmentMethodPickerDrawer: React.FC<EquipmentMethodPickerDrawerProps> = 
 
     // 关闭抽屉
     onClose();
-  }, [triggerHaptic, tempEquipmentId, tempMethodId, availableEquipments, lastSelectedMethod, onSelect, onClose]);
+  }, [
+    triggerHaptic,
+    tempEquipmentId,
+    tempMethodId,
+    availableEquipments,
+    lastSelectedMethod,
+    onSelect,
+    onClose,
+  ]);
 
   if (!shouldRender) return null;
 
@@ -275,7 +314,9 @@ const EquipmentMethodPickerDrawer: React.FC<EquipmentMethodPickerDrawerProps> = 
               commonMethods={commonMethodsForEquipment}
               onMethodSelect={handleMethodSelect}
               onParamsChange={handleParamsChange}
-              grinderDefaultSyncEnabled={settings?.grinderDefaultSync?.manualNote ?? true}
+              grinderDefaultSyncEnabled={
+                settings?.grinderDefaultSync?.manualNote ?? true
+              }
               initialParams={initialParams}
             />
           </div>
