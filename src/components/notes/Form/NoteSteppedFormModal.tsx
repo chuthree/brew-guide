@@ -246,7 +246,9 @@ const NoteSteppedFormModal = forwardRef<
               ref={contentScrollRefCallback}
             >
               {currentStepContent && (
-                <div className="space-y-6">{contentWithSearchProps}</div>
+                <div className="flex h-full flex-col">
+                  {contentWithSearchProps}
+                </div>
               )}
             </div>
 

@@ -17,9 +17,8 @@ import type {
 } from '@/types/app';
 import { isPendingCoffeeBean } from '@/lib/utils/coffeeBeanUtils';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
-import NoteFormHeader from '@/components/notes/ui/NoteFormHeader';
 import { captureImage, compressBase64Image } from '@/lib/utils/imageCapture';
-import { Camera, Image as ImageIcon, X } from 'lucide-react';
+import { Camera, Image as ImageIcon } from 'lucide-react';
 import {
   equipmentList,
   commonMethods,
@@ -45,27 +44,20 @@ import {
   formatBeanDisplayName,
   formatNoteBeanDisplayName,
 } from '@/lib/utils/beanVarietyUtils';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/coffee-bean/ui/select';
+
 import CoffeeBeanPickerDrawer from './CoffeeBeanPickerDrawer';
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData';
 import ImagePreview from '@/components/common/ImagePreview';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
-
-// 常量定义
-const ROAST_LEVELS = [
-  '极浅烘焙',
-  '浅度烘焙',
-  '中浅烘焙',
-  '中度烘焙',
-  '中深烘焙',
-  '深度烘焙',
-] as const;
+import FeatureListItem from './FeatureListItem';
+import DatePickerDrawer from './DatePickerDrawer';
+import EquipmentMethodPickerDrawer, {
+  type EquipmentMethodSelection,
+} from './EquipmentMethodPickerDrawer';
+import FlavorRatingDrawer from './FlavorRatingDrawer';
+import OverallRatingDrawer from './OverallRatingDrawer';
+import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 
 // 动画类型到器具ID的映射
 const ANIMATION_TYPE_MAPPING: Record<string, string> = {
@@ -75,15 +67,6 @@ const ANIMATION_TYPE_MAPPING: Record<string, string> = {
   kalita: 'Kalita',
   origami: 'Origami',
 };
-
-// 默认方案参数
-const DEFAULT_METHOD_PARAMS = {
-  coffee: '15g',
-  water: '225g',
-  ratio: '1:15',
-  grindSize: '中细',
-  temp: '92°C',
-} as const;
 
 // 工具函数：获取器具对应的通用方案
 const getCommonMethodsForEquipment = (
@@ -128,26 +111,6 @@ const getCommonMethodsForEquipment = (
 
   return methods;
 };
-
-// 工具函数：获取参数的默认值
-const getParamValue = (
-  param: string | undefined,
-  defaultKey: keyof typeof DEFAULT_METHOD_PARAMS
-): string => {
-  return param || DEFAULT_METHOD_PARAMS[defaultKey];
-};
-
-const SLIDER_STYLES = `relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none
-[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
-[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-solid
-[&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-neutral-50
-[&::-webkit-slider-thumb]:shadow-none [&::-webkit-slider-thumb]:outline-none
-dark:[&::-webkit-slider-thumb]:border-neutral-600 dark:[&::-webkit-slider-thumb]:bg-neutral-900
-[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none
-[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-solid
-[&::-moz-range-thumb]:border-neutral-300 [&::-moz-range-thumb]:bg-neutral-50
-[&::-moz-range-thumb]:shadow-none [&::-moz-range-thumb]:outline-none
-dark:[&::-moz-range-thumb]:border-neutral-600 dark:[&::-moz-range-thumb]:bg-neutral-900`;
 
 // 类型定义 - 使用动态的风味评分类型
 interface TasteRatings {
@@ -264,10 +227,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [showCoffeeBeanPickerDrawer, setShowCoffeeBeanPickerDrawer] =
     useState(false);
   const [originalBeanId] = useState<string | undefined>(initialData.beanId); // 记录原始的beanId用于容量同步
-  const [showFlavorInfo, setShowFlavorInfo] = useState(false); // 控制风味信息的显示
   const [showImagePreview, setShowImagePreview] = useState(false); // 控制图片预览
   // 🔥 标记用户是否主动选择了咖啡豆（用于防止 initialData 变化覆盖用户选择）
   const userSelectedBeanRef = useRef(false);
+
+  // 新的抽屉状态
+  const [showDatePickerDrawer, setShowDatePickerDrawer] = useState(false);
+  const [showEquipmentMethodDrawer, setShowEquipmentMethodDrawer] =
+    useState(false);
+  const [showFlavorRatingDrawer, setShowFlavorRatingDrawer] = useState(false);
+  const [showOverallRatingDrawer, setShowOverallRatingDrawer] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     coffeeBeanInfo: getInitialCoffeeBeanInfo(initialData),
@@ -309,24 +278,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
   // 添加方案参数状态 - 分离数值和单位
   const [methodParams, setMethodParams] = useState({
-    coffee: getParamValue(initialData?.params?.coffee, 'coffee'),
-    water: getParamValue(initialData?.params?.water, 'water'),
-    ratio: getParamValue(initialData?.params?.ratio, 'ratio'),
-    grindSize: getParamValue(initialData?.params?.grindSize, 'grindSize'),
-    temp: getParamValue(initialData?.params?.temp, 'temp'),
+    coffee: initialData?.params?.coffee || '',
+    water: initialData?.params?.water || '',
+    ratio: initialData?.params?.ratio || '',
+    grindSize: initialData?.params?.grindSize || '',
+    temp: initialData?.params?.temp || '',
   });
 
   // 分离的数值状态（用于输入框显示）
   const [numericValues, setNumericValues] = useState(() => ({
-    coffee: extractNumericValue(
-      getParamValue(initialData?.params?.coffee, 'coffee')
-    ),
-    water: extractNumericValue(
-      getParamValue(initialData?.params?.water, 'water')
-    ),
-    temp: extractNumericValue(getParamValue(initialData?.params?.temp, 'temp')),
+    coffee: extractNumericValue(initialData?.params?.coffee || ''),
+    water: extractNumericValue(initialData?.params?.water || ''),
+    temp: extractNumericValue(initialData?.params?.temp || ''),
     ratio: extractNumericValue(
-      getParamValue(initialData?.params?.ratio, 'ratio').split(':')[1]
+      (initialData?.params?.ratio || '').split(':')[1] || ''
     ),
   }));
 
@@ -338,8 +303,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [customMethods, setCustomMethods] = useState<Record<string, Method[]>>(
     {}
   );
-  const [showEquipmentMethodSelector, setShowEquipmentMethodSelector] =
-    useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState(
     initialData.equipment || ''
   );
@@ -373,44 +336,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   }, [initialData.totalTime]);
 
   const formRef = useRef<HTMLFormElement>(null);
-  const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(
-    null
-  );
-
-  // 通用滑块触摸处理
-  const createSliderHandlers = useCallback(
-    (
-      updateFn: (value: number) => void,
-      min: number = 0,
-      max: number = 5,
-      step: number = 1
-    ) => ({
-      onTouchStart: (value: number) => (e: React.TouchEvent) => {
-        // 移除 e.preventDefault() - 避免 passive event listener 警告
-        // 滑块组件本身会处理触摸事件，不需要在这里阻止默认行为
-        e.stopPropagation();
-        setCurrentSliderValue(value);
-      },
-      onTouchMove: (e: React.TouchEvent) => {
-        if (currentSliderValue === null) return;
-        const touch = e.touches[0];
-        const target = e.currentTarget as HTMLInputElement;
-        const rect = target.getBoundingClientRect();
-        const percentage = Math.max(
-          0,
-          Math.min(1, (touch.clientX - rect.left) / rect.width)
-        );
-        const newValue =
-          min + Math.round((percentage * (max - min)) / step) * step;
-        if (newValue !== currentSliderValue) {
-          updateFn(newValue);
-          setCurrentSliderValue(newValue);
-        }
-      },
-      onTouchEnd: () => setCurrentSliderValue(null),
-    }),
-    [currentSliderValue]
-  );
 
   // 创建显示维度（包含历史维度）
   const createDisplayDimensions = (
@@ -520,9 +445,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         // 过滤隐藏的器具
         if (settings) {
-          const { filterHiddenEquipments } = await import(
-            '@/lib/stores/settingsStore'
-          );
+          const { filterHiddenEquipments } =
+            await import('@/lib/stores/settingsStore');
           allEquipments = filterHiddenEquipments(allEquipments);
         }
 
@@ -563,8 +487,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
   // 事件监听
   useEffect(() => {
-    const handleGlobalTouchEnd = () => setCurrentSliderValue(null);
-
     const handleMethodParamsChange = (e: CustomEvent) => {
       if (e.detail?.params) {
         const params = e.detail.params;
@@ -668,15 +590,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       }
     };
 
-    // 点击外部区域关闭下拉选择器
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-equipment-method-selector]')) {
-        setShowEquipmentMethodSelector(false);
-      }
-    };
-
-    document.addEventListener('touchend', handleGlobalTouchEnd);
     document.addEventListener(
       'methodParamsChanged',
       handleMethodParamsChange as EventListener
@@ -685,10 +598,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       'brewing:updateNoteParams',
       handleUpdateNoteParams as EventListener
     );
-    document.addEventListener('click', handleClickOutside);
 
     return () => {
-      document.removeEventListener('touchend', handleGlobalTouchEnd);
       document.removeEventListener(
         'methodParamsChanged',
         handleMethodParamsChange as EventListener
@@ -697,7 +608,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         'brewing:updateNoteParams',
         handleUpdateNoteParams as EventListener
       );
-      document.removeEventListener('click', handleClickOutside);
     };
   }, [methodParams]);
 
@@ -705,12 +615,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const updateMethodParams = useCallback((params: Method['params']) => {
     setMethodParams(params);
     setNumericValues({
-      coffee: extractNumericValue(getParamValue(params.coffee, 'coffee')),
-      water: extractNumericValue(getParamValue(params.water, 'water')),
-      temp: extractNumericValue(getParamValue(params.temp, 'temp')),
-      ratio: extractNumericValue(
-        getParamValue(params.ratio, 'ratio').split(':')[1]
-      ),
+      coffee: extractNumericValue(params.coffee || ''),
+      water: extractNumericValue(params.water || ''),
+      temp: extractNumericValue(params.temp || ''),
+      ratio: extractNumericValue((params.ratio || '').split(':')[1] || ''),
     });
 
     // 如果方案包含阶段信息，尝试提取总时间
@@ -793,15 +701,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     ) {
       setMethodParams(current.params);
       setNumericValues({
-        coffee: extractNumericValue(
-          getParamValue(current.params.coffee, 'coffee')
-        ),
-        water: extractNumericValue(
-          getParamValue(current.params.water, 'water')
-        ),
-        temp: extractNumericValue(getParamValue(current.params.temp, 'temp')),
+        coffee: extractNumericValue(current.params.coffee || ''),
+        water: extractNumericValue(current.params.water || ''),
+        temp: extractNumericValue(current.params.temp || ''),
         ratio: extractNumericValue(
-          getParamValue(current.params.ratio, 'ratio').split(':')[1]
+          (current.params.ratio || '').split(':')[1] || ''
         ),
       });
     }
@@ -868,119 +772,34 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     []
   );
 
-  // 创建滑块处理器
-  const ratingHandlers = createSliderHandlers(updateRating, 0, 5, 0.5);
-  // 风味评分步进：开启半星精度时为0.5，否则为1
-  const flavorStep = settings?.flavorRatingHalfStep ? 0.5 : 1;
-  const tasteHandlers = (key: string) =>
-    createSliderHandlers(updateTasteRating(key), 0, 5, flavorStep);
-
-  // 计算水量
-  const calculateWater = useCallback(
-    (coffee: string, ratio: string): string => {
-      const coffeeValue = parseFloat(coffee.match(/(\d+(\.\d+)?)/)?.[0] || '0');
-      const ratioValue = parseFloat(ratio.match(/1:(\d+(\.\d+)?)/)?.[1] || '0');
-      return coffeeValue > 0 && ratioValue > 0
-        ? `${Math.round(coffeeValue * ratioValue)}g`
-        : methodParams.water;
-    },
-    [methodParams.water]
-  );
-
-  // 通用数值输入处理
-  const createNumericHandler = useCallback(
-    (
-      field: 'coffee' | 'ratio' | 'temp' | 'water',
-      formatter: (value: string) => string
-    ) =>
-      (value: string) => {
-        if (!validateNumericInput(value)) return;
-
-        setNumericValues(prev => ({ ...prev, [field]: value }));
-
-        const formattedValue = formatter(value);
-        setMethodParams(prev => {
-          const newParams = { ...prev, [field]: formattedValue };
-          if (!isEspresso && (field === 'coffee' || field === 'ratio')) {
-            newParams.water = calculateWater(
-              field === 'coffee' ? formattedValue : prev.coffee,
-              field === 'ratio' ? formattedValue : prev.ratio
-            );
-          }
-          return newParams;
-        });
-      },
-    [calculateWater, isEspresso]
-  );
-
-  const handleCoffeeChange = createNumericHandler('coffee', value =>
-    value ? `${value}g` : ''
-  );
-  const handleRatioChange = createNumericHandler('ratio', value =>
-    value ? `1:${value}` : DEFAULT_METHOD_PARAMS.ratio
-  );
-  const handleTempChange = createNumericHandler('temp', value =>
-    value ? `${value}°C` : ''
-  );
-
-  const handleWaterChange = createNumericHandler('water', value =>
-    value ? `${value}g` : ''
-  );
-
-  // 处理器具选择
-  const handleEquipmentSelect = useCallback(
-    async (equipmentId: string) => {
+  // 处理器具方案选择抽屉的选择结果
+  const handleEquipmentMethodSelection = useCallback(
+    (selection: EquipmentMethodSelection) => {
       try {
-        setSelectedEquipment(equipmentId);
-        const equipmentMethods = customMethods[equipmentId] || [];
-        // 使用新的辅助函数获取通用方案
-        const commonEquipmentMethods = getCommonMethodsForEquipment(
-          equipmentId,
-          availableEquipments,
-          settings
-        );
-        const allMethods = [...equipmentMethods, ...commonEquipmentMethods];
-        setAvailableMethods(allMethods);
+        // 更新器具
+        setSelectedEquipment(selection.equipmentId);
 
-        if (allMethods.length > 0) {
-          const firstMethod = allMethods[0];
-          const methodIdentifier = firstMethod.name || firstMethod.id || '';
-          setSelectedMethod(methodIdentifier);
-          updateMethodParams(firstMethod.params);
+        // 更新方案
+        if (selection.methodId) {
+          setSelectedMethod(selection.methodName || selection.methodId);
+          // 如果有方案参数，更新参数
+          if (selection.method?.params) {
+            updateMethodParams(selection.method.params);
+          }
         } else {
+          // 没有选择方案，清空方案
           setSelectedMethod('');
         }
-        // 不再在这里关闭选择界面，等待用户选择方案后再关闭
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('选择器具失败:', error);
-        }
-      }
-    },
-    [customMethods, updateMethodParams, availableEquipments, settings]
-  );
 
-  // 处理方案选择
-  const handleMethodSelect = useCallback(
-    (methodIdentifier: string) => {
-      try {
-        const selectedMethodObj = availableMethods.find(
-          m => m.name === methodIdentifier || m.id === methodIdentifier
-        );
-        if (selectedMethodObj) {
-          const methodToStore =
-            selectedMethodObj.name || selectedMethodObj.id || '';
-          setSelectedMethod(methodToStore);
-          updateMethodParams(selectedMethodObj.params);
-        }
-        setShowEquipmentMethodSelector(false);
+        // 关闭抽屉
+        setShowEquipmentMethodDrawer(false);
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('选择方案失败:', error);
+          console.error('选择器具方案失败:', error);
         }
       }
     },
-    [availableMethods, updateMethodParams]
+    [updateMethodParams]
   );
 
   // 获取当前器具和方案名称 - 使用useMemo优化
@@ -1015,43 +834,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   // 标记风味评分是否仅来自于总评同步（用于保存时判断是否要保存风味评分）
   const flavorRatingsOnlySyncedRef = useRef(true);
 
-  // Inside the component, add a new state for showing/hiding flavor ratings
-  const [showFlavorRatings, setShowFlavorRatings] = useState(() => {
-    // 初始化时检查是否有任何风味评分大于0
+  // 初始化时检查是否有风味评分数据，用于标记非仅同步状态
+  useEffect(() => {
     const hasTasteValues =
       initialData?.taste &&
       Object.values(initialData.taste).some(value => value > 0);
-
-    // 如果有风味评分，默认展开
     if (hasTasteValues) {
-      // 如果初始数据有风味评分，标记为非仅同步状态
       flavorRatingsOnlySyncedRef.current = false;
-      return true;
     }
-
-    // 如果是添加新笔记（没有ID或是复制操作）且设置中开启了默认展开
-    if (isAdding && settings?.defaultExpandRating) return true;
-
-    return false;
-  });
-
-  // 监听风味评分变化（仅用于用户手动修改时自动展开）
-  useEffect(() => {
-    // 检查任何风味评分是否大于0
-    const hasTasteValues = Object.values(formData.taste).some(
-      value => value > 0
-    );
-
-    // 只有在用户手动修改了风味评分后，才自动展开
-    // 如果只是通过总评同步的，不自动展开
-    if (
-      hasTasteValues &&
-      !showFlavorRatings &&
-      userModifiedFlavorRatingsRef.current
-    ) {
-      setShowFlavorRatings(true);
-    }
-  }, [formData.taste, showFlavorRatings]);
+  }, [initialData?.taste]);
 
   const handleImageSelect = useCallback(
     async (source: 'camera' | 'gallery') => {
@@ -1143,9 +934,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     if (selectedCoffeeBean && isPendingCoffeeBean(selectedCoffeeBean)) {
       try {
-        const { useCoffeeBeanStore } = await import(
-          '@/lib/stores/coffeeBeanStore'
-        );
+        const { useCoffeeBeanStore } =
+          await import('@/lib/stores/coffeeBeanStore');
         const addBean = useCoffeeBeanStore.getState().addBean;
 
         // 创建新咖啡豆，容量和剩余量基于本次冲煮用量
@@ -1284,7 +1074,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             ? selectedCoffeeBean.name
             : formData.coffeeBeanInfo.name
           : undefined;
-        
+
         await syncGrinderToSettings(
           methodParams.grindSize,
           normalizedEquipmentId,
@@ -1309,8 +1099,100 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }
   };
 
-  const containerClassName =
-    'relative flex flex-col h-full overflow-y-auto overscroll-contain';
+  const containerClassName = 'relative flex flex-col h-full';
+
+  // 格式化日期显示
+  const formatDateDisplay = (date: Date) => {
+    return format(date, 'yyyy/MM/dd HH:mm', { locale: zhCN });
+  };
+
+  // 获取咖啡豆显示名称
+  const getCoffeeBeanDisplayName = () => {
+    if (selectedCoffeeBean && !isPendingCoffeeBean(selectedCoffeeBean)) {
+      return formatBeanDisplayName(
+        selectedCoffeeBean as CoffeeBean,
+        roasterSettings
+      );
+    }
+    if (selectedCoffeeBean?.name) {
+      return selectedCoffeeBean.name;
+    }
+    if (formData.coffeeBeanInfo.name) {
+      return formatNoteBeanDisplayName(
+        formData.coffeeBeanInfo,
+        roasterSettings
+      );
+    }
+    return '';
+  };
+
+  // 获取方案参数预览
+  const getMethodParamsPreview = () => {
+    // 检查是否有有效参数
+    const hasParams =
+      methodParams.coffee ||
+      methodParams.ratio ||
+      methodParams.grindSize ||
+      methodParams.temp;
+    if (!hasParams) return null;
+
+    const params = [
+      methodParams.coffee && { label: '粉量', value: methodParams.coffee },
+      methodParams.ratio && { label: '比例', value: methodParams.ratio },
+      methodParams.grindSize && {
+        label: '研磨',
+        value: methodParams.grindSize,
+      },
+      methodParams.temp && { label: '水温', value: methodParams.temp },
+    ].filter(Boolean) as { label: string; value: string }[];
+
+    if (params.length === 0) return null;
+
+    return (
+      <div className="scrollbar-hide flex gap-1.5 overflow-x-auto">
+        {params.map(param => (
+          <span
+            key={param.label}
+            className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-sm font-medium text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-400"
+          >
+            {param.value}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  // 获取风味评分预览（显示有值的维度）
+  const getFlavorRatingPreview = () => {
+    const ratedDimensions = displayDimensions.filter(
+      dim => (formData.taste[dim.id] || 0) > 0
+    );
+    if (ratedDimensions.length === 0) return null;
+
+    return (
+      <div className="scrollbar-hide flex gap-1.5 overflow-x-auto">
+        {ratedDimensions.map(dim => (
+          <span
+            key={dim.id}
+            className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-sm font-medium text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-400"
+          >
+            {dim.label}&nbsp;
+            {settings?.flavorRatingHalfStep
+              ? formData.taste[dim.id].toFixed(1)
+              : formData.taste[dim.id]}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  // 处理风味评分变化（从抽屉）
+  const handleTasteChange = useCallback((newTaste: Record<string, number>) => {
+    // 标记用户已手动修改风味评分
+    userModifiedFlavorRatingsRef.current = true;
+    flavorRatingsOnlySyncedRef.current = false;
+    setFormData(prev => ({ ...prev, taste: newTaste }));
+  }, []);
 
   return (
     <form
@@ -1319,479 +1201,138 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       onSubmit={handleSubmit}
       className={containerClassName}
     >
-      {/* 根据hideHeader属性决定是否显示头部 */}
-      {!hideHeader && (
-        <div className="mb-4 shrink-0">
-          <NoteFormHeader
-            onSave={() => formRef.current?.requestSubmit()}
-            showSaveButton={showSaveButton}
-            timestamp={timestamp}
-            onTimestampChange={handleTimestampChange}
-          />
-        </div>
-      )}
+      {/* 上方：笔记内容输入区域 */}
+      <div className="flex-1 overflow-y-auto overscroll-contain pb-4">
+        {/* 笔记文本输入 */}
+        <AutoResizeTextarea
+          id="brewing-notes"
+          name="brewingNotes"
+          value={formData.notes}
+          onChange={e =>
+            setFormData({
+              ...formData,
+              notes: e.target.value,
+            })
+          }
+          className="w-full border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
+          placeholder="记录一下这杯的感受..."
+          minRows={8}
+          maxRows={20}
+        />
+      </div>
 
-      {/* Form content - 更新内容区域样式以确保正确滚动 */}
-      <div className="grow space-y-6 pb-20">
-        {/* 咖啡豆信息 */}
-        <div className="space-y-4">
-          {selectedCoffeeBean ||
-          initialData.coffeeBean ||
-          formData.coffeeBeanInfo.name ||
-          (initialData.id && formData.coffeeBeanInfo.name) ? (
-            <div className="mb-3 text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-              <span
-                onClick={() => setShowCoffeeBeanPickerDrawer(true)}
-                className="cursor-pointer text-xs font-medium tracking-widest text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-              >
-                {selectedCoffeeBean && !isPendingCoffeeBean(selectedCoffeeBean)
-                  ? formatBeanDisplayName(
-                      selectedCoffeeBean as CoffeeBean,
-                      roasterSettings
-                    )
-                  : selectedCoffeeBean?.name ||
-                    formatNoteBeanDisplayName(
-                      formData.coffeeBeanInfo,
-                      roasterSettings
-                    ) ||
-                    '未知咖啡豆'}
-              </span>
-              {selectedCoffeeBean &&
-                !isPendingCoffeeBean(selectedCoffeeBean) &&
-                (selectedCoffeeBean as CoffeeBean).flavor &&
-                (selectedCoffeeBean as CoffeeBean).flavor!.length > 0 && (
-                  <span
-                    onClick={() => setShowFlavorInfo(!showFlavorInfo)}
-                    className="ml-1 cursor-pointer text-xs text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
-                  >
-                    /{' '}
-                    {showFlavorInfo
-                      ? (selectedCoffeeBean as CoffeeBean).flavor!.join(' · ')
-                      : '显示风味'}
-                  </span>
-                )}
-            </div>
-          ) : (
-            <input
-              id="custom-bean-name"
-              name="customBeanName"
-              type="text"
-              value={formData.coffeeBeanInfo.name}
-              readOnly
-              onClick={() => setShowCoffeeBeanPickerDrawer(true)}
-              placeholder="点击选择咖啡豆..."
-              className="w-full cursor-pointer rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-            />
-          )}
-        </div>
-        {/* 笔记图片 */}
-        <div className="flex w-full items-center gap-2">
+      {/* 下方：图片和功能列表 */}
+      <div className="shrink-0">
+        {/* 图片区域 */}
+        <div className="mb-4 flex items-center gap-2">
           {formData.image ? (
-            /* 有图片时：只显示图片 */
             <motion.div
               layoutId="note-image-preview"
-              className="relative h-16 w-16 flex-shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
+              className="relative max-w-24 shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
               onClick={() => setShowImagePreview(true)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{
-                type: 'spring',
-                stiffness: 300,
-                damping: 30,
-              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
               <Image
                 src={formData.image}
                 alt="笔记图片"
-                className="object-cover"
-                fill
-                sizes="64px"
+                className="h-auto max-h-24 w-auto"
+                width={0}
+                height={0}
+                sizes="192px"
+                style={{ width: 'auto', height: 'auto', maxHeight: '96px' }}
               />
-              {/* 删除按钮 */}
-              <button
-                type="button"
-                onClick={e => {
-                  e.stopPropagation();
-                  setFormData(prev => ({ ...prev, image: '' }));
-                }}
-                className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500 dark:bg-neutral-200/80 dark:text-neutral-800 dark:hover:bg-red-500 dark:hover:text-white"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
             </motion.div>
           ) : (
-            /* 无图片时：显示两个占位框 */
             <>
-              {/* 拍照框 */}
               <button
                 type="button"
                 onClick={() => handleImageSelect('camera')}
-                className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
+                className="flex h-24 w-24 shrink-0 items-center justify-center rounded bg-neutral-100 transition-colors dark:bg-neutral-800/40"
                 title="拍照"
               >
-                <Camera className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
+                <Camera
+                  className="h-8 w-8 text-neutral-200 dark:text-neutral-800"
+                  strokeWidth={1.5}
+                />
               </button>
-
-              {/* 相册框 */}
               <button
                 type="button"
                 onClick={() => handleImageSelect('gallery')}
-                className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
+                className="flex h-24 w-24 shrink-0 items-center justify-center rounded bg-neutral-100 transition-colors dark:bg-neutral-800/40"
                 title="相册"
               >
-                <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
+                <ImageIcon
+                  className="h-8 w-8 text-neutral-200 dark:text-neutral-800"
+                  strokeWidth={1.5}
+                />
               </button>
             </>
           )}
         </div>
-        {/* 添加方案参数编辑 - 只在编辑记录时显示 */}
-        {initialData?.id && (
-          <div className="space-y-4">
-            <div
-              className="flex items-center justify-between"
-              data-equipment-method-selector
-            >
-              <div className="mr-3 min-w-0 flex-1 text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                <span className="block truncate">
-                  方案参数 · {currentEquipmentName}_{currentMethodName}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setShowEquipmentMethodSelector(!showEquipmentMethodSelector)
-                }
-                className="flex-shrink-0 text-xs font-medium tracking-widest text-neutral-500 underline hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-              >
-                [ 选择 ]
-              </button>
-            </div>
 
-            {/* 器具和方案选择下拉框 */}
-            {showEquipmentMethodSelector && (
-              <div
-                className="space-y-4 rounded-lg border border-neutral-200/50 bg-neutral-50 p-4 dark:border-neutral-800/50 dark:bg-neutral-900"
-                data-equipment-method-selector
-              >
-                {/* 器具选择 */}
-                <div className="space-y-2">
-                  <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                    选择器具
-                  </div>
-                  <div className="grid max-h-32 grid-cols-2 gap-2 overflow-y-auto">
-                    {availableEquipments.map(equipment => (
-                      <button
-                        key={equipment.id}
-                        type="button"
-                        onClick={() => handleEquipmentSelect(equipment.id)}
-                        className={`rounded border p-2 text-left text-xs ${
-                          selectedEquipment === equipment.id
-                            ? 'border-neutral-800/50 bg-neutral-100 dark:border-white dark:bg-neutral-800'
-                            : 'border-neutral-200/50 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500'
-                        }`}
-                      >
-                        {equipment.name}
-                        {'isCustom' in equipment && equipment.isCustom && (
-                          <span className="ml-1 text-neutral-400 dark:text-neutral-500">
-                            (自定义)
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+        {/* 功能列表 */}
+        <div className="">
+          {/* 日期 - 仅编辑模式显示 */}
+          {!isAdding && (
+            <FeatureListItem
+              label="日期"
+              value={formatDateDisplay(timestamp)}
+              onClick={() => setShowDatePickerDrawer(true)}
+              isFirst={true}
+            />
+          )}
 
-                {/* 方案选择 */}
-                {availableMethods.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                      选择方案
-                    </div>
-                    <div className="max-h-32 space-y-1 overflow-y-auto">
-                      {availableMethods.map(method => {
-                        // 优先使用名称作为标识符
-                        const methodIdentifier = method.name || method.id || '';
-                        return (
-                          <button
-                            key={method.id || method.name}
-                            type="button"
-                            onClick={() => handleMethodSelect(methodIdentifier)}
-                            className={`w-full rounded border p-2 text-left text-xs ${
-                              selectedMethod === methodIdentifier
-                                ? 'border-neutral-800/50 bg-neutral-100 dark:border-white dark:bg-neutral-800'
-                                : 'border-neutral-200/50 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500'
-                            }`}
-                          >
-                            {method.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="grid grid-cols-4 gap-6">
-              <div className="relative">
-                <input
-                  id="coffee-amount"
-                  name="coffeeAmount"
-                  type="text"
-                  inputMode="decimal"
-                  value={numericValues.coffee}
-                  onChange={e => handleCoffeeChange(e.target.value)}
-                  className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                  placeholder="15"
-                />
-                <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
-                  g
-                </span>
-              </div>
-
-              {isEspresso ? (
-                <>
-                  <div>
-                    <GrindSizeInput
-                      value={methodParams.grindSize}
-                      onChange={value =>
-                        setMethodParams({
-                          ...methodParams,
-                          grindSize: value,
-                        })
-                      }
-                      placeholder="中细"
-                      inputClassName="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                      defaultSyncEnabled={
-                        id
-                          ? (settings?.grinderDefaultSync?.noteEdit ?? false)
-                          : (settings?.grinderDefaultSync?.manualNote ?? true)
-                      }
-                    />
-                  </div>
-                  <div className="relative">
-                    <input
-                      id="total-time"
-                      name="totalTime"
-                      type="text"
-                      inputMode="decimal"
-                      value={totalTimeStr}
-                      onChange={e => setTotalTimeStr(e.target.value)}
-                      className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                      placeholder="25"
-                    />
-                    <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
-                      s
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      id="water-amount"
-                      name="waterAmount"
-                      type="text"
-                      inputMode="decimal"
-                      value={numericValues.water}
-                      onChange={e => handleWaterChange(e.target.value)}
-                      className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 pr-4 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                      placeholder="30"
-                    />
-                    <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
-                      g
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="relative overflow-hidden">
-                    <div className="flex items-center">
-                      <span className="mr-1 shrink-0 text-xs text-neutral-400 dark:text-neutral-500">
-                        1:
-                      </span>
-                      <input
-                        id="coffee-ratio"
-                        name="coffeeRatio"
-                        type="text"
-                        inputMode="decimal"
-                        value={numericValues.ratio}
-                        onChange={e => handleRatioChange(e.target.value)}
-                        className="min-w-0 flex-1 rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                        placeholder="15"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <GrindSizeInput
-                      value={methodParams.grindSize}
-                      onChange={value =>
-                        setMethodParams({
-                          ...methodParams,
-                          grindSize: value,
-                        })
-                      }
-                      placeholder="中细"
-                      inputClassName="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                      defaultSyncEnabled={
-                        id
-                          ? (settings?.grinderDefaultSync?.noteEdit ?? false)
-                          : (settings?.grinderDefaultSync?.manualNote ?? true)
-                      }
-                    />
-                  </div>
-                  <div className="relative">
-                    <input
-                      id="water-temperature"
-                      name="waterTemperature"
-                      type="text"
-                      inputMode="decimal"
-                      value={numericValues.temp}
-                      onChange={e => handleTempChange(e.target.value)}
-                      className="w-full rounded-none border-b border-neutral-200/50 bg-transparent py-2 pr-8 text-xs text-neutral-800 outline-hidden transition-colors placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-                      placeholder="92"
-                    />
-                    <span className="absolute right-0 bottom-2 text-xs text-neutral-400 dark:text-neutral-500">
-                      °C
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-        {/* 风味评分 */}
-        {showFlavorSection && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                风味评分
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowFlavorRatings(!showFlavorRatings)}
-                className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400"
-              >
-                [ {showFlavorRatings ? '收起' : '展开'} ]
-              </button>
-            </div>
-
-            {showFlavorRatings && (
-              <div className="grid grid-cols-2 gap-8">
-                {displayDimensions.map(dimension => {
-                  const value = formData.taste[dimension.id] || 0;
-                  return (
-                    <div key={dimension.id} className="relative space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                          {dimension.label}
-                          {dimension.order === 999 && (
-                            <span className="ml-1 text-[10px] text-neutral-400 dark:text-neutral-500">
-                              (已删除)
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                          [{' '}
-                          {settings?.flavorRatingHalfStep
-                            ? (value || 0).toFixed(1)
-                            : value || 0}{' '}
-                          ]
-                        </div>
-                      </div>
-                      <input
-                        id={`taste-${dimension.id}`}
-                        name={`taste_${dimension.id}`}
-                        type="range"
-                        min="0"
-                        max="5"
-                        step={settings?.flavorRatingHalfStep ? '0.5' : '1'}
-                        value={value || 0}
-                        onChange={e => {
-                          // 标记用户已手动修改风味评分
-                          userModifiedFlavorRatingsRef.current = true;
-                          flavorRatingsOnlySyncedRef.current = false;
-                          setFormData({
-                            ...formData,
-                            taste: {
-                              ...formData.taste,
-                              [dimension.id]: parseFloat(e.target.value),
-                            },
-                          });
-                        }}
-                        onTouchStart={tasteHandlers(dimension.id).onTouchStart(
-                          value
-                        )}
-                        onTouchMove={tasteHandlers(dimension.id).onTouchMove}
-                        onTouchEnd={tasteHandlers(dimension.id).onTouchEnd}
-                        className={SLIDER_STYLES}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-        {/* 总体评分 */}
-        {showOverallSection && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                总体评分
-              </div>
-              <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-                [ {formData.rating.toFixed(1)} ]
-              </div>
-            </div>
-            <div className="relative py-3">
-              <input
-                id="overall-rating"
-                name="overallRating"
-                type="range"
-                min="0"
-                max="5"
-                step="0.5"
-                value={formData.rating}
-                onChange={e => updateRating(parseFloat(e.target.value))}
-                onTouchStart={ratingHandlers.onTouchStart(formData.rating)}
-                onTouchMove={ratingHandlers.onTouchMove}
-                onTouchEnd={ratingHandlers.onTouchEnd}
-                className={SLIDER_STYLES}
-              />
-            </div>
-          </div>
-        )}
-        {/* 笔记 */}
-        <div className="space-y-4">
-          <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
-            笔记
-          </div>
-          <AutoResizeTextarea
-            id="brewing-notes"
-            name="brewingNotes"
-            value={formData.notes}
-            onChange={e =>
-              setFormData({
-                ...formData,
-                notes: e.target.value,
-              })
-            }
-            className="border-b border-neutral-200/50 pb-4 text-xs font-medium text-neutral-800 placeholder:text-neutral-300 focus:border-neutral-400 dark:border-neutral-800/50 dark:text-neutral-300 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
-            placeholder="记录一下这次冲煮的感受、改进点等..."
-            minRows={7}
-            maxRows={12}
+          {/* 咖啡豆 */}
+          <FeatureListItem
+            label="咖啡豆"
+            value={getCoffeeBeanDisplayName()}
+            onClick={() => setShowCoffeeBeanPickerDrawer(true)}
+            isFirst={isAdding}
           />
-        </div>
-      </div>
 
-      {/* 底部保存按钮 - 悬浮固定，仅在显示保存按钮且不隐藏头部时显示 */}
-      {showSaveButton && !hideHeader && (
-        <div className="pb-safe-bottom fixed bottom-6 left-1/2 z-10 -translate-x-1/2 transform">
-          <button
-            type="submit"
-            className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
-          >
-            <span className="font-medium">保存笔记</span>
-          </button>
+          {/* 器具方案 - 仅编辑模式显示 */}
+          {!isAdding && (initialData?.id || selectedEquipment) && (
+            <FeatureListItem
+              label="器具方案"
+              value={`${currentEquipmentName} · ${currentMethodName}`}
+              onClick={() => setShowEquipmentMethodDrawer(true)}
+              preview={getMethodParamsPreview()}
+            />
+          )}
+
+          {/* 风味评分 */}
+          {showFlavorSection && (
+            <FeatureListItem
+              label="风味评分"
+              onClick={() => setShowFlavorRatingDrawer(true)}
+              preview={getFlavorRatingPreview()}
+            />
+          )}
+
+          {/* 总体评分 */}
+          {showOverallSection && (
+            <FeatureListItem
+              label="总体评分"
+              value={formData.rating > 0 ? formData.rating.toFixed(1) : ''}
+              onClick={() => setShowOverallRatingDrawer(true)}
+              isLast={true}
+            />
+          )}
         </div>
-      )}
+
+        {/* 保存按钮 */}
+        {showSaveButton && (
+          <div className="pb-safe-bottom flex justify-center pt-4">
+            <button
+              type="submit"
+              className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+            >
+              保存笔记
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* 图片预览 */}
       {formData.image && (
@@ -1801,8 +1342,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           isOpen={showImagePreview}
           onClose={() => setShowImagePreview(false)}
           layoutId="note-image-preview"
+          onDelete={() => {
+            setFormData(prev => ({ ...prev, image: '' }));
+            setShowImagePreview(false);
+          }}
         />
       )}
+
+      {/* 日期选择抽屉 */}
+      <DatePickerDrawer
+        isOpen={showDatePickerDrawer}
+        onClose={() => setShowDatePickerDrawer(false)}
+        date={timestamp}
+        onDateChange={handleTimestampChange}
+      />
 
       {/* 咖啡豆选择抽屉 */}
       <CoffeeBeanPickerDrawer
@@ -1812,6 +1365,36 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         selectedBean={selectedCoffeeBean}
         showStatusDots={settings?.showStatusDots}
         hapticFeedback={settings?.hapticFeedback}
+      />
+
+      {/* 器具方案选择抽屉 */}
+      <EquipmentMethodPickerDrawer
+        isOpen={showEquipmentMethodDrawer}
+        onClose={() => setShowEquipmentMethodDrawer(false)}
+        onSelect={handleEquipmentMethodSelection}
+        selectedEquipmentId={selectedEquipment}
+        selectedMethodId={selectedMethod}
+        initialParams={methodParams}
+        settings={settings}
+        hapticFeedback={settings?.hapticFeedback}
+      />
+
+      {/* 风味评分抽屉 */}
+      <FlavorRatingDrawer
+        isOpen={showFlavorRatingDrawer}
+        onClose={() => setShowFlavorRatingDrawer(false)}
+        taste={formData.taste}
+        onTasteChange={handleTasteChange}
+        displayDimensions={displayDimensions}
+        halfStep={settings?.flavorRatingHalfStep}
+      />
+
+      {/* 总体评分抽屉 */}
+      <OverallRatingDrawer
+        isOpen={showOverallRatingDrawer}
+        onClose={() => setShowOverallRatingDrawer(false)}
+        rating={formData.rating}
+        onRatingChange={updateRating}
       />
     </form>
   );

@@ -195,7 +195,7 @@ export function Calendar({
   };
 
   return (
-    <div className={cn('p-3', className)}>
+    <div className={cn('', className)}>
       {/* 日历头部 - 月份导航 */}
       <div className="mb-4 flex items-center justify-between">
         <button

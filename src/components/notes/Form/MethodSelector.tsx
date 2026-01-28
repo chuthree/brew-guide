@@ -13,6 +13,8 @@ interface MethodSelectorProps {
   onMethodSelect: (methodId: string) => void;
   onParamsChange: (method: Method) => void;
   grinderDefaultSyncEnabled?: boolean;
+  /** 笔记保存的方案参数（编辑模式时优先使用） */
+  initialParams?: Partial<Method['params']>;
 }
 
 interface EditingValues {
@@ -64,6 +66,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   onMethodSelect,
   onParamsChange,
   grinderDefaultSyncEnabled = true,
+  initialParams,
 }) => {
   const isEspresso =
     selectedEquipment.toLowerCase().includes('espresso') ||
@@ -117,6 +120,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   );
 
   // 初始化编辑值 - 仅在方案变化时执行
+  // 优先级：initialParams（笔记保存的参数） > override（设置覆盖） > method.params（方案原始参数）
   useEffect(() => {
     if (!selectedMethod || !selectedEquipment) return;
 
@@ -128,6 +132,29 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     if (!method) return;
 
     initializedMethodRef.current = initKey;
+
+    // 如果有 initialParams（从笔记传入），优先使用它
+    if (initialParams) {
+      setEditingValues({
+        coffee: extractNumber(initialParams.coffee || ''),
+        ratio: extractRatioNumber(initialParams.ratio || ''),
+        grindSize: initialParams.grindSize || '',
+        water: extractNumber(initialParams.water || ''),
+        time: initialParams.stages?.[0]?.duration?.toString() ?? '',
+        temp: extractNumber(initialParams.temp || ''),
+      });
+
+      // 通知父组件
+      const methodWithNoteParams = {
+        ...method,
+        params: {
+          ...method.params,
+          ...initialParams,
+        },
+      };
+      onParamsChange(methodWithNoteParams);
+      return;
+    }
 
     const override = getOverride(selectedMethod);
     if (override) {
@@ -176,6 +203,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     findMethod,
     getOverride,
     onParamsChange,
+    initialParams,
   ]);
 
   // 处理方案选择

@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
+import { Trash2 } from 'lucide-react';
 
 interface ImagePreviewProps {
   id?: string;
@@ -12,6 +13,7 @@ interface ImagePreviewProps {
   isOpen: boolean;
   onClose: () => void;
   layoutId?: string; // 用于共享布局动画
+  onDelete?: () => void; // 删除图片回调
 }
 
 const ImagePreview: React.FC<ImagePreviewProps> = ({
@@ -21,6 +23,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   isOpen,
   onClose,
   layoutId = 'image-preview',
+  onDelete,
 }) => {
   // 适配历史栈
   useModalHistory({
@@ -88,6 +91,25 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
               priority
             />
           </motion.div>
+
+          {/* 删除按钮 */}
+          {onDelete && (
+            <motion.button
+              initial={{ opacity: 0, filter: 'blur(2px)', scale: 0.95 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+              exit={{ opacity: 0, filter: 'blur(2px)', scale: 0.95 }}
+              transition={{ delay: 0.1 }}
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-red-500/90 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+              移除
+            </motion.button>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

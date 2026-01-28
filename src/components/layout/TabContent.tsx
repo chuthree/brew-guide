@@ -260,9 +260,8 @@ const TabContent: React.FC<TabContentProps> = ({
   const handleSaveNote = async (note: BrewingNoteData) => {
     try {
       // 🔥 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
+      const { useBrewingNoteStore } =
+        await import('@/lib/stores/brewingNoteStore');
 
       const noteData: any = {
         ...note,
@@ -368,9 +367,8 @@ const TabContent: React.FC<TabContentProps> = ({
 
     try {
       // 使用动态导入，但只导入一次模块
-      const customEquipmentsModule = await import(
-        '@/lib/stores/customEquipmentStore'
-      );
+      const customEquipmentsModule =
+        await import('@/lib/stores/customEquipmentStore');
       const customEquipments =
         await customEquipmentsModule.loadCustomEquipments();
       return (
@@ -559,9 +557,8 @@ const TabContent: React.FC<TabContentProps> = ({
   // 简化的分享处理函数 - 使用统一的 useCopy hook
   const handleShareMethod = useCallback(
     async (method: Method) => {
-      const { generateMethodShareText } = await import(
-        '@/lib/stores/customMethodStore'
-      );
+      const { generateMethodShareText } =
+        await import('@/lib/stores/customMethodStore');
       const text = await generateMethodShareText(
         method,
         getSelectedCustomEquipment()
@@ -575,9 +572,8 @@ const TabContent: React.FC<TabContentProps> = ({
     async (equipment: CustomEquipment) => {
       try {
         const methods = customMethods[equipment.id || equipment.name] || [];
-        const { copyEquipmentToClipboard } = await import(
-          '@/lib/stores/customMethodStore'
-        );
+        const { copyEquipmentToClipboard } =
+          await import('@/lib/stores/customMethodStore');
         await copyEquipmentToClipboard(equipment, methods);
         showToast({
           type: 'success',
@@ -799,7 +795,7 @@ const TabContent: React.FC<TabContentProps> = ({
     };
 
     return (
-      <div className="px-6 pt-3">
+      <div className="flex h-full flex-col px-6 pt-6">
         <BrewingNoteForm
           id={undefined}
           onClose={handleCloseNoteForm}
@@ -808,14 +804,7 @@ const TabContent: React.FC<TabContentProps> = ({
           initialData={{
             equipment: noteEquipmentName || selectedEquipment || '',
             method: currentBrewingMethod?.name || '',
-            params: currentBrewingMethod?.params || {
-              coffee: '15g',
-              water: '225g',
-              ratio: '1:15',
-              grindSize: '中细',
-              temp: '92°C',
-              stages: [],
-            },
+            params: currentBrewingMethod?.params,
             totalTime: calculateTotalTime(),
             coffeeBean: selectedCoffeeBeanData || undefined,
           }}
