@@ -318,7 +318,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
             )}
 
             {/* 时间和评分 */}
-            <div className="text-xs leading-tight font-medium text-neutral-500/60 dark:text-neutral-500/60">
+            <div className="mt-2 text-xs leading-tight font-medium text-neutral-500/60 dark:text-neutral-500/60">
               {formatDate(note.timestamp)}
               {note.rating > 0 && (
                 <>
