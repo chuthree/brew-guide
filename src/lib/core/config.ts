@@ -1224,4 +1224,5 @@ export const sponsorsList = [
   'Hans',
   '杨源',
   'Jerry_li',
+  'Polaris',
 ];
