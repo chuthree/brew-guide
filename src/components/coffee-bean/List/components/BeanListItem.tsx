@@ -457,7 +457,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         </div>
 
         <div
-          className={`flex min-w-0 flex-1 flex-col gap-y-2 ${shouldShowNotes() ? '' : 'justify-center'}`}
+          className={`flex min-w-0 flex-1 flex-col gap-y-1.5 ${shouldShowNotes() ? '' : 'justify-center'}`}
         >
           <div className="flex flex-col justify-center gap-y-1">
             <div className="line-clamp-2 text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
