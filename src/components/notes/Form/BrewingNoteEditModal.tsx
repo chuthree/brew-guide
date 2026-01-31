@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
@@ -24,6 +24,35 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   settings,
   isCopy = false, // 默认不是复制操作
 }) => {
+  // 快捷记录模式状态
+  const [isQuickDecrementEdit, setIsQuickDecrementEdit] = useState(false);
+  const [isQuickMode, setIsQuickMode] = useState(false);
+
+  // 监听表单挂载事件，获取快捷扣除状态
+  useEffect(() => {
+    const handleFormMounted = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.noteId === initialData?.id) {
+        setIsQuickDecrementEdit(customEvent.detail.isQuickDecrementEdit);
+        setIsQuickMode(customEvent.detail.isQuickMode);
+      }
+    };
+
+    window.addEventListener('brewingNoteFormMounted', handleFormMounted);
+    return () => {
+      window.removeEventListener('brewingNoteFormMounted', handleFormMounted);
+    };
+  }, [initialData?.id]);
+
+  // 处理切换快捷记录模式
+  const handleToggleQuickMode = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent('toggleQuickMode', {
+        detail: { noteId: initialData?.id },
+      })
+    );
+    setIsQuickMode(!isQuickMode);
+  }, [initialData?.id, isQuickMode]);
   // 处理保存
   const handleSave = useCallback(
     (updatedData: BrewingNoteData) => {
@@ -97,7 +126,21 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
           </div>
 
           {/* 底部保存按钮 */}
-          <div className="modal-bottom-button flex shrink-0 items-center justify-center">
+          <div className="modal-bottom-button flex shrink-0 items-center justify-center gap-3">
+            {/* 切换按钮 - 仅快捷扣除记录显示 */}
+            {isQuickDecrementEdit && (
+              <button
+                type="button"
+                onClick={handleToggleQuickMode}
+                className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
+              >
+                <span className="font-medium">
+                  {isQuickMode ? '记录更多' : '返回快捷记录'}
+                </span>
+              </button>
+            )}
+
+            {/* 保存按钮 */}
             <button
               type="button"
               onClick={handleSaveClick}

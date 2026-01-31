@@ -294,7 +294,7 @@ const EquipmentMethodPickerDrawer: React.FC<
         className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[85vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="flex h-full flex-col overflow-hidden px-6 pt-4">
+        <div className="flex h-full flex-col overflow-hidden px-6 pt-6">
           {/* 器具分类栏 - 复用 EquipmentCategoryBar */}
           <div className="shrink-0">
             <EquipmentCategoryBar

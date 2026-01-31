@@ -119,8 +119,36 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     [selectedEquipment, methodParamOverrides]
   );
 
+  /**
+   * 检查 initialParams 是否为空占位符（快捷记录）
+   *
+   * 快捷记录只保存 coffee 字段，其他参数为空字符串
+   * 这种情况下应该保留 coffee 值，但其他参数使用方案的默认参数或设置覆盖
+   */
+  const isEmptyPlaceholder = useCallback(
+    (params?: Partial<Method['params']>): boolean => {
+      if (!params) return true;
+      const { coffee, water, ratio, grindSize, temp } = params;
+      // 只有 coffee 有值，其他字段都是空的，认为是空占位符
+      return !!coffee && !water && !ratio && !grindSize && !temp;
+    },
+    []
+  );
+
+  /**
+   * 从空占位符中提取 coffee 值
+   */
+  const extractCoffeeFromPlaceholder = useCallback(
+    (params?: Partial<Method['params']>): string | undefined => {
+      if (!params || !isEmptyPlaceholder(params)) return undefined;
+      return params.coffee;
+    },
+    [isEmptyPlaceholder]
+  );
+
   // 初始化编辑值 - 仅在方案变化时执行
-  // 优先级：initialParams（笔记保存的参数） > override（设置覆盖） > method.params（方案原始参数）
+  // 优先级：initialParams（笔记保存的参数，非空占位符） > override（设置覆盖） > method.params（方案原始参数）
+  // 特殊处理：如果 initialParams 是空占位符，保留其 coffee 值，其他参数使用 override 或方案默认值
   useEffect(() => {
     if (!selectedMethod || !selectedEquipment) return;
 
@@ -133,8 +161,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
     initializedMethodRef.current = initKey;
 
-    // 如果有 initialParams（从笔记传入），优先使用它
-    if (initialParams) {
+    // 如果有 initialParams（从笔记传入），且不是空占位符，优先使用它
+    if (initialParams && !isEmptyPlaceholder(initialParams)) {
       setEditingValues({
         coffee: extractNumber(initialParams.coffee || ''),
         ratio: extractRatioNumber(initialParams.ratio || ''),
@@ -156,11 +184,18 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       return;
     }
 
+    // initialParams 是空占位符或不存在，使用 override 或方案默认值
+    // 如果是空占位符，保留 coffee 值
+    const placeholderCoffee = extractCoffeeFromPlaceholder(initialParams);
     const override = getOverride(selectedMethod);
+
     if (override) {
       // 有覆盖参数，使用覆盖值（包括空字符串）
+      // 如果有空占位符的 coffee，优先使用它
       setEditingValues({
-        coffee: extractNumber(override.coffee ?? method.params.coffee),
+        coffee: extractNumber(
+          placeholderCoffee ?? override.coffee ?? method.params.coffee
+        ),
         ratio: extractRatioNumber(override.ratio ?? method.params.ratio),
         grindSize: override.grindSize ?? method.params.grindSize ?? '',
         water: extractNumber(override.water ?? method.params.water),
@@ -172,16 +207,25 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       });
     } else {
       // 无覆盖，使用原始值
-      setEditingValues(extractEditingValues(method));
+      // 如果有空占位符的 coffee，优先使用它
+      const defaultValues = extractEditingValues(method);
+      setEditingValues({
+        ...defaultValues,
+        coffee: extractNumber(placeholderCoffee ?? method.params.coffee),
+      });
     }
 
     // 通知父组件
+    // 如果有空占位符的 coffee，使用它；否则使用 override 或方案默认值
+    const effectiveCoffee =
+      placeholderCoffee ?? override?.coffee ?? method.params.coffee;
+
     const effectiveMethod = override
       ? {
           ...method,
           params: {
             ...method.params,
-            coffee: override.coffee ?? method.params.coffee,
+            coffee: effectiveCoffee,
             water: override.water ?? method.params.water,
             ratio: override.ratio ?? method.params.ratio,
             grindSize: override.grindSize ?? method.params.grindSize,
@@ -195,7 +239,13 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                 : method.params.stages,
           },
         }
-      : method;
+      : {
+          ...method,
+          params: {
+            ...method.params,
+            coffee: effectiveCoffee,
+          },
+        };
     onParamsChange(effectiveMethod);
   }, [
     selectedMethod,
@@ -204,6 +254,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     getOverride,
     onParamsChange,
     initialParams,
+    isEmptyPlaceholder,
+    extractCoffeeFromPlaceholder,
   ]);
 
   // 处理方案选择

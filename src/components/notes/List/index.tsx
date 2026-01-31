@@ -31,7 +31,6 @@ import AddNoteButton from './AddNoteButton';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import { showToast } from '@/components/common/feedback/LightToast';
 
-import ChangeRecordEditModal from '../Form/ChangeRecordEditModal';
 import { BrewingNoteData } from '@/types/app';
 import {
   globalCache,
@@ -92,12 +91,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const [searchSortOption, setSearchSortOption] = useState<SortOption | null>(
     null
   );
-  const [editingChangeRecord, setEditingChangeRecord] =
-    useState<BrewingNote | null>(null);
-
-  // 模态显示状态
-  const [showChangeRecordEditModal, setShowChangeRecordEditModal] =
-    useState(false);
+  // 模态显示状态（已移除 ChangeRecordEditModal 相关状态和变量）
 
   // 图文分享状态
   const [showArtisticShareDrawer, setShowArtisticShareDrawer] = useState(false);
@@ -519,9 +513,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     // 加载器具名称
     const loadEquipmentData = async () => {
       const { equipmentList } = await import('@/lib/core/config');
-      const { loadCustomEquipments } = await import(
-        '@/lib/stores/customEquipmentStore'
-      );
+      const { loadCustomEquipments } =
+        await import('@/lib/stores/customEquipmentStore');
       const customEquips = await loadCustomEquipments();
       setCustomEquipments(customEquips);
 
@@ -615,9 +608,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
               !isNaN(changeAmount) &&
               changeAmount !== 0
             ) {
-              const { getCoffeeBeanStore } = await import(
-                '@/lib/stores/coffeeBeanStore'
-              );
+              const { getCoffeeBeanStore } =
+                await import('@/lib/stores/coffeeBeanStore');
 
               // 获取当前咖啡豆信息
               const store = getCoffeeBeanStore();
@@ -654,9 +646,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           const beanId = getNoteAssociatedBeanId(noteToDelete);
 
           if (beanId && coffeeAmount > 0) {
-            const { increaseBeanRemaining } = await import(
-              '@/lib/stores/coffeeBeanStore'
-            );
+            const { increaseBeanRemaining } =
+              await import('@/lib/stores/coffeeBeanStore');
             await increaseBeanRemaining(beanId, coffeeAmount);
           }
         }
@@ -693,53 +684,46 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       const newTimestamp = Date.now();
       const newId = newTimestamp.toString();
 
-      // 检查是否为变动记录
+      // 检查是否为变动记录（统一使用 BrewingNoteForm 处理）
       const isChangeRecord =
         noteToCopy.source === 'quick-decrement' ||
         noteToCopy.source === 'capacity-adjustment';
 
-      if (isChangeRecord) {
-        // 变动记录：打开变动记录编辑界面（不包含图片）
-        const changeRecordToEdit: BrewingNote = {
-          ...noteToCopy,
-          id: newId,
-          timestamp: newTimestamp,
-          image: undefined, // 不包含图片
-        };
-        setEditingChangeRecord(changeRecordToEdit);
-        setShowChangeRecordEditModal(true);
-      } else {
-        // 普通笔记：打开编辑界面（不包含图片）
-        // 注意：不传递 id，让表单认为这是全新的笔记，这样容量同步逻辑才能正确工作
-        const noteToEdit: Partial<BrewingNoteData> = {
-          timestamp: newTimestamp,
-          equipment: noteToCopy.equipment,
-          method: noteToCopy.method,
-          params: noteToCopy.params,
-          coffeeBeanInfo: noteToCopy.coffeeBeanInfo || {
-            name: '',
-            roastLevel: '',
-          },
-          image: undefined, // 不包含图片
-          rating: noteToCopy.rating,
-          taste: noteToCopy.taste,
-          notes: noteToCopy.notes,
-          totalTime: noteToCopy.totalTime,
-          beanId: noteToCopy.beanId,
-          // 添加一个临时 ID 用于表单提交识别，但让表单知道这是新笔记
-          id: newId,
-        };
+      // 统一使用 BrewingNoteForm 处理所有类型的笔记复制
+      const noteToEdit: Partial<BrewingNoteData> = {
+        timestamp: newTimestamp,
+        equipment: noteToCopy.equipment,
+        method: noteToCopy.method,
+        params: noteToCopy.params,
+        coffeeBeanInfo: noteToCopy.coffeeBeanInfo || {
+          name: '',
+          roastLevel: '',
+        },
+        image: undefined, // 不包含图片
+        rating: noteToCopy.rating,
+        taste: noteToCopy.taste,
+        notes: noteToCopy.notes,
+        totalTime: noteToCopy.totalTime,
+        beanId: noteToCopy.beanId,
+        // 添加一个临时 ID 用于表单提交识别，但让表单知道这是新笔记
+        id: newId,
+        // 如果是变动记录，保留相关字段
+        ...(isChangeRecord && {
+          source: noteToCopy.source,
+          quickDecrementAmount: noteToCopy.quickDecrementAmount,
+          changeRecord: noteToCopy.changeRecord,
+        }),
+      };
 
-        // 通过事件触发模态框打开
-        window.dispatchEvent(
-          new CustomEvent('brewingNoteEditOpened', {
-            detail: {
-              data: noteToEdit,
-              isCopy: true, // 标记这是复制操作
-            },
-          })
-        );
-      }
+      // 通过事件触发模态框打开
+      window.dispatchEvent(
+        new CustomEvent('brewingNoteEditOpened', {
+          detail: {
+            data: noteToEdit,
+            isCopy: true, // 标记这是复制操作
+          },
+        })
+      );
 
       // 提示用户
       showToastMessage('请修改后保存', 'info');
@@ -749,84 +733,33 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     }
   };
 
-  // 处理笔记点击 - 区分变动记录和普通笔记，使用模态弹窗
+  // 处理笔记点击 - 统一使用 BrewingNoteForm 组件
   const handleNoteClick = (note: BrewingNote) => {
-    // 检查是否为变动记录
-    const isChangeRecord =
-      note.source === 'quick-decrement' ||
-      note.source === 'capacity-adjustment';
-
-    if (isChangeRecord) {
-      // 设置编辑变动记录并显示模态
-      setEditingChangeRecord(note);
-      setShowChangeRecordEditModal(true);
-    } else {
-      // 准备要编辑的普通笔记数据
-      const noteToEdit = {
-        id: note.id,
-        timestamp: note.timestamp,
-        equipment: note.equipment,
-        method: note.method,
-        params: note.params,
-        coffeeBeanInfo: note.coffeeBeanInfo || {
-          name: '', // 提供默认值
-          roastLevel: '',
-        },
-        image: note.image,
-        rating: note.rating,
-        taste: note.taste,
-        notes: note.notes,
-        totalTime: note.totalTime,
-        // 确保包含beanId字段，这是咖啡豆容量同步的关键
-        beanId: note.beanId,
-      };
-
-      // 通过事件触发模态框打开
-      window.dispatchEvent(
-        new CustomEvent('brewingNoteEditOpened', {
-          detail: { data: noteToEdit },
-        })
-      );
-    }
-  };
-
-  // 处理变动记录转换为普通笔记
-  const handleConvertToNormalNote = (convertedNote: BrewingNote) => {
-    // 注意：关闭变动记录编辑模态的操作已经由 modalHistory.back() 触发的 onClose 回调处理
-    // 这里只负责准备数据并打开普通笔记编辑模态
-
-    // 🔥 解构排除变动记录的特有字段，确保干净的数据转换
-    const { source, quickDecrementAmount, changeRecord, ...cleanNote } =
-      convertedNote as any;
-
-    // 准备普通笔记数据
+    // 准备要编辑的笔记数据（包括快捷扣除记录和普通笔记）
     const noteToEdit = {
-      ...cleanNote,
-      equipment: cleanNote.equipment || '',
-      method: cleanNote.method || '',
-      params: cleanNote.params || {
-        coffee: '',
-        water: '',
-        ratio: '',
-        grindSize: '',
-        temp: '',
-      },
-      coffeeBeanInfo: cleanNote.coffeeBeanInfo || {
-        name: '',
+      id: note.id,
+      timestamp: note.timestamp,
+      equipment: note.equipment,
+      method: note.method,
+      params: note.params,
+      coffeeBeanInfo: note.coffeeBeanInfo || {
+        name: '', // 提供默认值
         roastLevel: '',
       },
-      rating: cleanNote.rating ?? 0,
-      taste: cleanNote.taste || {
-        acidity: 0,
-        sweetness: 0,
-        bitterness: 0,
-        body: 0,
-      },
-      notes: cleanNote.notes || '',
-      totalTime: cleanNote.totalTime || 0,
+      image: note.image,
+      rating: note.rating,
+      taste: note.taste,
+      notes: note.notes,
+      totalTime: note.totalTime,
+      // 确保包含beanId字段，这是咖啡豆容量同步的关键
+      beanId: note.beanId,
+      // 保留快捷扣除和容量调整的特殊字段
+      source: note.source,
+      quickDecrementAmount: note.quickDecrementAmount,
+      changeRecord: note.changeRecord,
     };
 
-    // 通过事件打开普通笔记编辑模态
+    // 通过事件触发模态框打开
     window.dispatchEvent(
       new CustomEvent('brewingNoteEditOpened', {
         detail: { data: noteToEdit },
@@ -834,159 +767,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     );
   };
 
-  // 处理变动记录保存
-  const handleSaveChangeRecord = async (updatedRecord: BrewingNote) => {
-    try {
-      // 获取现有笔记
-      const { Storage } = await import('@/lib/core/storage');
-      const savedNotes = await Storage.get('brewingNotes');
-      let parsedNotes: BrewingNote[] = savedNotes ? JSON.parse(savedNotes) : [];
-
-      // 找到原始记录以计算容量变化差异
-      const originalRecord = parsedNotes.find(
-        note => note.id === updatedRecord.id
-      );
-      const isNewRecord = !originalRecord;
-
-      // 同步咖啡豆容量变化
-      if (updatedRecord.beanId) {
-        try {
-          const { getCoffeeBeanStore, updateBeanRemaining } = await import(
-            '@/lib/stores/coffeeBeanStore'
-          );
-          const store = getCoffeeBeanStore();
-
-          // 辅助函数：格式化数字
-          const formatNum = (value: number): string =>
-            Number.isInteger(value) ? value.toString() : value.toFixed(1);
-
-          if (isNewRecord) {
-            // 新记录：直接扣除咖啡豆剩余量
-            if (updatedRecord.source === 'quick-decrement') {
-              const decrementAmount = updatedRecord.quickDecrementAmount || 0;
-              if (decrementAmount > 0) {
-                await updateBeanRemaining(
-                  updatedRecord.beanId,
-                  decrementAmount
-                );
-              }
-            } else if (updatedRecord.source === 'capacity-adjustment') {
-              const changeAmount =
-                updatedRecord.changeRecord?.capacityAdjustment?.changeAmount ||
-                0;
-              if (Math.abs(changeAmount) > 0.01) {
-                // 获取当前咖啡豆信息
-                const currentBean = store.getBeanById(updatedRecord.beanId);
-                if (currentBean) {
-                  const currentRemaining = parseFloat(
-                    currentBean.remaining || '0'
-                  );
-                  const newRemaining = Math.max(
-                    0,
-                    currentRemaining + changeAmount
-                  );
-
-                  // 确保不超过总容量
-                  let finalRemaining = newRemaining;
-                  if (currentBean.capacity) {
-                    const totalCapacity = parseFloat(currentBean.capacity);
-                    if (!isNaN(totalCapacity) && totalCapacity > 0) {
-                      finalRemaining = Math.min(finalRemaining, totalCapacity);
-                    }
-                  }
-
-                  const formattedRemaining = formatNum(finalRemaining);
-                  await store.updateBean(updatedRecord.beanId, {
-                    remaining: formattedRemaining,
-                  });
-                }
-              }
-            }
-          } else {
-            // 更新现有记录：计算差异并调整
-            let originalChangeAmount = 0;
-            let newChangeAmount = 0;
-
-            if (originalRecord.source === 'quick-decrement') {
-              originalChangeAmount = -(
-                originalRecord.quickDecrementAmount || 0
-              );
-            } else if (originalRecord.source === 'capacity-adjustment') {
-              originalChangeAmount =
-                originalRecord.changeRecord?.capacityAdjustment?.changeAmount ||
-                0;
-            }
-
-            if (updatedRecord.source === 'quick-decrement') {
-              newChangeAmount = -(updatedRecord.quickDecrementAmount || 0);
-            } else if (updatedRecord.source === 'capacity-adjustment') {
-              newChangeAmount =
-                updatedRecord.changeRecord?.capacityAdjustment?.changeAmount ||
-                0;
-            }
-
-            // 计算需要调整的容量差异
-            const capacityDiff = newChangeAmount - originalChangeAmount;
-
-            if (Math.abs(capacityDiff) > 0.01) {
-              // 获取当前咖啡豆信息
-              const currentBean = store.getBeanById(updatedRecord.beanId);
-              if (currentBean) {
-                const currentRemaining = parseFloat(
-                  currentBean.remaining || '0'
-                );
-                const newRemaining = Math.max(
-                  0,
-                  currentRemaining + capacityDiff
-                );
-
-                // 确保不超过总容量
-                let finalRemaining = newRemaining;
-                if (currentBean.capacity) {
-                  const totalCapacity = parseFloat(currentBean.capacity);
-                  if (!isNaN(totalCapacity) && totalCapacity > 0) {
-                    finalRemaining = Math.min(finalRemaining, totalCapacity);
-                  }
-                }
-
-                const formattedRemaining = formatNum(finalRemaining);
-                await store.updateBean(updatedRecord.beanId, {
-                  remaining: formattedRemaining,
-                });
-              }
-            }
-          }
-        } catch (error) {
-          console.error('同步咖啡豆容量失败:', error);
-          // 不阻止记录保存，但显示警告
-          showToastMessage('记录已保存，但容量同步失败', 'error');
-        }
-      }
-
-      // 检查记录是否已存在
-      if (isNewRecord) {
-        // 添加新记录 - 使用 Zustand store 的 addNote 方法（会自动触发事件）
-        const { useBrewingNoteStore } = await import(
-          '@/lib/stores/brewingNoteStore'
-        );
-        await useBrewingNoteStore.getState().addNote(updatedRecord);
-      } else {
-        // 更新现有记录 - 使用 Zustand store 的 updateNote 方法（会自动触发事件）
-        updateNote(updatedRecord.id, updatedRecord);
-      }
-
-      // 注意：关闭模态和编辑状态已由 ChangeRecordEditModal 内部的 modalHistory.back() 触发的 onClose 回调处理
-
-      // 显示成功提示
-      showToastMessage(
-        isNewRecord ? '变动记录已添加' : '变动记录已更新',
-        'success'
-      );
-    } catch (error) {
-      console.error('更新变动记录失败:', error);
-      showToastMessage('更新变动记录失败', 'error');
-    }
-  };
+  // 注意：handleConvertToNormalNote 和 handleSaveChangeRecord 函数已移除
+  // 现在统一使用 BrewingNoteForm 处理所有类型的笔记编辑（包括快捷扣除记录）
+  // 快捷扣除记录的切换功能已集成到 BrewingNoteForm 内部
 
   // 处理添加笔记
   const handleAddNote = () => {
@@ -1460,25 +1243,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       ) : (
         !isImageFlowMode &&
         !isDateImageFlowMode && <AddNoteButton onAddNote={handleAddNote} />
-      )}
-
-      {/* 变动记录编辑模态 */}
-      {editingChangeRecord && (
-        <ChangeRecordEditModal
-          showModal={showChangeRecordEditModal}
-          initialData={editingChangeRecord}
-          onSave={handleSaveChangeRecord}
-          onConvertToNormalNote={handleConvertToNormalNote}
-          onClose={() => {
-            // 先设置 showModal=false 让退出动画播放
-            setShowChangeRecordEditModal(false);
-            // 延迟清理数据，等待动画完成
-            setTimeout(() => {
-              setEditingChangeRecord(null);
-            }, 300);
-          }}
-          settings={settings}
-        />
       )}
 
       {/* 图文分享抽屉 */}

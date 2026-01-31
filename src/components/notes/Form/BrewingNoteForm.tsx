@@ -143,6 +143,9 @@ interface BrewingNoteFormProps {
   onTimestampChange?: (timestamp: Date) => void;
   settings?: SettingsOptions;
   isCopy?: boolean; // 标记是否是复制操作
+  // 快捷记录模式相关
+  isQuickMode?: boolean;
+  onQuickModeChange?: (isQuick: boolean) => void;
 }
 
 // 工具函数
@@ -198,6 +201,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   onTimestampChange,
   settings,
   isCopy = false, // 默认不是复制操作
+  isQuickMode: externalIsQuickMode,
+  onQuickModeChange,
 }) => {
   // 获取烘焙商显示设置
   const roasterFieldEnabled = useSettingsStore(
@@ -326,6 +331,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   // 添加时间状态
   const [totalTimeStr, setTotalTimeStr] = useState(() =>
     initialData.totalTime ? String(initialData.totalTime) : ''
+  );
+
+  // 快捷扣除量状态（仅用于快捷扣除记录编辑）
+  const [quickDecrementAmount, setQuickDecrementAmount] = useState<string>(
+    () => {
+      if (initialData.source === 'quick-decrement') {
+        return String(initialData.quickDecrementAmount || 0);
+      }
+      return '';
+    }
   );
 
   // 监听initialData.totalTime的变化
@@ -716,6 +731,60 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   // 判断是否是添加模式（提前声明，供 updateRating 使用）
   const isAdding = !id || isCopy;
 
+  // 判断是否是快捷扣除记录编辑模式
+  const isQuickDecrementEdit =
+    !isAdding && initialData.source === 'quick-decrement';
+
+  // 跟踪当前是否处于快捷记录模式（用于切换按钮）
+  // 优先使用外部传入的状态，否则使用内部状态
+  const [internalIsQuickMode, setInternalIsQuickMode] =
+    useState(isQuickDecrementEdit);
+  const isQuickMode =
+    externalIsQuickMode !== undefined
+      ? externalIsQuickMode
+      : internalIsQuickMode;
+
+  // 切换模式的处理函数
+  const handleToggleQuickMode = useCallback(() => {
+    const newMode = !isQuickMode;
+    if (onQuickModeChange) {
+      onQuickModeChange(newMode);
+    } else {
+      setInternalIsQuickMode(newMode);
+    }
+  }, [isQuickMode, onQuickModeChange]);
+
+  // 暴露切换函数和状态给父组件
+  useEffect(() => {
+    if (isQuickDecrementEdit) {
+      // 通知父组件这是快捷扣除记录
+      window.dispatchEvent(
+        new CustomEvent('brewingNoteFormMounted', {
+          detail: {
+            isQuickDecrementEdit,
+            isQuickMode,
+            noteId: id,
+          },
+        })
+      );
+    }
+  }, [isQuickDecrementEdit, isQuickMode, id]);
+
+  // 监听外部的切换请求
+  useEffect(() => {
+    const handleToggleRequest = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.noteId === id) {
+        handleToggleQuickMode();
+      }
+    };
+
+    window.addEventListener('toggleQuickMode', handleToggleRequest);
+    return () => {
+      window.removeEventListener('toggleQuickMode', handleToggleRequest);
+    };
+  }, [id, handleToggleQuickMode]);
+
   // 创建评分更新函数
   // 总体评分更新函数，支持风味评分跟随设置
   const updateRating = useCallback(
@@ -768,6 +837,23 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         ...prev,
         taste: { ...prev.taste, [key]: value },
       }));
+    },
+    []
+  );
+
+  /**
+   * 检查参数是否为空占位符（快捷记录）
+   *
+   * 快捷记录只保存 coffee 字段，其他参数为空字符串
+   * 当用户从快捷记录切换到普通笔记并选择方案时，
+   * 应该忽略这些空占位符，使用方案的默认参数
+   */
+  const isEmptyPlaceholder = useCallback(
+    (params?: Partial<Method['params']>): boolean => {
+      if (!params) return true;
+      const { coffee, water, ratio, grindSize, temp } = params;
+      // 只有 coffee 有值，其他字段都是空的，认为是空占位符
+      return !!coffee && !water && !ratio && !grindSize && !temp;
     },
     []
   );
@@ -1062,7 +1148,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       totalTime: parseFloat(totalTimeStr) || initialData.totalTime || 0,
       // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
       beanId: finalBeanId,
+      // 如果是快捷扣除记录且处于快捷模式，保留source和quickDecrementAmount
+      ...(isQuickDecrementEdit &&
+        isQuickMode && {
+          source: 'quick-decrement' as const,
+          quickDecrementAmount: parseFloat(quickDecrementAmount) || 0,
+        }),
     };
+
+    // 如果是快捷扣除记录且处于快捷模式，同步更新 params.coffee 字段
+    if (isQuickDecrementEdit && isQuickMode && noteData.params) {
+      noteData.params.coffee = `${parseFloat(quickDecrementAmount) || 0}g`;
+    }
 
     try {
       // 同步磨豆机刻度到设置
@@ -1291,18 +1388,43 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             isFirst={isAdding}
           />
 
-          {/* 器具方案 - 仅编辑模式显示 */}
-          {!isAdding && (initialData?.id || selectedEquipment) && (
-            <FeatureListItem
-              label="器具方案"
-              value={`${currentEquipmentName} · ${currentMethodName}`}
-              onClick={() => setShowEquipmentMethodDrawer(true)}
-              preview={getMethodParamsPreview()}
-            />
+          {/* 快捷扣除量 - 仅快捷模式显示 */}
+          {isQuickDecrementEdit && isQuickMode && (
+            <div className="flex items-center border-b border-neutral-200/50 py-3 dark:border-neutral-800/50">
+              <span className="shrink-0 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                扣除量
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={quickDecrementAmount}
+                  onChange={e => setQuickDecrementAmount(e.target.value)}
+                  className="w-20 bg-transparent py-1 text-right text-sm font-medium text-neutral-800 outline-none dark:text-neutral-300"
+                  placeholder="0"
+                />
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                  g
+                </span>
+              </div>
+            </div>
           )}
 
-          {/* 风味评分 */}
-          {showFlavorSection && (
+          {/* 器具方案 - 编辑模式且非快捷模式时显示 */}
+          {!isAdding &&
+            (!isQuickDecrementEdit || !isQuickMode) &&
+            (initialData?.id || selectedEquipment) && (
+              <FeatureListItem
+                label="器具方案"
+                value={`${currentEquipmentName} · ${currentMethodName}`}
+                onClick={() => setShowEquipmentMethodDrawer(true)}
+                preview={getMethodParamsPreview()}
+              />
+            )}
+
+          {/* 风味评分 - 非快捷模式时显示 */}
+          {showFlavorSection && (!isQuickDecrementEdit || !isQuickMode) && (
             <FeatureListItem
               label="风味评分"
               onClick={() => setShowFlavorRatingDrawer(true)}
@@ -1310,8 +1432,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             />
           )}
 
-          {/* 总体评分 */}
-          {showOverallSection && (
+          {/* 总体评分 - 非快捷模式时显示 */}
+          {showOverallSection && (!isQuickDecrementEdit || !isQuickMode) && (
             <FeatureListItem
               label="总体评分"
               value={formData.rating > 0 ? formData.rating.toFixed(1) : ''}

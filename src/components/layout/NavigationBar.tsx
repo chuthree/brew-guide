@@ -636,9 +636,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       const result = await onPullToSync();
 
       // 使用 Toast 提示结果
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
+      const { showToast } =
+        await import('@/components/common/feedback/LightToast');
 
       if (result.success) {
         if (settings.hapticFeedback) {
@@ -667,9 +666,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         hapticsUtils.error();
       }
 
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
+      const { showToast } =
+        await import('@/components/common/feedback/LightToast');
       showToast({
         type: 'error',
         title: error instanceof Error ? error.message : '上传失败',
@@ -888,9 +886,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         : null;
 
       try {
-        const { loadCustomEquipments } = await import(
-          '@/lib/stores/customEquipmentStore'
-        );
+        const { loadCustomEquipments } =
+          await import('@/lib/stores/customEquipmentStore');
         const customEquipments = await loadCustomEquipments();
         updateParameterInfo(
           detail.step,
