@@ -331,28 +331,29 @@ export function Calendar({
           const isTodayDate = isToday(date);
 
           return (
-            <button
-              key={index}
-              onClick={() => handleDateSelect(date)}
-              className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-full text-sm transition-colors',
-                isCurrentMonth
-                  ? 'text-neutral-800 dark:text-white'
-                  : 'text-neutral-400 dark:text-neutral-600',
-                isTodayDate &&
-                  'border border-neutral-200/50 dark:border-neutral-700',
-                isSelectedDate
-                  ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-900'
-                  : isCurrentMonth &&
-                      'hover:bg-neutral-100/60 dark:hover:bg-neutral-800/30',
-                !isCurrentMonth && 'pointer-events-none opacity-50'
-              )}
-              disabled={!isCurrentMonth}
-              tabIndex={isCurrentMonth && initialFocus ? 0 : -1}
-              type="button"
-            >
-              {date.getDate()}
-            </button>
+            <div key={index} className="flex items-center justify-center">
+              <button
+                onClick={() => handleDateSelect(date)}
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-full text-sm transition-colors',
+                  isCurrentMonth
+                    ? 'text-neutral-800 dark:text-white'
+                    : 'text-neutral-400 dark:text-neutral-600',
+                  isTodayDate &&
+                    'border border-neutral-200/50 dark:border-neutral-700',
+                  isSelectedDate
+                    ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-900'
+                    : isCurrentMonth &&
+                        'hover:bg-neutral-100/60 dark:hover:bg-neutral-800/30',
+                  !isCurrentMonth && 'pointer-events-none opacity-50'
+                )}
+                disabled={!isCurrentMonth}
+                tabIndex={isCurrentMonth && initialFocus ? 0 : -1}
+                type="button"
+              >
+                {date.getDate()}
+              </button>
+            </div>
           );
         })}
       </div>

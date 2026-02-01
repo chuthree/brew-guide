@@ -47,7 +47,7 @@ const DatePickerDrawer: React.FC<DatePickerDrawerProps> = ({
 
   return (
     <ActionDrawer isOpen={isOpen} onClose={onClose} historyId="date-picker">
-      <ActionDrawer.Content className="mb-4!">
+      <ActionDrawer.Content>
         <Calendar
           selected={tempDate}
           onSelect={handleSelect}
