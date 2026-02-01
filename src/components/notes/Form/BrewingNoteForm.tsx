@@ -1229,7 +1229,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }
   };
 
-  const containerClassName = 'relative flex flex-col min-h-full';
+  const containerClassName = 'relative grid min-h-full grid-rows-[1fr_auto]';
 
   // 格式化日期显示
   const formatDateDisplay = (date: Date) => {
@@ -1337,7 +1337,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       className={containerClassName}
     >
       {/* 笔记内容输入区域 */}
-      <div className="flex min-h-0 flex-1 pb-4">
+      <div className="min-h-0 pb-4">
         <textarea
           ref={textareaRef}
           id="brewing-notes"
