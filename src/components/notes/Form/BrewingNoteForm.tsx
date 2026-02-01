@@ -1292,26 +1292,30 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     );
   };
 
-  // 获取风味评分预览（显示有值的维度）
+  // 获取风味评分预览（只要有一个维度>0，就显示所有维度包括0分的）
   const getFlavorRatingPreview = () => {
-    const ratedDimensions = displayDimensions.filter(
+    if (displayDimensions.length === 0) return null;
+
+    // 检查是否至少有一个维度的评分大于0
+    const hasAnyRating = displayDimensions.some(
       dim => (formData.taste[dim.id] || 0) > 0
     );
-    if (ratedDimensions.length === 0) return null;
+    if (!hasAnyRating) return null;
 
     return (
       <div className="scrollbar-hide flex gap-1.5 overflow-x-auto">
-        {ratedDimensions.map(dim => (
-          <span
-            key={dim.id}
-            className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-sm font-medium text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-400"
-          >
-            {dim.label}&nbsp;
-            {settings?.flavorRatingHalfStep
-              ? formData.taste[dim.id].toFixed(1)
-              : formData.taste[dim.id]}
-          </span>
-        ))}
+        {displayDimensions.map(dim => {
+          const value = formData.taste[dim.id] || 0;
+          return (
+            <span
+              key={dim.id}
+              className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-sm font-medium text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-400"
+            >
+              {dim.label}&nbsp;
+              {settings?.flavorRatingHalfStep ? value.toFixed(1) : value}
+            </span>
+          );
+        })}
       </div>
     );
   };
