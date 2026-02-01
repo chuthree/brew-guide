@@ -733,6 +733,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const isQuickDecrementEdit =
     !isAdding && initialData.source === 'quick-decrement';
 
+  // 判断是否是容量调整记录编辑模式
+  const isCapacityAdjustmentEdit =
+    !isAdding && initialData.source === 'capacity-adjustment';
+
+  // 判断是否应该隐藏图片功能（变动记录和快捷扣除记录不显示图片）
+  const shouldHideImage = isCapacityAdjustmentEdit || isQuickDecrementEdit;
+
   // 跟踪当前是否处于快捷记录模式（用于切换按钮）
   // 优先使用外部传入的状态，否则使用内部状态
   const [internalIsQuickMode, setInternalIsQuickMode] =
@@ -924,9 +931,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     return method?.name || selectedMethod || '未知方案';
   }, [availableMethods, selectedMethod]);
 
-  // 根据设置决定是否显示评分区域
-  // showOverallRatingInForm 是评分功能的总开关
-  const showRatingSection = settings?.showOverallRatingInForm ?? true;
+  // 根据设置和现有数据决定是否显示评分区域
+  // 规则：
+  // 1. 如果设置开启了评分功能，显示评分区域
+  // 2. 如果当前笔记已有评分数据（总体评分或风味评分），无论设置如何都显示
+  const hasExistingRatingData = useMemo(() => {
+    return (
+      formData.rating > 0 ||
+      Object.values(formData.taste).some(value => value > 0)
+    );
+  }, [formData.rating, formData.taste]);
+
+  const showRatingSection =
+    (settings?.showOverallRatingInForm ?? true) || hasExistingRatingData;
 
   // 🎯 风味评分跟随总评功能相关状态
   // 标记用户是否手动修改过风味评分（一旦手动修改，总评变化不再影响风味评分）
@@ -1320,7 +1337,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       className={containerClassName}
     >
       {/* 笔记内容输入区域 */}
-      <div className="flex-1 pb-4">
+      <div className="flex min-h-0 flex-1 pb-4">
         <textarea
           ref={textareaRef}
           id="brewing-notes"
@@ -1332,62 +1349,62 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               notes: e.target.value,
             });
           }}
-          className="w-full resize-none border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
+          className="h-full w-full resize-none border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
           placeholder="记录一下这杯的感受..."
-          rows={8}
-          style={{ overflow: 'hidden' }}
         />
       </div>
 
       {/* 下方：图片和功能列表 */}
       <div className="shrink-0">
-        {/* 图片区域 */}
-        <div className="mb-4 flex items-center gap-2">
-          {formData.image ? (
-            <motion.div
-              layoutId="note-image-preview"
-              className="relative max-w-24 shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
-              onClick={() => setShowImagePreview(true)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Image
-                src={formData.image}
-                alt="笔记图片"
-                className="h-auto max-h-24 w-auto"
-                width={0}
-                height={0}
-                sizes="192px"
-                style={{ width: 'auto', height: 'auto', maxHeight: '96px' }}
-              />
-            </motion.div>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => handleImageSelect('camera')}
-                className="flex h-24 w-24 shrink-0 items-center justify-center rounded bg-neutral-100 transition-colors dark:bg-neutral-800/40"
-                title="拍照"
+        {/* 图片区域 - 变动记录和快捷扣除记录不显示 */}
+        {!shouldHideImage && (
+          <div className="mb-4 flex items-center gap-2">
+            {formData.image ? (
+              <motion.div
+                layoutId="note-image-preview"
+                className="relative max-w-24 shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
+                onClick={() => setShowImagePreview(true)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <Camera
-                  className="h-8 w-8 text-neutral-200 dark:text-neutral-800"
-                  strokeWidth={1.5}
+                <Image
+                  src={formData.image}
+                  alt="笔记图片"
+                  className="h-auto max-h-24 w-auto"
+                  width={0}
+                  height={0}
+                  sizes="192px"
+                  style={{ width: 'auto', height: 'auto', maxHeight: '96px' }}
                 />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleImageSelect('gallery')}
-                className="flex h-24 w-24 shrink-0 items-center justify-center rounded bg-neutral-100 transition-colors dark:bg-neutral-800/40"
-                title="相册"
-              >
-                <ImageIcon
-                  className="h-8 w-8 text-neutral-200 dark:text-neutral-800"
-                  strokeWidth={1.5}
-                />
-              </button>
-            </>
-          )}
-        </div>
+              </motion.div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleImageSelect('camera')}
+                  className="flex h-24 w-24 shrink-0 items-center justify-center rounded bg-neutral-100 transition-colors dark:bg-neutral-800/40"
+                  title="拍照"
+                >
+                  <Camera
+                    className="h-8 w-8 text-neutral-200 dark:text-neutral-800"
+                    strokeWidth={1.5}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleImageSelect('gallery')}
+                  className="flex h-24 w-24 shrink-0 items-center justify-center rounded bg-neutral-100 transition-colors dark:bg-neutral-800/40"
+                  title="相册"
+                >
+                  <ImageIcon
+                    className="h-8 w-8 text-neutral-200 dark:text-neutral-800"
+                    strokeWidth={1.5}
+                  />
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* 功能列表 */}
         <div className="">

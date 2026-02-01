@@ -104,7 +104,7 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
       </SettingSection>
 
       <SettingSection title="表单">
-        <SettingRow label="评分">
+        <SettingRow label="评分" isLast>
           <SettingToggle
             checked={settings.showOverallRatingInForm ?? true}
             onChange={checked =>
@@ -112,45 +112,26 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
             }
           />
         </SettingRow>
-        {/* 只有当评分开启时，才显示评分相关的子设置 */}
-        {(settings.showOverallRatingInForm ?? true) && (
-          <>
-            <SettingRow
-              label="风味评分"
-              isSubSetting
-              isLast={!(settings.showFlavorRatingInForm ?? true)}
-            >
-              <SettingToggle
-                checked={settings.showFlavorRatingInForm ?? true}
-                onChange={checked =>
-                  handleChange('showFlavorRatingInForm', checked)
-                }
-              />
-            </SettingRow>
-            {/* 风味评分开启时的子设置 */}
-            {(settings.showFlavorRatingInForm ?? true) && (
-              <>
-                <SettingRow label="半分制" isSubSetting>
-                  <SettingToggle
-                    checked={settings.flavorRatingHalfStep ?? false}
-                    onChange={checked =>
-                      handleChange('flavorRatingHalfStep', checked)
-                    }
-                  />
-                </SettingRow>
-                <SettingRow label="初始值跟随总评" isSubSetting isLast>
-                  <SettingToggle
-                    checked={settings.flavorRatingFollowOverall ?? false}
-                    onChange={checked =>
-                      handleChange('flavorRatingFollowOverall', checked)
-                    }
-                  />
-                </SettingRow>
-              </>
-            )}
-            {/* 风味评分关闭时，半分制仍然显示（控制总体评分精度） */}
-            {!(settings.showFlavorRatingInForm ?? true) && (
-              <SettingRow label="半分制" isSubSetting isLast>
+      </SettingSection>
+
+      {/* 评分开启时，显示风味评分相关设置 */}
+      {(settings.showOverallRatingInForm ?? true) && (
+        <SettingSection>
+          <SettingRow
+            label="风味评分"
+            isLast={!(settings.showFlavorRatingInForm ?? true)}
+          >
+            <SettingToggle
+              checked={settings.showFlavorRatingInForm ?? true}
+              onChange={checked =>
+                handleChange('showFlavorRatingInForm', checked)
+              }
+            />
+          </SettingRow>
+          {/* 风味评分开启时，显示其相关设置 */}
+          {(settings.showFlavorRatingInForm ?? true) && (
+            <>
+              <SettingRow label="半分制" isSubSetting>
                 <SettingToggle
                   checked={settings.flavorRatingHalfStep ?? false}
                   onChange={checked =>
@@ -158,10 +139,18 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
                   }
                 />
               </SettingRow>
-            )}
-          </>
-        )}
-      </SettingSection>
+              <SettingRow label="初始值跟随总评" isSubSetting isLast>
+                <SettingToggle
+                  checked={settings.flavorRatingFollowOverall ?? false}
+                  onChange={checked =>
+                    handleChange('flavorRatingFollowOverall', checked)
+                  }
+                />
+              </SettingRow>
+            </>
+          )}
+        </SettingSection>
+      )}
 
       <SettingSection title="默认行为">
         {(settings.showFlavorRatingInForm ?? true) && (
