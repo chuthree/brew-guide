@@ -51,6 +51,7 @@ import {
   Box,
   Play,
 } from 'lucide-react';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 import Image from 'next/image';
 import { getChildPageStyle } from '@/lib/navigation/pageTransition';
@@ -463,11 +464,12 @@ const Settings: React.FC<SettingsProps> = ({
               <button
                 onClick={() => {
                   setShowSyncMenu(false);
-                  performQuickSync('upload');
+                  // 延迟执行同步，等待菜单收回动画完成
+                  setTimeout(() => performQuickSync('upload'), 250);
                 }}
                 disabled={isSyncing}
-                className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
-                  showSyncMenu
+                className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+                  showSyncMenu && !isSyncing
                     ? 'translate-x-0 opacity-100'
                     : 'pointer-events-none translate-x-4 opacity-0'
                 }`}
@@ -479,11 +481,12 @@ const Settings: React.FC<SettingsProps> = ({
               <button
                 onClick={() => {
                   setShowSyncMenu(false);
-                  performQuickSync('download');
+                  // 延迟执行同步，等待菜单收回动画完成
+                  setTimeout(() => performQuickSync('download'), 250);
                 }}
                 disabled={isSyncing}
-                className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
-                  showSyncMenu
+                className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+                  showSyncMenu && !isSyncing
                     ? 'translate-x-0 opacity-100'
                     : 'pointer-events-none translate-x-4 opacity-0'
                 }`}
@@ -491,13 +494,15 @@ const Settings: React.FC<SettingsProps> = ({
               >
                 <Download className="h-5 w-5" />
               </button>
-              {/* 云图标/叉号切换按钮 */}
+              {/* 云图标/叉号/加载动画切换按钮 */}
               <button
-                onClick={() => setShowSyncMenu(!showSyncMenu)}
+                onClick={() => !isSyncing && setShowSyncMenu(!showSyncMenu)}
                 disabled={isSyncing}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${isSyncing ? 'cursor-default' : ''}`}
               >
-                {showSyncMenu ? (
+                {isSyncing ? (
+                  <LoadingSpinner className="h-5 w-5" />
+                ) : showSyncMenu ? (
                   <X className="h-5 w-5" />
                 ) : (
                   <Cloud className="h-5 w-5" />
