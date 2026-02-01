@@ -16,7 +16,7 @@ import type {
   SelectableCoffeeBean,
 } from '@/types/app';
 import { isPendingCoffeeBean } from '@/lib/utils/coffeeBeanUtils';
-import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
+
 import { captureImage, compressBase64Image } from '@/lib/utils/imageCapture';
 import { Camera, Image as ImageIcon } from 'lucide-react';
 import {
@@ -785,6 +785,24 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     };
   }, [id, handleToggleQuickMode]);
 
+  // 自适应 textarea 高度
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // 重置高度以获取正确的 scrollHeight
+    textarea.style.height = 'auto';
+    // 设置为内容高度
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, []);
+
+  // 监听内容变化，自动调整高度
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [formData.notes, adjustTextareaHeight]);
+
   // 创建评分更新函数
   // 总体评分更新函数，支持风味评分跟随设置
   const updateRating = useCallback(
@@ -1196,7 +1214,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }
   };
 
-  const containerClassName = 'relative flex flex-col h-full';
+  const containerClassName = 'relative flex flex-col min-h-full';
 
   // 格式化日期显示
   const formatDateDisplay = (date: Date) => {
@@ -1298,23 +1316,23 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       onSubmit={handleSubmit}
       className={containerClassName}
     >
-      {/* 上方：笔记内容输入区域 */}
-      <div className="flex-1 overflow-y-auto overscroll-contain pb-4">
-        {/* 笔记文本输入 */}
-        <AutoResizeTextarea
+      {/* 笔记内容输入区域 */}
+      <div className="flex-1 pb-4">
+        <textarea
+          ref={textareaRef}
           id="brewing-notes"
           name="brewingNotes"
           value={formData.notes}
-          onChange={e =>
+          onChange={e => {
             setFormData({
               ...formData,
               notes: e.target.value,
-            })
-          }
-          className="w-full border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
+            });
+          }}
+          className="w-full resize-none border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
           placeholder="记录一下这杯的感受..."
-          minRows={8}
-          maxRows={20}
+          rows={8}
+          style={{ overflow: 'hidden' }}
         />
       </div>
 
