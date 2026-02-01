@@ -1526,7 +1526,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         onSelect={handleEquipmentMethodSelection}
         selectedEquipmentId={selectedEquipment}
         selectedMethodId={selectedMethod}
-        initialParams={methodParams}
+        initialParams={{
+          ...methodParams,
+          ...(initialData?.stages && { stages: initialData.stages }),
+        }}
         settings={settings}
         hapticFeedback={settings?.hapticFeedback}
       />
