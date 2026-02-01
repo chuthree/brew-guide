@@ -54,8 +54,7 @@ import DatePickerDrawer from './DatePickerDrawer';
 import EquipmentMethodPickerDrawer, {
   type EquipmentMethodSelection,
 } from './EquipmentMethodPickerDrawer';
-import FlavorRatingDrawer from './FlavorRatingDrawer';
-import OverallRatingDrawer from './OverallRatingDrawer';
+import RatingDrawer from './RatingDrawer';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
@@ -240,8 +239,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [showDatePickerDrawer, setShowDatePickerDrawer] = useState(false);
   const [showEquipmentMethodDrawer, setShowEquipmentMethodDrawer] =
     useState(false);
-  const [showFlavorRatingDrawer, setShowFlavorRatingDrawer] = useState(false);
-  const [showOverallRatingDrawer, setShowOverallRatingDrawer] = useState(false);
+  const [showRatingDrawer, setShowRatingDrawer] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     coffeeBeanInfo: getInitialCoffeeBeanInfo(initialData),
@@ -926,11 +924,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     return method?.name || selectedMethod || '未知方案';
   }, [availableMethods, selectedMethod]);
 
-  // 根据设置决定是否显示部分区域
-  const showFlavorSection =
-    !isAdding || (settings?.showFlavorRatingInForm ?? true);
-  const showOverallSection =
-    !isAdding || (settings?.showOverallRatingInForm ?? true);
+  // 根据设置决定是否显示评分区域
+  // showOverallRatingInForm 是评分功能的总开关
+  const showRatingSection = settings?.showOverallRatingInForm ?? true;
 
   // 🎯 风味评分跟随总评功能相关状态
   // 标记用户是否手动修改过风味评分（一旦手动修改，总评变化不再影响风味评分）
@@ -1134,15 +1130,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     );
 
     // 处理风味评分数据
-    // 如果用户只变更了总体评分，但风味评分完全没有手动修改过，
-    // 则不保存风味评分（视为未选择风味评分）
+    // 如果满足以下任一条件，不保存风味评分：
+    // 1. 用户关闭了风味评分显示
+    // 2. 用户只变更了总体评分，但风味评分完全没有手动修改过（仅来自同步）
     let finalTaste = formData.taste;
     if (
-      isAdding &&
-      settings?.flavorRatingFollowOverall &&
-      flavorRatingsOnlySyncedRef.current
+      !settings?.showFlavorRatingInForm ||
+      (isAdding &&
+        settings?.flavorRatingFollowOverall &&
+        flavorRatingsOnlySyncedRef.current)
     ) {
-      // 风味评分仅来自同步，用户未手动修改过，不保存风味评分
+      // 不保存风味评分
       finalTaste = {};
     }
 
@@ -1301,6 +1299,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     );
   };
 
+  // 获取总体评分显示值
+  const getOverallRatingDisplay = () => {
+    return formData.rating > 0 ? formData.rating.toFixed(1) : '';
+  };
+
   // 处理风味评分变化（从抽屉）
   const handleTasteChange = useCallback((newTaste: Record<string, number>) => {
     // 标记用户已手动修改风味评分
@@ -1441,21 +1444,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               />
             )}
 
-          {/* 风味评分 - 非快捷模式时显示 */}
-          {showFlavorSection && (!isQuickDecrementEdit || !isQuickMode) && (
+          {/* 评分（合并风味评分和总体评分） - 非快捷模式时显示 */}
+          {showRatingSection && (!isQuickDecrementEdit || !isQuickMode) && (
             <FeatureListItem
-              label="风味评分"
-              onClick={() => setShowFlavorRatingDrawer(true)}
+              label="评分"
+              value={getOverallRatingDisplay()}
+              onClick={() => setShowRatingDrawer(true)}
               preview={getFlavorRatingPreview()}
-            />
-          )}
-
-          {/* 总体评分 - 非快捷模式时显示 */}
-          {showOverallSection && (!isQuickDecrementEdit || !isQuickMode) && (
-            <FeatureListItem
-              label="总体评分"
-              value={formData.rating > 0 ? formData.rating.toFixed(1) : ''}
-              onClick={() => setShowOverallRatingDrawer(true)}
               isLast={true}
             />
           )}
@@ -1519,22 +1514,21 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         hapticFeedback={settings?.hapticFeedback}
       />
 
-      {/* 风味评分抽屉 */}
-      <FlavorRatingDrawer
-        isOpen={showFlavorRatingDrawer}
-        onClose={() => setShowFlavorRatingDrawer(false)}
+      {/* 评分抽屉（合并风味评分和总体评分） */}
+      <RatingDrawer
+        isOpen={showRatingDrawer}
+        onClose={() => setShowRatingDrawer(false)}
+        rating={formData.rating}
+        onRatingChange={updateRating}
         taste={formData.taste}
         onTasteChange={handleTasteChange}
         displayDimensions={displayDimensions}
         halfStep={settings?.flavorRatingHalfStep}
-      />
-
-      {/* 总体评分抽屉 */}
-      <OverallRatingDrawer
-        isOpen={showOverallRatingDrawer}
-        onClose={() => setShowOverallRatingDrawer(false)}
-        rating={formData.rating}
-        onRatingChange={updateRating}
+        beanName={getCoffeeBeanDisplayName()}
+        showOverallRating={true}
+        showFlavorRating={settings?.showFlavorRatingInForm ?? true}
+        flavorFollowOverall={settings?.flavorRatingFollowOverall ?? false}
+        isAdding={isAdding}
       />
     </form>
   );
