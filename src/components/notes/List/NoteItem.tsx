@@ -281,8 +281,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
                   noteImages.length === 1
                     ? 'block'
                     : noteImages.length === 2 || noteImages.length === 4
-                      ? 'grid max-w-[200px] grid-cols-2'
-                      : 'grid max-w-[300px] grid-cols-3'
+                      ? 'grid max-w-50 grid-cols-2'
+                      : 'grid max-w-75 grid-cols-3'
                 }`}
                 onClick={e => e.stopPropagation()}
               >
@@ -312,7 +312,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                         alt={`笔记图片 ${index + 1}`}
                         className={
                           noteImages.length === 1
-                            ? 'block h-auto max-h-[300px] w-auto max-w-[200px] object-contain'
+                            ? 'block h-auto max-h-45 w-auto max-w-35 object-contain'
                             : 'block h-full w-full object-cover'
                         }
                         onError={() => setNoteImageError(true)}
