@@ -118,6 +118,8 @@ export interface BrewingNoteData {
     roastDate?: string;
     roaster?: string; // 烘焙商名称（可选，用于动态显示）
   };
+  image?: string; // 单图兼容
+  images?: string[]; // 多图支持
   rating: number;
   taste: TasteRatings;
   notes: string;

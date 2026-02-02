@@ -17,8 +17,12 @@ import type {
 } from '@/types/app';
 import { isPendingCoffeeBean } from '@/lib/utils/coffeeBeanUtils';
 
-import { captureImage, compressBase64Image } from '@/lib/utils/imageCapture';
-import { Camera, Image as ImageIcon } from 'lucide-react';
+import {
+  captureImage,
+  captureImages,
+  compressBase64Image,
+} from '@/lib/utils/imageCapture';
+import { Camera, Image as ImageIcon, Plus } from 'lucide-react';
 import {
   equipmentList,
   commonMethods,
@@ -123,6 +127,7 @@ interface FormData {
     roaster?: string; // 烘焙商名称（可选）
   };
   image?: string;
+  images: string[]; // 多图支持
   rating: number;
   taste: TasteRatings;
   notes: string;
@@ -232,6 +237,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     useState(false);
   const [originalBeanId] = useState<string | undefined>(initialData.beanId); // 记录原始的beanId用于容量同步
   const [showImagePreview, setShowImagePreview] = useState(false); // 控制图片预览
+  const [previewImageIndex, setPreviewImageIndex] = useState(0); // 当前预览图片的索引
   // 🔥 标记用户是否主动选择了咖啡豆（用于防止 initialData 变化覆盖用户选择）
   const userSelectedBeanRef = useRef(false);
 
@@ -244,6 +250,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [formData, setFormData] = useState<FormData>({
     coffeeBeanInfo: getInitialCoffeeBeanInfo(initialData),
     image: typeof initialData.image === 'string' ? initialData.image : '',
+    images:
+      initialData.images || (initialData.image ? [initialData.image] : []),
     rating: initialData?.rating ?? 0,
     taste: initialData?.taste || {},
     notes: initialData?.notes || '',
@@ -963,26 +971,55 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
   const handleImageSelect = useCallback(
     async (source: 'camera' | 'gallery') => {
-      try {
-        // 获取图片（已经是base64格式）
-        const result = await captureImage({ source });
+      // 检查是否已达到最大数量
+      if (formData.images.length >= 9) {
+        alert('最多只能上传9张图片');
+        return;
+      }
 
-        // 直接压缩base64图片
-        const compressedBase64 = await compressBase64Image(result.dataUrl, {
-          maxSizeMB: 0.1,
-          maxWidthOrHeight: 1200,
-          initialQuality: 0.8,
-        });
+      const remainCount = 9 - formData.images.length;
+
+      try {
+        let newImagesBase64: string[] = [];
+
+        if (source === 'gallery') {
+          const results = await captureImages({ limit: remainCount });
+          newImagesBase64 = results.map(r => r.dataUrl);
+        } else {
+          // 获取图片（已经是base64格式）
+          const result = await captureImage({ source });
+          newImagesBase64 = [result.dataUrl];
+        }
+
+        if (newImagesBase64.length === 0) return;
+
+        // 压缩所有新图片
+        const compressedImages = await Promise.all(
+          newImagesBase64.map(base64 =>
+            compressBase64Image(base64, {
+              maxSizeMB: 0.1,
+              maxWidthOrHeight: 1200,
+              initialQuality: 0.8,
+            })
+          )
+        );
 
         // 更新表单数据
-        setFormData(prev => ({ ...prev, image: compressedBase64 }));
+        setFormData(prev => {
+          const newImages = [...prev.images, ...compressedImages];
+          return {
+            ...prev,
+            image: newImages[0], // 始终保持第一张为封面图
+            images: newImages,
+          };
+        });
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.error('打开相机/相册失败:', error);
         }
       }
     },
-    []
+    [formData.images.length]
   );
 
   // 处理咖啡豆选择变化（支持已有豆子和待创建豆子）
@@ -1359,30 +1396,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       </div>
 
       {/* 下方：图片和功能列表 */}
-      <div className="shrink-0 min-w-0 w-full">
-        {/* 图片区域 - 变动记录和快捷扣除记录不显示 */}
+      <div className="w-full min-w-0 shrink-0">
+        {/* 图片区域 - 仿朋友圈九宫格 */}
         {!shouldHideImage && (
-          <div className="mb-4 flex items-center gap-2">
-            {formData.image ? (
-              <motion.div
-                layoutId="note-image-preview"
-                className="relative max-w-24 shrink-0 cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
-                onClick={() => setShowImagePreview(true)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Image
-                  src={formData.image}
-                  alt="笔记图片"
-                  className="h-auto max-h-24 w-auto"
-                  width={0}
-                  height={0}
-                  sizes="192px"
-                  style={{ width: 'auto', height: 'auto', maxHeight: '96px' }}
-                />
-              </motion.div>
-            ) : (
-              <>
+          <div className="mb-4">
+            {formData.images.length === 0 ? (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleImageSelect('camera')}
@@ -1405,7 +1424,47 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     strokeWidth={1.5}
                   />
                 </button>
-              </>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {formData.images.map((img, index) => (
+                  <motion.div
+                    key={index}
+                    layoutId={`note-image-${index}`}
+                    className="relative aspect-square cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
+                    onClick={() => {
+                      setPreviewImageIndex(index);
+                      setShowImagePreview(true);
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Image
+                      src={img}
+                      alt={`笔记图片 ${index + 1}`}
+                      className="h-full w-full object-cover"
+                      width={200}
+                      height={200}
+                      unoptimized
+                    />
+                  </motion.div>
+                ))}
+
+                {/* 添加按钮 */}
+                {formData.images.length < 9 && (
+                  <button
+                    type="button"
+                    onClick={() => handleImageSelect('gallery')}
+                    className="flex aspect-square items-center justify-center rounded bg-neutral-100 transition-colors dark:bg-neutral-800/40"
+                    title="添加图片"
+                  >
+                    <Plus
+                      className="h-8 w-8 text-neutral-300 dark:text-neutral-600"
+                      strokeWidth={1.5}
+                    />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -1491,15 +1550,21 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       </div>
 
       {/* 图片预览 */}
-      {formData.image && (
+      {formData.images[previewImageIndex] && (
         <ImagePreview
-          src={formData.image}
+          src={formData.images[previewImageIndex]}
           alt="笔记图片"
           isOpen={showImagePreview}
           onClose={() => setShowImagePreview(false)}
-          layoutId="note-image-preview"
+          layoutId={`note-image-${previewImageIndex}`}
           onDelete={() => {
-            setFormData(prev => ({ ...prev, image: '' }));
+            const newImages = [...formData.images];
+            newImages.splice(previewImageIndex, 1);
+            setFormData(prev => ({
+              ...prev,
+              images: newImages,
+              image: newImages[0] || '',
+            }));
             setShowImagePreview(false);
           }}
         />

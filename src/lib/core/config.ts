@@ -146,6 +146,7 @@ export interface BrewingNote {
     roaster?: string; // 烘焙商名称（独立字段）
   };
   image?: string; // 添加可选的图片字段
+  images?: string[]; // 支持多图（最多9张）
   rating: number;
   taste: {
     [key: string]: number;

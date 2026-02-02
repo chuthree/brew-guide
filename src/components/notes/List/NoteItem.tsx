@@ -66,6 +66,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
   // 图片查看器状态和错误状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [noteImageViewerOpen, setNoteImageViewerOpen] = useState(false);
+  const [previewImageIndex, setPreviewImageIndex] = useState(0); // 当前预览图片的索引
   const [imageError, setImageError] = useState(false);
   const [noteImageError, setNoteImageError] = useState(false);
 
@@ -92,6 +93,13 @@ const NoteItem: React.FC<NoteItemProps> = ({
         method: n.method,
       }));
   }, [note.beanId, allNotes]);
+
+  // 获取笔记图片列表
+  const noteImages = React.useMemo(() => {
+    if (note.images && note.images.length > 0) return note.images;
+    if (note.image) return [note.image];
+    return [];
+  }, [note.images, note.image]);
 
   // 预先计算一些条件，避免在JSX中重复计算
   const validTasteRatings = getValidTasteRatings
@@ -266,56 +274,68 @@ const NoteItem: React.FC<NoteItemProps> = ({
               </div>
             )}
 
-            {/* 笔记图片 - 仿微信朋友圈样式，固定容器防止抖动 */}
-            {note.image && (
+            {/* 笔记图片 - 仿微信朋友圈九宫格 */}
+            {noteImages.length > 0 && (
               <div
-                className="mt-2 block max-w-fit cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
-                style={{ minHeight: '96px', minWidth: '96px' }}
-                onClick={e => {
-                  e.stopPropagation();
-                  if (!noteImageError) setNoteImageViewerOpen(true);
-                }}
+                className={`mt-2 gap-1 ${
+                  noteImages.length === 1
+                    ? 'block'
+                    : noteImages.length === 2 || noteImages.length === 4
+                      ? 'grid max-w-[200px] grid-cols-2'
+                      : 'grid max-w-[300px] grid-cols-3'
+                }`}
+                onClick={e => e.stopPropagation()}
               >
-                {noteImageError ? (
-                  <div className="flex h-24 w-24 items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
-                    加载失败
-                  </div>
-                ) : (
-                  <Image
-                    src={note.image}
-                    alt="笔记图片"
-                    width={150}
-                    height={225}
-                    unoptimized
-                    style={{
-                      width: 'auto',
-                      height: 'auto',
-                      maxWidth: '150px',
-                      maxHeight: '225px',
-                      display: 'block',
+                {noteImages.map((img, index) => (
+                  <div
+                    key={index}
+                    className={`relative cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20 ${
+                      noteImages.length === 1
+                        ? 'block w-fit'
+                        : 'block aspect-square'
+                    }`}
+                    onClick={() => {
+                      if (!noteImageError) {
+                        setPreviewImageIndex(index);
+                        setNoteImageViewerOpen(true);
+                      }
                     }}
-                    className="object-contain"
-                    sizes="150px"
-                    priority={false}
-                    loading="lazy"
-                    placeholder="blur"
-                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-                    onError={() => setNoteImageError(true)}
-                  />
-                )}
+                  >
+                    {noteImageError ? (
+                      <div className="flex h-full w-full items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
+                        加载失败
+                      </div>
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={img}
+                        alt={`笔记图片 ${index + 1}`}
+                        className={
+                          noteImages.length === 1
+                            ? 'block h-auto max-h-[300px] w-auto max-w-[200px] object-contain'
+                            : 'block h-full w-full object-cover'
+                        }
+                        onError={() => setNoteImageError(true)}
+                        loading="lazy"
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
             {/* 笔记图片查看器 */}
-            {note.image && !noteImageError && noteImageViewerOpen && (
-              <ImageViewer
-                id={`note-image-${note.id}`}
-                isOpen={noteImageViewerOpen}
-                imageUrl={note.image}
-                alt="笔记图片"
-                onClose={() => setNoteImageViewerOpen(false)}
-              />
-            )}
+            {noteImages.length > 0 &&
+              !noteImageError &&
+              noteImageViewerOpen && (
+                <ImageViewer
+                  id={`note-image-${note.id}-${previewImageIndex}`}
+                  isOpen={noteImageViewerOpen}
+                  imageUrl={noteImages[previewImageIndex]}
+                  alt="笔记图片"
+                  onClose={() => setNoteImageViewerOpen(false)}
+                />
+              )}
 
             {/* 时间和评分 */}
             <div className="mt-2 text-xs leading-tight font-medium text-neutral-500/60 dark:text-neutral-500/60">
@@ -396,6 +416,10 @@ export default React.memo(NoteItem, (prevProps, nextProps) => {
     prevNote.equipment !== nextNote.equipment ||
     prevNote.method !== nextNote.method ||
     prevNote.image !== nextNote.image ||
+    prevNote.images?.length !== nextNote.images?.length ||
+    (prevNote.images &&
+      nextNote.images &&
+      prevNote.images.some((img, i) => img !== nextNote.images![i])) ||
     prevNote.totalTime !== nextNote.totalTime
   ) {
     return false; // 笔记内容变化，需要重新渲染

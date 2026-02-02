@@ -13,6 +13,166 @@ export interface ImageCaptureResult {
   format: string;
 }
 
+export interface MultipleImageCaptureOptions {
+  limit?: number; // 限制数量，默认为 9
+}
+
+/**
+ * 统一的多图选择工具函数
+ */
+export async function captureImages(
+  options: MultipleImageCaptureOptions = {}
+): Promise<ImageCaptureResult[]> {
+  const { limit = 9 } = options;
+
+  // 在原生平台使用 Capacitor Camera API
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const result = await Camera.pickImages({
+        quality: 90,
+        limit,
+      });
+
+      const photos = result.photos;
+      const processedPhotos: ImageCaptureResult[] = [];
+
+      for (const photo of photos) {
+        if (photo.webPath) {
+          // fetch webPath 并转为 base64
+          const response = await fetch(photo.webPath);
+          const blob = await response.blob();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          processedPhotos.push({
+            dataUrl: base64,
+            format: photo.format || 'jpeg',
+          });
+        }
+      }
+      return processedPhotos;
+    } catch (e) {
+      console.warn('pickImages failed or cancelled, fallback to input', e);
+      // 如果出错可能是取消或者不支持，尝试降级（虽然pickImages不支持通常也没办法）
+      // 这里如果出错直接返回空数组或者抛出
+      return [];
+    }
+  }
+
+  // 网页端使用 HTML input
+  return captureImagesWithHtmlInput(limit);
+}
+
+/**
+ * 使用 HTML input 元素多选图片的方案
+ */
+function captureImagesWithHtmlInput(
+  limit: number
+): Promise<ImageCaptureResult[]> {
+  return new Promise((resolve, reject) => {
+    try {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.multiple = true; // 开启多选
+      fileInput.accept =
+        'image/jpeg,image/png,image/webp,image/heic,image/heif';
+      fileInput.style.display = 'none';
+      document.body.appendChild(fileInput);
+
+      let isResolved = false;
+
+      const timeout = setTimeout(() => {
+        if (!isResolved) {
+          cleanup();
+          reject(new Error('图片选择超时'));
+        }
+      }, 60000);
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        if (fileInput.parentNode) {
+          document.body.removeChild(fileInput);
+        }
+        window.removeEventListener('focus', handleFocus);
+      };
+
+      fileInput.onchange = async e => {
+        if (isResolved) return;
+        const input = e.target as HTMLInputElement;
+
+        if (!input.files || input.files.length === 0) {
+          isResolved = true;
+          cleanup();
+          reject(new Error('未选择图片'));
+          return;
+        }
+
+        if (input.files.length > limit) {
+          isResolved = true;
+          cleanup();
+          reject(new Error(`最多只能选择 ${limit} 张图片`));
+          return;
+        }
+
+        try {
+          const results: ImageCaptureResult[] = [];
+
+          for (let i = 0; i < input.files.length; i++) {
+            const file = input.files[i];
+
+            // 简单验证
+            if (file.size > 50 * 1024 * 1024) continue; // 跳过过大图片
+
+            const base64 = await new Promise<string>((res, rej) => {
+              const reader = new FileReader();
+              reader.onload = () => res(reader.result as string);
+              reader.onerror = rej;
+              reader.readAsDataURL(file);
+            });
+
+            results.push({
+              dataUrl: base64,
+              format: file.type.split('/')[1] || 'jpeg',
+            });
+          }
+
+          isResolved = true;
+          cleanup();
+          resolve(results);
+        } catch (error) {
+          isResolved = true;
+          cleanup();
+          reject(error);
+        }
+      };
+
+      // 检测取消
+      let focusTimeout: NodeJS.Timeout;
+      const handleFocus = () => {
+        focusTimeout = setTimeout(() => {
+          if (
+            !isResolved &&
+            (!fileInput.files || fileInput.files.length === 0)
+          ) {
+            isResolved = true;
+            cleanup();
+            reject(new Error('用户取消了图片选择'));
+          }
+        }, 3000); // 增加延时
+      };
+      window.addEventListener('focus', handleFocus);
+
+      fileInput.click();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 /**
  * 统一的图片选择/拍照工具函数
  * 在原生平台使用 Capacitor Camera API，在网页端使用 HTML input
@@ -68,7 +228,8 @@ function captureImageWithHtmlInput(
       const fileInput = document.createElement('input');
       fileInput.type = 'file';
       // 仅支持 JPG、PNG、WebP、HEIC 格式
-      fileInput.accept = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
+      fileInput.accept =
+        'image/jpeg,image/png,image/webp,image/heic,image/heif';
       fileInput.style.display = 'none';
 
       // 根据来源设置不同的capture属性
@@ -116,7 +277,13 @@ function captureImageWithHtmlInput(
 
           // 验证文件类型
           // 仅支持 JPG、PNG、WebP、HEIC 格式
-          const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+          const allowedTypes = [
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'image/heic',
+            'image/heif',
+          ];
           if (!allowedTypes.includes(file.type)) {
             isResolved = true;
             cleanup();
