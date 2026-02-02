@@ -119,7 +119,6 @@ export interface AppSettings {
   showStatusDots: boolean;
   showBeanSummary: boolean;
   showEstimatedCups: boolean;
-  noteDisplayStyle: 'list' | 'card';
 
   // 安全区域设置
   safeAreaMargins?: {

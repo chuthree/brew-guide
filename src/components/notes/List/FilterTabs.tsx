@@ -322,8 +322,6 @@ interface ViewModeSectionProps {
   isDateImageFlowMode?: boolean;
   onToggleDateImageFlowMode?: () => void;
   hasImageNotes?: boolean;
-  noteDisplayStyle?: 'list' | 'card';
-  onNoteDisplayStyleChange?: (style: 'list' | 'card') => void;
 }
 
 const ViewModeSection: React.FC<ViewModeSectionProps> = ({
@@ -334,8 +332,6 @@ const ViewModeSection: React.FC<ViewModeSectionProps> = ({
   isDateImageFlowMode = false,
   onToggleDateImageFlowMode,
   hasImageNotes = true,
-  noteDisplayStyle = 'list',
-  onNoteDisplayStyleChange,
 }) => {
   return (
     <div>
@@ -344,10 +340,9 @@ const ViewModeSection: React.FC<ViewModeSectionProps> = ({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <FilterButton
-          isActive={viewMode === 'list' && noteDisplayStyle === 'list'}
+          isActive={viewMode === 'list'}
           onClick={() => {
             onViewModeChange('list');
-            onNoteDisplayStyleChange?.('list');
             // 关闭所有图片流模式
             if (isImageFlowMode && onToggleImageFlowMode) {
               onToggleImageFlowMode();
@@ -358,22 +353,6 @@ const ViewModeSection: React.FC<ViewModeSectionProps> = ({
           }}
         >
           列表
-        </FilterButton>
-        <FilterButton
-          isActive={viewMode === 'list' && noteDisplayStyle === 'card'}
-          onClick={() => {
-            onViewModeChange('list');
-            onNoteDisplayStyleChange?.('card');
-            // 关闭所有图片流模式
-            if (isImageFlowMode && onToggleImageFlowMode) {
-              onToggleImageFlowMode();
-            }
-            if (isDateImageFlowMode && onToggleDateImageFlowMode) {
-              onToggleDateImageFlowMode();
-            }
-          }}
-        >
-          卡片
         </FilterButton>
         <FilterButton
           isActive={
@@ -768,8 +747,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   onSearchSortChange,
   searchHistory,
   onSearchHistoryClick,
-  noteDisplayStyle = 'list',
-  onNoteDisplayStyleChange,
 }) {
   // 搜索输入框引用 - 移到条件语句前面
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -1242,8 +1219,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                         isDateImageFlowMode={isDateImageFlowMode}
                         onToggleDateImageFlowMode={onToggleDateImageFlowMode}
                         hasImageNotes={hasImageNotes}
-                        noteDisplayStyle={noteDisplayStyle}
-                        onNoteDisplayStyleChange={onNoteDisplayStyleChange}
                       />
                     )}
                   </div>

@@ -63,7 +63,6 @@ export const defaultSettings: AppSettings = {
   showStatusDots: false,
   showBeanSummary: false,
   showEstimatedCups: false,
-  noteDisplayStyle: 'list',
 
   // 安全区域设置
   safeAreaMargins: {
