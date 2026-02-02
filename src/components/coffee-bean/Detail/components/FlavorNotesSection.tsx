@@ -51,7 +51,7 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             风味
           </div>
-          <div className="flex flex-1 flex-wrap items-center gap-1">
+          <div className="-mt-0.5 flex flex-1 flex-wrap items-center gap-1">
             {/* 已有的风味标签 */}
             {currentFlavors.map((flavor: string, index: number) => (
               <span

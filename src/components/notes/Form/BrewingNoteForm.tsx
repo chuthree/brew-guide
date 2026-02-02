@@ -1279,7 +1279,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     if (params.length === 0) return null;
 
     return (
-      <div className="scrollbar-hide flex gap-1.5 overflow-x-auto">
+      <div className="scrollbar-hide flex w-full gap-1.5 overflow-x-auto">
         {params.map(param => (
           <span
             key={param.label}
@@ -1303,7 +1303,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     if (!hasAnyRating) return null;
 
     return (
-      <div className="scrollbar-hide flex gap-1.5 overflow-x-auto">
+      <div className="scrollbar-hide flex w-full gap-1.5 overflow-x-auto">
         {displayDimensions.map(dim => {
           const value = formData.taste[dim.id] || 0;
           return (
@@ -1359,7 +1359,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       </div>
 
       {/* 下方：图片和功能列表 */}
-      <div className="shrink-0">
+      <div className="shrink-0 min-w-0 w-full">
         {/* 图片区域 - 变动记录和快捷扣除记录不显示 */}
         {!shouldHideImage && (
           <div className="mb-4 flex items-center gap-2">

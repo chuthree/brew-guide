@@ -67,7 +67,7 @@ const FeatureListItem: React.FC<FeatureListItemProps> = ({
       </button>
 
       {/* 预览内容（如风味评分标签） */}
-      {preview && <div className="pb-3">{preview}</div>}
+      {preview && <div className="w-full max-w-full pb-3">{preview}</div>}
 
       {/* 分隔线（非最后一项）或下边框（最后一项） */}
       <div className="border-b border-neutral-200/50 dark:border-neutral-800/50" />

@@ -653,7 +653,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   {validTasteRatings.length > 4 ? (
                     <button
                       onClick={() => setShowRatingRadar(true)}
-                      className="flex cursor-pointer flex-wrap items-center gap-1 text-left"
+                      className="-mt-0.5 flex cursor-pointer flex-wrap items-center gap-1 text-left"
                     >
                       {validTasteRatings.map(rating => (
                         <span
@@ -666,7 +666,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                       ))}
                     </button>
                   ) : (
-                    <div className="flex flex-wrap items-center gap-1">
+                    <div className="-mt-0.5 flex flex-wrap items-center gap-1">
                       {validTasteRatings.map(rating => (
                         <span
                           key={rating.id}
@@ -684,7 +684,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               {/* 总体评分 */}
               {note.rating > 0 && (
                 <InfoRow label="总评">
-                  <span className="bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300">
+                  <span className="-mt-0.5 bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300">
                     {note.rating}/5
                   </span>
                 </InfoRow>

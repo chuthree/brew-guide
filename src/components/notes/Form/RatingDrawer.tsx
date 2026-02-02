@@ -237,13 +237,17 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
               transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
               className="flex flex-col gap-3"
             >
-              <div className="space-y-1.5">
+              {/* 改用 auto auto 让内容紧凑靠左对其，同时保持列对齐 */}
+              <div className="grid grid-cols-[auto_auto] items-center justify-start gap-x-3 gap-y-3">
                 {displayDimensions.map(dimension => {
                   const value = tempTaste[dimension.id] || 0;
 
                   return (
-                    <div key={dimension.id} className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                    <React.Fragment key={dimension.id}>
+                      <span
+                        className="max-w-[10rem] truncate text-left text-sm font-medium text-neutral-500 dark:text-neutral-400"
+                        title={dimension.label}
+                      >
                         {dimension.label}
                         {dimension.order === 999 && (
                           <span className="ml-1">(已删除)</span>
@@ -295,7 +299,7 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
                           );
                         })}
                       </div>
-                    </div>
+                    </React.Fragment>
                   );
                 })}
               </div>
