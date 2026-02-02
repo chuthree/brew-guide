@@ -1471,22 +1471,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         {/* 功能列表 */}
         <div className="">
-          {/* 日期 - 仅编辑模式显示 */}
-          {!isAdding && (
-            <FeatureListItem
-              label="日期"
-              value={formatDateDisplay(timestamp)}
-              onClick={() => setShowDatePickerDrawer(true)}
-              isFirst={true}
-            />
-          )}
+          {/* 日期 */}
+          <FeatureListItem
+            label="日期"
+            value={formatDateDisplay(timestamp)}
+            onClick={() => setShowDatePickerDrawer(true)}
+            isFirst={true}
+          />
 
           {/* 咖啡豆 */}
           <FeatureListItem
             label="咖啡豆"
             value={getCoffeeBeanDisplayName()}
             onClick={() => setShowCoffeeBeanPickerDrawer(true)}
-            isFirst={isAdding}
           />
 
           {/* 快捷扣除量 - 仅快捷模式显示 */}
