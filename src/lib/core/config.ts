@@ -1227,4 +1227,5 @@ export const sponsorsList = [
   'Jerry_li',
   'Polaris',
   'Mooner',
+  '已经成为美女',
 ];
