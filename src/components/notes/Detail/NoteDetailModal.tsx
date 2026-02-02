@@ -18,7 +18,7 @@ import {
   getChildPageStyle,
   useIsLargeScreen,
 } from '@/lib/navigation/pageTransition';
-import { ChevronLeft, Pen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pen } from 'lucide-react';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
@@ -87,6 +87,25 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState(''); // 当前要查看的图片URL
 
+  // 多图轮播状态
+  const [showMultiImages, setShowMultiImages] = useState(false);
+  const [multiImageErrors, setMultiImageErrors] = useState<Set<number>>(
+    new Set()
+  );
+  const defaultImageRef = useRef<HTMLDivElement>(null);
+  const multiImageRef = useRef<HTMLDivElement>(null);
+  const [currentHeight, setCurrentHeight] = useState<number | 'auto'>('auto');
+
+  // 获取笔记图片列表 - 提前声明以便在效果中使用
+  const noteImages = useMemo(() => {
+    if (note?.images && note.images.length > 0) return note.images;
+    if (note?.image) return [note.image];
+    return [];
+  }, [note?.images, note?.image]);
+
+  // 是否有多图
+  const hasMultiImages = noteImages.length > 1;
+
   // 控制滑入动画
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -124,7 +143,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     }
   }, [isOpen]);
 
-  // 重置图片错误状态
+  // 重置图片错误状态和轮播状态
   useEffect(() => {
     if (note?.image) {
       setImageError(false);
@@ -132,7 +151,59 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     if (beanInfo?.image) {
       setBeanImageError(false);
     }
-  }, [note?.image, beanInfo?.image]);
+    // 重置轮播状态
+    setShowMultiImages(false);
+    setMultiImageErrors(new Set());
+    setCurrentHeight('auto');
+  }, [note?.image, beanInfo?.image, note?.id]);
+
+  // 使用 ResizeObserver 实时监听高度变化
+  useEffect(() => {
+    const defaultEl = defaultImageRef.current;
+    const multiEl = multiImageRef.current;
+
+    if (!defaultEl) return;
+
+    const updateHeight = () => {
+      const targetEl = showMultiImages ? multiEl : defaultEl;
+      if (targetEl) {
+        const height = targetEl.offsetHeight;
+        if (height > 0) {
+          setCurrentHeight(height);
+        }
+      }
+    };
+
+    // 初始设置高度
+    updateHeight();
+
+    // 创建 ResizeObserver 监听两个元素的高度变化
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+
+    resizeObserver.observe(defaultEl);
+    if (multiEl) {
+      resizeObserver.observe(multiEl);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [showMultiImages, isVisible, noteImages.length]);
+
+  // 切换页面时更新高度
+  useEffect(() => {
+    const targetEl = showMultiImages
+      ? multiImageRef.current
+      : defaultImageRef.current;
+    if (targetEl) {
+      const height = targetEl.offsetHeight;
+      if (height > 0) {
+        setCurrentHeight(height);
+      }
+    }
+  }, [showMultiImages]);
 
   // 初始化备注值
   useEffect(() => {
@@ -264,6 +335,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     roasterFieldEnabled,
     roasterSeparator,
   });
+
   const validTasteRatings = useMemo(
     () => (note ? getValidTasteRatings(note.taste) : []),
     [note, getValidTasteRatings]
@@ -433,92 +505,208 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
             touchAction: 'pan-y pinch-zoom',
           }}
         >
-          {/* 图片区域 */}
-          {(note?.image || beanInfo?.image) && (
-            <div className="mb-4">
-              <div className="flex cursor-pointer items-end justify-center gap-3 bg-neutral-200/30 px-6 py-3 dark:bg-neutral-800/40">
-                {/* 咖啡豆图片 - 当没有笔记图片时显示大图 */}
-                {beanInfo?.image && !note?.image && (
-                  <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                    {beanImageError ? (
-                      <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
-                        加载失败
-                      </div>
-                    ) : (
-                      <Image
-                        src={beanInfo.image}
-                        alt={beanName || '咖啡豆图片'}
-                        height={192}
-                        width={192}
-                        className="h-full w-auto object-cover"
-                        onError={() => setBeanImageError(true)}
-                        onClick={() => {
-                          if (!beanImageError) {
-                            setCurrentImageUrl(beanInfo.image || '');
-                            setImageViewerOpen(true);
-                          }
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* 有笔记图片时的布局 */}
-                {note?.image && (
-                  <>
-                    {/* 咖啡豆图片 - 小图 */}
-                    {beanInfo?.image && (
-                      <div className="relative h-20 shrink-0 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                        {beanImageError ? (
-                          <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
-                            加载失败
-                          </div>
-                        ) : (
-                          <Image
-                            src={beanInfo.image}
-                            alt={beanName || '咖啡豆图片'}
-                            height={80}
-                            width={80}
-                            className="h-full w-auto object-cover"
-                            onError={() => setBeanImageError(true)}
-                            onClick={e => {
-                              e.stopPropagation();
-                              if (!beanImageError) {
-                                setCurrentImageUrl(beanInfo.image || '');
-                                setImageViewerOpen(true);
-                              }
-                            }}
-                          />
-                        )}
-                      </div>
-                    )}
-
-                    {/* 笔记图片 */}
+          {/* 图片区域 - 带滑动轮播 */}
+          {(noteImages.length > 0 || beanInfo?.image) && (
+            <div
+              className="relative mb-4 overflow-hidden"
+              style={{
+                height: currentHeight === 'auto' ? 'auto' : currentHeight,
+                transition: 'height 350ms cubic-bezier(0.32, 0.72, 0, 1)',
+              }}
+            >
+              {/* 第一页：默认图片展示 */}
+              <div
+                ref={defaultImageRef}
+                className="w-full"
+                style={{
+                  transform: showMultiImages
+                    ? 'translateX(-100%)'
+                    : 'translateX(0)',
+                  transition: 'transform 350ms cubic-bezier(0.32, 0.72, 0, 1)',
+                  position: showMultiImages ? 'absolute' : 'relative',
+                  top: 0,
+                  left: 0,
+                }}
+              >
+                <div className="relative flex cursor-pointer items-end justify-center gap-3 bg-neutral-200/30 px-6 py-3 dark:bg-neutral-800/40">
+                  {/* 咖啡豆图片 - 当没有笔记图片时显示大图 */}
+                  {beanInfo?.image && noteImages.length === 0 && (
                     <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                      {imageError ? (
-                        <div className="absolute inset-0 flex items-center justify-center px-8 text-sm text-neutral-500 dark:text-neutral-400">
+                      {beanImageError ? (
+                        <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
                           加载失败
                         </div>
                       ) : (
                         <Image
-                          src={note.image}
-                          alt={beanName || '笔记图片'}
+                          src={beanInfo.image}
+                          alt={beanName || '咖啡豆图片'}
                           height={192}
                           width={192}
                           className="h-full w-auto object-cover"
-                          onError={() => setImageError(true)}
+                          onError={() => setBeanImageError(true)}
                           onClick={() => {
-                            if (!imageError) {
-                              setCurrentImageUrl(note.image || '');
+                            if (!beanImageError) {
+                              setCurrentImageUrl(beanInfo.image || '');
                               setImageViewerOpen(true);
                             }
                           }}
                         />
                       )}
                     </div>
-                  </>
-                )}
+                  )}
+
+                  {/* 有笔记图片时的布局 */}
+                  {noteImages.length > 0 && (
+                    <>
+                      {/* 咖啡豆图片 - 小图 */}
+                      {beanInfo?.image && (
+                        <div className="relative h-20 shrink-0 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                          {beanImageError ? (
+                            <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
+                              加载失败
+                            </div>
+                          ) : (
+                            <Image
+                              src={beanInfo.image}
+                              alt={beanName || '咖啡豆图片'}
+                              height={80}
+                              width={80}
+                              className="h-full w-auto object-cover"
+                              onError={() => setBeanImageError(true)}
+                              onClick={e => {
+                                e.stopPropagation();
+                                if (!beanImageError) {
+                                  setCurrentImageUrl(beanInfo.image || '');
+                                  setImageViewerOpen(true);
+                                }
+                              }}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {/* 笔记图片 - 显示第一张 */}
+                      <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                        {imageError ? (
+                          <div className="absolute inset-0 flex items-center justify-center px-8 text-sm text-neutral-500 dark:text-neutral-400">
+                            加载失败
+                          </div>
+                        ) : (
+                          <Image
+                            src={noteImages[0]}
+                            alt={beanName || '笔记图片'}
+                            height={192}
+                            width={192}
+                            className="h-full w-auto object-cover"
+                            onError={() => setImageError(true)}
+                            onClick={() => {
+                              if (!imageError) {
+                                setCurrentImageUrl(noteImages[0]);
+                                setImageViewerOpen(true);
+                              }
+                            }}
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {/* 右侧箭头 - 有多图时显示 */}
+                  {hasMultiImages && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        setShowMultiImages(true);
+                      }}
+                      className="absolute top-1/2 right-5 -translate-y-1/2 text-neutral-400/30 transition-colors hover:text-neutral-500 dark:text-neutral-500/30 dark:hover:text-neutral-400"
+                    >
+                      <ChevronRight
+                        className="h-8 w-5"
+                        style={{ transform: 'scaleY(1.4) scaleX(0.85)' }}
+                        strokeWidth={2}
+                      />
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* 第二页：多图网格展示 */}
+              {hasMultiImages && (
+                <div
+                  ref={multiImageRef}
+                  className="w-full"
+                  style={{
+                    transform: showMultiImages
+                      ? 'translateX(0)'
+                      : 'translateX(100%)',
+                    transition:
+                      'transform 350ms cubic-bezier(0.32, 0.72, 0, 1)',
+                    position: showMultiImages ? 'relative' : 'absolute',
+                    top: 0,
+                    left: 0,
+                  }}
+                >
+                  <div className="relative bg-neutral-200/30 px-6 py-3 dark:bg-neutral-800/40">
+                    {/* 左侧箭头 - 返回默认视图 */}
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        setShowMultiImages(false);
+                      }}
+                      className="absolute top-1/2 left-5 z-10 -translate-y-1/2 text-neutral-400/30 transition-colors hover:text-neutral-500 dark:text-neutral-500/30 dark:hover:text-neutral-400"
+                    >
+                      <ChevronLeft
+                        className="h-8 w-5"
+                        style={{ transform: 'scaleY(1.4) scaleX(0.85)' }}
+                        strokeWidth={2}
+                      />
+                    </button>
+
+                    {/* 多图网格 - 与列表页相同的布局 */}
+                    <div className="flex justify-center">
+                      <div
+                        className={`gap-1 ${
+                          noteImages.length === 2 || noteImages.length === 4
+                            ? 'grid max-w-50 grid-cols-2'
+                            : 'grid max-w-75 grid-cols-3'
+                        }`}
+                      >
+                        {noteImages.map((img, index) => (
+                          <div
+                            key={index}
+                            className="relative aspect-square cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
+                            onClick={() => {
+                              if (!multiImageErrors.has(index)) {
+                                setCurrentImageUrl(img);
+                                setImageViewerOpen(true);
+                              }
+                            }}
+                          >
+                            {multiImageErrors.has(index) ? (
+                              <div className="flex h-full w-full items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
+                                加载失败
+                              </div>
+                            ) : (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={img}
+                                alt={`笔记图片 ${index + 1}`}
+                                className="block h-full w-full object-cover"
+                                onError={() => {
+                                  setMultiImageErrors(prev =>
+                                    new Set(prev).add(index)
+                                  );
+                                }}
+                                loading="lazy"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
