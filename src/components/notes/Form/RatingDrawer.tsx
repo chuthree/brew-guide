@@ -174,7 +174,7 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
           {showOverallRating && (
             <div className="flex flex-col gap-3">
               <p className="text-base font-medium text-neutral-500 dark:text-neutral-400">
-                为
+                为这杯
                 <span className="mx-1 text-neutral-800 dark:text-neutral-200">
                   {beanName || '这杯咖啡'}
                 </span>
