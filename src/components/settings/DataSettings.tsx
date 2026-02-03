@@ -228,8 +228,12 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       [key]: value,
     };
 
-    // 只有当修改配置参数（非 enabled 和 lastConnectionSuccess）时才清除连接状态
-    if (key !== 'enabled' && key !== 'lastConnectionSuccess') {
+    // 只有当修改配置参数（非 enabled、lastConnectionSuccess、enablePullToSync）时才清除连接状态
+    if (
+      key !== 'enabled' &&
+      key !== 'lastConnectionSuccess' &&
+      key !== 'enablePullToSync'
+    ) {
       newS3Settings.lastConnectionSuccess = false;
     }
 
@@ -252,8 +256,12 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       [key]: value,
     };
 
-    // 只有当修改配置参数（非 enabled 和 lastConnectionSuccess）时才清除连接状态
-    if (key !== 'enabled' && key !== 'lastConnectionSuccess') {
+    // 只有当修改配置参数（非 enabled、lastConnectionSuccess、enablePullToSync）时才清除连接状态
+    if (
+      key !== 'enabled' &&
+      key !== 'lastConnectionSuccess' &&
+      key !== 'enablePullToSync'
+    ) {
       newWebDAVSettings.lastConnectionSuccess = false;
     }
 
