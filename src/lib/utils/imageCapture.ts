@@ -591,11 +591,20 @@ export async function compressBase64Image(
 
 /**
  * 将base64字符串转换为File对象
+ * 使用手动解析方式，避免在原生App环境中fetch data URL 的兼容性问题
  */
 async function base64ToFile(base64: string, filename: string): Promise<File> {
-  const response = await fetch(base64);
-  const blob = await response.blob();
-  return new File([blob], filename, { type: blob.type });
+  // 解析 base64 data URL
+  const arr = base64.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
 }
 
 /**
