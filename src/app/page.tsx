@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useCallback,
   useRef,
+  useLayoutEffect,
   ReactNode,
 } from 'react';
 import dynamic from 'next/dynamic';
@@ -2559,6 +2560,34 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const isBrewingMainTab = activeMainTab === '冲煮';
   const isNotesMainTab = activeMainTab === '笔记';
   const isBeansMainTab = activeMainTab === '咖啡豆';
+  const shouldShowBrewingTimer =
+    activeBrewingStep === 'brewing' && currentBrewingMethod && !showHistory;
+
+  const brewingTimerRef = useRef<HTMLDivElement | null>(null);
+  const [brewingTimerHeight, setBrewingTimerHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!shouldShowBrewingTimer || !brewingTimerRef.current) {
+      setBrewingTimerHeight(0);
+      return;
+    }
+
+    const element = brewingTimerRef.current;
+    const updateHeight = () => {
+      setBrewingTimerHeight(element.offsetHeight || 0);
+    };
+
+    updateHeight();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(updateHeight);
+      observer.observe(element);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, [shouldShowBrewingTimer]);
 
   useMultiStepModalHistory({
     id: 'brewing',
@@ -3319,18 +3348,27 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           }`}
         >
           <div
-            className={isBrewingMainTab ? 'h-full' : 'hidden'}
+            className={
+              isBrewingMainTab
+                ? `relative ${
+                    shouldShowBrewingTimer ? 'flex h-full flex-col' : 'h-full'
+                  }`
+                : 'hidden'
+            }
             aria-hidden={!isBrewingMainTab}
             data-main-tab="brewing"
           >
             <div
-              className={`h-full ${
-                activeBrewingStep === 'brewing' &&
-                currentBrewingMethod &&
-                !showHistory
+              className={
+                shouldShowBrewingTimer
                   ? 'min-h-0 flex-1 overflow-y-auto'
-                  : 'space-y-5 overflow-y-auto'
-              }`}
+                  : 'h-full space-y-5 overflow-y-auto'
+              }
+              style={
+                shouldShowBrewingTimer && brewingTimerHeight > 0
+                  ? { paddingBottom: `${brewingTimerHeight}px` }
+                  : undefined
+              }
             >
               <TabContent
                 activeTab={activeTab}
@@ -3366,9 +3404,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               />
             </div>
 
-            {activeBrewingStep === 'brewing' &&
-              currentBrewingMethod &&
-              !showHistory && (
+            {shouldShowBrewingTimer && (
+              <div
+                ref={brewingTimerRef}
+                className="pointer-events-auto absolute right-0 bottom-0 left-0 z-10"
+              >
                 <BrewingTimer
                   currentBrewingMethod={currentBrewingMethod as Method}
                   onStatusChange={({ isRunning }) => {
@@ -3420,7 +3460,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   isCoffeeBrewed={isCoffeeBrewed}
                   layoutSettings={settings.layoutSettings}
                 />
-              )}
+              </div>
+            )}
 
             {activeBrewingStep === 'method' && selectedEquipment && (
               <MethodTypeSelector
