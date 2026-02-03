@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { ChevronRight } from 'lucide-react';
@@ -29,6 +29,26 @@ const RatingRadarDrawer = dynamic(
     ssr: false,
   }
 );
+
+const SINGLE_IMAGE_MAX_WIDTH = 140;
+const SINGLE_IMAGE_MAX_HEIGHT = 180;
+const singleImageSizeCache = new Map<
+  string,
+  { width: number; height: number }
+>();
+
+const getConstrainedSize = (
+  width: number,
+  height: number,
+  maxWidth: number,
+  maxHeight: number
+) => {
+  const scale = Math.min(maxWidth / width, maxHeight / height, 1);
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+  };
+};
 
 // 优化笔记项组件以避免不必要的重渲染
 const NoteItem: React.FC<NoteItemProps> = ({
@@ -107,6 +127,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
     : [];
   const hasTasteRatings = validTasteRatings.length > 0;
   const hasNotes = Boolean(note.notes);
+  const isSingleNoteImage = noteImages.length === 1;
   const equipmentName =
     note.equipment && note.equipment.trim() !== ''
       ? equipmentNames[note.equipment] || note.equipment
@@ -131,6 +152,20 @@ const NoteItem: React.FC<NoteItemProps> = ({
     const roasterLogos = (settings as any).roasterLogos || {};
     return roasterLogos[beanInfo.roaster] || null;
   }, [beanInfo?.roaster]);
+
+  const singleImageUrl = isSingleNoteImage ? noteImages[0] : '';
+  const cachedSingleImageSize = useMemo(
+    () => (singleImageUrl ? singleImageSizeCache.get(singleImageUrl) : null),
+    [singleImageUrl]
+  );
+  const [singleImageSize, setSingleImageSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(cachedSingleImageSize ?? null);
+
+  useEffect(() => {
+    setSingleImageSize(cachedSingleImageSize ?? null);
+  }, [cachedSingleImageSize, singleImageUrl]);
 
   // 判断是否为意式咖啡笔记
   const isEspresso = React.useMemo(() => {
@@ -278,7 +313,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
             {noteImages.length > 0 && (
               <div
                 className={`mt-2 gap-1 ${
-                  noteImages.length === 1
+                  isSingleNoteImage
                     ? 'flex'
                     : noteImages.length === 2 || noteImages.length === 4
                       ? 'grid max-w-50 grid-cols-2'
@@ -289,11 +324,19 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 {noteImages.map((img, index) => (
                   <div
                     key={index}
-                    className={`relative cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20 ${
-                      noteImages.length === 1
-                        ? 'inline-flex h-45 w-35'
+                    className={`relative cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 dark:border-neutral-800/50 ${
+                      isSingleNoteImage
+                        ? 'inline-flex'
                         : 'block aspect-square'
                     }`}
+                    style={
+                      isSingleNoteImage && singleImageSize
+                        ? {
+                            width: singleImageSize.width,
+                            height: singleImageSize.height,
+                          }
+                        : undefined
+                    }
                     onClick={() => {
                       if (!noteImageError) {
                         setPreviewImageIndex(index);
@@ -310,13 +353,44 @@ const NoteItem: React.FC<NoteItemProps> = ({
                       <img
                         src={img}
                         alt={`笔记图片 ${index + 1}`}
-                        width={noteImages.length === 1 ? 140 : 96}
-                        height={noteImages.length === 1 ? 180 : 96}
+                        width={
+                          isSingleNoteImage
+                            ? singleImageSize?.width
+                            : 96
+                        }
+                        height={
+                          isSingleNoteImage
+                            ? singleImageSize?.height
+                            : 96
+                        }
                         className={
-                          noteImages.length === 1
-                            ? 'block h-full w-full object-cover'
+                          isSingleNoteImage
+                            ? 'block h-auto w-auto max-h-45 max-w-35'
                             : 'block h-full w-full object-cover'
                         }
+                        style={
+                          isSingleNoteImage && singleImageSize
+                            ? {
+                                width: singleImageSize.width,
+                                height: singleImageSize.height,
+                              }
+                            : undefined
+                        }
+                        onLoad={e => {
+                          if (!isSingleNoteImage) return;
+                          const target = e.currentTarget;
+                          const naturalWidth = target.naturalWidth || 0;
+                          const naturalHeight = target.naturalHeight || 0;
+                          if (naturalWidth <= 0 || naturalHeight <= 0) return;
+                          const constrained = getConstrainedSize(
+                            naturalWidth,
+                            naturalHeight,
+                            SINGLE_IMAGE_MAX_WIDTH,
+                            SINGLE_IMAGE_MAX_HEIGHT
+                          );
+                          singleImageSizeCache.set(img, constrained);
+                          setSingleImageSize(constrained);
+                        }}
                         onError={() => setNoteImageError(true)}
                         loading="lazy"
                       />
