@@ -1086,10 +1086,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     }
   }, [imageFlowStats, setImageFlowMode, updateViewMode, notes.length]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div
+      className={`flex h-full flex-col overflow-hidden ${
+        isOpen ? '' : 'hidden'
+      }`}
+    >
       {/* 笔记筛选分类栏 - 只有当有笔记数据时才显示 */}
       {notes.length > 0 && (
         <div className="sticky top-0 z-10 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">

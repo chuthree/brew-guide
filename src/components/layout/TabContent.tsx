@@ -75,7 +75,6 @@ const BrewingNoteForm = dynamic(
 );
 
 interface TabContentProps {
-  activeMainTab: MainTabType;
   activeTab: TabType;
   content: Content;
   selectedMethod: Method | null;
@@ -124,7 +123,6 @@ interface TabContentProps {
 }
 
 const TabContent: React.FC<TabContentProps> = ({
-  activeMainTab,
   activeTab,
   content,
   selectedMethod,
@@ -643,9 +641,6 @@ const TabContent: React.FC<TabContentProps> = ({
 
   // 供“咖啡豆”Tab 的虚拟列表绑定外层滚动容器
   const [beanScrollEl, setBeanScrollEl] = useState<HTMLElement | null>(null);
-
-  // 如果不是在冲煮主Tab，不显示内容
-  if (activeMainTab !== '冲煮') return null;
 
   // 渲染咖啡豆列表
   if (activeTab === '咖啡豆') {
