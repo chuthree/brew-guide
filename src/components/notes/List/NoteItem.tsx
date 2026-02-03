@@ -291,7 +291,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     key={index}
                     className={`relative cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20 ${
                       noteImages.length === 1
-                        ? 'inline-flex'
+                        ? 'inline-flex h-45 w-35'
                         : 'block aspect-square'
                     }`}
                     onClick={() => {
@@ -310,9 +310,11 @@ const NoteItem: React.FC<NoteItemProps> = ({
                       <img
                         src={img}
                         alt={`笔记图片 ${index + 1}`}
+                        width={noteImages.length === 1 ? 140 : 96}
+                        height={noteImages.length === 1 ? 180 : 96}
                         className={
                           noteImages.length === 1
-                            ? 'block max-h-45 max-w-35'
+                            ? 'block h-full w-full object-cover'
                             : 'block h-full w-full object-cover'
                         }
                         onError={() => setNoteImageError(true)}
