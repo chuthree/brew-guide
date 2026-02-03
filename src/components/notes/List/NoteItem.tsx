@@ -279,7 +279,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
               <div
                 className={`mt-2 gap-1 ${
                   noteImages.length === 1
-                    ? 'block'
+                    ? 'flex'
                     : noteImages.length === 2 || noteImages.length === 4
                       ? 'grid max-w-50 grid-cols-2'
                       : 'grid max-w-75 grid-cols-3'
@@ -291,7 +291,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     key={index}
                     className={`relative cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20 ${
                       noteImages.length === 1
-                        ? 'inline-block'
+                        ? 'inline-flex'
                         : 'block aspect-square'
                     }`}
                     onClick={() => {
