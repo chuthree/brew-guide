@@ -104,6 +104,7 @@
     "postcss-load-config": "^6.0.1",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
+    "react-grab": "^0.1.1",
     "serve": "^14.2.5",
     "serve-handler": "^6.1.6",
     "tailwindcss": "^4.1.17",
@@ -111,8 +112,8 @@
     "workbox-build": "^7.4.0"
   },
   "overrides": {
-    "@types/react": "19.2.2",
-    "@types/react-dom": "19.2.2",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
     "brace-expansion": ">=2.0.2"
   },
   "pnpm": {
