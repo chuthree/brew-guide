@@ -1304,8 +1304,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       finalTaste = {};
     }
 
-    const preservedSource = initialData.source;
-    const preservedChangeRecord = initialData.changeRecord;
+    const isConvertingToNormal = isQuickDecrementEdit && !isQuickMode;
+    const preservedSource = isConvertingToNormal
+      ? undefined
+      : initialData.source;
+    const preservedChangeRecord = isConvertingToNormal
+      ? undefined
+      : initialData.changeRecord;
     const quickDecrementAmountValue =
       preservedSource === 'quick-decrement'
         ? parseFloat(quickDecrementAmount) || 0
@@ -1335,6 +1340,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       ...(preservedChangeRecord && { changeRecord: preservedChangeRecord }),
       ...(preservedSource === 'quick-decrement' && {
         quickDecrementAmount: quickDecrementAmountValue,
+      }),
+      ...(isConvertingToNormal && {
+        source: undefined,
+        quickDecrementAmount: undefined,
+        changeRecord: undefined,
       }),
     };
 
