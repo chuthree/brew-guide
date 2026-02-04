@@ -235,7 +235,6 @@ export interface AppSettings {
   showGrinderScale?: boolean;
 
   // 笔记设置
-  defaultExpandRating: boolean;
   defaultExpandChangeLog: boolean;
   showFlavorRatingInForm: boolean;
   showOverallRatingInForm: boolean;

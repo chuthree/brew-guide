@@ -153,15 +153,6 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
       )}
 
       <SettingSection title="默认行为">
-        {(settings.showFlavorRatingInForm ?? true) && (
-          <SettingRow label="展开风味评分">
-            <SettingToggle
-              checked={settings.defaultExpandRating ?? false}
-              onChange={checked => handleChange('defaultExpandRating', checked)}
-            />
-          </SettingRow>
-        )}
-
         <SettingRow label="展开变动记录" isLast>
           <SettingToggle
             checked={settings.defaultExpandChangeLog ?? false}
