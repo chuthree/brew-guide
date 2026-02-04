@@ -698,31 +698,11 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         },
       };
 
-      // 保存记录（参考快捷扣除记录的保存方式）
-      const { Storage } = await import('@/lib/core/storage');
-      const existingNotesStr = await Storage.get('brewingNotes');
-      const existingNotes = existingNotesStr
-        ? JSON.parse(existingNotesStr)
-        : [];
-      const updatedNotes = [adjustmentRecord, ...existingNotes];
-
-      // 更新全局缓存
-      try {
-        const { globalCache } = await import(
-          '@/components/notes/List/globalCache'
-        );
-        globalCache.notes = updatedNotes;
-
-        const { calculateTotalCoffeeConsumption } = await import(
-          '@/components/notes/List/globalCache'
-        );
-        globalCache.totalConsumption =
-          calculateTotalCoffeeConsumption(updatedNotes);
-      } catch (error) {
-        console.error('更新全局缓存失败:', error);
-      }
-
-      await Storage.set('brewingNotes', JSON.stringify(updatedNotes));
+      // 保存记录（与快捷扣除一致，走 Zustand store）
+      const { useBrewingNoteStore } = await import(
+        '@/lib/stores/brewingNoteStore'
+      );
+      await useBrewingNoteStore.getState().addNote(adjustmentRecord as any);
       console.warn('容量调整记录创建成功:', noteContent);
     };
 

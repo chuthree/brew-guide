@@ -10,6 +10,7 @@ import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriod
 import { getEquipmentName } from '@/components/notes/utils';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import {
   getChildPageStyle,
   useIsLargeScreen,
@@ -125,6 +126,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   const bean = isAddMode ? (tempBean as CoffeeBean) : storeBean || propBean;
   const allBeans = useCoffeeBeanStore(state => state.beans);
+  const allNotes = useBrewingNoteStore(state => state.notes);
+  const loadNotes = useBrewingNoteStore(state => state.loadNotes);
 
   // 关联豆子
   const relatedBeans = React.useMemo(() => {
@@ -336,23 +339,20 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     const loadRelatedNotes = async () => {
       try {
-        // 使用 store 获取笔记，避免每次都读取 Storage
-        const { useBrewingNoteStore } = await import(
-          '@/lib/stores/brewingNoteStore'
-        );
-        const allNotes = useBrewingNoteStore.getState().notes;
+        let notesSource = allNotes;
 
         // 如果 store 为空，尝试加载
-        if (allNotes.length === 0) {
-          await useBrewingNoteStore.getState().loadNotes();
+        if (notesSource.length === 0) {
+          await loadNotes();
+          notesSource = useBrewingNoteStore.getState().notes;
         }
 
         if (isCancelled) return;
 
-        const beanNotes = useBrewingNoteStore
-          .getState()
-          .notes.filter(note => note.beanId === bean.id);
-        const sortedNotes = beanNotes.sort((a, b) => b.timestamp - a.timestamp);
+        const beanNotes = notesSource.filter(note => note.beanId === bean.id);
+        const sortedNotes = [...beanNotes].sort(
+          (a, b) => b.timestamp - a.timestamp
+        );
 
         // 立即设置笔记数据
         setRelatedNotes(sortedNotes);
@@ -403,7 +403,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [bean?.id, isOpen]);
+  }, [bean?.id, isOpen, allNotes, loadNotes]);
 
   // 通用字段更新
   const handleUpdateField = async (updates: Partial<CoffeeBean>) => {
