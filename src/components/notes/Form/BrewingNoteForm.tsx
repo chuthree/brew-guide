@@ -8,7 +8,7 @@ import React, {
   useMemo,
 } from 'react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import type {
   BrewingNoteData,
@@ -18,7 +18,12 @@ import type {
 import { isPendingCoffeeBean } from '@/lib/utils/coffeeBeanUtils';
 
 import { captureImage, compressBase64Image } from '@/lib/utils/imageCapture';
-import { Camera, Image as ImageIcon, Plus } from 'lucide-react';
+import {
+  Camera,
+  Image as ImageIcon,
+  Plus,
+  CornerDownRight,
+} from 'lucide-react';
 import {
   equipmentList,
   commonMethods,
@@ -236,6 +241,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [previewImageIndex, setPreviewImageIndex] = useState(0); // 当前预览图片的索引
   // 🔥 标记用户是否主动选择了咖啡豆（用于防止 initialData 变化覆盖用户选择）
   const userSelectedBeanRef = useRef(false);
+  const [showBeanFlavorTags, setShowBeanFlavorTags] = useState(false);
   // 图片选择 input ref
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -1359,6 +1365,66 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     return '';
   };
 
+  useEffect(() => {
+    setShowBeanFlavorTags(false);
+  }, [
+    selectedCoffeeBean && !isPendingCoffeeBean(selectedCoffeeBean)
+      ? (selectedCoffeeBean as CoffeeBean).id
+      : 'pending',
+  ]);
+
+  // 获取咖啡豆风味标签预览
+  const getCoffeeBeanFlavorPreview = () => {
+    if (!selectedCoffeeBean || isPendingCoffeeBean(selectedCoffeeBean)) {
+      return null;
+    }
+
+    const flavors = (selectedCoffeeBean as CoffeeBean).flavor || [];
+    if (flavors.length === 0) return null;
+
+    return (
+      <AnimatePresence initial={false} mode="popLayout">
+        {showBeanFlavorTags ? (
+          <motion.div
+            key="flavors"
+            className="scrollbar-hide flex w-full gap-1.5 overflow-x-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            {flavors.map((flavor, index) => (
+              <span
+                key={`${flavor}-${index}`}
+                className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-sm font-medium text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-400"
+              >
+                {flavor}
+              </span>
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="toggle"
+            className="scrollbar-hide flex w-full gap-1.5 overflow-x-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowBeanFlavorTags(true)}
+              className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded bg-neutral-100/80 px-1.5 py-0.5 text-sm font-medium text-neutral-500 transition-all duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-500 dark:hover:bg-neutral-800/60 dark:hover:text-neutral-400"
+            >
+              <CornerDownRight className="h-3.5 w-3.5" />
+              显示风味
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  };
+
   // 获取方案参数预览
   const getMethodParamsPreview = () => {
     // 检查是否有有效参数
@@ -1550,6 +1616,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             label="咖啡豆"
             value={getCoffeeBeanDisplayName()}
             onClick={() => setShowCoffeeBeanPickerDrawer(true)}
+            preview={getCoffeeBeanFlavorPreview()}
           />
 
           {/* 快捷扣除量 - 仅快捷模式显示 */}
