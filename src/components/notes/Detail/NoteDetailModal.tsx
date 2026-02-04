@@ -765,7 +765,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   {/* 风味 */}
                   {beanInfo.flavor && beanInfo.flavor.length > 0 && (
                     <InfoRow label="风味">
-                      <div className="flex flex-wrap items-center gap-1">
+                      <div className="-mt-0.5 flex flex-wrap items-center gap-1">
                         {beanInfo.flavor.map(
                           (flavor: string, index: number) => (
                             <span
