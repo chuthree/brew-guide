@@ -352,6 +352,38 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       return '';
     }
   );
+  // 容量调整量状态（仅用于容量调整记录编辑）
+  const [capacityAdjustmentAmount, setCapacityAdjustmentAmount] =
+    useState<string>(() => {
+      if (
+        initialData.source === 'capacity-adjustment' &&
+        initialData.changeRecord?.capacityAdjustment
+      ) {
+        const amount = initialData.changeRecord.capacityAdjustment.changeAmount;
+        if (typeof amount === 'number' && !isNaN(amount)) {
+          return String(Math.abs(amount));
+        }
+      }
+      if (initialData.params?.coffee) {
+        return extractNumericValue(initialData.params.coffee);
+      }
+      return '';
+    });
+  const [isCapacityAdjustmentIncrease, setIsCapacityAdjustmentIncrease] =
+    useState<boolean>(() => {
+      if (
+        initialData.source === 'capacity-adjustment' &&
+        initialData.changeRecord?.capacityAdjustment
+      ) {
+        const changeType =
+          initialData.changeRecord.capacityAdjustment.changeType;
+        if (changeType === 'increase') return true;
+        if (changeType === 'decrease') return false;
+        const amount = initialData.changeRecord.capacityAdjustment.changeAmount;
+        if (typeof amount === 'number') return amount >= 0;
+      }
+      return false;
+    });
 
   // 监听initialData.totalTime的变化
   useEffect(() => {
@@ -1151,7 +1183,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const { CapacitySyncManager, updateBeanRemaining, increaseBeanRemaining } =
       await import('@/lib/stores/coffeeBeanStore');
     const currentCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
-      methodParams.coffee
+      isQuickDecrementEdit && isQuickMode
+        ? `${parseFloat(quickDecrementAmount) || 0}g`
+        : methodParams.coffee
     );
 
     // 处理待创建的咖啡豆
@@ -1270,6 +1304,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       finalTaste = {};
     }
 
+    const preservedSource = initialData.source;
+    const preservedChangeRecord = initialData.changeRecord;
+    const quickDecrementAmountValue =
+      preservedSource === 'quick-decrement'
+        ? parseFloat(quickDecrementAmount) || 0
+        : undefined;
+
     // 创建完整的笔记数据
     const noteData: BrewingNoteData = {
       id: id || Date.now().toString(),
@@ -1290,13 +1331,42 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       totalTime: parseFloat(totalTimeStr) || initialData.totalTime || 0,
       // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
       beanId: finalBeanId,
-      // 如果是快捷扣除记录且处于快捷模式，保留source和quickDecrementAmount
-      ...(isQuickDecrementEdit &&
-        isQuickMode && {
-          source: 'quick-decrement' as const,
-          quickDecrementAmount: parseFloat(quickDecrementAmount) || 0,
-        }),
+      ...(preservedSource && { source: preservedSource }),
+      ...(preservedChangeRecord && { changeRecord: preservedChangeRecord }),
+      ...(preservedSource === 'quick-decrement' && {
+        quickDecrementAmount: quickDecrementAmountValue,
+      }),
     };
+
+    // 容量调整记录：同步 changeRecord 与显示的调整量
+    if (
+      isCapacityAdjustmentEdit &&
+      preservedChangeRecord?.capacityAdjustment &&
+      noteData.params
+    ) {
+      const rawAmount = parseFloat(capacityAdjustmentAmount);
+      const amount = isNaN(rawAmount) ? 0 : rawAmount;
+      const signedChange = (isCapacityAdjustmentIncrease ? 1 : -1) * amount;
+      const originalAmount =
+        preservedChangeRecord.capacityAdjustment.originalAmount;
+      const newAmount =
+        typeof originalAmount === 'number'
+          ? originalAmount + signedChange
+          : preservedChangeRecord.capacityAdjustment.newAmount;
+      const changeType =
+        signedChange > 0 ? 'increase' : signedChange < 0 ? 'decrease' : 'set';
+
+      noteData.changeRecord = {
+        ...preservedChangeRecord,
+        capacityAdjustment: {
+          ...preservedChangeRecord.capacityAdjustment,
+          changeAmount: signedChange,
+          changeType,
+          newAmount,
+        },
+      };
+      noteData.params.coffee = `${amount}g`;
+    }
 
     // 如果是快捷扣除记录且处于快捷模式，同步更新 params.coffee 字段
     if (isQuickDecrementEdit && isQuickMode && noteData.params) {
@@ -1626,15 +1696,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 扣除量
               </span>
               <div className="ml-auto flex items-center gap-2">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={quickDecrementAmount}
-                  onChange={e => setQuickDecrementAmount(e.target.value)}
-                  className="w-20 bg-transparent py-1 text-right text-sm font-medium text-neutral-800 outline-none dark:text-neutral-300"
-                  placeholder="0"
-                />
+                  <input
+                    type="tel"
+                    inputMode="decimal"
+                    pattern="^\\d*(\\.\\d+)?$"
+                    value={quickDecrementAmount}
+                    onChange={e => {
+                      const nextValue = e.target.value;
+                      if (!validateNumericInput(nextValue)) return;
+                      setQuickDecrementAmount(nextValue);
+                    }}
+                    className="w-20 bg-transparent py-1 text-right text-sm font-medium text-neutral-800 outline-none dark:text-neutral-300"
+                    placeholder="0"
+                  />
                 <span className="text-sm text-neutral-500 dark:text-neutral-400">
                   g
                 </span>
@@ -1642,8 +1716,54 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             </div>
           )}
 
+          {/* 容量调整量 - 仅容量调整记录显示 */}
+          {isCapacityAdjustmentEdit && (
+            <div className="border-b border-neutral-200/50 py-3 dark:border-neutral-800/50">
+              <div className="flex items-center">
+                <span className="shrink-0 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                  {isCapacityAdjustmentIncrease ? '增加量 (+)' : '减少量 (-)'}
+                </span>
+                <div className="ml-auto flex items-center gap-2">
+                  <input
+                    type="tel"
+                    inputMode="decimal"
+                    pattern="^\\d*(\\.\\d+)?$"
+                    value={capacityAdjustmentAmount}
+                    onChange={e => {
+                      const nextValue = e.target.value;
+                      if (!validateNumericInput(nextValue)) return;
+                      setCapacityAdjustmentAmount(nextValue);
+                    }}
+                    className="w-20 bg-transparent py-1 text-right text-sm font-medium text-neutral-800 outline-none dark:text-neutral-300"
+                    placeholder="0"
+                  />
+                  <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                    g
+                  </span>
+                </div>
+              </div>
+              <div className="mt-2 flex justify-start">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsCapacityAdjustmentIncrease(
+                      prevIncrease => !prevIncrease
+                    )
+                  }
+                  className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded bg-neutral-100/80 px-1.5 py-0.5 text-sm font-medium text-neutral-500 transition-all duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-500 dark:hover:bg-neutral-800/60 dark:hover:text-neutral-400"
+                >
+                  <CornerDownRight className="h-3.5 w-3.5" />
+                  {isCapacityAdjustmentIncrease
+                    ? '切换为减少量'
+                    : '切换为增加量'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* 器具方案 - 编辑模式且非快捷模式时显示 */}
           {!isAdding &&
+            !isCapacityAdjustmentEdit &&
             (!isQuickDecrementEdit || !isQuickMode) &&
             (initialData?.id || selectedEquipment) && (
               <FeatureListItem
@@ -1655,15 +1775,17 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             )}
 
           {/* 评分（合并风味评分和总体评分） - 非快捷模式时显示 */}
-          {showRatingSection && (!isQuickDecrementEdit || !isQuickMode) && (
-            <FeatureListItem
-              label="评分"
-              value={getOverallRatingDisplay()}
-              onClick={() => setShowRatingDrawer(true)}
-              preview={getFlavorRatingPreview()}
-              isLast={true}
-            />
-          )}
+          {showRatingSection &&
+            !isCapacityAdjustmentEdit &&
+            (!isQuickDecrementEdit || !isQuickMode) && (
+              <FeatureListItem
+                label="评分"
+                value={getOverallRatingDisplay()}
+                onClick={() => setShowRatingDrawer(true)}
+                preview={getFlavorRatingPreview()}
+                isLast={true}
+              />
+            )}
         </div>
 
         {/* 保存按钮 */}

@@ -2685,7 +2685,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       // 复制操作应该被视为新笔记，即使它有 id
       const isNewNote = isBrewingNoteCopy || !note.id;
 
-      // 构建保存数据，显式移除变动记录字段（设为 undefined 触发 updateNote 删除逻辑）
+      // 构建保存数据
       const noteToSave = {
         ...note,
         id: isNewNote ? Date.now().toString() : note.id,
@@ -2699,10 +2699,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           grindSize: '',
           temp: '',
         },
-        // 显式移除变动记录字段，确保快捷扣除/容量调整记录转为普通笔记
-        source: undefined,
-        quickDecrementAmount: undefined,
-        changeRecord: undefined,
       } as BrewingNote;
 
       if (isNewNote) {
