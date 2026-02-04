@@ -427,7 +427,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
             {/* 评分维度入口 - 仿微信朋友圈样式 */}
             {showRatingDimensionsEntry && hasTasteRatings && (
-              <div className="mt-2 -mr-6 border-t border-neutral-200/50 pt-2 pr-6 dark:border-neutral-800/50">
+              <div
+                className="mt-2 -mr-6 border-t border-neutral-200/50 pt-2 pr-6 dark:border-neutral-800/50"
+                data-export-hidden="true"
+              >
                 <div
                   className="dark:text-neutral-00 flex cursor-pointer items-center text-xs text-neutral-500 transition-colors"
                   onClick={e => {

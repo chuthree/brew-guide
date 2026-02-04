@@ -125,6 +125,12 @@ export async function exportSelectedNotes({
         (actionMenu as HTMLElement).style.display = 'none';
       }
 
+      // 移除仅在导出时隐藏的元素
+      const exportHiddenElements = clone.querySelectorAll(
+        '[data-export-hidden="true"]'
+      );
+      exportHiddenElements.forEach(element => element.remove());
+
       // 处理 Next.js Image 组件 - 转换为原生 img 元素以确保在 html-to-image 中正确渲染
       // 核心思路：让图片 100% 填充，由父容器控制尺寸，而不是让图片自己决定尺寸
       const cloneImages = clone.querySelectorAll('img[src], img[srcSet]');
