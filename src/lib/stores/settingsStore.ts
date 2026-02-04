@@ -159,7 +159,6 @@ export const defaultSettings: AppSettings = {
   flavorRatingHalfStep: false,
   showRatingDimensionsEntry: false,
   showUnitPriceInNote: false,
-  artisticSharingEnabled: false,
   showCapacityAdjustmentRecords: true,
 
   // 生豆库设置

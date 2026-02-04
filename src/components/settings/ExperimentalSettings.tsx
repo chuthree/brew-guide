@@ -94,19 +94,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
           />
         </SettingRow>
       </SettingSection>
-      <SettingSection
-        title="笔记"
-        footer="分享单个笔记时，将笔记转换为简洁的图片与文案，优化视觉效果以适配社交平台分享。"
-      >
-        <SettingRow label="图文分享" isLast>
-          <SettingToggle
-            checked={settings.artisticSharingEnabled ?? false}
-            onChange={checked =>
-              handleChange('artisticSharingEnabled', checked)
-            }
-          />
-        </SettingRow>
-      </SettingSection>
     </SettingPage>
   );
 };

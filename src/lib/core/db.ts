@@ -243,7 +243,6 @@ export interface AppSettings {
   flavorRatingHalfStep: boolean;
   showRatingDimensionsEntry: boolean;
   showUnitPriceInNote: boolean;
-  artisticSharingEnabled: boolean;
   showCapacityAdjustmentRecords: boolean;
 
   // 生豆库设置
