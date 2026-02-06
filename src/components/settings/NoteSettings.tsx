@@ -104,7 +104,10 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
       </SettingSection>
 
       <SettingSection title="表单">
-        <SettingRow label="评分" isLast>
+        <SettingRow
+          label="评分"
+          isLast={!(settings.showOverallRatingInForm ?? true)}
+        >
           <SettingToggle
             checked={settings.showOverallRatingInForm ?? true}
             onChange={checked =>
@@ -112,6 +115,16 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
             }
           />
         </SettingRow>
+        {(settings.showOverallRatingInForm ?? true) && (
+          <SettingRow label="使用滑块评分" isSubSetting isLast>
+            <SettingToggle
+              checked={settings.overallRatingUseSlider ?? false}
+              onChange={checked =>
+                handleChange('overallRatingUseSlider', checked)
+              }
+            />
+          </SettingRow>
+        )}
       </SettingSection>
 
       {/* 评分开启时，显示风味评分相关设置 */}

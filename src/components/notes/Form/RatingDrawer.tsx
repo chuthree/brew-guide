@@ -1,9 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import type { FlavorDimension } from '@/lib/core/db';
+
+// 滑块样式常量
+const SLIDER_STYLES = `relative h-px w-full appearance-none bg-neutral-300 dark:bg-neutral-600 cursor-pointer touch-none
+[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
+[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-solid
+[&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-neutral-50
+[&::-webkit-slider-thumb]:shadow-none [&::-webkit-slider-thumb]:outline-none
+dark:[&::-webkit-slider-thumb]:border-neutral-600 dark:[&::-webkit-slider-thumb]:bg-neutral-900
+[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none
+[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-solid
+[&::-moz-range-thumb]:border-neutral-300 [&::-moz-range-thumb]:bg-neutral-50
+[&::-moz-range-thumb]:shadow-none [&::-moz-range-thumb]:outline-none
+dark:[&::-moz-range-thumb]:border-neutral-600 dark:[&::-moz-range-thumb]:bg-neutral-900`;
 
 // 星星图标组件 - 移到组件外部避免重复创建
 const StarIcon = React.memo(
@@ -60,6 +73,8 @@ interface RatingDrawerProps {
   flavorFollowOverall?: boolean;
   /** 是否是新建笔记模式 */
   isAdding?: boolean;
+  /** 总体评分是否使用滑块 */
+  overallUseSlider?: boolean;
 }
 
 /**
@@ -80,6 +95,7 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
   showFlavorRating = true,
   flavorFollowOverall = false,
   isAdding = false,
+  overallUseSlider = false,
 }) => {
   // 内部临时状态
   const [tempRating, setTempRating] = useState(rating);
@@ -87,6 +103,9 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
   const [showDetails, setShowDetails] = useState(false);
   // 标记用户是否手动修改过风味评分
   const [userModifiedFlavor, setUserModifiedFlavor] = useState(false);
+  const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(
+    null
+  );
 
   // 同步外部状态到内部
   useEffect(() => {
@@ -160,6 +179,60 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
     }));
   }, []);
 
+  const step = halfStep ? 0.5 : 1;
+
+  const overallSliderHandlers = useMemo(
+    () => ({
+      onTouchStart: (e: React.TouchEvent) => {
+        e.stopPropagation();
+        setCurrentSliderValue(tempRating);
+      },
+      onTouchMove: (e: React.TouchEvent) => {
+        if (currentSliderValue === null) return;
+        const touch = e.touches[0];
+        const target = e.currentTarget as HTMLInputElement;
+        const rect = target.getBoundingClientRect();
+        const percentage = Math.max(
+          0,
+          Math.min(1, (touch.clientX - rect.left) / rect.width)
+        );
+        const newValue = Math.round((percentage * 5) / step) * step;
+        if (newValue !== currentSliderValue) {
+          setTempRating(newValue);
+          setCurrentSliderValue(newValue);
+        }
+      },
+      onTouchEnd: () => setCurrentSliderValue(null),
+    }),
+    [currentSliderValue, step, tempRating]
+  );
+
+  const createSliderHandlers = useCallback(
+    (key: string, currentValue: number) => ({
+      onTouchStart: (e: React.TouchEvent) => {
+        e.stopPropagation();
+        setCurrentSliderValue(currentValue);
+      },
+      onTouchMove: (e: React.TouchEvent) => {
+        if (currentSliderValue === null) return;
+        const touch = e.touches[0];
+        const target = e.currentTarget as HTMLInputElement;
+        const rect = target.getBoundingClientRect();
+        const percentage = Math.max(
+          0,
+          Math.min(1, (touch.clientX - rect.left) / rect.width)
+        );
+        const newValue = Math.round((percentage * 5) / step) * step;
+        if (newValue !== currentSliderValue) {
+          updateTasteRating(key, newValue);
+          setCurrentSliderValue(newValue);
+        }
+      },
+      onTouchEnd: () => setCurrentSliderValue(null),
+    }),
+    [currentSliderValue, step, updateTasteRating]
+  );
+
   const handleConfirm = useCallback(() => {
     onRatingChange(tempRating);
     onTasteChange(tempTaste);
@@ -173,59 +246,90 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
           {/* 总体评分 */}
           {showOverallRating && (
             <div className="flex flex-col gap-3">
-              <p className="text-base font-medium text-neutral-500 dark:text-neutral-400">
-                为这杯
-                <span className="mx-1 text-neutral-800 dark:text-neutral-200">
-                  {beanName || '这杯咖啡'}
-                </span>
-                评分
-              </p>
-              <div className="flex justify-between" data-vaul-no-drag>
-                {[1, 2, 3, 4, 5].map(star => {
-                  const isHalf = halfStep && tempRating === star - 0.5;
-                  const isFull = star <= tempRating;
-                  return (
-                    <motion.button
-                      key={star}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => {
-                        if (halfStep) {
-                          // 半星模式：1 → 0.5 → 0，其他：整星 → 半星 → 整星
-                          if (star === 1 && tempRating === 0.5) {
-                            setTempRating(0);
-                          } else if (tempRating === star) {
-                            setTempRating(star - 0.5);
+              {!overallUseSlider && (
+                <p className="text-base font-medium text-neutral-500 dark:text-neutral-400">
+                  为这杯
+                  <span className="mx-1 text-neutral-800 dark:text-neutral-200">
+                    {beanName || '这杯咖啡'}
+                  </span>
+                  评分
+                </p>
+              )}
+              {overallUseSlider ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                      总体评分
+                    </div>
+                    <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                      [ {halfStep ? tempRating.toFixed(1) : tempRating} ]
+                    </div>
+                  </div>
+                  <div className="relative py-3">
+                    <input
+                      type="range"
+                      min="0"
+                      max="5"
+                      step={step}
+                      value={tempRating}
+                      onChange={e =>
+                        setTempRating(parseFloat(e.target.value))
+                      }
+                      onTouchStart={overallSliderHandlers.onTouchStart}
+                      onTouchMove={overallSliderHandlers.onTouchMove}
+                      onTouchEnd={overallSliderHandlers.onTouchEnd}
+                      className={SLIDER_STYLES}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between" data-vaul-no-drag>
+                  {[1, 2, 3, 4, 5].map(star => {
+                    const isHalf = halfStep && tempRating === star - 0.5;
+                    const isFull = star <= tempRating;
+                    return (
+                      <motion.button
+                        key={star}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          if (halfStep) {
+                            // 半星模式：1 → 0.5 → 0，其他：整星 → 半星 → 整星
+                            if (star === 1 && tempRating === 0.5) {
+                              setTempRating(0);
+                            } else if (tempRating === star) {
+                              setTempRating(star - 0.5);
+                            } else {
+                              setTempRating(star);
+                            }
                           } else {
-                            setTempRating(star);
+                            // 整星模式：再次点击1星时清零
+                            if (star === 1 && tempRating === 1) {
+                              setTempRating(0);
+                            } else {
+                              setTempRating(star);
+                            }
                           }
-                        } else {
-                          // 整星模式：再次点击1星时清零
-                          if (star === 1 && tempRating === 1) {
-                            setTempRating(0);
-                          } else {
-                            setTempRating(star);
+                        }}
+                        className="cursor-pointer p-2"
+                        type="button"
+                      >
+                        <StarIcon
+                          halfClass={
+                            isHalf
+                              ? 'text-neutral-200 dark:text-neutral-700'
+                              : undefined
                           }
-                        }
-                      }}
-                      className="cursor-pointer p-2"
-                      type="button"
-                    >
-                      <StarIcon
-                        halfClass={
-                          isHalf
-                            ? 'text-neutral-200 dark:text-neutral-700'
-                            : undefined
-                        }
-                        className={`h-8 w-8 ${
-                          isFull || isHalf
-                            ? 'text-amber-400'
-                            : 'text-neutral-200 dark:text-neutral-700'
-                        }`}
-                      />
-                    </motion.button>
-                  );
-                })}
-              </div>
+                          className={`h-8 w-8 ${
+                            isFull || isHalf
+                              ? 'text-amber-400'
+                              : 'text-neutral-200 dark:text-neutral-700'
+                          }`}
+                        />
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -237,72 +341,115 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
               transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
               className="flex flex-col gap-3"
             >
-              {/* 改用 auto auto 让内容紧凑靠左对其，同时保持列对齐 */}
-              <div className="grid grid-cols-[auto_auto] items-center justify-start gap-x-3 gap-y-3">
-                {displayDimensions.map(dimension => {
-                  const value = tempTaste[dimension.id] || 0;
+              {overallUseSlider ? (
+                <div className="mb-3 grid grid-cols-2 gap-6">
+                  {displayDimensions.map(dimension => {
+                    const value = tempTaste[dimension.id] || 0;
+                    const handlers = createSliderHandlers(dimension.id, value);
 
-                  return (
-                    <React.Fragment key={dimension.id}>
-                      <span
-                        className="max-w-[10rem] truncate text-left text-sm font-medium text-neutral-500 dark:text-neutral-400"
-                        title={dimension.label}
-                      >
-                        {dimension.label}
-                        {dimension.order === 999 && (
-                          <span className="ml-1">(已删除)</span>
-                        )}
-                      </span>
-                      <div className="flex gap-0.5" data-vaul-no-drag>
-                        {[1, 2, 3, 4, 5].map(star => {
-                          const isHalf = halfStep && value === star - 0.5;
-                          const isFull = star <= value;
-                          return (
-                            <motion.button
-                              key={star}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => {
-                                if (halfStep) {
-                                  // 半星模式：1 → 0.5 → 0，其他：整星 → 半星 → 整星
-                                  if (star === 1 && value === 0.5) {
-                                    updateTasteRating(dimension.id, 0);
-                                  } else if (value === star) {
-                                    updateTasteRating(dimension.id, star - 0.5);
-                                  } else {
-                                    updateTasteRating(dimension.id, star);
-                                  }
-                                } else {
-                                  // 整星模式：再次点击1星时清零
-                                  if (star === 1 && value === 1) {
-                                    updateTasteRating(dimension.id, 0);
-                                  } else {
-                                    updateTasteRating(dimension.id, star);
-                                  }
-                                }
-                              }}
-                              className="cursor-pointer p-1"
-                              type="button"
-                            >
-                              <StarIcon
-                                halfClass={
-                                  isHalf
-                                    ? 'text-neutral-200 dark:text-neutral-700'
-                                    : undefined
-                                }
-                                className={`h-6 w-6 ${
-                                  isFull || isHalf
-                                    ? 'text-amber-400'
-                                    : 'text-neutral-200 dark:text-neutral-700'
-                                }`}
-                              />
-                            </motion.button>
-                          );
-                        })}
+                    return (
+                      <div key={dimension.id} className="relative space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                            {dimension.label}
+                            {dimension.order === 999 && (
+                              <span className="ml-1 text-[10px] text-neutral-400 dark:text-neutral-500">
+                                (已删除)
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs font-medium tracking-widest text-neutral-500 dark:text-neutral-400">
+                            [ {halfStep ? value.toFixed(1) : value} ]
+                          </div>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="5"
+                          step={step}
+                          value={value}
+                          onChange={e =>
+                            updateTasteRating(
+                              dimension.id,
+                              parseFloat(e.target.value)
+                            )
+                          }
+                          onTouchStart={handlers.onTouchStart}
+                          onTouchMove={handlers.onTouchMove}
+                          onTouchEnd={handlers.onTouchEnd}
+                          className={SLIDER_STYLES}
+                        />
                       </div>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-[auto_auto] items-center justify-start gap-x-3 gap-y-3">
+                  {displayDimensions.map(dimension => {
+                    const value = tempTaste[dimension.id] || 0;
+
+                    return (
+                      <React.Fragment key={dimension.id}>
+                        <span
+                          className="max-w-[10rem] truncate text-left text-sm font-medium text-neutral-500 dark:text-neutral-400"
+                          title={dimension.label}
+                        >
+                          {dimension.label}
+                          {dimension.order === 999 && (
+                            <span className="ml-1">(已删除)</span>
+                          )}
+                        </span>
+                        <div className="flex gap-0.5" data-vaul-no-drag>
+                          {[1, 2, 3, 4, 5].map(star => {
+                            const isHalf = halfStep && value === star - 0.5;
+                            const isFull = star <= value;
+                            return (
+                              <motion.button
+                                key={star}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => {
+                                  if (halfStep) {
+                                    // 半星模式：1 → 0.5 → 0，其他：整星 → 半星 → 整星
+                                    if (star === 1 && value === 0.5) {
+                                      updateTasteRating(dimension.id, 0);
+                                    } else if (value === star) {
+                                      updateTasteRating(dimension.id, star - 0.5);
+                                    } else {
+                                      updateTasteRating(dimension.id, star);
+                                    }
+                                  } else {
+                                    // 整星模式：再次点击1星时清零
+                                    if (star === 1 && value === 1) {
+                                      updateTasteRating(dimension.id, 0);
+                                    } else {
+                                      updateTasteRating(dimension.id, star);
+                                    }
+                                  }
+                                }}
+                                className="cursor-pointer p-1"
+                                type="button"
+                              >
+                                <StarIcon
+                                  halfClass={
+                                    isHalf
+                                      ? 'text-neutral-200 dark:text-neutral-700'
+                                      : undefined
+                                  }
+                                  className={`h-6 w-6 ${
+                                    isFull || isHalf
+                                      ? 'text-amber-400'
+                                      : 'text-neutral-200 dark:text-neutral-700'
+                                  }`}
+                                />
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              )}
             </motion.div>
           )}
         </div>

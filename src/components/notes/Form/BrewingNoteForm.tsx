@@ -1880,6 +1880,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         showFlavorRating={settings?.showFlavorRatingInForm ?? true}
         flavorFollowOverall={settings?.flavorRatingFollowOverall ?? false}
         isAdding={isAdding}
+        overallUseSlider={settings?.overallRatingUseSlider ?? false}
       />
 
       {/* 隐藏的图片选择 input */}
