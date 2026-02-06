@@ -160,6 +160,7 @@ export const defaultSettings: AppSettings = {
   showRatingDimensionsEntry: false,
   showUnitPriceInNote: false,
   showCapacityAdjustmentRecords: true,
+  useClassicNotesListStyle: false,
 
   // 生豆库设置
   enableGreenBeanInventory: false,
@@ -318,6 +319,14 @@ export const useSettingsStore = create<SettingsStore>()(
         if (stored && stored.data) {
           // 合并默认设置和存储的设置，确保新字段有默认值
           const mergedSettings = { ...defaultSettings, ...stored.data };
+
+          // 兼容旧字段：notesListStyle -> useClassicNotesListStyle
+          if (
+            (stored.data as any).notesListStyle === 'standard' &&
+            mergedSettings.useClassicNotesListStyle === undefined
+          ) {
+            mergedSettings.useClassicNotesListStyle = true;
+          }
           set({
             settings: mergedSettings,
             isLoading: false,

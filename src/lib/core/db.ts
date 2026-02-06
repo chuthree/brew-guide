@@ -244,6 +244,7 @@ export interface AppSettings {
   showRatingDimensionsEntry: boolean;
   showUnitPriceInNote: boolean;
   showCapacityAdjustmentRecords: boolean;
+  useClassicNotesListStyle?: boolean;
 
   // 生豆库设置
   enableGreenBeanInventory?: boolean;

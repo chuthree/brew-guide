@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { BrewingNote } from '@/lib/core/config';
 import NoteItem from './NoteItem';
+import NoteItemStandard from './NoteItemStandard';
 import ChangeRecordNoteItem from './ChangeRecordNoteItem';
 import GalleryView from './GalleryView';
 import DateImageFlowView from './DateImageFlowView';
@@ -183,6 +184,11 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   }
 
   // 列表模式
+  const useClassicNotesListStyle = settings?.useClassicNotesListStyle ?? false;
+  const NoteItemComponent = useClassicNotesListStyle
+    ? NoteItemStandard
+    : NoteItem;
+
   return (
     <div className="pb-20">
       <Virtuoso
@@ -242,7 +248,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
           ),
         }}
         itemContent={(index, note) => (
-          <NoteItem
+          <NoteItemComponent
             key={note.id}
             note={note}
             equipmentNames={equipmentNames}

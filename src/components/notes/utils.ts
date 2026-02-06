@@ -96,6 +96,12 @@ export const formatDate = (timestamp: number): string => {
   }
 };
 
+// 绝对日期格式（旧版列表使用）
+export const formatDateAbsolute = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 // 辅助函数：判断是否是今天
 const isToday = (date: Date): boolean => {
   const today = new Date();
