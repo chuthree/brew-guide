@@ -238,10 +238,15 @@ export async function exportSelectedNotes({
     footer.style.display = 'flex';
     footer.style.alignItems = 'center';
     footer.style.justifyContent = 'center';
-    footer.style.padding = '16px 24px 24px 24px';
-    footer.style.fontSize = '11px';
+    footer.style.textAlign = 'center';
+    footer.style.padding = '0 24px';
+    footer.style.marginTop = '0px';
+    footer.style.marginBottom = '8px';
+    footer.style.fontSize = '10px';
     footer.style.fontWeight = '400';
-    footer.style.letterSpacing = '0.025em';
+    footer.style.letterSpacing = '0.04em';
+    footer.style.lineHeight = '1.2';
+    footer.style.opacity = '0.7';
     footer.style.color = isDarkMode ? '#737373' : '#a3a3a3';
 
     // 签名：(@用户名 · Brew Guide App)
