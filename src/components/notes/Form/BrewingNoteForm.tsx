@@ -644,6 +644,26 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           }));
           break;
         }
+        case 'water': {
+          const waterValue = parseFloat(value);
+          if (isNaN(waterValue) || waterValue <= 0) return;
+
+          setMethodParams(prev => ({
+            ...prev,
+            water: `${waterValue}g`,
+          }));
+          setNumericValues(prev => ({
+            ...prev,
+            water: String(waterValue),
+          }));
+          break;
+        }
+        case 'time': {
+          const timeValue = parseFloat(value);
+          if (isNaN(timeValue) || timeValue < 0) return;
+          setTotalTimeStr(String(timeValue));
+          break;
+        }
       }
     };
 

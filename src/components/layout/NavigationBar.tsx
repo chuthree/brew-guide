@@ -983,6 +983,22 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
           }));
           break;
         }
+        case 'water': {
+          const waterValue = value.includes('g') ? value : `${value}g`;
+          setDisplayOverlay(prev => ({
+            ...prev,
+            water: waterValue,
+          }));
+          break;
+        }
+        case 'time': {
+          const timeValue = value.replace(/[sS秒]/g, '');
+          setDisplayOverlay(prev => ({
+            ...prev,
+            time: timeValue,
+          }));
+          break;
+        }
       }
     };
 
@@ -1033,6 +1049,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   const shouldShowParams = parameterInfo.method;
 
   const _handleTimeChange = (value: string) => {
+    if (activeBrewingStep === 'notes') {
+      handleParamChange('time', value);
+      return;
+    }
+
     if (handleExtractionTimeChange && selectedMethod) {
       const time = parseInt(value, 10) || 0;
       handleExtractionTimeChange(time);
