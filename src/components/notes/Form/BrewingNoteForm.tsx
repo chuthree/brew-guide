@@ -781,9 +781,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const isCapacityAdjustmentEdit =
     !isAdding && initialData.source === 'capacity-adjustment';
 
-  // 判断是否应该隐藏图片功能（变动记录和快捷扣除记录不显示图片）
-  const shouldHideImage = isCapacityAdjustmentEdit || isQuickDecrementEdit;
-
   // 跟踪当前是否处于快捷记录模式（用于切换按钮）
   // 优先使用外部传入的状态，否则使用内部状态
   const [internalIsQuickMode, setInternalIsQuickMode] =
@@ -792,6 +789,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     externalIsQuickMode !== undefined
       ? externalIsQuickMode
       : internalIsQuickMode;
+
+  // 判断是否应该隐藏图片功能（仅在变动记录/快捷扣除记录的快捷模式下隐藏）
+  const shouldHideImage =
+    (isCapacityAdjustmentEdit || isQuickDecrementEdit) && isQuickMode;
 
   // 切换模式的处理函数
   const handleToggleQuickMode = useCallback(() => {
