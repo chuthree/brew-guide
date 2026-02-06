@@ -274,9 +274,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
       // 如果是生豆，使用烘焙功能
       if (beanState === 'green') {
-        const { RoastingManager } = await import(
-          '@/lib/managers/roastingManager'
-        );
+        const { RoastingManager } =
+          await import('@/lib/managers/roastingManager');
         const result = await RoastingManager.simpleRoast(
           beanId,
           decrementAmount
@@ -1714,9 +1713,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     setIsSavingShareImage(true);
 
     try {
-      const { exportSelectedBeans } = await import(
-        '@/components/coffee-bean/Share/BeansExporter'
-      );
+      const { exportSelectedBeans } =
+        await import('@/components/coffee-bean/Share/BeansExporter');
       await exportSelectedBeans({
         selectedBeans,
         beansData: beans,

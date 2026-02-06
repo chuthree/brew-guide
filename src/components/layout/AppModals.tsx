@@ -596,9 +596,8 @@ const AppModals: React.FC<AppModalsProps> = ({
           editingBean
             ? async () => {
                 try {
-                  const { createRepurchaseBean } = await import(
-                    '@/lib/utils/beanRepurchaseUtils'
-                  );
+                  const { createRepurchaseBean } =
+                    await import('@/lib/utils/beanRepurchaseUtils');
                   const newBeanData = await createRepurchaseBean(editingBean);
                   setShowBeanForm(false);
                   setEditingBean(null);
@@ -629,9 +628,8 @@ const AppModals: React.FC<AppModalsProps> = ({
           initialBeanState={beanDetailAddBeanState}
           onSaveNew={async newBean => {
             try {
-              const { getCoffeeBeanStore } = await import(
-                '@/lib/stores/coffeeBeanStore'
-              );
+              const { getCoffeeBeanStore } =
+                await import('@/lib/stores/coffeeBeanStore');
               await getCoffeeBeanStore().addBean(newBean);
               handleBeanListChange();
               setBeanDetailAddMode(false);
@@ -646,9 +644,8 @@ const AppModals: React.FC<AppModalsProps> = ({
           onDelete={async bean => {
             setBeanDetailOpen(false);
             try {
-              const { getCoffeeBeanStore } = await import(
-                '@/lib/stores/coffeeBeanStore'
-              );
+              const { getCoffeeBeanStore } =
+                await import('@/lib/stores/coffeeBeanStore');
               await getCoffeeBeanStore().deleteBean(bean.id);
               handleBeanListChange();
             } catch (error) {
@@ -657,15 +654,12 @@ const AppModals: React.FC<AppModalsProps> = ({
           }}
           onShare={async bean => {
             try {
-              const { beanToReadableText } = await import(
-                '@/lib/utils/jsonUtils'
-              );
-              const { copyToClipboard } = await import(
-                '@/lib/utils/exportUtils'
-              );
-              const { showToast } = await import(
-                '@/components/common/feedback/LightToast'
-              );
+              const { beanToReadableText } =
+                await import('@/lib/utils/jsonUtils');
+              const { copyToClipboard } =
+                await import('@/lib/utils/exportUtils');
+              const { showToast } =
+                await import('@/components/common/feedback/LightToast');
               const hapticsUtils = (await import('@/lib/ui/haptics')).default;
 
               const text = beanToReadableText(bean);
@@ -694,9 +688,8 @@ const AppModals: React.FC<AppModalsProps> = ({
           onRepurchase={async bean => {
             setBeanDetailOpen(false);
             try {
-              const { createRepurchaseBean } = await import(
-                '@/lib/utils/beanRepurchaseUtils'
-              );
+              const { createRepurchaseBean } =
+                await import('@/lib/utils/beanRepurchaseUtils');
               const newBeanData = await createRepurchaseBean(bean);
               setEditingBean(newBeanData as ExtendedCoffeeBean);
               setShowBeanForm(true);
@@ -713,12 +706,10 @@ const AppModals: React.FC<AppModalsProps> = ({
             settings.enableGreenBeanInventory && settings.enableConvertToGreen
               ? async bean => {
                   try {
-                    const { RoastingManager } = await import(
-                      '@/lib/managers/roastingManager'
-                    );
-                    const { showToast } = await import(
-                      '@/components/common/feedback/LightToast'
-                    );
+                    const { RoastingManager } =
+                      await import('@/lib/managers/roastingManager');
+                    const { showToast } =
+                      await import('@/components/common/feedback/LightToast');
 
                     const preview =
                       await RoastingManager.previewConvertRoastedToGreen(
@@ -763,9 +754,8 @@ const AppModals: React.FC<AppModalsProps> = ({
                     setShowConvertToGreenDrawer(true);
                   } catch (error) {
                     console.error('预览转换失败:', error);
-                    const { showToast } = await import(
-                      '@/components/common/feedback/LightToast'
-                    );
+                    const { showToast } =
+                      await import('@/components/common/feedback/LightToast');
                     showToast({
                       type: 'error',
                       title: '转换失败',
@@ -838,9 +828,8 @@ const AppModals: React.FC<AppModalsProps> = ({
 
               try {
                 if (noteToDelete.source === 'roasting') {
-                  const { RoastingManager } = await import(
-                    '@/lib/managers/roastingManager'
-                  );
+                  const { RoastingManager } =
+                    await import('@/lib/managers/roastingManager');
                   const result =
                     await RoastingManager.deleteRoastingRecord(noteId);
                   if (!result.success) {
@@ -859,9 +848,8 @@ const AppModals: React.FC<AppModalsProps> = ({
                       !isNaN(changeAmount) &&
                       changeAmount !== 0
                     ) {
-                      const { getCoffeeBeanStore } = await import(
-                        '@/lib/stores/coffeeBeanStore'
-                      );
+                      const { getCoffeeBeanStore } =
+                        await import('@/lib/stores/coffeeBeanStore');
                       const store = getCoffeeBeanStore();
                       const currentBean = store.getBeanById(beanId);
                       if (currentBean) {
@@ -910,9 +898,8 @@ const AppModals: React.FC<AppModalsProps> = ({
                   const beanId = getNoteAssociatedBeanId(noteToDelete);
 
                   if (beanId && coffeeAmount > 0) {
-                    const { increaseBeanRemaining } = await import(
-                      '@/lib/stores/coffeeBeanStore'
-                    );
+                    const { increaseBeanRemaining } =
+                      await import('@/lib/stores/coffeeBeanStore');
                     await increaseBeanRemaining(beanId, coffeeAmount);
                   }
                 }
@@ -920,9 +907,8 @@ const AppModals: React.FC<AppModalsProps> = ({
                 console.error('恢复咖啡豆容量失败:', error);
               }
 
-              const { useBrewingNoteStore } = await import(
-                '@/lib/stores/brewingNoteStore'
-              );
+              const { useBrewingNoteStore } =
+                await import('@/lib/stores/brewingNoteStore');
               const deleteNote = useBrewingNoteStore.getState().deleteNote;
               await deleteNote(noteId);
             } catch (error) {

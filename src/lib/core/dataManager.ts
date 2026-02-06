@@ -373,9 +373,8 @@ export const DataManager = {
               settingsObj.grinders.length > 0
             ) {
               try {
-                const { getGrinderStore } = await import(
-                  '@/lib/stores/grinderStore'
-                );
+                const { getGrinderStore } =
+                  await import('@/lib/stores/grinderStore');
                 // 简单的验证，确保是对象且有 id 和 name
                 const validGrinders = settingsObj.grinders.filter(
                   (g: any) => g && typeof g === 'object' && g.id && g.name
@@ -490,9 +489,8 @@ export const DataManager = {
 
       // 刷新咖啡豆缓存，确保导入的数据能立即生效
       try {
-        const { getCoffeeBeanStore } = await import(
-          '@/lib/stores/coffeeBeanStore'
-        );
+        const { getCoffeeBeanStore } =
+          await import('@/lib/stores/coffeeBeanStore');
         await getCoffeeBeanStore().refreshBeans();
       } catch (error) {
         console.error('刷新咖啡豆缓存失败:', error);
@@ -500,9 +498,8 @@ export const DataManager = {
 
       // 执行烘焙商字段迁移（按需迁移导入的数据）
       try {
-        const { migrateRoasterField } = await import(
-          '@/lib/utils/roasterMigration'
-        );
+        const { migrateRoasterField } =
+          await import('@/lib/utils/roasterMigration');
         await migrateRoasterField();
       } catch (error) {
         console.error('烘焙商字段迁移失败:', error);
@@ -519,9 +516,8 @@ export const DataManager = {
       // 触发器具排序更新事件
       if (importData.data.equipmentOrder) {
         try {
-          const { equipmentEventBus } = await import(
-            '@/lib/equipment/equipmentEventBus'
-          );
+          const { equipmentEventBus } =
+            await import('@/lib/equipment/equipmentEventBus');
           equipmentEventBus.notify();
         } catch (error) {
           console.error('触发器具排序更新事件失败:', error);
@@ -649,45 +645,38 @@ export const DataManager = {
       // 重新初始化 Store 状态
       try {
         // 写入默认设置到 IndexedDB 并重新加载
-        const { getSettingsStore, defaultSettings } = await import(
-          '@/lib/stores/settingsStore'
-        );
+        const { getSettingsStore, defaultSettings } =
+          await import('@/lib/stores/settingsStore');
         await db.appSettings.put({ id: 'main', data: defaultSettings });
         await getSettingsStore().loadSettings();
 
         // 重置数据 Store
-        const { getCoffeeBeanStore } = await import(
-          '@/lib/stores/coffeeBeanStore'
-        );
+        const { getCoffeeBeanStore } =
+          await import('@/lib/stores/coffeeBeanStore');
         getCoffeeBeanStore().setBeans([]);
 
-        const { getBrewingNoteStore } = await import(
-          '@/lib/stores/brewingNoteStore'
-        );
+        const { getBrewingNoteStore } =
+          await import('@/lib/stores/brewingNoteStore');
         getBrewingNoteStore().setNotes([]);
 
-        const { getCustomEquipmentStore } = await import(
-          '@/lib/stores/customEquipmentStore'
-        );
+        const { getCustomEquipmentStore } =
+          await import('@/lib/stores/customEquipmentStore');
         getCustomEquipmentStore().setEquipments([]);
 
-        const { getCustomMethodStore } = await import(
-          '@/lib/stores/customMethodStore'
-        );
+        const { getCustomMethodStore } =
+          await import('@/lib/stores/customMethodStore');
         await getCustomMethodStore().loadMethods();
 
         const { getGrinderStore } = await import('@/lib/stores/grinderStore');
         getGrinderStore().setGrinders([]);
 
-        const { getYearlyReportStore } = await import(
-          '@/lib/stores/yearlyReportStore'
-        );
+        const { getYearlyReportStore } =
+          await import('@/lib/stores/yearlyReportStore');
         getYearlyReportStore().setReports([]);
 
         // 重置同步状态
-        const { useSyncStatusStore } = await import(
-          '@/lib/stores/syncStatusStore'
-        );
+        const { useSyncStatusStore } =
+          await import('@/lib/stores/syncStatusStore');
         useSyncStatusStore.getState().reset();
         // 显式重置实时同步状态
         useSyncStatusStore.setState({
@@ -698,9 +687,8 @@ export const DataManager = {
         });
 
         // 断开实时同步连接
-        const { getRealtimeSyncService } = await import(
-          '@/lib/supabase/realtime'
-        );
+        const { getRealtimeSyncService } =
+          await import('@/lib/supabase/realtime');
         await getRealtimeSyncService().disconnect();
       } catch (error) {
         console.error('重置 Store 状态失败:', error);
@@ -710,9 +698,8 @@ export const DataManager = {
       if (isBrowser) {
         // 触发器具排序更新事件
         try {
-          const { equipmentEventBus } = await import(
-            '@/lib/equipment/equipmentEventBus'
-          );
+          const { equipmentEventBus } =
+            await import('@/lib/equipment/equipmentEventBus');
           equipmentEventBus.notify();
         } catch (error) {
           console.error('触发器具排序更新事件失败:', error);

@@ -40,7 +40,13 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
         {brandName && (
-          <div style={{ ...textStyle, letterSpacing: '0.05em', textAlign: 'center' }}>
+          <div
+            style={{
+              ...textStyle,
+              letterSpacing: '0.05em',
+              textAlign: 'center',
+            }}
+          >
             [ {brandName} ]
           </div>
         )}

@@ -23,30 +23,26 @@ export async function notifyStoreDelete(
 ): Promise<void> {
   try {
     if (table === SYNC_TABLES.COFFEE_BEANS) {
-      const { useCoffeeBeanStore } = await import(
-        '@/lib/stores/coffeeBeanStore'
-      );
+      const { useCoffeeBeanStore } =
+        await import('@/lib/stores/coffeeBeanStore');
       useCoffeeBeanStore.setState(s => ({
         beans: s.beans.filter(b => b.id !== recordId),
       }));
     } else if (table === SYNC_TABLES.BREWING_NOTES) {
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
+      const { useBrewingNoteStore } =
+        await import('@/lib/stores/brewingNoteStore');
       useBrewingNoteStore.setState(s => ({
         notes: s.notes.filter(n => n.id !== recordId),
       }));
     } else if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
-      const { useCustomEquipmentStore } = await import(
-        '@/lib/stores/customEquipmentStore'
-      );
+      const { useCustomEquipmentStore } =
+        await import('@/lib/stores/customEquipmentStore');
       useCustomEquipmentStore.setState(s => ({
         equipments: s.equipments.filter(e => e.id !== recordId),
       }));
     } else if (table === SYNC_TABLES.CUSTOM_METHODS) {
-      const { useCustomMethodStore } = await import(
-        '@/lib/stores/customMethodStore'
-      );
+      const { useCustomMethodStore } =
+        await import('@/lib/stores/customMethodStore');
       useCustomMethodStore.setState(s => {
         const updated = { ...s.methodsByEquipment };
         delete updated[recordId];
@@ -68,9 +64,8 @@ export async function notifyStoreUpsert(
 ): Promise<void> {
   try {
     if (table === SYNC_TABLES.COFFEE_BEANS) {
-      const { useCoffeeBeanStore } = await import(
-        '@/lib/stores/coffeeBeanStore'
-      );
+      const { useCoffeeBeanStore } =
+        await import('@/lib/stores/coffeeBeanStore');
       const bean = data as unknown as CoffeeBean;
       useCoffeeBeanStore.setState(s => {
         const exists = s.beans.some(b => b.id === recordId);
@@ -81,9 +76,8 @@ export async function notifyStoreUpsert(
         };
       });
     } else if (table === SYNC_TABLES.BREWING_NOTES) {
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
+      const { useBrewingNoteStore } =
+        await import('@/lib/stores/brewingNoteStore');
       const note = data as unknown as BrewingNote;
       useBrewingNoteStore.setState(s => {
         const exists = s.notes.some(n => n.id === recordId);
@@ -94,9 +88,8 @@ export async function notifyStoreUpsert(
         };
       });
     } else if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
-      const { useCustomEquipmentStore } = await import(
-        '@/lib/stores/customEquipmentStore'
-      );
+      const { useCustomEquipmentStore } =
+        await import('@/lib/stores/customEquipmentStore');
       const equipment = data as unknown as CustomEquipment;
       useCustomEquipmentStore.setState(s => {
         const exists = s.equipments.some(e => e.id === recordId);
@@ -107,9 +100,8 @@ export async function notifyStoreUpsert(
         };
       });
     } else if (table === SYNC_TABLES.CUSTOM_METHODS) {
-      const { useCustomMethodStore } = await import(
-        '@/lib/stores/customMethodStore'
-      );
+      const { useCustomMethodStore } =
+        await import('@/lib/stores/customMethodStore');
       const methodData = data as { equipmentId?: string; methods?: Method[] };
       useCustomMethodStore.setState(s => ({
         methodsByEquipment: {
@@ -130,30 +122,26 @@ export async function refreshAllStores(): Promise<void> {
   try {
     await Promise.all([
       (async () => {
-        const { useCoffeeBeanStore } = await import(
-          '@/lib/stores/coffeeBeanStore'
-        );
+        const { useCoffeeBeanStore } =
+          await import('@/lib/stores/coffeeBeanStore');
         const beans = await db.coffeeBeans.toArray();
         useCoffeeBeanStore.setState({ beans });
       })(),
       (async () => {
-        const { useBrewingNoteStore } = await import(
-          '@/lib/stores/brewingNoteStore'
-        );
+        const { useBrewingNoteStore } =
+          await import('@/lib/stores/brewingNoteStore');
         const notes = await db.brewingNotes.toArray();
         useBrewingNoteStore.setState({ notes });
       })(),
       (async () => {
-        const { useCustomEquipmentStore } = await import(
-          '@/lib/stores/customEquipmentStore'
-        );
+        const { useCustomEquipmentStore } =
+          await import('@/lib/stores/customEquipmentStore');
         const equipments = await db.customEquipments.toArray();
         useCustomEquipmentStore.setState({ equipments });
       })(),
       (async () => {
-        const { useCustomMethodStore } = await import(
-          '@/lib/stores/customMethodStore'
-        );
+        const { useCustomMethodStore } =
+          await import('@/lib/stores/customMethodStore');
         const methodsData = await db.customMethods.toArray();
         const methodsByEquipment: Record<string, Method[]> = {};
         for (const item of methodsData) {

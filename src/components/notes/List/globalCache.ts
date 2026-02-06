@@ -164,9 +164,8 @@ export const initializeGlobalCache = async (): Promise<void> => {
       (async () => {
         const map: Record<string, string> = {};
         const { equipmentList } = await import('@/lib/core/config');
-        const { loadCustomEquipments } = await import(
-          '@/lib/stores/customEquipmentStore'
-        );
+        const { loadCustomEquipments } =
+          await import('@/lib/stores/customEquipmentStore');
         const customEquipments = await loadCustomEquipments();
 
         // 处理标准设备和自定义设备

@@ -259,9 +259,7 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
                       max="5"
                       step={step}
                       value={tempRating}
-                      onChange={e =>
-                        setTempRating(parseFloat(e.target.value))
-                      }
+                      onChange={e => setTempRating(parseFloat(e.target.value))}
                       onTouchStart={overallSliderHandlers.onTouchStart}
                       onTouchMove={overallSliderHandlers.onTouchMove}
                       onTouchEnd={overallSliderHandlers.onTouchEnd}
@@ -395,7 +393,10 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
                                     if (star === 1 && value === 0.5) {
                                       updateTasteRating(dimension.id, 0);
                                     } else if (value === star) {
-                                      updateTasteRating(dimension.id, star - 0.5);
+                                      updateTasteRating(
+                                        dimension.id,
+                                        star - 0.5
+                                      );
                                     } else {
                                       updateTasteRating(dimension.id, star);
                                     }

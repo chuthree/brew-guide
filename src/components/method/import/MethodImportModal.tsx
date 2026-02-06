@@ -347,9 +347,8 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       } else {
         const { smartCompress } = await import('@/lib/utils/imageCompression');
         const compressedFile = await smartCompress(file);
-        const { recognizeMethodImage } = await import(
-          '@/lib/api/methodRecognition'
-        );
+        const { recognizeMethodImage } =
+          await import('@/lib/api/methodRecognition');
         methodData = await recognizeMethodImage(compressedFile);
       }
 
@@ -366,9 +365,18 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
       const file = files[0];
       // 仅支持 JPG、PNG、WebP、HEIC 格式
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+      const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif',
+      ];
       if (!allowedTypes.includes(file.type)) {
-        showToast({ type: 'error', title: '请上传 JPG、PNG 或 WebP 格式的图片' });
+        showToast({
+          type: 'error',
+          title: '请上传 JPG、PNG 或 WebP 格式的图片',
+        });
         return;
       }
       if (file.size > 10 * 1024 * 1024) {

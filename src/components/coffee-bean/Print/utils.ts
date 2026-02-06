@@ -247,9 +247,8 @@ export async function savePreviewAsImage(
     document.body.removeChild(offscreenContainer);
 
     const { Capacitor } = await import('@capacitor/core');
-    const { showToast } = await import(
-      '@/components/common/feedback/LightToast'
-    );
+    const { showToast } =
+      await import('@/components/common/feedback/LightToast');
 
     if (Capacitor.isNativePlatform()) {
       try {

@@ -304,9 +304,8 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
       if (!isMounted.current) return;
 
       // 🔥 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
+      const { useBrewingNoteStore } =
+        await import('@/lib/stores/brewingNoteStore');
       await useBrewingNoteStore.getState().addNote(newNote as any);
     } catch (error) {
       console.error('创建快捷扣除笔记失败:', error);

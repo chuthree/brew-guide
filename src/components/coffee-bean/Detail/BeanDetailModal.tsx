@@ -415,9 +415,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (!bean?.id) return;
 
     try {
-      const { getCoffeeBeanStore } = await import(
-        '@/lib/stores/coffeeBeanStore'
-      );
+      const { getCoffeeBeanStore } =
+        await import('@/lib/stores/coffeeBeanStore');
       await getCoffeeBeanStore().updateBean(bean.id, updates);
 
       window.dispatchEvent(
@@ -736,9 +735,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         onClose={() => setRatingModalOpen(false)}
         onSave={async (id: string, ratings: Partial<CoffeeBean>) => {
           try {
-            const { useCoffeeBeanStore } = await import(
-              '@/lib/stores/coffeeBeanStore'
-            );
+            const { useCoffeeBeanStore } =
+              await import('@/lib/stores/coffeeBeanStore');
             await useCoffeeBeanStore.getState().updateBean(id, ratings);
           } catch (error) {
             console.error('保存评分失败:', error);

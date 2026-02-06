@@ -137,9 +137,8 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
       _onReorderEquipments(customEquipmentsOnly);
 
       // 通知所有器具栏组件更新
-      const { equipmentEventBus } = await import(
-        '@/lib/equipment/equipmentEventBus'
-      );
+      const { equipmentEventBus } =
+        await import('@/lib/equipment/equipmentEventBus');
       equipmentEventBus.notify();
     } catch (error) {
       console.error('保存器具排序失败:', error);

@@ -256,7 +256,7 @@ select:focus,
     /* 使用 100dvh 而不是 100vh，动态视口高度会随键盘调整 */
     min-height: 100dvh;
   }
-  
+
   /* 输入框聚焦时的额外间距 */
   input:focus,
   textarea:focus {

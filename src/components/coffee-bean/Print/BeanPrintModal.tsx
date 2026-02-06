@@ -60,9 +60,8 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
       await savePreviewAsImage('print-preview', bean);
     } catch (error) {
       console.error('保存图片失败:', error);
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
+      const { showToast } =
+        await import('@/components/common/feedback/LightToast');
       showToast({ type: 'error', title: '保存图片失败，请重试' });
     }
   };

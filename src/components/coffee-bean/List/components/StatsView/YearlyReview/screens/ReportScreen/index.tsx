@@ -377,9 +377,8 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
     try {
       const { toPng } = await import('html-to-image');
       const { TempFileManager } = await import('@/lib/utils/tempFileManager');
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
+      const { showToast } =
+        await import('@/components/common/feedback/LightToast');
 
       // 创建临时容器用于导出 - 不使用 position 偏移，直接渲染
       const tempContainer = document.createElement('div');
@@ -484,9 +483,8 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
       });
     } catch (error) {
       console.error('分享失败:', error);
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
+      const { showToast } =
+        await import('@/components/common/feedback/LightToast');
       showToast({
         type: 'error',
         title: '分享失败，请重试',

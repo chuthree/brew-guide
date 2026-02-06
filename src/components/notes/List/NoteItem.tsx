@@ -325,9 +325,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                   <div
                     key={index}
                     className={`relative cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 dark:border-neutral-800/50 ${
-                      isSingleNoteImage
-                        ? 'inline-flex'
-                        : 'block aspect-square'
+                      isSingleNoteImage ? 'inline-flex' : 'block aspect-square'
                     }`}
                     style={
                       isSingleNoteImage && singleImageSize
@@ -353,19 +351,13 @@ const NoteItem: React.FC<NoteItemProps> = ({
                       <img
                         src={img}
                         alt={`笔记图片 ${index + 1}`}
-                        width={
-                          isSingleNoteImage
-                            ? singleImageSize?.width
-                            : 96
-                        }
+                        width={isSingleNoteImage ? singleImageSize?.width : 96}
                         height={
-                          isSingleNoteImage
-                            ? singleImageSize?.height
-                            : 96
+                          isSingleNoteImage ? singleImageSize?.height : 96
                         }
                         className={
                           isSingleNoteImage
-                            ? 'block h-auto w-auto max-h-45 max-w-35'
+                            ? 'block h-auto max-h-45 w-auto max-w-35'
                             : 'block h-full w-full object-cover'
                         }
                         style={

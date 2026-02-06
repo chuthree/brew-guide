@@ -1727,19 +1727,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 扣除量
               </span>
               <div className="ml-auto flex items-center gap-2">
-                  <input
-                    type="tel"
-                    inputMode="decimal"
-                    pattern="^\\d*(\\.\\d+)?$"
-                    value={quickDecrementAmount}
-                    onChange={e => {
-                      const nextValue = e.target.value;
-                      if (!validateNumericInput(nextValue)) return;
-                      setQuickDecrementAmount(nextValue);
-                    }}
-                    className="w-20 bg-transparent py-1 text-right text-sm font-medium text-neutral-800 outline-none dark:text-neutral-300"
-                    placeholder="0"
-                  />
+                <input
+                  type="tel"
+                  inputMode="decimal"
+                  pattern="^\\d*(\\.\\d+)?$"
+                  value={quickDecrementAmount}
+                  onChange={e => {
+                    const nextValue = e.target.value;
+                    if (!validateNumericInput(nextValue)) return;
+                    setQuickDecrementAmount(nextValue);
+                  }}
+                  className="w-20 bg-transparent py-1 text-right text-sm font-medium text-neutral-800 outline-none dark:text-neutral-300"
+                  placeholder="0"
+                />
                 <span className="text-sm text-neutral-500 dark:text-neutral-400">
                   g
                 </span>

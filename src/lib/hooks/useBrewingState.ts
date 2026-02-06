@@ -367,9 +367,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         };
 
         // 🔥 使用 Zustand store 保存笔记
-        const { useBrewingNoteStore } = await import(
-          '@/lib/stores/brewingNoteStore'
-        );
+        const { useBrewingNoteStore } =
+          await import('@/lib/stores/brewingNoteStore');
         await useBrewingNoteStore.getState().addNote(newNote);
 
         // 🎯 扣减咖啡豆用量 - 使用笔记中保存的参数值,而不是冲煮步骤的原始值
@@ -380,9 +379,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
             const coffeeAmount = parseFloat(match[1]);
             if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
               // 动态导入 updateBeanRemaining
-              const { updateBeanRemaining } = await import(
-                '@/lib/stores/coffeeBeanStore'
-              );
+              const { updateBeanRemaining } =
+                await import('@/lib/stores/coffeeBeanStore');
               await updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
             }
           }
@@ -460,9 +458,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
         // 如果是从通用方案创建的新方案，显示成功提示
         if (isFromCommonMethod) {
-          const { showToast } = await import(
-            '@/components/common/feedback/LightToast'
-          );
+          const { showToast } =
+            await import('@/components/common/feedback/LightToast');
           showToast({
             type: 'success',
             title: '已保存通用方案到自定义列表',
@@ -518,9 +515,8 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
           .hideMethod(selectedEquipment, methodId);
 
         // 显示提示
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
+        const { showToast } =
+          await import('@/components/common/feedback/LightToast');
         showToast({
           type: 'success',
           title: '已隐藏方案',

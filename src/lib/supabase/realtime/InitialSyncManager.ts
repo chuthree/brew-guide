@@ -144,9 +144,8 @@ export class InitialSyncManager {
 
     // 执行烘焙商字段迁移（按需迁移同步下载的数据）
     try {
-      const { migrateRoasterField } = await import(
-        '@/lib/utils/roasterMigration'
-      );
+      const { migrateRoasterField } =
+        await import('@/lib/utils/roasterMigration');
       await migrateRoasterField();
     } catch (e) {
       console.error('[InitialSync] 烘焙商字段迁移失败:', e);

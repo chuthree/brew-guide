@@ -339,9 +339,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       } else {
         const { smartCompress } = await import('@/lib/utils/imageCompression');
         const compressedFile = await smartCompress(file);
-        const { recognizeBeanImage } = await import(
-          '@/lib/api/beanRecognition'
-        );
+        const { recognizeBeanImage } =
+          await import('@/lib/api/beanRecognition');
         beanData = await recognizeBeanImage(compressedFile);
       }
 
@@ -357,7 +356,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       if (!files || files.length === 0) return;
 
       // 过滤有效图片文件（仅支持 JPG、PNG、WebP、HEIC）
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+      const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif',
+      ];
       const validFiles: File[] = [];
       for (let i = 0; i < Math.min(files.length, MAX_IMAGES); i++) {
         const file = files[i];
@@ -371,7 +376,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       }
 
       if (validFiles.length === 0) {
-        showToast({ type: 'error', title: '请上传 JPG、PNG 或 WebP 格式的图片' });
+        showToast({
+          type: 'error',
+          title: '请上传 JPG、PNG 或 WebP 格式的图片',
+        });
         return;
       }
 
@@ -406,9 +414,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 const base64 = reader.result as string;
                 if (base64) {
                   try {
-                    const { compressBase64Image } = await import(
-                      '@/lib/utils/imageCapture'
-                    );
+                    const { compressBase64Image } =
+                      await import('@/lib/utils/imageCapture');
                     const compressedBase64 = await compressBase64Image(base64, {
                       maxSizeMB: 0.1,
                       maxWidthOrHeight: 1200,
@@ -491,9 +498,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           const base64 = reader.result as string;
           if (base64) {
             try {
-              const { compressBase64Image } = await import(
-                '@/lib/utils/imageCapture'
-              );
+              const { compressBase64Image } =
+                await import('@/lib/utils/imageCapture');
               const compressedBase64 = await compressBase64Image(base64, {
                 maxSizeMB: 0.1,
                 maxWidthOrHeight: 1200,

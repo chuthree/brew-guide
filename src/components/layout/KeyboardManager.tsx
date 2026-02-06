@@ -90,15 +90,16 @@ const KeyboardManager: React.FC = () => {
       if (isIOS && !isNative) {
         // 触发重排，让浏览器重新计算布局
         void inputElement.offsetHeight;
-        
+
         // 使用 window.scrollTo 确保页面滚动
         const rect = inputElement.getBoundingClientRect();
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollTop =
+          window.pageYOffset || document.documentElement.scrollTop;
         const targetY = rect.top + scrollTop - window.innerHeight / 3;
-        
+
         window.scrollTo({
           top: Math.max(0, targetY),
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
         return; // iOS 网页版只用 window.scrollTo，不再执行下面的 scrollIntoView
       }
@@ -133,11 +134,11 @@ const KeyboardManager: React.FC = () => {
 
     // 添加事件监听
     document.addEventListener('focusin', handleFocusIn);
-    
+
     if (isNative) {
       window.addEventListener('keyboardDidShow', handleKeyboardDidShow);
     }
-    
+
     // iOS 网页版：监听 visualViewport（这是关键！）
     if (isIOS && !isNative && window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleViewportResize);
@@ -146,13 +147,16 @@ const KeyboardManager: React.FC = () => {
     // 清理事件监听
     return () => {
       document.removeEventListener('focusin', handleFocusIn);
-      
+
       if (isNative) {
         window.removeEventListener('keyboardDidShow', handleKeyboardDidShow);
       }
-      
+
       if (isIOS && !isNative && window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleViewportResize);
+        window.visualViewport.removeEventListener(
+          'resize',
+          handleViewportResize
+        );
       }
     };
   }, []);

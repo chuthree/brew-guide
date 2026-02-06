@@ -307,9 +307,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         // 如果之前是 Supabase，现在切走，断开连接
         if (syncType === 'supabase' && type !== 'supabase') {
           try {
-            const { syncService } = await import(
-              '@/lib/sync/UnifiedSyncService'
-            );
+            const { syncService } =
+              await import('@/lib/sync/UnifiedSyncService');
             syncService.disconnect();
           } catch (e) {
             console.error('断开同步连接失败:', e);

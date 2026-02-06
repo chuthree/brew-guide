@@ -618,9 +618,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const handleSaveNote = useCallback(async (note: BrewingNoteData) => {
     try {
       // 🔥 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
+      const { useBrewingNoteStore } =
+        await import('@/lib/stores/brewingNoteStore');
 
       // 创建笔记数据 - 确保不保存完整的coffeeBean对象
       const noteData: any = {

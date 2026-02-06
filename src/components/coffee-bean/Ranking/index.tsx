@@ -153,9 +153,8 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
     if (!isOpen) return;
 
     try {
-      const { getCoffeeBeanStore } = await import(
-        '@/lib/stores/coffeeBeanStore'
-      );
+      const { getCoffeeBeanStore } =
+        await import('@/lib/stores/coffeeBeanStore');
       const allBeans = getCoffeeBeanStore().beans;
 
       // 按类型筛选

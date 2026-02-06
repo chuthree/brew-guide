@@ -95,13 +95,14 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
       // 使用 settingsStore 保存默认设置
       try {
-        await useSettingsStore.getState().importSettings(defaultSettings as any);
+        await useSettingsStore
+          .getState()
+          .importSettings(defaultSettings as any);
         // 通知上层组件设置已变更
         onSettingsChange(defaultSettings);
       } catch (error) {
         console.error('导入默认设置失败:', error);
       }
-
     } catch (error) {
       console.error('完成引导设置时发生错误:', error);
     }

@@ -64,9 +64,8 @@ export function useEquipmentList<
       // 过滤隐藏的器具
       let filteredEquipments = sortedEquipments;
       if (settings) {
-        const { filterHiddenEquipments } = await import(
-          '@/lib/stores/settingsStore'
-        );
+        const { filterHiddenEquipments } =
+          await import('@/lib/stores/settingsStore');
         filteredEquipments = filterHiddenEquipments(sortedEquipments);
       }
 
@@ -111,9 +110,8 @@ export function useEquipmentList<
       // 过滤隐藏的器具
       let filteredEquipments = sortedEquipments;
       if (settings) {
-        const { filterHiddenEquipments } = await import(
-          '@/lib/stores/settingsStore'
-        );
+        const { filterHiddenEquipments } =
+          await import('@/lib/stores/settingsStore');
         filteredEquipments = filterHiddenEquipments(sortedEquipments);
       }
 
@@ -139,9 +137,8 @@ export function useEquipmentList<
 
     const setupEventListener = async () => {
       try {
-        const { equipmentEventBus } = await import(
-          '@/lib/equipment/equipmentEventBus'
-        );
+        const { equipmentEventBus } =
+          await import('@/lib/equipment/equipmentEventBus');
         unsubscribe = equipmentEventBus.subscribe(handleEquipmentOrderUpdate);
       } catch (err) {
         console.error('设置器具排序事件监听失败:', err);

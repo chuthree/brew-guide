@@ -699,9 +699,8 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       };
 
       // 保存记录（与快捷扣除一致，走 Zustand store）
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
+      const { useBrewingNoteStore } =
+        await import('@/lib/stores/brewingNoteStore');
       await useBrewingNoteStore.getState().addNote(adjustmentRecord as any);
       console.warn('容量调整记录创建成功:', noteContent);
     };
@@ -852,7 +851,13 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     // 处理图片上传
     const handleImageUpload = async (file: File) => {
       // 仅支持 JPG、PNG、WebP、HEIC 格式
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+      const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif',
+      ];
       if (!allowedTypes.includes(file.type)) return;
 
       const reader = new FileReader();
@@ -889,7 +894,13 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     // 处理背面图片上传
     const handleBackImageUpload = async (file: File) => {
       // 仅支持 JPG、PNG、WebP、HEIC 格式
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+      const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif',
+      ];
       if (!allowedTypes.includes(file.type)) return;
 
       const reader = new FileReader();

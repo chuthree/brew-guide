@@ -144,7 +144,13 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     if (!file) return;
 
     // 仅支持 JPG、PNG、WebP、HEIC 格式
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'image/heif',
+    ];
     if (!allowedTypes.includes(file.type)) {
       alert('请上传 JPG、PNG 或 WebP 格式的图片');
       return;

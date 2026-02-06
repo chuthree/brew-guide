@@ -122,9 +122,8 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         try {
           const jsonString = event.target?.result as string;
 
-          const { isBeanconquerorData, importBeanconquerorData } = await import(
-            '@/lib/utils/beanconquerorImporter'
-          );
+          const { isBeanconquerorData, importBeanconquerorData } =
+            await import('@/lib/utils/beanconquerorImporter');
 
           if (isBeanconquerorData(jsonString)) {
             setStatus({
@@ -143,9 +142,8 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
               await Storage.set('brewingNotes', JSON.stringify([]));
               await db.brewingNotes.clear();
 
-              const { getCoffeeBeanStore } = await import(
-                '@/lib/stores/coffeeBeanStore'
-              );
+              const { getCoffeeBeanStore } =
+                await import('@/lib/stores/coffeeBeanStore');
               const store = getCoffeeBeanStore();
               await store.refreshBeans();
 

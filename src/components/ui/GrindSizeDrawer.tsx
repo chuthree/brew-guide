@@ -24,7 +24,7 @@ interface GrindSizeDrawerProps {
 
 /**
  * 研磨度抽屉组件
- * 
+ *
  * 功能：
  * - 显示当前研磨度，支持编辑
  * - 显示最近使用的研磨度历史
@@ -52,38 +52,41 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
   /**
    * 获取方案名称（支持系统预设和自定义方案）
    */
-  const getMethodName = useCallback((methodId: string, equipmentId?: string): string => {
-    // 如果没有方案ID，返回空
-    if (!methodId) return '';
+  const getMethodName = useCallback(
+    (methodId: string, equipmentId?: string): string => {
+      // 如果没有方案ID，返回空
+      if (!methodId) return '';
 
-    // 如果有器具ID，先在自定义方案中查找
-    if (equipmentId) {
-      const customMethods = methodsByEquipment[equipmentId] || [];
-      const customMethod = customMethods.find(m => m.id === methodId);
-      if (customMethod) {
-        return customMethod.name;
+      // 如果有器具ID，先在自定义方案中查找
+      if (equipmentId) {
+        const customMethods = methodsByEquipment[equipmentId] || [];
+        const customMethod = customMethods.find(m => m.id === methodId);
+        if (customMethod) {
+          return customMethod.name;
+        }
       }
-    }
 
-    // 在所有自定义方案中查找（如果没有器具ID或在指定器具中没找到）
-    for (const methods of Object.values(methodsByEquipment)) {
-      const method = methods.find(m => m.id === methodId);
-      if (method) {
-        return method.name;
+      // 在所有自定义方案中查找（如果没有器具ID或在指定器具中没找到）
+      for (const methods of Object.values(methodsByEquipment)) {
+        const method = methods.find(m => m.id === methodId);
+        if (method) {
+          return method.name;
+        }
       }
-    }
 
-    // 在系统预设方案中查找
-    for (const [, methods] of Object.entries(brewingMethods)) {
-      const method = methods.find(m => m.name === methodId);
-      if (method) {
-        return method.name;
+      // 在系统预设方案中查找
+      for (const [, methods] of Object.entries(brewingMethods)) {
+        const method = methods.find(m => m.name === methodId);
+        if (method) {
+          return method.name;
+        }
       }
-    }
 
-    // 如果都找不到，返回ID本身
-    return methodId;
-  }, [methodsByEquipment]);
+      // 如果都找不到，返回ID本身
+      return methodId;
+    },
+    [methodsByEquipment]
+  );
 
   // 初始化选中的磨豆机
   useEffect(() => {
@@ -140,12 +143,15 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
   }, [selectedGrinder, editValue, updateGrinder, onClose]);
 
   // 切换磨豆机
-  const handleSelectGrinder = useCallback((grinder: Grinder) => {
-    setSelectedGrinderId(grinder.id);
-    setShowGrinderSelector(false);
-    onGrinderChange?.(grinder.id);
-    hapticsUtils.light();
-  }, [onGrinderChange]);
+  const handleSelectGrinder = useCallback(
+    (grinder: Grinder) => {
+      setSelectedGrinderId(grinder.id);
+      setShowGrinderSelector(false);
+      onGrinderChange?.(grinder.id);
+      hapticsUtils.light();
+    },
+    [onGrinderChange]
+  );
 
   // 处理输入键盘事件
   const handleKeyDown = useCallback(
@@ -160,10 +166,7 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
   if (!selectedGrinder) return null;
 
   return (
-    <ActionDrawer
-      isOpen={isOpen}
-      onClose={onClose}
-    >
+    <ActionDrawer isOpen={isOpen} onClose={onClose}>
       <ActionDrawer.Content>
         {/* 磨豆机选择器 - 左上角紧凑布局 */}
         <div>
@@ -217,7 +220,7 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
         </div>
 
         {/* 研磨度输入 */}
-        <div className="text-center my-8">
+        <div className="my-8 text-center">
           <input
             ref={inputRef}
             type="text"
@@ -226,7 +229,9 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
             onChange={e => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="输入研磨度"
-            style={{ fontFamily: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif' }}
+            style={{
+              fontFamily: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif',
+            }}
             className="w-full bg-transparent text-center text-5xl font-bold text-neutral-800 outline-none placeholder:text-neutral-300 dark:text-neutral-100 dark:placeholder:text-neutral-700"
           />
         </div>
@@ -239,54 +244,56 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
                 最近使用
               </p>
               <div className="flex flex-col gap-1.5">
-                {selectedGrinder.grindSizeHistory.slice(0, 3).map((item, index) => {
-                  // 获取器具名称
-                  const equipmentName = item.equipment
-                    ? getEquipmentNameById(item.equipment, customEquipments)
-                    : '';
-                  
-                  // 获取方案名称
-                  const methodName = item.method
-                    ? getMethodName(item.method, item.equipment)
-                    : '';
-                  
-                  // 获取咖啡豆名称
-                  const coffeeBeanName = item.coffeeBean || '';
-                  
-                  // 智能截断：限制每个字段的最大长度，确保所有字段都能显示
-                  const truncateText = (text: string, maxLength: number) => {
-                    if (text.length <= maxLength) return text;
-                    return text.slice(0, maxLength) + '…';
-                  };
-                  
-                  // 构建左侧信息（咖啡豆 · 器具 · 方案），每个字段限制长度
-                  const leftParts = [
-                    coffeeBeanName ? truncateText(coffeeBeanName, 8) : '',
-                    equipmentName ? truncateText(equipmentName, 6) : '',
-                    methodName ? truncateText(methodName, 6) : '',
-                  ].filter(Boolean);
-                  
-                  return (
-                    <div
-                      key={index}
-                      className="w-full flex items-center justify-between gap-2 rounded-full bg-neutral-100 px-3 py-1.5 text-xs dark:bg-neutral-800"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="font-medium text-neutral-800 dark:text-neutral-100">
-                          {item.grindSize}
-                        </span>
-                        {leftParts.length > 0 && (
-                          <span className="text-neutral-500 dark:text-neutral-500">
-                            {' · ' + leftParts.join(' · ')}
+                {selectedGrinder.grindSizeHistory
+                  .slice(0, 3)
+                  .map((item, index) => {
+                    // 获取器具名称
+                    const equipmentName = item.equipment
+                      ? getEquipmentNameById(item.equipment, customEquipments)
+                      : '';
+
+                    // 获取方案名称
+                    const methodName = item.method
+                      ? getMethodName(item.method, item.equipment)
+                      : '';
+
+                    // 获取咖啡豆名称
+                    const coffeeBeanName = item.coffeeBean || '';
+
+                    // 智能截断：限制每个字段的最大长度，确保所有字段都能显示
+                    const truncateText = (text: string, maxLength: number) => {
+                      if (text.length <= maxLength) return text;
+                      return text.slice(0, maxLength) + '…';
+                    };
+
+                    // 构建左侧信息（咖啡豆 · 器具 · 方案），每个字段限制长度
+                    const leftParts = [
+                      coffeeBeanName ? truncateText(coffeeBeanName, 8) : '',
+                      equipmentName ? truncateText(equipmentName, 6) : '',
+                      methodName ? truncateText(methodName, 6) : '',
+                    ].filter(Boolean);
+
+                    return (
+                      <div
+                        key={index}
+                        className="flex w-full items-center justify-between gap-2 rounded-full bg-neutral-100 px-3 py-1.5 text-xs dark:bg-neutral-800"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="font-medium text-neutral-800 dark:text-neutral-100">
+                            {item.grindSize}
                           </span>
-                        )}
-                      </span>
-                      <span className="shrink-0 text-neutral-500 dark:text-neutral-500">
-                        {formatTimestamp(item.timestamp)}
-                      </span>
-                    </div>
-                  );
-                })}
+                          {leftParts.length > 0 && (
+                            <span className="text-neutral-500 dark:text-neutral-500">
+                              {' · ' + leftParts.join(' · ')}
+                            </span>
+                          )}
+                        </span>
+                        <span className="shrink-0 text-neutral-500 dark:text-neutral-500">
+                          {formatTimestamp(item.timestamp)}
+                        </span>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

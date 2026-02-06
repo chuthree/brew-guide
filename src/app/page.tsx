@@ -674,9 +674,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     if (!convertToGreenPreview) return;
 
     try {
-      const { RoastingManager } = await import(
-        '@/lib/managers/roastingManager'
-      );
+      const { RoastingManager } =
+        await import('@/lib/managers/roastingManager');
 
       const result = await RoastingManager.convertRoastedToGreen(
         convertToGreenPreview.beanId
@@ -1599,9 +1598,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           methodType,
         });
         // 尝试从缓存恢复设备选择
-        const { getSelectedEquipmentPreference } = await import(
-          '@/lib/hooks/useBrewingState'
-        );
+        const { getSelectedEquipmentPreference } =
+          await import('@/lib/hooks/useBrewingState');
         const cachedEquipment = getSelectedEquipmentPreference();
         if (cachedEquipment) {
           console.warn('从缓存恢复设备选择:', cachedEquipment);
@@ -1729,9 +1727,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       let lastImportedBean: ExtendedCoffeeBean | null = null;
 
       // 动态导入 coffeeBeanStore
-      const { getCoffeeBeanStore } = await import(
-        '@/lib/stores/coffeeBeanStore'
-      );
+      const { getCoffeeBeanStore } =
+        await import('@/lib/stores/coffeeBeanStore');
       const store = getCoffeeBeanStore();
 
       try {
@@ -1925,9 +1922,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 完全重写checkCoffeeBeans函数，简化逻辑
   const checkCoffeeBeans = useCallback(async () => {
     try {
-      const { getCoffeeBeanStore } = await import(
-        '@/lib/stores/coffeeBeanStore'
-      );
+      const { getCoffeeBeanStore } =
+        await import('@/lib/stores/coffeeBeanStore');
       const beans = getCoffeeBeanStore().beans;
       const hasAnyBeans = beans.length > 0;
       const wasHasBeans = hasCoffeeBeans;
@@ -2047,9 +2043,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => {
     try {
-      const { getCoffeeBeanStore } = await import(
-        '@/lib/stores/coffeeBeanStore'
-      );
+      const { getCoffeeBeanStore } =
+        await import('@/lib/stores/coffeeBeanStore');
       const store = getCoffeeBeanStore();
       const currentBeans = store.beans;
       const isFirstBean = !editingBean?.id && currentBeans.length === 0;
@@ -2057,12 +2052,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       // 检查是否是烘焙操作（从生豆转换为熟豆）
       if (roastingSourceBeanId && bean.sourceGreenBeanId) {
         // 调用 RoastingManager 完成烘焙转熟豆流程
-        const { RoastingManager } = await import(
-          '@/lib/managers/roastingManager'
-        );
-        const { showToast } = await import(
-          '@/components/common/feedback/LightToast'
-        );
+        const { RoastingManager } =
+          await import('@/lib/managers/roastingManager');
+        const { showToast } =
+          await import('@/components/common/feedback/LightToast');
 
         // 获取烘焙量（用户填写的容量）
         const roastedAmount = parseFloat(bean.capacity || '0');
@@ -2637,9 +2630,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handleSaveBrewingNote = async (note: BrewingNoteData) => {
     try {
       // 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
+      const { useBrewingNoteStore } =
+        await import('@/lib/stores/brewingNoteStore');
 
       const newNoteId = note.id || Date.now().toString();
       const timestamp = note.timestamp || Date.now();
@@ -2688,9 +2680,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handleSaveBrewingNoteEdit = async (note: BrewingNoteData) => {
     try {
       // 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } = await import(
-        '@/lib/stores/brewingNoteStore'
-      );
+      const { useBrewingNoteStore } =
+        await import('@/lib/stores/brewingNoteStore');
 
       // 复制操作应该被视为新笔记，即使它有 id
       const isNewNote = isBrewingNoteCopy || !note.id;
@@ -2719,9 +2710,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 这里不再重复扣除，避免重复减少剩余量
       } else {
         // 🔥 更新现有笔记 - 使用 Store 方法
-        const { useBrewingNoteStore } = await import(
-          '@/lib/stores/brewingNoteStore'
-        );
+        const { useBrewingNoteStore } =
+          await import('@/lib/stores/brewingNoteStore');
         await useBrewingNoteStore
           .getState()
           .updateNote(noteToSave.id, noteToSave);
@@ -2740,9 +2730,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       setIsBrewingNoteCopy(false);
 
       // 显示成功提示（事件触发已在 store 中自动完成）
-      const { showToast } = await import(
-        '@/components/common/feedback/LightToast'
-      );
+      const { showToast } =
+        await import('@/components/common/feedback/LightToast');
       showToast({
         title: isNewNote ? '笔记已复制' : '笔记已更新',
         type: 'success',
@@ -2808,9 +2797,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handleShareEquipment = async (equipment: CustomEquipment) => {
     try {
       const methods = customMethods[equipment.id || equipment.name] || [];
-      const { copyEquipmentToClipboard } = await import(
-        '@/lib/stores/customMethodStore'
-      );
+      const { copyEquipmentToClipboard } =
+        await import('@/lib/stores/customMethodStore');
       await copyEquipmentToClipboard(equipment, methods);
       showToast({
         type: 'success',
@@ -2829,9 +2817,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   const handleReorderEquipments = async (newOrder: CustomEquipment[]) => {
     try {
-      const { saveEquipmentOrder, loadEquipmentOrder } = await import(
-        '@/lib/stores/settingsStore'
-      );
+      const { saveEquipmentOrder, loadEquipmentOrder } =
+        await import('@/lib/stores/settingsStore');
       const { equipmentUtils } = await import('@/lib/equipment/equipmentUtils');
 
       const currentOrder = loadEquipmentOrder();
@@ -2953,9 +2940,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
           // 如果有ID，尝试获取完整的咖啡豆信息
           if (tempBeanInfo.id) {
-            const { getCoffeeBeanStore } = await import(
-              '@/lib/stores/coffeeBeanStore'
-            );
+            const { getCoffeeBeanStore } =
+              await import('@/lib/stores/coffeeBeanStore');
             const fullBean = getCoffeeBeanStore().getBeanById(tempBeanInfo.id);
 
             if (fullBean) {
@@ -3439,12 +3425,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   }}
                   onCountdownChange={time => {
                     setTimeout(() => {
-                      const event = new CustomEvent(
-                        'brewing:countdownChange',
-                        {
-                          detail: { remainingTime: time },
-                        }
-                      );
+                      const event = new CustomEvent('brewing:countdownChange', {
+                        detail: { remainingTime: time },
+                      });
                       window.dispatchEvent(event);
                     }, 0);
                   }}
@@ -3636,9 +3619,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   initialBeanState={beanDetailAddBeanState}
                   onSaveNew={async newBean => {
                     try {
-                      const { getCoffeeBeanStore } = await import(
-                        '@/lib/stores/coffeeBeanStore'
-                      );
+                      const { getCoffeeBeanStore } =
+                        await import('@/lib/stores/coffeeBeanStore');
                       await getCoffeeBeanStore().addBean(newBean);
                       handleBeanListChange();
                       setBeanDetailAddMode(false);
@@ -3653,9 +3635,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   onDelete={async bean => {
                     setBeanDetailOpen(false);
                     try {
-                      const { getCoffeeBeanStore } = await import(
-                        '@/lib/stores/coffeeBeanStore'
-                      );
+                      const { getCoffeeBeanStore } =
+                        await import('@/lib/stores/coffeeBeanStore');
                       await getCoffeeBeanStore().deleteBean(bean.id);
                       handleBeanListChange();
                     } catch (error) {
@@ -3664,15 +3645,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   }}
                   onShare={async bean => {
                     try {
-                      const { beanToReadableText } = await import(
-                        '@/lib/utils/jsonUtils'
-                      );
-                      const { copyToClipboard } = await import(
-                        '@/lib/utils/exportUtils'
-                      );
-                      const { showToast } = await import(
-                        '@/components/common/feedback/LightToast'
-                      );
+                      const { beanToReadableText } =
+                        await import('@/lib/utils/jsonUtils');
+                      const { copyToClipboard } =
+                        await import('@/lib/utils/exportUtils');
+                      const { showToast } =
+                        await import('@/components/common/feedback/LightToast');
 
                       const text = beanToReadableText(bean);
                       const result = await copyToClipboard(text);
@@ -3701,9 +3679,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   onRepurchase={async bean => {
                     setBeanDetailOpen(false);
                     try {
-                      const { createRepurchaseBean } = await import(
-                        '@/lib/utils/beanRepurchaseUtils'
-                      );
+                      const { createRepurchaseBean } =
+                        await import('@/lib/utils/beanRepurchaseUtils');
                       const newBeanData = await createRepurchaseBean(bean);
                       setEditingBean(newBeanData as ExtendedCoffeeBean);
                       setShowBeanForm(true);
@@ -3721,9 +3698,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     settings.enableConvertToGreen
                       ? async bean => {
                           try {
-                            const { RoastingManager } = await import(
-                              '@/lib/managers/roastingManager'
-                            );
+                            const { RoastingManager } =
+                              await import('@/lib/managers/roastingManager');
 
                             const preview =
                               await RoastingManager.previewConvertRoastedToGreen(
@@ -3819,9 +3795,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
                       try {
                         if (noteToDelete.source === 'roasting') {
-                          const { RoastingManager } = await import(
-                            '@/lib/managers/roastingManager'
-                          );
+                          const { RoastingManager } =
+                            await import('@/lib/managers/roastingManager');
                           const result =
                             await RoastingManager.deleteRoastingRecord(noteId);
                           if (!result.success) {
@@ -3843,9 +3818,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                               !isNaN(changeAmount) &&
                               changeAmount !== 0
                             ) {
-                              const { getCoffeeBeanStore } = await import(
-                                '@/lib/stores/coffeeBeanStore'
-                              );
+                              const { getCoffeeBeanStore } =
+                                await import('@/lib/stores/coffeeBeanStore');
                               const store = getCoffeeBeanStore();
                               const currentBean = store.getBeanById(beanId);
                               if (currentBean) {
@@ -3895,9 +3869,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                           const beanId = getNoteAssociatedBeanId(noteToDelete);
 
                           if (beanId && coffeeAmount > 0) {
-                            const { increaseBeanRemaining } = await import(
-                              '@/lib/stores/coffeeBeanStore'
-                            );
+                            const { increaseBeanRemaining } =
+                              await import('@/lib/stores/coffeeBeanStore');
                             await increaseBeanRemaining(beanId, coffeeAmount);
                           }
                         }
@@ -3905,9 +3878,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         console.error('恢复咖啡豆容量失败:', error);
                       }
 
-                      const { useBrewingNoteStore } = await import(
-                        '@/lib/stores/brewingNoteStore'
-                      );
+                      const { useBrewingNoteStore } =
+                        await import('@/lib/stores/brewingNoteStore');
                       const deleteNote =
                         useBrewingNoteStore.getState().deleteNote;
                       await deleteNote(noteId);

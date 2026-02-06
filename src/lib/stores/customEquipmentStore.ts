@@ -288,9 +288,8 @@ export async function saveCustomEquipment(
 
   // 如果提供了方案，保存方案
   if (methods && methods.length > 0 && equipment.id) {
-    const { useCustomMethodStore } = await import(
-      '@/lib/stores/customMethodStore'
-    );
+    const { useCustomMethodStore } =
+      await import('@/lib/stores/customMethodStore');
     const methodStore = useCustomMethodStore.getState();
     await methodStore.setMethodsForEquipment(equipment.id, methods);
   }
@@ -316,9 +315,8 @@ export async function addEquipmentWithMethods(
 
   if (methods && methods.length > 0) {
     // 动态导入以避免循环依赖
-    const { useCustomMethodStore } = await import(
-      '@/lib/stores/customMethodStore'
-    );
+    const { useCustomMethodStore } =
+      await import('@/lib/stores/customMethodStore');
     const methodStore = useCustomMethodStore.getState();
     await methodStore.setMethodsForEquipment(newEquipment.id, methods);
   }

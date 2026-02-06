@@ -1,5 +1,5 @@
 import { Metadata, Viewport } from 'next';
-import Script from "next/script";
+import Script from 'next/script';
 import { ThemeProvider } from 'next-themes';
 import { Analytics } from '@vercel/analytics/next';
 import localFont from 'next/font/local';
@@ -163,7 +163,7 @@ export default function RootLayout({
       }
     >
       <head>
-        {process.env.NODE_ENV === "development" && (
+        {process.env.NODE_ENV === 'development' && (
           <Script
             src="//unpkg.com/react-grab/dist/index.global.js"
             crossOrigin="anonymous"
