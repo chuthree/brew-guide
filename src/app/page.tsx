@@ -910,8 +910,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         try {
           const { Storage } = await import('@/lib/core/storage');
           const onboardingCompleted = await Storage.get('onboardingCompleted');
+          let isCompleted = onboardingCompleted === 'true';
+          if (!isCompleted) {
+            try {
+              const { db } = await import('@/lib/core/db');
+              const fallback = await db.settings.get('onboardingCompleted');
+              isCompleted = fallback?.value === 'true';
+            } catch {
+              // 静默处理错误
+            }
+          }
           if (isMounted) {
-            setShowOnboarding(!onboardingCompleted);
+            setShowOnboarding(!isCompleted);
           }
         } catch {
           // 静默处理错误

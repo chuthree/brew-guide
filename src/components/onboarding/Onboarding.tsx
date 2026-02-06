@@ -65,29 +65,43 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
   // 处理完成按钮点击
   const handleComplete = async () => {
+    // 先关闭引导，避免存储/初始化异常导致界面卡住
+    setIsOpen(false);
+    onComplete();
+
     try {
       // 如果是 PWA 模式且支持持久化存储，先尝试请求
       if (canRequestPersist && !isPersisted) {
-        try {
-          await PersistentStorageManager.requestPersist();
-        } catch (error) {
+        // 不阻塞后续流程，避免请求挂起导致无法完成引导
+        PersistentStorageManager.requestPersist().catch(error => {
           console.error('请求持久化存储失败:', error);
-          // 即使失败也继续完成引导流程
-        }
+        });
       }
 
       // 动态导入 Storage
       const { Storage } = await import('@/lib/core/storage');
       // 标记引导已完成
       await Storage.set('onboardingCompleted', 'true');
+      // 同步写入一次，避免异步存储异常
+      Storage.setSync('onboardingCompleted', 'true');
+
+      // 同步写入 IndexedDB 作为兜底（避免 localStorage 被清理）
+      try {
+        const { db } = await import('@/lib/core/db');
+        await db.settings.put({ key: 'onboardingCompleted', value: 'true' });
+      } catch (error) {
+        console.error('写入引导完成状态到 IndexedDB 失败:', error);
+      }
 
       // 使用 settingsStore 保存默认设置
-      await useSettingsStore.getState().importSettings(defaultSettings as any);
+      try {
+        await useSettingsStore.getState().importSettings(defaultSettings as any);
+        // 通知上层组件设置已变更
+        onSettingsChange(defaultSettings);
+      } catch (error) {
+        console.error('导入默认设置失败:', error);
+      }
 
-      // 通知上层组件设置已变更
-      onSettingsChange(defaultSettings);
-      // 调用完成回调
-      onComplete();
     } catch (error) {
       console.error('完成引导设置时发生错误:', error);
     }
