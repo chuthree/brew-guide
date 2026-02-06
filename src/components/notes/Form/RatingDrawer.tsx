@@ -100,7 +100,6 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
   // 内部临时状态
   const [tempRating, setTempRating] = useState(rating);
   const [tempTaste, setTempTaste] = useState<Record<string, number>>(taste);
-  const [showDetails, setShowDetails] = useState(false);
   // 标记用户是否手动修改过风味评分
   const [userModifiedFlavor, setUserModifiedFlavor] = useState(false);
   const [currentSliderValue, setCurrentSliderValue] = useState<number | null>(
@@ -112,24 +111,12 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
     if (isOpen) {
       setTempRating(rating);
       setTempTaste(taste);
-      // 如果已有评分，直接显示详细评分
-      setShowDetails(rating > 0);
       // 重置用户修改标记
       // 如果已有风味评分数据，说明用户之前修改过
       const hasTasteValues = Object.values(taste).some(value => value > 0);
       setUserModifiedFlavor(hasTasteValues);
-    } else {
-      // 关闭时重置状态，避免下次打开时闪烁
-      setShowDetails(false);
     }
   }, [isOpen, rating, taste]);
-
-  // 当用户设置总体评分后，立即显示详细评分（仅当风味评分开启时）
-  useEffect(() => {
-    if (tempRating > 0 && showFlavorRating) {
-      setShowDetails(true);
-    }
-  }, [tempRating, showFlavorRating]);
 
   // 🎯 实现"初始值跟随总评"功能
   // 当总体评分变化时，如果满足条件，自动同步风味评分
@@ -333,14 +320,9 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
             </div>
           )}
 
-          {/* 风味评分 - 简单淡入动画 */}
-          {showFlavorRating && displayDimensions.length > 0 && showDetails && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-              className="flex flex-col gap-3"
-            >
+          {/* 风味评分 */}
+          {showFlavorRating && displayDimensions.length > 0 && (
+            <div className="flex flex-col gap-3">
               {overallUseSlider ? (
                 <div className="mb-3 grid grid-cols-2 gap-6">
                   {displayDimensions.map(dimension => {
@@ -450,7 +432,7 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
                   })}
                 </div>
               )}
-            </motion.div>
+            </div>
           )}
         </div>
       </ActionDrawer.Content>
