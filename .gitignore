@@ -69,6 +69,7 @@ android/app/release/
 .idea/
 .vscode/
 .kiro/
+.agents/
 *.swp
 *.swo
 
