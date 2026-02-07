@@ -43,6 +43,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
             fontWeight: config.fontWeight,
             letterSpacing: '0.02em',
             wordBreak: 'keep-all',
+            whiteSpace: 'normal',
             overflow: 'hidden',
           }}
         >

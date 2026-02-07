@@ -172,6 +172,22 @@ const inlineStylesFromClasses = (element: HTMLElement): void => {
   processElement(element);
 };
 
+// 归一化文本节点空白，避免导出时意外换行
+const normalizeTextNodes = (element: HTMLElement): void => {
+  if (typeof document === 'undefined') return;
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node) {
+    if (node.nodeValue) {
+      const normalized = node.nodeValue.replace(/[\t\r\n]+/g, ' ');
+      if (normalized !== node.nodeValue) {
+        node.nodeValue = normalized;
+      }
+    }
+    node = walker.nextNode();
+  }
+};
+
 // 保存预览为图片
 export async function savePreviewAsImage(
   elementId: string,
@@ -204,8 +220,12 @@ export async function savePreviewAsImage(
   clonedEl.style.lineHeight = computedStyle.lineHeight;
   clonedEl.style.letterSpacing = computedStyle.letterSpacing;
   clonedEl.style.wordBreak = computedStyle.wordBreak;
+  clonedEl.style.whiteSpace = 'normal';
   clonedEl.style.backgroundColor = '#ffffff';
   clonedEl.style.color = '#000000';
+
+  // 5.1 归一化文本节点空白，避免导出时因隐藏换行导致提前换行
+  normalizeTextNodes(clonedEl);
 
   // 6. 创建离屏容器
   const offscreenContainer = document.createElement('div');
