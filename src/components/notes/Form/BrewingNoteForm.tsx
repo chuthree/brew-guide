@@ -1528,14 +1528,40 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
   // 获取方案参数预览
   const getMethodParamsPreview = () => {
-    // 检查是否有有效参数
-    const hasParams =
-      methodParams.coffee ||
-      methodParams.ratio ||
-      methodParams.grindSize ||
-      methodParams.temp;
-    if (!hasParams) return null;
+    if (isEspresso) {
+      const parsedTime = parseFloat(totalTimeStr);
+      const timeValue =
+        !Number.isNaN(parsedTime) && parsedTime > 0
+          ? `${parsedTime}s`
+          : '';
 
+      const params = [
+        methodParams.coffee && { label: '粉量', value: methodParams.coffee },
+        methodParams.grindSize && {
+          label: '研磨',
+          value: methodParams.grindSize,
+        },
+        timeValue && { label: '时长', value: timeValue },
+        methodParams.water && { label: '液重', value: methodParams.water },
+      ].filter(Boolean) as { label: string; value: string }[];
+
+      if (params.length === 0) return null;
+
+      return (
+        <div className="scrollbar-hide flex w-full gap-1.5 overflow-x-auto">
+          {params.map(param => (
+            <span
+              key={param.label}
+              className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-sm font-medium text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-400"
+            >
+              {param.value}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    // 非意式参数预览
     const params = [
       methodParams.coffee && { label: '粉量', value: methodParams.coffee },
       methodParams.ratio && { label: '比例', value: methodParams.ratio },
@@ -1594,6 +1620,24 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const getOverallRatingDisplay = () => {
     return formData.rating > 0 ? formData.rating.toFixed(1) : '';
   };
+
+  const initialMethodStages = useMemo(() => {
+    if (initialData?.stages && initialData.stages.length > 0) {
+      return initialData.stages;
+    }
+    const parsedTime = parseFloat(totalTimeStr);
+    if (!Number.isNaN(parsedTime) && parsedTime > 0) {
+      return [
+        {
+          label: '萃取',
+          detail: '',
+          duration: parsedTime,
+          pourType: 'extraction',
+        },
+      ];
+    }
+    return undefined;
+  }, [initialData?.stages, totalTimeStr]);
 
   // 处理风味评分变化（从抽屉）
   const handleTasteChange = useCallback((newTaste: Record<string, number>) => {
@@ -1880,7 +1924,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         selectedMethodId={selectedMethod}
         initialParams={{
           ...methodParams,
-          ...(initialData?.stages && { stages: initialData.stages }),
+          ...(initialMethodStages && { stages: initialMethodStages }),
         }}
         settings={settings}
         hapticFeedback={settings?.hapticFeedback}
