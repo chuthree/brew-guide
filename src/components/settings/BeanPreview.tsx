@@ -140,6 +140,7 @@ const BeanPreviewItem: React.FC<{
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
   const showFlavorInfo = settings?.showFlavorInfo ?? false;
   const showBeanNotes = settings?.showBeanNotes !== false;
+  const showNoteContent = settings?.showNoteContent !== false;
   const limitNotesLines = settings?.limitNotesLines ?? true;
   const notesMaxLines = settings?.notesMaxLines ?? 3;
   const showPrice = settings?.showPrice !== false;
@@ -231,11 +232,14 @@ const BeanPreviewItem: React.FC<{
   };
 
   const shouldShowNotes = () =>
-    showBeanNotes && ((showFlavorInfo && bean.flavor?.length) || bean.notes);
+    showBeanNotes &&
+    ((showFlavorInfo && bean.flavor?.length) ||
+      (showNoteContent && bean.notes));
 
   const getFullNotesContent = () => {
     const hasFlavor = showFlavorInfo && bean.flavor?.length;
-    const hasNotes = bean.notes && bean.notes.trim() !== '';
+    const hasNotes =
+      showNoteContent && bean.notes && bean.notes.trim() !== '';
 
     if (hasFlavor && hasNotes) {
       return `${bean.flavor!.join(' · ')}\n${bean.notes!}`;
@@ -243,7 +247,10 @@ const BeanPreviewItem: React.FC<{
     if (hasFlavor) {
       return bean.flavor!.join(' · ');
     }
-    return bean.notes || '';
+    if (hasNotes) {
+      return bean.notes || '';
+    }
+    return '';
   };
 
   const getLineClampClass = (lines: number): string => {

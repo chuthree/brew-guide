@@ -38,6 +38,7 @@ interface BeanListItemProps {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
     showFlavorInfo?: boolean;
     showBeanNotes?: boolean;
+    showNoteContent?: boolean;
     limitNotesLines?: boolean;
     notesMaxLines?: number;
     showPrice?: boolean;
@@ -104,6 +105,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
   const showFlavorInfo = settings?.showFlavorInfo ?? false;
   const showBeanNotes = settings?.showBeanNotes !== false;
+  const showNoteContent = settings?.showNoteContent !== false;
   const limitNotesLines = settings?.limitNotesLines ?? true;
   const notesMaxLines = settings?.notesMaxLines ?? 3;
   const showPrice = settings?.showPrice !== false;
@@ -320,7 +322,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   // 获取完整内容（不区分展开/收起状态）
   const getFullNotesText = (): string => {
     const hasFlavor = showFlavorInfo && bean.flavor?.length;
-    const hasNotes = bean.notes && bean.notes.trim() !== '';
+    const hasNotes =
+      showNoteContent && bean.notes && bean.notes.trim() !== '';
 
     if (hasFlavor && hasNotes) {
       return `${bean.flavor!.join(' · ')}\n${bean.notes!}`;
@@ -328,7 +331,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     if (hasFlavor) {
       return bean.flavor!.join(' · ');
     }
-    return bean.notes || '';
+    if (hasNotes) {
+      return bean.notes || '';
+    }
+    return '';
   };
 
   // 渲染内容
@@ -337,7 +343,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   };
 
   const shouldShowNotes = () =>
-    showBeanNotes && ((showFlavorInfo && bean.flavor?.length) || bean.notes);
+    showBeanNotes &&
+    ((showFlavorInfo && bean.flavor?.length) ||
+      (showNoteContent && bean.notes));
 
   const handleNotesClick = (e: React.MouseEvent) => {
     e.stopPropagation();

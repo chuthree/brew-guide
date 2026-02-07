@@ -56,6 +56,7 @@ export const defaultSettings: AppSettings = {
   dateDisplayMode: 'agingDays',
   showFlavorInfo: false,
   showBeanNotes: true,
+  showNoteContent: true,
   limitNotesLines: true,
   notesMaxLines: 3,
   showPrice: true,

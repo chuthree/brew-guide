@@ -150,6 +150,12 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
                 onChange={checked => handleChange('showFlavorInfo', checked)}
               />
             </SettingRow>
+            <SettingRow label="备注内容" isSubSetting>
+              <SettingToggle
+                checked={settings.showNoteContent !== false}
+                onChange={checked => handleChange('showNoteContent', checked)}
+              />
+            </SettingRow>
             <SettingRow
               label="备注行数限制"
               isLast={!settings.limitNotesLines}

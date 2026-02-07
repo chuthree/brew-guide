@@ -11,6 +11,7 @@ interface ExportListViewProps {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
     showFlavorInfo?: boolean;
     showBeanNotes?: boolean;
+    showNoteContent?: boolean;
     limitNotesLines?: boolean;
     notesMaxLines?: number;
     showTotalPrice?: boolean;

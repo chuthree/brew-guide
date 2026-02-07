@@ -3508,6 +3508,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 dateDisplayMode: settings.dateDisplayMode,
                 showFlavorInfo: settings.showFlavorInfo,
                 showBeanNotes: settings.showBeanNotes,
+                showNoteContent: settings.showNoteContent,
                 limitNotesLines: settings.limitNotesLines,
                 notesMaxLines: settings.notesMaxLines,
                 showPrice: settings.showPrice,

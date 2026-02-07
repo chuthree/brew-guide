@@ -99,6 +99,7 @@ export const exportListPreview = async (
   userSettings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
     showFlavorInfo?: boolean;
+    showNoteContent?: boolean;
     limitNotesLines?: boolean;
     notesMaxLines?: number;
     showTotalPrice?: boolean;
@@ -143,6 +144,7 @@ export const exportListPreview = async (
           settings: userSettings || {
             dateDisplayMode: 'date',
             showFlavorInfo: false, // 默认不显示风味
+            showNoteContent: true,
             limitNotesLines: true,
             notesMaxLines: 1, // 默认只显示一行
             showTotalPrice: false,
