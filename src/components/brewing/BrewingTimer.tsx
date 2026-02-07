@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useRef,
   useLayoutEffect,
+  useMemo,
 } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrewingNoteForm } from '@/components/notes';
@@ -100,15 +101,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const [isHapticsSupported, setIsHapticsSupported] = useState(false);
   const [isProgressBarReady, setIsProgressBarReady] = useState(false);
   const lastStageRef = useRef<number>(-1);
+  const mainTimerRef = useRef<NodeJS.Timeout | null>(null);
   // 添加一个引用来记录上一次的倒计时状态，避免重复触发事件
   const prevCountdownTimeRef = useRef<number | null>(null);
 
   // 创建扩展阶段数组的引用
   const expandedStagesRef = useRef<ExpandedStage[]>([]);
 
-  // 当前扩展阶段索引
-  const [currentExpandedStageIndex, setCurrentExpandedStageIndex] =
-    useState(-1);
+  const [expandedStagesVersion, setExpandedStagesVersion] = useState(0);
 
   const audioState = useRef<AudioState>(createInitialAudioState());
 
@@ -263,67 +263,59 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     return createExpandedStages(currentBrewingMethod.params.stages);
   }, [currentBrewingMethod]);
 
+  const markExpandedStagesUpdated = useCallback(() => {
+    setExpandedStagesVersion(prev => prev + 1);
+  }, []);
+
   // 修改useLayoutEffect使用processExpansion
   useLayoutEffect(() => {
     if (currentBrewingMethod?.params?.stages) {
       const newExpandedStages = processExpansion();
       expandedStagesRef.current = newExpandedStages;
+      markExpandedStagesUpdated();
 
       // 通知扩展阶段变化
       if (onExpandedStagesChange) {
         onExpandedStagesChange(newExpandedStages);
       }
 
-      // 重置当前阶段索引
-      setCurrentExpandedStageIndex(-1);
+      markExpandedStagesUpdated();
 
       // 标记进度条准备就绪
       setIsProgressBarReady(true);
     } else {
       setIsProgressBarReady(false);
     }
-  }, [processExpansion, onExpandedStagesChange, currentBrewingMethod]);
+  }, [
+    processExpansion,
+    onExpandedStagesChange,
+    currentBrewingMethod,
+    markExpandedStagesUpdated,
+  ]);
 
-  // 修改获取当前阶段和阶段进度的函数
-  const getCurrentStageAndUpdateIndex = useCallback(() => {
+  const currentStageIndex = useMemo(() => {
     if (!currentBrewingMethod?.params?.stages?.length) return -1;
+    if (expandedStagesRef.current.length === 0) return -1;
+    return getCurrentStageIndex(currentTime, expandedStagesRef.current);
+  }, [currentTime, currentBrewingMethod, expandedStagesVersion]);
 
-    const expandedStages = expandedStagesRef.current;
-    if (expandedStages.length === 0) return -1;
-
-    // 使用StageProcessor的getCurrentStageIndex函数
-    const stageIndex = getCurrentStageIndex(currentTime, expandedStages);
-
-    // 更新当前扩展阶段索引
-    if (stageIndex !== currentExpandedStageIndex) {
-      setCurrentExpandedStageIndex(stageIndex);
-    }
-
-    return stageIndex;
-  }, [currentTime, currentBrewingMethod, currentExpandedStageIndex]);
-
-  // 使用StageProcessor的getStageProgress函数
-  const calculateStageProgress = useCallback(
-    (stageIndex: number) => {
-      return getStageProgress(
-        stageIndex,
-        currentTime,
-        expandedStagesRef.current
-      );
-    },
-    [currentTime]
-  );
+  const stageProgress = useMemo(() => {
+    return getStageProgress(
+      currentStageIndex,
+      currentTime,
+      expandedStagesRef.current
+    );
+  }, [currentStageIndex, currentTime, expandedStagesVersion]);
 
   // 使用StageProcessor的calculateCurrentWater函数
   const calculateCurrentWaterAmount = useCallback(() => {
     if (!currentBrewingMethod || currentTime === 0) return 0;
-    const currentStageIndex = getCurrentStageAndUpdateIndex();
     return calculateCurrentWater(
       currentTime,
       currentStageIndex,
       expandedStagesRef.current
     );
-  }, [currentTime, currentBrewingMethod, getCurrentStageAndUpdateIndex]);
+  }, [currentTime, currentBrewingMethod, currentStageIndex]);
 
   useEffect(() => {
     methodStagesRef.current = currentBrewingMethod?.params.stages || [];
@@ -331,25 +323,27 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
   const clearTimerAndStates = useCallback(() => {
     // 清除主计时器
-    if (timerId) {
-      clearInterval(timerId);
-      setTimerId(null);
+    if (mainTimerRef.current) {
+      clearInterval(mainTimerRef.current);
+      mainTimerRef.current = null;
     }
+    setTimerId(null);
 
     // 同时清除倒计时计时器
     if (countdownTimerRef.current) {
       clearInterval(countdownTimerRef.current);
       countdownTimerRef.current = null;
     }
-  }, [timerId]);
+  }, []);
 
   useEffect(() => {
     return () => {
-      if (timerId) {
-        clearInterval(timerId);
+      if (mainTimerRef.current) {
+        clearInterval(mainTimerRef.current);
+        mainTimerRef.current = null;
       }
     };
-  }, [timerId]);
+  }, []);
 
   // 完成冲煮，显示笔记表单
   const handleComplete = useCallback(() => {
@@ -420,6 +414,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   // 处理主计时器的启动
   const startMainTimer = useCallback(() => {
     if (currentBrewingMethod) {
+      // 防止重复启动导致时间加速
+      if (mainTimerRef.current) {
+        clearInterval(mainTimerRef.current);
+        mainTimerRef.current = null;
+      }
+
       // 首先确认有扩展阶段数据
       if (expandedStagesRef.current.length === 0) {
         // 强制重新处理阶段数据
@@ -427,6 +427,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           currentBrewingMethod.params.stages || []
         );
         expandedStagesRef.current = newExpandedStages;
+        markExpandedStagesUpdated();
 
         // 检查再次扩展后的结果
         if (expandedStagesRef.current.length === 0) {
@@ -462,6 +463,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       // 设置状态和开始计时
       setIsRunning(true);
       setTimerId(timerId);
+      mainTimerRef.current = timerId;
 
       // 通知状态变化
       if (onStatusChange) {
@@ -476,6 +478,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     settings.notificationSound,
     settings.hapticFeedback,
     onStatusChange,
+    markExpandedStagesUpdated,
   ]);
 
   // 添加startCountdown函数
@@ -528,6 +531,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   currentBrewingMethod.params.stages
                 );
                 expandedStagesRef.current = newExpandedStages;
+                markExpandedStagesUpdated();
 
                 // 通知扩展阶段变化
                 if (onExpandedStagesChange) {
@@ -574,6 +578,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       clearTimerAndStates,
       currentBrewingMethod,
       onExpandedStagesChange,
+      markExpandedStagesUpdated,
     ]
   );
 
@@ -583,9 +588,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   // 修改倒计时相关的 useEffect，使用新的倒计时控制器
   useEffect(() => {
     if (countdownTime !== null && isRunning) {
-      // 确保在倒计时时清除之前的主计时器
-      if (timerId) {
-        clearInterval(timerId);
+      // 仅在倒计时进行中才清理主计时器，避免倒计时结束瞬间误清理
+      if (countdownTime > 0 && mainTimerRef.current) {
+        clearInterval(mainTimerRef.current);
+        mainTimerRef.current = null;
+      }
+      if (countdownTime > 0) {
         setTimerId(null);
       }
 
@@ -602,7 +610,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         prevCountdownTimeRef.current = countdownTime;
       }
     }
-  }, [countdownTime, isRunning, timerId]);
+  }, [countdownTime, isRunning]);
 
   // 单独添加一个 effect 用于回调通知倒计时变化
   useEffect(() => {
@@ -790,24 +798,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
   // 修改向外通知阶段变化的函数
   useEffect(() => {
-    const currentStage = getCurrentStageAndUpdateIndex();
-    const progress = calculateStageProgress(currentStage);
-
-    if (currentStage >= 0 && expandedStagesRef.current.length > 0) {
-      const currentExpandedStage = expandedStagesRef.current[currentStage];
+    if (currentStageIndex >= 0 && expandedStagesRef.current.length > 0) {
+      const currentExpandedStage = expandedStagesRef.current[currentStageIndex];
+      const isWaiting = currentExpandedStage.type === 'wait';
 
       onStageChange?.({
-        currentStage: currentStage,
-        progress: progress,
-        isWaiting: currentExpandedStage.type === 'wait',
+        currentStage: currentStageIndex,
+        progress: stageProgress,
+        isWaiting: isWaiting,
       });
     }
-  }, [
-    currentTime,
-    getCurrentStageAndUpdateIndex,
-    calculateStageProgress,
-    onStageChange,
-  ]);
+  }, [currentStageIndex, stageProgress, onStageChange]);
 
   // 监听brewing:paramsUpdated事件，更新笔记表单数据
   useEffect(() => {
@@ -911,7 +912,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
   // 触感反馈在阶段变化时
   useEffect(() => {
-    const currentStage = getCurrentStageAndUpdateIndex();
+    const currentStage = currentStageIndex;
     if (
       currentStage !== lastStageRef.current &&
       isRunning &&
@@ -920,7 +921,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       triggerHaptic('medium');
     }
     lastStageRef.current = currentStage;
-  }, [currentTime, getCurrentStageAndUpdateIndex, isRunning, triggerHaptic]);
+  }, [currentStageIndex, isRunning, triggerHaptic]);
 
   // 处理外部显示和关闭笔记表单的事件
   useEffect(() => {
@@ -984,6 +985,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       if (e.detail.stages) {
         methodStagesRef.current = e.detail.stages;
         expandedStagesRef.current = processExpansion();
+        markExpandedStagesUpdated();
       }
     };
 
@@ -999,7 +1001,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         handleMethodSelected as EventListener
       );
     };
-  }, [isRunning, resetTimer, processExpansion]);
+  }, [isRunning, resetTimer, processExpansion, markExpandedStagesUpdated]);
 
   // 简化状态同步：只在明确重置时同步
   useEffect(() => {
@@ -1039,38 +1041,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     };
   }, [clearTimerAndStates]);
 
-  // 监听当前阶段变化并发送事件
-  useEffect(() => {
-    if (
-      currentExpandedStageIndex >= 0 &&
-      expandedStagesRef.current.length > 0
-    ) {
-      const currentStage = expandedStagesRef.current[currentExpandedStageIndex];
-      const stageProgress =
-        (currentTime - currentStage.startTime) /
-        (currentStage.endTime - currentStage.startTime);
-      const isWaiting = currentStage.type === 'wait';
-
-      // 发送阶段变化事件
-      const stageEvent = new CustomEvent('brewing:stageChange', {
-        detail: {
-          currentStage: currentExpandedStageIndex,
-          stage: currentExpandedStageIndex, // 同时包含stage和currentStage，确保兼容性
-          progress: stageProgress,
-          isWaiting: isWaiting,
-        },
-      });
-      window.dispatchEvent(stageEvent);
-
-      // 调用回调
-      onStageChange?.({
-        currentStage: currentExpandedStageIndex,
-        progress: stageProgress,
-        isWaiting: isWaiting,
-      });
-    }
-  }, [currentExpandedStageIndex, currentTime, onStageChange]);
-
   // 简化跳过处理函数
   const handleSkip = useCallback(() => {
     if (!currentBrewingMethod || !expandedStagesRef.current.length) return;
@@ -1100,7 +1070,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
     const expandedStages = expandedStagesRef.current;
     const lastStageIndex = expandedStages.length - 1;
-    const currentStage = getCurrentStageAndUpdateIndex();
+    const currentStage = currentStageIndex;
 
     // 只在最后一个阶段且是等待阶段时显示跳过按钮
     const isLastStage = currentStage === lastStageIndex;
@@ -1117,7 +1087,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     setShowSkipButton(shouldShowSkip);
   }, [
     currentTime,
-    getCurrentStageAndUpdateIndex,
+    currentStageIndex,
     currentBrewingMethod,
     isRunning,
     hasStartedOnce,
@@ -1136,23 +1106,23 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   if (!currentBrewingMethod) return null;
 
   // 获取当前扩展阶段
-  const currentStageIndex =
-    currentExpandedStageIndex >= 0
-      ? currentExpandedStageIndex
+  const resolvedCurrentStageIndex =
+    currentStageIndex >= 0
+      ? currentStageIndex
       : expandedStagesRef.current.length > 0
         ? 0
         : -1;
 
   const currentStage =
-    currentStageIndex >= 0 && expandedStagesRef.current.length > 0
-      ? expandedStagesRef.current[currentStageIndex]
+    resolvedCurrentStageIndex >= 0 && expandedStagesRef.current.length > 0
+      ? expandedStagesRef.current[resolvedCurrentStageIndex]
       : null;
 
   // 获取下一个扩展阶段
   const nextStageIndex =
-    currentStageIndex >= 0 &&
-    currentStageIndex < expandedStagesRef.current.length - 1
-      ? currentStageIndex + 1
+    resolvedCurrentStageIndex >= 0 &&
+    resolvedCurrentStageIndex < expandedStagesRef.current.length - 1
+      ? resolvedCurrentStageIndex + 1
       : -1;
 
   const nextStage =
@@ -1293,7 +1263,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           当前阶段
                         </div>
                         <motion.div
-                          key={currentStageIndex}
+                          key={resolvedCurrentStageIndex}
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.26 }}
@@ -1328,7 +1298,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             目标时间
                           </div>
                           <motion.div
-                            key={`time-${currentStageIndex}`}
+                            key={`time-${resolvedCurrentStageIndex}`}
                             initial={{ opacity: 0.8 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.26 }}
@@ -1346,7 +1316,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             目标水量
                           </div>
                           <motion.div
-                            key={`water-${currentStageIndex}`}
+                            key={`water-${resolvedCurrentStageIndex}`}
                             initial={{ opacity: 0.8 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.26 }}
@@ -1377,7 +1347,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                               流速
                             </div>
                             <motion.div
-                              key={`flow-rate-${currentStageIndex}`}
+                              key={`flow-rate-${resolvedCurrentStageIndex}`}
                               initial={{ opacity: 0.8 }}
                               animate={{ opacity: 1 }}
                               transition={{ duration: 0.26 }}
@@ -1648,7 +1618,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                         {/* 当前阶段时间标记 */}
                         {currentStage && (
                           <div
-                            key={`current-${currentStage.endTime}-${currentExpandedStageIndex}`}
+                            key={`current-${currentStage.endTime}-${resolvedCurrentStageIndex}`}
                             className="absolute top-0 text-[9px] font-medium text-neutral-600 dark:text-neutral-300"
                             style={{
                               left: `${(currentStage.endTime / expandedStagesRef.current[expandedStagesRef.current.length - 1].endTime) * 100}%`,
