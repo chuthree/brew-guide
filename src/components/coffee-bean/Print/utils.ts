@@ -3,6 +3,7 @@ import { EditableContent, PrintConfig } from './types';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import {
   formatBeanDisplayName,
+  getBeanEstates,
   RoasterSettings,
 } from '@/lib/utils/beanVarietyUtils';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
@@ -86,6 +87,7 @@ export const createInitialContent = (
     return {
       name: '',
       origin: '',
+      estate: '',
       roastLevel: '',
       roastDate: '',
       process: '',
@@ -98,6 +100,7 @@ export const createInitialContent = (
   return {
     name: formatBeanDisplayName(bean, roasterSettings),
     origin: extractComponentInfo(bean, 'origin'),
+    estate: getBeanEstates(bean).join(', '),
     roastLevel: bean.roastLevel || '',
     roastDate: bean.roastDate || '',
     process: extractComponentInfo(bean, 'process'),

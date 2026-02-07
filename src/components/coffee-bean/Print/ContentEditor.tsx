@@ -235,6 +235,9 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
               {config.fields.origin && (
                 <TextInput label="产地" field="origin" placeholder="产地信息" />
               )}
+              {config.fields.estate && (
+                <TextInput label="庄园" field="estate" placeholder="庄园信息" />
+              )}
               {config.fields.process && (
                 <TextInput
                   label="处理法"
@@ -257,6 +260,9 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
                 />
               )}
               {config.fields.flavor && <FlavorEditor />}
+              {config.fields.weight && (
+                <TextInput label="克重" field="weight" placeholder="例如：250" />
+              )}
               {config.fields.notes && (
                 <div>
                   <label className={LABEL_CLASS}>备注</label>

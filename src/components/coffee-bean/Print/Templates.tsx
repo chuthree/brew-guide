@@ -89,6 +89,12 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
 }) => {
   const { fields, fontSize, titleFontSize, fontWeight } = config;
   const validFlavors = content.flavor.filter(f => f.trim());
+  const showEstate = fields.estate || !!content.estate;
+  const weightValue = content.weight
+    ? content.weight.trim().toLowerCase().endsWith('g')
+      ? content.weight
+      : `${content.weight}g`
+    : '';
 
   return (
     <div style={{ display: 'flex', height: '100%', flexDirection: 'column' }}>
@@ -98,7 +104,6 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
           style={{
             marginBottom: '0.375rem',
             flexShrink: 0,
-            paddingBottom: '0.25rem',
           }}
         >
           <div
@@ -142,6 +147,7 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
           label="产地"
           value={content.origin}
         />
+        <FieldRow show={showEstate} label="庄园" value={content.estate} />
         <FieldRow
           show={shouldShow(config, 'process', content.process)}
           label="处理"
@@ -161,6 +167,11 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
           show={fields.flavor && validFlavors.length > 0}
           label="风味"
           value={validFlavors.join(' / ')}
+        />
+        <FieldRow
+          show={shouldShow(config, 'weight', content.weight)}
+          label="克重"
+          value={weightValue}
         />
         <FieldRow
           show={shouldShow(config, 'notes', content.notes)}
