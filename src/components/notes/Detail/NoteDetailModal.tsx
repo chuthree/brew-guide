@@ -363,11 +363,8 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       }));
   }, [note?.beanId, allNotes]);
 
-  // 构建标题文本 - 只显示咖啡豆名称（使用 useMemo 缓存）
-  const titleText = useMemo(() => {
-    if (!note) return '未命名';
-    return beanName || '未命名';
-  }, [note, beanName]);
+  // 构建标题文本 - 仅在有咖啡豆时显示
+  const titleText = useMemo(() => (beanName ? beanName : ''), [beanName]);
 
   // 编辑按钮点击处理
   const handleEditClick = useCallback(() => {
@@ -467,9 +464,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               willChange: 'opacity, filter, transform',
             }}
           >
-            <h2 className="max-w-full truncate px-2 text-center text-sm font-medium text-neutral-800 dark:text-neutral-100">
-              {titleText}
-            </h2>
+            {titleText && (
+              <h2 className="max-w-full truncate px-2 text-center text-sm font-medium text-neutral-800 dark:text-neutral-100">
+                {titleText}
+              </h2>
+            )}
           </div>
 
           {/* 右侧操作按钮 */}
@@ -711,14 +710,16 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           )}
 
           {/* 标题区域 */}
-          <div className="mb-4 px-6">
-            <h2
-              id="note-detail-title"
-              className="text-sm font-medium text-neutral-800 dark:text-neutral-100"
-            >
-              {titleText}
-            </h2>
-          </div>
+          {titleText && (
+            <div className="mb-4 px-6">
+              <h2
+                id="note-detail-title"
+                className="text-sm font-medium text-neutral-800 dark:text-neutral-100"
+              >
+                {titleText}
+              </h2>
+            </div>
+          )}
 
           {note ? (
             <div className="space-y-3 px-6">

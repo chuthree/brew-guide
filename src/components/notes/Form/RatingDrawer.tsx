@@ -235,11 +235,17 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
             <div className="flex flex-col gap-3">
               {!overallUseSlider && (
                 <p className="text-base font-medium text-neutral-500 dark:text-neutral-400">
-                  为这杯
-                  <span className="mx-1 text-neutral-800 dark:text-neutral-200">
-                    {beanName || '这杯咖啡'}
-                  </span>
-                  评分
+                  {beanName ? (
+                    <>
+                      为这杯
+                      <span className="mx-1 text-neutral-800 dark:text-neutral-200">
+                        {beanName}
+                      </span>
+                      评分
+                    </>
+                  ) : (
+                    <>为这杯咖啡评分</>
+                  )}
                 </p>
               )}
               {overallUseSlider ? (
