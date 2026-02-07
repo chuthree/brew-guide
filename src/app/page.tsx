@@ -39,6 +39,7 @@ import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
 import Onboarding from '@/components/onboarding/Onboarding';
+import PWAInstallBanner from '@/components/layout/PWAInstallBanner';
 import AppModals from '@/components/layout/AppModals';
 import fontZoomUtils from '@/lib/utils/fontZoomUtils';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
@@ -920,7 +921,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             }
           }
           if (isMounted) {
-            setShowOnboarding(!isCompleted);
+            const shouldShowOnboarding = !isCompleted;
+            setShowOnboarding(shouldShowOnboarding);
+            if (typeof window !== 'undefined') {
+              (window as any).__onboardingOpen = shouldShowOnboarding;
+              window.dispatchEvent(
+                new CustomEvent('onboarding-visibility', {
+                  detail: { open: shouldShowOnboarding },
+                })
+              );
+            }
           }
         } catch {
           // 静默处理错误
@@ -1688,6 +1698,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
+    if (typeof window !== 'undefined') {
+      (window as any).__onboardingOpen = false;
+      window.dispatchEvent(
+        new CustomEvent('onboarding-visibility', { detail: { open: false } })
+      );
+    }
   };
 
   const handleImportBean = async (jsonData: string) => {
@@ -3230,7 +3246,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       {/* 大屏幕时：只有非详情页模态框（设置等）需要主页动画 */}
       {/* 小屏幕时：所有模态框都需要主页动画 */}
       <div
-        className="flex h-full flex-col md:flex-row"
+        className="flex h-full flex-col"
         style={
           {
             ...getParentPageStyle(
@@ -3245,7 +3261,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           } as React.CSSProperties
         }
       >
-        <NavigationBar
+        <PWAInstallBanner />
+        <div className="flex h-full flex-col md:flex-row">
+          <NavigationBar
           activeMainTab={activeMainTab}
           setActiveMainTab={handleMainTabClick}
           activeBrewingStep={activeBrewingStep}
@@ -3306,7 +3324,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onPullToSync={handlePullToSync}
           width={isLargeScreen ? navPanelWidth : undefined}
           isResizing={isNavResizing}
-        />
+          />
 
         {/* 导航栏拖动条 - 大屏幕时显示，放在 NavigationBar 和 main 之间避免被裁切 */}
         {isLargeScreen && (
@@ -3328,17 +3346,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           </div>
         )}
 
-        {/* 主内容区域 - 桌面端独立滚动 */}
-        <main
-          className={`md:pt-safe-top h-full flex-1 ${
-            activeMainTab === '冲煮' &&
-            activeBrewingStep === 'brewing' &&
-            currentBrewingMethod &&
-            !showHistory
-              ? 'flex flex-col overflow-hidden'
-              : 'overflow-y-auto md:overflow-y-scroll'
-          }`}
-        >
+          {/* 主内容区域 - 桌面端独立滚动 */}
+          <main
+            className={`md:pt-safe-top h-full flex-1 ${
+              activeMainTab === '冲煮' &&
+              activeBrewingStep === 'brewing' &&
+              currentBrewingMethod &&
+              !showHistory
+                ? 'flex flex-col overflow-hidden'
+                : 'overflow-y-auto md:overflow-y-scroll'
+            }`}
+          >
           <div
             className={
               isBrewingMainTab
@@ -3915,6 +3933,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             </div>
           </aside>
         )}
+        </div>
 
         <BackupReminderModal
           isOpen={showBackupReminder}

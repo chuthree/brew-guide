@@ -33,6 +33,16 @@ const Onboarding: React.FC<OnboardingProps> = ({
   // 使用 useThemeColor hook 同步顶部安全区颜色
   useThemeColor({ useOverlay: true, enabled: isOpen });
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    (window as any).__onboardingOpen = isOpen;
+    window.dispatchEvent(
+      new CustomEvent('onboarding-visibility', {
+        detail: { open: isOpen },
+      })
+    );
+  }, [isOpen]);
+
   // 持久化存储状态
   const [isPersisted, setIsPersisted] = useState(false);
   const [canRequestPersist, setCanRequestPersist] = useState(false);

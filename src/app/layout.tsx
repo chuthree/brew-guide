@@ -344,8 +344,8 @@ export default function RootLayout({
                 <ModalHistoryInit />
                 <KeyboardManager />
               </Suspense>
-              <div className="mx-auto h-full w-full overflow-hidden">
-                {children}
+              <div className="mx-auto flex h-full w-full flex-col overflow-hidden">
+                <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
               </div>
               <LightToast />
               <ExitToast />
