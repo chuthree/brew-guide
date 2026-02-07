@@ -80,14 +80,14 @@ export default function PWAInstallBanner() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
-    if (isIOS) {
+    if (isIOS || isAndroid) {
       setIsVisible(true);
     }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
     };
-  }, [isIOS, isNative]);
+  }, [isIOS, isAndroid, isNative]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
