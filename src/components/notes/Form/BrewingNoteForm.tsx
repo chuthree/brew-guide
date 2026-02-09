@@ -1439,7 +1439,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }
   };
 
-  const containerClassName = 'relative grid min-h-full grid-rows-[auto_auto]';
+  const containerClassName = 'relative grid min-h-full grid-rows-[1fr_auto]';
 
   // 格式化日期显示
   const formatDateDisplay = (date: Date) => {
