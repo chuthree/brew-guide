@@ -254,6 +254,16 @@ const RadarChart: React.FC<{
       const dy2 = next.y - curr.y;
       const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
 
+      // 如果边长为0（连续点重合），直接连线不做圆角处理
+      if (len1 < 0.01 || len2 < 0.01) {
+        if (i === 0) {
+          path.push(`M ${curr.x} ${curr.y}`);
+        } else {
+          path.push(`L ${curr.x} ${curr.y}`);
+        }
+        continue;
+      }
+
       // 限制圆角半径不超过边长的一半
       const r = Math.min(cornerRadius, len1 / 2, len2 / 2);
 
