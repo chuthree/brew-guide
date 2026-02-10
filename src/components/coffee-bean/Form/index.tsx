@@ -1094,8 +1094,8 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     }, [currentStep, validateRemaining]);
 
     return (
-      <div className="flex flex-col">
-        <div className="my-6 flex items-center justify-between">
+      <div className="flex h-full flex-col">
+        <div className="my-6 flex shrink-0 items-center justify-between">
           <button
             type="button"
             onClick={handleBack}
@@ -1115,7 +1115,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
           <AnimatePresence mode="wait">{renderStepContent()}</AnimatePresence>
         </div>
 
-        {renderNextButton()}
+        <div className="shrink-0">{renderNextButton()}</div>
       </div>
     );
   }

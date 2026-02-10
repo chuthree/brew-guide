@@ -1531,9 +1531,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     if (isEspresso) {
       const parsedTime = parseFloat(totalTimeStr);
       const timeValue =
-        !Number.isNaN(parsedTime) && parsedTime > 0
-          ? `${parsedTime}s`
-          : '';
+        !Number.isNaN(parsedTime) && parsedTime > 0 ? `${parsedTime}s` : '';
 
       const params = [
         methodParams.coffee && { label: '粉量', value: methodParams.coffee },
@@ -1655,7 +1653,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       className={containerClassName}
     >
       {/* 笔记内容输入区域 */}
-      <div className="min-h-0 pb-4">
+      <div className="flex-1 pb-4">
         <textarea
           ref={textareaRef}
           id="brewing-notes"
