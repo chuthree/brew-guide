@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
 import { BrewingNote } from '@/lib/core/config';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
-import { formatDate, formatRating } from '@/components/notes/utils';
+import { formatDateAbsolute, formatRating } from '@/components/notes/utils';
 import { BeanImageSmall } from './BeanImageSection';
 import { formatNumber } from '../utils';
 import { isSimpleChangeRecord, isRoastingRecord } from '../types';
@@ -269,9 +269,9 @@ const ChangeRecordItem: React.FC<{ note: BrewingNote }> = React.memo(
         )}
         <div
           className="w-20 overflow-hidden text-right text-xs font-medium tracking-wide whitespace-nowrap text-neutral-600 dark:text-neutral-400"
-          title={formatDate(note.timestamp)}
+          title={formatDateAbsolute(note.timestamp)}
         >
-          {formatDate(note.timestamp)}
+          {formatDateAbsolute(note.timestamp)}
         </div>
       </div>
     );
@@ -332,9 +332,9 @@ const RoastingRecordItem: React.FC<{
       )}
       <div
         className="w-20 overflow-hidden text-right text-xs font-medium tracking-wide whitespace-nowrap text-neutral-600 dark:text-neutral-400"
-        title={formatDate(note.timestamp)}
+        title={formatDateAbsolute(note.timestamp)}
       >
-        {formatDate(note.timestamp)}
+        {formatDateAbsolute(note.timestamp)}
       </div>
     </div>
   );
@@ -558,7 +558,7 @@ const BrewingRecordItem: React.FC<{
         {/* 时间和评分 */}
         <div className="flex items-baseline justify-between">
           <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
-            {formatDate(note.timestamp)}
+            {formatDateAbsolute(note.timestamp)}
           </div>
           {note.rating > 0 && (
             <div className="text-xs font-medium tracking-wide text-neutral-600 dark:text-neutral-400">

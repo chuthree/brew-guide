@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { formatDate } from '../utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { BrewingNote } from '@/lib/core/config';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { formatDateAbsolute } from '../utils';
 
 interface ChangeRecordNoteItemProps {
   note: BrewingNote;
@@ -73,7 +73,7 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
       roasterFieldEnabled,
       roasterSeparator,
     }) || '未知咖啡豆';
-  const dateFormatted = note.timestamp ? formatDate(note.timestamp) : '';
+  const dateFormatted = note.timestamp ? formatDateAbsolute(note.timestamp) : '';
 
   // 判断是否是烘焙记录
   const isRoastingRecord = note.source === 'roasting';
