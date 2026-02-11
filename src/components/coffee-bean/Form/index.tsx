@@ -1044,7 +1044,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         'rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100';
 
       return (
-        <div className="modal-bottom-button flex items-center justify-center">
+        <div className="flex items-center justify-center pb-safe-bottom pt-4">
           <div className="flex items-center justify-center gap-2">
             <AnimatePresence mode="popLayout">
               {canSave && (
@@ -1094,24 +1094,26 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     }, [currentStep, validateRemaining]);
 
     return (
-      <div className="flex flex-col">
-        <div className="my-6 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="-m-3 cursor-pointer rounded-full p-3"
-          >
-            <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
-          </button>
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="shrink-0 py-6">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="-m-3 cursor-pointer rounded-full p-3"
+            >
+              <ArrowLeft className="h-5 w-5 text-neutral-800 dark:text-neutral-200" />
+            </button>
 
-          <div className="flex-1 px-4">{renderProgressBar()}</div>
+            <div className="flex-1 px-4">{renderProgressBar()}</div>
 
-          <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-            {getCurrentStepIndex() + 1}/{steps.length}
+            <div className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+              {getCurrentStepIndex() + 1}/{steps.length}
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-4">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-4">
           <AnimatePresence mode="wait">{renderStepContent()}</AnimatePresence>
         </div>
 
