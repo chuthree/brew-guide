@@ -9,4 +9,3 @@ export { S3SyncSection } from './S3SyncSection';
 export { WebDAVSyncSection } from './WebDAVSyncSection';
 export { SupabaseSyncSection } from './SupabaseSyncSection';
 export { DataManagementSection } from './DataManagementSection';
-export { ToolsSection } from './ToolsSection';

@@ -18,7 +18,6 @@ import {
   WebDAVSyncSection,
   SupabaseSyncSection,
   DataManagementSection,
-  ToolsSection,
 } from './data-settings';
 import WebDAVTutorialModal from './data-settings/WebDAVTutorialModal';
 import { Capacitor } from '@capacitor/core';
@@ -827,9 +826,6 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
       {/* 数据管理设置组 */}
       <DataManagementSection onDataChange={onDataChange} />
-
-      {/* 工具设置组 */}
-      <ToolsSection onDataChange={onDataChange} />
 
       {/* WebDAV 配置教程 */}
       <WebDAVTutorialModal
