@@ -10,6 +10,10 @@ import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
 import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
 import { SettingsOptions } from '@/components/settings/Settings';
+import {
+  DEFAULT_BEAN_RECOGNITION_PROMPT,
+  type CustomBeanRecognitionConfig,
+} from '@/lib/api/beanRecognition';
 
 // 模拟 API 开关 - 设置为 true 时使用模拟数据
 const USE_MOCK_API = false;
@@ -51,25 +55,6 @@ interface ImportedBean {
   price?: number | string | null;
   [key: string]: unknown;
 }
-
-// 咖啡豆识别提示词（2025 简洁增强版）
-const BEAN_RECOGNITION_PROMPT = `你是OCR工具，提取图片中的咖啡豆信息，直接返回JSON（单豆返回对象{}，多豆返回数组[]）。
-
-必填: name（豆名，如"埃塞俄比亚赏花日晒原生种"）
-
-可选（图片有明确信息才填）：
-- roaster: 烘焙商/品牌名（如"西可"）
-- capacity/remaining/price: 纯数字
-- roastDate: YYYY-MM-DD (缺年份补2026)
-- roastLevel: 极浅烘焙|浅度烘焙|中浅烘焙|中度烘焙|中深烘焙|深度烘焙
-- beanType: filter|espresso|omni（≤200g/浅烘/单品→filter，≥300g/深烘/拼配→espresso，标注全能→omni，默认filter）
-- flavor: 风味数组["橘子","荔枝"]
-- startDay/endDay: 养豆期/赏味期天数
-- blendComponents: 产地/庄园/处理法/品种 [{origin:"埃塞俄比亚",estate:"赏花",process:"日晒",variety:"原生种"}]
-- notes: 处理站/海拔/批次号等补充信息（产地和庄园信息放 blendComponents，这里只放补充信息）
-
-规则：数值不带单位/不编造/不确定不填/直接返回JSON
-`;
 
 // 步骤类型定义
 type ImportStep = 'main' | 'json-input' | 'recognizing' | 'multi-preview';
@@ -182,6 +167,24 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   );
   // 多图识别是否正在进行
   const [isMultiRecognizing, setIsMultiRecognizing] = useState(false);
+  const recognitionRequestSeq = useRef(0);
+
+  const effectiveRecognitionPrompt = (
+    settings?.experimentalBeanRecognitionPrompt || ''
+  ).trim()
+    ? (settings?.experimentalBeanRecognitionPrompt as string).trim()
+    : DEFAULT_BEAN_RECOGNITION_PROMPT;
+
+  const customRecognitionConfig: CustomBeanRecognitionConfig | undefined =
+    settings?.experimentalBeanRecognitionEnabled
+      ? {
+          enabled: true,
+          apiBaseUrl: settings.experimentalBeanRecognitionApiBaseUrl || '',
+          apiKey: settings.experimentalBeanRecognitionApiKey || '',
+          model: settings.experimentalBeanRecognitionModel || '',
+          prompt: effectiveRecognitionPrompt,
+        }
+      : undefined;
 
   // 返回主界面
   const goBackToMain = useCallback(() => {
@@ -329,6 +332,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       file: File,
       imageUrl: string
     ): Promise<{ data: unknown; file: File }> => {
+      const requestId = ++recognitionRequestSeq.current;
       let beanData: unknown;
 
       if (USE_MOCK_API) {
@@ -341,12 +345,16 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         const compressedFile = await smartCompress(file);
         const { recognizeBeanImage } =
           await import('@/lib/api/beanRecognition');
-        beanData = await recognizeBeanImage(compressedFile);
+        beanData = await recognizeBeanImage(
+          compressedFile,
+          undefined,
+          customRecognitionConfig
+        );
       }
 
       return { data: beanData, file };
     },
-    []
+    [customRecognitionConfig]
   );
 
   // 处理图片上传识别（支持单张和多张）
@@ -422,10 +430,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                       initialQuality: 0.8,
                     });
                     onRecognitionImage(compressedBase64);
-                  } catch (error) {
-                    if (process.env.NODE_ENV === 'development') {
-                      console.error('识别图片压缩失败:', error);
-                    }
+                  } catch (_error) {
                     onRecognitionImage(base64);
                   }
                 }
@@ -443,7 +448,6 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
           await handleImportData(beanData);
         } catch (error) {
-          console.error('图片识别失败:', error);
           showToast({
             type: 'error',
             title: error instanceof Error ? error.message : '图片识别失败',
@@ -506,10 +510,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                 initialQuality: 0.8,
               });
               resolve(compressedBase64);
-            } catch (error) {
-              if (process.env.NODE_ENV === 'development') {
-                console.error('图片压缩失败:', error);
-              }
+            } catch (_error) {
               resolve(base64);
             }
           } else {
@@ -664,8 +665,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
   // 复制提示词 - 使用统一的 useCopy hook
   const handleCopyPrompt = useCallback(async () => {
-    await copyText(BEAN_RECOGNITION_PROMPT);
-  }, [copyText]);
+    await copyText(effectiveRecognitionPrompt);
+  }, [copyText, effectiveRecognitionPrompt]);
 
   // 提交 JSON 输入
   const handleSubmitJson = useCallback(async () => {

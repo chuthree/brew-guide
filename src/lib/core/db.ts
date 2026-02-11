@@ -255,6 +255,11 @@ export interface AppSettings {
   autoFillRecognitionImage?: boolean;
   showEstateField?: boolean;
   immersiveAdd?: boolean;
+  experimentalBeanRecognitionEnabled?: boolean;
+  experimentalBeanRecognitionApiBaseUrl?: string;
+  experimentalBeanRecognitionApiKey?: string;
+  experimentalBeanRecognitionModel?: string;
+  experimentalBeanRecognitionPrompt?: string;
 
   // 每日提醒设置
   dailyReminder: boolean;

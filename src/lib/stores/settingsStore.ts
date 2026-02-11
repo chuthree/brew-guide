@@ -171,6 +171,11 @@ export const defaultSettings: AppSettings = {
   autoFillRecognitionImage: false,
   showEstateField: false,
   immersiveAdd: false,
+  experimentalBeanRecognitionEnabled: false,
+  experimentalBeanRecognitionApiBaseUrl: '',
+  experimentalBeanRecognitionApiKey: '',
+  experimentalBeanRecognitionModel: '',
+  experimentalBeanRecognitionPrompt: '',
 
   // 每日提醒设置
   dailyReminder: false,
