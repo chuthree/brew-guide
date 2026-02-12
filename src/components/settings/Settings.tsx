@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { APP_VERSION, sponsorsList } from '@/lib/core/config';
+import { getVersionLabel } from '@/lib/core/buildInfo';
 import { pinyin } from 'pinyin-pro';
 import hapticsUtils from '@/lib/ui/haptics';
 import { restoreDefaultThemeColor } from '@/lib/hooks/useThemeColor';
@@ -306,10 +307,11 @@ const Settings: React.FC<SettingsProps> = ({
   // 自动检测更新（仅在 Capacitor 原生环境下）
   // 是否为自动检测触发的更新提示
   const [isAutoCheckUpdate, setIsAutoCheckUpdate] = useState(false);
+  const nativeApp = typeof window !== 'undefined' ? isNative() : false;
 
   useEffect(() => {
     if (!isOpen) return;
-    if (!isNative()) return; // 仅原生平台自动检测
+    if (!nativeApp) return; // 仅原生平台自动检测
 
     const autoCheckUpdate = async () => {
       try {
@@ -336,7 +338,7 @@ const Settings: React.FC<SettingsProps> = ({
     };
 
     autoCheckUpdate();
-  }, [isOpen]);
+  }, [isOpen, nativeApp]);
 
   // 点击外部关闭同步菜单
   useEffect(() => {
@@ -838,7 +840,7 @@ const Settings: React.FC<SettingsProps> = ({
             {
               icon: Info,
               label: '关于',
-              value: `v${APP_VERSION}`,
+              value: getVersionLabel(nativeApp),
               onClick: subSettingsHandlers.onOpenAboutSettings,
             },
           ]}

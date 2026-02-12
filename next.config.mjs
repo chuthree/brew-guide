@@ -1,10 +1,34 @@
 // Next.js 配置
 // PWA Service Worker 由 scripts/generate-sw.mjs 在构建后生成（使用 Google Workbox）
+import { execSync } from 'node:child_process';
+
+function readGitShortSha() {
+  if (process.env.NEXT_PUBLIC_APP_GIT_SHA) {
+    return process.env.NEXT_PUBLIC_APP_GIT_SHA.trim();
+  }
+
+  try {
+    return execSync('git rev-parse --short=8 HEAD', {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
+  } catch {
+    return 'unknown';
+  }
+}
+
+const buildInfoEnv = {
+  NEXT_PUBLIC_APP_GIT_SHA: readGitShortSha(),
+  NEXT_PUBLIC_APP_BUILD_TIME:
+    process.env.NEXT_PUBLIC_APP_BUILD_TIME || new Date().toISOString(),
+};
 
 const nextConfig = {
   reactStrictMode: true,
   // 启用 React Compiler
   reactCompiler: true,
+  env: buildInfoEnv,
   // 为 Capacitor 启用静态导出模式
   output: 'export',
   // 图像配置
