@@ -527,7 +527,7 @@ const Settings: React.FC<SettingsProps> = ({
               icon: CircleHelp,
               label: '帮助文档',
               onClick: () => {
-                window.open('https://help.chu3.top/docs', '_blank');
+                window.open('https://chu3.top/brewguide-help', '_blank');
                 if (settings.hapticFeedback) {
                   hapticsUtils.light();
                 }

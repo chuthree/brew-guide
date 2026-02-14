@@ -181,16 +181,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
               <div className="h-px bg-neutral-200 dark:bg-neutral-700" />
               <p>
                 目前功能处于 MVP
-                实现阶段，若有任何体验不足的地方或建议反馈，欢迎来
-                <a
-                  href="https://help.chu3.top/docs/contact"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline underline-offset-2"
-                >
-                  群里交流
-                </a>
-                ～
+                实现阶段，若有任何体验不足的地方或建议反馈，欢迎来群里交流～
               </p>
             </div>
           </details>

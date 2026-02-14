@@ -178,20 +178,12 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
                 官网
               </a>
               <a
-                href="https://help.chu3.top/docs"
+                href="https://chu3.top/notes/brew-guide-changelog"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-neutral-800 underline dark:text-neutral-200"
               >
-                帮助
-              </a>
-              <a
-                href="https://chu3.top/brew2"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-neutral-800 underline dark:text-neutral-200"
-              >
-                Brew2 计划
+                更新日志
               </a>
               <a
                 href="https://chu3.top/"
