@@ -21,7 +21,9 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({
   const brandName = extractBrandName(content.name, config.brandName);
   const beanName = extractBeanName(content.name, config.brandName);
   const flavorLine = getFlavorLine(content.flavor);
-  const bottomLine = getBottomInfoLine(content);
+  const bottomLine = getBottomInfoLine(content, config);
+  const showName = config.fields.name && !!content.name.trim();
+  const showFlavor = config.fields.flavor && !!flavorLine;
 
   const textStyle = {
     fontSize: `${config.fontSize}px`,
@@ -39,7 +41,7 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        {brandName && (
+        {showName && brandName && (
           <div
             style={{
               ...textStyle,
@@ -50,8 +52,8 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({
             [ {brandName} ]
           </div>
         )}
-        {beanName && <div style={textStyle}>{beanName}</div>}
-        {flavorLine && <div style={textStyle}>{flavorLine}</div>}
+        {showName && beanName && <div style={textStyle}>{beanName}</div>}
+        {showFlavor && <div style={textStyle}>{flavorLine}</div>}
       </div>
       {bottomLine && <div style={textStyle}>{bottomLine}</div>}
     </div>

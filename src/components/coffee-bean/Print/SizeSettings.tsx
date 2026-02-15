@@ -103,7 +103,7 @@ export const SizeSettings: React.FC<SizeSettingsProps> = ({
 
       {/* 编辑模式 */}
       {editMode && (
-        <div className="space-y-2 rounded bg-neutral-50 p-3 dark:bg-neutral-800/50">
+        <div className="space-y-2 rounded bg-neutral-100 p-3 dark:bg-neutral-800/50">
           <div className="flex items-center gap-2">
             <input
               type="number"
