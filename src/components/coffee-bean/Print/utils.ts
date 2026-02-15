@@ -43,15 +43,21 @@ export const getFlavorLine = (flavors: string[]): string =>
   flavors.filter(f => f.trim()).join(' / ');
 
 // 生成底部信息行（简洁模板用）
-export const getBottomInfoLine = (c: EditableContent): string => {
+export const getBottomInfoLine = (
+  c: EditableContent,
+  config: PrintConfig
+): string => {
   const parts: string[] = [];
-  if (c.weight) parts.push(`${c.weight}g`);
-  if (c.roastDate) parts.push(formatDate(c.roastDate));
-  if (c.process) parts.push(c.process);
-  if (c.variety) parts.push(c.variety);
-  if (c.origin) parts.push(c.origin);
-  if (c.roastLevel) parts.push(c.roastLevel);
-  if (c.notes) parts.push(c.notes);
+  if (config.fields.weight && c.weight) {
+    parts.push(c.weight.trim().toLowerCase().endsWith('g') ? c.weight : `${c.weight}g`);
+  }
+  if (config.fields.roastDate && c.roastDate) parts.push(formatDate(c.roastDate));
+  if (config.fields.process && c.process) parts.push(c.process);
+  if (config.fields.variety && c.variety) parts.push(c.variety);
+  if (config.fields.origin && c.origin) parts.push(c.origin);
+  if (config.fields.estate && c.estate) parts.push(c.estate);
+  if (config.fields.roastLevel && c.roastLevel) parts.push(c.roastLevel);
+  if (config.fields.notes && c.notes) parts.push(c.notes);
   return parts.join(' / ');
 };
 
