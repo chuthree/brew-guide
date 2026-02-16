@@ -16,6 +16,7 @@ import { DataLayerProvider } from '@/providers/DataLayerProvider';
 import { BaiduAnalytics } from '@/components/common/BaiduAnalytics';
 import DevTools from '@/components/common/DevTools';
 import TauriDragRegion from '@/components/layout/TauriDragRegion';
+import PWAUpdatePrompt from '@/components/layout/PWAUpdatePrompt';
 
 // 只加载需要的 GeistMono 字重（用于计时器）
 const geistMono = localFont({
@@ -253,33 +254,6 @@ export default function RootLayout({
             <meta httpEquiv="Expires" content="0" />
           </>
         )}
-        {!isDevelopment && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                // PWA Service Worker 注册 - 遵循 Google 最佳实践
-                if ('serviceWorker' in navigator) {
-                  window.addEventListener('load', function() {
-                    navigator.serviceWorker
-                      .register('/sw.js', { scope: '/' })
-                      .then(function(registration) {
-                        console.log('✅ Service Worker registered:', registration.scope);
-                        
-                        // 检查更新
-                        registration.addEventListener('updatefound', function() {
-                          const newWorker = registration.installing;
-                          console.log('🔄 Service Worker update found');
-                        });
-                      })
-                      .catch(function(error) {
-                        console.error('❌ Service Worker registration failed:', error);
-                      });
-                  });
-                }
-              `,
-            }}
-          />
-        )}
       </head>
       <body>
         {/* SEO: 为不支持 JavaScript 的搜索引擎爬虫提供内容 */}
@@ -347,6 +321,7 @@ export default function RootLayout({
               <div className="mx-auto flex h-full w-full flex-col overflow-hidden">
                 <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
               </div>
+              {!isDevelopment && <PWAUpdatePrompt />}
               <LightToast />
               <ExitToast />
             </div>

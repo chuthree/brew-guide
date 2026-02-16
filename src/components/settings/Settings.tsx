@@ -6,6 +6,7 @@ import { getVersionLabel } from '@/lib/core/buildInfo';
 import { pinyin } from 'pinyin-pro';
 import hapticsUtils from '@/lib/ui/haptics';
 import { restoreDefaultThemeColor } from '@/lib/hooks/useThemeColor';
+import { requestPWAUpdateCheck } from '@/lib/utils/pwaUpdateCheck';
 import {
   checkForUpdates,
   saveCheckTime,
@@ -308,6 +309,11 @@ const Settings: React.FC<SettingsProps> = ({
   // 是否为自动检测触发的更新提示
   const [isAutoCheckUpdate, setIsAutoCheckUpdate] = useState(false);
   const nativeApp = typeof window !== 'undefined' ? isNative() : false;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    requestPWAUpdateCheck();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

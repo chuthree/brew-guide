@@ -7,12 +7,18 @@ import ArrowUpIcon from '@public/images/icons/ui/arrow-up.svg';
 interface UpdateDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  currentVersion: string;
-  latestVersion: string;
-  downloadUrl: string;
+  currentVersion?: string;
+  latestVersion?: string;
+  downloadUrl?: string;
   releaseNotes?: string;
   isAutoCheck?: boolean; // 是否为自动检测触发
   onPostpone?: () => void; // 点击"以后再说"的回调（7天后再提醒）
+  mode?: 'native' | 'pwa';
+  onPrimaryClick?: () => void;
+  primaryText?: string;
+  secondaryText?: string;
+  primaryDisabled?: boolean;
+  historyId?: string;
 }
 
 /**
@@ -27,9 +33,23 @@ const UpdateDrawer: React.FC<UpdateDrawerProps> = ({
   releaseNotes,
   isAutoCheck = false,
   onPostpone,
+  mode = 'native',
+  onPrimaryClick,
+  primaryText,
+  secondaryText,
+  primaryDisabled = false,
+  historyId = 'update-drawer',
 }) => {
-  const handleDownload = () => {
-    window.open(downloadUrl, '_blank');
+  const isPWAMode = mode === 'pwa';
+
+  const handlePrimaryAction = () => {
+    if (onPrimaryClick) {
+      onPrimaryClick();
+      return;
+    }
+    if (downloadUrl) {
+      window.open(downloadUrl, '_blank');
+    }
   };
 
   const handleSecondaryClick = () => {
@@ -40,35 +60,44 @@ const UpdateDrawer: React.FC<UpdateDrawerProps> = ({
   };
 
   return (
-    <ActionDrawer isOpen={isOpen} onClose={onClose} historyId="update-drawer">
+    <ActionDrawer isOpen={isOpen} onClose={onClose} historyId={historyId}>
       <ActionDrawer.Icon icon={ArrowUpIcon} />
       <ActionDrawer.Content>
         <p className="text-neutral-500 dark:text-neutral-400">
-          发现新版本
-          <span className="text-neutral-800 dark:text-neutral-200">
-            {' '}
-            v{latestVersion}
-          </span>
-          {releaseNotes ? (
-            <>
-              ，本次更新
-              <span className="text-neutral-800 dark:text-neutral-200">
-                {releaseNotes}
-              </span>
-              ，建议更新以获得最佳体验。
-            </>
+          {isPWAMode ? (
+            <>检测到新版本，建议更新以获得最佳体验。</>
           ) : (
-            <>，建议更新以获得最佳体验。</>
+            <>
+              发现新版本
+              <span className="text-neutral-800 dark:text-neutral-200">
+                {' '}
+                v{latestVersion}
+              </span>
+              {releaseNotes ? (
+                <>
+                  ，本次更新
+                  <span className="text-neutral-800 dark:text-neutral-200">
+                    {releaseNotes}
+                  </span>
+                  ，建议更新以获得最佳体验。
+                </>
+              ) : (
+                <>，建议更新以获得最佳体验。</>
+              )}
+            </>
           )}
         </p>
       </ActionDrawer.Content>
 
       <ActionDrawer.Actions>
         <ActionDrawer.SecondaryButton onClick={handleSecondaryClick}>
-          {isAutoCheck ? '以后再说' : '稍后再说'}
+          {secondaryText ?? (isAutoCheck ? '以后再说' : '稍后再说')}
         </ActionDrawer.SecondaryButton>
-        <ActionDrawer.PrimaryButton onClick={handleDownload}>
-          前往更新
+        <ActionDrawer.PrimaryButton
+          onClick={handlePrimaryAction}
+          disabled={primaryDisabled}
+        >
+          {primaryText ?? (isPWAMode ? '立即更新' : '前往更新')}
         </ActionDrawer.PrimaryButton>
       </ActionDrawer.Actions>
     </ActionDrawer>
