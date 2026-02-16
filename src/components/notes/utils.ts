@@ -8,6 +8,56 @@ import type { BrewingNote } from '@/lib/core/config';
 import { SortOption, SORT_OPTIONS } from './types';
 import { db } from '@/lib/core/db';
 
+interface NoteDeleteDisplay {
+  itemName: string;
+  itemSuffix?: string;
+}
+
+const NOTE_DELETE_NAME_MAX_LENGTH = 18;
+
+const getNoteTextPreview = (text: string): string => {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+  if (normalized.length <= NOTE_DELETE_NAME_MAX_LENGTH) return normalized;
+  return `${normalized.slice(0, NOTE_DELETE_NAME_MAX_LENGTH)}...`;
+};
+
+export const getNoteDeleteDisplay = (note: BrewingNote): NoteDeleteDisplay => {
+  const beanName = note.coffeeBeanInfo?.name?.trim() || '未知咖啡豆';
+
+  if (note.source === 'quick-decrement') {
+    return {
+      itemName: beanName,
+      itemSuffix: '的快捷扣除记录',
+    };
+  }
+
+  if (note.source === 'capacity-adjustment') {
+    return {
+      itemName: beanName,
+      itemSuffix: '的容量调整记录',
+    };
+  }
+
+  if (note.source === 'roasting') {
+    return {
+      itemName: beanName,
+      itemSuffix: '的烘焙记录',
+    };
+  }
+
+  const notePreview = getNoteTextPreview(note.notes || '');
+  if (notePreview) {
+    return { itemName: notePreview };
+  }
+
+  if (note.coffeeBeanInfo?.name?.trim()) {
+    return { itemName: note.coffeeBeanInfo.name.trim() };
+  }
+
+  return { itemName: '此笔记' };
+};
+
 /**
  * 从用户备注中提取萃取时间
  * @param notes 用户备注内容

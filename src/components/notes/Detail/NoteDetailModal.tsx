@@ -11,7 +11,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { BrewingNote } from '@/lib/core/config';
 import { CoffeeBean } from '@/types/app';
-import { formatDate } from '@/components/notes/utils';
+import { formatDate, getNoteDeleteDisplay } from '@/components/notes/utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import {
@@ -362,6 +362,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         method: n.method,
       }));
   }, [note?.beanId, allNotes]);
+
+  const deleteDisplay = useMemo(
+    () =>
+      note
+        ? getNoteDeleteDisplay(note)
+        : {
+            itemName: '此笔记',
+            itemSuffix: undefined,
+          },
+    [note]
+  );
 
   // 构建标题文本 - 仅在有咖啡豆时显示
   const titleText = useMemo(() => (beanName ? beanName : ''), [beanName]);
@@ -933,20 +944,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
             onClose();
           }
         }}
-        itemName={
-          note?.source === 'quick-decrement' ||
-          note?.source === 'capacity-adjustment'
-            ? note.coffeeBeanInfo?.name || '未知咖啡豆'
-            : note?.method || '此笔记'
-        }
+        itemName={deleteDisplay.itemName}
         itemType="笔记"
-        itemSuffix={
-          note?.source === 'quick-decrement'
-            ? '的快捷扣除记录'
-            : note?.source === 'capacity-adjustment'
-              ? '的容量调整记录'
-              : undefined
-        }
+        itemSuffix={deleteDisplay.itemSuffix}
         extraWarning="删除后咖啡豆库存将恢复。"
       />
 

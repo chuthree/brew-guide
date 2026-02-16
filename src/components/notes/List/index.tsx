@@ -52,7 +52,7 @@ import {
 import ListView from './ListView';
 import { SortOption, DateGroupingMode } from '../types';
 import { exportSelectedNotes } from '../Share/NotesExporter';
-import { extractExtractionTime, sortNotes } from '../utils';
+import { extractExtractionTime, sortNotes, getNoteDeleteDisplay } from '../utils';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import {
@@ -539,18 +539,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         return;
       }
 
-      // 获取笔记名称用于确认对话框
-      let noteName = '此笔记';
-      let noteSuffix: string | undefined;
-      if (noteToDelete.source === 'quick-decrement') {
-        noteName = noteToDelete.coffeeBeanInfo?.name || '未知咖啡豆';
-        noteSuffix = '的快捷扣除记录';
-      } else if (noteToDelete.source === 'capacity-adjustment') {
-        noteName = noteToDelete.coffeeBeanInfo?.name || '未知咖啡豆';
-        noteSuffix = '的容量调整记录';
-      } else {
-        noteName = noteToDelete.method || '此笔记';
-      }
+      const { itemName: noteName, itemSuffix: noteSuffix } =
+        getNoteDeleteDisplay(noteToDelete);
 
       // 显示删除确认抽屉
       setDeleteConfirmData({ noteId, noteName, noteSuffix });
