@@ -662,12 +662,6 @@ const FeedbackDrawer: React.FC<FeedbackDrawerProps> = ({
                     setInputContent(e.target.value);
                     adjustHeight();
                   }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit();
-                    }
-                  }}
                   placeholder="说说你的想法..."
                   rows={1}
                   maxLength={200}
