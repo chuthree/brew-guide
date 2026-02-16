@@ -10,6 +10,7 @@ import GalleryView from './GalleryView';
 import DateImageFlowView from './DateImageFlowView';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { SettingsOptions } from '@/components/settings/Settings';
+import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
 // 定义组件属性接口
 interface NotesListViewProps {
@@ -141,6 +142,37 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     setShowQuickDecrementNotes(prev => !prev);
   }, []);
 
+  const handleImageFlowNoteClick = useCallback(
+    (note: BrewingNote) => {
+      const equipmentName =
+        note.equipment && note.equipment.trim() !== ''
+          ? equipmentNames[note.equipment] || note.equipment
+          : '未知器具';
+
+      const beanInfo = note.beanId
+        ? coffeeBeans.find(bean => bean.id === note.beanId)
+        : null;
+
+      const beanName = formatNoteBeanDisplayName(note.coffeeBeanInfo, {
+        roasterFieldEnabled: settings?.roasterFieldEnabled ?? true,
+        roasterSeparator: settings?.roasterSeparator ?? '/',
+      });
+      const beanUnitPrice = beanName ? beanPrices[beanName] || 0 : 0;
+
+      window.dispatchEvent(
+        new CustomEvent('noteDetailOpened', {
+          detail: {
+            note,
+            equipmentName,
+            beanUnitPrice,
+            beanInfo,
+          },
+        })
+      );
+    },
+    [beanPrices, coffeeBeans, equipmentNames, settings]
+  );
+
   if (notes.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
@@ -164,7 +196,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
       return (
         <DateImageFlowView
           notes={allRegularNotes}
-          onNoteClick={onNoteClick}
+          onNoteClick={handleImageFlowNoteClick}
           isShareMode={isShareMode}
           selectedNotes={selectedNotes}
           onToggleSelect={handleToggleSelect}
@@ -174,7 +206,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
       return (
         <GalleryView
           notes={allRegularNotes}
-          onNoteClick={onNoteClick}
+          onNoteClick={handleImageFlowNoteClick}
           isShareMode={isShareMode}
           selectedNotes={selectedNotes}
           onToggleSelect={handleToggleSelect}

@@ -1,19 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import { BrewingNote } from '@/lib/core/config';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-
-// 动态导入 ImageViewer 组件
-const ImageViewer = dynamic(
-  () => import('@/components/common/ui/ImageViewer'),
-  {
-    ssr: false,
-  }
-);
 
 interface GalleryViewProps {
   notes: BrewingNote[];
@@ -38,30 +29,8 @@ const GalleryView: React.FC<GalleryViewProps> = ({
     state => state.settings.roasterSeparator
   );
 
-  const [imageViewerOpen, setImageViewerOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<{
-    url: string;
-    alt: string;
-  } | null>(null);
-
   // 只显示有图片的笔记
   const notesWithImages = notes.filter(note => note.image);
-
-  const handleImageClick = (note: BrewingNote, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isShareMode && note.image) {
-      const beanName =
-        formatNoteBeanDisplayName(note.coffeeBeanInfo, {
-          roasterFieldEnabled,
-          roasterSeparator,
-        }) || '笔记图片';
-      setSelectedImage({
-        url: note.image,
-        alt: beanName,
-      });
-      setImageViewerOpen(true);
-    }
-  };
 
   const handleNoteClick = (note: BrewingNote) => {
     if (isShareMode && onToggleSelect) {
@@ -105,7 +74,6 @@ const GalleryView: React.FC<GalleryViewProps> = ({
                     className="object-cover"
                     sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, 33vw"
                     loading="lazy"
-                    onClick={e => handleImageClick(note, e)}
                   />
                 )}
               </div>
@@ -114,19 +82,6 @@ const GalleryView: React.FC<GalleryViewProps> = ({
         })}
       </div>
 
-      {/* 图片查看器 */}
-      {selectedImage && (
-        <ImageViewer
-          id="gallery-image"
-          isOpen={imageViewerOpen}
-          imageUrl={selectedImage.url}
-          alt={selectedImage.alt}
-          onClose={() => {
-            setImageViewerOpen(false);
-            setSelectedImage(null);
-          }}
-        />
-      )}
     </div>
   );
 };
