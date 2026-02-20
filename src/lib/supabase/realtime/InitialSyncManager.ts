@@ -312,12 +312,21 @@ export class InitialSyncManager {
             `[InitialSync] ${table} 下载详情失败:`,
             fetchResult.error
           );
-          // 如果下载失败，我们仍然继续，但这些记录将无法更新
+          // 下载失败时中止本表同步，避免后续误将本地旧数据上传覆盖云端
+          throw new Error(fetchResult.error || `下载 ${table} 详情失败`);
+        }
+
+        const missingIds = idsToDownload.filter(id => !downloadedDataMap.has(id));
+        if (missingIds.length > 0) {
+          console.error(
+            `[InitialSync] ${table} 详情下载不完整，缺失 ${missingIds.length} 条记录`
+          );
+          // 关键保护：详情缺失时不继续冲突解决，防止把旧本地数据误判为“云端不存在”
+          throw new Error(`下载 ${table} 详情不完整`);
         }
       }
 
       // 组装完整的 remoteRecords
-      const idsToDownloadSet = new Set(idsToDownload);
       const remoteRecords = remoteMetaRecords
         .map(r => {
           if (downloadedDataMap.has(r.id)) {
@@ -338,17 +347,6 @@ export class InitialSyncManager {
             return { ...r, data };
           }
           return r;
-        })
-        .filter(r => {
-          // 安全检查：如果记录需要下载但数据缺失（下载失败或数据库中为 null），则跳过该记录
-          // 防止 batchResolveConflicts 处理 null 数据导致崩溃
-          if (idsToDownloadSet.has(r.id) && !r.data && !r.deleted_at) {
-            console.warn(
-              `[InitialSync] ${table} 记录 ${r.id} 数据缺失，跳过本次同步`
-            );
-            return false;
-          }
-          return true;
         });
 
       // 冲突解决

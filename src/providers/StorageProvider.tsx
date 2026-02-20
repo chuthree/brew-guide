@@ -118,7 +118,8 @@ export default function StorageInit() {
           }
         } else if (supabaseSettings?.url && supabaseSettings?.anonKey) {
           // Supabase 已配置但不是活动同步类型，设置为手动模式
-          syncStatusStore.setProvider('supabase');
+          syncStatusStore.setProvider('none');
+          syncStatusStore.setRealtimeEnabled(false);
           syncStatusStore.setStatus('idle');
           console.log('[StorageProvider] Supabase 已配置，等待用户手动同步');
         } else {

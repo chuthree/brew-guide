@@ -181,17 +181,26 @@ export class RealtimeSyncService {
   }
 
   async connect(config: RealtimeSyncConfig): Promise<boolean> {
+    const sameConfig =
+      this.config?.url === config.url && this.config?.anonKey === config.anonKey;
+
+    if (this.state.connectionStatus === 'connected' && sameConfig) {
+      return true;
+    }
+
+    // 清理旧连接（包括失败后的残留 client/channel）
+    if (this.client || this.channel) {
+      await this.disconnect();
+    }
+
     // 确保服务已初始化（监听器已启动）
     if (!this.isInitialized) {
       this.initialize(config);
     }
 
-    if (
-      this.state.connectionStatus === 'connected' &&
-      this.config?.url === config.url
-    ) {
-      return true;
-    }
+    const syncStore = useSyncStatusStore.getState();
+    syncStore.setProvider('supabase');
+    syncStore.setRealtimeEnabled(true);
 
     this.config = config;
     this.setState({ connectionStatus: 'connecting', error: null });
@@ -234,8 +243,13 @@ export class RealtimeSyncService {
 
     this.client = null;
     this.config = null;
+    this.isInitialized = false;
     this.pendingLocalChanges.clear();
     this.setState({ connectionStatus: 'disconnected', error: null });
+
+    const syncStore = useSyncStatusStore.getState();
+    syncStore.setRealtimeEnabled(false);
+    syncStore.setProvider('none');
   }
 
   async manualSync(): Promise<void> {
