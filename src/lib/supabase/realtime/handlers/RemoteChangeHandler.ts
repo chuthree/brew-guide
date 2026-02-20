@@ -152,12 +152,17 @@ export class RemoteChangeHandler {
         await (dbTable as { put: (data: unknown) => Promise<unknown> }).put(
           beanData
         );
+        await notifyStoreUpsert(
+          table,
+          recordId,
+          beanData as unknown as Record<string, unknown>
+        );
       } else {
         await (dbTable as { put: (data: unknown) => Promise<unknown> }).put(
           remoteData
         );
+        await notifyStoreUpsert(table, recordId, remoteData);
       }
-      await notifyStoreUpsert(table, recordId, remoteData);
     }
     // 如果本地数据更新，则忽略远程变更
   }

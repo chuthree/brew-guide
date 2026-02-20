@@ -572,8 +572,31 @@ export class InitialSyncManager {
 
       const remoteTimestamp = remoteResult.success ? remoteResult.data || 0 : 0;
 
-      if (remoteTimestamp > lastSyncTime || lastSyncTime === 0) {
-        // 云端更新或首次同步，下载
+      // 首次同步特殊处理：
+      // - 云端有设置：下载
+      // - 云端无设置：上传本地设置（uploadSettingsData 内部有空数据保护）
+      if (lastSyncTime === 0) {
+        if (remoteTimestamp > 0) {
+          const result = await withTimeout(
+            downloadSettingsData(this.client),
+            SYNC_TIMEOUT,
+            '下载设置超时'
+          );
+          if (result.success) {
+            await refreshSettingsStores();
+          }
+        } else {
+          await withTimeout(
+            uploadSettingsData(this.client),
+            SYNC_TIMEOUT,
+            '上传设置超时'
+          );
+        }
+        return;
+      }
+
+      if (remoteTimestamp > lastSyncTime) {
+        // 云端更新，下载
         const result = await withTimeout(
           downloadSettingsData(this.client),
           SYNC_TIMEOUT,
