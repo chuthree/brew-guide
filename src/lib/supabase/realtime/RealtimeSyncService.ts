@@ -65,6 +65,8 @@ const SYNC_TIMING = {
   SETTINGS_DEBOUNCE: 500,
   SUBSCRIPTION_TIMEOUT: 10000,
   SETTINGS_COOLDOWN: 3000,
+  RECONNECT_BASE_DELAY: 1000,
+  RECONNECT_MAX_DELAY: 30000,
 } as const;
 
 type PostgresPayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -92,6 +94,9 @@ export class RealtimeSyncService {
   private isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
   private pendingLocalChanges = new Map<string, number>();
   private settingsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
+  private isDisconnecting = false;
   private isProcessingRemoteSettings = false;
   private isInitialized = false;
 
@@ -120,6 +125,7 @@ export class RealtimeSyncService {
     this.config = config;
     this.setupLocalChangeListeners();
     this.isInitialized = true;
+    void this.updatePendingCount();
     console.log('[RealtimeSync] 服务已初始化，本地监听器已启动');
   }
 
@@ -204,6 +210,7 @@ export class RealtimeSyncService {
 
     this.config = config;
     this.setState({ connectionStatus: 'connecting', error: null });
+    this.clearReconnectTimer();
 
     try {
       this.client = createClient(config.url, config.anonKey, {
@@ -214,6 +221,8 @@ export class RealtimeSyncService {
       await this.setupRealtimeChannel();
       // setupLocalChangeListeners 已在 initialize 中调用
       this.setState({ connectionStatus: 'connected' });
+      this.reconnectAttempts = 0;
+      await this.updatePendingCount();
 
       // 后台执行初始同步
       console.log('[RealtimeSync] 连接成功，开始后台初始同步...');
@@ -224,32 +233,44 @@ export class RealtimeSyncService {
       const message = error instanceof Error ? error.message : '连接失败';
       console.error('[RealtimeSync] 连接失败:', message);
       this.setState({ connectionStatus: 'error', error: message });
+      this.scheduleReconnect(`connect-failed:${message}`);
       return false;
     }
   }
 
   async disconnect(): Promise<void> {
-    if (this.channel) {
-      await this.channel.unsubscribe();
-      this.channel = null;
+    this.isDisconnecting = true;
+    this.clearReconnectTimer();
+
+    try {
+      if (this.channel && this.client) {
+        await this.client.removeChannel(this.channel);
+        this.channel = null;
+      } else if (this.channel) {
+        await this.channel.unsubscribe();
+        this.channel = null;
+      }
+
+      localChangeListener.stop();
+
+      if (this.settingsDebounceTimer) {
+        clearTimeout(this.settingsDebounceTimer);
+        this.settingsDebounceTimer = null;
+      }
+
+      this.client = null;
+      this.config = null;
+      this.isInitialized = false;
+      this.reconnectAttempts = 0;
+      this.pendingLocalChanges.clear();
+      this.setState({ connectionStatus: 'disconnected', error: null });
+
+      const syncStore = useSyncStatusStore.getState();
+      syncStore.setRealtimeEnabled(false);
+      syncStore.setProvider('none');
+    } finally {
+      this.isDisconnecting = false;
     }
-
-    localChangeListener.stop();
-
-    if (this.settingsDebounceTimer) {
-      clearTimeout(this.settingsDebounceTimer);
-      this.settingsDebounceTimer = null;
-    }
-
-    this.client = null;
-    this.config = null;
-    this.isInitialized = false;
-    this.pendingLocalChanges.clear();
-    this.setState({ connectionStatus: 'disconnected', error: null });
-
-    const syncStore = useSyncStatusStore.getState();
-    syncStore.setRealtimeEnabled(false);
-    syncStore.setProvider('none');
   }
 
   async manualSync(): Promise<void> {
@@ -283,6 +304,8 @@ export class RealtimeSyncService {
       console.error(`[RealtimeSync] syncLocalChange: recordId 不能为空`);
       return;
     }
+
+    this.cleanupExpiredLocalChanges();
 
     // 离线时加入队列
     if (!this.isOnline || !this.client) {
@@ -395,20 +418,79 @@ export class RealtimeSyncService {
       );
 
     await new Promise<void>((resolve, reject) => {
+      let settled = false;
       const timeout = setTimeout(() => {
+        settled = true;
         reject(new Error('Realtime 订阅超时'));
       }, SYNC_TIMING.SUBSCRIPTION_TIMEOUT);
 
       this.channel!.subscribe(status => {
         if (status === 'SUBSCRIBED') {
-          clearTimeout(timeout);
-          resolve();
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          clearTimeout(timeout);
-          reject(new Error(`订阅失败: ${status}`));
+          if (!settled) {
+            settled = true;
+            clearTimeout(timeout);
+            resolve();
+          }
+          this.reconnectAttempts = 0;
+        } else if (
+          status === 'CLOSED' ||
+          status === 'CHANNEL_ERROR' ||
+          status === 'TIMED_OUT'
+        ) {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timeout);
+            reject(new Error(`订阅失败: ${status}`));
+            return;
+          }
+
+          this.handleChannelRuntimeIssue(status);
         }
       });
     });
+  }
+
+  private handleChannelRuntimeIssue(status: string): void {
+    if (this.isDisconnecting) return;
+
+    console.warn(`[RealtimeSync] Channel 状态异常: ${status}`);
+    if (this.state.connectionStatus !== 'connecting') {
+      this.setState({
+        connectionStatus: 'error',
+        error: `Channel 异常: ${status}`,
+      });
+    }
+    this.scheduleReconnect(`channel-${status}`);
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  private scheduleReconnect(reason: string): void {
+    if (!this.config || !this.isOnline || this.isDisconnecting) return;
+    if (this.reconnectTimer) return;
+
+    const attempt = this.reconnectAttempts + 1;
+    const delay = Math.min(
+      SYNC_TIMING.RECONNECT_BASE_DELAY * Math.pow(2, attempt - 1),
+      SYNC_TIMING.RECONNECT_MAX_DELAY
+    );
+
+    this.reconnectAttempts = attempt;
+    console.log(
+      `[RealtimeSync] ${reason}，${delay}ms 后执行第 ${attempt} 次重连`
+    );
+
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      if (!this.config || !this.isOnline || this.isDisconnecting) return;
+
+      await this.connect(this.config);
+    }, delay);
   }
 
   /**
@@ -592,6 +674,15 @@ export class RealtimeSyncService {
     this.setState({ pendingChangesCount: count });
   }
 
+  private cleanupExpiredLocalChanges(): void {
+    const now = Date.now();
+    this.pendingLocalChanges.forEach((expireAt, key) => {
+      if (expireAt <= now) {
+        this.pendingLocalChanges.delete(key);
+      }
+    });
+  }
+
   private prepareRecordForUpload(
     table: RealtimeSyncTable,
     recordId: string,
@@ -656,6 +747,7 @@ export class RealtimeSyncService {
   private handleOffline = (): void => {
     console.log('[RealtimeSync] 网络断开');
     this.isOnline = false;
+    this.clearReconnectTimer();
     this.setState({ connectionStatus: 'disconnected' });
   };
 }

@@ -80,7 +80,8 @@ export function resolveConflictLWW<T extends SyncableRecord>(
   const localTime = extractTimestamp(local);
   const remoteTime = extractTimestamp(remote);
 
-  if (localTime >= remoteTime) {
+  // 同时间戳时优先云端，确保多端收敛到同一结果（Cloud-Authoritative）
+  if (localTime > remoteTime) {
     return {
       winner: 'local',
       record: local,
@@ -174,7 +175,7 @@ export function batchResolveConflicts<T extends SyncableRecord>(
 
       if (localModified && remoteModified) {
         // 两边都修改了 → LWW
-        if (localTime >= remoteTime) {
+        if (localTime > remoteTime) {
           merged.push(local);
           toUpload.push(local);
         } else if (remote.data) {
@@ -242,7 +243,8 @@ export function shouldAcceptRemoteChange<T extends SyncableRecord>(
   const localTime = extractTimestamp(localRecord);
   const remoteTime = extractTimestamp(remoteRecord);
 
-  return remoteTime > localTime;
+  // 同时间戳时接受远程变更，避免并发写入造成的双端分叉
+  return remoteTime >= localTime;
 }
 
 /**

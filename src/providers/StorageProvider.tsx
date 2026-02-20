@@ -123,6 +123,8 @@ export default function StorageInit() {
           syncStatusStore.setStatus('idle');
           console.log('[StorageProvider] Supabase 已配置，等待用户手动同步');
         } else {
+          syncStatusStore.setProvider('none');
+          syncStatusStore.setRealtimeEnabled(false);
           console.log(
             '[StorageProvider] Supabase 实时同步未启动 (条件不满足):',
             {

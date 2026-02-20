@@ -92,6 +92,12 @@ ALTER TABLE custom_equipments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow all on coffee_beans" ON coffee_beans;
+DROP POLICY IF EXISTS "Allow all on brewing_notes" ON brewing_notes;
+DROP POLICY IF EXISTS "Allow all on custom_equipments" ON custom_equipments;
+DROP POLICY IF EXISTS "Allow all on custom_methods" ON custom_methods;
+DROP POLICY IF EXISTS "Allow all on user_settings" ON user_settings;
+
 CREATE POLICY "Allow all on coffee_beans" ON coffee_beans FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on brewing_notes" ON brewing_notes FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on custom_equipments" ON custom_equipments FOR ALL USING (true) WITH CHECK (true);
@@ -100,14 +106,39 @@ CREATE POLICY "Allow all on user_settings" ON user_settings FOR ALL USING (true)
 
 -- ==================== Realtime 实时同步配置 ====================
 
-DROP PUBLICATION IF EXISTS supabase_realtime;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime'
+  ) THEN
+    CREATE PUBLICATION supabase_realtime;
+  END IF;
+END $$;
 
-CREATE PUBLICATION supabase_realtime FOR TABLE 
-  coffee_beans,
-  brewing_notes,
-  custom_equipments,
-  custom_methods,
-  user_settings;
+DO $$
+DECLARE
+  tbl TEXT;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY[
+    'coffee_beans',
+    'brewing_notes',
+    'custom_equipments',
+    'custom_methods',
+    'user_settings'
+  ]
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_publication p
+      JOIN pg_publication_rel pr ON p.oid = pr.prpubid
+      JOIN pg_class c ON c.oid = pr.prrelid
+      WHERE p.pubname = 'supabase_realtime'
+        AND c.relname = tbl
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', tbl);
+    END IF;
+  END LOOP;
+END $$;
 
 -- 设置 replica identity 为 FULL，确保 UPDATE/DELETE 事件包含完整数据
 ALTER TABLE coffee_beans REPLICA IDENTITY FULL;
