@@ -179,6 +179,11 @@ export class InitialSyncManager {
           type: 'success',
           title: `同步完成 ${parts.join(' ')}`,
         });
+
+        // 首次实时同步如果下载了云端数据，立即刷新应用，确保所有页面与缓存状态一致
+        if (lastSyncTime === 0 && stats.downloaded > 0) {
+          window.location.reload();
+        }
       } else {
         // 仅在首次同步时显示“数据已是最新”，避免日常使用中频繁打扰
         if (lastSyncTime === 0) {
