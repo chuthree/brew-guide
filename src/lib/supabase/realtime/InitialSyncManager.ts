@@ -272,11 +272,9 @@ export class InitialSyncManager {
           // 本地不存在 -> 需要下载（云端新增）
           idsToDownload.push(remote.id);
         } else {
-          // 直接访问 timestamp 属性，避免类型复杂度
-          const localTime =
-            'timestamp' in local && typeof local.timestamp === 'number'
-              ? local.timestamp
-              : 0;
+          const localTime = extractTimestamp(
+            local as { id: string; timestamp?: number; updatedAt?: number }
+          );
           // 远程比本地新 -> 需要下载
           if (remoteTime > localTime) {
             idsToDownload.push(remote.id);
