@@ -69,7 +69,7 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
     if (realtimeStatus === 'connected') return 'connected';
     if (realtimeStatus === 'connecting') return 'connecting';
     if (realtimeStatus === 'error') return 'error';
-    return settings.lastConnectionSuccess ? 'connected' : 'disconnected';
+    return 'disconnected';
   };
 
   const status = getDisplayStatus();
