@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Drawer } from 'vaul';
 import {
   SettingsOptions,
@@ -29,6 +29,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
 }) => {
   // 控制抽屉打开状态 - 直接打开，无需延迟
   const [isOpen, setIsOpen] = useState(true);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // 使用 useThemeColor hook 同步顶部安全区颜色
   useThemeColor({ useOverlay: true, enabled: isOpen });
@@ -75,9 +76,11 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
   // 处理完成按钮点击
   const handleComplete = async () => {
+    if (isCompleting) return;
+
+    setIsCompleting(true);
     // 先关闭引导，避免存储/初始化异常导致界面卡住
     setIsOpen(false);
-    onComplete();
 
     try {
       // 如果是 PWA 模式且支持持久化存储，先尝试请求
@@ -118,8 +121,21 @@ const Onboarding: React.FC<OnboardingProps> = ({
     }
   };
 
+  const handleAnimationEnd = useCallback(
+    (open: boolean) => {
+      if (!open && isCompleting) {
+        onComplete();
+      }
+    },
+    [isCompleting, onComplete]
+  );
+
   return (
-    <Drawer.Root open={isOpen} dismissible={false}>
+    <Drawer.Root
+      open={isOpen}
+      dismissible={false}
+      onAnimationEnd={handleAnimationEnd}
+    >
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/50" />
         <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mt-24 flex flex-col rounded-t-3xl bg-white/95 backdrop-blur-xl dark:bg-neutral-900/95">
