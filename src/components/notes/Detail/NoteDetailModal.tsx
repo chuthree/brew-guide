@@ -64,7 +64,7 @@ interface NoteDetailModalProps {
 
 const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   isOpen,
-  note,
+  note: initialNote,
   onClose,
   equipmentName = '未知器具',
   beanUnitPrice = 0,
@@ -81,6 +81,13 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const showUnitPriceInNote = useSettingsStore(
     state => state.settings.showUnitPriceInNote ?? false
   );
+
+  // 从 store 获取实时笔记，避免详情页停留时数据快照过期
+  const allNotes = useBrewingNoteStore(state => state.notes);
+  const note = useMemo(() => {
+    if (!initialNote?.id) return initialNote;
+    return allNotes.find(n => n.id === initialNote.id) || initialNote;
+  }, [allNotes, initialNote]);
 
   const [imageError, setImageError] = useState(false);
   const [beanImageError, setBeanImageError] = useState(false); // 咖啡豆图片加载错误状态
@@ -341,9 +348,6 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     [note, getValidTasteRatings]
   );
   const hasTasteRatings = validTasteRatings.length > 0;
-
-  // 获取所有笔记用于对比
-  const allNotes = useBrewingNoteStore(state => state.notes);
 
   // 获取该咖啡豆的所有有风味评分的笔记（用于对比）
   const compareNotes = useMemo(() => {
