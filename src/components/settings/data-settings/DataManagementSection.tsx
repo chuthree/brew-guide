@@ -2,11 +2,9 @@
 
 import React, { useState, useRef } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 import { DataManager as DataManagerUtil } from '@/lib/core/dataManager';
 import { BackupReminderUtils } from '@/lib/utils/backupReminderUtils';
+import { exportDataAsJsonFile } from '@/lib/utils/dataExportUtils';
 
 interface DataManagementSectionProps {
   onDataChange?: () => void;
@@ -24,78 +22,28 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
     message: '',
   });
   const [showConfirmReset, setShowConfirmReset] = useState(false);
-  const isNative = Capacitor.isNativePlatform();
 
   // 数据导出
   const handleExport = async () => {
     try {
-      const getLocalDateString = (date: Date) => {
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
       const jsonData = await DataManagerUtil.exportAllData();
-      const fileName = `brew-guide-data-${getLocalDateString(new Date())}.json`;
+      const exportResult = await exportDataAsJsonFile(jsonData);
 
-      if (isNative) {
-        try {
-          await Filesystem.writeFile({
-            path: fileName,
-            data: jsonData,
-            directory: Directory.Cache,
-            encoding: Encoding.UTF8,
-          });
-
-          const uriResult = await Filesystem.getUri({
-            path: fileName,
-            directory: Directory.Cache,
-          });
-
-          await Share.share({
-            title: '导出数据',
-            text: '请选择保存位置',
-            url: uriResult.uri,
-            dialogTitle: '导出数据',
-          });
-
-          await Filesystem.deleteFile({
-            path: fileName,
-            directory: Directory.Cache,
-          });
-
-          setStatus({ type: 'success', message: '数据已成功导出' });
-
-          try {
-            await BackupReminderUtils.markBackupCompleted();
-          } catch (error) {
-            console.error('标记备份完成失败:', error);
-          }
-        } catch (error) {
-          throw new Error(`保存文件失败: ${(error as Error).message}`);
-        }
+      if (exportResult.mode === 'android-local') {
+        setStatus({
+          type: 'success',
+          message: `数据已保存到文档/${exportResult.relativePath}，可在文件管理中直接发送到微信`,
+        });
+      } else if (exportResult.mode === 'native-share') {
+        setStatus({ type: 'success', message: '数据已成功导出' });
       } else {
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 100);
-
         setStatus({ type: 'success', message: '数据导出成功，文件已下载' });
+      }
 
-        try {
-          await BackupReminderUtils.markBackupCompleted();
-        } catch (error) {
-          console.error('标记备份完成失败:', error);
-        }
+      try {
+        await BackupReminderUtils.markBackupCompleted();
+      } catch (error) {
+        console.error('标记备份完成失败:', error);
       }
     } catch (_error) {
       setStatus({

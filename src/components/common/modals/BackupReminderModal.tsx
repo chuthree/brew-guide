@@ -7,9 +7,7 @@ import {
   BackupReminderType,
 } from '@/lib/utils/backupReminderUtils';
 import { DataManager as DataManagerUtil } from '@/lib/core/dataManager';
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
+import { exportDataAsJsonFile } from '@/lib/utils/dataExportUtils';
 
 interface BackupReminderModalProps {
   isOpen: boolean;
@@ -42,65 +40,21 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
     setExportMessage('正在导出数据...');
 
     try {
-      const getLocalDateString = (date: Date) => {
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
       const jsonData = await DataManagerUtil.exportAllData();
-      const fileName = `brew-guide-data-${getLocalDateString(new Date())}.json`;
-      const isNative = Capacitor.isNativePlatform();
+      const exportResult = await exportDataAsJsonFile(jsonData);
 
-      if (isNative) {
-        // 移动端处理
-        await Filesystem.writeFile({
-          path: fileName,
-          data: jsonData,
-          directory: Directory.Cache,
-          encoding: Encoding.UTF8,
-        });
-
-        const uriResult = await Filesystem.getUri({
-          path: fileName,
-          directory: Directory.Cache,
-        });
-
-        await Share.share({
-          title: '导出数据',
-          text: '请选择保存位置',
-          url: uriResult.uri,
-          dialogTitle: '导出数据',
-        });
-
-        // 清理临时文件
-        await Filesystem.deleteFile({
-          path: fileName,
-          directory: Directory.Cache,
-        });
+      if (exportResult.mode === 'android-local') {
+        setExportMessage(
+          `备份成功，已保存到文档/${exportResult.relativePath}`
+        );
       } else {
-        // Web端处理
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-
-        // 清理
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 100);
+        setExportMessage('数据导出成功！');
       }
 
       // 标记备份完成
       await BackupReminderUtils.markBackupCompleted();
 
       setExportStatus('success');
-      setExportMessage('数据导出成功！');
 
       // 延迟关闭弹窗
       setTimeout(() => {
