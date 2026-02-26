@@ -160,7 +160,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
               <button
                 key={value}
                 onClick={() => removeDecrementPreset(value)}
-                className="rounded bg-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
+                className="rounded cursor-pointer bg-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
               >
                 -{value}g ×
               </button>
@@ -200,7 +200,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
                   isNaN(parseFloat(decrementValue)) ||
                   parseFloat(decrementValue) <= 0
                 }
-                className="rounded-r bg-neutral-700 px-2 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-20 dark:bg-neutral-600"
+                className="rounded-r cursor-pointer bg-neutral-700 px-2 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-20 dark:bg-neutral-600"
               >
                 +
               </button>

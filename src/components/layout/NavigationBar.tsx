@@ -597,7 +597,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     pointerEvents: !(canGoBack() && onBackClick) ? 'auto' : 'none',
     visibility: !(canGoBack() && onBackClick) ? 'visible' : 'hidden',
   } as const;
-  const showDesktopBottomSettingsEntry = !(canGoBack() && onBackClick);
 
   const handlePinnedViewClick = (view: ViewOption) => {
     if (activeMainTab !== '咖啡豆') {
@@ -1054,6 +1053,14 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     activeMainTab === '冲煮' &&
     (!isTimerRunning || showComplete || activeBrewingStep === 'notes');
   const shouldShowParams = parameterInfo.method;
+  const isDesktopBackLayout = Boolean(canGoBack() && onBackClick);
+  const showDesktopTopTabs = !isDesktopBackLayout;
+  const isNoCoffeeBeanMode =
+    !hasCoffeeBeans || settings.showCoffeeBeanSelectionStep === false;
+  const desktopContentTopSpacingClass =
+    showDesktopTopTabs && isNoCoffeeBeanMode ? 'md:mt-6' : 'md:mt-0';
+  const desktopEquipmentTopSpacingClass =
+    showDesktopTopTabs && isNoCoffeeBeanMode ? 'md:mt-7' : 'md:mt-0';
 
   const _handleTimeChange = (value: string) => {
     if (activeBrewingStep === 'notes') {
@@ -1239,9 +1246,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                 {/* 设置入口按钮图标 - 扩大触碰区域 */}
                 <div
                   onClick={handleTitleClick}
-                  className={`-mt-3 -ml-3 flex cursor-pointer items-center pt-3 pr-4 pb-3 pl-3 text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400 ${
-                    canGoBack() && onBackClick ? 'md:flex' : 'md:hidden'
-                  }`}
+                  className="-mt-3 -ml-3 flex cursor-pointer items-center pt-3 pr-4 pb-3 pl-3 text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400"
                 >
                   <div className="relative flex h-4 w-4 items-center justify-center">
                     <AnimatePresence mode="popLayout" initial={false}>
@@ -1302,7 +1307,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                 {/* 桌面端：当显示返回按钮时（进入方案后），完全隐藏导航 tab 容器 */}
                 <div
                   className={`relative flex min-w-0 flex-1 items-center md:mt-2 md:min-w-0 md:flex-none md:flex-col md:items-start ${
-                    canGoBack() && onBackClick ? 'md:hidden' : ''
+                    isDesktopBackLayout ? 'md:hidden' : ''
                   }`}
                   style={navItemStyle}
                 >
@@ -1530,7 +1535,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                     }}
                     className="overflow-hidden"
                   >
-                    <div className="bg-neutral-100 px-6 py-2 text-xs font-medium text-neutral-500 md:mt-6 md:px-6 md:py-3 dark:bg-neutral-800/40 dark:text-neutral-400">
+                    <div
+                      className={`bg-neutral-100 px-6 py-2 text-xs font-medium text-neutral-500 md:px-6 md:py-3 dark:bg-neutral-800/40 dark:text-neutral-400 ${desktopContentTopSpacingClass}`}
+                    >
                       <div className="flex items-center justify-between gap-3 md:flex-col md:items-start md:gap-6">
                         {/* 左侧：方案名称区域 - 使用省略号 */}
                         <div className="flex min-w-0 flex-1 items-center overflow-hidden md:w-full md:flex-none md:flex-col md:items-start md:gap-1">
@@ -1820,6 +1827,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                       onEquipmentSelect={onEquipmentSelect || (() => {})}
                       onToggleManagementDrawer={handleToggleManagementDrawer}
                       settings={settings}
+                      className={desktopEquipmentTopSpacingClass}
                     />
                   </motion.div>
                 )}
@@ -1829,30 +1837,15 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         </AnimatePresence>
       )}
 
-      {/* 桌面端底部入口与同步指示 */}
-      <div
-        className={`mt-auto hidden px-6 md:block ${
-          syncProvider === 'supabase' && isSyncing ? 'pb-5' : 'pb-3'
-        }`}
-      >
-        {showDesktopBottomSettingsEntry && (
-          <button
-            type="button"
-            onClick={handleTitleClick}
-            className="-ml-2 flex items-center p-2 text-[12px] tracking-widest text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-            aria-label="打开设置"
-          >
-            <Equal className="h-4 w-4" />
-          </button>
-        )}
-
-        {syncProvider === 'supabase' && isSyncing && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500">
+      {/* 桌面端同步指示器 - 固定在导航栏底部 */}
+      {syncProvider === 'supabase' && isSyncing && (
+        <div className="mt-auto hidden px-6 pb-6 md:block">
+          <div className="flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500">
             <AppleSpinner className="h-3 w-3" />
             <span>同步中</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </motion.div>
   );
 };

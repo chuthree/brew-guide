@@ -453,7 +453,7 @@ const Settings: React.FC<SettingsProps> = ({
       <div className="pt-safe-top relative z-20 flex items-center justify-between px-6">
         <button
           onClick={handleClose}
-          className="flex flex-5 items-center rounded-full text-neutral-700 dark:text-neutral-300"
+          className="cursor-pointer flex flex-5 items-center rounded-full text-neutral-700 dark:text-neutral-300"
         >
           <ChevronLeft className="-ml-1 h-5 w-5" />
           <h2 className="pl-2.5 text-xl font-medium text-neutral-800 dark:text-neutral-200">

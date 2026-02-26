@@ -20,7 +20,7 @@ export function ButtonGroup<T extends string>({
       {options.map(option => (
         <button
           key={option.value}
-          className={`rounded px-2.5 py-1 text-xs font-medium transition-all ${
+          className={`rounded px-2.5 py-1 text-xs cursor-pointer font-medium transition-all ${
             value === option.value
               ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-600 dark:text-white'
               : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
