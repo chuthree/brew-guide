@@ -1115,7 +1115,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       className={`${isPwaBannerVisible ? 'pt-6' : 'pt-safe-top'} sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:shrink-0 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 ${
         isResizing
           ? ''
-          : 'md:transition-[width,border-color] md:duration-350 md:ease-[cubic-bezier(0.4,0,0.2,1)]'
+          : 'md:transition-[width,border-color] md:duration-350 md:ease-in-out'
       } ${
         activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'
           ? 'border-transparent md:border-neutral-200/50 dark:md:border-neutral-800/50'
@@ -1216,7 +1216,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
       {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 */}
       {/* 移动端使用 min-h 和绝对定位实现切换动画，桌面端使用常规流式布局 */}
-      <div className="relative min-h-[30px] w-full md:static md:min-h-0">
+      <div className="relative min-h-7.5 w-full md:static md:min-h-0">
         {/* 修改：将AnimatePresence用于透明度变化而非高度变化 */}
         <AnimatePresence mode="wait">
           {showAlternativeHeader ? (
