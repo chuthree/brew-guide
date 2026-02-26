@@ -365,7 +365,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   // 处理步骤完成 - 使用useCallback优化并延迟事件触发
   const handleStepComplete = useCallback(() => {
     setTimeout(() => {
-      const form = document.querySelector('form');
+      const modalRoot = document.querySelector(
+        '[data-note-stepped-form-modal="true"]'
+      );
+      const form = modalRoot?.querySelector('form');
       if (form) {
         form.dispatchEvent(
           new Event('submit', { cancelable: true, bubbles: true })

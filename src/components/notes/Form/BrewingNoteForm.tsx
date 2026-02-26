@@ -393,6 +393,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   }, [initialData.totalTime]);
 
   const formRef = useRef<HTMLFormElement>(null);
+  const generatedNoteIdRef = useRef(
+    id || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  );
+  const isSubmittingRef = useRef(false);
+
+  useEffect(() => {
+    if (id) {
+      generatedNoteIdRef.current = id;
+    }
+  }, [id]);
 
   // 创建显示维度（包含历史维度）
   const createDisplayDimensions = (
@@ -1200,242 +1210,258 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 提取当前咖啡用量（用于容量计算和新建豆子）
-    const { CapacitySyncManager, updateBeanRemaining, increaseBeanRemaining } =
-      await import('@/lib/stores/coffeeBeanStore');
-    const currentCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
-      isQuickDecrementEdit && isQuickMode
-        ? `${parseFloat(quickDecrementAmount) || 0}g`
-        : methodParams.coffee
-    );
-
-    // 处理待创建的咖啡豆
-    // 如果选中的是 PendingCoffeeBean，在保存笔记时创建它
-    let finalBeanId: string | undefined;
-
-    if (selectedCoffeeBean && isPendingCoffeeBean(selectedCoffeeBean)) {
-      try {
-        const { useCoffeeBeanStore } =
-          await import('@/lib/stores/coffeeBeanStore');
-        const addBean = useCoffeeBeanStore.getState().addBean;
-
-        // 创建新咖啡豆，容量和剩余量基于本次冲煮用量
-        // 容量 = 咖啡用量（首次使用的量即为总容量）
-        // 剩余量 = 0（本次冲煮已用完）
-        const coffeeAmountStr =
-          currentCoffeeAmount > 0 ? `${currentCoffeeAmount}g` : '';
-        const newBean = await addBean({
-          name: selectedCoffeeBean.name,
-          capacity: coffeeAmountStr,
-          remaining: '0',
-        });
-
-        finalBeanId = newBean.id;
-
-        // 更新 selectedCoffeeBean 为真实的豆子（用于后续逻辑）
-        setSelectedCoffeeBean(newBean);
-      } catch (error) {
-        console.error('创建咖啡豆失败:', error);
-        alert('创建咖啡豆失败，请重试');
-        return;
-      }
-    } else if (selectedCoffeeBean && !isPendingCoffeeBean(selectedCoffeeBean)) {
-      // 已有豆子，使用其 ID
-      finalBeanId = selectedCoffeeBean.id;
-
-      // 判断是否是新建笔记（没有ID或是复制操作）
-      const isNewNote = !initialData.id || isCopy;
-
-      if (isNewNote) {
-        // 新建笔记：直接扣除咖啡豆剩余量
-        if (currentCoffeeAmount > 0) {
-          try {
-            await updateBeanRemaining(
-              selectedCoffeeBean.id,
-              currentCoffeeAmount
-            );
-          } catch (error) {
-            console.error('扣除咖啡豆剩余量失败:', error);
-          }
-        }
-      } else if (initialData.source !== 'capacity-adjustment') {
-        // 编辑模式且非容量调整记录：处理容量同步
-        try {
-          const currentBeanId = selectedCoffeeBean.id;
-          const beanChanged = originalBeanId !== currentBeanId;
-
-          if (beanChanged) {
-            // 咖啡豆发生变化，需要处理双向容量同步
-            const originalCoffeeAmount =
-              CapacitySyncManager.extractCoffeeAmount(
-                initialData.params?.coffee || '0g'
-              );
-
-            // 恢复原咖啡豆的剩余量（如果原来有关联的咖啡豆）
-            if (originalBeanId && originalCoffeeAmount > 0) {
-              await increaseBeanRemaining(originalBeanId, originalCoffeeAmount);
-            }
-
-            // 扣除新咖啡豆的剩余量（如果选择了新的咖啡豆）
-            if (currentBeanId && currentCoffeeAmount > 0) {
-              await updateBeanRemaining(currentBeanId, currentCoffeeAmount);
-            }
-          } else if (originalBeanId) {
-            // 咖啡豆没有变化，但可能咖啡用量发生了变化
-            const oldCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
-              initialData.params?.coffee || '0g'
-            );
-            const amountDiff = currentCoffeeAmount - oldCoffeeAmount;
-
-            if (Math.abs(amountDiff) > 0.01) {
-              if (amountDiff > 0) {
-                await updateBeanRemaining(originalBeanId, amountDiff);
-              } else {
-                await increaseBeanRemaining(
-                  originalBeanId,
-                  Math.abs(amountDiff)
-                );
-              }
-            }
-          }
-        } catch (error) {
-          console.error('同步咖啡豆容量失败:', error);
-        }
-      }
-    }
-
-    // 规范化器具ID（将名称转换为ID）
-    const { normalizeEquipmentId } = await import('@/components/notes/utils');
-    const normalizedEquipmentId = await normalizeEquipmentId(
-      selectedEquipment || initialData.equipment || ''
-    );
-
-    // 处理风味评分数据
-    // 如果满足以下任一条件，不保存风味评分：
-    // 1. 用户关闭了风味评分显示
-    // 2. 用户只变更了总体评分，但风味评分完全没有手动修改过（仅来自同步）
-    let finalTaste = formData.taste;
-    if (
-      !settings?.showFlavorRatingInForm ||
-      (isAdding &&
-        settings?.flavorRatingFollowOverall &&
-        flavorRatingsOnlySyncedRef.current)
-    ) {
-      // 不保存风味评分
-      finalTaste = {};
-    }
-
-    const isConvertingToNormal = isQuickDecrementEdit && !isQuickMode;
-    const preservedSource = isConvertingToNormal
-      ? undefined
-      : initialData.source;
-    const preservedChangeRecord = isConvertingToNormal
-      ? undefined
-      : initialData.changeRecord;
-    const quickDecrementAmountValue =
-      preservedSource === 'quick-decrement'
-        ? parseFloat(quickDecrementAmount) || 0
-        : undefined;
-
-    // 创建完整的笔记数据
-    const noteData: BrewingNoteData = {
-      id: id || Date.now().toString(),
-      // 使用当前的时间戳状态
-      timestamp: timestamp.getTime(),
-      ...formData,
-      taste: finalTaste, // 使用处理后的风味评分
-      equipment: normalizedEquipmentId,
-      method: selectedMethod || initialData.method,
-      params: {
-        // 使用当前的方案参数
-        coffee: methodParams.coffee,
-        water: methodParams.water,
-        ratio: methodParams.ratio,
-        grindSize: methodParams.grindSize,
-        temp: methodParams.temp,
-      },
-      totalTime: parseFloat(totalTimeStr) || initialData.totalTime || 0,
-      // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
-      beanId: finalBeanId,
-      ...(preservedSource && { source: preservedSource }),
-      ...(preservedChangeRecord && { changeRecord: preservedChangeRecord }),
-      ...(preservedSource === 'quick-decrement' && {
-        quickDecrementAmount: quickDecrementAmountValue,
-      }),
-      ...(isConvertingToNormal && {
-        source: undefined,
-        quickDecrementAmount: undefined,
-        changeRecord: undefined,
-      }),
-    };
-
-    // 容量调整记录：同步 changeRecord 与显示的调整量
-    if (
-      isCapacityAdjustmentEdit &&
-      preservedChangeRecord?.capacityAdjustment &&
-      noteData.params
-    ) {
-      const rawAmount = parseFloat(capacityAdjustmentAmount);
-      const amount = isNaN(rawAmount) ? 0 : rawAmount;
-      const signedChange = (isCapacityAdjustmentIncrease ? 1 : -1) * amount;
-      const originalAmount =
-        preservedChangeRecord.capacityAdjustment.originalAmount;
-      const newAmount =
-        typeof originalAmount === 'number'
-          ? originalAmount + signedChange
-          : preservedChangeRecord.capacityAdjustment.newAmount;
-      const changeType =
-        signedChange > 0 ? 'increase' : signedChange < 0 ? 'decrease' : 'set';
-
-      noteData.changeRecord = {
-        ...preservedChangeRecord,
-        capacityAdjustment: {
-          ...preservedChangeRecord.capacityAdjustment,
-          changeAmount: signedChange,
-          changeType,
-          newAmount,
-        },
-      };
-      noteData.params.coffee = `${amount}g`;
-    }
-
-    // 如果是快捷扣除记录且处于快捷模式，同步更新 params.coffee 字段
-    if (isQuickDecrementEdit && isQuickMode && noteData.params) {
-      noteData.params.coffee = `${parseFloat(quickDecrementAmount) || 0}g`;
-    }
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     try {
-      // 同步磨豆机刻度到设置
-      if (methodParams.grindSize) {
-        const { syncGrinderToSettings } = await import('@/lib/grinder');
-        // 获取咖啡豆名称
-        const coffeeBeanName = selectedCoffeeBean
-          ? 'name' in selectedCoffeeBean
-            ? selectedCoffeeBean.name
-            : formData.coffeeBeanInfo.name
+      // 提取当前咖啡用量（用于容量计算和新建豆子）
+      const {
+        CapacitySyncManager,
+        updateBeanRemaining,
+        increaseBeanRemaining,
+      } = await import('@/lib/stores/coffeeBeanStore');
+      const currentCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
+        isQuickDecrementEdit && isQuickMode
+          ? `${parseFloat(quickDecrementAmount) || 0}g`
+          : methodParams.coffee
+      );
+
+      // 处理待创建的咖啡豆
+      // 如果选中的是 PendingCoffeeBean，在保存笔记时创建它
+      let finalBeanId: string | undefined;
+
+      if (selectedCoffeeBean && isPendingCoffeeBean(selectedCoffeeBean)) {
+        try {
+          const { useCoffeeBeanStore } =
+            await import('@/lib/stores/coffeeBeanStore');
+          const addBean = useCoffeeBeanStore.getState().addBean;
+
+          // 创建新咖啡豆，容量和剩余量基于本次冲煮用量
+          // 容量 = 咖啡用量（首次使用的量即为总容量）
+          // 剩余量 = 0（本次冲煮已用完）
+          const coffeeAmountStr =
+            currentCoffeeAmount > 0 ? `${currentCoffeeAmount}g` : '';
+          const newBean = await addBean({
+            name: selectedCoffeeBean.name,
+            capacity: coffeeAmountStr,
+            remaining: '0',
+          });
+
+          finalBeanId = newBean.id;
+
+          // 更新 selectedCoffeeBean 为真实的豆子（用于后续逻辑）
+          setSelectedCoffeeBean(newBean);
+        } catch (error) {
+          console.error('创建咖啡豆失败:', error);
+          alert('创建咖啡豆失败，请重试');
+          return;
+        }
+      } else if (
+        selectedCoffeeBean &&
+        !isPendingCoffeeBean(selectedCoffeeBean)
+      ) {
+        // 已有豆子，使用其 ID
+        finalBeanId = selectedCoffeeBean.id;
+
+        // 判断是否是新建笔记（没有ID或是复制操作）
+        const isNewNote = !initialData.id || isCopy;
+
+        if (isNewNote) {
+          // 新建笔记：直接扣除咖啡豆剩余量
+          if (currentCoffeeAmount > 0) {
+            try {
+              await updateBeanRemaining(
+                selectedCoffeeBean.id,
+                currentCoffeeAmount
+              );
+            } catch (error) {
+              console.error('扣除咖啡豆剩余量失败:', error);
+            }
+          }
+        } else if (initialData.source !== 'capacity-adjustment') {
+          // 编辑模式且非容量调整记录：处理容量同步
+          try {
+            const currentBeanId = selectedCoffeeBean.id;
+            const beanChanged = originalBeanId !== currentBeanId;
+
+            if (beanChanged) {
+              // 咖啡豆发生变化，需要处理双向容量同步
+              const originalCoffeeAmount =
+                CapacitySyncManager.extractCoffeeAmount(
+                  initialData.params?.coffee || '0g'
+                );
+
+              // 恢复原咖啡豆的剩余量（如果原来有关联的咖啡豆）
+              if (originalBeanId && originalCoffeeAmount > 0) {
+                await increaseBeanRemaining(
+                  originalBeanId,
+                  originalCoffeeAmount
+                );
+              }
+
+              // 扣除新咖啡豆的剩余量（如果选择了新的咖啡豆）
+              if (currentBeanId && currentCoffeeAmount > 0) {
+                await updateBeanRemaining(currentBeanId, currentCoffeeAmount);
+              }
+            } else if (originalBeanId) {
+              // 咖啡豆没有变化，但可能咖啡用量发生了变化
+              const oldCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
+                initialData.params?.coffee || '0g'
+              );
+              const amountDiff = currentCoffeeAmount - oldCoffeeAmount;
+
+              if (Math.abs(amountDiff) > 0.01) {
+                if (amountDiff > 0) {
+                  await updateBeanRemaining(originalBeanId, amountDiff);
+                } else {
+                  await increaseBeanRemaining(
+                    originalBeanId,
+                    Math.abs(amountDiff)
+                  );
+                }
+              }
+            }
+          } catch (error) {
+            console.error('同步咖啡豆容量失败:', error);
+          }
+        }
+      }
+
+      // 规范化器具ID（将名称转换为ID）
+      const { normalizeEquipmentId } = await import('@/components/notes/utils');
+      const normalizedEquipmentId = await normalizeEquipmentId(
+        selectedEquipment || initialData.equipment || ''
+      );
+
+      // 处理风味评分数据
+      // 如果满足以下任一条件，不保存风味评分：
+      // 1. 用户关闭了风味评分显示
+      // 2. 用户只变更了总体评分，但风味评分完全没有手动修改过（仅来自同步）
+      let finalTaste = formData.taste;
+      if (
+        !settings?.showFlavorRatingInForm ||
+        (isAdding &&
+          settings?.flavorRatingFollowOverall &&
+          flavorRatingsOnlySyncedRef.current)
+      ) {
+        // 不保存风味评分
+        finalTaste = {};
+      }
+
+      const isConvertingToNormal = isQuickDecrementEdit && !isQuickMode;
+      const preservedSource = isConvertingToNormal
+        ? undefined
+        : initialData.source;
+      const preservedChangeRecord = isConvertingToNormal
+        ? undefined
+        : initialData.changeRecord;
+      const quickDecrementAmountValue =
+        preservedSource === 'quick-decrement'
+          ? parseFloat(quickDecrementAmount) || 0
           : undefined;
 
-        await syncGrinderToSettings(
-          methodParams.grindSize,
-          normalizedEquipmentId,
-          selectedMethod || initialData.method,
-          coffeeBeanName
-        );
+      // 创建完整的笔记数据
+      const noteData: BrewingNoteData = {
+        id: id || generatedNoteIdRef.current,
+        // 使用当前的时间戳状态
+        timestamp: timestamp.getTime(),
+        ...formData,
+        taste: finalTaste, // 使用处理后的风味评分
+        equipment: normalizedEquipmentId,
+        method: selectedMethod || initialData.method,
+        params: {
+          // 使用当前的方案参数
+          coffee: methodParams.coffee,
+          water: methodParams.water,
+          ratio: methodParams.ratio,
+          grindSize: methodParams.grindSize,
+          temp: methodParams.temp,
+        },
+        totalTime: parseFloat(totalTimeStr) || initialData.totalTime || 0,
+        // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
+        beanId: finalBeanId,
+        ...(preservedSource && { source: preservedSource }),
+        ...(preservedChangeRecord && { changeRecord: preservedChangeRecord }),
+        ...(preservedSource === 'quick-decrement' && {
+          quickDecrementAmount: quickDecrementAmountValue,
+        }),
+        ...(isConvertingToNormal && {
+          source: undefined,
+          quickDecrementAmount: undefined,
+          changeRecord: undefined,
+        }),
+      };
+
+      // 容量调整记录：同步 changeRecord 与显示的调整量
+      if (
+        isCapacityAdjustmentEdit &&
+        preservedChangeRecord?.capacityAdjustment &&
+        noteData.params
+      ) {
+        const rawAmount = parseFloat(capacityAdjustmentAmount);
+        const amount = isNaN(rawAmount) ? 0 : rawAmount;
+        const signedChange = (isCapacityAdjustmentIncrease ? 1 : -1) * amount;
+        const originalAmount =
+          preservedChangeRecord.capacityAdjustment.originalAmount;
+        const newAmount =
+          typeof originalAmount === 'number'
+            ? originalAmount + signedChange
+            : preservedChangeRecord.capacityAdjustment.newAmount;
+        const changeType =
+          signedChange > 0 ? 'increase' : signedChange < 0 ? 'decrease' : 'set';
+
+        noteData.changeRecord = {
+          ...preservedChangeRecord,
+          capacityAdjustment: {
+            ...preservedChangeRecord.capacityAdjustment,
+            changeAmount: signedChange,
+            changeType,
+            newAmount,
+          },
+        };
+        noteData.params.coffee = `${amount}g`;
       }
 
-      // 保存笔记
-      onSave(noteData);
+      // 如果是快捷扣除记录且处于快捷模式，同步更新 params.coffee 字段
+      if (isQuickDecrementEdit && isQuickMode && noteData.params) {
+        noteData.params.coffee = `${parseFloat(quickDecrementAmount) || 0}g`;
+      }
 
-      // 如果提供了保存成功的回调，则调用它
-      if (onSaveSuccess) {
-        onSaveSuccess();
+      try {
+        // 同步磨豆机刻度到设置
+        if (methodParams.grindSize) {
+          const { syncGrinderToSettings } = await import('@/lib/grinder');
+          // 获取咖啡豆名称
+          const coffeeBeanName = selectedCoffeeBean
+            ? 'name' in selectedCoffeeBean
+              ? selectedCoffeeBean.name
+              : formData.coffeeBeanInfo.name
+            : undefined;
+
+          await syncGrinderToSettings(
+            methodParams.grindSize,
+            normalizedEquipmentId,
+            selectedMethod || initialData.method,
+            coffeeBeanName
+          );
+        }
+
+        // 保存笔记
+        await Promise.resolve(onSave(noteData));
+
+        // 如果提供了保存成功的回调，则调用它
+        if (onSaveSuccess) {
+          await Promise.resolve(onSaveSuccess());
+        }
+      } catch (error) {
+        // Log error in development only
+        if (process.env.NODE_ENV === 'development') {
+          console.error('保存笔记时出错:', error);
+        }
+        alert('保存笔记时出错，请重试');
       }
-    } catch (error) {
-      // Log error in development only
-      if (process.env.NODE_ENV === 'development') {
-        console.error('保存笔记时出错:', error);
-      }
-      alert('保存笔记时出错，请重试');
+    } finally {
+      isSubmittingRef.current = false;
     }
   };
 

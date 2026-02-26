@@ -216,6 +216,7 @@ const NoteSteppedFormModal = forwardRef<
       >
         {({ isMediumScreen }) => (
           <div
+            data-note-stepped-form-modal="true"
             className={`flex h-full flex-col overflow-hidden px-6 ${isMediumScreen ? 'pt-4' : 'pt-2'}`}
           >
             {/* 顶部导航栏 */}
