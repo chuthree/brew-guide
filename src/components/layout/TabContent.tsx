@@ -28,6 +28,7 @@ import { MethodStepConfig } from '@/lib/types/method';
 import GrinderScaleIndicator from '@/components/ui/GrinderScaleIndicator';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useCopy } from '@/lib/hooks/useCopy';
+import { useInputFocus } from '@/lib/hooks/useInputFocus';
 import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
 
 import { Search, X, Shuffle } from 'lucide-react';
@@ -390,23 +391,25 @@ const TabContent: React.FC<TabContentProps> = ({
   // 搜索相关状态和处理
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { inputRef: searchInputRef, activateAndFocus } =
+    useInputFocus<HTMLInputElement>(isSearching);
 
   const buttonBaseClass =
     'rounded-full border border-neutral-200/50 dark:border-neutral-700/50 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100';
   const springTransition = { stiffness: 500, damping: 25 };
 
-  const handleSearchClick = async () => {
-    await triggerHapticFeedback();
-    setIsSearching(true);
-    setTimeout(() => searchInputRef.current?.focus(), 100);
+  const handleSearchClick = () => {
+    activateAndFocus(() => {
+      setIsSearching(true);
+    });
+    void triggerHapticFeedback();
   };
 
-  const handleCloseSearch = async (e?: React.MouseEvent) => {
+  const handleCloseSearch = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    await triggerHapticFeedback();
     setIsSearching(false);
     setSearchQuery('');
+    void triggerHapticFeedback();
   };
 
   // 获取编辑器具方法 - 使用 useCallback 优化
@@ -732,6 +735,7 @@ const TabContent: React.FC<TabContentProps> = ({
                     placeholder="搜索咖啡豆名称..."
                     className="w-48 rounded-full border border-neutral-200/50 bg-neutral-100 px-5 py-3.5 text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:border-neutral-700/50 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
                     autoComplete="off"
+                    autoFocus
                     onKeyDown={e => e.key === 'Escape' && handleCloseSearch()}
                   />
                 </motion.div>

@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
+import { useInputFocus } from '@/lib/hooks/useInputFocus';
 
 interface NameStepProps {
   name: string;
@@ -25,14 +26,7 @@ const pageTransition = {
 };
 
 const NameStep: React.FC<NameStepProps> = ({ name, onChange, isEdit }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // 自动聚焦输入框
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, []);
+  const { inputRef } = useInputFocus<HTMLInputElement>(true);
 
   return (
     <motion.div
@@ -56,7 +50,7 @@ const NameStep: React.FC<NameStepProps> = ({ name, onChange, isEdit }) => {
               value={name}
               onChange={e => onChange(e.target.value)}
               placeholder="叫做..."
-              autoFocus={true}
+              autoFocus
               className={`bg-transparent py-2 text-center text-lg outline-hidden focus:border-neutral-800/50 dark:focus:border-neutral-400`}
             />
           </div>

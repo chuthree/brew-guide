@@ -28,6 +28,7 @@ import {
 } from '@/lib/utils/beanVarietyUtils';
 import { TABLE_COLUMN_CONFIG, type TableColumnKey } from './TableView';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useInputFocus } from '@/lib/hooks/useInputFocus';
 // Apple风格动画配置
 const FILTER_ANIMATION = {
   initial: {
@@ -632,16 +633,15 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   // 注：isMinimalistMode 和 hideTotalWeight 功能已移除，始终为 false
 
   // 搜索相关逻辑
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { inputRef: searchInputRef, activateAndFocus } =
+    useInputFocus<HTMLInputElement>(Boolean(isSearching));
 
   // 处理搜索图标点击
   const handleSearchClick = () => {
     if (setIsSearching) {
-      setIsSearching(true);
-      // 聚焦搜索框
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 50);
+      activateAndFocus(() => {
+        setIsSearching(true);
+      });
     }
   };
 
@@ -961,6 +961,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         placeholder="输入咖啡豆名称..."
                         className="w-full border-none bg-transparent pr-2 text-xs font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:text-neutral-100 dark:placeholder-neutral-500"
                         autoComplete="off"
+                        autoFocus
                       />
                     </div>
                     <button
@@ -1263,6 +1264,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       placeholder="输入咖啡豆名称..."
                       className="w-full border-none bg-transparent pr-2 text-xs font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:text-neutral-100 dark:placeholder-neutral-500"
                       autoComplete="off"
+                      autoFocus
                     />
                   </div>
                   <button

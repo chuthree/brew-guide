@@ -4,7 +4,6 @@ import React, {
   ReactNode,
   useState,
   useEffect,
-  useRef,
   forwardRef,
   useImperativeHandle,
   useCallback,
@@ -13,6 +12,7 @@ import { ArrowLeft, ArrowRight, Search, X, Shuffle } from 'lucide-react';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { showToast } from '@/components/common/feedback/LightToast';
 import AdaptiveModal from '@/components/common/ui/AdaptiveModal';
+import { useInputFocus } from '@/lib/hooks/useInputFocus';
 
 export interface Step {
   id: string;
@@ -69,7 +69,8 @@ const NoteSteppedFormModal = forwardRef<
     );
     const [scrollContainer, setScrollContainer] =
       useState<HTMLDivElement | null>(null);
-    const searchInputRef = useRef<HTMLInputElement>(null);
+    const { inputRef: searchInputRef, activateAndFocus } =
+      useInputFocus<HTMLInputElement>(isSearching);
 
     // callback ref: DOM 挂载时更新 state，触发重新渲染
     const contentScrollRefCallback = useCallback(
@@ -142,8 +143,9 @@ const NoteSteppedFormModal = forwardRef<
     };
 
     const handleSearchClick = () => {
-      setIsSearching(true);
-      setTimeout(() => searchInputRef.current?.focus(), 100);
+      activateAndFocus(() => {
+        setIsSearching(true);
+      });
     };
 
     const handleCloseSearch = (e?: React.MouseEvent) => {
@@ -266,6 +268,7 @@ const NoteSteppedFormModal = forwardRef<
                     placeholder="搜索咖啡豆名称..."
                     className="w-48 rounded-full border-none bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
                     autoComplete="off"
+                    autoFocus
                     onKeyDown={e => e.key === 'Escape' && handleCloseSearch()}
                   />
                   <button

@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { X, AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useInputFocus } from '@/lib/hooks/useInputFocus';
 
 // Apple风格动画配置
 const FILTER_ANIMATION = {
@@ -748,8 +749,9 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   searchHistory,
   onSearchHistoryClick,
 }) {
-  // 搜索输入框引用 - 移到条件语句前面
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  // 搜索输入框引用
+  const { inputRef: searchInputRef, activateAndFocus } =
+    useInputFocus<HTMLInputElement>(isSearching);
 
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
@@ -846,13 +848,16 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
 
   // 处理搜索图标点击
   const handleSearchClick = () => {
-    if (onSearchClick) {
-      onSearchClick();
-      // 聚焦搜索框
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 50);
+    if (!onSearchClick) return;
+
+    if (!isSearching) {
+      activateAndFocus(() => {
+        onSearchClick();
+      });
+      return;
     }
+
+    onSearchClick();
   };
 
   // 处理筛选展开栏
@@ -1133,6 +1138,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                   placeholder="搜索笔记..."
                   className="w-full border-none bg-transparent pr-2 text-xs font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:text-neutral-100 dark:placeholder-neutral-500"
                   autoComplete="off"
+                  autoFocus
                 />
               </div>
               <button
