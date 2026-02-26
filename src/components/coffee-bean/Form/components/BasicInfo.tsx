@@ -293,6 +293,24 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     }
   };
 
+  const renderAddSideImageButton = (imageType: 'front' | 'back') => {
+    const label = imageType === 'front' ? '正面图' : '背面图';
+    const title = imageType === 'front' ? '添加正面图片' : '添加背面图片';
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleImageSelect('gallery', imageType)}
+        className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
+        title={title}
+      >
+        <span className="text-[11px] font-medium text-neutral-300 dark:text-neutral-600">
+          {label}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <motion.div
       key="basic-step"
@@ -364,14 +382,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                   <X className="h-2.5 w-2.5" />
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => handleImageSelect('gallery', 'back')}
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
-                title="添加背面图片"
-              >
-                <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
-              </button>
+              {renderAddSideImageButton('back')}
             </>
           ) : !bean.image && roasterLogo ? (
             /* 状态: 烘焙商图标作为底图（半透明，提示可替换） */
@@ -413,27 +424,13 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 </div>
               ) : (
                 /* 无背面图，显示添加按钮 */
-                <button
-                  type="button"
-                  onClick={() => handleImageSelect('gallery', 'back')}
-                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
-                  title="添加背面图片"
-                >
-                  <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
-                </button>
+                renderAddSideImageButton('back')
               )}
             </>
           ) : !bean.image && bean.backImage ? (
             /* 状态: 无正面图 + 有用户背面图 */
             <>
-              <button
-                type="button"
-                onClick={() => handleImageSelect('gallery', 'front')}
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-neutral-200/40 transition-colors hover:bg-neutral-200/60 dark:bg-neutral-800/60 dark:hover:bg-neutral-800/80"
-                title="添加正面图片"
-              >
-                <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
-              </button>
+              {renderAddSideImageButton('front')}
               <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60">
                 <Image
                   src={bean.backImage}
