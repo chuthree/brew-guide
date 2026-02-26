@@ -32,6 +32,9 @@ const PWAInstallGuideDrawer: React.FC<PWAInstallGuideDrawerProps> = ({
   isOpen,
   onClose,
 }) => {
+  const stepNumberClass =
+    'ml-3 mr-6 inline-flex w-[1ch] justify-center text-4xl leading-none font-medium tabular-nums text-neutral-500 dark:text-neutral-400';
+
   return (
     <ActionDrawer
       isOpen={isOpen}
@@ -48,7 +51,7 @@ const PWAInstallGuideDrawer: React.FC<PWAInstallGuideDrawerProps> = ({
 
         <div className="space-y-7">
           <div className="flex">
-            <span className="text-4xl ml-3 mr-6 leading-none font-medium text-neutral-500 dark:text-neutral-400">
+            <span className={stepNumberClass}>
               1
             </span>
             <div className="space-y-2">
@@ -62,7 +65,7 @@ const PWAInstallGuideDrawer: React.FC<PWAInstallGuideDrawerProps> = ({
           </div>
 
           <div className="flex">
-            <span className="text-4xl ml-3 mr-6 leading-none font-medium text-neutral-500 dark:text-neutral-400">
+            <span className={stepNumberClass}>
               2
             </span>
             <div className="space-y-2">
@@ -77,7 +80,7 @@ const PWAInstallGuideDrawer: React.FC<PWAInstallGuideDrawerProps> = ({
           </div>
 
           <div className="flex">
-            <span className="text-4xl ml-3 mr-6 leading-none font-medium text-neutral-500 dark:text-neutral-400">
+            <span className={stepNumberClass}>
               3
             </span>
             <div className="space-y-2">
