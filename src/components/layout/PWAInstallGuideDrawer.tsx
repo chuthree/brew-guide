@@ -46,7 +46,7 @@ const PWAInstallGuideDrawer: React.FC<PWAInstallGuideDrawerProps> = ({
 
         </div>
 
-        <div className="space-y-9">
+        <div className="space-y-7">
           <div className="flex">
             <span className="text-4xl ml-3 mr-6 leading-none font-medium text-neutral-500 dark:text-neutral-400">
               1
