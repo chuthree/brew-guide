@@ -97,6 +97,14 @@ export function Calendar({
     if (onSelect) {
       onSelect(date);
     }
+
+    // 点击跨月日期时，同步切换到对应月份，行为与常见日历组件保持一致
+    if (
+      date.getMonth() !== currentMonth.getMonth() ||
+      date.getFullYear() !== currentMonth.getFullYear()
+    ) {
+      setCurrentMonth(startOfMonth(date));
+    }
   };
 
   // 检查日期是否被选中
@@ -326,7 +334,9 @@ export function Calendar({
       {/* 日期网格 */}
       <div className="grid grid-cols-7 gap-1">
         {daysInCalendar.map((date, index) => {
-          const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+          const isCurrentMonth =
+            date.getMonth() === currentMonth.getMonth() &&
+            date.getFullYear() === currentMonth.getFullYear();
           const isSelectedDate = isDateSelected(date);
           const isTodayDate = isToday(date);
 
@@ -343,12 +353,9 @@ export function Calendar({
                     'border border-neutral-200/50 dark:border-neutral-700',
                   isSelectedDate
                     ? 'bg-neutral-800 text-white dark:bg-white dark:text-neutral-900'
-                    : isCurrentMonth &&
-                        'hover:bg-neutral-100/60 dark:hover:bg-neutral-800/30',
-                  !isCurrentMonth && 'pointer-events-none opacity-50'
+                    : 'hover:bg-neutral-100/60 dark:hover:bg-neutral-800/30'
                 )}
-                disabled={!isCurrentMonth}
-                tabIndex={isCurrentMonth && initialFocus ? 0 : -1}
+                tabIndex={initialFocus ? 0 : -1}
                 type="button"
               >
                 {date.getDate()}
