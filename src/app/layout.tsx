@@ -31,11 +31,16 @@ const geistMono = localFont({
   display: 'swap',
 });
 
+const SEO_TITLE =
+  'Brew Guide 咖啡冲煮计时、豆仓管理与品鉴记录工具 | 手冲配方、参数记录与风味分析';
+const SEO_DESCRIPTION =
+  'Brew Guide 是面向手冲与精品咖啡爱好者的一站式咖啡工具，提供分阶段冲煮计时、注水可视化引导、咖啡豆库存与烘焙信息管理、风味评分与品鉴记录、冲煮历史回顾与统计分析、器具与方案自定义，并支持离线使用、数据导入导出与 Web/iOS/Android/桌面多端同步，帮助你稳定复现一杯咖啡风味，优化萃取参数与冲煮体验。';
+
 // SEO constants
 export const metadata: Metadata = {
   metadataBase: new URL('https://coffee.chu3.top/'),
-  title: 'Brew Guide - 咖啡小工具',
-  description: '一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。',
+  title: SEO_TITLE,
+  description: SEO_DESCRIPTION,
   keywords: [
     '手冲咖啡',
     '咖啡计时器',
@@ -61,8 +66,8 @@ export const metadata: Metadata = {
     canonical: 'https://coffee.chu3.top/',
   },
   openGraph: {
-    title: 'Brew Guide - 咖啡小工具',
-    description: '一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。',
+    title: SEO_TITLE,
+    description: SEO_DESCRIPTION,
     url: 'https://coffee.chu3.top/',
     siteName: "Brew Guide - Chu3's Coffee Guide",
     locale: 'zh_CN',
@@ -78,8 +83,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Brew Guide - 咖啡小工具',
-    description: '一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。',
+    title: SEO_TITLE,
+    description: SEO_DESCRIPTION,
     images: ['https://coffee.chu3.top/images/icons/app/icon-512x512.png'],
     creator: '@chu3',
   },
@@ -181,8 +186,7 @@ export default function RootLayout({
               name: 'Brew Guide',
               applicationCategory: 'LifestyleApplication',
               operatingSystem: 'Web, iOS, Android',
-              description:
-                '一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。',
+              description: SEO_DESCRIPTION,
               url: 'https://coffee.chu3.top/',
               author: {
                 '@type': 'Person',
@@ -256,11 +260,14 @@ export default function RootLayout({
         )}
       </head>
       <body>
+        <h1 className="sr-only">
+          Brew Guide 咖啡冲煮计时、豆仓管理与品鉴记录工具
+        </h1>
         {/* SEO: 为不支持 JavaScript 的搜索引擎爬虫提供内容 */}
         <noscript>
           <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-            <h1>Brew Guide - 咖啡小工具</h1>
-            <p>一站式咖啡小工具，支持辅助冲煮，豆仓管理与品鉴记录功能。</p>
+            <h1>Brew Guide 咖啡冲煮计时、豆仓管理与品鉴记录工具</h1>
+            <p>{SEO_DESCRIPTION}</p>
 
             <h2>冲煮管理</h2>
             <ul>
