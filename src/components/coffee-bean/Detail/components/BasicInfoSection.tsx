@@ -8,7 +8,6 @@ import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import {
   formatNumber,
-  formatDateString,
   parseDateString,
   getFlavorInfo,
 } from '../utils';
@@ -28,7 +27,8 @@ interface BasicInfoSectionProps {
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
   handleCapacityBlur: (value: string) => void;
   handleRemainingBlur: (value: string) => void;
-  handlePriceBlur: (value: string) => void;
+  handleRemainingQuickAction: (event: React.MouseEvent<HTMLSpanElement>) => void;
+  handlePriceBlur: (value: string) => Promise<void>;
   handleDateChange: (date: Date, field: 'roastDate' | 'purchaseDate') => void;
 }
 
@@ -47,6 +47,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   handleUpdateField,
   handleCapacityBlur,
   handleRemainingBlur,
+  handleRemainingQuickAction,
   handlePriceBlur,
   handleDateChange,
 }) => {
@@ -79,6 +80,10 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   const dateValue = isGreenBeanType
     ? currentBean?.purchaseDate
     : currentBean?.roastDate;
+  const priceNumber = parseFloat(currentBean?.price || '');
+  const capacityNumber = parseFloat(currentBean?.capacity || '');
+  const hasValidUnitPrice =
+    !isNaN(priceNumber) && !isNaN(capacityNumber) && capacityNumber > 0;
 
   // 聚焦输入框
   useEffect(() => {
@@ -178,7 +183,14 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 </div>
               ) : (
                 <span
-                  onClick={() => setEditingRemaining(true)}
+                  onClick={event => {
+                    if (isAddMode) {
+                      setEditingRemaining(true);
+                      return;
+                    }
+                    handleRemainingQuickAction(event);
+                  }}
+                  data-click-area="remaining-edit"
                   className={`cursor-pointer ${
                     currentBean?.remaining
                       ? 'text-neutral-800 dark:text-neutral-100'
@@ -217,8 +229,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 </div>
               ) : (
                 <span
-                  onClick={() => setEditingCapacity(true)}
-                  className={`cursor-pointer ${
+                  onClick={() => {
+                    if (isAddMode) {
+                      setEditingCapacity(true);
+                    }
+                  }}
+                  className={`${isAddMode ? 'cursor-pointer' : 'cursor-default'} ${
                     currentBean?.capacity
                       ? 'text-neutral-800 dark:text-neutral-100'
                       : 'text-neutral-400 dark:text-neutral-500'
@@ -250,14 +266,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                   suppressContentEditableWarning
                   inputMode="decimal"
                   onBlur={e => {
-                    handlePriceBlur(e.currentTarget.textContent || '');
-                    setEditingPrice(false);
+                    void handlePriceBlur(e.currentTarget.textContent || '');
                   }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      handlePriceBlur(e.currentTarget.textContent || '');
-                      setEditingPrice(false);
+                      void handlePriceBlur(e.currentTarget.textContent || '');
                     }
                   }}
                   className="min-w-[1ch] cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
@@ -279,8 +293,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               {currentBean?.price && (
                 <span className="text-neutral-800 dark:text-neutral-100">
                   元
-                  {currentBean?.capacity &&
-                    ` (${(parseFloat(currentBean.price) / parseFloat(currentBean.capacity)).toFixed(2)} 元/克)`}
+                  {hasValidUnitPrice &&
+                    ` (${(priceNumber / capacityNumber).toFixed(2)} 元/克)`}
                 </span>
               )}
             </div>
@@ -307,28 +321,13 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 </span>
               ) : (
                 <>
-                  {dateValue ? (
-                    isAddMode ? (
-                      <DatePicker
-                        date={parseDateString(dateValue)}
-                        onDateChange={date => handleDateChange(date, dateField)}
-                        placeholder={`选择${dateLabel}`}
-                        className="[&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
-                        displayFormat="yyyy-MM-dd"
-                      />
-                    ) : (
-                      <span className="whitespace-nowrap text-neutral-800 dark:text-neutral-100">
-                        {formatDateString(dateValue)}
-                      </span>
-                    )
-                  ) : (
-                    <DatePicker
-                      date={parseDateString(dateValue)}
-                      onDateChange={date => handleDateChange(date, dateField)}
-                      placeholder={`选择${dateLabel}`}
-                      className="[&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
-                    />
-                  )}
+                  <DatePicker
+                    date={parseDateString(dateValue)}
+                    onDateChange={date => handleDateChange(date, dateField)}
+                    placeholder={`选择${dateLabel}`}
+                    className="[&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
+                    displayFormat="yyyy-MM-dd"
+                  />
                   {/* 添加模式：在途状态选项 */}
                   {isAddMode && (
                     <>

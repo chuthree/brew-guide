@@ -11,6 +11,7 @@ import { getEquipmentName } from '@/components/notes/utils';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
+import { RoastingManager } from '@/lib/managers/roastingManager';
 import {
   getChildPageStyle,
   useIsLargeScreen,
@@ -21,7 +22,9 @@ import {
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
+import { showToast } from '@/components/common/feedback/LightToast';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
+import RemainingEditor from '@/components/coffee-bean/List/components/RemainingEditor';
 
 import {
   BeanDetailModalProps,
@@ -165,6 +168,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const [editingRemaining, setEditingRemaining] = useState(false);
   const [editingPrice, setEditingPrice] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [remainingEditorTarget, setRemainingEditorTarget] =
+    useState<HTMLElement | null>(null);
 
   const isGreenBean = bean?.beanState === 'green';
 
@@ -302,6 +307,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   useEffect(() => {
     if (bean?.image) setImageError(false);
   }, [bean?.image]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setRemainingEditorTarget(null);
+    }
+  }, [isOpen]);
 
   // 烘焙商 logo（优化：使用 useMemo 缓存 roasterSettings）
   const roasterSettings = React.useMemo(
@@ -483,9 +494,105 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (value) handleUpdateField({ remaining: value });
   };
 
-  const handlePriceBlur = (value: string) => {
+  const handlePriceBlur = async (value: string) => {
+    const sanitized = value
+      .trim()
+      .replace(/[^\d.]/g, '')
+      .replace(/(\..*)\./g, '$1');
+
+    let normalizedPrice = '';
+    if (!sanitized) {
+      normalizedPrice = '';
+    } else {
+      const parsed = parseFloat(sanitized);
+      if (!isNaN(parsed)) {
+        // 与表单保持一致：价格最多保留 2 位小数
+        normalizedPrice = parsed.toFixed(2).replace(/\.?0+$/, '');
+      }
+    }
+
+    const currentPrice = (isAddMode ? tempBean.price : bean?.price) || '';
+    if (normalizedPrice !== currentPrice) {
+      await handleUpdateField({ price: normalizedPrice });
+    }
+
     setEditingPrice(false);
-    if (value) handleUpdateField({ price: value });
+  };
+
+  const handleRemainingQuickAction = (
+    event: React.MouseEvent<HTMLSpanElement>
+  ) => {
+    if (isAddMode || !bean) return;
+
+    event.stopPropagation();
+    const target = event.currentTarget;
+    if (!target || !document.body.contains(target)) return;
+
+    // toggle: 点击同一目标时关闭，再次点击可重新打开
+    if (remainingEditorTarget === target) {
+      setRemainingEditorTarget(null);
+      return;
+    }
+
+    setRemainingEditorTarget(target);
+  };
+
+  const handleQuickDecrement = async (decrementAmount: number) => {
+    if (!bean?.id) return;
+
+    try {
+      const beanState = bean.beanState || 'roasted';
+
+      if (beanState === 'green') {
+        const result = await RoastingManager.simpleRoast(bean.id, decrementAmount);
+
+        if (result.success && result.greenBean) {
+          window.dispatchEvent(
+            new CustomEvent('coffeeBeanDataChanged', {
+              detail: { action: 'update', beanId: bean.id },
+            })
+          );
+          return;
+        }
+
+        showToast({
+          type: 'error',
+          title: result.error || '烘焙失败',
+          duration: 3000,
+        });
+        return;
+      }
+
+      const currentRemaining = parseFloat(bean.remaining || '0');
+      if (isNaN(currentRemaining)) {
+        showToast({
+          type: 'error',
+          title: '当前剩余量无效，无法扣除',
+          duration: 3000,
+        });
+        return;
+      }
+
+      const actualDecrement = Math.min(decrementAmount, currentRemaining);
+      const nextRemaining = Math.max(0, currentRemaining - actualDecrement);
+      const formattedValue = nextRemaining.toFixed(1);
+      await useCoffeeBeanStore
+        .getState()
+        .updateBean(bean.id, { remaining: formattedValue });
+
+      window.dispatchEvent(
+        new CustomEvent('coffeeBeanDataChanged', {
+          detail: { action: 'update', beanId: bean.id },
+        })
+      );
+    } catch (error) {
+      console.error('详情页快捷扣除失败:', error);
+      showToast({
+        type: 'error',
+        title: '扣除失败，请重试',
+        duration: 3000,
+      });
+    }
   };
 
   // 日期处理
@@ -651,6 +758,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 handleUpdateField={handleUpdateField}
                 handleCapacityBlur={handleCapacityBlur}
                 handleRemainingBlur={handleRemainingBlur}
+                handleRemainingQuickAction={handleRemainingQuickAction}
                 handlePriceBlur={handlePriceBlur}
                 handleDateChange={handleDateChange}
               />
@@ -702,6 +810,19 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           ) : null}
         </div>
       </div>
+
+      <RemainingEditor
+        targetElement={remainingEditorTarget}
+        isOpen={!!remainingEditorTarget}
+        onOpenChange={open => {
+          if (!open) {
+            setRemainingEditorTarget(null);
+          }
+        }}
+        onCancel={() => setRemainingEditorTarget(null)}
+        onQuickDecrement={handleQuickDecrement}
+        coffeeBean={isAddMode ? undefined : bean || undefined}
+      />
 
       {/* 图片查看器 */}
       {currentImageUrl && imageViewerOpen && (
