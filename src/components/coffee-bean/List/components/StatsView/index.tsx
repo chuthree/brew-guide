@@ -456,33 +456,86 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
   initialLimit = 5,
   displayMode = 'list',
 }) => {
+  const DEFAULT_TAGS_COLLAPSED_HEIGHT = 120;
+
   const [isExpanded, setIsExpanded] = useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number>(0);
+  const [collapsedHeight, setCollapsedHeight] = useState<number>(
+    displayMode === 'tags' ? DEFAULT_TAGS_COLLAPSED_HEIGHT : initialLimit * 26
+  );
+  const [hasMore, setHasMore] = useState(false);
 
-  // 测量内容实际高度
-  useEffect(() => {
-    if (contentRef.current) {
-      // 获取实际滚动高度
-      setContentHeight(contentRef.current.scrollHeight);
+  const measureContent = useCallback(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl) return;
+
+    const measuredContentHeight = contentEl.scrollHeight;
+    let measuredCollapsedHeight = DEFAULT_TAGS_COLLAPSED_HEIGHT;
+
+    if (displayMode === 'list') {
+      const rows = Array.from(contentEl.children) as HTMLElement[];
+      const visibleCount = Math.min(initialLimit, rows.length);
+      if (visibleCount > 0) {
+        const lastVisibleRow = rows[visibleCount - 1];
+        measuredCollapsedHeight =
+          lastVisibleRow.offsetTop + lastVisibleRow.offsetHeight;
+      } else {
+        measuredCollapsedHeight = 0;
+      }
     }
-  }, [data, isExpanded]);
+
+    setContentHeight(measuredContentHeight);
+    setCollapsedHeight(measuredCollapsedHeight);
+
+    const overflow = measuredContentHeight - measuredCollapsedHeight > 1;
+    setHasMore(overflow);
+    if (!overflow) {
+      setIsExpanded(false);
+    }
+  }, [displayMode, initialLimit]);
+
+  // 初始化与数据变化后测量
+  useEffect(() => {
+    measureContent();
+  }, [measureContent, data]);
+
+  // 监听字体缩放与窗口尺寸变化
+  useEffect(() => {
+    const handleMeasure = () => {
+      requestAnimationFrame(measureContent);
+    };
+
+    window.addEventListener('fontZoomChange', handleMeasure);
+    window.addEventListener('resize', handleMeasure);
+
+    return () => {
+      window.removeEventListener('fontZoomChange', handleMeasure);
+      window.removeEventListener('resize', handleMeasure);
+    };
+  }, [measureContent]);
+
+  // 监听容器尺寸变化（例如布局或宽度变化）
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined' || !contentRef.current) return;
+
+    const observer = new ResizeObserver(() => {
+      measureContent();
+    });
+    observer.observe(contentRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [measureContent]);
 
   if (data.length === 0) return null;
-
-  const hasMore = data.length > initialLimit;
 
   const handleToggle = () => {
     if (hasMore) {
       setIsExpanded(!isExpanded);
     }
   };
-
-  // 标签模式：收起时的初始高度
-  const tagsCollapsedHeight = 120;
-  // 列表模式：每行高度约 26px (包含 1.5 的 space-y)
-  const listItemHeight = 26;
-  const listCollapsedHeight = initialLimit * listItemHeight;
 
   // 标签模式
   if (displayMode === 'tags') {
@@ -500,9 +553,9 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
           ref={contentRef}
           className="flex flex-wrap gap-2.5 overflow-hidden transition-[max-height] duration-300 ease-out"
           style={{
-            maxHeight: isExpanded
-              ? `${contentHeight}px`
-              : `${tagsCollapsedHeight}px`,
+            maxHeight: hasMore
+              ? `${isExpanded ? contentHeight : collapsedHeight}px`
+              : 'none',
           }}
         >
           {data.map(([label, count]) => (
@@ -543,9 +596,9 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
         ref={contentRef}
         className="space-y-1.5 overflow-hidden transition-[max-height] duration-300 ease-out"
         style={{
-          maxHeight: isExpanded
-            ? `${contentHeight}px`
-            : `${listCollapsedHeight}px`,
+          maxHeight: hasMore
+            ? `${isExpanded ? contentHeight : collapsedHeight}px`
+            : 'none',
         }}
       >
         {data.map(([label, count]) => (
