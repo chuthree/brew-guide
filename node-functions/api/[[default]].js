@@ -776,13 +776,22 @@ async function handleCorsProxy(context) {
       ? undefined
       : request.body;
 
-  const upstream = await fetch(targetUrl.toString(), {
-    method: request.method,
-    headers: proxyHeadersFromRequest(request),
-    body: requestBody,
-    ...(requestBody ? { duplex: 'half' } : {}),
-    redirect: 'follow',
-  });
+  let upstream;
+  try {
+    upstream = await fetch(targetUrl.toString(), {
+      method: request.method,
+      headers: proxyHeadersFromRequest(request),
+      body: requestBody,
+      redirect: 'follow',
+    });
+  } catch (error) {
+    return errorResponse(
+      request,
+      env,
+      `代理请求失败: ${error?.message || 'unknown error'}`,
+      502
+    );
+  }
 
   const headers = sanitizeProxyResponseHeaders(upstream.headers);
   return withCors(
