@@ -139,10 +139,6 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
               使用图片识别功能（咖啡豆/冲煮方案）时，图片会上传至服务器进行 AI
               分析，处理完成后立即删除，不会保存。
             </p>
-            <p>
-              想法收集功能会记录您的 IP
-              哈希值（匿名化处理）用于防止重复投票，不会关联到您的真实身份。
-            </p>
           </CollapsibleSection>
           <CollapsibleSection title="开源致谢">
             <p>

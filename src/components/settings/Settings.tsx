@@ -15,7 +15,6 @@ import {
 } from '@/lib/utils/versionCheck';
 import { isNative } from '@/lib/app/capacitor';
 import UpdateDrawer from './UpdateDrawer';
-import FeedbackDrawer from './FeedbackDrawer';
 import SettingGroup from './SettingItem';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
@@ -31,7 +30,6 @@ import {
   Timer,
   Database,
   Bell,
-  Lightbulb,
   Shuffle,
   ArrowUpDown,
   Palette,
@@ -278,7 +276,6 @@ const Settings: React.FC<SettingsProps> = ({
 
   // 版本更新检测状态
   const [showUpdateDrawer, setShowUpdateDrawer] = useState(false);
-  const [showFeedbackDrawer, setShowFeedbackDrawer] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<{
     latestVersion: string;
     downloadUrl: string;
@@ -534,16 +531,6 @@ const Settings: React.FC<SettingsProps> = ({
               label: '帮助文档',
               onClick: () => {
                 window.open('https://chu3.top/brewguide-help', '_blank');
-                if (settings.hapticFeedback) {
-                  hapticsUtils.light();
-                }
-              },
-            },
-            {
-              icon: Lightbulb,
-              label: '想法收集站',
-              onClick: () => {
-                setShowFeedbackDrawer(true);
                 if (settings.hapticFeedback) {
                   hapticsUtils.light();
                 }
@@ -888,12 +875,6 @@ const Settings: React.FC<SettingsProps> = ({
         />
       )}
 
-      {/* 反馈建议抽屉 */}
-      <FeedbackDrawer
-        isOpen={showFeedbackDrawer}
-        onClose={() => setShowFeedbackDrawer(false)}
-        hapticFeedback={settings.hapticFeedback}
-      />
     </div>
   );
 };

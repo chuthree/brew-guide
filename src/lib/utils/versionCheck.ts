@@ -70,11 +70,12 @@ function compareVersions(v1: string, v2: string): number {
  */
 export async function checkForUpdates(): Promise<VersionCheckResult> {
   try {
-    // 从远程获取版本信息，使用代理避免跨域问题
-    const baseUrl = 'https://coffee.chu3.top/version.json';
-    const proxyUrl = `https://cors.chu3.top/raw?url=${encodeURIComponent(`${baseUrl}?t=${Date.now()}`)}`;
+    // 默认从同域读取版本信息（可通过 NEXT_PUBLIC_VERSION_URL 覆盖）
+    const baseUrl = process.env.NEXT_PUBLIC_VERSION_URL || '/version.json';
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    const requestUrl = `${baseUrl}${separator}t=${Date.now()}`;
 
-    const response = await fetch(proxyUrl, {
+    const response = await fetch(requestUrl, {
       headers: {
         Accept: 'application/json',
       },

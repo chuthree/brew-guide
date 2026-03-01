@@ -15,8 +15,8 @@ export class WebDAVClient {
     this.config = config;
     // 创建基础认证头
     this.authHeader = `Basic ${btoa(`${config.username}:${config.password}`)}`;
-    // 使用 CORS 代理（仅在浏览器环境下需要）
-    this.corsProxy = 'https://cors.chu3.top/raw?url=';
+    // 使用同域 EdgeOne Functions 代理（仅在浏览器环境下需要）
+    this.corsProxy = '/api/cors-proxy?url=';
   }
 
   /**

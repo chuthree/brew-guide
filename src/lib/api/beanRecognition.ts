@@ -1,7 +1,7 @@
 // API 配置
 export const API_CONFIG = {
-  // 生产环境使用 api.chu3.top，开发环境使用 localhost
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.chu3.top',
+  // 默认走同域 EdgeOne Functions（可通过 NEXT_PUBLIC_API_URL 覆盖）
+  baseURL: (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, ''),
   timeout: 120000, // 120秒超时
 };
 
@@ -228,7 +228,7 @@ export async function recognizeBeanImage(
     return result.data;
   } catch (error) {
     if (error instanceof Error && error.message.includes('404')) {
-      throw new Error('API 服务未配置，请联系管理员配置 Nginx 反向代理');
+      throw new Error('API 服务未配置，请检查 EdgeOne Functions 部署状态');
     }
 
     if (

@@ -1,7 +1,7 @@
 // API 配置
 export const API_CONFIG = {
-  // 生产环境使用 api.chu3.top，开发环境使用 localhost
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.chu3.top',
+  // 默认走同域 EdgeOne Functions（可通过 NEXT_PUBLIC_API_URL 覆盖）
+  baseURL: (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, ''),
   timeout: 120000, // 120秒超时
 };
 
