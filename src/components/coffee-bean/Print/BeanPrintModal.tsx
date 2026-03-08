@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { BeanPrintModalProps } from './types';
 import { usePrintConfig, useEditableContent } from './hooks';
-import { extractBrandName, savePreviewAsImage } from './utils';
+import { savePreviewAsImage } from './utils';
 import { injectPrintStyles } from './styles';
 import { SizeSettings } from './SizeSettings';
 import { LayoutSettings } from './LayoutSettings';
@@ -73,8 +73,6 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     setShowResetConfirm(false);
   };
 
-  const extractedBrandName = extractBrandName(content.name, config.brandName);
-
   if (!bean) return null;
 
   return (
@@ -140,14 +138,12 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
               <ContentEditor
                 config={config}
                 content={content}
-                extractedBrandName={extractedBrandName}
                 onToggleField={toggleField}
                 onUpdateField={updateField}
                 onUpdateFlavorItem={updateFlavorItem}
                 onAddFlavor={addFlavor}
                 onRemoveFlavor={removeFlavor}
                 onResetContent={resetContent}
-                onUpdateBrandName={b => updateConfig('brandName', b)}
               />
 
               <PrintPreview config={config} content={content} />

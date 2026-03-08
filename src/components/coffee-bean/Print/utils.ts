@@ -1,11 +1,7 @@
 import { CoffeeBean } from '@/types/app';
 import { EditableContent, PrintConfig } from './types';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
-import {
-  formatBeanDisplayName,
-  getBeanEstates,
-  RoasterSettings,
-} from '@/lib/utils/beanVarietyUtils';
+import { getBeanEstates, RoasterSettings } from '@/lib/utils/beanVarietyUtils';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 
 // 格式化日期
@@ -22,20 +18,17 @@ export const formatDate = (dateStr: string): string => {
   }
 };
 
-// 提取品牌名（空格前的部分）
-export const extractBrandName = (name: string, configBrand: string): string => {
-  if (configBrand) return configBrand;
-  if (!name) return '';
-  const idx = name.indexOf(' ');
-  return idx > 0 ? name.substring(0, idx) : '';
-};
+export const getDisplayBeanName = (
+  content: Pick<EditableContent, 'roaster' | 'name'>
+): string => {
+  const beanName = content.name.trim();
+  const roaster = content.roaster.trim();
 
-// 提取豆子名（去除品牌后）
-export const extractBeanName = (name: string, configBrand: string): string => {
-  if (!name) return '';
-  if (configBrand) return name;
-  const idx = name.indexOf(' ');
-  return idx > 0 ? name.substring(idx + 1) : name;
+  if (!beanName) {
+    return roaster;
+  }
+
+  return roaster ? `${roaster} ${beanName}` : beanName;
 };
 
 // 生成风味行
@@ -87,11 +80,12 @@ const extractComponentInfo = (
 // 从 bean 创建初始内容
 export const createInitialContent = (
   bean: CoffeeBean | null,
-  roasterSettings: RoasterSettings
+  _roasterSettings: RoasterSettings
 ): EditableContent => {
   if (!bean) {
     return {
       name: '',
+      roaster: '',
       origin: '',
       estate: '',
       roastLevel: '',
@@ -104,7 +98,8 @@ export const createInitialContent = (
     };
   }
   return {
-    name: formatBeanDisplayName(bean, roasterSettings),
+    name: bean.name || '',
+    roaster: bean.roaster || '',
     origin: extractComponentInfo(bean, 'origin'),
     estate: getBeanEstates(bean).join(', '),
     roastLevel: bean.roastLevel || '',

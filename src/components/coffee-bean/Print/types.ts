@@ -5,6 +5,7 @@ import { CoffeeBean } from '@/types/app';
 // 可编辑内容
 export interface EditableContent {
   name: string;
+  roaster: string;
   origin: string;
   estate: string;
   roastLevel: string;
@@ -38,7 +39,6 @@ export interface PrintConfig {
   titleFontSize: number;
   fontWeight: number;
   template: 'minimal' | 'detailed';
-  brandName: string;
 }
 
 // 预设尺寸

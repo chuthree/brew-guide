@@ -5,6 +5,7 @@ import { Plus, Minus, RotateCcw } from 'lucide-react';
 import { PrintConfig, EditableContent, FIELD_ORDER } from './types';
 import { DatePicker } from '@/components/common/ui/DatePicker';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { getDisplayBeanName } from './utils';
 
 const INPUT_CLASS =
   'w-full rounded border border-neutral-200/50 bg-white px-2 py-1.5 text-xs focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800';
@@ -14,7 +15,10 @@ const FIELD_BUTTON_BASE_CLASS =
   'h-8 min-w-0 rounded-[3px] border px-1.5 text-center text-xs font-medium transition-all bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700';
 
 type FieldKey = keyof PrintConfig['fields'];
-type TextFieldKey = Exclude<keyof EditableContent, 'roastDate' | 'flavor' | 'notes'>;
+type TextFieldKey = Exclude<
+  keyof EditableContent,
+  'roaster' | 'roastDate' | 'flavor' | 'notes'
+>;
 
 const EDITOR_LABELS: Record<FieldKey, string> = {
   name: '名称',
@@ -30,7 +34,7 @@ const EDITOR_LABELS: Record<FieldKey, string> = {
 };
 
 const PLACEHOLDERS: Record<TextFieldKey, string> = {
-  name: '例如：辛鹿 野草莓',
+  name: '例如：野草莓',
   origin: '产地信息',
   estate: '庄园信息',
   roastLevel: '烘焙度',
@@ -55,7 +59,6 @@ const MINIMAL_FIELDS: FieldKey[] = [
 interface ContentEditorProps {
   config: PrintConfig;
   content: EditableContent;
-  extractedBrandName: string;
   onToggleField: (field: keyof PrintConfig['fields']) => void;
   onUpdateField: <K extends keyof EditableContent>(
     field: K,
@@ -65,20 +68,17 @@ interface ContentEditorProps {
   onAddFlavor: () => void;
   onRemoveFlavor: (index: number) => void;
   onResetContent: () => void;
-  onUpdateBrandName: (brandName: string) => void;
 }
 
 export const ContentEditor: React.FC<ContentEditorProps> = ({
   config,
   content,
-  extractedBrandName,
   onToggleField,
   onUpdateField,
   onUpdateFlavorItem,
   onAddFlavor,
   onRemoveFlavor,
   onResetContent,
-  onUpdateBrandName,
 }) => {
   const isMinimal = config.template === 'minimal';
   const showEstateFieldSetting = useSettingsStore(
@@ -89,19 +89,15 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
   const fieldsToRender = (isMinimal ? MINIMAL_FIELDS : FIELD_ORDER).filter(
     field => field !== 'estate' || shouldShowEstateField
   );
-  const [activeField, setActiveField] = useState<FieldKey | null>(null);
+  const [selectedField, setSelectedField] = useState<FieldKey | null>(null);
+  const activeField =
+    selectedField && fieldsToRender.includes(selectedField) ? selectedField : null;
   const editorPanelRef = useRef<HTMLDivElement | null>(null);
 
   const autoResizeTextarea = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
   };
-
-  useEffect(() => {
-    if (activeField && !fieldsToRender.includes(activeField)) {
-      setActiveField(null);
-    }
-  }, [activeField, fieldsToRender]);
 
   useEffect(() => {
     if (!editorPanelRef.current) {
@@ -111,7 +107,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
       'textarea[data-autosize="true"]'
     );
     textareas.forEach(textarea => autoResizeTextarea(textarea as HTMLTextAreaElement));
-  }, [content, config.brandName, activeField]);
+  }, [content, activeField]);
 
   const renderTextInput = (field: TextFieldKey, placeholder: string) => (
     <textarea
@@ -178,7 +174,9 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
   const isFieldEmpty = (field: FieldKey): boolean => {
     switch (field) {
       case 'name':
-        return !content.name.trim();
+        return isMinimal
+          ? !content.name.trim()
+          : !getDisplayBeanName(content).trim();
       case 'roastDate':
         return !content.roastDate.trim();
       case 'origin':
@@ -207,23 +205,26 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
       case 'name':
         return (
           <div className="space-y-2">
-            {renderTextInput('name', PLACEHOLDERS.name)}
-            {isMinimal && (
-              <div className="space-y-1">
-                <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                  品牌名称（可选）
-                </div>
-                <textarea
-                  data-autosize="true"
-                  value={config.brandName}
-                  onChange={e => onUpdateBrandName(e.target.value)}
-                  onInput={e => autoResizeTextarea(e.currentTarget)}
-                  className={`${INPUT_CLASS} min-h-[32px] overflow-hidden resize-none leading-[1.4]`}
-                  placeholder={`自动提取: ${extractedBrandName || '名称空格前的部分'}`}
-                  rows={1}
-                />
+            <div className="space-y-1">
+              <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                烘焙商（可选）
               </div>
-            )}
+              <textarea
+                data-autosize="true"
+                value={content.roaster}
+                onChange={e => onUpdateField('roaster', e.target.value)}
+                onInput={e => autoResizeTextarea(e.currentTarget)}
+                className={`${INPUT_CLASS} min-h-[32px] overflow-hidden resize-none leading-[1.4]`}
+                placeholder="默认使用咖啡豆中的烘焙商，可手动修改"
+                rows={1}
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                名称
+              </div>
+              {renderTextInput('name', PLACEHOLDERS.name)}
+            </div>
           </div>
         );
       case 'roastDate':
@@ -308,7 +309,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
             key={field}
             type="button"
             onClick={() =>
-              setActiveField(current => (current === field ? null : field))
+              setSelectedField(current => (current === field ? null : field))
             }
             className={getFieldButtonClass(field)}
           >

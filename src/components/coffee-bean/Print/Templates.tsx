@@ -2,12 +2,7 @@
 
 import React from 'react';
 import { TemplateProps, PrintConfig } from './types';
-import {
-  extractBrandName,
-  extractBeanName,
-  getFlavorLine,
-  getBottomInfoLine,
-} from './utils';
+import { getFlavorLine, getBottomInfoLine, getDisplayBeanName } from './utils';
 
 // ============================================
 // 简洁模板
@@ -18,11 +13,11 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({
   content,
   formattedDate: _formattedDate,
 }) => {
-  const brandName = extractBrandName(content.name, config.brandName);
-  const beanName = extractBeanName(content.name, config.brandName);
+  const roaster = content.roaster.trim();
+  const beanName = content.name.trim();
   const flavorLine = getFlavorLine(content.flavor);
   const bottomLine = getBottomInfoLine(content, config);
-  const showName = config.fields.name && !!content.name.trim();
+  const showName = config.fields.name && !!beanName;
   const showFlavor = config.fields.flavor && !!flavorLine;
 
   const textStyle = {
@@ -41,7 +36,7 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        {showName && brandName && (
+        {showName && roaster && (
           <div
             style={{
               ...textStyle,
@@ -49,7 +44,7 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({
               textAlign: 'center',
             }}
           >
-            [ {brandName} ]
+            [ {roaster} ]
           </div>
         )}
         {showName && beanName && <div style={textStyle}>{beanName}</div>}
@@ -92,6 +87,7 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
   const { fields, fontSize, titleFontSize, fontWeight } = config;
   const validFlavors = content.flavor.filter(f => f.trim());
   const showEstate = fields.estate || !!content.estate;
+  const displayBeanName = getDisplayBeanName(content);
   const weightValue = content.weight
     ? content.weight.trim().toLowerCase().endsWith('g')
       ? content.weight
@@ -101,7 +97,7 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
   return (
     <div style={{ display: 'flex', height: '100%', flexDirection: 'column' }}>
       {/* 标题 */}
-      {shouldShow(config, 'name', content.name) && (
+      {shouldShow(config, 'name', displayBeanName) && (
         <div
           style={{
             marginBottom: '0.375rem',
@@ -115,7 +111,7 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
               lineHeight: 1.2,
             }}
           >
-            {content.name}
+            {displayBeanName}
           </div>
           <div
             style={{
