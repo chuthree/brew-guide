@@ -1231,4 +1231,5 @@ export const sponsorsList = [
   '果汁',
   '熊孩子',
   '飓风咖啡',
+  '枫桦',
 ];
