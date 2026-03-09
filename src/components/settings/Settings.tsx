@@ -13,7 +13,7 @@ import {
   canAutoCheck,
   postponeUpdateCheck,
 } from '@/lib/utils/versionCheck';
-import { isNative } from '@/lib/app/capacitor';
+import { isBundledNativeApp } from '@/lib/app/capacitor';
 import UpdateDrawer from './UpdateDrawer';
 import SettingGroup from './SettingItem';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
@@ -302,10 +302,11 @@ const Settings: React.FC<SettingsProps> = ({
   } = useCloudSyncConnection(settings as SettingsOptions);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
 
-  // 自动检测更新（仅在 Capacitor 原生环境下）
+  // 自动检测更新（仅在本地打包的 Capacitor 环境下）
   // 是否为自动检测触发的更新提示
   const [isAutoCheckUpdate, setIsAutoCheckUpdate] = useState(false);
-  const nativeApp = typeof window !== 'undefined' ? isNative() : false;
+  const bundledNativeApp =
+    typeof window !== 'undefined' ? isBundledNativeApp() : false;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -314,7 +315,7 @@ const Settings: React.FC<SettingsProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    if (!nativeApp) return; // 仅原生平台自动检测
+    if (!bundledNativeApp) return; // 仅本地打包原生平台自动检测
 
     const autoCheckUpdate = async () => {
       try {
@@ -341,7 +342,7 @@ const Settings: React.FC<SettingsProps> = ({
     };
 
     autoCheckUpdate();
-  }, [isOpen, nativeApp]);
+  }, [isOpen, bundledNativeApp]);
 
   // 点击外部关闭同步菜单
   useEffect(() => {
@@ -833,7 +834,7 @@ const Settings: React.FC<SettingsProps> = ({
             {
               icon: Info,
               label: '关于',
-              value: getVersionLabel(nativeApp),
+              value: getVersionLabel(bundledNativeApp),
               onClick: subSettingsHandlers.onOpenAboutSettings,
             },
           ]}

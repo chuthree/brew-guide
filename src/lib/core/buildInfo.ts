@@ -25,8 +25,8 @@ export const BUILD_INFO = {
   buildTimeLabel: formatBuildTime(APP_BUILD_TIME),
 } as const;
 
-export function getVersionLabel(isNativeApp: boolean): string {
-  if (isNativeApp) {
+export function getVersionLabel(isBundledNativeApp: boolean): string {
+  if (isBundledNativeApp) {
     return `v${BUILD_INFO.appVersion}`;
   }
 

@@ -5,8 +5,18 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SafeAreaManager } from './safeArea';
 
+const BUNDLED_WEB_HOSTNAME = 'app';
+
 export const isNative = () => {
   return Capacitor.isNativePlatform();
+};
+
+export const isBundledNativeApp = () => {
+  if (!isNative() || typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.location.hostname === BUNDLED_WEB_HOSTNAME;
 };
 
 export const getPlatform = () => {
@@ -71,6 +81,7 @@ export const initCapacitor = async (): Promise<void> => {
 
 const capacitorUtils = {
   isNative,
+  isBundledNativeApp,
   getPlatform,
   initCapacitor,
 };
