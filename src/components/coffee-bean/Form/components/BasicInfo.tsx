@@ -44,6 +44,8 @@ interface BasicInfoProps {
   roasterFieldEnabled?: boolean;
   /** 烘焙商建议列表 */
   roasterSuggestions?: string[];
+  /** 当前是否处于“生豆转熟豆”烘焙流程（来源生豆ID） */
+  roastingSourceBeanId?: string | null;
 }
 
 // 判断是否为生豆
@@ -53,11 +55,17 @@ const isGreenBean = (
   return bean.beanState === 'green';
 };
 
-// 判断是否为烘焙模式（从生豆转换而来）
-const isRoastingMode = (
-  bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
+// 判断是否为“生豆转熟豆”的烘焙流程
+const isRoastingConversion = (
+  bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>,
+  roastingSourceBeanId?: string | null
 ): boolean => {
-  return !!bean.sourceGreenBeanId && bean.beanState === 'roasted';
+  return (
+    !!roastingSourceBeanId &&
+    bean.beanState === 'roasted' &&
+    !!bean.sourceGreenBeanId &&
+    bean.sourceGreenBeanId === roastingSourceBeanId
+  );
 };
 
 // 辅助函数：格式化数字，去除末尾多余的0
@@ -81,6 +89,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   roasterLogo,
   roasterFieldEnabled = false,
   roasterSuggestions = [],
+  roastingSourceBeanId,
 }) => {
   // 处理容量和剩余容量的状态
   const [capacityValue, setCapacityValue] = useState('');
@@ -135,8 +144,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     );
   }, [bean.capacity, bean.remaining, editingRemaining]);
 
-  // 判断是否为烘焙模式（用于 useEffect 依赖）
-  const isInRoastingMode = isRoastingMode(bean);
+  // 判断是否处于“生豆转熟豆”的烘焙流程（用于 UI 和逻辑控制）
+  const isInRoastingMode = isRoastingConversion(bean, roastingSourceBeanId);
 
   // 同步脱水率显示：仅在非编辑状态下同步显示
   // 注意：这里只更新显示值，不触发烘焙度设置（烘焙度在失焦时设置）
@@ -559,7 +568,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
       <div className="grid w-full grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            {isRoastingMode(bean) ? '烘焙量(g)' : '库存量(g)'}
+            {isInRoastingMode ? '烘焙量(g)' : '库存量(g)'}
           </label>
           <div className="flex w-full items-center justify-start gap-2">
             <div className="flex-1">
@@ -574,7 +583,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                   handleRemainingBlur();
                   validateRemaining();
                 }}
-                placeholder={isRoastingMode(bean) ? '熟豆量' : '剩余量'}
+                placeholder={isInRoastingMode ? '熟豆量' : '剩余量'}
                 className="w-full border-b border-neutral-300 bg-transparent py-2 text-center outline-none dark:border-neutral-700"
               />
             </div>
@@ -586,7 +595,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 step="0.1"
                 value={capacityValue}
                 onChange={e => handleCapacityChange(e.target.value)}
-                placeholder={isRoastingMode(bean) ? '生豆量' : '总量'}
+                placeholder={isInRoastingMode ? '生豆量' : '总量'}
                 className="w-full border-b border-neutral-300 bg-transparent py-2 text-center outline-none dark:border-neutral-700"
                 onBlur={() => {
                   // 失焦时更新主表单的总量
@@ -595,7 +604,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                   // 失焦时判断是否需要同步剩余量
                   // 烘焙模式下不自动同步，让用户手动输入实际熟豆量
                   if (
-                    !isRoastingMode(bean) &&
+                    !isInRoastingMode &&
                     capacityValue &&
                     (!remainingValue || remainingValue.trim() === '')
                   ) {
@@ -604,7 +613,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                   }
 
                   // 烘焙模式下，如果已有剩余量，计算脱水率和烘焙度
-                  if (isRoastingMode(bean) && remainingValue) {
+                  if (isInRoastingMode && remainingValue) {
                     calculateAndUpdateMoistureLoss(
                       capacityValue,
                       remainingValue
@@ -622,7 +631,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
           </div>
 
           {/* 续购按钮 - 只在编辑模式下显示，且不在烘焙模式下显示 */}
-          {isEdit && onRepurchase && !isRoastingMode(bean) && (
+          {isEdit && onRepurchase && !isInRoastingMode && (
             <button
               type="button"
               onClick={onRepurchase}
@@ -637,9 +646,9 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
 
         <div className="space-y-2">
           <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            {isRoastingMode(bean) ? '脱水率' : '价格(¥)'}
+            {isInRoastingMode ? '脱水率' : '价格(¥)'}
           </label>
-          {isRoastingMode(bean) ? (
+          {isInRoastingMode ? (
             <div className="relative w-full">
               <input
                 type="number"

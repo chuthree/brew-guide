@@ -49,6 +49,8 @@ interface CoffeeBeanFormProps {
   onStepChange?: (step: number) => void;
   /** 初始豆子状态（生豆/熟豆），用于新建时自动设置 */
   initialBeanState?: 'green' | 'roasted';
+  /** 当前是否处于“生豆转熟豆”烘焙流程（来源生豆ID） */
+  roastingSourceBeanId?: string | null;
   /** 识别时使用的原始图片 base64（用于在表单中显示） */
   recognitionImage?: string | null;
 }
@@ -76,6 +78,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       onRepurchase,
       onStepChange,
       initialBeanState,
+      roastingSourceBeanId,
       recognitionImage,
     },
     ref
@@ -989,6 +992,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
               roasterLogo={roasterLogo}
               roasterFieldEnabled={settings.roasterFieldEnabled}
               roasterSuggestions={roasterSuggestions}
+              roastingSourceBeanId={roastingSourceBeanId}
             />
           );
 

@@ -380,8 +380,7 @@ const AppModals: React.FC<AppModalsProps> = ({
   imageViewerData,
   setImageViewerData,
 }) => {
-  // 标记未使用的变量（用于烘焙源生豆ID，在 CoffeeBeanFormModal 内部使用）
-  void roastingSourceBeanId;
+  // 标记未使用的变量
   void setNoteDetailData;
 
   return (
@@ -591,6 +590,7 @@ const AppModals: React.FC<AppModalsProps> = ({
           setRecognitionImage(null);
         }}
         initialBeanState={editingBeanState}
+        roastingSourceBeanId={roastingSourceBeanId}
         recognitionImage={recognitionImage}
         onRepurchase={
           editingBean

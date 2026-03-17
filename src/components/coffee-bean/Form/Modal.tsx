@@ -17,6 +17,8 @@ interface CoffeeBeanFormModalProps {
   onClose: () => void;
   onRepurchase?: () => void;
   initialBeanState?: 'green' | 'roasted';
+  /** 当前是否处于“生豆转熟豆”烘焙流程（来源生豆ID） */
+  roastingSourceBeanId?: string | null;
   /** 识别时使用的原始图片 base64（用于在表单中显示） */
   recognitionImage?: string | null;
 }
@@ -28,6 +30,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   onClose,
   onRepurchase,
   initialBeanState,
+  roastingSourceBeanId,
   recognitionImage,
 }) => {
   // 动画状态管理
@@ -151,6 +154,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
             onRepurchase={onRepurchase}
             onStepChange={setCurrentStep}
             initialBeanState={initialBeanState}
+            roastingSourceBeanId={roastingSourceBeanId}
             recognitionImage={recognitionImage}
           />
         </div>
