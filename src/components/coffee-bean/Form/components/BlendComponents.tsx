@@ -42,8 +42,18 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
     return components.some(comp => comp.estate && comp.estate.trim() !== '');
   }, [components]);
 
-  // 最终是否显示庄园字段：设置开启 或 已有庄园数据
-  const showEstateField = showEstateFieldSetting || hasExistingEstate;
+  // 是否因“已有/输入过庄园”而触发显示（进入表单后保持到退出）
+  const [estateFieldStickyByData, setEstateFieldStickyByData] =
+    React.useState(hasExistingEstate);
+
+  React.useEffect(() => {
+    if (hasExistingEstate) {
+      setEstateFieldStickyByData(true);
+    }
+  }, [hasExistingEstate]);
+
+  // 最终是否显示庄园字段：设置开启 或 数据触发（并在会话内保持）
+  const showEstateField = showEstateFieldSetting || estateFieldStickyByData;
 
   // 计算总百分比
   const totalPercentage = components.reduce(
