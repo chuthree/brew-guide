@@ -16,6 +16,7 @@ import {
   SettingRow,
   SettingToggle,
 } from './atomic';
+import AutoPourDetectionSettings from './AutoPourDetectionSettings';
 
 interface ExperimentalSettingsProps {
   settings: SettingsOptions;
@@ -274,6 +275,8 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
           </div>
         )}
       </SettingSection>
+
+      <AutoPourDetectionSettings />
     </SettingPage>
   );
 };
