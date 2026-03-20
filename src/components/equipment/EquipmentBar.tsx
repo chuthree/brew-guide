@@ -73,14 +73,12 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
   };
 
   return (
-    <div
-      className={`relative mt-2 w-full overflow-hidden ${className}`}
-    >
-      <div className="flex items-center md:flex-col md:items-start md:gap-4">
+    <div className={`relative w-full overflow-hidden ${className}`}>
+      <div className="flex items-end md:flex-col md:items-start md:gap-4">
         {/* 器具选择滚动区域 */}
         <div
           ref={scrollContainerRef}
-          className="flex flex-1 items-center gap-4 overflow-x-auto pr-2 md:mt-2 md:w-full md:flex-col md:items-start md:gap-4 md:overflow-x-visible md:overflow-y-auto md:pr-0"
+          className="flex min-h-7 flex-1 items-end gap-4 overflow-x-auto pr-2 md:min-h-0 md:w-full md:flex-col md:items-start md:gap-4 md:overflow-x-visible md:overflow-y-auto md:pr-0"
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
@@ -96,25 +94,19 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
           {allEquipments.map(equipment => (
             <div
               key={equipment.id}
-              className="flex shrink-0 items-center md:w-full"
+              className="flex shrink-0 items-end md:w-full md:items-center"
             >
-              <div className="relative flex items-center whitespace-nowrap md:w-full">
-                <div
+              <div className="relative flex items-end whitespace-nowrap md:w-full md:items-center">
+                <button
+                  type="button"
                   onClick={() => handleEquipmentSelect(equipment.id)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleEquipmentSelect(equipment.id);
-                    }
-                  }}
-                  tabIndex={0}
-                  role="button"
                   aria-label={`选择器具: ${equipment.name}`}
-                  className="relative cursor-pointer pb-2 text-xs font-medium tracking-widest whitespace-nowrap md:pb-0"
+                  aria-pressed={selectedEquipment === equipment.id}
+                  className="relative inline-flex min-h-6 items-center pb-1.5 text-xs font-medium tracking-widest whitespace-nowrap transition-colors duration-150 md:min-h-0 md:pb-0"
                   data-tab={equipment.id}
                 >
                   <span
-                    className={`relative transition-colors duration-150 ${
+                    className={`relative ${
                       selectedEquipment === equipment.id
                         ? 'text-neutral-800 dark:text-neutral-100'
                         : 'text-neutral-600 hover:opacity-80 dark:text-neutral-400'
@@ -129,7 +121,7 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
                       transition={UNDERLINE_TRANSITION}
                     />
                   )}
-                </div>
+                </button>
               </div>
             </div>
           ))}
@@ -143,16 +135,18 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
         </div>
 
         {/* 固定在右侧的管理按钮 - 桌面端在底部 */}
-        <div className="relative flex shrink-0 items-center md:w-full">
+        <div className="relative flex shrink-0 items-end md:w-full md:items-start">
           <button
             onClick={handleToggleManagement}
-            className="relative flex cursor-pointer items-center justify-center pb-2 pl-3 tracking-widest whitespace-nowrap md:flex-col md:items-start md:gap-4 md:pt-0 md:pb-0 md:pl-0"
+            type="button"
+            className="relative inline-flex min-h-6 items-center gap-3 pb-1.5 pl-3 text-xs font-medium tracking-widest whitespace-nowrap text-neutral-600 transition-colors duration-150 hover:opacity-80 md:min-h-0 md:flex-col md:items-start md:gap-4 md:pb-0 md:pl-0 dark:text-neutral-400"
             aria-label="器具列表"
           >
-            <div className="mr-3 h-3 w-px bg-neutral-200 md:mr-0 md:mb-0 md:h-px md:w-6 dark:bg-neutral-800"></div>
-            <span className="flex items-center text-xs font-medium whitespace-nowrap text-neutral-600 dark:text-neutral-400">
-              编辑
-            </span>
+            <span
+              aria-hidden="true"
+              className="h-3 w-px shrink-0 bg-neutral-200 md:h-px md:w-6 dark:bg-neutral-800"
+            />
+            <span className="flex items-center whitespace-nowrap">编辑</span>
           </button>
 
           {/* 右边渐变指示器 - 移动端右侧，桌面端底部 */}
