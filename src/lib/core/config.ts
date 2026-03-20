@@ -1235,4 +1235,5 @@ export const sponsorsList = [
   '🥥🥥🥥',
   '明汀',
   '银河',
+  '虾滑',
 ];
