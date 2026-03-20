@@ -1811,7 +1811,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
               </AnimatePresence>
 
               {/* 器具分类栏 - 只在方案步骤时显示，添加动画效果 */}
-              <AnimatePresence mode="wait">
+              <AnimatePresence mode="wait" initial={false}>
                 {activeBrewingStep === 'method' && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
