@@ -8,7 +8,6 @@ import { APP_VERSION } from '@/lib/core/config';
 // 远程版本信息接口
 interface RemoteVersionInfo {
   version: string;
-  downloadUrl: string;
   releaseNotes?: string;
 }
 
@@ -17,7 +16,6 @@ export interface VersionCheckResult {
   hasUpdate: boolean;
   currentVersion: string;
   latestVersion?: string;
-  downloadUrl?: string;
   releaseNotes?: string;
 }
 
@@ -94,7 +92,6 @@ export async function checkForUpdates(): Promise<VersionCheckResult> {
       hasUpdate,
       currentVersion: APP_VERSION,
       latestVersion: versionInfo.version,
-      downloadUrl: versionInfo.downloadUrl,
       releaseNotes: versionInfo.releaseNotes,
     };
   } catch (error) {
