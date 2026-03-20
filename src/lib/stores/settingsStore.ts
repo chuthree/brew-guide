@@ -214,7 +214,7 @@ export const defaultSettings: AppSettings = {
     frameDiffThreshold: 25,
     minMotionRatio: 0.02,
     maxMotionRatio: 0.8,
-    requiredConsecutiveDetections: 6,
+    requiredConsecutiveDetections: 1,
     stateTimeout: 5000,
     cooldownDuration: 2000,
     cameraDeviceId: null,

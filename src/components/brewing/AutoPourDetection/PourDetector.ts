@@ -89,6 +89,7 @@ export default class PourDetector {
       consecutiveCount: this._stateMachine.getConsecutiveCount(),
       timestamp: frame.timestamp,
       processingTime: 0,
+      motionAnalysis: null,
     };
 
     if (!this._isActive) {
@@ -119,6 +120,29 @@ export default class PourDetector {
       motionRegion: 'middle',
       areaChangeRatio: 0,
       isLargeSceneChange: false,
+      totalMotionPixels: 0,
+      motionCenterX: 0.5,
+      motionCenterY: 0.5,
+      boundingBoxArea: 0,
+      boundingBoxWidth: 0,
+      boundingBoxHeight: 0,
+      boundingBoxAspectRatio: 1,
+      centerYDisplacement: 0,
+      centerYHistory: [],
+      downwardVelocity: 0,
+      isKettleTilt: false,
+      kettleTiltConfidence: 0,
+      hasRotation: false,
+      rotationScore: 0,
+      topCenterY: 0.25,
+      bottomCenterY: 0.75,
+      centerYDiff: 0,
+      verticalGradient: 0,
+      asymmetryScore: 0,
+      topPixelCount: 0,
+      bottomPixelCount: 0,
+      tiltSignal: 0,
+      tiltConsistency: 0,
     };
 
     let isLargeSceneChange = false;
@@ -168,6 +192,8 @@ export default class PourDetector {
         isDownward: false,
         motionRegion: 'middle',
         timestamp: frame.timestamp,
+        isKettleTilt: false,
+        kettleTiltConfidence: 0,
       };
       stateResult = this._stateMachine.transition(event);
     } else if (!motionAnalysis.hasMotion) {
@@ -178,6 +204,8 @@ export default class PourDetector {
         isDownward: motionAnalysis.isDownward,
         motionRegion: motionAnalysis.motionRegion,
         timestamp: frame.timestamp,
+        isKettleTilt: motionAnalysis.isKettleTilt,
+        kettleTiltConfidence: motionAnalysis.kettleTiltConfidence,
       };
       stateResult = this._stateMachine.transition(event);
     } else {
@@ -188,6 +216,8 @@ export default class PourDetector {
         isDownward: motionAnalysis.isDownward,
         motionRegion: motionAnalysis.motionRegion,
         timestamp: frame.timestamp,
+        isKettleTilt: motionAnalysis.isKettleTilt,
+        kettleTiltConfidence: motionAnalysis.kettleTiltConfidence,
       };
       stateResult = this._stateMachine.transition(event);
     }
@@ -225,6 +255,8 @@ export default class PourDetector {
       consecutiveCount: stateResult.consecutiveCount,
       timestamp: frame.timestamp,
       processingTime: totalTime,
+      motionAnalysis: motionAnalysis,
+      stateMachineDebug: stateResult.debugInfo,
     };
   }
 

@@ -15,6 +15,12 @@ export { default as DetectionStateMachine } from './DetectionStateMachine';
 export { default as PourDetector } from './PourDetector';
 export { default as UndoController } from './UndoController';
 
+// Components
+export { default as CameraActiveIndicator } from './components/CameraActiveIndicator';
+export { default as DetectionStateIndicator } from './components/DetectionStateIndicator';
+export { default as UndoButton } from './components/UndoButton';
+export { default as DebugOverlay } from './components/DebugOverlay';
+
 // Types
 export type {
   DetectionMode,

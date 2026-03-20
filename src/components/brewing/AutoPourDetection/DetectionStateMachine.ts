@@ -1,8 +1,8 @@
 /**
  * DetectionStateMachine
  *
- * Layer 2: Manages detection state transitions and debouncing.
- * Prevents false triggers and manages the detection lifecycle.
+ * Layer 2: Manages detection state transitions with temporal stability.
+ * Uses sliding window and soft counting for robustness to noise.
  */
 
 import type {
@@ -16,6 +16,16 @@ interface StateMachineConfig {
   requiredConsecutiveDetections: number;
   stateTimeout: number;
   cooldownDuration: number;
+  idleToMonitoringThreshold?: number;
+  preparingTolerance?: number;
+  triggeredAutoExitFrames?: number;
+}
+
+interface DebugInfo {
+  stabilityScore: number;
+  recentDetections: boolean[];
+  softCounter: number;
+  stateEntryTime: number;
 }
 
 export default class DetectionStateMachine {
@@ -23,16 +33,37 @@ export default class DetectionStateMachine {
   private _consecutiveCount = 0;
   private _consecutiveNoMotion = 0;
   private _cooldownStart: number | null = null;
-  private _lastEventTime: number = Date.now();
+  private _stateEntryTime: number = Date.now();
   private _stateHistory: StateHistoryEntry[] = [];
   private _config: StateMachineConfig;
 
+  // Sliding window for stability detection
+  private _detectionWindow: boolean[] = [];
+  private readonly _windowSize = 5;
+
+  // Soft counter for tolerant counting
+  private _softCounter = 0;
+  private readonly _softCounterMax = 8;
+
+  // Debug info
+  private _debugInfo: DebugInfo = {
+    stabilityScore: 0,
+    recentDetections: [],
+    softCounter: 0,
+    stateEntryTime: Date.now(),
+  };
+
   constructor(config: StateMachineConfig) {
-    this._config = config;
+    this._config = {
+      ...config,
+      idleToMonitoringThreshold: config.idleToMonitoringThreshold ?? 1,
+      preparingTolerance: config.preparingTolerance ?? 0.3,
+      triggeredAutoExitFrames: config.triggeredAutoExitFrames ?? 30,
+    };
   }
 
   /**
-   * Process state transition based on event
+   * Process state transition with temporal stability
    */
   transition(event: StateMachineEvent): StateTransitionResult {
     const currentTime = Date.now();
@@ -40,117 +71,151 @@ export default class DetectionStateMachine {
     let shouldTriggerTimer = false;
     let transitionReason = '';
 
-    // Check for timeout
-    if (currentTime - this._lastEventTime > this._config.stateTimeout) {
-      if (this._state !== 'idle' && this._state !== 'triggered') {
-        this._state = 'idle';
-        this._consecutiveCount = 0;
-        transitionReason = 'timeout';
+    // Update detection window
+    const isDetection = event.isKettleTilt && event.motionScore >= 0.35;
+    this._updateDetectionWindow(isDetection);
+
+    // Calculate stability score from window
+    const stabilityScore = this._calculateStabilityScore();
+    this._debugInfo.stabilityScore = stabilityScore;
+    this._debugInfo.recentDetections = [...this._detectionWindow];
+
+    // Check state-specific timeout
+    const stateElapsed = currentTime - this._stateEntryTime;
+    if (stateElapsed > this._config.stateTimeout) {
+      if (this._state !== 'idle') {
+        transitionReason = this._handleTimeout();
       }
     }
-
-    this._lastEventTime = currentTime;
 
     // State machine logic
     switch (this._state) {
       case 'idle':
-        if (event.type === 'motion_detected' && event.motionRegion === 'top') {
+        // Require multiple consistent detections for stability
+        if (stabilityScore >= this._config.idleToMonitoringThreshold!) {
           this._state = 'monitoring';
-          this._consecutiveCount = 0;
-          transitionReason = 'motion_in_top_region';
+          this._softCounter = 0;
+          this._updateStateEntryTime(currentTime);
+          transitionReason = 'stable_kettle_detected';
         }
         break;
+
+      // case 'monitoring':
+      //   // Advance to preparing with soft counter
+      //   if (isDetection) {
+      //     this._softCounter = Math.min(
+      //       this._softCounter + 1,
+      //       this._softCounterMax
+      //     );
+      //   } else {
+      //     // Soft decrement on miss
+      //     this._softCounter = Math.max(0, this._softCounter - 1);
+      //   }
+
+      //   // Require stable detection to advance
+      //   if (
+      //     this._softCounter >= 2 &&
+      //     stabilityScore >= this._config.preparingTolerance!
+      //   ) {
+      //     this._state = 'preparing';
+      //     this._softCounter = 1;
+      //     this._updateStateEntryTime(currentTime);
+      //     transitionReason = 'tilt_confirmed_stable';
+      //   } else if (stabilityScore === 0) {
+      //     // Return to idle if completely lost
+      //     this._state = 'idle';
+      //     this._softCounter = 0;
+      //     transitionReason = 'kettle_lost';
+      //   }
+      //   break;
 
       case 'monitoring':
-        if (
-          event.type === 'motion_detected' &&
-          event.motionRegion === 'top' &&
-          event.motionScore >= 0.5
-        ) {
-          this._state = 'preparing';
-          this._consecutiveCount = 1;
-          transitionReason = 'strong_motion_detected';
-        } else if (
-          event.type === 'no_motion' ||
-          event.type === 'scene_change'
-        ) {
-          this._state = 'idle';
-          this._consecutiveCount = 0;
-          transitionReason = 'motion_lost';
+        // Soft counter with tolerance
+        if (isDetection) {
+          this._softCounter = Math.min(
+            this._softCounter + 1,
+            this._softCounterMax
+          );
+        } else {
+          // Allow occasional misses
+          this._softCounter = Math.max(
+            0,
+            this._softCounter - (1 - this._config.preparingTolerance!)
+          );
         }
-        break;
 
-      case 'preparing':
+        this._consecutiveCount = this._softCounter;
+
+        // Trigger when threshold reached
         if (
-          event.type === 'motion_detected' &&
-          event.motionRegion === 'top' &&
-          event.motionScore >= 0.5
+          this._consecutiveCount >= this._config.requiredConsecutiveDetections
         ) {
-          this._consecutiveCount++;
-
-          if (
-            this._consecutiveCount >= this._config.requiredConsecutiveDetections
-          ) {
-            this._state = 'triggered';
-            shouldTriggerTimer = true;
-            transitionReason = 'consecutive_detections_met';
-          }
-        } else if (
-          event.type === 'no_motion' ||
-          event.type === 'scene_change'
-        ) {
-          // Reset and go back to monitoring
-          this._consecutiveCount = 0;
+          this._state = 'triggered';
+          shouldTriggerTimer = true;
+          this._updateStateEntryTime(currentTime);
+          transitionReason = 'threshold_met_stable';
+        } else if (this._softCounter <= 0) {
+          // Return to monitoring on complete loss
           this._state = 'monitoring';
-          transitionReason = 'motion_interrupted';
+          this._consecutiveCount = 0;
+          transitionReason = 'tilt_lost';
         }
         break;
 
       case 'triggered':
-        // Terminal state - only manual reset can move to cooldown
+        // Auto-exit after N frames of no detection
+        // if (!isDetection) {
+        //   this._consecutiveNoMotion++;
+        //   if (
+        //     this._consecutiveNoMotion >= this._config.triggeredAutoExitFrames!
+        //   ) {
+        //     this._state = 'cooldown';
+        //     this._cooldownStart = currentTime;
+        //     this._updateStateEntryTime(currentTime);
+        //     transitionReason = 'auto_exit_no_motion';
+        //   }
+        // } else {
+        //   this._consecutiveNoMotion = 0;
+        // }
+
+        // Manual reset always works
         if (event.type === 'manual_reset') {
           this._state = 'cooldown';
           this._cooldownStart = currentTime;
           this._consecutiveNoMotion = 0;
+          this._updateStateEntryTime(currentTime);
           transitionReason = 'manual_reset';
         }
         break;
 
       case 'cooldown':
+        // Complete isolation - ignore all detection events
         if (this._cooldownStart) {
           const cooldownElapsed = currentTime - this._cooldownStart;
 
           if (cooldownElapsed >= this._config.cooldownDuration) {
             this._state = 'idle';
+            this._softCounter = 0;
             this._consecutiveCount = 0;
             this._consecutiveNoMotion = 0;
+            this._updateStateEntryTime(currentTime);
             transitionReason = 'cooldown_complete';
-          } else if (event.type === 'no_motion') {
-            this._consecutiveNoMotion++;
-            if (this._consecutiveNoMotion >= 10) {
-              this._state = 'idle';
-              this._consecutiveCount = 0;
-              this._consecutiveNoMotion = 0;
-              transitionReason = 'extended_stillness';
-            }
-          } else if (event.type === 'motion_detected') {
-            // Reset stillness counter on motion
-            this._consecutiveNoMotion = 0;
           }
         }
         break;
     }
+
+    this._debugInfo.softCounter = this._softCounter;
 
     // Record state transition
     if (previousState !== this._state) {
       this._stateHistory.push({
         state: this._state,
         timestamp: currentTime,
-        duration: 0, // Will be updated on next transition
+        duration: 0,
         consecutiveCount: this._consecutiveCount,
       });
 
-      // Update duration of previous state
       const prevIndex = this._stateHistory.length - 2;
       if (prevIndex >= 0) {
         this._stateHistory[prevIndex].duration =
@@ -164,17 +229,83 @@ export default class DetectionStateMachine {
       shouldTriggerTimer,
       consecutiveCount: this._consecutiveCount,
       transitionReason,
+      debugInfo: { ...this._debugInfo },
     };
   }
 
   /**
-   * Reset state machine to cooldown (not idle)
+   * Update sliding detection window
+   */
+  private _updateDetectionWindow(isDetection: boolean): void {
+    this._detectionWindow.push(isDetection);
+    if (this._detectionWindow.length > this._windowSize) {
+      this._detectionWindow.shift();
+    }
+  }
+
+  /**
+   * Calculate stability score from detection window
+   * Returns count of recent positive detections
+   */
+  private _calculateStabilityScore(): number {
+    if (this._detectionWindow.length === 0) {
+      return 0;
+    }
+    return this._detectionWindow.filter(Boolean).length;
+  }
+
+  /**
+   * Handle timeout for current state
+   */
+  private _handleTimeout(): string {
+    const timeoutReason = `${this._state}_timeout`;
+
+    switch (this._state) {
+      case 'monitoring':
+      case 'preparing':
+        this._state = 'idle';
+        this._softCounter = 0;
+        break;
+      case 'triggered':
+        this._state = 'cooldown';
+        this._cooldownStart = Date.now();
+        break;
+      case 'cooldown':
+        this._state = 'idle';
+        this._softCounter = 0;
+        break;
+    }
+
+    this._updateStateEntryTime(Date.now());
+    return timeoutReason;
+  }
+
+  /**
+   * Update state entry time for timeout tracking
+   */
+  private _updateStateEntryTime(timestamp: number): void {
+    this._stateEntryTime = timestamp;
+    this._debugInfo.stateEntryTime = timestamp;
+  }
+
+  /**
+   * Get debug information
+   */
+  getDebugInfo(): DebugInfo {
+    return { ...this._debugInfo };
+  }
+
+  /**
+   * Reset state machine to cooldown
    */
   reset(): void {
     this._state = 'cooldown';
     this._cooldownStart = Date.now();
+    this._softCounter = 0;
     this._consecutiveCount = 0;
     this._consecutiveNoMotion = 0;
+    this._detectionWindow = [];
+    this._updateStateEntryTime(Date.now());
   }
 
   /**
@@ -207,5 +338,12 @@ export default class DetectionStateMachine {
    */
   getState(): StateMachineState {
     return this._state;
+  }
+
+  /**
+   * Get detection window for debugging
+   */
+  getDetectionWindow(): boolean[] {
+    return [...this._detectionWindow];
   }
 }

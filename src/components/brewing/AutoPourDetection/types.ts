@@ -210,6 +210,123 @@ export interface MotionAnalysis {
 
   /** Whether this is a large scene change */
   isLargeSceneChange: boolean;
+
+  // === Debug Data: Raw metrics for observation ===
+  /** Total number of motion pixels detected */
+  totalMotionPixels: number;
+
+  /** Motion center X coordinate (normalized 0-1) */
+  motionCenterX: number;
+
+  /** Motion center Y coordinate (normalized 0-1) */
+  motionCenterY: number;
+
+  /** Current bounding box area in pixels */
+  boundingBoxArea: number;
+
+  /** Bounding box width in pixels */
+  boundingBoxWidth: number;
+
+  /** Bounding box height in pixels */
+  boundingBoxHeight: number;
+
+  /** Aspect ratio of bounding box (height/width) */
+  boundingBoxAspectRatio: number;
+
+  /** Displacement from previous frame center Y (positive = downward) */
+  centerYDisplacement: number;
+
+  /** Historical motion center Y values for trend analysis (last N frames) */
+  centerYHistory: number[];
+
+  /** Downward velocity (displacement per frame, smoothed) */
+  downwardVelocity: number;
+
+  /** Whether this appears to be a kettle tilt (large slow-moving object) */
+  isKettleTilt: boolean;
+
+  /** Confidence score for kettle tilt detection (0-1) */
+  kettleTiltConfidence: number;
+
+  // === Rotation Detection Features ===
+  /** Whether rotation is detected */
+  hasRotation: boolean;
+
+  /** Rotation score (0-1) */
+  rotationScore: number;
+
+  /** Top half motion center Y (normalized 0-1) */
+  topCenterY: number;
+
+  /** Bottom half motion center Y (normalized 0-1) */
+  bottomCenterY: number;
+
+  /** Difference between top and bottom motion centers (rotation indicator, positive = tilting) */
+  centerYDiff: number;
+
+  /** Vertical motion gradient (positive = more motion on top = tilting down) */
+  verticalGradient: number;
+
+  /** How asymmetric the motion is (0-1) */
+  asymmetryScore: number;
+
+  /** Top half pixel count */
+  topPixelCount: number;
+
+  /** Bottom half pixel count */
+  bottomPixelCount: number;
+
+  /** Temporal tilt signal: difference between top and bottom motion (positive = tilting) */
+  tiltSignal: number;
+
+  /** Tilt consistency across frames (0-1, higher = more consistent) */
+  tiltConsistency: number;
+}
+
+/**
+ * State machine debug information
+ */
+export interface StateMachineDebugInfo {
+  stabilityScore: number;
+  recentDetections: boolean[];
+  softCounter: number;
+  stateEntryTime: number;
+}
+
+/**
+ * Kettle Tilt Detection Analysis
+ * Specialized analysis for detecting kettle pouring motion
+ */
+export interface KettleTiltAnalysis {
+  /** Whether a kettle tilt is currently detected */
+  isTilting: boolean;
+
+  /** Confidence level (0-1) */
+  confidence: number;
+
+  /** Current tilt phase */
+  tiltPhase: 'none' | 'starting' | 'tilting' | 'pouring' | 'recovering';
+
+  /** Duration of current tilt in frames */
+  tiltDuration: number;
+
+  /** Cumulative downward displacement */
+  cumulativeDisplacement: number;
+
+  /** Average area of moving region */
+  averageArea: number;
+
+  /** Stability of motion (low = erratic, high = smooth) */
+  motionStability: number;
+
+  /** Debug metrics */
+  debugMetrics: {
+    frameCount: number;
+    centerY: number;
+    area: number;
+    velocity: number;
+    aspectRatio: number;
+  };
 }
 
 // ============================================================================
@@ -262,6 +379,12 @@ export interface DetectionResult {
   // Metadata
   timestamp: number;
   processingTime: number;
+
+  // Debug data: full motion analysis
+  motionAnalysis: MotionAnalysis | null;
+
+  // State machine debug info
+  stateMachineDebug?: StateMachineDebugInfo;
 }
 
 export interface DetectionStatus {
@@ -294,6 +417,8 @@ export interface StateMachineEvent {
   isDownward: boolean;
   motionRegion: 'top' | 'middle' | 'bottom';
   timestamp: number;
+  isKettleTilt: boolean;
+  kettleTiltConfidence: number;
 }
 
 export interface StateTransitionResult {
@@ -302,6 +427,7 @@ export interface StateTransitionResult {
   shouldTriggerTimer: boolean;
   consecutiveCount: number;
   transitionReason: string;
+  debugInfo?: StateMachineDebugInfo;
 }
 
 export interface StateHistoryEntry {

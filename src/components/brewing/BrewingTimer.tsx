@@ -47,10 +47,13 @@ import {
 import CameraActiveIndicator from '@/components/brewing/AutoPourDetection/components/CameraActiveIndicator';
 import DetectionStateIndicator from '@/components/brewing/AutoPourDetection/components/DetectionStateIndicator';
 import UndoButton from '@/components/brewing/AutoPourDetection/components/UndoButton';
+import DebugOverlay from '@/components/brewing/AutoPourDetection/components/DebugOverlay';
 import { showToast } from '@/components/common/feedback/LightToast';
 import type {
   DetectionConfig,
   StateMachineState,
+  MotionAnalysis,
+  StateMachineDebugInfo,
 } from '@/components/brewing/AutoPourDetection/types';
 
 // 保留布局设置接口的导出，但使用从Timer模块导入的定义
@@ -164,11 +167,15 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     consecutiveCount: number;
     motionScore: number;
     processingTimeMs: number;
+    motionAnalysis: MotionAnalysis | null;
+    stateMachineDebug: StateMachineDebugInfo | null;
   }>({
     state: 'idle',
     consecutiveCount: 0,
     motionScore: 0,
     processingTimeMs: 0,
+    motionAnalysis: null,
+    stateMachineDebug: null,
   });
 
   // 监听布局设置变化
@@ -934,13 +941,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
       const detectionConfig: DetectionConfig = {
         sensitivity: 50,
-        frameDiffThreshold: autoSettings.frameDiffThreshold ?? 25,
-        minMotionRatio: autoSettings.minMotionRatio ?? 0.02,
-        maxMotionRatio: autoSettings.maxMotionRatio ?? 0.8,
-        requiredConsecutiveDetections:
-          autoSettings.requiredConsecutiveDetections ?? 6,
-        stateTimeout: autoSettings.stateTimeout ?? 5000,
-        cooldownDuration: autoSettings.cooldownDuration ?? 2000,
+        frameDiffThreshold: 30,
+        minMotionRatio: 0.03,
+        maxMotionRatio: 0.8,
+        requiredConsecutiveDetections: 1,
+        stateTimeout: 5000,
+        cooldownDuration: 2000,
       };
 
       const pd = new PourDetector(detectionConfig);
@@ -976,6 +982,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             consecutiveCount: result.consecutiveCount,
             motionScore: result.motionScore,
             processingTimeMs: result.processingTime,
+            motionAnalysis: result.motionAnalysis,
+            stateMachineDebug: result.stateMachineDebug || null,
           });
         }
       });
@@ -1419,14 +1427,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           )}
         </AnimatePresence>
 
-        {debugState.state !== 'idle' && (
-          <div className="absolute top-8 right-6 z-50">
-            <DetectionStateIndicator
+        {debugState.state && (
+          <div className="absolute top-0 right-6 z-50">
+            <DebugOverlay
               state={debugState.state}
               consecutiveCount={debugState.consecutiveCount}
               motionScore={debugState.motionScore}
               processingTimeMs={debugState.processingTimeMs}
+              motionAnalysis={debugState.motionAnalysis}
+              stateMachineDebug={debugState.stateMachineDebug}
               visible={true}
+              position="top-right"
             />
           </div>
         )}
