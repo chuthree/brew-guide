@@ -1234,4 +1234,5 @@ export const sponsorsList = [
   '枫桦',
   '🥥🥥🥥',
   '明汀',
+  '银河',
 ];
