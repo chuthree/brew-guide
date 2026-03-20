@@ -306,13 +306,9 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                             color: 'rgb(107 114 128)',
                             transition: { duration: 0.1 },
                           }}
-                          title={
-                            equipment.name +
-                            (equipment.isSystem ? '' : ' - 自定义')
-                          }
+                          title={equipment.name}
                         >
                           {equipment.name}
-                          {equipment.isSystem ? '' : ' - 自定义'}
                         </motion.span>
 
                         <div className="flex items-center justify-end">
