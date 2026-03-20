@@ -64,14 +64,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
 
       - name: Enable corepack
         shell: bash
         run: |
           corepack enable
           corepack prepare pnpm@9 --activate
+          pnpm --version
 
       - name: Get pnpm store directory
         shell: bash
