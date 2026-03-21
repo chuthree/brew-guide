@@ -22,6 +22,7 @@ import {
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
+import { openImageViewer } from '@/lib/ui/imageViewer';
 import { showToast } from '@/components/common/feedback/LightToast';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import RemainingEditor from '@/components/coffee-bean/List/components/RemainingEditor';
@@ -44,12 +45,6 @@ import {
 // 延迟加载记录部分，因为它通常在页面下方
 const RelatedRecordsSection = dynamic(
   () => import('./components/RelatedRecordsSection'),
-  { ssr: false }
-);
-
-// 动态导入
-const ImageViewer = dynamic(
-  () => import('@/components/common/ui/ImageViewer'),
   { ssr: false }
 );
 
@@ -149,11 +144,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>(
     {}
   );
-  const [imageViewerOpen, setImageViewerOpen] = useState(false);
-  const [currentImageUrl, setCurrentImageUrl] = useState('');
-  const [currentBackImageUrl, setCurrentBackImageUrl] = useState<
-    string | undefined
-  >(undefined);
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
@@ -689,9 +679,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 图片查看
   const handleImageClick = (imageUrl: string, backImageUrl?: string) => {
-    setCurrentImageUrl(imageUrl);
-    setCurrentBackImageUrl(backImageUrl);
-    setImageViewerOpen(true);
+    openImageViewer({
+      url: imageUrl,
+      alt: bean?.name || '咖啡豆图片',
+      backUrl: backImageUrl,
+    });
   };
 
   if (!shouldRender) return null;
@@ -823,23 +815,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         onQuickDecrement={handleQuickDecrement}
         coffeeBean={isAddMode ? undefined : bean || undefined}
       />
-
-      {/* 图片查看器 */}
-      {currentImageUrl && imageViewerOpen && (
-        <ImageViewer
-          id="bean-detail-image"
-          isOpen={imageViewerOpen}
-          imageUrl={currentImageUrl}
-          backImageUrl={currentBackImageUrl}
-          alt="咖啡豆图片"
-          onClose={() => {
-            setImageViewerOpen(false);
-            setCurrentImageUrl('');
-            setCurrentBackImageUrl(undefined);
-          }}
-        />
-      )}
-
       {/* 打印模态框 */}
       {printEnabled && (
         <BeanPrintModal

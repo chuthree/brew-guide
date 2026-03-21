@@ -2,19 +2,11 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import { NoteItemProps } from '../types';
 import { formatDateAbsolute, formatRating } from '../utils';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-
-// 动态导入 ImageViewer 组件 - 移除加载占位符
-const ImageViewer = dynamic(
-  () => import('@/components/common/ui/ImageViewer'),
-  {
-    ssr: false,
-  }
-);
+import { openImageViewer } from '@/lib/ui/imageViewer';
 
 // 标准列表样式的笔记项组件
 const NoteItemStandard: React.FC<NoteItemProps> = ({
@@ -39,8 +31,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
     state => state.settings.roasterSeparator
   );
 
-  // 图片查看器状态和错误状态
-  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  // 图片错误状态
   const [imageError, setImageError] = useState(false);
 
   // 预先计算一些条件，避免在JSX中重复计算
@@ -113,7 +104,12 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
               className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
               onClick={e => {
                 e.stopPropagation();
-                if (!imageError) setImageViewerOpen(true);
+                if (!imageError) {
+                  openImageViewer({
+                    url: note.image!,
+                    alt: beanName || '笔记图片',
+                  });
+                }
               }}
             >
               {imageError ? (
@@ -136,17 +132,6 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
                 />
               )}
             </div>
-          )}
-
-          {/* 图片查看器 - 只有当需要显示时才渲染 */}
-          {note.image && !imageError && imageViewerOpen && (
-            <ImageViewer
-              id={`note-item-image-${note.id}`}
-              isOpen={imageViewerOpen}
-              imageUrl={note.image}
-              alt={beanName || '笔记图片'}
-              onClose={() => setImageViewerOpen(false)}
-            />
           )}
 
           {/* 名称和标签区域 */}

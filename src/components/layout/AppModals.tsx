@@ -1008,17 +1008,15 @@ const AppModals: React.FC<AppModalsProps> = ({
       />
 
       {/* ImageViewer */}
-      {imageViewerOpen && imageViewerData && (
+      {imageViewerData && (
         <ImageViewer
           id="app-image-viewer"
           isOpen={imageViewerOpen}
           imageUrl={imageViewerData.url}
           backImageUrl={imageViewerData.backUrl}
           alt={imageViewerData.alt}
-          onClose={() => {
-            setImageViewerOpen(false);
-            setImageViewerData(null);
-          }}
+          onClose={() => setImageViewerOpen(false)}
+          onExitComplete={() => setImageViewerData(null)}
         />
       )}
     </>

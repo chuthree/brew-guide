@@ -19,6 +19,7 @@ import {
   getBeanDisplayInitial,
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
+import { openImageViewer } from '@/lib/ui/imageViewer';
 
 interface BeanListItemProps {
   bean: ExtendedCoffeeBean;
@@ -399,17 +400,13 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
             onClick={() => {
               if ((bean.image || roasterLogo) && !imageError) {
-                window.dispatchEvent(
-                  new CustomEvent('imageViewerOpen', {
-                    detail: {
-                      url: bean.image || roasterLogo || '',
-                      alt: bean.image
-                        ? bean.name || '咖啡豆图片'
-                        : getRoasterName(bean, roasterSettings) + ' 烘焙商图标',
-                      backUrl: bean.backImage,
-                    },
-                  })
-                );
+                openImageViewer({
+                  url: bean.image || roasterLogo || '',
+                  alt: bean.image
+                    ? bean.name || '咖啡豆图片'
+                    : getRoasterName(bean, roasterSettings) + ' 烘焙商图标',
+                  backUrl: bean.backImage,
+                });
               }
             }}
             data-click-area="image"

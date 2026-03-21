@@ -8,7 +8,6 @@ import React, {
   useMemo,
 } from 'react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import { BrewingNote } from '@/lib/core/config';
 import { CoffeeBean } from '@/types/app';
 import { formatDate, getNoteDeleteDisplay } from '@/components/notes/utils';
@@ -23,6 +22,7 @@ import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { openImageViewer } from '@/lib/ui/imageViewer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import RatingRadarDrawer from './RatingRadarDrawer';
 
@@ -39,14 +39,6 @@ const InfoRow: React.FC<InfoRowProps> = ({ label, children }) => (
     </div>
     {children}
   </div>
-);
-
-// 动态导入 ImageViewer 组件
-const ImageViewer = dynamic(
-  () => import('@/components/common/ui/ImageViewer'),
-  {
-    ssr: false,
-  }
 );
 
 interface NoteDetailModalProps {
@@ -91,8 +83,6 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
   const [imageError, setImageError] = useState(false);
   const [beanImageError, setBeanImageError] = useState(false); // 咖啡豆图片加载错误状态
-  const [imageViewerOpen, setImageViewerOpen] = useState(false);
-  const [currentImageUrl, setCurrentImageUrl] = useState(''); // 当前要查看的图片URL
 
   // 多图轮播状态
   const [showMultiImages, setShowMultiImages] = useState(false);
@@ -560,8 +550,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                           onError={() => setBeanImageError(true)}
                           onClick={() => {
                             if (!beanImageError) {
-                              setCurrentImageUrl(beanInfo.image || '');
-                              setImageViewerOpen(true);
+                              openImageViewer({
+                                url: beanInfo.image || '',
+                                alt: beanName || '咖啡豆图片',
+                                backUrl: beanInfo.backImage,
+                              });
                             }
                           }}
                         />
@@ -590,8 +583,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                               onClick={e => {
                                 e.stopPropagation();
                                 if (!beanImageError) {
-                                  setCurrentImageUrl(beanInfo.image || '');
-                                  setImageViewerOpen(true);
+                                  openImageViewer({
+                                    url: beanInfo.image || '',
+                                    alt: beanName || '咖啡豆图片',
+                                    backUrl: beanInfo.backImage,
+                                  });
                                 }
                               }}
                             />
@@ -615,8 +611,10 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             onError={() => setImageError(true)}
                             onClick={() => {
                               if (!imageError) {
-                                setCurrentImageUrl(noteImages[0]);
-                                setImageViewerOpen(true);
+                                openImageViewer({
+                                  url: noteImages[0],
+                                  alt: beanName || '笔记图片',
+                                });
                               }
                             }}
                           />
@@ -691,8 +689,10 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             className="relative aspect-square cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
                             onClick={() => {
                               if (!multiImageErrors.has(index)) {
-                                setCurrentImageUrl(img);
-                                setImageViewerOpen(true);
+                                openImageViewer({
+                                  url: img,
+                                  alt: `笔记图片 ${index + 1}`,
+                                });
                               }
                             }}
                           >
@@ -923,21 +923,6 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           ) : null}
         </div>
       </div>
-
-      {/* 图片查看器 */}
-      {currentImageUrl && imageViewerOpen && (
-        <ImageViewer
-          id="note-detail-image"
-          isOpen={imageViewerOpen}
-          imageUrl={currentImageUrl}
-          alt="图片"
-          onClose={() => {
-            setImageViewerOpen(false);
-            setCurrentImageUrl('');
-          }}
-        />
-      )}
-
       {/* 删除确认抽屉 */}
       <DeleteConfirmDrawer
         isOpen={showDeleteConfirm}
