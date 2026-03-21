@@ -1,12 +1,8 @@
-# 咖啡冲煮指南 (Brew Guide)
+# Brew Guide APP
 
 一站式咖啡辅助工具，提供冲煮计时、咖啡豆库存管理和品鉴记录功能。
 
 ![应用截图](https://pic1.imgdb.cn/item/6913fbc43203f7be00f6dedd.png)
-
-## 网页版访问
-
-- **全球**：[https://coffee.chu3.top/](http://coffee.chu3.top/)
 
 ## 主要功能
 
@@ -36,7 +32,7 @@
 - 深色/浅色模式
 - 数据导入导出
 - 墨水屏优化
-- 多平台支持（Web、iOS、Android、macOS、Windows）
+- 多平台支持（Web、iOS、Android、macOS、Windows、Linux）
 
 ## 开发
 
@@ -85,12 +81,6 @@ pnpm tauri build
 
 ## 许可证
 
-Copyright © 2025 chu3 (chuthree)
+Copyright © 2026 chu3 (chuthree)
 
 本项目采用 [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html) 开源协议。
-
-## 链接
-
-- **GitHub**: https://github.com/chuthree/brew-guide
-- **Gitee**: https://gitee.com/chu3/brew-guide
-- **服务状态**: https://status.chu3.top
