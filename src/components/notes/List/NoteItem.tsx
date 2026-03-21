@@ -13,14 +13,7 @@ import {
 } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
-
-// 动态导入 ImageViewer 组件 - 移除加载占位符
-const ImageViewer = dynamic(
-  () => import('@/components/common/ui/ImageViewer'),
-  {
-    ssr: false,
-  }
-);
+import { openImageViewer } from '@/lib/ui/imageViewer';
 
 // 动态导入 RatingRadarDrawer 组件
 const RatingRadarDrawer = dynamic(
@@ -83,10 +76,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
     state => state.settings.showRatingDimensionsEntry ?? false
   );
 
-  // 图片查看器状态和错误状态
-  const [imageViewerOpen, setImageViewerOpen] = useState(false);
-  const [noteImageViewerOpen, setNoteImageViewerOpen] = useState(false);
-  const [previewImageIndex, setPreviewImageIndex] = useState(0); // 当前预览图片的索引
+  // 图片错误状态
   const [imageError, setImageError] = useState(false);
   const [noteImageError, setNoteImageError] = useState(false);
 
@@ -213,7 +203,16 @@ const NoteItem: React.FC<NoteItemProps> = ({
             onClick={e => {
               e.stopPropagation();
               if ((beanInfo?.image || roasterLogo) && !imageError)
-                setImageViewerOpen(true);
+                openImageViewer({
+                  url: beanInfo?.image || roasterLogo || '',
+                  alt: beanInfo?.image
+                    ? beanName || '咖啡豆图片'
+                    : beanInfo
+                      ? getRoasterName(beanInfo, roasterSettings) +
+                        ' 烘焙商图标'
+                      : '烘焙商图标',
+                  backUrl: beanInfo?.backImage,
+                });
             }}
           >
             {beanInfo?.image && !imageError ? (
@@ -258,26 +257,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
               </div>
             )}
           </div>
-
-          {/* 图片查看器 - 只有当需要显示时才渲染 */}
-          {(beanInfo?.image || roasterLogo) &&
-            !imageError &&
-            imageViewerOpen && (
-              <ImageViewer
-                id={`note-item-image-${note.id}`}
-                isOpen={imageViewerOpen}
-                imageUrl={beanInfo?.image || roasterLogo || ''}
-                alt={
-                  beanInfo?.image
-                    ? beanName || '咖啡豆图片'
-                    : beanInfo
-                      ? getRoasterName(beanInfo, roasterSettings) +
-                        ' 烘焙商图标'
-                      : '烘焙商图标'
-                }
-                onClose={() => setImageViewerOpen(false)}
-              />
-            )}
 
           {/* 内容区域 - 垂直排列，使用统一的间距系统 */}
           <div className="min-w-0 flex-1 space-y-1.5">
@@ -341,8 +320,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     }
                     onClick={() => {
                       if (!noteImageError) {
-                        setPreviewImageIndex(index);
-                        setNoteImageViewerOpen(true);
+                        openImageViewer({
+                          url: img,
+                          alt: `笔记图片 ${index + 1}`,
+                        });
                       }
                     }}
                   >
@@ -395,19 +376,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 ))}
               </div>
             )}
-
-            {/* 笔记图片查看器 */}
-            {noteImages.length > 0 &&
-              !noteImageError &&
-              noteImageViewerOpen && (
-                <ImageViewer
-                  id={`note-image-${note.id}-${previewImageIndex}`}
-                  isOpen={noteImageViewerOpen}
-                  imageUrl={noteImages[previewImageIndex]}
-                  alt="笔记图片"
-                  onClose={() => setNoteImageViewerOpen(false)}
-                />
-              )}
 
             {/* 时间和评分 */}
             <div className="mt-2 text-xs leading-tight font-medium text-neutral-500/60 dark:text-neutral-500/60">

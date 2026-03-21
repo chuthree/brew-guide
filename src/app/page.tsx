@@ -89,6 +89,10 @@ import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
 import NoteDetailModal from '@/components/notes/Detail/NoteDetailModal';
 import type { ConvertToGreenPreview } from '@/components/coffee-bean/ConvertToGreenDrawer';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import {
+  IMAGE_VIEWER_OPEN_EVENT,
+  type ImageViewerPayload,
+} from '@/lib/ui/imageViewer';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -511,11 +515,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // ImageViewer 状态
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
-  const [imageViewerData, setImageViewerData] = useState<{
-    url: string;
-    alt: string;
-    backUrl?: string;
-  } | null>(null);
+  const [imageViewerData, setImageViewerData] =
+    useState<ImageViewerPayload | null>(null);
 
   // 计算是否有任何模态框打开（Settings、子设置、咖啡豆详情、笔记详情）
   // 注意：咖啡豆导入是 ActionDrawer 抽屉式组件，不需要触发主页面转场动画
@@ -983,9 +984,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 监听 ImageViewer 打开事件
   useEffect(() => {
-    const handleImageViewerOpen = (
-      e: CustomEvent<{ url: string; alt: string; backUrl?: string }>
-    ) => {
+    const handleImageViewerOpen = (e: CustomEvent<ImageViewerPayload>) => {
       setImageViewerData({
         url: e.detail.url,
         alt: e.detail.alt,
@@ -995,12 +994,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
 
     window.addEventListener(
-      'imageViewerOpen',
+      IMAGE_VIEWER_OPEN_EVENT,
       handleImageViewerOpen as EventListener
     );
     return () =>
       window.removeEventListener(
-        'imageViewerOpen',
+        IMAGE_VIEWER_OPEN_EVENT,
         handleImageViewerOpen as EventListener
       );
   }, []);
