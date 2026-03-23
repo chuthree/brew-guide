@@ -23,3 +23,4 @@ declare global {
     imageViewerOpen: CustomEvent<ImageViewerPayload>;
   }
 }
+c
