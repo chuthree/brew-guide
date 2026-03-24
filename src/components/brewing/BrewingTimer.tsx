@@ -159,6 +159,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     supportsVideoFrameCallback: () => boolean;
   } | null>(null);
 
+  // 僵尸防线令牌，用于追踪最新的初始化轮次
+  const initCounterRef = useRef<number>(0);
+
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [showUndoButton, setShowUndoButton] = useState(false);
   const [undoRemainingMs, setUndoRemainingMs] = useState(0);
@@ -899,6 +902,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   }, []);
 
   const stopCamera = useCallback(() => {
+    // 强制令牌自增。这会让所有卡在 await 里的旧进程醒来后发现自己“过期”了
+    initCounterRef.current++;
+
     const recorder = debugRecorderRef.current;
     const hasRecording = recorder?.isRecording() && recorder.getSession();
 
@@ -974,6 +980,9 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     if (!autoSettings || autoSettings.mode === 'off') return;
     if (isRunning || hasStartedOnce) return;
 
+    // 领取当前轮次的令牌
+    const currentInit = ++initCounterRef.current;
+
     const cm = new CameraManager();
     const initResult = await cm.initialize();
     if (!initResult.success) {
@@ -991,6 +1000,8 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       });
       return;
     }
+    // 【防线 1】：如果等待权限期间触发了 stopCamera，立刻自尽
+    if (currentInit !== initCounterRef.current) return;
 
     cameraManagerRef.current = cm;
 
@@ -1018,6 +1029,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         height: DETECTION_PARAMS.videoResolution.height,
         frameRate: DETECTION_PARAMS.frameRate,
       });
+
+      // 【防线 2】：如果开启视频流期间被取消，关闭视频流并自尽
+      if (currentInit !== initCounterRef.current) {
+        cm.stopVideoStream();
+        return;
+      }
 
       const detectionConfig: DetectionConfig = {
         sensitivity: 50,
@@ -1053,6 +1070,13 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           videoEl.play().then(() => resolve());
         };
       });
+
+      // 【绝杀防线】：这是最关键的一步！防止产生僵尸死循环
+      if (currentInit !== initCounterRef.current) {
+        pd.stopDetection();
+        cm.stopVideoStream();
+        return;
+      }
 
       fp.initialize(videoEl);
 

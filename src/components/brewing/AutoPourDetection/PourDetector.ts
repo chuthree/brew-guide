@@ -329,6 +329,12 @@ export default class PourDetector {
    * Reset the detector
    */
   reset(): void {
+    // 【新增】：如果检测器处于冻结状态（调试模式），拒绝任何外部重置！
+    // 只有在 isActive=true，或者连 lastResult 都没有时才允许重置
+    if (!this._isActive && this._lastResult !== null) {
+        return;
+    }
+    
     this._stateMachine.reset();
     this._previousFrame = null;
     this._hasTriggered = false;
@@ -336,5 +342,8 @@ export default class PourDetector {
     this._layer1Times = [];
     this._layer2Times = [];
     this._droppedFrames = 0;
+
+    // 【新增】：清除缓存
+    this._lastResult = null;
   }
 }
