@@ -29,7 +29,6 @@ export default function DebugOverlay({
   stateMachineDebug,
   visible,
   position = 'top-right',
-  onExport,
   onCopyLog,
   hasRecording = false,
 }: DebugOverlayProps) {
@@ -53,9 +52,6 @@ export default function DebugOverlay({
     Number.isFinite(num) ? Math.round(num).toString() : '0';
 
   const handleExport = () => {
-    // if (onExport) {
-    //   onExport();
-    // }
     setShowExportPanel(true);
   };
 

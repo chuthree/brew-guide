@@ -46,7 +46,6 @@ import {
   DebugRecorder,
 } from '@/components/brewing/AutoPourDetection';
 import CameraActiveIndicator from '@/components/brewing/AutoPourDetection/components/CameraActiveIndicator';
-import DetectionStateIndicator from '@/components/brewing/AutoPourDetection/components/DetectionStateIndicator';
 import UndoButton from '@/components/brewing/AutoPourDetection/components/UndoButton';
 import DebugOverlay from '@/components/brewing/AutoPourDetection/components/DebugOverlay';
 import { showToast } from '@/components/common/feedback/LightToast';
@@ -908,7 +907,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     pourDetectorRef.current?.stopDetection();
     debugRecorderRef.current?.stopRecording();
     setIsCameraActive(false);
-
   }, [handleDebugExport]);
 
   const handleUndo = useCallback(() => {
@@ -1546,7 +1544,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           )}
         </AnimatePresence>
 
-        {debugState.state && (
+        {debugState.state && settings.autoPourDetection?.showDebugOverlay && (
           <div className="absolute top-0 right-6 z-50">
             <DebugOverlay
               state={debugState.state}

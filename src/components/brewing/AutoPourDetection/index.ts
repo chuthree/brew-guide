@@ -18,7 +18,6 @@ export { default as DebugRecorder } from './DebugRecorder';
 
 // Components
 export { default as CameraActiveIndicator } from './components/CameraActiveIndicator';
-export { default as DetectionStateIndicator } from './components/DetectionStateIndicator';
 export { default as UndoButton } from './components/UndoButton';
 export { default as DebugOverlay } from './components/DebugOverlay';
 
