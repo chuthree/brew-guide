@@ -909,11 +909,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     debugRecorderRef.current?.stopRecording();
     setIsCameraActive(false);
 
-    if (hasRecording) {
-      setTimeout(() => {
-        handleDebugExport();
-      }, 100);
-    }
   }, [handleDebugExport]);
 
   const handleUndo = useCallback(() => {

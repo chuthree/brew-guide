@@ -53,9 +53,9 @@ export default function DebugOverlay({
     Number.isFinite(num) ? Math.round(num).toString() : '0';
 
   const handleExport = () => {
-    if (onExport) {
-      onExport();
-    }
+    // if (onExport) {
+    //   onExport();
+    // }
     setShowExportPanel(true);
   };
 

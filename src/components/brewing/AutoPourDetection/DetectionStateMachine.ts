@@ -100,35 +100,6 @@ export default class DetectionStateMachine {
         }
         break;
 
-      // case 'monitoring':
-      //   // Advance to preparing with soft counter
-      //   if (isDetection) {
-      //     this._softCounter = Math.min(
-      //       this._softCounter + 1,
-      //       this._softCounterMax
-      //     );
-      //   } else {
-      //     // Soft decrement on miss
-      //     this._softCounter = Math.max(0, this._softCounter - 1);
-      //   }
-
-      //   // Require stable detection to advance
-      //   if (
-      //     this._softCounter >= 2 &&
-      //     stabilityScore >= this._config.preparingTolerance!
-      //   ) {
-      //     this._state = 'preparing';
-      //     this._softCounter = 1;
-      //     this._updateStateEntryTime(currentTime);
-      //     transitionReason = 'tilt_confirmed_stable';
-      //   } else if (stabilityScore === 0) {
-      //     // Return to idle if completely lost
-      //     this._state = 'idle';
-      //     this._softCounter = 0;
-      //     transitionReason = 'kettle_lost';
-      //   }
-      //   break;
-
       case 'monitoring':
         // Soft counter with tolerance
         if (isDetection) {
