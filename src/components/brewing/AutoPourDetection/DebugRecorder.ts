@@ -500,7 +500,6 @@ export default class DebugRecorder {
               hasRotation: f.motionAnalysis.hasRotation,
               totalMotionPixels: f.motionAnalysis.totalMotionPixels,
               motionRegion: f.motionAnalysis.motionRegion,
-              isTranslation: (f.motionAnalysis.translationScore ?? 0) > 0.52,
               rotationEvidence: f.motionAnalysis.rotationEvidence,
               gradientStability: f.motionAnalysis.gradientStability,
               asymmetryScore: f.motionAnalysis.asymmetryScore,

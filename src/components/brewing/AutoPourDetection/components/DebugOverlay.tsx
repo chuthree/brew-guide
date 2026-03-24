@@ -183,35 +183,6 @@ export default function DebugOverlay({
               </div>
 
               <div className="my-1 border-t border-white/10" />
-              <div className="text-center text-[9px] text-yellow-400">
-                平移检测
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-neutral-400">平移得分:</span>
-                <span
-                  className={
-                    (motionAnalysis.translationScore ?? 0) > 0.5
-                      ? 'text-yellow-400'
-                      : ''
-                  }
-                >
-                  {formatNumber(motionAnalysis.translationScore ?? 0, 2)}
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-neutral-400">谷深度:</span>
-                <span
-                  className={
-                    (motionAnalysis.velocityRatio ?? 0) > 0.52
-                      ? 'text-yellow-400'
-                      : ''
-                  }
-                >
-                  {formatNumber(motionAnalysis.velocityRatio ?? 0, 2)}
-                </span>
-              </div>
 
               <div className="flex justify-between">
                 <span className="text-neutral-400">像素数:</span>

@@ -317,11 +317,8 @@ export default class FrameDiffDetector {
       this._trendAlpha * bottomRatioTrend +
       (1 - this._trendAlpha) * this._smoothedTrend;
 
-    const isTranslation = this._isTranslation(valleyDepth, fillRatio, bbHeight,asymmetry);
-
     const rotationScore = this._calculateRotationScore(
       this._smoothedTrend,
-      isTranslation,
       trendConsistency,
       motionMagnitude,
       asymmetry,
@@ -337,23 +334,20 @@ export default class FrameDiffDetector {
       totalMotionPixels
     );
 
-    const translationScore = isTranslation
-      ? Math.min(1, 0.5 + valleyDepth * 0.5)
-      : Math.max(0, valleyDepth * 0.4);
+    const translationScore = Math.max(0, valleyDepth * 0.4);
 
     const isKettleTilt = this._isKettleTilt(
-      rotationScore,         // 传入当前的旋转得分
-      trendConsistency,      // 传入趋势一致性
-      this._smoothedTrend,   // 传入倾斜信号 (tiltSignal)，用于判断方向
-      totalMotionPixels      // 传入运动像素总数
+      rotationScore, // 传入当前的旋转得分
+      trendConsistency, // 传入趋势一致性
+      this._smoothedTrend, // 传入倾斜信号 (tiltSignal)，用于判断方向
+      totalMotionPixels // 传入运动像素总数
     );
 
     const gradientStability =
       this._calculateGradientStability(bottomRatioTrend);
 
     const trendStrength = Math.min(1, Math.max(0, this._smoothedTrend) / 0.04);
-    const rotationEvidence =
-      trendStrength * 0.5 + (isTranslation ? 0 : 0.3) + trendConsistency * 0.2;
+    const rotationEvidence = trendStrength * 0.5 + 0.3 + trendConsistency * 0.2;
 
     const topRatio = topPixels / totalMotionPixels;
     let motionRegion: 'top' | 'middle' | 'bottom';
@@ -619,31 +613,13 @@ export default class FrameDiffDetector {
    *   Tier 2 (fallback):  fillRatio < 0.25.  Catches slow translations where
    *   displacement is tiny (<4px) so valley detection has insufficient span.
    */
-  private _isTranslation(
-    valleyDepth: number,
-    fillRatio: number,
-    bbHeight: number,
-    asymmetry: number
-  ): boolean {
-    // 【新增】如果画面高度不对称（通常是因为水嘴在一侧倒水），则降低其判定为纯平移的概率
-    if (asymmetry > 0.4) {
-      return false;
-    }
-    if (bbHeight >= 6) {
-      return valleyDepth > 0.80;
-    }
-    return fillRatio < 0.25;
-  }
-
   private _calculateRotationScore(
     bottomRatioTrend: number,
-    isTranslation: boolean,
     trendConsistency: number,
     motionMagnitude: number,
     asymmetry: number,
     bottomRatio: number
   ): number {
-
     const trendScore = Math.min(1, Math.max(0, bottomRatioTrend) / 0.025);
     const asymmetryScore = Math.min(1, asymmetry / 0.4);
     const bottomDominanceScore = Math.min(
