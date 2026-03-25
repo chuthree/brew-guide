@@ -11,11 +11,7 @@
 
 export type DetectionMode = 'auto-start' | 'remind-only' | 'off';
 
-export type StateMachineState =
-  | 'idle'
-  | 'monitoring'
-  | 'preparing'
-  | 'triggered';
+export type StateMachineState = 'idle' | 'monitoring' | 'triggered';
 
 // ============================================================================
 // Auto Pour Detection Settings

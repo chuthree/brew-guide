@@ -16,7 +16,6 @@ interface StateMachineConfig {
   requiredConsecutiveDetections: number;
   stateTimeout: number;
   idleToMonitoringThreshold?: number;
-  preparingTolerance?: number;
   triggeredAutoExitFrames?: number;
 }
 
@@ -55,7 +54,6 @@ export default class DetectionStateMachine {
     this._config = {
       ...config,
       idleToMonitoringThreshold: config.idleToMonitoringThreshold ?? 1,
-      preparingTolerance: config.preparingTolerance ?? 0.3,
       triggeredAutoExitFrames: config.triggeredAutoExitFrames ?? 30,
     };
   }
@@ -112,11 +110,8 @@ export default class DetectionStateMachine {
             // 每次只扣除 0.15 分，这意味着允许水壶连续保持绝对静止 5-6 帧都不会断掉状态！
             this._softCounter = Math.max(0, this._softCounter - 0.1);
           } else {
-            // 如果画面在运动，但被 Layer 1 判定为“不是倒水”（比如平移、收回水壶等干扰动作），正常重度扣分
-            this._softCounter = Math.max(
-              0,
-              this._softCounter - (1 - this._config.preparingTolerance!)
-            );
+            // 如果画面在运动，但被 Layer 1 判定为"不是倒水"（比如平移、收回水壶等干扰动作），正常重度扣分
+            this._softCounter = Math.max(0, this._softCounter - 0.5);
           }
         }
 
@@ -207,7 +202,6 @@ export default class DetectionStateMachine {
 
     switch (this._state) {
       case 'monitoring':
-      case 'preparing':
         this._state = 'idle';
         this._softCounter = 0;
         break;

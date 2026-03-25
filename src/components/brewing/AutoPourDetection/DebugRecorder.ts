@@ -517,7 +517,6 @@ export default class DebugRecorder {
     const durations: Record<string, number> = {
       idle: 0,
       monitoring: 0,
-      preparing: 0,
       triggered: 0,
     };
 
