@@ -163,7 +163,6 @@ export default class FrameDiffDetector {
       maxMotionRatio: 0.8,
       requiredConsecutiveDetections: 2,
       stateTimeout: 5000,
-      cooldownDuration: 2000,
     };
   }
 
@@ -667,14 +666,14 @@ export default class FrameDiffDetector {
 
     // 2. 核心方向规则：根据需求，tiltSignal > 0 时表示未倾倒水壶（拒绝）。
     // 这意味着只有当 tiltSignal <= 0 时，才有可能判定为倒水。
-    if (tiltSignal > 0.40) return false;
+    if (tiltSignal > 0.4) return false;
 
     // 3. 历史数据要求：需要至少 2 帧历史记录来建立上下文，否则拒绝。
     if (this._tiltHistory.length < 2) return false;
 
     // 3. 【绝对核心】趋势一致性必须极高
     // 日志证明：平移最高仅为 0.57，而倒水在 0.75 - 1.0 之间。
-    if (trendConsistency < 0.55  ) return false;
+    if (trendConsistency < 0.55) return false;
 
     return true;
   }

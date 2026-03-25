@@ -15,8 +15,7 @@ export type StateMachineState =
   | 'idle'
   | 'monitoring'
   | 'preparing'
-  | 'triggered'
-  | 'cooldown';
+  | 'triggered';
 
 // ============================================================================
 // Auto Pour Detection Settings
@@ -306,9 +305,6 @@ export interface DetectionConfig {
 
   /** State timeout in milliseconds */
   stateTimeout: number;
-
-  /** Cooldown duration in milliseconds */
-  cooldownDuration: number;
 
   /** Region of interest */
   regionOfInterest?: {

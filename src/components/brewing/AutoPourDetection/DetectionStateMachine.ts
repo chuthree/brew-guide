@@ -15,7 +15,6 @@ import type {
 interface StateMachineConfig {
   requiredConsecutiveDetections: number;
   stateTimeout: number;
-  cooldownDuration: number;
   idleToMonitoringThreshold?: number;
   preparingTolerance?: number;
   triggeredAutoExitFrames?: number;
@@ -32,7 +31,6 @@ export default class DetectionStateMachine {
   private _state: StateMachineState = 'idle';
   private _consecutiveCount = 0;
   private _consecutiveNoMotion = 0;
-  private _cooldownStart: number | null = null;
   private _stateEntryTime: number = Date.now();
   private _stateHistory: StateHistoryEntry[] = [];
   private _config: StateMachineConfig;
@@ -112,10 +110,7 @@ export default class DetectionStateMachine {
           if (event.type === 'no_motion') {
             // 如果画面完全静止（代表倒水时手在悬停），我们给予极高的宽容度。
             // 每次只扣除 0.15 分，这意味着允许水壶连续保持绝对静止 5-6 帧都不会断掉状态！
-            this._softCounter = Math.max(
-              0,
-              this._softCounter - 0.1
-            );
+            this._softCounter = Math.max(0, this._softCounter - 0.1);
           } else {
             // 如果画面在运动，但被 Layer 1 判定为“不是倒水”（比如平移、收回水壶等干扰动作），正常重度扣分
             this._softCounter = Math.max(
@@ -144,44 +139,13 @@ export default class DetectionStateMachine {
         break;
 
       case 'triggered':
-        // Auto-exit after N frames of no detection
-        // if (!isDetection) {
-        //   this._consecutiveNoMotion++;
-        //   if (
-        //     this._consecutiveNoMotion >= this._config.triggeredAutoExitFrames!
-        //   ) {
-        //     this._state = 'cooldown';
-        //     this._cooldownStart = currentTime;
-        //     this._updateStateEntryTime(currentTime);
-        //     transitionReason = 'auto_exit_no_motion';
-        //   }
-        // } else {
-        //   this._consecutiveNoMotion = 0;
-        // }
-
-        // Manual reset always works
+        // Triggered state - detection completed, wait for manual reset
         if (event.type === 'manual_reset') {
-          this._state = 'cooldown';
-          this._cooldownStart = currentTime;
+          this._state = 'idle';
+          this._softCounter = 0;
           this._consecutiveNoMotion = 0;
           this._updateStateEntryTime(currentTime);
           transitionReason = 'manual_reset';
-        }
-        break;
-
-      case 'cooldown':
-        // Complete isolation - ignore all detection events
-        if (this._cooldownStart) {
-          const cooldownElapsed = currentTime - this._cooldownStart;
-
-          if (cooldownElapsed >= this._config.cooldownDuration) {
-            this._state = 'idle';
-            this._softCounter = 0;
-            this._consecutiveCount = 0;
-            this._consecutiveNoMotion = 0;
-            this._updateStateEntryTime(currentTime);
-            transitionReason = 'cooldown_complete';
-          }
         }
         break;
     }
@@ -248,10 +212,6 @@ export default class DetectionStateMachine {
         this._softCounter = 0;
         break;
       case 'triggered':
-        this._state = 'cooldown';
-        this._cooldownStart = Date.now();
-        break;
-      case 'cooldown':
         this._state = 'idle';
         this._softCounter = 0;
         break;
@@ -277,11 +237,10 @@ export default class DetectionStateMachine {
   }
 
   /**
-   * Reset state machine to cooldown
+   * Reset state machine to idle
    */
   reset(): void {
-    this._state = 'cooldown';
-    this._cooldownStart = Date.now();
+    this._state = 'idle';
     this._softCounter = 0;
     this._consecutiveCount = 0;
     this._consecutiveNoMotion = 0;
@@ -294,17 +253,6 @@ export default class DetectionStateMachine {
    */
   getConsecutiveCount(): number {
     return this._consecutiveCount;
-  }
-
-  /**
-   * Get remaining cooldown time in ms
-   */
-  getCooldownRemaining(): number {
-    if (this._state !== 'cooldown' || !this._cooldownStart) {
-      return 0;
-    }
-    const elapsed = Date.now() - this._cooldownStart;
-    return Math.max(0, this._config.cooldownDuration - elapsed);
   }
 
   /**

@@ -224,9 +224,6 @@ export default class DebugRecorder {
       `Required Consecutive Detections: ${session.config.requiredConsecutiveDetections}`
     );
     lines.push(`State Timeout:               ${session.config.stateTimeout}ms`);
-    lines.push(
-      `Cooldown Duration:           ${session.config.cooldownDuration}ms`
-    );
     lines.push('');
 
     lines.push('📈 SUMMARY STATISTICS');
@@ -522,7 +519,6 @@ export default class DebugRecorder {
       monitoring: 0,
       preparing: 0,
       triggered: 0,
-      cooldown: 0,
     };
 
     if (session.frames.length === 0) return durations;

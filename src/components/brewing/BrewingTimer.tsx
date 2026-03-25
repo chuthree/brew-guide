@@ -1027,7 +1027,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         // 状态机参数
         requiredConsecutiveDetections: 2,
         stateTimeout: 5000,
-        cooldownDuration: 2000,
       };
 
       await cm.startVideoStream({
@@ -1051,7 +1050,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         requiredConsecutiveDetections:
           DETECTION_PARAMS.requiredConsecutiveDetections,
         stateTimeout: DETECTION_PARAMS.stateTimeout,
-        cooldownDuration: DETECTION_PARAMS.cooldownDuration,
       };
 
       const pd = new PourDetector(detectionConfig);

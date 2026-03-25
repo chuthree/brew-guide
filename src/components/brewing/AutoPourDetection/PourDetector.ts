@@ -40,7 +40,6 @@ export default class PourDetector {
     this._stateMachine = new DetectionStateMachine({
       requiredConsecutiveDetections: config.requiredConsecutiveDetections,
       stateTimeout: config.stateTimeout,
-      cooldownDuration: config.cooldownDuration,
     });
   }
 
@@ -53,7 +52,6 @@ export default class PourDetector {
       this._stateMachine = new DetectionStateMachine({
         requiredConsecutiveDetections: config.requiredConsecutiveDetections,
         stateTimeout: config.stateTimeout,
-        cooldownDuration: config.cooldownDuration,
       });
     }
 
@@ -321,7 +319,6 @@ export default class PourDetector {
     this._stateMachine = new DetectionStateMachine({
       requiredConsecutiveDetections: this._config.requiredConsecutiveDetections,
       stateTimeout: this._config.stateTimeout,
-      cooldownDuration: this._config.cooldownDuration,
     });
   }
 
@@ -332,9 +329,9 @@ export default class PourDetector {
     // 【新增】：如果检测器处于冻结状态（调试模式），拒绝任何外部重置！
     // 只有在 isActive=true，或者连 lastResult 都没有时才允许重置
     if (!this._isActive && this._lastResult !== null) {
-        return;
+      return;
     }
-    
+
     this._stateMachine.reset();
     this._previousFrame = null;
     this._hasTriggered = false;
