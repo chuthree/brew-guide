@@ -965,6 +965,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       });
       setHighlightPlayButton(true);
       setTimeout(() => setHighlightPlayButton(false), 3000);
+      if (autoPourSettings.autoStopCamera) stopCamera();
     }
   }, [
     isRunning,
@@ -1018,7 +1019,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
         maxMotionRatio: 0.8,
 
         // 状态机参数
-        requiredConsecutiveDetections: 4,
+        requiredConsecutiveDetections: 2,
         stateTimeout: 5000,
         cooldownDuration: 2000,
       };
@@ -1579,7 +1580,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               stateMachineDebug={debugState.stateMachineDebug}
               visible={true}
               position="top-right"
-              hasRecording={debugRecorderRef.current?.isRecording() ?? false}
+              hasRecording={
+                (debugRecorderRef.current?.isRecording() ?? false) ||
+                !!(debugRecorderRef.current?.getSession() ?? null)
+              }
               onExport={handleDebugExport}
               onCopyLog={handleDebugCopyLog}
             />
