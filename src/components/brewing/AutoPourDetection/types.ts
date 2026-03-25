@@ -49,9 +49,6 @@ export interface AutoPourDetectionSettings {
   // UX config
   /** Whether to show toast notifications */
   showToastNotification: boolean;
-
-  /** Undo window duration in milliseconds (default 2000) */
-  undoWindowDuration: number;
 }
 
 // ============================================================================

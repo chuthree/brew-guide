@@ -217,7 +217,6 @@ export const defaultSettings: AppSettings = {
     showDebugOverlay: false,
     autoStopCamera: true,
     showToastNotification: true,
-    undoWindowDuration: 2000,
   },
 };
 

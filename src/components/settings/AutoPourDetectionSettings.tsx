@@ -79,7 +79,7 @@ export default function AutoPourDetectionSettings() {
               >
                 <div className="font-medium">自动开始</div>
                 <div className="mt-1 text-xs opacity-70">
-                  检测到注水时立即开始计时，2秒内可撤销
+                  检测到注水时立即开始计时，10秒内可撤销
                 </div>
               </button>
             </div>
@@ -104,10 +104,11 @@ export default function AutoPourDetectionSettings() {
           <div className="mt-4 rounded-lg bg-neutral-100 p-3 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
             <div className="mb-1 font-medium">使用说明：</div>
             <ol className="list-inside list-decimal space-y-1">
-              <li>将手机平放，前置摄像头朝上</li>
+              <li>将手机平放，前置摄像头朝上（推荐使用手机支架）</li>
               <li>确保光线充足，手部动作清晰可见</li>
               <li>开始注水后，系统会自动检测并响应</li>
-              <li>如需撤销自动开始，请在2秒内点击撤销按钮</li>
+              <li>如需撤销自动开始，请在10秒内点击撤销按钮</li>
+              <li>只做了iphone适配测试，安卓用户谨慎使用</li>
             </ol>
           </div>
         </>

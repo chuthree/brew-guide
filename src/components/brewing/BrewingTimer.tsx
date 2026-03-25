@@ -162,6 +162,12 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   // 僵尸防线令牌，用于追踪最新的初始化轮次
   const initCounterRef = useRef<number>(0);
 
+  // 自动注水检测配置 - 开发者可调参数
+  const AUTO_POUR_CONFIG = {
+    // 撤销窗口时长（毫秒）
+    undoWindowDuration: 10000,
+  };
+
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [showUndoButton, setShowUndoButton] = useState(false);
   const [undoRemainingMs, setUndoRemainingMs] = useState(0);
@@ -938,11 +944,11 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       showToast({
         type: 'success',
         title: '检测到注水，已开始计时',
-        duration: 2000,
+        duration: AUTO_POUR_CONFIG.undoWindowDuration,
       });
       undoControllerRef.current = new UndoController();
       undoControllerRef.current.startUndoWindow(
-        autoPourSettings.undoWindowDuration ?? 2000,
+        AUTO_POUR_CONFIG.undoWindowDuration,
         snapshot,
         {
           onTick: remaining => {
@@ -960,7 +966,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
       showToast({
         type: 'info',
         title: '检测到注水，点击开始',
-        duration: 3000,
+        duration: AUTO_POUR_CONFIG.undoWindowDuration,
         action: { label: '开始', onClick: () => startTimer() },
       });
       setHighlightPlayButton(true);

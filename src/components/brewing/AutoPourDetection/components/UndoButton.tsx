@@ -25,7 +25,7 @@ export default function UndoButton({
       onClick={onUndo}
       className="rounded-full bg-neutral-800/80 px-4 py-2 text-sm text-white hover:bg-neutral-700/80"
     >
-      ↶ 撤销 ({seconds}s)
+      撤销 ({seconds}s)
     </button>
   );
 }
