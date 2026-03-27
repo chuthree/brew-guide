@@ -137,7 +137,7 @@ export const RoastingManager = {
           remaining: formatNumber(userRemaining),
           // 继承生豆的其他属性
           image: roastedBeanData.image || greenBean.image,
-          roastLevel: roastedBeanData.roastLevel || greenBean.roastLevel,
+          roastLevel: roastedBeanData.roastLevel ?? greenBean.roastLevel,
           roastDate: roastedBeanData.roastDate,
           flavor: roastedBeanData.flavor || greenBean.flavor,
           notes: roastedBeanData.notes || greenBean.notes,

@@ -2,16 +2,9 @@
 
 import { CoffeeBean } from '@/types/app';
 import { BrewingNote } from '@/lib/core/config';
+import { ROAST_LEVELS } from '@/lib/utils/roastProfileUtils';
 
-// 烘焙度选项
-export const ROAST_LEVELS = [
-  '极浅烘焙',
-  '浅度烘焙',
-  '中浅烘焙',
-  '中度烘焙',
-  '中深烘焙',
-  '深度烘焙',
-] as const;
+export { ROAST_LEVELS };
 
 // 咖啡豆类型选项
 export const BEAN_TYPES = [

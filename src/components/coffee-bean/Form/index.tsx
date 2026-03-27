@@ -24,7 +24,6 @@ import {
 } from './constants';
 import {
   defaultSettings,
-  type SettingsOptions,
 } from '@/components/settings/Settings';
 import { compressBase64Image } from '@/lib/utils/imageCapture';
 import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
@@ -68,6 +67,101 @@ const steps: StepConfig[] = [
   { id: 'flavor', label: '风味描述' },
   { id: 'complete', label: '完成' },
 ];
+
+const getTodayLocalDateString = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const isRoastingDraft = (
+  bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>,
+  roastingSourceBeanId?: string | null
+) => {
+  return (
+    !!roastingSourceBeanId &&
+    bean.beanState === 'roasted' &&
+    bean.sourceGreenBeanId === roastingSourceBeanId
+  );
+};
+
+const createEmptyBeanDraft = (
+  initialBeanState?: 'green' | 'roasted'
+): Omit<ExtendedCoffeeBean, 'id' | 'timestamp'> => ({
+  name: '',
+  capacity: '',
+  remaining: '',
+  roastLevel: '',
+  roastDate: '',
+  flavor: [],
+  price: '',
+  beanType: 'filter',
+  notes: '',
+  startDay: 0,
+  endDay: 0,
+  blendComponents: [],
+  beanState: initialBeanState || 'roasted',
+  purchaseDate:
+    initialBeanState === 'green' ? getTodayLocalDateString() : undefined,
+});
+
+const createInitialBeanDraft = ({
+  initialBean,
+  initialBeanState,
+  roastingSourceBeanId,
+  roasterFieldEnabled,
+}: {
+  initialBean?: ExtendedCoffeeBean;
+  initialBeanState?: 'green' | 'roasted';
+  roastingSourceBeanId?: string | null;
+  roasterFieldEnabled: boolean;
+}): Omit<ExtendedCoffeeBean, 'id' | 'timestamp'> => {
+  if (!initialBean) {
+    return createEmptyBeanDraft(initialBeanState);
+  }
+
+  const { id: _id, timestamp: _timestamp, ...beanData } = initialBean;
+
+  if (!roasterFieldEnabled && beanData.roaster && beanData.name) {
+    beanData.name = `${beanData.roaster} ${beanData.name}`;
+    beanData.roaster = '';
+  }
+
+  if (!beanData.beanType) {
+    beanData.beanType = 'filter';
+  }
+
+  if (isRoastingDraft(beanData, roastingSourceBeanId)) {
+    beanData.roastLevel = '';
+    beanData.startDay = 0;
+    beanData.endDay = 0;
+  }
+
+  const needFlavorPeriodInit = !beanData.startDay && !beanData.endDay;
+
+  if (needFlavorPeriodInit && beanData.roastLevel) {
+    let startDay = 0;
+    let endDay = 0;
+
+    if (beanData.roastLevel.includes('浅')) {
+      startDay = 7;
+      endDay = 60;
+    } else if (beanData.roastLevel.includes('深')) {
+      startDay = 14;
+      endDay = 90;
+    } else {
+      startDay = 10;
+      endDay = 60;
+    }
+
+    beanData.startDay = startDay;
+    beanData.endDay = endDay;
+  }
+
+  return beanData;
+};
 
 const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
   (
@@ -124,78 +218,13 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     const [bean, setBean] = useState<
       Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
     >(() => {
-      // 获取当前设置
       const currentSettings = useSettingsStore.getState().settings;
-      const roasterFieldEnabled = currentSettings.roasterFieldEnabled;
-
-      if (initialBean) {
-        const { id: _id, timestamp: _timestamp, ...beanData } = initialBean;
-
-        // 如果关闭了独立烘焙商输入，且有 roaster 字段，将其合并到名称中
-        if (!roasterFieldEnabled && beanData.roaster && beanData.name) {
-          // 始终使用空格作为分隔符（关闭独立输入时的默认行为）
-          beanData.name = `${beanData.roaster} ${beanData.name}`;
-          beanData.roaster = '';
-        }
-
-        // 不预设烘焙度默认值，保持数据严谨性
-
-        // 确保有beanType字段，默认为手冲
-        if (!beanData.beanType) {
-          beanData.beanType = 'filter';
-        }
-
-        const needFlavorPeriodInit = !beanData.startDay && !beanData.endDay;
-
-        if (needFlavorPeriodInit && beanData.roastLevel) {
-          // 这里先设置默认值，后续会在useEffect中用自定义设置覆盖
-          let startDay = 0;
-          let endDay = 0;
-
-          if (beanData.roastLevel.includes('浅')) {
-            startDay = 7;
-            endDay = 60;
-          } else if (beanData.roastLevel.includes('深')) {
-            startDay = 14;
-            endDay = 90;
-          } else {
-            startDay = 10;
-            endDay = 60;
-          }
-
-          beanData.startDay = startDay;
-          beanData.endDay = endDay;
-        }
-
-        return beanData;
-      }
-
-      return {
-        name: '',
-        capacity: '',
-        remaining: '',
-        roastLevel: '',
-        roastDate: '',
-        flavor: [],
-        price: '',
-        beanType: 'filter', // 默认为手冲
-        notes: '',
-        startDay: 0,
-        endDay: 0,
-        blendComponents: [],
-        beanState: initialBeanState || 'roasted', // 使用传入的 initialBeanState 或默认为熟豆
-        // 生豆预设今天的购买日期
-        purchaseDate:
-          initialBeanState === 'green'
-            ? (() => {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const day = String(today.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-              })()
-            : undefined,
-      };
+      return createInitialBeanDraft({
+        initialBean,
+        initialBeanState,
+        roastingSourceBeanId,
+        roasterFieldEnabled: !!currentSettings.roasterFieldEnabled,
+      });
     });
 
     // 定义额外的状态来跟踪风味标签输入
@@ -450,6 +479,49 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       });
     };
 
+    // 根据烘焙度自动设置赏味期参数
+    const autoSetFlavorPeriod = useCallback(
+      (roastLevelOverride?: string) => {
+        let startDay = 0;
+        let endDay = 0;
+
+        const currentRoastLevel = roastLevelOverride || bean.roastLevel || '';
+
+        try {
+          const currentSettings = useSettingsStore.getState().settings;
+          const customFlavorPeriod =
+            currentSettings.customFlavorPeriod ||
+            defaultSettings.customFlavorPeriod;
+
+          const roasterName = bean.name
+            ? (extractRoasterFromName(bean.name) ?? undefined)
+            : undefined;
+
+          const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
+            currentRoastLevel,
+            customFlavorPeriod,
+            roasterName
+          );
+          startDay = flavorPeriod.startDay;
+          endDay = flavorPeriod.endDay;
+        } catch (error) {
+          console.error('获取自定义赏味期设置失败，使用默认值:', error);
+          const flavorPeriod =
+            getDefaultFlavorPeriodByRoastLevelSync(currentRoastLevel);
+          startDay = flavorPeriod.startDay;
+          endDay = flavorPeriod.endDay;
+        }
+
+        setBean(prev => ({
+          ...prev,
+          startDay,
+          endDay,
+          isFrozen: false,
+        }));
+      },
+      [bean.name, bean.roastLevel]
+    );
+
     // 处理输入变化
     const handleInputChange =
       (field: keyof Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) =>
@@ -526,8 +598,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
             [field]: safeValue,
           }));
 
-          // 传入新的烘焙度值，避免使用过时的state
-          setTimeout(() => autoSetFlavorPeriod(safeValue), 100);
+          autoSetFlavorPeriod(safeValue);
         } else if (field === 'name') {
           // 更新名称
           setBean(prev => ({
@@ -784,50 +855,6 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
       // 调用保存回调
       onSave(finalBean);
-    };
-
-    // 根据烘焙度自动设置赏味期参数
-    const autoSetFlavorPeriod = async (roastLevelOverride?: string) => {
-      let startDay = 0;
-      let endDay = 0;
-
-      // 使用传入的烘焙度参数，如果没有则使用当前的bean.roastLevel
-      const currentRoastLevel = roastLevelOverride || bean.roastLevel || '';
-
-      try {
-        // 从 settingsStore 获取自定义赏味期配置
-        const settings = useSettingsStore.getState().settings;
-        const customFlavorPeriod =
-          settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
-
-        // 从咖啡豆名称中提取烘焙商名称
-        const roasterName = bean.name
-          ? (extractRoasterFromName(bean.name) ?? undefined)
-          : undefined;
-
-        // 使用工具函数获取烘焙度对应的赏味期设置，传入烘焙商名称
-        const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
-          currentRoastLevel,
-          customFlavorPeriod,
-          roasterName
-        );
-        startDay = flavorPeriod.startDay;
-        endDay = flavorPeriod.endDay;
-      } catch (error) {
-        console.error('获取自定义赏味期设置失败，使用默认值:', error);
-        // 使用工具函数获取默认值
-        const flavorPeriod =
-          getDefaultFlavorPeriodByRoastLevelSync(currentRoastLevel);
-        startDay = flavorPeriod.startDay;
-        endDay = flavorPeriod.endDay;
-      }
-
-      setBean(prev => ({
-        ...prev,
-        startDay,
-        endDay,
-        isFrozen: false, // 设置赏味期时取消冷冻状态
-      }));
     };
 
     // 切换冷冻状态

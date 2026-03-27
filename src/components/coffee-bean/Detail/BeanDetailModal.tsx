@@ -664,7 +664,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       capacity: '',
       remaining: '',
       image: bean.image,
-      roastLevel: bean.roastLevel,
+      roastLevel: '',
       roastDate: today,
       flavor: bean.flavor,
       notes: bean.notes,

@@ -20,6 +20,11 @@ import {
 } from '@/components/coffee-bean/ui/select';
 import { DatePicker } from '@/components/common/ui/DatePicker';
 import { captureImage } from '@/lib/utils/imageCapture';
+import {
+  ROAST_LEVELS,
+  getRoastProfileFromAmounts,
+  getRoastProfileFromMoistureLoss,
+} from '@/lib/utils/roastProfileUtils';
 
 interface BasicInfoProps {
   bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -68,11 +73,6 @@ const isRoastingConversion = (
   );
 };
 
-// 辅助函数：格式化数字，去除末尾多余的0
-const formatDecimal = (num: number, decimals: number = 1): string => {
-  return parseFloat(num.toFixed(decimals)).toString();
-};
-
 const BasicInfo: React.FC<BasicInfoProps> = ({
   bean,
   onBeanChange,
@@ -100,39 +100,40 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   // 追踪剩余量输入框是否正在输入（用于延迟计算脱水率和烘焙度）
   const [isRemainingFocused, setIsRemainingFocused] = useState(false);
 
-  // 根据脱水率推断烘焙度
-  const getRoastLevelFromMoistureLoss = (loss: number): string | null => {
-    if (loss >= 8 && loss <= 10) return '极浅烘焙';
-    if (loss > 10 && loss <= 13) return '浅度烘焙';
-    if (loss > 13 && loss <= 16) return '中度烘焙';
-    if (loss > 16 && loss < 18) return '中深烘焙';
-    if (loss >= 18) return '深度烘焙';
-    return null;
+  const updateRoastLevel = (value: string) => {
+    if (bean.roastLevel !== value) {
+      onBeanChange('roastLevel')(value);
+    }
   };
 
-  // 计算脱水率并更新烘焙度的核心函数
-  // 在失焦时调用，避免输入过程中频繁触发
-  // 只有当烘焙度为空时才自动设置，已有值则不覆盖
-  const calculateAndUpdateMoistureLoss = (
+  const syncRoastProfileFromAmounts = (
     capacity: string,
     remaining: string
   ) => {
-    if (!capacity || !remaining) return;
+    const roastProfile = getRoastProfileFromAmounts(capacity, remaining);
+    updateRoastLevel(roastProfile.roastLevel);
+  };
 
-    const cap = parseFloat(capacity);
-    const rem = parseFloat(remaining);
+  const syncRoastProfileFromMoistureLoss = (
+    nextMoistureLoss: string,
+    capacity: string,
+    normalizeDisplay: boolean = false
+  ) => {
+    const roastProfile = getRoastProfileFromMoistureLoss(
+      nextMoistureLoss,
+      capacity
+    );
 
-    if (cap > 0 && !isNaN(rem)) {
-      const loss = ((cap - rem) / cap) * 100;
-      setMoistureLoss(formatDecimal(loss));
+    if (normalizeDisplay) {
+      setMoistureLoss(
+        roastProfile.moistureLoss || nextMoistureLoss.replace(/[^\d.]/g, '')
+      );
+    }
+    updateRoastLevel(roastProfile.roastLevel);
 
-      // 只有当烘焙度为空时才自动设置，用户已设置则不覆盖
-      if (!bean.roastLevel) {
-        const suggestedRoastLevel = getRoastLevelFromMoistureLoss(loss);
-        if (suggestedRoastLevel) {
-          onBeanChange('roastLevel')(suggestedRoastLevel);
-        }
-      }
+    if (roastProfile.roastedAmount) {
+      setRemainingValue(roastProfile.roastedAmount);
+      onBeanChange('remaining')(roastProfile.roastedAmount);
     }
   };
 
@@ -147,30 +148,12 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   // 判断是否处于“生豆转熟豆”的烘焙流程（用于 UI 和逻辑控制）
   const isInRoastingMode = isRoastingConversion(bean, roastingSourceBeanId);
 
-  // 同步脱水率显示：仅在非编辑状态下同步显示
-  // 注意：这里只更新显示值，不触发烘焙度设置（烘焙度在失焦时设置）
-  useEffect(() => {
-    // 如果用户正在输入脱水率或剩余量，不要覆盖
-    if (isMoistureFocused || isRemainingFocused) return;
-
-    // 仅在烘焙模式下执行
-    if (!isInRoastingMode) return;
-
-    if (capacityValue && remainingValue && parseFloat(capacityValue) > 0) {
-      const cap = parseFloat(capacityValue);
-      const rem = parseFloat(remainingValue);
-      const loss = ((cap - rem) / cap) * 100;
-      setMoistureLoss(formatDecimal(loss));
-    } else {
-      setMoistureLoss('');
-    }
-  }, [
-    capacityValue,
-    remainingValue,
-    isMoistureFocused,
-    isRemainingFocused,
-    isInRoastingMode,
-  ]);
+  const derivedMoistureLoss = isInRoastingMode
+    ? getRoastProfileFromAmounts(capacityValue, remainingValue).moistureLoss
+    : '';
+  const displayedMoistureLoss = isMoistureFocused
+    ? moistureLoss
+    : derivedMoistureLoss;
 
   // 处理日期变化 - 根据豆子状态决定更新哪个字段
   const handleDateChange = (date: Date) => {
@@ -216,7 +199,10 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   // 处理容量变化 - 只更新本地状态，不触发主表单更新
   const handleCapacityChange = (value: string) => {
     setCapacityValue(value);
-    // 不再实时调用 onBeanChange，只在失焦时处理
+
+    if (isInRoastingMode && remainingValue) {
+      syncRoastProfileFromAmounts(value, remainingValue);
+    }
   };
 
   // 处理剩余容量变化 - 只更新本地状态，不触发烘焙度计算
@@ -227,49 +213,36 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     }
     setRemainingValue(value);
     onBeanChange('remaining')(value);
-    // 注意：不在这里计算烘焙度，等失焦时再计算
+
+    if (isInRoastingMode) {
+      syncRoastProfileFromAmounts(capacityValue, value);
+    }
   };
 
   // 处理剩余容量输入框失焦 - 此时才计算脱水率和烘焙度
   const handleRemainingBlur = () => {
     setIsRemainingFocused(false);
 
-    // 仅在烘焙模式下计算
     if (isInRoastingMode) {
-      calculateAndUpdateMoistureLoss(capacityValue, remainingValue);
+      syncRoastProfileFromAmounts(capacityValue, remainingValue);
     }
   };
 
-  // 处理脱水率手动输入变化 - 只更新本地状态
+  // 处理脱水率手动输入变化
   const handleMoistureChange = (value: string) => {
     setMoistureLoss(value);
 
-    const loss = parseFloat(value);
-    const cap = parseFloat(capacityValue);
-
-    // 根据脱水率反算熟豆量（实时更新，方便用户看到效果）
-    if (!isNaN(loss) && !isNaN(cap) && cap > 0) {
-      const newRem = cap * (1 - loss / 100);
-      const newRemStr = formatDecimal(newRem);
-      setRemainingValue(newRemStr);
-      onBeanChange('remaining')(newRemStr);
+    if (isInRoastingMode) {
+      syncRoastProfileFromMoistureLoss(value, capacityValue);
     }
-    // 注意：不在这里设置烘焙度，等失焦时再设置
   };
 
-  // 处理脱水率输入框失焦 - 此时才设置烘焙度
+  // 处理脱水率输入框失焦
   const handleMoistureBlur = () => {
     setIsMoistureFocused(false);
 
-    // 只有当烘焙度为空时才自动设置
-    if (!bean.roastLevel) {
-      const loss = parseFloat(moistureLoss);
-      if (!isNaN(loss)) {
-        const suggestedRoastLevel = getRoastLevelFromMoistureLoss(loss);
-        if (suggestedRoastLevel) {
-          onBeanChange('roastLevel')(suggestedRoastLevel);
-        }
-      }
+    if (isInRoastingMode) {
+      syncRoastProfileFromMoistureLoss(moistureLoss, capacityValue, true);
     }
   };
 
@@ -614,10 +587,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
 
                   // 烘焙模式下，如果已有剩余量，计算脱水率和烘焙度
                   if (isInRoastingMode && remainingValue) {
-                    calculateAndUpdateMoistureLoss(
-                      capacityValue,
-                      remainingValue
-                    );
+                    syncRoastProfileFromAmounts(capacityValue, remainingValue);
                   }
 
                   // 触发容量变化回调，用于类型推断
@@ -654,7 +624,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 type="number"
                 inputMode="decimal"
                 step="0.1"
-                value={moistureLoss}
+                value={displayedMoistureLoss}
                 onChange={e => handleMoistureChange(e.target.value)}
                 onFocus={() => setIsMoistureFocused(true)}
                 onBlur={handleMoistureBlur}
@@ -685,19 +655,18 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             烘焙度
           </label>
           <Select
-            value={bean.roastLevel || ''}
+            value={bean.roastLevel || undefined}
             onValueChange={value => onBeanChange('roastLevel')(value)}
           >
             <SelectTrigger className="h-auto w-full rounded-none border-0 border-b border-neutral-300 bg-transparent px-0 py-2 text-base shadow-none placeholder:text-neutral-500 focus-within:border-neutral-800/50 data-[placeholder]:text-neutral-500 dark:border-neutral-700 dark:placeholder:text-neutral-400 dark:focus-within:border-neutral-400 dark:data-[placeholder]:text-neutral-400">
               <SelectValue placeholder="选择烘焙度" />
             </SelectTrigger>
             <SelectContent className="max-h-[40vh] overflow-y-auto rounded-lg border-neutral-200/70 bg-white/95 shadow-lg backdrop-blur-xs dark:border-neutral-800/70 dark:bg-neutral-900/95">
-              <SelectItem value="极浅烘焙">极浅烘焙</SelectItem>
-              <SelectItem value="浅度烘焙">浅度烘焙</SelectItem>
-              <SelectItem value="中浅烘焙">中浅烘焙</SelectItem>
-              <SelectItem value="中度烘焙">中度烘焙</SelectItem>
-              <SelectItem value="中深烘焙">中深烘焙</SelectItem>
-              <SelectItem value="深度烘焙">深度烘焙</SelectItem>
+              {ROAST_LEVELS.map(level => (
+                <SelectItem key={level} value={level}>
+                  {level}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
