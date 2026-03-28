@@ -1237,4 +1237,5 @@ export const sponsorsList = [
   '银河',
   '虾滑',
   '贞贞锤',
+  '肉圆不算太圆',
 ];
