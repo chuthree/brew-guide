@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
-import { GrainGradient } from '@paper-design/shaders-react';
 import {
   StatsViewProps,
   DateGroupingMode,
@@ -35,88 +33,12 @@ import {
 } from '@/lib/utils/beanVarietyUtils';
 import { ExtendedCoffeeBean } from '../../types';
 import GreenBeanStatsView from './GreenBeanStatsView';
-import YearlyReviewDrawer from './YearlyReviewDrawer';
 import CoffeeOriginMap from './CoffeeOriginMap';
-import { Storage } from '@/lib/core/storage';
 
 // 格式化辅助函数
 const fmtWeight = (v: number) => (v > 0 ? `${formatNumber(v)}g` : '-');
 const fmtCost = (v: number) => (v > 0 ? `¥${formatNumber(v)}` : '-');
 const fmtDays = (v: number) => (v > 0 ? `${v}天` : '-');
-
-// 年度回顾预览入口组件
-interface YearlyReviewPreviewCardProps {
-  onClick: () => void;
-  onDismiss: () => void;
-}
-
-// 预览卡片的主题颜色 - 薄荷青绿
-const PREVIEW_CARD_COLORS: [string, string, string, string] = [
-  '#00B894',
-  '#55EFC4',
-  '#00CEC9',
-  '#81ECEC',
-];
-
-const YearlyReviewPreviewCard: React.FC<YearlyReviewPreviewCardProps> = ({
-  onClick,
-  onDismiss,
-}) => {
-  const handleDismiss = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDismiss();
-  };
-
-  return (
-    <motion.div
-      onClick={onClick}
-      className="relative z-0 cursor-pointer overflow-hidden rounded-md shadow"
-      style={{ height: '72px', isolation: 'isolate' }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-    >
-      {/* GrainGradient 特效背景 */}
-      <div className="absolute inset-0">
-        <GrainGradient
-          colors={PREVIEW_CARD_COLORS}
-          colorBack={PREVIEW_CARD_COLORS[2]}
-          shape="wave"
-          speed={0.6}
-          softness={0.8}
-          intensity={0.5}
-          noise={0.08}
-          scale={2}
-          rotation={90}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-          }}
-        />
-      </div>
-
-      {/* 关闭按钮 - 右上角 */}
-      <motion.button
-        onClick={handleDismiss}
-        className="absolute top-2 right-2 z-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-white/70 backdrop-blur-sm transition-colors hover:bg-white/25 hover:text-white"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <X size={12} />
-      </motion.button>
-
-      {/* 内容 */}
-      <div className="relative z-1 flex h-full items-center px-4">
-        <div className="flex items-baseline gap-2">
-          <span className="text-xl font-bold tracking-tight text-white">
-            Replay'25
-          </span>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
 
 // 统计项的唯一标识
 type StatsKey =
@@ -984,31 +906,6 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
   // 是否为内容模式（由父组件管理状态）
   const isContentMode = !!contentModeProps;
 
-  // 年度回顾抽屉状态
-  const [isYearlyReviewOpen, setIsYearlyReviewOpen] = useState(false);
-  // 年度回顾预览卡片是否被关闭
-  const [isYearlyReviewDismissed, setIsYearlyReviewDismissed] = useState(true);
-
-  // 初始化时从 Storage 读取关闭状态
-  useEffect(() => {
-    const loadDismissState = async () => {
-      try {
-        const dismissed = await Storage.get('yearlyReviewPreviewDismissed');
-        // 如果没有存储值或值为 'false'，则显示卡片
-        setIsYearlyReviewDismissed(dismissed === 'true');
-      } catch {
-        setIsYearlyReviewDismissed(false);
-      }
-    };
-    loadDismissState();
-  }, []);
-
-  // 关闭预览卡片
-  const handleDismissYearlyReview = useCallback(async () => {
-    setIsYearlyReviewDismissed(true);
-    await Storage.set('yearlyReviewPreviewDismissed', 'true');
-  }, []);
-
   // 筛选状态 - 内容模式使用外部状态，独立模式使用本地状态
   const [localDateGroupingMode, setLocalDateGroupingMode] =
     useState<DateGroupingMode>(globalCache.dateGroupingMode);
@@ -1327,14 +1224,6 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
       <div className={isContentMode ? 'px-6' : 'mt-5 px-6'}>
         <div className="flex flex-col items-center">
           <div className="w-full space-y-5">
-            {/* 年度回顾入口 - 仅在全部视图（selectedDate 为 null）且未被关闭时显示 */}
-            {!selectedDate && !isYearlyReviewDismissed && (
-              <YearlyReviewPreviewCard
-                onClick={() => setIsYearlyReviewOpen(true)}
-                onDismiss={handleDismissYearlyReview}
-              />
-            )}
-
             {/* 概览 */}
             <StatsCard
               title="概览"
@@ -1396,12 +1285,6 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
         explanation={explanation}
         onClose={handleCloseExplanation}
         anchorRect={anchorRect}
-      />
-
-      {/* 年度回顾抽屉 */}
-      <YearlyReviewDrawer
-        isOpen={isYearlyReviewOpen}
-        onClose={() => setIsYearlyReviewOpen(false)}
       />
     </>
   );
