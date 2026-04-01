@@ -1,9 +1,6 @@
-// API 配置
-export const API_CONFIG = {
-  // 默认走同域 EdgeOne Functions（可通过 NEXT_PUBLIC_API_URL 覆盖）
-  baseURL: (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, ''),
-  timeout: 120000, // 120秒超时
-};
+import { API_CONFIG } from './shared/config';
+import { fetchWithTimeout, isTimeoutError } from './shared/request';
+import { validateRecognitionImageFile } from './shared/recognition';
 
 export const DEFAULT_BEAN_RECOGNITION_PROMPT = `你是OCR工具，提取图片中的咖啡豆信息，直接返回JSON（单豆返回对象{}，多豆返回数组[]）。
 
@@ -29,43 +26,6 @@ export interface CustomBeanRecognitionConfig {
   apiKey?: string;
   model: string;
   prompt: string;
-}
-
-// 文件上传安全配置
-const UPLOAD_CONFIG = {
-  // 允许的图片类型
-  allowedTypes: [
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'image/heic',
-    'image/heif',
-  ],
-  // 最大文件大小：5MB
-  maxSize: 5 * 1024 * 1024,
-};
-
-// 验证图片文件
-function validateImageFile(file: File): void {
-  // 验证文件类型
-  if (!UPLOAD_CONFIG.allowedTypes.includes(file.type)) {
-    throw new Error('不支持的文件类型，请上传 JPG、PNG 或 HEIF 图片');
-  }
-
-  // 验证文件大小
-  if (file.size > UPLOAD_CONFIG.maxSize) {
-    const maxSizeMB = UPLOAD_CONFIG.maxSize / (1024 * 1024);
-    throw new Error(`文件过大，请上传不超过 ${maxSizeMB}MB 的图片`);
-  }
-
-  // 验证文件名（防止路径遍历攻击）
-  if (
-    file.name.includes('..') ||
-    file.name.includes('/') ||
-    file.name.includes('\\')
-  ) {
-    throw new Error('文件名包含非法字符');
-  }
 }
 
 async function fileToDataUrl(file: File): Promise<string> {
@@ -99,7 +59,6 @@ async function recognizeBeanImageWithCustomAPI(
   customConfig: CustomBeanRecognitionConfig
 ): Promise<unknown> {
   try {
-    const requestStartAt = Date.now();
     const baseUrl = customConfig.apiBaseUrl.trim().replace(/\/+$/, '');
     if (!baseUrl) {
       throw new Error('实验性识别已启用，但未配置 API 地址');
@@ -114,7 +73,7 @@ async function recognizeBeanImageWithCustomAPI(
     const endpoint = `${baseUrl}/chat/completions`;
     const imageUrl = await fileToDataUrl(imageFile);
 
-    const response = await fetch(endpoint, {
+    const response = await fetchWithTimeout(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -135,7 +94,7 @@ async function recognizeBeanImageWithCustomAPI(
         max_tokens: 2000,
         response_format: { type: 'json_object' },
       }),
-      signal: AbortSignal.timeout(API_CONFIG.timeout),
+      timeoutMs: API_CONFIG.timeoutMs,
     });
 
     if (!response.ok) {
@@ -171,12 +130,9 @@ async function recognizeBeanImageWithCustomAPI(
 
     throw new Error('实验性识别返回格式不支持，请检查 API 兼容性');
   } catch (error) {
-    if (
-      error instanceof DOMException &&
-      error.name === 'AbortError'
-    ) {
+    if (isTimeoutError(error)) {
       throw new Error(
-        `实验性识别超时（>${Math.floor(API_CONFIG.timeout / 1000)}s），可更换模型或稍后重试`
+        `实验性识别超时（>${Math.floor(API_CONFIG.timeoutMs / 1000)}s），可更换模型或稍后重试`
       );
     }
     throw error;
@@ -191,7 +147,7 @@ export async function recognizeBeanImage(
   customConfig?: CustomBeanRecognitionConfig
 ): Promise<unknown> {
   // 验证文件安全性
-  validateImageFile(imageFile);
+  validateRecognitionImageFile(imageFile);
 
   if (customConfig?.enabled) {
     return recognizeBeanImageWithCustomAPI(imageFile, customConfig);
@@ -203,14 +159,14 @@ export async function recognizeBeanImage(
   formData.append('image', imageFile);
 
   try {
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithTimeout(apiUrl, {
       method: 'POST',
       body: formData,
       credentials: 'include',
       headers: {
         Accept: 'application/json', // 请求非流式响应
       },
-      signal: AbortSignal.timeout(API_CONFIG.timeout),
+      timeoutMs: API_CONFIG.timeoutMs,
     });
 
     if (!response.ok) {
@@ -238,6 +194,12 @@ export async function recognizeBeanImage(
       throw new Error('请求失败，请检查网络连接或尝试更新应用');
     }
 
+    if (isTimeoutError(error)) {
+      throw new Error(
+        `识别超时（>${Math.floor(API_CONFIG.timeoutMs / 1000)}s），请稍后重试`
+      );
+    }
+
     throw error;
   }
 }
@@ -263,14 +225,14 @@ export async function testCustomBeanRecognitionConfig(
     const startAt = Date.now();
 
     // 1) 先测试鉴权与连通性（/models 更快且不依赖视觉推理）
-    const modelsResponse = await fetch(modelsEndpoint, {
+    const modelsResponse = await fetchWithTimeout(modelsEndpoint, {
       method: 'GET',
       headers: {
         ...(customConfig.apiKey?.trim()
           ? { Authorization: `Bearer ${customConfig.apiKey.trim()}` }
           : {}),
       },
-      signal: AbortSignal.timeout(20000),
+      timeoutMs: 20000,
     });
 
     if (!modelsResponse.ok) {
@@ -300,7 +262,7 @@ export async function testCustomBeanRecognitionConfig(
 
     // 2) 再做一次极简 chat/completions 探测，确认该模型能被调起
     // 对视觉模型仍可能较慢，给更宽裕超时并提供明确报错
-    const response = await fetch(endpoint, {
+    const response = await fetchWithTimeout(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -314,7 +276,7 @@ export async function testCustomBeanRecognitionConfig(
         temperature: 0,
         max_tokens: 8,
       }),
-      signal: AbortSignal.timeout(60000),
+      timeoutMs: 60000,
     });
 
     const durationMs = Date.now() - startAt;
@@ -334,10 +296,7 @@ export async function testCustomBeanRecognitionConfig(
 
     return { endpoint, model, durationMs };
   } catch (error) {
-    if (
-      error instanceof DOMException &&
-      error.name === 'AbortError'
-    ) {
+    if (isTimeoutError(error)) {
       throw new Error(
         '测试超时：请检查网络、API 网关可用性，或稍后重试'
       );
@@ -349,10 +308,10 @@ export async function testCustomBeanRecognitionConfig(
 // 健康检查
 async function checkAPIHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_CONFIG.baseURL}/health`, {
+    const response = await fetchWithTimeout(`${API_CONFIG.baseURL}/health`, {
       method: 'GET',
       credentials: 'include',
-      signal: AbortSignal.timeout(5000),
+      timeoutMs: 5000,
     });
     return response.ok;
   } catch {

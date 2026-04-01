@@ -1,4 +1,4 @@
-import { API_CONFIG } from './beanRecognition';
+import { API_CONFIG } from './shared/config';
 
 // 年度报告统计数据接口
 export interface YearlyReportStats {
