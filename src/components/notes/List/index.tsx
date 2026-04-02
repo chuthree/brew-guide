@@ -52,7 +52,14 @@ import {
 import ListView from './ListView';
 import { SortOption, DateGroupingMode } from '../types';
 import { exportSelectedNotes } from '../Share/NotesExporter';
-import { extractExtractionTime, sortNotes, getNoteDeleteDisplay } from '../utils';
+import {
+  buildNoteSearchableTexts,
+  extractExtractionTime,
+  getNoteDeleteDisplay,
+  scoreSearchMatch,
+  sortNotes,
+  splitSearchTerms,
+} from '../utils';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import {
@@ -371,101 +378,61 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     return calculateTotalCoffeeConsumption(filteredNotes);
   }, [filteredNotes]);
 
+  const coffeeBeanLookup = useMemo(
+    () => new Map(coffeeBeans.map(bean => [bean.id, bean])),
+    [coffeeBeans]
+  );
+
+  const searchableFilteredNotes = useMemo(
+    () =>
+      filteredNotes.map(note => ({
+        note,
+        searchableTexts: buildNoteSearchableTexts(note, coffeeBeanLookup),
+      })),
+    [filteredNotes, coffeeBeanLookup]
+  );
+
   // 搜索过滤逻辑 - 在Hook之后定义以避免循环依赖
   const searchFilteredNotes = useMemo(() => {
     if (!isSearching || !searchQuery.trim()) return filteredNotes;
 
-    const query = searchQuery.toLowerCase().trim();
-    const queryTerms = query.split(/\s+/).filter(term => term.length > 0);
+    const queryTerms = splitSearchTerms(searchQuery);
+    if (queryTerms.length === 0) return filteredNotes;
 
-    // 从原始笔记开始搜索，而不是从已排序的filteredNotes
-    const baseNotes = filteredNotes.length > 0 ? filteredNotes : notes;
-    const notesWithScores = baseNotes.map((note: BrewingNote) => {
-      const equipment = note.equipment?.toLowerCase() || '';
-      const method = note.method?.toLowerCase() || '';
-      const beanName = note.coffeeBeanInfo?.name?.toLowerCase() || '';
-      const roastLevel = note.coffeeBeanInfo?.roastLevel?.toLowerCase() || '';
-      const notes = note.notes?.toLowerCase() || '';
-      const coffee = note.params?.coffee?.toLowerCase() || '';
-      const water = note.params?.water?.toLowerCase() || '';
-      const ratio = note.params?.ratio?.toLowerCase() || '';
-      const grindSize = note.params?.grindSize?.toLowerCase() || '';
-      const temp = note.params?.temp?.toLowerCase() || '';
-      const tasteInfo =
-        `酸度${note.taste?.acidity || 0} 甜度${note.taste?.sweetness || 0} 苦度${note.taste?.bitterness || 0} 醇厚度${note.taste?.body || 0}`.toLowerCase();
-      const dateInfo = note.timestamp
-        ? new Date(note.timestamp).toLocaleDateString()
-        : '';
-      const totalTime = note.totalTime ? `${note.totalTime}秒` : '';
-      const ratingText = note.rating
-        ? `评分${note.rating} ${note.rating}分 ${note.rating}星`.toLowerCase()
-        : '';
+    const matchingNotes = searchableFilteredNotes
+      .map(({ note, searchableTexts }) => ({
+        note,
+        ...scoreSearchMatch(queryTerms, searchableTexts),
+      }))
+      .filter(item => item.matches);
 
-      const searchableTexts = [
-        { text: beanName, weight: 3 },
-        { text: equipment, weight: 2 },
-        { text: method, weight: 2 },
-        { text: notes, weight: 2 },
-        { text: roastLevel, weight: 1 },
-        { text: coffee, weight: 1 },
-        { text: water, weight: 1 },
-        { text: ratio, weight: 1 },
-        { text: grindSize, weight: 1 },
-        { text: temp, weight: 1 },
-        { text: tasteInfo, weight: 1 },
-        { text: dateInfo, weight: 1 },
-        { text: totalTime, weight: 1 },
-        { text: ratingText, weight: 1 },
-      ];
+    const matchedNotesOnly = matchingNotes.map(item => item.note);
 
-      let score = 0;
-      let allTermsMatch = true;
+    if (searchSortOption) {
+      return sortNotes(matchedNotesOnly, searchSortOption);
+    }
 
-      for (const term of queryTerms) {
-        const termMatches = searchableTexts.some(({ text }) =>
-          text.includes(term)
+    const sortedByCurrentOption = sortNotes(matchedNotesOnly, sortOption);
+    const sortOrder = new Map(
+      sortedByCurrentOption.map((note, index) => [note.id, index])
+    );
+
+    return [...matchingNotes]
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+
+        return (
+          (sortOrder.get(a.note.id) ?? 0) - (sortOrder.get(b.note.id) ?? 0)
         );
-        if (!termMatches) {
-          allTermsMatch = false;
-          break;
-        }
-
-        for (const { text, weight } of searchableTexts) {
-          if (text.includes(term)) {
-            score += weight;
-            if (text === term) {
-              score += weight * 2;
-            }
-            if (text.startsWith(term)) {
-              score += weight;
-            }
-          }
-        }
-      }
-
-      return { note, score, matches: allTermsMatch };
-    });
-
-    type NoteWithScore = { note: BrewingNote; score: number; matches: boolean };
-    const matchingNotes = notesWithScores.filter(
-      (item: NoteWithScore) => item.matches
-    );
-
-    // 获取匹配的笔记
-    const matchedNotesOnly = matchingNotes.map(
-      (item: NoteWithScore) => item.note
-    );
-
-    // 对搜索结果应用排序选项：优先使用搜索排序，否则使用普通排序
-    const effectiveSortOption = searchSortOption || sortOption;
-    const sortedMatchedNotes = sortNotes(matchedNotesOnly, effectiveSortOption);
-
-    return sortedMatchedNotes;
+      })
+      .map(item => item.note);
   }, [
     isSearching,
     searchQuery,
     filteredNotes,
-    notes,
+    searchableFilteredNotes,
     searchSortOption,
     sortOption,
   ]);

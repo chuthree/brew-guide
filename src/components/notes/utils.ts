@@ -5,12 +5,18 @@ import {
   getEquipmentIdByName,
 } from '@/lib/utils/equipmentUtils';
 import type { BrewingNote } from '@/lib/core/config';
+import type { CoffeeBean } from '@/types/app';
 import { SortOption, SORT_OPTIONS } from './types';
 import { db } from '@/lib/core/db';
 
 interface NoteDeleteDisplay {
   itemName: string;
   itemSuffix?: string;
+}
+
+export interface WeightedSearchText {
+  text: string;
+  weight: number;
 }
 
 const NOTE_DELETE_NAME_MAX_LENGTH = 18;
@@ -56,6 +62,157 @@ export const getNoteDeleteDisplay = (note: BrewingNote): NoteDeleteDisplay => {
   }
 
   return { itemName: '此笔记' };
+};
+
+type CoffeeBeanLookup = ReadonlyMap<
+  string,
+  Pick<CoffeeBean, 'id' | 'name' | 'roaster'>
+>;
+
+const normalizeSearchText = (text: string | undefined | null): string => {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+
+  return text.trim().toLowerCase();
+};
+
+export const splitSearchTerms = (query: string): string[] => {
+  return normalizeSearchText(query)
+    .split(/\s+/)
+    .map(term => term.trim())
+    .filter(Boolean);
+};
+
+export const resolveNoteCoffeeBeanInfo = (
+  note: Pick<BrewingNote, 'coffeeBeanInfo' | 'beanId'>,
+  coffeeBeanLookup?: CoffeeBeanLookup
+): { name: string; roaster?: string } | null => {
+  const linkedBean = note.beanId ? coffeeBeanLookup?.get(note.beanId) : null;
+  const snapshot = note.coffeeBeanInfo;
+
+  const name = snapshot?.name?.trim() || linkedBean?.name?.trim() || '';
+  const roaster = snapshot?.roaster?.trim() || linkedBean?.roaster?.trim();
+
+  if (!name && !roaster) {
+    return null;
+  }
+
+  return {
+    name,
+    ...(roaster ? { roaster } : {}),
+  };
+};
+
+const dedupeWeightedSearchTexts = (
+  searchableTexts: WeightedSearchText[]
+): WeightedSearchText[] => {
+  const weightByText = new Map<string, number>();
+
+  searchableTexts.forEach(({ text, weight }) => {
+    const normalizedText = normalizeSearchText(text);
+
+    if (!normalizedText) {
+      return;
+    }
+
+    const currentWeight = weightByText.get(normalizedText) ?? 0;
+    if (weight > currentWeight) {
+      weightByText.set(normalizedText, weight);
+    }
+  });
+
+  return Array.from(weightByText.entries()).map(([text, weight]) => ({
+    text,
+    weight,
+  }));
+};
+
+export const buildNoteSearchableTexts = (
+  note: BrewingNote,
+  coffeeBeanLookup?: CoffeeBeanLookup
+): WeightedSearchText[] => {
+  const resolvedBeanInfo = resolveNoteCoffeeBeanInfo(note, coffeeBeanLookup);
+  const localeDateText = note.timestamp
+    ? new Date(note.timestamp).toLocaleDateString()
+    : '';
+  const absoluteDateText = note.timestamp
+    ? formatDateAbsolute(note.timestamp)
+    : '';
+  const totalTimeText = note.totalTime ? `${note.totalTime}秒` : '';
+  const ratingText = note.rating
+    ? `评分${note.rating} ${note.rating}分 ${note.rating}星`
+    : '';
+  const tasteText = `酸度${note.taste?.acidity || 0} 甜度${note.taste?.sweetness || 0} 苦度${note.taste?.bitterness || 0} 醇厚度${note.taste?.body || 0}`;
+
+  return dedupeWeightedSearchTexts([
+    { text: note.coffeeBeanInfo?.name || '', weight: 3 },
+    { text: resolvedBeanInfo?.name || '', weight: 3 },
+    { text: resolvedBeanInfo?.roaster || '', weight: 3 },
+    {
+      text:
+        resolvedBeanInfo?.name && resolvedBeanInfo?.roaster
+          ? `${resolvedBeanInfo.roaster} ${resolvedBeanInfo.name}`
+          : '',
+      weight: 3,
+    },
+    {
+      text:
+        resolvedBeanInfo?.name && resolvedBeanInfo?.roaster
+          ? `${resolvedBeanInfo.roaster}/${resolvedBeanInfo.name}`
+          : '',
+      weight: 3,
+    },
+    { text: note.coffeeBeanInfo?.roastLevel || '', weight: 1 },
+    { text: note.equipment || '', weight: 2 },
+    { text: note.method || '', weight: 2 },
+    { text: note.notes || '', weight: 2 },
+    { text: note.params?.coffee || '', weight: 1 },
+    { text: note.params?.water || '', weight: 1 },
+    { text: note.params?.ratio || '', weight: 1 },
+    { text: note.params?.grindSize || '', weight: 1 },
+    { text: note.params?.temp || '', weight: 1 },
+    { text: tasteText, weight: 1 },
+    { text: localeDateText, weight: 1 },
+    { text: absoluteDateText, weight: 1 },
+    { text: totalTimeText, weight: 1 },
+    { text: ratingText, weight: 1 },
+  ]);
+};
+
+export const scoreSearchMatch = (
+  queryTerms: string[],
+  searchableTexts: WeightedSearchText[]
+): { matches: boolean; score: number } => {
+  if (queryTerms.length === 0) {
+    return { matches: true, score: 0 };
+  }
+
+  let score = 0;
+
+  for (const term of queryTerms) {
+    const matchedTexts = searchableTexts.filter(({ text }) =>
+      text.includes(term)
+    );
+
+    if (matchedTexts.length === 0) {
+      return { matches: false, score: 0 };
+    }
+
+    matchedTexts.forEach(({ text, weight }) => {
+      score += weight;
+
+      if (text === term) {
+        score += weight * 2;
+      }
+
+      if (text.startsWith(term)) {
+        score += weight;
+      }
+    });
+  }
+
+  return { matches: true, score };
 };
 
 /**
