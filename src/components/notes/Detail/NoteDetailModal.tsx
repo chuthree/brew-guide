@@ -969,6 +969,8 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                 </InfoRow>
               )}
 
+              <div className="border-t border-dashed border-neutral-200/50 dark:border-neutral-800/50"></div>
+
               {/* 时间 */}
               <InfoRow label="时间">
                 <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
