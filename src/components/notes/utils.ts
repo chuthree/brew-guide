@@ -5,9 +5,13 @@ import {
   getEquipmentIdByName,
 } from '@/lib/utils/equipmentUtils';
 import type { BrewingNote } from '@/lib/core/config';
-import type { CoffeeBean } from '@/types/app';
 import { SortOption, SORT_OPTIONS } from './types';
 import { db } from '@/lib/core/db';
+import {
+  getBeanUnitPrice,
+  resolveNoteCoffeeBeanInfo,
+  type CoffeeBeanLookup,
+} from '@/lib/notes/noteDisplay';
 
 interface NoteDeleteDisplay {
   itemName: string;
@@ -28,8 +32,12 @@ const getNoteTextPreview = (text: string): string => {
   return `${normalized.slice(0, NOTE_DELETE_NAME_MAX_LENGTH)}...`;
 };
 
-export const getNoteDeleteDisplay = (note: BrewingNote): NoteDeleteDisplay => {
-  const beanName = note.coffeeBeanInfo?.name?.trim() || '未知咖啡豆';
+export const getNoteDeleteDisplay = (
+  note: BrewingNote,
+  coffeeBeanLookup?: CoffeeBeanLookup
+): NoteDeleteDisplay => {
+  const resolvedBeanInfo = resolveNoteCoffeeBeanInfo(note, coffeeBeanLookup);
+  const beanName = resolvedBeanInfo?.name?.trim() || '未知咖啡豆';
 
   if (note.source === 'quick-decrement') {
     return {
@@ -57,17 +65,12 @@ export const getNoteDeleteDisplay = (note: BrewingNote): NoteDeleteDisplay => {
     return { itemName: notePreview };
   }
 
-  if (note.coffeeBeanInfo?.name?.trim()) {
-    return { itemName: note.coffeeBeanInfo.name.trim() };
+  if (resolvedBeanInfo?.name?.trim()) {
+    return { itemName: resolvedBeanInfo.name.trim() };
   }
 
   return { itemName: '此笔记' };
 };
-
-type CoffeeBeanLookup = ReadonlyMap<
-  string,
-  Pick<CoffeeBean, 'id' | 'name' | 'roaster'>
->;
 
 const normalizeSearchText = (text: string | undefined | null): string => {
   if (!text || typeof text !== 'string') {
@@ -82,26 +85,6 @@ export const splitSearchTerms = (query: string): string[] => {
     .split(/\s+/)
     .map(term => term.trim())
     .filter(Boolean);
-};
-
-export const resolveNoteCoffeeBeanInfo = (
-  note: Pick<BrewingNote, 'coffeeBeanInfo' | 'beanId'>,
-  coffeeBeanLookup?: CoffeeBeanLookup
-): { name: string; roaster?: string } | null => {
-  const linkedBean = note.beanId ? coffeeBeanLookup?.get(note.beanId) : null;
-  const snapshot = note.coffeeBeanInfo;
-
-  const name = snapshot?.name?.trim() || linkedBean?.name?.trim() || '';
-  const roaster = snapshot?.roaster?.trim() || linkedBean?.roaster?.trim();
-
-  if (!name && !roaster) {
-    return null;
-  }
-
-  return {
-    name,
-    ...(roaster ? { roaster } : {}),
-  };
 };
 
 const dedupeWeightedSearchTexts = (
@@ -448,13 +431,23 @@ export const getCoffeeBeanUnitPrice = async (
 
 // 计算笔记消费的函数
 export const calculateNoteCost = async (note: BrewingNote): Promise<number> => {
-  if (!note.params?.coffee || !note.coffeeBeanInfo?.name) return 0;
+  if (!note.params?.coffee) return 0;
 
   const coffeeMatch = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
   if (!coffeeMatch) return 0;
 
   const coffeeAmount = parseFloat(coffeeMatch[0]);
   if (isNaN(coffeeAmount)) return 0;
+
+  if (note.beanId) {
+    const linkedBean = await db.coffeeBeans.get(note.beanId);
+    const linkedBeanUnitPrice = getBeanUnitPrice(linkedBean);
+    if (linkedBeanUnitPrice > 0) {
+      return coffeeAmount * linkedBeanUnitPrice;
+    }
+  }
+
+  if (!note.coffeeBeanInfo?.name) return 0;
 
   const unitPrice = await getCoffeeBeanUnitPrice(note.coffeeBeanInfo.name);
   return coffeeAmount * unitPrice;
@@ -474,13 +467,21 @@ const calculateTotalCost = async (notes: BrewingNote[]): Promise<number> => {
     if (
       note.source === 'quick-decrement' &&
       note.quickDecrementAmount &&
-      note.coffeeBeanInfo?.name
+      (note.beanId || note.coffeeBeanInfo?.name)
     ) {
       const coffeeAmount = note.quickDecrementAmount;
       if (!isNaN(coffeeAmount)) {
-        const unitPrice = await getCoffeeBeanUnitPrice(
-          note.coffeeBeanInfo.name
-        );
+        let unitPrice = 0;
+
+        if (note.beanId) {
+          const linkedBean = await db.coffeeBeans.get(note.beanId);
+          unitPrice = getBeanUnitPrice(linkedBean);
+        }
+
+        if (unitPrice <= 0 && note.coffeeBeanInfo?.name) {
+          unitPrice = await getCoffeeBeanUnitPrice(note.coffeeBeanInfo.name);
+        }
+
         totalCost += coffeeAmount * unitPrice;
       }
     } else {

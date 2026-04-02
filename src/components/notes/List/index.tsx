@@ -62,12 +62,17 @@ import {
 } from '../utils';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
 import {
   isSameEquipment,
   getEquipmentIdByName,
 } from '@/lib/utils/equipmentUtils';
 import ArtisticShareDrawer from '../Share/ArtisticShareDrawer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
+import {
+  buildCoffeeBeanLookup,
+  buildEquipmentNameMap,
+} from '@/lib/notes/noteDisplay';
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   isOpen,
@@ -262,13 +267,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
   // 🔥 从 Zustand Store 订阅咖啡豆数据
   const coffeeBeans = useCoffeeBeanStore(state => state.beans);
-
-  const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>(
-    {}
+  const customEquipments = useCustomEquipmentStore(state => state.equipments);
+  const customEquipmentInitialized = useCustomEquipmentStore(
+    state => state.initialized
   );
-  const [customEquipments, setCustomEquipments] = useState<
-    import('@/lib/core/config').CustomEquipment[]
-  >([]);
+  const loadEquipments = useCustomEquipmentStore(state => state.loadEquipments);
+
+  const equipmentNames = useMemo(
+    () => buildEquipmentNameMap(customEquipments),
+    [customEquipments]
+  );
+  const coffeeBeanLookup = useMemo(
+    () => buildCoffeeBeanLookup(coffeeBeans),
+    [coffeeBeans]
+  );
 
   // 预览容器引用
   const notesContainerRef = useRef<HTMLDivElement>(null);
@@ -378,11 +390,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     return calculateTotalCoffeeConsumption(filteredNotes);
   }, [filteredNotes]);
 
-  const coffeeBeanLookup = useMemo(
-    () => new Map(coffeeBeans.map(bean => [bean.id, bean])),
-    [coffeeBeans]
-  );
-
   const searchableFilteredNotes = useMemo(
     () =>
       filteredNotes.map(note => ({
@@ -451,31 +458,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 计算总咖啡消耗量
   const totalCoffeeConsumption = useRef(0);
 
-  // 🔥 组件挂载时加载笔记数据和器具名称（不依赖 isOpen）
+  // 🔥 组件挂载时加载笔记数据和器具数据（不依赖 isOpen）
   useEffect(() => {
-    // 初始化加载笔记
-    loadNotes();
-
-    // 加载器具名称
-    const loadEquipmentData = async () => {
-      const { equipmentList } = await import('@/lib/core/config');
-      const { loadCustomEquipments } =
-        await import('@/lib/stores/customEquipmentStore');
-      const customEquips = await loadCustomEquipments();
-      setCustomEquipments(customEquips);
-
-      const namesMap: Record<string, string> = {};
-      equipmentList.forEach(equipment => {
-        namesMap[equipment.id] = equipment.name;
-      });
-      customEquips.forEach(equipment => {
-        namesMap[equipment.id] = equipment.name;
-      });
-      setEquipmentNames(namesMap);
-    };
-
-    loadEquipmentData();
-  }, [loadNotes]);
+    void loadNotes();
+    if (!customEquipmentInitialized) {
+      void loadEquipments();
+    }
+  }, [customEquipmentInitialized, loadEquipments, loadNotes]);
 
   // 计算总消耗量
   useEffect(() => {
@@ -507,7 +496,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       }
 
       const { itemName: noteName, itemSuffix: noteSuffix } =
-        getNoteDeleteDisplay(noteToDelete);
+        getNoteDeleteDisplay(noteToDelete, coffeeBeanLookup);
 
       // 显示删除确认抽屉
       setDeleteConfirmData({ noteId, noteName, noteSuffix });
@@ -1140,7 +1129,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             isDateImageFlowMode={isDateImageFlowMode}
             scrollParentRef={notesContainerRef.current || undefined}
             equipmentNames={equipmentNames}
-            beanPrices={{}}
             coffeeBeans={coffeeBeans}
             settings={settings}
           />

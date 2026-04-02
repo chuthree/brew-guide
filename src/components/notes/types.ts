@@ -1,5 +1,6 @@
 import type { BrewingNote } from '@/lib/core/config';
 import type { BrewingNoteData, CoffeeBean } from '@/types/app';
+import type { CoffeeBeanLookup } from '@/lib/notes/noteDisplay';
 
 // 排序类型定义
 export const SORT_OPTIONS = {
@@ -58,7 +59,6 @@ export interface NoteItemProps {
   onEdit: (note: BrewingNote) => void;
   onDelete: (noteId: string) => void;
   onCopy?: (noteId: string) => void;
-  unitPriceCache: Record<string, number>;
   isShareMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void;
@@ -72,6 +72,7 @@ export interface NoteItemProps {
   ) => Array<{ id: string; label: string; value: number }>;
   // 咖啡豆列表（用于获取完整的咖啡豆信息，包括图片）
   coffeeBeans?: CoffeeBean[];
+  coffeeBeanLookup?: CoffeeBeanLookup;
 }
 
 // 筛选标签页属性

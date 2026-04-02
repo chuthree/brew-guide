@@ -7,6 +7,10 @@ import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { formatDateAbsolute } from '../utils';
+import {
+  buildCoffeeBeanLookup,
+  resolveNoteCoffeeBeanInfo,
+} from '@/lib/notes/noteDisplay';
 
 interface ChangeRecordNoteItemProps {
   note: BrewingNote;
@@ -41,6 +45,7 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
     if (!note.beanId) return null;
     return beans.find(b => b.id === note.beanId) || null;
   }, [note.beanId, beans]);
+  const coffeeBeanLookup = useMemo(() => buildCoffeeBeanLookup(beans), [beans]);
 
   // 获取烘焙记录中的熟豆信息（用于显示格式化的熟豆名称）
   const roastingRecord = note.changeRecord?.roastingRecord;
@@ -50,13 +55,10 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
   }, [roastingRecord?.roastedBeanId, beans]);
 
   // 构建用于显示的咖啡豆信息，优先使用笔记中的 roaster，否则从关联咖啡豆获取
-  const displayBeanInfo = useMemo(() => {
-    if (!note.coffeeBeanInfo) return null;
-    return {
-      name: note.coffeeBeanInfo.name,
-      roaster: note.coffeeBeanInfo.roaster || linkedBean?.roaster,
-    };
-  }, [note.coffeeBeanInfo, linkedBean?.roaster]);
+  const displayBeanInfo = useMemo(
+    () => resolveNoteCoffeeBeanInfo(note, coffeeBeanLookup, linkedBean),
+    [note, coffeeBeanLookup, linkedBean]
+  );
 
   // 构建用于显示的熟豆信息（烘焙记录用）
   const displayRoastedBeanInfo = useMemo(() => {

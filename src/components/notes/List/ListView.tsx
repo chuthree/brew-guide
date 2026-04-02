@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { BrewingNote } from '@/lib/core/config';
 import NoteItem from './NoteItem';
@@ -10,7 +10,12 @@ import GalleryView from './GalleryView';
 import DateImageFlowView from './DateImageFlowView';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { SettingsOptions } from '@/components/settings/Settings';
-import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import {
+  buildCoffeeBeanLookup,
+  getBeanUnitPrice,
+  resolveNoteBean,
+  resolveNoteEquipmentName,
+} from '@/lib/notes/noteDisplay';
 
 // 定义组件属性接口
 interface NotesListViewProps {
@@ -29,9 +34,8 @@ interface NotesListViewProps {
   isDateImageFlowMode?: boolean;
   // 外部滚动容器（Virtuoso 使用）
   scrollParentRef?: HTMLElement;
-  // 设备名称映射和价格缓存
+  // 设备名称映射
   equipmentNames?: Record<string, string>;
-  beanPrices?: Record<string, number>;
   // 咖啡豆列表
   coffeeBeans?: import('@/types/app').CoffeeBean[];
   // 设置
@@ -54,11 +58,9 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   isDateImageFlowMode = false,
   scrollParentRef,
   equipmentNames = {},
-  beanPrices = {},
   coffeeBeans = [],
   settings,
 }) => {
-  const [unitPriceCache] = useState<Record<string, number>>(beanPrices);
   const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(
     settings?.defaultExpandChangeLog ?? false
   );
@@ -75,6 +77,10 @@ const NotesListView: React.FC<NotesListViewProps> = ({
 
   // 🔥 直接使用 preFilteredNotes，不需要内部 state
   const notes = preFilteredNotes || [];
+  const coffeeBeanLookup = useMemo(
+    () => buildCoffeeBeanLookup(coffeeBeans),
+    [coffeeBeans]
+  );
 
   // 判断笔记是否为变动记录 - 纯函数，不需要缓存
   const isChangeRecord = useCallback(
@@ -144,20 +150,9 @@ const NotesListView: React.FC<NotesListViewProps> = ({
 
   const handleImageFlowNoteClick = useCallback(
     (note: BrewingNote) => {
-      const equipmentName =
-        note.equipment && note.equipment.trim() !== ''
-          ? equipmentNames[note.equipment] || note.equipment
-          : '未知器具';
-
-      const beanInfo = note.beanId
-        ? coffeeBeans.find(bean => bean.id === note.beanId)
-        : null;
-
-      const beanName = formatNoteBeanDisplayName(note.coffeeBeanInfo, {
-        roasterFieldEnabled: settings?.roasterFieldEnabled ?? true,
-        roasterSeparator: settings?.roasterSeparator ?? '/',
-      });
-      const beanUnitPrice = beanName ? beanPrices[beanName] || 0 : 0;
+      const equipmentName = resolveNoteEquipmentName(note, equipmentNames);
+      const beanInfo = resolveNoteBean(note, coffeeBeanLookup);
+      const beanUnitPrice = getBeanUnitPrice(beanInfo);
 
       window.dispatchEvent(
         new CustomEvent('noteDetailOpened', {
@@ -170,7 +165,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
         })
       );
     },
-    [beanPrices, coffeeBeans, equipmentNames, settings]
+    [coffeeBeanLookup, equipmentNames, settings]
   );
 
   if (notes.length === 0) {
@@ -287,7 +282,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             onEdit={onNoteClick}
             onDelete={onDeleteNote}
             onCopy={onCopyNote}
-            unitPriceCache={unitPriceCache}
             isShareMode={isShareMode}
             isSelected={selectedNotes.includes(note.id)}
             onToggleSelect={handleToggleSelect}
@@ -295,6 +289,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
             isLast={index === regularNotes.length - 1}
             getValidTasteRatings={getValidTasteRatings}
             coffeeBeans={coffeeBeans}
+            coffeeBeanLookup={coffeeBeanLookup}
           />
         )}
       />

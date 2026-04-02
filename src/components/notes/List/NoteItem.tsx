@@ -7,13 +7,18 @@ import { ChevronRight } from 'lucide-react';
 import { NoteItemProps } from '../types';
 import { formatDate, formatRating } from '../utils';
 import {
-  formatNoteBeanDisplayName,
   getBeanDisplayInitial,
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { openImageViewer } from '@/lib/ui/imageViewer';
+import {
+  getBeanUnitPrice,
+  resolveNoteBean,
+  resolveNoteBeanDisplayName,
+  resolveNoteEquipmentName,
+} from '@/lib/notes/noteDisplay';
 
 // 动态导入 RatingRadarDrawer 组件
 const RatingRadarDrawer = dynamic(
@@ -50,7 +55,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
   onEdit,
   onDelete,
   onCopy,
-  unitPriceCache,
   isShareMode = false,
   isSelected = false,
   onToggleSelect,
@@ -58,6 +62,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
   isLast = false,
   getValidTasteRatings,
   coffeeBeans = [],
+  coffeeBeanLookup,
 }) => {
   // 获取烘焙商相关设置
   const roasterFieldEnabled = useSettingsStore(
@@ -119,21 +124,25 @@ const NoteItem: React.FC<NoteItemProps> = ({
   const hasNotes = Boolean(note.notes);
   const isSingleNoteImage = noteImages.length === 1;
   const equipmentName =
-    note.equipment && note.equipment.trim() !== ''
-      ? equipmentNames[note.equipment] || note.equipment
-      : '未知器具';
+    resolveNoteEquipmentName(note, equipmentNames);
 
-  // 使用格式化函数动态显示咖啡豆名称
-  const beanName = formatNoteBeanDisplayName(note.coffeeBeanInfo, {
-    roasterFieldEnabled,
-    roasterSeparator,
-  });
-  const beanUnitPrice = beanName ? unitPriceCache[beanName] || 0 : 0;
+  // 获取完整的咖啡豆信息（包括图片），优先使用实时关联的咖啡豆
+  const beanInfo =
+    resolveNoteBean(note, coffeeBeanLookup) ||
+    (note.beanId
+      ? coffeeBeans.find(bean => bean.id === note.beanId) || null
+      : null);
 
-  // 获取完整的咖啡豆信息（包括图片）
-  const beanInfo = note.beanId
-    ? coffeeBeans.find(bean => bean.id === note.beanId)
-    : null;
+  const beanName = resolveNoteBeanDisplayName(
+    note,
+    coffeeBeanLookup,
+    {
+      roasterFieldEnabled,
+      roasterSeparator,
+    },
+    beanInfo
+  );
+  const beanUnitPrice = getBeanUnitPrice(beanInfo);
 
   // 获取烘焙商图片
   const roasterLogo = React.useMemo(() => {
@@ -430,91 +439,4 @@ const NoteItem: React.FC<NoteItemProps> = ({
   );
 };
 
-// 只有当 props 真正变化时才重新渲染
-export default React.memo(NoteItem, (prevProps, nextProps) => {
-  // UI 状态检查
-  if (
-    prevProps.isSelected !== nextProps.isSelected ||
-    prevProps.isShareMode !== nextProps.isShareMode ||
-    prevProps.isLast !== nextProps.isLast
-  ) {
-    return false; // props 变化，需要重新渲染
-  }
-
-  // 笔记 ID 检查
-  if (prevProps.note.id !== nextProps.note.id) {
-    return false; // 不同的笔记，需要重新渲染
-  }
-
-  // 🔥 关键修复：检查笔记内容是否变化（深度比较）
-  // 这样可以捕获笔记编辑后的内容变化
-  const prevNote = prevProps.note;
-  const nextNote = nextProps.note;
-
-  // 检查可能变化的字段
-  if (
-    prevNote.timestamp !== nextNote.timestamp ||
-    prevNote.rating !== nextNote.rating ||
-    prevNote.notes !== nextNote.notes ||
-    prevNote.equipment !== nextNote.equipment ||
-    prevNote.method !== nextNote.method ||
-    prevNote.image !== nextNote.image ||
-    prevNote.images?.length !== nextNote.images?.length ||
-    (prevNote.images &&
-      nextNote.images &&
-      prevNote.images.some((img, i) => img !== nextNote.images![i])) ||
-    prevNote.totalTime !== nextNote.totalTime
-  ) {
-    return false; // 笔记内容变化，需要重新渲染
-  }
-
-  // 检查咖啡豆信息
-  if (
-    prevNote.coffeeBeanInfo?.name !== nextNote.coffeeBeanInfo?.name ||
-    prevNote.coffeeBeanInfo?.roastLevel !== nextNote.coffeeBeanInfo?.roastLevel
-  ) {
-    return false;
-  }
-
-  // 检查参数
-  if (
-    prevNote.params?.coffee !== nextNote.params?.coffee ||
-    prevNote.params?.water !== nextNote.params?.water ||
-    prevNote.params?.ratio !== nextNote.params?.ratio ||
-    prevNote.params?.grindSize !== nextNote.params?.grindSize ||
-    prevNote.params?.temp !== nextNote.params?.temp
-  ) {
-    return false;
-  }
-
-  // 检查口感 - 🔥 修复：检查所有评分维度（包括自定义维度）
-  const prevTasteKeys = Object.keys(prevNote.taste || {});
-  const nextTasteKeys = Object.keys(nextNote.taste || {});
-
-  // 检查评分维度数量是否变化
-  if (prevTasteKeys.length !== nextTasteKeys.length) {
-    return false;
-  }
-
-  // 检查每个评分维度的值是否变化
-  for (const key of nextTasteKeys) {
-    if (prevNote.taste?.[key] !== nextNote.taste?.[key]) {
-      return false;
-    }
-  }
-
-  // 检查设备名称映射
-  const prevEquipmentName = prevNote.equipment
-    ? prevProps.equipmentNames[prevNote.equipment]
-    : undefined;
-  const nextEquipmentName = nextNote.equipment
-    ? nextProps.equipmentNames[nextNote.equipment]
-    : undefined;
-
-  if (prevEquipmentName !== nextEquipmentName) {
-    return false;
-  }
-
-  // 所有检查都通过，不需要重新渲染
-  return true;
-});
+export default NoteItem;

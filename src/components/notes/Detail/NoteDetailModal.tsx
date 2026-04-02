@@ -20,11 +20,19 @@ import {
 import { ChevronLeft, ChevronRight, Pen } from 'lucide-react';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { openImageViewer } from '@/lib/ui/imageViewer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import RatingRadarDrawer from './RatingRadarDrawer';
+import {
+  buildCoffeeBeanLookup,
+  buildEquipmentNameMap,
+  resolveNoteBean,
+  resolveNoteBeanDisplayName,
+  resolveNoteEquipmentName,
+} from '@/lib/notes/noteDisplay';
 
 // 信息行组件
 interface InfoRowProps {
@@ -58,9 +66,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   isOpen,
   note: initialNote,
   onClose,
-  equipmentName = '未知器具',
-  beanUnitPrice = 0,
-  beanInfo = null,
+  equipmentName: _equipmentName = '未知器具',
+  beanUnitPrice: _beanUnitPrice = 0,
+  beanInfo: initialBeanInfo = null,
   onEdit,
   onDelete,
   onCopy,
@@ -76,10 +84,40 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
   // 从 store 获取实时笔记，避免详情页停留时数据快照过期
   const allNotes = useBrewingNoteStore(state => state.notes);
+  const coffeeBeans = useCoffeeBeanStore(state => state.beans);
+  const coffeeBeansInitialized = useCoffeeBeanStore(state => state.initialized);
+  const loadBeans = useCoffeeBeanStore(state => state.loadBeans);
+  const customEquipments = useCustomEquipmentStore(state => state.equipments);
+  const customEquipmentInitialized = useCustomEquipmentStore(
+    state => state.initialized
+  );
+  const loadEquipments = useCustomEquipmentStore(state => state.loadEquipments);
   const note = useMemo(() => {
     if (!initialNote?.id) return initialNote;
     return allNotes.find(n => n.id === initialNote.id) || initialNote;
   }, [allNotes, initialNote]);
+  const coffeeBeanLookup = useMemo(
+    () => buildCoffeeBeanLookup(coffeeBeans),
+    [coffeeBeans]
+  );
+  const equipmentNames = useMemo(
+    () => buildEquipmentNameMap(customEquipments),
+    [customEquipments]
+  );
+  const beanInfo = useMemo(
+    () =>
+      note
+        ? resolveNoteBean(note, coffeeBeanLookup, initialBeanInfo)
+        : initialBeanInfo,
+    [note, coffeeBeanLookup, initialBeanInfo]
+  );
+  const equipmentName = useMemo(
+    () =>
+      note
+        ? resolveNoteEquipmentName(note, equipmentNames)
+        : '未知器具',
+    [note, equipmentNames]
+  );
 
   const [imageError, setImageError] = useState(false);
   const [beanImageError, setBeanImageError] = useState(false); // 咖啡豆图片加载错误状态
@@ -121,6 +159,24 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
   // 使用评分维度hook
   const { getValidTasteRatings } = useFlavorDimensions();
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (!coffeeBeansInitialized) {
+      void loadBeans();
+    }
+
+    if (!customEquipmentInitialized) {
+      void loadEquipments();
+    }
+  }, [
+    coffeeBeansInitialized,
+    customEquipmentInitialized,
+    isOpen,
+    loadBeans,
+    loadEquipments,
+  ]);
 
   // 处理显示/隐藏动画
   useEffect(() => {
@@ -327,11 +383,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     state => state.settings.roasterSeparator
   );
 
-  // 使用格式化函数动态显示咖啡豆名称
-  const beanName = formatNoteBeanDisplayName(note?.coffeeBeanInfo, {
-    roasterFieldEnabled,
-    roasterSeparator,
-  });
+  const beanName = note
+    ? resolveNoteBeanDisplayName(
+        note,
+        coffeeBeanLookup,
+        {
+          roasterFieldEnabled,
+          roasterSeparator,
+        },
+        beanInfo
+      )
+    : '';
 
   const validTasteRatings = useMemo(
     () => (note ? getValidTasteRatings(note.taste) : []),
@@ -360,12 +422,12 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const deleteDisplay = useMemo(
     () =>
       note
-        ? getNoteDeleteDisplay(note)
+        ? getNoteDeleteDisplay(note, coffeeBeanLookup)
         : {
             itemName: '此笔记',
             itemSuffix: undefined,
           },
-    [note]
+    [note, coffeeBeanLookup]
   );
 
   // 构建标题文本 - 仅在有咖啡豆时显示

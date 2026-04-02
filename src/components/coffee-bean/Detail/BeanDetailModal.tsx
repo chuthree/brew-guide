@@ -1,16 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 
 import { CoffeeBean } from '@/types/app';
-import { BrewingNote } from '@/lib/core/config';
 import { defaultSettings } from '@/components/settings/Settings';
 import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
-import { getEquipmentName } from '@/components/notes/utils';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
+import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
 import { RoastingManager } from '@/lib/managers/roastingManager';
 import {
   getChildPageStyle,
@@ -26,6 +25,7 @@ import { openImageViewer } from '@/lib/ui/imageViewer';
 import { showToast } from '@/components/common/feedback/LightToast';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import RemainingEditor from '@/components/coffee-bean/List/components/RemainingEditor';
+import { buildEquipmentNameMap } from '@/lib/notes/noteDisplay';
 
 import {
   BeanDetailModalProps,
@@ -126,6 +126,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const allBeans = useCoffeeBeanStore(state => state.beans);
   const allNotes = useBrewingNoteStore(state => state.notes);
   const loadNotes = useBrewingNoteStore(state => state.loadNotes);
+  const customEquipments = useCustomEquipmentStore(state => state.equipments);
+  const customEquipmentInitialized = useCustomEquipmentStore(
+    state => state.initialized
+  );
+  const loadEquipments = useCustomEquipmentStore(state => state.loadEquipments);
 
   // 关联豆子
   const relatedBeans = React.useMemo(() => {
@@ -140,9 +145,18 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   // 状态
   const [imageError, setImageError] = useState(false);
   const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
-  const [relatedNotes, setRelatedNotes] = useState<BrewingNote[]>([]);
-  const [equipmentNames, setEquipmentNames] = useState<Record<string, string>>(
-    {}
+  const relatedNotes = useMemo(
+    () =>
+      bean?.id
+        ? [...allNotes.filter(note => note.beanId === bean.id)].sort(
+            (a, b) => b.timestamp - a.timestamp
+          )
+        : [],
+    [allNotes, bean?.id]
+  );
+  const equipmentNames = useMemo(
+    () => buildEquipmentNameMap(customEquipments),
+    [customEquipments]
   );
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -177,8 +191,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       setPrintModalOpen(false);
       const timer = setTimeout(() => {
         setShouldRender(false);
-        setRelatedNotes([]);
-        setEquipmentNames({});
       }, 350);
       return () => clearTimeout(timer);
     }
@@ -272,26 +284,23 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     },
   });
 
-  // 数据刷新
-  const refreshBeans = useCoffeeBeanStore(state => state.refreshBeans);
-
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleCoffeeBeanDataChanged = () => refreshBeans();
+    if (allNotes.length === 0) {
+      void loadNotes();
+    }
 
-    window.addEventListener(
-      'coffeeBeanDataChanged',
-      handleCoffeeBeanDataChanged as EventListener
-    );
-
-    return () => {
-      window.removeEventListener(
-        'coffeeBeanDataChanged',
-        handleCoffeeBeanDataChanged as EventListener
-      );
-    };
-  }, [isOpen, refreshBeans]);
+    if (!customEquipmentInitialized) {
+      void loadEquipments();
+    }
+  }, [
+    allNotes.length,
+    customEquipmentInitialized,
+    isOpen,
+    loadEquipments,
+    loadNotes,
+  ]);
 
   // 图片错误重置
   useEffect(() => {
@@ -327,84 +336,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       setRoasterLogo(null);
     }
   }, [bean?.name, bean?.image, bean?.roaster, roasterSettings]);
-
-  // 加载相关记录（优化：避免切换时闪烁，关闭时由动画 useEffect 清空）
-  useEffect(() => {
-    // 如果没有 bean 或未打开，直接返回，不清空数据
-    // 数据清空由动画 useEffect 在 350ms 后处理
-    if (!bean?.id || !isOpen) {
-      return;
-    }
-
-    let isCancelled = false;
-
-    const loadRelatedNotes = async () => {
-      try {
-        let notesSource = allNotes;
-
-        // 如果 store 为空，尝试加载
-        if (notesSource.length === 0) {
-          await loadNotes();
-          notesSource = useBrewingNoteStore.getState().notes;
-        }
-
-        if (isCancelled) return;
-
-        const beanNotes = notesSource.filter(note => note.beanId === bean.id);
-        const sortedNotes = [...beanNotes].sort(
-          (a, b) => b.timestamp - a.timestamp
-        );
-
-        // 立即设置笔记数据
-        setRelatedNotes(sortedNotes);
-
-        // 异步加载设备名称
-        const equipmentIds = Array.from(
-          new Set(
-            sortedNotes
-              .map(note => note.equipment)
-              .filter((equipment): equipment is string => !!equipment)
-          )
-        );
-
-        if (equipmentIds.length > 0) {
-          const namesMap: Record<string, string> = {};
-
-          // 并行获取所有设备名称
-          const results = await Promise.allSettled(
-            equipmentIds.map(async equipmentId => {
-              const name = await getEquipmentName(equipmentId);
-              return { equipmentId, name };
-            })
-          );
-
-          if (isCancelled) return;
-
-          results.forEach(result => {
-            if (result.status === 'fulfilled') {
-              namesMap[result.value.equipmentId] = result.value.name;
-            }
-          });
-
-          setEquipmentNames(namesMap);
-        } else {
-          // 如果没有设备，清空设备名称映射
-          setEquipmentNames({});
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          console.error('加载冲煮记录失败:', error);
-          setRelatedNotes([]);
-        }
-      }
-    };
-
-    loadRelatedNotes();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [bean?.id, isOpen, allNotes, loadNotes]);
 
   // 通用字段更新
   const handleUpdateField = async (updates: Partial<CoffeeBean>) => {

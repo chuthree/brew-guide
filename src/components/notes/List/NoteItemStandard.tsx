@@ -4,9 +4,14 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { NoteItemProps } from '../types';
 import { formatDateAbsolute, formatRating } from '../utils';
-import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { openImageViewer } from '@/lib/ui/imageViewer';
+import {
+  getBeanUnitPrice,
+  resolveNoteBean,
+  resolveNoteBeanDisplayName,
+  resolveNoteEquipmentName,
+} from '@/lib/notes/noteDisplay';
 
 // 标准列表样式的笔记项组件
 const NoteItemStandard: React.FC<NoteItemProps> = ({
@@ -15,13 +20,13 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
   onEdit,
   onDelete,
   onCopy,
-  unitPriceCache,
   isShareMode = false,
   isSelected = false,
   onToggleSelect,
   isLast = false,
   getValidTasteRatings,
   coffeeBeans = [],
+  coffeeBeanLookup,
 }) => {
   // 获取烘焙商相关设置
   const roasterFieldEnabled = useSettingsStore(
@@ -41,21 +46,24 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
   const hasTasteRatings = validTasteRatings.length > 0;
   const hasNotes = Boolean(note.notes);
   const equipmentName =
-    note.equipment && note.equipment.trim() !== ''
-      ? equipmentNames[note.equipment] || note.equipment
-      : '未知器具';
+    resolveNoteEquipmentName(note, equipmentNames);
 
-  // 使用格式化函数动态显示咖啡豆名称
-  const beanName = formatNoteBeanDisplayName(note.coffeeBeanInfo, {
-    roasterFieldEnabled,
-    roasterSeparator,
-  });
-  const beanUnitPrice = beanName ? unitPriceCache[beanName] || 0 : 0;
+  const beanInfo =
+    resolveNoteBean(note, coffeeBeanLookup) ||
+    (note.beanId
+      ? coffeeBeans.find(bean => bean.id === note.beanId) || null
+      : null);
 
-  // 获取完整的咖啡豆信息（包括图片）
-  const beanInfo = note.beanId
-    ? coffeeBeans.find(bean => bean.id === note.beanId)
-    : null;
+  const beanName = resolveNoteBeanDisplayName(
+    note,
+    coffeeBeanLookup,
+    {
+      roasterFieldEnabled,
+      roasterSeparator,
+    },
+    beanInfo
+  );
+  const beanUnitPrice = getBeanUnitPrice(beanInfo);
 
   // 判断是否为意式咖啡笔记
   const isEspresso = React.useMemo(() => {
@@ -311,78 +319,4 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
   );
 };
 
-// 只有当 props 真正变化时才重新渲染
-export default React.memo(NoteItemStandard, (prevProps, nextProps) => {
-  // UI 状态检查
-  if (
-    prevProps.isSelected !== nextProps.isSelected ||
-    prevProps.isShareMode !== nextProps.isShareMode ||
-    prevProps.isLast !== nextProps.isLast
-  ) {
-    return false; // props 变化，需要重新渲染
-  }
-
-  // 笔记 ID 检查
-  if (prevProps.note.id !== nextProps.note.id) {
-    return false; // 不同的笔记，需要重新渲染
-  }
-
-  // 关键字段变化检查
-  const prevNote = prevProps.note;
-  const nextNote = nextProps.note;
-
-  if (
-    prevNote.timestamp !== nextNote.timestamp ||
-    prevNote.rating !== nextNote.rating ||
-    prevNote.notes !== nextNote.notes ||
-    prevNote.equipment !== nextNote.equipment ||
-    prevNote.method !== nextNote.method ||
-    prevNote.image !== nextNote.image ||
-    prevNote.totalTime !== nextNote.totalTime
-  ) {
-    return false;
-  }
-
-  if (
-    prevNote.coffeeBeanInfo?.name !== nextNote.coffeeBeanInfo?.name ||
-    prevNote.coffeeBeanInfo?.roastLevel !== nextNote.coffeeBeanInfo?.roastLevel
-  ) {
-    return false;
-  }
-
-  if (
-    prevNote.params?.coffee !== nextNote.params?.coffee ||
-    prevNote.params?.water !== nextNote.params?.water ||
-    prevNote.params?.ratio !== nextNote.params?.ratio ||
-    prevNote.params?.grindSize !== nextNote.params?.grindSize ||
-    prevNote.params?.temp !== nextNote.params?.temp
-  ) {
-    return false;
-  }
-
-  const prevTasteKeys = Object.keys(prevNote.taste || {});
-  const nextTasteKeys = Object.keys(nextNote.taste || {});
-
-  if (prevTasteKeys.length !== nextTasteKeys.length) {
-    return false;
-  }
-
-  for (const key of nextTasteKeys) {
-    if (prevNote.taste?.[key] !== nextNote.taste?.[key]) {
-      return false;
-    }
-  }
-
-  const prevEquipmentName = prevNote.equipment
-    ? prevProps.equipmentNames[prevNote.equipment]
-    : undefined;
-  const nextEquipmentName = nextNote.equipment
-    ? nextProps.equipmentNames[nextNote.equipment]
-    : undefined;
-
-  if (prevEquipmentName !== nextEquipmentName) {
-    return false;
-  }
-
-  return true;
-});
+export default NoteItemStandard;
