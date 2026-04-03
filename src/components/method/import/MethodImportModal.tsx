@@ -6,6 +6,7 @@ import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { useCopy } from '@/lib/hooks/useCopy';
 import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
+import { METHOD_RECOGNITION_PROMPT } from '@/lib/constants/methodRecognitionPrompt';
 import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
 import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
@@ -75,32 +76,6 @@ interface MethodImportModalProps {
   existingMethods?: Method[];
   customEquipment?: CustomEquipment;
 }
-
-// 冲煮方案识别提示词
-const METHOD_RECOGNITION_PROMPT = `你是OCR工具，提取图片中的咖啡冲煮方案，直接返回JSON。
-
-关键规则：
-1. 每个注水动作是独立步骤，duration=注水时长（秒）
-2. 焖蒸/等待必须拆成两步：注水步骤 + wait步骤
-   例：焖蒸30秒注水50g(10秒注完) → 注水10秒50g + 等待20秒
-3. wait步骤只有label和duration字段，无water和detail
-
-JSON格式：
-{
-  "name":"方案名",
-  "params":{
-    "coffee":"咖啡粉量如15g",
-    "water":"总水量如225g",
-    "ratio":"粉水比如1:15",
-    "grindSize":"研磨度如中细",
-    "temp":"水温如92°C",
-    "stages":[
-      {"pourType":"center|circle|ice|bypass|wait|other","label":"步骤名","water":"注水量(纯数字)","duration":秒数,"detail":"说明"}
-    ]
-  }
-}
-
-规则：数值不带单位/不编造/不确定不填/直接返回JSON`;
 
 // 步骤类型定义
 type ImportStep = 'main' | 'json-input' | 'recognizing';
@@ -275,11 +250,11 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
             `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           name: methodData.name as string,
           params: {
-            coffee: (params.coffee as string) || '15g',
-            water: (params.water as string) || '225g',
-            ratio: (params.ratio as string) || '1:15',
-            grindSize: (params.grindSize as string) || '中细',
-            temp: (params.temp as string) || '92°C',
+            coffee: (params.coffee as string) || '',
+            water: (params.water as string) || '',
+            ratio: (params.ratio as string) || '',
+            grindSize: (params.grindSize as string) || '',
+            temp: (params.temp as string) || '',
             stages: params.stages as Method['params']['stages'],
           },
         };
@@ -336,7 +311,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
   // 识别单张图片的核心函数
   const recognizeSingleImage = useCallback(
-    async (file: File, _imageUrl: string): Promise<{ data: unknown }> => {
+    async (file: File): Promise<{ data: unknown }> => {
       let methodData: unknown;
 
       if (USE_MOCK_API) {
@@ -390,7 +365,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       setIsRecognizing(true);
 
       try {
-        const { data: methodData } = await recognizeSingleImage(file, imageUrl);
+        const { data: methodData } = await recognizeSingleImage(file);
         // 成功后 handleImportData 会调用 handleClose 处理状态重置和资源清理
         await handleImportData(methodData);
       } catch (error) {

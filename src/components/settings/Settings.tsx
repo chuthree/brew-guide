@@ -220,7 +220,7 @@ const Settings: React.FC<SettingsProps> = ({
       const timer = setTimeout(() => setShouldRender(false), 350);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen]);19
 
   // 关闭处理
   const handleClose = () => {

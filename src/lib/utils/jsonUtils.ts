@@ -351,11 +351,11 @@ export function parseMethodFromJson(jsonString: string): Method | null {
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       name: methodName,
       params: {
-        coffee: parsedData.params?.coffee || '15g',
-        water: parsedData.params?.water || '225g',
-        ratio: parsedData.params?.ratio || '1:15',
-        grindSize: parsedData.params?.grindSize || '中细',
-        temp: parsedData.params?.temp || '93°C',
+        coffee: parsedData.params?.coffee || '',
+        water: parsedData.params?.water || '',
+        ratio: parsedData.params?.ratio || '',
+        grindSize: parsedData.params?.grindSize || '',
+        temp: parsedData.params?.temp || '',
         stages: [],
       },
     };

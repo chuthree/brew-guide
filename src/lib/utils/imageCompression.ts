@@ -149,16 +149,24 @@ export async function compressImage(
 export async function smartCompress(file: File): Promise<File> {
   const fileSizeKB = file.size / 1024;
 
-  // AI 识别专用：强力压缩到 100KB 以内，提升识别速度
+  // 小图或文字截图很容易被过度压缩后影响 OCR，保留原图更稳
+  if (file.size <= 300 * 1024) {
+    console.log(
+      `📸 原始图片大小: ${fileSizeKB.toFixed(1)}KB，已足够小，跳过压缩以保留文字细节`
+    );
+    return file;
+  }
+
+  // AI 识别专用：大图再做压缩，兼顾速度和可读性
   console.log(
     `📸 原始图片大小: ${fileSizeKB.toFixed(1)}KB，开始压缩以加速 AI 识别...`
   );
 
-  // 所有图片都压缩，目标是 80-100KB
+  // 对大图压到更温和的体积，避免小字和细线信息损失过多
   return compressImage(file, {
-    maxWidth: 1024,
-    maxHeight: 1024,
-    quality: 0.75,
-    maxSizeMB: 0.1, // 限制在 100KB 以内
+    maxWidth: 1600,
+    maxHeight: 1600,
+    quality: 0.82,
+    maxSizeMB: 0.6,
   });
 }

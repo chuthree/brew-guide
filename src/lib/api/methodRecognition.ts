@@ -36,9 +36,25 @@ export async function recognizeMethodImage(imageFile: File): Promise<any> {
     console.log('📥 收到响应，状态码:', response.status);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: '请求失败' }));
-      console.error('❌ 响应错误:', error);
-      throw new Error(error.error || `请求失败: ${response.status}`);
+      const rawText = await response.text().catch(() => '');
+      let error: { error?: string; message?: string } = {};
+
+      if (rawText) {
+        try {
+          error = JSON.parse(rawText);
+        } catch {
+          error = { error: rawText.slice(0, 300) };
+        }
+      }
+
+      console.error('❌ 响应错误:', {
+        status: response.status,
+        body: error,
+        rawText: rawText.slice(0, 300),
+      });
+      throw new Error(
+        error.error || error.message || `请求失败: ${response.status}`
+      );
     }
 
     const result = await response.json();
