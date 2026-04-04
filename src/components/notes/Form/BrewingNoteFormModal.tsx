@@ -45,6 +45,7 @@ import {
   type BrewingNoteDraftData,
   type BrewingNoteDraftSession,
 } from './brewingNoteDraft';
+import { findCoffeeBeanByIdentity } from '@/lib/utils/coffeeBeanUtils';
 
 interface BrewingNoteFormModalProps {
   showForm: boolean;
@@ -282,8 +283,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }
 
     if (draftSession.note.coffeeBeanInfo?.name) {
-      const foundByName = coffeeBeans.find(
-        bean => bean.name === draftSession.note.coffeeBeanInfo?.name
+      const foundByName = findCoffeeBeanByIdentity(
+        coffeeBeans,
+        draftSession.note.coffeeBeanInfo
       );
       if (foundByName) {
         updateDraftNote(prev => ({

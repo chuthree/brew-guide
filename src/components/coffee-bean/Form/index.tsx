@@ -34,9 +34,10 @@ import {
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
 import {
+  getBeanRoasterName,
   extractRoasterFromName,
   removeRoasterFromName,
-} from '@/lib/utils/beanVarietyUtils';
+} from '@/lib/utils/coffeeBeanUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
 interface CoffeeBeanFormProps {
@@ -273,9 +274,12 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       // 根据是否启用独立烘焙商字段决定如何获取烘焙商名称
       // 启用独立输入时：只从 roaster 字段获取
       // 关闭独立输入时：从名称中提取
-      const roasterName = settings.roasterFieldEnabled
-        ? bean.roaster
-        : extractRoasterFromName(bean.name);
+      const roasterName = getBeanRoasterName(
+        bean,
+        settings.roasterFieldEnabled && settings.roasterSeparator === '/'
+          ? '/'
+          : ' '
+      );
 
       if (roasterName) {
         const logo = getRoasterLogoSync(roasterName);
@@ -337,7 +341,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         const customFlavorPeriod =
           settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
 
-        const roasterName = extractRoasterFromName(bean.name) ?? undefined;
+        const roasterName = getBeanRoasterName(bean) || undefined;
 
         const { startDay, endDay } = getDefaultFlavorPeriodByRoastLevelSync(
           bean.roastLevel,
@@ -493,9 +497,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
             currentSettings.customFlavorPeriod ||
             defaultSettings.customFlavorPeriod;
 
-          const roasterName = bean.name
-            ? (extractRoasterFromName(bean.name) ?? undefined)
-            : undefined;
+          const roasterName = getBeanRoasterName(bean) || undefined;
 
           const flavorPeriod = getDefaultFlavorPeriodByRoastLevelSync(
             currentRoastLevel,

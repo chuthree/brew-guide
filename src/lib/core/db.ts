@@ -11,7 +11,9 @@ export interface GrindSizeHistory {
   timestamp: number;
   equipment?: string; // 器具名称
   method?: string; // 冲煮方案名称
-  coffeeBean?: string; // 咖啡豆名称
+  coffeeBean?: string; // @deprecated 旧版仅存储显示名称
+  coffeeBeanName?: string; // 咖啡豆名称
+  coffeeBeanRoaster?: string; // 烘焙商名称
 }
 
 /**

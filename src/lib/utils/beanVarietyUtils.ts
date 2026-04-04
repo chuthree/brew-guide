@@ -5,6 +5,11 @@
 
 import type { CoffeeBean } from '@/types/app';
 import { calculateFlavorInfo } from './flavorPeriodUtils';
+import {
+  extractRoasterFromDisplayName,
+  getBeanRoasterName,
+  removeRoasterFromDisplayName,
+} from './coffeeBeanUtils';
 
 /**
  * 检查文本是否为有效值
@@ -436,10 +441,13 @@ export interface RoasterSettings {
  */
 export const getRoasterName = (
   bean: CoffeeBean,
-  _settings?: RoasterSettings
+  settings?: RoasterSettings
 ): string => {
-  // 直接返回 roaster 字段值，如果没有则返回空字符串
-  return bean.roaster || '';
+  const separator =
+    settings?.roasterFieldEnabled && settings.roasterSeparator === '/'
+      ? '/'
+      : ' ';
+  return getBeanRoasterName(bean, separator);
 };
 
 /**
@@ -477,37 +485,7 @@ export const extractRoasterFromName = (
   beanName: string,
   separator: ' ' | '/' = ' '
 ): string | null => {
-  if (!beanName || typeof beanName !== 'string') {
-    return null;
-  }
-
-  const trimmedName = beanName.trim();
-  if (!trimmedName) {
-    return null;
-  }
-
-  // 根据分隔符分割名称
-  const parts =
-    separator === '/' ? trimmedName.split('/') : trimmedName.split(/\s+/);
-
-  // 如果只有一个词，无法区分是烘焙商还是咖啡豆名称
-  if (parts.length === 1) {
-    return null;
-  }
-
-  // 取第一个词作为烘焙商
-  const firstPart = parts[0];
-
-  // 过滤掉一些明显不是烘焙商的词
-  const excludeWords = ['豆', 'bean', 'beans', '手冲', '意式', '咖啡豆'];
-  if (
-    excludeWords.some(word => firstPart.toLowerCase() === word.toLowerCase()) ||
-    firstPart.toLowerCase() === 'coffee'
-  ) {
-    return null;
-  }
-
-  return firstPart;
+  return extractRoasterFromDisplayName(beanName, separator);
 };
 
 /**
@@ -520,41 +498,7 @@ export const removeRoasterFromName = (
   beanName: string,
   separator: ' ' | '/' = ' '
 ): string => {
-  if (!beanName || typeof beanName !== 'string') {
-    return beanName || '';
-  }
-
-  const trimmedName = beanName.trim();
-  if (!trimmedName) {
-    return '';
-  }
-
-  // 根据分隔符分割名称
-  const parts =
-    separator === '/' ? trimmedName.split('/') : trimmedName.split(/\s+/);
-
-  // 如果只有一个词，无法分离烘焙商和名称
-  if (parts.length === 1) {
-    return trimmedName;
-  }
-
-  // 检查第一个词是否是烘焙商（使用与 extractRoasterFromName 相同的逻辑）
-  const firstPart = parts[0];
-  const excludeWords = ['豆', 'bean', 'beans', '手冲', '意式', '咖啡豆'];
-
-  // 如果第一个词是排除词，则整个名称都是咖啡豆名称
-  if (
-    excludeWords.some(word => firstPart.toLowerCase() === word.toLowerCase()) ||
-    firstPart.toLowerCase() === 'coffee'
-  ) {
-    return trimmedName;
-  }
-
-  // 移除第一个词（烘焙商），返回剩余部分
-  const remainingParts = parts.slice(1);
-  return separator === '/'
-    ? remainingParts.join('/')
-    : remainingParts.join(' ');
+  return removeRoasterFromDisplayName(beanName, separator);
 };
 
 /**
@@ -571,9 +515,9 @@ export const extractUniqueRoasters = (
 
   // 统计每个烘焙商的咖啡豆数量
   beans.forEach(bean => {
-    // 直接使用 roaster 字段，跳过没有烘焙商的豆子
-    if (bean.roaster) {
-      roasterCount.set(bean.roaster, (roasterCount.get(bean.roaster) || 0) + 1);
+    const roaster = getBeanRoasterName(bean);
+    if (roaster) {
+      roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
     }
   });
 
@@ -602,9 +546,9 @@ export const extractUniqueRoasters = (
 export const beanHasRoaster = (
   bean: ExtendedCoffeeBean,
   roaster: string,
-  _settings?: RoasterSettings
+  settings?: RoasterSettings
 ): boolean => {
-  return bean.roaster === roaster;
+  return getRoasterName(bean, settings) === roaster;
 };
 
 /**
@@ -619,8 +563,9 @@ export const getBeanDisplayInitial = (
   if (!bean) return '豆';
 
   // 优先使用烘焙商首字母
-  if (bean.roaster && bean.roaster.trim()) {
-    return bean.roaster.trim().charAt(0);
+  const roaster = getBeanRoasterName(bean);
+  if (roaster) {
+    return roaster.charAt(0);
   }
 
   // 其次使用名称首字母

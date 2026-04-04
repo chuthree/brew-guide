@@ -12,6 +12,7 @@ import {
   resolveNoteCoffeeBeanInfo,
   type CoffeeBeanLookup,
 } from '@/lib/notes/noteDisplay';
+import { findCoffeeBeanByIdentity } from '@/lib/utils/coffeeBeanUtils';
 
 interface NoteDeleteDisplay {
   itemName: string;
@@ -400,28 +401,18 @@ export const calculateTotalCoffeeConsumption = (
 
 // 获取咖啡豆单位价格的函数
 export const getCoffeeBeanUnitPrice = async (
-  beanName: string
+  beanName: string,
+  roaster?: string
 ): Promise<number> => {
   try {
     // 直接从 DB 获取所有咖啡豆
     const beans = await db.coffeeBeans.toArray();
-    // 查找匹配的咖啡豆
-    const bean = beans.find(b => b.name === beanName);
-    if (bean && bean.price && bean.capacity) {
-      // 价格格式可能是"100元"或"100" - 使用原子组避免回溯
-      const priceMatch = bean.price.match(/(\d+(?:\.\d+)?)/);
-      const capacityMatch = bean.capacity.match(/(\d+(?:\.\d+)?)/);
-
-      if (priceMatch && capacityMatch) {
-        const price = parseFloat(priceMatch[0]);
-        const capacity = parseFloat(capacityMatch[0]);
-
-        if (!isNaN(price) && !isNaN(capacity) && capacity > 0) {
-          // 返回每克价格
-          return price / capacity;
-        }
-      }
+    const bean = findCoffeeBeanByIdentity(beans, { name: beanName, roaster });
+    const unitPrice = getBeanUnitPrice(bean);
+    if (unitPrice > 0) {
+      return unitPrice;
     }
+
     return 0; // 找不到匹配的咖啡豆或无法计算价格时返回0
   } catch (error) {
     console.error('获取咖啡豆单位价格出错:', error);
@@ -449,7 +440,10 @@ export const calculateNoteCost = async (note: BrewingNote): Promise<number> => {
 
   if (!note.coffeeBeanInfo?.name) return 0;
 
-  const unitPrice = await getCoffeeBeanUnitPrice(note.coffeeBeanInfo.name);
+  const unitPrice = await getCoffeeBeanUnitPrice(
+    note.coffeeBeanInfo.name,
+    note.coffeeBeanInfo.roaster
+  );
   return coffeeAmount * unitPrice;
 };
 
@@ -479,7 +473,10 @@ const calculateTotalCost = async (notes: BrewingNote[]): Promise<number> => {
         }
 
         if (unitPrice <= 0 && note.coffeeBeanInfo?.name) {
-          unitPrice = await getCoffeeBeanUnitPrice(note.coffeeBeanInfo.name);
+          unitPrice = await getCoffeeBeanUnitPrice(
+            note.coffeeBeanInfo.name,
+            note.coffeeBeanInfo.roaster
+          );
         }
 
         totalCost += coffeeAmount * unitPrice;

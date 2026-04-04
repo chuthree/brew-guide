@@ -2381,12 +2381,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     // 咖啡豆选择
     const handleCoffeeBeanSelection = async (e: CustomEvent) => {
-      const { beanName } = e.detail;
-      if (!beanName) return;
+      const { beanId, beanName, roaster } = e.detail;
+      if (!beanId && !beanName) return;
 
       try {
-        const { getBeanByName } = await import('@/lib/stores/coffeeBeanStore');
-        const bean = await getBeanByName(beanName);
+        const { getCoffeeBeanStore, getBeanByName } = await import(
+          '@/lib/stores/coffeeBeanStore'
+        );
+
+        const bean =
+          (beanId ? getCoffeeBeanStore().getBeanById(beanId) : null) ||
+          (beanName ? await getBeanByName(beanName, roaster) : null);
+
         if (bean) {
           handleCoffeeBeanSelect(bean.id, bean);
         }

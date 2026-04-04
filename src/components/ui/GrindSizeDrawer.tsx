@@ -10,6 +10,11 @@ import { getEquipmentNameById } from '@/lib/utils/equipmentUtils';
 import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
 import { useCustomMethodStore } from '@/lib/stores/customMethodStore';
 import { brewingMethods } from '@/lib/core/config';
+import {
+  formatNoteBeanDisplayName,
+  type RoasterSettings,
+} from '@/lib/utils/beanVarietyUtils';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 interface GrindSizeDrawerProps {
   /** 是否打开抽屉 */
@@ -39,12 +44,22 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
   const { grinders, updateGrinder } = useGrinderStore();
   const { equipments: customEquipments } = useCustomEquipmentStore();
   const { methodsByEquipment } = useCustomMethodStore();
+  const roasterFieldEnabled = useSettingsStore(
+    state => state.settings.roasterFieldEnabled
+  );
+  const roasterSeparator = useSettingsStore(
+    state => state.settings.roasterSeparator
+  );
   const [selectedGrinderId, setSelectedGrinderId] = useState<string | null>(
     initialGrinderId || null
   );
   const [editValue, setEditValue] = useState('');
   const [showGrinderSelector, setShowGrinderSelector] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const roasterSettings: RoasterSettings = {
+    roasterFieldEnabled,
+    roasterSeparator,
+  };
 
   // 选中的磨豆机
   const selectedGrinder = grinders.find(g => g.id === selectedGrinderId);
@@ -257,8 +272,13 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
                       ? getMethodName(item.method, item.equipment)
                       : '';
 
-                    // 获取咖啡豆名称
-                    const coffeeBeanName = item.coffeeBean || '';
+                    const coffeeBeanName = formatNoteBeanDisplayName(
+                      {
+                        name: item.coffeeBeanName || item.coffeeBean || '',
+                        roaster: item.coffeeBeanRoaster,
+                      },
+                      roasterSettings
+                    );
 
                     // 智能截断：限制每个字段的最大长度，确保所有字段都能显示
                     const truncateText = (text: string, maxLength: number) => {

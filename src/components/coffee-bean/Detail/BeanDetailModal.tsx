@@ -549,7 +549,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           setTimeout(() => {
             document.dispatchEvent(
               new CustomEvent(BREWING_EVENTS.SELECT_COFFEE_BEAN, {
-                detail: { beanName: bean.name },
+                detail: {
+                  beanId: bean.id,
+                  beanName: bean.name,
+                  roaster: bean.roaster,
+                },
               })
             );
           }, 100);

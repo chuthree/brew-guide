@@ -10,6 +10,10 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { db, Grinder } from '@/lib/core/db';
 import { nanoid } from 'nanoid';
+import {
+  normalizeCoffeeBeanName,
+  normalizeCoffeeBeanRoaster,
+} from '@/lib/utils/coffeeBeanUtils';
 
 // 重新导出 Grinder 类型和历史记录类型
 export type { Grinder, GrindSizeHistory } from '@/lib/core/db';
@@ -280,19 +284,57 @@ function dispatchGrinderChanged(): void {
  */
 export const getGrinderStore = () => useGrinderStore.getState();
 
+type GrinderCoffeeBeanContext =
+  | string
+  | {
+      name?: string;
+      roaster?: string;
+    }
+  | undefined;
+
+const normalizeGrinderCoffeeBeanContext = (
+  coffeeBean?: GrinderCoffeeBeanContext
+) => {
+  if (!coffeeBean) {
+    return {
+      coffeeBean: undefined,
+      coffeeBeanName: undefined,
+      coffeeBeanRoaster: undefined,
+    };
+  }
+
+  if (typeof coffeeBean === 'string') {
+    const legacyDisplayName = normalizeCoffeeBeanName(coffeeBean);
+    return {
+      coffeeBean: legacyDisplayName || undefined,
+      coffeeBeanName: legacyDisplayName || undefined,
+      coffeeBeanRoaster: undefined,
+    };
+  }
+
+  const coffeeBeanName = normalizeCoffeeBeanName(coffeeBean.name);
+  const coffeeBeanRoaster = normalizeCoffeeBeanRoaster(coffeeBean.roaster);
+
+  return {
+    coffeeBean: coffeeBeanName || undefined,
+    coffeeBeanName: coffeeBeanName || undefined,
+    coffeeBeanRoaster: coffeeBeanRoaster || undefined,
+  };
+};
+
 /**
  * 同步磨豆机刻度
  * @param grindSize 研磨度字符串，如 "C40 24"
  * @param equipment 器具名称（可选）
  * @param method 冲煮方案名称（可选）
- * @param coffeeBean 咖啡豆名称（可选）
+ * @param coffeeBean 咖啡豆上下文（可选）
  * @returns 是否成功同步
  */
 export async function syncGrinderScale(
   grindSize: string,
   equipment?: string,
   method?: string,
-  coffeeBean?: string
+  coffeeBean?: GrinderCoffeeBeanContext
 ): Promise<boolean> {
   const store = useGrinderStore.getState();
 
@@ -318,6 +360,8 @@ export async function syncGrinderScale(
     );
 
     if (grinder) {
+      const coffeeBeanContext = normalizeGrinderCoffeeBeanContext(coffeeBean);
+
       // 更新历史记录，包含器具、方案和咖啡豆信息
       const history = grinder.grindSizeHistory || [];
       const newHistory = [
@@ -326,7 +370,7 @@ export async function syncGrinderScale(
           timestamp: Date.now(),
           equipment,
           method,
-          coffeeBean,
+          ...coffeeBeanContext,
         },
         ...history.filter(h => h.grindSize !== parsed.scale), // 去重
       ].slice(0, 3); // 最多保留3条

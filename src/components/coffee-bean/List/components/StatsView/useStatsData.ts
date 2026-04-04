@@ -10,6 +10,7 @@ import {
   BrewingDetailItem,
 } from './types';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { findCoffeeBeanByIdentity } from '@/lib/utils/coffeeBeanUtils';
 
 // ============================================================================
 // 类型定义
@@ -78,10 +79,7 @@ const findBeanForNote = (
     const bean = beans.find(b => b.id === note.beanId);
     if (bean) return bean;
   }
-  if (note.coffeeBeanInfo?.name) {
-    return beans.find(b => b.name === note.coffeeBeanInfo?.name) || null;
-  }
-  return null;
+  return findCoffeeBeanByIdentity(beans, note.coffeeBeanInfo);
 };
 
 /** 计算笔记的花费 */

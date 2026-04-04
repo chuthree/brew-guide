@@ -4,6 +4,8 @@ import { CoffeeBean } from '@/types/app';
 import { db } from '@/lib/core/db';
 import { nanoid } from 'nanoid';
 import {
+  findCoffeeBeanByDisplayName,
+  findCoffeeBeanByIdentity,
   hasInvalidFlavorValue,
   normalizeCoffeeBean,
   normalizeCoffeeBeans,
@@ -376,11 +378,22 @@ export async function getRatedBeansByType(
 }
 
 /**
- * 根据名称获取咖啡豆
+ * 根据名称/显示名称获取咖啡豆
  */
-export async function getBeanByName(name: string): Promise<CoffeeBean | null> {
+export async function getBeanByName(
+  name: string,
+  roaster?: string
+): Promise<CoffeeBean | null> {
   const store = getCoffeeBeanStore();
   const beans =
     store.beans.length > 0 ? store.beans : await db.coffeeBeans.toArray();
-  return beans.find(bean => bean.name === name) || null;
+
+  if (roaster) {
+    return findCoffeeBeanByIdentity(beans, { name, roaster });
+  }
+
+  return (
+    findCoffeeBeanByDisplayName(beans, name) ??
+    findCoffeeBeanByIdentity(beans, { name })
+  );
 }

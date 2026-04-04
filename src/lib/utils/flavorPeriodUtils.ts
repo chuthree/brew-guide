@@ -5,7 +5,7 @@ import {
   getRoasterConfigSync,
   getSettingsStore,
 } from '@/lib/stores/settingsStore';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import { getBeanRoasterName } from '@/lib/utils/coffeeBeanUtils';
 
 // 赏味期信息接口
 export interface FlavorInfo {
@@ -227,7 +227,7 @@ export const calculateFlavorInfo = (
 
   // 如果没有自定义值，则根据烘焙度设置默认值
   if (startDay === 0 && endDay === 0) {
-    const roasterName = extractRoasterFromName(bean.name) ?? undefined;
+    const roasterName = getBeanRoasterName(bean) || undefined;
     const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
       bean.roastLevel || '',
       customFlavorPeriod,

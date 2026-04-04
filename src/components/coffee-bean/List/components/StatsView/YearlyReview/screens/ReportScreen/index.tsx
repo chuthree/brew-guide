@@ -14,7 +14,7 @@ import {
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
 
 // 每日生成次数限制
 const DAILY_LIMIT = 5;
@@ -106,8 +106,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
     // 烘焙商统计
     const roasterCount = new Map<string, number>();
     beans.forEach(bean => {
-      // 优先使用 roaster 字段，否则从名称中提取
-      const roaster = bean.roaster || extractRoasterFromName(bean.name);
+      const roaster = getRoasterName(bean);
       if (roaster) {
         roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
       }

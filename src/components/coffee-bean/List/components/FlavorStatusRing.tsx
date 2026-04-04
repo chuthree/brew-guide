@@ -5,7 +5,7 @@ import {
   getFlavorPeriodSettings,
   getDefaultFlavorPeriodByRoastLevelSync,
 } from '@/lib/utils/flavorPeriodUtils';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import { getBeanRoasterName } from '@/lib/utils/coffeeBeanUtils';
 import type { CoffeeBean } from '@/types/app';
 import { cn } from '@/lib/utils/classNameUtils';
 
@@ -216,7 +216,7 @@ const FlavorStatusRing: React.FC<FlavorStatusRingProps> = ({
 
   if (startDay === 0 && endDay === 0) {
     const { customFlavorPeriod } = getFlavorPeriodSettings();
-    const roasterName = extractRoasterFromName(bean.name) ?? undefined;
+    const roasterName = getBeanRoasterName(bean) || undefined;
     const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
       bean.roastLevel || '',
       customFlavorPeriod,

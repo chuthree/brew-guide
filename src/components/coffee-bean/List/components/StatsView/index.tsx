@@ -29,7 +29,7 @@ import {
   getBeanProcesses,
   getBeanFlavors,
   getBeanEstates,
-  extractRoasterFromName,
+  getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
 import { ExtendedCoffeeBean } from '../../types';
 import GreenBeanStatsView from './GreenBeanStatsView';
@@ -711,8 +711,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
   const roasterStats = useMemo(() => {
     const roasterCount = new Map<string, number>();
     filteredBeans.forEach(bean => {
-      // 优先使用 roaster 字段，否则从名称中提取
-      const roaster = bean.roaster || extractRoasterFromName(bean.name);
+      const roaster = getRoasterName(bean);
       if (roaster) {
         roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
       }

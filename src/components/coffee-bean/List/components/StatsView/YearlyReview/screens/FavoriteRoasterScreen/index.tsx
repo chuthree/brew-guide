@@ -4,7 +4,7 @@ import React, { useRef, useMemo, useState, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import type { CoffeeBean } from '@/types/app';
-import { extractRoasterFromName } from '@/lib/utils/beanVarietyUtils';
+import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
 import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
 
 // 预加载图片的工具函数
@@ -55,8 +55,7 @@ const FavoriteRoasterScreen: React.FC<FavoriteRoasterScreenProps> = ({
     const roasterBeans = new Map<string, CoffeeBean[]>();
 
     beans.forEach(bean => {
-      // 优先使用 roaster 字段，否则从名称中提取
-      const roaster = bean.roaster || extractRoasterFromName(bean.name);
+      const roaster = getRoasterName(bean);
       if (roaster) {
         roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
         if (!roasterBeans.has(roaster)) {

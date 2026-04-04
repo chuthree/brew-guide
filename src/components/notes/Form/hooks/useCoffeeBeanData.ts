@@ -3,6 +3,7 @@
 import { useCallback, useEffect } from 'react';
 import type { CoffeeBean } from '@/types/app';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { findCoffeeBeanByIdentity } from '@/lib/utils/coffeeBeanUtils';
 
 /**
  * 冲煮界面专用的咖啡豆数据 Hook
@@ -31,8 +32,8 @@ export const useCoffeeBeanData = () => {
 
   // 根据名称查找咖啡豆
   const findBeanByName = useCallback(
-    (name: string): CoffeeBean | null => {
-      return beans.find(bean => bean.name === name) || null;
+    (name: string, roaster?: string): CoffeeBean | null => {
+      return findCoffeeBeanByIdentity(beans, { name, roaster });
     },
     [beans]
   );
