@@ -104,13 +104,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
       return [];
     }
 
-    const coffeeText = normalizedParams.coffee
-      ? `${normalizedParams.coffee}${
-          beanName && beanUnitPrice > 0
-            ? ` (${beanUnitPrice.toFixed(2)}元/克)`
-            : ''
-        }`
-      : '';
+    const coffeeText = normalizedParams.coffee || '';
 
     if (isEspresso) {
       return [
@@ -126,7 +120,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
       .join(' · ');
 
     return [coffeeText, normalizedParams.ratio, combinedTexture].filter(Boolean);
-  }, [beanName, beanUnitPrice, isEspresso, normalizedParams, note.totalTime]);
+  }, [isEspresso, normalizedParams, note.totalTime]);
 
   // 处理笔记点击事件
   const handleNoteClick = () => {
