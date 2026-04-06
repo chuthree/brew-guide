@@ -87,9 +87,12 @@ export function normalizeWebDAVSettings(
 ): WebDAVSyncSettings {
   if (!incoming) return { ...defaultWebDAVSettings };
 
+  const sanitized = { ...incoming } as Record<string, unknown>;
+  delete sanitized.useProxy;
+
   return {
     ...defaultWebDAVSettings,
-    ...incoming,
+    ...(sanitized as Partial<WebDAVSyncSettings>),
     syncMode: 'manual', // 强制手动模式
   };
 }
