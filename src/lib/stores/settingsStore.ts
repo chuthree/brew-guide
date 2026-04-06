@@ -432,7 +432,8 @@ export const useSettingsStore = create<SettingsStore>()(
       const newWebDAVSettings = {
         ...currentSettings.webdavSync,
         ...webdav,
-      };
+      } as Record<string, unknown>;
+      delete newWebDAVSettings.useProxy;
       await get().updateSettings({
         webdavSync: newWebDAVSettings as AppSettings['webdavSync'],
       });

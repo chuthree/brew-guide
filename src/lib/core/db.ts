@@ -180,7 +180,6 @@ export interface AppSettings {
     syncMode: 'manual';
     lastConnectionSuccess?: boolean;
     enablePullToSync?: boolean;
-    useProxy?: boolean;
   };
 
   // Supabase同步设置

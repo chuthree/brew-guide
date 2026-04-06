@@ -162,7 +162,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         username: settings.username,
         password: settings.password,
         remotePath: settings.remotePath,
-        useProxy: settings.useProxy,
       });
 
       if (connected) {
@@ -208,7 +207,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
             username: settings.username,
             password: settings.password,
             remotePath: settings.remotePath,
-            useProxy: settings.useProxy,
           },
           skipTest
         );
@@ -306,7 +304,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
             username: settings.username,
             password: settings.password,
             remotePath: settings.remotePath,
-            useProxy: settings.useProxy,
           },
           true
         );
@@ -374,38 +371,37 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         <div className="space-y-3 rounded bg-neutral-100 p-4 dark:bg-neutral-800">
           {/* URL */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            <label
+              htmlFor="webdav-url"
+              className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400"
+            >
               服务器地址
             </label>
             <input
+              id="webdav-url"
               type="url"
               value={settings.url}
               onChange={e => onSettingChange('url', e.target.value)}
               placeholder="https://dav.jianguoyun.com/dav/"
               className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
-            <div className="mt-1.5 flex items-center justify-between">
+            <div className="mt-1.5 space-y-1">
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 坚果云: https://dav.jianguoyun.com/dav/
               </p>
-              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300">
-                <input
-                  type="checkbox"
-                  checked={settings.useProxy !== false}
-                  onChange={e => onSettingChange('useProxy', e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-neutral-300 text-neutral-600 focus:ring-1 focus:ring-neutral-400 dark:border-neutral-600 dark:bg-neutral-700"
-                />
-                <span>代理</span>
-              </label>
             </div>
           </div>
 
           {/* 账号 */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            <label
+              htmlFor="webdav-username"
+              className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400"
+            >
               账号
             </label>
             <input
+              id="webdav-username"
               type="text"
               value={settings.username}
               onChange={e => onSettingChange('username', e.target.value)}
@@ -417,11 +413,15 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
 
           {/* 密码 */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            <label
+              htmlFor="webdav-password"
+              className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400"
+            >
               密码
             </label>
             <div className="relative">
               <input
+                id="webdav-password"
                 type={showPassword ? 'text' : 'password'}
                 value={settings.password}
                 onChange={e => onSettingChange('password', e.target.value)}
@@ -462,10 +462,14 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
 
           {/* 远程路径 */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            <label
+              htmlFor="webdav-remote-path"
+              className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400"
+            >
               远程目录路径
             </label>
             <input
+              id="webdav-remote-path"
               type="text"
               value={settings.remotePath}
               onChange={e => onSettingChange('remotePath', e.target.value)}

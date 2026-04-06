@@ -8,14 +8,14 @@ import type { WebDAVConfig, WebDAVFile } from './types';
 export class WebDAVClient {
   private config: WebDAVConfig;
   private authHeader: string;
-  private corsProxy: string;
+  private readonly corsProxy: string;
   private verifiedDirs = new Set<string>();
 
   constructor(config: WebDAVConfig) {
     this.config = config;
     // 创建基础认证头
     this.authHeader = `Basic ${btoa(`${config.username}:${config.password}`)}`;
-    // 固定使用轻量云 CORS 代理
+    // WebDAV 始终通过统一的 CORS 代理访问，避免端侧再分叉。
     this.corsProxy = 'https://cors.chu3.top/raw?url=';
   }
 
@@ -672,18 +672,7 @@ export class WebDAVClient {
    * 获取代理后的 URL
    */
   private getProxiedUrl(originalUrl: string): string {
-    // 如果用户明确设置不使用代理，直接返回原始 URL
-    if (this.config.useProxy === false) {
-      return originalUrl;
-    }
-
-    // 在浏览器环境下使用 CORS 代理
-    if (typeof window !== 'undefined') {
-      return `${this.corsProxy}${encodeURIComponent(originalUrl)}`;
-    }
-
-    // 在 Node.js 或 Capacitor 原生环境下直接使用原始 URL
-    return originalUrl;
+    return `${this.corsProxy}${encodeURIComponent(originalUrl)}`;
   }
 
   /**
