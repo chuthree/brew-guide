@@ -36,6 +36,12 @@ import {
   normalizeWebDAVSettings,
   normalizeSupabaseSettings,
 } from '@/lib/hooks/useCloudSyncSettings';
+import {
+  type ManualSyncProvider,
+  getCloudProviderLabel,
+  getResolvedActiveSyncType,
+  getSupabaseBackupProvider,
+} from '@/lib/sync/settings';
 
 interface DataSettingsProps {
   settings: SettingsOptions;
@@ -46,6 +52,66 @@ interface DataSettingsProps {
   ) => void | Promise<void>;
   onDataChange?: () => void;
 }
+
+interface SelectionDropdownProps {
+  label: string;
+  value: string;
+  valueLabel: string;
+  isOpen: boolean;
+  options: Array<{
+    value: string;
+    label: string;
+  }>;
+  onToggle: () => void;
+  onSelect: (value: string) => void;
+}
+
+const SelectionDropdown: React.FC<SelectionDropdownProps> = ({
+  label,
+  value,
+  valueLabel,
+  isOpen,
+  options,
+  onToggle,
+  onSelect,
+}) => {
+  return (
+    <div className="relative">
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+      >
+        <span>{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-neutral-500 dark:text-neutral-400">
+            {valueLabel}
+          </span>
+          <ChevronRight
+            className={`h-4 w-4 text-neutral-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+          />
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="mt-2 space-y-2 rounded bg-neutral-100 p-2 dark:bg-neutral-800">
+          {options.map(option => (
+            <button
+              key={option.value}
+              onClick={() => onSelect(option.value)}
+              className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
+                value === option.value
+                  ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
+                  : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const DataSettings: React.FC<DataSettingsProps> = ({
   settings: _settings,
@@ -102,18 +168,17 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   // 云同步类型选择
   const [showSyncTypeDropdown, setShowSyncTypeDropdown] = useState(false);
+  const [showSupabaseBackupDropdown, setShowSupabaseBackupDropdown] =
+    useState(false);
   // WebDAV 教程弹窗
   const [showWebDAVTutorial, setShowWebDAVTutorial] = useState(false);
 
   // 云同步类型：使用本地 state 管理，确保 UI 即时响应
   const [activeSyncType, setActiveSyncType] = useState<CloudSyncType>(() => {
-    // 初始化时从 settings 读取，或从 enabled 状态推导（兼容旧数据）
-    if (settings.activeSyncType) return settings.activeSyncType;
-    if (settings.supabaseSync?.enabled) return 'supabase';
-    if (settings.s3Sync?.enabled) return 's3';
-    if (settings.webdavSync?.enabled) return 'webdav';
-    return 'none';
+    return getResolvedActiveSyncType(settings);
   });
+  const [supabaseBackupProvider, setSupabaseBackupProvider] =
+    useState<ManualSyncProvider>(() => getSupabaseBackupProvider(settings));
 
   // syncType 直接使用本地 state
   const syncType = activeSyncType;
@@ -355,6 +420,104 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     [syncType, settings.hapticFeedback, handleChange]
   );
 
+  const switchSupabaseBackupProvider = useCallback(
+    (provider: ManualSyncProvider) => {
+      setSupabaseBackupProvider(provider);
+
+      void (async () => {
+        if (provider === 's3') {
+          const newSettings = { ...s3SettingsRef.current, enabled: true };
+          s3SettingsRef.current = newSettings;
+          setS3Settings(newSettings);
+          await handleChange('s3Sync', newSettings);
+        } else if (provider === 'webdav') {
+          const newSettings = { ...webdavSettingsRef.current, enabled: true };
+          webdavSettingsRef.current = newSettings;
+          setWebDAVSettings(newSettings);
+          await handleChange('webdavSync', newSettings);
+        }
+
+        await handleChange('supabaseBackupProvider', provider);
+      })();
+
+      if (settings.hapticFeedback) {
+        hapticsUtils.light();
+      }
+    },
+    [handleChange, settings.hapticFeedback]
+  );
+
+  const selectedManualSyncType: ManualSyncProvider =
+    syncType === 'supabase'
+      ? supabaseBackupProvider
+      : syncType === 's3' || syncType === 'webdav'
+        ? syncType
+        : 'none';
+
+  const isManualSyncConnected =
+    selectedManualSyncType === 's3'
+      ? s3Settings.lastConnectionSuccess === true
+      : selectedManualSyncType === 'webdav'
+        ? webdavSettings.lastConnectionSuccess === true
+        : false;
+
+  const isPullToSyncEnabled =
+    selectedManualSyncType === 's3'
+      ? s3Settings.enablePullToSync !== false
+      : selectedManualSyncType === 'webdav'
+        ? webdavSettings.enablePullToSync !== false
+        : false;
+
+  const handlePullToSyncSettingChange = (enabled: boolean) => {
+    if (selectedManualSyncType === 's3') {
+      handleS3SettingChange('enablePullToSync', enabled);
+    } else if (selectedManualSyncType === 'webdav') {
+      handleWebDAVSettingChange('enablePullToSync', enabled);
+    }
+
+    if (settings.hapticFeedback) {
+      hapticsUtils.light();
+    }
+  };
+
+  const renderManualSyncSection = () => {
+    if (selectedManualSyncType === 's3') {
+      return (
+        <S3SyncSection
+          settings={s3Settings}
+          enabled={true}
+          hapticFeedback={settings.hapticFeedback}
+          onSettingChange={handleS3SettingChange}
+          onSyncComplete={onDataChange}
+          onEnable={() =>
+            syncType === 'supabase'
+              ? switchSupabaseBackupProvider('s3')
+              : switchSyncType('s3')
+          }
+        />
+      );
+    }
+
+    if (selectedManualSyncType === 'webdav') {
+      return (
+        <WebDAVSyncSection
+          settings={webdavSettings}
+          enabled={true}
+          hapticFeedback={settings.hapticFeedback}
+          onSettingChange={handleWebDAVSettingChange}
+          onSyncComplete={onDataChange}
+          onEnable={() =>
+            syncType === 'supabase'
+              ? switchSupabaseBackupProvider('webdav')
+              : switchSyncType('webdav')
+          }
+        />
+      );
+    }
+
+    return null;
+  };
+
   // 备份提醒设置变更
   const handleBackupReminderChange = async (enabled: boolean) => {
     try {
@@ -439,95 +602,28 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         </h3>
 
         <div className="space-y-3">
-          {/* 云同步类型选择 */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSyncTypeDropdown(!showSyncTypeDropdown)}
-              className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-            >
-              <span>同步服务</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {syncType === 's3'
-                    ? 'S3 对象存储'
-                    : syncType === 'webdav'
-                      ? 'WebDAV'
-                      : syncType === 'supabase'
-                        ? 'Supabase 实时同步'
-                        : '不使用'}
-                </span>
-                <ChevronRight
-                  className={`h-4 w-4 text-neutral-400 transition-transform ${showSyncTypeDropdown ? 'rotate-90' : ''}`}
-                />
-              </div>
-            </button>
+          <SelectionDropdown
+            label="同步服务"
+            value={syncType}
+            valueLabel={getCloudProviderLabel(syncType)}
+            isOpen={showSyncTypeDropdown}
+            options={[
+              { value: 'none', label: getCloudProviderLabel('none') },
+              { value: 'webdav', label: getCloudProviderLabel('webdav') },
+              { value: 's3', label: getCloudProviderLabel('s3') },
+              { value: 'supabase', label: getCloudProviderLabel('supabase') },
+            ]}
+            onToggle={() => setShowSyncTypeDropdown(prev => !prev)}
+            onSelect={value => {
+              switchSyncType(value as CloudSyncType);
+              setShowSyncTypeDropdown(false);
+            }}
+          />
 
-            {/* 下拉选项 */}
-            {showSyncTypeDropdown && (
-              <div className="mt-2 space-y-2 rounded bg-neutral-100 p-2 dark:bg-neutral-800">
-                <button
-                  onClick={() => {
-                    switchSyncType('none');
-                    setShowSyncTypeDropdown(false);
-                  }}
-                  className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
-                    syncType === 'none'
-                      ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
-                      : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
-                  }`}
-                >
-                  不使用
-                </button>
-                <button
-                  onClick={() => {
-                    switchSyncType('webdav');
-                    setShowSyncTypeDropdown(false);
-                  }}
-                  className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
-                    syncType === 'webdav'
-                      ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
-                      : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
-                  }`}
-                >
-                  WebDAV
-                </button>
-                <button
-                  onClick={() => {
-                    switchSyncType('s3');
-                    setShowSyncTypeDropdown(false);
-                  }}
-                  className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
-                    syncType === 's3'
-                      ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
-                      : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
-                  }`}
-                >
-                  S3 对象存储
-                </button>
-                <button
-                  onClick={() => {
-                    switchSyncType('supabase');
-                    setShowSyncTypeDropdown(false);
-                  }}
-                  className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
-                    syncType === 'supabase'
-                      ? 'bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
-                      : 'text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span>Supabase 实时同步</span>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Supabase 详细设置 - 仅在选择 Supabase 时显示 */}
           {syncType === 'supabase' && (
             <SupabaseSyncSection
               settings={supabaseSettings}
-              enabled={syncType === 'supabase'}
+              enabled={true}
               hapticFeedback={settings.hapticFeedback}
               onSettingChange={handleSupabaseSettingChange}
               onSyncComplete={onDataChange}
@@ -535,32 +631,11 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             />
           )}
 
-          {/* S3 详细设置 - 仅在选择 S3 时显示 */}
-          {syncType === 's3' && (
-            <S3SyncSection
-              settings={s3Settings}
-              enabled={syncType === 's3'}
-              hapticFeedback={settings.hapticFeedback}
-              onSettingChange={handleS3SettingChange}
-              onSyncComplete={onDataChange}
-              onEnable={() => switchSyncType('s3')}
-            />
-          )}
+          {syncType !== 'supabase' && renderManualSyncSection()}
 
-          {/* WebDAV 详细设置 - 仅在选择 WebDAV 时显示 */}
-          {syncType === 'webdav' && (
-            <WebDAVSyncSection
-              settings={webdavSettings}
-              enabled={syncType === 'webdav'}
-              hapticFeedback={settings.hapticFeedback}
-              onSettingChange={handleWebDAVSettingChange}
-              onSyncComplete={onDataChange}
-              onEnable={() => switchSyncType('webdav')}
-            />
-          )}
-
-          {/* 引导式配置按钮 - 仅在选择 WebDAV 且未成功连接时显示 */}
-          {syncType === 'webdav' && !webdavSettings.lastConnectionSuccess && (
+          {syncType !== 'supabase' &&
+            selectedManualSyncType === 'webdav' &&
+            !webdavSettings.lastConnectionSuccess && (
             <button
               onClick={() => setShowWebDAVTutorial(true)}
               className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
@@ -570,10 +645,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             </button>
           )}
 
-          {/* 下拉上传开关 - 仅在 S3/WebDAV 已选择且已成功连接时显示（Supabase 只支持手动同步） */}
-          {((syncType === 's3' && s3Settings.lastConnectionSuccess) ||
-            (syncType === 'webdav' &&
-              webdavSettings.lastConnectionSuccess)) && (
+          {syncType !== 'supabase' && isManualSyncConnected && (
             <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
               <div>
                 <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
@@ -586,25 +658,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               <label className="relative inline-flex cursor-pointer items-center">
                 <input
                   type="checkbox"
-                  checked={
-                    syncType === 's3'
-                      ? s3Settings.enablePullToSync !== false
-                      : webdavSettings.enablePullToSync !== false
-                  }
-                  onChange={e => {
-                    if (syncType === 's3') {
-                      handleS3SettingChange(
-                        'enablePullToSync',
-                        e.target.checked
-                      );
-                    } else if (syncType === 'webdav') {
-                      handleWebDAVSettingChange(
-                        'enablePullToSync',
-                        e.target.checked
-                      );
-                    }
-                    if (settings.hapticFeedback) hapticsUtils.light();
-                  }}
+                  checked={isPullToSyncEnabled}
+                  onChange={e => handlePullToSyncSettingChange(e.target.checked)}
                   className="peer sr-only"
                 />
                 <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
@@ -613,6 +668,70 @@ const DataSettings: React.FC<DataSettingsProps> = ({
           )}
         </div>
       </div>
+
+      {syncType === 'supabase' && (
+        <div className="px-6 py-4">
+          <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+            手动备份
+          </h3>
+
+          <div className="space-y-3">
+            <SelectionDropdown
+              label="备份服务"
+              value={supabaseBackupProvider}
+              valueLabel={getCloudProviderLabel(supabaseBackupProvider)}
+              isOpen={showSupabaseBackupDropdown}
+              options={[
+                { value: 'none', label: getCloudProviderLabel('none') },
+                { value: 'webdav', label: getCloudProviderLabel('webdav') },
+                { value: 's3', label: getCloudProviderLabel('s3') },
+              ]}
+              onToggle={() => setShowSupabaseBackupDropdown(prev => !prev)}
+              onSelect={value => {
+                switchSupabaseBackupProvider(value as ManualSyncProvider);
+                setShowSupabaseBackupDropdown(false);
+              }}
+            />
+
+            {supabaseBackupProvider !== 'none' && renderManualSyncSection()}
+
+            {selectedManualSyncType === 'webdav' &&
+              !webdavSettings.lastConnectionSuccess && (
+              <button
+                onClick={() => setShowWebDAVTutorial(true)}
+                className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              >
+                <span>引导式配置（推荐新手）</span>
+                <ChevronRight className="h-4 w-4 text-neutral-400" />
+              </button>
+            )}
+
+            {isManualSyncConnected && (
+              <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+                <div>
+                  <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                    下拉上传
+                  </div>
+                  <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                    在导航栏下拉可快速上传数据
+                  </div>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={isPullToSyncEnabled}
+                    onChange={e =>
+                      handlePullToSyncSettingChange(e.target.checked)
+                    }
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 持久化存储设置组 */}
       <div className="px-6 py-4">
@@ -855,12 +974,19 @@ const DataSettings: React.FC<DataSettingsProps> = ({
           };
 
           // 立即更新本地 state
-          setActiveSyncType('webdav');
           setWebDAVSettings(newWebDAVSettings);
           webdavSettingsRef.current = newWebDAVSettings;
 
+          if (syncType !== 'supabase') {
+            setActiveSyncType('webdav');
+          }
+
           // 异步持久化
-          handleChange('activeSyncType', 'webdav');
+          if (syncType !== 'supabase') {
+            handleChange('activeSyncType', 'webdav');
+          } else {
+            handleChange('supabaseBackupProvider', 'webdav');
+          }
           handleChange('webdavSync', newWebDAVSettings);
 
           if (settings.hapticFeedback) hapticsUtils.light();

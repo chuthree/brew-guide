@@ -480,63 +480,62 @@ const Settings: React.FC<SettingsProps> = ({
           </h2>
         </button>
 
-        {/* 云同步快捷按钮 - 仅对手动同步类型（S3/WebDAV）显示 */}
-        {cloudSyncStatus === 'connected' &&
-          settings.activeSyncType !== 'supabase' && (
-            <div
-              className="absolute right-6 flex items-center gap-2"
-              data-sync-menu
+        {/* 手动同步/备份快捷按钮 - 支持主手动同步和 Supabase 下的双备份 */}
+        {cloudSyncStatus === 'connected' && (
+          <div
+            className="absolute right-6 flex items-center gap-2"
+            data-sync-menu
+          >
+            {/* 上传按钮 - 从右侧滑入 */}
+            <button
+              onClick={() => {
+                setShowSyncMenu(false);
+                // 延迟执行同步，等待菜单收回动画完成
+                setTimeout(() => performQuickSync('upload'), 250);
+              }}
+              disabled={isSyncing}
+              className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+                showSyncMenu && !isSyncing
+                  ? 'translate-x-0 opacity-100'
+                  : 'pointer-events-none translate-x-4 opacity-0'
+              }`}
+              style={{ transitionDuration: '200ms' }}
             >
-              {/* 上传按钮 - 从右侧滑入 */}
-              <button
-                onClick={() => {
-                  setShowSyncMenu(false);
-                  // 延迟执行同步，等待菜单收回动画完成
-                  setTimeout(() => performQuickSync('upload'), 250);
-                }}
-                disabled={isSyncing}
-                className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
-                  showSyncMenu && !isSyncing
-                    ? 'translate-x-0 opacity-100'
-                    : 'pointer-events-none translate-x-4 opacity-0'
-                }`}
-                style={{ transitionDuration: '200ms' }}
-              >
-                <Upload className="h-5 w-5" />
-              </button>
-              {/* 下载按钮 - 从右侧滑入 */}
-              <button
-                onClick={() => {
-                  setShowSyncMenu(false);
-                  // 延迟执行同步，等待菜单收回动画完成
-                  setTimeout(() => performQuickSync('download'), 250);
-                }}
-                disabled={isSyncing}
-                className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
-                  showSyncMenu && !isSyncing
-                    ? 'translate-x-0 opacity-100'
-                    : 'pointer-events-none translate-x-4 opacity-0'
-                }`}
-                style={{ transitionDuration: '250ms' }}
-              >
-                <Download className="h-5 w-5" />
-              </button>
-              {/* 云图标/叉号/加载动画切换按钮 */}
-              <button
-                onClick={() => !isSyncing && setShowSyncMenu(!showSyncMenu)}
-                disabled={isSyncing}
-                className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${isSyncing ? 'cursor-default' : ''}`}
-              >
-                {isSyncing ? (
-                  <LoadingSpinner className="h-5 w-5" />
-                ) : showSyncMenu ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Cloud className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-          )}
+              <Upload className="h-5 w-5" />
+            </button>
+            {/* 下载按钮 - 从右侧滑入 */}
+            <button
+              onClick={() => {
+                setShowSyncMenu(false);
+                // 延迟执行同步，等待菜单收回动画完成
+                setTimeout(() => performQuickSync('download'), 250);
+              }}
+              disabled={isSyncing}
+              className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+                showSyncMenu && !isSyncing
+                  ? 'translate-x-0 opacity-100'
+                  : 'pointer-events-none translate-x-4 opacity-0'
+              }`}
+              style={{ transitionDuration: '250ms' }}
+            >
+              <Download className="h-5 w-5" />
+            </button>
+            {/* 云图标/叉号/加载动画切换按钮 */}
+            <button
+              onClick={() => !isSyncing && setShowSyncMenu(!showSyncMenu)}
+              disabled={isSyncing}
+              className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${isSyncing ? 'cursor-default' : ''}`}
+            >
+              {isSyncing ? (
+                <LoadingSpinner className="h-5 w-5" />
+              ) : showSyncMenu ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Cloud className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 滚动内容区域 - 新的简洁设计 */}

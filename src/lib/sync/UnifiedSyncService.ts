@@ -6,6 +6,7 @@ import type { SettingsOptions } from '@/lib/core/db';
 import type { CloudProvider, SyncDirection, SyncProgress } from './types';
 import type { ISyncManager, ISyncResult, ISyncOptions } from './interfaces';
 import { createFailureResult, BaseSyncManagerAdapter } from './interfaces';
+import { getConnectedManualSyncProvider } from './settings';
 
 interface ManagerCache {
   provider: CloudProvider;
@@ -20,16 +21,12 @@ function hash(o: object): string {
 class UnifiedSyncService {
   private cache: ManagerCache | null = null;
 
-  getActiveProvider(settings: SettingsOptions): CloudProvider {
-    const type = settings.activeSyncType;
-    if (!type || type === 'none') return 'none';
+  getManualProvider(settings: SettingsOptions): CloudProvider {
+    return getConnectedManualSyncProvider(settings);
+  }
 
-    const cfg = {
-      supabase: settings.supabaseSync,
-      s3: settings.s3Sync,
-      webdav: settings.webdavSync,
-    }[type];
-    return cfg?.lastConnectionSuccess ? type : 'none';
+  getActiveProvider(settings: SettingsOptions): CloudProvider {
+    return this.getManualProvider(settings);
   }
 
   async getManager(
@@ -129,7 +126,7 @@ class UnifiedSyncService {
     direction: SyncDirection,
     onProgress?: (p: SyncProgress) => void
   ): Promise<ISyncResult> {
-    const provider = this.getActiveProvider(settings);
+    const provider = this.getManualProvider(settings);
     if (provider === 'none') return createFailureResult('未配置云同步服务');
 
     const manager = await this.getManager(settings, provider);

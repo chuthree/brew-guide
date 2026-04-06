@@ -26,7 +26,7 @@ interface UseCloudSyncReturn {
 export function useCloudSyncConnection(
   settings: SettingsOptions
 ): UseCloudSyncReturn {
-  const provider = syncService.getActiveProvider(settings);
+  const provider = syncService.getManualProvider(settings);
   const status: CloudSyncStatus =
     provider !== 'none' ? 'connected' : 'disconnected';
   const [isSyncing, setIsSyncing] = useState(false);

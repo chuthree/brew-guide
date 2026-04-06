@@ -97,6 +97,10 @@ import {
   normalizeBrewingNoteParams,
   normalizeBrewingNoteSelection,
 } from '@/lib/notes/noteDisplay';
+import {
+  getConnectedManualSyncProvider,
+  isPullToSyncEnabled,
+} from '@/lib/sync/settings';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -2260,23 +2264,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // ==================== 云同步相关状态和处理 ====================
   // 检查云同步是否已启用且连接成功，并且开启了下拉上传功能
   const isCloudSyncEnabled = useCallback(() => {
-    const activeType = settings.activeSyncType;
-    if (!activeType || activeType === 'none') return false;
-
-    if (activeType === 's3') {
-      return (
-        settings.s3Sync?.lastConnectionSuccess &&
-        settings.s3Sync?.enablePullToSync !== false
-      );
-    }
-    if (activeType === 'webdav') {
-      return (
-        settings.webdavSync?.lastConnectionSuccess &&
-        settings.webdavSync?.enablePullToSync !== false
-      );
-    }
-    return false; // Supabase 不支持下拉同步
-  }, [settings.activeSyncType, settings.s3Sync, settings.webdavSync]);
+    return isPullToSyncEnabled(settings as SettingsOptions);
+  }, [settings]);
 
   // 下拉上传处理函数
   const handlePullToSync = useCallback(async (): Promise<{
@@ -2284,8 +2273,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     message?: string;
   }> => {
     try {
-      const activeType = settings.activeSyncType;
-      if (!activeType || activeType === 'none') {
+      const manualProvider = getConnectedManualSyncProvider(
+        settings as SettingsOptions
+      );
+
+      if (manualProvider === 'none') {
         return { success: false, message: '云同步未配置' };
       }
 
@@ -2296,7 +2288,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         message?: string;
       } | null = null;
 
-      if (activeType === 's3' && settings.s3Sync?.lastConnectionSuccess) {
+      if (manualProvider === 's3' && settings.s3Sync?.lastConnectionSuccess) {
         const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
         const cfg = settings.s3Sync;
         const mgr = new S3SyncManager();
@@ -2312,7 +2304,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           result = await mgr.sync({ preferredDirection: 'upload' });
         }
       } else if (
-        activeType === 'webdav' &&
+        manualProvider === 'webdav' &&
         settings.webdavSync?.lastConnectionSuccess
       ) {
         const { WebDAVSyncManager } = await import('@/lib/webdav/syncManager');
@@ -2352,7 +2344,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         message: error instanceof Error ? error.message : '上传失败',
       };
     }
-  }, [settings.activeSyncType, settings.s3Sync, settings.webdavSync]);
+  }, [settings]);
   // ==================== 云同步相关状态和处理结束 ====================
 
   // 简化的历史记录导航事件处理

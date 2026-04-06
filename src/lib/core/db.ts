@@ -194,6 +194,9 @@ export interface AppSettings {
   // 当前激活的云同步类型
   activeSyncType?: 'none' | 's3' | 'webdav' | 'supabase';
 
+  // Supabase 主同步下的手动双备份提供商
+  supabaseBackupProvider?: 'none' | 's3' | 'webdav';
+
   // 随机咖啡豆设置
   randomCoffeeBeans?: {
     enableLongPressRandomType: boolean;

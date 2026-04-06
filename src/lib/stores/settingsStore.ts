@@ -115,6 +115,7 @@ export const defaultSettings: AppSettings = {
     anonKey: '',
   },
   activeSyncType: 'none',
+  supabaseBackupProvider: 'none',
 
   // 随机咖啡豆设置
   randomCoffeeBeans: {
