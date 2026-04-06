@@ -1191,7 +1191,7 @@ export const sponsorsList = [
   '志文',
   'Z先生',
   'D',
-  'Lemueno',
+  'Lamueno',
   '匿名',
   'JayGoaler',
   '汉唐',
