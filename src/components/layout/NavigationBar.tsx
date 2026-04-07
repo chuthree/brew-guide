@@ -54,6 +54,10 @@ const AppleSpinner: React.FC<{ className?: string }> = ({ className = '' }) => {
 };
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import {
+  COFFEE_BEAN_VIEW_ORDER,
+  deriveNavigationSettings,
+} from '@/lib/navigation/navigationSettings';
+import {
   ViewOption,
   VIEW_LABELS,
   SIMPLIFIED_VIEW_LABELS,
@@ -435,24 +439,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   const isDesktopBackLayout = Boolean(canGoBack() && onBackClick);
   const showDesktopTopTabs = !isDesktopBackLayout;
 
-  const {
-    visibleTabs = { brewing: true, coffeeBean: true, notes: true },
-    pinnedViews = [],
-    coffeeBeanViews = {
-      [VIEW_OPTIONS.INVENTORY]: true,
-      [VIEW_OPTIONS.RANKING]: true,
-      [VIEW_OPTIONS.STATS]: true,
-    },
-  } = settings.navigationSettings || {};
-
-  // 类型断言：pinnedViews 从 db 存储时为 string[]，运行时实际为 ViewOption[]
-  const typedPinnedViews = pinnedViews as ViewOption[];
-
-  // 计算可用视图数量
-  const availableViewsCount = Object.values(VIEW_OPTIONS).filter(view => {
-    if (typedPinnedViews.includes(view)) return false;
-    return coffeeBeanViews[view] !== false;
-  }).length;
+  const derivedNavigation = deriveNavigationSettings(
+    settings.navigationSettings
+  );
+  const { visibleTabs, coffeeBeanViews, showCoffeeBeanMainTab } =
+    derivedNavigation;
+  const typedPinnedViews = derivedNavigation.pinnedViews;
+  const availableViewsCount = derivedNavigation.enabledUnpinnedViews.length;
 
   // 判断当前视图是否被固定
   const isCurrentViewPinned =
@@ -472,7 +465,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   // 计算 tab 数量
   const tabCount =
     (visibleTabs.brewing ? 1 : 0) +
-    (visibleTabs.coffeeBean && availableViewsCount > 0 ? 1 : 0) +
+    (showCoffeeBeanMainTab ? 1 : 0) +
     typedPinnedViews.length +
     (visibleTabs.notes ? 1 : 0);
 
@@ -493,8 +486,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   // 获取第一个未被固定且允许显示的视图作为默认视图
   const getFirstAvailableView = useCallback(() => {
-    const allViews = Object.values(VIEW_OPTIONS);
-    const availableView = allViews.find(view => {
+    const availableView = COFFEE_BEAN_VIEW_ORDER.find(view => {
       // 必须未被固定
       if (typedPinnedViews.includes(view)) return false;
       // 必须允许显示 (默认为 true)
@@ -844,8 +836,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       availableViewsCount === 2
     ) {
       // 找到另一个可用视图
-      const allViews = Object.values(VIEW_OPTIONS);
-      const enabledViews = allViews.filter(
+      const enabledViews = COFFEE_BEAN_VIEW_ORDER.filter(
         v => !typedPinnedViews.includes(v) && coffeeBeanViews[v] !== false
       );
       if (enabledViews.length === 2 && currentBeanView) {
@@ -1345,7 +1336,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                       </div>
                     )}
 
-                    {visibleTabs.coffeeBean && availableViewsCount > 0 && (
+                    {showCoffeeBeanMainTab && (
                       <div className="relative shrink-0">
                         {/* 咖啡豆按钮 - 带下拉菜单 */}
                         <div

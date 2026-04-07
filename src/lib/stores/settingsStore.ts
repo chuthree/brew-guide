@@ -18,7 +18,11 @@ import {
   DEFAULT_FLAVOR_DIMENSIONS,
 } from '@/lib/core/db';
 import { LayoutSettings } from '@/components/brewing/Timer/Settings';
-import { VIEW_OPTIONS } from '@/components/coffee-bean/List/constants';
+import {
+  DEFAULT_NAVIGATION_SETTINGS,
+  mergeNavigationSettings,
+  normalizeNavigationSettings,
+} from '@/lib/navigation/navigationSettings';
 
 /**
  * 默认设置值
@@ -72,19 +76,7 @@ export const defaultSettings: AppSettings = {
   },
 
   // 导航栏设置
-  navigationSettings: {
-    visibleTabs: {
-      brewing: true,
-      coffeeBean: true,
-      notes: true,
-    },
-    coffeeBeanViews: {
-      [VIEW_OPTIONS.INVENTORY]: true,
-      [VIEW_OPTIONS.RANKING]: true,
-      [VIEW_OPTIONS.STATS]: true,
-    },
-    pinnedViews: [],
-  },
+  navigationSettings: DEFAULT_NAVIGATION_SETTINGS,
 
   // 赏味期设置
   customFlavorPeriod: {
@@ -325,7 +317,13 @@ export const useSettingsStore = create<SettingsStore>()(
 
         if (stored && stored.data) {
           // 合并默认设置和存储的设置，确保新字段有默认值
-          const mergedSettings = { ...defaultSettings, ...stored.data };
+          const mergedSettings = {
+            ...defaultSettings,
+            ...stored.data,
+            navigationSettings: normalizeNavigationSettings(
+              stored.data.navigationSettings
+            ),
+          };
 
           // 兼容旧字段：notesListStyle -> useClassicNotesListStyle
           if (
@@ -408,10 +406,10 @@ export const useSettingsStore = create<SettingsStore>()(
 
     updateNavigationSettings: async nav => {
       const currentSettings = get().settings;
-      const newNavSettings = {
-        ...currentSettings.navigationSettings,
-        ...nav,
-      };
+      const newNavSettings = mergeNavigationSettings(
+        currentSettings.navigationSettings,
+        nav
+      );
       await get().updateSettings({
         navigationSettings: newNavSettings as AppSettings['navigationSettings'],
       });

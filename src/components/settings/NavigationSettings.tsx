@@ -12,12 +12,19 @@ import {
   SettingToggle,
 } from './atomic';
 import {
-  ViewOption,
   VIEW_LABELS,
   SIMPLIFIED_VIEW_LABELS,
-  VIEW_OPTIONS,
+  type ViewOption,
 } from '@/components/coffee-bean/List/constants';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import {
+  canDisableCoffeeBeanView,
+  canDisableMainNavigationTab,
+  COFFEE_BEAN_VIEW_ORDER,
+  deriveNavigationSettings,
+  mergeNavigationSettings,
+  normalizeNavigationSettings,
+} from '@/lib/navigation/navigationSettings';
 
 interface NavigationSettingsProps {
   settings: SettingsOptions;
@@ -33,23 +40,12 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
   onClose,
   handleChange: _handleChange,
 }) => {
-  // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);
-
-  // 使用 settingsStore 的 handleChange
-  const handleChange = React.useCallback(
-    async <K extends keyof SettingsOptions>(
-      key: K,
-      value: SettingsOptions[K]
-    ) => {
-      await updateSettings({ [key]: value } as any);
-    },
-    [updateSettings]
+  const updateNavigationSettings = useSettingsStore(
+    state => state.updateNavigationSettings
   );
 
-  // 控制动画状态
-  const [shouldRender, setShouldRender] = React.useState(true);
   const [isVisible, setIsVisible] = React.useState(false);
 
   // 用于保存最新的 onClose 引用
@@ -86,103 +82,79 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
     });
   }, []);
 
-  // 处理主导航显示切换
+  const derivedNavigation = React.useMemo(
+    () => deriveNavigationSettings(settings.navigationSettings),
+    [settings.navigationSettings]
+  );
+
+  const currentNavigation = React.useMemo(
+    () => normalizeNavigationSettings(settings.navigationSettings),
+    [settings.navigationSettings]
+  );
+
+  const commitNavigationSettings = React.useCallback(
+    async (
+      updates: Partial<NonNullable<SettingsOptions['navigationSettings']>>
+    ) => {
+      const nextNavigation = mergeNavigationSettings(
+        currentNavigation,
+        updates
+      );
+
+      if (
+        deriveNavigationSettings(nextNavigation).renderedMainTabs.length === 0
+      ) {
+        showToast({ type: 'error', title: '至少需要保留一个主导航标签页' });
+        return false;
+      }
+
+      await updateNavigationSettings(nextNavigation);
+
+      if (settings.hapticFeedback) {
+        hapticsUtils.light();
+      }
+
+      return true;
+    },
+    [currentNavigation, settings.hapticFeedback, updateNavigationSettings]
+  );
+
   const handleMainTabToggle = (tab: 'brewing' | 'coffeeBean' | 'notes') => {
-    const current = settings.navigationSettings || {
-      visibleTabs: {
-        brewing: true,
-        coffeeBean: true,
-        notes: true,
-      },
-      coffeeBeanViews: {
-        [VIEW_OPTIONS.INVENTORY]: true,
-        [VIEW_OPTIONS.RANKING]: true,
-        [VIEW_OPTIONS.STATS]: true,
-      },
-      pinnedViews: [],
-    };
-
-    const currentVisibleTabs = current.visibleTabs;
-
-    // 至少保留一个标签页
-    const activeCount =
-      Object.values(currentVisibleTabs).filter(Boolean).length;
-    if (currentVisibleTabs[tab] && activeCount <= 1) {
-      showToast({ type: 'error', title: '至少保留一个标签页' });
+    if (
+      currentNavigation.visibleTabs[tab] &&
+      !canDisableMainNavigationTab(settings.navigationSettings, tab)
+    ) {
+      showToast({ type: 'error', title: '至少需要保留一个主导航标签页' });
       return;
     }
 
-    const newVisibleTabs = {
-      ...currentVisibleTabs,
-      [tab]: !currentVisibleTabs[tab],
-    };
-    handleChange('navigationSettings', {
-      ...current,
-      visibleTabs: newVisibleTabs,
+    void commitNavigationSettings({
+      visibleTabs: {
+        ...currentNavigation.visibleTabs,
+        [tab]: !currentNavigation.visibleTabs[tab],
+      },
     });
-
-    if (settings.hapticFeedback) {
-      hapticsUtils.light();
-    }
   };
 
-  // 处理咖啡豆视图显示切换
   const handleBeanViewToggle = (view: ViewOption) => {
-    const current = settings.navigationSettings || {
-      visibleTabs: {
-        brewing: true,
-        coffeeBean: true,
-        notes: true,
-      },
-      coffeeBeanViews: {
-        [VIEW_OPTIONS.INVENTORY]: true,
-        [VIEW_OPTIONS.RANKING]: true,
-        [VIEW_OPTIONS.STATS]: true,
-      },
-      pinnedViews: [],
-    };
-
-    const currentBeanViews = current.coffeeBeanViews;
-
-    // 至少保留一个视图
-    const activeCount = Object.values(currentBeanViews).filter(Boolean).length;
-    if (currentBeanViews[view] && activeCount <= 1) {
+    if (
+      currentNavigation.coffeeBeanViews[view] &&
+      !canDisableCoffeeBeanView(settings.navigationSettings, view)
+    ) {
       showToast({ type: 'error', title: '至少保留一个视图' });
       return;
     }
 
-    const newBeanViews = {
-      ...currentBeanViews,
-      [view]: !currentBeanViews[view],
-    };
-    handleChange('navigationSettings', {
-      ...current,
-      coffeeBeanViews: newBeanViews,
+    void commitNavigationSettings({
+      coffeeBeanViews: {
+        ...currentNavigation.coffeeBeanViews,
+        [view]: !currentNavigation.coffeeBeanViews[view],
+      },
     });
-
-    if (settings.hapticFeedback) {
-      hapticsUtils.light();
-    }
   };
 
-  // 处理视图固定切换
   const handlePinViewToggle = (view: ViewOption) => {
-    const current = settings.navigationSettings || {
-      visibleTabs: {
-        brewing: true,
-        coffeeBean: true,
-        notes: true,
-      },
-      coffeeBeanViews: {
-        [VIEW_OPTIONS.INVENTORY]: true,
-        [VIEW_OPTIONS.RANKING]: true,
-        [VIEW_OPTIONS.STATS]: true,
-      },
-      pinnedViews: [],
-    };
-
-    // 类型断言：pinnedViews 从 db 存储时为 string[]，运行时实际为 ViewOption[]
-    const currentPinned = current.pinnedViews as ViewOption[];
+    const currentPinned = currentNavigation.pinnedViews as ViewOption[];
     let newPinned: ViewOption[];
     const isPinning = !currentPinned.includes(view); // 判断是固定还是取消固定
 
@@ -192,14 +164,13 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
       newPinned = [...currentPinned, view];
     }
 
-    handleChange('navigationSettings', {
-      ...current,
+    void commitNavigationSettings({
       pinnedViews: newPinned,
-    });
+    }).then(success => {
+      if (!success || !isPinning) {
+        return;
+      }
 
-    // 如果正在固定视图，触发事件通知需要切换当前视图
-    if (isPinning) {
-      // 使用 setTimeout 确保在状态更新后触发事件，避免主界面使用旧的 settings 计算可用视图
       setTimeout(() => {
         window.dispatchEvent(
           new CustomEvent('viewPinned', {
@@ -207,38 +178,8 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
           })
         );
       }, 0);
-    }
-
-    if (settings.hapticFeedback) {
-      hapticsUtils.light();
-    }
+    });
   };
-
-  if (!shouldRender) {
-    return null;
-  }
-
-  const visibleTabs = settings.navigationSettings?.visibleTabs || {
-    brewing: true,
-    coffeeBean: true,
-    notes: true,
-  };
-
-  const coffeeBeanViews = settings.navigationSettings?.coffeeBeanViews || {
-    [VIEW_OPTIONS.INVENTORY]: true,
-    [VIEW_OPTIONS.RANKING]: true,
-    [VIEW_OPTIONS.STATS]: true,
-  };
-
-  const pinnedViews = settings.navigationSettings?.pinnedViews || [];
-
-  // 计算未被固定的视图中，有多少是被启用的
-  const availableUnpinnedViewsCount = Object.values(VIEW_OPTIONS).filter(
-    view => {
-      if (pinnedViews.includes(view)) return false;
-      return coffeeBeanViews[view] !== false;
-    }
-  ).length;
 
   const getLabel = (view: ViewOption) => {
     return settings.simplifiedViewLabels
@@ -248,78 +189,99 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
 
   return (
     <SettingPage title="导航栏" isVisible={isVisible} onClose={handleClose}>
-      {/* 通用设置 */}
       <SettingSection title="通用" className="-mt-4">
         <SettingRow label="简化标签名称" isLast>
           <SettingToggle
             checked={settings.simplifiedViewLabels ?? false}
-            onChange={checked => handleChange('simplifiedViewLabels', checked)}
+            onChange={checked =>
+              void updateSettings({ simplifiedViewLabels: checked })
+            }
           />
         </SettingRow>
       </SettingSection>
 
-      {/* 主导航显示设置 */}
-      <SettingSection title="主导航显示" footer="至少需要保留一个主导航标签页">
+      <SettingSection
+        title="主导航显示"
+        footer="至少需要保留一个主导航标签页"
+      >
         <SettingRow label="冲煮">
           <SettingToggle
-            checked={visibleTabs.brewing}
+            checked={derivedNavigation.visibleTabs.brewing}
+            disabled={
+              !canDisableMainNavigationTab(
+                settings.navigationSettings,
+                'brewing'
+              )
+            }
             onChange={() => handleMainTabToggle('brewing')}
           />
         </SettingRow>
-        {availableUnpinnedViewsCount > 0 && (
-          <SettingRow
-            label={settings.simplifiedViewLabels ? '库存' : '咖啡豆库存'}
-          >
+        {derivedNavigation.canConfigureCoffeeBeanMainTab && (
+          <SettingRow label={settings.simplifiedViewLabels ? '库存' : '咖啡豆库存'}>
             <SettingToggle
-              checked={visibleTabs.coffeeBean}
+              checked={derivedNavigation.showCoffeeBeanMainTab}
+              disabled={
+                currentNavigation.visibleTabs.coffeeBean &&
+                !canDisableMainNavigationTab(
+                  settings.navigationSettings,
+                  'coffeeBean'
+                )
+              }
               onChange={() => handleMainTabToggle('coffeeBean')}
             />
           </SettingRow>
         )}
         <SettingRow label="笔记" isLast>
           <SettingToggle
-            checked={visibleTabs.notes}
+            checked={derivedNavigation.visibleTabs.notes}
+            disabled={
+              !canDisableMainNavigationTab(settings.navigationSettings, 'notes')
+            }
             onChange={() => handleMainTabToggle('notes')}
           />
         </SettingRow>
       </SettingSection>
 
-      {/* 咖啡豆视图显示设置 */}
-      {visibleTabs.coffeeBean && availableUnpinnedViewsCount > 0 && (
+      {COFFEE_BEAN_VIEW_ORDER.some(
+        view => !derivedNavigation.pinnedViews.includes(view)
+      ) && (
         <SettingSection
           title="视图显示"
           footer="控制在咖啡豆页面下拉菜单中显示的视图选项"
         >
-          {Object.values(VIEW_OPTIONS)
-            .filter(view => !pinnedViews.includes(view))
-            .map((view, index, array) => (
-              <SettingRow
-                key={view}
-                label={getLabel(view)}
-                isLast={index === array.length - 1}
-              >
-                <SettingToggle
-                  checked={coffeeBeanViews[view] ?? true}
-                  onChange={() => handleBeanViewToggle(view)}
-                />
-              </SettingRow>
-            ))}
+          {COFFEE_BEAN_VIEW_ORDER.filter(
+            view => !derivedNavigation.pinnedViews.includes(view)
+          ).map((view, index, array) => (
+            <SettingRow
+              key={view}
+              label={getLabel(view)}
+              isLast={index === array.length - 1}
+            >
+              <SettingToggle
+                checked={derivedNavigation.coffeeBeanViews[view] ?? true}
+                disabled={
+                  derivedNavigation.coffeeBeanViews[view] &&
+                  !canDisableCoffeeBeanView(settings.navigationSettings, view)
+                }
+                onChange={() => handleBeanViewToggle(view)}
+              />
+            </SettingRow>
+          ))}
         </SettingSection>
       )}
 
-      {/* 视图固定设置 */}
       <SettingSection
         title="固定视图"
         footer="开启后，该视图将作为独立标签页显示在主导航栏右侧"
       >
-        {Object.values(VIEW_OPTIONS).map((view, index, array) => (
+        {COFFEE_BEAN_VIEW_ORDER.map((view, index, array) => (
           <SettingRow
             key={view}
             label={getLabel(view)}
             isLast={index === array.length - 1}
           >
             <SettingToggle
-              checked={pinnedViews.includes(view)}
+              checked={derivedNavigation.pinnedViews.includes(view)}
               onChange={() => handlePinViewToggle(view)}
             />
           </SettingRow>

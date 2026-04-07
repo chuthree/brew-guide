@@ -44,6 +44,10 @@ import AppModals from '@/components/layout/AppModals';
 import fontZoomUtils from '@/lib/utils/fontZoomUtils';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import {
+  COFFEE_BEAN_VIEW_ORDER,
+  deriveNavigationSettings,
+} from '@/lib/navigation/navigationSettings';
+import {
   useMultiStepModalHistory,
   modalHistory,
 } from '@/lib/hooks/useModalHistory';
@@ -327,6 +331,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 使用 Zustand settingsStore 管理设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+  const navigationState = React.useMemo(
+    () => deriveNavigationSettings(settings.navigationSettings),
+    [settings.navigationSettings]
+  );
   const updateSettings = useSettingsStore(state => state.updateSettings);
   const storeInitialized = useSettingsStore(state => state.initialized);
   const loadSettingsFromStore = useSettingsStore(state => state.loadSettings);
@@ -773,8 +781,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
     // 检查冲煮 tab 是否可见
-    const isBrewingTabVisible =
-      settings.navigationSettings?.visibleTabs?.brewing !== false;
+    const isBrewingTabVisible = navigationState.visibleTabs.brewing;
 
     // 只有当冲煮 tab 可见且当前在冲煮 tab 时，才调整冲煮步骤
     if (isBrewingTabVisible && activeMainTab === '冲煮') {
@@ -793,7 +800,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   }, [
     storeInitialized,
     settings.showCoffeeBeanSelectionStep,
-    settings.navigationSettings?.visibleTabs?.brewing,
+    navigationState.visibleTabs.brewing,
     activeMainTab,
     activeBrewingStep,
     navigateToStep,
@@ -1059,6 +1066,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }
   });
 
+  const dropdownBeanViews = React.useMemo(
+    () =>
+      COFFEE_BEAN_VIEW_ORDER.filter(
+        view =>
+          view !== currentBeanView &&
+          navigationState.enabledUnpinnedViews.includes(view)
+      ),
+    [currentBeanView, navigationState.enabledUnpinnedViews]
+  );
+
   // 监听视图固定事件，当固定当前视图时自动切换到其他可用视图
   useEffect(() => {
     const handleViewPinned = (e: Event) => {
@@ -1067,22 +1084,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
       // 如果固定的是当前正在查看的视图
       if (pinnedView === currentBeanView) {
-        // 获取最新的导航设置
-        const { navigationSettings } = settings;
-        const pinnedViews = navigationSettings?.pinnedViews || [];
-        const coffeeBeanViews = navigationSettings?.coffeeBeanViews || {
-          [VIEW_OPTIONS.INVENTORY]: true,
-          [VIEW_OPTIONS.RANKING]: true,
-          [VIEW_OPTIONS.STATS]: true,
-        };
-
-        // 查找第一个未被固定且启用的视图
-        const availableView = Object.values(VIEW_OPTIONS).find(view => {
-          // 排除刚刚被固定的视图
-          if ([...pinnedViews, pinnedView].includes(view)) return false;
-          // 必须是启用的视图
-          return coffeeBeanViews[view] !== false;
-        });
+        const availableView = navigationState.enabledUnpinnedViews.find(
+          view => view !== pinnedView
+        );
 
         // 如果找到可用视图，切换过去
         if (availableView) {
@@ -1099,7 +1103,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleViewPinned as EventListener
       );
     };
-  }, [currentBeanView, settings]);
+  }, [currentBeanView, navigationState]);
 
   // 视图下拉菜单状态
   const [showViewDropdown, setShowViewDropdown] = useState(false);
@@ -4015,70 +4019,49 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 data-view-selector
               >
                 <div className="flex flex-col">
-                  {Object.entries(VIEW_LABELS)
-                    .filter(([key]) => {
-                      const viewKey = key as ViewOption;
-                      if (viewKey === currentBeanView) return false;
-
-                      // 如果已经被固定到导航栏，不显示在下拉菜单中
-                      const isPinned =
-                        settings.navigationSettings?.pinnedViews?.includes(
-                          viewKey
-                        );
-                      if (isPinned) return false;
-
-                      // Check visibility setting
-                      const isVisible =
-                        settings.navigationSettings?.coffeeBeanViews?.[
-                          viewKey
-                        ] ?? true;
-                      return isVisible;
-                    })
-                    .map(([key], index) => {
-                      const label = settings.simplifiedViewLabels
-                        ? SIMPLIFIED_VIEW_LABELS[key as ViewOption]
-                        : VIEW_LABELS[key as ViewOption];
-                      return (
-                        <motion.button
-                          key={key}
-                          initial={{
-                            opacity: 0,
-                            y: -6,
-                            scale: 0.98,
-                          }}
-                          animate={{
-                            opacity: 1,
-                            y: 0,
-                            scale: 1,
-                            transition: {
-                              delay: index * 0.04,
-                              duration: 0.2,
-                              ease: [0.25, 0.46, 0.45, 0.94],
-                            },
-                          }}
-                          exit={{
-                            opacity: 0,
-                            y: -4,
-                            scale: 0.98,
-                            transition: {
-                              delay:
-                                (Object.keys(VIEW_LABELS).length - index - 1) *
-                                0.02,
-                              duration: 0.12,
-                              ease: [0.4, 0.0, 1, 1],
-                            },
-                          }}
-                          onClick={() =>
-                            handleBeanViewChange(key as ViewOption)
-                          }
-                          className="flex items-center pb-3 text-left text-xs font-medium tracking-widest whitespace-nowrap text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                          style={{ paddingBottom: '12px' }}
-                        >
-                          <span className="relative inline-block">{label}</span>
-                          <span className="ml-1 h-3 w-3" />
-                        </motion.button>
-                      );
-                    })}
+                  {dropdownBeanViews.map((key, index) => {
+                    const label = settings.simplifiedViewLabels
+                      ? SIMPLIFIED_VIEW_LABELS[key]
+                      : VIEW_LABELS[key];
+                    return (
+                      <motion.button
+                        key={key}
+                        initial={{
+                          opacity: 0,
+                          y: -6,
+                          scale: 0.98,
+                        }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                          transition: {
+                            delay: index * 0.04,
+                            duration: 0.2,
+                            ease: [0.25, 0.46, 0.45, 0.94],
+                          },
+                        }}
+                        exit={{
+                          opacity: 0,
+                          y: -4,
+                          scale: 0.98,
+                          transition: {
+                            delay:
+                              (COFFEE_BEAN_VIEW_ORDER.length - index - 1) *
+                              0.02,
+                            duration: 0.12,
+                            ease: [0.4, 0.0, 1, 1],
+                          },
+                        }}
+                        onClick={() => handleBeanViewChange(key)}
+                        className="flex items-center pb-3 text-left text-xs font-medium tracking-widest whitespace-nowrap text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                        style={{ paddingBottom: '12px' }}
+                      >
+                        <span className="relative inline-block">{label}</span>
+                        <span className="ml-1 h-3 w-3" />
+                      </motion.button>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
