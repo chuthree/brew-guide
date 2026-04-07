@@ -19,30 +19,40 @@ export const formatDateString = (dateStr: string): string => {
     const date = new Date(timestamp);
     const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
 
-    // 计算已过天数
-    const today = new Date();
-    const todayDate = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    );
-    const roastDateOnly = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate()
-    );
-    const daysSinceRoast = Math.ceil(
-      (todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const daysSinceRoast = getDaysSinceDateString(dateStr);
 
     // 如果是今天或未来日期，不显示天数
-    if (daysSinceRoast <= 0) {
+    if (daysSinceRoast === null || daysSinceRoast <= 0) {
       return formattedDate;
     }
 
     return `${formattedDate} (已养豆 ${daysSinceRoast} 天)`;
   } catch {
     return dateStr;
+  }
+};
+
+export const getDaysSinceDateString = (dateStr: string): number | null => {
+  try {
+    const timestamp = parseDateToTimestamp(dateStr);
+    const date = new Date(timestamp);
+    const today = new Date();
+    const todayDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const targetDateOnly = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
+    return Math.ceil(
+      (todayDate.getTime() - targetDateOnly.getTime()) / (1000 * 60 * 60 * 24)
+    );
+  } catch {
+    return null;
   }
 };
 

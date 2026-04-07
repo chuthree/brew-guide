@@ -1,11 +1,16 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Minus, RotateCcw } from 'lucide-react';
-import { PrintConfig, EditableContent, FIELD_ORDER } from './types';
+import { PrintConfig, EditableContent, PrintFieldKey } from './types';
 import { DatePicker } from '@/components/common/ui/DatePicker';
-import { useSettingsStore } from '@/lib/stores/settingsStore';
-import { getDisplayBeanName } from './utils';
+import {
+  PRINT_EDITOR_FIELD_LABELS,
+  PRINT_FIELD_ORDER,
+  PRINT_TEXT_FIELD_PLACEHOLDERS,
+  PrintTextFieldKey,
+  hasPrintFieldContent,
+} from './fields';
 
 const INPUT_CLASS =
   'w-full rounded border border-neutral-200/50 bg-white px-2 py-1.5 text-xs focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800';
@@ -14,47 +19,13 @@ const SOFT_BUTTON_CLASS =
 const FIELD_BUTTON_BASE_CLASS =
   'h-8 min-w-0 rounded-[3px] border px-1.5 text-center text-xs font-medium transition-all bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700';
 
-type FieldKey = keyof PrintConfig['fields'];
-type TextFieldKey = Exclude<
-  keyof EditableContent,
-  'roaster' | 'roastDate' | 'flavor' | 'notes'
->;
+const createEditorItemKey = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
 
-const EDITOR_LABELS: Record<FieldKey, string> = {
-  name: '名称',
-  roastDate: '烘焙日期',
-  origin: '产地',
-  estate: '庄园',
-  process: '处理法',
-  variety: '品种',
-  roastLevel: '烘焙度',
-  flavor: '风味',
-  weight: '克重',
-  notes: '备注',
+  return `editor-item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 };
-
-const PLACEHOLDERS: Record<TextFieldKey, string> = {
-  name: '例如：野草莓',
-  origin: '产地信息',
-  estate: '庄园信息',
-  roastLevel: '烘焙度',
-  process: '例如：水洗、日晒',
-  variety: '例如：卡杜拉、瑰夏',
-  weight: '例如：250',
-};
-
-const MINIMAL_FIELDS: FieldKey[] = [
-  'name',
-  'roastDate',
-  'origin',
-  'estate',
-  'process',
-  'variety',
-  'roastLevel',
-  'flavor',
-  'weight',
-  'notes',
-];
 
 interface ContentEditorProps {
   config: PrintConfig;
@@ -80,16 +51,11 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
   onRemoveFlavor,
   onResetContent,
 }) => {
-  const isMinimal = config.template === 'minimal';
-  const showEstateFieldSetting = useSettingsStore(
-    state => state.settings.showEstateField || false
+  const fieldsToRender = PRINT_FIELD_ORDER;
+  const [selectedField, setSelectedField] = useState<PrintFieldKey | null>(null);
+  const [flavorKeys, setFlavorKeys] = useState<string[]>(() =>
+    content.flavor.map(() => createEditorItemKey())
   );
-  const shouldShowEstateField =
-    showEstateFieldSetting || !!content.estate.trim() || config.fields.estate;
-  const fieldsToRender = (isMinimal ? MINIMAL_FIELDS : FIELD_ORDER).filter(
-    field => field !== 'estate' || shouldShowEstateField
-  );
-  const [selectedField, setSelectedField] = useState<FieldKey | null>(null);
   const activeField =
     selectedField && fieldsToRender.includes(selectedField) ? selectedField : null;
   const editorPanelRef = useRef<HTMLDivElement | null>(null);
@@ -109,7 +75,31 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
     textareas.forEach(textarea => autoResizeTextarea(textarea as HTMLTextAreaElement));
   }, [content, activeField]);
 
-  const renderTextInput = (field: TextFieldKey, placeholder: string) => (
+  const visibleFlavorKeys = useMemo(() => {
+    if (flavorKeys.length >= content.flavor.length) {
+      return flavorKeys.slice(0, content.flavor.length);
+    }
+
+    return [
+      ...flavorKeys,
+      ...Array.from(
+        { length: content.flavor.length - flavorKeys.length },
+        createEditorItemKey
+      ),
+    ];
+  }, [content.flavor.length, flavorKeys]);
+
+  const handleAddFlavor = () => {
+    setFlavorKeys([...visibleFlavorKeys, createEditorItemKey()]);
+    onAddFlavor();
+  };
+
+  const handleRemoveFlavor = (index: number) => {
+    setFlavorKeys(visibleFlavorKeys.filter((_, i) => i !== index));
+    onRemoveFlavor(index);
+  };
+
+  const renderTextInput = (field: PrintTextFieldKey, placeholder: string) => (
     <textarea
       data-autosize="true"
       value={content[field]}
@@ -127,7 +117,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
         <div />
         <button
           type="button"
-          onClick={onAddFlavor}
+          onClick={handleAddFlavor}
           className={`flex h-6 w-6 items-center justify-center ${SOFT_BUTTON_CLASS}`}
         >
           <Plus className="h-3 w-3" />
@@ -135,7 +125,10 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
       </div>
       <div className="space-y-2">
         {content.flavor.map((flavor, index) => (
-          <div key={index} className="flex items-center gap-2">
+          <div
+            key={visibleFlavorKeys[index] ?? `flavor-item-${index}`}
+            className="flex items-center gap-2"
+          >
             <textarea
               data-autosize="true"
               value={flavor}
@@ -147,7 +140,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
             />
             <button
               type="button"
-              onClick={() => onRemoveFlavor(index)}
+              onClick={() => handleRemoveFlavor(index)}
               className={`flex h-6 w-6 items-center justify-center ${SOFT_BUTTON_CLASS}`}
             >
               <Minus className="h-3 w-3" />
@@ -171,36 +164,10 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
     </div>
   );
 
-  const isFieldEmpty = (field: FieldKey): boolean => {
-    switch (field) {
-      case 'name':
-        return isMinimal
-          ? !content.name.trim()
-          : !getDisplayBeanName(content).trim();
-      case 'roastDate':
-        return !content.roastDate.trim();
-      case 'origin':
-        return !content.origin.trim();
-      case 'estate':
-        return !content.estate.trim();
-      case 'process':
-        return !content.process.trim();
-      case 'variety':
-        return !content.variety.trim();
-      case 'roastLevel':
-        return !content.roastLevel.trim();
-      case 'flavor':
-        return content.flavor.filter(item => item.trim()).length === 0;
-      case 'weight':
-        return !content.weight.trim();
-      case 'notes':
-        return !content.notes.trim();
-      default:
-        return true;
-    }
-  };
+  const isFieldEmpty = (field: PrintFieldKey): boolean =>
+    !hasPrintFieldContent(field, content, config.template);
 
-  const renderFieldEditor = (field: FieldKey) => {
+  const renderFieldEditor = (field: PrintFieldKey) => {
     switch (field) {
       case 'name':
         return (
@@ -223,26 +190,29 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
               <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
                 名称
               </div>
-              {renderTextInput('name', PLACEHOLDERS.name)}
+              {renderTextInput('name', PRINT_TEXT_FIELD_PLACEHOLDERS.name)}
             </div>
           </div>
         );
       case 'roastDate':
         return renderDateInput();
       case 'origin':
-        return renderTextInput('origin', PLACEHOLDERS.origin);
+        return renderTextInput('origin', PRINT_TEXT_FIELD_PLACEHOLDERS.origin);
       case 'estate':
-        return renderTextInput('estate', PLACEHOLDERS.estate);
+        return renderTextInput('estate', PRINT_TEXT_FIELD_PLACEHOLDERS.estate);
       case 'process':
-        return renderTextInput('process', PLACEHOLDERS.process);
+        return renderTextInput('process', PRINT_TEXT_FIELD_PLACEHOLDERS.process);
       case 'variety':
-        return renderTextInput('variety', PLACEHOLDERS.variety);
+        return renderTextInput('variety', PRINT_TEXT_FIELD_PLACEHOLDERS.variety);
       case 'roastLevel':
-        return renderTextInput('roastLevel', PLACEHOLDERS.roastLevel);
+        return renderTextInput(
+          'roastLevel',
+          PRINT_TEXT_FIELD_PLACEHOLDERS.roastLevel
+        );
       case 'flavor':
         return renderFlavorEditor();
       case 'weight':
-        return renderTextInput('weight', PLACEHOLDERS.weight);
+        return renderTextInput('weight', PRINT_TEXT_FIELD_PLACEHOLDERS.weight);
       case 'notes':
         return (
           <textarea
@@ -271,7 +241,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
     ? `border-neutral-100 opacity-100 text-neutral-700 dark:border-neutral-800 dark:text-neutral-200 ${SOFT_BUTTON_CLASS}`
     : `border-dashed border-neutral-400 opacity-60 text-neutral-600 dark:border-neutral-500 dark:text-neutral-300 ${SOFT_BUTTON_CLASS}`;
 
-  const getFieldButtonClass = (field: FieldKey) => {
+  const getFieldButtonClass = (field: PrintFieldKey) => {
     const selected = activeField === field;
     const visible = config.fields[field];
     const empty = isFieldEmpty(field);
@@ -313,7 +283,9 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
             }
             className={getFieldButtonClass(field)}
           >
-            <div className="truncate leading-none">{EDITOR_LABELS[field]}</div>
+            <div className="truncate leading-none">
+              {PRINT_EDITOR_FIELD_LABELS[field]}
+            </div>
           </button>
         ))}
       </div>
@@ -325,7 +297,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
         >
           <div className="flex items-center justify-between">
             <div className="min-w-0 truncate text-xs font-medium text-neutral-700 dark:text-neutral-200">
-              {EDITOR_LABELS[activeField]}
+              {PRINT_EDITOR_FIELD_LABELS[activeField]}
             </div>
             <button
               type="button"

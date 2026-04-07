@@ -10,6 +10,7 @@ import {
   formatNumber,
   parseDateString,
   getFlavorInfo,
+  getDaysSinceDateString,
 } from '../utils';
 
 interface BasicInfoSectionProps {
@@ -90,6 +91,14 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   const isOutOfStock = remainingNumber !== null && remainingNumber <= 0;
   const hasValidUnitPrice =
     !isNaN(priceNumber) && !isNaN(capacityNumber) && capacityNumber > 0;
+  const agingDays =
+    !isAddMode &&
+    !isGreenBeanType &&
+    !isOutOfStock &&
+    !currentBean?.isInTransit &&
+    dateValue
+      ? getDaysSinceDateString(dateValue)
+      : null;
 
   // 聚焦输入框
   useEffect(() => {
@@ -331,9 +340,14 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     date={parseDateString(dateValue)}
                     onDateChange={date => handleDateChange(date, dateField)}
                     placeholder={`选择${dateLabel}`}
-                    className="[&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
+                    className="w-auto [&_button]:w-auto [&_button]:border-0 [&_button]:justify-start [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
                     displayFormat="yyyy-MM-dd"
                   />
+                  {agingDays !== null && agingDays > 0 && (
+                    <span className="whitespace-nowrap text-neutral-800 dark:text-neutral-100">
+                      {`(已养豆 ${agingDays} 天)`}
+                    </span>
+                  )}
                   {/* 添加模式：在途状态选项 */}
                   {isAddMode && (
                     <>

@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { TemplateProps, PrintConfig } from './types';
+import { TemplateProps } from './types';
+import { PRINT_FIELD_LABELS, isPrintFieldVisible } from './fields';
 import { getFlavorLine, getBottomInfoLine, getDisplayBeanName } from './utils';
 
 // ============================================
@@ -17,8 +18,8 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({
   const beanName = content.name.trim();
   const flavorLine = getFlavorLine(content.flavor);
   const bottomLine = getBottomInfoLine(content, config);
-  const showName = config.fields.name && !!beanName;
-  const showFlavor = config.fields.flavor && !!flavorLine;
+  const showName = isPrintFieldVisible('name', config, content);
+  const showFlavor = isPrintFieldVisible('flavor', config, content);
 
   const textStyle = {
     fontSize: `${config.fontSize}px`,
@@ -73,31 +74,35 @@ const FieldRow: React.FC<{
   );
 };
 
-const shouldShow = (
-  config: PrintConfig,
-  field: keyof PrintConfig['fields'],
-  value: unknown
-): boolean => config.fields[field] && !!value;
-
 export const DetailedTemplate: React.FC<TemplateProps> = ({
   config,
   content,
   formattedDate,
 }) => {
-  const { fields, fontSize, titleFontSize, fontWeight } = config;
+  const { fontSize, titleFontSize, fontWeight } = config;
   const validFlavors = content.flavor.filter(f => f.trim());
-  const showEstate = fields.estate || !!content.estate;
   const displayBeanName = getDisplayBeanName(content);
   const weightValue = content.weight
     ? content.weight.trim().toLowerCase().endsWith('g')
       ? content.weight
       : `${content.weight}g`
     : '';
+  const rows = [
+    { field: 'roastDate', value: formattedDate },
+    { field: 'origin', value: content.origin },
+    { field: 'estate', value: content.estate },
+    { field: 'process', value: content.process },
+    { field: 'variety', value: content.variety },
+    { field: 'roastLevel', value: content.roastLevel },
+    { field: 'flavor', value: validFlavors.join(' / ') },
+    { field: 'weight', value: weightValue },
+    { field: 'notes', value: content.notes },
+  ] as const;
 
   return (
     <div style={{ display: 'flex', height: '100%', flexDirection: 'column' }}>
       {/* 标题 */}
-      {shouldShow(config, 'name', displayBeanName) && (
+      {isPrintFieldVisible('name', config, content) && (
         <div
           style={{
             marginBottom: '0.375rem',
@@ -135,47 +140,14 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
           lineHeight: 1.3,
         }}
       >
-        <FieldRow
-          show={shouldShow(config, 'roastDate', content.roastDate)}
-          label="日期"
-          value={formattedDate}
-        />
-        <FieldRow
-          show={shouldShow(config, 'origin', content.origin)}
-          label="产地"
-          value={content.origin}
-        />
-        <FieldRow show={showEstate} label="庄园" value={content.estate} />
-        <FieldRow
-          show={shouldShow(config, 'process', content.process)}
-          label="处理"
-          value={content.process}
-        />
-        <FieldRow
-          show={shouldShow(config, 'variety', content.variety)}
-          label="品种"
-          value={content.variety}
-        />
-        <FieldRow
-          show={shouldShow(config, 'roastLevel', content.roastLevel)}
-          label="烘焙"
-          value={content.roastLevel}
-        />
-        <FieldRow
-          show={fields.flavor && validFlavors.length > 0}
-          label="风味"
-          value={validFlavors.join(' / ')}
-        />
-        <FieldRow
-          show={shouldShow(config, 'weight', content.weight)}
-          label="克重"
-          value={weightValue}
-        />
-        <FieldRow
-          show={shouldShow(config, 'notes', content.notes)}
-          label="备注"
-          value={content.notes}
-        />
+        {rows.map(({ field, value }) => (
+          <FieldRow
+            key={field}
+            show={isPrintFieldVisible(field, config, content)}
+            label={PRINT_FIELD_LABELS[field]}
+            value={value}
+          />
+        ))}
       </div>
     </div>
   );

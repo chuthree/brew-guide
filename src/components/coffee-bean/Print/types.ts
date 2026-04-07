@@ -41,6 +41,8 @@ export interface PrintConfig {
   template: 'minimal' | 'detailed';
 }
 
+export type PrintFieldKey = keyof PrintConfig['fields'];
+
 // 预设尺寸
 export interface PresetSize {
   label: string;
@@ -61,33 +63,6 @@ export interface TemplateProps {
   content: EditableContent;
   formattedDate: string;
 }
-
-// 字段顺序和标签（统一顺序：名称→日期→产地→处理法→品种→烘焙度→风味→备注）
-export const FIELD_ORDER: (keyof PrintConfig['fields'])[] = [
-  'name',
-  'roastDate',
-  'origin',
-  'estate',
-  'process',
-  'variety',
-  'roastLevel',
-  'flavor',
-  'weight',
-  'notes',
-];
-
-export const FIELD_LABELS: Record<keyof PrintConfig['fields'], string> = {
-  name: '名称',
-  roastDate: '日期',
-  origin: '产地',
-  estate: '庄园',
-  process: '处理法',
-  variety: '品种',
-  roastLevel: '烘焙',
-  flavor: '风味',
-  weight: '克重',
-  notes: '备注',
-};
 
 // 模板选项
 export const TEMPLATE_OPTIONS = [

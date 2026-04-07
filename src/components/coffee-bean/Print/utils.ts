@@ -1,6 +1,7 @@
 import { CoffeeBean } from '@/types/app';
 import { EditableContent, PrintConfig } from './types';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
+import { isPrintFieldVisible } from './fields';
 import { getBeanEstates, RoasterSettings } from '@/lib/utils/beanVarietyUtils';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 
@@ -41,16 +42,34 @@ export const getBottomInfoLine = (
   config: PrintConfig
 ): string => {
   const parts: string[] = [];
-  if (config.fields.weight && c.weight) {
-    parts.push(c.weight.trim().toLowerCase().endsWith('g') ? c.weight : `${c.weight}g`);
+  const weightValue = c.weight.trim();
+
+  if (isPrintFieldVisible('weight', config, c)) {
+    parts.push(
+      weightValue.toLowerCase().endsWith('g') ? weightValue : `${weightValue}g`
+    );
   }
-  if (config.fields.roastDate && c.roastDate) parts.push(formatDate(c.roastDate));
-  if (config.fields.process && c.process) parts.push(c.process);
-  if (config.fields.variety && c.variety) parts.push(c.variety);
-  if (config.fields.origin && c.origin) parts.push(c.origin);
-  if (config.fields.estate && c.estate) parts.push(c.estate);
-  if (config.fields.roastLevel && c.roastLevel) parts.push(c.roastLevel);
-  if (config.fields.notes && c.notes) parts.push(c.notes);
+  if (isPrintFieldVisible('roastDate', config, c)) {
+    parts.push(formatDate(c.roastDate));
+  }
+  if (isPrintFieldVisible('process', config, c)) {
+    parts.push(c.process.trim());
+  }
+  if (isPrintFieldVisible('variety', config, c)) {
+    parts.push(c.variety.trim());
+  }
+  if (isPrintFieldVisible('origin', config, c)) {
+    parts.push(c.origin.trim());
+  }
+  if (isPrintFieldVisible('estate', config, c)) {
+    parts.push(c.estate.trim());
+  }
+  if (isPrintFieldVisible('roastLevel', config, c)) {
+    parts.push(c.roastLevel.trim());
+  }
+  if (isPrintFieldVisible('notes', config, c)) {
+    parts.push(c.notes.trim());
+  }
   return parts.join(' / ');
 };
 
