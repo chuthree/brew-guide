@@ -23,6 +23,7 @@ import {
   mergeNavigationSettings,
   normalizeNavigationSettings,
 } from '@/lib/navigation/navigationSettings';
+import { normalizeSyncSettings } from '@/lib/sync/settings';
 
 /**
  * 默认设置值
@@ -316,12 +317,14 @@ export const useSettingsStore = create<SettingsStore>()(
         const stored = await db.appSettings.get('main');
 
         if (stored && stored.data) {
+          const normalizedStoredData = normalizeSyncSettings(stored.data);
+
           // 合并默认设置和存储的设置，确保新字段有默认值
           const mergedSettings = {
             ...defaultSettings,
-            ...stored.data,
+            ...normalizedStoredData,
             navigationSettings: normalizeNavigationSettings(
-              stored.data.navigationSettings
+              normalizedStoredData.navigationSettings
             ),
           };
 
@@ -332,6 +335,15 @@ export const useSettingsStore = create<SettingsStore>()(
           ) {
             mergedSettings.useClassicNotesListStyle = true;
           }
+
+          if (
+            mergedSettings.activeSyncType !== stored.data.activeSyncType ||
+            mergedSettings.supabaseBackupProvider !==
+              stored.data.supabaseBackupProvider
+          ) {
+            await db.appSettings.put({ id: 'main', data: mergedSettings });
+          }
+
           set({
             settings: mergedSettings,
             isLoading: false,
@@ -708,7 +720,10 @@ export const useSettingsStore = create<SettingsStore>()(
     },
 
     importSettings: async settings => {
-      const mergedSettings = { ...defaultSettings, ...settings };
+      const mergedSettings = {
+        ...defaultSettings,
+        ...normalizeSyncSettings(settings),
+      };
       try {
         await db.appSettings.put({ id: 'main', data: mergedSettings });
         set({ settings: mergedSettings });

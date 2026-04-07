@@ -39,8 +39,11 @@ import {
 import {
   type ManualSyncProvider,
   getCloudProviderLabel,
+  getConnectedManualSyncProvider,
   getResolvedActiveSyncType,
+  getSelectedManualSyncProvider,
   getSupabaseBackupProvider,
+  isPullToSyncEnabled,
 } from '@/lib/sync/settings';
 
 interface DataSettingsProps {
@@ -193,6 +196,15 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   // syncType 直接使用本地 state
   const syncType = activeSyncType;
+
+  const resolvedSyncSettings: SettingsOptions = {
+    ...settings,
+    activeSyncType: syncType,
+    supabaseBackupProvider,
+    s3Sync: s3Settings,
+    webdavSync: webdavSettings,
+    supabaseSync: supabaseSettings,
+  };
 
   // 关闭处理函数（带动画）
   const handleCloseWithAnimation = React.useCallback(() => {
@@ -396,6 +408,13 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       setActiveSyncType(type);
 
       (async () => {
+        const nextBackupProvider: ManualSyncProvider =
+          type === 'supabase' &&
+          (syncType === 's3' || syncType === 'webdav') &&
+          supabaseBackupProvider === 'none'
+            ? syncType
+            : supabaseBackupProvider;
+
         // 如果之前是 Supabase，现在切走，断开连接
         if (syncType === 'supabase' && type !== 'supabase') {
           try {
@@ -422,6 +441,11 @@ const DataSettings: React.FC<DataSettingsProps> = ({
           supabaseSettingsRef.current = newSettings;
           setSupabaseSettings(newSettings);
           await handleChange('supabaseSync', newSettings);
+
+          if (nextBackupProvider !== supabaseBackupProvider) {
+            setSupabaseBackupProvider(nextBackupProvider);
+            await handleChange('supabaseBackupProvider', nextBackupProvider);
+          }
         }
         // 如果切换到 S3
         else if (type === 's3') {
@@ -445,7 +469,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         hapticsUtils.light();
       }
     },
-    [syncType, settings.hapticFeedback, handleChange]
+    [syncType, supabaseBackupProvider, settings.hapticFeedback, handleChange]
   );
 
   const switchSupabaseBackupProvider = useCallback(
@@ -475,26 +499,12 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     [handleChange, settings.hapticFeedback]
   );
 
-  const selectedManualSyncType: ManualSyncProvider =
-    syncType === 'supabase'
-      ? supabaseBackupProvider
-      : syncType === 's3' || syncType === 'webdav'
-        ? syncType
-        : 'none';
-
+  const selectedManualSyncType = getSelectedManualSyncProvider(
+    resolvedSyncSettings
+  );
   const isManualSyncConnected =
-    selectedManualSyncType === 's3'
-      ? s3Settings.lastConnectionSuccess === true
-      : selectedManualSyncType === 'webdav'
-        ? webdavSettings.lastConnectionSuccess === true
-        : false;
-
-  const isPullToSyncEnabled =
-    selectedManualSyncType === 's3'
-      ? s3Settings.enablePullToSync !== false
-      : selectedManualSyncType === 'webdav'
-        ? webdavSettings.enablePullToSync !== false
-        : false;
+    getConnectedManualSyncProvider(resolvedSyncSettings) !== 'none';
+  const isManualPullToSyncEnabled = isPullToSyncEnabled(resolvedSyncSettings);
 
   const handlePullToSyncSettingChange = (enabled: boolean) => {
     if (selectedManualSyncType === 's3') {
@@ -688,7 +698,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               <label className="relative inline-flex cursor-pointer items-center">
                 <input
                   type="checkbox"
-                  checked={isPullToSyncEnabled}
+                  checked={isManualPullToSyncEnabled}
                   onChange={e => handlePullToSyncSettingChange(e.target.checked)}
                   className="peer sr-only"
                 />
@@ -749,7 +759,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                 <label className="relative inline-flex cursor-pointer items-center">
                   <input
                     type="checkbox"
-                    checked={isPullToSyncEnabled}
+                    checked={isManualPullToSyncEnabled}
                     onChange={e =>
                       handlePullToSyncSettingChange(e.target.checked)
                     }
