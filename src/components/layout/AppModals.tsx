@@ -31,6 +31,8 @@ import ExperimentalSettings from '@/components/settings/ExperimentalSettings';
 import AboutSettings from '@/components/settings/AboutSettings';
 import NavigationSettings from '@/components/settings/NavigationSettings';
 import BrewingSettings from '@/components/settings/BrewingSettings';
+import { SettingPageLayoutProvider } from '@/components/settings/atomic/SettingPageLayoutContext';
+import { modalHistory } from '@/lib/hooks/useModalHistory';
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal';
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
 import ImportModal from '@/components/common/modals/BeanImportModal';
@@ -385,42 +387,170 @@ const AppModals: React.FC<AppModalsProps> = ({
   // 标记未使用的变量
   void setNoteDetailData;
 
-  return (
-    <>
-      {/* Settings 组件独立渲染 */}
-      <Settings
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onDataChange={handleDataChange}
-        hasSubSettingsOpen={hasSubSettingsOpen}
-        subSettingsHandlers={{
-          onOpenDisplaySettings: () => setShowDisplaySettings(true),
-          onOpenNavigationSettings: () => setShowNavigationSettings(true),
-          onOpenStockSettings: () => setShowStockSettings(true),
-          onOpenBeanSettings: () => setShowBeanSettings(true),
-          onOpenGreenBeanSettings: () => setShowGreenBeanSettings(true),
-          onOpenFlavorPeriodSettings: () => setShowFlavorPeriodSettings(true),
-          onOpenBrewingSettings: () => setShowBrewingSettings(true),
-          onOpenTimerSettings: () => setShowTimerSettings(true),
-          onOpenDataSettings: () => setShowDataSettings(true),
-          onOpenNotificationSettings: () => setShowNotificationSettings(true),
-          onOpenRandomCoffeeBeanSettings: () =>
-            setShowRandomCoffeeBeanSettings(true),
-          onOpenSearchSortSettings: () => setShowSearchSortSettings(true),
-          onOpenNoteSettings: () => setShowNoteSettings(true),
-          onOpenFlavorDimensionSettings: () =>
-            setShowFlavorDimensionSettings(true),
-          onOpenHiddenMethodsSettings: () => setShowHiddenMethodsSettings(true),
-          onOpenHiddenEquipmentsSettings: () =>
-            setShowHiddenEquipmentsSettings(true),
-          onOpenRoasterLogoSettings: () => setShowRoasterLogoSettings(true),
-          onOpenGrinderSettings: () => setShowGrinderSettings(true),
-          onOpenExperimentalSettings: () => setShowExperimentalSettings(true),
-          onOpenAboutSettings: () => setShowAboutSettings(true),
-        }}
-      />
+  const subSettingStates = [
+    {
+      id: 'display-settings',
+      isOpen: showDisplaySettings,
+    },
+    {
+      id: 'navigation-settings',
+      isOpen: showNavigationSettings,
+    },
+    {
+      id: 'stock-settings',
+      isOpen: showStockSettings,
+    },
+    {
+      id: 'bean-settings',
+      isOpen: showBeanSettings,
+    },
+    {
+      id: 'green-bean-settings',
+      isOpen: showGreenBeanSettings,
+    },
+    {
+      id: 'flavor-period-settings',
+      isOpen: showFlavorPeriodSettings,
+    },
+    {
+      id: 'brewing-settings',
+      isOpen: showBrewingSettings,
+    },
+    {
+      id: 'timer-settings',
+      isOpen: showTimerSettings,
+    },
+    {
+      id: 'data-settings',
+      isOpen: showDataSettings,
+    },
+    {
+      id: 'notification-settings',
+      isOpen: showNotificationSettings,
+    },
+    {
+      id: 'random-coffee-bean-settings',
+      isOpen: showRandomCoffeeBeanSettings,
+    },
+    {
+      id: 'search-sort-settings',
+      isOpen: showSearchSortSettings,
+    },
+    {
+      id: 'note-settings',
+      isOpen: showNoteSettings,
+    },
+    {
+      id: 'flavor-dimension-settings',
+      isOpen: showFlavorDimensionSettings,
+    },
+    {
+      id: 'hidden-methods-settings',
+      isOpen: showHiddenMethodsSettings,
+    },
+    {
+      id: 'hidden-equipments-settings',
+      isOpen: showHiddenEquipmentsSettings,
+    },
+    {
+      id: 'roaster-logo-settings',
+      isOpen: showRoasterLogoSettings,
+    },
+    {
+      id: 'grinder-settings',
+      isOpen: showGrinderSettings,
+    },
+    {
+      id: 'experimental-settings',
+      isOpen: showExperimentalSettings,
+    },
+    {
+      id: 'about-settings',
+      isOpen: showAboutSettings,
+    },
+  ] as const;
+  const activeSubSettingId =
+    subSettingStates.find(subSetting => subSetting.isOpen)?.id ?? null;
 
-      {/* 所有子设置页面 */}
+  const closeAllSubSettings = React.useCallback(() => {
+    setShowDisplaySettings(false);
+    setShowNavigationSettings(false);
+    setShowStockSettings(false);
+    setShowBeanSettings(false);
+    setShowGreenBeanSettings(false);
+    setShowFlavorPeriodSettings(false);
+    setShowBrewingSettings(false);
+    setShowTimerSettings(false);
+    setShowDataSettings(false);
+    setShowNotificationSettings(false);
+    setShowRandomCoffeeBeanSettings(false);
+    setShowSearchSortSettings(false);
+    setShowNoteSettings(false);
+    setShowFlavorDimensionSettings(false);
+    setShowHiddenMethodsSettings(false);
+    setShowHiddenEquipmentsSettings(false);
+    setShowRoasterLogoSettings(false);
+    setShowGrinderSettings(false);
+    setShowExperimentalSettings(false);
+    setShowAboutSettings(false);
+  }, [
+    setShowDisplaySettings,
+    setShowNavigationSettings,
+    setShowStockSettings,
+    setShowBeanSettings,
+    setShowGreenBeanSettings,
+    setShowFlavorPeriodSettings,
+    setShowBrewingSettings,
+    setShowTimerSettings,
+    setShowDataSettings,
+    setShowNotificationSettings,
+    setShowRandomCoffeeBeanSettings,
+    setShowSearchSortSettings,
+    setShowNoteSettings,
+    setShowFlavorDimensionSettings,
+    setShowHiddenMethodsSettings,
+    setShowHiddenEquipmentsSettings,
+    setShowRoasterLogoSettings,
+    setShowGrinderSettings,
+    setShowExperimentalSettings,
+    setShowAboutSettings,
+  ]);
+
+  const openSubSetting = (id: string, setter: (show: boolean) => void) => {
+    const activeSubSetting =
+      subSettingStates.find(subSetting => subSetting.isOpen) ?? null;
+
+    if (activeSubSetting?.id === id) {
+      return;
+    }
+
+    // 大屏切换右侧设置内容时，复用同一层历史记录，避免栈深不断增加
+    if (
+      isLargeScreen &&
+      activeSubSetting &&
+      modalHistory.isTop(activeSubSetting.id)
+    ) {
+      modalHistory.replace({
+        id,
+        onClose: () => setter(false),
+      });
+    }
+
+    closeAllSubSettings();
+    setter(true);
+  };
+
+  const handleSettingsClose = React.useCallback(() => {
+    // 退出设置时，一次性清理 settings 及其上方所有子设置历史
+    if (modalHistory.isOpen('settings')) {
+      modalHistory.close('settings');
+    }
+    setIsSettingsOpen(false);
+    closeAllSubSettings();
+  }, [setIsSettingsOpen, closeAllSubSettings]);
+
+  const subSettingsContent = (
+    <>
       {showDisplaySettings && (
         <DisplaySettings
           settings={settings}
@@ -578,6 +708,93 @@ const AppModals: React.FC<AppModalsProps> = ({
       {showAboutSettings && (
         <AboutSettings onClose={() => setShowAboutSettings(false)} />
       )}
+    </>
+  );
+
+  return (
+    <>
+      {/* Settings 组件独立渲染 */}
+      <Settings
+        isOpen={isSettingsOpen}
+        onClose={handleSettingsClose}
+        onDataChange={handleDataChange}
+        hasSubSettingsOpen={hasSubSettingsOpen}
+        isLargeScreen={isLargeScreen}
+        activeSubSettingId={activeSubSettingId}
+        subSettingsContent={
+          isLargeScreen ? (
+            <SettingPageLayoutProvider mode="embedded">
+              {subSettingsContent}
+            </SettingPageLayoutProvider>
+          ) : null
+        }
+        subSettingsHandlers={{
+          onOpenDisplaySettings: () =>
+            openSubSetting('display-settings', setShowDisplaySettings),
+          onOpenNavigationSettings: () =>
+            openSubSetting('navigation-settings', setShowNavigationSettings),
+          onOpenStockSettings: () =>
+            openSubSetting('stock-settings', setShowStockSettings),
+          onOpenBeanSettings: () =>
+            openSubSetting('bean-settings', setShowBeanSettings),
+          onOpenGreenBeanSettings: () =>
+            openSubSetting('green-bean-settings', setShowGreenBeanSettings),
+          onOpenFlavorPeriodSettings: () =>
+            openSubSetting(
+              'flavor-period-settings',
+              setShowFlavorPeriodSettings
+            ),
+          onOpenBrewingSettings: () =>
+            openSubSetting('brewing-settings', setShowBrewingSettings),
+          onOpenTimerSettings: () =>
+            openSubSetting('timer-settings', setShowTimerSettings),
+          onOpenDataSettings: () =>
+            openSubSetting('data-settings', setShowDataSettings),
+          onOpenNotificationSettings: () =>
+            openSubSetting(
+              'notification-settings',
+              setShowNotificationSettings
+            ),
+          onOpenRandomCoffeeBeanSettings: () =>
+            openSubSetting(
+              'random-coffee-bean-settings',
+              setShowRandomCoffeeBeanSettings
+            ),
+          onOpenSearchSortSettings: () =>
+            openSubSetting('search-sort-settings', setShowSearchSortSettings),
+          onOpenNoteSettings: () =>
+            openSubSetting('note-settings', setShowNoteSettings),
+          onOpenFlavorDimensionSettings: () =>
+            openSubSetting(
+              'flavor-dimension-settings',
+              setShowFlavorDimensionSettings
+            ),
+          onOpenHiddenMethodsSettings: () =>
+            openSubSetting(
+              'hidden-methods-settings',
+              setShowHiddenMethodsSettings
+            ),
+          onOpenHiddenEquipmentsSettings: () =>
+            openSubSetting(
+              'hidden-equipments-settings',
+              setShowHiddenEquipmentsSettings
+            ),
+          onOpenRoasterLogoSettings: () =>
+            openSubSetting('roaster-logo-settings', setShowRoasterLogoSettings),
+          onOpenGrinderSettings: () =>
+            openSubSetting('grinder-settings', setShowGrinderSettings),
+          onOpenExperimentalSettings: () =>
+            openSubSetting(
+              'experimental-settings',
+              setShowExperimentalSettings
+            ),
+          onOpenAboutSettings: () =>
+            openSubSetting('about-settings', setShowAboutSettings),
+        }}
+      />
+
+      {/* 所有子设置页面 */}
+      {!isLargeScreen && subSettingsContent}
 
       {/* 咖啡豆表单模态框 */}
       <CoffeeBeanFormModal

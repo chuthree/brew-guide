@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSettingPageLayoutMode } from './SettingPageLayoutContext';
 
 interface SettingSectionProps {
   title?: string | React.ReactNode;
@@ -17,6 +18,9 @@ const SettingSection: React.FC<SettingSectionProps> = ({
   children,
   className = '',
 }) => {
+  const layoutMode = useSettingPageLayoutMode();
+  const sectionPaddingClass = layoutMode === 'embedded' ? 'pl-3 pr-6' : 'px-6';
+
   // 判断是否需要胶囊样式：只有一个子元素且没有描述
   const isCapsule = React.useMemo(() => {
     const validChildren = React.Children.toArray(children);
@@ -62,7 +66,7 @@ const SettingSection: React.FC<SettingSectionProps> = ({
   };
 
   return (
-    <div className={`px-6 pb-5 ${className}`}>
+    <div className={`${sectionPaddingClass} pb-5 ${className}`}>
       {title && (
         <div className="mb-3">
           {typeof title === 'string' ? (

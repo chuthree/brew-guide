@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { APP_VERSION, sponsorsList } from '@/lib/core/config';
 import { getVersionLabel } from '@/lib/core/buildInfo';
 import { pinyin } from 'pinyin-pro';
@@ -96,6 +97,9 @@ interface SettingsProps {
   onDataChange?: () => void;
   subSettingsHandlers: SubSettingsHandlers;
   hasSubSettingsOpen: boolean; // 是否有子设置页面打开
+  isLargeScreen?: boolean;
+  activeSubSettingId?: string | null;
+  subSettingsContent?: React.ReactNode;
 }
 
 // 获取名字的首字母（支持中文拼音）
@@ -183,12 +187,16 @@ const Settings: React.FC<SettingsProps> = ({
   onDataChange: _onDataChange,
   subSettingsHandlers,
   hasSubSettingsOpen,
+  isLargeScreen = false,
+  activeSubSettingId = null,
+  subSettingsContent = null,
 }) => {
   // 使用 Zustand store 管理设置
   const settings = useSettingsStore(state => state.settings);
   const updateSettings = useSettingsStore(state => state.updateSettings);
   const storeInitialized = useSettingsStore(state => state.initialized);
   const loadSettings = useSettingsStore(state => state.loadSettings);
+  const shouldReduceMotion = useReducedMotion();
 
   // 初始化加载设置
   useEffect(() => {
@@ -220,10 +228,15 @@ const Settings: React.FC<SettingsProps> = ({
       const timer = setTimeout(() => setShouldRender(false), 350);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);19
+  }, [isOpen]);
 
   // 关闭处理
   const handleClose = () => {
+    if (isLargeScreen) {
+      onClose();
+      return;
+    }
+
     // 立即触发退出动画
     setIsVisible(false);
 
@@ -456,425 +469,533 @@ const Settings: React.FC<SettingsProps> = ({
     ...baseStyle,
     // 如果有子设置页面打开且不是正在关闭，Settings 向左移动
     transform:
-      isVisible && hasSubSettingsOpen && !isSubSettingsClosing
+      !isLargeScreen && isVisible && hasSubSettingsOpen && !isSubSettingsClosing
         ? 'translate3d(-24px, 0, 0)'
         : baseStyle.transform,
     // 保持完全不透明，不要降低透明度
     opacity: isVisible ? 1 : 0,
   };
 
+  const headerContent = (
+    <div className="pt-safe-top relative z-20 flex items-center justify-between px-6">
+      <button
+        onClick={handleClose}
+        className="flex flex-5 cursor-pointer items-center rounded-full text-neutral-700 dark:text-neutral-300"
+      >
+        <ChevronLeft className="-ml-1 h-5 w-5" />
+        <h2 className="pl-2.5 text-xl font-medium text-neutral-800 dark:text-neutral-200">
+          设置
+        </h2>
+      </button>
+
+      {/* 手动同步/备份快捷按钮 - 支持主手动同步和 Supabase 下的双备份 */}
+      {cloudSyncStatus === 'connected' && (
+        <div
+          className="absolute right-6 flex items-center gap-2"
+          data-sync-menu
+        >
+          {/* 上传按钮 - 从右侧滑入 */}
+          <button
+            onClick={() => {
+              setShowSyncMenu(false);
+              // 延迟执行同步，等待菜单收回动画完成
+              setTimeout(() => performQuickSync('upload'), 250);
+            }}
+            disabled={isSyncing}
+            className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+              showSyncMenu && !isSyncing
+                ? 'translate-x-0 opacity-100'
+                : 'pointer-events-none translate-x-4 opacity-0'
+            }`}
+            style={{ transitionDuration: '200ms' }}
+          >
+            <Upload className="h-5 w-5" />
+          </button>
+          {/* 下载按钮 - 从右侧滑入 */}
+          <button
+            onClick={() => {
+              setShowSyncMenu(false);
+              // 延迟执行同步，等待菜单收回动画完成
+              setTimeout(() => performQuickSync('download'), 250);
+            }}
+            disabled={isSyncing}
+            className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+              showSyncMenu && !isSyncing
+                ? 'translate-x-0 opacity-100'
+                : 'pointer-events-none translate-x-4 opacity-0'
+            }`}
+            style={{ transitionDuration: '250ms' }}
+          >
+            <Download className="h-5 w-5" />
+          </button>
+          {/* 云图标/叉号/加载动画切换按钮 */}
+          <button
+            onClick={() => !isSyncing && setShowSyncMenu(!showSyncMenu)}
+            disabled={isSyncing}
+            className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${isSyncing ? 'cursor-default' : ''}`}
+          >
+            {isSyncing ? (
+              <LoadingSpinner className="h-5 w-5" />
+            ) : showSyncMenu ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Cloud className="h-5 w-5" />
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+  const shouldDimSubSettingEntries = isLargeScreen && !!activeSubSettingId;
+  const masterGroupPaddingClass = isLargeScreen ? 'pl-6 pr-3' : 'px-6';
+
   return (
     <div
       className="fixed inset-0 mx-auto flex flex-col bg-neutral-50 dark:bg-neutral-900"
       style={settingsStyle}
     >
-      {/* 头部导航栏 */}
-      <div className="pt-safe-top relative z-20 flex items-center justify-between px-6">
-        <button
-          onClick={handleClose}
-          className="cursor-pointer flex flex-5 items-center rounded-full text-neutral-700 dark:text-neutral-300"
-        >
-          <ChevronLeft className="-ml-1 h-5 w-5" />
-          <h2 className="pl-2.5 text-xl font-medium text-neutral-800 dark:text-neutral-200">
-            设置
-          </h2>
-        </button>
-
-        {/* 手动同步/备份快捷按钮 - 支持主手动同步和 Supabase 下的双备份 */}
-        {cloudSyncStatus === 'connected' && (
-          <div
-            className="absolute right-6 flex items-center gap-2"
-            data-sync-menu
-          >
-            {/* 上传按钮 - 从右侧滑入 */}
-            <button
-              onClick={() => {
-                setShowSyncMenu(false);
-                // 延迟执行同步，等待菜单收回动画完成
-                setTimeout(() => performQuickSync('upload'), 250);
-              }}
-              disabled={isSyncing}
-              className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
-                showSyncMenu && !isSyncing
-                  ? 'translate-x-0 opacity-100'
-                  : 'pointer-events-none translate-x-4 opacity-0'
-              }`}
-              style={{ transitionDuration: '200ms' }}
-            >
-              <Upload className="h-5 w-5" />
-            </button>
-            {/* 下载按钮 - 从右侧滑入 */}
-            <button
-              onClick={() => {
-                setShowSyncMenu(false);
-                // 延迟执行同步，等待菜单收回动画完成
-                setTimeout(() => performQuickSync('download'), 250);
-              }}
-              disabled={isSyncing}
-              className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
-                showSyncMenu && !isSyncing
-                  ? 'translate-x-0 opacity-100'
-                  : 'pointer-events-none translate-x-4 opacity-0'
-              }`}
-              style={{ transitionDuration: '250ms' }}
-            >
-              <Download className="h-5 w-5" />
-            </button>
-            {/* 云图标/叉号/加载动画切换按钮 */}
-            <button
-              onClick={() => !isSyncing && setShowSyncMenu(!showSyncMenu)}
-              disabled={isSyncing}
-              className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-all hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${isSyncing ? 'cursor-default' : ''}`}
-            >
-              {isSyncing ? (
-                <LoadingSpinner className="h-5 w-5" />
-              ) : showSyncMenu ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Cloud className="h-5 w-5" />
-              )}
-            </button>
-          </div>
-        )}
-      </div>
+      {!isLargeScreen && headerContent}
 
       {/* 滚动内容区域 - 新的简洁设计 */}
-      <div className="pb-safe-bottom relative flex-1 overflow-y-auto">
-        {/* 顶部渐变阴影（随滚动粘附）*/}
-        <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
+      <div className={isLargeScreen ? 'flex min-h-0 flex-1' : 'flex-1'}>
+        <div
+          className={
+            isLargeScreen ? 'flex h-full w-96 shrink-0 flex-col' : 'flex-1'
+          }
+        >
+          {isLargeScreen && headerContent}
 
-        {/* 帮助与反馈 */}
-        <SettingGroup
-          className="-mt-4"
-          items={[
-            {
-              icon: CircleHelp,
-              label: '帮助文档',
-              onClick: () => {
-                window.open('https://chu3.top/brewguide-help', '_blank');
-                if (settings.hapticFeedback) {
-                  hapticsUtils.light();
-                }
-              },
-            },
-            ...(!settings.hideGroupQRCode
-              ? [
-                  {
-                    icon: MessageCircle,
-                    label: '交流群',
-                    isExpanded: qrCodeType === 'group',
-                    onClick: () => {
-                      setQrCodeType(qrCodeType === 'group' ? null : 'group');
-                      if (settings.hapticFeedback) {
-                        hapticsUtils.light();
-                      }
-                    },
-                    expandedContent: (
-                      <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
-                        <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
-                          <Image
-                            src="/images/content/group-code.jpg"
-                            alt="交流群二维码"
-                            width={200}
-                            height={200}
-                            className="h-auto w-50"
-                          />
-                        </div>
-                        <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                          群满 200 人哩，加开发者拉你进群吧
-                          {confirmingHide === 'group' ? (
-                            <span data-hide-confirm>
-                              {' - '}
-                              <button
-                                onClick={async e => {
-                                  e.stopPropagation();
-                                  await handleChange('hideGroupQRCode', true);
-                                  setConfirmingHide(null);
-                                  setQrCodeType(null);
-                                  if (settings.hapticFeedback) {
-                                    hapticsUtils.medium();
-                                  }
-                                }}
-                                className="cursor-pointer text-red-500 hover:text-red-600 active:text-red-700 dark:text-red-400 dark:hover:text-red-500"
-                              >
-                                永久隐藏
-                              </button>
-                            </span>
-                          ) : (
-                            <span data-hide-confirm>
-                              {' - '}
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setConfirmingHide('group');
-                                  if (settings.hapticFeedback) {
-                                    hapticsUtils.light();
-                                  }
-                                }}
-                                className="cursor-pointer text-neutral-500 hover:text-neutral-600 active:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                              >
-                                不再显示
-                              </button>
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    ),
+          <div
+            className={
+              isLargeScreen
+                ? 'pb-safe-bottom relative min-h-0 flex-1 overflow-y-auto'
+                : 'pb-safe-bottom relative flex-1 overflow-y-auto'
+            }
+          >
+            {/* 顶部渐变阴影（随滚动粘附）*/}
+            <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
+
+            {/* 帮助与反馈 */}
+            <SettingGroup
+              className="-mt-4"
+              paddingClass={masterGroupPaddingClass}
+              items={[
+                {
+                  icon: CircleHelp,
+                  label: '帮助文档',
+                  onClick: () => {
+                    window.open('https://chu3.top/brewguide-help', '_blank');
+                    if (settings.hapticFeedback) {
+                      hapticsUtils.light();
+                    }
                   },
-                ]
-              : []),
-            ...(!settings.hideAppreciationQRCode
-              ? [
-                  {
-                    icon: ThumbsUp,
-                    label: '赞赏码',
-                    isExpanded: qrCodeType === 'appreciation',
-                    onClick: () => {
-                      setQrCodeType(
-                        qrCodeType === 'appreciation' ? null : 'appreciation'
-                      );
-                      if (settings.hapticFeedback) {
-                        hapticsUtils.light();
-                      }
-                    },
-                    expandedContent: (
-                      <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
-                        <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
-                          <Image
-                            src="/images/content/appreciation-code.jpg"
-                            alt="赞赏码"
-                            width={200}
-                            height={200}
-                            className="h-auto w-50"
-                          />
-                        </div>
-                        <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                          赞赏码（开发不易，要是能支持一下就太好了 www）
-                          {confirmingHide === 'appreciation' ? (
-                            <span data-hide-confirm>
-                              {' - '}
-                              <button
-                                onClick={async e => {
-                                  e.stopPropagation();
-                                  await handleChange(
-                                    'hideAppreciationQRCode',
-                                    true
-                                  );
-                                  setConfirmingHide(null);
-                                  setQrCodeType(null);
-                                  if (settings.hapticFeedback) {
-                                    hapticsUtils.medium();
-                                  }
-                                }}
-                                className="cursor-pointer text-red-500 hover:text-red-600 active:text-red-700 dark:text-red-400 dark:hover:text-red-500"
-                              >
-                                永久隐藏
-                              </button>
-                            </span>
-                          ) : (
-                            <span data-hide-confirm>
-                              {' - '}
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setConfirmingHide('appreciation');
-                                  if (settings.hapticFeedback) {
-                                    hapticsUtils.light();
-                                  }
-                                }}
-                                className="cursor-pointer text-neutral-500 hover:text-neutral-600 active:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
-                              >
-                                不再显示
-                              </button>
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    ),
+                },
+                ...(!settings.hideGroupQRCode
+                  ? [
+                      {
+                        icon: MessageCircle,
+                        label: '交流群',
+                        isExpanded: qrCodeType === 'group',
+                        onClick: () => {
+                          setQrCodeType(
+                            qrCodeType === 'group' ? null : 'group'
+                          );
+                          if (settings.hapticFeedback) {
+                            hapticsUtils.light();
+                          }
+                        },
+                        expandedContent: (
+                          <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
+                            <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
+                              <Image
+                                src="/images/content/group-code.jpg"
+                                alt="交流群二维码"
+                                width={200}
+                                height={200}
+                                className="h-auto w-50"
+                              />
+                            </div>
+                            <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                              群满 200 人哩，加开发者拉你进群吧
+                              {confirmingHide === 'group' ? (
+                                <span data-hide-confirm>
+                                  {' - '}
+                                  <button
+                                    onClick={async e => {
+                                      e.stopPropagation();
+                                      await handleChange(
+                                        'hideGroupQRCode',
+                                        true
+                                      );
+                                      setConfirmingHide(null);
+                                      setQrCodeType(null);
+                                      if (settings.hapticFeedback) {
+                                        hapticsUtils.medium();
+                                      }
+                                    }}
+                                    className="cursor-pointer text-red-500 hover:text-red-600 active:text-red-700 dark:text-red-400 dark:hover:text-red-500"
+                                  >
+                                    永久隐藏
+                                  </button>
+                                </span>
+                              ) : (
+                                <span data-hide-confirm>
+                                  {' - '}
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      setConfirmingHide('group');
+                                      if (settings.hapticFeedback) {
+                                        hapticsUtils.light();
+                                      }
+                                    }}
+                                    className="cursor-pointer text-neutral-500 hover:text-neutral-600 active:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                                  >
+                                    不再显示
+                                  </button>
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        ),
+                      },
+                    ]
+                  : []),
+                ...(!settings.hideAppreciationQRCode
+                  ? [
+                      {
+                        icon: ThumbsUp,
+                        label: '赞赏码',
+                        isExpanded: qrCodeType === 'appreciation',
+                        onClick: () => {
+                          setQrCodeType(
+                            qrCodeType === 'appreciation'
+                              ? null
+                              : 'appreciation'
+                          );
+                          if (settings.hapticFeedback) {
+                            hapticsUtils.light();
+                          }
+                        },
+                        expandedContent: (
+                          <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
+                            <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
+                              <Image
+                                src="/images/content/appreciation-code.jpg"
+                                alt="赞赏码"
+                                width={200}
+                                height={200}
+                                className="h-auto w-50"
+                              />
+                            </div>
+                            <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                              赞赏码（开发不易，要是能支持一下就太好了 www）
+                              {confirmingHide === 'appreciation' ? (
+                                <span data-hide-confirm>
+                                  {' - '}
+                                  <button
+                                    onClick={async e => {
+                                      e.stopPropagation();
+                                      await handleChange(
+                                        'hideAppreciationQRCode',
+                                        true
+                                      );
+                                      setConfirmingHide(null);
+                                      setQrCodeType(null);
+                                      if (settings.hapticFeedback) {
+                                        hapticsUtils.medium();
+                                      }
+                                    }}
+                                    className="cursor-pointer text-red-500 hover:text-red-600 active:text-red-700 dark:text-red-400 dark:hover:text-red-500"
+                                  >
+                                    永久隐藏
+                                  </button>
+                                </span>
+                              ) : (
+                                <span data-hide-confirm>
+                                  {' - '}
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      setConfirmingHide('appreciation');
+                                      if (settings.hapticFeedback) {
+                                        hapticsUtils.light();
+                                      }
+                                    }}
+                                    className="cursor-pointer text-neutral-500 hover:text-neutral-600 active:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+                                  >
+                                    不再显示
+                                  </button>
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        ),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+
+            {/* 显示与界面设置 */}
+            <SettingGroup
+              paddingClass={masterGroupPaddingClass}
+              activeSettingId={activeSubSettingId}
+              dimUnselectedItems={shouldDimSubSettingEntries}
+              items={[
+                {
+                  icon: Monitor,
+                  label: '外观与字体',
+                  settingId: 'display-settings',
+                  onClick: subSettingsHandlers.onOpenDisplaySettings,
+                },
+                {
+                  icon: Layout,
+                  label: '导航栏',
+                  settingId: 'navigation-settings',
+                  onClick: subSettingsHandlers.onOpenNavigationSettings,
+                },
+                {
+                  icon: Bell,
+                  label: '通知',
+                  settingId: 'notification-settings',
+                  onClick: subSettingsHandlers.onOpenNotificationSettings,
+                },
+              ]}
+            />
+            {/* 功能设置 */}
+            <SettingGroup
+              paddingClass={masterGroupPaddingClass}
+              activeSettingId={activeSubSettingId}
+              dimUnselectedItems={shouldDimSubSettingEntries}
+              items={[
+                {
+                  icon: Play,
+                  label: '冲煮',
+                  settingId: 'brewing-settings',
+                  onClick: subSettingsHandlers.onOpenBrewingSettings,
+                },
+                {
+                  icon: Timer,
+                  label: '计时器',
+                  settingId: 'timer-settings',
+                  onClick: subSettingsHandlers.onOpenTimerSettings,
+                },
+                {
+                  icon: Settings2,
+                  label: '磨豆机',
+                  settingId: 'grinder-settings',
+                  onClick: subSettingsHandlers.onOpenGrinderSettings,
+                },
+                {
+                  icon: Shuffle,
+                  label: '随机咖啡豆规则',
+                  settingId: 'random-coffee-bean-settings',
+                  onClick: subSettingsHandlers.onOpenRandomCoffeeBeanSettings,
+                },
+                ...(hasHiddenMethods
+                  ? [
+                      {
+                        icon: EyeOff,
+                        label: '隐藏的预设方案',
+                        settingId: 'hidden-methods-settings',
+                        onClick:
+                          subSettingsHandlers.onOpenHiddenMethodsSettings,
+                      },
+                    ]
+                  : []),
+                ...(hasHiddenEquipments
+                  ? [
+                      {
+                        icon: EyeOff,
+                        label: '隐藏的预设器具',
+                        settingId: 'hidden-equipments-settings',
+                        onClick:
+                          subSettingsHandlers.onOpenHiddenEquipmentsSettings,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+
+            {/* 咖啡豆管理 */}
+            <SettingGroup
+              paddingClass={masterGroupPaddingClass}
+              activeSettingId={activeSubSettingId}
+              dimUnselectedItems={shouldDimSubSettingEntries}
+              items={[
+                {
+                  icon: List,
+                  label: '咖啡豆',
+                  settingId: 'bean-settings',
+                  onClick: subSettingsHandlers.onOpenBeanSettings,
+                },
+                {
+                  icon: Box,
+                  label: '生豆库',
+                  settingId: 'green-bean-settings',
+                  onClick: subSettingsHandlers.onOpenGreenBeanSettings,
+                },
+                {
+                  icon: Archive,
+                  label: '库存扣除',
+                  settingId: 'stock-settings',
+                  onClick: subSettingsHandlers.onOpenStockSettings,
+                },
+                {
+                  icon: CalendarDays,
+                  label: '赏味期',
+                  settingId: 'flavor-period-settings',
+                  onClick: subSettingsHandlers.onOpenFlavorPeriodSettings,
+                },
+                {
+                  icon: ImagePlus,
+                  label: '烘焙商图标',
+                  settingId: 'roaster-logo-settings',
+                  onClick: subSettingsHandlers.onOpenRoasterLogoSettings,
+                },
+              ]}
+            />
+
+            {/* 笔记管理 */}
+            <SettingGroup
+              paddingClass={masterGroupPaddingClass}
+              activeSettingId={activeSubSettingId}
+              dimUnselectedItems={shouldDimSubSettingEntries}
+              items={[
+                {
+                  icon: Notebook,
+                  label: '笔记',
+                  settingId: 'note-settings',
+                  onClick: subSettingsHandlers.onOpenNoteSettings,
+                },
+                {
+                  icon: ArrowUpDown,
+                  label: '搜索与排序',
+                  settingId: 'search-sort-settings',
+                  onClick: subSettingsHandlers.onOpenSearchSortSettings,
+                },
+                {
+                  icon: Palette,
+                  label: '评分维度',
+                  settingId: 'flavor-dimension-settings',
+                  onClick: subSettingsHandlers.onOpenFlavorDimensionSettings,
+                },
+              ]}
+            />
+
+            {/* 实验性功能 */}
+            <SettingGroup
+              paddingClass={masterGroupPaddingClass}
+              activeSettingId={activeSubSettingId}
+              dimUnselectedItems={shouldDimSubSettingEntries}
+              items={[
+                {
+                  icon: FlaskConical,
+                  label: '实验性功能',
+                  settingId: 'experimental-settings',
+                  onClick: subSettingsHandlers.onOpenExperimentalSettings,
+                },
+              ]}
+            />
+
+            {/* 数据与备份 */}
+            <SettingGroup
+              paddingClass={masterGroupPaddingClass}
+              activeSettingId={activeSubSettingId}
+              dimUnselectedItems={shouldDimSubSettingEntries}
+              items={[
+                {
+                  icon: User,
+                  label: '用户名',
+                  value: settings.username,
+                  placeholder: '点击输入',
+                  editable: true,
+                  onSave: value => {
+                    handleChange('username', value);
+                    if (settings.hapticFeedback) {
+                      hapticsUtils.light();
+                    }
                   },
-                ]
-              : []),
-          ]}
-        />
+                },
+                {
+                  icon: Database,
+                  label: '数据与备份',
+                  settingId: 'data-settings',
+                  onClick: subSettingsHandlers.onOpenDataSettings,
+                },
+              ]}
+            />
 
-        {/* 显示与界面设置 */}
-        <SettingGroup
-          items={[
-            {
-              icon: Monitor,
-              label: '外观与字体',
-              onClick: subSettingsHandlers.onOpenDisplaySettings,
-            },
-            {
-              icon: Layout,
-              label: '导航栏',
-              onClick: subSettingsHandlers.onOpenNavigationSettings,
-            },
-            {
-              icon: Bell,
-              label: '通知',
-              onClick: subSettingsHandlers.onOpenNotificationSettings,
-            },
-          ]}
-        />
-        {/* 功能设置 */}
-        <SettingGroup
-          items={[
-            {
-              icon: Play,
-              label: '冲煮',
-              onClick: subSettingsHandlers.onOpenBrewingSettings,
-            },
-            {
-              icon: Timer,
-              label: '计时器',
-              onClick: subSettingsHandlers.onOpenTimerSettings,
-            },
-            {
-              icon: Settings2,
-              label: '磨豆机',
-              onClick: subSettingsHandlers.onOpenGrinderSettings,
-            },
-            {
-              icon: Shuffle,
-              label: '随机咖啡豆规则',
-              onClick: subSettingsHandlers.onOpenRandomCoffeeBeanSettings,
-            },
-            ...(hasHiddenMethods
-              ? [
-                  {
-                    icon: EyeOff,
-                    label: '隐藏的预设方案',
-                    onClick: subSettingsHandlers.onOpenHiddenMethodsSettings,
-                  },
-                ]
-              : []),
-            ...(hasHiddenEquipments
-              ? [
-                  {
-                    icon: EyeOff,
-                    label: '隐藏的预设器具',
-                    onClick: subSettingsHandlers.onOpenHiddenEquipmentsSettings,
-                  },
-                ]
-              : []),
-          ]}
-        />
+            {/* 关于 */}
+            <SettingGroup
+              paddingClass={masterGroupPaddingClass}
+              activeSettingId={activeSubSettingId}
+              dimUnselectedItems={shouldDimSubSettingEntries}
+              items={[
+                {
+                  icon: Info,
+                  label: '关于',
+                  settingId: 'about-settings',
+                  value: getVersionLabel(bundledNativeApp),
+                  onClick: subSettingsHandlers.onOpenAboutSettings,
+                },
+              ]}
+            />
 
-        {/* 咖啡豆管理 */}
-        <SettingGroup
-          items={[
-            {
-              icon: List,
-              label: '咖啡豆',
-              onClick: subSettingsHandlers.onOpenBeanSettings,
-            },
-            {
-              icon: Box,
-              label: '生豆库',
-              onClick: subSettingsHandlers.onOpenGreenBeanSettings,
-            },
-            {
-              icon: Archive,
-              label: '库存扣除',
-              onClick: subSettingsHandlers.onOpenStockSettings,
-            },
-            {
-              icon: CalendarDays,
-              label: '赏味期',
-              onClick: subSettingsHandlers.onOpenFlavorPeriodSettings,
-            },
-            {
-              icon: ImagePlus,
-              label: '烘焙商图标',
-              onClick: subSettingsHandlers.onOpenRoasterLogoSettings,
-            },
-          ]}
-        />
-
-        {/* 笔记管理 */}
-        <SettingGroup
-          items={[
-            {
-              icon: Notebook,
-              label: '笔记',
-              onClick: subSettingsHandlers.onOpenNoteSettings,
-            },
-            {
-              icon: ArrowUpDown,
-              label: '搜索与排序',
-              onClick: subSettingsHandlers.onOpenSearchSortSettings,
-            },
-            {
-              icon: Palette,
-              label: '评分维度',
-              onClick: subSettingsHandlers.onOpenFlavorDimensionSettings,
-            },
-          ]}
-        />
-
-        {/* 实验性功能 */}
-        <SettingGroup
-          items={[
-            {
-              icon: FlaskConical,
-              label: '实验性功能',
-              onClick: subSettingsHandlers.onOpenExperimentalSettings,
-            },
-          ]}
-        />
-
-        {/* 数据与备份 */}
-        <SettingGroup
-          items={[
-            {
-              icon: User,
-              label: '用户名',
-              value: settings.username,
-              placeholder: '点击输入',
-              editable: true,
-              onSave: value => {
-                handleChange('username', value);
-                if (settings.hapticFeedback) {
-                  hapticsUtils.light();
-                }
-              },
-            },
-            {
-              icon: Database,
-              label: '数据与备份',
-              onClick: subSettingsHandlers.onOpenDataSettings,
-            },
-          ]}
-        />
-
-        {/* 关于 */}
-        <SettingGroup
-          items={[
-            {
-              icon: Info,
-              label: '关于',
-              value: getVersionLabel(bundledNativeApp),
-              onClick: subSettingsHandlers.onOpenAboutSettings,
-            },
-          ]}
-        />
-
-        {/* 感谢名单 */}
-        <div className="px-8 pt-18 pb-8">
-          <div className="text-left text-xs select-none">
-            <p className="font-medium text-neutral-800 dark:text-neutral-200">
-              感谢各位一直以来的支持，自 2025 年 2 月 1
-              日首次发布至今，项目已持续运行{' '}
-              {Math.floor(
-                (Date.now() - new Date('2025-02-01').getTime()) /
-                  (1000 * 60 * 60 * 24)
-              )}{' '}
-              天，你们的每一次鼓励与贡献，都是它不断成长的重要动力。
-            </p>
-            <SponsorList />
+            {/* 感谢名单 */}
+            <div className="px-8 pt-18 pb-8">
+              <div className="text-left text-xs select-none">
+                <p className="font-medium text-neutral-800 dark:text-neutral-200">
+                  感谢各位一直以来的支持，自 2025 年 2 月 1
+                  日首次发布至今，项目已持续运行{' '}
+                  {Math.floor(
+                    (Date.now() - new Date('2025-02-01').getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  )}{' '}
+                  天，你们的每一次鼓励与贡献，都是它不断成长的重要动力。
+                </p>
+                <SponsorList />
+              </div>
+            </div>
           </div>
         </div>
+        {isLargeScreen && (
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            <AnimatePresence mode="wait" initial={false}>
+              {activeSubSettingId ? (
+                <motion.div
+                  key={activeSubSettingId}
+                  className="h-full"
+                  initial={
+                    shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 12 }
+                  }
+                  animate={
+                    shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }
+                  }
+                  exit={
+                    shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -8 }
+                  }
+                  transition={{
+                    duration: shouldReduceMotion ? 0.12 : 0.2,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                >
+                  {subSettingsContent}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="settings-empty-detail"
+                  className="h-full"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {/* 版本更新抽屉 */}
@@ -895,7 +1016,6 @@ const Settings: React.FC<SettingsProps> = ({
           }}
         />
       )}
-
     </div>
   );
 };
