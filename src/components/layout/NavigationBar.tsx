@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { equipmentList, type CustomEquipment } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
@@ -169,11 +169,14 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [tempValue, setTempValue] = useState(value);
 
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
+  useLayoutEffect(() => {
+    if (!isEditing || !inputRef.current) return;
+
+    const input = inputRef.current;
+    input.focus({ preventScroll: true });
+
+    const cursorPosition = input.value.length;
+    input.setSelectionRange(cursorPosition, cursorPosition);
   }, [isEditing]);
 
   useEffect(() => {
