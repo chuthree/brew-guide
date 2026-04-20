@@ -241,6 +241,7 @@ const TableView: React.FC<TableViewProps> = ({
   filteredBeans,
   emptyBeans,
   showEmptyBeans,
+  onRate,
   onRemainingClick,
   settings,
   visibleColumns = getDefaultVisibleColumns(),
@@ -398,6 +399,14 @@ const TableView: React.FC<TableViewProps> = ({
   const clearHoverPreview = useCallback(() => {
     setHoverPreviewBean(null);
   }, []);
+
+  const handleRateClick = useCallback(
+    (bean: ExtendedCoffeeBean, event: React.MouseEvent<HTMLElement>) => {
+      event.stopPropagation();
+      onRate?.(bean);
+    },
+    [onRate]
+  );
 
   // 检查是否有生豆
   const hasGreenBeans = useMemo(
@@ -596,8 +605,31 @@ const TableView: React.FC<TableViewProps> = ({
         id: 'rating',
         header: '评分',
         cell: ({ row }) => {
-          const rating = row.original.overallRating;
-          return rating && rating > 0 ? rating : '-';
+          const bean = row.original;
+          const rating = bean.overallRating;
+          const displayValue = rating && rating > 0 ? rating : '-';
+
+          if (!onRate) {
+            return displayValue;
+          }
+
+          const beanName = formatBeanDisplayName(bean, roasterSettings);
+          const actionLabel =
+            rating && rating > 0
+              ? `编辑 ${beanName} 的评分`
+              : `添加 ${beanName} 的评分`;
+
+          return (
+            <button
+              type="button"
+              className="block w-full cursor-pointer text-left"
+              onClick={event => handleRateClick(bean, event)}
+              aria-label={actionLabel}
+              title={actionLabel}
+            >
+              {displayValue}
+            </button>
+          );
         },
         sortingFn: 'basic',
       }),
@@ -613,7 +645,14 @@ const TableView: React.FC<TableViewProps> = ({
     return TABLE_COLUMN_CONFIG.filter(col =>
       visibleColumns.includes(col.key)
     ).map(col => allColumns[col.key]);
-  }, [visibleColumns, dateDisplayMode, hasGreenBeans, roasterSettings]);
+  }, [
+    visibleColumns,
+    dateDisplayMode,
+    hasGreenBeans,
+    handleRateClick,
+    onRate,
+    roasterSettings,
+  ]);
 
   // 创建表格实例
   const table = useReactTable({
@@ -701,6 +740,7 @@ const TableView: React.FC<TableViewProps> = ({
                     const isLast = index === row.getVisibleCells().length - 1;
                     const isCapacity = cell.column.id === 'capacity';
                     const isName = cell.column.id === 'name';
+                    const isRating = cell.column.id === 'rating' && Boolean(onRate);
 
                     const cellClass =
                       'text-xs leading-relaxed font-medium text-neutral-600 dark:text-neutral-400';
@@ -723,6 +763,8 @@ const TableView: React.FC<TableViewProps> = ({
                                 e.stopPropagation();
                                 onRemainingClick?.(bean, e);
                               }
+                            : isRating
+                              ? e => handleRateClick(bean, e)
                             : undefined
                         }
                         onMouseEnter={
