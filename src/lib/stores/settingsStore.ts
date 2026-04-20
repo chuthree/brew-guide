@@ -69,6 +69,8 @@ export const defaultSettings: AppSettings = {
   showStatusDots: false,
   showBeanSummary: false,
   showEstimatedCups: false,
+  enableBeanSummaryCapacityLimit: false,
+  beanSummaryMaxDisplayCapacity: 1000,
 
   // 安全区域设置
   safeAreaMargins: {

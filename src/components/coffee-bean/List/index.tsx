@@ -103,6 +103,12 @@ import {
 import EmptyBeanTipDrawer, {
   shouldShowEmptyBeanTip,
 } from './components/EmptyBeanTipDrawer';
+import {
+  buildBeanSummaryDetailItems,
+  formatBeanSummaryWeight,
+  formatBeanSummaryWeightWithLimit,
+  getBeanSummaryDisplayLimit,
+} from '@/lib/utils/beanSummaryDisplay';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -691,6 +697,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const showEstimatedCups = useSettingsStore(
     state => state.settings.showEstimatedCups === true
   );
+  const beanSummaryDisplayLimit = useSettingsStore(state =>
+    getBeanSummaryDisplayLimit(state.settings)
+  );
 
   // 当生豆库被禁用且当前在生豆库视图时，切换回熟豆库
   useEffect(() => {
@@ -1156,12 +1165,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const totalWeight = beansToUse
       .filter(bean => bean.remaining && parseFloat(bean.remaining) > 0)
       .reduce((sum, bean) => sum + parseFloat(bean.remaining || '0'), 0);
+    const maxDisplayWeight =
+      selectedBeanState === 'roasted' ? beanSummaryDisplayLimit : undefined;
 
-    if (totalWeight < 1000) {
-      return `${Math.round(totalWeight)} g`;
-    } else {
-      return `${(totalWeight / 1000).toFixed(2)} kg`;
-    }
+    return formatBeanSummaryWeightWithLimit(totalWeight, maxDisplayWeight);
   };
 
   // 计算原始总重量（包括已用完的豆子）
@@ -1172,11 +1179,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       return sum + (isNaN(capacity) ? 0 : capacity);
     }, 0);
 
-    if (totalWeight < 1000) {
-      return `${Math.round(totalWeight)} g`;
-    } else {
-      return `${(totalWeight / 1000).toFixed(2)} kg`;
-    }
+    return formatBeanSummaryWeight(totalWeight);
   };
 
   // 切换显示空豆子状态 - 简化版本，优化的Hook会自动处理筛选
@@ -1599,14 +1602,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   const [isExportingPreview, setIsExportingPreview] = useState(false);
 
-  // 格式化重量显示
-  const formatWeight = (weight: number): string => {
-    if (weight < 1000) {
-      return `${Math.round(weight)} g`;
-    }
-    return `${(weight / 1000).toFixed(2)} kg`;
-  };
-
   // 处理预览图导出
   const handleExportPreview = async () => {
     if (isExportingPreview) return;
@@ -1636,6 +1631,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         useSettingsStore.getState().settings.showBeanSummary ?? false;
       const showEstimatedCupsForExport =
         useSettingsStore.getState().settings.showEstimatedCups ?? false;
+      const maxDisplayWeight =
+        selectedBeanState === 'roasted'
+          ? getBeanSummaryDisplayLimit(useSettingsStore.getState().settings)
+          : undefined;
 
       // 生成概要文本，与界面显示保持一致
       const summaryText = (() => {
@@ -1667,17 +1666,32 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         if (
           showBeanSummary &&
           selectedBeanState === 'roasted' &&
-          selectedBeanType === 'all' &&
+          (!selectedBeanType || selectedBeanType === 'all') &&
           typeCount > 1
         ) {
-          const details = [
-            searchAwareTypeStats.espressoCount > 0 &&
-              `意式 ${formatWeight(searchAwareTypeStats.espressoRemaining)}`,
-            searchAwareTypeStats.filterCount > 0 &&
-              `手冲 ${formatWeight(searchAwareTypeStats.filterRemaining)}`,
-            searchAwareTypeStats.omniCount > 0 &&
-              `全能 ${formatWeight(searchAwareTypeStats.omniRemaining)}`,
-          ].filter(Boolean);
+          const details = buildBeanSummaryDetailItems(
+            [
+              searchAwareTypeStats.espressoCount > 0
+                ? {
+                    label: '意式',
+                    weight: searchAwareTypeStats.espressoRemaining,
+                  }
+                : null,
+              searchAwareTypeStats.filterCount > 0
+                ? {
+                    label: '手冲',
+                    weight: searchAwareTypeStats.filterRemaining,
+                  }
+                : null,
+              searchAwareTypeStats.omniCount > 0
+                ? {
+                    label: '全能',
+                    weight: searchAwareTypeStats.omniRemaining,
+                  }
+                : null,
+            ].filter(Boolean) as Array<{ label: string; weight: number }>,
+            maxDisplayWeight
+          );
           if (details.length > 0) {
             text += `（${details.join('，')}）`;
           }

@@ -123,6 +123,8 @@ export interface AppSettings {
   showStatusDots: boolean;
   showBeanSummary: boolean;
   showEstimatedCups: boolean;
+  enableBeanSummaryCapacityLimit: boolean;
+  beanSummaryMaxDisplayCapacity: number;
 
   // 安全区域设置
   safeAreaMargins?: {

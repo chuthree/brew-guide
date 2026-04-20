@@ -4,6 +4,11 @@ import { toPng } from 'html-to-image';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { getSettingsStore } from '@/lib/stores/settingsStore';
 import type { CoffeeBean } from '@/types/app';
+import {
+  buildBeanSummaryDetailItems,
+  formatBeanSummaryWeightWithLimit,
+  getBeanSummaryDisplayLimit,
+} from '@/lib/utils/beanSummaryDisplay';
 
 interface BeansExporterProps {
   selectedBeans: string[];
@@ -46,16 +51,6 @@ const waitForImages = (element: HTMLElement): Promise<void> => {
       }
     });
   });
-};
-
-/**
- * 格式化重量显示
- */
-const formatWeight = (grams: number): string => {
-  if (grams >= 1000) {
-    return `${(grams / 1000).toFixed(2)} kg`;
-  }
-  return `${grams.toFixed(0)}g`;
 };
 
 /**
@@ -153,6 +148,14 @@ export async function exportSelectedBeans({
     // 获取用户设置
     const settings = getSettingsStore().settings;
     const showBeanSummary = settings.showBeanSummary ?? false;
+    const selectedBeansData = beansData.filter(bean =>
+      selectedBeans.includes(bean.id)
+    );
+    const selectedBeanState = selectedBeansData[0]?.beanState || 'roasted';
+    const maxDisplayWeight =
+      selectedBeanState === 'roasted'
+        ? getBeanSummaryDisplayLimit(settings)
+        : undefined;
 
     // 计算分类剩余量
     const beansSummary = calculateBeansSummary(selectedBeans, beansData);
@@ -160,21 +163,30 @@ export async function exportSelectedBeans({
     // 构建概要文本
     let summaryText = `${selectedBeans.length} 款咖啡豆`;
     if (beansSummary.total > 0) {
-      summaryText += `，剩余 ${formatWeight(beansSummary.total)}`;
+      summaryText += `，剩余 ${formatBeanSummaryWeightWithLimit(
+        beansSummary.total,
+        maxDisplayWeight
+      )}`;
       const typeCount = [
         beansSummary.espressoCount > 0,
         beansSummary.filterCount > 0,
         beansSummary.omniCount > 0,
       ].filter(Boolean).length;
-      if (showBeanSummary && typeCount > 1) {
-        const details = [
-          beansSummary.espressoCount > 0 &&
-            `意式 ${formatWeight(beansSummary.espresso)}`,
-          beansSummary.filterCount > 0 &&
-            `手冲 ${formatWeight(beansSummary.filter)}`,
-          beansSummary.omniCount > 0 &&
-            `全能 ${formatWeight(beansSummary.omni)}`,
-        ].filter(Boolean);
+      if (showBeanSummary && selectedBeanState === 'roasted' && typeCount > 1) {
+        const details = buildBeanSummaryDetailItems(
+          [
+            beansSummary.espressoCount > 0
+              ? { label: '意式', weight: beansSummary.espresso }
+              : null,
+            beansSummary.filterCount > 0
+              ? { label: '手冲', weight: beansSummary.filter }
+              : null,
+            beansSummary.omniCount > 0
+              ? { label: '全能', weight: beansSummary.omni }
+              : null,
+          ].filter(Boolean) as Array<{ label: string; weight: number }>,
+          maxDisplayWeight
+        );
         if (details.length > 0) {
           summaryText += `（${details.join('，')}）`;
         }

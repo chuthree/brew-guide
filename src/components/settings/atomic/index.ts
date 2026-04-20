@@ -16,6 +16,7 @@ export { default as SettingRow } from './SettingRow';
 export { default as SettingToggle } from './SettingToggle';
 export { default as SettingSelector } from './SettingSelector';
 export { default as SettingSlider } from './SettingSlider';
+export { default as SettingPillInput } from './SettingPillInput';
 
 // 辅助组件
 export { default as SettingDescription } from './SettingDescription';

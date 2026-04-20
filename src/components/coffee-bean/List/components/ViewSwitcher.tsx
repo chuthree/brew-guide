@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   ViewOption,
   VIEW_OPTIONS,
@@ -29,6 +35,10 @@ import {
 import { TABLE_COLUMN_CONFIG, type TableColumnKey } from './TableView';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useInputFocus } from '@/lib/hooks/useInputFocus';
+import {
+  buildBeanSummaryDetailItems,
+  getBeanSummaryDisplayLimit,
+} from '@/lib/utils/beanSummaryDisplay';
 // Apple风格动画配置
 const FILTER_ANIMATION = {
   initial: {
@@ -480,14 +490,47 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   const showEstimatedCups = useSettingsStore(
     state => state.settings.showEstimatedCups
   );
+  const beanSummaryDisplayLimit = useSettingsStore(state =>
+    getBeanSummaryDisplayLimit(state.settings)
+  );
+  const beanSummaryDetailsText = useMemo(() => {
+    const typeCount = [
+      espressoCount > 0,
+      filterCount > 0,
+      omniCount > 0,
+    ].filter(Boolean).length;
 
-  // 格式化重量显示
-  const formatWeight = (weight: number): string => {
-    if (weight < 1000) {
-      return `${Math.round(weight)} g`;
+    if (
+      !showBeanSummary ||
+      selectedBeanState !== 'roasted' ||
+      (selectedBeanType && selectedBeanType !== 'all') ||
+      typeCount <= 1
+    ) {
+      return '';
     }
-    return `${(weight / 1000).toFixed(2)} kg`;
-  };
+
+    const details = buildBeanSummaryDetailItems(
+      [
+        espressoCount > 0 ? { label: '意式', weight: espressoRemaining } : null,
+        filterCount > 0 ? { label: '手冲', weight: filterRemaining } : null,
+        omniCount > 0 ? { label: '全能', weight: omniRemaining } : null,
+      ].filter(Boolean) as Array<{ label: string; weight: number }>,
+      beanSummaryDisplayLimit
+    );
+
+    return details.length > 0 ? `（${details.join('，')}）` : '';
+  }, [
+    beanSummaryDisplayLimit,
+    espressoCount,
+    espressoRemaining,
+    filterCount,
+    filterRemaining,
+    omniCount,
+    omniRemaining,
+    selectedBeanState,
+    selectedBeanType,
+    showBeanSummary,
+  ]);
 
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
@@ -798,21 +841,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     estimatedCups !== undefined &&
                     estimatedCups > 0 &&
                     `，约 ${estimatedCups} 杯`}
-                  {showBeanSummary &&
-                    selectedBeanState === 'roasted' &&
-                    (!selectedBeanType || selectedBeanType === 'all') &&
-                    [espressoCount > 0, filterCount > 0, omniCount > 0].filter(
-                      Boolean
-                    ).length > 1 &&
-                    `（${[
-                      espressoCount > 0 &&
-                        `意式 ${formatWeight(espressoRemaining)}`,
-                      filterCount > 0 &&
-                        `手冲 ${formatWeight(filterRemaining)}`,
-                      omniCount > 0 && `全能 ${formatWeight(omniRemaining)}`,
-                    ]
-                      .filter(Boolean)
-                      .join('，')}）`}
+                  {showBeanSummary && beanSummaryDetailsText}
                 </span>
               )
             ) : rankingBeansCount === 0 ? (
