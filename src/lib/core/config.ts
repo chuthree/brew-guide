@@ -1241,4 +1241,5 @@ export const sponsorsList = [
   'Lvxunkk',
   '悦MAX',
   '小狗别喝了',
+  'yo'
 ];
