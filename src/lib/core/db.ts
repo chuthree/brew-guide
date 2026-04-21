@@ -125,6 +125,7 @@ export interface AppSettings {
   showEstimatedCups: boolean;
   enableBeanSummaryCapacityLimit: boolean;
   beanSummaryMaxDisplayCapacity: number;
+  enableBeanSummaryOverflowWrap: boolean;
 
   // 安全区域设置
   safeAreaMargins?: {

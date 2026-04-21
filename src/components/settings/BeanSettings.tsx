@@ -122,7 +122,13 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
 
       <SettingSection
         title="容量显示"
-        footer="限制咖啡豆概要中的剩余容量显示上限。超过上限时，将以 1 kg+ 这类形式展示。"
+        footer={
+          !settings.enableBeanSummaryCapacityLimit
+            ? '限制咖啡豆概要中的剩余容量显示上限。超过上限时，将以 1 kg+ 这类形式展示。'
+            : !settings.enableBeanSummaryOverflowWrap
+              ? '开启循环显示后，超过上限将从 0 重新累计（不显示 +）。'
+              : undefined
+        }
       >
         <SettingRow
           label="最大显示容量"
@@ -136,27 +142,37 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
           />
         </SettingRow>
         {settings.enableBeanSummaryCapacityLimit && (
-          <SettingRow label="显示上限" isSubSetting isLast>
-            <SettingPillInput
-              value={beanSummaryCapacityInput}
-              inputMode="numeric"
-              suffix="g"
-              placeholder="克数"
-              onChange={value => {
-                const sanitizedValue = value.replace(/\D/g, '');
-                setBeanSummaryCapacityInput(sanitizedValue);
-              }}
-              onBlur={() => {
-                void commitBeanSummaryCapacityInput();
-              }}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  void commitBeanSummaryCapacityInput();
+          <>
+            <SettingRow label="超过上限循环显示" isSubSetting>
+              <SettingToggle
+                checked={settings.enableBeanSummaryOverflowWrap || false}
+                onChange={checked =>
+                  handleChange('enableBeanSummaryOverflowWrap', checked)
                 }
-              }}
-            />
-          </SettingRow>
+              />
+            </SettingRow>
+            <SettingRow label="显示上限" isSubSetting isLast>
+              <SettingPillInput
+                value={beanSummaryCapacityInput}
+                inputMode="numeric"
+                suffix="g"
+                placeholder="克数"
+                onChange={value => {
+                  const sanitizedValue = value.replace(/\D/g, '');
+                  setBeanSummaryCapacityInput(sanitizedValue);
+                }}
+                onBlur={() => {
+                  void commitBeanSummaryCapacityInput();
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void commitBeanSummaryCapacityInput();
+                  }
+                }}
+              />
+            </SettingRow>
+          </>
         )}
       </SettingSection>
 

@@ -8,8 +8,12 @@ export const BEAN_SUMMARY_MAX_DISPLAY_CAPACITY_RANGE = {
 
 type BeanSummaryDisplaySettings = Pick<
   AppSettings,
-  'enableBeanSummaryCapacityLimit' | 'beanSummaryMaxDisplayCapacity'
+  | 'enableBeanSummaryCapacityLimit'
+  | 'beanSummaryMaxDisplayCapacity'
+  | 'enableBeanSummaryOverflowWrap'
 >;
+
+export type BeanSummaryLimitMode = 'clamp' | 'wrap';
 
 export interface BeanSummaryWeightItem {
   label: string;
@@ -71,51 +75,87 @@ export const getBeanSummaryDisplayLimit = (
   return Math.round(rawLimit);
 };
 
+export const getBeanSummaryLimitMode = (
+  settings?: Partial<BeanSummaryDisplaySettings>
+): BeanSummaryLimitMode =>
+  settings?.enableBeanSummaryOverflowWrap ? 'wrap' : 'clamp';
+
+const getWrappedWeight = (weight: number, limit: number): number => {
+  if (weight <= limit) {
+    return weight;
+  }
+
+  const wrapped = weight % limit;
+  return wrapped === 0 ? limit : wrapped;
+};
+
+const getDisplayedTotalWeight = (
+  totalWeight: number,
+  maxDisplayWeight?: number,
+  mode: BeanSummaryLimitMode = 'clamp'
+): BeanSummaryDisplayValue => {
+  const normalizedTotalWeight = normalizeWeight(totalWeight);
+  const normalizedLimit = normalizeWeight(maxDisplayWeight ?? 0);
+
+  if (normalizedLimit <= 0 || normalizedTotalWeight <= normalizedLimit) {
+    return {
+      value: normalizedTotalWeight,
+      isLimited: false,
+    };
+  }
+
+  if (mode === 'wrap') {
+    return {
+      value: getWrappedWeight(normalizedTotalWeight, normalizedLimit),
+      isLimited: false,
+    };
+  }
+
+  return {
+    value: normalizedLimit,
+    isLimited: true,
+  };
+};
+
 export const formatBeanSummaryWeightWithLimit = (
   weight: number,
-  maxDisplayWeight?: number
+  maxDisplayWeight?: number,
+  mode: BeanSummaryLimitMode = 'clamp'
 ): string => {
   return formatBeanSummaryDisplayValue(
-    getBeanSummaryWeightDisplay(weight, maxDisplayWeight),
+    getBeanSummaryWeightDisplay(weight, maxDisplayWeight, mode),
     formatBeanSummaryWeight
   );
 };
 
 export const getBeanSummaryWeightDisplay = (
   weight: number,
-  maxDisplayWeight?: number
-): BeanSummaryDisplayValue => {
-  const normalizedWeight = normalizeWeight(weight);
-  const normalizedLimit = normalizeWeight(maxDisplayWeight ?? 0);
-
-  if (normalizedLimit > 0 && normalizedWeight > normalizedLimit) {
-    return {
-      value: normalizedLimit,
-      isLimited: true,
-    };
-  }
-
-  return {
-    value: normalizedWeight,
-    isLimited: false,
-  };
-};
+  maxDisplayWeight?: number,
+  mode: BeanSummaryLimitMode = 'clamp'
+): BeanSummaryDisplayValue =>
+  getDisplayedTotalWeight(weight, maxDisplayWeight, mode);
 
 export const allocateBeanSummaryWeights = <T extends BeanSummaryWeightItem>(
   items: T[],
-  maxDisplayWeight?: number
-): Array<T & { displayWeight: number }> => {
+  maxDisplayWeight?: number,
+  mode: BeanSummaryLimitMode = 'clamp'
+): Array<T & { displayWeight: number; isLimited: boolean }> => {
   const normalizedItems = items.map(item => ({
     ...item,
     weight: normalizeWeight(item.weight),
   }));
-  const normalizedLimit = normalizeWeight(maxDisplayWeight ?? 0);
   const totalWeight = normalizedItems.reduce(
     (sum, item) => sum + item.weight,
     0
   );
+  const displayedTotal = getDisplayedTotalWeight(
+    totalWeight,
+    maxDisplayWeight,
+    mode
+  );
+  const targetWeight = displayedTotal.value;
 
-  if (normalizedLimit <= 0 || totalWeight <= normalizedLimit) {
+  if (targetWeight <= 0 || targetWeight >= totalWeight) {
     return normalizedItems.map(item => ({
       ...item,
       displayWeight: item.weight,
@@ -123,7 +163,7 @@ export const allocateBeanSummaryWeights = <T extends BeanSummaryWeightItem>(
     }));
   }
 
-  const integerLimit = Math.round(normalizedLimit);
+  const integerLimit = Math.round(targetWeight);
   const allocations = normalizedItems.map((item, index) => {
     if (item.weight <= 0) {
       return {
@@ -182,7 +222,8 @@ const getDefaultAmountPerCup = (
 
 export const calculateBeanSummaryEstimatedCups = (
   beans: BeanSummaryCupItem[],
-  maxDisplayWeight?: number
+  maxDisplayWeight?: number,
+  mode: BeanSummaryLimitMode = 'clamp'
 ): BeanSummaryDisplayValue => {
   if (!beans || beans.length === 0) {
     return { value: 0, isLimited: false };
@@ -196,9 +237,13 @@ export const calculateBeanSummaryEstimatedCups = (
     (sum, bean) => sum + bean.remainingWeight,
     0
   );
-  const normalizedLimit = normalizeWeight(maxDisplayWeight ?? 0);
-  const shouldLimit = normalizedLimit > 0 && totalWeight > normalizedLimit;
-  const scale = shouldLimit ? normalizedLimit / totalWeight : 1;
+  const displayedTotal = getDisplayedTotalWeight(
+    totalWeight,
+    maxDisplayWeight,
+    mode
+  );
+  const scale =
+    totalWeight > 0 ? Math.min(displayedTotal.value / totalWeight, 1) : 1;
 
   const totalCups = normalizedBeans.reduce((sum, bean) => {
     if (bean.remainingWeight <= 0) {
@@ -211,7 +256,7 @@ export const calculateBeanSummaryEstimatedCups = (
 
   return {
     value: totalCups,
-    isLimited: shouldLimit,
+    isLimited: displayedTotal.isLimited,
   };
 };
 
@@ -221,9 +266,10 @@ export const formatBeanSummaryEstimatedCups = (
 
 export const buildBeanSummaryDetailItems = (
   items: BeanSummaryWeightItem[],
-  maxDisplayWeight?: number
+  maxDisplayWeight?: number,
+  mode: BeanSummaryLimitMode = 'clamp'
 ): string[] =>
-  allocateBeanSummaryWeights(items, maxDisplayWeight)
+  allocateBeanSummaryWeights(items, maxDisplayWeight, mode)
     .filter(item => item.displayWeight > 0)
     .map(
       item => `${item.label} ${formatBeanSummaryWeight(item.displayWeight)}`

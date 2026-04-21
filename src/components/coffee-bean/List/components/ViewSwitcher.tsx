@@ -38,6 +38,7 @@ import { useInputFocus } from '@/lib/hooks/useInputFocus';
 import {
   buildBeanSummaryDetailItems,
   getBeanSummaryDisplayLimit,
+  getBeanSummaryLimitMode,
 } from '@/lib/utils/beanSummaryDisplay';
 // Apple风格动画配置
 const FILTER_ANIMATION = {
@@ -493,6 +494,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   const beanSummaryDisplayLimit = useSettingsStore(state =>
     getBeanSummaryDisplayLimit(state.settings)
   );
+  const beanSummaryLimitMode = useSettingsStore(state =>
+    getBeanSummaryLimitMode(state.settings)
+  );
   const beanSummaryDetailsText = useMemo(() => {
     const typeCount = [
       espressoCount > 0,
@@ -515,12 +519,14 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
         filterCount > 0 ? { label: '手冲', weight: filterRemaining } : null,
         omniCount > 0 ? { label: '全能', weight: omniRemaining } : null,
       ].filter(Boolean) as Array<{ label: string; weight: number }>,
-      beanSummaryDisplayLimit
+      beanSummaryDisplayLimit,
+      beanSummaryLimitMode
     );
 
     return details.length > 0 ? `（${details.join('，')}）` : '';
   }, [
     beanSummaryDisplayLimit,
+    beanSummaryLimitMode,
     espressoCount,
     espressoRemaining,
     filterCount,

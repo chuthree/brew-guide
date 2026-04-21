@@ -109,6 +109,7 @@ import {
   formatBeanSummaryWeight,
   formatBeanSummaryWeightWithLimit,
   getBeanSummaryDisplayLimit,
+  getBeanSummaryLimitMode,
 } from '@/lib/utils/beanSummaryDisplay';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
@@ -701,6 +702,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const beanSummaryDisplayLimit = useSettingsStore(state =>
     getBeanSummaryDisplayLimit(state.settings)
   );
+  const beanSummaryLimitMode = useSettingsStore(state =>
+    getBeanSummaryLimitMode(state.settings)
+  );
 
   // 当生豆库被禁用且当前在生豆库视图时，切换回熟豆库
   useEffect(() => {
@@ -1159,7 +1163,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const maxDisplayWeight =
       selectedBeanState === 'roasted' ? beanSummaryDisplayLimit : undefined;
 
-    return formatBeanSummaryWeightWithLimit(totalWeight, maxDisplayWeight);
+    return formatBeanSummaryWeightWithLimit(
+      totalWeight,
+      maxDisplayWeight,
+      beanSummaryLimitMode
+    );
   };
 
   // 计算原始总重量（包括已用完的豆子）
@@ -1584,7 +1592,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     const beansToCount = isSearching ? searchFilteredBeans : filteredBeans;
     const cupsDisplay = calculateBeanSummaryEstimatedCups(
       beansToCount,
-      beanSummaryDisplayLimit
+      beanSummaryDisplayLimit,
+      beanSummaryLimitMode
     );
 
     if (cupsDisplay.value <= 0) {
@@ -1594,6 +1603,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     return formatBeanSummaryEstimatedCups(cupsDisplay);
   }, [
     beanSummaryDisplayLimit,
+    beanSummaryLimitMode,
     showEstimatedCups,
     selectedBeanState,
     isSearching,
@@ -1636,6 +1646,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         selectedBeanState === 'roasted'
           ? getBeanSummaryDisplayLimit(useSettingsStore.getState().settings)
           : undefined;
+      const limitMode = getBeanSummaryLimitMode(
+        useSettingsStore.getState().settings
+      );
 
       // 生成概要文本，与界面显示保持一致
       const summaryText = (() => {
@@ -1690,7 +1703,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                   }
                 : null,
             ].filter(Boolean) as Array<{ label: string; weight: number }>,
-            maxDisplayWeight
+            maxDisplayWeight,
+            limitMode
           );
           if (details.length > 0) {
             text += `（${details.join('，')}）`;

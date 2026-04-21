@@ -8,6 +8,7 @@ import {
   buildBeanSummaryDetailItems,
   formatBeanSummaryWeightWithLimit,
   getBeanSummaryDisplayLimit,
+  getBeanSummaryLimitMode,
 } from '@/lib/utils/beanSummaryDisplay';
 
 interface BeansExporterProps {
@@ -156,6 +157,7 @@ export async function exportSelectedBeans({
       selectedBeanState === 'roasted'
         ? getBeanSummaryDisplayLimit(settings)
         : undefined;
+    const limitMode = getBeanSummaryLimitMode(settings);
 
     // 计算分类剩余量
     const beansSummary = calculateBeansSummary(selectedBeans, beansData);
@@ -165,7 +167,8 @@ export async function exportSelectedBeans({
     if (beansSummary.total > 0) {
       summaryText += `，剩余 ${formatBeanSummaryWeightWithLimit(
         beansSummary.total,
-        maxDisplayWeight
+        maxDisplayWeight,
+        limitMode
       )}`;
       const typeCount = [
         beansSummary.espressoCount > 0,
@@ -185,7 +188,8 @@ export async function exportSelectedBeans({
               ? { label: '全能', weight: beansSummary.omni }
               : null,
           ].filter(Boolean) as Array<{ label: string; weight: number }>,
-          maxDisplayWeight
+          maxDisplayWeight,
+          limitMode
         );
         if (details.length > 0) {
           summaryText += `（${details.join('，')}）`;
