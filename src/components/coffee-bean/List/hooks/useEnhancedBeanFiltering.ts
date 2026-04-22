@@ -38,8 +38,10 @@ interface UseEnhancedBeanFilteringProps {
 }
 
 interface UseEnhancedBeanFilteringReturn {
-  filteredBeans: ExtendedCoffeeBean[];
-  emptyBeans: ExtendedCoffeeBean[]; // 已用完的豆子
+  filteredBeans: ExtendedCoffeeBean[]; // 列表/图片流使用（已应用列表排序）
+  emptyBeans: ExtendedCoffeeBean[]; // 已用完的豆子（已应用列表排序）
+  tableFilteredBeans: ExtendedCoffeeBean[]; // 表格使用（仅筛选，不应用列表排序）
+  tableEmptyBeans: ExtendedCoffeeBean[]; // 表格使用的已用完豆子（仅筛选，不应用列表排序）
   availableVarieties: string[];
   availableOrigins: string[];
   availableProcessingMethods: string[];
@@ -81,8 +83,8 @@ export const useEnhancedBeanFiltering = ({
     [roasterFieldEnabled, roasterSeparator]
   );
 
-  // 提取通用的筛选和排序逻辑
-  const filterAndSortBeans = useCallback(
+  // 提取通用筛选逻辑（不排序）
+  const filterBeans = useCallback(
     (beanList: ExtendedCoffeeBean[], isEmptyFilter: boolean) => {
       if (!beanList || beanList.length === 0) return [];
 
@@ -143,7 +145,26 @@ export const useEnhancedBeanFiltering = ({
           break;
       }
 
-      // 4. 排序
+      return filtered;
+    },
+    [
+      filterMode,
+      selectedVariety,
+      selectedOrigin,
+      selectedProcessingMethod,
+      selectedFlavorPeriod,
+      selectedRoaster,
+      selectedBeanType,
+      selectedBeanState,
+      roasterSettings,
+    ]
+  );
+
+  // 仅对列表/图片流应用排序，表格视图复用筛选结果并交由列头排序控制
+  const sortFilteredBeans = useCallback(
+    (filtered: ExtendedCoffeeBean[], isEmptyFilter: boolean) => {
+      if (!filtered.length) return [];
+
       const compatibleBeans = filtered.map(bean => ({
         id: bean.id,
         name: bean.name,
@@ -178,42 +199,35 @@ export const useEnhancedBeanFiltering = ({
         sortedBeans = sortBeans(compatibleBeans, sortOption);
       }
 
-      // 按照排序后的顺序收集原始豆子
-      const resultBeans: ExtendedCoffeeBean[] = [];
-      for (const sortedBean of sortedBeans) {
-        const originalBean = filtered.find(b => b.id === sortedBean.id);
-        if (originalBean) {
-          resultBeans.push(originalBean);
-        }
-      }
-
-      return resultBeans;
+      const beanMap = new Map(filtered.map(bean => [bean.id, bean]));
+      return sortedBeans
+        .map(bean => beanMap.get(bean.id))
+        .filter((bean): bean is ExtendedCoffeeBean => Boolean(bean));
     },
-    [
-      filterMode,
-      selectedVariety,
-      selectedOrigin,
-      selectedProcessingMethod,
-      selectedFlavorPeriod,
-      selectedRoaster,
-      selectedBeanType,
-      selectedBeanState,
-      sortOption,
-      roasterSettings,
-    ]
+    [sortOption]
   );
 
-  // 使用useMemo缓存筛选后的正常豆子
-  const filteredBeans = useMemo(
-    () => filterAndSortBeans(beans, false),
-    [beans, filterAndSortBeans]
+  // 仅筛选结果（供表格视图使用）
+  const tableFilteredBeans = useMemo(
+    () => filterBeans(beans, false),
+    [beans, filterBeans]
   );
 
-  // 使用useMemo缓存已用完的豆子列表
-  const emptyBeans = useMemo(() => {
+  const tableEmptyBeans = useMemo(() => {
     if (!showEmptyBeans) return [];
-    return filterAndSortBeans(beans, true);
-  }, [beans, showEmptyBeans, filterAndSortBeans]);
+    return filterBeans(beans, true);
+  }, [beans, showEmptyBeans, filterBeans]);
+
+  // 列表/图片流结果（应用筛选 + 列表排序）
+  const filteredBeans = useMemo(
+    () => sortFilteredBeans(tableFilteredBeans, false),
+    [tableFilteredBeans, sortFilteredBeans]
+  );
+
+  const emptyBeans = useMemo(
+    () => sortFilteredBeans(tableEmptyBeans, true),
+    [tableEmptyBeans, sortFilteredBeans]
+  );
 
   // 获取基础筛选后的豆子（用于计算可用分类选项）
   const baseFilteredBeans = useMemo(() => {
@@ -268,6 +282,8 @@ export const useEnhancedBeanFiltering = ({
   return {
     filteredBeans,
     emptyBeans,
+    tableFilteredBeans,
+    tableEmptyBeans,
     availableVarieties,
     availableOrigins,
     availableProcessingMethods,
