@@ -75,7 +75,7 @@ export const TABLE_COLUMN_CONFIG: {
 export const getDefaultVisibleColumns = (): TableColumnKey[] =>
   TABLE_COLUMN_CONFIG.filter(c => c.defaultVisible).map(c => c.key);
 
-// 默认排序状态（空数组，跟随列表排序）
+// 默认排序状态（空数组，表示不预设列排序）
 const DEFAULT_SORTING: SortingState = [];
 const SORTING_STORAGE_KEY = 'brew-guide:coffee-beans:tableSorting';
 const HOVER_PREVIEW_OFFSET_X = 24;

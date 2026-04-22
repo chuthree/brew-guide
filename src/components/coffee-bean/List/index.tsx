@@ -346,6 +346,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const {
     filteredBeans,
     emptyBeans,
+    tableFilteredBeans,
+    tableEmptyBeans,
     availableVarieties,
     availableOrigins,
     availableProcessingMethods,
@@ -1549,20 +1551,31 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     [searchQuery, isSearching]
   );
 
+  // 按显示模式选择库存数据源：
+  // - list/imageFlow: 使用列表排序结果
+  // - table: 仅使用筛选结果，排序交由表头控制
+  const inventoryFilteredBeans = React.useMemo(() => {
+    return displayMode === 'table' ? tableFilteredBeans : filteredBeans;
+  }, [displayMode, tableFilteredBeans, filteredBeans]);
+
+  const inventoryEmptyBeans = React.useMemo(() => {
+    return displayMode === 'table' ? tableEmptyBeans : emptyBeans;
+  }, [displayMode, tableEmptyBeans, emptyBeans]);
+
   // 搜索过滤后的正常豆子
   const searchFilteredBeans = React.useMemo(() => {
-    return filterBeansBySearch(filteredBeans);
-  }, [filteredBeans, filterBeansBySearch]);
+    return filterBeansBySearch(inventoryFilteredBeans);
+  }, [inventoryFilteredBeans, filterBeansBySearch]);
 
   // 搜索过滤后的用完的豆子（当showEmptyBeans为true时）
   const searchFilteredEmptyBeans = React.useMemo(() => {
     if (!showEmptyBeans) return [];
-    return filterBeansBySearch(emptyBeans);
-  }, [emptyBeans, showEmptyBeans, filterBeansBySearch]);
+    return filterBeansBySearch(inventoryEmptyBeans);
+  }, [inventoryEmptyBeans, showEmptyBeans, filterBeansBySearch]);
 
   // 基于搜索结果的类型统计（搜索时使用搜索过滤后的数据）
   const searchAwareTypeStats = React.useMemo(() => {
-    const beansToCount = isSearching ? searchFilteredBeans : filteredBeans;
+    const beansToCount = isSearching ? searchFilteredBeans : inventoryFilteredBeans;
 
     const espressoBeans = beansToCount.filter(
       bean => bean.beanType === 'espresso'
@@ -1587,14 +1600,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         0
       ),
     };
-  }, [isSearching, searchFilteredBeans, filteredBeans]);
+  }, [isSearching, searchFilteredBeans, inventoryFilteredBeans]);
 
   // 基于搜索结果的预计杯数
   const searchAwareEstimatedCupsLabel = React.useMemo(() => {
     if (!showEstimatedCups || selectedBeanState !== 'roasted') {
       return undefined;
     }
-    const beansToCount = isSearching ? searchFilteredBeans : filteredBeans;
+    const beansToCount = isSearching ? searchFilteredBeans : inventoryFilteredBeans;
     const cupsDisplay = calculateBeanSummaryEstimatedCups(
       beansToCount,
       beanSummaryDisplayLimit,
@@ -1613,7 +1626,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     selectedBeanState,
     isSearching,
     searchFilteredBeans,
-    filteredBeans,
+    inventoryFilteredBeans,
   ]);
 
   const [isExportingPreview, setIsExportingPreview] = useState(false);
@@ -1626,10 +1639,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
     try {
       // 根据【包含已用完】选择情况和搜索状态，获取正确的豆子列表
-      const normalBeans = isSearching ? searchFilteredBeans : filteredBeans;
+      const normalBeans = isSearching
+        ? searchFilteredBeans
+        : inventoryFilteredBeans;
       const emptyBeansToExport = isSearching
         ? searchFilteredEmptyBeans
-        : emptyBeans;
+        : inventoryEmptyBeans;
       const beansToExport = showEmptyBeans
         ? [...normalBeans, ...emptyBeansToExport]
         : normalBeans;
@@ -1926,11 +1941,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         sortOption={sortOption}
         onSortChange={handleSortChange}
         beansCount={
-          isSearching ? searchFilteredBeans.length : filteredBeans.length
+          isSearching
+            ? searchFilteredBeans.length
+            : inventoryFilteredBeans.length
         }
         totalBeans={beans.length}
         totalWeight={calculateTotalWeight(
-          isSearching ? searchFilteredBeans : filteredBeans
+          isSearching ? searchFilteredBeans : inventoryFilteredBeans
         )}
         rankingBeanType={rankingBeanType}
         onRankingBeanTypeChange={newType => {
@@ -1982,7 +1999,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         availableFlavorPeriods={availableFlavorPeriods}
         availableRoasters={availableRoasters}
         originalTotalWeight={calculateOriginalTotalWeight(
-          isSearching ? searchFilteredBeans : filteredBeans
+          isSearching ? searchFilteredBeans : inventoryFilteredBeans
         )}
         // 新增导出相关属性
         onExportPreview={handleExportPreview}
@@ -2006,9 +2023,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 预计杯数（基于搜索结果）
         estimatedCupsLabel={searchAwareEstimatedCupsLabel}
         // 是否有生豆（用于动态调整列标签）
-        hasGreenBeans={(isSearching ? searchFilteredBeans : filteredBeans).some(
-          bean => bean.beanState === 'green'
-        )}
+        hasGreenBeans={(
+          isSearching ? searchFilteredBeans : inventoryFilteredBeans
+        ).some(bean => bean.beanState === 'green')}
       />
 
       {/* 内容区域 - 可滚动 */}
@@ -2023,8 +2040,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             }}
           >
             <InventoryView
-              filteredBeans={isSearching ? searchFilteredBeans : filteredBeans}
-              emptyBeans={isSearching ? searchFilteredEmptyBeans : emptyBeans}
+              filteredBeans={
+                isSearching ? searchFilteredBeans : inventoryFilteredBeans
+              }
+              emptyBeans={
+                isSearching ? searchFilteredEmptyBeans : inventoryEmptyBeans
+              }
               selectedVariety={selectedVariety}
               showEmptyBeans={showEmptyBeans}
               selectedBeanType={selectedBeanType}
