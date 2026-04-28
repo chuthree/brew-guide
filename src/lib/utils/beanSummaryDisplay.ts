@@ -1,4 +1,9 @@
 import type { AppSettings } from '@/lib/core/db';
+import {
+  calculateEstimatedCupsFromWeights,
+  parseEstimatedCupRemainingWeight,
+  type EstimatedCupDoseSettings,
+} from '@/lib/settings/estimatedCupDose';
 
 export const BEAN_SUMMARY_MAX_DISPLAY_CAPACITY_RANGE = {
   min: 250,
@@ -211,19 +216,11 @@ export const allocateBeanSummaryWeights = <T extends BeanSummaryWeightItem>(
   }));
 };
 
-const parseBeanRemainingWeight = (remaining?: string): number => {
-  const remainingMatch = (remaining || '0').match(/(\d+(?:\.\d+)?)/);
-  return remainingMatch ? normalizeWeight(parseFloat(remainingMatch[1])) : 0;
-};
-
-const getDefaultAmountPerCup = (
-  beanType: 'espresso' | 'filter' | 'omni' | undefined
-): number => (beanType === 'espresso' ? 18 : 15);
-
 export const calculateBeanSummaryEstimatedCups = (
   beans: BeanSummaryCupItem[],
   maxDisplayWeight?: number,
-  mode: BeanSummaryLimitMode = 'clamp'
+  mode: BeanSummaryLimitMode = 'clamp',
+  estimatedCupDoseSettings?: Partial<EstimatedCupDoseSettings> | null
 ): BeanSummaryDisplayValue => {
   if (!beans || beans.length === 0) {
     return { value: 0, isLimited: false };
@@ -231,7 +228,9 @@ export const calculateBeanSummaryEstimatedCups = (
 
   const normalizedBeans = beans.map(bean => ({
     beanType: bean.beanType,
-    remainingWeight: parseBeanRemainingWeight(bean.remaining),
+    remainingWeight: normalizeWeight(
+      parseEstimatedCupRemainingWeight(bean.remaining)
+    ),
   }));
   const totalWeight = normalizedBeans.reduce(
     (sum, bean) => sum + bean.remainingWeight,
@@ -245,14 +244,13 @@ export const calculateBeanSummaryEstimatedCups = (
   const scale =
     totalWeight > 0 ? Math.min(displayedTotal.value / totalWeight, 1) : 1;
 
-  const totalCups = normalizedBeans.reduce((sum, bean) => {
-    if (bean.remainingWeight <= 0) {
-      return sum;
-    }
-
-    const amountPerCup = getDefaultAmountPerCup(bean.beanType);
-    return sum + Math.floor((bean.remainingWeight * scale) / amountPerCup);
-  }, 0);
+  const totalCups = calculateEstimatedCupsFromWeights(
+    normalizedBeans.map(bean => ({
+      beanType: bean.beanType,
+      remainingWeight: bean.remainingWeight * scale,
+    })),
+    estimatedCupDoseSettings
+  );
 
   return {
     value: totalCups,
