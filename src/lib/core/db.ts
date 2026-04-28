@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 import { BrewingNote, Method, CustomEquipment } from './config';
+import type { EstimatedCupDoseSettings } from '@/lib/settings/estimatedCupDose';
 import { CoffeeBean } from '@/types/app';
 import { normalizeCoffeeBeans } from '@/lib/utils/coffeeBeanUtils';
 
@@ -123,6 +124,7 @@ export interface AppSettings {
   showStatusDots: boolean;
   showBeanSummary: boolean;
   showEstimatedCups: boolean;
+  estimatedCupDoseSettings: EstimatedCupDoseSettings;
   enableBeanSummaryCapacityLimit: boolean;
   beanSummaryMaxDisplayCapacity: number;
   enableBeanSummaryOverflowWrap: boolean;

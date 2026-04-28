@@ -700,6 +700,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const showEstimatedCups = useSettingsStore(
     state => state.settings.showEstimatedCups === true
   );
+  const estimatedCupDoseSettings = useSettingsStore(
+    state => state.settings.estimatedCupDoseSettings
+  );
   const beanSummaryDisplayLimit = useSettingsStore(state =>
     getBeanSummaryDisplayLimit(state.settings)
   );
@@ -1575,7 +1578,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   // 基于搜索结果的类型统计（搜索时使用搜索过滤后的数据）
   const searchAwareTypeStats = React.useMemo(() => {
-    const beansToCount = isSearching ? searchFilteredBeans : inventoryFilteredBeans;
+    const beansToCount = isSearching
+      ? searchFilteredBeans
+      : inventoryFilteredBeans;
 
     const espressoBeans = beansToCount.filter(
       bean => bean.beanType === 'espresso'
@@ -1607,11 +1612,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     if (!showEstimatedCups || selectedBeanState !== 'roasted') {
       return undefined;
     }
-    const beansToCount = isSearching ? searchFilteredBeans : inventoryFilteredBeans;
+    const beansToCount = isSearching
+      ? searchFilteredBeans
+      : inventoryFilteredBeans;
     const cupsDisplay = calculateBeanSummaryEstimatedCups(
       beansToCount,
       beanSummaryDisplayLimit,
-      beanSummaryLimitMode
+      beanSummaryLimitMode,
+      estimatedCupDoseSettings
     );
 
     if (cupsDisplay.value <= 0) {
@@ -1622,6 +1630,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   }, [
     beanSummaryDisplayLimit,
     beanSummaryLimitMode,
+    estimatedCupDoseSettings,
     showEstimatedCups,
     selectedBeanState,
     isSearching,
@@ -2023,8 +2032,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 预计杯数（基于搜索结果）
         estimatedCupsLabel={searchAwareEstimatedCupsLabel}
         // 是否有生豆（用于动态调整列标签）
-        hasGreenBeans={(
-          isSearching ? searchFilteredBeans : inventoryFilteredBeans
+        hasGreenBeans={(isSearching
+          ? searchFilteredBeans
+          : inventoryFilteredBeans
         ).some(bean => bean.beanState === 'green')}
       />
 

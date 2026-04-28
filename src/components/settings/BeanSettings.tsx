@@ -14,6 +14,7 @@ import {
   SettingToggle,
 } from './atomic';
 
+import BeanEstimatedCupSection from './BeanEstimatedCupSection';
 import BeanPreview from './BeanPreview';
 
 interface BeanSettingsProps {
@@ -105,20 +106,10 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       {/* 预览区域 */}
       <BeanPreview settings={settings} />
 
-      <SettingSection title="概要" className="mt-6">
-        <SettingRow label="详细剩余量">
-          <SettingToggle
-            checked={settings.showBeanSummary || false}
-            onChange={checked => handleChange('showBeanSummary', checked)}
-          />
-        </SettingRow>
-        <SettingRow label="预计杯数" isLast>
-          <SettingToggle
-            checked={settings.showEstimatedCups || false}
-            onChange={checked => handleChange('showEstimatedCups', checked)}
-          />
-        </SettingRow>
-      </SettingSection>
+      <BeanEstimatedCupSection
+        settings={settings}
+        handleChange={handleChange}
+      />
 
       <SettingSection
         title="容量显示"

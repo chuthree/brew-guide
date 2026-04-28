@@ -23,6 +23,10 @@ import {
   mergeNavigationSettings,
   normalizeNavigationSettings,
 } from '@/lib/navigation/navigationSettings';
+import {
+  DEFAULT_ESTIMATED_CUP_DOSE_SETTINGS,
+  normalizeEstimatedCupDoseSettings,
+} from '@/lib/settings/estimatedCupDose';
 import { normalizeSyncSettings } from '@/lib/sync/settings';
 
 /**
@@ -69,6 +73,7 @@ export const defaultSettings: AppSettings = {
   showStatusDots: false,
   showBeanSummary: false,
   showEstimatedCups: false,
+  estimatedCupDoseSettings: { ...DEFAULT_ESTIMATED_CUP_DOSE_SETTINGS },
   enableBeanSummaryCapacityLimit: false,
   beanSummaryMaxDisplayCapacity: 1000,
   enableBeanSummaryOverflowWrap: false,
@@ -301,6 +306,17 @@ interface SettingsStore {
   importSettings: (settings: AppSettings) => Promise<void>;
 }
 
+const mergeSettingsWithDefaults = (
+  settings?: Partial<AppSettings> | null
+): AppSettings => ({
+  ...defaultSettings,
+  ...settings,
+  navigationSettings: normalizeNavigationSettings(settings?.navigationSettings),
+  estimatedCupDoseSettings: normalizeEstimatedCupDoseSettings(
+    settings?.estimatedCupDoseSettings
+  ),
+});
+
 /**
  * 设置 Store
  */
@@ -322,14 +338,9 @@ export const useSettingsStore = create<SettingsStore>()(
         if (stored && stored.data) {
           const normalizedStoredData = normalizeSyncSettings(stored.data);
 
-          // 合并默认设置和存储的设置，确保新字段有默认值
-          const mergedSettings = {
-            ...defaultSettings,
-            ...normalizedStoredData,
-            navigationSettings: normalizeNavigationSettings(
-              normalizedStoredData.navigationSettings
-            ),
-          };
+          // 合并默认设置和存储的设置，确保新字段和嵌套字段都有默认值
+          const mergedSettings =
+            mergeSettingsWithDefaults(normalizedStoredData);
 
           // 兼容旧字段：notesListStyle -> useClassicNotesListStyle
           if (
@@ -723,10 +734,9 @@ export const useSettingsStore = create<SettingsStore>()(
     },
 
     importSettings: async settings => {
-      const mergedSettings = {
-        ...defaultSettings,
-        ...normalizeSyncSettings(settings),
-      };
+      const mergedSettings = mergeSettingsWithDefaults(
+        normalizeSyncSettings(settings)
+      );
       try {
         await db.appSettings.put({ id: 'main', data: mergedSettings });
         set({ settings: mergedSettings });
