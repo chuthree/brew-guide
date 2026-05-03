@@ -174,7 +174,7 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
                 官网
               </a>
               <a
-                href="https://chu3.top/notes/brew-guide-changelog"
+                href="https://chu3.top/projects/brew-guide-app/changelog"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-neutral-800 underline dark:text-neutral-200"
@@ -191,49 +191,6 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
               </a>
             </p>
           </CollapsibleSection>
-          {/* <p>
-            你好，我是{' '}
-            <a
-              href="https://chu3.top/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-neutral-800 underline dark:text-neutral-200"
-            >
-              chu3
-            </a>
-            ，
-          </p> */}
-
-          {/* <p>
-            感谢你看到这里，这个工具起初是记方案用的。在一次做着做着发到了博主的群里，没想到群友们开始帮忙提建议、推荐给其他人，这个小工具就这样慢慢长大了。从最开始只是记录冲煮方案，到后来发现大家最常用的反而是咖啡豆库存管理，这些都是在和使用者的交流中一点点完善起来的。
-          </p>
-
-          <p>
-            说实话，开发过程中也有过好几次怀疑，不知道做这个到底有什么意义。但每次收到反馈，或者看到群里有人在讨论怎么用，又或者因为这个应用认识了新朋友，就会觉得，嗯，这样挺好的。能做出一个真的有人在用的东西，这件事本身就很有意思。
-          </p>
-
-          <p>
-            这个项目是完全开源的，代码放在{' '}
-            <a
-              href="https://github.com/chuthree/brew-guide"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-neutral-800 underline dark:text-neutral-200"
-            >
-              GitHub
-            </a>{' '}
-            和{' '}
-            <a
-              href="https://gitee.com/chu3/brew-guide"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-neutral-800 underline dark:text-neutral-200"
-            >
-              Gitee
-            </a>{' '}
-            上。如果你遇到问题或者有什么想法，欢迎提 Issue 或
-            PR。如果你也在做一些小而美的东西，或者只是想聊聊天，也都欢迎来找我。
-          </p> */}
         </div>
       </div>
     </SettingPage>
