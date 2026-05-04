@@ -1,6 +1,5 @@
 import type { ExpandedStage } from './types';
-import { playSound } from './Audio';
-import type { AudioState } from './Audio';
+import { playTimerSound } from './Audio';
 
 /**
  * 计时器回调接口
@@ -17,7 +16,6 @@ export interface TimerCallbacks {
 export const handleTimerTick = (
   currentTime: number,
   expandedStages: ExpandedStage[],
-  audioState: AudioState,
   notificationSoundEnabled: boolean,
   hapticEnabled: boolean,
   hapticCallback?: (type: string) => void
@@ -68,19 +66,19 @@ export const handleTimerTick = (
   }
 
   if (shouldPlayDing) {
-    playSound('ding', audioState, notificationSoundEnabled);
+    playTimerSound('ding', notificationSoundEnabled);
   }
 
   if (shouldPlayStart) {
-    playSound('start', audioState, notificationSoundEnabled);
+    playTimerSound('start', notificationSoundEnabled);
   }
 
   if (shouldPreNotifyPourEnd) {
-    playSound('start', audioState, notificationSoundEnabled);
+    playTimerSound('start', notificationSoundEnabled);
   }
 
   if (shouldNotifyPourEnd) {
-    playSound('ding', audioState, notificationSoundEnabled);
+    playTimerSound('ding', notificationSoundEnabled);
     if (hapticEnabled && hapticCallback) {
       hapticCallback('medium');
     }
@@ -105,7 +103,6 @@ export const handleTimerTick = (
  */
 export const startMainTimer = (
   expandedStages: ExpandedStage[],
-  audioState: AudioState,
   notificationSoundEnabled: boolean,
   hapticEnabled: boolean,
   callbacks: TimerCallbacks
@@ -115,7 +112,6 @@ export const startMainTimer = (
       const { newTime, isCompleted } = handleTimerTick(
         currentTime,
         expandedStages,
-        audioState,
         notificationSoundEnabled,
         hapticEnabled,
         callbacks.onHaptic

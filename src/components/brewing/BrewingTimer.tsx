@@ -20,9 +20,8 @@ import {
   handleScreenWake,
   cleanupScreenWake,
   calculateTargetFlowRate,
-  // 音频模块
-  createInitialAudioState,
-  initAudioSystem,
+  initializeTimerAudio,
+  playTimerSound,
   // 阶段处理器
   createExpandedStages,
   getCurrentStageIndex,
@@ -34,10 +33,8 @@ import {
 import type {
   ExpandedStage,
   LayoutSettings,
-  AudioState,
   TimerCallbacks,
 } from '@/components/brewing/Timer';
-import { globalAudioManager } from '@/lib/audio/globalAudioManager';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 保留布局设置接口的导出，但使用从Timer模块导入的定义
@@ -109,8 +106,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   const expandedStagesRef = useRef<ExpandedStage[]>([]);
 
   const [expandedStagesVersion, setExpandedStagesVersion] = useState(0);
-
-  const audioState = useRef<AudioState>(createInitialAudioState());
 
   const methodStagesRef = useRef(currentBrewingMethod?.params.stages || []);
   const [showNoteForm, setShowNoteForm] = useState(false);
@@ -211,48 +206,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     [isHapticsSupported, settings.hapticFeedback]
   );
 
-  // 音频系统初始化 - 同时初始化全局和本地音频管理器
+  // 提前预载提示音；真正播放前仍会按浏览器策略在用户交互后恢复 AudioContext。
   useEffect(() => {
-    // 初始化音频系统
-    const setup = async () => {
-      // 初始化全局音频管理器
-      await globalAudioManager.initialize();
-
-      // 同时初始化本地音频状态（用于计时器阶段切换提示音）
-      audioState.current = await initAudioSystem(audioState.current);
-    };
-
-    setup();
-
-    // 添加用户交互事件监听器（用于恢复音频上下文）
-    const handleUserInteraction = () => {
-      if (audioState.current.audioContext?.state === 'suspended') {
-        audioState.current.audioContext.resume();
-      }
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('touchstart', handleUserInteraction);
-    };
-
-    document.addEventListener('click', handleUserInteraction);
-    document.addEventListener('touchstart', handleUserInteraction);
-
-    return () => {
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('touchstart', handleUserInteraction);
-      // 不再立即清理音频系统，让全局管理器处理
-      // 只在有活跃音频时等待完成
-      if (globalAudioManager.isAudioPlaying()) {
-        globalAudioManager.waitForAudioCompletion().then(() => {
-          // 音频播放完毕后的清理可以在这里进行
-        });
-      }
-    };
+    void initializeTimerAudio();
   }, []);
 
   const playSoundEffect = useCallback(
     (type: 'start' | 'ding' | 'correct') => {
-      // 使用全局音频管理器播放音效
-      globalAudioManager.playSound(type, settings.notificationSound);
+      playTimerSound(type, settings.notificationSound);
     },
     [settings.notificationSound]
   );
@@ -454,7 +415,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
       const timerId = startTimerController(
         expandedStagesRef.current,
-        audioState.current,
         settings.notificationSound,
         settings.hapticFeedback && isHapticsSupported,
         timerCallbacks
