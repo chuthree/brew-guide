@@ -2068,13 +2068,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         {/* 保存按钮 */}
         {showSaveButton && (
-          <div className="pb-safe-bottom flex justify-center gap-3 pt-4">
+          <div className="flex justify-center gap-3 pt-4">
             {shouldShowQuickDecrementButton && (
               <button
                 type="submit"
                 name="intent"
                 value="quick-decrement"
-                className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
               >
                 仅扣除
               </button>
@@ -2083,7 +2083,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               type="submit"
               name="intent"
               value="save-note"
-              className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+              className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
             >
               保存笔记
             </button>
