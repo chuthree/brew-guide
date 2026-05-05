@@ -33,6 +33,7 @@ export const globalCache: {
   selectedProcessingMethod: string | null;
   selectedFlavorPeriod: FlavorPeriodStatus | null;
   selectedRoaster: string | null;
+  selectedBeanGroupId: string | null;
   selectedVarieties: { green: string | null; roasted: string | null };
   selectedOrigins: { green: string | null; roasted: string | null };
   selectedProcessingMethods: { green: string | null; roasted: string | null };
@@ -41,6 +42,7 @@ export const globalCache: {
     roasted: FlavorPeriodStatus | null;
   };
   selectedRoasters: { green: string | null; roasted: string | null };
+  selectedBeanGroupIds: { green: string | null; roasted: string | null };
   showEmptyBeans: boolean;
   showEmptyBeansSettings: { green: boolean; roasted: boolean };
 
@@ -76,6 +78,7 @@ export const globalCache: {
   availableOrigins: string[];
   availableFlavorPeriods: FlavorPeriodStatus[];
   availableRoasters: string[];
+  availableBeanGroupIds: string[];
 } = {
   selectedVariety: null,
   selectedBeanType: 'all',
@@ -87,11 +90,13 @@ export const globalCache: {
   selectedProcessingMethod: null,
   selectedFlavorPeriod: null,
   selectedRoaster: null,
+  selectedBeanGroupId: null,
   selectedVarieties: { green: null, roasted: null },
   selectedOrigins: { green: null, roasted: null },
   selectedProcessingMethods: { green: null, roasted: null },
   selectedFlavorPeriods: { green: null, roasted: null },
   selectedRoasters: { green: null, roasted: null },
+  selectedBeanGroupIds: { green: null, roasted: null },
   showEmptyBeans: false,
   showEmptyBeansSettings: { green: false, roasted: false },
   isImageFlowMode: false,
@@ -117,6 +122,7 @@ export const globalCache: {
   availableOrigins: [],
   availableFlavorPeriods: [],
   availableRoasters: [],
+  availableBeanGroupIds: [],
 };
 
 // ==================== 偏好设置读写函数 ====================
@@ -242,7 +248,7 @@ export const saveFilterModePreference = (v: BeanFilterMode) =>
   saveStringState(MODULE_NAME, 'filterMode', v);
 export const getFilterModeByStatePreference = (s: BeanState) => {
   const v = getStringState(MODULE_NAME, `filterMode_${s}`, 'variety');
-  return s === 'green' && v === 'flavorPeriod'
+  return s === 'green' && (v === 'flavorPeriod' || v === 'group')
     ? 'variety'
     : (v as BeanFilterMode);
 };
@@ -301,6 +307,18 @@ export const saveSelectedRoasterByStatePreference = (
   s: BeanState,
   v: string | null
 ) => saveStringState(MODULE_NAME, `selectedRoaster_${s}`, v || '');
+
+// 分组筛选
+export const getSelectedBeanGroupPreference = () =>
+  getStringState(MODULE_NAME, 'selectedBeanGroupId', '') || null;
+export const saveSelectedBeanGroupPreference = (v: string | null) =>
+  saveStringState(MODULE_NAME, 'selectedBeanGroupId', v || '');
+export const getSelectedBeanGroupByStatePreference = (s: BeanState) =>
+  getStringState(MODULE_NAME, `selectedBeanGroupId_${s}`, '') || null;
+export const saveSelectedBeanGroupByStatePreference = (
+  s: BeanState,
+  v: string | null
+) => saveStringState(MODULE_NAME, `selectedBeanGroupId_${s}`, v || '');
 
 // 显示模式: list（列表）、imageFlow（图片流）、table（表格）
 export type DisplayMode = 'list' | 'imageFlow' | 'table';
@@ -444,6 +462,7 @@ const initGlobalCache = () => {
     getSelectedProcessingMethodPreference();
   globalCache.selectedFlavorPeriod = getSelectedFlavorPeriodPreference();
   globalCache.selectedRoaster = getSelectedRoasterPreference();
+  globalCache.selectedBeanGroupId = getSelectedBeanGroupPreference();
   globalCache.selectedVarieties = {
     green: getSelectedVarietyByStatePreference('green'),
     roasted: getSelectedVarietyByStatePreference('roasted'),
@@ -463,6 +482,10 @@ const initGlobalCache = () => {
   globalCache.selectedRoasters = {
     green: getSelectedRoasterByStatePreference('green'),
     roasted: getSelectedRoasterByStatePreference('roasted'),
+  };
+  globalCache.selectedBeanGroupIds = {
+    green: getSelectedBeanGroupByStatePreference('green'),
+    roasted: getSelectedBeanGroupByStatePreference('roasted'),
   };
   globalCache.dateGroupingMode = getDateGroupingModePreference();
   globalCache.selectedDate = getSelectedDatePreference();

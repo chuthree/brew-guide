@@ -197,6 +197,9 @@ export const defaultSettings: AppSettings = {
   // 烘焙商配置
   roasterConfigs: [],
 
+  // 分组
+  coffeeBeanGroups: [],
+
   // 器具排序
   equipmentOrder: [],
 

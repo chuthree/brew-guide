@@ -63,6 +63,9 @@ import {
   saveSelectedRoasterPreference,
   saveSelectedRoasterByStatePreference,
   getSelectedRoasterByStatePreference,
+  saveSelectedBeanGroupPreference,
+  saveSelectedBeanGroupByStatePreference,
+  getSelectedBeanGroupByStatePreference,
   // 显示模式相关
   type DisplayMode,
   isBeanEmpty,
@@ -75,6 +78,7 @@ import {
   FlavorPeriodStatus,
   beanHasVariety,
   beanHasOrigin,
+  beanHasProcess,
   beanHasFlavorPeriodStatus,
   beanHasRoaster,
   RoasterSettings,
@@ -110,6 +114,7 @@ import {
   getBeanSummaryDisplayLimit,
   getBeanSummaryLimitMode,
 } from '@/lib/utils/beanSummaryDisplay';
+import { beanBelongsToGroup } from '@/lib/utils/coffeeBeanGroupUtils';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -216,6 +221,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     useState<FlavorPeriodStatus | null>(globalCache.selectedFlavorPeriod);
   const [selectedRoaster, setSelectedRoaster] = useState<string | null>(
     globalCache.selectedRoaster
+  );
+  const [selectedBeanGroupId, setSelectedBeanGroupId] = useState<string | null>(
+    globalCache.selectedBeanGroupId
   );
 
   const [rankingBeanType, setRankingBeanType] = useState<BeanType>(
@@ -353,6 +361,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     availableProcessingMethods,
     availableFlavorPeriods,
     availableRoasters,
+    availableBeanGroups,
   } = useEnhancedBeanFiltering({
     beans,
     filterMode,
@@ -361,6 +370,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     selectedProcessingMethod,
     selectedFlavorPeriod,
     selectedRoaster,
+    selectedBeanGroupId,
     selectedBeanType,
     selectedBeanState,
     showEmptyBeans,
@@ -385,6 +395,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   );
   const roasterSeparator = useSettingsStore(
     state => state.settings.roasterSeparator
+  );
+  const coffeeBeanGroups = useSettingsStore(
+    state => state.settings.coffeeBeanGroups
   );
   const roasterSettings = useMemo<RoasterSettings>(
     () => ({
@@ -433,6 +446,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           );
         }
         break;
+      case 'processingMethod':
+        if (selectedProcessingMethod) {
+          beansToCount = beansToCount.filter(bean =>
+            beanHasProcess(bean, selectedProcessingMethod)
+          );
+        }
+        break;
       case 'flavorPeriod':
         if (selectedFlavorPeriod) {
           beansToCount = beansToCount.filter(bean =>
@@ -444,6 +464,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         if (selectedRoaster) {
           beansToCount = beansToCount.filter(bean =>
             beanHasRoaster(bean, selectedRoaster, roasterSettings)
+          );
+        }
+        break;
+      case 'group':
+        if (selectedBeanGroupId) {
+          const selectedGroup = coffeeBeanGroups?.find(
+            group => group.id === selectedBeanGroupId
+          );
+          beansToCount = beansToCount.filter(bean =>
+            beanBelongsToGroup(bean, selectedGroup)
           );
         }
         break;
@@ -489,9 +519,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     filterMode,
     selectedVariety,
     selectedOrigin,
+    selectedProcessingMethod,
     selectedFlavorPeriod,
     selectedRoaster,
+    selectedBeanGroupId,
     roasterSettings,
+    coffeeBeanGroups,
   ]);
 
   // 计算总体类型统计 - 用于判断按钮是否应该禁用（考虑分类栏选择，但不考虑类型本身的选择）
@@ -526,6 +559,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             );
           }
           break;
+        case 'processingMethod':
+          if (selectedProcessingMethod) {
+            beansToCount = beansToCount.filter(bean =>
+              beanHasProcess(bean, selectedProcessingMethod)
+            );
+          }
+          break;
         case 'flavorPeriod':
           if (selectedFlavorPeriod) {
             beansToCount = beansToCount.filter(bean =>
@@ -537,6 +577,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           if (selectedRoaster) {
             beansToCount = beansToCount.filter(bean =>
               beanHasRoaster(bean, selectedRoaster, roasterSettings)
+            );
+          }
+          break;
+        case 'group':
+          if (selectedBeanGroupId) {
+            const selectedGroup = coffeeBeanGroups?.find(
+              group => group.id === selectedBeanGroupId
+            );
+            beansToCount = beansToCount.filter(bean =>
+              beanBelongsToGroup(bean, selectedGroup)
             );
           }
           break;
@@ -565,9 +615,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       filterMode,
       selectedVariety,
       selectedOrigin,
+      selectedProcessingMethod,
       selectedFlavorPeriod,
       selectedRoaster,
+      selectedBeanGroupId,
       roasterSettings,
+      coffeeBeanGroups,
     ]);
 
   const updateFilteredBeansAndCategories = useCallback(
@@ -576,6 +629,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.availableOrigins = availableOrigins;
       globalCache.availableFlavorPeriods = availableFlavorPeriods;
       globalCache.availableRoasters = availableRoasters;
+      globalCache.availableBeanGroupIds = availableBeanGroups.map(
+        group => group.id
+      );
       globalCache.filteredBeans = filteredBeans;
     },
     [
@@ -583,6 +639,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       availableOrigins,
       availableFlavorPeriods,
       availableRoasters,
+      availableBeanGroups,
       filteredBeans,
     ]
   );
@@ -860,6 +917,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.selectedOrigin = selectedOrigin;
       globalCache.selectedFlavorPeriod = selectedFlavorPeriod;
       globalCache.selectedRoaster = selectedRoaster;
+      globalCache.selectedBeanGroupId = selectedBeanGroupId;
     }
   }, [
     storeInitialized,
@@ -870,6 +928,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     selectedOrigin,
     selectedFlavorPeriod,
     selectedRoaster,
+    selectedBeanGroupId,
   ]);
 
   useEffect(() => {
@@ -978,6 +1037,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       );
       globalCache.selectedRoasters[currentBeanState] = selectedRoaster;
       saveSelectedRoasterByStatePreference(currentBeanState, selectedRoaster);
+      globalCache.selectedBeanGroupIds[currentBeanState] = selectedBeanGroupId;
+      saveSelectedBeanGroupByStatePreference(
+        currentBeanState,
+        selectedBeanGroupId
+      );
 
       // 切换 beanState
       setSelectedBeanState(beanState);
@@ -1069,6 +1133,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       setSelectedRoaster(targetRoaster);
       globalCache.selectedRoaster = targetRoaster;
       saveSelectedRoasterPreference(targetRoaster);
+
+      const targetBeanGroupId =
+        globalCache.selectedBeanGroupIds[beanState] ??
+        getSelectedBeanGroupByStatePreference(beanState);
+      setSelectedBeanGroupId(targetBeanGroupId);
+      globalCache.selectedBeanGroupId = targetBeanGroupId;
+      saveSelectedBeanGroupPreference(targetBeanGroupId);
     },
     [
       filterMode,
@@ -1082,6 +1153,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       selectedProcessingMethod,
       selectedFlavorPeriod,
       selectedRoaster,
+      selectedBeanGroupId,
     ]
   );
 
@@ -1239,16 +1311,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       setSelectedProcessingMethod(null);
       setSelectedFlavorPeriod(null);
       setSelectedRoaster(null);
+      setSelectedBeanGroupId(null);
       globalCache.selectedVariety = null;
       globalCache.selectedOrigin = null;
       globalCache.selectedProcessingMethod = null;
       globalCache.selectedFlavorPeriod = null;
       globalCache.selectedRoaster = null;
+      globalCache.selectedBeanGroupId = null;
       saveSelectedVarietyPreference(null);
       saveSelectedOriginPreference(null);
       saveSelectedProcessingMethodPreference(null);
       saveSelectedFlavorPeriodPreference(null);
       saveSelectedRoasterPreference(null);
+      saveSelectedBeanGroupPreference(null);
     },
     [selectedBeanState]
   );
@@ -1304,6 +1379,41 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     },
     [selectedBeanState]
   );
+
+  // 处理分组点击
+  const handleBeanGroupClick = useCallback(
+    (groupId: string | null) => {
+      setSelectedBeanGroupId(groupId);
+      globalCache.selectedBeanGroupId = groupId;
+      globalCache.selectedBeanGroupIds[selectedBeanState] = groupId;
+      saveSelectedBeanGroupPreference(groupId);
+      saveSelectedBeanGroupByStatePreference(selectedBeanState, groupId);
+    },
+    [selectedBeanState]
+  );
+
+  useEffect(() => {
+    if (
+      filterMode === 'group' &&
+      (!coffeeBeanGroups || coffeeBeanGroups.length === 0)
+    ) {
+      handleFilterModeChange('variety');
+      return;
+    }
+
+    if (
+      selectedBeanGroupId &&
+      !coffeeBeanGroups?.some(group => group.id === selectedBeanGroupId)
+    ) {
+      handleBeanGroupClick(null);
+    }
+  }, [
+    coffeeBeanGroups,
+    filterMode,
+    handleBeanGroupClick,
+    handleFilterModeChange,
+    selectedBeanGroupId,
+  ]);
 
   useEffect(() => {
     if (storeInitialized && viewMode === VIEW_OPTIONS.RANKING) {
@@ -2003,10 +2113,13 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         onFlavorPeriodClick={handleFlavorPeriodClick}
         selectedRoaster={selectedRoaster}
         onRoasterClick={handleRoasterClick}
+        selectedBeanGroupId={selectedBeanGroupId}
+        onBeanGroupClick={handleBeanGroupClick}
         availableOrigins={availableOrigins}
         availableProcessingMethods={availableProcessingMethods}
         availableFlavorPeriods={availableFlavorPeriods}
         availableRoasters={availableRoasters}
+        availableBeanGroups={availableBeanGroups}
         originalTotalWeight={calculateOriginalTotalWeight(
           isSearching ? searchFilteredBeans : inventoryFilteredBeans
         )}

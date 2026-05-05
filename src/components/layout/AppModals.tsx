@@ -15,6 +15,7 @@ import DisplaySettings from '@/components/settings/DisplaySettings';
 import StockSettings from '@/components/settings/StockSettings';
 import BeanSettings from '@/components/settings/BeanSettings';
 import GreenBeanSettings from '@/components/settings/GreenBeanSettings';
+import CoffeeBeanGroupSettings from '@/components/settings/CoffeeBeanGroupSettings';
 import FlavorPeriodSettings from '@/components/settings/FlavorPeriodSettings';
 import TimerSettings from '@/components/settings/TimerSettings';
 import DataSettings from '@/components/settings/DataSettings';
@@ -78,6 +79,8 @@ export interface AppModalsProps {
   setShowBeanSettings: (show: boolean) => void;
   showGreenBeanSettings: boolean;
   setShowGreenBeanSettings: (show: boolean) => void;
+  showCoffeeBeanGroupSettings: boolean;
+  setShowCoffeeBeanGroupSettings: (show: boolean) => void;
   showFlavorPeriodSettings: boolean;
   setShowFlavorPeriodSettings: (show: boolean) => void;
   showBrewingSettings: boolean;
@@ -271,6 +274,8 @@ const AppModals: React.FC<AppModalsProps> = ({
   setShowBeanSettings,
   showGreenBeanSettings,
   setShowGreenBeanSettings,
+  showCoffeeBeanGroupSettings,
+  setShowCoffeeBeanGroupSettings,
   showFlavorPeriodSettings,
   setShowFlavorPeriodSettings,
   showBrewingSettings,
@@ -418,6 +423,10 @@ const AppModals: React.FC<AppModalsProps> = ({
       isOpen: showGreenBeanSettings,
     },
     {
+      id: 'coffee-bean-group-settings',
+      isOpen: showCoffeeBeanGroupSettings,
+    },
+    {
       id: 'flavor-period-settings',
       isOpen: showFlavorPeriodSettings,
     },
@@ -487,6 +496,7 @@ const AppModals: React.FC<AppModalsProps> = ({
     setShowStockSettings(false);
     setShowBeanSettings(false);
     setShowGreenBeanSettings(false);
+    setShowCoffeeBeanGroupSettings(false);
     setShowFlavorPeriodSettings(false);
     setShowBrewingSettings(false);
     setShowTimerSettings(false);
@@ -508,6 +518,7 @@ const AppModals: React.FC<AppModalsProps> = ({
     setShowStockSettings,
     setShowBeanSettings,
     setShowGreenBeanSettings,
+    setShowCoffeeBeanGroupSettings,
     setShowFlavorPeriodSettings,
     setShowBrewingSettings,
     setShowTimerSettings,
@@ -596,6 +607,14 @@ const AppModals: React.FC<AppModalsProps> = ({
         <GreenBeanSettings
           settings={settings}
           onClose={() => setShowGreenBeanSettings(false)}
+          handleChange={handleSubSettingChange}
+        />
+      )}
+
+      {showCoffeeBeanGroupSettings && (
+        <CoffeeBeanGroupSettings
+          settings={settings}
+          onClose={() => setShowCoffeeBeanGroupSettings(false)}
           handleChange={handleSubSettingChange}
         />
       )}
@@ -748,6 +767,11 @@ const AppModals: React.FC<AppModalsProps> = ({
             openSubSetting('bean-settings', setShowBeanSettings),
           onOpenGreenBeanSettings: () =>
             openSubSetting('green-bean-settings', setShowGreenBeanSettings),
+          onOpenCoffeeBeanGroupSettings: () =>
+            openSubSetting(
+              'coffee-bean-group-settings',
+              setShowCoffeeBeanGroupSettings
+            ),
           onOpenFlavorPeriodSettings: () =>
             openSubSetting(
               'flavor-period-settings',

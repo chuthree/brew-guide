@@ -40,6 +40,7 @@ import {
   getBeanSummaryDisplayLimit,
   getBeanSummaryLimitMode,
 } from '@/lib/utils/beanSummaryDisplay';
+import type { CoffeeBeanGroup } from '@/lib/core/db';
 // Apple风格动画配置
 const FILTER_ANIMATION = {
   initial: {
@@ -72,6 +73,8 @@ const UNDERLINE_TRANSITION = {
   damping: 35,
   mass: 1,
 };
+
+const EMPTY_BEAN_GROUPS: CoffeeBeanGroup[] = [];
 
 // 可复用的标签按钮组件 - 支持 layoutId 实现跨按钮下划线动画
 interface TabButtonProps {
@@ -271,12 +274,14 @@ interface FilterModeSectionProps {
   filterMode: BeanFilterMode;
   onFilterModeChange: (mode: BeanFilterMode) => void;
   selectedBeanState?: BeanState;
+  hasBeanGroups?: boolean;
 }
 
 const FilterModeSection: React.FC<FilterModeSectionProps> = ({
   filterMode,
   onFilterModeChange,
   selectedBeanState = 'roasted',
+  hasBeanGroups = false,
 }) => {
   const isGreenBean = selectedBeanState === 'green';
 
@@ -299,6 +304,14 @@ const FilterModeSection: React.FC<FilterModeSectionProps> = ({
             onClick={() => onFilterModeChange('flavorPeriod')}
           >
             按赏味期
+          </FilterButton>
+        )}
+        {!isGreenBean && hasBeanGroups && (
+          <FilterButton
+            isActive={filterMode === 'group'}
+            onClick={() => onFilterModeChange('group')}
+          >
+            按分组
           </FilterButton>
         )}
         <FilterButton
@@ -374,12 +387,15 @@ interface ViewSwitcherProps {
   onFlavorPeriodClick?: (status: FlavorPeriodStatus | null) => void;
   selectedRoaster?: string | null;
   onRoasterClick?: (roaster: string | null) => void;
+  selectedBeanGroupId?: string | null;
+  onBeanGroupClick?: (groupId: string | null) => void;
   selectedProcessingMethod?: string | null;
   onProcessingMethodClick?: (method: string | null) => void;
   availableOrigins?: string[];
   availableProcessingMethods?: string[];
   availableFlavorPeriods?: FlavorPeriodStatus[];
   availableRoasters?: string[];
+  availableBeanGroups?: CoffeeBeanGroup[];
   // 新增导出相关props
   onExportPreview?: () => void;
   // 新增类型统计props（基于当前筛选条件）
@@ -454,12 +470,15 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   onFlavorPeriodClick,
   selectedRoaster,
   onRoasterClick,
+  selectedBeanGroupId,
+  onBeanGroupClick,
   selectedProcessingMethod,
   onProcessingMethodClick,
   availableOrigins = [],
   availableProcessingMethods = [],
   availableFlavorPeriods = [],
   availableRoasters = [],
+  availableBeanGroups = EMPTY_BEAN_GROUPS,
   // 新增导出相关参数
   onExportPreview,
   // 新增类型统计参数（基于当前筛选条件）
@@ -490,6 +509,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   );
   const showEstimatedCups = useSettingsStore(
     state => state.settings.showEstimatedCups
+  );
+  const hasConfiguredBeanGroups = useSettingsStore(
+    state => (state.settings.coffeeBeanGroups?.length || 0) > 0
   );
   const beanSummaryDisplayLimit = useSettingsStore(state =>
     getBeanSummaryDisplayLimit(state.settings)
@@ -537,6 +559,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     selectedBeanType,
     showBeanSummary,
   ]);
+  const hasBeanGroups = hasConfiguredBeanGroups;
 
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
@@ -1091,6 +1114,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           selectedFlavorPeriod === null) ||
                         (filterMode === 'roaster' &&
                           selectedRoaster === null) ||
+                        (filterMode === 'group' &&
+                          selectedBeanGroupId === null) ||
                         (filterMode === 'processingMethod' &&
                           selectedProcessingMethod === null)
                       }
@@ -1120,6 +1145,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                           selectedRoaster !== null
                         ) {
                           onRoasterClick?.(null);
+                        } else if (
+                          filterMode === 'group' &&
+                          selectedBeanGroupId !== null
+                        ) {
+                          onBeanGroupClick?.(null);
                         }
                       }}
                       className="mr-1"
@@ -1264,6 +1294,23 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             {roaster}
                           </TabButton>
                         ))}
+
+                      {filterMode === 'group' &&
+                        availableBeanGroups.map(group => (
+                          <TabButton
+                            key={group.id}
+                            isActive={selectedBeanGroupId === group.id}
+                            onClick={() =>
+                              selectedBeanGroupId !== group.id &&
+                              onBeanGroupClick?.(group.id)
+                            }
+                            className="mr-3"
+                            dataTab={group.id}
+                            layoutId="inventory-group-underline"
+                          >
+                            {group.name}
+                          </TabButton>
+                        ))}
                     </div>
 
                     {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
@@ -1363,6 +1410,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                               filterMode={filterMode}
                               onFilterModeChange={onFilterModeChange}
                               selectedBeanState={selectedBeanState}
+                              hasBeanGroups={hasBeanGroups}
                             />
                           )}
 

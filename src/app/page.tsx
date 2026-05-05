@@ -286,6 +286,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [showStockSettings, setShowStockSettings] = useState(false);
   const [showBeanSettings, setShowBeanSettings] = useState(false);
   const [showGreenBeanSettings, setShowGreenBeanSettings] = useState(false);
+  const [showCoffeeBeanGroupSettings, setShowCoffeeBeanGroupSettings] =
+    useState(false);
   const [showFlavorPeriodSettings, setShowFlavorPeriodSettings] =
     useState(false);
   const [showBrewingSettings, setShowBrewingSettings] = useState(false);
@@ -316,6 +318,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showStockSettings ||
     showBeanSettings ||
     showGreenBeanSettings ||
+    showCoffeeBeanGroupSettings ||
     showFlavorPeriodSettings ||
     showBrewingSettings ||
     showTimerSettings ||
@@ -4212,6 +4215,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setShowBeanSettings={setShowBeanSettings}
         showGreenBeanSettings={showGreenBeanSettings}
         setShowGreenBeanSettings={setShowGreenBeanSettings}
+        showCoffeeBeanGroupSettings={showCoffeeBeanGroupSettings}
+        setShowCoffeeBeanGroupSettings={setShowCoffeeBeanGroupSettings}
         showFlavorPeriodSettings={showFlavorPeriodSettings}
         setShowFlavorPeriodSettings={setShowFlavorPeriodSettings}
         showBrewingSettings={showBrewingSettings}

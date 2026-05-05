@@ -13,7 +13,8 @@ export type BeanFilterMode =
   | 'origin'
   | 'processingMethod'
   | 'variety'
-  | 'flavorPeriod';
+  | 'flavorPeriod'
+  | 'group';
 
 // 分类模式显示名称
 const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
@@ -22,6 +23,7 @@ const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
   processingMethod: '按处理法',
   variety: '按品种',
   flavorPeriod: '按赏味期',
+  group: '按分组',
 };
 
 export interface CoffeeBeansProps {
