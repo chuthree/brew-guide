@@ -217,12 +217,18 @@ const validateNumericInput = (value: string): boolean => {
   return /^$|^[0-9]*\.?[0-9]*$/.test(value);
 };
 
+const getBeanRemainingAmount = (bean: SelectableCoffeeBean): number => {
+  if (isPendingCoffeeBean(bean)) return 0;
+  const remaining = parseFloat((bean as CoffeeBean).remaining || '0');
+  return Number.isFinite(remaining) ? Math.max(0, remaining) : 0;
+};
+
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   id,
   onClose: _onClose,
   onSave,
   initialData,
-  inBrewPage: _inBrewPage = false,
+  inBrewPage = false,
   showSaveButton = true,
   onSaveSuccess,
   hideHeader = false,
@@ -828,6 +834,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   // 判断是否是添加模式（提前声明，供 updateRating 使用）
   const isAdding = !id || isCopy;
 
+  const shouldShowQuickDecrementButton =
+    inBrewPage && isAdding && !!selectedCoffeeBean;
+
   // 判断是否是快捷扣除记录编辑模式
   const isQuickDecrementEdit =
     !isAdding && initialData.source === 'quick-decrement';
@@ -1247,11 +1256,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
+    const submitter = (e.nativeEvent as SubmitEvent)
+      .submitter as HTMLButtonElement | null;
+    const isQuickDecrementOnly = submitter?.value === 'quick-decrement';
 
     try {
       // 提取当前咖啡用量（用于容量计算和新建豆子）
       const {
         CapacitySyncManager,
+        useCoffeeBeanStore,
         updateBeanRemaining,
         increaseBeanRemaining,
       } = await import('@/lib/stores/coffeeBeanStore');
@@ -1261,14 +1274,25 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           : methodParams.coffee
       );
 
+      if (isQuickDecrementOnly) {
+        if (!selectedCoffeeBean) {
+          alert('请选择咖啡豆后再扣除');
+          return;
+        }
+
+        if (currentCoffeeAmount <= 0) {
+          alert('当前方案没有有效的咖啡用量，无法扣除');
+          return;
+        }
+      }
+
       // 处理待创建的咖啡豆
       // 如果选中的是 PendingCoffeeBean，在保存笔记时创建它
       let finalBeanId: string | undefined;
+      let deductedCoffeeAmount = currentCoffeeAmount;
 
       if (selectedCoffeeBean && isPendingCoffeeBean(selectedCoffeeBean)) {
         try {
-          const { useCoffeeBeanStore } =
-            await import('@/lib/stores/coffeeBeanStore');
           const addBean = useCoffeeBeanStore.getState().addBean;
 
           // 创建新咖啡豆，容量和剩余量基于本次冲煮用量
@@ -1305,10 +1329,24 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           // 新建笔记：直接扣除咖啡豆剩余量
           if (currentCoffeeAmount > 0) {
             try {
-              await updateBeanRemaining(
-                selectedCoffeeBean.id,
-                currentCoffeeAmount
-              );
+              const latestBean =
+                useCoffeeBeanStore
+                  .getState()
+                  .getBeanById(selectedCoffeeBean.id) || selectedCoffeeBean;
+              const decrementAmount = isQuickDecrementOnly
+                ? Math.min(
+                    currentCoffeeAmount,
+                    getBeanRemainingAmount(latestBean)
+                  )
+                : currentCoffeeAmount;
+              deductedCoffeeAmount = decrementAmount;
+
+              if (isQuickDecrementOnly && decrementAmount <= 0) {
+                alert('当前咖啡豆剩余量不足，无法扣除');
+                return;
+              }
+
+              await updateBeanRemaining(selectedCoffeeBean.id, decrementAmount);
             } catch (error) {
               console.error('扣除咖啡豆剩余量失败:', error);
             }
@@ -1375,6 +1413,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       const finalParams = normalizeBrewingNoteParams(methodParams);
       const finalTotalTime = parseFloat(totalTimeStr);
 
+      if (isQuickDecrementOnly && deductedCoffeeAmount <= 0) {
+        alert('扣除失败，请重试');
+        return;
+      }
+
       // 处理风味评分数据
       // 如果满足以下任一条件，不保存风味评分：
       // 1. 用户关闭了风味评分显示
@@ -1391,27 +1434,46 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       }
 
       const isConvertingToNormal = isQuickDecrementEdit && !isQuickMode;
-      const preservedSource = isConvertingToNormal
-        ? undefined
-        : initialData.source;
+      const preservedSource = isQuickDecrementOnly
+        ? 'quick-decrement'
+        : isConvertingToNormal
+          ? undefined
+          : initialData.source;
       const preservedChangeRecord = isConvertingToNormal
         ? undefined
         : initialData.changeRecord;
-      const quickDecrementAmountValue =
-        preservedSource === 'quick-decrement'
+      const quickDecrementAmountValue = isQuickDecrementOnly
+        ? deductedCoffeeAmount
+        : preservedSource === 'quick-decrement'
           ? parseFloat(quickDecrementAmount) || 0
           : undefined;
+      const noteParams = isQuickDecrementOnly
+        ? {
+            ...finalParams,
+            coffee: CapacitySyncManager.formatCoffeeParam(deductedCoffeeAmount),
+          }
+        : finalParams;
+      const noteFormData = isQuickDecrementOnly
+        ? {
+            ...formData,
+            image: '',
+            images: [],
+            rating: 0,
+            notes: formData.notes.trim() || '快捷扣除',
+          }
+        : formData;
+      const noteTaste = isQuickDecrementOnly ? {} : finalTaste;
 
       // 创建完整的笔记数据
       const noteData: BrewingNoteData = {
         id: id || generatedNoteIdRef.current,
         // 使用当前的时间戳状态
         timestamp: timestamp.getTime(),
-        ...formData,
-        taste: finalTaste, // 使用处理后的风味评分
+        ...noteFormData,
+        taste: noteTaste, // 使用处理后的风味评分
         ...(finalEquipment && { equipment: finalEquipment }),
         ...(finalMethod && { method: finalMethod }),
-        ...(finalParams && { params: finalParams }),
+        ...(noteParams && { params: noteParams }),
         ...(finalTotalTime > 0 && { totalTime: finalTotalTime }),
         // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
         beanId: finalBeanId,
@@ -2006,9 +2068,21 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         {/* 保存按钮 */}
         {showSaveButton && (
-          <div className="pb-safe-bottom flex justify-center pt-4">
+          <div className="pb-safe-bottom flex justify-center gap-3 pt-4">
+            {shouldShowQuickDecrementButton && (
+              <button
+                type="submit"
+                name="intent"
+                value="quick-decrement"
+                className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              >
+                仅扣除
+              </button>
+            )}
             <button
               type="submit"
+              name="intent"
+              value="save-note"
               className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
             >
               保存笔记

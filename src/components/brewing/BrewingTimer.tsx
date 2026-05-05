@@ -1898,6 +1898,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
               // 允许用户稍后返回继续填写
             }}
             onSave={handleSaveNote}
+            inBrewPage={true}
             initialData={
               noteFormInitialData || {
                 equipment: selectedEquipment || '',
