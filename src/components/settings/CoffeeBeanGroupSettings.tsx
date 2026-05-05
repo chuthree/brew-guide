@@ -207,11 +207,15 @@ const getBeanMetaParts = (
   return parts;
 };
 
-const getChipBeanName = (bean: CoffeeBean) => {
-  const normalizedName = bean.name.replace(/\s+/g, ' ').trim();
-  return normalizedName.length > 12
-    ? `${normalizedName.slice(0, 12)}...`
-    : normalizedName;
+const getChipBeanName = (
+  bean: CoffeeBean,
+  displaySettings: BeanDisplaySettings
+) => {
+  const displayName = formatBeanDisplayName(bean, displaySettings)
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return displayName || bean.name.replace(/\s+/g, ' ').trim();
 };
 
 const BeanThumbnail: React.FC<{
@@ -652,12 +656,14 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
               >
                 {selectedBeans.map(bean => {
                   const isActive = activeSelectedBeanId === bean.id;
+                  const chipName = getChipBeanName(bean, displaySettings);
 
                   return (
                     <button
                       key={bean.id}
                       type="button"
                       onClick={() => handleSelectedChipClick(bean.id)}
+                      title={chipName}
                       className={`flex max-w-full cursor-pointer items-center gap-1.5 rounded-full py-1 pr-3 pl-1.5 text-sm font-medium transition active:scale-[0.98] ${
                         isActive
                           ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
@@ -678,7 +684,7 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
                         )}
                       </span>
                       <span className="max-w-28 truncate">
-                        {getChipBeanName(bean)}
+                        {chipName}
                       </span>
                     </button>
                   );
