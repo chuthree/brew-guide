@@ -280,7 +280,11 @@ const StackedDrawer: React.FC<StackedDrawerProps> = ({
   const contentZ = layer === 'top' ? 'z-[71]' : 'z-[61]';
 
   return (
-    <Drawer.Root open={isOpen} onOpenChange={open => !open && onCancel()}>
+    <Drawer.Root
+      open={isOpen}
+      onOpenChange={open => !open && onCancel()}
+      repositionInputs={false}
+    >
       <Drawer.Portal>
         <Drawer.Overlay className={`fixed inset-0 ${overlayZ} bg-black/50`} />
         <Drawer.Content
@@ -484,21 +488,13 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
     top: false,
     bottom: false,
   });
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
   const chipListRef = React.useRef<HTMLDivElement>(null);
   const beanListRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (!isOpen) {
       setSearchQuery('');
-      return;
     }
-
-    const timer = window.setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 320);
-
-    return () => window.clearTimeout(timer);
   }, [isOpen]);
 
   const selectedIdSet = React.useMemo(
@@ -703,7 +699,6 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
 
           <div className="relative">
             <input
-              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={event => setSearchQuery(event.target.value)}
