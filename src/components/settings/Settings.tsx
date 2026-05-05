@@ -55,6 +55,7 @@ import {
   FlaskConical,
   Box,
   Play,
+  Folder,
 } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -74,6 +75,7 @@ export interface SubSettingsHandlers {
   onOpenStockSettings: () => void;
   onOpenBeanSettings: () => void;
   onOpenGreenBeanSettings: () => void;
+  onOpenCoffeeBeanGroupSettings: () => void;
   onOpenFlavorPeriodSettings: () => void;
   onOpenBrewingSettings: () => void;
   onOpenTimerSettings: () => void;
@@ -825,6 +827,17 @@ const Settings: React.FC<SettingsProps> = ({
                   label: '咖啡豆',
                   settingId: 'bean-settings',
                   onClick: subSettingsHandlers.onOpenBeanSettings,
+                },
+                {
+                  icon: Folder,
+                  label: '分组',
+                  settingId: 'coffee-bean-group-settings',
+                  value:
+                    settings.coffeeBeanGroups &&
+                    settings.coffeeBeanGroups.length > 0
+                      ? `${settings.coffeeBeanGroups.length} 组`
+                      : undefined,
+                  onClick: subSettingsHandlers.onOpenCoffeeBeanGroupSettings,
                 },
                 {
                   icon: Box,

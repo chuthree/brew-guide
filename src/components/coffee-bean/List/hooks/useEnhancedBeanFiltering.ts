@@ -22,6 +22,11 @@ import {
   RoasterSettings,
 } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import type { CoffeeBeanGroup } from '@/lib/core/db';
+import {
+  beanBelongsToGroup,
+  getAvailableCoffeeBeanGroups,
+} from '@/lib/utils/coffeeBeanGroupUtils';
 
 interface UseEnhancedBeanFilteringProps {
   beans: ExtendedCoffeeBean[];
@@ -31,6 +36,7 @@ interface UseEnhancedBeanFilteringProps {
   selectedProcessingMethod: string | null;
   selectedFlavorPeriod: FlavorPeriodStatus | null;
   selectedRoaster: string | null;
+  selectedBeanGroupId: string | null;
   selectedBeanType: BeanType;
   selectedBeanState: BeanState;
   showEmptyBeans: boolean;
@@ -47,6 +53,7 @@ interface UseEnhancedBeanFilteringReturn {
   availableProcessingMethods: string[];
   availableFlavorPeriods: FlavorPeriodStatus[];
   availableRoasters: string[];
+  availableBeanGroups: CoffeeBeanGroup[];
 }
 
 /**
@@ -61,6 +68,7 @@ export const useEnhancedBeanFiltering = ({
   selectedProcessingMethod,
   selectedFlavorPeriod,
   selectedRoaster,
+  selectedBeanGroupId,
   selectedBeanType,
   selectedBeanState,
   showEmptyBeans,
@@ -72,6 +80,9 @@ export const useEnhancedBeanFiltering = ({
   );
   const roasterSeparator = useSettingsStore(
     state => state.settings.roasterSeparator
+  );
+  const coffeeBeanGroups = useSettingsStore(
+    state => state.settings.coffeeBeanGroups
   );
 
   // 使用 useMemo 缓存 roasterSettings 对象
@@ -143,6 +154,16 @@ export const useEnhancedBeanFiltering = ({
             );
           }
           break;
+        case 'group':
+          if (selectedBeanGroupId) {
+            const selectedGroup = coffeeBeanGroups?.find(
+              group => group.id === selectedBeanGroupId
+            );
+            filtered = filtered.filter(bean =>
+              beanBelongsToGroup(bean, selectedGroup)
+            );
+          }
+          break;
       }
 
       return filtered;
@@ -154,9 +175,11 @@ export const useEnhancedBeanFiltering = ({
       selectedProcessingMethod,
       selectedFlavorPeriod,
       selectedRoaster,
+      selectedBeanGroupId,
       selectedBeanType,
       selectedBeanState,
       roasterSettings,
+      coffeeBeanGroups,
     ]
   );
 
@@ -279,6 +302,10 @@ export const useEnhancedBeanFiltering = ({
     return extractUniqueRoasters(baseFilteredBeans, roasterSettings);
   }, [baseFilteredBeans, roasterSettings]);
 
+  const availableBeanGroups = useMemo(() => {
+    return getAvailableCoffeeBeanGroups(coffeeBeanGroups, baseFilteredBeans);
+  }, [baseFilteredBeans, coffeeBeanGroups]);
+
   return {
     filteredBeans,
     emptyBeans,
@@ -289,5 +316,6 @@ export const useEnhancedBeanFiltering = ({
     availableProcessingMethods,
     availableFlavorPeriods,
     availableRoasters,
+    availableBeanGroups,
   };
 };

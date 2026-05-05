@@ -79,6 +79,18 @@ export interface RoasterConfig {
 }
 
 /**
+ * 咖啡豆自定义分组
+ */
+export interface CoffeeBeanGroup {
+  id: string;
+  name: string;
+  beanIds: string[];
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
  * 应用设置类型定义
  * 统一管理所有用户设置，存储在 IndexedDB 中
  */
@@ -288,6 +300,9 @@ export interface AppSettings {
 
   // 烘焙商配置
   roasterConfigs?: RoasterConfig[];
+
+  // 咖啡豆自定义分组
+  coffeeBeanGroups?: CoffeeBeanGroup[];
 
   // 器具排序
   equipmentOrder?: string[];
