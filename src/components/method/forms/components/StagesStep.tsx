@@ -9,6 +9,12 @@ import {
   getPourTypeName as _getPourTypeName,
 } from '@/lib/utils/equipmentUtils';
 import {
+  applyCumulativeDurationEdit,
+  applyCumulativeWaterEdit,
+  applyStageEndTimeEdit,
+  applyStageStartTimeEdit,
+  buildStageTimelineData,
+  buildStageCumulativeData,
   calculateTotalDuration,
   calculateTotalWater,
 } from '@/lib/brewing/stageUtils';
@@ -43,6 +49,7 @@ interface StagesStepProps {
     field: keyof Stage,
     value: string | number
   ) => void;
+  onStagesChange: (stages: Stage[]) => void;
   onPourTypeChange: (index: number, value: string) => void;
   toggleValveStatus: (index: number) => void;
   addStage: () => void;
@@ -74,12 +81,12 @@ const StagesStep: React.FC<StagesStepProps> = ({
   totalWater,
   customEquipment,
   onStageChange,
+  onStagesChange,
   onPourTypeChange,
   toggleValveStatus,
   addStage,
   removeStage,
   removeStages,
-  insertStage,
   formatTime,
   showWaterTooltip: _showWaterTooltip,
   setShowWaterTooltip: _setShowWaterTooltip,
@@ -155,136 +162,12 @@ const StagesStep: React.FC<StagesStepProps> = ({
     handleDisplayModeChange(nextMode);
   };
 
-  // 计算累计时长和水量
-  const cumulativeData = useMemo(() => {
-    const result: { cumulativeDuration: number; cumulativeWater: number }[] =
-      [];
-    let totalDuration = 0;
-    let totalWaterAmount = 0;
+  const cumulativeData = useMemo(
+    () => buildStageCumulativeData(stages),
+    [stages]
+  );
 
-    stages.forEach(stage => {
-      if (stage.pourType !== 'bypass' && stage.pourType !== 'beverage') {
-        totalDuration += stage.duration || 0;
-      }
-      if (stage.pourType !== 'wait') {
-        const waterValue = stage.water
-          ? typeof stage.water === 'number'
-            ? stage.water
-            : parseInt(stage.water.toString().replace('g', '') || '0')
-          : 0;
-        totalWaterAmount += waterValue;
-      }
-      result.push({
-        cumulativeDuration: totalDuration,
-        cumulativeWater: totalWaterAmount,
-      });
-    });
-
-    return result;
-  }, [stages]);
-
-  // 时间模式数据
-  // 时间模式下隐藏"等待"步骤（等待时间通过开始/结束时间推算）
-  // 但保留所有其他步骤类型，包括 bypass 和 beverage
-  const timeModeData = useMemo(() => {
-    const result: {
-      originalIndex: number;
-      isWait: boolean;
-      startTime: number;
-      endTime: number | null; // null 表示未设置（新步骤）
-      cumulativeWater: number;
-      prevWaitIndex: number | null;
-      pourStageNumber: number | null;
-      hasDuration: boolean; // 是否有设置 duration
-      isTimeless: boolean; // 是否是无时间步骤（bypass/beverage）
-    }[] = [];
-
-    let currentTime = 0;
-    let cumulativeWater = 0;
-    let lastWaitIndex: number | null = null;
-    let pourStageCount = 0;
-
-    stages.forEach((stage, index) => {
-      const hasDuration = stage.duration !== undefined && stage.duration > 0;
-      const isTimeless =
-        stage.pourType === 'bypass' || stage.pourType === 'beverage';
-
-      if (stage.pourType === 'wait') {
-        // 等待步骤：在时间模式下仍然记录，但渲染时会简化显示
-        const startTime = currentTime;
-        const duration = stage.duration || 0;
-        const endTime = hasDuration ? currentTime + duration : null;
-        if (hasDuration) currentTime = currentTime + duration;
-
-        result.push({
-          originalIndex: index,
-          isWait: true,
-          startTime,
-          endTime,
-          cumulativeWater,
-          prevWaitIndex: null,
-          pourStageNumber: null,
-          hasDuration,
-          isTimeless: false,
-        });
-
-        lastWaitIndex = index;
-      } else if (isTimeless) {
-        // bypass/beverage 步骤：没有时间概念，但需要显示
-        pourStageCount++;
-        const waterValue = stage.water
-          ? typeof stage.water === 'number'
-            ? stage.water
-            : parseInt(stage.water.toString().replace('g', '') || '0')
-          : 0;
-        cumulativeWater += waterValue;
-
-        result.push({
-          originalIndex: index,
-          isWait: false,
-          startTime: currentTime, // 使用当前时间点
-          endTime: null, // 无时间步骤没有结束时间
-          cumulativeWater,
-          prevWaitIndex: lastWaitIndex,
-          pourStageNumber: pourStageCount,
-          hasDuration: false,
-          isTimeless: true,
-        });
-
-        lastWaitIndex = null;
-      } else {
-        // 普通注水步骤
-        pourStageCount++;
-        const startTime = currentTime;
-        const duration = stage.duration || 0;
-        const endTime = hasDuration ? currentTime + duration : null;
-        if (hasDuration) currentTime = currentTime + duration;
-
-        const waterValue = stage.water
-          ? typeof stage.water === 'number'
-            ? stage.water
-            : parseInt(stage.water.toString().replace('g', '') || '0')
-          : 0;
-        cumulativeWater += waterValue;
-
-        result.push({
-          originalIndex: index,
-          isWait: false,
-          startTime,
-          endTime,
-          cumulativeWater,
-          prevWaitIndex: lastWaitIndex,
-          pourStageNumber: pourStageCount,
-          hasDuration,
-          isTimeless: false,
-        });
-
-        lastWaitIndex = null;
-      }
-    });
-
-    return result;
-  }, [stages]);
+  const timeModeData = useMemo(() => buildStageTimelineData(stages), [stages]);
 
   useEffect(() => {
     try {
@@ -439,16 +322,15 @@ const StagesStep: React.FC<StagesStepProps> = ({
     const percentMatch = value.match(/^(\d+(\.\d+)?)%$/);
     if (percentMatch) {
       const percentValue = parseFloat(percentMatch[1]);
-      let calculatedWater =
+      const calculatedWater =
         totalWaterValue > 0
           ? Math.round((percentValue / 100) * totalWaterValue)
           : Math.round(percentValue);
-      if (useCumulativeMode && index > 0) {
-        const previousCumulative =
-          cumulativeData[index - 1]?.cumulativeWater || 0;
-        calculatedWater = Math.max(0, calculatedWater - previousCumulative);
+      if (useCumulativeMode) {
+        commitWater(index, calculatedWater);
+      } else {
+        onStageChange(index, 'water', `${calculatedWater}`);
       }
-      onStageChange(index, 'water', `${calculatedWater}`);
       return;
     }
 
@@ -459,25 +341,23 @@ const StagesStep: React.FC<StagesStepProps> = ({
       const multipleValue = parseFloat(multipleMatch[1]);
       const coffeeMatch = coffeeDosage.match(/(\d+(\.\d+)?)/);
       const coffeeAmount = coffeeMatch ? parseFloat(coffeeMatch[1]) : 15;
-      let calculatedWater = Math.round(multipleValue * coffeeAmount);
-      if (useCumulativeMode && index > 0) {
-        const previousCumulative =
-          cumulativeData[index - 1]?.cumulativeWater || 0;
-        calculatedWater = Math.max(0, calculatedWater - previousCumulative);
+      const calculatedWater = Math.round(multipleValue * coffeeAmount);
+      if (useCumulativeMode) {
+        commitWater(index, calculatedWater);
+      } else {
+        onStageChange(index, 'water', `${calculatedWater}`);
       }
-      onStageChange(index, 'water', `${calculatedWater}`);
       return;
     }
 
-    let water = value.includes('.')
+    const water = value.includes('.')
       ? Math.round(parseFloat(value))
       : parseInt(value) || 0;
-    if (useCumulativeMode && index > 0) {
-      const previousCumulative =
-        cumulativeData[index - 1]?.cumulativeWater || 0;
-      water = Math.max(0, water - previousCumulative);
+    if (useCumulativeMode) {
+      commitWater(index, water);
+    } else {
+      onStageChange(index, 'water', `${water}`);
     }
-    onStageChange(index, 'water', `${water}`);
   };
 
   const getWaterDisplayValue = (stage: Stage, index: number) => {
@@ -508,6 +388,36 @@ const StagesStep: React.FC<StagesStepProps> = ({
     return mins * 60 + secs;
   };
 
+  const commitDuration = (index: number, cumulativeSeconds: number) => {
+    const safeSeconds = Number.isFinite(cumulativeSeconds)
+      ? Math.max(0, cumulativeSeconds)
+      : 0;
+    if (!useCumulativeMode) {
+      onStageChange(index, 'duration', safeSeconds);
+      return;
+    }
+
+    const nextStages = applyCumulativeDurationEdit(stages, index, safeSeconds);
+    onStagesChange(nextStages);
+  };
+
+  const commitWaterBoundary = (index: number, cumulativeWater: number) => {
+    onStagesChange(applyCumulativeWaterEdit(stages, index, cumulativeWater));
+  };
+
+  const commitWater = (index: number, cumulativeWater: number) => {
+    const safeWater = Number.isFinite(cumulativeWater)
+      ? Math.max(0, cumulativeWater)
+      : 0;
+    if (!useCumulativeMode) {
+      onStageChange(index, 'water', `${safeWater}`);
+      return;
+    }
+
+    const nextStages = applyCumulativeWaterEdit(stages, index, safeWater);
+    onStagesChange(nextStages);
+  };
+
   // 时间模式：处理开始时间编辑完成（直接从 DOM 读取值）
   const handleTimeModeStartBlurWithValues = (
     timeModeIndex: number,
@@ -518,47 +428,12 @@ const StagesStep: React.FC<StagesStepProps> = ({
     if (!timeData || timeData.isWait) return;
 
     const newStartTime = parseTimeToSeconds(mins, secs);
-
-    // 找到上一个注水阶段
-    let prevPourTimeData: typeof timeData | null = null;
-    for (let i = timeModeIndex - 1; i >= 0; i--) {
-      if (!timeModeData[i].isWait) {
-        prevPourTimeData = timeModeData[i];
-        break;
-      }
-    }
-    // 上一个注水阶段的结束时间（如果没有设置 duration，则用 startTime）
-    const minStartTime = prevPourTimeData
-      ? (prevPourTimeData.endTime ?? prevPourTimeData.startTime)
-      : 0;
-
-    // 验证：新开始时间不能小于上一个注水阶段的结束时间
-    if (newStartTime < minStartTime) return;
-
-    // 验证：如果当前步骤有结束时间，新开始时间不能大于等于结束时间
-    if (timeData.endTime !== null && newStartTime >= timeData.endTime) return;
-
-    // 计算需要的等待时间
-    const requiredWaitDuration = newStartTime - minStartTime;
-
-    if (requiredWaitDuration === 0) {
-      // 不需要等待时间，删除已有的等待阶段
-      if (timeData.prevWaitIndex !== null) {
-        removeStage(timeData.prevWaitIndex);
-      }
-    } else if (timeData.prevWaitIndex !== null) {
-      // 已有等待阶段，更新其时长
-      onStageChange(timeData.prevWaitIndex, 'duration', requiredWaitDuration);
-    } else if (insertStage) {
-      // 没有等待阶段，需要插入一个新的
-      const newWaitStage: Stage = {
-        duration: requiredWaitDuration,
-        label: '等待',
-        detail: '',
-        pourType: 'wait',
-      };
-      insertStage(timeData.originalIndex, newWaitStage);
-    }
+    const nextStages = applyStageStartTimeEdit(
+      stages,
+      timeData.originalIndex,
+      newStartTime
+    );
+    onStagesChange(nextStages);
   };
 
   // 时间模式：处理结束时间编辑完成（直接从 DOM 读取值）
@@ -571,13 +446,12 @@ const StagesStep: React.FC<StagesStepProps> = ({
     if (!timeData) return;
 
     const newEndTime = parseTimeToSeconds(mins, secs);
-
-    // 结束时间必须大于开始时间
-    if (newEndTime <= timeData.startTime) return;
-
-    // 计算新的 duration
-    const newDuration = newEndTime - timeData.startTime;
-    onStageChange(timeData.originalIndex, 'duration', newDuration);
+    const nextStages = applyStageEndTimeEdit(
+      stages,
+      timeData.originalIndex,
+      newEndTime
+    );
+    onStagesChange(nextStages);
   };
 
   // 时间模式：获取水量显示值（累计值）
@@ -612,17 +486,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
     const inputCumulative = value.includes('.')
       ? Math.round(parseFloat(value))
       : parseInt(value) || 0;
-
-    let prevCumulative = 0;
-    for (let i = timeModeIndex - 1; i >= 0; i--) {
-      if (!timeModeData[i].isWait) {
-        prevCumulative = timeModeData[i].cumulativeWater || 0;
-        break;
-      }
-    }
-
-    const independentWater = Math.max(0, inputCumulative - prevCumulative);
-    onStageChange(timeData.originalIndex, 'water', `${independentWater}`);
+    commitWaterBoundary(timeData.originalIndex, inputCumulative);
   };
 
   // 时间模式：处理水量失焦
@@ -639,14 +503,6 @@ const StagesStep: React.FC<StagesStepProps> = ({
 
     const totalWaterValue = parseInt(totalWater.replace('g', '') || '0');
 
-    let prevCumulative = 0;
-    for (let i = timeModeIndex - 1; i >= 0; i--) {
-      if (!timeModeData[i].isWait) {
-        prevCumulative = timeModeData[i].cumulativeWater || 0;
-        break;
-      }
-    }
-
     const percentMatch = value.match(/^(\d+(\.\d+)?)%$/);
     if (percentMatch) {
       const percentValue = parseFloat(percentMatch[1]);
@@ -654,11 +510,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
         totalWaterValue > 0
           ? Math.round((percentValue / 100) * totalWaterValue)
           : Math.round(percentValue);
-      const independentWater = Math.max(
-        0,
-        calculatedCumulative - prevCumulative
-      );
-      onStageChange(timeData.originalIndex, 'water', `${independentWater}`);
+      commitWaterBoundary(timeData.originalIndex, calculatedCumulative);
       return;
     }
 
@@ -670,19 +522,14 @@ const StagesStep: React.FC<StagesStepProps> = ({
       const coffeeMatch = coffeeDosage.match(/(\d+(\.\d+)?)/);
       const coffeeAmount = coffeeMatch ? parseFloat(coffeeMatch[1]) : 15;
       const calculatedCumulative = Math.round(multipleValue * coffeeAmount);
-      const independentWater = Math.max(
-        0,
-        calculatedCumulative - prevCumulative
-      );
-      onStageChange(timeData.originalIndex, 'water', `${independentWater}`);
+      commitWaterBoundary(timeData.originalIndex, calculatedCumulative);
       return;
     }
 
     const inputCumulative = value.includes('.')
       ? Math.round(parseFloat(value))
       : parseInt(value) || 0;
-    const independentWater = Math.max(0, inputCumulative - prevCumulative);
-    onStageChange(timeData.originalIndex, 'water', `${independentWater}`);
+    commitWaterBoundary(timeData.originalIndex, inputCumulative);
   };
 
   // 时间模式：删除阶段
@@ -728,13 +575,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
   const handleDurationChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
     setEditingDuration({ index, value });
-    let val = parseInt(value) || 0;
-    if (useCumulativeMode && index > 0) {
-      const previousCumulative =
-        cumulativeData[index - 1]?.cumulativeDuration || 0;
-      val = Math.max(0, val - previousCumulative);
-    }
-    onStageChange(index, 'duration', val);
+    commitDuration(index, parseInt(value) || 0);
   };
 
   const handleWaterChange = (index: number, value: string) => {
@@ -744,15 +585,14 @@ const StagesStep: React.FC<StagesStepProps> = ({
       return;
     }
     if (value.endsWith('%')) return;
-    let water = value.includes('.')
+    const water = value.includes('.')
       ? Math.round(parseFloat(value))
       : parseInt(value) || 0;
-    if (useCumulativeMode && index > 0) {
-      const previousCumulative =
-        cumulativeData[index - 1]?.cumulativeWater || 0;
-      water = Math.max(0, water - previousCumulative);
+    if (useCumulativeMode) {
+      commitWater(index, water);
+    } else {
+      onStageChange(index, 'water', `${water}`);
     }
-    onStageChange(index, 'water', `${water}`);
   };
 
   const pourTypeOptions = getPourTypeOptions();
@@ -1332,17 +1172,8 @@ const StagesStep: React.FC<StagesStepProps> = ({
                               spans[hasMins ? 1 : 0]?.textContent || '0'
                             );
                             // 自动进位
-                            let totalSecs = mins * 60 + secs;
-                            if (useCumulativeMode && index > 0) {
-                              const previousCumulative =
-                                cumulativeData[index - 1]?.cumulativeDuration ||
-                                0;
-                              totalSecs = Math.max(
-                                0,
-                                totalSecs - previousCumulative
-                              );
-                            }
-                            onStageChange(index, 'duration', totalSecs);
+                            const totalSecs = mins * 60 + secs;
+                            commitDuration(index, totalSecs);
                           }
                         }}
                       >

@@ -469,6 +469,46 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
   // ===== 事件处理函数 =====
 
+  const syncEspressoParamsFromStages = (
+    params: MethodWithStages['params'],
+    stages: Stage[]
+  ): MethodWithStages['params'] => {
+    if (!isEspressoMachine(customEquipment)) {
+      return { ...params, stages };
+    }
+
+    const extractionStage = stages.find(
+      stage => stage.pourType === 'extraction'
+    );
+    const liquidValue = extractionStage?.water
+      ? parseInt(String(extractionStage.water).replace('g', '') || '0')
+      : 0;
+
+    if (!extractionStage || liquidValue <= 0) {
+      return { ...params, stages };
+    }
+
+    const coffee = parseFloat(params.coffee.replace('g', ''));
+    const ratio = liquidValue / coffee;
+
+    return {
+      ...params,
+      stages,
+      water: String(extractionStage.water),
+      ratio:
+        coffee > 0
+          ? `1:${Number.isInteger(ratio) ? ratio.toString() : ratio.toFixed(1)}`
+          : params.ratio,
+    };
+  };
+
+  const handleStagesChange = (stages: Stage[]) => {
+    setMethod(prev => ({
+      ...prev,
+      params: syncEspressoParamsFromStages(prev.params, stages),
+    }));
+  };
+
   // 处理步骤变更
   const handleStageChange = (
     index: number,
@@ -1363,6 +1403,7 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
             totalWater={method.params.water}
             customEquipment={customEquipment}
             onStageChange={handleStageChange}
+            onStagesChange={handleStagesChange}
             onPourTypeChange={handlePourTypeChange}
             toggleValveStatus={toggleValveStatus}
             addStage={addStage}
