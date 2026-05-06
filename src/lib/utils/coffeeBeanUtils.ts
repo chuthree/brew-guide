@@ -21,6 +21,8 @@ const normalizeBeanText = (value: unknown): string => {
   return typeof value === 'string' ? value.trim() : '';
 };
 
+const hasWhitespaceSeparator = (value: string): boolean => /\s/.test(value);
+
 const isExcludedLegacyRoasterToken = (value: string): boolean => {
   const lowerCased = value.toLowerCase();
   const excludeWords = ['豆', 'bean', 'beans', '手冲', '意式', '咖啡豆', 'coffee'];
@@ -196,6 +198,21 @@ export const extractRoasterFromName = extractRoasterFromDisplayName;
 
 export const removeRoasterFromName = removeRoasterFromDisplayName;
 
+const inferRoasterFromDisplayName = (beanName: string): string | null => {
+  const normalizedName = normalizeCoffeeBeanName(beanName);
+  if (!normalizedName) {
+    return null;
+  }
+
+  // 旧版组合名称通常是“烘焙商 豆名”。优先按空白拆分，
+  // 避免把 Let's/Grind 这类烘焙商名称按斜杠截断。
+  if (hasWhitespaceSeparator(normalizedName)) {
+    return extractRoasterFromDisplayName(normalizedName, ' ');
+  }
+
+  return extractRoasterFromDisplayName(normalizedName, '/');
+};
+
 /**
  * 获取咖啡豆当前应使用的烘焙商名称
  * 优先使用独立字段，缺失时再回退到旧版组合名称解析。
@@ -210,9 +227,77 @@ export function getBeanRoasterName(
 
   return (
     normalizeCoffeeBeanRoaster(bean.roaster) ||
-    extractRoasterFromDisplayName(normalizeCoffeeBeanName(bean.name), separator) ||
+    inferRoasterFromDisplayName(normalizeCoffeeBeanName(bean.name)) ||
+    extractRoasterFromDisplayName(
+      normalizeCoffeeBeanName(bean.name),
+      separator
+    ) ||
     ''
   );
+}
+
+/**
+ * 获取不含烘焙商前缀的咖啡豆名称。
+ * 该函数以数据身份为准，不依赖当前 UI 是否显示独立烘焙商字段。
+ */
+export function getBeanNameWithoutRoaster(
+  bean: Pick<BeanIdentityLike, 'name' | 'roaster'> | null | undefined,
+  separator: ' ' | '/' = ' '
+): string {
+  if (!bean) {
+    return '';
+  }
+
+  const name = normalizeCoffeeBeanName(bean.name);
+  if (!name) {
+    return '';
+  }
+
+  const explicitRoaster = normalizeCoffeeBeanRoaster(bean.roaster);
+  const roaster = explicitRoaster || getBeanRoasterName(bean, separator);
+  if (!roaster) {
+    return name;
+  }
+
+  for (const candidateSeparator of [' ', '/'] as const) {
+    const prefix = `${roaster}${candidateSeparator}`;
+    if (name.startsWith(prefix)) {
+      return normalizeCoffeeBeanName(name.slice(prefix.length)) || name;
+    }
+  }
+
+  if (explicitRoaster) {
+    return name;
+  }
+
+  const inferredSeparator = hasWhitespaceSeparator(name) ? ' ' : '/';
+  const displayName = removeRoasterFromDisplayName(name, inferredSeparator);
+  return normalizeCoffeeBeanName(displayName) || name;
+}
+
+/**
+ * 格式化完整显示名称，保证不会重复拼接已经嵌入名称的烘焙商。
+ */
+export function formatCoffeeBeanDisplayName(
+  bean: Pick<BeanIdentityLike, 'name' | 'roaster'> | null | undefined,
+  separator: ' ' | '/' = ' '
+): string {
+  if (!bean) {
+    return '';
+  }
+
+  const roaster = getBeanRoasterName(bean, separator);
+  const name = getBeanNameWithoutRoaster(bean, separator);
+
+  if (!roaster) {
+    return name;
+  }
+
+  if (!name) {
+    return roaster;
+  }
+
+  return `${roaster}${separator}${name}`;
 }
 
 /**

@@ -25,6 +25,7 @@ import {
 } from '@/lib/stores/settingsStore';
 import {
   formatBeanDisplayName,
+  formatBeanNameWithoutRoaster,
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
 import FlavorStatusRing from './FlavorStatusRing';
@@ -467,6 +468,16 @@ const TableView: React.FC<TableViewProps> = ({
       sorting,
       sortingFns.alphanumeric as SortingFn<ExtendedCoffeeBean>
     );
+    const getNameDisplayValue = (bean: ExtendedCoffeeBean) =>
+      showRoasterColumn
+        ? formatBeanNameWithoutRoaster(bean, roasterSettings)
+        : formatBeanDisplayName(bean, roasterSettings);
+    const nameSortingFn = createBeanSortingFn(sorting, (rowA, rowB) =>
+      getNameDisplayValue(rowA.original).localeCompare(
+        getNameDisplayValue(rowB.original),
+        'zh-CN'
+      )
+    );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allColumns: Record<
@@ -483,16 +494,12 @@ const TableView: React.FC<TableViewProps> = ({
         }
       ),
       name: columnHelper.accessor(
-        row => {
-          const title = formatBeanDisplayName(row, roasterSettings);
-          // If roaster column is shown separately, just show the bean name without roaster
-          return showRoasterColumn ? row.name : title;
-        },
+        row => getNameDisplayValue(row),
         {
           id: 'name',
           header: '名称',
-          cell: info => info.getValue(),
-          sortingFn: alphanumericSortingFn,
+          cell: ({ row }) => getNameDisplayValue(row.original),
+          sortingFn: nameSortingFn,
         }
       ),
       flavorPeriod: columnHelper.accessor(
