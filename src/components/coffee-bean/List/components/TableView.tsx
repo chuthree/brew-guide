@@ -10,6 +10,9 @@ import {
   createColumnHelper,
   SortingState,
   ColumnDef,
+  Row,
+  SortingFn,
+  sortingFns,
 } from '@tanstack/react-table';
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { ExtendedCoffeeBean } from '../types';
@@ -182,6 +185,44 @@ const getPricePerGram = (price: string, capacity: string): number => {
   if (isNaN(priceNum) || isNaN(capacityNum) || capacityNum === 0) return 0;
   return priceNum / capacityNum;
 };
+
+const getSortingDesc = (
+  sorting: SortingState,
+  columnId: string
+): boolean => sorting.find(sort => sort.id === columnId)?.desc === true;
+
+const compareEmptyBeanGroup = (
+  rowA: Row<ExtendedCoffeeBean>,
+  rowB: Row<ExtendedCoffeeBean>,
+  isDesc: boolean
+): number => {
+  const aEmpty = isBeanEmpty(rowA.original);
+  const bEmpty = isBeanEmpty(rowB.original);
+
+  if (aEmpty === bEmpty) return 0;
+
+  // TanStack applies desc by reversing the sortingFn result, so flip the
+  // grouping value ahead of time to keep empty beans at the bottom.
+  const result = aEmpty ? 1 : -1;
+  return isDesc ? -result : result;
+};
+
+const createBeanSortingFn =
+  (
+    sorting: SortingState,
+    baseSortingFn: SortingFn<ExtendedCoffeeBean>
+  ): SortingFn<ExtendedCoffeeBean> =>
+  (rowA, rowB, columnId) => {
+    const emptyGroupResult = compareEmptyBeanGroup(
+      rowA,
+      rowB,
+      getSortingDesc(sorting, columnId)
+    );
+
+    if (emptyGroupResult !== 0) return emptyGroupResult;
+
+    return baseSortingFn(rowA, rowB, columnId);
+  };
 
 // 获取赏味期状态的排序值
 const getFlavorStatusSortValue = (bean: ExtendedCoffeeBean): number => {
@@ -418,6 +459,14 @@ const TableView: React.FC<TableViewProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columns = useMemo<ColumnDef<ExtendedCoffeeBean, any>[]>(() => {
     const showRoasterColumn = visibleColumns.includes('roaster');
+    const basicSortingFn = createBeanSortingFn(
+      sorting,
+      sortingFns.basic as SortingFn<ExtendedCoffeeBean>
+    );
+    const alphanumericSortingFn = createBeanSortingFn(
+      sorting,
+      sortingFns.alphanumeric as SortingFn<ExtendedCoffeeBean>
+    );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allColumns: Record<
@@ -430,7 +479,7 @@ const TableView: React.FC<TableViewProps> = ({
           id: 'roaster',
           header: '烘焙商',
           cell: info => info.getValue(),
-          sortingFn: 'alphanumeric',
+          sortingFn: alphanumericSortingFn,
         }
       ),
       name: columnHelper.accessor(
@@ -443,7 +492,7 @@ const TableView: React.FC<TableViewProps> = ({
           id: 'name',
           header: '名称',
           cell: info => info.getValue(),
-          sortingFn: 'alphanumeric',
+          sortingFn: alphanumericSortingFn,
         }
       ),
       flavorPeriod: columnHelper.accessor(
@@ -497,7 +546,7 @@ const TableView: React.FC<TableViewProps> = ({
               </span>
             );
           },
-          sortingFn: 'basic',
+          sortingFn: basicSortingFn,
         }
       ),
       capacity: columnHelper.accessor(row => parseFloat(row.remaining || '0'), {
@@ -522,7 +571,7 @@ const TableView: React.FC<TableViewProps> = ({
             </>
           );
         },
-        sortingFn: 'basic',
+        sortingFn: basicSortingFn,
       }),
       price: columnHelper.accessor(
         row => getPricePerGram(row.price || '0', row.capacity || '0'),
@@ -535,7 +584,7 @@ const TableView: React.FC<TableViewProps> = ({
               ? formatPrice(bean.price, bean.capacity)
               : '-';
           },
-          sortingFn: 'basic',
+          sortingFn: basicSortingFn,
         }
       ),
       beanType: columnHelper.accessor(row => row.beanType || '', {
@@ -551,7 +600,7 @@ const TableView: React.FC<TableViewProps> = ({
                 ? '全能'
                 : '-';
         },
-        sortingFn: 'alphanumeric',
+        sortingFn: alphanumericSortingFn,
       }),
       origin: columnHelper.accessor(
         row => row.blendComponents?.[0]?.origin || '',
@@ -559,7 +608,7 @@ const TableView: React.FC<TableViewProps> = ({
           id: 'origin',
           header: '产地',
           cell: info => info.getValue() || '-',
-          sortingFn: 'alphanumeric',
+          sortingFn: alphanumericSortingFn,
         }
       ),
       estate: columnHelper.accessor(
@@ -568,7 +617,7 @@ const TableView: React.FC<TableViewProps> = ({
           id: 'estate',
           header: '庄园',
           cell: info => info.getValue() || '-',
-          sortingFn: 'alphanumeric',
+          sortingFn: alphanumericSortingFn,
         }
       ),
       process: columnHelper.accessor(
@@ -577,7 +626,7 @@ const TableView: React.FC<TableViewProps> = ({
           id: 'process',
           header: '处理法',
           cell: info => info.getValue() || '-',
-          sortingFn: 'alphanumeric',
+          sortingFn: alphanumericSortingFn,
         }
       ),
       variety: columnHelper.accessor(
@@ -586,20 +635,20 @@ const TableView: React.FC<TableViewProps> = ({
           id: 'variety',
           header: '品种',
           cell: info => info.getValue() || '-',
-          sortingFn: 'alphanumeric',
+          sortingFn: alphanumericSortingFn,
         }
       ),
       roastLevel: columnHelper.accessor(row => row.roastLevel || '', {
         id: 'roastLevel',
         header: '烘焙度',
         cell: info => info.getValue() || '-',
-        sortingFn: 'alphanumeric',
+        sortingFn: alphanumericSortingFn,
       }),
       flavor: columnHelper.accessor(row => row.flavor?.join('、') || '', {
         id: 'flavor',
         header: '风味',
         cell: info => info.getValue() || '-',
-        sortingFn: 'alphanumeric',
+        sortingFn: alphanumericSortingFn,
       }),
       rating: columnHelper.accessor(row => row.overallRating || 0, {
         id: 'rating',
@@ -631,13 +680,13 @@ const TableView: React.FC<TableViewProps> = ({
             </button>
           );
         },
-        sortingFn: 'basic',
+        sortingFn: basicSortingFn,
       }),
       notes: columnHelper.accessor(row => row.notes || '', {
         id: 'notes',
         header: '备注',
         cell: info => info.getValue() || '-',
-        sortingFn: 'alphanumeric',
+        sortingFn: alphanumericSortingFn,
       }),
     };
 
@@ -652,6 +701,7 @@ const TableView: React.FC<TableViewProps> = ({
     handleRateClick,
     onRate,
     roasterSettings,
+    sorting,
   ]);
 
   // 创建表格实例
