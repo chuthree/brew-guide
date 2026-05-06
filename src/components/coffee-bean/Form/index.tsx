@@ -22,9 +22,7 @@ import {
   DEFAULT_PROCESSES,
   DEFAULT_VARIETIES,
 } from './constants';
-import {
-  defaultSettings,
-} from '@/components/settings/Settings';
+import { defaultSettings } from '@/components/settings/Settings';
 import { compressBase64Image } from '@/lib/utils/imageCapture';
 import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
@@ -34,9 +32,9 @@ import {
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
 import {
+  formatCoffeeBeanDisplayName,
+  getBeanNameWithoutRoaster,
   getBeanRoasterName,
-  extractRoasterFromName,
-  removeRoasterFromName,
 } from '@/lib/utils/coffeeBeanUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
@@ -125,8 +123,17 @@ const createInitialBeanDraft = ({
 
   const { id: _id, timestamp: _timestamp, ...beanData } = initialBean;
 
-  if (!roasterFieldEnabled && beanData.roaster && beanData.name) {
-    beanData.name = `${beanData.roaster} ${beanData.name}`;
+  const roaster = getBeanRoasterName(beanData);
+  const nameWithoutRoaster = getBeanNameWithoutRoaster(beanData);
+
+  if (roasterFieldEnabled) {
+    beanData.roaster = roaster || beanData.roaster;
+    beanData.name = nameWithoutRoaster || beanData.name;
+  } else if (roaster && nameWithoutRoaster) {
+    beanData.name = formatCoffeeBeanDisplayName(
+      { ...beanData, roaster, name: nameWithoutRoaster },
+      ' '
+    );
     beanData.roaster = '';
   }
 
@@ -274,12 +281,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       // 根据是否启用独立烘焙商字段决定如何获取烘焙商名称
       // 启用独立输入时：只从 roaster 字段获取
       // 关闭独立输入时：从名称中提取
-      const roasterName = getBeanRoasterName(
-        bean,
-        settings.roasterFieldEnabled && settings.roasterSeparator === '/'
-          ? '/'
-          : ' '
-      );
+      const roasterName = getBeanRoasterName(bean);
 
       if (roasterName) {
         const logo = getRoasterLogoSync(roasterName);
@@ -287,7 +289,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       } else {
         setRoasterLogo(null);
       }
-    }, [bean.name, bean.roaster, settings.roasterFieldEnabled]);
+    }, [bean.name, bean.roaster]);
 
     // 自动填充识图图片 - 在表单加载时检查设置，如果开启了自动填充且有识图图片，则自动填充
     useEffect(() => {
@@ -843,10 +845,9 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
       // 如果未启用独立烘焙商输入，从名称中自动提取烘焙商
       if (!settings.roasterFieldEnabled && bean.name && !bean.roaster) {
-        // 关闭独立输入时，始终使用空格作为分隔符
-        const extractedRoaster = extractRoasterFromName(bean.name, ' ');
+        const extractedRoaster = getBeanRoasterName(bean);
         if (extractedRoaster) {
-          const nameWithoutRoaster = removeRoasterFromName(bean.name, ' ');
+          const nameWithoutRoaster = getBeanNameWithoutRoaster(bean);
           finalBean = {
             ...finalBean,
             roaster: extractedRoaster,

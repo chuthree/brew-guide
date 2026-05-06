@@ -7,6 +7,8 @@ import type { CoffeeBean } from '@/types/app';
 import { calculateFlavorInfo } from './flavorPeriodUtils';
 import {
   extractRoasterFromDisplayName,
+  formatCoffeeBeanDisplayName,
+  getBeanNameWithoutRoaster,
   getBeanRoasterName,
   removeRoasterFromDisplayName,
 } from './coffeeBeanUtils';
@@ -441,13 +443,9 @@ export interface RoasterSettings {
  */
 export const getRoasterName = (
   bean: CoffeeBean,
-  settings?: RoasterSettings
+  _settings?: RoasterSettings
 ): string => {
-  const separator =
-    settings?.roasterFieldEnabled && settings.roasterSeparator === '/'
-      ? '/'
-      : ' ';
-  return getBeanRoasterName(bean, separator);
+  return getBeanRoasterName(bean);
 };
 
 /**
@@ -461,17 +459,30 @@ export const formatBeanDisplayName = (
   bean: CoffeeBean,
   settings?: RoasterSettings
 ): string => {
-  // 如果没有 roaster 字段值，直接返回名称
-  if (!bean.roaster) {
-    return bean.name;
-  }
-
   // 只有开启独立输入时才使用用户设置的分隔符，否则使用空格
   const separator =
     settings?.roasterFieldEnabled && settings?.roasterSeparator === '/'
       ? '/'
       : ' ';
-  return `${bean.roaster}${separator}${bean.name}`;
+  return formatCoffeeBeanDisplayName(bean, separator);
+};
+
+/**
+ * 获取不含烘焙商前缀的咖啡豆名称
+ * 用于烘焙商已经单独展示的场景。
+ * @param bean 咖啡豆对象
+ * @param settings 烘焙商相关设置
+ * @returns 不含烘焙商的咖啡豆名称
+ */
+export const formatBeanNameWithoutRoaster = (
+  bean: CoffeeBean,
+  settings?: RoasterSettings
+): string => {
+  const separator =
+    settings?.roasterFieldEnabled && settings?.roasterSeparator === '/'
+      ? '/'
+      : ' ';
+  return getBeanNameWithoutRoaster(bean, separator);
 };
 
 /**
