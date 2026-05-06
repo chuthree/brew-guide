@@ -36,6 +36,7 @@ export class S3SyncManager extends BaseSyncManager {
   private config: S3Config | null = null;
   private s3Client: S3Client | null = null;
   private _initialized = false;
+  private lastError: string | null = null;
 
   getServiceName(): string {
     return 'S3';
@@ -43,6 +44,10 @@ export class S3SyncManager extends BaseSyncManager {
 
   isInitialized(): boolean {
     return this._initialized && this.client !== null;
+  }
+
+  getLastError(): string | null {
+    return this.lastError || this.s3Client?.getLastError() || null;
   }
 
   /**
@@ -57,6 +62,7 @@ export class S3SyncManager extends BaseSyncManager {
     }
 
     try {
+      this.lastError = null;
       this.config = config;
       this.s3Client = new S3Client(config);
       this.client = this.s3Client;
@@ -68,13 +74,14 @@ export class S3SyncManager extends BaseSyncManager {
       if (!skipConnectionTest) {
         const connected = await this.s3Client.testConnection();
         if (!connected) {
-          throw new Error('无法连接到 S3 服务');
+          throw new Error(this.s3Client.getLastError() || '无法连接到 S3 服务');
         }
       }
 
       this._initialized = true;
       return true;
     } catch (error) {
+      this.lastError = error instanceof Error ? error.message : String(error);
       console.error('❌ S3 初始化失败:', error);
       this._initialized = false;
       return false;

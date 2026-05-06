@@ -10,6 +10,7 @@ export interface S3Config {
   bucketName: string;
   prefix: string;
   endpoint?: string; // 自定义端点，用于兼容其他S3服务
+  forcePathStyle?: boolean; // S3 兼容服务通常需要 Path-Style: /bucket/key
 }
 
 export interface S3File {
@@ -21,9 +22,38 @@ export interface S3File {
 
 export class S3Client {
   private config: S3Config;
+  private lastError: string | null = null;
 
   constructor(config: S3Config) {
-    this.config = config;
+    this.config = this.normalizeConfig(config);
+  }
+
+  private normalizeConfig(config: S3Config): S3Config {
+    if (!this.isCstCloudEndpoint(config.endpoint)) {
+      return config;
+    }
+
+    return {
+      ...config,
+      region:
+        !config.region || config.region === 'cn-south-1'
+          ? 'us-east-1'
+          : config.region,
+      forcePathStyle: true,
+    };
+  }
+
+  private isCstCloudEndpoint(endpoint?: string): boolean {
+    if (!endpoint) return false;
+
+    try {
+      const normalizedEndpoint = endpoint.startsWith('http')
+        ? endpoint
+        : `https://${endpoint}`;
+      return new URL(normalizedEndpoint).hostname.endsWith('cstcloud.cn');
+    } catch {
+      return endpoint.includes('cstcloud.cn');
+    }
   }
 
   /**
@@ -31,20 +61,36 @@ export class S3Client {
    */
   async testConnection(): Promise<boolean> {
     try {
+      this.lastError = null;
+
       // 对于七牛云等服务，我们先尝试简单的HEAD请求测试bucket是否存在
       if (this.config.endpoint && this.config.endpoint.includes('qiniu')) {
         // 七牛云特殊处理
         return await this.testQiniuConnection();
       }
 
-      // 尝试列出bucket中的对象来测试连接
+      if (this.isCstCloudEndpoint(this.config.endpoint)) {
+        const writeTestResult = await this.testWriteConnection();
+        this.logSummary('test-connection', {
+          service: 'cstcloud',
+          ok: writeTestResult,
+          method: 'write-test',
+        });
+
+        if (writeTestResult) {
+          return true;
+        }
+      }
+
       await this.listObjects('', 1);
       this.logSummary('test-connection', {
         service: 'generic',
         ok: true,
+        method: 'list-fallback',
       });
       return true;
     } catch (error) {
+      this.lastError = error instanceof Error ? error.message : String(error);
       console.error('S3连接测试失败:', error);
       this.logSummary('test-connection', {
         service: 'generic',
@@ -52,6 +98,35 @@ export class S3Client {
         error: error instanceof Error ? error.message : String(error),
       });
       return false;
+    }
+  }
+
+  getLastError(): string | null {
+    return this.lastError;
+  }
+
+  private async testWriteConnection(): Promise<boolean> {
+    const testKey = `.brew-guide-connection-test-${Date.now()}`;
+    const testContent = JSON.stringify({ timestamp: Date.now() });
+    const uploadResult = await this.uploadFile(testKey, testContent);
+
+    if (uploadResult !== true) {
+      this.lastError =
+        typeof uploadResult === 'object'
+          ? uploadResult.error
+          : '上传连接测试文件失败';
+      return false;
+    }
+
+    try {
+      const downloaded = await this.downloadFile(testKey);
+      if (downloaded !== testContent) {
+        this.lastError = '连接测试文件读取失败，返回内容与上传内容不一致';
+        return false;
+      }
+      return true;
+    } finally {
+      await this.deleteFile(testKey).catch(() => {});
     }
   }
 
@@ -125,8 +200,7 @@ export class S3Client {
     try {
       const fullKey = this.getFullKey(key);
 
-      // 统一使用buildUrl方法构建URL
-      const url = this.buildUrl(`/${fullKey}`);
+      const url = this.buildObjectUrl(fullKey);
 
       const { requestUrl, headers } = await this.prepareRequest(
         'PUT',
@@ -157,7 +231,7 @@ export class S3Client {
       if (!response.ok) {
         const responseText = await response.text();
         console.error('❌ 上传失败，响应内容:', responseText.substring(0, 500));
-        const errorDetail = `HTTP ${response.status} ${response.statusText}${responseText ? ` - ${responseText.substring(0, 200)}` : ''}`;
+        const errorDetail = this.formatHttpError(response, responseText);
         return { success: false, error: errorDetail };
       }
 
@@ -181,8 +255,7 @@ export class S3Client {
     try {
       const fullKey = this.getFullKey(key);
 
-      // 统一使用buildUrl方法构建URL
-      const url = this.buildUrl(`/${fullKey}`);
+      const url = this.buildObjectUrl(fullKey);
 
       const { requestUrl, headers } = await this.prepareRequest('GET', url);
 
@@ -225,6 +298,12 @@ export class S3Client {
         return content;
       }
 
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(
+          this.formatHttpError(response, errorSnippet || undefined)
+        );
+      }
+
       return null;
     } catch (error) {
       console.error('❌ 下载文件失败:', error);
@@ -251,8 +330,7 @@ export class S3Client {
         'max-keys': maxKeys.toString(),
       });
 
-      const path = `/${this.config.bucketName}?${params.toString()}`;
-      const url = this.buildUrl(path);
+      const url = this.buildBucketUrl(params);
 
       const { requestUrl, headers } = await this.prepareRequest('GET', url);
 
@@ -285,8 +363,10 @@ export class S3Client {
           console.warn('列出对象时收到403，返回空列表以避免中断同步流程');
           return [];
         }
+        const responseText = errorSnippet || '';
         throw new Error(
-          `列出对象失败: ${response.status} ${response.statusText}`
+          this.formatHttpError(response, responseText) ||
+            `列出对象失败: ${response.status} ${response.statusText}`
         );
       }
 
@@ -327,9 +407,9 @@ export class S3Client {
     try {
       const sourceFullKey = this.getFullKey(source);
       const destFullKey = this.getFullKey(destination);
-      const url = this.buildUrl(`/${destFullKey}`);
+      const url = this.buildObjectUrl(destFullKey);
 
-      const copySource = `/${this.config.bucketName}/${sourceFullKey}`;
+      const copySource = this.buildCopySource(sourceFullKey);
 
       const { requestUrl, headers } = await this.prepareRequest('PUT', url, {
         'x-amz-copy-source': copySource,
@@ -361,8 +441,7 @@ export class S3Client {
     try {
       const fullKey = this.getFullKey(key);
 
-      // 统一使用buildUrl方法构建URL
-      const url = this.buildUrl(`/${fullKey}`);
+      const url = this.buildObjectUrl(fullKey);
 
       const { requestUrl, headers } = await this.prepareRequest('DELETE', url);
 
@@ -423,8 +502,7 @@ export class S3Client {
   ): Promise<{ response: Response; fullKey: string; baseUrl: string }> {
     const fullKey = this.getFullKey(key);
 
-    // 统一使用buildUrl方法构建URL
-    const url = this.buildUrl(`/${fullKey}`);
+    const url = this.buildObjectUrl(fullKey);
 
     const { requestUrl, headers } = await this.prepareRequest('HEAD', url);
 
@@ -458,11 +536,34 @@ export class S3Client {
   }
 
   /**
-   * 构建URL
+   * 构建桶级 URL
+   */
+  private buildBucketUrl(query?: URLSearchParams): string {
+    const suffix = query && query.toString() ? `?${query.toString()}` : '';
+    return this.buildUrl(`/${this.config.bucketName}${suffix}`);
+  }
+
+  /**
+   * 构建对象级 URL
+   */
+  private buildObjectUrl(fullKey: string): string {
+    return this.buildUrl(`/${this.config.bucketName}/${fullKey}`);
+  }
+
+  private buildCopySource(fullKey: string): string {
+    const bucket = encodeURIComponent(this.config.bucketName);
+    const key = fullKey
+      .split('/')
+      .map(segment => encodeURIComponent(segment))
+      .join('/');
+    return `/${bucket}/${key}`;
+  }
+
+  /**
+   * 构建 URL。入参始终使用 Path-Style 路径，Virtual-Hosted 端点在此处转换。
    */
   private buildUrl(path: string): string {
     if (this.config.endpoint) {
-      // 使用自定义端点 - 七牛云等服务
       const { resolvedEndpoint: endpoint } = this.resolveEndpoint(
         this.config.endpoint
       );
@@ -472,42 +573,63 @@ export class S3Client {
         ? endpoint.slice(0, -1)
         : endpoint;
 
-      // 七牛云的S3端点格式：https://bucket-name.s3.region.qiniucs.com
-      // bucket名称已经包含在域名中，路径应该直接从prefix开始
-      if (
-        normalizedEndpoint.includes('qiniucs.com') ||
-        normalizedEndpoint.includes(this.config.bucketName)
-      ) {
-        // 对于七牛云，路径不应该包含bucket名称
-        let cleanPath = path;
-
-        // 如果路径以 /bucket-name/ 开头，需要移除它
-        const bucketSlashPrefix = `/${this.config.bucketName}/`;
-        if (cleanPath.startsWith(bucketSlashPrefix)) {
-          cleanPath = cleanPath.substring(bucketSlashPrefix.length);
-        }
-
-        const bucketDirectPrefix = `/${this.config.bucketName}`;
-        if (cleanPath === bucketDirectPrefix) {
-          cleanPath = '';
-        } else if (cleanPath.startsWith(`${bucketDirectPrefix}?`)) {
-          cleanPath = cleanPath.substring(bucketDirectPrefix.length);
-        }
-
-        // 确保路径以 / 开头
-        const finalPath = cleanPath.startsWith('/')
-          ? cleanPath
-          : `/${cleanPath}`;
-        return `${normalizedEndpoint}${finalPath}`;
-      } else {
-        // 其他S3兼容服务，保持原有逻辑
-        const finalPath = path.startsWith('/') ? path : `/${path}`;
-        return `${normalizedEndpoint}${finalPath}`;
+      if (this.shouldUseVirtualHostedPath(normalizedEndpoint)) {
+        return this.convertPathStyleToVirtualHostedUrl(
+          normalizedEndpoint,
+          path
+        );
       }
-    } else {
-      // 使用AWS S3标准端点
-      return `https://s3.${this.config.region}.amazonaws.com${path}`;
+
+      const finalPath = path.startsWith('/') ? path : `/${path}`;
+      return `${normalizedEndpoint}${finalPath}`;
     }
+
+    return `https://s3.${this.config.region}.amazonaws.com${path}`;
+  }
+
+  private shouldUseVirtualHostedPath(endpoint: string): boolean {
+    if (this.config.forcePathStyle === true) {
+      return false;
+    }
+
+    if (this.config.forcePathStyle === false) {
+      return true;
+    }
+
+    try {
+      const host = new URL(endpoint).host.toLowerCase();
+      const bucket = this.config.bucketName.toLowerCase();
+      return (
+        endpoint.includes('qiniucs.com') ||
+        host === bucket ||
+        host.startsWith(`${bucket}.`) ||
+        endpoint.includes(this.config.bucketName)
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  private convertPathStyleToVirtualHostedUrl(
+    endpoint: string,
+    path: string
+  ): string {
+    let cleanPath = path;
+
+    const bucketSlashPrefix = `/${this.config.bucketName}/`;
+    if (cleanPath.startsWith(bucketSlashPrefix)) {
+      cleanPath = cleanPath.substring(bucketSlashPrefix.length);
+    }
+
+    const bucketDirectPrefix = `/${this.config.bucketName}`;
+    if (cleanPath === bucketDirectPrefix) {
+      cleanPath = '';
+    } else if (cleanPath.startsWith(`${bucketDirectPrefix}?`)) {
+      cleanPath = cleanPath.substring(bucketDirectPrefix.length);
+    }
+
+    const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+    return `${endpoint}${finalPath}`;
   }
 
   private async prepareRequest(
@@ -538,9 +660,23 @@ export class S3Client {
     );
 
     return {
-      requestUrl: url,
+      requestUrl: this.shouldUseS3Proxy(url) ? this.buildS3ProxyUrl(url) : url,
       headers,
     };
+  }
+
+  private shouldUseS3Proxy(url: string): boolean {
+    try {
+      return this.isCstCloudEndpoint(new URL(url).hostname);
+    } catch {
+      return false;
+    }
+  }
+
+  private buildS3ProxyUrl(url: string): string {
+    const proxyBase =
+      process.env.NEXT_PUBLIC_S3_PROXY_URL || 'https://cors.chu3.top/s3?url=';
+    return `${proxyBase}${encodeURIComponent(url)}`;
   }
 
   private isQiniu(): boolean {
@@ -638,6 +774,26 @@ export class S3Client {
       resolvedEndpoint: trimmed,
       selectedProtocol,
     };
+  }
+
+  private formatHttpError(
+    response: Pick<Response, 'status' | 'statusText'>,
+    responseText?: string
+  ): string {
+    const statusText = response.statusText ? ` ${response.statusText}` : '';
+    const snippet = responseText?.trim()
+      ? ` - ${responseText.trim().slice(0, 200)}`
+      : '';
+
+    if (response.status === 401) {
+      return `HTTP 401${statusText}：S3 服务拒绝认证，请检查 AccessKey、Secret、权限是否为当前 Bucket 生成，并确认没有多余空格${snippet}`;
+    }
+
+    if (response.status === 403) {
+      return `HTTP 403${statusText}：S3 服务拒绝访问，请检查 AccessKey 权限、Bucket 名称和对象前缀${snippet}`;
+    }
+
+    return `HTTP ${response.status}${statusText}${snippet}`;
   }
 
   private getQiniuSignedHeaders(

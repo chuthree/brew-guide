@@ -157,11 +157,12 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         triggerHaptic('light');
       } else {
         setStatus('error');
-        if (!settings.endpoint) {
-          setError('连接失败：请检查 Bucket 名称和 Region 是否正确');
-        } else {
-          setError('连接失败：无法访问存储桶或缺少写入权限');
-        }
+        setError(
+          manager.getLastError() ||
+            (settings.endpoint
+              ? '连接失败：无法访问存储桶或缺少写入权限'
+              : '连接失败：请检查 Bucket 名称和 Region 是否正确')
+        );
       }
     } catch (err) {
       setStatus('error');
@@ -198,7 +199,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         );
         if (!connected) {
           setStatus('error');
-          setError('连接失败，请检查配置');
+          setError(manager.getLastError() || '连接失败，请检查配置');
           setIsSyncing(false);
           return;
         }
@@ -383,7 +384,8 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
               className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              七牛云示例: http(s)://bucket-name.s3.cn-south-1.qiniucs.com
+              支持 S3 兼容服务，如 s3.cstcloud.cn 或
+              bucket-name.s3.cn-south-1.qiniucs.com
             </p>
           </div>
 
