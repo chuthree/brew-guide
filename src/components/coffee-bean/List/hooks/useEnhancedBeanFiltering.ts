@@ -56,6 +56,30 @@ interface UseEnhancedBeanFilteringReturn {
   availableBeanGroups: CoffeeBeanGroup[];
 }
 
+const sortByNonEmptyBeanOrder = <T>(
+  items: T[],
+  nonEmptyItems: T[],
+  getKey: (item: T) => string
+): T[] => {
+  const nonEmptyOrder = new Map(
+    nonEmptyItems.map((item, index) => [getKey(item), index])
+  );
+
+  return [...items].sort((a, b) => {
+    const aOrder = nonEmptyOrder.get(getKey(a));
+    const bOrder = nonEmptyOrder.get(getKey(b));
+
+    if (aOrder !== undefined && bOrder !== undefined) {
+      return aOrder - bOrder;
+    }
+
+    if (aOrder !== undefined) return -1;
+    if (bOrder !== undefined) return 1;
+
+    return getKey(a).localeCompare(getKey(b), 'zh-CN');
+  });
+};
+
 /**
  * 增强的咖啡豆筛选和排序Hook
  * 支持多种分类模式：品种、产地、赏味期、烘焙商
@@ -253,7 +277,7 @@ export const useEnhancedBeanFiltering = ({
   );
 
   // 获取基础筛选后的豆子（用于计算可用分类选项）
-  const baseFilteredBeans = useMemo(() => {
+  const categoryFilteredBeans = useMemo(() => {
     if (!beans || beans.length === 0) return [];
 
     let filtered = beans;
@@ -277,34 +301,63 @@ export const useEnhancedBeanFiltering = ({
     return filtered;
   }, [beans, selectedBeanState, selectedBeanType, showEmptyBeans]);
 
+  // 分类栏排序只统计未用完豆子，避免开启“包含已用完”后改变分类顺序
+  const nonEmptyCategoryOrderBeans = useMemo(
+    () => categoryFilteredBeans.filter(bean => !isBeanEmpty(bean)),
+    [categoryFilteredBeans]
+  );
+
   // 使用useMemo缓存可用品种列表
   const availableVarieties = useMemo(() => {
-    return extractUniqueVarieties(baseFilteredBeans);
-  }, [baseFilteredBeans]);
+    return sortByNonEmptyBeanOrder(
+      extractUniqueVarieties(categoryFilteredBeans),
+      extractUniqueVarieties(nonEmptyCategoryOrderBeans),
+      variety => variety
+    );
+  }, [categoryFilteredBeans, nonEmptyCategoryOrderBeans]);
 
   // 使用useMemo缓存可用产地列表
   const availableOrigins = useMemo(() => {
-    return extractUniqueOrigins(baseFilteredBeans);
-  }, [baseFilteredBeans]);
+    return sortByNonEmptyBeanOrder(
+      extractUniqueOrigins(categoryFilteredBeans),
+      extractUniqueOrigins(nonEmptyCategoryOrderBeans),
+      origin => origin
+    );
+  }, [categoryFilteredBeans, nonEmptyCategoryOrderBeans]);
 
   // 使用useMemo缓存可用处理法列表
   const availableProcessingMethods = useMemo(() => {
-    return extractUniqueProcesses(baseFilteredBeans);
-  }, [baseFilteredBeans]);
+    return sortByNonEmptyBeanOrder(
+      extractUniqueProcesses(categoryFilteredBeans),
+      extractUniqueProcesses(nonEmptyCategoryOrderBeans),
+      method => method
+    );
+  }, [categoryFilteredBeans, nonEmptyCategoryOrderBeans]);
 
   // 使用useMemo缓存可用赏味期状态列表
   const availableFlavorPeriods = useMemo(() => {
-    return extractAvailableFlavorPeriodStatuses(baseFilteredBeans);
-  }, [baseFilteredBeans]);
+    return sortByNonEmptyBeanOrder(
+      extractAvailableFlavorPeriodStatuses(categoryFilteredBeans),
+      extractAvailableFlavorPeriodStatuses(nonEmptyCategoryOrderBeans),
+      status => status
+    );
+  }, [categoryFilteredBeans, nonEmptyCategoryOrderBeans]);
 
   // 使用useMemo缓存可用烘焙商列表
   const availableRoasters = useMemo(() => {
-    return extractUniqueRoasters(baseFilteredBeans, roasterSettings);
-  }, [baseFilteredBeans, roasterSettings]);
+    return sortByNonEmptyBeanOrder(
+      extractUniqueRoasters(categoryFilteredBeans, roasterSettings),
+      extractUniqueRoasters(nonEmptyCategoryOrderBeans, roasterSettings),
+      roaster => roaster
+    );
+  }, [categoryFilteredBeans, nonEmptyCategoryOrderBeans, roasterSettings]);
 
   const availableBeanGroups = useMemo(() => {
-    return getAvailableCoffeeBeanGroups(coffeeBeanGroups, baseFilteredBeans);
-  }, [baseFilteredBeans, coffeeBeanGroups]);
+    return getAvailableCoffeeBeanGroups(
+      coffeeBeanGroups,
+      categoryFilteredBeans
+    );
+  }, [categoryFilteredBeans, coffeeBeanGroups]);
 
   return {
     filteredBeans,
