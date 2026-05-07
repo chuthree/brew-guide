@@ -102,7 +102,7 @@ export const defaultSettings: AppSettings = {
     enabled: false,
     accessKeyId: '',
     secretAccessKey: '',
-    region: 'cn-south-1',
+    region: 'us-east-1',
     bucketName: '',
     prefix: 'brew-guide-data/',
     endpoint: '',

@@ -380,13 +380,9 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
               type="url"
               value={settings.endpoint || ''}
               onChange={e => onSettingChange('endpoint', e.target.value)}
-              placeholder="http(s)://bucket-name.s3.cn-south-1.qiniucs.com"
+              placeholder="s3.cstcloud.cn"
               className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
-            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              支持 S3 兼容服务，如 s3.cstcloud.cn 或
-              bucket-name.s3.cn-south-1.qiniucs.com
-            </p>
           </div>
 
           {/* 区域 (Region) */}
@@ -398,12 +394,9 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
               type="text"
               value={settings.region}
               onChange={e => onSettingChange('region', e.target.value)}
-              placeholder="cn-south-1"
+              placeholder="us-east-1"
               className="w-full rounded-md border border-neutral-200/50 bg-neutral-50 px-3 py-2 text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
             />
-            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              如不确定可填写: us-east-1 或 cn-south-1
-            </p>
           </div>
 
           {/* Access Key ID */}

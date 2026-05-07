@@ -30,7 +30,7 @@ export const defaultS3Settings: S3SyncSettings = {
   enabled: false,
   accessKeyId: '',
   secretAccessKey: '',
-  region: 'cn-south-1',
+  region: 'us-east-1',
   bucketName: '',
   prefix: 'brew-guide-data/',
   endpoint: '',
