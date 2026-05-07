@@ -35,6 +35,7 @@ import {
 import { TABLE_COLUMN_CONFIG, type TableColumnKey } from './TableView';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useInputFocus } from '@/lib/hooks/useInputFocus';
+import { useHorizontalWheelScroll } from '@/lib/hooks/useHorizontalWheelScroll';
 import {
   buildBeanSummaryDetailItems,
   getBeanSummaryDisplayLimit,
@@ -578,6 +579,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   // 滚动容器引用
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const rankingScrollContainerRef = useRef<HTMLDivElement>(null);
+  useHorizontalWheelScroll(scrollContainerRef);
+  useHorizontalWheelScroll(rankingScrollContainerRef);
 
   // 处理滚动阴影效果
   const [showLeftShadow, setShowLeftShadow] = useState(false);

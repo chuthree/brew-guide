@@ -11,6 +11,7 @@ import {
 import { X, AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useInputFocus } from '@/lib/hooks/useInputFocus';
+import { useHorizontalWheelScroll } from '@/lib/hooks/useHorizontalWheelScroll';
 
 // Apple风格动画配置
 const FILTER_ANIMATION = {
@@ -497,6 +498,7 @@ const SearchSortBar: React.FC<SearchSortBarProps> = ({
   const searchScrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftShadow, setShowLeftShadow] = useState(false);
   const [showRightShadow, setShowRightShadow] = useState(false);
+  useHorizontalWheelScroll(searchScrollContainerRef);
 
   // 处理滚动事件以控制阴影显示
   const handleSearchScroll = useCallback(() => {
@@ -762,6 +764,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
 
   // 滚动容器引用
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  useHorizontalWheelScroll(scrollContainerRef);
 
   // 处理滚动阴影效果
   const [showLeftShadow, setShowLeftShadow] = useState(false);
