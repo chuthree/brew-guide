@@ -71,6 +71,36 @@ interface ParsedStage {
   valveStatus?: 'open' | 'closed';
 }
 
+const readableTextSectionSeparator = /\n[ \t]*---[ \t]*\n/;
+const coffeeBeanTextHeaderPattern = /【咖啡豆(?:信息)?】/;
+
+function normalizeImportText(text: string): string {
+  return text
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u2028\u2029]/g, '\n')
+    .replace(/\u00A0/g, ' ')
+    .trim();
+}
+
+function startsWithCoffeeBeanTextHeader(text: string): boolean {
+  return (
+    text.startsWith('【咖啡豆】') || text.startsWith('【咖啡豆信息】')
+  );
+}
+
+function splitCoffeeBeanTextSections(text: string): string[] {
+  return text
+    .split(readableTextSectionSeparator)
+    .map(section => {
+      const headerMatch = section.match(coffeeBeanTextHeaderPattern);
+      return headerMatch?.index === undefined
+        ? ''
+        : section.slice(headerMatch.index).trim();
+    })
+    .filter(startsWithCoffeeBeanTextHeader);
+}
+
 /**
  * 清理JSON字符串，移除不必要的包装
  * @param jsonString 可能需要清理的JSON字符串
@@ -78,7 +108,7 @@ interface ParsedStage {
  */
 export function cleanJsonString(jsonString: string): string {
   // 去除首尾空白字符
-  let cleanedString = jsonString.trim();
+  let cleanedString = normalizeImportText(jsonString);
 
   // 检查是否被```json和```包裹，如常见的复制格式
   if (cleanedString.startsWith('```json') && cleanedString.endsWith('```')) {
@@ -140,7 +170,7 @@ export function extractJsonFromText(
   | null {
   try {
     // 首先检查是否为自然语言格式的文本
-    const originalText = text.trim();
+    const originalText = normalizeImportText(text);
 
     // 检查是否是冲煮方案文本格式
     if (originalText.startsWith('【冲煮方案】')) {
@@ -153,21 +183,14 @@ export function extractJsonFromText(
 
     // 检查是否是咖啡豆文本格式
     if (
-      originalText.startsWith('【咖啡豆】') ||
-      originalText.startsWith('【咖啡豆信息】')
+      startsWithCoffeeBeanTextHeader(originalText)
     ) {
       // Log in development only
       if (process.env.NODE_ENV === 'development') {
         console.warn('检测到咖啡豆文本格式');
       }
       // 检查是否包含多个咖啡豆（使用 ---\n 分隔）
-      const beanSections = originalText.split(/\n---\n/).filter(section => {
-        const trimmed = section.trim();
-        return (
-          trimmed.startsWith('【咖啡豆】') ||
-          trimmed.startsWith('【咖啡豆信息】')
-        );
-      });
+      const beanSections = splitCoffeeBeanTextSections(originalText);
 
       if (beanSections.length > 1) {
         // 批量导入：解析多个咖啡豆
