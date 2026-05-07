@@ -27,10 +27,6 @@ const config: CapacitorConfig = {
       navigationBarContent: 'light',
       offset: 0,
     },
-    LocalNotifications: {
-      smallIcon: 'ic_stat_icon_config_sample',
-      iconColor: '#737373',
-    },
   },
 };
 

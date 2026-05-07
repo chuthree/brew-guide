@@ -283,10 +283,6 @@ export interface AppSettings {
   experimentalBeanRecognitionModel?: string;
   experimentalBeanRecognitionPrompt?: string;
 
-  // 每日提醒设置
-  dailyReminder: boolean;
-  dailyReminderTime: string;
-
   // 隐藏二维码选项
   hideGroupQRCode?: boolean;
   hideAppreciationQRCode?: boolean;

@@ -179,10 +179,6 @@ export const defaultSettings: AppSettings = {
   experimentalBeanRecognitionModel: '',
   experimentalBeanRecognitionPrompt: '',
 
-  // 每日提醒设置
-  dailyReminder: false,
-  dailyReminderTime: '09:00',
-
   // 隐藏二维码选项
   hideGroupQRCode: false,
   hideAppreciationQRCode: false,
