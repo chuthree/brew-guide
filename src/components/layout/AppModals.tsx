@@ -21,7 +21,6 @@ import TimerSettings from '@/components/settings/TimerSettings';
 import DataSettings from '@/components/settings/DataSettings';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import RandomCoffeeBeanSettings from '@/components/settings/RandomCoffeeBeanSettings';
-import SearchSortSettings from '@/components/settings/SearchSortSettings';
 import NoteSettings from '@/components/settings/NoteSettings';
 import FlavorDimensionSettings from '@/components/settings/FlavorDimensionSettings';
 import HiddenMethodsSettings from '@/components/settings/HiddenMethodsSettings';
@@ -93,8 +92,6 @@ export interface AppModalsProps {
   setShowNotificationSettings: (show: boolean) => void;
   showRandomCoffeeBeanSettings: boolean;
   setShowRandomCoffeeBeanSettings: (show: boolean) => void;
-  showSearchSortSettings: boolean;
-  setShowSearchSortSettings: (show: boolean) => void;
   showNoteSettings: boolean;
   setShowNoteSettings: (show: boolean) => void;
   showFlavorDimensionSettings: boolean;
@@ -288,8 +285,6 @@ const AppModals: React.FC<AppModalsProps> = ({
   setShowNotificationSettings,
   showRandomCoffeeBeanSettings,
   setShowRandomCoffeeBeanSettings,
-  showSearchSortSettings,
-  setShowSearchSortSettings,
   showNoteSettings,
   setShowNoteSettings,
   showFlavorDimensionSettings,
@@ -451,10 +446,6 @@ const AppModals: React.FC<AppModalsProps> = ({
       isOpen: showRandomCoffeeBeanSettings,
     },
     {
-      id: 'search-sort-settings',
-      isOpen: showSearchSortSettings,
-    },
-    {
       id: 'note-settings',
       isOpen: showNoteSettings,
     },
@@ -503,7 +494,6 @@ const AppModals: React.FC<AppModalsProps> = ({
     setShowDataSettings(false);
     setShowNotificationSettings(false);
     setShowRandomCoffeeBeanSettings(false);
-    setShowSearchSortSettings(false);
     setShowNoteSettings(false);
     setShowFlavorDimensionSettings(false);
     setShowHiddenMethodsSettings(false);
@@ -525,7 +515,6 @@ const AppModals: React.FC<AppModalsProps> = ({
     setShowDataSettings,
     setShowNotificationSettings,
     setShowRandomCoffeeBeanSettings,
-    setShowSearchSortSettings,
     setShowNoteSettings,
     setShowFlavorDimensionSettings,
     setShowHiddenMethodsSettings,
@@ -667,14 +656,6 @@ const AppModals: React.FC<AppModalsProps> = ({
         />
       )}
 
-      {showSearchSortSettings && (
-        <SearchSortSettings
-          settings={settings}
-          onClose={() => setShowSearchSortSettings(false)}
-          handleChange={handleSubSettingChange}
-        />
-      )}
-
       {showNoteSettings && (
         <NoteSettings
           settings={settings}
@@ -793,8 +774,6 @@ const AppModals: React.FC<AppModalsProps> = ({
               'random-coffee-bean-settings',
               setShowRandomCoffeeBeanSettings
             ),
-          onOpenSearchSortSettings: () =>
-            openSubSetting('search-sort-settings', setShowSearchSortSettings),
           onOpenNoteSettings: () =>
             openSubSetting('note-settings', setShowNoteSettings),
           onOpenFlavorDimensionSettings: () =>

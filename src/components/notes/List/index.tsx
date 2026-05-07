@@ -54,7 +54,6 @@ import { SortOption, DateGroupingMode } from '../types';
 import { exportSelectedNotes } from '../Share/NotesExporter';
 import {
   buildNoteSearchableTexts,
-  extractExtractionTime,
   getNoteDeleteDisplay,
   scoreSearchMatch,
   sortNotes,
@@ -99,10 +98,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     getDateGroupingModePreference()
   );
 
-  // 搜索排序状态 - 独立于普通排序，可选的
-  const [searchSortOption, setSearchSortOption] = useState<SortOption | null>(
-    null
-  );
   // 模态显示状态（已移除 ChangeRecordEditModal 相关状态和变量）
 
   // 图文分享状态
@@ -415,10 +410,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
     const matchedNotesOnly = matchingNotes.map(item => item.note);
 
-    if (searchSortOption) {
-      return sortNotes(matchedNotesOnly, searchSortOption);
-    }
-
     const sortedByCurrentOption = sortNotes(matchedNotesOnly, sortOption);
     const sortOrder = new Map(
       sortedByCurrentOption.map((note, index) => [note.id, index])
@@ -440,20 +431,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     searchQuery,
     filteredNotes,
     searchableFilteredNotes,
-    searchSortOption,
     sortOption,
   ]);
-
-  // 检测搜索结果中是否有萃取时间数据
-  const hasExtractionTimeData = useMemo(() => {
-    if (!isSearching || !searchQuery.trim()) return false;
-
-    // 检查搜索结果中是否有至少一条笔记包含萃取时间信息
-    return searchFilteredNotes.some(note => {
-      const extractionTime = extractExtractionTime(note.notes || '');
-      return extractionTime !== null;
-    });
-  }, [isSearching, searchQuery, searchFilteredNotes]);
 
   // 计算总咖啡消耗量
   const totalCoffeeConsumption = useRef(0);
@@ -709,12 +688,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     saveSortOptionPreference(option);
   };
 
-  // 处理搜索排序选项变化 - 独立于普通排序
-  const handleSearchSortChange = (option: SortOption | null) => {
-    setSearchSortOption(option);
-    // 搜索排序不需要持久化存储，因为它是临时的
-  };
-
   // 处理显示模式变化
   const handleViewModeChange = useCallback(
     (mode: 'list' | 'gallery') => {
@@ -872,9 +845,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const handleSearchClick = () => {
     setIsSearching(!isSearching);
     if (isSearching) {
-      // 退出搜索时：清空搜索查询并重置搜索排序状态
       setSearchQuery('');
-      setSearchSortOption(null);
     }
   };
 
@@ -888,7 +859,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     if (e.key === 'Escape') {
       setIsSearching(false);
       setSearchQuery('');
-      setSearchSortOption(null); // 重置搜索排序状态
     }
   };
 
@@ -1093,9 +1063,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             onSmartToggleImageFlow={handleSmartToggleImageFlow}
             hasImageNotes={hasImageNotes}
             settings={settings}
-            hasExtractionTimeData={hasExtractionTimeData}
-            searchSortOption={searchSortOption || undefined}
-            onSearchSortChange={handleSearchSortChange}
             searchHistory={searchHistory}
             onSearchHistoryClick={handleSearchHistoryClick}
           />

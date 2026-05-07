@@ -132,14 +132,6 @@ export const defaultSettings: AppSettings = {
     },
   },
 
-  // 搜索排序设置
-  searchSort: {
-    enabled: false,
-    time: false,
-    rating: false,
-    extractionTime: true,
-  },
-
   // 其他设置
   enableBeanPrint: false,
   showBeanRating: false,
@@ -307,14 +299,21 @@ interface SettingsStore {
 
 const mergeSettingsWithDefaults = (
   settings?: Partial<AppSettings> | null
-): AppSettings => ({
-  ...defaultSettings,
-  ...settings,
-  navigationSettings: normalizeNavigationSettings(settings?.navigationSettings),
-  estimatedCupDoseSettings: normalizeEstimatedCupDoseSettings(
-    settings?.estimatedCupDoseSettings
-  ),
-});
+): AppSettings => {
+  const { searchSort: _legacySearchSort, ...supportedSettings } = (settings ??
+    {}) as Partial<AppSettings> & { searchSort?: unknown };
+
+  return {
+    ...defaultSettings,
+    ...supportedSettings,
+    navigationSettings: normalizeNavigationSettings(
+      settings?.navigationSettings
+    ),
+    estimatedCupDoseSettings: normalizeEstimatedCupDoseSettings(
+      settings?.estimatedCupDoseSettings
+    ),
+  };
+};
 
 /**
  * 设置 Store

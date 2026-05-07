@@ -297,7 +297,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     useState(false);
   const [showRandomCoffeeBeanSettings, setShowRandomCoffeeBeanSettings] =
     useState(false);
-  const [showSearchSortSettings, setShowSearchSortSettings] = useState(false);
   const [showNoteSettings, setShowNoteSettings] = useState(false);
   const [showFlavorDimensionSettings, setShowFlavorDimensionSettings] =
     useState(false);
@@ -325,7 +324,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showDataSettings ||
     showNotificationSettings ||
     showRandomCoffeeBeanSettings ||
-    showSearchSortSettings ||
     showNoteSettings ||
     showFlavorDimensionSettings ||
     showHiddenMethodsSettings ||
@@ -4229,8 +4227,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setShowNotificationSettings={setShowNotificationSettings}
         showRandomCoffeeBeanSettings={showRandomCoffeeBeanSettings}
         setShowRandomCoffeeBeanSettings={setShowRandomCoffeeBeanSettings}
-        showSearchSortSettings={showSearchSortSettings}
-        setShowSearchSortSettings={setShowSearchSortSettings}
         showNoteSettings={showNoteSettings}
         setShowNoteSettings={setShowNoteSettings}
         showFlavorDimensionSettings={showFlavorDimensionSettings}

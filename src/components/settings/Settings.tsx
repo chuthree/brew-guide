@@ -36,7 +36,6 @@ import {
   Database,
   Bell,
   Shuffle,
-  ArrowUpDown,
   Palette,
   EyeOff,
   ImagePlus,
@@ -82,7 +81,6 @@ export interface SubSettingsHandlers {
   onOpenDataSettings: () => void;
   onOpenNotificationSettings: () => void;
   onOpenRandomCoffeeBeanSettings: () => void;
-  onOpenSearchSortSettings: () => void;
   onOpenFlavorDimensionSettings: () => void;
   onOpenNoteSettings: () => void;
   onOpenHiddenMethodsSettings: () => void;
@@ -877,12 +875,6 @@ const Settings: React.FC<SettingsProps> = ({
                   label: '笔记',
                   settingId: 'note-settings',
                   onClick: subSettingsHandlers.onOpenNoteSettings,
-                },
-                {
-                  icon: ArrowUpDown,
-                  label: '搜索与排序',
-                  settingId: 'search-sort-settings',
-                  onClick: subSettingsHandlers.onOpenSearchSortSettings,
                 },
                 {
                   icon: Palette,

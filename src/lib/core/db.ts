@@ -228,14 +228,6 @@ export interface AppSettings {
     };
   };
 
-  // 搜索排序设置
-  searchSort?: {
-    enabled: boolean;
-    time: boolean;
-    rating: boolean;
-    extractionTime: boolean;
-  };
-
   // 打印设置
   enableBeanPrint?: boolean;
   showBeanRating?: boolean;

@@ -8,9 +8,6 @@ export const SORT_OPTIONS = {
   TIME_ASC: 'time_asc',
   RATING_DESC: 'rating_desc',
   RATING_ASC: 'rating_asc',
-  // 搜索排序选项
-  EXTRACTION_TIME_DESC: 'extraction_time_desc',
-  EXTRACTION_TIME_ASC: 'extraction_time_asc',
 } as const;
 
 export type SortOption = (typeof SORT_OPTIONS)[keyof typeof SORT_OPTIONS];
@@ -31,8 +28,6 @@ const SORT_LABELS: Record<SortOption, string> = {
   [SORT_OPTIONS.TIME_ASC]: '时间',
   [SORT_OPTIONS.RATING_DESC]: '评分',
   [SORT_OPTIONS.RATING_ASC]: '评分',
-  [SORT_OPTIONS.EXTRACTION_TIME_DESC]: '萃取时间',
-  [SORT_OPTIONS.EXTRACTION_TIME_ASC]: '萃取时间',
 };
 
 // 消息提示状态接口
@@ -109,13 +104,8 @@ export interface FilterTabsProps {
   onSmartToggleImageFlow?: () => void;
   // 是否有图片笔记（用于禁用/启用图片流按钮）
   hasImageNotes?: boolean;
-  // 新增设置参数（用于搜索排序功能）
+  // 新增设置参数
   settings?: import('@/components/settings/Settings').SettingsOptions;
-  // 搜索结果中是否包含萃取时间数据
-  hasExtractionTimeData?: boolean;
-  // 搜索排序相关props - 独立于普通排序
-  searchSortOption?: SortOption;
-  onSearchSortChange?: (option: SortOption | null) => void;
   // 搜索历史相关props
   searchHistory?: string[];
   onSearchHistoryClick?: (query: string) => void;
