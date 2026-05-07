@@ -25,7 +25,15 @@ const hasWhitespaceSeparator = (value: string): boolean => /\s/.test(value);
 
 const isExcludedLegacyRoasterToken = (value: string): boolean => {
   const lowerCased = value.toLowerCase();
-  const excludeWords = ['豆', 'bean', 'beans', '手冲', '意式', '咖啡豆', 'coffee'];
+  const excludeWords = [
+    '豆',
+    'bean',
+    'beans',
+    '手冲',
+    '意式',
+    '咖啡豆',
+    'coffee',
+  ];
   return excludeWords.includes(lowerCased);
 };
 
@@ -300,6 +308,68 @@ export function formatCoffeeBeanDisplayName(
   return `${roaster}${separator}${name}`;
 }
 
+export function getCoffeeBeanRoasterSuggestions(
+  beans: Array<Pick<BeanIdentityLike, 'name' | 'roaster'>>,
+  enabled = true
+): string[] {
+  if (!enabled) {
+    return [];
+  }
+
+  const roasterCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    const roaster = getBeanRoasterName(bean);
+    if (!roaster || roaster === '未知烘焙商') {
+      return;
+    }
+
+    roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
+  });
+
+  return Array.from(roasterCount.entries())
+    .sort((a, b) => {
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(([roaster]) => roaster);
+}
+
+export function prepareCoffeeBeanRoasterFieldsForSave<
+  T extends Pick<BeanIdentityLike, 'name' | 'roaster'>,
+>(
+  bean: T,
+  options: {
+    roasterFieldEnabled?: boolean;
+    separator?: ' ' | '/';
+  }
+): T {
+  const separator = options.separator || ' ';
+
+  if (options.roasterFieldEnabled) {
+    return bean;
+  }
+
+  const normalizedRoaster = normalizeCoffeeBeanRoaster(bean.roaster);
+  if (!bean.name || normalizedRoaster) {
+    return bean;
+  }
+
+  const extractedRoaster = getBeanRoasterName(bean, separator);
+  if (!extractedRoaster) {
+    return bean;
+  }
+
+  return {
+    ...bean,
+    roaster: extractedRoaster,
+    name: getBeanNameWithoutRoaster(bean, separator),
+  };
+}
+
 /**
  * 比较两个咖啡豆身份是否一致
  * 优先比较 roaster + name，缺少 roaster 时退化为 name。
@@ -376,9 +446,7 @@ export function findCoffeeBeanByIdentity<T extends BeanIdentityLike>(
   }
 
   const displayMatches = beans
-    .filter(bean =>
-      getDisplayNameCandidates(bean).includes(targetDisplayName)
-    )
+    .filter(bean => getDisplayNameCandidates(bean).includes(targetDisplayName))
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
   return displayMatches[0] || null;
@@ -423,10 +491,7 @@ export function hasInvalidFlavorValue(flavor: unknown): boolean {
  */
 export function normalizeCoffeeBean<
   T extends { flavor?: unknown; name?: unknown; roaster?: unknown },
->(
-  bean: T,
-  options?: { ensureFlavorArray?: boolean }
-): T {
+>(bean: T, options?: { ensureFlavorArray?: boolean }): T {
   const hasRoasterField = Object.prototype.hasOwnProperty.call(bean, 'roaster');
   const hasNameField = Object.prototype.hasOwnProperty.call(bean, 'name');
   const shouldNormalizeFlavor =
@@ -449,7 +514,8 @@ export function normalizeCoffeeBean<
   }
 
   if (hasRoasterField) {
-    normalizedBean.roaster = normalizeCoffeeBeanRoaster(bean.roaster) || undefined;
+    normalizedBean.roaster =
+      normalizeCoffeeBeanRoaster(bean.roaster) || undefined;
   }
 
   if (shouldNormalizeFlavor) {

@@ -35,6 +35,8 @@ import {
   formatCoffeeBeanDisplayName,
   getBeanNameWithoutRoaster,
   getBeanRoasterName,
+  getCoffeeBeanRoasterSuggestions,
+  prepareCoffeeBeanRoasterFieldsForSave,
 } from '@/lib/utils/coffeeBeanUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
@@ -245,35 +247,11 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     const settings = useSettingsStore(state => state.settings);
     const allBeans = useCoffeeBeanStore(state => state.beans);
 
-    // 计算烘焙商建议列表 - 从所有咖啡豆中提取唯一烘焙商，按使用频率排序，排除"未知烘焙商"
     const roasterSuggestions = React.useMemo(() => {
-      // 只有启用独立输入时才需要建议列表
-      if (!settings.roasterFieldEnabled) return [];
-
-      const roasterCount = new Map<string, number>();
-
-      // 统计每个烘焙商的咖啡豆数量
-      allBeans.forEach(b => {
-        // 直接使用 roaster 字段
-        const roaster = b.roaster;
-
-        // 排除空值和"未知烘焙商"
-        if (roaster && roaster !== '未知烘焙商') {
-          roasterCount.set(roaster, (roasterCount.get(roaster) || 0) + 1);
-        }
-      });
-
-      // 按数量排序，数量多的在前
-      return Array.from(roasterCount.entries())
-        .sort((a, b) => {
-          // 按数量降序排列
-          if (a[1] !== b[1]) {
-            return b[1] - a[1];
-          }
-          // 数量相同时按名称字母顺序排列
-          return a[0].localeCompare(b[0], 'zh-CN');
-        })
-        .map(entry => entry[0]);
+      return getCoffeeBeanRoasterSuggestions(
+        allBeans,
+        !!settings.roasterFieldEnabled
+      );
     }, [allBeans, settings.roasterFieldEnabled]);
 
     // 加载烘焙商图标 - 当烘焙商名称变化时
@@ -841,20 +819,10 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       modalHistory.closeAllByPrefix('bean-form');
 
       // 准备保存的数据
-      let finalBean = { ...bean, blendComponents };
-
-      // 如果未启用独立烘焙商输入，从名称中自动提取烘焙商
-      if (!settings.roasterFieldEnabled && bean.name && !bean.roaster) {
-        const extractedRoaster = getBeanRoasterName(bean);
-        if (extractedRoaster) {
-          const nameWithoutRoaster = getBeanNameWithoutRoaster(bean);
-          finalBean = {
-            ...finalBean,
-            roaster: extractedRoaster,
-            name: nameWithoutRoaster,
-          };
-        }
-      }
+      const finalBean = prepareCoffeeBeanRoasterFieldsForSave(
+        { ...bean, blendComponents },
+        { roasterFieldEnabled: settings.roasterFieldEnabled }
+      );
 
       // 调用保存回调
       onSave(finalBean);
@@ -1078,7 +1046,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         'rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100';
 
       return (
-        <div className="flex items-center justify-center pb-safe-bottom pt-4">
+        <div className="pb-safe-bottom flex items-center justify-center pt-4">
           <div className="flex items-center justify-center gap-2">
             <AnimatePresence mode="popLayout">
               {canSave && (

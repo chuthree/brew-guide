@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { CoffeeBean } from '@/types/app';
 import { DatePicker } from '@/components/common/ui/DatePicker';
 import HighlightText from '@/components/common/ui/HighlightText';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { getCoffeeBeanRoasterSuggestions } from '@/lib/utils/coffeeBeanUtils';
+import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import {
   formatNumber,
   parseDateString,
@@ -28,7 +31,9 @@ interface BasicInfoSectionProps {
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
   handleCapacityBlur: (value: string) => void;
   handleRemainingBlur: (value: string) => void;
-  handleRemainingQuickAction: (event: React.MouseEvent<HTMLSpanElement>) => void;
+  handleRemainingQuickAction: (
+    event: React.MouseEvent<HTMLSpanElement>
+  ) => void;
   handlePriceBlur: (value: string) => Promise<void>;
   handleDateChange: (date: Date, field: 'roastDate' | 'purchaseDate') => void;
 }
@@ -67,10 +72,16 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
     roasterFieldEnabled,
     roasterSeparator,
   };
+  const allBeans = useCoffeeBeanStore(state => state.beans);
 
   const currentBean = isAddMode ? tempBean : bean;
   const isGreenBeanType = currentBean?.beanState === 'green';
+  const merchantLabel = isGreenBeanType ? '生豆商' : '烘焙商';
   const flavorInfo = getFlavorInfo(bean);
+  const roasterSuggestions = useMemo(
+    () => getCoffeeBeanRoasterSuggestions(allBeans, !!roasterFieldEnabled),
+    [allBeans, roasterFieldEnabled]
+  );
 
   // 获取格式化后的显示名称
   const displayName = bean ? formatBeanDisplayName(bean, roasterSettings) : '';
@@ -140,9 +151,32 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
   return (
     <>
-      {/* 标题区域 */}
+      {/* 名称输入/标题区域 */}
       <div>
-        {isAddMode ? (
+        {isAddMode && roasterFieldEnabled ? (
+          <div className="grid w-full grid-cols-2 gap-4">
+            <AutocompleteInput
+              value={tempBean.roaster || ''}
+              onChange={value => {
+                void handleUpdateField({ roaster: value });
+              }}
+              placeholder={`${merchantLabel}名称`}
+              suggestions={roasterSuggestions}
+              clearable
+              inputMode="text"
+              containerClassName="space-y-0"
+              className="border-dashed border-neutral-300 py-1 text-sm font-medium text-neutral-800 placeholder:text-neutral-400 focus:border-neutral-500 dark:border-neutral-600 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
+            />
+            <input
+              id="bean-detail-title"
+              type="text"
+              value={tempBean.name || ''}
+              onChange={e => handleUpdateField({ name: e.target.value })}
+              placeholder="咖啡豆名称"
+              className="w-full border-b border-dashed border-neutral-300 bg-transparent pb-1 text-sm font-medium text-neutral-800 outline-none placeholder:text-neutral-400 focus:border-neutral-500 dark:border-neutral-600 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
+            />
+          </div>
+        ) : isAddMode ? (
           <input
             id="bean-detail-title"
             type="text"
@@ -340,7 +374,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     date={parseDateString(dateValue)}
                     onDateChange={date => handleDateChange(date, dateField)}
                     placeholder={`选择${dateLabel}`}
-                    className="w-auto [&_button]:w-auto [&_button]:border-0 [&_button]:justify-start [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
+                    className="w-auto [&_button]:w-auto [&_button]:justify-start [&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
                     displayFormat="yyyy-MM-dd"
                   />
                   {agingDays !== null && agingDays > 0 && (

@@ -12,6 +12,7 @@ import {
 } from '@/components/coffee-bean/Form/constants';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { prepareCoffeeBeanRoasterFieldsForSave } from '@/lib/utils/coffeeBeanUtils';
 
 interface HeaderBarProps {
   isAddMode: boolean;
@@ -75,9 +76,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   );
 
   // 获取显示名称
-  const displayName = bean
-    ? formatBeanDisplayName(bean, roasterSettings)
-    : tempBean.name || '添加咖啡豆';
+  const displayName = bean ? formatBeanDisplayName(bean, roasterSettings) : '';
 
   const handleSave = () => {
     if (!canSave) return;
@@ -97,7 +96,12 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       }
     });
 
-    onSaveNew?.(tempBean as Omit<CoffeeBean, 'id' | 'timestamp'>);
+    const beanToSave = prepareCoffeeBeanRoasterFieldsForSave(
+      tempBean as Omit<CoffeeBean, 'id' | 'timestamp'>,
+      { roasterFieldEnabled, separator: roasterSeparator }
+    );
+
+    onSaveNew?.(beanToSave);
     onClose();
   };
 
@@ -124,9 +128,11 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           willChange: 'opacity, filter, transform',
         }}
       >
-        <h2 className="max-w-full truncate px-2 text-center text-sm font-medium text-neutral-800 dark:text-neutral-100">
-          {isAddMode ? tempBean.name || '添加咖啡豆' : displayName || '未命名'}
-        </h2>
+        {!isAddMode && (
+          <h2 className="max-w-full truncate px-2 text-center text-sm font-medium text-neutral-800 dark:text-neutral-100">
+            {displayName || '未命名'}
+          </h2>
+        )}
       </div>
 
       {/* 右侧操作按钮 */}
