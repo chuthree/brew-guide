@@ -6,7 +6,6 @@ import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import {
   SettingPage,
-  SettingPillInput,
   SettingSection,
   SettingRow,
   SettingSelector,
@@ -45,19 +44,11 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
   );
 
   const [isVisible, setIsVisible] = React.useState(false);
-  const [beanSummaryCapacityInput, setBeanSummaryCapacityInput] =
-    React.useState(String(settings.beanSummaryMaxDisplayCapacity || 1000));
   const onCloseRef = React.useRef(onClose);
 
   React.useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
-
-  React.useEffect(() => {
-    setBeanSummaryCapacityInput(
-      String(settings.beanSummaryMaxDisplayCapacity || 1000)
-    );
-  }, [settings.beanSummaryMaxDisplayCapacity]);
 
   const handleCloseWithAnimation = React.useCallback(() => {
     setIsVisible(false);
@@ -85,22 +76,6 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
     });
   }, []);
 
-  const commitBeanSummaryCapacityInput = React.useCallback(async () => {
-    const parsedValue = Number.parseInt(beanSummaryCapacityInput, 10);
-    const nextValue =
-      Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : 1000;
-
-    setBeanSummaryCapacityInput(String(nextValue));
-
-    if (nextValue !== (settings.beanSummaryMaxDisplayCapacity || 1000)) {
-      await handleChange('beanSummaryMaxDisplayCapacity', nextValue);
-    }
-  }, [
-    beanSummaryCapacityInput,
-    handleChange,
-    settings.beanSummaryMaxDisplayCapacity,
-  ]);
-
   return (
     <SettingPage title="咖啡豆" isVisible={isVisible} onClose={handleClose}>
       {/* 预览区域 */}
@@ -110,62 +85,6 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         settings={settings}
         handleChange={handleChange}
       />
-
-      <SettingSection
-        title="容量显示"
-        footer={
-          !settings.enableBeanSummaryCapacityLimit
-            ? '限制咖啡豆概要中的剩余容量显示上限。超过上限时，将以 1 kg+ 这类形式展示。'
-            : !settings.enableBeanSummaryOverflowWrap
-              ? '开启循环显示后，超过上限将从 0 重新累计（不显示 +）。'
-              : undefined
-        }
-      >
-        <SettingRow
-          label="最大显示容量"
-          isLast={!settings.enableBeanSummaryCapacityLimit}
-        >
-          <SettingToggle
-            checked={settings.enableBeanSummaryCapacityLimit || false}
-            onChange={checked =>
-              handleChange('enableBeanSummaryCapacityLimit', checked)
-            }
-          />
-        </SettingRow>
-        {settings.enableBeanSummaryCapacityLimit && (
-          <>
-            <SettingRow label="超过上限循环显示" isSubSetting>
-              <SettingToggle
-                checked={settings.enableBeanSummaryOverflowWrap || false}
-                onChange={checked =>
-                  handleChange('enableBeanSummaryOverflowWrap', checked)
-                }
-              />
-            </SettingRow>
-            <SettingRow label="显示上限" isSubSetting isLast>
-              <SettingPillInput
-                value={beanSummaryCapacityInput}
-                inputMode="numeric"
-                suffix="g"
-                placeholder="克数"
-                onChange={value => {
-                  const sanitizedValue = value.replace(/\D/g, '');
-                  setBeanSummaryCapacityInput(sanitizedValue);
-                }}
-                onBlur={() => {
-                  void commitBeanSummaryCapacityInput();
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    void commitBeanSummaryCapacityInput();
-                  }
-                }}
-              />
-            </SettingRow>
-          </>
-        )}
-      </SettingSection>
 
       <SettingSection title="列表">
         <SettingRow label="日期模式">

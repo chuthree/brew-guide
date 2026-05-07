@@ -16,6 +16,7 @@ import {
   SettingRow,
   SettingToggle,
 } from './atomic';
+import BeanSummaryCapacityLimitSection from './BeanSummaryCapacityLimitSection';
 
 interface ExperimentalSettingsProps {
   settings: SettingsOptions;
@@ -179,6 +180,11 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
           />
         </SettingRow>
       </SettingSection>
+
+      <BeanSummaryCapacityLimitSection
+        settings={settings}
+        handleChange={handleChange}
+      />
 
       <SettingSection
         footer={
