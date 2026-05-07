@@ -3,7 +3,15 @@
 import React from 'react';
 import Image from 'next/image';
 import { Drawer } from 'vaul';
-import { Check, ChevronRight, Plus, Search, X } from 'lucide-react';
+import {
+  Check,
+  ChevronRight,
+  GripVertical,
+  Plus,
+  Search,
+  X,
+} from 'lucide-react';
+import { Reorder, useDragControls } from 'framer-motion';
 
 import type { SettingsOptions } from './Settings';
 import { SettingPage, SettingSection, SettingRow } from './atomic';
@@ -55,6 +63,14 @@ type EditingDraft = {
 
 const createGroupId = () =>
   `bean_group_${globalThis.crypto?.randomUUID?.() || Date.now()}`;
+
+const withSequentialGroupOrder = (
+  groups: CoffeeBeanGroup[]
+): CoffeeBeanGroup[] =>
+  groups.map((group, index) => ({
+    ...group,
+    order: index,
+  }));
 
 const parseWeight = (value?: string) => {
   const parsed = Number.parseFloat(value || '');
@@ -218,6 +234,22 @@ const getChipBeanName = (
   return displayName || bean.name.replace(/\s+/g, ' ').trim();
 };
 
+const getBeansByIds = (
+  beanIds: string[],
+  beanById: Map<string, CoffeeBean>
+): CoffeeBean[] => {
+  const selectedBeans: CoffeeBean[] = [];
+
+  beanIds.forEach(beanId => {
+    const bean = beanById.get(beanId);
+    if (bean) {
+      selectedBeans.push(bean);
+    }
+  });
+
+  return selectedBeans;
+};
+
 const BeanThumbnail: React.FC<{
   bean: CoffeeBean;
   size?: 'xs' | 'sm' | 'md';
@@ -246,6 +278,78 @@ const BeanThumbnail: React.FC<{
         </div>
       )}
     </div>
+  );
+};
+
+const CoffeeBeanGroupRow: React.FC<{
+  group: CoffeeBeanGroup;
+  isLast: boolean;
+  isReorderMode: boolean;
+  onOpen: (group: CoffeeBeanGroup) => void;
+  onDragEnd: () => void;
+}> = ({ group, isLast, isReorderMode, onOpen, onDragEnd }) => {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={group}
+      dragControls={dragControls}
+      dragListener={false}
+      onDragEnd={onDragEnd}
+      whileDrag={{
+        scale: 1.01,
+        transition: { duration: 0.1 },
+      }}
+      className="px-3.5"
+      style={{ listStyle: 'none' }}
+    >
+      <div
+        className={`flex items-center gap-3 py-1 ${
+          isLast ? '' : 'border-b border-black/5 dark:border-white/5'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => onOpen(group)}
+          disabled={isReorderMode}
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left transition-opacity active:opacity-70 disabled:cursor-default disabled:active:opacity-100"
+        >
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            {group.name}
+          </span>
+        </button>
+
+        <div
+          className={`relative -mr-2 flex h-10 shrink-0 items-center justify-center transition-[width] duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+            isReorderMode ? 'w-10' : 'w-8'
+          }`}
+        >
+          <button
+            type="button"
+            aria-label={`拖动调整 ${group.name} 排序`}
+            title="拖动排序"
+            onPointerDown={event => dragControls.start(event)}
+            className={`absolute inset-0 flex cursor-grab items-center justify-center rounded-lg text-neutral-400 transition-[opacity,transform,filter,background-color] duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:cursor-grabbing active:bg-black/5 dark:text-neutral-500 dark:active:bg-white/5 ${
+              isReorderMode
+                ? 'blur-0 pointer-events-auto scale-100 opacity-100'
+                : 'pointer-events-none scale-[0.25] opacity-0 blur-[4px]'
+            }`}
+          >
+            <GripVertical className="h-4 w-4" strokeWidth={2.25} />
+          </button>
+
+          <span
+            className={`absolute inset-0 flex items-center justify-center text-neutral-400 transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] dark:text-neutral-500 ${
+              isReorderMode
+                ? 'scale-[0.25] opacity-0 blur-[4px]'
+                : 'blur-0 scale-100 opacity-100'
+            }`}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </span>
+        </div>
+      </div>
+    </Reorder.Item>
   );
 };
 
@@ -371,6 +475,7 @@ const GroupEditorDrawer: React.FC<GroupEditorDrawerProps> = ({
             placeholder="输入分组名称"
             className="w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-50 dark:placeholder:text-neutral-500"
             autoComplete="off"
+            id="bean-group-name-input"
           />
         </SettingRow>
       </SettingSection>
@@ -513,10 +618,7 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
   }, [beans]);
 
   const selectedBeans = React.useMemo(
-    () =>
-      selectedIds
-        .map(beanId => beanById.get(beanId))
-        .filter((bean): bean is CoffeeBean => Boolean(bean)),
+    () => getBeansByIds(selectedIds, beanById),
     [beanById, selectedIds]
   );
 
@@ -683,9 +785,7 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
                           <BeanThumbnail bean={bean} size="xs" />
                         )}
                       </span>
-                      <span className="max-w-28 truncate">
-                        {chipName}
-                      </span>
+                      <span className="max-w-28 truncate">{chipName}</span>
                     </button>
                   );
                 })}
@@ -833,6 +933,7 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
   );
   const [isBeanPickerOpen, setIsBeanPickerOpen] = React.useState(false);
   const [isDeleteConfirming, setIsDeleteConfirming] = React.useState(false);
+  const [isReorderMode, setIsReorderMode] = React.useState(false);
 
   const onCloseRef = React.useRef(onClose);
 
@@ -872,6 +973,22 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
     () => normalizeCoffeeBeanGroups(settings.coffeeBeanGroups, beans),
     [settings.coffeeBeanGroups, beans]
   );
+  const [orderedGroups, setOrderedGroups] =
+    React.useState<CoffeeBeanGroup[]>(groups);
+  const orderedGroupsRef = React.useRef<CoffeeBeanGroup[]>(groups);
+  const hasPendingGroupOrderRef = React.useRef(false);
+
+  React.useEffect(() => {
+    setOrderedGroups(groups);
+    orderedGroupsRef.current = groups;
+    hasPendingGroupOrderRef.current = false;
+  }, [groups]);
+
+  React.useEffect(() => {
+    if (orderedGroups.length <= 1 && isReorderMode) {
+      setIsReorderMode(false);
+    }
+  }, [isReorderMode, orderedGroups.length]);
 
   const beanById = React.useMemo(() => {
     const map = new Map<string, CoffeeBean>();
@@ -898,9 +1015,7 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
 
   const selectedBeans = React.useMemo(() => {
     if (!draft) return [];
-    return draft.beanIds
-      .map(beanId => beanById.get(beanId))
-      .filter((bean): bean is CoffeeBean => Boolean(bean));
+    return getBeansByIds(draft.beanIds, beanById);
   }, [beanById, draft]);
 
   const updateGroups = React.useCallback(
@@ -915,6 +1030,42 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
       hapticsUtils.light();
     }
   }, [settings.hapticFeedback]);
+
+  const handleReorderGroups = React.useCallback(
+    (nextGroups: CoffeeBeanGroup[]) => {
+      const reorderedGroups = withSequentialGroupOrder(nextGroups);
+      orderedGroupsRef.current = reorderedGroups;
+      hasPendingGroupOrderRef.current = true;
+      setOrderedGroups(reorderedGroups);
+    },
+    []
+  );
+
+  const persistGroupOrder = React.useCallback(async () => {
+    if (!hasPendingGroupOrderRef.current) return;
+
+    hasPendingGroupOrderRef.current = false;
+
+    try {
+      await updateGroups(orderedGroupsRef.current);
+    } catch (error) {
+      console.error('保存分组排序失败:', error);
+      orderedGroupsRef.current = groups;
+      setOrderedGroups(groups);
+    }
+  }, [groups, updateGroups]);
+
+  const toggleReorderMode = React.useCallback(async () => {
+    if (isReorderMode) {
+      await persistGroupOrder();
+      setIsReorderMode(false);
+      triggerHaptic();
+      return;
+    }
+
+    setIsReorderMode(true);
+    triggerHaptic();
+  }, [isReorderMode, persistGroupOrder, triggerHaptic]);
 
   const openCreateDrawer = React.useCallback(() => {
     setDraft({ groupId: null, name: '', beanIds: [] });
@@ -953,34 +1104,38 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
 
     if (draft.groupId) {
       await updateGroups(
-        groups.map(group =>
-          group.id === draft.groupId
-            ? {
-                ...group,
-                name,
-                beanIds: normalizedBeanIds,
-                updatedAt: now,
-              }
-            : group
+        withSequentialGroupOrder(
+          orderedGroups.map(group =>
+            group.id === draft.groupId
+              ? {
+                  ...group,
+                  name,
+                  beanIds: normalizedBeanIds,
+                  updatedAt: now,
+                }
+              : group
+          )
         )
       );
     } else {
-      await updateGroups([
-        ...groups,
-        {
-          id: createGroupId(),
-          name,
-          beanIds: normalizedBeanIds,
-          order: groups.length,
-          createdAt: now,
-          updatedAt: now,
-        },
-      ]);
+      await updateGroups(
+        withSequentialGroupOrder([
+          ...orderedGroups,
+          {
+            id: createGroupId(),
+            name,
+            beanIds: normalizedBeanIds,
+            order: orderedGroups.length,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+      );
     }
 
     triggerHaptic();
     closeEditor();
-  }, [closeEditor, draft, groups, triggerHaptic, updateGroups]);
+  }, [closeEditor, draft, orderedGroups, triggerHaptic, updateGroups]);
 
   const deleteCurrentGroup = React.useCallback(async () => {
     if (!draft?.groupId) return;
@@ -992,9 +1147,9 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
     }
 
     await updateGroups(
-      groups
-        .filter(group => group.id !== draft.groupId)
-        .map((group, index) => ({ ...group, order: index }))
+      withSequentialGroupOrder(
+        orderedGroups.filter(group => group.id !== draft.groupId)
+      )
     );
 
     triggerHaptic();
@@ -1002,8 +1157,8 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
   }, [
     closeEditor,
     draft?.groupId,
-    groups,
     isDeleteConfirming,
+    orderedGroups,
     triggerHaptic,
     updateGroups,
   ]);
@@ -1031,26 +1186,43 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
   }, []);
 
   const handleClose = () => {
+    void persistGroupOrder();
     modalHistory.back();
   };
+
+  const groupSectionTitle = (
+    <div className="flex items-center justify-between pl-3.5">
+      <h3 className="text-sm font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+        分组
+      </h3>
+      {orderedGroups.length > 1 && (
+        <button
+          type="button"
+          onClick={() => void toggleReorderMode()}
+          className="flex cursor-pointer items-center rounded-full px-3 text-sm font-medium text-neutral-600 transition-transform active:scale-[0.96] dark:text-neutral-300"
+        >
+          {isReorderMode ? '完成' : '编辑'}
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <>
       <SettingPage title="分组" isVisible={isVisible} onClose={handleClose}>
         <SettingSection
-          title="分组"
+          title={groupSectionTitle}
           footer="为不同咖啡豆创建分组，并在筛选分类中快速切换。"
         >
-          {groups.length === 0 ? (
+          {orderedGroups.length === 0 ? (
             <button
               type="button"
               onClick={openCreateDrawer}
-              className="flex w-full cursor-pointer items-center justify-between gap-3 px-3.5 py-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
+              className="flex w-full cursor-pointer items-center px-3.5 py-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
             >
               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                 创建分组
               </span>
-              <ChevronRight className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
             </button>
           ) : (
             <div>
@@ -1058,40 +1230,31 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
                 <button
                   type="button"
                   onClick={openCreateDrawer}
-                  className="flex w-full cursor-pointer items-center justify-between gap-3 border-b border-black/5 py-3.5 text-left transition active:opacity-70 dark:border-white/5"
+                  className="flex w-full cursor-pointer items-center border-b border-black/5 py-3.5 text-left transition active:opacity-70 dark:border-white/5"
                 >
                   <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                     创建分组
                   </span>
-                  <ChevronRight className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
                 </button>
               </div>
 
-              {groups.map((group, index) => {
-                const isLast = index === groups.length - 1;
-
-                return (
-                  <div key={group.id} className="px-3.5">
-                    <button
-                      type="button"
-                      onClick={() => openEditDrawer(group)}
-                      className={`flex w-full cursor-pointer items-center justify-between gap-3 py-3.5 text-left transition active:opacity-70 ${
-                        isLast
-                          ? ''
-                          : 'border-b border-black/5 dark:border-white/5'
-                      }`}
-                    >
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                        {group.name}
-                      </span>
-                      <span className="shrink-0 text-sm font-medium text-neutral-500 tabular-nums dark:text-neutral-400">
-                        {group.beanIds.length} 款
-                      </span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-                    </button>
-                  </div>
-                );
-              })}
+              <Reorder.Group
+                axis="y"
+                values={orderedGroups}
+                onReorder={handleReorderGroups}
+                className="m-0 list-none p-0"
+              >
+                {orderedGroups.map((group, index) => (
+                  <CoffeeBeanGroupRow
+                    key={group.id}
+                    group={group}
+                    isLast={index === orderedGroups.length - 1}
+                    isReorderMode={isReorderMode}
+                    onOpen={openEditDrawer}
+                    onDragEnd={triggerHaptic}
+                  />
+                ))}
+              </Reorder.Group>
             </div>
           )}
         </SettingSection>
