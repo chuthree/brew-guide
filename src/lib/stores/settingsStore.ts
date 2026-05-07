@@ -207,7 +207,7 @@ export const defaultSettings: AppSettings = {
   showCoffeeBeanSelectionStep: false, // 默认不显示咖啡豆选择步骤
 
   // 烘焙商字段设置
-  roasterFieldEnabled: false, // 是否启用独立烘焙商字段
+  roasterFieldEnabled: true, // 是否启用独立烘焙商字段
   roasterSeparator: ' ', // 烘焙商分隔符，默认空格
   roasterMigrationCompleted: false, // @deprecated 已废弃，按需迁移策略不再使用此标记
 };

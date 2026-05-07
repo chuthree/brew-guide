@@ -326,7 +326,7 @@ export interface AppSettings {
   showCoffeeBeanSelectionStep?: boolean; // 是否显示咖啡豆选择步骤，默认 true
 
   // 烘焙商字段设置
-  roasterFieldEnabled?: boolean; // 是否启用独立烘焙商字段，默认 false
+  roasterFieldEnabled?: boolean; // 是否启用独立烘焙商字段，默认 true
   roasterSeparator?: ' ' | '/'; // 烘焙商分隔符，默认空格
   roasterMigrationCompleted?: boolean; // @deprecated 已废弃，按需迁移策略不再使用此标记
 
