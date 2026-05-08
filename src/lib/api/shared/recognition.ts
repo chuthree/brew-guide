@@ -9,6 +9,8 @@ export const RECOGNITION_UPLOAD_CONFIG = {
   maxSize: 5 * 1024 * 1024,
 } as const;
 
+export { normalizeRecognitionErrorMessage } from './recognitionErrors';
+
 export function validateRecognitionImageFile(file: File): void {
   const allowedTypes = RECOGNITION_UPLOAD_CONFIG.allowedTypes as readonly string[];
 

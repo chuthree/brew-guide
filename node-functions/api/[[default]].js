@@ -1,4 +1,7 @@
 import { METHOD_RECOGNITION_PROMPT } from '../../src/lib/constants/methodRecognitionPrompt.js';
+import { normalizeRecognitionErrorMessage } from '../../src/lib/api/shared/recognitionErrors.js';
+
+export { normalizeRecognitionErrorMessage };
 
 const API_ALLOWED_HEADERS = [
   'Content-Type',
@@ -449,7 +452,9 @@ async function handleBeanRecognition(context) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    const message = error?.message || '服务器内部错误';
+    const message = normalizeRecognitionErrorMessage(
+      error?.message || '服务器内部错误'
+    );
     const status = message.includes('请上传图片文件') ||
       message.includes('不支持的文件类型') ||
       message.includes('文件过大') ||
@@ -505,7 +510,9 @@ async function handleMethodRecognition(context) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    const message = error?.message || '服务器内部错误';
+    const message = normalizeRecognitionErrorMessage(
+      error?.message || '服务器内部错误'
+    );
     const status = message.includes('请上传图片文件') ||
       message.includes('不支持的文件类型') ||
       message.includes('文件过大') ||

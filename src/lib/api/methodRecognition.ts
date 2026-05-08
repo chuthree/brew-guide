@@ -1,6 +1,9 @@
 import { API_CONFIG } from './shared/config';
 import { fetchWithTimeout, isTimeoutError } from './shared/request';
-import { validateRecognitionImageFile } from './shared/recognition';
+import {
+  normalizeRecognitionErrorMessage,
+  validateRecognitionImageFile,
+} from './shared/recognition';
 
 // 识别冲煮方案图片
 export async function recognizeMethodImage(imageFile: File): Promise<any> {
@@ -69,10 +72,11 @@ export async function recognizeMethodImage(imageFile: File): Promise<any> {
     console.error('❌ 请求失败:', error);
 
     if (error instanceof Error) {
+      const message = error.message;
       if (isTimeoutError(error)) {
         throw new Error('请求超时，请稍后重试');
       }
-      throw error;
+      throw new Error(normalizeRecognitionErrorMessage(message));
     }
 
     throw new Error('未知错误');

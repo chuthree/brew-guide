@@ -1,6 +1,9 @@
 import { API_CONFIG } from './shared/config';
 import { fetchWithTimeout, isTimeoutError } from './shared/request';
-import { validateRecognitionImageFile } from './shared/recognition';
+import {
+  normalizeRecognitionErrorMessage,
+  validateRecognitionImageFile,
+} from './shared/recognition';
 
 export const DEFAULT_BEAN_RECOGNITION_PROMPT = `你是OCR工具，提取图片中的咖啡豆信息，直接返回JSON（单豆返回对象{}，多豆返回数组[]）。
 
@@ -135,6 +138,9 @@ async function recognizeBeanImageWithCustomAPI(
         `实验性识别超时（>${Math.floor(API_CONFIG.timeoutMs / 1000)}s），可更换模型或稍后重试`
       );
     }
+    if (error instanceof Error) {
+      throw new Error(normalizeRecognitionErrorMessage(error.message));
+    }
     throw error;
   }
 }
@@ -198,6 +204,10 @@ export async function recognizeBeanImage(
       throw new Error(
         `识别超时（>${Math.floor(API_CONFIG.timeoutMs / 1000)}s），请稍后重试`
       );
+    }
+
+    if (error instanceof Error) {
+      throw new Error(normalizeRecognitionErrorMessage(error.message));
     }
 
     throw error;
@@ -300,6 +310,9 @@ export async function testCustomBeanRecognitionConfig(
       throw new Error(
         '测试超时：请检查网络、API 网关可用性，或稍后重试'
       );
+    }
+    if (error instanceof Error) {
+      throw new Error(normalizeRecognitionErrorMessage(error.message));
     }
     throw error;
   }
