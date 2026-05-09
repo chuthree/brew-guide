@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { ExtendedCoffeeBean } from '../types';
 import { isBeanEmpty } from '../preferences';
@@ -63,9 +63,11 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   settings,
 }) => {
   // 状态管理
-  const [imageError, setImageError] = useState(false);
+  const [imageError, setImageError] = useState<{
+    source: string | null;
+    failed: boolean;
+  }>({ source: null, failed: false });
   const [internalNotesExpanded, setInternalNotesExpanded] = useState(false);
-  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -88,19 +90,25 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
       ? externalNotesExpanded
       : internalNotesExpanded;
 
-  // 加载烘焙商图标
-  useEffect(() => {
+  const roasterName = useMemo(
+    () => getRoasterName(bean, roasterSettings),
+    [bean, roasterSettings]
+  );
+
+  const roasterLogo = useMemo(() => {
     if (!bean.name || bean.image) {
-      // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
-      return;
+      return null;
     }
 
-    const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
-      const logo = getRoasterLogoSync(roasterName);
-      setRoasterLogo(logo || null);
+      return getRoasterLogoSync(roasterName) || null;
     }
-  }, [bean.name, bean.image, bean.roaster, roasterSettings]);
+
+    return null;
+  }, [bean.name, bean.image, roasterName]);
+
+  const imageSource = bean.image || roasterLogo;
+  const hasImageError = imageError.source === imageSource && imageError.failed;
 
   // 设置默认值
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
@@ -323,8 +331,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   // 获取完整内容（不区分展开/收起状态）
   const getFullNotesText = (): string => {
     const hasFlavor = showFlavorInfo && bean.flavor?.length;
-    const hasNotes =
-      showNoteContent && bean.notes && bean.notes.trim() !== '';
+    const hasNotes = showNoteContent && bean.notes && bean.notes.trim() !== '';
 
     if (hasFlavor && hasNotes) {
       return `${bean.flavor!.join(' · ')}\n${bean.notes!}`;
@@ -399,19 +406,19 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
           <div
             className="relative size-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
             onClick={() => {
-              if ((bean.image || roasterLogo) && !imageError) {
+              if (imageSource && !hasImageError) {
                 openImageViewer({
-                  url: bean.image || roasterLogo || '',
+                  url: imageSource,
                   alt: bean.image
                     ? bean.name || '咖啡豆图片'
-                    : getRoasterName(bean, roasterSettings) + ' 烘焙商图标',
+                    : `${roasterName} 烘焙商图标`,
                   backUrl: bean.backImage,
                 });
               }
             }}
             data-click-area="image"
           >
-            {bean.image && !imageError ? (
+            {bean.image && !hasImageError ? (
               <Image
                 src={bean.image}
                 alt={bean.name || '咖啡豆图片'}
@@ -421,24 +428,26 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                 style={{ width: '100%', height: '100%' }}
                 className="object-cover"
                 sizes="48px"
-                loading="lazy"
-                onError={() => setImageError(true)}
-                placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                loading="eager"
+                onError={() =>
+                  setImageError({ source: bean.image || null, failed: true })
+                }
               />
-            ) : roasterLogo && !imageError ? (
+            ) : roasterLogo && !hasImageError ? (
               // 显示烘焙商图标
               <Image
                 src={roasterLogo}
-                alt={getRoasterName(bean, roasterSettings) || '烘焙商图标'}
+                alt={roasterName || '烘焙商图标'}
                 height={48}
                 width={48}
                 unoptimized
                 style={{ width: '100%', height: '100%' }}
                 className="object-cover"
                 sizes="48px"
-                loading="lazy"
-                onError={() => setImageError(true)}
+                loading="eager"
+                onError={() =>
+                  setImageError({ source: roasterLogo, failed: true })
+                }
               />
             ) : (
               // 默认显示首字符

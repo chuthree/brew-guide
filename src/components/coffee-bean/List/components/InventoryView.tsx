@@ -8,11 +8,45 @@ import ImageFlowView from './ImageFlowView';
 import TableView, { TableColumnKey } from './TableView';
 import RemainingEditor from './RemainingEditor';
 import { showToast } from '@/components/common/feedback/LightToast';
+import {
+  buildInventoryVirtuosoData,
+  getInventoryVirtuosoItemKey,
+} from './inventoryVirtualization';
 
 // 显示模式类型
 export type DisplayMode = 'list' | 'imageFlow' | 'table';
 
 // 已移除手动分页，改用 react-virtuoso 虚拟列表
+
+type VirtuosoListProps = React.HTMLAttributes<HTMLDivElement> & {
+  ref?: React.Ref<HTMLDivElement>;
+};
+
+const InventoryVirtuosoList = ({
+  style,
+  children,
+  ref,
+  ...props
+}: VirtuosoListProps) => (
+  <div
+    ref={ref}
+    style={style}
+    className="mx-6 flex flex-col gap-y-3.5"
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+const InventoryVirtuosoHeader = () => <div className="h-5" />;
+
+const INVENTORY_VIRTUOSO_COMPONENTS = {
+  List: InventoryVirtuosoList,
+  Header: InventoryVirtuosoHeader,
+};
+const INVENTORY_VIRTUOSO_OVERSCAN = { top: 240, bottom: 480 };
+const EMPTY_EXPANDED_NOTES: Record<string, boolean> = {};
+const EMPTY_SELECTED_BEANS: string[] = [];
 
 /** 获取空状态提示消息 */
 const getEmptyStateMessage = ({
@@ -130,10 +164,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   isImageFlowMode = false,
   displayMode: externalDisplayMode,
   tableVisibleColumns,
-  expandedNotes = {},
+  expandedNotes = EMPTY_EXPANDED_NOTES,
   onNotesExpandToggle,
   isShareMode = false,
-  selectedBeans = [],
+  selectedBeans = EMPTY_SELECTED_BEANS,
   onToggleSelect,
   settings,
   scrollParentRef,
@@ -180,8 +214,6 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     });
   };
 
-  const [_rerenderTick, setRerenderTick] = useState(0);
-
   const handleQuickDecrement = async (decrementAmount: number) => {
     if (!editingRemaining) return;
 
@@ -191,12 +223,6 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     try {
       const result = await onQuickDecrement(beanId, value, decrementAmount);
       if (result.success) {
-        const updatedBean = filteredBeans.find(b => b.id === beanId);
-        if (updatedBean) {
-          // 乐观更新本地对象并触发一次重新渲染
-          updatedBean.remaining = result.value || '0';
-          setRerenderTick(t => t + 1);
-        }
         // 如果咖啡豆用完了，通知父组件
         if (result.reducedToZero && onBeanReducedToZero) {
           onBeanReducedToZero();
@@ -227,31 +253,12 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   // 兼容之前编辑剩余量时的就地更新
   // 虚拟列表场景下直接依赖 filteredBeans 的外部更新即可
 
-  // 构建虚拟列表的数据结构
-  // 包含正常豆子、分割线（如果有已用完的豆子）、已用完的豆子
   const virtuosoData = React.useMemo(() => {
-    const items: Array<
-      { type: 'bean'; bean: ExtendedCoffeeBean } | { type: 'divider' }
-    > = [];
-
-    // 添加正常豆子
-    filteredBeans.forEach(bean => {
-      items.push({ type: 'bean', bean });
-    });
-
-    // 只有在同时存在正常豆子和已用完的豆子时才显示分割线
-    if (showEmptyBeans && emptyBeans.length > 0 && filteredBeans.length > 0) {
-      items.push({ type: 'divider' });
-    }
-
-    // 添加已用完的豆子
-    if (showEmptyBeans && emptyBeans.length > 0) {
-      emptyBeans.forEach(bean => {
-        items.push({ type: 'bean', bean });
-      });
-    }
-
-    return items;
+    return buildInventoryVirtuosoData(
+      filteredBeans,
+      emptyBeans,
+      showEmptyBeans
+    );
   }, [filteredBeans, emptyBeans, showEmptyBeans]);
 
   // 判断是否为生豆
@@ -325,66 +332,43 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       ) : (
         <div className="pb-64">
-          {(() => {
-            const VirtuosoList = React.forwardRef<
-              HTMLDivElement,
-              React.HTMLAttributes<HTMLDivElement>
-            >(({ style, children, ...props }, ref) => (
-              <div
-                ref={ref}
-                style={style}
-                className="mx-6 flex flex-col gap-y-3.5"
-                {...props}
-              >
-                {children}
-              </div>
-            ));
-            VirtuosoList.displayName = 'VirtuosoList';
+          <Virtuoso
+            data={virtuosoData}
+            customScrollParent={scrollParentRef}
+            components={INVENTORY_VIRTUOSO_COMPONENTS}
+            computeItemKey={getInventoryVirtuosoItemKey}
+            increaseViewportBy={INVENTORY_VIRTUOSO_OVERSCAN}
+            itemContent={(_index, item) => {
+              if (item.type === 'divider') {
+                return (
+                  <div className="relative -mx-6 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
+                    </div>
+                    <div className="relative bg-neutral-50 px-4 text-xs font-medium text-neutral-400 dark:bg-neutral-900 dark:text-neutral-700">
+                      用完的咖啡豆
+                    </div>
+                  </div>
+                );
+              }
 
-            return (
-              <Virtuoso
-                data={virtuosoData}
-                customScrollParent={scrollParentRef}
-                components={{
-                  List: VirtuosoList,
-                  Header: () => <div className="h-5" />,
-                }}
-                itemContent={(_index, item) => {
-                  if (item.type === 'divider') {
-                    // 渲染分割线
-                    return (
-                      <div className="relative -mx-6 flex items-center justify-center">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
-                        </div>
-                        <div className="relative bg-neutral-50 px-4 text-xs font-medium text-neutral-400 dark:bg-neutral-900 dark:text-neutral-700">
-                          用完的咖啡豆
-                        </div>
-                      </div>
-                    );
-                  } else {
-                    // 渲染豆子项
-                    return (
-                      <BeanListItem
-                        key={item.bean.id}
-                        bean={item.bean}
-                        isLast={false}
-                        onRemainingClick={handleRemainingClick}
-                        onDetailClick={handleDetailClick}
-                        searchQuery={isSearching ? searchQuery : ''}
-                        isNotesExpanded={expandedNotes[item.bean.id]}
-                        onNotesExpandToggle={onNotesExpandToggle}
-                        isShareMode={isShareMode}
-                        isSelected={selectedBeans.includes(item.bean.id)}
-                        onToggleSelect={onToggleSelect}
-                        settings={settings}
-                      />
-                    );
-                  }
-                }}
-              />
-            );
-          })()}
+              return (
+                <BeanListItem
+                  bean={item.bean}
+                  isLast={false}
+                  onRemainingClick={handleRemainingClick}
+                  onDetailClick={handleDetailClick}
+                  searchQuery={isSearching ? searchQuery : ''}
+                  isNotesExpanded={expandedNotes[item.bean.id]}
+                  onNotesExpandToggle={onNotesExpandToggle}
+                  isShareMode={isShareMode}
+                  isSelected={selectedBeans.includes(item.bean.id)}
+                  onToggleSelect={onToggleSelect}
+                  settings={settings}
+                />
+              );
+            }}
+          />
         </div>
       )}
 

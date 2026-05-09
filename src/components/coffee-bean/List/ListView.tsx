@@ -27,54 +27,86 @@ import {
   getDefaultFlavorPeriodByRoastLevelSync,
 } from '@/lib/utils/flavorPeriodUtils';
 
+const LIST_VIRTUOSO_OVERSCAN = { top: 240, bottom: 480 };
+const getCoffeeBeanListItemKey = (_index: number, bean: CoffeeBean) =>
+  `bean:${bean.id}`;
+
+type VirtuosoListProps = React.HTMLAttributes<HTMLDivElement> & {
+  ref?: React.Ref<HTMLDivElement>;
+};
+
+const CoffeeBeanVirtuosoList = ({
+  style,
+  children,
+  ref,
+  ...props
+}: VirtuosoListProps) => (
+  <div ref={ref} style={style} {...props}>
+    {children}
+  </div>
+);
+
+const COFFEE_BEAN_VIRTUOSO_COMPONENTS = {
+  List: CoffeeBeanVirtuosoList,
+};
+
 // 咖啡豆图片组件（支持烘焙商图标）
 const BeanImage: React.FC<{
   bean: CoffeeBean;
-  forceRefreshKey: number;
   roasterSettings: {
     roasterFieldEnabled?: boolean;
     roasterSeparator?: ' ' | '/';
   };
-}> = ({ bean, forceRefreshKey, roasterSettings }) => {
-  const [imageError, setImageError] = useState(false);
-  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
+}> = ({ bean, roasterSettings }) => {
+  const [imageError, setImageError] = useState<{
+    source: string | null;
+    failed: boolean;
+  }>({ source: null, failed: false });
 
-  useEffect(() => {
+  const roasterName = useMemo(
+    () => getRoasterName(bean, roasterSettings),
+    [bean, roasterSettings]
+  );
+
+  const roasterLogo = useMemo(() => {
     if (!bean.name || bean.image) {
-      // 如果咖啡豆有自己的图片，不需要加载烘焙商图标
-      return;
+      return null;
     }
 
-    const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
-      const logo = getRoasterLogoSync(roasterName);
-      setRoasterLogo(logo || null);
+      return getRoasterLogoSync(roasterName) || null;
     }
-  }, [bean.name, bean.image, bean.roaster, roasterSettings]);
 
-  const roasterName = getRoasterName(bean, roasterSettings);
+    return null;
+  }, [bean.name, bean.image, roasterName]);
+
+  const imageSource = bean.image || roasterLogo;
+  const hasImageError = imageError.source === imageSource && imageError.failed;
 
   return (
     <>
-      {bean.image && !imageError ? (
+      {bean.image && !hasImageError ? (
         <Image
           src={bean.image}
           alt={bean.name || '咖啡豆图片'}
           width={56}
           height={56}
           className="h-full w-full object-cover"
-          key={`${bean.id}-${forceRefreshKey}`}
-          onError={() => setImageError(true)}
+          loading="eager"
+          onError={() =>
+            setImageError({ source: bean.image || null, failed: true })
+          }
           unoptimized
         />
-      ) : roasterLogo && !imageError ? (
+      ) : roasterLogo && !hasImageError ? (
         <Image
           src={roasterLogo}
           alt={roasterName || '烘焙商图标'}
           width={56}
           height={56}
           className="h-full w-full object-cover"
-          onError={() => setImageError(true)}
+          loading="eager"
+          onError={() => setImageError({ source: roasterLogo, failed: true })}
           unoptimized
         />
       ) : (
@@ -109,7 +141,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
   const storeInitialized = useCoffeeBeanStore(state => state.initialized);
   const loadBeans = useCoffeeBeanStore(state => state.loadBeans);
 
-  const [forceRefreshKey, setForceRefreshKey] = useState(0);
   const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // 获取烘焙商字段设置
@@ -149,7 +180,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
   useEffect(() => {
     const handleBeansUpdated = () => {
       loadBeans();
-      setForceRefreshKey(prev => prev + 1);
     };
 
     window.addEventListener('coffeeBeansUpdated', handleBeansUpdated);
@@ -368,22 +398,6 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
     }
   }, [highlightedBeanId]);
 
-  // 删除加载动画，直接显示内容
-
-  // Virtuoso 自定义 List - 移除 space-y 避免滚动计算问题
-  const VirtList = React.useMemo(() => {
-    const Cmp = React.forwardRef<
-      HTMLDivElement,
-      React.HTMLAttributes<HTMLDivElement>
-    >(({ style, children, ...props }, ref) => (
-      <div ref={ref} style={style} {...props}>
-        {children}
-      </div>
-    ));
-    Cmp.displayName = 'CoffeeBeanVirtuosoList';
-    return Cmp;
-  }, []);
-
   return (
     <div className="pb-20">
       {/* 添加"不选择咖啡豆"选项 */}
@@ -395,7 +409,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
           <div className="flex gap-3">
             {/* 左侧图标区域 - 实线边框，空内容 */}
             <div className="relative self-start">
-              <div className="relative h-14 w-14 shrink-0 rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
+              <div className="relative size-14 shrink-0 rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
                 {/* 空内容，表示"不选择" */}
               </div>
             </div>
@@ -420,7 +434,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
       {filteredBeans.length === 0 && searchQuery.trim() !== '' && (
         <div className="flex gap-3">
           {/* 左侧占位区域 - 与咖啡豆图片保持一致的尺寸 */}
-          <div className="h-14 w-14 shrink-0"></div>
+          <div className="size-14 shrink-0"></div>
 
           {/* 右侧内容区域 */}
           <div className="flex h-14 min-w-0 flex-1 flex-col justify-center">
@@ -434,7 +448,9 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
       <Virtuoso
         customScrollParent={scrollParentRef}
         data={filteredBeans}
-        components={{ List: VirtList }}
+        components={COFFEE_BEAN_VIRTUOSO_COMPONENTS}
+        computeItemKey={getCoffeeBeanListItemKey}
+        increaseViewportBy={LIST_VIRTUOSO_OVERSCAN}
         itemContent={(_index, bean) => {
           const flavorInfo = getFlavorInfo(bean);
           const displayTitle = formatBeanDisplayName(bean, roasterSettings);
@@ -447,12 +463,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
             >
               <div className="flex gap-3">
                 <div className="relative self-start">
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
-                    <BeanImage
-                      bean={bean}
-                      forceRefreshKey={forceRefreshKey}
-                      roasterSettings={roasterSettings}
-                    />
+                  <div className="relative size-14 shrink-0 overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20">
+                    <BeanImage bean={bean} roasterSettings={roasterSettings} />
                   </div>
 
                   {showStatusDots &&

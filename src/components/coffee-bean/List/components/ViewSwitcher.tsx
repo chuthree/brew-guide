@@ -811,7 +811,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   const newLocal =
     'shrink-0 bg-neutral-200/30 px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-400 transition-colors dark:bg-neutral-800/50 dark:text-neutral-400';
   return (
-    <div className="sticky top-0 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
+    <div className="sticky top-0 flex-none space-y-6 z-20 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
       {/* 视图切换与筛选栏 - 统一布局 */}
       <div className="mb-6 flex items-center justify-between px-6">
         <div className="flex items-center space-x-3">
