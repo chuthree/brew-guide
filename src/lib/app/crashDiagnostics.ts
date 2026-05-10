@@ -8,6 +8,9 @@ const NON_FATAL_BROWSER_ERROR_PHASES = new Set([
   'window-error',
   'unhandled-rejection',
 ]);
+const IGNORED_BROWSER_ERROR_PATTERNS = [
+  /Paper Shaders: image for uniform \S+ must be fully loaded/i,
+];
 
 type JsonValue =
   | string
@@ -186,23 +189,35 @@ const isUnexpectedPreviousSession = (
 ): boolean => {
   if (!session) return false;
 
-  return session.startupState !== 'ready' || Boolean(session.nativeCrash);
+  if (session.nativeCrash) return true;
+  if (isIgnoredBrowserError(session.fatalError)) return false;
+
+  return session.startupState !== 'ready';
 };
 
-const isRecoveredBrowserErrorReport = (
+const isNonFatalBrowserError = (error: CrashErrorRecord | undefined): boolean =>
+  Boolean(error && NON_FATAL_BROWSER_ERROR_PHASES.has(error.phase));
+
+const isIgnoredBrowserError = (error: CrashErrorRecord | undefined): boolean =>
+  Boolean(
+    error &&
+    isNonFatalBrowserError(error) &&
+    IGNORED_BROWSER_ERROR_PATTERNS.some(pattern => pattern.test(error.message))
+  );
+
+export const shouldShowCrashDiagnosticReport = (
   report: CrashDiagnosticReport | null
 ): boolean => {
   if (!report) return false;
 
   const { session } = report;
 
-  return (
+  if (session.nativeCrash) return true;
+  if (isIgnoredBrowserError(session.fatalError)) return false;
+
+  return !(
     session.startupState === 'ready' &&
-    !session.nativeCrash &&
-    Boolean(
-      session.fatalError &&
-      NON_FATAL_BROWSER_ERROR_PHASES.has(session.fatalError.phase)
-    )
+    isNonFatalBrowserError(session.fatalError)
   );
 };
 
@@ -263,9 +278,9 @@ export async function installCrashDiagnostics(): Promise<void> {
       readStorageValue<CrashDiagnosticSession>(CURRENT_SESSION_KEY),
       readStorageValue<CrashDiagnosticReport>(LAST_REPORT_KEY),
     ]);
-    const existingReport = isRecoveredBrowserErrorReport(storedReport)
-      ? null
-      : storedReport;
+    const existingReport = shouldShowCrashDiagnosticReport(storedReport)
+      ? storedReport
+      : null;
 
     if (storedReport && !existingReport) {
       await removeStorageValue(LAST_REPORT_KEY);
@@ -398,7 +413,7 @@ export function recordObservedBrowserError(
 export async function getCrashDiagnosticReport(): Promise<CrashDiagnosticReport | null> {
   const report = await readStorageValue<CrashDiagnosticReport>(LAST_REPORT_KEY);
 
-  if (isRecoveredBrowserErrorReport(report)) {
+  if (!shouldShowCrashDiagnosticReport(report)) {
     await removeStorageValue(LAST_REPORT_KEY);
     return null;
   }

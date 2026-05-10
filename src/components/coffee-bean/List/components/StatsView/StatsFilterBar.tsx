@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useRef, useEffect } from 'react';
 import { AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateGroupingMode } from './types';
-import YearlyReviewDrawer from './YearlyReviewDrawer';
+
+const YearlyReviewDrawer = React.lazy(() => import('./YearlyReviewDrawer'));
 
 export const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
   year: '按年统计',
@@ -504,11 +505,14 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* 年度回顾抽屉 */}
-      <YearlyReviewDrawer
-        isOpen={isYearlyReviewOpen}
-        onClose={() => setIsYearlyReviewOpen(false)}
-      />
+      {isYearlyReviewOpen && (
+        <Suspense fallback={null}>
+          <YearlyReviewDrawer
+            isOpen={isYearlyReviewOpen}
+            onClose={() => setIsYearlyReviewOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

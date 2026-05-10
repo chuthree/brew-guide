@@ -187,26 +187,6 @@ const YearlyReviewDrawer: React.FC<YearlyReviewDrawerProps> = ({
 
   return (
     <>
-      {/* 预加载 GrainGradient - 1px 不可见像素提前初始化 WebGL shader */}
-      {!isOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            width: 1,
-            height: 1,
-            opacity: 0,
-            pointerEvents: 'none',
-            overflow: 'hidden',
-          }}
-          aria-hidden="true"
-        >
-          <GrainGradient
-            colors={WELCOME_THEME.colors}
-            colorBack={WELCOME_THEME.colors[2]}
-            style={{ width: 1, height: 1 }}
-          />
-        </div>
-      )}
       <Drawer.Root
         open={isOpen}
         onOpenChange={handleOpenChange}
