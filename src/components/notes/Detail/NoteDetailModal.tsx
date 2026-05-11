@@ -33,7 +33,7 @@ import {
   resolveNoteBean,
   resolveNoteBeanDisplayName,
   resolveNoteEquipmentName,
-  getNoteBeanAgingDays,
+  getNoteBeanAgingDaysForNote,
 } from '@/lib/notes/noteDisplay';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
 
@@ -477,9 +477,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const beanAgingDays = useMemo(() => {
     if (!showBeanAgingDaysInNote || !note) return null;
 
-    return getNoteBeanAgingDays(
-      beanInfo?.roastDate || note.coffeeBeanInfo?.roastDate
-    );
+    return getNoteBeanAgingDaysForNote(note, beanInfo);
   }, [
     beanInfo?.roastDate,
     note,

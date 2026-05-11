@@ -207,3 +207,13 @@ export const getNoteBeanAgingDays = (
 
   return Math.max(0, days);
 };
+
+export const getNoteBeanAgingDaysForNote = (
+  note: Pick<BrewingNote, 'timestamp' | 'coffeeBeanInfo'>,
+  bean?: Pick<CoffeeBean, 'roastDate'> | null
+): number | null => {
+  const roastDate = bean?.roastDate || note.coffeeBeanInfo?.roastDate;
+  if (!note.timestamp) return null;
+
+  return getNoteBeanAgingDays(roastDate, new Date(note.timestamp));
+};
