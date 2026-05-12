@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { saveImageToAndroidGallery } from './nativeGallerySaver';
 
 /**
  * 分享选项接口
@@ -36,6 +37,14 @@ export class TempFileManager {
       link.download = `brew-guide-${new Date().getTime()}.png`;
       link.href = imageData;
       link.click();
+      return;
+    }
+
+    if (Capacitor.getPlatform() === 'android') {
+      await saveImageToAndroidGallery(
+        imageData,
+        `brew-guide-${new Date().getTime()}`
+      );
       return;
     }
 
