@@ -84,6 +84,19 @@ CREATE INDEX IF NOT EXISTS idx_custom_methods_user_id ON custom_methods(user_id)
 CREATE INDEX IF NOT EXISTS idx_custom_methods_active ON custom_methods(user_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
+-- ==================== Data API 权限 ====================
+
+-- 个人自建 Supabase 项目使用 anon key 访问 Data API，需要显式授权。
+GRANT USAGE ON SCHEMA public TO anon;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+  public.coffee_beans,
+  public.brewing_notes,
+  public.custom_equipments,
+  public.custom_methods,
+  public.user_settings
+TO anon;
+
 -- ==================== RLS 策略 ====================
 
 ALTER TABLE coffee_beans ENABLE ROW LEVEL SECURITY;
