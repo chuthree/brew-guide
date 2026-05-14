@@ -6,7 +6,7 @@ import { KeyboardResize, KeyboardStyle } from '@capacitor/keyboard';
 const config: CapacitorConfig = {
   appId: 'com.brewguide.online',
   appName: 'BrewGuide(OL)',
-  webDir: 'out',
+  webDir: 'web',
   server: {
     url: 'https://coffee.chu3.top/',
     cleartext: false,
