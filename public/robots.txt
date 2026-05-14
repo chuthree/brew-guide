@@ -1,6 +1,0 @@
-# https://coffee.chu3.top/ robots.txt
-User-agent: *
-Allow: /
-
-# 网站地图
-Sitemap: https://coffee.chu3.top/sitemap.xml 
