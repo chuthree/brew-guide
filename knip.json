@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignoreExportsUsedInFile": true,
   "ignore": ["eslint.config.mjs", "android/app/src/main/assets/**"],
-  "ignoreDependencies": ["eslint-config-next"],
+  "ignoreDependencies": ["@svgr/webpack", "eslint-config-next"],
   "next": {
     "entry": [
       "src/app/**/page.tsx",

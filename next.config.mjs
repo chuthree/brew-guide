@@ -1,6 +1,10 @@
 // Next.js 配置
 // PWA Service Worker 由 scripts/generate-sw.mjs 在构建后生成（使用 Google Workbox）
 import { execSync } from 'node:child_process';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const projectRoot = dirname(fileURLToPath(import.meta.url));
 
 function readGitShortSha() {
   if (process.env.NEXT_PUBLIC_APP_GIT_SHA) {
@@ -50,6 +54,7 @@ const nextConfig = {
 
   // Turbopack 配置
   turbopack: {
+    root: projectRoot,
     rules: {
       // SVGR 支持 - 将 SVG 转换为 React 组件
       '*.svg': {
