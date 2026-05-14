@@ -81,9 +81,18 @@ export async function createRepurchaseBean(
   // 获取下一个可用编号
   const nextNumber = getNextAvailableNumber(baseName, allBeans);
 
-  // 复制所有数据，只修改名称、剩余量和烘焙日期
+  // 复制基础数据，仅保留适合续购继承的字段
+  // 评分属于上一次购买的历史记录，不应随新批次继承
+  const {
+    id: _id,
+    timestamp: _timestamp,
+    overallRating: _overallRating,
+    ratingNotes: _ratingNotes,
+    ...repurchaseSourceBean
+  } = sourceBean;
+
   const newBeanData: Omit<CoffeeBean, 'id' | 'timestamp'> = {
-    ...sourceBean,
+    ...repurchaseSourceBean,
     // 更新名称编号
     name: `${baseName} #${nextNumber}`,
     // 剩余量改为总量
@@ -91,10 +100,6 @@ export async function createRepurchaseBean(
     // 清除烘焙日期
     roastDate: '',
   };
-
-  // 移除 id 和 timestamp（不应该被复制）
-  delete (newBeanData as any).id;
-  delete (newBeanData as any).timestamp;
 
   return newBeanData;
 }
