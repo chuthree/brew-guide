@@ -33,6 +33,8 @@ interface AutocompleteInputProps {
   // 新增：自定义预设标记和预设删除功能
   isCustomPreset?: (value: string) => boolean;
   onRemovePreset?: (value: string) => void;
+  onSuggestionSelect?: (value: string) => void;
+  suggestionSelectMode?: 'fill' | 'commit';
   // 新增：回车键回调
   onEnter?: () => void;
 }
@@ -59,6 +61,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   // 新增：自定义预设标记和预设删除功能
   isCustomPreset = () => false,
   onRemovePreset,
+  onSuggestionSelect,
+  suggestionSelectMode = 'fill',
   // 新增：回车键回调
   onEnter,
 }) => {
@@ -202,8 +206,16 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   // 处理选择建议
   const handleSelectSuggestion = (selectedValue: string) => {
-    setInputValue(selectedValue);
-    onChange(selectedValue);
+    onSuggestionSelect?.(selectedValue);
+
+    if (suggestionSelectMode === 'commit') {
+      setInputValue('');
+      onChange('');
+    } else {
+      setInputValue(selectedValue);
+      onChange(selectedValue);
+    }
+
     setOpen(false);
     setFilteredSuggestions([]); // 清空过滤后的建议列表
     setJustSelected(true); // 标记用户刚选择过建议项

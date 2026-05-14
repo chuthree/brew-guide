@@ -77,6 +77,8 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
                 tag => !bean.flavor?.includes(tag)
               )}
               className="w-full border-none"
+              onSuggestionSelect={onAddFlavor}
+              suggestionSelectMode="commit"
               onBlur={() => flavorInput.trim() && onAddFlavor()}
               onEnter={() => flavorInput.trim() && onAddFlavor()}
             />
