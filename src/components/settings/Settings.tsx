@@ -604,7 +604,7 @@ const Settings: React.FC<SettingsProps> = ({
                           <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
                             <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
                               <Image
-                                src="/images/content/group-code.webp"
+                                src="/images/content/group-code.jpg"
                                 alt="交流群二维码"
                                 width={200}
                                 height={200}
@@ -612,7 +612,7 @@ const Settings: React.FC<SettingsProps> = ({
                               />
                             </div>
                             <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                              欢迎加群～～～
+                              群满 200 人哩，加开发者拉你进群吧
                               {confirmingHide === 'group' ? (
                                 <span data-hide-confirm>
                                   {' - '}
