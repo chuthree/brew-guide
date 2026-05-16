@@ -14,14 +14,14 @@ const DROPDOWN_ITEM_HEIGHT = 32;
 const DROPDOWN_MAX_HEIGHT = 280;
 const DROPDOWN_OVERSCAN = 4;
 
-interface SuggestionDropdownProps {
+interface SuggestionDropdownProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
   suggestions: string[];
   onSelect: (value: string) => void;
   isRemovableSuggestion?: (value: string) => boolean;
   onRemoveSuggestion?: (value: string) => void;
   className?: string;
   style?: React.CSSProperties;
-  onTouchStart?: (event: React.TouchEvent<HTMLDivElement>) => void;
 }
 
 const SuggestionDropdown = React.forwardRef<
@@ -37,6 +37,7 @@ const SuggestionDropdown = React.forwardRef<
       className,
       style,
       onTouchStart,
+      ...dropdownProps
     },
     ref
   ) => {
@@ -88,6 +89,7 @@ const SuggestionDropdown = React.forwardRef<
 
     return (
       <div
+        {...dropdownProps}
         ref={scrollRef}
         onTouchStart={onTouchStart}
         onScroll={event => setScrollTop(event.currentTarget.scrollTop)}

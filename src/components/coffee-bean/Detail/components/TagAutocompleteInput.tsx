@@ -1,8 +1,25 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { calcInputWidth } from '../utils';
 import SuggestionDropdown from '@/components/common/forms/SuggestionDropdown';
+import {
+  autoUpdate,
+  flip,
+  FloatingPortal,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from '@floating-ui/react';
 
 interface TagAutocompleteInputProps {
   placeholder: string;
@@ -35,6 +52,31 @@ const TagAutocompleteInput: React.FC<TagAutocompleteInputProps> = ({
   );
   const closeTimerRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { refs, floatingStyles, context } = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
+    placement: 'bottom-start',
+    middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  });
+  const dismiss = useDismiss(context);
+  const role = useRole(context, { role: 'listbox' });
+  const { getFloatingProps } = useInteractions([dismiss, role]);
+
+  const setInputElement = useCallback(
+    (node: HTMLInputElement | null) => {
+      inputRef.current = node;
+      refs.setReference(node);
+    },
+    [refs]
+  );
+
+  const setFloatingElement = useCallback(
+    (node: HTMLDivElement | null) => {
+      refs.setFloating(node);
+    },
+    [refs]
+  );
 
   const filteredSuggestions = useMemo(() => {
     const query = getActiveSuggestionQuery(inputValue).toLowerCase();
@@ -88,7 +130,7 @@ const TagAutocompleteInput: React.FC<TagAutocompleteInputProps> = ({
   return (
     <span className="relative inline-flex max-w-full">
       <input
-        ref={inputRef}
+        ref={setInputElement}
         type="text"
         value={inputValue}
         placeholder={placeholder}
@@ -131,30 +173,38 @@ const TagAutocompleteInput: React.FC<TagAutocompleteInputProps> = ({
       />
 
       {isOpen && filteredSuggestions.length > 0 && (
-        <SuggestionDropdown
-          suggestions={filteredSuggestions}
-          onSelect={suggestion => {
-            commitValue(suggestion);
-            inputRef.current?.focus();
-          }}
-          isRemovableSuggestion={isCustomPreset}
-          onRemoveSuggestion={
-            onRemovePreset
-              ? suggestion => {
-                  setRemovedSuggestions(current => {
-                    const next = new Set(current);
-                    next.add(suggestion);
-                    return next;
-                  });
-                  onRemovePreset(suggestion);
-                  if (inputValue === suggestion) {
-                    setInputValue('');
+        <FloatingPortal>
+          <SuggestionDropdown
+            ref={setFloatingElement}
+            suggestions={filteredSuggestions}
+            onSelect={suggestion => {
+              commitValue(suggestion);
+              inputRef.current?.focus();
+            }}
+            isRemovableSuggestion={isCustomPreset}
+            onRemoveSuggestion={
+              onRemovePreset
+                ? suggestion => {
+                    setRemovedSuggestions(current => {
+                      const next = new Set(current);
+                      next.add(suggestion);
+                      return next;
+                    });
+                    onRemovePreset(suggestion);
+                    if (inputValue === suggestion) {
+                      setInputValue('');
+                    }
                   }
-                }
-              : undefined
-          }
-          className="top-full right-auto left-0 min-w-32"
-        />
+                : undefined
+            }
+            style={{
+              ...floatingStyles,
+              zIndex: 50,
+              minWidth: 128,
+            }}
+            {...getFloatingProps()}
+          />
+        </FloatingPortal>
       )}
     </span>
   );
