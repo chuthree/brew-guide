@@ -4,18 +4,28 @@ import React, { useMemo } from 'react';
 import { CoffeeBean } from '@/types/app';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { ArrowRight, ChevronLeft } from 'lucide-react';
+import { showToast } from '@/components/common/feedback/LightToast';
 import {
   DEFAULT_ORIGINS,
+  DEFAULT_ESTATES,
   DEFAULT_PROCESSES,
   DEFAULT_VARIETIES,
   addCustomPreset,
 } from '@/components/coffee-bean/Form/constants';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
-import { prepareCoffeeBeanRoasterFieldsForSave } from '@/lib/utils/coffeeBeanUtils';
+import {
+  normalizeDelimitedTextList,
+  prepareCoffeeBeanRoasterFieldsForSave,
+} from '@/lib/utils/coffeeBeanUtils';
+import {
+  isOptionalCoffeeBeanAmount,
+  parseCoffeeBeanAmount,
+} from '@/lib/coffee-beans/capacityAdjustment';
 
 interface HeaderBarProps {
   isAddMode: boolean;
+  isEditMode: boolean;
   isGreenBean: boolean;
   isTitleVisible: boolean;
   bean: CoffeeBean | null;
@@ -34,12 +44,19 @@ interface HeaderBarProps {
     roastedBeanTemplate: Omit<CoffeeBean, 'id' | 'timestamp'>
   ) => void;
   onConvertToGreen?: (bean: CoffeeBean) => void;
-  onSaveNew?: (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => void;
+  onSaveNew?: (
+    bean: Omit<CoffeeBean, 'id' | 'timestamp'>
+  ) => void | Promise<void>;
+  onSaveEdit?: (
+    bean: Omit<CoffeeBean, 'id' | 'timestamp'>
+  ) => void | Promise<void>;
+  onSaveComplete?: () => void;
   onShowDeleteConfirm: () => void;
 }
 
 const HeaderBar: React.FC<HeaderBarProps> = ({
   isAddMode,
+  isEditMode,
   isGreenBean,
   isTitleVisible,
   bean,
@@ -56,9 +73,41 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   onRoast,
   onConvertToGreen,
   onSaveNew,
+  onSaveEdit,
+  onSaveComplete,
   onShowDeleteConfirm,
 }) => {
-  const canSave = !!tempBean.name?.trim();
+  const [isSaving, setIsSaving] = React.useState(false);
+  const hasValidBeanType =
+    tempBean.beanType === undefined ||
+    tempBean.beanType === 'filter' ||
+    tempBean.beanType === 'espresso' ||
+    tempBean.beanType === 'omni';
+  const capacityAmount = parseCoffeeBeanAmount(tempBean.capacity);
+  const remainingAmount = parseCoffeeBeanAmount(tempBean.remaining);
+  const hasValidRemaining =
+    capacityAmount === null ||
+    remainingAmount === null ||
+    remainingAmount <= capacityAmount;
+  const components = tempBean.blendComponents || [];
+  const hasValidBlendPercentages =
+    components.every(
+      component =>
+        component.percentage === undefined ||
+        (component.percentage >= 0 && component.percentage <= 100)
+    ) &&
+    components.reduce(
+      (sum, component) => sum + (component.percentage || 0),
+      0
+    ) <= 100;
+  const canSave =
+    !!tempBean.name?.trim() &&
+    hasValidBeanType &&
+    isOptionalCoffeeBeanAmount(tempBean.capacity) &&
+    isOptionalCoffeeBeanAmount(tempBean.remaining) &&
+    isOptionalCoffeeBeanAmount(tempBean.price) &&
+    hasValidRemaining &&
+    hasValidBlendPercentages;
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -78,31 +127,70 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   // 获取显示名称
   const displayName = bean ? formatBeanDisplayName(bean, roasterSettings) : '';
 
-  const handleSave = () => {
-    if (!canSave) return;
+  const handleSave = async () => {
+    if (!canSave || isSaving) return;
 
-    // 保存自定义的预设值
-    const components = tempBean.blendComponents || [];
+    setIsSaving(true);
 
-    components.forEach(component => {
-      if (component.origin && !DEFAULT_ORIGINS.includes(component.origin)) {
-        addCustomPreset('origins', component.origin);
+    try {
+      // 保存自定义的预设值
+      const addPresetValues = (
+        key: 'origins' | 'estates' | 'processes' | 'varieties',
+        defaultValues: string[],
+        value?: string
+      ) => {
+        normalizeDelimitedTextList(value).forEach(item => {
+          if (!defaultValues.includes(item)) {
+            addCustomPreset(key, item);
+          }
+        });
+      };
+
+      components.forEach(component => {
+        addPresetValues('origins', DEFAULT_ORIGINS, component.origin);
+        addPresetValues('estates', DEFAULT_ESTATES, component.estate);
+        addPresetValues('processes', DEFAULT_PROCESSES, component.process);
+        addPresetValues('varieties', DEFAULT_VARIETIES, component.variety);
+      });
+
+      if (tempBean.roaster?.trim()) {
+        addCustomPreset('roasters', tempBean.roaster);
       }
-      if (component.process && !DEFAULT_PROCESSES.includes(component.process)) {
-        addCustomPreset('processes', component.process);
-      }
-      if (component.variety && !DEFAULT_VARIETIES.includes(component.variety)) {
-        addCustomPreset('varieties', component.variety);
-      }
-    });
 
-    const beanToSave = prepareCoffeeBeanRoasterFieldsForSave(
-      tempBean as Omit<CoffeeBean, 'id' | 'timestamp'>,
-      { roasterFieldEnabled, separator: roasterSeparator }
-    );
+      if (tempBean.roastLevel?.trim()) {
+        addCustomPreset('roastLevels', tempBean.roastLevel);
+      }
 
-    onSaveNew?.(beanToSave);
-    onClose();
+      tempBean.flavor?.forEach(flavor => {
+        addCustomPreset('flavors', flavor);
+      });
+
+      const beanToSave = prepareCoffeeBeanRoasterFieldsForSave(
+        tempBean as Omit<CoffeeBean, 'id' | 'timestamp'>,
+        { roasterFieldEnabled, separator: roasterSeparator }
+      ) as Partial<CoffeeBean>;
+      const { id: _id, timestamp: _timestamp, ...beanDraft } = beanToSave;
+
+      if (isEditMode) {
+        await onSaveEdit?.(beanDraft as Omit<CoffeeBean, 'id' | 'timestamp'>);
+      } else {
+        await onSaveNew?.(beanDraft as Omit<CoffeeBean, 'id' | 'timestamp'>);
+      }
+
+      if (onSaveComplete) {
+        onSaveComplete();
+      } else {
+        onClose();
+      }
+    } catch (error) {
+      console.error('保存咖啡豆失败:', error);
+      showToast({
+        type: 'error',
+        title: '保存失败，请重试',
+        duration: 3000,
+      });
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -140,15 +228,15 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         {/* 添加模式：显示保存按钮 */}
         {isAddMode && (
           <button
-            onClick={handleSave}
-            disabled={!canSave}
+            onClick={() => void handleSave()}
+            disabled={!canSave || isSaving}
             className={`px-3 py-1 text-xs font-medium transition-colors ${
-              canSave
+              canSave && !isSaving
                 ? 'text-neutral-800 dark:text-neutral-100'
                 : 'cursor-not-allowed text-neutral-300 dark:text-neutral-600'
             }`}
           >
-            保存
+            {isSaving ? '保存中' : '保存'}
           </button>
         )}
 

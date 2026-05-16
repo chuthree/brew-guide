@@ -11,20 +11,14 @@ import {
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/coffee-bean/ui/select';
 import { DatePicker } from '@/components/common/ui/DatePicker';
 import { captureImage } from '@/lib/utils/imageCapture';
 import {
-  ROAST_LEVELS,
   getRoastProfileFromAmounts,
   getRoastProfileFromMoistureLoss,
 } from '@/lib/utils/roastProfileUtils';
+import { usePresetSuggestions } from '../hooks/usePresetSuggestions';
+import { useRoastLevelSuggestions } from '../hooks/useCoffeeBeanFieldSuggestions';
 
 interface BasicInfoProps {
   bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -97,8 +91,11 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   // 处理脱水率状态
   const [moistureLoss, setMoistureLoss] = useState('');
   const [isMoistureFocused, setIsMoistureFocused] = useState(false);
-  // 追踪剩余量输入框是否正在输入（用于延迟计算脱水率和烘焙度）
-  const [isRemainingFocused, setIsRemainingFocused] = useState(false);
+  const roasterPresetSuggestions = usePresetSuggestions(
+    'roasters',
+    roasterSuggestions
+  );
+  const roastLevelSuggestions = useRoastLevelSuggestions();
 
   const updateRoastLevel = (value: string) => {
     if (bean.roastLevel !== value) {
@@ -106,10 +103,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     }
   };
 
-  const syncRoastProfileFromAmounts = (
-    capacity: string,
-    remaining: string
-  ) => {
+  const syncRoastProfileFromAmounts = (capacity: string, remaining: string) => {
     const roastProfile = getRoastProfileFromAmounts(capacity, remaining);
     updateRoastLevel(roastProfile.roastLevel);
   };
@@ -221,8 +215,6 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
 
   // 处理剩余容量输入框失焦 - 此时才计算脱水率和烘焙度
   const handleRemainingBlur = () => {
-    setIsRemainingFocused(false);
-
     if (isInRoastingMode) {
       syncRoastProfileFromAmounts(capacityValue, remainingValue);
     }
@@ -487,9 +479,11 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
               value={bean.roaster || ''}
               onChange={onBeanChange('roaster')}
               placeholder={isGreenBean(bean) ? '生豆商名称' : '烘焙商名称'}
-              suggestions={roasterSuggestions}
+              suggestions={roasterPresetSuggestions.suggestions}
               clearable
               inputMode="text"
+              isCustomPreset={roasterPresetSuggestions.isRemovableSuggestion}
+              onRemovePreset={roasterPresetSuggestions.removeSuggestion}
             />
           </div>
           <div className="space-y-2">
@@ -551,7 +545,6 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
                 step="0.1"
                 value={remainingValue}
                 onChange={e => handleRemainingChange(e.target.value)}
-                onFocus={() => setIsRemainingFocused(true)}
                 onBlur={() => {
                   handleRemainingBlur();
                   validateRemaining();
@@ -654,21 +647,17 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
           <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
             烘焙度
           </label>
-          <Select
-            value={bean.roastLevel || undefined}
-            onValueChange={value => onBeanChange('roastLevel')(value)}
-          >
-            <SelectTrigger className="h-auto w-full rounded-none border-0 border-b border-neutral-300 bg-transparent px-0 py-2 text-base shadow-none placeholder:text-neutral-500 focus-within:border-neutral-800/50 data-[placeholder]:text-neutral-500 dark:border-neutral-700 dark:placeholder:text-neutral-400 dark:focus-within:border-neutral-400 dark:data-[placeholder]:text-neutral-400">
-              <SelectValue placeholder="选择烘焙度" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[40vh] overflow-y-auto rounded-lg border-neutral-200/70 bg-white/95 shadow-lg backdrop-blur-xs dark:border-neutral-800/70 dark:bg-neutral-900/95">
-              {ROAST_LEVELS.map(level => (
-                <SelectItem key={level} value={level}>
-                  {level}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AutocompleteInput
+            value={bean.roastLevel || ''}
+            onChange={onBeanChange('roastLevel')}
+            placeholder="选择烘焙度"
+            suggestions={roastLevelSuggestions.suggestions}
+            readOnly
+            clearable
+            isCustomPreset={roastLevelSuggestions.isRemovableSuggestion}
+            onRemovePreset={roastLevelSuggestions.removeSuggestion}
+            className="text-base"
+          />
         </div>
 
         <div className="space-y-2">

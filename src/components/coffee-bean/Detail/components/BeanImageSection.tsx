@@ -153,6 +153,28 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
         : null,
     [bean, storedFrontImage, storedBackImage]
   );
+  const hasTempFrontImage = Object.prototype.hasOwnProperty.call(
+    tempBean,
+    'image'
+  );
+  const hasTempBackImage = Object.prototype.hasOwnProperty.call(
+    tempBean,
+    'backImage'
+  );
+  const formBean = useMemo(
+    () => ({
+      ...tempBean,
+      image: hasTempFrontImage ? tempBean.image : storedFrontImage,
+      backImage: hasTempBackImage ? tempBean.backImage : storedBackImage,
+    }),
+    [
+      hasTempBackImage,
+      hasTempFrontImage,
+      storedBackImage,
+      storedFrontImage,
+      tempBean,
+    ]
+  );
 
   // 处理图片选择
   const handleImageSelect = async (
@@ -207,7 +229,7 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
       <div className="flex cursor-pointer items-end justify-center gap-3 bg-neutral-200/30 px-6 py-3 dark:bg-neutral-800/40">
         {isAddMode ? (
           <AddModeImages
-            tempBean={tempBean}
+            tempBean={formBean}
             roasterLogo={roasterLogo}
             imageError={imageError}
             setImageError={setImageError}
@@ -276,7 +298,7 @@ const AddModeImages: React.FC<{
             type="button"
             onClick={e => {
               e.stopPropagation();
-              setTempBean(prev => ({ ...prev, image: undefined }));
+              setTempBean(prev => ({ ...prev, image: '' }));
             }}
             className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500"
           >
@@ -301,7 +323,7 @@ const AddModeImages: React.FC<{
             type="button"
             onClick={e => {
               e.stopPropagation();
-              setTempBean(prev => ({ ...prev, backImage: undefined }));
+              setTempBean(prev => ({ ...prev, backImage: '' }));
             }}
             className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500"
           >
@@ -334,7 +356,7 @@ const AddModeImages: React.FC<{
             type="button"
             onClick={e => {
               e.stopPropagation();
-              setTempBean(prev => ({ ...prev, image: undefined }));
+              setTempBean(prev => ({ ...prev, image: '' }));
             }}
             className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500"
           >
@@ -395,7 +417,7 @@ const AddModeImages: React.FC<{
               type="button"
               onClick={e => {
                 e.stopPropagation();
-                setTempBean(prev => ({ ...prev, backImage: undefined }));
+                setTempBean(prev => ({ ...prev, backImage: '' }));
               }}
               className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500"
             >
@@ -450,7 +472,7 @@ const AddModeImages: React.FC<{
             type="button"
             onClick={e => {
               e.stopPropagation();
-              setTempBean(prev => ({ ...prev, backImage: undefined }));
+              setTempBean(prev => ({ ...prev, backImage: '' }));
             }}
             className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500"
           >

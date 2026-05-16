@@ -3,12 +3,20 @@
  */
 
 import type {
+  BlendComponent,
   CoffeeBean,
   PendingCoffeeBean,
   SelectableCoffeeBean,
 } from '@/types/app';
 
-const FLAVOR_SPLIT_REGEX = /[\n,，、;；]+/;
+const TEXT_LIST_SPLIT_REGEX = /[\n,，、;；]+/;
+
+const createEmptyBlendComponent = (): BlendComponent => ({
+  origin: '',
+  estate: '',
+  process: '',
+  variety: '',
+});
 
 type BeanIdentityLike = {
   id?: string | null;
@@ -97,38 +105,73 @@ export function extractCoffeeAmount(coffeeParam: string | undefined): number {
   return match ? parseFloat(match[1]) : 0;
 }
 
-/**
- * 将任意格式的风味字段规范为字符串数组
- */
-export function normalizeFlavorList(flavor: unknown): string[] {
-  if (Array.isArray(flavor)) {
-    return flavor
-      .filter((item): item is string => typeof item === 'string')
-      .map(item => item.trim())
-      .filter(Boolean);
+export function normalizeDelimitedTextList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap(item => normalizeDelimitedTextList(item));
   }
 
-  if (typeof flavor === 'string') {
-    const normalized = flavor.trim();
+  if (typeof value === 'string') {
+    const normalized = value.trim();
     if (!normalized) return [];
 
     return normalized
-      .split(FLAVOR_SPLIT_REGEX)
+      .split(TEXT_LIST_SPLIT_REGEX)
       .map(item => item.trim())
       .filter(Boolean);
   }
 
-  if (flavor && typeof flavor === 'object') {
-    const entries = Object.entries(flavor as Record<string, unknown>);
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>);
     const isArrayLikeObject =
       entries.length > 0 && entries.every(([key]) => /^\d+$/.test(key));
 
     if (isArrayLikeObject) {
-      return normalizeFlavorList(entries.map(([, value]) => value));
+      return normalizeDelimitedTextList(entries.map(([, item]) => item));
     }
   }
 
   return [];
+}
+
+export function updateBlendComponentsDelimitedField(
+  components: BlendComponent[] | undefined,
+  index: number,
+  field: Exclude<keyof BlendComponent, 'percentage'>,
+  value: string
+): BlendComponent[] {
+  const nextComponents =
+    components && components.length > 0
+      ? components.map(component => ({ ...component }))
+      : [createEmptyBlendComponent()];
+
+  while (nextComponents.length <= index) {
+    nextComponents.push(createEmptyBlendComponent());
+  }
+
+  const hasSeparator = TEXT_LIST_SPLIT_REGEX.test(value);
+  const fieldValues = hasSeparator
+    ? value.split(TEXT_LIST_SPLIT_REGEX).map(item => item.trim())
+    : [value.trim()];
+
+  while (nextComponents.length < index + fieldValues.length) {
+    nextComponents.push(createEmptyBlendComponent());
+  }
+
+  fieldValues.forEach((fieldValue, offset) => {
+    nextComponents[index + offset] = {
+      ...nextComponents[index + offset],
+      [field]: fieldValue,
+    };
+  });
+
+  return nextComponents;
+}
+
+/**
+ * 将任意格式的风味字段规范为字符串数组
+ */
+export function normalizeFlavorList(flavor: unknown): string[] {
+  return normalizeDelimitedTextList(flavor);
 }
 
 /**

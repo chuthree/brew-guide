@@ -1,3 +1,5 @@
+import { ROAST_LEVELS } from '@/lib/utils/roastProfileUtils';
+
 // 预设选项
 // 产区：咖啡生产国家及子产区
 export const DEFAULT_ORIGINS = [
@@ -544,7 +546,23 @@ export const DEFAULT_VARIETIES = [
 const isBrowser = typeof window !== 'undefined';
 
 // 从本地存储获取自定义预设
-const getCustomPresets = (key: string): string[] => {
+export type CoffeeBeanPresetKey =
+  | 'origins'
+  | 'estates'
+  | 'processes'
+  | 'varieties'
+  | 'roasters'
+  | 'flavors'
+  | 'roastLevels';
+
+export type BlendPresetKey = Extract<
+  CoffeeBeanPresetKey,
+  'origins' | 'estates' | 'processes' | 'varieties'
+>;
+
+const normalizePresetValue = (value: string) => value.trim();
+
+const getCustomPresets = (key: CoffeeBeanPresetKey): string[] => {
   if (!isBrowser) return []; // 服务器端渲染时返回空数组
 
   try {
@@ -557,7 +575,10 @@ const getCustomPresets = (key: string): string[] => {
 };
 
 // 保存自定义预设到本地存储
-const saveCustomPresets = (key: string, presets: string[]): void => {
+const saveCustomPresets = (
+  key: CoffeeBeanPresetKey,
+  presets: string[]
+): void => {
   if (!isBrowser) return; // 服务器端渲染时不执行
 
   try {
@@ -570,63 +591,155 @@ const saveCustomPresets = (key: string, presets: string[]): void => {
   }
 };
 
+const getHiddenPresets = (key: CoffeeBeanPresetKey): string[] => {
+  if (!isBrowser) return [];
+
+  try {
+    const stored = localStorage.getItem(`brew-guide:hidden-presets:${key}`);
+    return stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error(`读取隐藏${key}失败:`, e);
+    return [];
+  }
+};
+
+const saveHiddenPresets = (
+  key: CoffeeBeanPresetKey,
+  presets: string[]
+): void => {
+  if (!isBrowser) return;
+
+  try {
+    localStorage.setItem(
+      `brew-guide:hidden-presets:${key}`,
+      JSON.stringify(presets)
+    );
+  } catch (e) {
+    console.error(`保存隐藏${key}失败:`, e);
+  }
+};
+
+const getDefaultPresets = (key: CoffeeBeanPresetKey): string[] => {
+  switch (key) {
+    case 'origins':
+      return [...DEFAULT_ORIGINS];
+    case 'estates':
+      return [...DEFAULT_ESTATES];
+    case 'processes':
+      return [...DEFAULT_PROCESSES];
+    case 'varieties':
+      return [...DEFAULT_VARIETIES];
+    case 'flavors':
+      return [...FLAVOR_TAGS];
+    case 'roastLevels':
+      return [...ROAST_LEVELS];
+    case 'roasters':
+      return [];
+    default:
+      return [];
+  }
+};
+
+const isDefaultPreset = (key: CoffeeBeanPresetKey, value: string): boolean => {
+  const normalizedValue = normalizePresetValue(value);
+  return getDefaultPresets(key).includes(normalizedValue);
+};
+
+const isPresetHidden = (key: CoffeeBeanPresetKey, value: string): boolean => {
+  const normalizedValue = normalizePresetValue(value);
+  return getHiddenPresets(key).includes(normalizedValue);
+};
+
+const unhidePreset = (key: CoffeeBeanPresetKey, value: string): void => {
+  const normalizedValue = normalizePresetValue(value);
+  if (!normalizedValue || !isBrowser) return;
+
+  const hiddenPresets = getHiddenPresets(key);
+  const nextHiddenPresets = hiddenPresets.filter(
+    preset => preset !== normalizedValue
+  );
+
+  if (nextHiddenPresets.length !== hiddenPresets.length) {
+    saveHiddenPresets(key, nextHiddenPresets);
+  }
+};
+
 // 添加自定义预设
 export const addCustomPreset = (
-  key: 'origins' | 'estates' | 'processes' | 'varieties',
+  key: CoffeeBeanPresetKey,
   value: string
 ): void => {
-  if (!isBrowser || !value.trim()) return;
+  const normalizedValue = normalizePresetValue(value);
+  if (!isBrowser || !normalizedValue || isDefaultPreset(key, normalizedValue)) {
+    return;
+  }
+
+  unhidePreset(key, normalizedValue);
 
   const presets = getCustomPresets(key);
-  if (!presets.includes(value)) {
+  if (!presets.includes(normalizedValue)) {
     // 将新预设添加到数组开头，这样最新的预设会优先显示
-    presets.unshift(value);
+    presets.unshift(normalizedValue);
     saveCustomPresets(key, presets);
   }
 };
 
 // 删除自定义预设
 export const removeCustomPreset = (
-  key: 'origins' | 'estates' | 'processes' | 'varieties',
+  key: CoffeeBeanPresetKey,
   value: string
 ): void => {
-  if (!isBrowser) return;
+  const normalizedValue = normalizePresetValue(value);
+  if (!isBrowser || !normalizedValue || isDefaultPreset(key, normalizedValue)) {
+    return;
+  }
 
   const presets = getCustomPresets(key);
-  const index = presets.indexOf(value);
-  if (index !== -1) {
-    presets.splice(index, 1);
-    saveCustomPresets(key, presets);
+  const nextPresets = presets.filter(preset => preset !== normalizedValue);
+  if (nextPresets.length !== presets.length) {
+    saveCustomPresets(key, nextPresets);
+  }
+
+  const hiddenPresets = getHiddenPresets(key);
+  if (!hiddenPresets.includes(normalizedValue)) {
+    saveHiddenPresets(key, [...hiddenPresets, normalizedValue]);
   }
 };
 
 // 检查是否为自定义预设
 export const isCustomPreset = (
-  key: 'origins' | 'estates' | 'processes' | 'varieties',
+  key: CoffeeBeanPresetKey,
   value: string
 ): boolean => {
   if (!isBrowser) return false;
-  return getCustomPresets(key).includes(value);
+
+  const normalizedValue = normalizePresetValue(value);
+  return (
+    Boolean(normalizedValue) &&
+    !isDefaultPreset(key, normalizedValue) &&
+    !isPresetHidden(key, normalizedValue)
+  );
+};
+
+export const getVisiblePresetSuggestions = (
+  key: CoffeeBeanPresetKey,
+  values: string[]
+): string[] => {
+  return values.filter(value => {
+    const normalizedValue = normalizePresetValue(value);
+    return normalizedValue && !isPresetHidden(key, normalizedValue);
+  });
 };
 
 // 获取完整预设列表（自定义+默认）
-export const getFullPresets = (
-  key: 'origins' | 'estates' | 'processes' | 'varieties'
-): string[] => {
-  const defaults = {
-    origins: DEFAULT_ORIGINS,
-    estates: DEFAULT_ESTATES,
-    processes: DEFAULT_PROCESSES,
-    varieties: DEFAULT_VARIETIES,
-  };
+export const getFullPresets = (key: BlendPresetKey): string[] => {
+  const defaultPresets = getDefaultPresets(key);
   // 将自定义预设放在前面，这样用户最近添加的内容会优先显示
-  return [...getCustomPresets(key), ...defaults[key]];
+  return getVisiblePresetSuggestions(key, [
+    ...getCustomPresets(key),
+    ...defaultPresets,
+  ]);
 };
-
-// 导出合并后的预设（向后兼容）
-const ORIGINS = getFullPresets('origins');
-const PROCESSES = getFullPresets('processes');
-const VARIETIES = getFullPresets('varieties');
 
 // 预设风味标签
 export const FLAVOR_TAGS = [

@@ -1,9 +1,13 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { CoffeeBean } from '@/types/app';
 import HighlightText from '@/components/common/ui/HighlightText';
-import { ROAST_LEVELS, BEAN_TYPES } from '../types';
+import { BEAN_TYPES } from '../types';
+import BlendComponentTagRows from './BlendComponentTagRows';
+import { updateBlendComponentsDelimitedField } from '@/lib/utils/coffeeBeanUtils';
+import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
+import { useRoastLevelSuggestions } from '@/components/coffee-bean/Form/hooks/useCoffeeBeanFieldSuggestions';
 
 interface OriginInfoSectionProps {
   bean: CoffeeBean | null;
@@ -24,15 +28,19 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   handleUpdateField,
   handleRoastLevelSelect,
 }) => {
+  const flavorPeriodDayInputClass =
+    'w-10 bg-neutral-100 px-1.5 py-0.5 text-center text-xs font-medium text-neutral-700 placeholder:text-neutral-400 outline-none dark:bg-neutral-800/40 dark:text-neutral-300 dark:placeholder:text-neutral-500';
+
   const originRef = useRef<HTMLDivElement>(null);
   const estateRef = useRef<HTMLDivElement>(null);
   const processRef = useRef<HTMLDivElement>(null);
   const varietyRef = useRef<HTMLDivElement>(null);
-  const roastLevelRef = useRef<HTMLDivElement>(null);
-
-  const [showRoastLevelDropdown, setShowRoastLevelDropdown] = useState(false);
-
   const currentBean = isAddMode ? tempBean : bean;
+  const roastLevelSuggestions = useRoastLevelSuggestions();
+  const components =
+    currentBean?.blendComponents && currentBean.blendComponents.length > 0
+      ? currentBean.blendComponents
+      : [{ origin: '', estate: '', process: '', variety: '' }];
   const isMultipleBlend =
     currentBean?.blendComponents && currentBean.blendComponents.length > 1;
   const firstComponent = currentBean?.blendComponents?.[0];
@@ -43,6 +51,8 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   const process = firstComponent?.process || '';
   const variety = firstComponent?.variety || '';
   const roastLevel = currentBean?.roastLevel || '';
+  const shouldShowEstateField =
+    showEstateField || components.some(component => component.estate?.trim());
 
   // 初始化成分值
   useEffect(() => {
@@ -63,59 +73,46 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bean?.id]);
 
-  // 点击外部关闭烘焙度下拉
-  useEffect(() => {
-    if (!showRoastLevelDropdown) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        roastLevelRef.current &&
-        !roastLevelRef.current.contains(e.target as Node)
-      ) {
-        setShowRoastLevelDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showRoastLevelDropdown]);
-
   // 处理成分编辑
   const handleBlendComponentUpdate = (
+    index: number,
     field: 'origin' | 'estate' | 'process' | 'variety',
     value: string
   ) => {
-    if (!currentBean?.blendComponents) return;
-
-    const updatedComponents = [...currentBean.blendComponents];
-
-    if (updatedComponents.length === 0) {
-      updatedComponents.push({ [field]: value });
-    } else {
-      updatedComponents[0] = {
-        ...updatedComponents[0],
-        [field]: value.trim(),
-      };
-    }
+    const updatedComponents = updateBlendComponentsDelimitedField(
+      currentBean?.blendComponents,
+      index,
+      field,
+      value
+    );
 
     handleUpdateField({ blendComponents: updatedComponents });
   };
 
   const handleOriginInput = () => {
     if (originRef.current) {
-      handleBlendComponentUpdate('origin', originRef.current.textContent || '');
+      handleBlendComponentUpdate(
+        0,
+        'origin',
+        originRef.current.textContent || ''
+      );
     }
   };
 
   const handleEstateInput = () => {
     if (estateRef.current) {
-      handleBlendComponentUpdate('estate', estateRef.current.textContent || '');
+      handleBlendComponentUpdate(
+        0,
+        'estate',
+        estateRef.current.textContent || ''
+      );
     }
   };
 
   const handleProcessInput = () => {
     if (processRef.current) {
       handleBlendComponentUpdate(
+        0,
         'process',
         processRef.current.textContent || ''
       );
@@ -125,15 +122,22 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   const handleVarietyInput = () => {
     if (varietyRef.current) {
       handleBlendComponentUpdate(
+        0,
         'variety',
         varietyRef.current.textContent || ''
       );
     }
   };
 
-  const handleRoastLevelClick = (level: string) => {
-    setShowRoastLevelDropdown(false);
-    handleRoastLevelSelect(level);
+  const handleFlavorPeriodDayChange = (
+    field: 'startDay' | 'endDay',
+    value: string
+  ) => {
+    const numericValue = value.replace(/\D/g, '');
+
+    handleUpdateField({
+      [field]: numericValue ? parseInt(numericValue, 10) : undefined,
+    });
   };
 
   // 单品豆且有成分信息时显示可编辑区域
@@ -170,8 +174,16 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
         </div>
       )}
 
+      {isAddMode && (
+        <BlendComponentTagRows
+          components={components}
+          showEstateField={shouldShowEstateField}
+          onChange={handleBlendComponentUpdate}
+        />
+      )}
+
       {/* 产地 */}
-      {(isAddMode || origin) && (
+      {!isAddMode && origin && (
         <div className="flex items-start">
           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             产地
@@ -215,8 +227,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
       )}
 
       {/* 庄园 */}
-      {((isAddMode && (showEstateField || estate)) ||
-        (!isAddMode && estate)) && (
+      {!isAddMode && estate && (
         <div className="flex items-start">
           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             庄园
@@ -256,7 +267,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
       )}
 
       {/* 处理法 */}
-      {(isAddMode || process) && (
+      {!isAddMode && process && (
         <div className="flex items-start">
           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             处理法
@@ -296,7 +307,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
       )}
 
       {/* 品种 */}
-      {(isAddMode || variety) && (
+      {!isAddMode && variety && (
         <div className="flex items-start">
           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             品种
@@ -341,35 +352,18 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             烘焙度
           </div>
-          <div ref={roastLevelRef} className="relative inline-flex">
-            <span
-              onClick={() => setShowRoastLevelDropdown(!showRoastLevelDropdown)}
-              className={`cursor-pointer text-xs font-medium ${
-                isAddMode && !roastLevel
-                  ? 'text-neutral-400 dark:text-neutral-500'
-                  : 'text-neutral-800 dark:text-neutral-100'
-              }`}
-            >
-              {roastLevel || (isAddMode ? '选择烘焙度' : '')}
-            </span>
-            {showRoastLevelDropdown && (
-              <div className="absolute top-full left-0 z-50 mt-1 min-w-[100px] rounded border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
-                {ROAST_LEVELS.map(level => (
-                  <div
-                    key={level}
-                    onClick={() => handleRoastLevelClick(level)}
-                    className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
-                      level === roastLevel
-                        ? 'bg-neutral-100 text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
-                        : 'text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-700/50'
-                    }`}
-                  >
-                    {level}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <AutocompleteInput
+            value={roastLevel}
+            onChange={handleRoastLevelSelect}
+            placeholder="选择烘焙度"
+            suggestions={roastLevelSuggestions.suggestions}
+            readOnly
+            clearable
+            isCustomPreset={roastLevelSuggestions.isRemovableSuggestion}
+            onRemovePreset={roastLevelSuggestions.removeSuggestion}
+            containerClassName="w-32 space-y-0"
+            className="border-none py-0 pr-5 text-xs font-medium text-neutral-800 placeholder:text-neutral-400 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+          />
         </div>
       )}
 
@@ -390,33 +384,27 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
             ) : (
               <>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   value={currentBean?.startDay ?? ''}
                   onChange={e =>
-                    handleUpdateField({
-                      startDay: e.target.value
-                        ? parseInt(e.target.value)
-                        : undefined,
-                    })
+                    handleFlavorPeriodDayChange('startDay', e.target.value)
                   }
                   placeholder="天数"
-                  className="w-10 bg-neutral-100 px-1.5 py-0.5 text-center text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800 dark:text-neutral-300"
+                  className={flavorPeriodDayInputClass}
                 />
                 <span className="text-xs text-neutral-400">~</span>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   value={currentBean?.endDay ?? ''}
                   onChange={e =>
-                    handleUpdateField({
-                      endDay: e.target.value
-                        ? parseInt(e.target.value)
-                        : undefined,
-                    })
+                    handleFlavorPeriodDayChange('endDay', e.target.value)
                   }
                   placeholder="天数"
-                  className="w-10 bg-neutral-100 px-1.5 py-0.5 text-center text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800 dark:text-neutral-300"
+                  className={flavorPeriodDayInputClass}
                 />
                 <span className="text-xs text-neutral-400">天</span>
                 <div className="mx-1 h-3 w-px bg-neutral-200 dark:bg-neutral-700" />

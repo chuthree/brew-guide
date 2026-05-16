@@ -45,6 +45,7 @@ import ConvertToGreenDrawer from '@/components/coffee-bean/ConvertToGreenDrawer'
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import ConfirmDrawer from '@/components/common/ui/ConfirmDrawer';
 import ImageViewer from '@/components/common/ui/ImageViewer';
+import { createCapacityAdjustmentRecordIfNeeded } from '@/lib/coffee-beans/capacityAdjustment';
 
 interface ExtendedCoffeeBean extends CoffeeBean {
   blendComponents?: {
@@ -135,6 +136,8 @@ export interface AppModalsProps {
   beanDetailSearchQuery: string;
   beanDetailAddMode: boolean;
   setBeanDetailAddMode: (mode: boolean) => void;
+  beanDetailEditMode: boolean;
+  setBeanDetailEditMode: (mode: boolean) => void;
   beanDetailAddBeanState: 'green' | 'roasted';
   onCreateNoteFromBean: (bean: CoffeeBean) => void;
   onOpenNoteDetailFromBean: (detail: {
@@ -331,6 +334,8 @@ const AppModals: React.FC<AppModalsProps> = ({
   beanDetailSearchQuery,
   beanDetailAddMode,
   setBeanDetailAddMode,
+  beanDetailEditMode,
+  setBeanDetailEditMode,
   beanDetailAddBeanState,
   onCreateNoteFromBean,
   onOpenNoteDetailFromBean,
@@ -865,11 +870,14 @@ const AppModals: React.FC<AppModalsProps> = ({
           onClose={() => {
             setBeanDetailOpen(false);
             setBeanDetailAddMode(false);
+            setBeanDetailEditMode(false);
           }}
           onCreateNoteFromBean={onCreateNoteFromBean}
           onOpenRelatedNote={onOpenNoteDetailFromBean}
           searchQuery={beanDetailSearchQuery}
-          mode={beanDetailAddMode ? 'add' : 'view'}
+          mode={
+            beanDetailAddMode ? 'add' : beanDetailEditMode ? 'edit' : 'view'
+          }
           initialBeanState={beanDetailAddBeanState}
           onSaveNew={async newBean => {
             try {
@@ -880,14 +888,45 @@ const AppModals: React.FC<AppModalsProps> = ({
               setBeanDetailAddMode(false);
             } catch (error) {
               console.error('添加咖啡豆失败:', error);
+              throw error;
             }
           }}
+          onSaveEdit={async (bean, updates) => {
+            try {
+              const { getCoffeeBeanStore } =
+                await import('@/lib/stores/coffeeBeanStore');
+              await getCoffeeBeanStore().updateBean(bean.id, updates);
+              try {
+                await createCapacityAdjustmentRecordIfNeeded(
+                  bean,
+                  bean.remaining,
+                  updates.remaining
+                );
+              } catch (recordError) {
+                console.error('创建容量变动记录失败:', recordError);
+              }
+              handleBeanListChange();
+              setBeanDetailEditMode(false);
+            } catch (error) {
+              console.error('编辑咖啡豆失败:', error);
+              throw error;
+            }
+          }}
+          onExitEdit={() => setBeanDetailEditMode(false)}
           onEdit={bean => {
+            if (settings.immersiveAdd) {
+              setBeanDetailAddMode(false);
+              setBeanDetailEditMode(true);
+              setBeanDetailOpen(true);
+              return;
+            }
+
             setEditingBean(bean);
             setShowBeanForm(true);
           }}
           onDelete={async bean => {
             setBeanDetailOpen(false);
+            setBeanDetailEditMode(false);
             try {
               const { getCoffeeBeanStore } =
                 await import('@/lib/stores/coffeeBeanStore');

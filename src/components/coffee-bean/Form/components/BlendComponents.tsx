@@ -1,19 +1,8 @@
 import React, { useMemo } from 'react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { BlendComponent } from '@/types/app';
-import {
-  isCustomPreset,
-  removeCustomPreset,
-  getFullPresets,
-} from '../constants';
-import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
-import {
-  extractUniqueOrigins,
-  extractUniqueVarieties,
-  getBeanProcesses,
-  getBeanEstates,
-} from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import BlendComponentFieldRows from './BlendComponentFieldRows';
 
 interface BlendComponentsProps {
   components: BlendComponent[];
@@ -84,93 +73,6 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
   // 只有当组件数量大于1（拼配咖啡）时才考虑百分比限制
   const canAddMoreComponents = components.length === 1 || totalPercentage < 100;
 
-  // 判断值是否为自定义预设
-  const checkIsCustomPreset = (
-    key: 'origins' | 'estates' | 'processes' | 'varieties',
-    value: string
-  ): boolean => {
-    return isCustomPreset(key, value);
-  };
-
-  // 处理删除自定义预设
-  const handleRemovePreset = (
-    key: 'origins' | 'estates' | 'processes' | 'varieties',
-    value: string
-  ): void => {
-    removeCustomPreset(key, value);
-    // 强制重新渲染
-    setForceUpdate(prev => prev + 1);
-  };
-
-  // 添加forceUpdate状态以在删除预设时触发重新渲染
-  const [_forceUpdate, setForceUpdate] = React.useState(0);
-
-  // 从 store 获取咖啡豆数据
-  const beans = useCoffeeBeanStore(state => state.beans);
-
-  // 按使用率排序的预设列表
-  // 优先显示用户咖啡豆中使用过的值（按使用次数排序），然后是默认预设中未使用过的值
-  const currentOrigins = useMemo(() => {
-    // 从咖啡豆中统计产地使用情况（已按使用次数排序）
-    const usedOrigins = extractUniqueOrigins(beans);
-    // 获取完整预设列表（包含自定义和默认）
-    const allPresets = getFullPresets('origins');
-    // 过滤出未使用过的预设
-    const unusedPresets = allPresets.filter(p => !usedOrigins.includes(p));
-    // 合并：使用过的在前（按次数排序），未使用的在后
-    return [...usedOrigins, ...unusedPresets];
-  }, [beans, _forceUpdate]);
-
-  const currentProcesses = useMemo(() => {
-    // 从咖啡豆中统计处理法使用情况
-    const processCount = new Map<string, number>();
-    beans.forEach(bean => {
-      const processes = getBeanProcesses(bean);
-      processes.forEach(process => {
-        processCount.set(process, (processCount.get(process) || 0) + 1);
-      });
-    });
-    // 按使用次数排序
-    const usedProcesses = Array.from(processCount.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(entry => entry[0]);
-    // 获取完整预设列表
-    const allPresets = getFullPresets('processes');
-    // 过滤出未使用过的预设
-    const unusedPresets = allPresets.filter(p => !usedProcesses.includes(p));
-    return [...usedProcesses, ...unusedPresets];
-  }, [beans, _forceUpdate]);
-
-  const currentVarieties = useMemo(() => {
-    // 从咖啡豆中统计品种使用情况（已按使用次数排序）
-    const usedVarieties = extractUniqueVarieties(beans);
-    // 获取完整预设列表
-    const allPresets = getFullPresets('varieties');
-    // 过滤出未使用过的预设
-    const unusedPresets = allPresets.filter(p => !usedVarieties.includes(p));
-    return [...usedVarieties, ...unusedPresets];
-  }, [beans, _forceUpdate]);
-
-  const currentEstates = useMemo(() => {
-    // 从咖啡豆中统计庄园使用情况
-    const estateCount = new Map<string, number>();
-    beans.forEach(bean => {
-      const estates = getBeanEstates(bean);
-      estates.forEach(estate => {
-        estateCount.set(estate, (estateCount.get(estate) || 0) + 1);
-      });
-    });
-    // 按使用次数排序
-    const usedEstates = Array.from(estateCount.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(entry => entry[0]);
-    // 获取完整预设列表
-    const allPresets = getFullPresets('estates');
-    // 过滤出未使用过的预设
-    const unusedPresets = allPresets.filter(p => !usedEstates.includes(p));
-    return [...usedEstates, ...unusedPresets];
-  }, [beans, _forceUpdate]);
-
   return (
     <div className="w-full space-y-5">
       <div className="flex items-center justify-between">
@@ -235,75 +137,18 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                     inputType="tel"
                     clearable={true}
                     suggestions={[]}
-                    maxValue={maxAllowed} // 动态计算当前成分可用的最大百分比
+                    maxValue={maxAllowed}
                     disabled={maxAllowed === 0 && !component.percentage}
                   />
                 </div>
               )}
 
-              <div
-                className={`grid gap-3 ${showEstateField ? 'grid-cols-2' : 'grid-cols-3'}`}
-              >
-                <AutocompleteInput
-                  label="产地"
-                  value={component.origin || ''}
-                  onChange={value => onChange(index, 'origin', value)}
-                  placeholder="产地"
-                  suggestions={currentOrigins}
-                  clearable
-                  isCustomPreset={value =>
-                    checkIsCustomPreset('origins', value)
-                  }
-                  onRemovePreset={value => handleRemovePreset('origins', value)}
-                />
-
-                {showEstateField && (
-                  <AutocompleteInput
-                    label="庄园"
-                    value={component.estate || ''}
-                    onChange={value => onChange(index, 'estate', value)}
-                    placeholder="庄园"
-                    suggestions={currentEstates}
-                    clearable
-                    isCustomPreset={value =>
-                      checkIsCustomPreset('estates', value)
-                    }
-                    onRemovePreset={value =>
-                      handleRemovePreset('estates', value)
-                    }
-                  />
-                )}
-
-                <AutocompleteInput
-                  label="处理法"
-                  value={component.process || ''}
-                  onChange={value => onChange(index, 'process', value)}
-                  placeholder="处理法"
-                  suggestions={currentProcesses}
-                  clearable
-                  isCustomPreset={value =>
-                    checkIsCustomPreset('processes', value)
-                  }
-                  onRemovePreset={value =>
-                    handleRemovePreset('processes', value)
-                  }
-                />
-
-                <AutocompleteInput
-                  label="品种"
-                  value={component.variety || ''}
-                  onChange={value => onChange(index, 'variety', value)}
-                  placeholder="品种"
-                  suggestions={currentVarieties}
-                  clearable
-                  isCustomPreset={value =>
-                    checkIsCustomPreset('varieties', value)
-                  }
-                  onRemovePreset={value =>
-                    handleRemovePreset('varieties', value)
-                  }
-                />
-              </div>
+              <BlendComponentFieldRows
+                component={component}
+                index={index}
+                showEstateField={showEstateField}
+                onChange={onChange}
+              />
             </div>
           );
         })}

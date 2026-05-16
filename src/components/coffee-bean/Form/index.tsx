@@ -16,6 +16,10 @@ import DetailInfo from './components/DetailInfo';
 import FlavorInfo from './components/FlavorInfo';
 import Complete from './components/Complete';
 import {
+  autofillBlendComponentsFromName,
+  useBlendComponentSuggestions,
+} from './hooks/useBlendComponentSuggestions';
+import {
   addCustomPreset,
   DEFAULT_ORIGINS,
   DEFAULT_ESTATES,
@@ -37,6 +41,8 @@ import {
   getBeanRoasterName,
   getCoffeeBeanRoasterSuggestions,
   prepareCoffeeBeanRoasterFieldsForSave,
+  normalizeDelimitedTextList,
+  updateBlendComponentsDelimitedField,
 } from '@/lib/utils/coffeeBeanUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 
@@ -177,7 +183,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
   (
     {
       onSave,
-      onCancel,
+      onCancel: _onCancel,
       initialBean,
       onRepurchase,
       onStepChange,
@@ -195,9 +201,6 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     const [editingRemaining, setEditingRemaining] = useState<string | null>(
       null
     );
-
-    // 记录初始剩余容量，用于检测容量变动
-    const initialRemainingRef = useRef<string>(initialBean?.remaining || '');
 
     // 添加拼配成分状态
     const [blendComponents, setBlendComponents] = useState<BlendComponent[]>(
@@ -224,6 +227,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         ];
       }
     );
+    const blendComponentNameAutofillRef = useRef<BlendComponent[]>([]);
 
     const [bean, setBean] = useState<
       Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
@@ -253,6 +257,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         !!settings.roasterFieldEnabled
       );
     }, [allBeans, settings.roasterFieldEnabled]);
+    const blendComponentSuggestions = useBlendComponentSuggestions();
 
     // 加载烘焙商图标 - 当烘焙商名称变化时
     useEffect(() => {
@@ -271,38 +276,18 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
     // 自动填充识图图片 - 在表单加载时检查设置，如果开启了自动填充且有识图图片，则自动填充
     useEffect(() => {
-      console.log(
-        '[自动填充检查] recognitionImage:',
-        recognitionImage ? '有图片' : '无图片'
-      );
-      console.log(
-        '[自动填充检查] initialBean:',
-        initialBean ? '编辑模式' : '新建模式'
-      );
-      console.log(
-        '[自动填充检查] bean.image:',
-        bean.image ? '已有图片' : '无图片'
-      );
-
       // 只要没有图片且有识图图片就自动填充（不管是新建还是编辑）
       // 因为识图导入后会先保存到数据库再打开表单，此时 initialBean 会有值
       if (!bean.image && recognitionImage) {
         // 从 settingsStore 获取设置
         const settings = useSettingsStore.getState().settings;
-        console.log(
-          '[自动填充检查] autoFillRecognitionImage 设置:',
-          settings.autoFillRecognitionImage
-        );
 
         // 检查是否开启了自动填充设置
         if (settings.autoFillRecognitionImage) {
-          console.log('[自动填充] 开始填充图片');
           setBean(prev => ({
             ...prev,
             image: recognitionImage,
           }));
-        } else {
-          console.log('[自动填充] 设置未开启，不自动填充');
         }
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -441,26 +426,22 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     // 添加风味标签
     const handleAddFlavor = (flavorValue?: string) => {
       const value = flavorValue || flavorInput;
-      if (!value.trim()) return;
+      const nextFlavors = normalizeDelimitedTextList(value);
+      if (nextFlavors.length === 0) return;
 
-      if (bean.flavor?.includes(value.trim())) {
-        if (!flavorValue) setFlavorInput('');
-        return;
-      }
-
-      setBean({
-        ...bean,
-        flavor: [...(bean.flavor || []), value.trim()],
-      });
+      setBean(prev => ({
+        ...prev,
+        flavor: Array.from(new Set([...(prev.flavor || []), ...nextFlavors])),
+      }));
       if (!flavorValue) setFlavorInput('');
     };
 
     // 移除风味标签
     const handleRemoveFlavor = (flavor: string) => {
-      setBean({
-        ...bean,
-        flavor: bean.flavor?.filter((f: string) => f !== flavor) || [],
-      });
+      setBean(prev => ({
+        ...prev,
+        flavor: prev.flavor?.filter((f: string) => f !== flavor) || [],
+      }));
     };
 
     // 根据烘焙度自动设置赏味期参数
@@ -588,61 +569,19 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
             [field]: safeValue,
           }));
 
-          // 从名称中智能提取产地、庄园、处理法、品种并自动填充到成分
-          if (safeValue.trim() && blendComponents.length === 1) {
-            const extractedOrigin = DEFAULT_ORIGINS.find(origin =>
-              safeValue.includes(origin)
-            );
-            const extractedEstate = DEFAULT_ESTATES.find(estate =>
-              safeValue.includes(estate)
-            );
-            const extractedProcess = DEFAULT_PROCESSES.find(process =>
-              safeValue.includes(process)
-            );
-            const extractedVariety = DEFAULT_VARIETIES.find(variety =>
-              safeValue.includes(variety)
+          setBlendComponents(prev => {
+            const autofillResult = autofillBlendComponentsFromName(
+              prev,
+              safeValue,
+              blendComponentSuggestions,
+              blendComponentNameAutofillRef.current
             );
 
-            // 只有当提取到信息且对应字段为空时才自动填充
-            if (
-              extractedOrigin ||
-              extractedEstate ||
-              extractedProcess ||
-              extractedVariety
-            ) {
-              setBlendComponents(prev => {
-                const newComponents = [...prev];
-                if (newComponents.length > 0) {
-                  // 只在字段为空时填充，避免覆盖用户手动输入的内容
-                  if (extractedOrigin && !newComponents[0].origin) {
-                    newComponents[0] = {
-                      ...newComponents[0],
-                      origin: extractedOrigin,
-                    };
-                  }
-                  if (extractedEstate && !newComponents[0].estate) {
-                    newComponents[0] = {
-                      ...newComponents[0],
-                      estate: extractedEstate,
-                    };
-                  }
-                  if (extractedProcess && !newComponents[0].process) {
-                    newComponents[0] = {
-                      ...newComponents[0],
-                      process: extractedProcess,
-                    };
-                  }
-                  if (extractedVariety && !newComponents[0].variety) {
-                    newComponents[0] = {
-                      ...newComponents[0],
-                      variety: extractedVariety,
-                    };
-                  }
-                }
-                return newComponents;
-              });
-            }
-          }
+            blendComponentNameAutofillRef.current =
+              autofillResult.autofillComponents;
+
+            return autofillResult.components;
+          });
         } else {
           setBean(prev => ({
             ...prev,
@@ -653,32 +592,31 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
     // 添加拼配成分处理函数
     const handleAddBlendComponent = () => {
-      // 计算当前总百分比
-      const totalPercentage = blendComponents.reduce(
-        (sum, comp) => (comp.percentage ? sum + comp.percentage : sum),
-        0
-      );
+      setBlendComponents(prev => {
+        const totalPercentage = prev.reduce(
+          (sum, comp) => (comp.percentage ? sum + comp.percentage : sum),
+          0
+        );
 
-      // 如果不是第一个成分且总百分比已经达到100%，则不允许添加更多成分
-      if (blendComponents.length > 1 && totalPercentage >= 100) {
-        return;
-      }
+        if (prev.length > 1 && totalPercentage >= 100) {
+          return prev;
+        }
 
-      setBlendComponents([
-        ...blendComponents,
-        {
-          origin: '',
-          process: '',
-          variety: '',
-        },
-      ]);
+        return [
+          ...prev,
+          {
+            origin: '',
+            process: '',
+            variety: '',
+          },
+        ];
+      });
     };
 
     const handleRemoveBlendComponent = (index: number) => {
-      if (blendComponents.length <= 1) return;
-
-      const newComponents = blendComponents.filter((_, i) => i !== index);
-      setBlendComponents(newComponents);
+      setBlendComponents(prev =>
+        prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)
+      );
     };
 
     const handleBlendComponentChange = (
@@ -686,134 +624,68 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       field: keyof BlendComponent,
       value: string | number
     ) => {
-      const newComponents = [...blendComponents];
+      setBlendComponents(prev => {
+        const newComponents = [...prev];
 
-      if (field === 'percentage') {
-        if (value === '' || value === null || value === undefined) {
-          delete newComponents[index].percentage;
+        if (field === 'percentage') {
+          if (value === '' || value === null || value === undefined) {
+            delete newComponents[index].percentage;
+          } else {
+            // 将输入值转换为数字
+            const numValue =
+              typeof value === 'string' ? parseInt(value) || 0 : value;
+
+            // 直接设置值，AutocompleteInput组件的maxValue属性会负责限制最大值
+            newComponents[index].percentage = numValue;
+          }
         } else {
-          // 将输入值转换为数字
-          const numValue =
-            typeof value === 'string' ? parseInt(value) || 0 : value;
-
-          // 直接设置值，AutocompleteInput组件的maxValue属性会负责限制最大值
-          newComponents[index].percentage = numValue;
+          return updateBlendComponentsDelimitedField(
+            newComponents,
+            index,
+            field,
+            value as string
+          );
         }
-      } else {
-        newComponents[index][field] = value as string;
-      }
 
-      setBlendComponents(newComponents);
-    };
-
-    // 创建容量调整记录的辅助函数
-    const createCapacityAdjustmentRecord = async (
-      originalAmount: number,
-      newAmount: number
-    ) => {
-      const changeAmount = newAmount - originalAmount;
-      const timestamp = Date.now();
-      const changeType =
-        changeAmount > 0 ? 'increase' : changeAmount < 0 ? 'decrease' : 'set';
-
-      // 简化备注内容
-      const noteContent = '容量调整(不计入统计)';
-
-      // 创建容量调整记录（简化版本，参考快捷扣除记录）
-      const adjustmentRecord = {
-        id: timestamp.toString(),
-        timestamp,
-        source: 'capacity-adjustment',
-        beanId: initialBean!.id,
-        equipment: '',
-        method: '',
-        coffeeBeanInfo: {
-          name: initialBean!.name || '',
-          roastLevel: initialBean!.roastLevel || '中度烘焙',
-          roastDate: initialBean!.roastDate,
-          roaster: initialBean!.roaster,
-        },
-        notes: noteContent,
-        rating: 0,
-        taste: { acidity: 0, sweetness: 0, bitterness: 0, body: 0 },
-        params: {
-          coffee: `${Math.abs(changeAmount)}g`,
-          water: '',
-          ratio: '',
-          grindSize: '',
-          temp: '',
-        },
-        totalTime: 0,
-        changeRecord: {
-          capacityAdjustment: {
-            originalAmount,
-            newAmount,
-            changeAmount,
-            changeType,
-          },
-        },
-      };
-
-      // 保存记录（与快捷扣除一致，走 Zustand store）
-      const { useBrewingNoteStore } =
-        await import('@/lib/stores/brewingNoteStore');
-      await useBrewingNoteStore.getState().addNote(adjustmentRecord as any);
-      console.warn('容量调整记录创建成功:', noteContent);
+        return newComponents;
+      });
     };
 
     // 提交表单
     const handleSubmit = async () => {
       validateRemaining();
 
+      const addPresetValues = (
+        key: 'origins' | 'estates' | 'processes' | 'varieties',
+        defaultValues: string[],
+        value?: string
+      ) => {
+        normalizeDelimitedTextList(value).forEach(item => {
+          if (!defaultValues.includes(item)) {
+            addCustomPreset(key, item);
+          }
+        });
+      };
+
       // 保存自定义的预设值
       blendComponents.forEach(component => {
-        // 检查产地是否是自定义值
-        if (component.origin && !DEFAULT_ORIGINS.includes(component.origin)) {
-          addCustomPreset('origins', component.origin);
-        }
-
-        // 检查庄园是否是自定义值
-        if (component.estate && !DEFAULT_ESTATES.includes(component.estate)) {
-          addCustomPreset('estates', component.estate);
-        }
-
-        // 检查处理法是否是自定义值
-        if (
-          component.process &&
-          !DEFAULT_PROCESSES.includes(component.process)
-        ) {
-          addCustomPreset('processes', component.process);
-        }
-
-        // 检查品种是否是自定义值
-        if (
-          component.variety &&
-          !DEFAULT_VARIETIES.includes(component.variety)
-        ) {
-          addCustomPreset('varieties', component.variety);
-        }
+        addPresetValues('origins', DEFAULT_ORIGINS, component.origin);
+        addPresetValues('estates', DEFAULT_ESTATES, component.estate);
+        addPresetValues('processes', DEFAULT_PROCESSES, component.process);
+        addPresetValues('varieties', DEFAULT_VARIETIES, component.variety);
       });
 
-      // 如果是编辑模式且容量发生变化，创建容量变动记录
-      if (initialBean && initialBean.id) {
-        try {
-          const originalAmount = parseFloat(initialRemainingRef.current || '0');
-          const newAmount = parseFloat(bean.remaining || '0');
-          const changeAmount = newAmount - originalAmount;
-
-          // 检查是否有有效的变化（避免微小的浮点数差异）
-          if (
-            !isNaN(originalAmount) &&
-            !isNaN(newAmount) &&
-            Math.abs(changeAmount) >= 0.01
-          ) {
-            await createCapacityAdjustmentRecord(originalAmount, newAmount);
-          }
-        } catch (error) {
-          console.error('创建容量变动记录失败:', error);
-          // 不阻止保存流程，只记录错误
-        }
+      if (bean.roaster?.trim()) {
+        addCustomPreset('roasters', bean.roaster);
       }
+
+      if (bean.roastLevel?.trim()) {
+        addCustomPreset('roastLevels', bean.roastLevel);
+      }
+
+      bean.flavor?.forEach(flavor => {
+        addCustomPreset('flavors', flavor);
+      });
 
       // 先清理历史栈（关闭所有 bean-form 相关的历史记录）
       modalHistory.closeAllByPrefix('bean-form');

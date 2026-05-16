@@ -2,12 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
-import {
-  pageVariants,
-  pageTransition,
-  FLAVOR_TAGS,
-  FLAVOR_CATEGORIES,
-} from '../constants';
+import { pageVariants, pageTransition } from '../constants';
+import { useFlavorSuggestions } from '../hooks/useCoffeeBeanFieldSuggestions';
 
 interface FlavorInfoProps {
   bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>;
@@ -24,6 +20,8 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
   onAddFlavor,
   onRemoveFlavor,
 }) => {
+  const flavorSuggestions = useFlavorSuggestions();
+
   return (
     <motion.div
       key="flavor-step"
@@ -40,9 +38,9 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
         </label>
         <div className="flex flex-wrap gap-2 pb-2">
           {bean.flavor && bean.flavor.length > 0 ? (
-            bean.flavor.map((flavor: string, index: number) => (
+            bean.flavor.map((flavor: string) => (
               <div
-                key={index}
+                key={flavor}
                 className="flex items-center rounded-full bg-neutral-200 px-3 py-1 dark:bg-neutral-800"
               >
                 <span className="text-xs">{flavor}</span>
@@ -72,10 +70,12 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
             <AutocompleteInput
               value={flavorInput}
               onChange={onFlavorInputChange}
-              placeholder="例如：柑橘"
-              suggestions={FLAVOR_TAGS.filter(
+              placeholder="例如：柑橘, 花香"
+              suggestions={flavorSuggestions.suggestions.filter(
                 tag => !bean.flavor?.includes(tag)
               )}
+              isCustomPreset={flavorSuggestions.isRemovableSuggestion}
+              onRemovePreset={flavorSuggestions.removeSuggestion}
               className="w-full border-none"
               onSuggestionSelect={onAddFlavor}
               suggestionSelectMode="commit"

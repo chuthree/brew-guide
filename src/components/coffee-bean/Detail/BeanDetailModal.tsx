@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { CoffeeBean } from '@/types/app';
 import { defaultSettings } from '@/components/settings/Settings';
@@ -23,10 +26,18 @@ import {
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
 import { openImageViewer } from '@/lib/ui/imageViewer';
 import { showToast } from '@/components/common/feedback/LightToast';
+import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import RemainingEditor from '@/components/coffee-bean/List/components/RemainingEditor';
 import { buildEquipmentNameMap } from '@/lib/notes/noteDisplay';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
+import {
+  clearCoffeeBeanFormDraftSession,
+  hasCoffeeBeanFormDraftContent,
+  loadCoffeeBeanFormDraftSession,
+  normalizeCoffeeBeanFormDraft,
+  saveCoffeeBeanFormDraftSession,
+} from './coffeeBeanFormDraft';
 
 import {
   BeanDetailModalProps,
@@ -59,6 +70,18 @@ const BeanRatingModal = dynamic(
   { ssr: false }
 );
 
+const contentFadeTransition = {
+  enter: {
+    duration: 0.32,
+    delay: 0.04,
+    ease: [0.22, 1, 0.36, 1],
+  },
+  exit: {
+    duration: 0.18,
+    ease: [0.4, 0, 1, 1],
+  },
+} as const;
+
 const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   isOpen,
   bean: propBean,
@@ -75,30 +98,28 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onConvertToGreen,
   mode = 'view',
   onSaveNew,
+  onSaveEdit,
+  onExitEdit,
   initialBeanState = 'roasted',
 }) => {
   const isLargeScreen = useIsLargeScreen();
   const isAddMode = mode === 'add';
+  const isEditMode = mode === 'edit';
+  const isFormMode = isAddMode || isEditMode;
 
-  // 临时 bean 数据（添加模式）
-  const [tempBean, setTempBean] = useState<Partial<CoffeeBean>>(() => ({
-    name: '',
-    beanState: initialBeanState,
-    beanType: 'filter',
-    capacity: '',
-    remaining: '',
-    roastLevel: '',
-    roastDate: '',
-    purchaseDate: '',
-    flavor: [],
-    notes: '',
-    blendComponents: [{ origin: '', estate: '', process: '', variety: '' }],
-  }));
+  const createTempBean = React.useCallback(
+    (sourceBean?: CoffeeBean | null): Partial<CoffeeBean> => {
+      if (sourceBean) {
+        return {
+          ...sourceBean,
+          blendComponents:
+            sourceBean.blendComponents && sourceBean.blendComponents.length > 0
+              ? sourceBean.blendComponents
+              : [{ origin: '', estate: '', process: '', variety: '' }],
+        };
+      }
 
-  // 重置临时 bean
-  useEffect(() => {
-    if (isAddMode && isOpen) {
-      setTempBean({
+      return {
         name: '',
         beanState: initialBeanState,
         beanType: 'filter',
@@ -110,9 +131,18 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         flavor: [],
         notes: '',
         blendComponents: [{ origin: '', estate: '', process: '', variety: '' }],
-      });
-    }
-  }, [isAddMode, isOpen, initialBeanState]);
+      };
+    },
+    [initialBeanState]
+  );
+
+  // 临时 bean 数据（添加模式）
+  const [tempBean, setTempBean] = useState<Partial<CoffeeBean>>(() =>
+    createTempBean(isEditMode ? propBean : null)
+  );
+  const [baselineTempBean, setBaselineTempBean] = useState<Partial<CoffeeBean>>(
+    () => createTempBean(isEditMode ? propBean : null)
+  );
 
   // Store 数据（优化：使用 useMemo 避免每次渲染都查找）
   const storeBean = useCoffeeBeanStore(
@@ -125,7 +155,33 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     )
   );
 
-  const bean = isAddMode ? (tempBean as CoffeeBean) : storeBean || propBean;
+  const persistedBean = storeBean || propBean;
+
+  // 重置临时 bean
+  useEffect(() => {
+    if (!isFormMode || !isOpen) return;
+
+    shouldAutoPersistDraftRef.current = true;
+    const baseBean = createTempBean(isEditMode ? persistedBean : null);
+    setBaselineTempBean(baseBean);
+
+    if (isAddMode) {
+      const savedDraft = loadCoffeeBeanFormDraftSession();
+      setTempBean(savedDraft ? savedDraft.bean : baseBean);
+      return;
+    }
+
+    setTempBean(baseBean);
+  }, [
+    createTempBean,
+    isAddMode,
+    isEditMode,
+    isFormMode,
+    isOpen,
+    persistedBean,
+  ]);
+
+  const bean = isFormMode ? (tempBean as CoffeeBean) : persistedBean;
   const beanOriginalImage = useCoffeeBeanImage(bean?.id, {
     fallback: bean?.image,
     preferThumbnail: false,
@@ -179,10 +235,40 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const [editingRemaining, setEditingRemaining] = useState(false);
   const [editingPrice, setEditingPrice] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDraftExitDrawerOpen, setIsDraftExitDrawerOpen] = useState(false);
   const [remainingEditorTarget, setRemainingEditorTarget] =
     useState<HTMLElement | null>(null);
+  const latestTempBeanRef = React.useRef(tempBean);
+  const latestHasDraftContentRef = React.useRef(false);
+  const shouldAutoPersistDraftRef = React.useRef(true);
 
   const isGreenBean = bean?.beanState === 'green';
+  const hasAddDraftContent = useMemo(
+    () =>
+      isAddMode && hasCoffeeBeanFormDraftContent(tempBean, baselineTempBean),
+    [baselineTempBean, isAddMode, tempBean]
+  );
+
+  useEffect(() => {
+    latestTempBeanRef.current = tempBean;
+    latestHasDraftContentRef.current = hasAddDraftContent;
+  }, [hasAddDraftContent, tempBean]);
+
+  const persistAddDraftSnapshot = React.useCallback(() => {
+    if (
+      !isAddMode ||
+      !shouldAutoPersistDraftRef.current ||
+      !latestHasDraftContentRef.current
+    ) {
+      return;
+    }
+
+    saveCoffeeBeanFormDraftSession({
+      version: 1,
+      bean: normalizeCoffeeBeanFormDraft(latestTempBeanRef.current),
+      updatedAt: Date.now(),
+    });
+  }, [isAddMode]);
 
   // 动画处理（优化：使用 flushSync 确保立即渲染，然后触发动画）
   useEffect(() => {
@@ -250,7 +336,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 标题可见性（优化：减少延迟）
   useEffect(() => {
-    if (!isOpen || !isVisible) {
+    if (!isOpen || !isVisible || isFormMode) {
       setIsTitleVisible(true);
       return;
     }
@@ -260,7 +346,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     // 减少延迟从 100ms 到 50ms
     const timer = setTimeout(() => {
       const titleElement = document.getElementById('bean-detail-title');
-      if (!titleElement) return;
+      if (!titleElement) {
+        setIsTitleVisible(true);
+        return;
+      }
 
       const rect = titleElement.getBoundingClientRect();
       setIsTitleVisible(rect.top >= 60);
@@ -277,17 +366,69 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       clearTimeout(timer);
       if (observer) observer.disconnect();
     };
-  }, [isOpen, isVisible]);
+  }, [bean?.id, isFormMode, isOpen, isVisible]);
+
+  const completeClose = React.useCallback(
+    ({
+      preserveSavedDraft = false,
+      closeHistory = true,
+    }: {
+      preserveSavedDraft?: boolean;
+      closeHistory?: boolean;
+    } = {}) => {
+      shouldAutoPersistDraftRef.current = false;
+
+      if (isAddMode && !preserveSavedDraft) {
+        clearCoffeeBeanFormDraftSession();
+      }
+
+      setIsDraftExitDrawerOpen(false);
+
+      if (closeHistory) {
+        modalHistory.close('bean-detail');
+      }
+
+      onClose();
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('beanDetailClosing'));
+      }, 175);
+    },
+    [isAddMode, onClose]
+  );
+
+  const historyCloseRequestRef = React.useRef<() => void>(() => {});
+
+  const handleHistoryCloseRequest = React.useCallback(() => {
+    if (isAddMode && latestHasDraftContentRef.current) {
+      modalHistory.pushStep(
+        'bean-detail',
+        1,
+        () => {},
+        () => historyCloseRequestRef.current()
+      );
+      setIsDraftExitDrawerOpen(true);
+      return;
+    }
+
+    completeClose({ closeHistory: false });
+  }, [completeClose, isAddMode]);
+
+  useEffect(() => {
+    historyCloseRequestRef.current = handleHistoryCloseRequest;
+  }, [handleHistoryCloseRequest]);
 
   // 历史栈管理
   useModalHistory({
     id: 'bean-detail',
     isOpen,
+    onClose: handleHistoryCloseRequest,
+  });
+
+  useModalHistory({
+    id: 'bean-detail-edit',
+    isOpen: isOpen && isEditMode,
     onClose: () => {
-      onClose();
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('beanDetailClosing'));
-      }, 175);
+      onExitEdit?.();
     },
   });
 
@@ -320,6 +461,53 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || !isAddMode) {
+      return;
+    }
+
+    const handlePageHide = () => {
+      persistAddDraftSnapshot();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        persistAddDraftSnapshot();
+      }
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    let removeAppStateListener: (() => void) | undefined;
+    let isDisposed = false;
+
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) {
+          persistAddDraftSnapshot();
+        }
+      }).then(listener => {
+        if (isDisposed) {
+          listener.remove();
+          return;
+        }
+
+        removeAppStateListener = () => {
+          listener.remove();
+        };
+      });
+    }
+
+    return () => {
+      isDisposed = true;
+      persistAddDraftSnapshot();
+      window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      removeAppStateListener?.();
+    };
+  }, [isAddMode, isOpen, persistAddDraftSnapshot]);
+
   // 烘焙商 logo（优化：使用 useMemo 缓存 roasterSettings）
   const roasterSettings = React.useMemo(
     () => ({
@@ -346,7 +534,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 通用字段更新
   const handleUpdateField = async (updates: Partial<CoffeeBean>) => {
-    if (isAddMode) {
+    if (isFormMode) {
       setTempBean(prev => ({ ...prev, ...updates }));
       return;
     }
@@ -378,7 +566,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       const customFlavorPeriod =
         settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
 
-      const currentBean = isAddMode ? tempBean : bean;
+      const currentBean = isFormMode ? tempBean : bean;
       const roasterSettings = {
         roasterFieldEnabled: settings.roasterFieldEnabled,
         roasterSeparator: settings.roasterSeparator,
@@ -409,7 +597,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const handleCapacityBlur = (value: string) => {
     setEditingCapacity(false);
     if (value) {
-      const currentRemaining = isAddMode ? tempBean.remaining : bean?.remaining;
+      const currentRemaining = isFormMode
+        ? tempBean.remaining
+        : bean?.remaining;
       handleUpdateField({
         capacity: value,
         remaining: currentRemaining || value,
@@ -439,7 +629,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       }
     }
 
-    const currentPrice = (isAddMode ? tempBean.price : bean?.price) || '';
+    const currentPrice = (isFormMode ? tempBean.price : bean?.price) || '';
     if (normalizedPrice !== currentPrice) {
       await handleUpdateField({ price: normalizedPrice });
     }
@@ -450,7 +640,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const handleRemainingQuickAction = (
     event: React.MouseEvent<HTMLSpanElement>
   ) => {
-    if (isAddMode || !bean) return;
+    if (isFormMode || !bean) return;
 
     event.stopPropagation();
     const target = event.currentTarget;
@@ -538,7 +728,38 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   };
 
   // 关闭处理
-  const handleClose = () => modalHistory.back();
+  const handleClose = () => {
+    if (isAddMode && hasAddDraftContent) {
+      setIsDraftExitDrawerOpen(true);
+      return;
+    }
+
+    modalHistory.back();
+  };
+
+  const handleFormSaveComplete = () => {
+    if (isEditMode) {
+      modalHistory.close('bean-detail-edit');
+      onExitEdit?.();
+      return;
+    }
+
+    completeClose();
+  };
+
+  const handleSaveDraft = () => {
+    if (!hasAddDraftContent) {
+      completeClose();
+      return;
+    }
+
+    saveCoffeeBeanFormDraftSession({
+      version: 1,
+      bean: normalizeCoffeeBeanFormDraft(tempBean),
+      updatedAt: Date.now(),
+    });
+    completeClose({ preserveSavedDraft: true });
+  };
 
   // 导航处理
   const handleGoToBrewing = () => {
@@ -618,6 +839,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   if (!shouldRender) return null;
 
+  const contentModeKey = isEditMode ? 'edit' : isAddMode ? 'add' : 'view';
+
   return (
     <>
       <div
@@ -626,111 +849,140 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         }`}
         style={getChildPageStyle(isVisible, undefined, true)}
       >
-        <HeaderBar
-          isAddMode={isAddMode}
-          isGreenBean={isGreenBean}
-          isTitleVisible={isTitleVisible}
-          bean={bean}
-          tempBean={tempBean}
-          printEnabled={printEnabled}
-          onClose={handleClose}
-          onGoToBrewing={handleGoToBrewing}
-          onGoToNotes={handleGoToNotes}
-          onGoToRoast={handleGoToRoast}
-          onPrint={() => setPrintModalOpen(true)}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onShare={onShare}
-          onRoast={onRoast}
-          onConvertToGreen={onConvertToGreen}
-          onSaveNew={onSaveNew}
-          onShowDeleteConfirm={() => setShowDeleteConfirm(true)}
-        />
-
-        <div
-          className="pb-safe-bottom flex-1 overflow-auto"
-          style={{ overflowY: 'auto', touchAction: 'pan-y pinch-zoom' }}
-        >
-          <BeanImageSection
-            bean={bean}
-            tempBean={tempBean}
-            isAddMode={isAddMode}
-            roasterLogo={roasterLogo}
-            imageError={imageError}
-            setImageError={setImageError}
-            setTempBean={setTempBean}
-            handleUpdateField={handleUpdateField}
-            onImageClick={handleImageClick}
-          />
-
-          {bean ? (
-            <div className="space-y-3 px-6 pb-6">
-              <BasicInfoSection
-                bean={bean}
-                tempBean={tempBean}
-                isAddMode={isAddMode}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={contentModeKey}
+              className="absolute inset-0 flex min-h-0 flex-col bg-neutral-50 dark:bg-neutral-900"
+              initial={{
+                opacity: 0,
+              }}
+              animate={{
+                opacity: 1,
+                transition: contentFadeTransition.enter,
+              }}
+              exit={{
+                opacity: 0,
+                transition: contentFadeTransition.exit,
+              }}
+            >
+              <HeaderBar
+                isAddMode={isFormMode}
+                isEditMode={isEditMode}
                 isGreenBean={isGreenBean}
-                searchQuery={searchQuery}
-                editingCapacity={editingCapacity}
-                editingRemaining={editingRemaining}
-                editingPrice={editingPrice}
-                setEditingCapacity={setEditingCapacity}
-                setEditingRemaining={setEditingRemaining}
-                setEditingPrice={setEditingPrice}
-                handleUpdateField={handleUpdateField}
-                handleCapacityBlur={handleCapacityBlur}
-                handleRemainingBlur={handleRemainingBlur}
-                handleRemainingQuickAction={handleRemainingQuickAction}
-                handlePriceBlur={handlePriceBlur}
-                handleDateChange={handleDateChange}
-              />
-
-              <OriginInfoSection
+                isTitleVisible={isTitleVisible}
                 bean={bean}
                 tempBean={tempBean}
-                isAddMode={isAddMode}
-                searchQuery={searchQuery}
-                showEstateField={showEstateField}
-                handleUpdateField={handleUpdateField}
-                handleRoastLevelSelect={handleRoastLevelSelect}
+                printEnabled={printEnabled}
+                onClose={handleClose}
+                onGoToBrewing={handleGoToBrewing}
+                onGoToNotes={handleGoToNotes}
+                onGoToRoast={handleGoToRoast}
+                onPrint={() => setPrintModalOpen(true)}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onShare={onShare}
+                onRoast={onRoast}
+                onConvertToGreen={onConvertToGreen}
+                onSaveNew={onSaveNew}
+                onSaveEdit={
+                  isEditMode && persistedBean
+                    ? updates => onSaveEdit?.(persistedBean, updates)
+                    : undefined
+                }
+                onSaveComplete={handleFormSaveComplete}
+                onShowDeleteConfirm={() => setShowDeleteConfirm(true)}
               />
 
-              <BlendComponentsSection
-                bean={bean}
-                handleUpdateField={handleUpdateField}
-              />
+              <div
+                className="pb-safe-bottom flex-1 overflow-auto"
+                style={{ overflowY: 'auto', touchAction: 'pan-y pinch-zoom' }}
+              >
+                <BeanImageSection
+                  bean={bean}
+                  tempBean={tempBean}
+                  isAddMode={isFormMode}
+                  roasterLogo={roasterLogo}
+                  imageError={imageError}
+                  setImageError={setImageError}
+                  setTempBean={setTempBean}
+                  handleUpdateField={handleUpdateField}
+                  onImageClick={handleImageClick}
+                />
 
-              <FlavorNotesSection
-                bean={bean}
-                tempBean={tempBean}
-                isAddMode={isAddMode}
-                searchQuery={searchQuery}
-                handleUpdateField={handleUpdateField}
-              />
+                {bean ? (
+                  <div className="space-y-3 px-6 pb-6">
+                    <BasicInfoSection
+                      bean={bean}
+                      tempBean={tempBean}
+                      isAddMode={isFormMode}
+                      searchQuery={searchQuery}
+                      editingCapacity={editingCapacity}
+                      editingRemaining={editingRemaining}
+                      editingPrice={editingPrice}
+                      setEditingCapacity={setEditingCapacity}
+                      setEditingRemaining={setEditingRemaining}
+                      setEditingPrice={setEditingPrice}
+                      handleUpdateField={handleUpdateField}
+                      handleCapacityBlur={handleCapacityBlur}
+                      handleRemainingBlur={handleRemainingBlur}
+                      handleRemainingQuickAction={handleRemainingQuickAction}
+                      handlePriceBlur={handlePriceBlur}
+                      handleDateChange={handleDateChange}
+                    />
 
-              <RatingSection
-                bean={bean}
-                isAddMode={isAddMode}
-                showBeanRating={showBeanRating}
-                onOpenRatingModal={() => setRatingModalOpen(true)}
-              />
+                    <OriginInfoSection
+                      bean={bean}
+                      tempBean={tempBean}
+                      isAddMode={isFormMode}
+                      searchQuery={searchQuery}
+                      showEstateField={showEstateField}
+                      handleUpdateField={handleUpdateField}
+                      handleRoastLevelSelect={handleRoastLevelSelect}
+                    />
 
-              <RelatedRecordsSection
-                relatedNotes={relatedNotes}
-                relatedBeans={relatedBeans}
-                equipmentNames={equipmentNames}
-                isGreenBean={isGreenBean}
-                allBeans={allBeans}
-                bean={bean}
-                showChangeRecords={showChangeRecords}
-                showGreenBeanRecords={showGreenBeanRecords}
-                setShowChangeRecords={setShowChangeRecords}
-                setShowGreenBeanRecords={setShowGreenBeanRecords}
-                onImageClick={handleImageClick}
-                onOpenNoteDetail={onOpenRelatedNote}
-              />
-            </div>
-          ) : null}
+                    <BlendComponentsSection
+                      bean={bean}
+                      isAddMode={isFormMode}
+                      handleUpdateField={handleUpdateField}
+                    />
+
+                    <FlavorNotesSection
+                      bean={bean}
+                      tempBean={tempBean}
+                      isAddMode={isFormMode}
+                      searchQuery={searchQuery}
+                      handleUpdateField={handleUpdateField}
+                    />
+
+                    <RatingSection
+                      bean={bean}
+                      isAddMode={isFormMode}
+                      showBeanRating={showBeanRating}
+                      onOpenRatingModal={() => setRatingModalOpen(true)}
+                    />
+
+                    {!isFormMode && (
+                      <RelatedRecordsSection
+                        relatedNotes={relatedNotes}
+                        relatedBeans={relatedBeans}
+                        equipmentNames={equipmentNames}
+                        isGreenBean={isGreenBean}
+                        allBeans={allBeans}
+                        bean={bean}
+                        showChangeRecords={showChangeRecords}
+                        showGreenBeanRecords={showGreenBeanRecords}
+                        setShowChangeRecords={setShowChangeRecords}
+                        setShowGreenBeanRecords={setShowGreenBeanRecords}
+                        onImageClick={handleImageClick}
+                        onOpenNoteDetail={onOpenRelatedNote}
+                      />
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
@@ -744,7 +996,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         }}
         onCancel={() => setRemainingEditorTarget(null)}
         onQuickDecrement={handleQuickDecrement}
-        coffeeBean={isAddMode ? undefined : bean || undefined}
+        coffeeBean={isFormMode ? undefined : bean || undefined}
       />
       {/* 打印模态框 */}
       {printEnabled && (
@@ -784,6 +1036,36 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         itemName={bean?.name || ''}
         itemType="咖啡豆"
       />
+
+      <ActionDrawer
+        isOpen={isDraftExitDrawerOpen}
+        onClose={() => setIsDraftExitDrawerOpen(false)}
+        historyId="bean-draft-exit-drawer"
+      >
+        <ActionDrawer.Content>
+          <p className="text-neutral-500 dark:text-neutral-400">
+            当前内容尚未完成，你可以先
+            <span className="text-neutral-800 dark:text-neutral-200">
+              保存为草稿
+            </span>
+            ，稍后继续；也可以直接离开。
+          </p>
+        </ActionDrawer.Content>
+        <ActionDrawer.Actions>
+          <ActionDrawer.SecondaryButton
+            onClick={() => completeClose()}
+            className="text-neutral-500 dark:text-neutral-400"
+          >
+            离开
+          </ActionDrawer.SecondaryButton>
+          <ActionDrawer.PrimaryButton
+            onClick={handleSaveDraft}
+            className="bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100"
+          >
+            保存草稿
+          </ActionDrawer.PrimaryButton>
+        </ActionDrawer.Actions>
+      </ActionDrawer>
     </>
   );
 };

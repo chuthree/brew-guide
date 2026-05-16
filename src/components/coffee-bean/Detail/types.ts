@@ -46,10 +46,17 @@ export interface BeanDetailModalProps {
   ) => void;
   /** 转为生豆回调 - 将熟豆转换为生豆（用于迁移旧数据） */
   onConvertToGreen?: (bean: CoffeeBean) => void;
-  /** 模式：view 查看/编辑现有豆子，add 添加新豆子 */
-  mode?: 'view' | 'add';
+  /** 模式：view 查看现有豆子，add 添加新豆子，edit 编辑现有豆子 */
+  mode?: 'view' | 'add' | 'edit';
   /** 添加模式下的保存回调 */
   onSaveNew?: (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => void;
+  /** 编辑模式下的保存回调 */
+  onSaveEdit?: (
+    bean: CoffeeBean,
+    updates: Omit<CoffeeBean, 'id' | 'timestamp'>
+  ) => void | Promise<void>;
+  /** 从详情页编辑模式返回详情页 */
+  onExitEdit?: () => void;
   /** 添加模式下的初始豆子状态 */
   initialBeanState?: 'green' | 'roasted';
 }

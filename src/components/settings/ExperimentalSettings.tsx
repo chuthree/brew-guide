@@ -171,9 +171,9 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
     <SettingPage title="实验性功能" isVisible={isVisible} onClose={handleClose}>
       <SettingSection
         title="咖啡豆"
-        footer="开启后，手动添加咖啡豆将使用全屏表单。"
+        footer="开启后，手动添加和编辑咖啡豆将使用全屏表单。"
       >
-        <SettingRow label="沉浸式添加" isLast>
+        <SettingRow label="沉浸式表单" isLast>
           <SettingToggle
             checked={settings.immersiveAdd || false}
             onChange={checked => handleChange('immersiveAdd', checked)}
@@ -295,7 +295,10 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
         )}
       </SettingSection>
 
-      <SettingSection title="笔记" footer="添加笔记和快捷扣除时，使用分类栏选中的日期。">
+      <SettingSection
+        title="笔记"
+        footer="添加笔记和快捷扣除时，使用分类栏选中的日期。"
+      >
         <SettingRow
           label="同步筛选日期"
           isLast={!settings.syncNewNoteDateWithSelectedDate}

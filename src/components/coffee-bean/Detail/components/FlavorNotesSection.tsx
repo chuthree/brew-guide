@@ -3,7 +3,9 @@
 import React, { useRef, useEffect } from 'react';
 import { CoffeeBean } from '@/types/app';
 import HighlightText from '@/components/common/ui/HighlightText';
-import { calcInputWidth } from '../utils';
+import { normalizeDelimitedTextList } from '@/lib/utils/coffeeBeanUtils';
+import TagAutocompleteInput from './TagAutocompleteInput';
+import { useFlavorSuggestions } from '@/components/coffee-bean/Form/hooks/useCoffeeBeanFieldSuggestions';
 
 interface FlavorNotesSectionProps {
   bean: CoffeeBean | null;
@@ -24,6 +26,7 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
 
   const currentFlavors = isAddMode ? tempBean.flavor || [] : bean?.flavor || [];
   const currentNotes = isAddMode ? tempBean.notes : bean?.notes;
+  const flavorSuggestions = useFlavorSuggestions();
 
   // 初始化备注值
   useEffect(() => {
@@ -41,7 +44,27 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
     }
   };
 
-  const placeholder = currentFlavors.length === 0 ? '输入风味，空格分隔' : '+ ';
+  const appendFlavors = (value: string) => {
+    const nextItems = normalizeDelimitedTextList(value);
+    if (nextItems.length === 0) return false;
+
+    handleUpdateField({
+      flavor: Array.from(new Set([...currentFlavors, ...nextItems])),
+    });
+    return true;
+  };
+
+  const replaceFlavor = (index: number, value: string) => {
+    const remainingFlavors = currentFlavors.filter((_, i) => i !== index);
+    const nextItems = normalizeDelimitedTextList(value).filter(
+      item => !remainingFlavors.includes(item)
+    );
+    const nextFlavors = [...remainingFlavors];
+    nextFlavors.splice(index, 0, ...nextItems);
+    handleUpdateField({ flavor: nextFlavors });
+  };
+
+  const placeholder = currentFlavors.length === 0 ? '输入风味，逗号分隔' : '+ ';
 
   return (
     <>
@@ -55,19 +78,13 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
             {/* 已有的风味标签 */}
             {currentFlavors.map((flavor: string, index: number) => (
               <span
-                key={index}
+                key={flavor}
                 contentEditable
                 suppressContentEditableWarning
                 onBlur={e => {
                   const newValue = e.currentTarget.textContent?.trim() || '';
                   if (newValue !== flavor) {
-                    const newFlavors = [...currentFlavors];
-                    if (newValue === '') {
-                      newFlavors.splice(index, 1);
-                    } else {
-                      newFlavors[index] = newValue;
-                    }
-                    handleUpdateField({ flavor: newFlavors });
+                    replaceFlavor(index, newValue);
                   }
                 }}
                 className="cursor-text bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800/40 dark:text-neutral-300"
@@ -77,61 +94,22 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
             ))}
             {/* 添加模式：输入框 */}
             {isAddMode && (
-              <input
-                type="text"
+              <TagAutocompleteInput
                 placeholder={placeholder}
-                onInput={e => {
-                  const input = e.currentTarget;
-                  input.style.width = calcInputWidth(input.value, placeholder);
-                }}
-                onKeyDown={e => {
-                  if (e.nativeEvent.isComposing) return;
+                suggestions={flavorSuggestions.suggestions.filter(
+                  flavor => !currentFlavors.includes(flavor)
+                )}
+                isCustomPreset={flavorSuggestions.isRemovableSuggestion}
+                onRemovePreset={flavorSuggestions.removeSuggestion}
+                onCommit={appendFlavors}
+                onBackspaceEmpty={() => {
+                  if (currentFlavors.length === 0) return undefined;
 
-                  const input = e.currentTarget;
-                  const value = input.value.trim();
-
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    if (value) {
-                      e.preventDefault();
-                      handleUpdateField({
-                        flavor: [...currentFlavors, value],
-                      });
-                      input.value = '';
-                      input.style.width = calcInputWidth('', '+');
-                    }
-                  }
-
-                  if (
-                    e.key === 'Backspace' &&
-                    !value &&
-                    currentFlavors.length > 0
-                  ) {
-                    e.preventDefault();
-                    const lastFlavor =
-                      currentFlavors[currentFlavors.length - 1];
-                    const newFlavors = currentFlavors.slice(0, -1);
-                    handleUpdateField({ flavor: newFlavors });
-                    input.value = lastFlavor;
-                    input.style.width = calcInputWidth(lastFlavor, '+');
-                  }
+                  const lastFlavor = currentFlavors[currentFlavors.length - 1];
+                  const newFlavors = currentFlavors.slice(0, -1);
+                  handleUpdateField({ flavor: newFlavors });
+                  return lastFlavor;
                 }}
-                onBlur={e => {
-                  const input = e.currentTarget;
-                  const value = input.value.trim();
-                  if (value) {
-                    handleUpdateField({
-                      flavor: [...currentFlavors, value],
-                    });
-                    input.value = '';
-                  }
-                  const newPlaceholder =
-                    currentFlavors.length === 0 && !value
-                      ? '输入风味，空格分隔'
-                      : '+ ';
-                  input.style.width = calcInputWidth('', newPlaceholder);
-                }}
-                className="bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 placeholder:text-neutral-400 focus:outline-none dark:bg-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-500"
-                style={{ width: calcInputWidth('', placeholder) }}
               />
             )}
           </div>

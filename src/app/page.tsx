@@ -31,7 +31,7 @@ import { useBrewingParameters } from '@/lib/hooks/useBrewingParameters';
 import { useBrewingContent } from '@/lib/hooks/useBrewingContent';
 import { useMethodSelector } from '@/lib/hooks/useMethodSelector';
 import { EditableParams } from '@/lib/hooks/useBrewingParameters';
-import { MethodType, MethodStepConfig } from '@/lib/types/method';
+import { MethodType } from '@/lib/types/method';
 import CustomMethodFormModal from '@/components/method/forms/CustomMethodFormModal';
 import NavigationBar from '@/components/layout/NavigationBar';
 import { SettingsOptions } from '@/components/settings/Settings';
@@ -106,6 +106,7 @@ import {
   getConnectedManualSyncProvider,
   isPullToSyncEnabled,
 } from '@/lib/sync/settings';
+import { createCapacityAdjustmentRecordIfNeeded } from '@/lib/coffee-beans/capacityAdjustment';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -392,6 +393,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [beanDetailSearchQuery, setBeanDetailSearchQuery] = useState('');
   // 沉浸式添加模式状态
   const [beanDetailAddMode, setBeanDetailAddMode] = useState(false);
+  const [beanDetailEditMode, setBeanDetailEditMode] = useState(false);
   const [beanDetailAddBeanState, setBeanDetailAddBeanState] = useState<
     'green' | 'roasted'
   >('roasted');
@@ -579,9 +581,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const hasAnyModalOpen =
     isSettingsOpen || hasSubSettingsOpen || beanDetailOpen || noteDetailOpen;
 
-  // 详情页类型的模态框（咖啡豆/笔记详情）- 在大屏幕时作为右侧面板显示，主页面不需要动画
-  const hasDetailModalOpen = beanDetailOpen || noteDetailOpen;
-
   // 其他模态框（设置页等）- 在大屏幕时仍然是全屏覆盖，主页面需要动画
   // 注意：brewingNoteEditOpen 使用 ResponsiveModal，自己管理动画，不需要触发主页面转场
   const hasOverlayModalOpen = isSettingsOpen || hasSubSettingsOpen;
@@ -737,6 +736,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
       if (result.success) {
         setBeanDetailOpen(false);
+        setBeanDetailAddMode(false);
+        setBeanDetailEditMode(false);
 
         showToast({
           type: 'success',
@@ -1173,6 +1174,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     if (beanDetailOpen) {
       setBeanDetailOpen(false);
       setBeanDetailAddMode(false);
+      setBeanDetailEditMode(false);
     }
 
     setCurrentBeanView(view);
@@ -1207,6 +1209,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
       requestAnimationFrame(() => {
         setBeanDetailAddMode(false);
+        setBeanDetailEditMode(false);
         setBeanDetailSearchQuery('');
         setBeanDetailData(bean as ExtendedCoffeeBean);
         setBeanDetailOpen(true);
@@ -1272,6 +1275,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       if (beanDetailOpen) {
         setBeanDetailOpen(false);
         setBeanDetailAddMode(false);
+        setBeanDetailEditMode(false);
         window.setTimeout(navigateToNoteDetail, DETAIL_NAVIGATION_DELAY_MS);
         return;
       }
@@ -1819,6 +1823,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     if (beanDetailOpen) {
       setBeanDetailOpen(false);
       setBeanDetailAddMode(false);
+      setBeanDetailEditMode(false);
     }
     if (noteDetailOpen) {
       setNoteDetailOpen(false);
@@ -2075,6 +2080,27 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     bean: ExtendedCoffeeBean | null = null,
     beanState?: 'green' | 'roasted'
   ) => {
+    if (settings.immersiveAdd) {
+      setShowBeanForm(false);
+      setEditingBean(null);
+      setEditingBeanState(beanState || bean?.beanState || 'roasted');
+      setBeanDetailSearchQuery('');
+
+      if (bean) {
+        setBeanDetailData(bean);
+        setBeanDetailAddMode(false);
+        setBeanDetailEditMode(true);
+      } else {
+        setBeanDetailData(null);
+        setBeanDetailAddBeanState(beanState || 'roasted');
+        setBeanDetailAddMode(true);
+        setBeanDetailEditMode(false);
+      }
+
+      setBeanDetailOpen(true);
+      return;
+    }
+
     setEditingBean(bean);
     setEditingBeanState(beanState || 'roasted');
     setShowBeanForm(true);
@@ -2231,7 +2257,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
 
         // 如果用户没有填写价格，自动根据生豆价格计算
-        let finalBean = { ...bean };
+        const finalBean = { ...bean };
         if (!bean.price || bean.price.trim() === '') {
           const greenBean = store.getBeanById(roastingSourceBeanId);
           if (greenBean?.price && greenBean?.capacity) {
@@ -2272,6 +2298,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       } else if (editingBean?.id) {
         // 普通编辑操作
         await store.updateBean(editingBean.id, bean);
+        try {
+          await createCapacityAdjustmentRecordIfNeeded(
+            editingBean,
+            editingBean.remaining,
+            bean.remaining
+          );
+        } catch (recordError) {
+          console.error('创建容量变动记录失败:', recordError);
+        }
       } else {
         // 普通新增操作
         await store.addBean(bean);
@@ -2848,7 +2883,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       // 事件触发已在 store 中自动完成
       saveMainTabPreference('笔记');
       setActiveMainTab('笔记');
-    } catch (error) {
+    } catch (_error) {
       // 保存冲煮笔记失败
       alert('保存失败，请重试');
     }
@@ -2904,7 +2939,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         title: isNewNote ? '笔记已复制' : '笔记已更新',
         type: 'success',
       });
-    } catch (error) {
+    } catch (_error) {
       alert('保存失败，请重试');
     }
   };
@@ -3152,6 +3187,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         console.error('BeanDetailModal: 打开事件缺少必要数据');
         return;
       }
+      setBeanDetailAddMode(false);
+      setBeanDetailEditMode(false);
       setBeanDetailData(customEvent.detail.bean);
       setBeanDetailSearchQuery(customEvent.detail.searchQuery || '');
       setBeanDetailOpen(true);
@@ -3161,6 +3198,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       setBeanDetailOpen(false);
       // 重置添加模式状态
       setBeanDetailAddMode(false);
+      setBeanDetailEditMode(false);
     };
 
     // 监听沉浸式添加模式事件
@@ -3169,6 +3207,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         beanState?: 'green' | 'roasted';
       }>;
       setBeanDetailAddMode(true);
+      setBeanDetailEditMode(false);
       setBeanDetailAddBeanState(customEvent.detail?.beanState || 'roasted');
       setBeanDetailData(null);
       setBeanDetailSearchQuery('');
@@ -3713,11 +3752,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     onClose={() => {
                       setBeanDetailOpen(false);
                       setBeanDetailAddMode(false);
+                      setBeanDetailEditMode(false);
                     }}
                     onCreateNoteFromBean={handleCreateNoteFromBean}
                     onOpenRelatedNote={handleOpenNoteDetailFromBean}
                     searchQuery={beanDetailSearchQuery}
-                    mode={beanDetailAddMode ? 'add' : 'view'}
+                    mode={
+                      beanDetailAddMode
+                        ? 'add'
+                        : beanDetailEditMode
+                          ? 'edit'
+                          : 'view'
+                    }
                     initialBeanState={beanDetailAddBeanState}
                     onSaveNew={async newBean => {
                       try {
@@ -3728,14 +3774,45 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         setBeanDetailAddMode(false);
                       } catch (error) {
                         console.error('添加咖啡豆失败:', error);
+                        throw error;
                       }
                     }}
+                    onSaveEdit={async (bean, updates) => {
+                      try {
+                        const { getCoffeeBeanStore } =
+                          await import('@/lib/stores/coffeeBeanStore');
+                        await getCoffeeBeanStore().updateBean(bean.id, updates);
+                        try {
+                          await createCapacityAdjustmentRecordIfNeeded(
+                            bean,
+                            bean.remaining,
+                            updates.remaining
+                          );
+                        } catch (recordError) {
+                          console.error('创建容量变动记录失败:', recordError);
+                        }
+                        handleBeanListChange();
+                        setBeanDetailEditMode(false);
+                      } catch (error) {
+                        console.error('编辑咖啡豆失败:', error);
+                        throw error;
+                      }
+                    }}
+                    onExitEdit={() => setBeanDetailEditMode(false)}
                     onEdit={bean => {
+                      if (settings.immersiveAdd) {
+                        setBeanDetailAddMode(false);
+                        setBeanDetailEditMode(true);
+                        setBeanDetailOpen(true);
+                        return;
+                      }
+
                       setEditingBean(bean);
                       setShowBeanForm(true);
                     }}
                     onDelete={async bean => {
                       setBeanDetailOpen(false);
+                      setBeanDetailEditMode(false);
                       try {
                         const { getCoffeeBeanStore } =
                           await import('@/lib/stores/coffeeBeanStore');
@@ -4291,6 +4368,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         beanDetailSearchQuery={beanDetailSearchQuery}
         beanDetailAddMode={beanDetailAddMode}
         setBeanDetailAddMode={setBeanDetailAddMode}
+        beanDetailEditMode={beanDetailEditMode}
+        setBeanDetailEditMode={setBeanDetailEditMode}
         beanDetailAddBeanState={beanDetailAddBeanState}
         onCreateNoteFromBean={handleCreateNoteFromBean}
         onOpenNoteDetailFromBean={handleOpenNoteDetailFromBean}

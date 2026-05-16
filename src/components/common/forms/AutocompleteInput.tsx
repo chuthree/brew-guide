@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils/classNameUtils';
 import { X } from 'lucide-react';
+import SuggestionDropdown from './SuggestionDropdown';
 
 interface AutocompleteInputProps {
   value: string;
@@ -27,6 +28,7 @@ interface AutocompleteInputProps {
     | 'email'
     | 'url'; // 新增输入模式属性
   disabled?: boolean; // 添加禁用属性
+  readOnly?: boolean;
   maxValue?: number; // 添加最大值属性，用于限制数字输入
   allowDecimal?: boolean; // 新增：是否允许小数点输入
   maxDecimalPlaces?: number; // 新增：小数点后最多允许的位数
@@ -39,11 +41,19 @@ interface AutocompleteInputProps {
   onEnter?: () => void;
 }
 
+const LIST_SEPARATOR_REGEX = /[,，、;；]/;
+const EMPTY_SUGGESTIONS: string[] = [];
+
+const getActiveSuggestionQuery = (value: string) => {
+  const segments = value.split(LIST_SEPARATOR_REGEX);
+  return (segments[segments.length - 1] || '').trim();
+};
+
 const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   value,
   onChange,
   placeholder = '',
-  suggestions = [],
+  suggestions = EMPTY_SUGGESTIONS,
   label,
   className,
   required = false,
@@ -55,6 +65,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   inputType = 'text', // 默认为text类型
   inputMode, // 输入模式
   disabled = false, // 默认为不禁用
+  readOnly = false,
   maxValue,
   allowDecimal = false, // 新增：默认不允许小数点
   maxDecimalPlaces = 2, // 新增：默认小数点后最多2位
@@ -69,6 +80,9 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  const [removedSuggestions, setRemovedSuggestions] = useState<Set<string>>(
+    () => new Set()
+  );
   const [justSelected, setJustSelected] = useState(false); // 跟踪用户是否刚选择过建议项
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -81,23 +95,26 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   // 过滤建议列表
   useEffect(() => {
-    if (!inputValue.trim()) {
-      setFilteredSuggestions(suggestions.slice(0, 10));
+    const query = getActiveSuggestionQuery(inputValue);
+    const visibleSuggestions = suggestions.filter(
+      suggestion => !removedSuggestions.has(suggestion)
+    );
+
+    if (!query) {
+      setFilteredSuggestions(visibleSuggestions);
       return;
     }
 
-    const lowerCaseInput = inputValue.toLowerCase();
-    const filtered = suggestions
-      .filter(suggestion => {
-        const lowerCaseSuggestion = suggestion.toLowerCase();
-        return matchStartsWith
-          ? lowerCaseSuggestion.startsWith(lowerCaseInput)
-          : lowerCaseSuggestion.includes(lowerCaseInput);
-      })
-      .slice(0, 10);
+    const lowerCaseInput = query.toLowerCase();
+    const filtered = visibleSuggestions.filter(suggestion => {
+      const lowerCaseSuggestion = suggestion.toLowerCase();
+      return matchStartsWith
+        ? lowerCaseSuggestion.startsWith(lowerCaseInput)
+        : lowerCaseSuggestion.includes(lowerCaseInput);
+    });
 
     setFilteredSuggestions(filtered);
-  }, [inputValue, suggestions, matchStartsWith]);
+  }, [inputValue, matchStartsWith, removedSuggestions, suggestions]);
 
   // 处理点击外部关闭下拉菜单
   useEffect(() => {
@@ -131,6 +148,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   // 处理输入变化
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
+
     let newValue = e.target.value;
 
     // 对数字类型输入进行处理
@@ -304,18 +323,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     }
   };
 
-  // 处理下拉菜单项点击
-  const handleItemClick = (suggestion: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleSelectSuggestion(suggestion);
-  };
-
   // 新增：处理删除预设
-  const handleRemovePreset = (suggestion: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const handleRemovePreset = (suggestion: string) => {
     // 如果当前值等于要删除的预设值，清空输入框
     if (inputValue === suggestion) {
       setInputValue('');
@@ -361,9 +370,16 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
+            readOnly={readOnly}
+            onClick={() => {
+              if (filteredSuggestions.length > 0) {
+                setOpen(true);
+              }
+            }}
             className={cn(
               'w-full border-b border-neutral-300 bg-transparent py-2 outline-hidden focus:border-neutral-800/50 dark:border-neutral-700 dark:focus:border-neutral-400',
               disabled && 'cursor-not-allowed opacity-60',
+              readOnly && 'cursor-pointer',
               className
             )}
           />
@@ -389,38 +405,29 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
         </div>
 
         {open && filteredSuggestions.length > 0 && (
-          <div
+          <SuggestionDropdown
             ref={dropdownRef}
             onTouchStart={handleDropdownTouch}
-            className="absolute right-0 left-0 z-50 mt-1 max-h-[200px] overflow-auto rounded-md border border-neutral-200/50 bg-white shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900"
-          >
-            <ul className="py-1">
-              {filteredSuggestions.map((suggestion, index) => (
-                <li
-                  key={index}
-                  className="flex cursor-pointer items-center justify-between px-3 py-3 text-sm hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700"
-                  onClick={e => handleItemClick(suggestion, e)}
-                  onTouchStart={e => e.stopPropagation()}
-                >
-                  <span>{suggestion}</span>
-
-                  {/* 如果是自定义预设且提供了删除函数，显示删除按钮 */}
-                  {isCustomPreset(suggestion) && onRemovePreset && (
-                    <button
-                      type="button"
-                      onClick={e => {
-                        e.stopPropagation(); // 阻止点击事件冒泡到li元素
-                        handleRemovePreset(suggestion, e);
-                      }}
-                      className="ml-2 p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
+            suggestions={filteredSuggestions}
+            onSelect={handleSelectSuggestion}
+            isRemovableSuggestion={isCustomPreset}
+            onRemoveSuggestion={
+              onRemovePreset
+                ? suggestion => {
+                    setRemovedSuggestions(current => {
+                      const next = new Set(current);
+                      next.add(suggestion);
+                      return next;
+                    });
+                    handleRemovePreset(suggestion);
+                    setFilteredSuggestions(current =>
+                      current.filter(value => value !== suggestion)
+                    );
+                  }
+                : undefined
+            }
+            className="absolute right-0 left-0"
+          />
         )}
       </div>
     </div>

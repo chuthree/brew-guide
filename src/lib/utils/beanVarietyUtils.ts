@@ -10,6 +10,7 @@ import {
   formatCoffeeBeanDisplayName,
   getBeanNameWithoutRoaster,
   getBeanRoasterName,
+  normalizeDelimitedTextList,
   removeRoasterFromDisplayName,
 } from './coffeeBeanUtils';
 
@@ -27,6 +28,7 @@ export interface ExtendedCoffeeBean extends CoffeeBean {
   blendComponents?: {
     percentage?: number;
     origin?: string;
+    estate?: string;
     process?: string;
     variety?: string;
   }[];
@@ -45,7 +47,7 @@ export const getBeanVarieties = (bean: CoffeeBean): string[] => {
   if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
     bean.blendComponents.forEach(component => {
       if (isValidText(component.variety)) {
-        varieties.push(component.variety!.trim());
+        varieties.push(...normalizeDelimitedTextList(component.variety));
       }
     });
   }
@@ -225,7 +227,7 @@ export const getBeanOrigins = (bean: CoffeeBean): string[] => {
   if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
     bean.blendComponents.forEach(component => {
       if (isValidText(component.origin)) {
-        origins.push(component.origin!.trim());
+        origins.push(...normalizeDelimitedTextList(component.origin));
       }
     });
   }
@@ -247,7 +249,7 @@ export const getBeanProcesses = (bean: CoffeeBean): string[] => {
   if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
     bean.blendComponents.forEach(component => {
       if (isValidText(component.process)) {
-        processes.push(component.process!.trim());
+        processes.push(...normalizeDelimitedTextList(component.process));
       }
     });
   }
@@ -269,7 +271,7 @@ export const getBeanEstates = (bean: CoffeeBean): string[] => {
   if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
     bean.blendComponents.forEach(component => {
       if (isValidText(component.estate)) {
-        estates.push(component.estate!.trim());
+        estates.push(...normalizeDelimitedTextList(component.estate));
       }
     });
   }
@@ -322,7 +324,7 @@ export const getBeanFlavors = (bean: CoffeeBean): string[] => {
   if (bean.flavor && Array.isArray(bean.flavor)) {
     bean.flavor.forEach(flavor => {
       if (isValidText(flavor)) {
-        flavors.push(flavor.trim());
+        flavors.push(...normalizeDelimitedTextList(flavor));
       }
     });
   }

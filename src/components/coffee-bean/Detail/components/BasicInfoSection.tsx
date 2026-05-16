@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { CoffeeBean } from '@/types/app';
 import { DatePicker } from '@/components/common/ui/DatePicker';
 import HighlightText from '@/components/common/ui/HighlightText';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
-import { getCoffeeBeanRoasterSuggestions } from '@/lib/utils/coffeeBeanUtils';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
+import {
+  autofillBlendComponentsFromName,
+  useBlendComponentSuggestions,
+} from '@/components/coffee-bean/Form/hooks/useBlendComponentSuggestions';
+import { useRoasterSuggestions } from '@/components/coffee-bean/Form/hooks/useCoffeeBeanFieldSuggestions';
 import {
   formatNumber,
   parseDateString,
@@ -20,7 +23,6 @@ interface BasicInfoSectionProps {
   bean: CoffeeBean | null;
   tempBean: Partial<CoffeeBean>;
   isAddMode: boolean;
-  isGreenBean: boolean;
   searchQuery: string;
   editingCapacity: boolean;
   editingRemaining: boolean;
@@ -42,7 +44,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   bean,
   tempBean,
   isAddMode,
-  isGreenBean,
   searchQuery,
   editingCapacity,
   editingRemaining,
@@ -60,6 +61,9 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   const capacityInputRef = useRef<HTMLDivElement>(null);
   const remainingInputRef = useRef<HTMLDivElement>(null);
   const priceInputRef = useRef<HTMLDivElement>(null);
+  const blendComponentNameAutofillRef = useRef<
+    NonNullable<CoffeeBean['blendComponents']>
+  >([]);
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -72,16 +76,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
     roasterFieldEnabled,
     roasterSeparator,
   };
-  const allBeans = useCoffeeBeanStore(state => state.beans);
-
   const currentBean = isAddMode ? tempBean : bean;
   const isGreenBeanType = currentBean?.beanState === 'green';
   const merchantLabel = isGreenBeanType ? '生豆商' : '烘焙商';
   const flavorInfo = getFlavorInfo(bean);
-  const roasterSuggestions = useMemo(
-    () => getCoffeeBeanRoasterSuggestions(allBeans, !!roasterFieldEnabled),
-    [allBeans, roasterFieldEnabled]
-  );
+  const blendComponentSuggestions = useBlendComponentSuggestions();
+  const roasterSuggestions = useRoasterSuggestions(!!roasterFieldEnabled);
 
   // 获取格式化后的显示名称
   const displayName = bean ? formatBeanDisplayName(bean, roasterSettings) : '';
@@ -110,6 +110,24 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
     dateValue
       ? getDaysSinceDateString(dateValue)
       : null;
+
+  const handleNameChange = (name: string) => {
+    const currentComponents = currentBean?.blendComponents || [];
+    const autofillResult = autofillBlendComponentsFromName(
+      currentComponents,
+      name,
+      blendComponentSuggestions,
+      blendComponentNameAutofillRef.current
+    );
+    blendComponentNameAutofillRef.current = autofillResult.autofillComponents;
+
+    void handleUpdateField({
+      name,
+      ...(autofillResult.changed
+        ? { blendComponents: autofillResult.components }
+        : {}),
+    });
+  };
 
   // 聚焦输入框
   useEffect(() => {
@@ -154,34 +172,36 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
       {/* 名称输入/标题区域 */}
       <div>
         {isAddMode && roasterFieldEnabled ? (
-          <div className="grid w-full grid-cols-2 gap-4">
+          <div className="grid w-full grid-cols-[minmax(7rem,max-content)_minmax(0,1fr)] items-end gap-3">
             <AutocompleteInput
               value={tempBean.roaster || ''}
               onChange={value => {
                 void handleUpdateField({ roaster: value });
               }}
               placeholder={`${merchantLabel}名称`}
-              suggestions={roasterSuggestions}
+              suggestions={roasterSuggestions.suggestions}
               clearable
               inputMode="text"
-              containerClassName="space-y-0"
-              className="border-dashed border-neutral-300 py-1 text-sm font-medium text-neutral-800 placeholder:text-neutral-400 focus:border-neutral-500 dark:border-neutral-600 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
+              isCustomPreset={roasterSuggestions.isRemovableSuggestion}
+              onRemovePreset={roasterSuggestions.removeSuggestion}
+              containerClassName="min-w-28 max-w-[45vw] space-y-0"
+              className="field-sizing-content w-auto max-w-full min-w-28 border-dashed border-neutral-300 py-1 pr-5 text-sm font-medium text-neutral-800 placeholder:text-neutral-400 focus:border-neutral-500 dark:border-neutral-600 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
             />
             <input
-              id="bean-detail-title"
+              id="bean-detail-form-title"
               type="text"
               value={tempBean.name || ''}
-              onChange={e => handleUpdateField({ name: e.target.value })}
+              onChange={e => handleNameChange(e.target.value)}
               placeholder="咖啡豆名称"
-              className="w-full border-b border-dashed border-neutral-300 bg-transparent pb-1 text-sm font-medium text-neutral-800 outline-none placeholder:text-neutral-400 focus:border-neutral-500 dark:border-neutral-600 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
+              className="min-w-0 border-b border-dashed border-neutral-300 bg-transparent pb-1 text-sm font-medium text-neutral-800 outline-none placeholder:text-neutral-400 focus:border-neutral-500 dark:border-neutral-600 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
             />
           </div>
         ) : isAddMode ? (
           <input
-            id="bean-detail-title"
+            id="bean-detail-form-title"
             type="text"
             value={tempBean.name || ''}
-            onChange={e => handleUpdateField({ name: e.target.value })}
+            onChange={e => handleNameChange(e.target.value)}
             placeholder="输入咖啡豆名称"
             className="w-full border-b border-dashed border-neutral-300 bg-transparent pb-1 text-sm font-medium text-neutral-800 outline-none placeholder:text-neutral-400 focus:border-neutral-500 dark:border-neutral-600 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
           />
@@ -339,7 +359,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                   {currentBean?.price || (isAddMode ? '输入' : '')}
                 </span>
               )}
-              {currentBean?.price && (
+              {(isAddMode || currentBean?.price) && (
                 <span className="text-neutral-800 dark:text-neutral-100">
                   元
                   {hasValidUnitPrice &&
@@ -352,11 +372,11 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
         {/* 日期 */}
         {(isAddMode || dateValue || currentBean?.isInTransit) && (
-          <div className="flex items-start">
-            <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+          <div className="flex items-center">
+            <div className="w-16 shrink-0 text-xs leading-4 font-medium text-neutral-500 dark:text-neutral-400">
               {dateLabel}
             </div>
-            <div className="flex items-center gap-2 text-xs font-medium">
+            <div className="flex min-h-4 items-center gap-2 text-xs leading-4 font-medium">
               {!isAddMode && currentBean?.isInTransit ? (
                 <span className="whitespace-nowrap text-neutral-800 dark:text-neutral-100">
                   在途
@@ -374,7 +394,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     date={parseDateString(dateValue)}
                     onDateChange={date => handleDateChange(date, dateField)}
                     placeholder={`选择${dateLabel}`}
-                    className="w-auto [&_button]:w-auto [&_button]:justify-start [&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:font-medium"
+                    className="w-auto leading-4 [&_button]:h-4 [&_button]:w-auto [&_button]:items-center [&_button]:justify-start [&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:leading-4 [&_button]:font-medium [&_button>span]:leading-4"
                     displayFormat="yyyy-MM-dd"
                   />
                   {agingDays !== null && agingDays > 0 && (
