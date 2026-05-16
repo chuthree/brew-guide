@@ -653,9 +653,6 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
             placeholder="选择烘焙度"
             suggestions={roastLevelSuggestions.suggestions}
             readOnly
-            clearable
-            isCustomPreset={roastLevelSuggestions.isRemovableSuggestion}
-            onRemovePreset={roastLevelSuggestions.removeSuggestion}
             className="text-base"
           />
         </div>

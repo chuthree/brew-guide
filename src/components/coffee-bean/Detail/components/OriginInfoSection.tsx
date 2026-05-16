@@ -1,13 +1,24 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { CoffeeBean } from '@/types/app';
 import HighlightText from '@/components/common/ui/HighlightText';
 import { BEAN_TYPES } from '../types';
 import BlendComponentTagRows from './BlendComponentTagRows';
 import { updateBlendComponentsDelimitedField } from '@/lib/utils/coffeeBeanUtils';
-import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { useRoastLevelSuggestions } from '@/components/coffee-bean/Form/hooks/useCoffeeBeanFieldSuggestions';
+import SuggestionDropdown from '@/components/common/forms/SuggestionDropdown';
+import {
+  autoUpdate,
+  flip,
+  FloatingPortal,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from '@floating-ui/react';
 
 interface OriginInfoSectionProps {
   bean: CoffeeBean | null;
@@ -18,6 +29,87 @@ interface OriginInfoSectionProps {
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
   handleRoastLevelSelect: (level: string) => void;
 }
+
+interface InlineRoastLevelSelectProps {
+  value: string;
+  placeholder: string;
+  suggestions: string[];
+  onChange: (value: string) => void;
+}
+
+const InlineRoastLevelSelect: React.FC<InlineRoastLevelSelectProps> = ({
+  value,
+  placeholder,
+  suggestions,
+  onChange,
+}) => {
+  const [open, setOpen] = useState(false);
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: setOpen,
+    placement: 'bottom-start',
+    middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  });
+  const dismiss = useDismiss(context);
+  const role = useRole(context, { role: 'listbox' });
+  const { getReferenceProps, getFloatingProps } = useInteractions([
+    dismiss,
+    role,
+  ]);
+
+  const handleSelect = useCallback(
+    (selectedValue: string) => {
+      onChange(selectedValue);
+      setOpen(false);
+    },
+    [onChange]
+  );
+
+  return (
+    <>
+      <button
+        ref={refs.setReference}
+        type="button"
+        className="block min-h-[1.25em] max-w-full cursor-pointer bg-transparent p-0 text-left text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+        {...getReferenceProps({
+          onClick: () => setOpen(current => !current),
+          onKeyDown: event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setOpen(current => !current);
+            }
+          },
+        })}
+      >
+        {value || (
+          <span className="text-neutral-400 dark:text-neutral-500">
+            {placeholder}
+          </span>
+        )}
+      </button>
+
+      {open && suggestions.length > 0 && (
+        <FloatingPortal>
+          <SuggestionDropdown
+            ref={refs.setFloating}
+            suggestions={suggestions}
+            onSelect={handleSelect}
+            style={{
+              ...floatingStyles,
+              zIndex: 50,
+              minWidth: 128,
+              width:
+                refs.reference.current?.getBoundingClientRect().width ??
+                undefined,
+            }}
+            {...getFloatingProps()}
+          />
+        </FloatingPortal>
+      )}
+    </>
+  );
+};
 
 const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   bean,
@@ -352,17 +444,11 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
           <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             烘焙度
           </div>
-          <AutocompleteInput
+          <InlineRoastLevelSelect
             value={roastLevel}
             onChange={handleRoastLevelSelect}
             placeholder="选择烘焙度"
             suggestions={roastLevelSuggestions.suggestions}
-            readOnly
-            clearable
-            isCustomPreset={roastLevelSuggestions.isRemovableSuggestion}
-            onRemovePreset={roastLevelSuggestions.removeSuggestion}
-            containerClassName="w-32 space-y-0"
-            className="border-none py-0 pr-5 text-xs font-medium text-neutral-800 placeholder:text-neutral-400 dark:text-neutral-100 dark:placeholder:text-neutral-500"
           />
         </div>
       )}

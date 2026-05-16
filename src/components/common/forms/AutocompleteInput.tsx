@@ -1,9 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils/classNameUtils';
 import { X } from 'lucide-react';
 import SuggestionDropdown from './SuggestionDropdown';
+import {
+  autoUpdate,
+  flip,
+  FloatingPortal,
+  offset,
+  shift,
+  useFloating,
+} from '@floating-ui/react';
 
 interface AutocompleteInputProps {
   value: string;
@@ -87,6 +95,28 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { refs, floatingStyles } = useFloating({
+    open,
+    onOpenChange: setOpen,
+    placement: 'bottom-start',
+    middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  });
+
+  const setReferenceElement = useCallback(
+    (node: HTMLDivElement | null) => {
+      refs.setReference(node);
+    },
+    [refs]
+  );
+
+  const setDropdownElement = useCallback(
+    (node: HTMLDivElement | null) => {
+      dropdownRef.current = node;
+      refs.setFloating(node);
+    },
+    [refs]
+  );
 
   // 当外部value变化时更新内部state
   useEffect(() => {
@@ -100,7 +130,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       suggestion => !removedSuggestions.has(suggestion)
     );
 
-    if (!query) {
+    if (readOnly || !query) {
       setFilteredSuggestions(visibleSuggestions);
       return;
     }
@@ -114,25 +144,37 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     });
 
     setFilteredSuggestions(filtered);
-  }, [inputValue, matchStartsWith, removedSuggestions, suggestions]);
+  }, [inputValue, matchStartsWith, readOnly, removedSuggestions, suggestions]);
 
   // 处理点击外部关闭下拉菜单
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+
       if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        containerRef.current?.contains(target) ||
+        dropdownRef.current?.contains(target)
       ) {
+        return;
+      }
+
+      if (containerRef.current) {
         setOpen(false);
       }
     }
 
     // 移动端touch事件特殊处理
     function handleTouchOutside(event: TouchEvent) {
+      const target = event.target as Node;
+
       if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        containerRef.current?.contains(target) ||
+        dropdownRef.current?.contains(target)
       ) {
+        return;
+      }
+
+      if (containerRef.current) {
         setOpen(false);
       }
     }
@@ -274,7 +316,12 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   // 处理键盘事件
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && inputValue) {
+    if (readOnly && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      if (filteredSuggestions.length > 0) {
+        setOpen(current => !current);
+      }
+    } else if (e.key === 'Enter' && inputValue) {
       e.preventDefault();
       onChange(inputValue);
       setOpen(false);
@@ -293,6 +340,10 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   // 处理聚焦
   const handleFocus = () => {
+    if (readOnly) {
+      return;
+    }
+
     // 如果用户刚选择过建议项，则不打开下拉菜单
     if (justSelected) {
       setJustSelected(false);
@@ -351,7 +402,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       )}
 
       <div className="relative">
-        <div className="relative w-full">
+        <div ref={setReferenceElement} className="relative w-full">
           <input
             ref={inputRef}
             type={inputType}
@@ -373,7 +424,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
             readOnly={readOnly}
             onClick={() => {
               if (filteredSuggestions.length > 0) {
-                setOpen(true);
+                setOpen(current => (readOnly ? !current : true));
               }
             }}
             className={cn(
@@ -405,29 +456,37 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
         </div>
 
         {open && filteredSuggestions.length > 0 && (
-          <SuggestionDropdown
-            ref={dropdownRef}
-            onTouchStart={handleDropdownTouch}
-            suggestions={filteredSuggestions}
-            onSelect={handleSelectSuggestion}
-            isRemovableSuggestion={isCustomPreset}
-            onRemoveSuggestion={
-              onRemovePreset
-                ? suggestion => {
-                    setRemovedSuggestions(current => {
-                      const next = new Set(current);
-                      next.add(suggestion);
-                      return next;
-                    });
-                    handleRemovePreset(suggestion);
-                    setFilteredSuggestions(current =>
-                      current.filter(value => value !== suggestion)
-                    );
-                  }
-                : undefined
-            }
-            className="absolute right-0 left-0"
-          />
+          <FloatingPortal>
+            <SuggestionDropdown
+              ref={setDropdownElement}
+              onTouchStart={handleDropdownTouch}
+              suggestions={filteredSuggestions}
+              onSelect={handleSelectSuggestion}
+              isRemovableSuggestion={isCustomPreset}
+              onRemoveSuggestion={
+                onRemovePreset
+                  ? suggestion => {
+                      setRemovedSuggestions(current => {
+                        const next = new Set(current);
+                        next.add(suggestion);
+                        return next;
+                      });
+                      handleRemovePreset(suggestion);
+                      setFilteredSuggestions(current =>
+                        current.filter(value => value !== suggestion)
+                      );
+                    }
+                  : undefined
+              }
+              style={{
+                ...floatingStyles,
+                zIndex: 50,
+                width:
+                  refs.reference.current?.getBoundingClientRect().width ??
+                  undefined,
+              }}
+            />
+          </FloatingPortal>
         )}
       </div>
     </div>

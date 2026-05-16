@@ -20,6 +20,7 @@ interface SuggestionDropdownProps {
   isRemovableSuggestion?: (value: string) => boolean;
   onRemoveSuggestion?: (value: string) => void;
   className?: string;
+  style?: React.CSSProperties;
   onTouchStart?: (event: React.TouchEvent<HTMLDivElement>) => void;
 }
 
@@ -34,6 +35,7 @@ const SuggestionDropdown = React.forwardRef<
       isRemovableSuggestion = () => false,
       onRemoveSuggestion,
       className,
+      style,
       onTouchStart,
     },
     ref
@@ -89,9 +91,9 @@ const SuggestionDropdown = React.forwardRef<
         ref={scrollRef}
         onTouchStart={onTouchStart}
         onScroll={event => setScrollTop(event.currentTarget.scrollTop)}
-        style={{ maxHeight: DROPDOWN_MAX_HEIGHT }}
+        style={{ ...style, maxHeight: DROPDOWN_MAX_HEIGHT }}
         className={cn(
-          'absolute right-0 left-0 z-50 mt-1 overflow-auto rounded-md border border-neutral-200/50 bg-white py-1 shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900',
+          'overflow-auto rounded-md border border-neutral-200/50 bg-white py-1 shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900',
           className
         )}
       >
