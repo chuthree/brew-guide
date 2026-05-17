@@ -7,6 +7,11 @@ import {
   getCoffeeBeanImageSource,
 } from '@/lib/coffee-beans/imageRepository';
 
+type CoffeeBeanDataChangedDetail = {
+  beanId?: string;
+  bean?: { id?: string };
+};
+
 export function useCoffeeBeanImage(
   beanId: string | undefined,
   options: {
@@ -17,6 +22,7 @@ export function useCoffeeBeanImage(
 ): string | undefined {
   const { side = 'front', preferThumbnail = true, fallback } = options;
   const [imageSource, setImageSource] = useState<string | undefined>(fallback);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,7 +47,36 @@ export function useCoffeeBeanImage(
     return () => {
       cancelled = true;
     };
-  }, [beanId, side, preferThumbnail, fallback]);
+  }, [beanId, side, preferThumbnail, fallback, refreshKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !beanId) {
+      return;
+    }
+
+    const handleBeanDataChanged = (event: Event) => {
+      const detail = (event as CustomEvent<CoffeeBeanDataChangedDetail>).detail;
+
+      if (detail?.beanId && detail.beanId !== beanId) {
+        return;
+      }
+
+      if (detail?.bean?.id && detail.bean.id !== beanId) {
+        return;
+      }
+
+      setRefreshKey(key => key + 1);
+    };
+
+    window.addEventListener('coffeeBeanDataChanged', handleBeanDataChanged);
+
+    return () => {
+      window.removeEventListener(
+        'coffeeBeanDataChanged',
+        handleBeanDataChanged
+      );
+    };
+  }, [beanId]);
 
   return imageSource;
 }
