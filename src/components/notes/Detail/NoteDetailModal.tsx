@@ -119,6 +119,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const showBeanAgingDaysInNote = useSettingsStore(
     state => state.settings.showBeanAgingDaysInNote ?? false
   );
+  const showNoteTimeInNote = useSettingsStore(
+    state => state.settings.showNoteTimeInNote ?? true
+  );
 
   // 从 store 获取实时笔记，避免详情页停留时数据快照过期
   const allNotes = useBrewingNoteStore(state => state.notes);
@@ -1046,14 +1049,18 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                 </InfoRow>
               )}
 
-              <div className="border-t border-dashed border-neutral-200/50 dark:border-neutral-800/50"></div>
+              {(showNoteTimeInNote || note.notes) && (
+                <div className="border-t border-dashed border-neutral-200/50 dark:border-neutral-800/50"></div>
+              )}
 
               {/* 时间 */}
-              <InfoRow label="时间">
-                <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                  {formatDate(note.timestamp)}
-                </div>
-              </InfoRow>
+              {showNoteTimeInNote && (
+                <InfoRow label="时间">
+                  <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                    {formatDate(note.timestamp)}
+                  </div>
+                </InfoRow>
+              )}
 
               {/* 笔记信息 */}
               {note.notes && (

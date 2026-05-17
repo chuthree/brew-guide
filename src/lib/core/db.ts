@@ -262,6 +262,7 @@ export interface AppSettings {
   showRatingDimensionsEntry: boolean;
   showUnitPriceInNote: boolean;
   showBeanAgingDaysInNote: boolean;
+  showNoteTimeInNote: boolean;
   showCapacityAdjustmentRecords: boolean;
   useClassicNotesListStyle?: boolean;
 

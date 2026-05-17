@@ -114,12 +114,18 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
             onChange={checked => handleChange('showUnitPriceInNote', checked)}
           />
         </SettingRow>
-        <SettingRow label="养豆" isLast>
+        <SettingRow label="养豆">
           <SettingToggle
             checked={settings.showBeanAgingDaysInNote ?? false}
             onChange={checked =>
               handleChange('showBeanAgingDaysInNote', checked)
             }
+          />
+        </SettingRow>
+        <SettingRow label="时间" isLast>
+          <SettingToggle
+            checked={settings.showNoteTimeInNote ?? true}
+            onChange={checked => handleChange('showNoteTimeInNote', checked)}
           />
         </SettingRow>
       </SettingSection>
