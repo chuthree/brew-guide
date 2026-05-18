@@ -25,6 +25,7 @@ def capacitor_pods
   pod 'CapacitorSplashScreen', :path => '../../node_modules/.pnpm/@capacitor+splash-screen@7.0.3_@capacitor+core@7.4.4/node_modules/@capacitor/splash-screen'
   pod 'CapacitorStatusBar', :path => '../../node_modules/.pnpm/@capacitor+status-bar@7.0.3_@capacitor+core@7.4.4/node_modules/@capacitor/status-bar'
   pod 'CapawesomeCapacitorFilePicker', :path => '../../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.2.0_@capacitor+core@7.4.4/node_modules/@capawesome/capacitor-file-picker'
+  pod 'EbarooniCapacitorCalendar', :path => '../../node_modules/.pnpm/@ebarooni+capacitor-calendar@7.2.0_@capacitor+core@7.4.4/node_modules/@ebarooni/capacitor-calendar'
 end
 
 target 'App' do

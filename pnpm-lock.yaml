@@ -53,6 +53,9 @@ importers:
       '@capawesome/capacitor-file-picker':
         specifier: ^7.2.0
         version: 7.2.0(@capacitor/core@7.4.4)
+      '@ebarooni/capacitor-calendar':
+        specifier: 7.2.0
+        version: 7.2.0(@capacitor/core@7.4.4)
     devDependencies:
       '@capacitor/android':
         specifier: ^7.4.4
@@ -158,6 +161,12 @@ packages:
 
   '@capawesome/capacitor-file-picker@7.2.0':
     resolution: {integrity: sha512-qUNa+Ypem575xSNiJwgiOaaHXzAHaxMtERySRIsIC0HggoCa11xGS3xEVtMooQ3fS0cDXfl4/17DYoHQtkDjXA==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
+  '@ebarooni/capacitor-calendar@7.2.0':
+    resolution: {integrity: sha512-V5Qr4n7Aoc9BIcS7ap0dC6QKiAC2HFnV1QBa2gdu7hMSOlYCNMQ38ar7HoeQ6QJtWt8/n2nipczCtAv3XANpOg==}
+    engines: {node: '>=20.12.2'}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -657,6 +666,10 @@ snapshots:
   '@capacitor/synapse@1.0.4': {}
 
   '@capawesome/capacitor-file-picker@7.2.0(@capacitor/core@7.4.4)':
+    dependencies:
+      '@capacitor/core': 7.4.4
+
+  '@ebarooni/capacitor-calendar@7.2.0(@capacitor/core@7.4.4)':
     dependencies:
       '@capacitor/core': 7.4.4
 
