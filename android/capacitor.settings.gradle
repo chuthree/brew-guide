@@ -40,3 +40,6 @@ project(':capacitor-status-bar').projectDir = new File('../node_modules/.pnpm/@c
 
 include ':capawesome-capacitor-file-picker'
 project(':capawesome-capacitor-file-picker').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.2.0_@capacitor+core@7.4.5/node_modules/@capawesome/capacitor-file-picker/android')
+
+include ':ebarooni-capacitor-calendar'
+project(':ebarooni-capacitor-calendar').projectDir = new File('../node_modules/.pnpm/@ebarooni+capacitor-calendar@7.2.0_@capacitor+core@7.4.5/node_modules/@ebarooni/capacitor-calendar/android')

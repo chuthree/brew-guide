@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useTraySync } from '@/lib/hooks/useTraySync';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import { getRealtimeSyncService } from '@/lib/supabase/realtime';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useDataLayer } from './DataLayerProvider';
+import { useCalendarSync } from '@/lib/calendarSync/useCalendarSync';
 
 // 检查是否在 Tauri 环境中
 const isTauri = () => {
@@ -22,7 +23,7 @@ const isTauri = () => {
  * 3. Realtime 连接与数据加载并行进行
  */
 export default function StorageInit() {
-  const [initialized, setInitialized] = useState(false);
+  const initializedRef = useRef(false);
   const beans = useCoffeeBeanStore(state => state.beans);
   const { isInitialized: dataLayerReady } = useDataLayer();
 
@@ -47,6 +48,7 @@ export default function StorageInit() {
 
   // 同步咖啡豆数据到 Tauri 菜单栏（桌面端）
   useTraySync(handleNavigateToBean);
+  useCalendarSync(dataLayerReady);
 
   // 初始化托盘图标可见性（根据设置）
   const showMenuBarIcon = useSettingsStore(
@@ -74,7 +76,7 @@ export default function StorageInit() {
   // 初始化 Supabase Realtime 同步
   useEffect(() => {
     // 等待数据层就绪
-    if (!dataLayerReady || initialized) return;
+    if (!dataLayerReady || initializedRef.current) return;
 
     async function initRealtimeSync() {
       if (typeof window === 'undefined') return;
@@ -142,15 +144,15 @@ export default function StorageInit() {
           });
         });
 
-        setInitialized(true);
+        initializedRef.current = true;
       } catch (error) {
         console.error('Realtime 同步初始化失败:', error);
-        setInitialized(true); // 即使失败也标记为已初始化，避免重试
+        initializedRef.current = true; // 即使失败也标记为已初始化，避免重试
       }
     }
 
     initRealtimeSync();
-  }, [dataLayerReady, initialized]);
+  }, [dataLayerReady]);
 
   // 这个组件不会渲染任何内容，它只是初始化存储系统
   return null;

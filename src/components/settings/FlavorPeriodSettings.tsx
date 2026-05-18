@@ -1,9 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { SettingsOptions, defaultSettings } from './Settings';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from 'react';
+import { SettingsOptions } from './Settings';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import { SettingPage } from './atomic';
+import SettingPage from './atomic/SettingPage';
+import SettingToggle from './atomic/SettingToggle';
 import SettingSection from './atomic/SettingSection';
 import SettingRow from './atomic/SettingRow';
 import {
@@ -19,6 +25,12 @@ import {
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
 import { ChevronDown } from 'lucide-react';
+import { normalizeCalendarSyncSettings } from '@/lib/calendarSync/settings';
+import { canUseNativeCalendar } from '@/lib/calendarSync/nativeCalendar';
+
+const subscribeCalendarSyncSupport = () => () => undefined;
+const getCalendarSyncSupportSnapshot = () => canUseNativeCalendar();
+const getUnsupportedCalendarSyncSnapshot = () => false;
 
 interface FlavorPeriodSettingsProps {
   settings: SettingsOptions;
@@ -44,9 +56,42 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
       key: K,
       value: SettingsOptions[K]
     ) => {
-      await updateSettings({ [key]: value } as any);
+      await updateSettings({ [key]: value } as Partial<SettingsOptions>);
     },
     [updateSettings]
+  );
+  const calendarSync = normalizeCalendarSyncSettings(settings.calendarSync);
+  const updateCalendarSync = useCallback(
+    async (updates: Partial<typeof calendarSync>) => {
+      await handleChange('calendarSync', {
+        ...calendarSync,
+        ...updates,
+      });
+    },
+    [calendarSync, handleChange]
+  );
+  const handleCalendarEnabledChange = useCallback(
+    (checked: boolean) => {
+      updateCalendarSync({ enabled: checked });
+    },
+    [updateCalendarSync]
+  );
+  const handleCalendarAgingPeriodChange = useCallback(
+    (checked: boolean) => {
+      updateCalendarSync({ syncAgingPeriod: checked });
+    },
+    [updateCalendarSync]
+  );
+  const handleCalendarFlavorPeriodChange = useCallback(
+    (checked: boolean) => {
+      updateCalendarSync({ syncFlavorPeriod: checked });
+    },
+    [updateCalendarSync]
+  );
+  const calendarSyncSupported = useSyncExternalStore(
+    subscribeCalendarSyncSupport,
+    getCalendarSyncSupportSnapshot,
+    getUnsupportedCalendarSyncSnapshot
   );
 
   // 控制动画状态
@@ -60,18 +105,14 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
   >(new Map());
   const [expandedRoaster, setExpandedRoaster] = useState<string | null>(null);
 
-  // 用于保存最新的 onClose 引用
-  const onCloseRef = React.useRef(onClose);
-  onCloseRef.current = onClose;
-
   // 关闭处理函数（带动画）
   const handleCloseWithAnimation = React.useCallback(() => {
     setIsVisible(false);
     window.dispatchEvent(new CustomEvent('subSettingsClosing'));
     setTimeout(() => {
-      onCloseRef.current();
+      onClose();
     }, 350);
-  }, []);
+  }, [onClose]);
 
   // 使用统一的历史栈管理系统
   useModalHistory({
@@ -94,13 +135,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
     });
   }, []);
 
-  // 加载烘焙商列表和配置
-  useEffect(() => {
-    loadRoasters();
-    loadConfigs();
-  }, []);
-
-  const loadRoasters = async () => {
+  const loadRoasters = useCallback(async () => {
     try {
       const beans = useCoffeeBeanStore.getState().beans as ExtendedCoffeeBean[];
       const settingsData = getSettingsStore().settings;
@@ -113,9 +148,9 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
     } catch (error) {
       console.error('Failed to load roasters:', error);
     }
-  };
+  }, []);
 
-  const loadConfigs = () => {
+  const loadConfigs = useCallback(() => {
     try {
       const allConfigs = getRoasterConfigsSync();
       const configMap = new Map<string, RoasterConfig>();
@@ -126,7 +161,13 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
     } catch (error) {
       console.error('Failed to load configs:', error);
     }
-  };
+  }, []);
+
+  // 加载烘焙商列表和配置
+  useEffect(() => {
+    loadRoasters();
+    loadConfigs();
+  }, [loadConfigs, loadRoasters]);
 
   const toggleExpand = (roasterName: string) => {
     setExpandedRoaster(expandedRoaster === roasterName ? null : roasterName);
@@ -245,12 +286,38 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
   );
 
   return (
-    <SettingPage
-      title="赏味期"
-      isVisible={isVisible}
-      onClose={handleClose}
-    >
+    <SettingPage title="赏味期" isVisible={isVisible} onClose={handleClose}>
       <div className="mt-4">
+        {calendarSyncSupported && (
+          <SettingSection
+            title="日历同步"
+          >
+            <SettingRow label="同步到系统日历" isLast={!calendarSync.enabled}>
+              <SettingToggle
+                checked={calendarSync.enabled}
+                onChange={handleCalendarEnabledChange}
+              />
+            </SettingRow>
+
+            {calendarSync.enabled && (
+              <>
+                <SettingRow label="养豆期" isSubSetting>
+                  <SettingToggle
+                    checked={calendarSync.syncAgingPeriod}
+                    onChange={handleCalendarAgingPeriodChange}
+                  />
+                </SettingRow>
+                <SettingRow label="赏味期" isSubSetting isLast>
+                  <SettingToggle
+                    checked={calendarSync.syncFlavorPeriod}
+                    onChange={handleCalendarFlavorPeriodChange}
+                  />
+                </SettingRow>
+              </>
+            )}
+          </SettingSection>
+        )}
+
         {/* 全局默认预设 */}
         <SettingSection
           title="全局默认预设"

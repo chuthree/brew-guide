@@ -51,5 +51,11 @@
 	<string>此应用需要访问相册来选择咖啡豆照片和冲煮笔记图片</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>此应用需要访问相册来保存咖啡相关图片</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>此应用需要访问日历来同步咖啡豆养豆期和赏味期</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>此应用需要写入日历来同步咖啡豆养豆期和赏味期</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>此应用需要访问日历来同步和维护咖啡豆养豆期与赏味期</string>
 </dict>
 </plist>

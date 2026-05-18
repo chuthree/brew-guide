@@ -30,6 +30,8 @@ PODS:
     - Capacitor
   - CapawesomeCapacitorFilePicker (7.2.0):
     - Capacitor
+  - EbarooniCapacitorCalendar (7.2.0):
+    - Capacitor
   - IONFilesystemLib (1.0.1)
   - SDWebImage (5.21.5):
     - SDWebImage/Core (= 5.21.5)
@@ -51,6 +53,7 @@ DEPENDENCIES:
   - "CapacitorSplashScreen (from `../../node_modules/.pnpm/@capacitor+splash-screen@7.0.4_@capacitor+core@7.4.5/node_modules/@capacitor/splash-screen`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.4_@capacitor+core@7.4.5/node_modules/@capacitor/status-bar`)"
   - "CapawesomeCapacitorFilePicker (from `../../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.2.0_@capacitor+core@7.4.5/node_modules/@capawesome/capacitor-file-picker`)"
+  - "EbarooniCapacitorCalendar (from `../../node_modules/.pnpm/@ebarooni+capacitor-calendar@7.2.0_@capacitor+core@7.4.5/node_modules/@ebarooni/capacitor-calendar`)"
 
 SPEC REPOS:
   trunk:
@@ -88,6 +91,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+status-bar@7.0.4_@capacitor+core@7.4.5/node_modules/@capacitor/status-bar"
   CapawesomeCapacitorFilePicker:
     :path: "../../node_modules/.pnpm/@capawesome+capacitor-file-picker@7.2.0_@capacitor+core@7.4.5/node_modules/@capawesome/capacitor-file-picker"
+  EbarooniCapacitorCalendar:
+    :path: "../../node_modules/.pnpm/@ebarooni+capacitor-calendar@7.2.0_@capacitor+core@7.4.5/node_modules/@ebarooni/capacitor-calendar"
 
 SPEC CHECKSUMS:
   Capacitor: 12914e6f1b7835e161a74ebd19cb361efa37a7dd
@@ -105,9 +110,10 @@ SPEC CHECKSUMS:
   CapacitorSplashScreen: 000f7591d546907dda5cbb514bd6b6d9e6048cf8
   CapacitorStatusBar: d0e0151c89c001a9c7125bac59ddedf76b664768
   CapawesomeCapacitorFilePicker: 0f4a913a00e39dd77213449f0d917e92f35a5ca9
+  EbarooniCapacitorCalendar: 4568a8a318b940245bf6e257a8b115626581bb7d
   IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
   SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838
 
-PODFILE CHECKSUM: 39ae1112f5d0fd34074df1b466ded143156dea81
+PODFILE CHECKSUM: a397934c529fb07af935027edf9f709b5318d4fc
 
 COCOAPODS: 1.16.2

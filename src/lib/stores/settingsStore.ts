@@ -28,6 +28,10 @@ import {
   normalizeEstimatedCupDoseSettings,
 } from '@/lib/settings/estimatedCupDose';
 import { normalizeSyncSettings } from '@/lib/sync/settings';
+import {
+  defaultCalendarSyncSettings,
+  normalizeCalendarSyncSettings,
+} from '@/lib/calendarSync/settings';
 
 /**
  * 默认设置值
@@ -93,6 +97,7 @@ export const defaultSettings: AppSettings = {
     medium: { startDay: 0, endDay: 0 },
     dark: { startDay: 0, endDay: 0 },
   },
+  calendarSync: { ...defaultCalendarSyncSettings },
 
   // 备份提醒设置
   backupReminder: undefined,
@@ -315,6 +320,7 @@ const mergeSettingsWithDefaults = (
     estimatedCupDoseSettings: normalizeEstimatedCupDoseSettings(
       settings?.estimatedCupDoseSettings
     ),
+    calendarSync: normalizeCalendarSyncSettings(settings?.calendarSync),
   };
 };
 
