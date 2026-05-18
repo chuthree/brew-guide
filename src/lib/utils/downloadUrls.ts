@@ -2,7 +2,7 @@ const GH_PROXY_PREFIX = 'https://gh-proxy.org/';
 const GITHUB_RELEASES_BASE =
   'https://github.com/chuthree/brew-guide/releases/download';
 const DESKTOP_DOWNLOAD_URL = 'https://chu3.top/brewguide';
-const ONLINE_ANDROID_VERSION = '1.0.2';
+const ONLINE_ANDROID_VERSION = '1.0.3';
 
 const normalizeVersion = (version: string) => version.replace(/^v/i, '');
 
