@@ -246,6 +246,12 @@ export const formatDateAbsolute = (timestamp: number): string => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
+// 笔记详情使用精确到分钟的固定时间，避免停留在相对时间文案。
+export const formatNoteDetailDateTime = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  return `${date.getMonth() + 1}月${date.getDate()}日 ${formatTime(date)}`;
+};
+
 // 辅助函数：判断是否是今天
 const isToday = (date: Date): boolean => {
   const today = new Date();

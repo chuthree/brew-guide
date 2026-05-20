@@ -10,7 +10,10 @@ import React, {
 import Image from 'next/image';
 import { BrewingNote } from '@/lib/core/config';
 import { CoffeeBean } from '@/types/app';
-import { formatDate, getNoteDeleteDisplay } from '@/components/notes/utils';
+import {
+  formatNoteDetailDateTime,
+  getNoteDeleteDisplay,
+} from '@/components/notes/utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import {
@@ -1099,7 +1102,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                         {showNoteTimeInNote && (
                           <InfoRow label="时间">
                             <div className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                              {formatDate(note.timestamp)}
+                              {formatNoteDetailDateTime(note.timestamp)}
                             </div>
                           </InfoRow>
                         )}
