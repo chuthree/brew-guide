@@ -108,11 +108,11 @@ type RoastedStatsSectionKey =
 
 const ROASTED_STATS_SECTION_DEFAULTS: StatsSectionOption[] = [
   { key: 'beanCount', label: '咖啡豆', visible: true },
+  { key: 'roaster', label: '烘焙商', visible: true },
+  { key: 'expensiveBeans', label: '最贵豆子', visible: false },
+  { key: 'cheapBeans', label: '最便宜豆子', visible: false },
   { key: 'bestBeans', label: '最夯豆子', visible: true },
   { key: 'worstBeans', label: '最拉豆子', visible: true },
-  { key: 'expensiveBeans', label: '最贵豆子', visible: true },
-  { key: 'cheapBeans', label: '最便宜豆子', visible: true },
-  { key: 'roaster', label: '烘焙商', visible: true },
   { key: 'originMap', label: '咖啡产区地图', visible: true },
   { key: 'origin', label: '产地', visible: true },
   { key: 'estate', label: '庄园', visible: true },
@@ -708,9 +708,8 @@ const getAttributeCardItemKey = (item: AttributeCardItem): string =>
 const getAttributeCardItemLabel = (item: AttributeCardItem): string =>
   isAttributeCardRow(item) ? item.label : item[0];
 
-const getAttributeCardItemValue = (
-  item: AttributeCardItem
-): string | number => (isAttributeCardRow(item) ? item.value : item[1]);
+const getAttributeCardItemValue = (item: AttributeCardItem): string | number =>
+  isAttributeCardRow(item) ? item.value : item[1];
 
 // 单个属性统计卡片组件（支持展开/收起）
 interface AttributeCardProps {
@@ -835,17 +834,17 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
             const value = getAttributeCardItemValue(item);
 
             return (
-            <div
-              key={getAttributeCardItemKey(item)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-neutral-200/50 px-3 py-1.5 dark:bg-neutral-800/50"
-            >
-              <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
-                {label}
-              </span>
-              <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                {value}
-              </span>
-            </div>
+              <div
+                key={getAttributeCardItemKey(item)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-neutral-200/50 px-3 py-1.5 dark:bg-neutral-800/50"
+              >
+                <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
+                  {label}
+                </span>
+                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  {value}
+                </span>
+              </div>
             );
           })}
         </div>
@@ -1326,7 +1325,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
       <div className="space-y-3">
         {visibleSections}
 
-        <div className="flex justify-center mt-6">
+        <div className="mt-6 flex justify-center">
           <button
             type="button"
             onClick={() => setIsEditorOpen(true)}
