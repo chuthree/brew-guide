@@ -1400,7 +1400,7 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
               stats.inventoryByType &&
               stats.inventoryByType.length > 0 && (
                 <StatsCard
-                  title="库存预测"
+                  title="库存"
                   stats={inventoryStats}
                   extra={<InventoryForecast data={stats.inventoryByType} />}
                   onExplain={handleExplain}

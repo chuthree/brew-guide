@@ -23,6 +23,12 @@ interface StatsExplainerProps {
   anchorRect: DOMRect | null;
 }
 
+const STATS_BLOCK_SELECTOR = '[data-stats-block]';
+
+const getEventTarget = (event: Event): Element | null => {
+  return event.target instanceof Element ? event.target : null;
+};
+
 const StatsExplainer: React.FC<StatsExplainerProps> = ({
   explanation,
   onClose,
@@ -36,6 +42,7 @@ const StatsExplainer: React.FC<StatsExplainerProps> = ({
     anchorRect: DOMRect;
   } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const outsideTouchPointerIdRef = useRef<number | null>(null);
 
   // 计算位置
   const calculatePosition = useCallback((rect: DOMRect) => {
@@ -107,19 +114,70 @@ const StatsExplainer: React.FC<StatsExplainerProps> = ({
     };
   }, [explanation, anchorRect]);
 
-  // 点击外部关闭
+  // 统一处理弹层外部交互：统计卡片点击由卡片自身负责切换，其他外部触碰直接关闭。
   useEffect(() => {
     if (displayState === 'hidden') return;
 
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (popoverRef.current?.contains(target)) return;
-      if (target.closest('[data-stats-block]')) return;
+    const isInsidePopover = (event: Event) => {
+      const popover = popoverRef.current;
+      if (!popover) return false;
+
+      return event.composedPath().includes(popover);
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (isInsidePopover(event)) {
+        outsideTouchPointerIdRef.current = null;
+        return;
+      }
+
+      outsideTouchPointerIdRef.current =
+        event.pointerType === 'touch' ? event.pointerId : null;
+
+      const target = getEventTarget(event);
+      if (target?.closest(STATS_BLOCK_SELECTOR)) return;
+
       onClose();
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const handleScroll = (event: Event) => {
+      if (isInsidePopover(event)) return;
+
+      onClose();
+    };
+
+    const handlePointerCancel = (event: PointerEvent) => {
+      if (outsideTouchPointerIdRef.current !== event.pointerId) return;
+
+      outsideTouchPointerIdRef.current = null;
+      onClose();
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      if (outsideTouchPointerIdRef.current !== event.pointerId) return;
+
+      outsideTouchPointerIdRef.current = null;
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+
+      onClose();
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    document.addEventListener('pointercancel', handlePointerCancel, true);
+    document.addEventListener('pointerup', handlePointerUp, true);
+    document.addEventListener('scroll', handleScroll, true);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      document.removeEventListener('pointercancel', handlePointerCancel, true);
+      document.removeEventListener('pointerup', handlePointerUp, true);
+      document.removeEventListener('scroll', handleScroll, true);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [displayState, onClose]);
 
   if (displayState === 'hidden' || !currentData) return null;
