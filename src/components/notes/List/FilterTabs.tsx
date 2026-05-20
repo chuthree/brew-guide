@@ -471,7 +471,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   onToggleDateImageFlowMode,
   onSmartToggleImageFlow,
   hasImageNotes = true,
-  settings,
   searchHistory,
   onSearchHistoryClick,
 }) {
@@ -481,9 +480,8 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
 
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-  // 展开的筛选下拉区域 ref
+  // 筛选交互边界：只包含触发按钮和下拉内容，点击其他分类标签会按外部点击处理
   const filterDropdownRef = useRef<HTMLDivElement>(null);
-  // 筛选按钮 ref
   const filterToggleButtonRef = useRef<HTMLButtonElement>(null);
 
   // 滚动容器引用
@@ -577,6 +575,8 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   const handleSearchClick = () => {
     if (!onSearchClick) return;
 
+    setIsFilterExpanded(false);
+
     if (!isSearching) {
       activateAndFocus(() => {
         onSearchClick();
@@ -588,38 +588,36 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   };
 
   // 处理筛选展开栏
-  const handleFilterToggle = () => {
-    setIsFilterExpanded(!isFilterExpanded);
-  };
+  const handleFilterToggle = useCallback(() => {
+    setIsFilterExpanded(isExpanded => !isExpanded);
+  }, []);
 
-  // 点击外部关闭筛选展开栏 - 只检测展开的下拉区域
+  // 点击外部关闭筛选展开栏
   useEffect(() => {
     if (!isFilterExpanded) return;
 
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+    const handlePointerDownOutside = (event: PointerEvent) => {
       const target = event.target as Node;
-      // 检查点击是否在展开的下拉筛选区域内
-      if (filterDropdownRef.current?.contains(target)) {
+      const isInsideFilterInteraction = [
+        filterToggleButtonRef.current,
+        filterDropdownRef.current,
+      ].some(element => element?.contains(target));
+
+      if (isInsideFilterInteraction) {
         return;
       }
-      // 检查点击是否在筛选按钮上（避免点击按钮时先关闭再展开）
-      if (filterToggleButtonRef.current?.contains(target)) {
-        return;
-      }
+
       setIsFilterExpanded(false);
     };
 
-    // 使用 capture 阶段确保事件能被捕获
-    // 延迟添加监听器，避免当前点击事件触发关闭
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside, true);
-      document.addEventListener('touchstart', handleClickOutside, true);
-    }, 0);
+    document.addEventListener('pointerdown', handlePointerDownOutside, true);
 
     return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside, true);
-      document.removeEventListener('touchstart', handleClickOutside, true);
+      document.removeEventListener(
+        'pointerdown',
+        handlePointerDownOutside,
+        true
+      );
     };
   }, [isFilterExpanded]);
 
