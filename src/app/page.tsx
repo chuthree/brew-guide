@@ -3644,6 +3644,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 }}
                 externalViewMode={currentBeanView}
                 onExternalViewChange={handleBeanViewChange}
+                activeBeanId={
+                  beanDetailOpen && beanDetailData ? beanDetailData.id : null
+                }
                 settings={{
                   dateDisplayMode: settings.dateDisplayMode,
                   showFlavorInfo: settings.showFlavorInfo,

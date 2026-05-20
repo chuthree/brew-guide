@@ -123,6 +123,7 @@ interface InventoryViewProps {
   displayMode?: DisplayMode;
   // 表格可见列配置
   tableVisibleColumns?: TableColumnKey[];
+  activeBeanId?: string | null;
   // 备注展开状态相关
   expandedNotes?: Record<string, boolean>;
   onNotesExpandToggle?: (beanId: string, expanded: boolean) => void;
@@ -164,6 +165,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   isImageFlowMode = false,
   displayMode: externalDisplayMode,
   tableVisibleColumns,
+  activeBeanId,
   expandedNotes = EMPTY_EXPANDED_NOTES,
   onNotesExpandToggle,
   isShareMode = false,
@@ -311,6 +313,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
           onRemainingClick={handleRemainingClick}
           settings={settings}
           visibleColumns={tableVisibleColumns}
+          activeBeanId={activeBeanId}
         />
         <RemainingEditor
           targetElement={editingRemaining?.targetElement || null}

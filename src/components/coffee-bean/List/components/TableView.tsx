@@ -127,6 +127,7 @@ interface TableViewProps {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
   };
   visibleColumns?: TableColumnKey[];
+  activeBeanId?: string | null;
 }
 
 // 格式化工具函数
@@ -286,6 +287,7 @@ const TableView: React.FC<TableViewProps> = ({
   onRemainingClick,
   settings,
   visibleColumns = getDefaultVisibleColumns(),
+  activeBeanId,
 }) => {
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';
 
@@ -784,12 +786,16 @@ const TableView: React.FC<TableViewProps> = ({
             {table.getRowModel().rows.map(row => {
               const bean = row.original;
               const isEmpty = isBeanEmpty(bean);
+              const isActive = activeBeanId === bean.id;
 
               return (
                 <tr
                   key={row.id}
-                  className={`cursor-pointer transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800/30 ${isEmpty ? 'opacity-50' : ''}`}
+                  className={`cursor-pointer hover:bg-neutral-100 active:bg-neutral-100 dark:hover:bg-neutral-800/30 dark:active:bg-neutral-800/30 ${
+                    isActive ? 'bg-neutral-100 dark:bg-neutral-800/30' : ''
+                  } ${isEmpty ? 'opacity-50' : ''}`}
                   onClick={() => handleDetailClick(bean)}
+                  aria-selected={isActive}
                 >
                   {row.getVisibleCells().map((cell, index) => {
                     const isFirst = index === 0;

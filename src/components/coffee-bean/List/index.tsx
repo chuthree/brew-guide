@@ -120,6 +120,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   externalViewMode,
   onExternalViewChange,
   initialViewMode,
+  activeBeanId,
   settings,
 }) => {
   const { copyText, failureDrawerProps } = useCopy();
@@ -1802,6 +1803,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               isImageFlowMode={isImageFlowMode}
               displayMode={displayMode}
               tableVisibleColumns={tableVisibleColumns}
+              activeBeanId={activeBeanId}
               settings={settings}
               scrollParentRef={inventoryScrollEl ?? undefined}
               expandedNotes={expandedNotes}
