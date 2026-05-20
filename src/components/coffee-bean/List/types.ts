@@ -38,6 +38,7 @@ export interface CoffeeBeansProps {
   onExternalViewChange?: (view: ViewOption) => void;
   // 添加初始化参数支持
   initialViewMode?: ViewOption;
+  activeBeanId?: string | null;
   // 添加设置参数
   settings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';
