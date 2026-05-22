@@ -92,12 +92,5 @@ export {
 } from './grinderStore';
 export type { Grinder } from './grinderStore';
 
-// 年度报告 Store
-export {
-  useYearlyReportStore,
-  getYearlyReportStore,
-} from './yearlyReportStore';
-export type { YearlyReport } from './yearlyReportStore';
-
 // 同步状态 Store
 export { useSyncStatusStore } from './syncStatusStore';

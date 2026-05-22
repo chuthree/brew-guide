@@ -34,17 +34,6 @@ export interface Grinder {
 }
 
 /**
- * 年度报告类型定义
- */
-export interface YearlyReport {
-  id: string;
-  year: number;
-  username: string;
-  content: string;
-  createdAt: number;
-}
-
-/**
  * 风味评分维度类型定义
  */
 export interface FlavorDimension {
@@ -359,6 +348,7 @@ export type SettingsOptions = AppSettings;
  * - v4: 重构 - 添加 grinders, yearlyReports, appSettings 表，统一数据管理
  * - v7: 咖啡豆缩略图拆分到独立表，避免读取缩略图时反序列化原图
  * - v8: 为冲煮记录增加 beanId 索引，详情页按咖啡豆懒查询关联记录
+ * - v9: 移除年度报告表
  */
 export class BrewGuideDB extends Dexie {
   // 核心数据表
@@ -379,9 +369,6 @@ export class BrewGuideDB extends Dexie {
 
   // 磨豆机表
   grinders!: Dexie.Table<Grinder, string>;
-
-  // 年度报告表
-  yearlyReports!: Dexie.Table<YearlyReport, string>;
 
   // 应用设置表
   appSettings!: Dexie.Table<{ id: string; data: AppSettings }, string>;
@@ -502,6 +489,22 @@ export class BrewGuideDB extends Dexie {
       appSettings: 'id',
       pendingOperations: 'id, table, recordId, timestamp',
     });
+
+    // 版本9：移除年度报告表
+    this.version(9).stores({
+      brewingNotes:
+        'id, timestamp, equipment, method, beanId, [beanId+timestamp]',
+      coffeeBeans: 'id, timestamp, name, type',
+      coffeeBeanImages: 'beanId, updatedAt',
+      coffeeBeanImageThumbnails: 'beanId, updatedAt',
+      settings: 'key',
+      customEquipments: 'id, name',
+      customMethods: 'equipmentId',
+      grinders: 'id, name',
+      yearlyReports: null,
+      appSettings: 'id',
+      pendingOperations: 'id, table, recordId, timestamp',
+    });
   }
 }
 
@@ -571,10 +574,7 @@ export const dbUtils = {
       // 1. 迁移磨豆机数据
       await this.migrateGrinders();
 
-      // 2. 迁移年度报告数据
-      await this.migrateYearlyReports();
-
-      // 3. 迁移应用设置
+      // 2. 迁移应用设置
       await this.migrateAppSettings();
 
       // 标记 v4 迁移完成
@@ -615,33 +615,6 @@ export const dbUtils = {
       }
     } catch (error) {
       console.error('迁移磨豆机数据失败:', error);
-    }
-  },
-
-  /**
-   * 迁移年度报告数据
-   */
-  async migrateYearlyReports(): Promise<void> {
-    try {
-      if (typeof localStorage === 'undefined') return;
-
-      // 检查是否已有数据
-      const existingCount = await db.yearlyReports.count();
-      if (existingCount > 0) {
-        console.log('年度报告数据已存在，跳过迁移');
-        return;
-      }
-
-      const reportsStr = localStorage.getItem('yearlyReports');
-      if (!reportsStr) return;
-
-      const reports = JSON.parse(reportsStr) as YearlyReport[];
-      if (reports && reports.length > 0) {
-        await db.yearlyReports.bulkPut(reports);
-        console.log(`已迁移 ${reports.length} 份年度报告到 IndexedDB`);
-      }
-    } catch (error) {
-      console.error('迁移年度报告数据失败:', error);
     }
   },
 
@@ -1014,7 +987,6 @@ export const dbUtils = {
       await db.customEquipments.clear();
       await db.customMethods.clear();
       await db.grinders.clear();
-      await db.yearlyReports.clear();
       await db.appSettings.clear();
       await db.settings.clear();
       console.warn('数据库已清空');

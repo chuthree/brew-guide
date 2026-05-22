@@ -65,8 +65,6 @@ export const APP_DATA_KEYS = [
   'equipmentOrder', // 器具排序信息（已迁移到 brewGuideSettings）
   'onboardingCompleted', // 引导完成标记
   'backupReminderSettings', // 备份提醒设置
-  'yearlyReports', // 年度报告
-  'yearlyReviewReminderSettings', // 年度回顾提醒设置
   'grinders', // 磨豆机数据
 ];
 
@@ -619,7 +617,6 @@ export const DataManager = {
       await db.customEquipments.clear();
       await db.customMethods.clear();
       await db.grinders.clear();
-      await db.yearlyReports.clear();
       await db.appSettings.clear();
       await db.settings.clear();
 
@@ -697,10 +694,6 @@ export const DataManager = {
 
         const { getGrinderStore } = await import('@/lib/stores/grinderStore');
         getGrinderStore().setGrinders([]);
-
-        const { getYearlyReportStore } =
-          await import('@/lib/stores/yearlyReportStore');
-        getYearlyReportStore().setReports([]);
 
         // 重置同步状态
         const { useSyncStatusStore } =

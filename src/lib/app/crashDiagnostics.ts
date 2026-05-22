@@ -8,9 +8,7 @@ const NON_FATAL_BROWSER_ERROR_PHASES = new Set([
   'window-error',
   'unhandled-rejection',
 ]);
-const IGNORED_BROWSER_ERROR_PATTERNS = [
-  /Paper Shaders: image for uniform \S+ must be fully loaded/i,
-];
+const IGNORED_BROWSER_ERROR_PATTERNS: RegExp[] = [];
 
 type JsonValue =
   | string

@@ -13,7 +13,6 @@ import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
 import { useCustomMethodStore } from '@/lib/stores/customMethodStore';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 import { useGrinderStore } from '@/lib/stores/grinderStore';
-import { useYearlyReportStore } from '@/lib/stores/yearlyReportStore';
 import { recordCrashCheckpoint } from '@/lib/app/crashDiagnostics';
 import { migrateRoasterField } from '@/lib/utils/roasterMigration';
 import { cleanupEmbeddedCoffeeBeansFromNotes } from '@/lib/notes/cleanup';
@@ -81,7 +80,6 @@ export async function initializeDataLayer(): Promise<void> {
       useCustomEquipmentStore.getState().loadEquipments(),
       useCustomMethodStore.getState().loadMethods(),
       useGrinderStore.getState().initialize(),
-      useYearlyReportStore.getState().loadReports(),
     ]);
 
     // 4. 同步初始化 UI 状态 Store（不需要 await，不涉及异步操作）
@@ -137,7 +135,6 @@ export async function refreshAllData(): Promise<void> {
     useCustomEquipmentStore.getState().refreshEquipments(),
     useCustomMethodStore.getState().refreshMethods(),
     useGrinderStore.getState().refreshGrinders(),
-    useYearlyReportStore.getState().refreshReports(),
   ]);
 
   console.log('✅ 数据刷新完成');
@@ -157,7 +154,6 @@ export async function exportAllData(): Promise<{
     typeof useCustomMethodStore.getState
   >['methodsByEquipment'];
   grinders: ReturnType<typeof useGrinderStore.getState>['grinders'];
-  yearlyReports: ReturnType<typeof useYearlyReportStore.getState>['reports'];
 }> {
   // 确保已初始化
   if (!initState.isInitialized) {
@@ -171,7 +167,6 @@ export async function exportAllData(): Promise<{
     customEquipments: useCustomEquipmentStore.getState().equipments,
     customMethods: useCustomMethodStore.getState().methodsByEquipment,
     grinders: useGrinderStore.getState().grinders,
-    yearlyReports: useYearlyReportStore.getState().reports,
   };
 }
 
@@ -189,7 +184,6 @@ export async function importAllData(data: {
     typeof useCustomMethodStore.getState
   >['methodsByEquipment'];
   grinders?: ReturnType<typeof useGrinderStore.getState>['grinders'];
-  yearlyReports?: ReturnType<typeof useYearlyReportStore.getState>['reports'];
 }): Promise<void> {
   console.log('📥 开始导入数据...');
 
@@ -246,16 +240,6 @@ export async function importAllData(data: {
 
   if (data.grinders) {
     tasks.push(useGrinderStore.getState().setGrinders(data.grinders));
-  }
-
-  if (data.yearlyReports) {
-    tasks.push(
-      (async () => {
-        for (const report of data.yearlyReports!) {
-          await useYearlyReportStore.getState().upsertReport(report);
-        }
-      })()
-    );
   }
 
   await Promise.all(tasks);

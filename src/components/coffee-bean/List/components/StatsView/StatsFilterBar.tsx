@@ -1,11 +1,9 @@
 'use client';
 
-import React, { Suspense, useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateGroupingMode } from './types';
-
-const YearlyReviewDrawer = React.lazy(() => import('./YearlyReviewDrawer'));
 
 export const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
   year: '按年统计',
@@ -240,21 +238,6 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const filterExpandRef = useRef<HTMLDivElement>(null);
 
-  // 年度回顾抽屉状态
-  const [isYearlyReviewOpen, setIsYearlyReviewOpen] = useState(false);
-
-  // 监听外部打开年度回顾的事件
-  useEffect(() => {
-    const handleOpenYearlyReview = () => {
-      setIsYearlyReviewOpen(true);
-    };
-
-    window.addEventListener('openYearlyReview', handleOpenYearlyReview);
-    return () => {
-      window.removeEventListener('openYearlyReview', handleOpenYearlyReview);
-    };
-  }, []);
-
   // 滚动容器引用
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftShadow, setShowLeftShadow] = useState(false);
@@ -484,35 +467,12 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                     </div>
                   </div>
 
-                  {/* 更多功能 */}
-                  <div>
-                    <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                      更多
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <FilterButton
-                        isActive={false}
-                        onClick={() => setIsYearlyReviewOpen(true)}
-                      >
-                        2025年度回顾
-                      </FilterButton>
-                    </div>
-                  </div>
                 </div>
               </motion.div>
             </>
           )}
         </AnimatePresence>
       </div>
-
-      {isYearlyReviewOpen && (
-        <Suspense fallback={null}>
-          <YearlyReviewDrawer
-            isOpen={isYearlyReviewOpen}
-            onClose={() => setIsYearlyReviewOpen(false)}
-          />
-        </Suspense>
-      )}
     </div>
   );
 };
