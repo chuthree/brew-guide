@@ -5,10 +5,7 @@ import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import Image from 'next/image';
 import type { CoffeeBean } from '@/types/app';
 import CoffeeBeanCreateOption from '@/components/coffee-bean/ui/CoffeeBeanCreateOption';
-import {
-  getRoasterLogoSync,
-  useSettingsStore,
-} from '@/lib/stores/settingsStore';
+import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import {
   formatBeanDisplayName,
   getBeanDisplayInitial,
@@ -70,6 +67,7 @@ const BeanImage: React.FC<{
   });
 
   const roasterName = getRoasterName(bean, roasterSettings);
+  const configuredRoasterLogo = useRoasterLogo(roasterName);
   const roasterLogo = useMemo(() => {
     if (!bean.name || beanImage) {
       return null;
@@ -79,8 +77,8 @@ const BeanImage: React.FC<{
       return null;
     }
 
-    return getRoasterLogoSync(roasterName) || null;
-  }, [bean.name, beanImage, roasterName]);
+    return configuredRoasterLogo;
+  }, [bean.name, beanImage, configuredRoasterLogo, roasterName]);
 
   useEffect(() => {
     setImageError(false);

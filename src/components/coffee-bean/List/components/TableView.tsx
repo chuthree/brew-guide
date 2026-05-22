@@ -20,7 +20,7 @@ import { isBeanEmpty } from '../preferences';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
 import {
-  getRoasterLogoSync,
+  getRoasterLogoFromConfigs,
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
 import {
@@ -376,9 +376,9 @@ const TableView: React.FC<TableViewProps> = ({
     }
   }, [supportsHoverPreview]);
 
-  const [roasterLogos, setRoasterLogos] = useState<
-    Record<string, string | null>
-  >({});
+  const roasterConfigs = useSettingsStore(
+    state => state.settings.roasterConfigs
+  );
 
   // 合并正常豆子和用完的豆子
   const allBeans = useMemo(() => {
@@ -386,20 +386,19 @@ const TableView: React.FC<TableViewProps> = ({
     return [...filteredBeans, ...emptyBeans];
   }, [filteredBeans, emptyBeans, showEmptyBeans]);
 
-  // 加载所有咖啡豆的烘焙商图标
-  useEffect(() => {
+  const roasterLogos = useMemo(() => {
     const logos: Record<string, string | null> = {};
     allBeans.forEach(bean => {
       if (!bean.image && bean.name) {
         const roasterName = getRoasterName(bean, roasterSettings);
         if (roasterName && roasterName !== '未知烘焙商') {
-          const logo = getRoasterLogoSync(roasterName);
+          const logo = getRoasterLogoFromConfigs(roasterConfigs, roasterName);
           logos[bean.id] = logo || null;
         }
       }
     });
-    setRoasterLogos(logos);
-  }, [allBeans, roasterSettings]);
+    return logos;
+  }, [allBeans, roasterConfigs, roasterSettings]);
 
   const buildHoverPreviewBean = useCallback(
     async (bean: ExtendedCoffeeBean): Promise<HoverPreviewBean | null> => {

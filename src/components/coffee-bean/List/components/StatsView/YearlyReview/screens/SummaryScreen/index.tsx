@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useRef, useMemo, useState, useEffect } from 'react';
+import React, { useRef, useMemo } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import type { CoffeeBean } from '@/types/app';
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
-import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
+import { useRoasterLogo } from '@/lib/stores/settingsStore';
 
 interface SummaryScreenProps {
   beans: CoffeeBean[];
@@ -19,8 +19,6 @@ interface SummaryScreenProps {
  * - 底部: 四张图片从右边出现围绕中心旋转，烘焙商圆形，其他正方形
  */
 const SummaryScreen: React.FC<SummaryScreenProps> = ({ beans, onComplete }) => {
-  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
-
   // 统计数据
   const stats = useMemo(() => {
     // 烘焙商统计
@@ -107,6 +105,12 @@ const SummaryScreen: React.FC<SummaryScreenProps> = ({ beans, onComplete }) => {
     };
   }, [beans]);
 
+  const roasterLogo = useRoasterLogo(
+    stats.roaster.name && stats.roaster.name !== '未知'
+      ? stats.roaster.name
+      : null
+  );
+
   // 获取旋转展示的图片
   const rotatingImages = useMemo(() => {
     const images: Array<{
@@ -164,14 +168,6 @@ const SummaryScreen: React.FC<SummaryScreenProps> = ({ beans, onComplete }) => {
 
     return images.slice(0, 4);
   }, [roasterLogo, stats]);
-
-  // 加载烘焙商图标
-  useEffect(() => {
-    if (stats.roaster.name && stats.roaster.name !== '未知') {
-      const logo = getRoasterLogoSync(stats.roaster.name);
-      setRoasterLogo(logo || null);
-    }
-  }, [stats.roaster.name]);
 
   return (
     <div className="h-full w-full pt-24">

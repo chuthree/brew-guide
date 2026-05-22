@@ -10,10 +10,7 @@ import {
   calculateFlavorInfo,
   getDefaultFlavorPeriodByRoastLevelSync,
 } from '@/lib/utils/flavorPeriodUtils';
-import {
-  getRoasterLogoSync,
-  useSettingsStore,
-} from '@/lib/stores/settingsStore';
+import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import {
   formatBeanDisplayName,
   getBeanDisplayInitial,
@@ -96,6 +93,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     () => getRoasterName(bean, roasterSettings),
     [bean, roasterSettings]
   );
+  const configuredRoasterLogo = useRoasterLogo(roasterName);
 
   const beanImage = useCoffeeBeanImage(bean.id, {
     fallback: bean.image,
@@ -108,11 +106,11 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     }
 
     if (roasterName && roasterName !== '未知烘焙商') {
-      return getRoasterLogoSync(roasterName) || null;
+      return configuredRoasterLogo;
     }
 
     return null;
-  }, [bean.name, beanImage, roasterName]);
+  }, [bean.name, beanImage, configuredRoasterLogo, roasterName]);
 
   const imageSource = beanImage || roasterLogo;
   const hasImageError = imageError.source === imageSource && imageError.failed;
@@ -142,14 +140,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         backUrl: backImage,
       });
     })();
-  }, [
-    bean.id,
-    bean.name,
-    beanImage,
-    hasImageError,
-    imageSource,
-    roasterName,
-  ]);
+  }, [bean.id, bean.name, beanImage, hasImageError, imageSource, roasterName]);
 
   // 设置默认值
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';

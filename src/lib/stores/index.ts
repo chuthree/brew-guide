@@ -40,7 +40,10 @@ export {
   // 烘焙商配置工具函数
   getRoasterConfigsSync,
   getRoasterConfigSync,
+  getRoasterConfigFromConfigs,
+  getRoasterLogoFromConfigs,
   getRoasterLogoSync,
+  useRoasterLogo,
   // 风味维度工具函数
   getFlavorDimensionsSync,
   getHistoricalLabelsSync,

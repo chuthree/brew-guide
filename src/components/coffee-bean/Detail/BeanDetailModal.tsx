@@ -20,10 +20,7 @@ import {
   useIsLargeScreen,
 } from '@/lib/navigation/pageTransition';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import {
-  getRoasterLogoSync,
-  useSettingsStore,
-} from '@/lib/stores/settingsStore';
+import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
 import { openImageViewer } from '@/lib/ui/imageViewer';
 import { showToast } from '@/components/common/feedback/LightToast';
@@ -205,22 +202,18 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 状态
   const [imageError, setImageError] = useState(false);
-  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
   const [lazyRelatedNotes, setLazyRelatedNotes] = useState<BrewingNote[]>([]);
-  const relatedNotes = useMemo(
-    () => {
-      if (!bean?.id) return [];
+  const relatedNotes = useMemo(() => {
+    if (!bean?.id) return [];
 
-      if (!notesInitialized) {
-        return lazyRelatedNotes.filter(note => note.beanId === bean.id);
-      }
+    if (!notesInitialized) {
+      return lazyRelatedNotes.filter(note => note.beanId === bean.id);
+    }
 
-      return [...allNotes.filter(note => note.beanId === bean.id)].sort(
-        (a, b) => b.timestamp - a.timestamp
-      );
-    },
-    [allNotes, bean?.id, lazyRelatedNotes, notesInitialized]
-  );
+    return [...allNotes.filter(note => note.beanId === bean.id)].sort(
+      (a, b) => b.timestamp - a.timestamp
+    );
+  }, [allNotes, bean?.id, lazyRelatedNotes, notesInitialized]);
   const equipmentNames = useMemo(
     () => buildEquipmentNameMap(customEquipments),
     [customEquipments]
@@ -556,20 +549,19 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     [storeSettings?.roasterFieldEnabled, storeSettings?.roasterSeparator]
   );
 
-  useEffect(() => {
+  const roasterLogoName = useMemo(() => {
     if (!bean?.name || bean?.image) {
-      setRoasterLogo(null);
-      return;
+      return null;
     }
 
     const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
-      const logo = getRoasterLogoSync(roasterName);
-      setRoasterLogo(logo || null);
-    } else {
-      setRoasterLogo(null);
+      return roasterName;
     }
-  }, [bean?.name, bean?.image, bean?.roaster, roasterSettings]);
+
+    return null;
+  }, [bean, roasterSettings]);
+  const roasterLogo = useRoasterLogo(roasterLogoName);
 
   // 通用字段更新
   const handleUpdateField = async (updates: Partial<CoffeeBean>) => {

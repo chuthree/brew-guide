@@ -5,7 +5,7 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import type { CoffeeBean } from '@/types/app';
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
-import { getRoasterLogoSync } from '@/lib/stores/settingsStore';
+import { useRoasterLogo } from '@/lib/stores/settingsStore';
 
 // 预加载图片的工具函数
 const preloadImages = (urls: string[]): Promise<void[]> => {
@@ -47,7 +47,6 @@ const FavoriteRoasterScreen: React.FC<FavoriteRoasterScreenProps> = ({
   onComplete,
 }) => {
   const [currentSegment, setCurrentSegment] = useState<number>(0);
-  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
   // 计算最爱的烘焙商和对应图片
   const { roasterName, beanCount, rawRoasterImages } = useMemo(() => {
@@ -89,13 +88,9 @@ const FavoriteRoasterScreen: React.FC<FavoriteRoasterScreenProps> = ({
     };
   }, [beans]);
 
-  // 加载烘焙商图标
-  useEffect(() => {
-    if (roasterName && roasterName !== '未知') {
-      const logo = getRoasterLogoSync(roasterName);
-      setRoasterLogo(logo || null);
-    }
-  }, [roasterName]);
+  const roasterLogo = useRoasterLogo(
+    roasterName && roasterName !== '未知' ? roasterName : null
+  );
 
   // 构建最终的图片列表：如果有烘焙商图标，优先使用；然后用咖啡豆图片填充，不够则重复
   const roasterImages = useMemo(() => {

@@ -11,10 +11,7 @@ import {
   getRoasterName,
   RoasterSettings,
 } from '@/lib/utils/beanVarietyUtils';
-import {
-  getRoasterLogoSync,
-  useSettingsStore,
-} from '@/lib/stores/settingsStore';
+import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
 import {
   getCoffeeBeanImageSource,
@@ -47,7 +44,6 @@ interface BeanImageSectionProps {
 // 小尺寸咖啡豆图片组件（用于关联豆子卡片）
 export const BeanImageSmall: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
   const [imageError, setImageError] = useState(false);
-  const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -68,22 +64,22 @@ export const BeanImageSmall: React.FC<{ bean: CoffeeBean }> = ({ bean }) => {
     preferThumbnail: true,
   });
 
-  useEffect(() => {
+  const roasterName = useMemo(
+    () => getRoasterName(bean, roasterSettings),
+    [bean, roasterSettings]
+  );
+  const configuredRoasterLogo = useRoasterLogo(roasterName);
+  const roasterLogo = useMemo(() => {
     if (!bean.name || beanImage) {
-      setRoasterLogo(null);
-      return;
+      return null;
     }
 
-    const roasterName = getRoasterName(bean, roasterSettings);
     if (roasterName && roasterName !== '未知烘焙商') {
-      const logo = getRoasterLogoSync(roasterName);
-      setRoasterLogo(logo || null);
-    } else {
-      setRoasterLogo(null);
+      return configuredRoasterLogo;
     }
-  }, [bean.name, beanImage, bean.roaster, roasterSettings]);
 
-  const roasterName = getRoasterName(bean, roasterSettings);
+    return null;
+  }, [bean.name, beanImage, configuredRoasterLogo, roasterName]);
 
   return (
     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xs bg-neutral-200/30 dark:bg-neutral-800/40">

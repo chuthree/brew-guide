@@ -5,12 +5,12 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { ChevronRight } from 'lucide-react';
 import { NoteItemProps } from '../types';
-import { formatDate, formatRating } from '../utils';
+import { formatDate } from '../utils';
 import {
   getBeanDisplayInitial,
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
-import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { openImageViewer } from '@/lib/ui/imageViewer';
 import {
@@ -54,9 +54,6 @@ const getConstrainedSize = (
 const NoteItem: React.FC<NoteItemProps> = ({
   note,
   equipmentNames,
-  onEdit,
-  onDelete,
-  onCopy,
   isShareMode = false,
   isSelected = false,
   onToggleSelect,
@@ -73,10 +70,13 @@ const NoteItem: React.FC<NoteItemProps> = ({
   const roasterSeparator = useSettingsStore(
     state => state.settings.roasterSeparator
   );
-  const roasterSettings = {
-    roasterFieldEnabled,
-    roasterSeparator,
-  };
+  const roasterSettings = useMemo(
+    () => ({
+      roasterFieldEnabled,
+      roasterSeparator,
+    }),
+    [roasterFieldEnabled, roasterSeparator]
+  );
 
   // 获取评分维度入口显示设置
   const showRatingDimensionsEntry = useSettingsStore(
@@ -125,8 +125,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
   const hasTasteRatings = validTasteRatings.length > 0;
   const hasNotes = Boolean(note.notes);
   const isSingleNoteImage = noteImages.length === 1;
-  const equipmentName =
-    resolveNoteEquipmentName(note, equipmentNames);
+  const equipmentName = resolveNoteEquipmentName(note, equipmentNames);
 
   // 获取完整的咖啡豆信息（包括图片），优先使用实时关联的咖啡豆
   const beanInfo =
@@ -150,13 +149,15 @@ const NoteItem: React.FC<NoteItemProps> = ({
     preferThumbnail: true,
   });
 
-  // 获取烘焙商图片
-  const roasterLogo = React.useMemo(() => {
-    if (!beanInfo?.roaster || beanImage) return null;
-    const settings = useSettingsStore.getState().settings;
-    const roasterLogos = (settings as any).roasterLogos || {};
-    return roasterLogos[beanInfo.roaster] || null;
-  }, [beanImage, beanInfo?.roaster]);
+  const roasterLogoName = useMemo(() => {
+    if (!beanInfo || beanImage) {
+      return null;
+    }
+
+    const roasterName = getRoasterName(beanInfo, roasterSettings);
+    return roasterName && roasterName !== '未知烘焙商' ? roasterName : null;
+  }, [beanImage, beanInfo, roasterSettings]);
+  const roasterLogo = useRoasterLogo(roasterLogoName);
 
   useEffect(() => {
     setImageError(false);
@@ -186,7 +187,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
         const isBeanImage = Boolean(beanImage);
         openImageViewer({
-          url: frontImage || (isBeanImage ? beanInfo?.image : undefined) || imageSource,
+          url:
+            frontImage ||
+            (isBeanImage ? beanInfo?.image : undefined) ||
+            imageSource,
           alt: isBeanImage
             ? beanName || '咖啡豆图片'
             : beanInfo
@@ -212,19 +216,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
   useEffect(() => {
     setSingleImageSize(cachedSingleImageSize ?? null);
   }, [cachedSingleImageSize, singleImageUrl]);
-
-  // 判断是否为意式咖啡笔记
-  const isEspresso = React.useMemo(() => {
-    // 检查器具ID (兼容自定义意式器具ID格式，通常包含 espresso)
-    if (
-      note.equipment &&
-      (note.equipment.toLowerCase().includes('espresso') ||
-        note.equipment.includes('意式'))
-    ) {
-      return true;
-    }
-    return false;
-  }, [note.equipment]);
 
   // 处理笔记点击事件
   const handleNoteClick = () => {

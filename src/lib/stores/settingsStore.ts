@@ -943,15 +943,54 @@ export function getRoasterConfigSync(
   roasterName: string
 ): RoasterConfig | undefined {
   const configs = getRoasterConfigsSync();
-  return configs.find(c => c.roasterName === roasterName);
+  return getRoasterConfigFromConfigs(configs, roasterName);
 }
 
 /**
- * 获取烘焙商 Logo（同步）
+ * 从指定配置集合获取烘焙商配置
+ */
+export function getRoasterConfigFromConfigs(
+  configs: RoasterConfig[] | undefined,
+  roasterName: string
+): RoasterConfig | undefined {
+  return configs?.find(c => c.roasterName === roasterName);
+}
+
+/**
+ * 从指定配置集合获取烘焙商 Logo
+ */
+export function getRoasterLogoFromConfigs(
+  configs: RoasterConfig[] | undefined,
+  roasterName: string
+): string | undefined {
+  return getRoasterConfigFromConfigs(configs, roasterName)?.logoData;
+}
+
+/**
+ * 获取烘焙商 Logo（同步，非响应式）
  */
 export function getRoasterLogoSync(roasterName: string): string | undefined {
-  const config = getRoasterConfigSync(roasterName);
-  return config?.logoData;
+  return getRoasterLogoFromConfigs(getRoasterConfigsSync(), roasterName);
+}
+
+/**
+ * 订阅并获取烘焙商 Logo。
+ *
+ * React 组件应优先使用此 hook，确保 roasterConfigs 更新后相关咖啡豆图标同步刷新。
+ */
+export function useRoasterLogo(
+  roasterName: string | null | undefined
+): string | null {
+  return useSettingsStore(state => {
+    if (!roasterName) {
+      return null;
+    }
+
+    return (
+      getRoasterLogoFromConfigs(state.settings.roasterConfigs, roasterName) ??
+      null
+    );
+  });
 }
 
 // ==================== 风味维度工具函数 ====================

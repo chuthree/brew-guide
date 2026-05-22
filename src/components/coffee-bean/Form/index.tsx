@@ -31,10 +31,7 @@ import { compressBase64Image } from '@/lib/utils/imageCapture';
 import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
 import { inferBeanType } from '@/lib/utils/beanTypeInference';
-import {
-  getRoasterLogoSync,
-  useSettingsStore,
-} from '@/lib/stores/settingsStore';
+import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import {
   formatCoffeeBeanDisplayName,
   getBeanNameWithoutRoaster,
@@ -244,9 +241,6 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     // 定义额外的状态来跟踪风味标签输入
     const [flavorInput, setFlavorInput] = useState('');
 
-    // 烘焙商图标状态（仅用于显示，不存储到咖啡豆数据）
-    const [roasterLogo, setRoasterLogo] = useState<string | null>(null);
-
     // 获取设置和所有咖啡豆用于烘焙商建议
     const settings = useSettingsStore(state => state.settings);
     const allBeans = useCoffeeBeanStore(state => state.beans);
@@ -259,20 +253,15 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     }, [allBeans, settings.roasterFieldEnabled]);
     const blendComponentSuggestions = useBlendComponentSuggestions();
 
-    // 加载烘焙商图标 - 当烘焙商名称变化时
-    useEffect(() => {
+    const roasterLogoName = React.useMemo(() => {
       // 根据是否启用独立烘焙商字段决定如何获取烘焙商名称
       // 启用独立输入时：只从 roaster 字段获取
       // 关闭独立输入时：从名称中提取
-      const roasterName = getBeanRoasterName(bean);
-
-      if (roasterName) {
-        const logo = getRoasterLogoSync(roasterName);
-        setRoasterLogo(logo || null);
-      } else {
-        setRoasterLogo(null);
-      }
+      return getBeanRoasterName(bean) || null;
     }, [bean.name, bean.roaster]);
+
+    // 烘焙商图标仅用于显示，不存储到咖啡豆数据
+    const roasterLogo = useRoasterLogo(roasterLogoName);
 
     // 自动填充识图图片 - 在表单加载时检查设置，如果开启了自动填充且有识图图片，则自动填充
     useEffect(() => {

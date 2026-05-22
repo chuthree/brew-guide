@@ -12,10 +12,7 @@ import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
 import CoffeeBeanCreateOption from '@/components/coffee-bean/ui/CoffeeBeanCreateOption';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
-import {
-  getRoasterLogoSync,
-  useSettingsStore,
-} from '@/lib/stores/settingsStore';
+import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import {
   formatBeanDisplayName,
   getBeanDisplayInitial,
@@ -69,6 +66,7 @@ const BeanImage: React.FC<{
     () => getRoasterName(bean, roasterSettings),
     [bean, roasterSettings]
   );
+  const configuredRoasterLogo = useRoasterLogo(roasterName);
   const beanImage = useCoffeeBeanImage(bean.id, {
     fallback: bean.image,
     preferThumbnail: true,
@@ -80,11 +78,11 @@ const BeanImage: React.FC<{
     }
 
     if (roasterName && roasterName !== '未知烘焙商') {
-      return getRoasterLogoSync(roasterName) || null;
+      return configuredRoasterLogo;
     }
 
     return null;
-  }, [bean.name, beanImage, roasterName]);
+  }, [bean.name, beanImage, configuredRoasterLogo, roasterName]);
 
   const imageSource = beanImage || roasterLogo;
   const hasImageError = imageError.source === imageSource && imageError.failed;
