@@ -24,6 +24,7 @@ export interface CalendarProps {
   locale?: string;
   className?: string;
   initialFocus?: boolean;
+  showTimeInput?: boolean;
 }
 
 const getDaysOfWeek = (locale: Locale) => {
@@ -39,20 +40,42 @@ const getDaysOfWeek = (locale: Locale) => {
   return days;
 };
 
+type TimePart = 'hours' | 'minutes';
+
+const formatTimePart = (value: number) => value.toString().padStart(2, '0');
+
+const getTimeDraft = (date: Date) => ({
+  hours: formatTimePart(date.getHours()),
+  minutes: formatTimePart(date.getMinutes()),
+});
+
 export function Calendar({
   selected,
   onSelect,
   locale = 'zh-CN',
   className,
   initialFocus = false,
+  showTimeInput = false,
 }: CalendarProps) {
+  const selectedDate = selected instanceof Date ? selected : undefined;
   const [currentMonth, setCurrentMonth] = React.useState(() => {
     // 如果有选中的日期，则显示该日期所在的月份
-    if (selected instanceof Date) {
-      return selected;
+    if (selectedDate) {
+      return selectedDate;
     }
     return new Date();
   });
+  const [activeTimePart, setActiveTimePart] = React.useState<TimePart | null>(
+    null
+  );
+  const [timeDraft, setTimeDraft] = React.useState(() =>
+    getTimeDraft(selectedDate ?? new Date())
+  );
+
+  React.useEffect(() => {
+    if (activeTimePart || !selectedDate) return;
+    setTimeDraft(getTimeDraft(selectedDate));
+  }, [activeTimePart, selectedDate]);
 
   const localeObj = locale === 'zh-CN' ? zhCN : enUS;
   const daysOfWeek = getDaysOfWeek(localeObj);
@@ -69,11 +92,24 @@ export function Calendar({
 
   // 选择今天
   const selectToday = () => {
-    const today = new Date();
+    const today = withSelectedTime(new Date());
     if (onSelect) {
       onSelect(today);
     }
     setCurrentMonth(today);
+  };
+
+  const withSelectedTime = (date: Date) => {
+    if (!selectedDate) return date;
+
+    const nextDate = new Date(date);
+    nextDate.setHours(
+      selectedDate.getHours(),
+      selectedDate.getMinutes(),
+      selectedDate.getSeconds(),
+      selectedDate.getMilliseconds()
+    );
+    return nextDate;
   };
 
   // 获取当前月的天数
@@ -94,18 +130,64 @@ export function Calendar({
 
   // 处理日期选择
   const handleDateSelect = (date: Date) => {
+    const selectedDate = withSelectedTime(date);
     if (onSelect) {
-      onSelect(date);
+      onSelect(selectedDate);
     }
 
     // 点击跨月日期时，同步切换到对应月份，行为与常见日历组件保持一致
     if (
-      date.getMonth() !== currentMonth.getMonth() ||
-      date.getFullYear() !== currentMonth.getFullYear()
+      selectedDate.getMonth() !== currentMonth.getMonth() ||
+      selectedDate.getFullYear() !== currentMonth.getFullYear()
     ) {
-      setCurrentMonth(startOfMonth(date));
+      setCurrentMonth(startOfMonth(selectedDate));
     }
   };
+
+  const updateSelectedTime = (nextTime: Partial<Record<TimePart, string>>) => {
+    if (!onSelect) return;
+
+    const baseDate = selectedDate ?? new Date(currentMonth);
+    const nextDate = new Date(baseDate);
+    const hours = Number(nextTime.hours ?? timeDraft.hours);
+    const minutes = Number(nextTime.minutes ?? timeDraft.minutes);
+
+    if (!Number.isNaN(hours) && !Number.isNaN(minutes)) {
+      nextDate.setHours(hours, minutes);
+      onSelect(nextDate);
+      setCurrentMonth(nextDate);
+    }
+  };
+
+  const handleTimeChange =
+    (part: TimePart) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value.replace(/\D/g, '').slice(0, 2);
+      setTimeDraft(prevDraft => ({ ...prevDraft, [part]: value }));
+
+      const maxValue = part === 'hours' ? 23 : 59;
+      const numericValue = Number(value);
+      if (value !== '' && numericValue <= maxValue) {
+        updateSelectedTime({ [part]: value });
+      }
+    };
+
+  const handleTimeBlur = (part: TimePart) => {
+    const maxValue = part === 'hours' ? 23 : 59;
+    const numericValue = Number(timeDraft[part]);
+    const safeValue = Number.isNaN(numericValue)
+      ? 0
+      : Math.min(Math.max(numericValue, 0), maxValue);
+    const formattedValue = formatTimePart(safeValue);
+
+    setActiveTimePart(null);
+    setTimeDraft(prevDraft => ({ ...prevDraft, [part]: formattedValue }));
+    updateSelectedTime({ [part]: formattedValue });
+  };
+
+  const timeInputClass =
+    'w-[2ch] bg-transparent p-0 text-center font-medium tabular-nums text-inherit outline-none placeholder:text-current';
+  const footerControlClass =
+    'rounded-md bg-neutral-100 px-3 py-1.5 text-xs text-neutral-800 transition-colors dark:bg-neutral-800 dark:text-white';
 
   // 检查日期是否被选中
   const isDateSelected = (date: Date): boolean => {
@@ -365,15 +447,59 @@ export function Calendar({
         })}
       </div>
 
-      {/* 底部操作区 - 今天按钮 */}
-      <div className="mt-4 flex justify-end">
+      {/* 底部操作区 */}
+      <div className="mt-4 flex items-center justify-between">
         <button
           onClick={selectToday}
-          className="rounded-md bg-neutral-100 px-3 py-1.5 text-xs text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700"
+          className={cn(
+            footerControlClass,
+            'hover:bg-neutral-200 dark:hover:bg-neutral-700'
+          )}
           type="button"
         >
           今天
         </button>
+        {showTimeInput && (
+          <div
+            className={cn(
+              footerControlClass,
+              'flex items-center gap-0.5 font-medium tabular-nums'
+            )}
+            aria-label="选择时间"
+          >
+            <input
+              aria-label="小时"
+              className={timeInputClass}
+              inputMode="numeric"
+              maxLength={2}
+              onBlur={() => handleTimeBlur('hours')}
+              onChange={handleTimeChange('hours')}
+              onFocus={event => {
+                setActiveTimePart('hours');
+                event.currentTarget.select();
+              }}
+              pattern="[0-9]*"
+              type="text"
+              value={timeDraft.hours}
+            />
+            <span aria-hidden="true">:</span>
+            <input
+              aria-label="分钟"
+              className={timeInputClass}
+              inputMode="numeric"
+              maxLength={2}
+              onBlur={() => handleTimeBlur('minutes')}
+              onChange={handleTimeChange('minutes')}
+              onFocus={event => {
+                setActiveTimePart('minutes');
+                event.currentTarget.select();
+              }}
+              pattern="[0-9]*"
+              type="text"
+              value={timeDraft.minutes}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
