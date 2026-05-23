@@ -32,12 +32,7 @@ const DatePickerDrawer: React.FC<DatePickerDrawerProps> = ({
   }, [isOpen, date]);
 
   const handleSelect = (selectedDate: Date) => {
-    // 保留原始时间（时/分/秒）
-    const newDate = new Date(selectedDate);
-    newDate.setHours(date.getHours());
-    newDate.setMinutes(date.getMinutes());
-    newDate.setSeconds(date.getSeconds());
-    setTempDate(newDate);
+    setTempDate(new Date(selectedDate));
   };
 
   const handleConfirm = () => {
@@ -53,6 +48,7 @@ const DatePickerDrawer: React.FC<DatePickerDrawerProps> = ({
           onSelect={handleSelect}
           locale="zh-CN"
           initialFocus
+          showTimeInput
         />
       </ActionDrawer.Content>
       <ActionDrawer.Actions>
