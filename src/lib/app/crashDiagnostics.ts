@@ -9,6 +9,7 @@ const NON_FATAL_BROWSER_ERROR_PHASES = new Set([
   'unhandled-rejection',
 ]);
 const IGNORED_BROWSER_ERROR_PATTERNS: RegExp[] = [];
+const IGNORE_INFERRED_BOOT_INTERRUPTION_DIAGNOSTICS = true;
 
 type JsonValue =
   | string
@@ -182,17 +183,6 @@ const queuePersist = (session: CrashDiagnosticSession | null) => {
     });
 };
 
-const isUnexpectedPreviousSession = (
-  session: CrashDiagnosticSession | null
-): boolean => {
-  if (!session) return false;
-
-  if (session.nativeCrash) return true;
-  if (isIgnoredBrowserError(session.fatalError)) return false;
-
-  return session.startupState !== 'ready';
-};
-
 const isNonFatalBrowserError = (error: CrashErrorRecord | undefined): boolean =>
   Boolean(error && NON_FATAL_BROWSER_ERROR_PHASES.has(error.phase));
 
@@ -203,6 +193,26 @@ const isIgnoredBrowserError = (error: CrashErrorRecord | undefined): boolean =>
     IGNORED_BROWSER_ERROR_PATTERNS.some(pattern => pattern.test(error.message))
   );
 
+const isTemporarilyIgnoredInferredBootInterruption = (
+  session: CrashDiagnosticSession
+): boolean =>
+  IGNORE_INFERRED_BOOT_INTERRUPTION_DIAGNOSTICS &&
+  !session.nativeCrash &&
+  !session.fatalError &&
+  session.startupState === 'booting';
+
+const isUnexpectedPreviousSession = (
+  session: CrashDiagnosticSession | null
+): boolean => {
+  if (!session) return false;
+
+  if (session.nativeCrash) return true;
+  if (isIgnoredBrowserError(session.fatalError)) return false;
+  if (isTemporarilyIgnoredInferredBootInterruption(session)) return false;
+
+  return session.startupState !== 'ready';
+};
+
 export const shouldShowCrashDiagnosticReport = (
   report: CrashDiagnosticReport | null
 ): boolean => {
@@ -212,6 +222,7 @@ export const shouldShowCrashDiagnosticReport = (
 
   if (session.nativeCrash) return true;
   if (isIgnoredBrowserError(session.fatalError)) return false;
+  if (isTemporarilyIgnoredInferredBootInterruption(session)) return false;
 
   return !(
     session.startupState === 'ready' &&
