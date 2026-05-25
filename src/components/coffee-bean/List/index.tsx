@@ -106,6 +106,7 @@ import {
   getBeanSummaryLimitMode,
 } from '@/lib/utils/beanSummaryDisplay';
 import { searchBeanRecords, summarizeBeanTypeStats } from './beanListPipeline';
+import { useCoffeeBeanImageIds } from '@/lib/hooks/useCoffeeBeanImage';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -432,19 +433,22 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [rankingOmniCount, setRankingOmniCount] = useState<number>(0);
 
   // 显示模式状态（持久化记忆 - 参考笔记模块的实现方式）
-  // 支持 list（列表）、table（表格）两种模式
+  // 支持 list（列表）、imageFlow（图片流）、table（表格）三种模式
   const [displayMode, setDisplayModeState] = useState<DisplayMode>(() => {
     if (typeof window !== 'undefined') {
       // 根据当前 beanState 读取对应的显示模式
       const validState = getValidBeanState();
       const storageKey = `brew-guide:coffee-beans:displayMode_${validState}`;
       const saved = localStorage.getItem(storageKey);
-      if (saved === 'list' || saved === 'table') {
+      if (saved === 'list' || saved === 'imageFlow' || saved === 'table') {
         return saved;
       }
     }
     return 'list';
   });
+
+  // 图片流模式（向后兼容，从 displayMode 派生）
+  const isImageFlowMode = displayMode === 'imageFlow';
 
   // 表格可见列配置（持久化）
   const [tableVisibleColumns, setTableVisibleColumnsState] = useState<
@@ -526,6 +530,20 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     }
   }, [enableGreenBeanInventory, selectedBeanState]);
 
+  // 计算是否有图片咖啡豆（用于禁用/启用图片流按钮）
+  const beanImageIds = useCoffeeBeanImageIds(beans.map(bean => bean.id));
+  const hasImageBeans = useMemo(() => {
+    return beans.some(
+      bean =>
+        beanImageIds.has(bean.id) || (bean.image && bean.image.trim() !== '')
+    );
+  }, [beans, beanImageIds]);
+
+  // 切换图片流模式（简化版，直接使用 updateDisplayMode）
+  const handleToggleImageFlowMode = useCallback(() => {
+    updateDisplayMode(isImageFlowMode ? 'list' : 'imageFlow');
+  }, [isImageFlowMode, updateDisplayMode]);
+
   // 显示模式切换处理函数（直接使用 updateDisplayMode）
   const handleDisplayModeChange = useCallback(
     (mode: DisplayMode) => {
@@ -533,6 +551,25 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     },
     [updateDisplayMode]
   );
+
+  // 当没有图片咖啡豆时，自动关闭图片流模式
+  // 但只在数据已经加载完成后才执行此检查，避免初始化时误判
+  useEffect(() => {
+    if (
+      storeInitialized &&
+      isImageFlowMode &&
+      !hasImageBeans &&
+      beans.length > 0
+    ) {
+      updateDisplayMode('list');
+    }
+  }, [
+    storeInitialized,
+    isImageFlowMode,
+    hasImageBeans,
+    beans.length,
+    updateDisplayMode,
+  ]);
 
   // 从 Store beans 中筛选已评分的咖啡豆（包含手动评分和自动评分）
   const loadRatedBeans = React.useCallback(() => {
@@ -794,7 +831,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         const saved = localStorage.getItem(
           `brew-guide:coffee-beans:displayMode_${beanState}`
         );
-        if (saved === 'list' || saved === 'table') {
+        if (saved === 'list' || saved === 'imageFlow' || saved === 'table') {
           targetDisplayMode = saved;
         }
       }
@@ -1237,7 +1274,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
   // 按显示模式选择库存数据源：
-  // - list: 使用列表排序结果
+  // - list/imageFlow: 使用列表排序结果
   // - table: 仅使用筛选结果，排序交由表头控制
   const inventoryFilteredRecords = React.useMemo(
     () => (displayMode === 'table' ? tableFilteredRecords : filteredRecords),
@@ -1674,6 +1711,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         rankingEspressoCount={rankingEspressoCount}
         rankingFilterCount={rankingFilterCount}
         rankingOmniCount={rankingOmniCount}
+        isImageFlowMode={isImageFlowMode}
+        onToggleImageFlowMode={handleToggleImageFlowMode}
+        hasImageBeans={hasImageBeans}
+        // 新增显示模式属性
         displayMode={displayMode}
         onDisplayModeChange={handleDisplayModeChange}
         // 表格列配置属性
@@ -1759,6 +1800,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               onBeanReducedToZero={handleBeanReducedToZero}
               isSearching={isSearching}
               searchQuery={searchQuery}
+              isImageFlowMode={isImageFlowMode}
               displayMode={displayMode}
               tableVisibleColumns={tableVisibleColumns}
               activeBeanId={activeBeanId}

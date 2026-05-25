@@ -47,10 +47,12 @@ export const globalCache: {
   showEmptyBeansSettings: { green: boolean; roasted: boolean };
 
   // 视图状态
-  displayMode: 'list' | 'table';
+  isImageFlowMode: boolean;
+  isImageFlowModes: { green: boolean; roasted: boolean };
+  displayMode: 'list' | 'imageFlow' | 'table';
   displayModes: {
-    green: 'list' | 'table';
-    roasted: 'list' | 'table';
+    green: 'list' | 'imageFlow' | 'table';
+    roasted: 'list' | 'imageFlow' | 'table';
   };
   viewMode: ViewOption;
   sortOption: SortOption;
@@ -97,6 +99,8 @@ export const globalCache: {
   selectedBeanGroupIds: { green: null, roasted: null },
   showEmptyBeans: false,
   showEmptyBeansSettings: { green: false, roasted: false },
+  isImageFlowMode: false,
+  isImageFlowModes: { green: false, roasted: false },
   displayMode: 'list',
   displayModes: { green: 'list', roasted: 'list' },
   viewMode: 'inventory',
@@ -316,15 +320,21 @@ export const saveSelectedBeanGroupByStatePreference = (
   v: string | null
 ) => saveStringState(MODULE_NAME, `selectedBeanGroupId_${s}`, v || '');
 
-// 显示模式: list（列表）、table（表格）
-export type DisplayMode = 'list' | 'table';
+// 显示模式: list（列表）、imageFlow（图片流）、table（表格）
+export type DisplayMode = 'list' | 'imageFlow' | 'table';
 
 export const getDisplayModePreference = (): DisplayMode => {
+  // 优先读取新的 displayMode，如果没有则从旧的 isImageFlowMode 迁移
   const newMode = getStringState(MODULE_NAME, 'displayMode', '');
-  if (newMode === 'list' || newMode === 'table') {
-    return newMode;
+  if (
+    newMode &&
+    (newMode === 'list' || newMode === 'imageFlow' || newMode === 'table')
+  ) {
+    return newMode as DisplayMode;
   }
-  return 'list';
+  // 迁移旧的 isImageFlowMode 设置
+  const oldMode = getBooleanState(MODULE_NAME, 'isImageFlowMode', false);
+  return oldMode ? 'imageFlow' : 'list';
 };
 
 export const saveDisplayModePreference = (v: DisplayMode) =>
@@ -332,16 +342,31 @@ export const saveDisplayModePreference = (v: DisplayMode) =>
 
 export const getDisplayModeByStatePreference = (s: BeanState): DisplayMode => {
   const newMode = getStringState(MODULE_NAME, `displayMode_${s}`, '');
-  if (newMode === 'list' || newMode === 'table') {
-    return newMode;
+  if (
+    newMode &&
+    (newMode === 'list' || newMode === 'imageFlow' || newMode === 'table')
+  ) {
+    return newMode as DisplayMode;
   }
-  return 'list';
+  // 迁移旧的 isImageFlowMode 设置
+  const oldMode = getBooleanState(MODULE_NAME, `isImageFlowMode_${s}`, false);
+  return oldMode ? 'imageFlow' : 'list';
 };
 
 export const saveDisplayModeByStatePreference = (
   s: BeanState,
   v: DisplayMode
 ) => saveStringState(MODULE_NAME, `displayMode_${s}`, v);
+
+// 向后兼容：isImageFlowMode 函数
+export const getImageFlowModePreference = () =>
+  getDisplayModePreference() === 'imageFlow';
+export const saveImageFlowModePreference = (v: boolean) =>
+  saveDisplayModePreference(v ? 'imageFlow' : 'list');
+export const getImageFlowModeByStatePreference = (s: BeanState) =>
+  getDisplayModeByStatePreference(s) === 'imageFlow';
+export const saveImageFlowModeByStatePreference = (s: BeanState, v: boolean) =>
+  saveDisplayModeByStatePreference(s, v ? 'imageFlow' : 'list');
 
 // 统计视图
 export const getDateGroupingModePreference = () =>
@@ -490,6 +515,11 @@ const initGlobalCache = () => {
   globalCache.selectedBeanTypes = {
     green: getSelectedBeanTypeByStatePreference('green'),
     roasted: getSelectedBeanTypeByStatePreference('roasted'),
+  };
+  globalCache.isImageFlowMode = getImageFlowModePreference();
+  globalCache.isImageFlowModes = {
+    green: getImageFlowModeByStatePreference('green'),
+    roasted: getImageFlowModeByStatePreference('roasted'),
   };
   globalCache.displayMode = getDisplayModePreference();
   globalCache.displayModes = {
