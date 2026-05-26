@@ -6,14 +6,11 @@ import { X } from 'lucide-react';
 import SuggestionDropdown, {
   SUGGESTION_DROPDOWN_Z_INDEX,
 } from './SuggestionDropdown';
+import { FloatingPortal, useFloating } from '@floating-ui/react';
 import {
-  autoUpdate,
-  flip,
-  FloatingPortal,
-  offset,
-  shift,
-  useFloating,
-} from '@floating-ui/react';
+  autocompleteDropdownMiddleware,
+  autoUpdateAutocompleteDropdown,
+} from './autocompleteFloating';
 
 interface AutocompleteInputProps {
   value: string;
@@ -101,8 +98,9 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     open,
     onOpenChange: setOpen,
     placement: 'bottom-start',
-    middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
-    whileElementsMounted: autoUpdate,
+    strategy: 'fixed',
+    middleware: autocompleteDropdownMiddleware,
+    whileElementsMounted: autoUpdateAutocompleteDropdown,
   });
 
   const setReferenceElement = useCallback(
