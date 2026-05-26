@@ -12,11 +12,11 @@ import SuggestionDropdown, {
   SUGGESTION_DROPDOWN_Z_INDEX,
 } from '@/components/common/forms/SuggestionDropdown';
 import {
-  autoUpdate,
-  flip,
+  autocompleteDropdownMiddleware,
+  autoUpdateAutocompleteDropdown,
+} from '@/components/common/forms/autocompleteFloating';
+import {
   FloatingPortal,
-  offset,
-  shift,
   useDismiss,
   useFloating,
   useInteractions,
@@ -58,8 +58,9 @@ const TagAutocompleteInput: React.FC<TagAutocompleteInputProps> = ({
     open: isOpen,
     onOpenChange: setIsOpen,
     placement: 'bottom-start',
-    middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
-    whileElementsMounted: autoUpdate,
+    strategy: 'fixed',
+    middleware: autocompleteDropdownMiddleware,
+    whileElementsMounted: autoUpdateAutocompleteDropdown,
   });
   const dismiss = useDismiss(context);
   const role = useRole(context, { role: 'listbox' });
