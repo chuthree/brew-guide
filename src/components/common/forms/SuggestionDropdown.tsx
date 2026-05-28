@@ -11,12 +11,16 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/utils/classNameUtils';
 
 const DROPDOWN_ITEM_HEIGHT = 32;
-const DROPDOWN_MAX_HEIGHT = 280;
+export const DROPDOWN_MAX_HEIGHT = 280;
 const DROPDOWN_OVERSCAN = 4;
+export const SUGGESTION_DROPDOWN_AVAILABLE_HEIGHT_VAR =
+  '--suggestion-dropdown-available-height';
 export const SUGGESTION_DROPDOWN_Z_INDEX = 80;
 
-interface SuggestionDropdownProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
+interface SuggestionDropdownProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  'onSelect'
+> {
   suggestions: string[];
   onSelect: (value: string) => void;
   isRemovableSuggestion?: (value: string) => boolean;
@@ -92,7 +96,10 @@ const SuggestionDropdown = React.forwardRef<
         data-vaul-no-drag
         onTouchStart={onTouchStart}
         onScroll={event => setScrollTop(event.currentTarget.scrollTop)}
-        style={{ ...style, maxHeight: DROPDOWN_MAX_HEIGHT }}
+        style={{
+          ...style,
+          maxHeight: `min(var(${SUGGESTION_DROPDOWN_AVAILABLE_HEIGHT_VAR}, ${DROPDOWN_MAX_HEIGHT}px), ${DROPDOWN_MAX_HEIGHT}px)`,
+        }}
         className={cn(
           'pointer-events-auto overflow-auto overscroll-contain rounded-md border border-neutral-200/50 bg-white py-1 shadow-lg dark:border-neutral-800/50 dark:bg-neutral-900',
           className

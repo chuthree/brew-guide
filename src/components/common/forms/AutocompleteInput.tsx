@@ -1,15 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import { cn } from '@/lib/utils/classNameUtils';
 import { X } from 'lucide-react';
 import SuggestionDropdown, {
   SUGGESTION_DROPDOWN_Z_INDEX,
 } from './SuggestionDropdown';
 import { FloatingPortal, useFloating } from '@floating-ui/react';
+import type { Placement } from '@floating-ui/react';
 import {
-  autocompleteDropdownMiddleware,
   autoUpdateAutocompleteDropdown,
+  createAutocompleteDropdownMiddleware,
 } from './autocompleteFloating';
 
 interface AutocompleteInputProps {
@@ -44,6 +51,7 @@ interface AutocompleteInputProps {
   onRemovePreset?: (value: string) => void;
   onSuggestionSelect?: (value: string) => void;
   suggestionSelectMode?: 'fill' | 'commit';
+  dropdownPlacement?: Extract<Placement, 'bottom-start' | 'top-start'>;
   // 新增：回车键回调
   onEnter?: () => void;
 }
@@ -81,6 +89,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   onRemovePreset,
   onSuggestionSelect,
   suggestionSelectMode = 'fill',
+  dropdownPlacement = 'bottom-start',
   // 新增：回车键回调
   onEnter,
 }) => {
@@ -94,12 +103,16 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownMiddleware = useMemo(
+    () => createAutocompleteDropdownMiddleware(),
+    []
+  );
   const { refs, floatingStyles } = useFloating({
     open,
     onOpenChange: setOpen,
-    placement: 'bottom-start',
+    placement: dropdownPlacement,
     strategy: 'fixed',
-    middleware: autocompleteDropdownMiddleware,
+    middleware: dropdownMiddleware,
     whileElementsMounted: autoUpdateAutocompleteDropdown,
   });
 
