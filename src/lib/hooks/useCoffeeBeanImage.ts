@@ -27,7 +27,7 @@ export function useCoffeeBeanImage(
   const { side = 'front', preferThumbnail = true, fallback } = options;
   const [imageSource, setImageSource] = useState<string | undefined>(fallback);
   const [refreshKey, setRefreshKey] = useState(0);
-  const sourceIdentityRef = useRef<string | undefined>();
+  const sourceIdentityRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,9 +175,8 @@ export function useCoffeeBeanImageSources(
         if (!cancelled) {
           setImageSources(
             new Map(
-              entries.filter(
-                (entry): entry is readonly [string, string] =>
-                  Boolean(entry[1])
+              entries.filter((entry): entry is readonly [string, string] =>
+                Boolean(entry[1])
               )
             )
           );

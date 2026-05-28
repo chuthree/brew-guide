@@ -26,7 +26,6 @@ interface DrawingCanvasProps {
   width?: number;
   height?: number;
   defaultSvg?: string;
-  onDrawingComplete?: (svgString: string) => void;
   referenceSvgUrl?: string;
   referenceSvg?: string;
   strokeColor?: string;
@@ -56,8 +55,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
       width = 300,
       height = 300,
       defaultSvg,
-      onDrawingComplete,
-      referenceSvgUrl = '/images/icons/ui/v60-base.svg',
+      referenceSvgUrl,
       referenceSvg,
       strokeColor,
       showReference = true,
@@ -71,9 +69,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
     const blobUrlRef = useRef<string | null>(null);
 
     // 状态
-    const [isDrawing, setIsDrawing] = useState(false);
+    const [_isDrawing, setIsDrawing] = useState(false);
+    const isDrawingRef = useRef(false);
     const [lines, setLines] = useState<Line[]>([]);
     const [currentLine, setCurrentLine] = useState<Line | null>(null);
+    const currentLineRef = useRef<Line | null>(null);
     const [strokeWidth, setStrokeWidth] = useState(3);
     // 强制使用纯黑色(#000000)作为默认颜色，以便在暗黑模式下可以正确转换为白色
     const [_color, _setColor] = useState(strokeColor || '#000000');
@@ -580,11 +580,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
     const saveDrawing = useCallback(() => {
       // 使用linesRef.current以确保获取最新的lines
       const svgString = linesToSvgPath(linesRef.current, width, height);
-      if (onDrawingComplete) {
-        onDrawingComplete(svgString);
-      }
       return svgString;
-    }, [width, height, onDrawingComplete]);
+    }, [width, height]);
 
     // 修改处理触摸/鼠标开始事件
     const handleStart = useCallback(
@@ -604,66 +601,67 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
         const drawingColor = getCurrentDrawingColor();
 
         setIsDrawing(true);
-        setCurrentLine({
+        isDrawingRef.current = true;
+        const nextLine = {
           points: [{ x, y }],
           strokeWidth,
           color: drawingColor, // 使用实际的颜色值
-        });
+        };
+        currentLineRef.current = nextLine;
+        setCurrentLine(nextLine);
       },
       [strokeWidth, isReady, getCurrentDrawingColor]
     );
 
     // 处理触摸/鼠标移动事件 - 直接处理相对于画布的坐标
-    const handleMove = useCallback(
-      (clientX: number, clientY: number) => {
-        if (!isDrawing || !currentLine || !canvasRef.current) return;
+    const handleMove = useCallback((clientX: number, clientY: number) => {
+      if (!isDrawingRef.current || !canvasRef.current) return;
 
-        // 计算相对于画布左上角的坐标
-        const canvas = canvasRef.current;
-        const rect = canvas.getBoundingClientRect();
-        const x = clientX - rect.left;
-        const y = clientY - rect.top;
+      // 计算相对于画布左上角的坐标
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
 
-        // 确保坐标在画布范围内
-        if (x < 0 || x > canvas.width || y < 0 || y > canvas.height) return;
+      // 确保坐标在画布范围内
+      if (x < 0 || x > canvas.width || y < 0 || y > canvas.height) return;
 
-        setCurrentLine(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            points: [...prev.points, { x, y }],
-          };
-        });
-      },
-      [isDrawing, currentLine]
-    );
+      const nextLine = currentLineRef.current
+        ? {
+            ...currentLineRef.current,
+            points: [...currentLineRef.current.points, { x, y }],
+          }
+        : null;
+
+      currentLineRef.current = nextLine;
+      setCurrentLine(nextLine);
+    }, []);
 
     // 处理触摸/鼠标结束事件
     const handleEnd = useCallback(() => {
-      if (!isDrawing || !currentLine) return;
+      const finishedLine = currentLineRef.current;
+      if (!isDrawingRef.current || !finishedLine) return;
 
       hapticsUtils.medium();
 
       // 只有当线条有足够的点时才保存
-      if (currentLine.points.length > 1) {
+      if (finishedLine.points.length > 1) {
         // 同步更新lines数组
-        const updatedLines = [...linesRef.current, currentLine];
+        const updatedLines = [...linesRef.current, finishedLine];
         setLines(updatedLines);
 
         // 立即更新ref，以便saveDrawing可以访问
         linesRef.current = updatedLines;
-
-        // 确保状态更新后再调用保存
-        // 移除setTimeout，直接调用saveDrawing
-        saveDrawing();
       }
 
       setIsDrawing(false);
+      isDrawingRef.current = false;
+      currentLineRef.current = null;
       setCurrentLine(null);
 
       // 更新画布偏移以防止动画或滚动后的位置变化
       updateCanvasOffset();
-    }, [isDrawing, currentLine, saveDrawing, updateCanvasOffset]);
+    }, [updateCanvasOffset]);
 
     // 在 useEffect 之前添加新的事件处理设置
     useEffect(() => {
@@ -672,40 +670,51 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
 
       const touchStartHandler = (e: TouchEvent) => {
         if (e.touches.length !== 1) return;
+        e.preventDefault();
+        e.stopPropagation();
         const touch = e.touches[0];
         handleStart(touch.clientX, touch.clientY);
       };
 
       const touchMoveHandler = (e: TouchEvent) => {
-        if (!isDrawing || e.touches.length !== 1) return;
+        if (e.touches.length !== 1) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isDrawingRef.current) return;
         const touch = e.touches[0];
         handleMove(touch.clientX, touch.clientY);
-        e.preventDefault();
       };
 
-      const touchEndHandler = () => {
-        if (!isDrawing) return;
+      const touchEndHandler = (e: TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isDrawingRef.current) return;
         handleEnd();
       };
 
       canvas.addEventListener('touchstart', touchStartHandler, {
-        passive: true,
+        passive: false,
       });
       canvas.addEventListener('touchmove', touchMoveHandler, {
         passive: false,
       });
-      canvas.addEventListener('touchend', touchEndHandler, { passive: true });
+      canvas.addEventListener('touchend', touchEndHandler, { passive: false });
+      canvas.addEventListener('touchcancel', touchEndHandler, {
+        passive: false,
+      });
 
       return () => {
         canvas.removeEventListener('touchstart', touchStartHandler);
         canvas.removeEventListener('touchmove', touchMoveHandler);
         canvas.removeEventListener('touchend', touchEndHandler);
+        canvas.removeEventListener('touchcancel', touchEndHandler);
       };
-    }, [isDrawing, handleStart, handleMove, handleEnd]);
+    }, [handleStart, handleMove, handleEnd]);
 
     // 鼠标事件处理（用于桌面测试）- 优化版本
     const handleMouseDown = useCallback(
       (e: React.MouseEvent) => {
+        e.stopPropagation();
         handleStart(e.clientX, e.clientY);
       },
       [handleStart]
@@ -713,19 +722,26 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
 
     const handleMouseMove = useCallback(
       (e: React.MouseEvent) => {
-        if (!isDrawing) return;
+        e.stopPropagation();
+        if (!isDrawingRef.current) return;
         handleMove(e.clientX, e.clientY);
       },
-      [isDrawing, handleMove]
+      [handleMove]
     );
 
-    const handleMouseUp = useCallback(() => {
-      handleEnd();
-    }, [handleEnd]);
+    const handleMouseUp = useCallback(
+      (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        handleEnd();
+      },
+      [handleEnd]
+    );
 
     // 清除画布
     const clearCanvas = useCallback(() => {
       hapticsUtils.light();
+      linesRef.current = [];
+      currentLineRef.current = null;
       setLines([]);
       setCurrentLine(null);
     }, []);
@@ -733,7 +749,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
     // 撤销最后一条线
     const undoLastLine = useCallback(() => {
       hapticsUtils.light();
-      setLines(prev => prev.slice(0, -1));
+      setLines(prev => {
+        const nextLines = prev.slice(0, -1);
+        linesRef.current = nextLines;
+        return nextLines;
+      });
     }, []);
 
     // 公开API - 使用useImperativeHandle向父组件暴露功能
@@ -856,11 +876,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
     return (
       <div
         ref={containerRef}
+        data-vaul-no-drag
         className="relative overflow-hidden rounded-lg border border-neutral-200/50 dark:border-neutral-700"
         style={{ touchAction: 'none' }} // 防止触摸手势引起的页面滚动
       >
         <canvas
           ref={canvasRef}
+          data-vaul-no-drag
           width={width}
           height={height}
           style={{ touchAction: 'none' }}

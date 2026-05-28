@@ -686,7 +686,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [editingEquipment, setEditingEquipment] = useState<
     CustomEquipment | undefined
   >(undefined);
-  const [showEquipmentImportForm, setShowEquipmentImportForm] = useState(false);
   // 用于导入器具后回填数据到添加器具表单
   const [pendingImportEquipment, setPendingImportEquipment] = useState<{
     equipment: CustomEquipment;
@@ -3149,16 +3148,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }
   }, [selectedEquipment, customEquipments, methodType, setMethodType]);
 
-  // 处理从导入模态框回填数据到添加器具表单
+  // 处理从导入文件回填数据到添加器具表单
   const handleImportEquipmentToForm = (
     equipment: CustomEquipment,
     methods?: Method[]
   ) => {
     // 存储导入的数据，等待回填到表单
     setPendingImportEquipment({ equipment, methods });
-    // 注意：不要在这里设置 setShowEquipmentImportForm(false)
-    // 让 EquipmentImportModal 自己通过 modalHistory.back() 关闭
-    // 这样可以避免双重关闭导致的历史栈问题
     // 确保添加器具表单是打开的
     if (!showEquipmentForm) {
       setShowEquipmentForm(true);
@@ -4487,8 +4483,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setShowEquipmentForm={setShowEquipmentForm}
         editingEquipment={editingEquipment}
         setEditingEquipment={setEditingEquipment}
-        showEquipmentImportForm={showEquipmentImportForm}
-        setShowEquipmentImportForm={setShowEquipmentImportForm}
         pendingImportEquipment={pendingImportEquipment}
         setPendingImportEquipment={setPendingImportEquipment}
         showEquipmentManagement={showEquipmentManagement}

@@ -7,6 +7,10 @@ import { type CustomEquipment } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useEquipmentList } from '@/lib/equipment/useEquipmentList';
+import {
+  getEquipmentDisplayName,
+  getEquipmentDisplayParts,
+} from '@/lib/equipment/displayName';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
@@ -261,134 +265,151 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                   onReorder={handleReorder}
                   className="space-y-2"
                 >
-                  {allEquipments.map(equipment => (
-                    <Reorder.Item
-                      key={equipment.id}
-                      value={equipment}
-                      whileDrag={{
-                        scale: 1.01,
-                        transition: { duration: 0.1 },
-                      }}
-                      style={{
-                        listStyle: 'none',
-                      }}
-                    >
-                      <motion.div
-                        className="flex items-center py-3"
+                  {allEquipments.map(equipment => {
+                    const { name: equipmentName, customSuffix } =
+                      getEquipmentDisplayParts(equipment);
+                    const equipmentDisplayName =
+                      getEquipmentDisplayName(equipment);
+
+                    return (
+                      <Reorder.Item
+                        key={equipment.id}
+                        value={equipment}
                         whileDrag={{
-                          backgroundColor: 'transparent',
+                          scale: 1.01,
                           transition: { duration: 0.1 },
                         }}
-                        onPointerDown={e => {
-                          const target = e.target as HTMLElement;
-                          const isDragHandle = target.closest('.drag-handle');
-                          if (!isDragHandle) {
-                            e.preventDefault();
-                          }
+                        style={{
+                          listStyle: 'none',
                         }}
                       >
-                        <div className="drag-handle mr-3 cursor-grab rounded-md p-1 pl-0 transition-colors duration-150 active:cursor-grabbing">
-                          <motion.div
+                        <motion.div
+                          className="flex items-center py-3"
+                          whileDrag={{
+                            backgroundColor: 'transparent',
+                            transition: { duration: 0.1 },
+                          }}
+                          onPointerDown={e => {
+                            const target = e.target as HTMLElement;
+                            const isDragHandle =
+                              target.closest('.drag-handle');
+                            if (!isDragHandle) {
+                              e.preventDefault();
+                            }
+                          }}
+                        >
+                          <div className="drag-handle mr-3 cursor-grab rounded-md p-1 pl-0 transition-colors duration-150 active:cursor-grabbing">
+                            <motion.div
+                              whileDrag={{
+                                color: 'rgb(107 114 128)',
+                                transition: { duration: 0.1 },
+                              }}
+                            >
+                              <GripVertical className="h-4 w-4 text-neutral-400 transition-colors duration-150 dark:text-neutral-500" />
+                            </motion.div>
+                          </div>
+
+                          <motion.span
+                            className="flex min-w-0 flex-1 items-baseline text-base font-medium text-neutral-700 transition-colors duration-150 dark:text-neutral-200"
                             whileDrag={{
                               color: 'rgb(107 114 128)',
                               transition: { duration: 0.1 },
                             }}
+                            title={equipmentDisplayName}
                           >
-                            <GripVertical className="h-4 w-4 text-neutral-400 transition-colors duration-150 dark:text-neutral-500" />
-                          </motion.div>
-                        </div>
+                            <span
+                              className={
+                                equipment.showActions ? 'truncate' : undefined
+                              }
+                            >
+                              {equipmentName}
+                            </span>
+                            {customSuffix && (
+                              <span className="ml-1 shrink-0 text-neutral-400 dark:text-neutral-500">
+                                {customSuffix}
+                              </span>
+                            )}
+                          </motion.span>
 
-                        <motion.span
-                          className={`flex-1 text-base font-medium text-neutral-700 transition-colors duration-150 dark:text-neutral-200 ${
-                            equipment.showActions ? 'truncate' : ''
-                          }`}
-                          whileDrag={{
-                            color: 'rgb(107 114 128)',
-                            transition: { duration: 0.1 },
-                          }}
-                          title={equipment.name}
-                        >
-                          {equipment.name}
-                        </motion.span>
-
-                        <div className="flex items-center justify-end">
-                          <AnimatePresence mode="wait">
-                            {equipment.showActions ? (
-                              <motion.div
-                                initial={{ opacity: 0, filter: 'blur(4px)' }}
-                                animate={{ opacity: 1, filter: 'blur(0px)' }}
-                                exit={{ opacity: 0, filter: 'blur(4px)' }}
-                                transition={{ duration: 0.2 }}
-                                className="flex items-center space-x-1"
-                              >
-                                {equipment.isSystem ? (
-                                  // 系统器具只显示隐藏按钮
+                          <div className="flex items-center justify-end">
+                            <AnimatePresence mode="wait">
+                              {equipment.showActions ? (
+                                <motion.div
+                                  initial={{ opacity: 0, filter: 'blur(4px)' }}
+                                  animate={{ opacity: 1, filter: 'blur(0px)' }}
+                                  exit={{ opacity: 0, filter: 'blur(4px)' }}
+                                  transition={{ duration: 0.2 }}
+                                  className="flex items-center space-x-1"
+                                >
+                                  {equipment.isSystem ? (
+                                    // 系统器具只显示隐藏按钮
+                                    <button
+                                      onClick={() =>
+                                        handleAction('hide', equipment)
+                                      }
+                                      className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
+                                    >
+                                      <EyeOff className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                                    </button>
+                                  ) : (
+                                    // 自定义器具显示编辑、分享、删除按钮
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          handleAction('edit', equipment)
+                                        }
+                                        className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
+                                      >
+                                        <Edit className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleAction('share', equipment)
+                                        }
+                                        className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
+                                      >
+                                        <Share2 className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleAction('delete', equipment)
+                                        }
+                                        className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                                      </button>
+                                    </>
+                                  )}
                                   <button
-                                    onClick={() =>
-                                      handleAction('hide', equipment)
-                                    }
+                                    onClick={() => toggleActions(equipment.id)}
                                     className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
                                   >
-                                    <EyeOff className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                                    <X className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
                                   </button>
-                                ) : (
-                                  // 自定义器具显示编辑、分享、删除按钮
-                                  <>
-                                    <button
-                                      onClick={() =>
-                                        handleAction('edit', equipment)
-                                      }
-                                      className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
-                                    >
-                                      <Edit className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleAction('share', equipment)
-                                      }
-                                      className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
-                                    >
-                                      <Share2 className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleAction('delete', equipment)
-                                      }
-                                      className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
-                                    >
-                                      <Trash2 className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                                    </button>
-                                  </>
-                                )}
-                                <button
+                                </motion.div>
+                              ) : (
+                                <motion.button
+                                  initial={{
+                                    opacity: 0.6,
+                                    filter: 'blur(2px)',
+                                  }}
+                                  animate={{ opacity: 1, filter: 'blur(0px)' }}
+                                  exit={{ opacity: 0.6, filter: 'blur(2px)' }}
+                                  transition={{ duration: 0.2 }}
                                   onClick={() => toggleActions(equipment.id)}
-                                  className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
+                                  className="rounded-md p-2 transition-all duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
                                 >
-                                  <X className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                                </button>
-                              </motion.div>
-                            ) : (
-                              <motion.button
-                                initial={{
-                                  opacity: 0.6,
-                                  filter: 'blur(2px)',
-                                }}
-                                animate={{ opacity: 1, filter: 'blur(0px)' }}
-                                exit={{ opacity: 0.6, filter: 'blur(2px)' }}
-                                transition={{ duration: 0.2 }}
-                                onClick={() => toggleActions(equipment.id)}
-                                className="rounded-md p-2 transition-all duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
-                              >
-                                <span className="flex h-4 w-4 items-center justify-center text-lg leading-none font-bold text-neutral-600 select-none dark:text-neutral-400">
-                                  ⋯
-                                </span>
-                              </motion.button>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </motion.div>
-                    </Reorder.Item>
-                  ))}
+                                  <span className="flex h-4 w-4 items-center justify-center text-lg leading-none font-bold text-neutral-600 select-none dark:text-neutral-400">
+                                    ⋯
+                                  </span>
+                                </motion.button>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </motion.div>
+                      </Reorder.Item>
+                    );
+                  })}
                 </Reorder.Group>
               </div>
             ) : (

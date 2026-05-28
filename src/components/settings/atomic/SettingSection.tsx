@@ -6,6 +6,7 @@ interface SettingSectionProps {
   footer?: string | React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  contentShape?: 'auto' | 'card' | 'capsule' | 'none';
 }
 
 /**
@@ -17,12 +18,15 @@ const SettingSection: React.FC<SettingSectionProps> = ({
   footer,
   children,
   className = '',
+  contentShape = 'auto',
 }) => {
   const layoutMode = useSettingPageLayoutMode();
   const sectionPaddingClass = layoutMode === 'embedded' ? 'pl-3 pr-6' : 'px-6';
 
   // 判断是否需要胶囊样式：只有一个子元素且没有描述
-  const isCapsule = React.useMemo(() => {
+  const getIsCapsule = () => {
+    if (contentShape !== 'auto') return contentShape === 'capsule';
+
     const validChildren = React.Children.toArray(children);
     if (validChildren.length !== 1) return false;
 
@@ -32,9 +36,13 @@ const SettingSection: React.FC<SettingSectionProps> = ({
     // 如果是原生 div 容器，通常包含复杂内容，不应作为胶囊处理
     if (child.type === 'div') return false;
 
+    const childProps = child.props as any;
+
     // 检查 props.description 是否存在
-    return !(child.props as any).description;
-  }, [children]);
+    return !childProps.description;
+  };
+
+  const isCapsule = getIsCapsule();
 
   // 处理子元素，自动注入 isLast 属性
   const renderChildren = () => {
@@ -65,6 +73,8 @@ const SettingSection: React.FC<SettingSectionProps> = ({
     });
   };
 
+  const content = renderChildren();
+
   return (
     <div className={`${sectionPaddingClass} pb-5 ${className}`}>
       {title && (
@@ -78,13 +88,17 @@ const SettingSection: React.FC<SettingSectionProps> = ({
           )}
         </div>
       )}
-      <div
-        className={`overflow-hidden bg-neutral-100 dark:bg-neutral-800/40 ${
-          isCapsule ? 'rounded-full' : 'rounded-xl'
-        }`}
-      >
-        {renderChildren()}
-      </div>
+      {contentShape === 'none' ? (
+        children
+      ) : (
+        <div
+          className={`overflow-hidden bg-neutral-100 dark:bg-neutral-800/40 ${
+            isCapsule ? 'rounded-full' : 'rounded-xl'
+          }`}
+        >
+          {content}
+        </div>
+      )}
       {footer && (
         <div className="mt-2 px-3.5">
           {typeof footer === 'string' ? (

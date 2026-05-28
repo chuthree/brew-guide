@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CustomEquipment, Method } from '@/lib/core/config';
-import CustomEquipmentForm from './CustomEquipmentForm';
+import CustomEquipmentForm, {
+  CustomEquipmentFormHandle,
+  EquipmentFormDrawerChrome,
+} from './CustomEquipmentForm';
 import { exportEquipment, copyToClipboard } from '@/lib/utils/exportUtils';
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
-import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import PageStackDrawer, {
+  useDrawerPageStack,
+} from '@/components/common/ui/PageStackDrawer';
+import { modalHistory } from '@/lib/navigation/modalHistory';
 
 interface CustomEquipmentFormModalProps {
   showForm: boolean;
@@ -12,7 +16,7 @@ interface CustomEquipmentFormModalProps {
   onSave: (equipment: CustomEquipment, methods?: Method[]) => void;
   editingEquipment?: CustomEquipment;
   onImport?: () => void;
-  /** 从导入模态框回填的数据 */
+  /** 从导入文件回填的数据 */
   pendingImportData?: {
     equipment: CustomEquipment;
     methods?: Method[];
@@ -30,6 +34,12 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
   pendingImportData,
   onClearPendingImport,
 }) => {
+  const formRef = useRef<CustomEquipmentFormHandle>(null);
+  const [drawerChrome, setDrawerChrome] = useState<EquipmentFormDrawerChrome>({
+    title: editingEquipment ? '编辑器具' : '添加器具',
+    doneDisabled: false,
+    canGoBack: false,
+  });
   // 用于回填的器具数据（来自导入或编辑）
   const [currentEquipment, setCurrentEquipment] = useState<
     CustomEquipment | undefined
@@ -39,8 +49,12 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
     undefined
   );
 
-  // 同步顶部安全区颜色
-  useThemeColor({ useOverlay: true, enabled: showForm });
+  const pageStack = useDrawerPageStack<'form' | 'equipment-picker'>(
+    'form',
+    showForm,
+    'equipment-form',
+    onClose
+  );
 
   // 处理导入数据回填
   useEffect(() => {
@@ -64,20 +78,48 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
     if (!showForm) {
       setCurrentEquipment(undefined);
       setPendingMethods(undefined);
+      setDrawerChrome({
+        title: editingEquipment ? '编辑器具' : '添加器具',
+        doneDisabled: false,
+        canGoBack: false,
+      });
     }
-  }, [showForm]);
-
-  // 使用统一的历史栈管理
-  // 子页面（绘制杯型、阀门、动画）在 CustomEquipmentForm 内部自己注册历史条目
-  useModalHistory({
-    id: 'equipment-form',
-    isOpen: showForm,
-    onClose: onClose,
-  });
+  }, [editingEquipment, showForm]);
 
   // 处理关闭 - 使用统一历史栈
   const handleClose = () => {
     modalHistory.back();
+  };
+
+  const isEquipmentPickerPage = pageStack.currentPage === 'equipment-picker';
+
+  const headerTitle = useMemo(() => {
+    if (isEquipmentPickerPage) return '选择器具';
+    return drawerChrome.title;
+  }, [drawerChrome.title, isEquipmentPickerPage]);
+
+  const canGoBack = isEquipmentPickerPage || Boolean(drawerChrome.canGoBack);
+
+  const doneDisabled = isEquipmentPickerPage
+    ? false
+    : Boolean(drawerChrome.doneDisabled);
+
+  const handleBack = () => {
+    if (isEquipmentPickerPage) {
+      pageStack.back();
+      return;
+    }
+
+    formRef.current?.back();
+  };
+
+  const handleDone = () => {
+    if (isEquipmentPickerPage) {
+      pageStack.back();
+      return;
+    }
+
+    formRef.current?.done();
   };
 
   const _handleExport = async (equipment: CustomEquipment) => {
@@ -95,115 +137,35 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
   };
 
   return (
-    <AnimatePresence>
+    <PageStackDrawer
+      isOpen={showForm}
+      title={headerTitle}
+      activeKey={`${pageStack.currentPage}-${drawerChrome.key || 'form'}`}
+      canGoBack={canGoBack}
+      doneDisabled={doneDisabled}
+      onCancel={handleClose}
+      onBack={handleBack}
+      onDone={handleDone}
+      historyId="equipment-form"
+    >
       {showForm && (
-        <motion.div
-          data-modal="equipment-form"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.265 }}
-          className="fixed inset-0 z-10 bg-black/50"
-        >
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{
-              ease: [0.33, 1, 0.68, 1], // cubic-bezier(0.33, 1, 0.68, 1) - easeOutCubic
-              duration: 0.265,
-            }}
-            style={{
-              willChange: 'transform',
-            }}
-            className="absolute inset-x-0 bottom-0 mx-auto max-h-[90vh] max-w-md overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl dark:bg-neutral-900"
-          >
-            {/* 拖动条 */}
-            <div className="sticky top-0 z-10 flex justify-center bg-neutral-50 py-2 dark:bg-neutral-900">
-              <div className="h-1.5 w-12 rounded-full bg-neutral-200 dark:bg-neutral-700" />
-            </div>
-
-            {/* 表单内容 */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.265,
-                delay: 0.05,
-              }}
-              style={{
-                willChange: 'opacity, transform',
-              }}
-              className="pb-safe-bottom max-h-[calc(90vh-40px)] overflow-auto px-6"
-            >
-              <div className="flex flex-col">
-                {/* 顶部标题 */}
-                <div className="mt-3 mb-6 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="-m-3 cursor-pointer rounded-full p-3"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="text-neutral-800 dark:text-neutral-200"
-                    >
-                      <path
-                        d="M19 12H5M5 12L12 19M5 12L12 5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-                  <h3 className="ml-6 text-base font-medium">
-                    {currentEquipment ? '编辑器具' : '添加器具'}
-                  </h3>
-                  {/* 导入按钮 - 不再关闭当前模态框 */}
-                  {!currentEquipment && onImport && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onImport();
-                        // 不再关闭当前模态框，保持层级结构
-                      }}
-                      className="px-3 py-1.5 text-sm text-neutral-600 transition-colors hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                    >
-                      导入
-                    </button>
-                  )}
-                  {(currentEquipment || !onImport) && (
-                    <div className="w-8"></div>
-                  )}
-                </div>
-
-                {/* 表单内容 */}
-                <div className="mt-2">
-                  {showForm && (
-                    <CustomEquipmentForm
-                      key={`equipment-form-${currentEquipment?.id || 'new'}-${pendingImportData ? 'imported' : 'manual'}`}
-                      onSave={equipment => {
-                        // 保存时传递待保存的方案
-                        onSave(equipment, pendingMethods);
-                        // 关闭模态框（会自动清理历史）
-                        modalHistory.back();
-                      }}
-                      onCancel={handleClose}
-                      initialEquipment={currentEquipment}
-                    />
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </motion.div>
+        <CustomEquipmentForm
+          ref={formRef}
+          key={`equipment-form-${currentEquipment?.id || 'new'}-${pendingImportData ? 'imported' : 'manual'}`}
+          activeDrawerPage={pageStack.currentPage}
+          onOpenEquipmentPicker={() => pageStack.push('equipment-picker')}
+          onChromeChange={setDrawerChrome}
+          onImport={currentEquipment ? undefined : onImport}
+          onSave={equipment => {
+            // 保存时传递待保存的方案
+            onSave(equipment, pendingMethods);
+            onClose();
+          }}
+          onCancel={handleClose}
+          initialEquipment={currentEquipment}
+        />
       )}
-    </AnimatePresence>
+    </PageStackDrawer>
   );
 };
 

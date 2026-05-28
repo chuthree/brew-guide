@@ -44,7 +44,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
               )}
             </div>
           )}
-          <div className="w-full">{children}</div>
+          <div className="w-full leading-none">{children}</div>
         </div>
       </div>
     );

@@ -118,7 +118,6 @@ interface AnimationEditorProps {
   width?: number;
   height?: number;
   initialFrames?: AnimationFrame[];
-  onAnimationComplete?: (frames: AnimationFrame[]) => void;
   referenceImages?: Array<{ url: string; label: string }>;
   maxFrames?: number;
   referenceSvg?: string;
@@ -131,7 +130,6 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
       width = 300,
       height = 300,
       initialFrames,
-      onAnimationComplete,
       referenceImages = [],
       maxFrames = 8,
       referenceSvg,
@@ -249,22 +247,23 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
         currentFrameIndex < 0 ||
         currentFrameIndex >= frames.length
       )
-        return;
+        return frames;
 
       try {
         // 获取当前画布内容
         const svgData = canvasRef.current.save();
 
         // 更新当前帧数据
-        setFrames(prev =>
-          prev.map((frame, index) =>
-            index === currentFrameIndex ? { ...frame, svgData } : frame
-          )
+        const updatedFrames = frames.map((frame, index) =>
+          index === currentFrameIndex ? { ...frame, svgData } : frame
         );
+        setFrames(updatedFrames);
+        return updatedFrames;
       } catch (_error) {
         // 保存帧数据失败
+        return frames;
       }
-    }, [currentFrameIndex, frames.length]);
+    }, [currentFrameIndex, frames]);
 
     // 切换到指定帧
     const goToFrame = useCallback(
@@ -426,11 +425,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
     // 保存整个动画
     const saveAnimation = useCallback(() => {
       // 首先保存当前帧
-      saveCurrentFrame();
+      const updatedFrames = saveCurrentFrame();
 
       // 保存动画
 
-      return frames;
+      return updatedFrames || frames;
     }, [frames, saveCurrentFrame]);
 
     // 切换到下一帧/上一帧
@@ -536,29 +535,6 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
       return () => window.removeEventListener('keydown', handleKeyDown);
     }, [prevFrame, nextFrame, togglePlayback]);
 
-    // 处理绘制完成
-    const handleDrawingComplete = useCallback(
-      (svgString: string) => {
-        if (!svgString) return;
-
-        // 更新当前帧的SVG数据
-        setFrames(prev => {
-          const newFrames = [...prev];
-          newFrames[currentFrameIndex] = {
-            ...newFrames[currentFrameIndex],
-            svgData: svgString,
-          };
-          return newFrames;
-        });
-
-        // 如果有完成回调，则调用
-        if (onAnimationComplete) {
-          onAnimationComplete(frames);
-        }
-      },
-      [currentFrameIndex, frames, onAnimationComplete]
-    );
-
     return (
       <div className="flex flex-col space-y-4">
         {/* 主画布区域 */}
@@ -568,7 +544,6 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
             width={width}
             height={height}
             defaultSvg={currentFrame.svgData}
-            onDrawingComplete={handleDrawingComplete}
             referenceSvg={previousFramesSvg}
             referenceSvgUrl={
               !referenceSvg ? referenceSrc || undefined : undefined
@@ -589,6 +564,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
           <div className="flex gap-2 overflow-x-auto rounded-lg bg-neutral-100 p-2 dark:bg-neutral-800">
             {frames.map((frame, index) => (
               <button
+                type="button"
                 key={frame.id}
                 onClick={e => {
                   e.stopPropagation();
@@ -627,6 +603,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
             {/* 添加新帧按钮 */}
             {frames.length < maxFrames && (
               <button
+                type="button"
                 onClick={e => {
                   // 阻止事件冒泡，防止点击导致模态框关闭
                   e.stopPropagation();
@@ -657,6 +634,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
             <div className="flex gap-2">
               {/* 播放/暂停按钮 */}
               <button
+                type="button"
                 onClick={e => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -701,6 +679,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
 
               {/* 上一帧按钮 */}
               <button
+                type="button"
                 onClick={e => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -730,6 +709,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
 
               {/* 下一帧按钮 */}
               <button
+                type="button"
                 onClick={e => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -763,6 +743,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
             <div className="flex gap-2">
               {/* 复制帧按钮 */}
               <button
+                type="button"
                 onClick={e => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -794,6 +775,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
 
               {/* 删除帧按钮 */}
               <button
+                type="button"
                 onClick={e => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -832,6 +814,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
               <div className="flex gap-2 overflow-x-auto rounded-lg bg-neutral-100 p-2 dark:bg-neutral-800">
                 {/* 无参考选项 */}
                 <button
+                  type="button"
                   onClick={e => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -867,6 +850,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
                 {/* 参考图像列表 */}
                 {referenceImages.map((img, index) => (
                   <button
+                    type="button"
                     key={index}
                     onClick={e => {
                       e.stopPropagation();

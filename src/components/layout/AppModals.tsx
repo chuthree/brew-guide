@@ -39,7 +39,9 @@ import ImportModal from '@/components/common/modals/BeanImportModal';
 import BrewingNoteEditModal from '@/components/notes/Form/BrewingNoteEditModal';
 import NoteDetailModal from '@/components/notes/Detail/NoteDetailModal';
 import CustomEquipmentFormModal from '@/components/equipment/forms/CustomEquipmentFormModal';
-import EquipmentImportModal from '@/components/equipment/import/EquipmentImportModal';
+import EquipmentImportFilePicker, {
+  type EquipmentImportFilePickerHandle,
+} from '@/components/equipment/import/EquipmentImportFilePicker';
 import EquipmentManagementDrawer from '@/components/equipment/EquipmentManagementDrawer';
 import ConvertToGreenDrawer from '@/components/coffee-bean/ConvertToGreenDrawer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
@@ -188,8 +190,6 @@ export interface AppModalsProps {
   setShowEquipmentForm: (show: boolean) => void;
   editingEquipment: CustomEquipment | undefined;
   setEditingEquipment: (equipment: CustomEquipment | undefined) => void;
-  showEquipmentImportForm: boolean;
-  setShowEquipmentImportForm: (show: boolean) => void;
   pendingImportEquipment: {
     equipment: CustomEquipment;
     methods?: Method[];
@@ -366,8 +366,6 @@ const AppModals: React.FC<AppModalsProps> = ({
   setShowEquipmentForm,
   editingEquipment,
   setEditingEquipment,
-  showEquipmentImportForm,
-  setShowEquipmentImportForm,
   pendingImportEquipment,
   setPendingImportEquipment,
   showEquipmentManagement,
@@ -407,6 +405,13 @@ const AppModals: React.FC<AppModalsProps> = ({
 }) => {
   // 标记未使用的变量
   void setNoteDetailData;
+
+  const equipmentImportPickerRef =
+    React.useRef<EquipmentImportFilePickerHandle>(null);
+
+  const handleOpenEquipmentImport = React.useCallback(() => {
+    equipmentImportPickerRef.current?.open();
+  }, []);
 
   const subSettingStates = [
     {
@@ -1228,15 +1233,14 @@ const AppModals: React.FC<AppModalsProps> = ({
         }}
         onSave={handleSaveEquipment}
         editingEquipment={editingEquipment}
-        onImport={() => setShowEquipmentImportForm(true)}
+        onImport={handleOpenEquipmentImport}
         pendingImportData={pendingImportEquipment}
         onClearPendingImport={() => setPendingImportEquipment(null)}
       />
 
-      <EquipmentImportModal
-        showForm={showEquipmentImportForm}
+      <EquipmentImportFilePicker
+        ref={equipmentImportPickerRef}
         onImport={handleImportEquipmentToForm}
-        onClose={() => setShowEquipmentImportForm(false)}
         existingEquipments={customEquipments}
       />
 
