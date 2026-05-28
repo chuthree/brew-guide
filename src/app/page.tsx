@@ -3945,11 +3945,22 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                       }
                     }}
                     onRepurchase={async bean => {
-                      setBeanDetailOpen(false);
                       try {
                         const { createRepurchaseBean } =
                           await import('@/lib/utils/beanRepurchaseUtils');
                         const newBeanData = await createRepurchaseBean(bean);
+
+                        if (settings.immersiveAdd) {
+                          setShowBeanForm(false);
+                          setEditingBean(null);
+                          setBeanDetailData(newBeanData as ExtendedCoffeeBean);
+                          setBeanDetailAddMode(true);
+                          setBeanDetailEditMode(false);
+                          setBeanDetailOpen(true);
+                          return;
+                        }
+
+                        setBeanDetailOpen(false);
                         setEditingBean(newBeanData as ExtendedCoffeeBean);
                         setShowBeanForm(true);
                       } catch (error) {
@@ -4452,6 +4463,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         beanDetailOpen={beanDetailOpen}
         setBeanDetailOpen={setBeanDetailOpen}
         beanDetailData={beanDetailData}
+        setBeanDetailData={setBeanDetailData}
         beanDetailSearchQuery={beanDetailSearchQuery}
         beanDetailAddMode={beanDetailAddMode}
         setBeanDetailAddMode={setBeanDetailAddMode}

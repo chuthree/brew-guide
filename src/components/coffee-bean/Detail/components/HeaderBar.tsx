@@ -31,6 +31,7 @@ interface HeaderBarProps {
   bean: CoffeeBean | null;
   tempBean: Partial<CoffeeBean>;
   printEnabled: boolean;
+  saveButtonLabel?: string;
   onClose: () => void;
   onGoToBrewing: () => void;
   onGoToNotes: () => void;
@@ -62,6 +63,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   bean,
   tempBean,
   printEnabled,
+  saveButtonLabel = '保存',
   onClose,
   onGoToBrewing,
   onGoToNotes,
@@ -236,7 +238,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                 : 'cursor-not-allowed text-neutral-300 dark:text-neutral-600'
             }`}
           >
-            {isSaving ? '保存中' : '保存'}
+            {isSaving ? `${saveButtonLabel}中` : saveButtonLabel}
           </button>
         )}
 

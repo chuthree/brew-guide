@@ -92,7 +92,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onDelete,
   onShare,
   onRate: _onRate,
-  onRepurchase: _onRepurchase,
+  onRepurchase,
   onRoast,
   onConvertToGreen,
   mode = 'view',
@@ -105,6 +105,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const isAddMode = mode === 'add';
   const isEditMode = mode === 'edit';
   const isFormMode = isAddMode || isEditMode;
+  const isRepurchaseMode = isAddMode && !!propBean;
 
   const createTempBean = React.useCallback(
     (sourceBean?: CoffeeBean | null): Partial<CoffeeBean> => {
@@ -137,10 +138,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 临时 bean 数据（添加模式）
   const [tempBean, setTempBean] = useState<Partial<CoffeeBean>>(() =>
-    createTempBean(isEditMode ? propBean : null)
+    createTempBean(isEditMode || isAddMode ? propBean : null)
   );
   const [baselineTempBean, setBaselineTempBean] = useState<Partial<CoffeeBean>>(
-    () => createTempBean(isEditMode ? propBean : null)
+    () => createTempBean(isEditMode || isAddMode ? propBean : null)
   );
 
   // Store 数据（优化：使用 useMemo 避免每次渲染都查找）
@@ -161,11 +162,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (!isFormMode || !isOpen) return;
 
     shouldAutoPersistDraftRef.current = true;
-    const baseBean = createTempBean(isEditMode ? persistedBean : null);
+    const baseBean = createTempBean(
+      isEditMode ? persistedBean : isAddMode ? propBean : null
+    );
     setBaselineTempBean(baseBean);
 
     if (isAddMode) {
-      const savedDraft = loadCoffeeBeanFormDraftSession();
+      const savedDraft = propBean ? null : loadCoffeeBeanFormDraftSession();
       setTempBean(savedDraft ? savedDraft.bean : baseBean);
       return;
     }
@@ -178,6 +181,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     isFormMode,
     isOpen,
     persistedBean,
+    propBean,
   ]);
 
   const bean = isFormMode ? (tempBean as CoffeeBean) : persistedBean;
@@ -919,6 +923,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 bean={bean}
                 tempBean={tempBean}
                 printEnabled={printEnabled}
+                saveButtonLabel={isRepurchaseMode ? '添加' : undefined}
                 onClose={handleClose}
                 onGoToBrewing={handleGoToBrewing}
                 onGoToNotes={handleGoToNotes}
@@ -961,6 +966,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       bean={bean}
                       tempBean={tempBean}
                       isAddMode={isFormMode}
+                      isEditMode={isEditMode}
                       searchQuery={searchQuery}
                       editingCapacity={editingCapacity}
                       editingRemaining={editingRemaining}
@@ -974,6 +980,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       handleRemainingQuickAction={handleRemainingQuickAction}
                       handlePriceBlur={handlePriceBlur}
                       handleDateChange={handleDateChange}
+                      onRepurchase={
+                        isEditMode && persistedBean && onRepurchase
+                          ? () => onRepurchase(persistedBean)
+                          : undefined
+                      }
                     />
 
                     <OriginInfoSection

@@ -135,6 +135,7 @@ export interface AppModalsProps {
   beanDetailOpen: boolean;
   setBeanDetailOpen: (open: boolean) => void;
   beanDetailData: ExtendedCoffeeBean | null;
+  setBeanDetailData: (bean: ExtendedCoffeeBean | null) => void;
   beanDetailSearchQuery: string;
   beanDetailAddMode: boolean;
   setBeanDetailAddMode: (mode: boolean) => void;
@@ -331,6 +332,7 @@ const AppModals: React.FC<AppModalsProps> = ({
   beanDetailOpen,
   setBeanDetailOpen,
   beanDetailData,
+  setBeanDetailData,
   beanDetailSearchQuery,
   beanDetailAddMode,
   setBeanDetailAddMode,
@@ -975,11 +977,22 @@ const AppModals: React.FC<AppModalsProps> = ({
             }
           }}
           onRepurchase={async bean => {
-            setBeanDetailOpen(false);
             try {
               const { createRepurchaseBean } =
                 await import('@/lib/utils/beanRepurchaseUtils');
               const newBeanData = await createRepurchaseBean(bean);
+
+              if (settings.immersiveAdd) {
+                setShowBeanForm(false);
+                setEditingBean(null);
+                setBeanDetailData(newBeanData as ExtendedCoffeeBean);
+                setBeanDetailAddMode(true);
+                setBeanDetailEditMode(false);
+                setBeanDetailOpen(true);
+                return;
+              }
+
+              setBeanDetailOpen(false);
               setEditingBean(newBeanData as ExtendedCoffeeBean);
               setShowBeanForm(true);
             } catch (error) {
