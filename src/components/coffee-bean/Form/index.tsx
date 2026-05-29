@@ -14,7 +14,6 @@ import { ExtendedCoffeeBean, BlendComponent, Step, StepConfig } from './types';
 import BasicInfo from './components/BasicInfo';
 import DetailInfo from './components/DetailInfo';
 import FlavorInfo from './components/FlavorInfo';
-import Complete from './components/Complete';
 import {
   autofillBlendComponentsFromName,
   useBlendComponentSuggestions,
@@ -69,7 +68,6 @@ const steps: StepConfig[] = [
   { id: 'basic', label: '基本信息' },
   { id: 'detail', label: '详细信息' },
   { id: 'flavor', label: '风味描述' },
-  { id: 'complete', label: '完成' },
 ];
 
 const getTodayLocalDateString = () => {
@@ -882,15 +880,6 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
             />
           );
 
-        case 'complete':
-          return (
-            <Complete
-              bean={bean}
-              blendComponents={blendComponents}
-              isEdit={!!initialBean}
-            />
-          );
-
         default:
           return null;
       }
@@ -899,8 +888,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     const renderNextButton = () => {
       const isLastStep = getCurrentStepIndex() === steps.length - 1;
       const valid = isStepValid();
-      const canSave =
-        valid && ['basic', 'detail', 'flavor'].includes(currentStep);
+      const canSave = valid && !isLastStep;
 
       const springTransition = { stiffness: 500, damping: 25 };
       const buttonBaseClass =

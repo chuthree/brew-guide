@@ -7,15 +7,8 @@ export type { CoffeeBean, BlendComponent };
 // ExtendedCoffeeBean 已移除，直接使用 CoffeeBean
 export type ExtendedCoffeeBean = CoffeeBean;
 
-// 表单属性接口
-interface CoffeeBeanFormProps {
-  onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
-  onCancel: () => void;
-  initialBean?: ExtendedCoffeeBean;
-}
-
 // 定义步骤类型
-export type Step = 'basic' | 'detail' | 'flavor' | 'complete';
+export type Step = 'basic' | 'detail' | 'flavor';
 
 // 步骤配置接口
 export interface StepConfig {
