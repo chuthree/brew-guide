@@ -27,7 +27,8 @@
     "tauri:build:windows": "tauri build --target x86_64-pc-windows-msvc",
     "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu",
     "perf:check": "./scripts/perf-check.sh",
-    "perf:analyze": "ANALYZE=true pnpm build"
+    "perf:analyze": "ANALYZE=true pnpm build",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^7.1.0",
@@ -99,6 +100,7 @@
     "postcss-load-config": "^6.0.1",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
+    "react-doctor": "^0.2.11",
     "serve": "^14.2.5",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",

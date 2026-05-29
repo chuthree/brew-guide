@@ -71,7 +71,7 @@ function SettingReorderableRow<T>({
           aria-label={`拖动调整 ${label} 排序`}
           title="拖动排序"
           tabIndex={isReorderMode ? 0 : -1}
-          aria-hidden={!isReorderMode}
+          disabled={!isReorderMode}
           onPointerDown={event => dragControls.start(event)}
           className={`-mr-2 -ml-8 flex h-10 w-10 cursor-grab items-center justify-center rounded-lg text-neutral-400 transition-[opacity,transform,filter,background-color] duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:cursor-grabbing active:bg-black/5 dark:text-neutral-500 dark:active:bg-white/5 ${
             isReorderMode
