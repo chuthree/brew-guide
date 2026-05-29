@@ -23,8 +23,7 @@ import NotificationSettings from '@/components/settings/NotificationSettings';
 import RandomCoffeeBeanSettings from '@/components/settings/RandomCoffeeBeanSettings';
 import NoteSettings from '@/components/settings/NoteSettings';
 import FlavorDimensionSettings from '@/components/settings/FlavorDimensionSettings';
-import HiddenMethodsSettings from '@/components/settings/HiddenMethodsSettings';
-import HiddenEquipmentsSettings from '@/components/settings/HiddenEquipmentsSettings';
+import EquipmentMethodSettings from '@/components/settings/EquipmentMethodSettings';
 import RoasterLogoSettings from '@/components/settings/RoasterLogoSettings';
 import GrinderSettings from '@/components/settings/GrinderSettings';
 import ExperimentalSettings from '@/components/settings/ExperimentalSettings';
@@ -67,7 +66,6 @@ export interface AppModalsProps {
   handleDataChange: () => Promise<void>;
   settings: SettingsOptions;
   handleSubSettingChange: (key: string, value: unknown) => Promise<void>;
-  handleSettingsChange: (newSettings: SettingsOptions) => Promise<void>;
   customEquipments: CustomEquipment[];
 
   // 子设置页面状态
@@ -95,14 +93,12 @@ export interface AppModalsProps {
   setShowNotificationSettings: (show: boolean) => void;
   showRandomCoffeeBeanSettings: boolean;
   setShowRandomCoffeeBeanSettings: (show: boolean) => void;
+  showEquipmentMethodSettings: boolean;
+  setShowEquipmentMethodSettings: (show: boolean) => void;
   showNoteSettings: boolean;
   setShowNoteSettings: (show: boolean) => void;
   showFlavorDimensionSettings: boolean;
   setShowFlavorDimensionSettings: (show: boolean) => void;
-  showHiddenMethodsSettings: boolean;
-  setShowHiddenMethodsSettings: (show: boolean) => void;
-  showHiddenEquipmentsSettings: boolean;
-  setShowHiddenEquipmentsSettings: (show: boolean) => void;
   showRoasterLogoSettings: boolean;
   setShowRoasterLogoSettings: (show: boolean) => void;
   showGrinderSettings: boolean;
@@ -266,7 +262,6 @@ const AppModals: React.FC<AppModalsProps> = ({
   handleDataChange,
   settings,
   handleSubSettingChange,
-  handleSettingsChange,
   customEquipments,
 
   // 子设置页面状态
@@ -294,14 +289,12 @@ const AppModals: React.FC<AppModalsProps> = ({
   setShowNotificationSettings,
   showRandomCoffeeBeanSettings,
   setShowRandomCoffeeBeanSettings,
+  showEquipmentMethodSettings,
+  setShowEquipmentMethodSettings,
   showNoteSettings,
   setShowNoteSettings,
   showFlavorDimensionSettings,
   setShowFlavorDimensionSettings,
-  showHiddenMethodsSettings,
-  setShowHiddenMethodsSettings,
-  showHiddenEquipmentsSettings,
-  setShowHiddenEquipmentsSettings,
   showRoasterLogoSettings,
   setShowRoasterLogoSettings,
   showGrinderSettings,
@@ -465,20 +458,16 @@ const AppModals: React.FC<AppModalsProps> = ({
       isOpen: showRandomCoffeeBeanSettings,
     },
     {
+      id: 'equipment-method-settings',
+      isOpen: showEquipmentMethodSettings,
+    },
+    {
       id: 'note-settings',
       isOpen: showNoteSettings,
     },
     {
       id: 'flavor-dimension-settings',
       isOpen: showFlavorDimensionSettings,
-    },
-    {
-      id: 'hidden-methods-settings',
-      isOpen: showHiddenMethodsSettings,
-    },
-    {
-      id: 'hidden-equipments-settings',
-      isOpen: showHiddenEquipmentsSettings,
     },
     {
       id: 'roaster-logo-settings',
@@ -513,10 +502,9 @@ const AppModals: React.FC<AppModalsProps> = ({
     setShowDataSettings(false);
     setShowNotificationSettings(false);
     setShowRandomCoffeeBeanSettings(false);
+    setShowEquipmentMethodSettings(false);
     setShowNoteSettings(false);
     setShowFlavorDimensionSettings(false);
-    setShowHiddenMethodsSettings(false);
-    setShowHiddenEquipmentsSettings(false);
     setShowRoasterLogoSettings(false);
     setShowGrinderSettings(false);
     setShowExperimentalSettings(false);
@@ -534,10 +522,9 @@ const AppModals: React.FC<AppModalsProps> = ({
     setShowDataSettings,
     setShowNotificationSettings,
     setShowRandomCoffeeBeanSettings,
+    setShowEquipmentMethodSettings,
     setShowNoteSettings,
     setShowFlavorDimensionSettings,
-    setShowHiddenMethodsSettings,
-    setShowHiddenEquipmentsSettings,
     setShowRoasterLogoSettings,
     setShowGrinderSettings,
     setShowExperimentalSettings,
@@ -675,6 +662,17 @@ const AppModals: React.FC<AppModalsProps> = ({
         />
       )}
 
+      {showEquipmentMethodSettings && (
+        <EquipmentMethodSettings
+          settings={settings}
+          customEquipments={customEquipments}
+          onClose={() => setShowEquipmentMethodSettings(false)}
+          onAddEquipment={handleAddEquipment}
+          onSaveEquipment={handleSaveEquipment}
+          onDeleteEquipment={handleDeleteEquipment}
+        />
+      )}
+
       {showNoteSettings && (
         <NoteSettings
           settings={settings}
@@ -688,24 +686,6 @@ const AppModals: React.FC<AppModalsProps> = ({
           settings={settings}
           onClose={() => setShowFlavorDimensionSettings(false)}
           handleChange={handleSubSettingChange}
-        />
-      )}
-
-      {showHiddenMethodsSettings && (
-        <HiddenMethodsSettings
-          settings={settings}
-          customEquipments={customEquipments}
-          onClose={() => setShowHiddenMethodsSettings(false)}
-          onChange={handleSettingsChange}
-        />
-      )}
-
-      {showHiddenEquipmentsSettings && (
-        <HiddenEquipmentsSettings
-          settings={settings}
-          customEquipments={customEquipments}
-          onClose={() => setShowHiddenEquipmentsSettings(false)}
-          onChange={handleSettingsChange}
         />
       )}
 
@@ -793,22 +773,17 @@ const AppModals: React.FC<AppModalsProps> = ({
               'random-coffee-bean-settings',
               setShowRandomCoffeeBeanSettings
             ),
+          onOpenEquipmentMethodSettings: () =>
+            openSubSetting(
+              'equipment-method-settings',
+              setShowEquipmentMethodSettings
+            ),
           onOpenNoteSettings: () =>
             openSubSetting('note-settings', setShowNoteSettings),
           onOpenFlavorDimensionSettings: () =>
             openSubSetting(
               'flavor-dimension-settings',
               setShowFlavorDimensionSettings
-            ),
-          onOpenHiddenMethodsSettings: () =>
-            openSubSetting(
-              'hidden-methods-settings',
-              setShowHiddenMethodsSettings
-            ),
-          onOpenHiddenEquipmentsSettings: () =>
-            openSubSetting(
-              'hidden-equipments-settings',
-              setShowHiddenEquipmentsSettings
             ),
           onOpenRoasterLogoSettings: () =>
             openSubSetting('roaster-logo-settings', setShowRoasterLogoSettings),
@@ -1103,9 +1078,8 @@ const AppModals: React.FC<AppModalsProps> = ({
           beanInfo={noteDetailData.beanInfo}
           onOpenBeanDetail={onOpenBeanDetailFromNote}
           onEdit={async note => {
-            const { getBrewingNoteById } = await import(
-              '@/lib/notes/relatedNotes'
-            );
+            const { getBrewingNoteById } =
+              await import('@/lib/notes/relatedNotes');
             const fullNote = await getBrewingNoteById(note.id);
             if (fullNote) {
               setBrewingNoteEditData(fullNote as BrewingNoteData);
@@ -1115,9 +1089,8 @@ const AppModals: React.FC<AppModalsProps> = ({
           onDelete={async noteId => {
             setNoteDetailOpen(false);
             try {
-              const { getBrewingNoteById } = await import(
-                '@/lib/notes/relatedNotes'
-              );
+              const { getBrewingNoteById } =
+                await import('@/lib/notes/relatedNotes');
               const noteToDelete = await getBrewingNoteById(noteId);
               if (!noteToDelete) {
                 console.warn('未找到要删除的笔记:', noteId);
@@ -1215,9 +1188,8 @@ const AppModals: React.FC<AppModalsProps> = ({
           }}
           onCopy={async noteId => {
             setNoteDetailOpen(false);
-            const { getBrewingNoteById } = await import(
-              '@/lib/notes/relatedNotes'
-            );
+            const { getBrewingNoteById } =
+              await import('@/lib/notes/relatedNotes');
             const fullNote = await getBrewingNoteById(noteId);
             if (fullNote) {
               setBrewingNoteEditData(fullNote as BrewingNoteData);

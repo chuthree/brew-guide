@@ -219,7 +219,6 @@ const AppLoader = ({
           if (!storageVersion) {
             await Storage.set('brewingNotesVersion', APP_VERSION);
           }
-
         } catch {
           // 静默处理错误
         }
@@ -286,12 +285,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     useState(false);
   const [showRandomCoffeeBeanSettings, setShowRandomCoffeeBeanSettings] =
     useState(false);
+  const [showEquipmentMethodSettings, setShowEquipmentMethodSettings] =
+    useState(false);
   const [showNoteSettings, setShowNoteSettings] = useState(false);
   const [showFlavorDimensionSettings, setShowFlavorDimensionSettings] =
-    useState(false);
-  const [showHiddenMethodsSettings, setShowHiddenMethodsSettings] =
-    useState(false);
-  const [showHiddenEquipmentsSettings, setShowHiddenEquipmentsSettings] =
     useState(false);
   const [showRoasterLogoSettings, setShowRoasterLogoSettings] = useState(false);
   const [showGrinderSettings, setShowGrinderSettings] = useState(false);
@@ -313,10 +310,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showDataSettings ||
     showNotificationSettings ||
     showRandomCoffeeBeanSettings ||
+    showEquipmentMethodSettings ||
     showNoteSettings ||
     showFlavorDimensionSettings ||
-    showHiddenMethodsSettings ||
-    showHiddenEquipmentsSettings ||
     showRoasterLogoSettings ||
     showGrinderSettings ||
     showExperimentalSettings ||
@@ -895,9 +891,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 检查coffee beans而不是直接调用不存在的函数
         let hasCoffeeBeans = initialHasBeans;
         try {
-          const { hasCoffeeBeans: hasCoffeeBeansInDb } = await import(
-            '@/lib/core/dataStats'
-          );
+          const { hasCoffeeBeans: hasCoffeeBeansInDb } =
+            await import('@/lib/core/dataStats');
           hasCoffeeBeans = await hasCoffeeBeansInDb();
         } catch (error) {
           // Log error in development only
@@ -1296,36 +1291,40 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     [noteDetailOpen, openBeanDetailInInventory]
   );
 
-  const handleBeanReadyReminderBeanClick = useCallback(async (beanId: string) => {
-    const { getCoffeeBeanStore } = await import('@/lib/stores/coffeeBeanStore');
-    const store = getCoffeeBeanStore();
+  const handleBeanReadyReminderBeanClick = useCallback(
+    async (beanId: string) => {
+      const { getCoffeeBeanStore } =
+        await import('@/lib/stores/coffeeBeanStore');
+      const store = getCoffeeBeanStore();
 
-    if (!store.initialized) {
-      await store.loadBeans();
-    }
+      if (!store.initialized) {
+        await store.loadBeans();
+      }
 
-    const bean = store.getBeanById(beanId);
-    if (!bean) {
-      showToast({
-        type: 'error',
-        title: '咖啡豆不存在或已被删除',
-        duration: 2000,
-      });
+      const bean = store.getBeanById(beanId);
+      if (!bean) {
+        showToast({
+          type: 'error',
+          title: '咖啡豆不存在或已被删除',
+          duration: 2000,
+        });
+        setShowBeanReadyReminder(false);
+        return;
+      }
+
+      const openDetail = () => openBeanDetailInInventory(bean);
+
+      if (modalHistory.isTop('bean-ready-reminder')) {
+        modalHistory.back();
+        window.setTimeout(openDetail, DETAIL_NAVIGATION_DELAY_MS);
+        return;
+      }
+
       setShowBeanReadyReminder(false);
-      return;
-    }
-
-    const openDetail = () => openBeanDetailInInventory(bean);
-
-    if (modalHistory.isTop('bean-ready-reminder')) {
-      modalHistory.back();
       window.setTimeout(openDetail, DETAIL_NAVIGATION_DELAY_MS);
-      return;
-    }
-
-    setShowBeanReadyReminder(false);
-    window.setTimeout(openDetail, DETAIL_NAVIGATION_DELAY_MS);
-  }, [openBeanDetailInInventory]);
+    },
+    [openBeanDetailInInventory]
+  );
 
   const openNoteDetailInNotes = useCallback(
     (detail: {
@@ -4046,9 +4045,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     beanInfo={noteDetailData.beanInfo}
                     onOpenBeanDetail={handleOpenBeanDetailFromNote}
                     onEdit={async note => {
-                      const { getBrewingNoteById } = await import(
-                        '@/lib/notes/relatedNotes'
-                      );
+                      const { getBrewingNoteById } =
+                        await import('@/lib/notes/relatedNotes');
                       const fullNote = await getBrewingNoteById(note.id);
                       if (fullNote) {
                         setBrewingNoteEditData(fullNote as BrewingNoteData);
@@ -4058,9 +4056,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     onDelete={async noteId => {
                       setNoteDetailOpen(false);
                       try {
-                        const { getBrewingNoteById } = await import(
-                          '@/lib/notes/relatedNotes'
-                        );
+                        const { getBrewingNoteById } =
+                          await import('@/lib/notes/relatedNotes');
                         const noteToDelete = await getBrewingNoteById(noteId);
                         if (!noteToDelete) {
                           console.warn('未找到要删除的笔记:', noteId);
@@ -4166,9 +4163,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     }}
                     onCopy={async noteId => {
                       setNoteDetailOpen(false);
-                      const { getBrewingNoteById } = await import(
-                        '@/lib/notes/relatedNotes'
-                      );
+                      const { getBrewingNoteById } =
+                        await import('@/lib/notes/relatedNotes');
                       const fullNote = await getBrewingNoteById(noteId);
                       if (fullNote) {
                         setBrewingNoteEditData(fullNote as BrewingNoteData);
@@ -4400,7 +4396,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleDataChange={handleDataChange}
         settings={settings}
         handleSubSettingChange={handleSubSettingChange}
-        handleSettingsChange={handleSettingsChange}
         customEquipments={customEquipments}
         // 子设置页面状态
         showDisplaySettings={showDisplaySettings}
@@ -4427,14 +4422,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setShowNotificationSettings={setShowNotificationSettings}
         showRandomCoffeeBeanSettings={showRandomCoffeeBeanSettings}
         setShowRandomCoffeeBeanSettings={setShowRandomCoffeeBeanSettings}
+        showEquipmentMethodSettings={showEquipmentMethodSettings}
+        setShowEquipmentMethodSettings={setShowEquipmentMethodSettings}
         showNoteSettings={showNoteSettings}
         setShowNoteSettings={setShowNoteSettings}
         showFlavorDimensionSettings={showFlavorDimensionSettings}
         setShowFlavorDimensionSettings={setShowFlavorDimensionSettings}
-        showHiddenMethodsSettings={showHiddenMethodsSettings}
-        setShowHiddenMethodsSettings={setShowHiddenMethodsSettings}
-        showHiddenEquipmentsSettings={showHiddenEquipmentsSettings}
-        setShowHiddenEquipmentsSettings={setShowHiddenEquipmentsSettings}
         showRoasterLogoSettings={showRoasterLogoSettings}
         setShowRoasterLogoSettings={setShowRoasterLogoSettings}
         showGrinderSettings={showGrinderSettings}

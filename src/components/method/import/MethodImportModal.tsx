@@ -71,10 +71,12 @@ const MOCK_METHOD_DATA = {
 
 interface MethodImportModalProps {
   showForm: boolean;
-  onImport: (method: Method) => void;
+  onImport: (method: Method) => void | Promise<void>;
   onClose: () => void;
   existingMethods?: Method[];
   customEquipment?: CustomEquipment;
+  historyId?: string;
+  disableHistory?: boolean;
 }
 
 // 步骤类型定义
@@ -142,6 +144,8 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
   onClose,
   existingMethods = [],
   customEquipment,
+  historyId,
+  disableHistory = true,
 }) => {
   // 统一的复制功能
   const { copyText, failureDrawerProps } = useCopy({
@@ -151,7 +155,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
   // 当前步骤
   const [currentStep, setCurrentStep] = useState<ImportStep>('main');
   // 图片识别加载状态
-  const [isRecognizing, setIsRecognizing] = useState(false);
+  const [, setIsRecognizing] = useState(false);
   // 识别中的图片 URL
   const [recognizingImageUrl, setRecognizingImageUrl] = useState<string | null>(
     null
@@ -259,7 +263,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
           },
         };
 
-        onImport(validMethod);
+        await onImport(validMethod);
         onClose();
       } catch (error) {
         const errorMessage =
@@ -576,7 +580,12 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
   return (
     <>
-      <ActionDrawer isOpen={showForm} onClose={handleClose} disableHistory>
+      <ActionDrawer
+        isOpen={showForm}
+        onClose={handleClose}
+        historyId={historyId}
+        disableHistory={disableHistory}
+      >
         <ActionDrawer.Switcher activeKey={currentStep}>
           {renderContent()}
         </ActionDrawer.Switcher>

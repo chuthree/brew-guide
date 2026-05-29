@@ -15,6 +15,7 @@ interface PageStackDrawerProps {
   activeKey: string;
   canGoBack: boolean;
   doneLabel?: string;
+  backLabel?: string;
   doneDisabled?: boolean;
   onCancel: () => void;
   onBack: () => void;
@@ -82,6 +83,7 @@ const PageStackDrawer: React.FC<PageStackDrawerProps> = ({
   activeKey,
   canGoBack,
   doneLabel = '完成',
+  backLabel,
   doneDisabled = false,
   onCancel,
   onBack,
@@ -190,7 +192,7 @@ const PageStackDrawer: React.FC<PageStackDrawerProps> = ({
                 onClick={canGoBack ? onBack : onCancel}
                 className="w-fit cursor-pointer rounded-full bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-600 transition active:scale-95 dark:bg-neutral-800 dark:text-neutral-300"
               >
-                {canGoBack ? '返回' : '取消'}
+                {canGoBack ? backLabel || '返回' : '取消'}
               </button>
               <Drawer.Title className="max-w-48 truncate px-3 text-center text-base font-semibold text-neutral-900 dark:text-neutral-50">
                 {title}

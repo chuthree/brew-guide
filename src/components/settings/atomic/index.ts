@@ -11,6 +11,7 @@ export { default as SettingPage } from './SettingPage';
 // 布局组件
 export { default as SettingSection } from './SettingSection';
 export { default as SettingRow } from './SettingRow';
+export { default as SettingReorderableRow } from './SettingReorderableRow';
 
 // 控件组件
 export { default as SettingToggle } from './SettingToggle';

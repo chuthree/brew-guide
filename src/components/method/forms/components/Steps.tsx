@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 // 定义步骤类型
-export type Step = 'name' | 'params' | 'stages' | 'complete';
+export type Step = 'name' | 'params' | 'stages';
 
 interface StepsProps {
   steps: { id: Step; label: string }[];

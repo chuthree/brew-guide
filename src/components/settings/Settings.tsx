@@ -23,11 +23,7 @@ import UpdateDrawer from './UpdateDrawer';
 import SettingGroup from './SettingItem';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
-import {
-  useSettingsStore,
-  getSettingsStore,
-  getHiddenEquipmentIds,
-} from '@/lib/stores/settingsStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 import { useTheme } from 'next-themes';
 import {
@@ -41,7 +37,6 @@ import {
   Bell,
   Shuffle,
   Palette,
-  EyeOff,
   ImagePlus,
   Cloud,
   Upload,
@@ -56,6 +51,7 @@ import {
   ThumbsUp,
   Notebook,
   FlaskConical,
+  LibraryBig,
   Box,
   Play,
   Folder,
@@ -85,10 +81,9 @@ export interface SubSettingsHandlers {
   onOpenDataSettings: () => void;
   onOpenNotificationSettings: () => void;
   onOpenRandomCoffeeBeanSettings: () => void;
+  onOpenEquipmentMethodSettings: () => void;
   onOpenFlavorDimensionSettings: () => void;
   onOpenNoteSettings: () => void;
-  onOpenHiddenMethodsSettings: () => void;
-  onOpenHiddenEquipmentsSettings: () => void;
   onOpenRoasterLogoSettings: () => void;
   onOpenGrinderSettings: () => void;
   onOpenExperimentalSettings: () => void;
@@ -284,8 +279,6 @@ const Settings: React.FC<SettingsProps> = ({
       );
   }, []);
 
-  // 添加二维码显示状态
-  const [showQRCodes, setShowQRCodes] = useState(false);
   // 添加显示哪种二维码的状态
   const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(
     null
@@ -303,22 +296,10 @@ const Settings: React.FC<SettingsProps> = ({
     releaseNotes?: string;
   } | null>(null);
 
-  // 计算是否有隐藏的方案和器具
-  const hasHiddenMethods = React.useMemo(() => {
-    const hiddenMethods = settings.hiddenCommonMethods || {};
-    return Object.values(hiddenMethods).some(methods => methods.length > 0);
-  }, [settings.hiddenCommonMethods]);
-
-  const hasHiddenEquipments = React.useMemo(() => {
-    const hiddenEquipments = getHiddenEquipmentIds();
-    return hiddenEquipments.length > 0;
-  }, [settings.hiddenEquipments, settings.equipmentOrder]);
-
   // S3同步相关状态（仅用于同步按钮）
   const {
     status: cloudSyncStatus,
     isSyncing,
-    setIsSyncing,
     performSync: performQuickSync,
   } = useCloudSyncConnection(settings as SettingsOptions);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
@@ -793,28 +774,20 @@ const Settings: React.FC<SettingsProps> = ({
                   settingId: 'random-coffee-bean-settings',
                   onClick: subSettingsHandlers.onOpenRandomCoffeeBeanSettings,
                 },
-                ...(hasHiddenMethods
-                  ? [
-                      {
-                        icon: EyeOff,
-                        label: '隐藏的预设方案',
-                        settingId: 'hidden-methods-settings',
-                        onClick:
-                          subSettingsHandlers.onOpenHiddenMethodsSettings,
-                      },
-                    ]
-                  : []),
-                ...(hasHiddenEquipments
-                  ? [
-                      {
-                        icon: EyeOff,
-                        label: '隐藏的预设器具',
-                        settingId: 'hidden-equipments-settings',
-                        onClick:
-                          subSettingsHandlers.onOpenHiddenEquipmentsSettings,
-                      },
-                    ]
-                  : []),
+              ]}
+            />
+
+            <SettingGroup
+              paddingClass={masterGroupPaddingClass}
+              activeSettingId={activeSubSettingId}
+              dimUnselectedItems={shouldDimSubSettingEntries}
+              items={[
+                {
+                  icon: LibraryBig,
+                  label: '器具和方案',
+                  settingId: 'equipment-method-settings',
+                  onClick: subSettingsHandlers.onOpenEquipmentMethodSettings,
+                },
               ]}
             />
 
