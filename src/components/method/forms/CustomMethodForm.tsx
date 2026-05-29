@@ -9,6 +9,11 @@ import {
   getPourTypeName,
 } from '@/lib/utils/equipmentUtils';
 import {
+  applyRegularStagePourTypeDefaults,
+  getStageTextDefaults,
+  normalizeStageDefaults,
+} from '@/lib/brewing/stageDefaults';
+import {
   Steps,
   NameStep,
   ParamsStep,
@@ -87,7 +92,7 @@ const normalizeMethodData = (
               normalizedStage.water = `${normalizedStage.water}g`;
             }
           }
-          return normalizedStage as unknown as Stage;
+          return normalizeStageDefaults(normalizedStage as unknown as Stage);
         }
       );
     }
@@ -306,72 +311,11 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
 
   // ===== 注水步骤辅助函数 =====
   const getDefaultStageLabel = (pourType: string) => {
-    const isCustomPreset = customEquipment.animationType === 'custom';
-
-    // 特殊情况处理
-    if (isCustomPreset && pourType === 'other') return '';
-
-    // 检查自定义注水动画
-    if (customEquipment.customPourAnimations) {
-      // 先检查ID匹配
-      const idMatch = customEquipment.customPourAnimations.find(
-        anim => anim.id === pourType
-      );
-      if (idMatch) return idMatch.name;
-
-      // 再检查pourType匹配
-      const typeMatch = customEquipment.customPourAnimations.find(
-        anim => anim.pourType === pourType
-      );
-      if (typeMatch?.name) return typeMatch.name;
-    }
-
-    // 默认标签
-    switch (pourType) {
-      case 'circle':
-        return '绕圈注水';
-      case 'center':
-        return '中心注水';
-      case 'ice':
-        return '添加冰块';
-      case 'bypass':
-        return 'Bypass';
-      case 'other':
-        return '';
-      default:
-        return '注水';
-    }
+    return getStageTextDefaults(pourType, customEquipment).label;
   };
 
   const getDefaultStageDetail = (pourType: string) => {
-    const isCustomPreset = customEquipment.animationType === 'custom';
-
-    // 特殊情况处理
-    if (isCustomPreset && pourType === 'other') return '';
-
-    // 检查自定义注水动画
-    if (customEquipment.customPourAnimations) {
-      const customAnimation = customEquipment.customPourAnimations.find(
-        anim => anim.id === pourType
-      );
-      if (customAnimation) return `使用${customAnimation.name}注水`;
-    }
-
-    // 默认详情
-    switch (pourType) {
-      case 'circle':
-        return '中心向外缓慢画圈注水，均匀萃取咖啡风味';
-      case 'center':
-        return '中心定点注水，降低萃取率';
-      case 'ice':
-        return '添加冰块，降低温度进行冷萃';
-      case 'bypass':
-        return '冲煮完成后添加到咖啡液中，调节浓度和口感';
-      case 'other':
-        return '';
-      default:
-        return '注水';
-    }
+    return getStageTextDefaults(pourType, customEquipment).detail;
   };
 
   // ===== 副作用 =====
@@ -443,28 +387,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
         return total + stageDuration;
       }, 0);
     }
-  };
-
-  // 计算当前已使用的水量（排除 Bypass 和等待步骤）
-  const calculateCurrentWater = () => {
-    if (method.params.stages.length === 0) return 0;
-
-    // 累加所有非等待、非 Bypass 步骤的水量
-    return method.params.stages.reduce((total, stage) => {
-      // 跳过等待和 Bypass 步骤
-      if (stage.pourType === 'wait' || stage.pourType === 'bypass') {
-        return total;
-      }
-
-      if (stage.water) {
-        const waterValue =
-          typeof stage.water === 'number'
-            ? stage.water
-            : parseInt(stage.water.replace('g', '') || '0');
-        return total + (waterValue > 0 ? waterValue : 0);
-      }
-      return total;
-    }, 0);
   };
 
   // ===== 事件处理函数 =====
@@ -1102,7 +1024,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
   const handlePourTypeChange = (index: number, value: string) => {
     const newStages = [...method.params.stages];
     const stage = { ...newStages[index] } as Stage;
-    const isCustomPreset = customEquipment.animationType === 'custom';
     const isEspresso = isEspressoMachine(customEquipment);
 
     // 设置pourType，对所有器具类型通用
@@ -1152,112 +1073,17 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
           break;
       }
     }
-    // 检查是否选择了自定义注水动画（自定义注水动画的值是ID而不是pourType类型）
-    else if (isCustomPreset) {
-      // 获取所有可能的默认注水方式标签
-      const allDefaultLabels = ['绕圈注水', '中心注水', '添加冰块', '注水', ''];
-      // 获取所有可能的默认注水方式详细信息
-      const allDefaultDetails = [
-        '中心向外缓慢画圈注水，均匀萃取咖啡风味',
-        '中心定点注水，降低萃取率',
-        '添加冰块，降低温度进行冷萃',
-        '注水',
-        '',
-      ];
-
-      // 如果有自定义注水动画，将它们的名称添加到默认标签列表中
-      if (customEquipment.customPourAnimations) {
-        customEquipment.customPourAnimations.forEach(anim => {
-          if (anim.name) allDefaultLabels.push(anim.name);
-          if (anim.name) allDefaultDetails.push(`使用${anim.name}注水`);
-        });
-      }
-
-      const isCustomAnimation =
-        value !== 'center' &&
-        value !== 'circle' &&
-        value !== 'ice' &&
-        value !== 'other';
-
-      // 检查当前标签是否与任何默认标签匹配
-      const isLabelDefault =
-        !stage.label ||
-        stage.label === '' ||
-        allDefaultLabels.includes(stage.label);
-      // 检查当前详细说明是否与任何默认详细说明匹配
-      const isDetailDefault =
-        !stage.detail ||
-        stage.detail === '' ||
-        allDefaultDetails.includes(stage.detail);
-
-      if (isCustomAnimation) {
-        // 查找对应的自定义注水动画
-        const customAnimation = customEquipment.customPourAnimations?.find(
-          anim => anim.id === value
-        );
-
-        if (customAnimation) {
-          // 更新标签和详细信息，如果它们是默认值之一或为空
-          if (isLabelDefault) {
-            stage.label = customAnimation.name || getDefaultStageLabel(value);
-          }
-
-          if (isDetailDefault) {
-            stage.detail = getDefaultStageDetail(value);
-          }
-        }
-      } else {
-        // 常规注水方式
-        if (isLabelDefault) {
-          stage.label = getDefaultStageLabel(value);
-        }
-
-        if (isDetailDefault) {
-          stage.detail = getDefaultStageDetail(value);
-        }
-      }
-    }
-    // 常规器具处理
+    // 常规器具和自定义动画统一通过阶段默认值工具处理
     else {
-      // 获取所有可能的默认注水方式标签
-      const allDefaultLabels = ['绕圈注水', '中心注水', '添加冰块', '注水', ''];
-      // 获取所有可能的默认注水方式详细信息
-      const allDefaultDetails = [
-        '中心向外缓慢画圈注水，均匀萃取咖啡风味',
-        '中心定点注水，降低萃取率',
-        '添加冰块，降低温度进行冷萃',
-        '注水',
-        '',
-      ];
-
-      // 如果有自定义注水动画，将它们的名称添加到默认标签列表中
-      if (customEquipment.customPourAnimations) {
-        customEquipment.customPourAnimations.forEach(anim => {
-          if (anim.name) allDefaultLabels.push(anim.name);
-          if (anim.name) allDefaultDetails.push(`使用${anim.name}注水`);
-        });
-      }
-
-      // 检查当前标签是否与任何默认标签匹配
-      const isLabelDefault =
-        !stage.label ||
-        stage.label === '' ||
-        allDefaultLabels.includes(stage.label);
-      // 检查当前详细说明是否与任何默认详细说明匹配
-      const isDetailDefault =
-        !stage.detail ||
-        stage.detail === '' ||
-        allDefaultDetails.includes(stage.detail);
-
-      // 如果标签是默认值之一或为空，更新它
-      if (isLabelDefault) {
-        stage.label = getDefaultStageLabel(value);
-      }
-
-      // 如果详细说明是默认值之一或为空，更新它
-      if (isDetailDefault) {
-        stage.detail = getDefaultStageDetail(value);
-      }
+      const normalizedStage = applyRegularStagePourTypeDefaults(
+        stage,
+        value,
+        customEquipment
+      );
+      stage.label = normalizedStage.label;
+      stage.water = normalizedStage.water;
+      stage.detail = normalizedStage.detail;
+      stage.pourType = normalizedStage.pourType;
     }
 
     // 更新stages
@@ -1295,8 +1121,6 @@ const CustomMethodForm: React.FC<CustomMethodFormProps> = ({
       },
     });
   };
-
-  // 此处原calculateCurrentWater函数已移至上方统一管理
 
   // 格式化意式咖啡的总水量，显示为各阶段的累加
   const formatEspressoTotalWater = () => {
