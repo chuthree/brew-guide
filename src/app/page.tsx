@@ -14,6 +14,7 @@ import {
   equipmentList,
   APP_VERSION,
   commonMethods,
+  getBaseEquipmentIdByAnimationType,
   CustomEquipment,
   type Method,
   type BrewingNote,
@@ -3034,6 +3035,29 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     methods?: Method[]
   ) => {
     try {
+      const presetEquipment = equipmentList.find(
+        preset => preset.id === equipment.id
+      );
+
+      if (presetEquipment) {
+        const nextName = equipment.name.trim();
+        const currentSettings = useSettingsStore.getState().settings;
+        const equipmentNameOverrides = {
+          ...(currentSettings.equipmentNameOverrides || {}),
+        };
+
+        if (!nextName || nextName === presetEquipment.name) {
+          delete equipmentNameOverrides[presetEquipment.id];
+        } else {
+          equipmentNameOverrides[presetEquipment.id] = nextName;
+        }
+
+        await useSettingsStore.getState().updateSettings({
+          equipmentNameOverrides,
+        });
+        return;
+      }
+
       await saveCustomEquipment(equipment, methods);
       const updatedEquipments = await loadCustomEquipments();
       setCustomEquipments(updatedEquipments);
@@ -3084,7 +3108,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   const handleShareEquipment = async (equipment: CustomEquipment) => {
     try {
-      const methods = customMethods[equipment.id || equipment.name] || [];
+      const customEquipmentMethods =
+        customMethods[equipment.id || equipment.name] || [];
+      const isPresetEquipment = equipmentList.some(
+        preset => preset.id === equipment.id
+      );
+      const baseEquipmentId = getBaseEquipmentIdByAnimationType(
+        equipment.animationType
+      );
+      const methods =
+        customEquipmentMethods.length > 0
+          ? customEquipmentMethods
+          : isPresetEquipment && baseEquipmentId
+            ? commonMethods[baseEquipmentId] || []
+            : [];
       const { copyEquipmentToClipboard } =
         await import('@/lib/stores/customMethodStore');
       await copyEquipmentToClipboard(equipment, methods);

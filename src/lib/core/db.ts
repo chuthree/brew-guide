@@ -238,6 +238,9 @@ export interface AppSettings {
   // 隐藏的器具设置
   hiddenEquipments?: string[];
 
+  // 系统预设器具名称覆盖，key 为系统器具 id。
+  equipmentNameOverrides?: Record<string, string>;
+
   // 磨豆机默认同步设置
   grinderDefaultSync?: {
     navigationBar: boolean;

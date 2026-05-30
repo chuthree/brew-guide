@@ -27,7 +27,10 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import RemainingEditor from '@/components/coffee-bean/List/components/RemainingEditor';
-import { buildEquipmentNameMap } from '@/lib/notes/noteDisplay';
+import {
+  buildEquipmentNameMap,
+  EMPTY_EQUIPMENT_NAME_OVERRIDES,
+} from '@/lib/notes/noteDisplay';
 import { getCoffeeBeanImageSource } from '@/lib/coffee-beans/imageRepository';
 import { getRelatedNotesForBean } from '@/lib/notes/relatedNotes';
 import {
@@ -218,9 +221,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       (a, b) => b.timestamp - a.timestamp
     );
   }, [allNotes, bean?.id, lazyRelatedNotes, notesInitialized]);
+  const equipmentNameOverrides = useSettingsStore(
+    state =>
+      state.settings.equipmentNameOverrides || EMPTY_EQUIPMENT_NAME_OVERRIDES
+  );
   const equipmentNames = useMemo(
-    () => buildEquipmentNameMap(customEquipments),
-    [customEquipments]
+    () => buildEquipmentNameMap(customEquipments, equipmentNameOverrides),
+    [customEquipments, equipmentNameOverrides]
   );
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);

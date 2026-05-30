@@ -8,6 +8,7 @@ import {
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 
 export type CoffeeBeanLookup = ReadonlyMap<string, CoffeeBean>;
+export const EMPTY_EQUIPMENT_NAME_OVERRIDES: Record<string, string> = {};
 
 const normalizeOptionalText = (value?: string | null): string =>
   value?.trim() ?? '';
@@ -26,12 +27,17 @@ export const buildCoffeeBeanLookup = (beans: CoffeeBean[]): CoffeeBeanLookup =>
   new Map(beans.map(bean => [bean.id, bean]));
 
 export const buildEquipmentNameMap = (
-  customEquipments: CustomEquipment[]
+  customEquipments: CustomEquipment[],
+  equipmentNameOverrides: Record<
+    string,
+    string
+  > = EMPTY_EQUIPMENT_NAME_OVERRIDES
 ): Record<string, string> => {
   const equipmentNames: Record<string, string> = {};
 
   equipmentList.forEach(equipment => {
-    equipmentNames[equipment.id] = equipment.name;
+    equipmentNames[equipment.id] =
+      equipmentNameOverrides[equipment.id]?.trim() || equipment.name;
   });
 
   customEquipments.forEach(equipment => {

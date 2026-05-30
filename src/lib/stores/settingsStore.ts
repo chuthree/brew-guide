@@ -144,6 +144,7 @@ export const defaultSettings: AppSettings = {
   showBeanRating: false,
   hiddenCommonMethods: {},
   hiddenEquipments: [],
+  equipmentNameOverrides: {},
   grinderDefaultSync: {
     navigationBar: true,
     methodForm: true,

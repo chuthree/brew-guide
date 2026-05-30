@@ -20,7 +20,6 @@ import {
   createEditableMethodFromCommon,
   equipmentList,
   getBaseEquipmentIdByAnimationType,
-  getAnimationTypeFromEquipmentId,
   type CustomEquipment,
   type Equipment,
   type Method,
@@ -35,6 +34,7 @@ import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { modalHistory as drawerModalHistory } from '@/lib/navigation/modalHistory';
 import hapticsUtils from '@/lib/ui/haptics';
+import { createEditableEquipmentFromPreset } from '@/lib/equipment/editableEquipment';
 import {
   SettingPage,
   SettingReorderableRow,
@@ -50,6 +50,7 @@ interface EquipmentMethodSettingsProps {
   onAddEquipment: () => void;
   onSaveEquipment: (equipment: CustomEquipment) => void | Promise<void>;
   onDeleteEquipment: (equipment: CustomEquipment) => void;
+  onShareEquipment: (equipment: CustomEquipment) => void | Promise<void>;
 }
 
 type ManagedSystemEquipment = Equipment & {
@@ -81,6 +82,7 @@ const buildManagedEquipments = (
 ): ManagedEquipment[] => {
   const orderedIds = settings.equipmentOrder || [];
   const hiddenIds = settings.hiddenEquipments || [];
+  const nameOverrides = settings.equipmentNameOverrides || {};
   const systemEquipments: ManagedSystemEquipment[] = equipmentList.map(
     equipment => {
       const isUserHidden = hiddenIds.includes(equipment.id);
@@ -90,6 +92,7 @@ const buildManagedEquipments = (
 
       return {
         ...equipment,
+        name: nameOverrides[equipment.id]?.trim() || equipment.name,
         isCustom: false,
         isUserHidden,
         isDefaultDisabled,
@@ -259,6 +262,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
   onClose,
   onAddEquipment,
   onSaveEquipment,
+  onShareEquipment,
 }) => {
   const storeSettings = useSettingsStore(
     state => state.settings
@@ -466,13 +470,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
     if (!activeEquipment) return null;
     if (activeEquipment.isCustom) return activeEquipment;
 
-    return {
-      id: activeEquipment.id,
-      name: activeEquipment.name,
-      isCustom: true,
-      animationType: getAnimationTypeFromEquipmentId(activeEquipment.id),
-      hasValve: activeEquipment.id === 'CleverDripper',
-    };
+    return createEditableEquipmentFromPreset(activeEquipment);
   }, [activeEquipment]);
 
   const triggerHaptic = React.useCallback(() => {
@@ -554,7 +552,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
   ]);
 
   const openEquipmentForm = React.useCallback(() => {
-    if (!activeEquipment?.isCustom) return;
+    if (!activeEquipment) return;
 
     setDrawerChrome({
       title: '编辑器具',
@@ -670,11 +668,23 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
   const handleSaveEquipment = React.useCallback(
     async (equipment: CustomEquipment) => {
       await onSaveEquipment(equipment);
+      setActiveEquipmentId(equipment.id);
       drawerStack.back();
       showToast({ type: 'success', title: '器具已保存', duration: 1600 });
     },
     [drawerStack, onSaveEquipment]
   );
+
+  const _handleShareEquipment = React.useCallback(async () => {
+    if (!activeEquipment) return;
+
+    const editableEquipment = activeEquipment.isCustom
+      ? activeEquipment
+      : createEditableEquipmentFromPreset(activeEquipment);
+
+    await onShareEquipment(editableEquipment);
+    triggerHaptic();
+  }, [activeEquipment, onShareEquipment, triggerHaptic]);
 
   const handleDeleteMethod = React.useCallback(
     async (method: Method) => {
@@ -925,8 +935,6 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
 
   const renderOverview = () => {
     if (!activeEquipment) return null;
-    const canShowEditActions = activeEquipment.isCustom;
-    const hasEquipmentActions = canShowEditActions || !activeEquipment.isCustom;
 
     return (
       <div>
@@ -1007,48 +1015,29 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
           </SettingSection>
         )}
 
-        {hasEquipmentActions && (
-          <SettingSection title="操作">
-            {canShowEditActions && (
-              <button
-                type="button"
-                onClick={openEquipmentForm}
-                className={`flex w-full cursor-pointer items-center px-3.5 py-3.5 text-left text-sm font-medium text-neutral-600 transition active:bg-black/5 dark:text-neutral-300 dark:active:bg-white/5 ${
-                  activeEquipment.isCustom
-                    ? 'border-b border-black/5 dark:border-white/5'
-                    : ''
-                }`}
-              >
-                编辑器具
-              </button>
-            )}
-            {!activeEquipment.isCustom && (
-              <button
-                type="button"
-                onClick={() => void toggleEquipmentHidden(activeEquipment)}
-                className="flex w-full cursor-pointer items-center px-3.5 py-3.5 text-left text-sm font-medium text-neutral-600 transition active:bg-black/5 dark:text-neutral-300 dark:active:bg-white/5"
-              >
-                {activeEquipment.isUserHidden ||
+        <SettingSection title="操作">
+          <ActionRow label="编辑器具" onClick={openEquipmentForm} />
+          {!activeEquipment.isCustom && (
+            <ActionRow
+              label={
+                activeEquipment.isUserHidden ||
                 activeEquipment.isDefaultDisabled
                   ? '恢复器具'
-                  : '隐藏器具'}
-              </button>
-            )}
-            {activeEquipment.isCustom && (
-              <button
-                type="button"
-                onClick={() => void handleDeleteEquipment()}
-                className={`flex w-full cursor-pointer items-center px-3.5 py-3.5 text-left text-sm font-medium transition active:bg-black/5 dark:active:bg-white/5 ${
-                  isDeleteConfirmingEquipment
-                    ? 'text-red-500 dark:text-red-400'
-                    : 'text-neutral-600 dark:text-neutral-300'
-                }`}
-              >
-                {isDeleteConfirmingEquipment ? '确认删除' : '删除器具'}
-              </button>
-            )}
-          </SettingSection>
-        )}
+                  : '隐藏器具'
+              }
+              onClick={() => void toggleEquipmentHidden(activeEquipment)}
+              isLast
+            />
+          )}
+          {activeEquipment.isCustom && (
+            <ActionRow
+              label={isDeleteConfirmingEquipment ? '确认删除' : '删除器具'}
+              onClick={() => void handleDeleteEquipment()}
+              danger={isDeleteConfirmingEquipment}
+              isLast
+            />
+          )}
+        </SettingSection>
       </div>
     );
   };
@@ -1058,14 +1047,14 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
 
     if (
       isCustomEquipmentFormPage &&
-      activeEquipment.isCustom &&
+      activeCustomEquipment &&
       drawerStack.currentPage !== 'method-form'
     ) {
       return (
         <CustomEquipmentForm
           ref={equipmentFormRef}
-          key={`equipment-settings-form-${activeEquipment.id}`}
-          initialEquipment={activeEquipment}
+          key={`equipment-settings-form-${activeCustomEquipment.id}`}
+          initialEquipment={activeCustomEquipment}
           activeDrawerPage={isEquipmentPickerPage ? 'equipment-picker' : 'form'}
           onOpenEquipmentPicker={() => drawerStack.push('equipment-picker')}
           onChromeChange={setDrawerChrome}

@@ -7,8 +7,9 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import { CustomEquipment } from '@/lib/core/config';
+import { CustomEquipment, equipmentList } from '@/lib/core/config';
 import { isEquipmentNameAvailable } from '@/lib/stores/customEquipmentStore';
+import { getSettingsStore } from '@/lib/stores/settingsStore';
 import DrawingCanvas, { DrawingCanvasRef } from '../../common/ui/DrawingCanvas';
 import AnimationEditor, {
   AnimationEditorRef,
@@ -170,6 +171,24 @@ const getPresetValueFromAnimationType = (
   );
 
   return matchedPreset?.value || 'v60';
+};
+
+const isPresetEquipmentNameAvailable = (
+  name: string,
+  currentId?: string
+): boolean => {
+  const normalizedName = name.trim();
+  if (!normalizedName) return false;
+
+  const nameOverrides =
+    getSettingsStore().settings.equipmentNameOverrides || {};
+
+  return !equipmentList.some(equipment => {
+    if (equipment.id === currentId) return false;
+
+    const displayName = nameOverrides[equipment.id]?.trim() || equipment.name;
+    return displayName === normalizedName;
+  });
 };
 
 // 修改默认注水类型常量
@@ -525,6 +544,7 @@ const CustomEquipmentForm = forwardRef<
       if (!equipment.name?.trim()) {
         newErrors.name = '请输入器具名称';
       } else if (
+        !isPresetEquipmentNameAvailable(equipment.name, initialEquipment?.id) ||
         !(await isEquipmentNameAvailable(equipment.name, initialEquipment?.id))
       ) {
         newErrors.name = '器具名称已存在';
@@ -557,16 +577,22 @@ const CustomEquipmentForm = forwardRef<
           const equipmentToSave = {
             ...(equipment as CustomEquipment),
             isCustom: true as const,
-            customPourAnimations:
-              selectedPreset === 'custom' ? processedAnimations : undefined,
-            // 根据杯型选择，清空或保留customShapeSvg
+            customPourAnimations: shouldShowPourAnimationControls
+              ? processedAnimations
+              : undefined,
+            // 只有自定义器具保留杯型/阀门绘制数据，预设器具始终使用固定外观。
             customShapeSvg:
-              cupShapeType === 'custom' ? equipment.customShapeSvg : '',
-            // 如果使用默认杯型，同时清空阀门自定义数据
+              shouldShowCustomShapeControls && cupShapeType === 'custom'
+                ? equipment.customShapeSvg
+                : '',
             customValveSvg:
-              cupShapeType === 'custom' ? equipment.customValveSvg : '',
+              shouldShowCustomShapeControls && cupShapeType === 'custom'
+                ? equipment.customValveSvg
+                : '',
             customValveOpenSvg:
-              cupShapeType === 'custom' ? equipment.customValveOpenSvg : '',
+              shouldShowCustomShapeControls && cupShapeType === 'custom'
+                ? equipment.customValveOpenSvg
+                : '',
           };
 
           // 检查杯型SVG数据是否存在
@@ -946,6 +972,13 @@ const CustomEquipmentForm = forwardRef<
     );
 
     const selectedPresetInfo = getEquipmentPreset(selectedPreset);
+    const isEditingPresetEquipment = Boolean(
+      initialEquipment?.id &&
+      equipmentList.some(preset => preset.id === initialEquipment.id)
+    );
+    const canEditEquipmentType = !isEditingPresetEquipment;
+    const shouldShowCustomShapeControls = selectedPreset === 'custom';
+    const shouldShowPourAnimationControls = selectedPreset === 'custom';
 
     // 获取自定义杯型SVG
     const customShapeSvg = useMemo(() => {
@@ -1786,22 +1819,30 @@ const CustomEquipmentForm = forwardRef<
         </SettingSection>
 
         <SettingSection title="器具">
-          <button
-            type="button"
-            onClick={onOpenEquipmentPicker}
-            className="flex w-full cursor-pointer items-center gap-3 px-3.5 py-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
-          >
-            <span className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-              类型
-            </span>
-            <span className="shrink-0 text-sm font-medium text-neutral-500 dark:text-neutral-400">
-              {selectedPresetInfo.label}
-            </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-          </button>
+          {canEditEquipmentType ? (
+            <button
+              type="button"
+              onClick={onOpenEquipmentPicker}
+              className="flex w-full cursor-pointer items-center gap-3 px-3.5 py-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
+            >
+              <span className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                类型
+              </span>
+              <span className="shrink-0 text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                {selectedPresetInfo.label}
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
+            </button>
+          ) : (
+            <SettingRow label="类型">
+              <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                {selectedPresetInfo.label}
+              </span>
+            </SettingRow>
+          )}
         </SettingSection>
 
-        {selectedPreset !== 'espresso' && (
+        {shouldShowCustomShapeControls && (
           <SettingSection title="杯型" contentShape="none">
             <SettingCardSelector<CupShapeType>
               ariaLabel="杯型"
@@ -1888,7 +1929,7 @@ const CustomEquipmentForm = forwardRef<
           </SettingSection>
         )}
 
-        {selectedPreset === 'custom' && (
+        {shouldShowPourAnimationControls && (
           <SettingSection title="注水方式" contentShape="none">
             <div className="grid grid-cols-2 gap-3">
               {customPourAnimations.map(animation => (

@@ -14,6 +14,7 @@ import {
   getEquipmentDisplayName,
   getEquipmentDisplayParts,
 } from '@/lib/equipment/displayName';
+import { createEditableEquipmentFromPreset } from '@/lib/equipment/editableEquipment';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
@@ -185,18 +186,23 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
       return;
     }
 
-    // 只对自定义器具执行其他操作
-    if (!equipment.isSystem && equipment.isCustom) {
-      switch (action) {
-        case 'edit':
-          onEditEquipment(equipment as CustomEquipment);
-          break;
-        case 'delete':
-          onDeleteEquipment(equipment as CustomEquipment);
-          break;
-        case 'share':
-          onShareEquipment(equipment as CustomEquipment);
-          break;
+    if (action === 'delete') {
+      if (!equipment.isSystem && equipment.isCustom) {
+        onDeleteEquipment(equipment as CustomEquipment);
+      }
+      return;
+    }
+
+    if (action === 'edit' || action === 'share') {
+      const editableEquipment =
+        !equipment.isSystem && equipment.isCustom
+          ? (equipment as CustomEquipment)
+          : createEditableEquipmentFromPreset(equipment);
+
+      if (action === 'edit') {
+        onEditEquipment(editableEquipment);
+      } else {
+        onShareEquipment(editableEquipment);
       }
     }
   };
@@ -337,8 +343,23 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                                   transition={{ duration: 0.2 }}
                                   className="flex items-center space-x-1"
                                 >
+                                  <button
+                                    onClick={() =>
+                                      handleAction('edit', equipment)
+                                    }
+                                    className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
+                                  >
+                                    <Edit className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleAction('share', equipment)
+                                    }
+                                    className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
+                                  >
+                                    <Share2 className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                                  </button>
                                   {equipment.isSystem ? (
-                                    // 系统器具只显示隐藏按钮
                                     <button
                                       onClick={() =>
                                         handleAction('hide', equipment)
@@ -348,33 +369,14 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
                                       <EyeOff className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
                                     </button>
                                   ) : (
-                                    // 自定义器具显示编辑、分享、删除按钮
-                                    <>
-                                      <button
-                                        onClick={() =>
-                                          handleAction('edit', equipment)
-                                        }
-                                        className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
-                                      >
-                                        <Edit className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleAction('share', equipment)
-                                        }
-                                        className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
-                                      >
-                                        <Share2 className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleAction('delete', equipment)
-                                        }
-                                        className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
-                                      >
-                                        <Trash2 className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                                      </button>
-                                    </>
+                                    <button
+                                      onClick={() =>
+                                        handleAction('delete', equipment)
+                                      }
+                                      className="rounded-md p-2 transition-colors duration-150 hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+                                    </button>
                                   )}
                                   <button
                                     onClick={() => toggleActions(equipment.id)}

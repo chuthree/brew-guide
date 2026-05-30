@@ -670,6 +670,7 @@ const AppModals: React.FC<AppModalsProps> = ({
           onAddEquipment={handleAddEquipment}
           onSaveEquipment={handleSaveEquipment}
           onDeleteEquipment={handleDeleteEquipment}
+          onShareEquipment={handleShareEquipment}
         />
       )}
 

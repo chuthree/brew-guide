@@ -55,7 +55,8 @@ export function useEquipmentList<
       const equipmentOrder = loadEquipmentOrder();
       const sortedEquipments = equipmentUtils.getAllEquipments(
         customEquipments,
-        equipmentOrder
+        equipmentOrder,
+        settings?.equipmentNameOverrides
       );
 
       // 过滤隐藏的器具
@@ -99,7 +100,8 @@ export function useEquipmentList<
       const equipmentOrder = loadEquipmentOrder();
       const sortedEquipments = equipmentUtils.getAllEquipments(
         customEquipments,
-        equipmentOrder
+        equipmentOrder,
+        settings?.equipmentNameOverrides
       );
 
       // 过滤隐藏的器具
