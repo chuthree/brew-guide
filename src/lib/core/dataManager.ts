@@ -47,6 +47,13 @@ interface ExportAllDataOptions {
   pretty?: boolean;
 }
 
+type LegacyCoffeeBeanRecord = _CoffeeBean & {
+  origin?: string;
+  process?: string;
+  variety?: string;
+  type?: unknown;
+};
+
 // 使用从 config.ts 导入的 BrewingNote 类型
 
 /**
@@ -802,7 +809,7 @@ export const DataManager = {
    * @param bean 咖啡豆对象
    * @returns 是否有有效的旧格式字段
    */
-  hasValidLegacyFields(bean: Record<string, unknown>): boolean {
+  hasValidLegacyFields(bean: LegacyCoffeeBeanRecord): boolean {
     return (
       this.isValidText(bean.origin as string) ||
       this.isValidText(bean.process as string) ||
@@ -820,18 +827,8 @@ export const DataManager = {
     totalCount: number;
   }> {
     try {
-      // 获取所有咖啡豆数据
-      const storage = await getStorage();
-      const beansStr = await storage.get('coffeeBeans');
-      if (!beansStr) {
-        return { hasLegacyData: false, legacyCount: 0, totalCount: 0 };
-      }
-
-      // 解析咖啡豆数据
-      const beans = JSON.parse(beansStr);
-      if (!Array.isArray(beans)) {
-        return { hasLegacyData: false, legacyCount: 0, totalCount: 0 };
-      }
+      const beans =
+        (await db.coffeeBeans.toArray()) as LegacyCoffeeBeanRecord[];
 
       let legacyCount = 0;
 
@@ -866,24 +863,13 @@ export const DataManager = {
     message: string;
   }> {
     try {
-      // 获取所有咖啡豆数据
-      const storage = await getStorage();
-      const beansStr = await storage.get('coffeeBeans');
-      if (!beansStr) {
+      const beans =
+        (await db.coffeeBeans.toArray()) as LegacyCoffeeBeanRecord[];
+      if (beans.length === 0) {
         return {
           success: true,
           migratedCount: 0,
           message: '没有找到咖啡豆数据',
-        };
-      }
-
-      // 解析咖啡豆数据
-      const beans = JSON.parse(beansStr);
-      if (!Array.isArray(beans)) {
-        return {
-          success: false,
-          migratedCount: 0,
-          message: '咖啡豆数据格式错误',
         };
       }
 
@@ -946,14 +932,7 @@ export const DataManager = {
 
       // 如果有迁移，更新存储
       if (migratedCount > 0) {
-        await storage.set('coffeeBeans', JSON.stringify(migratedBeans));
-
-        // 同时更新IndexedDB
-        try {
-          await replaceCoffeeBeansWithSplitImages(migratedBeans);
-        } catch (dbError) {
-          console.error('更新IndexedDB失败:', dbError);
-        }
+        await db.coffeeBeans.bulkPut(migratedBeans);
       }
 
       return {
@@ -981,17 +960,10 @@ export const DataManager = {
    */
   async fixBlendBeansData(): Promise<{ success: boolean; fixedCount: number }> {
     try {
-      // 获取所有咖啡豆数据
-      const storage = await getStorage();
-      const beansStr = await storage.get('coffeeBeans');
-      if (!beansStr) {
+      const beans =
+        (await db.coffeeBeans.toArray()) as LegacyCoffeeBeanRecord[];
+      if (beans.length === 0) {
         return { success: true, fixedCount: 0 };
-      }
-
-      // 解析咖啡豆数据
-      const beans = JSON.parse(beansStr);
-      if (!Array.isArray(beans)) {
-        return { success: false, fixedCount: 0 };
       }
 
       let fixedCount = 0;
@@ -1000,7 +972,7 @@ export const DataManager = {
       const fixedBeans = beans.map(bean => {
         // 删除已废弃的type字段
         if ('type' in bean) {
-          delete (bean as Record<string, unknown>).type;
+          delete bean.type;
           fixedCount++;
         }
 
@@ -1063,7 +1035,7 @@ export const DataManager = {
 
       // 如果有修复，更新存储
       if (fixedCount > 0) {
-        await storage.set('coffeeBeans', JSON.stringify(fixedBeans));
+        await db.coffeeBeans.bulkPut(fixedBeans);
       }
 
       return { success: true, fixedCount };
