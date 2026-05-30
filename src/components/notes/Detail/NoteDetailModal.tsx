@@ -780,12 +780,13 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                           width={192}
                           className="h-full w-auto object-cover"
                           onError={() => setBeanImageError(true)}
-                          onClick={() => {
+                          onClick={e => {
                             if (!beanImageError) {
                               openImageViewer({
                                 url: beanFrontImage,
                                 alt: beanName || '咖啡豆图片',
                                 backUrl: beanBackImage,
+                                sourceElement: e.currentTarget,
                               });
                             }
                           }}
@@ -819,6 +820,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                                     url: beanFrontImage,
                                     alt: beanName || '咖啡豆图片',
                                     backUrl: beanBackImage,
+                                    sourceElement: e.currentTarget,
                                   });
                                 }
                               }}
@@ -841,11 +843,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             width={192}
                             className="h-full w-auto object-cover"
                             onError={() => setImageError(true)}
-                            onClick={() => {
+                            onClick={e => {
                               if (!imageError) {
                                 openImageViewer({
                                   url: noteImages[0],
                                   alt: beanName || '笔记图片',
+                                  items: noteImages.map((url, index) => ({
+                                    url,
+                                    alt: `笔记图片 ${index + 1}`,
+                                  })),
+                                  index: 0,
+                                  sourceElement: e.currentTarget,
                                 });
                               }
                             }}
@@ -909,6 +917,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                     {/* 多图网格 - 与列表页相同的布局 */}
                     <div className="flex justify-center">
                       <div
+                        data-note-images
                         className={`gap-1 ${
                           noteImages.length === 2 || noteImages.length === 4
                             ? 'grid max-w-50 grid-cols-2'
@@ -918,12 +927,32 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                         {noteImages.map((img, index) => (
                           <div
                             key={index}
+                            data-image-index={index}
                             className="relative aspect-square cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
-                            onClick={() => {
+                            onClick={e => {
                               if (!multiImageErrors.has(index)) {
+                                const galleryElement =
+                                  e.currentTarget.closest(
+                                    '[data-note-images]'
+                                  );
+                                const sourceElements = galleryElement
+                                  ? Array.from(
+                                      galleryElement.querySelectorAll<HTMLElement>(
+                                        '[data-image-index]'
+                                      )
+                                    )
+                                  : [e.currentTarget];
+
                                 openImageViewer({
                                   url: img,
                                   alt: `笔记图片 ${index + 1}`,
+                                  items: noteImages.map((url, itemIndex) => ({
+                                    url,
+                                    alt: `笔记图片 ${itemIndex + 1}`,
+                                  })),
+                                  index,
+                                  sourceElement: e.currentTarget,
+                                  sourceElements,
                                 });
                               }
                             }}

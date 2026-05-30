@@ -171,6 +171,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
         return;
       }
 
+      const sourceElement = event.currentTarget;
+
       void (async () => {
         const [frontImage, backImage] =
           beanImage && beanInfo?.id
@@ -197,6 +199,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
               ? `${getRoasterName(beanInfo, roasterSettings)} 烘焙商图标`
               : '烘焙商图标',
           backUrl: backImage || beanInfo?.backImage,
+          sourceElement,
         });
       })();
     },
@@ -216,12 +219,31 @@ const NoteItem: React.FC<NoteItemProps> = ({
         return;
       }
 
+      const index = Number(imageIndex);
+      if (!Number.isInteger(index)) {
+        return;
+      }
+
+      const galleryElement = event.currentTarget.closest('[data-note-images]');
+      const sourceElements = galleryElement
+        ? Array.from(
+            galleryElement.querySelectorAll<HTMLElement>('[data-image-index]')
+          )
+        : [event.currentTarget];
+
       openImageViewer({
         url: imageUrl,
-        alt: `笔记图片 ${Number(imageIndex) + 1}`,
+        alt: `笔记图片 ${index + 1}`,
+        items: noteImages.map((url, itemIndex) => ({
+          url,
+          alt: `笔记图片 ${itemIndex + 1}`,
+        })),
+        index,
+        sourceElement: event.currentTarget,
+        sourceElements,
       });
     },
-    [noteImageError]
+    [noteImageError, noteImages]
   );
 
   const singleImageUrl = isSingleNoteImage ? noteImages[0] : '';
@@ -350,6 +372,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
             {/* 笔记图片 - 仿微信朋友圈九宫格 */}
             {noteImages.length > 0 && (
               <div
+                data-note-images
                 className={`mt-2 gap-1 ${
                   isSingleNoteImage
                     ? 'flex'

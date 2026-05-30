@@ -160,6 +160,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
                   openImageViewer({
                     url: note.image!,
                     alt: beanName || '笔记图片',
+                    sourceElement: e.currentTarget,
                   });
                 }
               }}

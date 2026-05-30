@@ -885,11 +885,16 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   };
 
   // 图片查看
-  const handleImageClick = (imageUrl: string, backImageUrl?: string) => {
+  const handleImageClick = (
+    imageUrl: string,
+    backImageUrl?: string,
+    sourceElement?: HTMLElement | null
+  ) => {
     openImageViewer({
       url: imageUrl,
       alt: bean?.name || '咖啡豆图片',
       backUrl: backImageUrl,
+      sourceElement,
     });
   };
 

@@ -115,32 +115,38 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   const imageSource = beanImage || roasterLogo;
   const hasImageError = imageError.source === imageSource && imageError.failed;
 
-  const handleImageViewerOpen = useCallback(() => {
-    if (!imageSource || hasImageError) {
-      return;
-    }
+  const handleImageViewerOpen = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!imageSource || hasImageError) {
+        return;
+      }
 
-    void (async () => {
-      const isBeanImage = Boolean(beanImage);
-      const [frontImage, backImage] = isBeanImage
-        ? await Promise.all([
-            getCoffeeBeanImageSource(bean.id, { preferThumbnail: false }),
-            getCoffeeBeanImageSource(bean.id, {
-              side: 'back',
-              preferThumbnail: false,
-            }),
-          ])
-        : [undefined, undefined];
+      const sourceElement = event.currentTarget;
 
-      openImageViewer({
-        url: frontImage || imageSource,
-        alt: isBeanImage
-          ? bean.name || '咖啡豆图片'
-          : `${roasterName} 烘焙商图标`,
-        backUrl: backImage,
-      });
-    })();
-  }, [bean.id, bean.name, beanImage, hasImageError, imageSource, roasterName]);
+      void (async () => {
+        const isBeanImage = Boolean(beanImage);
+        const [frontImage, backImage] = isBeanImage
+          ? await Promise.all([
+              getCoffeeBeanImageSource(bean.id, { preferThumbnail: false }),
+              getCoffeeBeanImageSource(bean.id, {
+                side: 'back',
+                preferThumbnail: false,
+              }),
+            ])
+          : [undefined, undefined];
+
+        openImageViewer({
+          url: frontImage || imageSource,
+          alt: isBeanImage
+            ? bean.name || '咖啡豆图片'
+            : `${roasterName} 烘焙商图标`,
+          backUrl: backImage,
+          sourceElement,
+        });
+      })();
+    },
+    [bean.id, bean.name, beanImage, hasImageError, imageSource, roasterName]
+  );
 
   // 设置默认值
   const dateDisplayMode = settings?.dateDisplayMode ?? 'date';

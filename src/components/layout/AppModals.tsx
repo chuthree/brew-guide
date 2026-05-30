@@ -46,6 +46,7 @@ import ConvertToGreenDrawer from '@/components/coffee-bean/ConvertToGreenDrawer'
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import ConfirmDrawer from '@/components/common/ui/ConfirmDrawer';
 import ImageViewer from '@/components/common/ui/ImageViewer';
+import type { ImageViewerPayload } from '@/lib/ui/imageViewer';
 import { createCapacityAdjustmentRecordIfNeeded } from '@/lib/coffee-beans/capacityAdjustment';
 
 interface ExtendedCoffeeBean extends CoffeeBean {
@@ -248,10 +249,8 @@ export interface AppModalsProps {
   // ImageViewer
   imageViewerOpen: boolean;
   setImageViewerOpen: (open: boolean) => void;
-  imageViewerData: { url: string; alt: string; backUrl?: string } | null;
-  setImageViewerData: (
-    data: { url: string; alt: string; backUrl?: string } | null
-  ) => void;
+  imageViewerData: ImageViewerPayload | null;
+  setImageViewerData: (data: ImageViewerPayload | null) => void;
 }
 
 const AppModals: React.FC<AppModalsProps> = ({
@@ -1283,6 +1282,10 @@ const AppModals: React.FC<AppModalsProps> = ({
           imageUrl={imageViewerData.url}
           backImageUrl={imageViewerData.backUrl}
           alt={imageViewerData.alt}
+          items={imageViewerData.items}
+          initialIndex={imageViewerData.index}
+          sourceElement={imageViewerData.sourceElement}
+          sourceElements={imageViewerData.sourceElements}
           onClose={() => setImageViewerOpen(false)}
           onExitComplete={() => setImageViewerData(null)}
         />

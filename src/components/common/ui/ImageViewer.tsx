@@ -1,24 +1,10 @@
 'use client';
 
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-} from 'react';
-import Image from 'next/image';
-import {
-  AnimatePresence,
-  LazyMotion,
-  domAnimation,
-  m,
-  type Transition,
-  type Variants,
-} from 'framer-motion';
+import { useEffect, useRef } from 'react';
+import PhotoSwipe, { type EventCallback, type SlideData } from 'photoswipe';
 import gsap from 'gsap';
-import { createPortal } from 'react-dom';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
+import type { ImageViewerItem } from '@/lib/ui/imageViewer';
 
 interface ImageViewerProps {
   id?: string;
@@ -26,243 +12,276 @@ interface ImageViewerProps {
   imageUrl: string;
   backImageUrl?: string;
   alt: string;
+  items?: ImageViewerItem[];
+  initialIndex?: number;
+  sourceElement?: HTMLElement | null;
+  sourceElements?: Array<HTMLElement | null | undefined>;
   onClose: () => void;
   onExitComplete?: () => void;
 }
 
-const MODAL_ENTER_TRANSITION: Transition = {
-  duration: 0.2,
-  ease: [0.25, 0.1, 0.25, 1],
+type ImageSize = {
+  width: number;
+  height: number;
 };
 
-const MODAL_EXIT_TRANSITION: Transition = {
-  duration: 0.18,
-  ease: [0.4, 0, 1, 1] as const,
+type PhotoSwipeItem = ImageViewerItem & {
+  sourceElement?: HTMLElement | null;
+  thumbnailCropped?: boolean;
 };
 
-const overlayVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: MODAL_ENTER_TRANSITION,
-  },
-  exit: {
-    opacity: 0,
-    transition: MODAL_EXIT_TRANSITION,
-  },
+type DualSideImage = {
+  url: string;
+  alt: string;
+  size: ImageSize;
 };
 
-const panelVariants: Variants = {
-  hidden: {
-    opacity: 0,
-    scale: 0.975,
-    y: 8,
-  },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: MODAL_ENTER_TRANSITION,
-  },
-  exit: {
-    opacity: 0,
-    scale: 0.975,
-    y: 8,
-    transition: MODAL_EXIT_TRANSITION,
-  },
+type DualSideImages = {
+  front: DualSideImage;
+  back: DualSideImage;
+};
+
+type DualSideState = {
+  side: 'front' | 'back';
+  isFlipping: boolean;
+};
+
+const DEFAULT_IMAGE_SIZE: ImageSize = {
+  width: 1600,
+  height: 1200,
 };
 
 const FLIP_DURATION = 0.5;
 const FLIP_EASE = 'sine.inOut';
-const CARD_PERSPECTIVE = 1000;
 
-const TRANSPARENT_IMAGE_STYLE: CSSProperties = {
-  background: 'transparent',
-};
+const imageSizeCache = new Map<string, Promise<ImageSize>>();
 
-const FLIP_SCENE_STYLE: CSSProperties = {
-  perspective: CARD_PERSPECTIVE,
-};
+const getImageSize = (url: string): Promise<ImageSize> => {
+  const cached = imageSizeCache.get(url);
+  if (cached) return cached;
 
-const FLIP_CARD_STYLE: CSSProperties = {
-  transformStyle: 'preserve-3d',
-};
+  const promise = new Promise<ImageSize>(resolve => {
+    const image = new window.Image();
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      resolve(DEFAULT_IMAGE_SIZE);
+    }, 2500);
 
-const FACE_STYLE: CSSProperties = {
-  backfaceVisibility: 'hidden',
-};
-
-const BACK_FACE_STYLE: CSSProperties = {
-  ...FACE_STYLE,
-  transform: 'rotateY(180deg)',
-};
-
-const ErrorState = () => (
-  <div className="flex h-full w-full items-center justify-center p-4 text-center">
-    <div>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="mx-auto mb-2 h-12 w-12 text-red-500"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
-      <p className="text-neutral-500 dark:text-neutral-400">图片加载失败</p>
-    </div>
-  </div>
-);
-
-const baseImageClassName = 'max-h-[80vh] w-auto max-w-[92vw]';
-const flippableImageClassName = `${baseImageClassName} cursor-pointer select-none`;
-
-interface ImageViewerPanelProps {
-  imageUrl: string;
-  backImageUrl?: string;
-  alt: string;
-  onClose: () => void;
-}
-
-const ImageViewerPanel: React.FC<ImageViewerPanelProps> = ({
-  imageUrl,
-  backImageUrl,
-  alt,
-  onClose,
-}) => {
-  const [frontError, setFrontError] = useState(false);
-  const [backError, setBackError] = useState(false);
-  const hasBackImage = Boolean(backImageUrl);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const currentRotation = useRef(0);
-  const isFlippingRef = useRef(false);
-
-  useEffect(() => {
-    return () => {
-      if (cardRef.current) {
-        gsap.killTweensOf(cardRef.current);
-      }
-      currentRotation.current = 0;
-      isFlippingRef.current = false;
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      image.onload = null;
+      image.onerror = null;
     };
-  }, []);
 
-  useEffect(() => {
-    if (!cardRef.current) return;
+    image.onload = () => {
+      const width = image.naturalWidth || DEFAULT_IMAGE_SIZE.width;
+      const height = image.naturalHeight || DEFAULT_IMAGE_SIZE.height;
 
-    gsap.set(cardRef.current, { rotateY: 0 });
-  }, []);
+      cleanup();
+      resolve({ width, height });
+    };
 
-  const flip = useCallback(() => {
-    if (!cardRef.current || isFlippingRef.current) return;
+    image.onerror = () => {
+      cleanup();
+      resolve(DEFAULT_IMAGE_SIZE);
+    };
 
-    const targetRotation = currentRotation.current + 180;
-    isFlippingRef.current = true;
+    image.src = url;
+  });
 
-    gsap.to(cardRef.current, {
-      rotateY: targetRotation,
-      duration: FLIP_DURATION,
-      ease: FLIP_EASE,
-      onComplete: () => {
-        currentRotation.current = targetRotation;
-        isFlippingRef.current = false;
-      },
-    });
-  }, []);
+  imageSizeCache.set(url, promise);
+  return promise;
+};
 
-  const handleFlipClick = useCallback(() => {
-    if (!backImageUrl) return;
-    flip();
-  }, [backImageUrl, flip]);
-
-  return (
-    <m.div
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={panelVariants}
-      className="relative max-h-[90vh] overflow-visible"
-      onClick={event => {
-        if (!hasBackImage) {
-          onClose();
-        } else {
-          event.stopPropagation();
+const resolveSlideData = async (item: PhotoSwipeItem): Promise<SlideData> => {
+  const explicitSize =
+    item.width && item.height
+      ? {
+          width: item.width,
+          height: item.height,
         }
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-label={alt}
-    >
-      {hasBackImage ? (
-        <div style={FLIP_SCENE_STYLE}>
-          <div ref={cardRef} className="relative" style={FLIP_CARD_STYLE}>
-            <div style={FACE_STYLE}>
-              {frontError ? (
-                <ErrorState />
-              ) : (
-                <Image
-                  src={imageUrl}
-                  alt={alt}
-                  className={flippableImageClassName}
-                  width={0}
-                  height={1000}
-                  style={TRANSPARENT_IMAGE_STYLE}
-                  onError={() => setFrontError(true)}
-                  onClick={handleFlipClick}
-                  draggable={false}
-                  priority
-                />
-              )}
-            </div>
+      : null;
+  const size = explicitSize ?? (await getImageSize(item.url));
+  const thumbCropped =
+    item.thumbnailCropped ?? isCroppedThumbnailElement(item.sourceElement);
 
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={BACK_FACE_STYLE}
-            >
-              {backError ? (
-                <ErrorState />
-              ) : (
-                <Image
-                  src={backImageUrl!}
-                  alt={`${alt} - 背面`}
-                  className={flippableImageClassName}
-                  width={0}
-                  height={1000}
-                  style={TRANSPARENT_IMAGE_STYLE}
-                  onError={() => setBackError(true)}
-                  onClick={handleFlipClick}
-                  draggable={false}
-                  priority
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="relative flex min-h-70 items-center justify-center">
-          {frontError ? (
-            <ErrorState />
-          ) : (
-            <Image
-              src={imageUrl}
-              alt={alt}
-              className={baseImageClassName}
-              width={0}
-              height={1000}
-              style={TRANSPARENT_IMAGE_STYLE}
-              onError={() => setFrontError(true)}
-              priority
-            />
-          )}
-        </div>
-      )}
-    </m.div>
-  );
+  return {
+    src: item.url,
+    msrc: item.thumbnailUrl ?? item.url,
+    alt: item.alt,
+    width: size.width,
+    height: size.height,
+    element: item.sourceElement ?? undefined,
+    ...(thumbCropped ? { thumbCropped: true } : {}),
+  };
+};
+
+const normalizeItems = ({
+  imageUrl,
+  alt,
+  items,
+  sourceElement,
+  sourceElements,
+}: Pick<
+  ImageViewerProps,
+  'imageUrl' | 'alt' | 'items' | 'sourceElement' | 'sourceElements'
+>): PhotoSwipeItem[] => {
+  const normalizedItems =
+    items && items.length > 0 ? items : [{ url: imageUrl, alt }];
+
+  return normalizedItems.map((item, index) => ({
+    ...item,
+    sourceElement:
+      item.sourceElement ?? sourceElements?.[index] ?? sourceElement ?? null,
+  }));
+};
+
+const clampInitialIndex = (index: number, length: number) =>
+  Math.min(Math.max(index, 0), Math.max(length - 1, 0));
+
+const hasGalleryItems = (items?: ImageViewerItem[]) =>
+  Boolean(items && items.length > 0);
+
+const isImageActionTarget = (target: EventTarget | null) =>
+  target instanceof HTMLElement && target.classList.contains('pswp__img');
+
+const getThumbnailElement = (element?: HTMLElement | null) => {
+  if (!element) return null;
+  return element instanceof HTMLImageElement
+    ? element
+    : element.querySelector('img');
+};
+
+const isCroppedThumbnailElement = (element?: HTMLElement | null) => {
+  const thumbnail = getThumbnailElement(element);
+  return thumbnail
+    ? window.getComputedStyle(thumbnail).objectFit === 'cover'
+    : false;
+};
+
+const applyDualSideImage = (
+  instance: PhotoSwipe,
+  side: DualSideImage
+): HTMLImageElement | null => {
+  const slide = instance.currSlide;
+  const content = slide?.content;
+  const element = content?.element;
+
+  if (!slide || !content || !(element instanceof HTMLImageElement)) {
+    return null;
+  }
+
+  slide.data.src = side.url;
+  slide.data.alt = side.alt;
+  slide.data.width = side.size.width;
+  slide.data.height = side.size.height;
+  slide.width = side.size.width;
+  slide.height = side.size.height;
+
+  content.data.src = side.url;
+  content.data.alt = side.alt;
+  content.data.width = side.size.width;
+  content.data.height = side.size.height;
+  content.width = side.size.width;
+  content.height = side.size.height;
+
+  element.src = side.url;
+  element.alt = side.alt;
+
+  slide.calculateSize();
+  slide.zoomAndPanToInitial();
+  slide.applyCurrentZoomPan();
+  slide.updateContentSize(true);
+
+  return element;
+};
+
+const flipDualSideImage = async (
+  instance: PhotoSwipe,
+  images: DualSideImages,
+  state: DualSideState
+) => {
+  if (state.isFlipping) {
+    return;
+  }
+
+  const slide = instance.currSlide;
+  const element = slide?.content.element;
+
+  if (!slide || !(element instanceof HTMLImageElement)) {
+    return;
+  }
+
+  const nextSide = state.side === 'front' ? 'back' : 'front';
+  const nextImage = images[nextSide];
+
+  state.isFlipping = true;
+  slide.content.placeholder?.destroy();
+  slide.content.placeholder = undefined;
+
+  const previousTransformOrigin = element.style.transformOrigin;
+  const previousBackfaceVisibility = element.style.backfaceVisibility;
+  const reduceMotion = window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  ).matches;
+
+  try {
+    if (reduceMotion) {
+      if (applyDualSideImage(instance, nextImage)) {
+        state.side = nextSide;
+      }
+      return;
+    }
+
+    await new Promise<void>(resolve => {
+      gsap.set(element, {
+        transformOrigin: 'center center',
+        backfaceVisibility: 'hidden',
+        rotateY: 0,
+      });
+
+      gsap.to(element, {
+        rotateY: 90,
+        duration: FLIP_DURATION / 2,
+        ease: FLIP_EASE,
+        onComplete: () => {
+          if (instance.currSlide !== slide) {
+            resolve();
+            return;
+          }
+
+          const nextElement = applyDualSideImage(instance, nextImage);
+          if (!nextElement) {
+            resolve();
+            return;
+          }
+
+          state.side = nextSide;
+          gsap.set(nextElement, {
+            transformOrigin: 'center center',
+            backfaceVisibility: 'hidden',
+            rotateY: -90,
+          });
+
+          gsap.to(nextElement, {
+            rotateY: 0,
+            duration: FLIP_DURATION / 2,
+            ease: FLIP_EASE,
+            onComplete: resolve,
+          });
+        },
+      });
+    });
+  } finally {
+    const currentElement = instance.currSlide?.content.element;
+    if (currentElement instanceof HTMLImageElement) {
+      gsap.killTweensOf(currentElement);
+      gsap.set(currentElement, { rotateY: 0 });
+      currentElement.style.transformOrigin = previousTransformOrigin;
+      currentElement.style.backfaceVisibility = previousBackfaceVisibility;
+    }
+    state.isFlipping = false;
+  }
 };
 
 const ImageViewer: React.FC<ImageViewerProps> = ({
@@ -271,9 +290,26 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
   imageUrl,
   backImageUrl,
   alt,
+  items,
+  initialIndex = 0,
+  sourceElement,
+  sourceElements,
   onClose,
   onExitComplete,
 }) => {
+  const pswpRef = useRef<PhotoSwipe | null>(null);
+  const latestOnCloseRef = useRef(onClose);
+  const latestOnExitCompleteRef = useRef(onExitComplete);
+  const isDualSideViewer = Boolean(backImageUrl && !hasGalleryItems(items));
+
+  useEffect(() => {
+    latestOnCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    latestOnExitCompleteRef.current = onExitComplete;
+  }, [onExitComplete]);
+
   useModalHistory({
     id,
     isOpen,
@@ -281,53 +317,199 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
   });
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || typeof window === 'undefined') {
+      return;
+    }
 
-    const previousOverflow = document.body.style.overflow;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
+    let cancelled = false;
+    let instance: PhotoSwipe | null = null;
+    let shouldNotifyClose = true;
+    let detachInstanceListeners = () => {};
+
+    const openViewer = async () => {
+      let dualSideImages: DualSideImages | null = null;
+      let viewerItems: PhotoSwipeItem[];
+
+      if (isDualSideViewer && backImageUrl) {
+        const [frontSize, backSize] = await Promise.all([
+          getImageSize(imageUrl),
+          getImageSize(backImageUrl),
+        ]);
+
+        dualSideImages = {
+          front: {
+            url: imageUrl,
+            alt,
+            size: frontSize,
+          },
+          back: {
+            url: backImageUrl,
+            alt: `${alt} - 背面`,
+            size: backSize,
+          },
+        };
+
+        viewerItems = [
+          {
+            url: imageUrl,
+            alt,
+            width: frontSize.width,
+            height: frontSize.height,
+            sourceElement,
+            thumbnailCropped: true,
+          },
+        ];
+      } else {
+        viewerItems = normalizeItems({
+          imageUrl,
+          alt,
+          items,
+          sourceElement,
+          sourceElements,
+        });
       }
+
+      const safeInitialIndex = clampInitialIndex(
+        initialIndex,
+        viewerItems.length
+      );
+      const dataSource = await Promise.all(viewerItems.map(resolveSlideData));
+
+      if (cancelled || viewerItems.length === 0) {
+        return;
+      }
+
+      instance = new PhotoSwipe({
+        dataSource,
+        index: safeInitialIndex,
+        mainClass: 'brew-image-viewer-pswp',
+        bgOpacity: 1,
+        spacing: 0.12,
+        showHideAnimationType: 'zoom',
+        showAnimationDuration: 200,
+        hideAnimationDuration: 180,
+        zoomAnimationDuration: 220,
+        easing: 'cubic-bezier(.25,.1,.25,1)',
+        padding: { top: 16, right: 16, bottom: 16, left: 16 },
+        loop: viewerItems.length > 2,
+        arrowPrev: viewerItems.length > 1,
+        arrowNext: viewerItems.length > 1,
+        counter: false,
+        close: false,
+        zoom: false,
+        pinchToClose: true,
+        closeOnVerticalDrag: true,
+        bgClickAction: 'close',
+        tapAction: 'close',
+        doubleTapAction: false,
+        imageClickAction: 'close',
+        errorMsg: '图片加载失败',
+        closeTitle: '关闭',
+        zoomTitle: '缩放',
+        arrowPrevTitle: '上一张',
+        arrowNextTitle: '下一张',
+        indexIndicatorSep: ' / ',
+      });
+
+      const dualSideState: DualSideState = {
+        side: 'front',
+        isFlipping: false,
+      };
+
+      const handleClose = () => {
+        if (shouldNotifyClose) {
+          latestOnCloseRef.current();
+        }
+      };
+
+      const handleDestroy = () => {
+        if (pswpRef.current === instance) {
+          pswpRef.current = null;
+        }
+        latestOnExitCompleteRef.current?.();
+        detachInstanceListeners();
+      };
+
+      const handleImageClickAction: EventCallback<
+        'imageClickAction'
+      > = event => {
+        if (
+          !dualSideImages ||
+          !isImageActionTarget(event.originalEvent.target)
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        void flipDualSideImage(instance!, dualSideImages, dualSideState);
+      };
+
+      const handleTapAction: EventCallback<'tapAction'> = event => {
+        if (
+          !dualSideImages ||
+          !isImageActionTarget(event.originalEvent.target)
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        void flipDualSideImage(instance!, dualSideImages, dualSideState);
+      };
+
+      const handleAfterSetContent: EventCallback<'afterSetContent'> = event => {
+        if (!dualSideImages) {
+          return;
+        }
+
+        const element = event.slide.content.element;
+        if (element instanceof HTMLImageElement) {
+          element.style.cursor = 'pointer';
+        }
+      };
+
+      instance.on('close', handleClose);
+      instance.on('destroy', handleDestroy);
+      instance.on('imageClickAction', handleImageClickAction);
+      instance.on('tapAction', handleTapAction);
+      instance.on('afterSetContent', handleAfterSetContent);
+
+      detachInstanceListeners = () => {
+        instance?.off('close', handleClose);
+        instance?.off('destroy', handleDestroy);
+        instance?.off('imageClickAction', handleImageClickAction);
+        instance?.off('tapAction', handleTapAction);
+        instance?.off('afterSetContent', handleAfterSetContent);
+      };
+
+      pswpRef.current = instance;
+      instance.init();
     };
 
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', handleKeyDown);
+    void openViewer();
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
+      cancelled = true;
+
+      if (instance && !instance.isDestroying) {
+        shouldNotifyClose = false;
+        instance.close();
+      } else {
+        detachInstanceListeners();
+      }
     };
-  }, [isOpen, onClose]);
+  }, [
+    alt,
+    backImageUrl,
+    imageUrl,
+    initialIndex,
+    isDualSideViewer,
+    isOpen,
+    items,
+    sourceElement,
+    sourceElements,
+  ]);
 
-  if (typeof document === 'undefined') return null;
-
-  return createPortal(
-    <LazyMotion features={domAnimation}>
-      <AnimatePresence onExitComplete={onExitComplete}>
-        {isOpen ? (
-          <m.div
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={overlayVariants}
-            className="fixed inset-0 z-100 flex items-center justify-center bg-neutral-50/90 p-4 backdrop-blur-xs dark:bg-neutral-900/90"
-            onClick={onClose}
-            role="presentation"
-          >
-            <ImageViewerPanel
-              key={`${imageUrl}::${backImageUrl ?? ''}`}
-              imageUrl={imageUrl}
-              backImageUrl={backImageUrl}
-              alt={alt}
-              onClose={onClose}
-            />
-          </m.div>
-        ) : null}
-      </AnimatePresence>
-    </LazyMotion>,
-    document.body
-  );
+  return null;
 };
 
 export default ImageViewer;

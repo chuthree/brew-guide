@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'photoswipe/style.css';
 /*
   ---break---
 */
@@ -22,6 +23,55 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
   }
+}
+
+.brew-image-viewer-pswp {
+  --pswp-bg: var(--background);
+  --pswp-placeholder-bg: rgb(245 245 245);
+  --pswp-icon-color: rgb(38 38 38);
+  --pswp-icon-color-secondary: rgb(163 163 163);
+  --pswp-icon-stroke-color: rgb(250 250 250);
+  --pswp-error-text-color: rgb(115 115 115);
+  --pswp-root-z-index: 100;
+}
+
+.dark .brew-image-viewer-pswp {
+  --pswp-bg: rgb(23 23 23);
+  --pswp-placeholder-bg: rgb(38 38 38);
+  --pswp-icon-color: rgb(245 245 245);
+  --pswp-icon-color-secondary: rgb(115 115 115);
+  --pswp-icon-stroke-color: rgb(23 23 23);
+  --pswp-error-text-color: rgb(163 163 163);
+}
+
+.brew-image-viewer-pswp .pswp__bg {
+  background: var(--pswp-bg);
+}
+
+.brew-image-viewer-pswp .pswp__top-bar {
+  height: 52px;
+  padding-top: env(safe-area-inset-top);
+}
+
+.brew-image-viewer-pswp .pswp__button {
+  width: 48px;
+  height: 52px;
+  opacity: 0.55;
+}
+
+.brew-image-viewer-pswp .pswp__button:hover,
+.brew-image-viewer-pswp .pswp__button:focus-visible {
+  opacity: 0.9;
+}
+
+.brew-image-viewer-pswp .pswp__counter {
+  height: 52px;
+  color: var(--pswp-error-text-color);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 52px;
+  opacity: 0.7;
+  text-shadow: none;
 }
 
 /* 变量定义 */

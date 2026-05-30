@@ -1097,6 +1097,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         url: e.detail.url,
         alt: e.detail.alt,
         backUrl: e.detail.backUrl,
+        items: e.detail.items,
+        index: e.detail.index,
+        sourceElement: e.detail.sourceElement,
+        sourceElements: e.detail.sourceElements,
       });
       setImageViewerOpen(true);
     };
