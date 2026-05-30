@@ -1,4 +1,5 @@
 import { CustomEquipment, equipmentList } from '@/lib/core/config';
+import { getSettingsStore } from '@/lib/stores/settingsStore';
 
 type PourTypeOption = {
   value: string;
@@ -40,6 +41,14 @@ const appendPourTypeOption = (
   options.push(option);
 };
 
+const getEquipmentNameOverrides = (): Record<string, string> =>
+  getSettingsStore().settings.equipmentNameOverrides || {};
+
+const getSystemEquipmentName = (
+  equipment: (typeof equipmentList)[number]
+): string =>
+  getEquipmentNameOverrides()[equipment.id]?.trim() || equipment.name;
+
 /**
  * 根据器具ID获取器具名称（统一查找逻辑）
  * @param equipmentId 器具ID
@@ -55,7 +64,7 @@ export const getEquipmentNameById = (
   // 首先在系统器具中查找
   const systemEquipment = equipmentList.find(eq => eq.id === equipmentId);
   if (systemEquipment) {
-    return systemEquipment.name;
+    return getSystemEquipmentName(systemEquipment);
   }
 
   // 然后在自定义器具中查找
@@ -81,7 +90,10 @@ export const getEquipmentIdByName = (
   if (!equipmentName) return '';
 
   // 首先在系统器具中查找
-  const systemEquipment = equipmentList.find(eq => eq.name === equipmentName);
+  const systemEquipment = equipmentList.find(
+    eq =>
+      getSystemEquipmentName(eq) === equipmentName || eq.name === equipmentName
+  );
   if (systemEquipment) {
     return systemEquipment.id;
   }
@@ -113,7 +125,10 @@ export const getEquipmentById = (
   // 首先在系统器具中查找
   const systemEquipment = equipmentList.find(eq => eq.id === equipmentId);
   if (systemEquipment) {
-    return systemEquipment;
+    return {
+      ...systemEquipment,
+      name: getSystemEquipmentName(systemEquipment),
+    };
   }
 
   // 然后在自定义器具中查找

@@ -63,6 +63,7 @@ import { resolveSelectedDateTimestamp } from '@/lib/utils/dateUtils';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import {
   isSameEquipment,
   getEquipmentIdByName,
@@ -72,6 +73,7 @@ import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import {
   buildCoffeeBeanLookup,
   buildEquipmentNameMap,
+  EMPTY_EQUIPMENT_NAME_OVERRIDES,
 } from '@/lib/notes/noteDisplay';
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({
@@ -259,7 +261,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const notes = useBrewingNoteStore(state => state.notes);
   const loadNotes = useBrewingNoteStore(state => state.loadNotes);
   const deleteNote = useBrewingNoteStore(state => state.deleteNote);
-  const updateNote = useBrewingNoteStore(state => state.updateNote);
 
   // 🔥 从 Zustand Store 订阅咖啡豆数据
   const coffeeBeans = useCoffeeBeanStore(state => state.beans);
@@ -268,10 +269,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     state => state.initialized
   );
   const loadEquipments = useCustomEquipmentStore(state => state.loadEquipments);
+  const equipmentNameOverrides = useSettingsStore(
+    state =>
+      state.settings.equipmentNameOverrides || EMPTY_EQUIPMENT_NAME_OVERRIDES
+  );
 
   const equipmentNames = useMemo(
-    () => buildEquipmentNameMap(customEquipments),
-    [customEquipments]
+    () => buildEquipmentNameMap(customEquipments, equipmentNameOverrides),
+    [customEquipments, equipmentNameOverrides]
   );
   const coffeeBeanLookup = useMemo(
     () => buildCoffeeBeanLookup(coffeeBeans),

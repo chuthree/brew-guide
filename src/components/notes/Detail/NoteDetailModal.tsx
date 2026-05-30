@@ -32,6 +32,7 @@ import RatingRadarDrawer from './RatingRadarDrawer';
 import {
   buildCoffeeBeanLookup,
   buildEquipmentNameMap,
+  EMPTY_EQUIPMENT_NAME_OVERRIDES,
   normalizeBrewingNoteParams,
   resolveNoteBean,
   resolveNoteBeanDisplayName,
@@ -184,6 +185,10 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const showNoteTimeInNote = useSettingsStore(
     state => state.settings.showNoteTimeInNote ?? true
   );
+  const equipmentNameOverrides = useSettingsStore(
+    state =>
+      state.settings.equipmentNameOverrides || EMPTY_EQUIPMENT_NAME_OVERRIDES
+  );
 
   // 从 store 获取实时笔记，避免详情页停留时数据快照过期
   const allNotes = useBrewingNoteStore(state => state.notes);
@@ -204,8 +209,8 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     [coffeeBeans]
   );
   const equipmentNames = useMemo(
-    () => buildEquipmentNameMap(customEquipments),
-    [customEquipments]
+    () => buildEquipmentNameMap(customEquipments, equipmentNameOverrides),
+    [customEquipments, equipmentNameOverrides]
   );
   const beanInfo = useMemo(
     () =>

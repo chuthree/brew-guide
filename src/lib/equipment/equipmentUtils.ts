@@ -26,11 +26,13 @@ export const equipmentUtils = {
    */
   getAllEquipments: (
     customEquipments: CustomEquipment[],
-    equipmentOrder?: EquipmentOrder
+    equipmentOrder?: EquipmentOrder,
+    equipmentNameOverrides: Record<string, string> = {}
   ) => {
     const orderedEquipmentIds = equipmentOrder?.equipmentIds || [];
     const systemEquipments = equipmentList.map(eq => ({
       ...eq,
+      name: equipmentNameOverrides[eq.id]?.trim() || eq.name,
       isCustom: false,
     }));
     const enabledSystemEquipments = systemEquipments.filter(
