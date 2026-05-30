@@ -438,6 +438,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   // 判断是否正在同步
   const isSyncing = syncStatus === 'syncing' || isInitialSyncing;
+  const showHeaderSyncSpinner =
+    syncProvider === 'supabase' && isSyncing && !isDesktopLayout;
 
   const isDesktopBackLayout = Boolean(canGoBack() && onBackClick);
   const showDesktopTopTabs = !isDesktopBackLayout;
@@ -616,7 +618,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   // ==================== 下拉上传状态和逻辑 ====================
   const [pullDistance, setPullDistance] = useState(0);
   const [pullSyncStatus, setPullSyncStatus] = useState<PullSyncStatus>('idle');
-  const [pullSyncMessage, setPullSyncMessage] = useState('');
   const touchStartY = useRef<number>(0);
   const isTrackingPull = useRef(false);
 
@@ -624,7 +625,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   const resetPullState = useCallback(() => {
     setPullDistance(0);
     setPullSyncStatus('idle');
-    setPullSyncMessage('');
     isTrackingPull.current = false;
   }, []);
 
@@ -1247,7 +1247,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                 >
                   <div className="relative flex h-4 w-4 items-center justify-center">
                     <AnimatePresence mode="popLayout" initial={false}>
-                      {syncProvider === 'supabase' && isSyncing ? (
+                      {showHeaderSyncSpinner ? (
                         <motion.div
                           key="spinner"
                           initial={{
