@@ -33,6 +33,7 @@ export interface BeanDetailModalProps {
     beanUnitPrice: number;
     beanInfo?: CoffeeBean | null;
   }) => void;
+  onEditRelatedNote?: (note: BrewingNote) => void;
   searchQuery?: string;
   onEdit?: (bean: CoffeeBean) => void;
   onDelete?: (bean: CoffeeBean) => void;

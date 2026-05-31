@@ -146,6 +146,7 @@ export interface AppModalsProps {
     beanUnitPrice: number;
     beanInfo?: CoffeeBean | null;
   }) => void;
+  onEditRelatedNoteFromBean: (note: BrewingNote) => void;
 
   // 咖啡豆导入
   showImportBeanForm: boolean;
@@ -333,6 +334,7 @@ const AppModals: React.FC<AppModalsProps> = ({
   beanDetailAddBeanState,
   onCreateNoteFromBean,
   onOpenNoteDetailFromBean,
+  onEditRelatedNoteFromBean,
 
   // 咖啡豆导入
   showImportBeanForm,
@@ -856,6 +858,7 @@ const AppModals: React.FC<AppModalsProps> = ({
           }}
           onCreateNoteFromBean={onCreateNoteFromBean}
           onOpenRelatedNote={onOpenNoteDetailFromBean}
+          onEditRelatedNote={onEditRelatedNoteFromBean}
           searchQuery={beanDetailSearchQuery}
           mode={
             beanDetailAddMode ? 'add' : beanDetailEditMode ? 'edit' : 'view'

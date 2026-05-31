@@ -35,6 +35,7 @@ import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { modalHistory as drawerModalHistory } from '@/lib/navigation/modalHistory';
 import hapticsUtils from '@/lib/ui/haptics';
 import { createEditableEquipmentFromPreset } from '@/lib/equipment/editableEquipment';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import {
   SettingPage,
   SettingReorderableRow,
@@ -282,6 +283,9 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
   );
 
   const effectiveSettings = storeSettings || settings;
+  const navigationState = deriveNavigationSettings(
+    effectiveSettings.navigationSettings
+  );
   const [isVisible, setIsVisible] = React.useState(false);
   const [activeEquipmentId, setActiveEquipmentId] = React.useState<
     string | null
@@ -1077,6 +1081,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
             onStepChange={setMethodFormStep}
             chromeMode="drawer"
             onChromeChange={setMethodChrome}
+            enableStageEditing={navigationState.visibleTabs.brewing}
             grinderDefaultSyncEnabled={
               effectiveSettings.grinderDefaultSync?.methodForm ?? false
             }
@@ -1128,6 +1133,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
         customEquipment={activeCustomEquipment || undefined}
         historyId="equipment-method-import-drawer"
         disableHistory={false}
+        allowEmptyStages={!navigationState.visibleTabs.brewing}
       />
     </>
   );

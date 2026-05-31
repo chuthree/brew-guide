@@ -36,6 +36,8 @@ interface ParamsStepProps {
   customEquipment?: CustomEquipment;
   /** 磨豆机同步默认开关状态 */
   grinderDefaultSyncEnabled?: boolean;
+  /** 无冲泡步骤的方案不显示萃取时间。 */
+  showExtractionTime?: boolean;
 }
 
 const ParamsStep: React.FC<ParamsStepProps> = ({
@@ -48,6 +50,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
   onLiquidWeightChange,
   customEquipment,
   grinderDefaultSyncEnabled = false,
+  showExtractionTime = true,
 }) => {
   // 检查是否是意式机
   const isEspresso = customEquipment
@@ -110,7 +113,7 @@ const ParamsStep: React.FC<ParamsStepProps> = ({
         </div>
 
         {/* 意式机特有字段 - 萃取时间 */}
-        {isEspresso && (
+        {isEspresso && showExtractionTime && (
           <div className="space-y-2">
             <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
               萃取时间

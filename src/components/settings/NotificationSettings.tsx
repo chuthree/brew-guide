@@ -5,6 +5,8 @@ import { SettingsOptions } from './Settings';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { Capacitor } from '@capacitor/core';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
+import { getNotificationSettingsVisibility } from './notificationSettingsVisibility';
 import {
   SettingPage,
   SettingSection,
@@ -30,6 +32,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+  const navigationState = deriveNavigationSettings(settings.navigationSettings);
   const updateSettings = useSettingsStore(state => state.updateSettings);
 
   // 使用 settingsStore 的 handleChange
@@ -45,6 +48,14 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
   // 检测是否为原生应用
   const isNativeApp = Capacitor.isNativePlatform();
+  const {
+    showBrewingNotificationSound,
+    showCoffeeBeanNotifications,
+    showGeneralNotificationSection,
+  } = getNotificationSettingsVisibility({
+    isNativeApp,
+    visibleModules: navigationState.visibleTabs,
+  });
   const calendarSyncSupported = canUseNativeCalendar();
   const calendarSync = normalizeCalendarSyncSettings(settings.calendarSync);
 
@@ -100,44 +111,48 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
   return (
     <SettingPage title="通知" isVisible={isVisible} onClose={handleClose}>
-      {/* 通用设置 */}
-      <SettingSection title="通用" className="-mt-4">
-        <SettingRow label="提示音" isLast={!isNativeApp}>
-          <SettingToggle
-            checked={settings.notificationSound}
-            onChange={checked => handleChange('notificationSound', checked)}
-          />
-        </SettingRow>
+      {showGeneralNotificationSection && (
+        <SettingSection title="通用" className="-mt-4">
+          {showBrewingNotificationSound && (
+            <SettingRow label="提示音" isLast={!isNativeApp}>
+              <SettingToggle
+                checked={settings.notificationSound}
+                onChange={checked => handleChange('notificationSound', checked)}
+              />
+            </SettingRow>
+          )}
 
-        {/* 震动反馈 - 仅在原生应用中显示 */}
-        {isNativeApp && (
-          <SettingRow label="震动反馈" isLast>
+          {isNativeApp && (
+            <SettingRow label="震动反馈" isLast>
+              <SettingToggle
+                checked={settings.hapticFeedback}
+                onChange={checked => handleChange('hapticFeedback', checked)}
+              />
+            </SettingRow>
+          )}
+        </SettingSection>
+      )}
+
+      {showCoffeeBeanNotifications && (
+        <SettingSection title="咖啡豆">
+          <SettingRow label="提醒弹窗" isLast={!calendarSyncSupported}>
             <SettingToggle
-              checked={settings.hapticFeedback}
-              onChange={checked => handleChange('hapticFeedback', checked)}
+              checked={settings.showBeanReadyReminderPopup}
+              onChange={checked =>
+                handleChange('showBeanReadyReminderPopup', checked)
+              }
             />
           </SettingRow>
-        )}
-      </SettingSection>
-
-      <SettingSection title="咖啡豆">
-        <SettingRow label="提醒弹窗" isLast={!calendarSyncSupported}>
-          <SettingToggle
-            checked={settings.showBeanReadyReminderPopup}
-            onChange={checked =>
-              handleChange('showBeanReadyReminderPopup', checked)
-            }
-          />
-        </SettingRow>
-        {calendarSyncSupported && (
-          <SettingRow label="同步日历" isLast>
-            <SettingToggle
-              checked={calendarSync.enabled}
-              onChange={handleCalendarSyncChange}
-            />
-          </SettingRow>
-        )}
-      </SettingSection>
+          {calendarSyncSupported && (
+            <SettingRow label="同步日历" isLast>
+              <SettingToggle
+                checked={calendarSync.enabled}
+                onChange={handleCalendarSyncChange}
+              />
+            </SettingRow>
+          )}
+        </SettingSection>
+      )}
     </SettingPage>
   );
 };

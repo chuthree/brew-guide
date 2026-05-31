@@ -2,7 +2,9 @@
 
 import React, { useMemo } from 'react';
 import { CoffeeBean } from '@/types/app';
-import ActionMenu from '@/components/coffee-bean/ui/action-menu';
+import ActionMenu, {
+  type ActionMenuItem,
+} from '@/components/coffee-bean/ui/action-menu';
 import { ArrowRight, ChevronLeft } from 'lucide-react';
 import { showToast } from '@/components/common/feedback/LightToast';
 import {
@@ -32,6 +34,8 @@ interface HeaderBarProps {
   tempBean: Partial<CoffeeBean>;
   printEnabled: boolean;
   saveButtonLabel?: string;
+  canGoToBrewing: boolean;
+  canGoToNotes: boolean;
   onClose: () => void;
   onGoToBrewing: () => void;
   onGoToNotes: () => void;
@@ -64,6 +68,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   tempBean,
   printEnabled,
   saveButtonLabel = '保存',
+  canGoToBrewing,
+  canGoToNotes,
   onClose,
   onGoToBrewing,
   onGoToNotes,
@@ -110,6 +116,28 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     isOptionalCoffeeBeanAmount(tempBean.price) &&
     hasValidRemaining &&
     hasValidBlendPercentages;
+  const beanNavigationActions: ActionMenuItem[] = [
+    ...(canGoToBrewing
+      ? [
+          {
+            id: 'brewing',
+            label: '去冲煮',
+            onClick: onGoToBrewing,
+            color: 'default' as const,
+          },
+        ]
+      : []),
+    ...(canGoToNotes
+      ? [
+          {
+            id: 'notes',
+            label: '去记录',
+            onClick: onGoToNotes,
+            color: 'default' as const,
+          },
+        ]
+      : []),
+  ];
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -254,30 +282,32 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           </button>
         )}
 
-        {/* 查看模式：熟豆通过菜单显示"去冲煮/去记录" */}
-        {!isAddMode && bean && !isGreenBean && (
-          <ActionMenu
-            items={[
-              {
-                id: 'brewing',
-                label: '去冲煮',
-                onClick: onGoToBrewing,
-                color: 'default' as const,
-              },
-              {
-                id: 'notes',
-                label: '去记录',
-                onClick: onGoToNotes,
-                color: 'default' as const,
-              },
-            ]}
-            useMorphingAnimation={true}
-            triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-            triggerChildren={
-              <ArrowRight className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-            }
-          />
-        )}
+        {/* 查看模式：熟豆按可见模块显示前往操作 */}
+        {!isAddMode &&
+          bean &&
+          !isGreenBean &&
+          beanNavigationActions.length === 1 && (
+            <button
+              type="button"
+              onClick={beanNavigationActions[0].onClick}
+              className="flex h-8 items-center justify-center rounded-full bg-neutral-100 px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-100"
+            >
+              {beanNavigationActions[0].label}
+            </button>
+          )}
+        {!isAddMode &&
+          bean &&
+          !isGreenBean &&
+          beanNavigationActions.length > 1 && (
+            <ActionMenu
+              items={beanNavigationActions}
+              useMorphingAnimation={true}
+              triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              triggerChildren={
+                <ArrowRight className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+              }
+            />
+          )}
 
         {/* 查看模式：原有的操作按钮 */}
         {!isAddMode &&

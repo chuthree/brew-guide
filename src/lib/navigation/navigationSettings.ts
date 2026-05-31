@@ -102,17 +102,21 @@ export const deriveNavigationSettings = (
   navigationSettings?: AppSettings['navigationSettings']
 ): DerivedNavigationSettings => {
   const normalized = normalizeNavigationSettings(navigationSettings);
-  const pinnedViews = normalized.pinnedViews as ViewOption[];
+  const rawPinnedViews = normalized.pinnedViews as ViewOption[];
+  const isCoffeeBeanModuleVisible = normalized.visibleTabs.coffeeBean;
+  const pinnedViews = isCoffeeBeanModuleVisible ? rawPinnedViews : [];
 
-  const enabledViews = COFFEE_BEAN_VIEW_ORDER.filter(
-    view => normalized.coffeeBeanViews[view] !== false
-  );
+  const enabledViews = isCoffeeBeanModuleVisible
+    ? COFFEE_BEAN_VIEW_ORDER.filter(
+        view => normalized.coffeeBeanViews[view] !== false
+      )
+    : [];
   const enabledUnpinnedViews = enabledViews.filter(
     view => !pinnedViews.includes(view)
   );
 
   const showCoffeeBeanMainTab =
-    normalized.visibleTabs.coffeeBean && enabledUnpinnedViews.length > 0;
+    isCoffeeBeanModuleVisible && enabledUnpinnedViews.length > 0;
 
   const renderedMainTabs = MAIN_NAVIGATION_TABS.filter(tab => {
     if (tab === 'coffeeBean') {
@@ -138,17 +142,23 @@ export const canDisableMainNavigationTab = (
   navigationSettings: AppSettings['navigationSettings'] | undefined,
   tab: MainNavigationTab
 ) => {
-  const derived = deriveNavigationSettings(navigationSettings);
+  const normalized = normalizeNavigationSettings(navigationSettings);
 
-  if (tab === 'coffeeBean' && !derived.canConfigureCoffeeBeanMainTab) {
-    return false;
-  }
-
-  if (!derived.renderedMainTabs.includes(tab)) {
+  if (!normalized.visibleTabs[tab]) {
     return true;
   }
 
-  return derived.renderedMainTabs.length > 1;
+  const nextNavigation = mergeNavigationSettings(normalized, {
+    visibleTabs: {
+      ...normalized.visibleTabs,
+      [tab]: false,
+    },
+  });
+  const nextDerived = deriveNavigationSettings(nextNavigation);
+
+  return (
+    nextDerived.renderedMainTabs.length + nextDerived.pinnedViews.length > 0
+  );
 };
 
 export const canDisableCoffeeBeanView = (

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Method } from '@/lib/core/config';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 
 interface MethodSelectorProps {
   selectedEquipment: string;
@@ -110,6 +111,11 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   const methodParamOverrides = useSettingsStore(
     state => state.settings.methodParamOverrides
   );
+  const navigationSettings = useSettingsStore(
+    state => state.settings.navigationSettings
+  );
+  const canUseBrewingModule =
+    deriveNavigationSettings(navigationSettings).visibleTabs.brewing;
 
   const findMethod = useCallback(
     (methodId: string): Method | undefined =>
@@ -458,6 +464,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     const isSelected =
       selectedMethod === methodId || selectedMethod === method.name;
     const override = getOverride(methodId);
+    const hasStages = method.params.stages.length > 0;
 
     // 显示参数：优先使用覆盖值（包括空字符串）
     const displayParams = override
@@ -511,10 +518,11 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               {isEspresso ? (
                 <>
                   {renderDisplay('研磨度', displayParams.grindSize)}
-                  {renderDisplay(
-                    '萃取时长',
-                    `${override?.extractionTime ?? method.params.stages?.[0]?.duration ?? 0}s`
-                  )}
+                  {hasStages &&
+                    renderDisplay(
+                      '萃取时长',
+                      `${override?.extractionTime ?? method.params.stages[0]?.duration ?? 0}s`
+                    )}
                   {renderDisplay('液重', displayParams.water)}
                 </>
               ) : (
@@ -553,12 +561,13 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
                         dropdownPlacement="right"
                       />
                     </div>
-                    {renderInput(
-                      '萃取时长',
-                      editingValues?.time ?? '',
-                      v => updateParam('time', v),
-                      's'
-                    )}
+                    {hasStages &&
+                      renderInput(
+                        '萃取时长',
+                        editingValues?.time ?? '',
+                        v => updateParam('time', v),
+                        's'
+                      )}
                     {renderInput(
                       '液重',
                       editingValues?.water ?? '',
@@ -617,7 +626,9 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         </div>
       ) : !hasMethods ? (
         <div className="border-l border-neutral-200/50 pl-6 text-xs text-neutral-500 dark:border-neutral-800/50 dark:text-neutral-400">
-          没有可用的冲煮方案，请前往&ldquo;冲煮&rdquo;页面添加
+          {canUseBrewingModule
+            ? '没有可用的冲煮方案，请前往“冲煮”页面添加'
+            : '没有可用方案，请前往设置中的“器具和方案”添加'}
         </div>
       ) : (
         <div className="space-y-5">

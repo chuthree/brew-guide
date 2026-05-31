@@ -19,42 +19,32 @@ import {
   getOfflineAndroidDownloadUrl,
   getOfflineIosDownloadUrl,
 } from '@/lib/utils/downloadUrls';
+import { Capacitor } from '@capacitor/core';
 import UpdateDrawer from './UpdateDrawer';
 import SettingGroup from './SettingItem';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
+import { buildSettingsFeatureGroups } from './settingsFeatureRegistry';
+import { getNotificationSettingsVisibility } from './notificationSettingsVisibility';
 
 import { useTheme } from 'next-themes';
 import {
   ChevronLeft,
   Monitor,
-  Archive,
-  List,
-  CalendarDays,
-  Timer,
   Database,
   Bell,
-  Shuffle,
-  Palette,
-  ImagePlus,
   Cloud,
   Upload,
   Download,
   X,
-  Settings2,
   Layout,
   CircleHelp,
   Info,
   User,
   MessageCircle,
   ThumbsUp,
-  Notebook,
-  FlaskConical,
-  LibraryBig,
-  Box,
-  Play,
-  Folder,
 } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -192,6 +182,16 @@ const Settings: React.FC<SettingsProps> = ({
 }) => {
   // 使用 Zustand store 管理设置
   const settings = useSettingsStore(state => state.settings);
+  const navigationState = deriveNavigationSettings(settings.navigationSettings);
+  const settingsFeatureGroups = buildSettingsFeatureGroups({
+    settings: settings as SettingsOptions,
+    subSettingsHandlers,
+    visibleModules: navigationState.visibleTabs,
+  });
+  const { hasVisibleNotificationSettings } = getNotificationSettingsVisibility({
+    isNativeApp: Capacitor.isNativePlatform(),
+    visibleModules: navigationState.visibleTabs,
+  });
   const updateSettings = useSettingsStore(state => state.updateSettings);
   const storeInitialized = useSettingsStore(state => state.initialized);
   const loadSettings = useSettingsStore(state => state.loadSettings);
@@ -736,146 +736,27 @@ const Settings: React.FC<SettingsProps> = ({
                   settingId: 'navigation-settings',
                   onClick: subSettingsHandlers.onOpenNavigationSettings,
                 },
-                {
-                  icon: Bell,
-                  label: '通知',
-                  settingId: 'notification-settings',
-                  onClick: subSettingsHandlers.onOpenNotificationSettings,
-                },
+                ...(hasVisibleNotificationSettings
+                  ? [
+                      {
+                        icon: Bell,
+                        label: '通知',
+                        settingId: 'notification-settings',
+                        onClick: subSettingsHandlers.onOpenNotificationSettings,
+                      },
+                    ]
+                  : []),
               ]}
             />
-            {/* 功能设置 */}
-            <SettingGroup
-              paddingClass={masterGroupPaddingClass}
-              activeSettingId={activeSubSettingId}
-              dimUnselectedItems={shouldDimSubSettingEntries}
-              items={[
-                {
-                  icon: Play,
-                  label: '冲煮',
-                  settingId: 'brewing-settings',
-                  onClick: subSettingsHandlers.onOpenBrewingSettings,
-                },
-                {
-                  icon: Timer,
-                  label: '计时器',
-                  settingId: 'timer-settings',
-                  onClick: subSettingsHandlers.onOpenTimerSettings,
-                },
-                {
-                  icon: Settings2,
-                  label: '磨豆机',
-                  settingId: 'grinder-settings',
-                  onClick: subSettingsHandlers.onOpenGrinderSettings,
-                },
-                {
-                  icon: Shuffle,
-                  label: '随机咖啡豆规则',
-                  settingId: 'random-coffee-bean-settings',
-                  onClick: subSettingsHandlers.onOpenRandomCoffeeBeanSettings,
-                },
-              ]}
-            />
-
-            <SettingGroup
-              paddingClass={masterGroupPaddingClass}
-              activeSettingId={activeSubSettingId}
-              dimUnselectedItems={shouldDimSubSettingEntries}
-              items={[
-                {
-                  icon: LibraryBig,
-                  label: '器具和方案',
-                  settingId: 'equipment-method-settings',
-                  onClick: subSettingsHandlers.onOpenEquipmentMethodSettings,
-                },
-              ]}
-            />
-
-            {/* 咖啡豆管理 */}
-            <SettingGroup
-              paddingClass={masterGroupPaddingClass}
-              activeSettingId={activeSubSettingId}
-              dimUnselectedItems={shouldDimSubSettingEntries}
-              items={[
-                {
-                  icon: List,
-                  label: '咖啡豆',
-                  settingId: 'bean-settings',
-                  onClick: subSettingsHandlers.onOpenBeanSettings,
-                },
-                {
-                  icon: Folder,
-                  label: '分组',
-                  settingId: 'coffee-bean-group-settings',
-                  value:
-                    settings.coffeeBeanGroups &&
-                    settings.coffeeBeanGroups.length > 0
-                      ? `${settings.coffeeBeanGroups.length} 组`
-                      : undefined,
-                  onClick: subSettingsHandlers.onOpenCoffeeBeanGroupSettings,
-                },
-                {
-                  icon: Box,
-                  label: '生豆库',
-                  settingId: 'green-bean-settings',
-                  onClick: subSettingsHandlers.onOpenGreenBeanSettings,
-                },
-                {
-                  icon: Archive,
-                  label: '库存扣除',
-                  settingId: 'stock-settings',
-                  onClick: subSettingsHandlers.onOpenStockSettings,
-                },
-                {
-                  icon: CalendarDays,
-                  label: '赏味期',
-                  settingId: 'flavor-period-settings',
-                  onClick: subSettingsHandlers.onOpenFlavorPeriodSettings,
-                },
-                {
-                  icon: ImagePlus,
-                  label: '烘焙商图标',
-                  settingId: 'roaster-logo-settings',
-                  onClick: subSettingsHandlers.onOpenRoasterLogoSettings,
-                },
-              ]}
-            />
-
-            {/* 笔记管理 */}
-            <SettingGroup
-              paddingClass={masterGroupPaddingClass}
-              activeSettingId={activeSubSettingId}
-              dimUnselectedItems={shouldDimSubSettingEntries}
-              items={[
-                {
-                  icon: Notebook,
-                  label: '笔记',
-                  settingId: 'note-settings',
-                  onClick: subSettingsHandlers.onOpenNoteSettings,
-                },
-                {
-                  icon: Palette,
-                  label: '评分维度',
-                  settingId: 'flavor-dimension-settings',
-                  onClick: subSettingsHandlers.onOpenFlavorDimensionSettings,
-                },
-              ]}
-            />
-
-            {/* 实验性功能 */}
-            <SettingGroup
-              paddingClass={masterGroupPaddingClass}
-              activeSettingId={activeSubSettingId}
-              dimUnselectedItems={shouldDimSubSettingEntries}
-              items={[
-                {
-                  icon: FlaskConical,
-                  label: '实验性功能',
-                  settingId: 'experimental-settings',
-                  onClick: subSettingsHandlers.onOpenExperimentalSettings,
-                },
-              ]}
-            />
+            {settingsFeatureGroups.map(group => (
+              <SettingGroup
+                key={group.id}
+                paddingClass={masterGroupPaddingClass}
+                activeSettingId={activeSubSettingId}
+                dimUnselectedItems={shouldDimSubSettingEntries}
+                items={group.items}
+              />
+            ))}
 
             {/* 数据与备份 */}
             <SettingGroup

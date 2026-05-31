@@ -454,11 +454,6 @@ export function parseMethodFromJson(jsonString: string): Method | null {
       }
     }
 
-    // 验证stages
-    if (!method.params.stages || method.params.stages.length === 0) {
-      throw new Error('导入的JSON缺少冲煮步骤');
-    }
-
     // 强制确保name字段不为空
     if (!method.name) {
       method.name = `${parsedData.equipment || ''}优化冲煮方案`;

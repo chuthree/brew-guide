@@ -19,6 +19,7 @@ import {
   calculateCumulativeTime,
   calculateCumulativeWater,
 } from '@/lib/brewing/stageUtils';
+import { hasBrewingStages } from '@/lib/brewing/methodAvailability';
 
 // 增强 Content.注水.steps 接口以支持 pourType
 declare module './useBrewingState' {
@@ -137,7 +138,8 @@ export function useBrewingContent({
         let commonMethodsForEquipment: Method[] = [];
 
         // 总是获取自定义方案
-        customMethodsForEquipment = currentEquipmentCustomMethods;
+        customMethodsForEquipment =
+          currentEquipmentCustomMethods.filter(hasBrewingStages);
 
         // 获取通用方案
         {

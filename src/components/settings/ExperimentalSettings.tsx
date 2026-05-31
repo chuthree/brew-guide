@@ -6,6 +6,7 @@ import { SettingsOptions } from './Settings';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import {
   DEFAULT_BEAN_RECOGNITION_PROMPT,
   testCustomBeanRecognitionConfig,
@@ -34,6 +35,9 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
 }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
+  const navigationState = deriveNavigationSettings(settings.navigationSettings);
+  const showCoffeeBeanExperiments = navigationState.visibleTabs.coffeeBean;
+  const showNoteExperiments = navigationState.visibleTabs.notes;
   const updateSettings = useSettingsStore(state => state.updateSettings);
 
   // 使用 settingsStore 的 handleChange
@@ -79,7 +83,10 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
 
   // 用于保存最新的 onClose 引用
   const onCloseRef = React.useRef(onClose);
-  onCloseRef.current = onClose;
+
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // 关闭处理函数（带动画）
   const handleCloseWithAnimation = React.useCallback(() => {
@@ -169,158 +176,171 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
 
   return (
     <SettingPage title="实验性功能" isVisible={isVisible} onClose={handleClose}>
-      <SettingSection
-        title="咖啡豆"
-        footer="开启后，手动添加和编辑咖啡豆将使用全屏表单。"
-      >
-        <SettingRow label="沉浸式表单" isLast>
-          <SettingToggle
-            checked={settings.immersiveAdd || false}
-            onChange={checked => handleChange('immersiveAdd', checked)}
-          />
-        </SettingRow>
-      </SettingSection>
-
-      <BeanSummaryCapacityLimitSection
-        settings={settings}
-        handleChange={handleChange}
-      />
-
-      <SettingSection
-        footer={
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            使用你自己的模型API用于识别咖啡豆，以获得更准确的结果。
-            <a
-              className="ml-1 text-neutral-600 underline underline-offset-2 dark:text-neutral-300"
-              href="https://chu3.top/brewguide-help/custom-bean-recognition-api"
-              target="_blank"
-              rel="noreferrer"
-            >
-              查看教程
-            </a>
-          </p>
-        }
-      >
-        <SettingRow label="自定义识别咖啡豆 API">
-          <SettingToggle
-            checked={settings.experimentalBeanRecognitionEnabled || false}
-            onChange={checked =>
-              handleChange('experimentalBeanRecognitionEnabled', checked)
-            }
-          />
-        </SettingRow>
-        {settings.experimentalBeanRecognitionEnabled && (
-          <div className="space-y-2 px-3 py-3">
-            <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
-              <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
-                API URL
-              </p>
-              <input
-                value={apiBaseUrl}
-                onChange={e => setApiBaseUrl(e.target.value)}
-                onBlur={saveApiBaseUrl}
-                placeholder="https://api.qnaigc.com/v1"
-                className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
-              />
-            </div>
-
-            <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
-              <div className="mb-1 flex items-center justify-between">
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  API Key
-                </p>
-                <button
-                  onClick={() => setShowApiKey(v => !v)}
-                  className="text-xs text-neutral-500 dark:text-neutral-400"
-                >
-                  {showApiKey ? '隐藏' : '显示'}
-                </button>
-              </div>
-              <input
-                value={apiKey}
-                type={showApiKey ? 'text' : 'password'}
-                onChange={e => setApiKey(e.target.value)}
-                onBlur={saveApiKey}
-                placeholder="sk-..."
-                className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
-              />
-            </div>
-
-            <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
-              <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
-                Model
-              </p>
-              <input
-                value={model}
-                onChange={e => setModel(e.target.value)}
-                onBlur={saveModel}
-                placeholder="qwen-vl-max-2025-01-25"
-                className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
-              />
-            </div>
-
-            <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
-              <div className="mb-1 flex items-center justify-between">
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  System Prompt
-                </p>
-                <button
-                  onClick={restoreDefaultPrompt}
-                  className="text-xs text-neutral-500 dark:text-neutral-400"
-                >
-                  重置
-                </button>
-              </div>
-              <textarea
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                onBlur={savePrompt}
-                placeholder={DEFAULT_BEAN_RECOGNITION_PROMPT}
-                className="h-28 w-full resize-none bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
-              />
-            </div>
-
-            <button
-              onClick={testConfig}
-              disabled={isTestingConfig}
-              className={`w-full rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                isTestingConfig
-                  ? 'bg-neutral-200 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
-                  : 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-              }`}
-            >
-              {isTestingConfig ? '测试中...' : '测试连接'}
-            </button>
-          </div>
-        )}
-      </SettingSection>
-
-      <SettingSection
-        title="笔记"
-        footer="添加笔记和快捷扣除时，使用分类栏选中的日期。"
-      >
-        <SettingRow
-          label="同步筛选日期"
-          isLast={!settings.syncNewNoteDateWithSelectedDate}
+      {showCoffeeBeanExperiments && (
+        <SettingSection
+          title="咖啡豆"
+          footer="开启后，手动添加和编辑咖啡豆将使用全屏表单。"
         >
-          <SettingToggle
-            checked={settings.syncNewNoteDateWithSelectedDate || false}
-            onChange={checked =>
-              handleChange('syncNewNoteDateWithSelectedDate', checked)
-            }
-          />
-        </SettingRow>
-        {settings.syncNewNoteDateWithSelectedDate && (
-          <SettingRow label="快捷扣除" isSubSetting isLast>
+          <SettingRow label="沉浸式表单" isLast>
             <SettingToggle
-              checked={settings.syncQuickDecrementDateWithSelectedDate || false}
+              checked={settings.immersiveAdd || false}
+              onChange={checked => handleChange('immersiveAdd', checked)}
+            />
+          </SettingRow>
+        </SettingSection>
+      )}
+
+      {showCoffeeBeanExperiments && (
+        <BeanSummaryCapacityLimitSection
+          settings={settings}
+          handleChange={handleChange}
+        />
+      )}
+
+      {showCoffeeBeanExperiments && (
+        <SettingSection
+          footer={
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              使用你自己的模型API用于识别咖啡豆，以获得更准确的结果。
+              <a
+                className="ml-1 text-neutral-600 underline underline-offset-2 dark:text-neutral-300"
+                href="https://chu3.top/brewguide-help/custom-bean-recognition-api"
+                target="_blank"
+                rel="noreferrer"
+              >
+                查看教程
+              </a>
+            </p>
+          }
+        >
+          <SettingRow label="自定义识别咖啡豆 API">
+            <SettingToggle
+              checked={settings.experimentalBeanRecognitionEnabled || false}
               onChange={checked =>
-                handleChange('syncQuickDecrementDateWithSelectedDate', checked)
+                handleChange('experimentalBeanRecognitionEnabled', checked)
               }
             />
           </SettingRow>
-        )}
-      </SettingSection>
+          {settings.experimentalBeanRecognitionEnabled && (
+            <div className="space-y-2 px-3 py-3">
+              <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
+                <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  API URL
+                </p>
+                <input
+                  value={apiBaseUrl}
+                  onChange={e => setApiBaseUrl(e.target.value)}
+                  onBlur={saveApiBaseUrl}
+                  placeholder="https://api.qnaigc.com/v1"
+                  className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                />
+              </div>
+
+              <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    API Key
+                  </p>
+                  <button
+                    onClick={() => setShowApiKey(v => !v)}
+                    className="text-xs text-neutral-500 dark:text-neutral-400"
+                  >
+                    {showApiKey ? '隐藏' : '显示'}
+                  </button>
+                </div>
+                <input
+                  value={apiKey}
+                  type={showApiKey ? 'text' : 'password'}
+                  onChange={e => setApiKey(e.target.value)}
+                  onBlur={saveApiKey}
+                  placeholder="sk-..."
+                  className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                />
+              </div>
+
+              <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
+                <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  Model
+                </p>
+                <input
+                  value={model}
+                  onChange={e => setModel(e.target.value)}
+                  onBlur={saveModel}
+                  placeholder="qwen-vl-max-2025-01-25"
+                  className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                />
+              </div>
+
+              <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    System Prompt
+                  </p>
+                  <button
+                    onClick={restoreDefaultPrompt}
+                    className="text-xs text-neutral-500 dark:text-neutral-400"
+                  >
+                    重置
+                  </button>
+                </div>
+                <textarea
+                  value={prompt}
+                  onChange={e => setPrompt(e.target.value)}
+                  onBlur={savePrompt}
+                  placeholder={DEFAULT_BEAN_RECOGNITION_PROMPT}
+                  className="h-28 w-full resize-none bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                />
+              </div>
+
+              <button
+                onClick={testConfig}
+                disabled={isTestingConfig}
+                className={`w-full rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                  isTestingConfig
+                    ? 'bg-neutral-200 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
+                    : 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                }`}
+              >
+                {isTestingConfig ? '测试中...' : '测试连接'}
+              </button>
+            </div>
+          )}
+        </SettingSection>
+      )}
+
+      {showNoteExperiments && (
+        <SettingSection
+          title="笔记"
+          footer="添加笔记和快捷扣除时，使用分类栏选中的日期。"
+        >
+          <SettingRow
+            label="同步筛选日期"
+            isLast={!settings.syncNewNoteDateWithSelectedDate}
+          >
+            <SettingToggle
+              checked={settings.syncNewNoteDateWithSelectedDate || false}
+              onChange={checked =>
+                handleChange('syncNewNoteDateWithSelectedDate', checked)
+              }
+            />
+          </SettingRow>
+          {settings.syncNewNoteDateWithSelectedDate && (
+            <SettingRow label="快捷扣除" isSubSetting isLast>
+              <SettingToggle
+                checked={
+                  settings.syncQuickDecrementDateWithSelectedDate || false
+                }
+                onChange={checked =>
+                  handleChange(
+                    'syncQuickDecrementDateWithSelectedDate',
+                    checked
+                  )
+                }
+              />
+            </SettingRow>
+          )}
+        </SettingSection>
+      )}
     </SettingPage>
   );
 };

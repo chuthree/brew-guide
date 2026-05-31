@@ -6,6 +6,7 @@ import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
 import { SettingsOptions } from '@/components/settings/Settings';
 import AdaptiveModal from '@/components/common/ui/AdaptiveModal';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 
 interface BrewingNoteEditModalProps {
   showModal: boolean;
@@ -24,6 +25,8 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   settings,
   isCopy = false, // 默认不是复制操作
 }) => {
+  const navigationState = deriveNavigationSettings(settings?.navigationSettings);
+  const canUseNotesModule = navigationState.visibleTabs.notes;
   // 快捷记录模式状态
   const [isQuickDecrementEdit, setIsQuickDecrementEdit] = useState(false);
   const [isQuickMode, setIsQuickMode] = useState(false);
@@ -128,7 +131,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
           {/* 底部保存按钮 */}
           <div className="modal-bottom-button flex shrink-0 items-center justify-center gap-3">
             {/* 切换按钮 - 仅快捷扣除记录显示 */}
-            {isQuickDecrementEdit && (
+            {canUseNotesModule && isQuickDecrementEdit && (
               <button
                 type="button"
                 onClick={handleToggleQuickMode}
@@ -146,7 +149,9 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
               onClick={handleSaveClick}
               className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
             >
-              <span className="font-medium">保存笔记</span>
+              <span className="font-medium">
+                {canUseNotesModule ? '保存笔记' : '保存记录'}
+              </span>
             </button>
           </div>
         </div>

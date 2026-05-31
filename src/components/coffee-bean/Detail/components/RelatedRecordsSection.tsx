@@ -34,6 +34,7 @@ interface RelatedRecordsSectionProps {
     beanUnitPrice: number;
     beanInfo?: CoffeeBean | null;
   }) => void;
+  onEditNote?: (note: BrewingNote) => void;
 }
 
 const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
@@ -50,6 +51,7 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
     setShowGreenBeanRecords,
     onImageClick,
     onOpenNoteDetail,
+    onEditNote,
   }) => {
     const { getValidTasteRatings } = useFlavorDimensions();
     const [noteImageErrors, setNoteImageErrors] = useState<
@@ -202,16 +204,13 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
               note => {
                 const isChangeRecord = isSimpleChangeRecord(note);
                 const isRoasting = isRoastingRecord(note);
+                const isEditableRecord = !!onEditNote && !isRoasting;
                 const isClickableBrewingRecord =
-                  !isChangeRecord && !isRoasting && !!onOpenNoteDetail;
-
-                return (
-                  <div
-                    key={note.id}
-                    className={`rounded bg-neutral-100 p-1.5 dark:bg-neutral-800/40 ${
-                      isClickableBrewingRecord ? 'cursor-pointer' : ''
-                    }`}
-                  >
+                  !isChangeRecord &&
+                  !isRoasting &&
+                  (!!onOpenNoteDetail || isEditableRecord);
+                const content = (
+                  <>
                     {isChangeRecord ? (
                       <ChangeRecordItem note={note} />
                     ) : isRoasting ? (
@@ -230,9 +229,37 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
                         noteImageErrors={noteImageErrors}
                         setNoteImageErrors={setNoteImageErrors}
                         onImageClick={onImageClick}
-                        onOpenNoteDetail={onOpenNoteDetail}
+                        onOpenNoteDetail={
+                          isEditableRecord ? undefined : onOpenNoteDetail
+                        }
                       />
                     )}
+                  </>
+                );
+
+                if (isEditableRecord) {
+                  return (
+                    <button
+                      type="button"
+                      key={note.id}
+                      onClick={() => onEditNote?.(note)}
+                      className="block w-full cursor-pointer rounded bg-neutral-100 p-1.5 text-left dark:bg-neutral-800/40"
+                    >
+                      {content}
+                    </button>
+                  );
+                }
+
+                return (
+                  <div
+                    key={note.id}
+                    className={`rounded bg-neutral-100 p-1.5 dark:bg-neutral-800/40 ${
+                      isClickableBrewingRecord
+                        ? 'cursor-pointer'
+                        : 'cursor-default'
+                    }`}
+                  >
+                    {content}
                   </div>
                 );
               }
@@ -405,19 +432,8 @@ const BrewingRecordItem: React.FC<{
       note.method?.trim() || '',
     ].filter(Boolean);
 
-    return (
-      <button
-        type="button"
-        className="block w-full cursor-pointer space-y-3 text-left"
-        onClick={() =>
-          onOpenNoteDetail?.({
-            note,
-            equipmentName,
-            beanUnitPrice,
-            beanInfo: noteBean,
-          })
-        }
-      >
+    const content = (
+      <>
         {/* 图片和标题参数区域 */}
         <div className="flex gap-3">
           {/* 笔记图片 */}
@@ -566,6 +582,27 @@ const BrewingRecordItem: React.FC<{
             {note.notes}
           </div>
         )}
+      </>
+    );
+
+    if (!onOpenNoteDetail) {
+      return <div className="block w-full space-y-3 text-left">{content}</div>;
+    }
+
+    return (
+      <button
+        type="button"
+        className="block w-full cursor-pointer space-y-3 text-left"
+        onClick={() =>
+          onOpenNoteDetail({
+            note,
+            equipmentName,
+            beanUnitPrice,
+            beanInfo: noteBean,
+          })
+        }
+      >
+        {content}
       </button>
     );
   }

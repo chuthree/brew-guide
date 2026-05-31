@@ -77,6 +77,7 @@ interface MethodImportModalProps {
   customEquipment?: CustomEquipment;
   historyId?: string;
   disableHistory?: boolean;
+  allowEmptyStages?: boolean;
 }
 
 // 步骤类型定义
@@ -146,6 +147,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
   customEquipment,
   historyId,
   disableHistory = true,
+  allowEmptyStages = false,
 }) => {
   // 统一的复制功能
   const { copyText, failureDrawerProps } = useCopy({
@@ -230,7 +232,11 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         }
 
         const params = methodData.params as Record<string, unknown>;
-        if (!params.stages || !Array.isArray(params.stages)) {
+        if (
+          !params.stages ||
+          !Array.isArray(params.stages) ||
+          (!allowEmptyStages && params.stages.length === 0)
+        ) {
           showToast({ type: 'error', title: '方案缺少冲煮步骤' });
           return;
         }
@@ -271,7 +277,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         showToast({ type: 'error', title: `添加失败: ${errorMessage}` });
       }
     },
-    [existingMethods, onImport, onClose]
+    [allowEmptyStages, existingMethods, onImport, onClose]
   );
 
   // 处理输入JSON - 进入 JSON 输入步骤

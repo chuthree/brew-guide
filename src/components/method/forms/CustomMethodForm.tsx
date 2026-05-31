@@ -120,6 +120,8 @@ interface CustomMethodFormProps {
   onStepChange?: (step: number) => void;
   /** 磨豆机同步默认开关状态 */
   grinderDefaultSyncEnabled?: boolean;
+  /** 是否启用冲泡步骤编辑。笔记模式下新增方案只保留基本参数。 */
+  enableStageEditing?: boolean;
   chromeMode?: 'internal' | 'drawer';
   onChromeChange?: (chrome: {
     doneLabel: string;
@@ -149,6 +151,7 @@ const CustomMethodForm = React.forwardRef<
       currentStep: externalStep,
       onStepChange,
       grinderDefaultSyncEnabled = false,
+      enableStageEditing = true,
       chromeMode = 'internal',
       onChromeChange,
     },
@@ -159,7 +162,11 @@ const CustomMethodForm = React.forwardRef<
     const [internalStep, setInternalStep] = useState<Step>('name');
 
     // 步骤映射：数字步骤 <-> 字符串步骤
-    const stepOrder = useMemo<Step[]>(() => ['name', 'params', 'stages'], []);
+    const stepOrder = useMemo<Step[]>(
+      () =>
+        enableStageEditing ? ['name', 'params', 'stages'] : ['name', 'params'],
+      [enableStageEditing]
+    );
 
     // 根据外部步骤号获取实际步骤
     const currentStep: Step = externalStep
@@ -214,15 +221,17 @@ const CustomMethodForm = React.forwardRef<
             ratio: '1:2',
             grindSize: '细',
             temp: '93°C',
-            stages: [
-              {
-                duration: 25,
-                label: '萃取浓缩',
-                water: '36',
-                detail: '标准意式浓缩',
-                pourType: 'extraction',
-              },
-            ],
+            stages: enableStageEditing
+              ? [
+                  {
+                    duration: 25,
+                    label: '萃取浓缩',
+                    water: '36',
+                    detail: '标准意式浓缩',
+                    pourType: 'extraction',
+                  },
+                ]
+              : [],
           },
         };
       }
@@ -235,10 +244,12 @@ const CustomMethodForm = React.forwardRef<
           ratio: '1:15',
           grindSize: '中细',
           temp: '92°C',
-          stages: createInitialStagesForEquipment(customEquipment, '15g'),
+          stages: enableStageEditing
+            ? createInitialStagesForEquipment(customEquipment, '15g')
+            : [],
         },
       };
-    }, [customEquipment]);
+    }, [customEquipment, enableStageEditing]);
 
     // 初始化方法状态
     const [method, setMethod] = useState<MethodWithStages>(() => {
@@ -248,12 +259,17 @@ const CustomMethodForm = React.forwardRef<
 
     // ===== 步骤配置 =====
     const steps = React.useMemo(
-      () => [
-        { id: 'name' as Step, label: '方案名称' },
-        { id: 'params' as Step, label: '基本参数' },
-        { id: 'stages' as Step, label: '冲泡步骤' },
-      ],
-      []
+      () =>
+        stepOrder.map(id => ({
+          id,
+          label:
+            id === 'name'
+              ? '方案名称'
+              : id === 'params'
+                ? '基本参数'
+                : '冲泡步骤',
+        })),
+      [stepOrder]
     );
 
     // ===== 基本功能函数 =====
@@ -594,6 +610,10 @@ const CustomMethodForm = React.forwardRef<
         JSON.stringify(method)
       ) as MethodWithStages;
 
+      if (!enableStageEditing && !initialMethod) {
+        finalMethod.params.stages = [];
+      }
+
       // 如果是聪明杯，将阀门状态添加到步骤名称中
       if (customEquipment.hasValve && finalMethod.params.stages) {
         finalMethod.params.stages = finalMethod.params.stages.map(stage => {
@@ -670,7 +690,7 @@ const CustomMethodForm = React.forwardRef<
         // 可以在这里添加用户友好的错误提示
         alert('保存方案失败，请重试');
       }
-    }, [customEquipment, method, onSave]);
+    }, [customEquipment, enableStageEditing, initialMethod, method, onSave]);
 
     const handleCoffeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const coffee = e.target.value;
@@ -868,11 +888,7 @@ const CustomMethodForm = React.forwardRef<
 
     // 意式机特有 - 处理液重变更
     const handleLiquidWeightChange = (liquidWeight: string) => {
-      if (
-        !isEspressoMachine(customEquipment) ||
-        method.params.stages.length === 0
-      )
-        return;
+      if (!isEspressoMachine(customEquipment)) return;
 
       // 获取旧液重（第一个萃取步骤的水量）
       const extractionStage = method.params.stages.find(
@@ -1024,6 +1040,9 @@ const CustomMethodForm = React.forwardRef<
                 })
               }
               onTempChange={handleTempChange}
+              showExtractionTime={
+                enableStageEditing && method.params.stages.length > 0
+              }
               // 添加意式机特有参数处理函数
               onExtractionTimeChange={
                 isEspressoMachine(customEquipment)

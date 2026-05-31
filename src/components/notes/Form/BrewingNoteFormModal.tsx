@@ -36,6 +36,7 @@ import {
   normalizeBrewingNoteDraftSelection,
   normalizeBrewingNoteSelection,
 } from '@/lib/notes/noteDisplay';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import {
   clearBrewingNoteDraftSession,
   createBrewingNoteDraftSession,
@@ -137,6 +138,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   settings,
 }) => {
   const { beans: coffeeBeans } = useCoffeeBeanData();
+  const navigationState = deriveNavigationSettings(settings?.navigationSettings);
+  const canUseCoffeeBeanModule = navigationState.visibleTabs.coffeeBean;
+  const availableCoffeeBeans = canUseCoffeeBeanModule ? coffeeBeans : [];
   const setPersistedEquipment = useEquipmentStore(
     state => state.setSelectedEquipment
   );
@@ -147,9 +151,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const [isLongPressRandom, setIsLongPressRandom] = useState(false);
   const [isExitDrawerOpen, setIsExitDrawerOpen] = useState(false);
   const hasPrefilledCoffeeBean = Boolean(
-    initialNote?.coffeeBean ||
-    initialNote?.beanId ||
-    initialNote?.coffeeBeanInfo?.name
+    canUseCoffeeBeanModule &&
+      (initialNote?.coffeeBean ||
+        initialNote?.beanId ||
+        initialNote?.coffeeBeanInfo?.name)
   );
 
   const getInitialDraftEquipmentId = useCallback(
@@ -166,19 +171,22 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         initialNote: initialNote
           ? {
               ...initialNote,
-              coffeeBean: initialNote.coffeeBean || null,
+              coffeeBean: canUseCoffeeBeanModule
+                ? initialNote.coffeeBean || null
+                : null,
             }
           : undefined,
         persistedEquipment: getInitialDraftEquipmentId(),
         initialStep:
           draftSource === 'prefilled' &&
           hasPrefilledCoffeeBean &&
-          coffeeBeans.length > 0
+          availableCoffeeBeans.length > 0
             ? 1
             : 0,
       }),
     [
-      coffeeBeans.length,
+      availableCoffeeBeans.length,
+      canUseCoffeeBeanModule,
       draftSource,
       getInitialDraftEquipmentId,
       hasPrefilledCoffeeBean,
@@ -226,17 +234,43 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     []
   );
 
-  const selectedCoffeeBean = draftSession.note.coffeeBean || null;
+  const selectedCoffeeBean = canUseCoffeeBeanModule
+    ? draftSession.note.coffeeBean || null
+    : null;
   const selectedEquipment = draftSession.note.equipment || '';
   const selectedMethodId = draftSession.note.method || '';
   const currentStep = draftSession.step;
-  const maxStepIndex = coffeeBeans.length > 0 ? 2 : 1;
+  const maxStepIndex = availableCoffeeBeans.length > 0 ? 2 : 1;
   const boundedCurrentStep = Math.min(currentStep, maxStepIndex);
   const hasDraftRecordContent = useMemo(
     () => hasBrewingNoteDraftRecordContent(draftSession, baselineSession),
     [baselineSession, draftSession]
   );
   const isCreateMode = !initialNote?.id;
+
+  useEffect(() => {
+    if (canUseCoffeeBeanModule) return;
+    if (
+      !draftSession.note.coffeeBean &&
+      !draftSession.note.beanId &&
+      !draftSession.note.coffeeBeanInfo?.name
+    ) {
+      return;
+    }
+
+    updateDraftNote(prev => ({
+      ...prev,
+      coffeeBean: null,
+      beanId: undefined,
+      coffeeBeanInfo: EMPTY_COFFEE_BEAN_INFO,
+    }));
+  }, [
+    canUseCoffeeBeanModule,
+    draftSession.note.beanId,
+    draftSession.note.coffeeBean,
+    draftSession.note.coffeeBeanInfo?.name,
+    updateDraftNote,
+  ]);
 
   useEffect(() => {
     latestDraftSessionRef.current = draftSession;
@@ -293,7 +327,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       !showForm ||
       draftSource !== 'prefilled' ||
       !hasPrefilledCoffeeBean ||
-      coffeeBeans.length === 0 ||
+      availableCoffeeBeans.length === 0 ||
       draftSession.step > 0 ||
       didAutoAdvancePrefilledStepRef.current
     ) {
@@ -303,7 +337,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     didAutoAdvancePrefilledStepRef.current = true;
     setDraftStep(1);
   }, [
-    coffeeBeans.length,
+    availableCoffeeBeans.length,
     draftSession.step,
     draftSource,
     hasPrefilledCoffeeBean,
@@ -319,12 +353,12 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   }, [showForm]);
 
   useEffect(() => {
-    if (!showForm || coffeeBeans.length === 0 || selectedCoffeeBean) {
+    if (!showForm || availableCoffeeBeans.length === 0 || selectedCoffeeBean) {
       return;
     }
 
     if (draftSession.note.beanId) {
-      const foundById = coffeeBeans.find(
+      const foundById = availableCoffeeBeans.find(
         bean => bean.id === draftSession.note.beanId
       );
       if (foundById) {
@@ -339,7 +373,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
     if (draftSession.note.coffeeBeanInfo?.name) {
       const foundByName = findCoffeeBeanByIdentity(
-        coffeeBeans,
+        availableCoffeeBeans,
         draftSession.note.coffeeBeanInfo
       );
       if (foundByName) {
@@ -351,7 +385,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       }
     }
   }, [
-    coffeeBeans,
+    availableCoffeeBeans,
     draftSession.note.beanId,
     draftSession.note.coffeeBeanInfo,
     selectedCoffeeBean,
@@ -484,6 +518,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   );
 
   const handleOpenRandomPicker = (isLongPress: boolean = false) => {
+    if (!canUseCoffeeBeanModule) return;
     setIsLongPressRandom(isLongPress);
     setIsRandomPickerOpen(true);
   };
@@ -606,7 +641,11 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         params: normalizeBrewingNoteParams(note.params),
       };
 
-      if (selectedCoffeeBean && isPendingCoffeeBean(selectedCoffeeBean)) {
+      if (
+        canUseCoffeeBeanModule &&
+        selectedCoffeeBean &&
+        isPendingCoffeeBean(selectedCoffeeBean)
+      ) {
         try {
           const newBean = await createBeanFromBrewUsage(
             selectedCoffeeBean.name,
@@ -624,6 +663,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           return;
         }
       } else if (
+        canUseCoffeeBeanModule &&
         selectedCoffeeBean &&
         'id' in selectedCoffeeBean &&
         selectedCoffeeBean.id
@@ -641,6 +681,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     },
     [
       commonMethodsOnly,
+      canUseCoffeeBeanModule,
       customMethods,
       onClose,
       onSave,
@@ -737,14 +778,14 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
   const steps: Step[] = useMemo(
     () => [
-      ...(coffeeBeans.length > 0
+      ...(availableCoffeeBeans.length > 0
         ? [
             {
               id: 'coffeeBean',
               label: '选择咖啡豆',
               content: (
                 <CoffeeBeanSelector
-                  coffeeBeans={coffeeBeans}
+                  coffeeBeans={availableCoffeeBeans}
                   selectedCoffeeBean={
                     selectedCoffeeBean && 'roastLevel' in selectedCoffeeBean
                       ? (selectedCoffeeBean as CoffeeBean)
@@ -816,7 +857,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       },
     ],
     [
-      coffeeBeans,
+      availableCoffeeBeans,
       commonMethodsOnly,
       customEquipments,
       customMethods,
@@ -852,16 +893,18 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         onRandomBean={handleOpenRandomPicker}
       />
 
-      <CoffeeBeanRandomPicker
-        beans={coffeeBeans}
-        isOpen={isRandomPickerOpen}
-        onClose={() => {
-          setIsRandomPickerOpen(false);
-          setIsLongPressRandom(false);
-        }}
-        onSelect={handleRandomBeanSelect}
-        isLongPress={isLongPressRandom}
-      />
+      {canUseCoffeeBeanModule && (
+        <CoffeeBeanRandomPicker
+          beans={availableCoffeeBeans}
+          isOpen={isRandomPickerOpen}
+          onClose={() => {
+            setIsRandomPickerOpen(false);
+            setIsLongPressRandom(false);
+          }}
+          onSelect={handleRandomBeanSelect}
+          isLongPress={isLongPressRandom}
+        />
+      )}
 
       <ActionDrawer
         isOpen={isExitDrawerOpen}

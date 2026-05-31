@@ -40,6 +40,7 @@ import {
   normalizeCoffeeBeanFormDraft,
   saveCoffeeBeanFormDraftSession,
 } from './coffeeBeanFormDraft';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 
 import {
   BeanDetailModalProps,
@@ -90,6 +91,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onClose,
   onCreateNoteFromBean,
   onOpenRelatedNote,
+  onEditRelatedNote,
   searchQuery = '',
   onEdit,
   onDelete,
@@ -329,6 +331,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 设置加载（优化：移除 isOpen 依赖，避免每次打开都重新设置）
   const storeSettings = useSettingsStore(state => state.settings);
+  const navigationState = deriveNavigationSettings(
+    storeSettings.navigationSettings
+  );
 
   useEffect(() => {
     if (storeSettings) {
@@ -808,6 +813,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 导航处理
   const handleGoToBrewing = () => {
+    if (!navigationState.visibleTabs.brewing) return;
+
     handleClose();
     setTimeout(() => {
       document.dispatchEvent(
@@ -839,7 +846,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   };
 
   const handleGoToNotes = () => {
-    if (!bean) return;
+    if (!bean || !navigationState.visibleTabs.notes) return;
 
     handleClose();
 
@@ -936,6 +943,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 tempBean={tempBean}
                 printEnabled={printEnabled}
                 saveButtonLabel={isRepurchaseMode ? '添加' : undefined}
+                canGoToBrewing={navigationState.visibleTabs.brewing}
+                canGoToNotes={navigationState.visibleTabs.notes}
                 onClose={handleClose}
                 onGoToBrewing={handleGoToBrewing}
                 onGoToNotes={handleGoToNotes}
@@ -1043,7 +1052,16 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         setShowChangeRecords={setShowChangeRecords}
                         setShowGreenBeanRecords={setShowGreenBeanRecords}
                         onImageClick={handleImageClick}
-                        onOpenNoteDetail={onOpenRelatedNote}
+                        onOpenNoteDetail={
+                          navigationState.visibleTabs.notes
+                            ? onOpenRelatedNote
+                            : undefined
+                        }
+                        onEditNote={
+                          navigationState.visibleTabs.notes
+                            ? undefined
+                            : onEditRelatedNote
+                        }
                       />
                     )}
                   </div>

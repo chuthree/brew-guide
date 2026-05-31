@@ -777,7 +777,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     if (!storeInitialized || hasAdjustedInitialStep.current) return;
     hasAdjustedInitialStep.current = true;
 
-    const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
+    const showBeanStep =
+      navigationState.visibleTabs.coffeeBean &&
+      settings.showCoffeeBeanSelectionStep !== false;
     // 检查冲煮 tab 是否可见
     const isBrewingTabVisible = navigationState.visibleTabs.brewing;
 
@@ -1018,6 +1020,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   useEffect(() => {
     if (!storeInitialized || !settings.showBeanReadyReminderPopup) return;
+    if (!navigationState.visibleTabs.coffeeBean) return;
     if (showOnboarding || showDataMigration || showBackupReminder) return;
 
     let isCancelled = false;
@@ -1080,6 +1083,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   }, [
     settings.customFlavorPeriod,
     settings.showBeanReadyReminderPopup,
+    navigationState.visibleTabs.coffeeBean,
     showBackupReminder,
     showDataMigration,
     showOnboarding,
@@ -1117,6 +1121,46 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   }, []);
 
   const [hasCoffeeBeans, setHasCoffeeBeans] = useState(initialHasBeans);
+  const canUseCoffeeBeanInBrewing =
+    navigationState.visibleTabs.coffeeBean &&
+    settings.showCoffeeBeanSelectionStep !== false;
+  const brewingStartStep: BrewingStep =
+    hasCoffeeBeans && canUseCoffeeBeanInBrewing ? 'coffeeBean' : 'method';
+
+  useEffect(() => {
+    if (navigationState.visibleTabs.coffeeBean) return;
+
+    setSelectedCoffeeBean(null);
+    setSelectedCoffeeBeanData(null);
+
+    if (activeMainTab === '冲煮' && activeBrewingStep === 'coffeeBean') {
+      navigateToStep('method', { force: true });
+    }
+  }, [
+    activeBrewingStep,
+    activeMainTab,
+    navigateToStep,
+    navigationState.visibleTabs.coffeeBean,
+    setSelectedCoffeeBean,
+    setSelectedCoffeeBeanData,
+  ]);
+
+  useEffect(() => {
+    if (
+      navigationState.visibleTabs.notes ||
+      activeMainTab !== '冲煮' ||
+      activeBrewingStep !== 'notes'
+    ) {
+      return;
+    }
+
+    navigateToStep('brewing', { force: true });
+  }, [
+    activeBrewingStep,
+    activeMainTab,
+    navigateToStep,
+    navigationState.visibleTabs.notes,
+  ]);
 
   const [currentBeanView, setCurrentBeanView] = useState<ViewOption>(() => {
     try {
@@ -1377,6 +1421,34 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     [beanDetailOpen, openNoteDetailInNotes]
   );
 
+  const handleEditRelatedNoteFromBean = useCallback((note: BrewingNote) => {
+    const noteToEdit: BrewingNoteData = {
+      id: note.id,
+      timestamp: note.timestamp,
+      equipment: note.equipment,
+      method: note.method,
+      params: note.params,
+      coffeeBeanInfo: note.coffeeBeanInfo || {
+        name: '',
+        roastLevel: '',
+      },
+      image: note.image,
+      images: note.images,
+      rating: note.rating,
+      taste: note.taste,
+      notes: note.notes,
+      totalTime: note.totalTime,
+      beanId: note.beanId,
+      source: note.source,
+      quickDecrementAmount: note.quickDecrementAmount,
+      changeRecord: note.changeRecord,
+    };
+
+    setBrewingNoteEditData(noteToEdit);
+    setIsBrewingNoteCopy(false);
+    setBrewingNoteEditOpen(true);
+  }, []);
+
   // 点击外部关闭视图下拉菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1502,11 +1574,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       'shouldStartFromCoffeeBeanStep'
     );
     // 只有当设置开启且有咖啡豆时才从咖啡豆步骤开始
-    const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
     if (
       shouldStartFromCoffeeBeanStep === 'true' &&
-      hasCoffeeBeans &&
-      showBeanStep
+      brewingStartStep === 'coffeeBean'
     ) {
       localStorage.removeItem('shouldStartFromCoffeeBeanStep');
       resetBrewingState(false);
@@ -1515,14 +1585,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       return;
     }
     // 如果设置关闭，清除标记
-    if (shouldStartFromCoffeeBeanStep === 'true' && !showBeanStep) {
+    if (
+      shouldStartFromCoffeeBeanStep === 'true' &&
+      brewingStartStep !== 'coffeeBean'
+    ) {
       localStorage.removeItem('shouldStartFromCoffeeBeanStep');
     }
 
     // 从其他标签切换到冲煮标签时，根据设置决定起始步骤
     // 如果开启了咖啡豆选择步骤且有咖啡豆，应该从咖啡豆步骤开始
     // 如果关闭了咖啡豆选择步骤，应该从方案步骤开始
-    const targetStep = hasCoffeeBeans && showBeanStep ? 'coffeeBean' : 'method';
+    const targetStep = brewingStartStep;
 
     // 只有当当前步骤不是目标起始步骤时才需要重置
     // 例如：如果已经在 brewing 或 notes 步骤，说明用户正在进行冲煮流程，不应该打断
@@ -1545,8 +1618,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     prevMainTabRef,
     setShowHistory,
     navigateToStep,
-    hasCoffeeBeans,
-    settings.showCoffeeBeanSelectionStep,
+    brewingStartStep,
   ]);
 
   const handleMethodTypeChange = useCallback(
@@ -1598,6 +1670,113 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     },
     [updateSettings]
   );
+
+  const completeBrewingWithoutNote = useCallback(async () => {
+    const canDeductCoffee =
+      navigationState.visibleTabs.coffeeBean &&
+      selectedCoffeeBean &&
+      currentBrewingMethod?.params?.coffee;
+    let didDeductCoffee = false;
+
+    if (canDeductCoffee) {
+      try {
+        const [
+          {
+            CapacitySyncManager,
+            initializeBeanFromBrewUsage,
+            updateBeanRemaining,
+          },
+          { useBrewingNoteStore },
+        ] = await Promise.all([
+          import('@/lib/stores/coffeeBeanStore'),
+          import('@/lib/stores/brewingNoteStore'),
+        ]);
+        const coffeeParam = currentBrewingMethod.params.coffee;
+        const coffeeAmount = CapacitySyncManager.extractCoffeeAmount(
+          coffeeParam
+        );
+
+        if (coffeeAmount > 0) {
+          if (selectedCoffeeBeanCreatedFromSearch) {
+            await initializeBeanFromBrewUsage(selectedCoffeeBean, coffeeParam);
+          } else {
+            await updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
+          }
+
+          const now = Date.now();
+          const quickDecrementNote: BrewingNote = {
+            id: `${now}`,
+            timestamp: now,
+            equipment: selectedEquipment || '',
+            method: currentBrewingMethod.name,
+            params: normalizeBrewingNoteParams({
+              ...currentBrewingMethod.params,
+              coffee: CapacitySyncManager.formatCoffeeParam(coffeeAmount),
+            }),
+            totalTime: currentBrewingMethod.params.stages?.reduce(
+              (total, stage) => total + (stage.duration ?? stage.time ?? 0),
+              0
+            ),
+            coffeeBeanInfo: selectedCoffeeBeanData
+              ? {
+                  name: selectedCoffeeBeanData.name,
+                  roastLevel:
+                    selectedCoffeeBeanData.roastLevel || '中度烘焙',
+                  roastDate: selectedCoffeeBeanData.roastDate || '',
+                  roaster: selectedCoffeeBeanData.roaster,
+                }
+              : undefined,
+            beanId: selectedCoffeeBean,
+            source: 'quick-decrement',
+            quickDecrementAmount: coffeeAmount,
+            rating: 0,
+            taste: {},
+            notes: '快捷扣除',
+          };
+
+          await useBrewingNoteStore.getState().addNote(quickDecrementNote);
+          didDeductCoffee = true;
+        }
+      } catch (error) {
+        console.error('自动扣除咖啡豆失败:', error);
+        showToast({
+          type: 'error',
+          title: '自动扣除失败',
+          duration: 2500,
+        });
+      }
+    }
+
+    setShowComplete(false);
+    setIsCoffeeBrewed(false);
+    setHasAutoNavigatedToNotes(false);
+    resetBrewingState(false);
+
+    if (didDeductCoffee && navigationState.visibleTabs.coffeeBean) {
+      modalHistory.clearAndNavigate();
+      saveMainTabPreference('咖啡豆');
+      setShowHistory(false);
+      setCurrentBeanView(VIEW_OPTIONS.INVENTORY);
+      saveStringState('coffee-beans', 'viewMode', VIEW_OPTIONS.INVENTORY);
+      setActiveMainTab('咖啡豆');
+      return;
+    }
+
+    navigateToStep(brewingStartStep, { force: true });
+  }, [
+    brewingStartStep,
+    currentBrewingMethod,
+    navigateToStep,
+    navigationState.visibleTabs.coffeeBean,
+    resetBrewingState,
+    selectedCoffeeBean,
+    selectedCoffeeBeanCreatedFromSearch,
+    selectedCoffeeBeanData,
+    selectedEquipment,
+    setActiveMainTab,
+    setShowComplete,
+    setShowHistory,
+  ]);
 
   const handleLayoutChange = useCallback(
     (e: CustomEvent) => {
@@ -1775,12 +1954,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 简化的返回按钮处理 - 使用统一的步骤流程
   const handleBackClick = useCallback(() => {
-    // 根据设置决定是否显示咖啡豆选择步骤
-    const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
     // 定义步骤返回映射
     const BACK_STEPS: Record<BrewingStep, BrewingStep | null> = {
       brewing: 'method',
-      method: hasCoffeeBeans && showBeanStep ? 'coffeeBean' : null,
+      method: brewingStartStep === 'coffeeBean' ? 'coffeeBean' : null,
       coffeeBean: null,
       notes: 'brewing',
     };
@@ -1810,14 +1987,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     navigateToStep(backStep);
   }, [
     activeBrewingStep,
-    hasCoffeeBeans,
+    brewingStartStep,
     showComplete,
     isCoffeeBrewed,
     navigateToStep,
     setShowComplete,
     setIsCoffeeBrewed,
     setHasAutoNavigatedToNotes,
-    settings.showCoffeeBeanSelectionStep,
   ]);
 
   const handleMethodSelectWrapper = useCallback(
@@ -1891,8 +2067,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
       // 使用setTimeout确保状态更新完成后再跳转
       const navigationTimer = window.setTimeout(() => {
-        navigateToStep('notes', { force: true });
         setHasAutoNavigatedToNotes(true);
+        if (navigationState.visibleTabs.notes) {
+          navigateToStep('notes', { force: true });
+          return;
+        }
+
+        void completeBrewingWithoutNote();
       }, 0);
 
       return () => window.clearTimeout(navigationTimer);
@@ -1901,7 +2082,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     showComplete,
     activeMainTab,
     activeBrewingStep,
+    completeBrewingWithoutNote,
     navigateToStep,
+    navigationState.visibleTabs.notes,
     hasAutoNavigatedToNotes,
     setShowComplete,
   ]);
@@ -2262,7 +2445,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       checkCoffeeBeans();
 
       // 首次添加咖啡豆时，标记从咖啡豆步骤开始
-      if (e.detail.isFirstBean && activeMainTab === '咖啡豆') {
+      if (
+        e.detail.isFirstBean &&
+        activeMainTab === '咖啡豆' &&
+        navigationState.visibleTabs.coffeeBean
+      ) {
         localStorage.setItem('shouldStartFromCoffeeBeanStep', 'true');
         return;
       }
@@ -2307,6 +2494,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     activeMainTab,
     activeBrewingStep,
     selectedCoffeeBean,
+    navigationState.visibleTabs.coffeeBean,
     setSelectedCoffeeBean,
     setSelectedCoffeeBeanData,
     resetBrewingState,
@@ -2808,9 +2996,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const getBrewingStepNumber = (): number => {
     if (activeMainTab !== '冲煮') return 0;
 
-    const showBeanStep = settings.showCoffeeBeanSelectionStep !== false;
-
-    if (hasCoffeeBeans && showBeanStep) {
+    if (brewingStartStep === 'coffeeBean') {
       // 有咖啡豆且设置开启的流程
       switch (activeBrewingStep) {
         case 'coffeeBean':
@@ -2820,7 +3006,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         case 'brewing':
           return 2;
         case 'notes':
-          return 3;
+          return navigationState.visibleTabs.notes ? 3 : 0;
         default:
           return 0;
       }
@@ -2832,7 +3018,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         case 'brewing':
           return 1;
         case 'notes':
-          return 2;
+          return navigationState.visibleTabs.notes ? 2 : 0;
         default:
           return 0;
       }
@@ -3537,7 +3723,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             setShowHistory={setShowHistory}
             onTitleDoubleClick={() => setIsSettingsOpen(true)}
             settings={settings}
-            hasCoffeeBeans={hasCoffeeBeans}
+            hasCoffeeBeans={
+              hasCoffeeBeans && navigationState.visibleTabs.coffeeBean
+            }
             alternativeHeader={alternativeHeaderContent}
             showAlternativeHeader={showAlternativeHeader}
             currentBeanView={currentBeanView}
@@ -3628,9 +3816,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   currentStage={currentStage}
                   isWaiting={isStageWaiting}
                   selectedEquipment={selectedEquipment}
-                  selectedCoffeeBean={selectedCoffeeBean}
-                  selectedCoffeeBeanData={selectedCoffeeBeanData}
+                  selectedCoffeeBean={
+                    navigationState.visibleTabs.coffeeBean
+                      ? selectedCoffeeBean
+                      : null
+                  }
+                  selectedCoffeeBeanData={
+                    navigationState.visibleTabs.coffeeBean
+                      ? selectedCoffeeBeanData
+                      : null
+                  }
                   selectedCoffeeBeanCreatedFromSearch={
+                    navigationState.visibleTabs.coffeeBean &&
                     selectedCoffeeBeanCreatedFromSearch
                   }
                   countdownTime={countdownTime}
@@ -3885,6 +4082,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     }}
                     onCreateNoteFromBean={handleCreateNoteFromBean}
                     onOpenRelatedNote={handleOpenNoteDetailFromBean}
+                    onEditRelatedNote={handleEditRelatedNoteFromBean}
                     searchQuery={beanDetailSearchQuery}
                     mode={
                       beanDetailAddMode
@@ -4506,6 +4704,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         beanDetailAddBeanState={beanDetailAddBeanState}
         onCreateNoteFromBean={handleCreateNoteFromBean}
         onOpenNoteDetailFromBean={handleOpenNoteDetailFromBean}
+        onEditRelatedNoteFromBean={handleEditRelatedNoteFromBean}
         // 咖啡豆导入
         showImportBeanForm={showImportBeanForm}
         setShowImportBeanForm={setShowImportBeanForm}

@@ -34,6 +34,7 @@ import { useCopy } from '@/lib/hooks/useCopy';
 import { useInputFocus } from '@/lib/hooks/useInputFocus';
 import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
 import { methodToReadableText } from '@/lib/utils/jsonUtils';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -168,6 +169,8 @@ const TabContent: React.FC<TabContentProps> = ({
 }) => {
   // 笔记表单状态
   const [noteSaved, setNoteSaved] = useState(false);
+  const navigationState = deriveNavigationSettings(settings.navigationSettings);
+  const canUseCoffeeBeanModule = navigationState.visibleTabs.coffeeBean;
 
   // 本地流速显示设置
   const [localShowFlowRate, setLocalShowFlowRate] = useState(
@@ -647,7 +650,7 @@ const TabContent: React.FC<TabContentProps> = ({
   const [beanScrollEl, setBeanScrollEl] = useState<HTMLElement | null>(null);
 
   // 渲染咖啡豆列表
-  if (activeTab === '咖啡豆') {
+  if (activeTab === '咖啡豆' && canUseCoffeeBeanModule) {
     return (
       <>
         <div
@@ -807,10 +810,12 @@ const TabContent: React.FC<TabContentProps> = ({
             method: currentBrewingMethod?.name || '',
             params: currentBrewingMethod?.params,
             totalTime: calculateTotalTime(),
-            coffeeBean: selectedCoffeeBeanData || undefined,
+            coffeeBean: canUseCoffeeBeanModule
+              ? selectedCoffeeBeanData || undefined
+              : undefined,
           }}
           initialCoffeeBeanCreatedFromSearch={
-            selectedCoffeeBeanCreatedFromSearch
+            canUseCoffeeBeanModule && selectedCoffeeBeanCreatedFromSearch
           }
           settings={settings}
         />
@@ -852,10 +857,6 @@ const TabContent: React.FC<TabContentProps> = ({
   const showEmptyMethodsMessage =
     activeTab === '方案' &&
     selectedEquipment &&
-    (!customMethods[selectedEquipment] ||
-      customMethods[selectedEquipment].length === 0) &&
-    (!commonMethods[selectedEquipment] ||
-      commonMethods[selectedEquipment].length === 0) &&
     content[activeTab]?.steps.length === 0;
 
   // 渲染默认列表内容
@@ -864,7 +865,7 @@ const TabContent: React.FC<TabContentProps> = ({
       <div className="content-area m-6 space-y-4 md:mt-0">
         {showEmptyMethodsMessage ? (
           <div className="mt-4 flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-600 dark:text-neutral-400">
-            [ 当前器具暂无自定义方案，请点击下方按钮添加 ]
+            [ 当前器具暂无可用于冲煮的方案，请点击下方按钮添加 ]
           </div>
         ) : (
           <>

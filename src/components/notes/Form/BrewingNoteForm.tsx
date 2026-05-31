@@ -41,6 +41,7 @@ import {
   normalizeBrewingNoteParams,
   normalizeBrewingNoteSelection,
 } from '@/lib/notes/noteDisplay';
+import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { FlavorDimension, DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/core/db';
 import {
@@ -234,6 +235,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   onDraftChange,
   syncInitialDataChanges = true,
 }) => {
+  const navigationState = deriveNavigationSettings(settings?.navigationSettings);
+  const canUseCoffeeBeanModule = navigationState.visibleTabs.coffeeBean;
+
   // 获取烘焙商显示设置
   const roasterFieldEnabled = useSettingsStore(
     state => state.settings.roasterFieldEnabled
@@ -258,7 +262,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   // 支持已有豆子(CoffeeBean)和待创建豆子(PendingCoffeeBean)
   const { beans: coffeeBeans } = useCoffeeBeanData();
   const [selectedCoffeeBean, setSelectedCoffeeBean] =
-    useState<SelectableCoffeeBean | null>(initialData.coffeeBean || null);
+    useState<SelectableCoffeeBean | null>(
+      canUseCoffeeBeanModule ? initialData.coffeeBean || null : null
+    );
   const [showCoffeeBeanPickerDrawer, setShowCoffeeBeanPickerDrawer] =
     useState(false);
   const [originalBeanId] = useState<string | undefined>(initialData.beanId); // 记录原始的beanId用于容量同步
@@ -301,6 +307,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
   // 初始化选中的咖啡豆
   useEffect(() => {
+    if (!canUseCoffeeBeanModule) return;
     if (initialData.beanId && coffeeBeans.length > 0 && !selectedCoffeeBean) {
       const foundBean = coffeeBeans.find(
         bean => bean.id === initialData.beanId
@@ -309,7 +316,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         setSelectedCoffeeBean(foundBean);
       }
     }
-  }, [initialData.beanId, coffeeBeans, selectedCoffeeBean]);
+  }, [
+    canUseCoffeeBeanModule,
+    initialData.beanId,
+    coffeeBeans,
+    selectedCoffeeBean,
+  ]);
+
+  useEffect(() => {
+    if (canUseCoffeeBeanModule) return;
+    setSelectedCoffeeBean(null);
+    userSelectedBeanRef.current = false;
+  }, [canUseCoffeeBeanModule]);
 
   // 处理时间戳变化，同时通知外部组件
   const handleTimestampChange = (newTimestamp: Date) => {
@@ -755,7 +773,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       prev.coffeeBean?.id !== current.coffeeBean?.id ||
       prev.coffeeBeanInfo?.name !== current.coffeeBeanInfo?.name;
 
-    if (beanChanged) {
+    if (beanChanged && canUseCoffeeBeanModule) {
       const beanInfo = current.coffeeBean || current.coffeeBeanInfo;
       const roastLevel =
         beanInfo && 'roastLevel' in beanInfo
@@ -819,6 +837,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     prevInitialDataRef.current = current;
   }, [
     applyMethodParams,
+    canUseCoffeeBeanModule,
     initialData,
     selectedCoffeeBean?.id,
     flavorDimensions,
@@ -829,7 +848,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const isAdding = !id || isCopy;
 
   const shouldShowQuickDecrementButton =
-    inBrewPage && isAdding && !!selectedCoffeeBean;
+    canUseCoffeeBeanModule && inBrewPage && isAdding && !!selectedCoffeeBean;
 
   // 判断是否是快捷扣除记录编辑模式
   const isQuickDecrementEdit =
@@ -1287,7 +1306,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       let finalBeanId: string | undefined;
       let deductedCoffeeAmount = currentCoffeeAmount;
 
-      if (selectedCoffeeBean && isPendingCoffeeBean(selectedCoffeeBean)) {
+      if (
+        canUseCoffeeBeanModule &&
+        selectedCoffeeBean &&
+        isPendingCoffeeBean(selectedCoffeeBean)
+      ) {
         try {
           const newBean = await createBeanFromBrewUsage(
             selectedCoffeeBean.name,
@@ -1306,6 +1329,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           return;
         }
       } else if (
+        canUseCoffeeBeanModule &&
         selectedCoffeeBean &&
         !isPendingCoffeeBean(selectedCoffeeBean)
       ) {
@@ -1538,23 +1562,25 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 同步磨豆机刻度到设置
         if (methodParams.grindSize && finalEquipment && finalMethod) {
           const { syncGrinderToSettings } = await import('@/lib/grinder');
-          const coffeeBeanContext = selectedCoffeeBean
-            ? {
-                name:
-                  'name' in selectedCoffeeBean
-                    ? selectedCoffeeBean.name
-                    : formData.coffeeBeanInfo.name,
-                roaster:
-                  'roaster' in selectedCoffeeBean
-                    ? selectedCoffeeBean.roaster
-                    : formData.coffeeBeanInfo.roaster,
-              }
-            : formData.coffeeBeanInfo.name
+          const coffeeBeanContext = canUseCoffeeBeanModule
+            ? selectedCoffeeBean
               ? {
-                  name: formData.coffeeBeanInfo.name,
-                  roaster: formData.coffeeBeanInfo.roaster,
+                  name:
+                    'name' in selectedCoffeeBean
+                      ? selectedCoffeeBean.name
+                      : formData.coffeeBeanInfo.name,
+                  roaster:
+                    'roaster' in selectedCoffeeBean
+                      ? selectedCoffeeBean.roaster
+                      : formData.coffeeBeanInfo.roaster,
                 }
-              : undefined;
+              : formData.coffeeBeanInfo.name
+                ? {
+                    name: formData.coffeeBeanInfo.name,
+                    roaster: formData.coffeeBeanInfo.roaster,
+                  }
+                : undefined
+            : undefined;
 
           await syncGrinderToSettings(
             methodParams.grindSize,
@@ -1806,16 +1832,26 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const images = formData.images || [];
     const image = images[0] || '';
     const beanId =
-      selectedCoffeeBean && !isPendingCoffeeBean(selectedCoffeeBean)
+      canUseCoffeeBeanModule &&
+      selectedCoffeeBean &&
+      !isPendingCoffeeBean(selectedCoffeeBean)
         ? selectedCoffeeBean.id
         : undefined;
+    const draftCoffeeBeanInfo = canUseCoffeeBeanModule
+      ? formData.coffeeBeanInfo
+      : {
+          name: '',
+          roastLevel: '中度烘焙',
+          roastDate: '',
+          roaster: undefined,
+        };
 
     const nextDraft = {
       id,
       timestamp: timestamp.getTime(),
-      coffeeBean: selectedCoffeeBean,
+      coffeeBean: canUseCoffeeBeanModule ? selectedCoffeeBean : null,
       beanId,
-      coffeeBeanInfo: formData.coffeeBeanInfo,
+      coffeeBeanInfo: draftCoffeeBeanInfo,
       image,
       images,
       rating: formData.rating,
@@ -1838,6 +1874,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     lastEmittedDraftRef.current = nextDraftSignature;
     onDraftChange(nextDraft);
   }, [
+    canUseCoffeeBeanModule,
     formData,
     id,
     initialData.changeRecord,
@@ -1962,12 +1999,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           />
 
           {/* 咖啡豆 */}
-          <FeatureListItem
-            label="咖啡豆"
-            value={getCoffeeBeanDisplayName()}
-            onClick={() => setShowCoffeeBeanPickerDrawer(true)}
-            preview={getCoffeeBeanFlavorPreview()}
-          />
+          {canUseCoffeeBeanModule && (
+            <FeatureListItem
+              label="咖啡豆"
+              value={getCoffeeBeanDisplayName()}
+              onClick={() => setShowCoffeeBeanPickerDrawer(true)}
+              preview={getCoffeeBeanFlavorPreview()}
+            />
+          )}
 
           {/* 快捷扣除量 - 仅快捷模式显示 */}
           {isQuickDecrementEdit && isQuickMode && (
@@ -2123,14 +2162,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       />
 
       {/* 咖啡豆选择抽屉 */}
-      <CoffeeBeanPickerDrawer
-        isOpen={showCoffeeBeanPickerDrawer}
-        onClose={() => setShowCoffeeBeanPickerDrawer(false)}
-        onSelect={handleCoffeeBeanSelect}
-        selectedBean={selectedCoffeeBean}
-        showStatusDots={settings?.showStatusDots}
-        hapticFeedback={settings?.hapticFeedback}
-      />
+      {canUseCoffeeBeanModule && (
+        <CoffeeBeanPickerDrawer
+          isOpen={showCoffeeBeanPickerDrawer}
+          onClose={() => setShowCoffeeBeanPickerDrawer(false)}
+          onSelect={handleCoffeeBeanSelect}
+          selectedBean={selectedCoffeeBean}
+          showStatusDots={settings?.showStatusDots}
+          hapticFeedback={settings?.hapticFeedback}
+        />
+      )}
 
       {/* 器具方案选择抽屉 */}
       <EquipmentMethodPickerDrawer

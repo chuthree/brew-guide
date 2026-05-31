@@ -5,17 +5,22 @@ import { useCoffeeBeanStore } from '../stores/coffeeBeanStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { canUseNativeCalendar } from './nativeCalendar';
 import { syncCoffeeBeanCalendarEvents } from './service';
+import { deriveNavigationSettings } from '../navigation/navigationSettings';
 
 export const useCalendarSync = (enabled: boolean): void => {
   const beans = useCoffeeBeanStore(state => state.beans);
   const settings = useSettingsStore(state => state.settings);
   const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const calendarSyncSupported = useMemo(() => canUseNativeCalendar(), []);
+  const coffeeBeanModuleVisible = deriveNavigationSettings(
+    settings.navigationSettings
+  ).visibleTabs.coffeeBean;
 
   const syncKey = useMemo(
     () =>
       JSON.stringify({
         enabled,
+        coffeeBeanModuleVisible,
         calendarSync: settings.calendarSync,
         customFlavorPeriod: settings.customFlavorPeriod,
         beans: beans.map(bean => ({
@@ -32,11 +37,17 @@ export const useCalendarSync = (enabled: boolean): void => {
           isInTransit: bean.isInTransit,
         })),
       }),
-    [beans, enabled, settings.calendarSync, settings.customFlavorPeriod]
+    [
+      beans,
+      coffeeBeanModuleVisible,
+      enabled,
+      settings.calendarSync,
+      settings.customFlavorPeriod,
+    ]
   );
 
   useEffect(() => {
-    if (!enabled || !calendarSyncSupported) return;
+    if (!enabled || !calendarSyncSupported || !coffeeBeanModuleVisible) return;
 
     let cancelled = false;
     const timer = window.setTimeout(() => {
@@ -51,5 +62,12 @@ export const useCalendarSync = (enabled: boolean): void => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [beans, calendarSyncSupported, enabled, settings, syncKey]);
+  }, [
+    beans,
+    calendarSyncSupported,
+    coffeeBeanModuleVisible,
+    enabled,
+    settings,
+    syncKey,
+  ]);
 };

@@ -10,6 +10,8 @@ import { EditableParams } from './useBrewingParameters';
 import { getEquipmentNameById } from '@/lib/utils/equipmentUtils';
 import { TabType, BrewingStep } from './useBrewingState';
 import { MethodStepConfig } from '@/lib/types/method';
+import { hasBrewingStages } from '@/lib/brewing/methodAvailability';
+import { showToast } from '@/components/common/feedback/LightToast';
 
 export interface UseMethodSelectorProps {
   selectedEquipment: string | null;
@@ -42,6 +44,13 @@ export function useMethodSelector({
   const processSelectedMethod = useCallback(
     async (method: Method | null) => {
       if (!method) return false;
+      if (!hasBrewingStages(method)) {
+        showToast({
+          type: 'error',
+          title: '该方案没有冲煮步骤，请补充步骤后再用于计时',
+        });
+        return false;
+      }
 
       // 设置选中的方案
       setCurrentBrewingMethod(method);
