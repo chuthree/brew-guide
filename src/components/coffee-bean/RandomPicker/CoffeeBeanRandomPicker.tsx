@@ -7,6 +7,7 @@ import React, {
   useRef,
   useMemo,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
@@ -337,11 +338,11 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
         ...validBeans,
       ];
 
-  return (
+  const content = (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="pt-safe-top fixed inset-0 z-60 flex items-center justify-center bg-neutral-50/90 backdrop-blur-xs dark:bg-neutral-900/90"
+          className="pt-safe-top fixed inset-0 z-[90] flex items-center justify-center bg-neutral-50/90 backdrop-blur-xs dark:bg-neutral-900/90"
           initial="closed"
           animate="open"
           exit="closed"
@@ -478,6 +479,10 @@ const CoffeeBeanRandomPicker: React.FC<CoffeeBeanRandomPickerProps> = ({
       )}
     </AnimatePresence>
   );
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(content, document.body);
 };
 
 const RandomPickerBeanImage: React.FC<{

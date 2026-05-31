@@ -4,9 +4,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, X, Shuffle } from 'lucide-react';
 import type { CoffeeBean, SelectableCoffeeBean } from '@/types/app';
 import CoffeeBeanSelector from './CoffeeBeanSelector';
+import PickerDrawerFrame from './PickerDrawerFrame';
 import { COFFEE_BEAN_SEARCH_OR_CREATE_PLACEHOLDER } from '@/components/coffee-bean/ui/coffeeBeanSelectionText';
-import { useModalHistory } from '@/lib/hooks/useModalHistory';
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import {
   createPendingBean,
@@ -39,10 +38,6 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
   showStatusDots = true,
   hapticFeedback = true,
 }) => {
-  // 动画状态管理
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
   // 搜索状态
   const [searchQuery, setSearchQuery] = useState('');
   const [showRandomPicker, setShowRandomPicker] = useState(false);
@@ -50,22 +45,11 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
 
   // refs
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
 
   // 从 Store 获取咖啡豆数据
   const allBeans = useCoffeeBeanStore(state => state.beans);
   const storeInitialized = useCoffeeBeanStore(state => state.initialized);
   const loadBeans = useCoffeeBeanStore(state => state.loadBeans);
-
-  // 同步顶部安全区颜色
-  useThemeColor({ useOverlay: true, enabled: isOpen });
-
-  // 历史栈管理
-  useModalHistory({
-    id: 'coffee-bean-picker-drawer',
-    isOpen,
-    onClose,
-  });
 
   // 确保 Store 已初始化
   useEffect(() => {
@@ -73,29 +57,6 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
       loadBeans();
     }
   }, [storeInitialized, loadBeans]);
-
-  // 处理显示/隐藏动画
-  useEffect(() => {
-    if (isOpen) {
-      setShouldRender(true);
-      const timer = setTimeout(() => setIsVisible(true), 10);
-      // 动画完成后自动聚焦搜索输入框
-      const focusTimer = setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 400);
-      return () => {
-        clearTimeout(timer);
-        clearTimeout(focusTimer);
-      };
-    } else {
-      setIsVisible(false);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-        setSearchQuery('');
-      }, 400);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
 
   // 触感反馈
   const triggerHaptic = useCallback(() => {
@@ -163,20 +124,14 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
     [onSelect, onClose, triggerHaptic]
   );
 
-  if (!shouldRender) return null;
-
   return (
     <>
-      {/* 背景遮罩 */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={onClose}
-      />
-
-      {/* 抽屉内容 */}
-      <div
-        ref={modalRef}
-        className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[85vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
+      <PickerDrawerFrame
+        isOpen={isOpen}
+        onClose={onClose}
+        historyId="coffee-bean-picker-drawer"
+        onAfterOpen={() => searchInputRef.current?.focus()}
+        onAfterClose={() => setSearchQuery('')}
       >
         <div className="flex h-full flex-col overflow-hidden px-6 pt-4">
           {/* 顶部搜索区域 */}
@@ -254,7 +209,7 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
             />
           </div>
         </div>
-      </div>
+      </PickerDrawerFrame>
 
       {/* 随机选择器 */}
       <CoffeeBeanRandomPicker

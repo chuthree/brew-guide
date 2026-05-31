@@ -10,12 +10,11 @@ import {
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { loadCustomMethods } from '@/lib/stores/customMethodStore';
 import { filterHiddenEquipments } from '@/lib/stores/settingsStore';
-import { useModalHistory } from '@/lib/hooks/useModalHistory';
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { SettingsOptions } from '@/components/settings/Settings';
 import hapticsUtils from '@/lib/ui/haptics';
 import EquipmentCategoryBar from './EquipmentCategoryBar';
 import MethodSelector from './MethodSelector';
+import PickerDrawerFrame from './PickerDrawerFrame';
 
 /**
  * 获取器具对应的通用方案
@@ -103,10 +102,6 @@ const EquipmentMethodPickerDrawer: React.FC<
   settings,
   hapticFeedback = true,
 }) => {
-  // 动画状态管理
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
   // 数据状态
   const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>(
     []
@@ -128,16 +123,6 @@ const EquipmentMethodPickerDrawer: React.FC<
     Method | undefined
   >();
 
-  // 同步顶部安全区颜色
-  useThemeColor({ useOverlay: true, enabled: isOpen });
-
-  // 历史栈管理
-  useModalHistory({
-    id: 'equipment-method-picker-drawer',
-    isOpen,
-    onClose,
-  });
-
   // 加载自定义数据
   useEffect(() => {
     if (isOpen && !dataLoaded) {
@@ -154,19 +139,10 @@ const EquipmentMethodPickerDrawer: React.FC<
   // 处理显示/隐藏动画
   useEffect(() => {
     if (isOpen) {
-      setShouldRender(true);
       // 同步外部状态到内部
       setTempEquipmentId(selectedEquipmentId || '');
       setTempMethodId(selectedMethodId || '');
       setLastSelectedMethod(undefined);
-      const timer = setTimeout(() => setIsVisible(true), 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsVisible(false);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-      }, 400);
-      return () => clearTimeout(timer);
     }
   }, [isOpen, selectedEquipmentId, selectedMethodId]);
 
@@ -267,69 +243,59 @@ const EquipmentMethodPickerDrawer: React.FC<
     onClose,
   ]);
 
-  if (!shouldRender) return null;
-
   return (
-    <>
-      {/* 背景遮罩 */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={onClose}
-      />
+    <PickerDrawerFrame
+      isOpen={isOpen}
+      onClose={onClose}
+      historyId="equipment-method-picker-drawer"
+    >
+      <div className="flex h-full flex-col overflow-hidden px-6 pt-6">
+        {/* 器具分类栏 - 复用 EquipmentCategoryBar */}
+        <div className="shrink-0">
+          <EquipmentCategoryBar
+            selectedEquipment={tempEquipmentId}
+            customEquipments={customEquipments}
+            onEquipmentSelect={handleEquipmentSelect}
+            settings={settings}
+          />
+        </div>
 
-      {/* 抽屉内容 */}
-      <div
-        className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[85vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        <div className="flex h-full flex-col overflow-hidden px-6 pt-6">
-          {/* 器具分类栏 - 复用 EquipmentCategoryBar */}
-          <div className="shrink-0">
-            <EquipmentCategoryBar
-              selectedEquipment={tempEquipmentId}
-              customEquipments={customEquipments}
-              onEquipmentSelect={handleEquipmentSelect}
-              settings={settings}
-            />
-          </div>
+        {/* 方案选择列表 - 复用 MethodSelector */}
+        <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+          <MethodSelector
+            selectedEquipment={tempEquipmentId}
+            selectedMethod={tempMethodId}
+            customMethods={customMethodsForEquipment}
+            commonMethods={commonMethodsForEquipment}
+            onMethodSelect={handleMethodSelect}
+            onParamsChange={handleParamsChange}
+            grinderDefaultSyncEnabled={
+              settings?.grinderDefaultSync?.manualNote ?? true
+            }
+            initialParams={initialParams}
+          />
+        </div>
 
-          {/* 方案选择列表 - 复用 MethodSelector */}
-          <div className="min-h-0 flex-1 overflow-y-auto pb-4">
-            <MethodSelector
-              selectedEquipment={tempEquipmentId}
-              selectedMethod={tempMethodId}
-              customMethods={customMethodsForEquipment}
-              commonMethods={commonMethodsForEquipment}
-              onMethodSelect={handleMethodSelect}
-              onParamsChange={handleParamsChange}
-              grinderDefaultSyncEnabled={
-                settings?.grinderDefaultSync?.manualNote ?? true
-              }
-              initialParams={initialParams}
-            />
-          </div>
-
-          {/* 底部按钮 */}
-          <div className="flex shrink-0 gap-3 pt-3 pb-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-full bg-neutral-100 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-            >
-              取消
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={!tempEquipmentId}
-              className="flex-1 rounded-full bg-neutral-900 py-3 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-            >
-              确定
-            </button>
-          </div>
+        {/* 底部按钮 */}
+        <div className="flex shrink-0 gap-3 pt-3 pb-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-full bg-neutral-100 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={!tempEquipmentId}
+            className="flex-1 rounded-full bg-neutral-900 py-3 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
+          >
+            确定
+          </button>
         </div>
       </div>
-    </>
+    </PickerDrawerFrame>
   );
 };
 
