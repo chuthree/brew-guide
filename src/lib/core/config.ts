@@ -1467,4 +1467,5 @@ export const sponsorsList = [
   '风风不吹风',
   '小李',
   'RX',
+  'no Tattos',
 ];
