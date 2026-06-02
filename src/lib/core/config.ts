@@ -1472,4 +1472,5 @@ export const sponsorsList = [
   'May Wang',
   'null',
   'Neuanfang Jan',
+  'TáuM',
 ];
