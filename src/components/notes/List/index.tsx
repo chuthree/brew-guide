@@ -83,6 +83,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   setAlternativeHeaderContent: _setAlternativeHeaderContent, // 不再使用，保留以兼容接口
   setShowAlternativeHeader: _setShowAlternativeHeader, // 不再使用，保留以兼容接口
   settings,
+  navigationToggleControl,
 }) => {
   // 用于跟踪用户选择 - 从本地存储初始化
   const [sortOption, setSortOption] = useState<SortOption>(
@@ -1016,24 +1017,33 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         <div className="sticky top-0 z-10 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
           {/* 数量显示 */}
           <div className="mb-6 flex items-center justify-between px-6">
-            <div className="text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
-              {(() => {
-                // 图片流模式下显示有图片的记录统计
-                if (imageFlowStats) {
-                  return imageFlowStats.count === 0
-                    ? ''
-                    : `${imageFlowStats.count} 条图片记录，已消耗 ${formatConsumption(imageFlowStats.consumption)}`;
-                }
+            <div
+              className={`relative min-w-0 ${navigationToggleControl ? 'pl-6' : ''}`}
+            >
+              {navigationToggleControl && (
+                <div className="absolute top-1/2 -left-1.5 -translate-y-1/2">
+                  {navigationToggleControl}
+                </div>
+              )}
+              <div className="min-w-0 text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
+                {(() => {
+                  // 图片流模式下显示有图片的记录统计
+                  if (imageFlowStats) {
+                    return imageFlowStats.count === 0
+                      ? ''
+                      : `${imageFlowStats.count} 条图片记录，已消耗 ${formatConsumption(imageFlowStats.consumption)}`;
+                  }
 
-                // 普通模式下显示总记录统计
-                // 搜索模式：显示搜索结果的统计
-                if (isSearching && searchQuery.trim()) {
-                  return `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
-                }
+                  // 普通模式下显示总记录统计
+                  // 搜索模式：显示搜索结果的统计
+                  if (isSearching && searchQuery.trim()) {
+                    return `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
+                  }
 
-                // 普通模式：显示当前筛选结果的统计
-                return `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
-              })()}
+                  // 普通模式：显示当前筛选结果的统计
+                  return `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
+                })()}
+              </div>
             </div>
           </div>
 

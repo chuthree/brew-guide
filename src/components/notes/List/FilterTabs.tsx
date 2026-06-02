@@ -633,7 +633,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
           {!isSearching ? (
             <div className="relative flex items-center">
               {/* 固定在左侧的"全部"和筛选按钮 */}
-              <div className="relative z-10 flex flex-shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
+              <div className="relative flex flex-shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
                 <TabButton
                   isActive={
                     (filterMode === 'equipment' &&
@@ -675,7 +675,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
               <div className="relative flex-1 overflow-hidden">
                 {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
                 {showLeftShadow && (
-                  <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-gradient-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                  <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
                 )}
 
                 <div
@@ -832,11 +832,11 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                 </div>
 
                 {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-6 bg-gradient-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                <div className="pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-gradient-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
               </div>
 
               {/* 固定在右侧的搜索按钮 */}
-              <div className="relative z-10 flex flex-shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
+              <div className="relative flex flex-shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
                 {/* 竖直分割线 */}
                 <div className="mr-3 mb-1.5 h-3 w-px bg-neutral-200 dark:bg-neutral-800"></div>
                 <button

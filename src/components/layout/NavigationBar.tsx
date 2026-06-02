@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { equipmentList, type CustomEquipment } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
@@ -19,6 +25,7 @@ import {
   useScrollBorder,
 } from '@/lib/equipment/useScrollToSelected';
 import DesktopGlobalSearch from '@/components/layout/DesktopGlobalSearch';
+import { NavigationSettingsButton } from '@/components/layout/NavigationControls';
 
 import { Equal, ArrowLeft, ChevronsUpDown, Upload } from 'lucide-react';
 
@@ -325,6 +332,9 @@ interface NavigationBarProps {
   width?: number;
   isResizing?: boolean;
   isDesktopLayout?: boolean;
+  sidebarCollapseControl?: React.ReactNode;
+  sidebarControlVisibility?: 'reveal' | 'always';
+  showDesktopBorder?: boolean;
 }
 
 // 意式咖啡相关工具函数 - 优化为更简洁的实现
@@ -423,6 +433,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   width,
   isResizing,
   isDesktopLayout = false,
+  sidebarCollapseControl,
+  sidebarControlVisibility: _sidebarControlVisibility = 'reveal',
+  showDesktopBorder = true,
 }) => {
   const { canGoBack } = useNavigation(
     activeBrewingStep,
@@ -443,6 +456,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   const isDesktopBackLayout = Boolean(canGoBack() && onBackClick);
   const showDesktopTopTabs = !isDesktopBackLayout;
+  const [isSidebarControlVisible, setIsSidebarControlVisible] = useState(false);
+  const showSidebarCollapseControl =
+    isDesktopLayout && Boolean(sidebarCollapseControl);
 
   const derivedNavigation = deriveNavigationSettings(
     settings.navigationSettings
@@ -1109,11 +1125,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   return (
     <motion.div
-      className={`${isPwaBannerVisible ? 'pt-6' : 'pt-safe-top'} sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:shrink-0 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 ${
-        isResizing
-          ? ''
-          : 'md:transition-[width,border-color] md:duration-350 md:ease-in-out'
-      } ${
+      className={`${isPwaBannerVisible ? 'pt-6' : 'pt-safe-top'} sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:shrink-0 md:flex-col md:overflow-y-auto md:border-b-0 ${showDesktopBorder ? 'md:border-r' : ''} ${
         activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'
           ? 'border-transparent md:border-neutral-200/50 dark:md:border-neutral-800/50'
           : 'border-neutral-200/50 dark:border-neutral-800/50'
@@ -1239,13 +1251,30 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
               transition={{ duration: 0.2 }}
               style={{ pointerEvents: shouldHideHeader ? 'none' : 'auto' }}
             >
-              <div className="flex items-start justify-between md:flex-col">
-                {/* 设置入口按钮图标 - 扩大触碰区域 */}
+              <div className="flex items-start justify-between md:block">
                 <div
-                  onClick={handleTitleClick}
-                  className="-mt-3 -ml-3 flex cursor-pointer items-center pt-3 pr-4 pb-3 pl-3 text-[12px] tracking-widest text-neutral-500 dark:text-neutral-400"
+                  className="flex shrink-0 items-start md:w-full md:items-center md:justify-between"
+                  onMouseEnter={() => setIsSidebarControlVisible(true)}
+                  onMouseLeave={() => setIsSidebarControlVisible(false)}
+                  onTouchStart={() => setIsSidebarControlVisible(true)}
+                  onFocus={() => setIsSidebarControlVisible(true)}
+                  onBlur={event => {
+                    if (
+                      !event.currentTarget.contains(
+                        event.relatedTarget as Node | null
+                      )
+                    ) {
+                      setIsSidebarControlVisible(false);
+                    }
+                  }}
                 >
-                  <div className="relative flex h-4 w-4 items-center justify-center">
+                  {/* 设置入口按钮图标 - 扩大触碰区域 */}
+                  <NavigationSettingsButton
+                    placement="sidebar"
+                    title={canGoBack() && onBackClick ? '返回' : '设置'}
+                    ariaLabel={canGoBack() && onBackClick ? '返回' : '设置'}
+                    onClick={handleTitleClick}
+                  >
                     <AnimatePresence mode="popLayout" initial={false}>
                       {showHeaderSyncSpinner ? (
                         <motion.div
@@ -1260,7 +1289,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             scale: 1,
                             filter: 'blur(0px)',
                           }}
-                          exit={{ opacity: 0, scale: 0.5, filter: 'blur(4px)' }}
+                          exit={{
+                            opacity: 0,
+                            scale: 0.5,
+                            filter: 'blur(4px)',
+                          }}
                           transition={{
                             duration: 0.3,
                             ease: [0.23, 1, 0.32, 1], // cubic-bezier for smooth feel
@@ -1282,7 +1315,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             scale: 1,
                             filter: 'blur(0px)',
                           }}
-                          exit={{ opacity: 0, scale: 0.5, filter: 'blur(4px)' }}
+                          exit={{
+                            opacity: 0,
+                            scale: 0.5,
+                            filter: 'blur(4px)',
+                          }}
                           transition={{
                             duration: 0.3,
                             ease: [0.23, 1, 0.32, 1],
@@ -1297,7 +1334,13 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
+                  </NavigationSettingsButton>
+
+                  {showSidebarCollapseControl && isSidebarControlVisible && (
+                    <div className="-mt-3 -mr-3 hidden h-10 w-10 shrink-0 items-center justify-center md:flex">
+                      {sidebarCollapseControl}
+                    </div>
+                  )}
                 </div>
 
                 {/* 主导航按钮 - 移动端可滚动，桌面端垂直排列 */}

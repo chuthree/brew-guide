@@ -1,5 +1,6 @@
 import { CoffeeBean } from '@/types/app';
 import { VIEW_OPTIONS, VIEW_LABELS, type ViewOption } from './constants';
+import type { ReactNode } from 'react';
 
 // ExtendedCoffeeBean 已移除，直接使用 CoffeeBean
 export type ExtendedCoffeeBean = CoffeeBean;
@@ -39,6 +40,7 @@ export interface CoffeeBeansProps {
   // 添加初始化参数支持
   initialViewMode?: ViewOption;
   activeBeanId?: string | null;
+  navigationToggleControl?: ReactNode;
   // 添加设置参数
   settings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';

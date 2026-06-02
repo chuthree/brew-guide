@@ -420,6 +420,7 @@ interface ViewSwitcherProps {
   estimatedCupsLabel?: string;
   // 是否有生豆（用于动态调整列标签）
   hasGreenBeans?: boolean;
+  navigationToggleControl?: React.ReactNode;
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -503,6 +504,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   estimatedCupsLabel,
   // 是否有生豆（用于动态调整列标签）
   hasGreenBeans = false,
+  navigationToggleControl,
 }) => {
   // 获取概要显示设置
   const showBeanSummary = useSettingsStore(
@@ -806,11 +808,18 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   const newLocal =
     'shrink-0 bg-neutral-200/30 px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-400 transition-colors dark:bg-neutral-800/50 dark:text-neutral-400';
   return (
-    <div className="sticky top-0 z-20 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
+    <div className="sticky top-0 flex-none space-y-6 bg-neutral-50 pt-6 md:pt-0 dark:bg-neutral-900">
       {/* 视图切换与筛选栏 - 统一布局 */}
       <div className="mb-6 flex items-center justify-between px-6">
-        <div className="flex items-center space-x-3">
-          <div className="text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
+        <div
+          className={`relative min-w-0 ${navigationToggleControl ? 'pl-6' : ''}`}
+        >
+          {navigationToggleControl && (
+            <div className="absolute top-1/2 -left-1.5 -translate-y-1/2">
+              {navigationToggleControl}
+            </div>
+          )}
+          <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
             {viewMode === VIEW_OPTIONS.INVENTORY ? (
               showEmptyBeans ? (
                 <span>
@@ -892,7 +901,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                 {!isSearching ? (
                   <div className="relative flex items-center">
                     {/* 固定在左侧的"全部"和筛选按钮 */}
-                    <div className="relative z-10 flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
+                    <div className="relative flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
                       <TabButton
                         isActive={rankingBeanType === 'all'}
                         onClick={() => onRankingBeanTypeChange?.('all')}
@@ -920,7 +929,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     <div className="relative flex-1 overflow-hidden">
                       {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
                       {showRankingLeftShadow && (
-                        <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-linear-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                        <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-6 bg-linear-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
                       )}
 
                       <div
@@ -984,11 +993,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       </div>
 
                       {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                      <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-6 bg-linear-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                      <div className="pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-linear-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
                     </div>
 
                     {/* 固定在右侧的搜索按钮 */}
-                    <div className="relative z-10 flex shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
+                    <div className="relative flex shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
                       {/* 竖直分割线 */}
                       <div className="mr-3 mb-1.5 h-3 w-px bg-neutral-200 dark:bg-neutral-800"></div>
                       <button
@@ -1102,7 +1111,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
               {!isSearching ? (
                 <div className="relative flex items-center">
                   {/* 固定在左侧的"全部"和筛选按钮 */}
-                  <div className="relative z-10 flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
+                  <div className="relative flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
                     <TabButton
                       isActive={
                         (filterMode === 'variety' &&
@@ -1186,7 +1195,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   <div className="relative flex-1 overflow-hidden">
                     {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
                     {showLeftShadow && (
-                      <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-linear-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                      <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-6 bg-linear-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
                     )}
 
                     <div
@@ -1312,11 +1321,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </div>
 
                     {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                    <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-6 bg-linear-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                    <div className="pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-linear-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
                   </div>
 
                   {/* 固定在右侧的搜索按钮 */}
-                  <div className="relative z-10 flex shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
+                  <div className="relative flex shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
                     {/* 竖直分割线 */}
                     <div className="mr-3 mb-1.5 h-3 w-px bg-neutral-200 dark:bg-neutral-800"></div>
                     <button

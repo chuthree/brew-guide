@@ -121,6 +121,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   onExternalViewChange,
   initialViewMode,
   activeBeanId,
+  navigationToggleControl,
   settings,
 }) => {
   const { copyText, failureDrawerProps } = useCopy();
@@ -1767,6 +1768,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
           ? searchFilteredBeans
           : inventoryFilteredBeans
         ).some(bean => bean.beanState === 'green')}
+        navigationToggleControl={navigationToggleControl}
       />
 
       {/* 内容区域 - 可滚动 */}

@@ -35,6 +35,12 @@ import { EditableParams } from '@/lib/hooks/useBrewingParameters';
 import { MethodType } from '@/lib/types/method';
 import CustomMethodFormModal from '@/components/method/forms/CustomMethodFormModal';
 import NavigationBar from '@/components/layout/NavigationBar';
+import {
+  CollapsedNavigationDockOverlay,
+  CollapsedNavigationDockTrigger,
+  useCollapsedNavigationDock,
+} from '@/components/layout/CollapsedNavigationDock';
+import { NavigationArrowButton } from '@/components/layout/NavigationControls';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
 import TabContent from '@/components/layout/TabContent';
@@ -135,6 +141,19 @@ interface BlendComponent {
 interface ExtendedCoffeeBean extends CoffeeBean {
   blendComponents?: BlendComponent[];
 }
+
+const isEditableShortcutTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return false;
+
+  const tagName = target.tagName;
+  return (
+    target.isContentEditable ||
+    Boolean(target.closest('[contenteditable="true"], [role="textbox"]')) ||
+    tagName === 'INPUT' ||
+    tagName === 'TEXTAREA' ||
+    tagName === 'SELECT'
+  );
+};
 
 const EMPTY_NOTE_TASTE = {
   acidity: 0,
@@ -265,6 +284,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const isLargeScreen = useIsLargeScreen();
   // 检测是否启用桌面侧栏布局（md 断点）
   const isDesktopLayout = useIsDesktopLayout();
+  const NAVIGATION_COLLAPSED_STORAGE_KEY = 'navigationCollapsed';
+  const [isNavigationCollapsed, setIsNavigationCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      localStorage.getItem(NAVIGATION_COLLAPSED_STORAGE_KEY) === 'true'
+    );
+  });
 
   // 使用设置相关状态
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -405,7 +431,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const DETAIL_PANEL_STORAGE_KEY = 'detailPanelWidth';
 
   // 导航栏宽度拖动状态（大屏幕）
-  const NAV_PANEL_MIN_WIDTH = 120; // 最小宽度
+  const NAV_PANEL_MIN_WIDTH = 86; // 最小宽度
   const NAV_PANEL_MAX_WIDTH = 280; // 最大宽度
   const NAV_PANEL_DEFAULT_WIDTH = 144; // 默认宽度 (w-36 = 9rem = 144px)
   const NAV_PANEL_STORAGE_KEY = 'navPanelWidth';
@@ -632,6 +658,66 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     handleHideMethod: executeHideMethod,
     navigateToStep,
   } = brewingState;
+
+  const canCollapseNavigation =
+    isDesktopLayout && activeMainTab !== '冲煮' && !isNavigationCollapsed;
+  const canToggleNavigation =
+    isDesktopLayout &&
+    activeMainTab !== '冲煮' &&
+    !isNavResizing &&
+    !hasAnyModalOpen;
+
+  const handleCollapseNavigation = useCallback(() => {
+    if (!canCollapseNavigation) return;
+    if (settings.hapticFeedback) {
+      hapticsUtils.light();
+    }
+    localStorage.setItem(NAVIGATION_COLLAPSED_STORAGE_KEY, 'true');
+    setIsNavigationCollapsed(true);
+  }, [canCollapseNavigation, settings.hapticFeedback]);
+
+  const handleExpandNavigation = useCallback(() => {
+    if (settings.hapticFeedback) {
+      hapticsUtils.light();
+    }
+    localStorage.setItem(NAVIGATION_COLLAPSED_STORAGE_KEY, 'false');
+    setIsNavigationCollapsed(false);
+  }, [settings.hapticFeedback]);
+
+  useEffect(() => {
+    if (!isNavigationCollapsed) return;
+    if (!isDesktopLayout || activeMainTab === '冲煮') {
+      setIsNavigationCollapsed(false);
+    }
+  }, [activeMainTab, isDesktopLayout, isNavigationCollapsed]);
+
+  useEffect(() => {
+    const handleNavigationShortcut = (event: KeyboardEvent) => {
+      if (!canToggleNavigation) return;
+      if (isEditableShortcutTarget(event.target)) return;
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.altKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== 'b') return;
+
+      event.preventDefault();
+      if (settings.hapticFeedback) {
+        hapticsUtils.light();
+      }
+      setIsNavigationCollapsed(prev => {
+        const next = !prev;
+        localStorage.setItem(
+          NAVIGATION_COLLAPSED_STORAGE_KEY,
+          String(next)
+        );
+        return next;
+      });
+    };
+
+    window.addEventListener('keydown', handleNavigationShortcut);
+    return () => {
+      window.removeEventListener('keydown', handleNavigationShortcut);
+    };
+  }, [canToggleNavigation, settings.hapticFeedback]);
 
   // 包装删除方案函数，添加确认抽屉
   const handleDeleteCustomMethod = useCallback(
@@ -1692,9 +1778,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           import('@/lib/stores/brewingNoteStore'),
         ]);
         const coffeeParam = currentBrewingMethod.params.coffee;
-        const coffeeAmount = CapacitySyncManager.extractCoffeeAmount(
-          coffeeParam
-        );
+        const coffeeAmount =
+          CapacitySyncManager.extractCoffeeAmount(coffeeParam);
 
         if (coffeeAmount > 0) {
           if (selectedCoffeeBeanCreatedFromSearch) {
@@ -1720,8 +1805,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             coffeeBeanInfo: selectedCoffeeBeanData
               ? {
                   name: selectedCoffeeBeanData.name,
-                  roastLevel:
-                    selectedCoffeeBeanData.roastLevel || '中度烘焙',
+                  roastLevel: selectedCoffeeBeanData.roastLevel || '中度烘焙',
                   roastDate: selectedCoffeeBeanData.roastDate || '',
                   roaster: selectedCoffeeBeanData.roaster,
                 }
@@ -3634,6 +3718,125 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
   }, []);
 
+  const renderNavigationBar = (
+    key: string,
+    sidebarControl: React.ReactNode,
+    sidebarControlVisibility: 'reveal' | 'always' = 'reveal',
+    showDesktopBorder = true
+  ) => (
+    <NavigationBar
+      key={key}
+      activeMainTab={activeMainTab}
+      setActiveMainTab={handleMainTabClick}
+      activeBrewingStep={activeBrewingStep}
+      parameterInfo={parameterInfo}
+      setParameterInfo={setParameterInfo}
+      editableParams={editableParams}
+      setEditableParams={setEditableParams}
+      isTimerRunning={isTimerRunning}
+      showComplete={showComplete}
+      selectedEquipment={selectedEquipment}
+      selectedMethod={
+        currentBrewingMethod
+          ? {
+              name: currentBrewingMethod.name,
+              params: {
+                coffee: currentBrewingMethod.params.coffee,
+                water: currentBrewingMethod.params.water,
+                ratio: currentBrewingMethod.params.ratio,
+                grindSize: currentBrewingMethod.params.grindSize,
+                temp: currentBrewingMethod.params.temp,
+                stages: currentBrewingMethod.params.stages.map(stage => ({
+                  label: stage.label,
+                  duration: stage.duration,
+                  water: stage.water,
+                  detail: stage.detail,
+                  pourType: stage.pourType,
+                })),
+              },
+            }
+          : null
+      }
+      handleParamChange={handleParamChangeWrapper}
+      handleExtractionTimeChange={handleExtractionTimeChange}
+      setShowHistory={setShowHistory}
+      onTitleDoubleClick={() => setIsSettingsOpen(true)}
+      settings={settings}
+      hasCoffeeBeans={hasCoffeeBeans && navigationState.visibleTabs.coffeeBean}
+      alternativeHeader={alternativeHeaderContent}
+      showAlternativeHeader={showAlternativeHeader}
+      currentBeanView={currentBeanView}
+      showViewDropdown={showViewDropdown}
+      onToggleViewDropdown={handleToggleViewDropdown}
+      onBeanViewChange={handleBeanViewChange}
+      customEquipments={customEquipments}
+      onEquipmentSelect={handleEquipmentSelectWithName}
+      onAddEquipment={() => setShowEquipmentForm(true)}
+      onEditEquipment={equipment => {
+        setEditingEquipment(equipment);
+        setShowEquipmentForm(true);
+      }}
+      onDeleteEquipment={handleDeleteEquipment}
+      onShareEquipment={handleShareEquipment}
+      onBackClick={handleBackClick}
+      onToggleEquipmentManagement={() =>
+        setShowEquipmentManagement(!showEquipmentManagement)
+      }
+      cloudSyncEnabled={isCloudSyncEnabled()}
+      onPullToSync={handlePullToSync}
+      sidebarCollapseControl={sidebarControl}
+      sidebarControlVisibility={sidebarControlVisibility}
+      showDesktopBorder={showDesktopBorder}
+      width={isDesktopLayout ? navPanelWidth : undefined}
+      isResizing={isNavResizing}
+      isDesktopLayout={isDesktopLayout}
+    />
+  );
+
+  const expandedSidebarControl = canCollapseNavigation ? (
+    <NavigationArrowButton
+      direction="collapse"
+      placement="inline"
+      onClick={handleCollapseNavigation}
+    />
+  ) : null;
+
+  const collapsedSidebarControl =
+    isDesktopLayout && isNavigationCollapsed ? (
+      <NavigationArrowButton
+        direction="expand"
+        placement="inline"
+        onClick={handleExpandNavigation}
+      />
+    ) : null;
+
+  const collapsedNavigationDock = useCollapsedNavigationDock();
+
+  const contentNavigationControl =
+    isDesktopLayout && isNavigationCollapsed && activeMainTab !== '冲煮' ? (
+      <CollapsedNavigationDockTrigger
+        triggerRef={collapsedNavigationDock.triggerRef}
+        openOverlay={collapsedNavigationDock.openOverlay}
+        closeOverlay={collapsedNavigationDock.closeOverlay}
+      />
+    ) : null;
+
+  const collapsedNavigationOverlay =
+    isDesktopLayout && isNavigationCollapsed && activeMainTab !== '冲煮' ? (
+      <CollapsedNavigationDockOverlay
+        isOverlayOpen={collapsedNavigationDock.isOverlayOpen}
+        overlayRef={collapsedNavigationDock.overlayRef}
+        openOverlay={collapsedNavigationDock.openOverlay}
+        closeOverlay={collapsedNavigationDock.closeOverlay}
+        overlayContent={renderNavigationBar(
+          'collapsed-navigation-overlay',
+          collapsedSidebarControl,
+          'always',
+          false
+        )}
+      />
+    ) : null;
+
   return (
     <>
       {/* 主页面内容 - 应用转场动画 */}
@@ -3647,7 +3850,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               isLargeScreen ? hasOverlayModalOpen : hasModalOpen
             ),
             // CSS 变量用于 BottomActionBar 等组件
-            '--nav-panel-width': isDesktopLayout ? `${navPanelWidth}px` : '0px',
+            '--nav-panel-width':
+              isDesktopLayout && !isNavigationCollapsed
+                ? `${navPanelWidth}px`
+                : '0px',
             '--detail-panel-width':
               isLargeScreen && (beanDetailOpen || noteDetailOpen)
                 ? `${detailPanelWidth}px`
@@ -3657,88 +3863,28 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       >
         <PWAInstallBanner />
         <div className="flex h-full flex-col md:flex-row">
-          <NavigationBar
-            activeMainTab={activeMainTab}
-            setActiveMainTab={handleMainTabClick}
-            activeBrewingStep={activeBrewingStep}
-            parameterInfo={parameterInfo}
-            setParameterInfo={setParameterInfo}
-            editableParams={editableParams}
-            setEditableParams={setEditableParams}
-            isTimerRunning={isTimerRunning}
-            showComplete={showComplete}
-            selectedEquipment={selectedEquipment}
-            selectedMethod={
-              currentBrewingMethod
-                ? {
-                    name: currentBrewingMethod.name,
-                    params: {
-                      coffee: currentBrewingMethod.params.coffee,
-                      water: currentBrewingMethod.params.water,
-                      ratio: currentBrewingMethod.params.ratio,
-                      grindSize: currentBrewingMethod.params.grindSize,
-                      temp: currentBrewingMethod.params.temp,
-                      stages: currentBrewingMethod.params.stages.map(stage => ({
-                        label: stage.label,
-                        duration: stage.duration,
-                        water: stage.water,
-                        detail: stage.detail,
-                        pourType: stage.pourType,
-                      })),
-                    },
-                  }
-                : null
-            }
-            handleParamChange={handleParamChangeWrapper}
-            handleExtractionTimeChange={handleExtractionTimeChange}
-            setShowHistory={setShowHistory}
-            onTitleDoubleClick={() => setIsSettingsOpen(true)}
-            settings={settings}
-            hasCoffeeBeans={
-              hasCoffeeBeans && navigationState.visibleTabs.coffeeBean
-            }
-            alternativeHeader={alternativeHeaderContent}
-            showAlternativeHeader={showAlternativeHeader}
-            currentBeanView={currentBeanView}
-            showViewDropdown={showViewDropdown}
-            onToggleViewDropdown={handleToggleViewDropdown}
-            onBeanViewChange={handleBeanViewChange}
-            customEquipments={customEquipments}
-            onEquipmentSelect={handleEquipmentSelectWithName}
-            onAddEquipment={() => setShowEquipmentForm(true)}
-            onEditEquipment={equipment => {
-              setEditingEquipment(equipment);
-              setShowEquipmentForm(true);
-            }}
-            onDeleteEquipment={handleDeleteEquipment}
-            onShareEquipment={handleShareEquipment}
-            onBackClick={handleBackClick}
-            onToggleEquipmentManagement={() =>
-              setShowEquipmentManagement(!showEquipmentManagement)
-            }
-            cloudSyncEnabled={isCloudSyncEnabled()}
-            onPullToSync={handlePullToSync}
-            width={isDesktopLayout ? navPanelWidth : undefined}
-            isResizing={isNavResizing}
-            isDesktopLayout={isDesktopLayout}
-          />
+          {!isNavigationCollapsed && (
+            <div className="md:h-full md:shrink-0 md:overflow-hidden">
+              {renderNavigationBar('navigation-bar', expandedSidebarControl)}
+            </div>
+          )}
+
+          {collapsedNavigationOverlay}
 
           {/* 导航栏拖动条 - 侧边导航布局（md 及以上）显示，放在 NavigationBar 和 main 之间避免被裁切 */}
-          {isDesktopLayout && (
+          {isDesktopLayout && !isNavigationCollapsed && (
             <div
               className="group relative z-10 hidden h-full w-0 cursor-col-resize select-none md:block"
               onMouseDown={handleNavResizeStart}
               onTouchStart={handleNavResizeStart}
             >
-              {/* 可视化拖动指示器 - 居中显示 */}
               <div
-                className={`absolute top-1/2 left-1/2 h-12 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-200 ${
+                className={`absolute top-1/2 left-1/2 h-12 w-px -translate-x-1/2 -translate-y-1/2 ${
                   isNavResizing
-                    ? 'scale-y-150 bg-neutral-400 dark:bg-neutral-500'
+                    ? 'bg-neutral-400 dark:bg-neutral-500'
                     : 'bg-transparent group-hover:bg-neutral-300 dark:group-hover:bg-neutral-600'
                 }`}
               />
-              {/* 扩大触摸区域 - 左右各扩展8px */}
               <div className="absolute inset-y-0 -right-2 -left-2" />
             </div>
           )}
@@ -3913,6 +4059,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 setAlternativeHeaderContent={setAlternativeHeaderContent}
                 setShowAlternativeHeader={setShowAlternativeHeader}
                 settings={settings}
+                navigationToggleControl={contentNavigationControl}
               />
             </div>
 
@@ -3949,6 +4096,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   showStatusDots: settings.showStatusDots,
                   immersiveAdd: settings.immersiveAdd,
                 }}
+                navigationToggleControl={contentNavigationControl}
               />
             </div>
 
@@ -4018,9 +4166,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 >
                   {/* 可视化拖动指示器 - 居中显示 */}
                   <div
-                    className={`absolute top-1/2 left-1/2 h-12 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-200 ${
+                    className={`absolute top-1/2 left-1/2 h-12 w-px -translate-x-1/2 -translate-y-1/2 ${
                       isResizing
-                        ? 'scale-y-150 bg-neutral-400 dark:bg-neutral-500'
+                        ? 'bg-neutral-400 dark:bg-neutral-500'
                         : 'bg-transparent group-hover:bg-neutral-300 dark:group-hover:bg-neutral-600'
                     }`}
                   />
