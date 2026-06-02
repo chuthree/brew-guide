@@ -1471,4 +1471,5 @@ export const sponsorsList = [
   'no Tattos',
   'May Wang',
   'null',
+  'Neuanfang Jan',
 ];
