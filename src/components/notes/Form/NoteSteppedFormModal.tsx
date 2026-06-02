@@ -276,7 +276,7 @@ const NoteSteppedFormModal = forwardRef<
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
-                        {isCoffeeBeanStep ? '搜索' : '下一步'}
+                        {isCoffeeBeanStep ? '搜索或新建' : '下一步'}
                       </span>
                       {isCoffeeBeanStep ? (
                         <Search className="h-4 w-4" strokeWidth="3" />

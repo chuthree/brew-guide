@@ -626,9 +626,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         </div>
       ) : !hasMethods ? (
         <div className="border-l border-neutral-200/50 pl-6 text-xs text-neutral-500 dark:border-neutral-800/50 dark:text-neutral-400">
-          {canUseBrewingModule
-            ? '没有可用的冲煮方案，请前往“冲煮”页面添加'
-            : '没有可用方案，请前往设置中的“器具和方案”添加'}
+          没有可用方案，请前往设置中的“器具和方案”添加
         </div>
       ) : (
         <div className="space-y-5">
