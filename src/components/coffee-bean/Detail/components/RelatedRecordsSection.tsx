@@ -204,11 +204,13 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
               note => {
                 const isChangeRecord = isSimpleChangeRecord(note);
                 const isRoasting = isRoastingRecord(note);
-                const isEditableRecord = !!onEditNote && !isRoasting;
+                const canEditRecord = !!onEditNote && !isRoasting;
+                const shouldOpenNoteDetail =
+                  !isChangeRecord && !isRoasting && !!onOpenNoteDetail;
+                const shouldEditRecord =
+                  canEditRecord && (isChangeRecord || !shouldOpenNoteDetail);
                 const isClickableBrewingRecord =
-                  !isChangeRecord &&
-                  !isRoasting &&
-                  (!!onOpenNoteDetail || isEditableRecord);
+                  shouldOpenNoteDetail || shouldEditRecord;
                 const content = (
                   <>
                     {isChangeRecord ? (
@@ -230,14 +232,14 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
                         setNoteImageErrors={setNoteImageErrors}
                         onImageClick={onImageClick}
                         onOpenNoteDetail={
-                          isEditableRecord ? undefined : onOpenNoteDetail
+                          shouldOpenNoteDetail ? onOpenNoteDetail : undefined
                         }
                       />
                     )}
                   </>
                 );
 
-                if (isEditableRecord) {
+                if (shouldEditRecord) {
                   return (
                     <button
                       type="button"

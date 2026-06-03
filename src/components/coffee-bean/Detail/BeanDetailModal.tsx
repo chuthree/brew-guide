@@ -1057,11 +1057,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                             ? onOpenRelatedNote
                             : undefined
                         }
-                        onEditNote={
-                          navigationState.visibleTabs.notes
-                            ? undefined
-                            : onEditRelatedNote
-                        }
+                        onEditNote={onEditRelatedNote}
                       />
                     )}
                   </div>
