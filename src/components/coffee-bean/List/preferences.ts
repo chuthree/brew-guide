@@ -19,6 +19,7 @@ import { DateGroupingMode } from './components/StatsView/types';
 
 const MODULE_NAME = 'coffee-beans';
 const MAX_SEARCH_HISTORY = 15;
+const DEFAULT_SHOW_EMPTY_BEANS = true;
 
 // UI 偏好设置缓存（不存储数据，只存储 UI 状态）
 export const globalCache: {
@@ -97,8 +98,11 @@ export const globalCache: {
   selectedFlavorPeriods: { green: null, roasted: null },
   selectedRoasters: { green: null, roasted: null },
   selectedBeanGroupIds: { green: null, roasted: null },
-  showEmptyBeans: false,
-  showEmptyBeansSettings: { green: false, roasted: false },
+  showEmptyBeans: DEFAULT_SHOW_EMPTY_BEANS,
+  showEmptyBeansSettings: {
+    green: DEFAULT_SHOW_EMPTY_BEANS,
+    roasted: DEFAULT_SHOW_EMPTY_BEANS,
+  },
   isImageFlowMode: false,
   isImageFlowModes: { green: false, roasted: false },
   displayMode: 'list',
@@ -139,11 +143,11 @@ const migrateSortOption = (
 
 // 显示空豆子
 export const getShowEmptyBeansPreference = () =>
-  getBooleanState(MODULE_NAME, 'showEmptyBeans', false);
+  getBooleanState(MODULE_NAME, 'showEmptyBeans', DEFAULT_SHOW_EMPTY_BEANS);
 export const saveShowEmptyBeansPreference = (v: boolean) =>
   saveBooleanState(MODULE_NAME, 'showEmptyBeans', v);
 export const getShowEmptyBeansByStatePreference = (s: BeanState) =>
-  getBooleanState(MODULE_NAME, `showEmptyBeans_${s}`, false);
+  getBooleanState(MODULE_NAME, `showEmptyBeans_${s}`, DEFAULT_SHOW_EMPTY_BEANS);
 export const saveShowEmptyBeansByStatePreference = (s: BeanState, v: boolean) =>
   saveBooleanState(MODULE_NAME, `showEmptyBeans_${s}`, v);
 
