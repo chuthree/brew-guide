@@ -11,6 +11,7 @@ interface StageItemProps {
     isPinned?: boolean;
     isDivider?: boolean;
     dividerText?: string;
+    defaultCollapsed?: boolean;
     onToggleCollapse?: (isCollapsed: boolean) => void;
     time?: number;
     pourTime?: number;
@@ -130,18 +131,20 @@ const StageItem: React.FC<StageItemProps> = React.memo(
     allSteps = [],
     stepDisplayMode = 'cumulative',
   }) => {
-    const [isCommonSectionCollapsed, setIsCommonSectionCollapsed] =
-      useState(false);
+    const [isCommonSectionCollapsed, setIsCommonSectionCollapsed] = useState(
+      () => Boolean(step.defaultCollapsed)
+    );
 
     useEffect(() => {
       if (step.isDivider && step.onToggleCollapse) {
         step.onToggleCollapse(isCommonSectionCollapsed);
       }
-    }, [isCommonSectionCollapsed, step]);
+    }, [isCommonSectionCollapsed, step.isDivider, step.onToggleCollapse]);
 
     const isWaitingStage = step.type === 'wait';
     const isBypassStep = step.pourType === 'bypass';
     const isCurrentStage = activeTab === '注水' && index === currentStage;
+    const isCollapsibleDivider = Boolean(step.onToggleCollapse);
     const waterText =
       stepDisplayMode === 'independent'
         ? (step.displayWater?.independent ?? step.items?.[0])
@@ -156,16 +159,21 @@ const StageItem: React.FC<StageItemProps> = React.memo(
     }, []);
 
     const opacityStyle = useMemo(() => {
+      if (activeTab === '方案' && step.isNoStageMethod) {
+        return 'opacity-50';
+      }
       if (activeTab === '注水' && !isCurrentStage && index > currentStage) {
         return 'opacity-50';
       }
       return '';
-    }, [activeTab, isCurrentStage, index, currentStage]);
+    }, [activeTab, step.isNoStageMethod, isCurrentStage, index, currentStage]);
 
     const handleClick = (e: React.MouseEvent) => {
       if (step.isDivider) {
         e.stopPropagation();
-        setIsCommonSectionCollapsed(!isCommonSectionCollapsed);
+        if (isCollapsibleDivider) {
+          setIsCommonSectionCollapsed(!isCommonSectionCollapsed);
+        }
         return;
       }
       onClick();
@@ -193,27 +201,29 @@ const StageItem: React.FC<StageItemProps> = React.memo(
       if (step.isDivider) {
         return (
           <div
-            className="relative mb-4 flex cursor-pointer items-center"
+            className={`relative mb-4 flex items-center ${isCollapsibleDivider ? 'cursor-pointer' : ''}`}
             onClick={handleClick}
           >
             <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
-            <button className="mx-3 flex items-center justify-center text-[10px] font-medium text-neutral-600 dark:text-neutral-400">
+            <div className="mx-3 flex items-center justify-center text-[10px] font-medium text-neutral-600 dark:text-neutral-400">
               {step.dividerText || ''}
-              <svg
-                className={`ml-1 h-3 w-3 transition-transform duration-200 ${isCommonSectionCollapsed ? 'rotate-180' : ''}`}
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6 9L12 15L18 9"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
+              {isCollapsibleDivider && (
+                <svg
+                  className={`ml-1 h-3 w-3 transition-transform duration-200 ${isCommonSectionCollapsed ? 'rotate-180' : ''}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M6 9L12 15L18 9"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </div>
             <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
           </div>
         );

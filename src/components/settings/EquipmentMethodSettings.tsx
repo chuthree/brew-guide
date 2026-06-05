@@ -14,6 +14,7 @@ import MethodImportModal from '@/components/method/import/MethodImportModal';
 import PageStackDrawer, {
   useDrawerPageStack,
 } from '@/components/common/ui/PageStackDrawer';
+import type { PageStackDrawerAction } from '@/components/common/ui/PageStackDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
 import {
   commonMethods,
@@ -485,6 +486,11 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
     drawerStack.canGoBack ||
     Boolean(drawerChrome.canGoBack) ||
     (isMethodFormPage && methodChrome.canGoBack);
+  const canSkipMethodStages =
+    isMethodFormPage &&
+    !editingMethod &&
+    navigationState.visibleTabs.brewing &&
+    methodFormStep === 3;
   const activeCustomEquipment = React.useMemo<CustomEquipment | null>(() => {
     if (!activeEquipment) return null;
     if (activeEquipment.isCustom) return activeEquipment;
@@ -568,6 +574,36 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
     isCustomEquipmentFormPage,
     isEquipmentPickerPage,
     isMethodFormPage,
+  ]);
+
+  const handleSkipMethodStages = React.useCallback(() => {
+    methodFormRef.current?.skipStages();
+  }, []);
+
+  const drawerDoneActions = React.useMemo<
+    PageStackDrawerAction[] | undefined
+  >(() => {
+    if (!canSkipMethodStages) {
+      return undefined;
+    }
+
+    return [
+      {
+        label: '跳过',
+        onClick: handleSkipMethodStages,
+      },
+      {
+        label: methodChrome.doneLabel,
+        onClick: handleDrawerDone,
+        disabled: methodChrome.doneDisabled,
+      },
+    ];
+  }, [
+    canSkipMethodStages,
+    handleDrawerDone,
+    handleSkipMethodStages,
+    methodChrome.doneDisabled,
+    methodChrome.doneLabel,
   ]);
 
   const openEquipmentForm = React.useCallback(() => {
@@ -1192,6 +1228,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
           isMethodFormPage && methodChrome.canGoBack ? '上一步' : '返回'
         }
         doneLabel={isMethodFormPage ? methodChrome.doneLabel : '完成'}
+        doneActions={drawerDoneActions}
         doneDisabled={
           isMethodFormPage
             ? methodChrome.doneDisabled

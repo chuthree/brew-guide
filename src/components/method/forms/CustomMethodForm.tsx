@@ -133,6 +133,7 @@ interface CustomMethodFormProps {
 export interface CustomMethodFormHandle {
   back: () => void;
   done: () => void;
+  skipStages: () => void;
 }
 
 /**
@@ -604,93 +605,96 @@ const CustomMethodForm = React.forwardRef<
       });
     };
 
-    const handleSubmit = useCallback(async () => {
-      // 创建一个方法的深拷贝，以便修改
-      const finalMethod = JSON.parse(
-        JSON.stringify(method)
-      ) as MethodWithStages;
+    const handleSubmit = useCallback(
+      async (skipStages = false) => {
+        // 创建一个方法的深拷贝，以便修改
+        const finalMethod = JSON.parse(
+          JSON.stringify(method)
+        ) as MethodWithStages;
 
-      if (!enableStageEditing && !initialMethod) {
-        finalMethod.params.stages = [];
-      }
+        if (skipStages || (!enableStageEditing && !initialMethod)) {
+          finalMethod.params.stages = [];
+        }
 
-      // 如果是聪明杯，将阀门状态添加到步骤名称中
-      if (customEquipment.hasValve && finalMethod.params.stages) {
-        finalMethod.params.stages = finalMethod.params.stages.map(stage => {
-          if (stage.valveStatus) {
-            const valveStatusText =
-              stage.valveStatus === 'open' ? '[开阀]' : '[关阀]';
-            // 确保没有重复添加
-            const baseLabel = stage.label
-              .replace(/\s*\[开阀\]|\s*\[关阀\]/g, '')
-              .trim();
-            return {
-              ...stage,
-              label: `${valveStatusText}${baseLabel}`.trim(),
-            };
-          }
-          return stage;
-        });
-      }
-
-      // 保存意式机饮料名称到localStorage
-      if (isEspressoMachine(customEquipment)) {
-        try {
-          // 获取所有饮料类型步骤的饮料名称
-          const beverageNames = finalMethod.params.stages
-            .filter(stage => stage.pourType === 'beverage')
-            .map(stage => stage.label)
-            .filter(label => label.trim() !== ''); // 排除空名称
-
-          if (beverageNames.length > 0) {
-            // 从localStorage读取已保存的饮料名称
-            const savedSuggestions = localStorage.getItem(
-              'userBeverageSuggestions'
-            );
-            let userBeverages: string[] = [];
-
-            if (savedSuggestions) {
-              userBeverages = JSON.parse(savedSuggestions);
+        // 如果是聪明杯，将阀门状态添加到步骤名称中
+        if (customEquipment.hasValve && finalMethod.params.stages) {
+          finalMethod.params.stages = finalMethod.params.stages.map(stage => {
+            if (stage.valveStatus) {
+              const valveStatusText =
+                stage.valveStatus === 'open' ? '[开阀]' : '[关阀]';
+              // 确保没有重复添加
+              const baseLabel = stage.label
+                .replace(/\s*\[开阀\]|\s*\[关阀\]/g, '')
+                .trim();
+              return {
+                ...stage,
+                label: `${valveStatusText}${baseLabel}`.trim(),
+              };
             }
-
-            // 添加新的饮料名称，去重
-            const uniqueBeverages = Array.from(
-              new Set([...userBeverages, ...beverageNames])
-            );
-
-            // 保存回localStorage
-            localStorage.setItem(
-              'userBeverageSuggestions',
-              JSON.stringify(uniqueBeverages)
-            );
-          }
-        } catch (error) {
-          // Log error in development only
-          if (process.env.NODE_ENV === 'development') {
-            console.error('保存饮料名称失败:', error);
-          }
-          // 继续执行，不影响主要功能
-        }
-      }
-
-      try {
-        // 同步磨豆机刻度到设置
-        if (finalMethod.params.grindSize) {
-          const { syncGrinderToSettings } = await import('@/lib/grinder');
-          await syncGrinderToSettings(
-            finalMethod.params.grindSize,
-            customEquipment.id,
-            finalMethod.name
-          );
+            return stage;
+          });
         }
 
-        // 保存方法
-        await onSave(finalMethod);
-      } catch {
-        // 可以在这里添加用户友好的错误提示
-        alert('保存方案失败，请重试');
-      }
-    }, [customEquipment, enableStageEditing, initialMethod, method, onSave]);
+        // 保存意式机饮料名称到localStorage
+        if (isEspressoMachine(customEquipment)) {
+          try {
+            // 获取所有饮料类型步骤的饮料名称
+            const beverageNames = finalMethod.params.stages
+              .filter(stage => stage.pourType === 'beverage')
+              .map(stage => stage.label)
+              .filter(label => label.trim() !== ''); // 排除空名称
+
+            if (beverageNames.length > 0) {
+              // 从localStorage读取已保存的饮料名称
+              const savedSuggestions = localStorage.getItem(
+                'userBeverageSuggestions'
+              );
+              let userBeverages: string[] = [];
+
+              if (savedSuggestions) {
+                userBeverages = JSON.parse(savedSuggestions);
+              }
+
+              // 添加新的饮料名称，去重
+              const uniqueBeverages = Array.from(
+                new Set([...userBeverages, ...beverageNames])
+              );
+
+              // 保存回localStorage
+              localStorage.setItem(
+                'userBeverageSuggestions',
+                JSON.stringify(uniqueBeverages)
+              );
+            }
+          } catch (error) {
+            // Log error in development only
+            if (process.env.NODE_ENV === 'development') {
+              console.error('保存饮料名称失败:', error);
+            }
+            // 继续执行，不影响主要功能
+          }
+        }
+
+        try {
+          // 同步磨豆机刻度到设置
+          if (finalMethod.params.grindSize) {
+            const { syncGrinderToSettings } = await import('@/lib/grinder');
+            await syncGrinderToSettings(
+              finalMethod.params.grindSize,
+              customEquipment.id,
+              finalMethod.name
+            );
+          }
+
+          // 保存方法
+          await onSave(finalMethod);
+        } catch {
+          // 可以在这里添加用户友好的错误提示
+          alert('保存方案失败，请重试');
+        }
+      },
+      [customEquipment, enableStageEditing, initialMethod, method, onSave]
+    );
 
     const handleCoffeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const coffee = e.target.value;
@@ -1344,13 +1348,22 @@ const CustomMethodForm = React.forwardRef<
       stepValid,
     ]);
 
+    const handleSkipStages = useCallback(() => {
+      if (!enableStageEditing || initialMethod || currentStep !== 'stages') {
+        return;
+      }
+
+      void handleSubmit(true);
+    }, [currentStep, enableStageEditing, handleSubmit, initialMethod]);
+
     React.useImperativeHandle(
       ref,
       () => ({
         back: handleBack,
         done: handlePrimaryAction,
+        skipStages: handleSkipStages,
       }),
-      [handleBack, handlePrimaryAction]
+      [handleBack, handlePrimaryAction, handleSkipStages]
     );
 
     React.useEffect(() => {

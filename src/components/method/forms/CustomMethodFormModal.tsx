@@ -1,13 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import CustomMethodForm from '@/components/method/forms/CustomMethodForm';
+import type { CustomMethodFormHandle } from '@/components/method/forms/CustomMethodForm';
 import {
   useMultiStepModalHistory,
   useModalHistory,
   modalHistory,
 } from '@/lib/hooks/useModalHistory';
 import MethodImportModal from '@/components/method/import/MethodImportModal';
+import PageStackDrawer from '@/components/common/ui/PageStackDrawer';
+import type { PageStackDrawerAction } from '@/components/common/ui/PageStackDrawer';
 import {
   Method,
   CustomEquipment,
@@ -40,15 +49,22 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
   onCloseImportForm,
   grinderDefaultSyncEnabled = false,
 }) => {
+  const formRef = useRef<CustomMethodFormHandle>(null);
   const [_validationError, setValidationError] = useState<string | null>(null);
   const [_customEquipments, setCustomEquipments] = useState<CustomEquipment[]>(
     []
   );
   const [currentCustomEquipment, setCurrentCustomEquipment] =
     useState<CustomEquipment | null>(null);
+  const [drawerChrome, setDrawerChrome] = useState({
+    doneLabel: '下一步',
+    doneDisabled: false,
+    canGoBack: false,
+  });
 
   // 多步骤表单的当前步骤状态
   const [currentFormStep, setCurrentFormStep] = useState(1);
+  const isCustomMethodDrawerOpen = showCustomForm && !!currentCustomEquipment;
 
   // 步骤变化回调 - 用于浏览器返回时
   const handleStepChange = useCallback((step: number) => {
@@ -58,7 +74,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
   // 使用新的多步骤历史栈管理
   useMultiStepModalHistory({
     id: 'custom-method-form',
-    isOpen: showCustomForm && !!currentCustomEquipment,
+    isOpen: isCustomMethodDrawerOpen,
     step: currentFormStep,
     onStepChange: handleStepChange,
     onClose: onCloseCustomForm,
@@ -110,52 +126,55 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
   }, [selectedEquipment, showCustomForm]); // 只在selectedEquipment或showCustomForm变化时重新加载
 
   // 根据表单数据保存自定义方法
-  const handleSaveMethod = async (method: Method) => {
-    try {
-      // 检查必要字段
-      if (!method.name) {
-        setValidationError('请输入方案名称');
+  const handleSaveMethod = useCallback(
+    async (method: Method) => {
+      try {
+        // 检查必要字段
+        if (!method.name) {
+          setValidationError('请输入方案名称');
+          return null;
+        }
+
+        if (!method.params?.coffee || !method.params?.water) {
+          setValidationError('请输入咖啡粉量和水量');
+          return null;
+        }
+
+        // 确保有唯一ID
+        const methodWithId: Method = {
+          ...method,
+          id: method.id || uuidv4(),
+        };
+
+        // 直接调用父组件的保存方法并传递完整的方法对象
+        onSaveCustomMethod(methodWithId);
+
+        // 清除错误
+        setValidationError(null);
+
+        // 保存成功后直接关闭表单，不通过历史栈返回
+        // 直接调用父组件的关闭回调，避免触发 popstate 事件导致表单返回上一步
+        onCloseCustomForm();
+
+        return methodWithId.id;
+      } catch (error) {
+        console.error('保存方案失败:', error);
+        setValidationError('保存失败，请重试');
         return null;
       }
-
-      if (!method.params?.coffee || !method.params?.water) {
-        setValidationError('请输入咖啡粉量和水量');
-        return null;
-      }
-
-      if (!method.params.stages || method.params.stages.length === 0) {
-        setValidationError('至少需要添加一个阶段');
-        return null;
-      }
-
-      // 确保有唯一ID
-      const methodWithId: Method = {
-        ...method,
-        id: method.id || uuidv4(),
-      };
-
-      // 直接调用父组件的保存方法并传递完整的方法对象
-      onSaveCustomMethod(methodWithId);
-
-      // 清除错误
-      setValidationError(null);
-
-      // 保存成功后直接关闭表单，不通过历史栈返回
-      // 直接调用父组件的关闭回调，避免触发 popstate 事件导致表单返回上一步
-      onCloseCustomForm();
-
-      return methodWithId.id;
-    } catch (error) {
-      console.error('保存方案失败:', error);
-      setValidationError('保存失败，请重试');
-      return null;
-    }
-  };
+    },
+    [onCloseCustomForm, onSaveCustomMethod]
+  );
 
   // 重置表单步骤当表单关闭时
   useEffect(() => {
     if (!showCustomForm) {
       setCurrentFormStep(1);
+      setDrawerChrome({
+        doneLabel: '下一步',
+        doneDisabled: false,
+        canGoBack: false,
+      });
     }
   }, [showCustomForm]);
 
@@ -164,6 +183,39 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
     modalHistory.back();
   }, []);
 
+  const handleDoneCustomForm = useCallback(() => {
+    formRef.current?.done();
+  }, []);
+
+  const handleSkipStages = useCallback(() => {
+    formRef.current?.skipStages();
+  }, []);
+
+  const drawerDoneActions = useMemo<PageStackDrawerAction[] | undefined>(() => {
+    if (editingMethod || currentFormStep !== 3) {
+      return undefined;
+    }
+
+    return [
+      {
+        label: '跳过',
+        onClick: handleSkipStages,
+      },
+      {
+        label: drawerChrome.doneLabel,
+        onClick: handleDoneCustomForm,
+        disabled: drawerChrome.doneDisabled,
+      },
+    ];
+  }, [
+    currentFormStep,
+    drawerChrome.doneDisabled,
+    drawerChrome.doneLabel,
+    editingMethod,
+    handleDoneCustomForm,
+    handleSkipStages,
+  ]);
+
   // 处理导入表单关闭（使用新的历史栈系统）
   const handleCloseImportForm = useCallback(() => {
     modalHistory.back();
@@ -171,23 +223,40 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
 
   return (
     <>
-      {/* 自定义方案表单 - 只在设备信息加载完成后显示 */}
-      {showCustomForm && currentCustomEquipment && (
-        <div
-          data-modal="custom-method-form"
-          className="pt-safe-top pb-safe-bottom fixed inset-0 inset-x-0 bottom-0 z-50 mx-auto flex h-full flex-col overflow-hidden bg-neutral-50 px-6 dark:bg-neutral-900"
-        >
-          <CustomMethodForm
-            onSave={handleSaveMethod}
-            onBack={handleCloseCustomForm}
-            initialMethod={editingMethod}
-            customEquipment={currentCustomEquipment}
-            currentStep={currentFormStep}
-            onStepChange={setCurrentFormStep}
-            grinderDefaultSyncEnabled={grinderDefaultSyncEnabled}
-          />
-        </div>
-      )}
+      <PageStackDrawer
+        isOpen={isCustomMethodDrawerOpen}
+        title={editingMethod ? '编辑方案' : '添加方案'}
+        activeKey={`custom-method-form-${currentFormStep}`}
+        canGoBack={drawerChrome.canGoBack}
+        backLabel="上一步"
+        doneLabel={drawerChrome.doneLabel}
+        doneActions={drawerDoneActions}
+        doneDisabled={drawerChrome.doneDisabled}
+        onCancel={handleCloseCustomForm}
+        onBack={handleCloseCustomForm}
+        onDone={handleDoneCustomForm}
+        historyId="custom-method-form"
+      >
+        {isCustomMethodDrawerOpen && currentCustomEquipment && (
+          <div
+            data-modal="custom-method-form"
+            className="flex h-[min(72vh,680px)] min-h-[520px] flex-col px-6 pb-2"
+          >
+            <CustomMethodForm
+              ref={formRef}
+              onSave={handleSaveMethod}
+              onBack={handleCloseCustomForm}
+              initialMethod={editingMethod}
+              customEquipment={currentCustomEquipment}
+              currentStep={currentFormStep}
+              onStepChange={setCurrentFormStep}
+              chromeMode="drawer"
+              onChromeChange={setDrawerChrome}
+              grinderDefaultSyncEnabled={grinderDefaultSyncEnabled}
+            />
+          </div>
+        )}
+      </PageStackDrawer>
 
       {/* 导入方案组件 - 使用新的MethodImportModal */}
       <MethodImportModal

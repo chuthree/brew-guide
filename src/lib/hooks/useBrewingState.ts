@@ -76,6 +76,10 @@ export interface Step {
   endTime?: number;
   isCommonMethod?: boolean;
   methodIndex?: number;
+  isDivider?: boolean;
+  dividerText?: string;
+  defaultCollapsed?: boolean;
+  isNoStageMethod?: boolean;
 }
 
 export interface Content {
