@@ -13,11 +13,7 @@ import { loadCustomMethodsForEquipment } from '@/lib/stores/customMethodStore';
 import { filterHiddenMethods } from '@/lib/stores/settingsStore';
 import { MethodType } from '@/lib/types/method';
 import { isLegacyFormat, parseWater } from '@/lib/brewing/stageMigration';
-import {
-  calculateTotalDuration,
-  calculateTotalWater,
-  calculateCumulativeTime,
-} from '@/lib/brewing/stageUtils';
+import { calculateTotalDuration } from '@/lib/brewing/stageUtils';
 import { hasBrewingStages } from '@/lib/brewing/methodAvailability';
 
 // 格式化时间工具函数
@@ -135,9 +131,8 @@ export function useBrewingContent({
         let customMethodsForEquipment: Method[] = [];
         let commonMethodsForEquipment: Method[] = [];
 
-        // 总是获取自定义方案
-        customMethodsForEquipment =
-          currentEquipmentCustomMethods.filter(hasBrewingStages);
+        // 总是获取自定义方案。无步骤方案也保留在列表中，放入单独分组。
+        customMethodsForEquipment = currentEquipmentCustomMethods;
 
         // 获取通用方案
         {
@@ -175,8 +170,31 @@ export function useBrewingContent({
           }
         }
 
-        // 准备两个方案列表
-        const customMethodSteps = customMethodsForEquipment.map(method => {
+        const buildMethodStep = (
+          method: Method,
+          options: {
+            isCustom?: boolean;
+            isCommonMethod?: boolean;
+            methodIndex?: number;
+          } = {}
+        ) => {
+          const hasStages = hasBrewingStages(method);
+
+          if (!hasStages) {
+            return {
+              title: method.name,
+              methodId: method.id,
+              items: [
+                `水粉比 ${method.params.ratio}`,
+                `水量 ${method.params.water}`,
+                `研磨度 ${method.params.grindSize}`,
+              ],
+              note: '',
+              isNoStageMethod: true,
+              ...options,
+            };
+          }
+
           // 检查是否是意式咖啡方案
           const isEspressoMethod = method.params.stages.some(
             stage =>
@@ -237,10 +255,23 @@ export function useBrewingContent({
           return {
             title: method.name,
             methodId: method.id,
+            ...options,
             items: items,
             note: '',
-            isCustom: true, // 标记为自定义方案
           };
+        };
+
+        const customMethodsWithStages =
+          customMethodsForEquipment.filter(hasBrewingStages);
+        const customMethodsWithoutStages = customMethodsForEquipment.filter(
+          method => !hasBrewingStages(method)
+        );
+
+        // 准备两个方案列表
+        const customMethodSteps = customMethodsWithStages.map(method => {
+          return buildMethodStep(method, {
+            isCustom: true,
+          });
         });
 
         // 通用方案列表 - 过滤掉被隐藏的通用方案
@@ -253,6 +284,12 @@ export function useBrewingContent({
           );
         }
 
+        const noStageMethodSteps = customMethodsWithoutStages.map(method => {
+          return buildMethodStep(method, {
+            isCustom: true,
+          });
+        });
+
         const commonMethodSteps = filteredCommonMethods.map(method => {
           // 找到该方案在原始数组中的索引
           const originalMethodIndex = commonMethodsForEquipment.findIndex(m => {
@@ -262,75 +299,27 @@ export function useBrewingContent({
             return matchById || matchByName;
           });
 
-          // 检查是否是意式咖啡方案
-          const isEspressoMethod = method.params.stages.some(
-            stage =>
-              stage.pourType === 'extraction' || stage.pourType === 'beverage'
-          );
-
-          // 计算总时长 - 支持新旧格式
-          let totalTime = 0;
-          if (isEspressoMethod) {
-            // 对于意式咖啡，只计算萃取步骤的时间
-            const extractionStage = method.params.stages.find(
-              stage => stage.pourType === 'extraction'
-            );
-            // 支持新旧格式：优先使用 duration，否则使用 time
-            totalTime = extractionStage?.duration ?? extractionStage?.time ?? 0;
-          } else {
-            // 检测是否为新格式
-            const useNewFormat =
-              !isLegacyFormat(method.params.stages) &&
-              method.params.stages.some(
-                stage =>
-                  typeof stage.duration === 'number' ||
-                  stage.pourType === 'wait'
-              );
-
-            if (useNewFormat) {
-              // 新格式：累加所有阶段的 duration
-              totalTime = calculateTotalDuration(method.params.stages);
-            } else {
-              // 旧格式：使用最后一个步骤的累计时间
-              totalTime =
-                method.params.stages[method.params.stages.length - 1]?.time ||
-                0;
-            }
-          }
-
-          // 针对不同类型的方案显示不同的信息
-          let items: string[] = [];
-          if (isEspressoMethod) {
-            // 意式咖啡方案显示: 粉量、液重、萃取时间
-            const extractionStage = method.params.stages.find(
-              stage => stage.pourType === 'extraction'
-            );
-            items = [
-              `粉量 ${method.params.coffee}`,
-              `液重 ${extractionStage?.water || method.params.water}`,
-              `萃取时间 ${formatTime(totalTime, true)}`,
-            ];
-          } else {
-            // 传统方案显示: 水粉比、总时长、研磨度
-            items = [
-              `水粉比 ${method.params.ratio}`,
-              `总时长 ${formatTime(totalTime, true)}`,
-              `研磨度 ${method.params.grindSize}`,
-            ];
-          }
-
-          return {
-            title: method.name,
-            methodId: method.id,
+          return buildMethodStep(method, {
             isCommonMethod: true, // 标记为通用方案
             methodIndex: originalMethodIndex, // 使用原始数组中的索引
-            items: items,
-            note: '',
-          };
+          });
         });
 
-        // 合并所有步骤：自定义方案 + 分隔符 + 通用方案
-        const dividerStep =
+        const noStageDividerStep =
+          noStageMethodSteps.length > 0
+            ? [
+                {
+                  title: '',
+                  items: [],
+                  note: '',
+                  isDivider: true,
+                  dividerText: '无步骤方案',
+                  defaultCollapsed: true,
+                },
+              ]
+            : [];
+
+        const commonDividerStep =
           customMethodSteps.length > 0 && commonMethodSteps.length > 0
             ? [
                 {
@@ -345,8 +334,10 @@ export function useBrewingContent({
 
         const steps = [
           ...customMethodSteps, // 先显示自定义方案
-          ...dividerStep, // 添加分隔符
+          ...commonDividerStep, // 添加分隔符
           ...commonMethodSteps, // 再显示通用方案
+          ...noStageDividerStep, // 最后显示无步骤方案分组
+          ...noStageMethodSteps,
         ];
 
         const result = {
@@ -472,7 +463,7 @@ export function useBrewingContent({
     let cumulativeWater = 0;
     let stageIndex = 0; // 用于跟踪实际的阶段编号（等待步骤与前一个注水步骤共享）
 
-    stages.forEach((stage, index) => {
+    stages.forEach((stage, _index) => {
       // Bypass 类型的步骤不参与主要计时，单独处理
       if (stage.pourType === 'bypass') {
         expandedStages.push({

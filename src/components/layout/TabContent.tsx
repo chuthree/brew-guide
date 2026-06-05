@@ -35,10 +35,13 @@ import { useInputFocus } from '@/lib/hooks/useInputFocus';
 import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
 import { methodToReadableText } from '@/lib/utils/jsonUtils';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
+import { getBooleanState, saveBooleanState } from '@/lib/core/statePersistence';
 
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 // 分享模态框已移除，改为直接复制到剪贴板
+
+const BREWING_UI_STATE_MODULE = 'brewing-ui';
 
 // 导入随机咖啡豆选择器组件
 const CoffeeBeanRandomPicker = dynamic(
@@ -458,8 +461,37 @@ const TabContent: React.FC<TabContentProps> = ({
   );
 
   // 通用方案折叠状态
-  const [isCommonMethodsCollapsed, setIsCommonMethodsCollapsed] =
-    useState(false);
+  const [isCommonMethodsCollapsed, setIsCommonMethodsCollapsed] = useState(() =>
+    getBooleanState(BREWING_UI_STATE_MODULE, 'commonMethodsCollapsed')
+  );
+  const [isNoStageMethodsCollapsed, setIsNoStageMethodsCollapsed] = useState(
+    () =>
+      getBooleanState(BREWING_UI_STATE_MODULE, 'noStageMethodsCollapsed', true)
+  );
+
+  const handleCommonMethodsCollapsedChange = useCallback(
+    (isCollapsed: boolean) => {
+      setIsCommonMethodsCollapsed(isCollapsed);
+      saveBooleanState(
+        BREWING_UI_STATE_MODULE,
+        'commonMethodsCollapsed',
+        isCollapsed
+      );
+    },
+    []
+  );
+
+  const handleNoStageMethodsCollapsedChange = useCallback(
+    (isCollapsed: boolean) => {
+      setIsNoStageMethodsCollapsed(isCollapsed);
+      saveBooleanState(
+        BREWING_UI_STATE_MODULE,
+        'noStageMethodsCollapsed',
+        isCollapsed
+      );
+    },
+    []
+  );
 
   // 简化的随机选择咖啡豆
   const handleRandomBean = async (isLongPress: boolean = false) => {
@@ -858,6 +890,24 @@ const TabContent: React.FC<TabContentProps> = ({
     activeTab === '方案' &&
     selectedEquipment &&
     content[activeTab]?.steps.length === 0;
+  const activeSteps = content[activeTab]?.steps || [];
+
+  const isInCollapsedSection = (
+    index: number,
+    dividerIndex: number,
+    isCollapsed: boolean
+  ) => {
+    if (!isCollapsed || dividerIndex === -1 || index <= dividerIndex) {
+      return false;
+    }
+
+    const nextDividerIndex = activeSteps.findIndex(
+      (step: Step, stepIndex: number) =>
+        stepIndex > dividerIndex && step.isDivider
+    );
+
+    return nextDividerIndex === -1 || index < nextDividerIndex;
+  };
 
   // 渲染默认列表内容
   return (
@@ -869,22 +919,26 @@ const TabContent: React.FC<TabContentProps> = ({
           </div>
         ) : (
           <>
-            {content[activeTab]?.steps.map((step: Step, index: number) => {
-              // 如果是通用方案分隔符之后的项目，且折叠状态为true，则不显示
-              const isDividerFound =
-                content[activeTab]?.steps.findIndex(
-                  (s: Step) => s.isDivider
-                ) !== -1;
-              const dividerIndex = content[activeTab]?.steps.findIndex(
-                (s: Step) => s.isDivider
+            {activeSteps.map((step: Step, index: number) => {
+              // 如果分隔符之后的项目处于折叠区间，则不显示
+              const commonDividerIndex = content[activeTab]?.steps.findIndex(
+                (s: Step) => s.isDivider && s.dividerText === '通用方案'
+              );
+              const noStageDividerIndex = content[activeTab]?.steps.findIndex(
+                (s: Step) => s.isDivider && s.dividerText === '无步骤方案'
               );
 
-              // 如果通用方案被折叠，且当前项在分隔符之后，则跳过渲染
               if (
-                isDividerFound &&
-                dividerIndex !== -1 &&
-                index > dividerIndex &&
-                isCommonMethodsCollapsed
+                isInCollapsedSection(
+                  index,
+                  commonDividerIndex ?? -1,
+                  isCommonMethodsCollapsed
+                ) ||
+                isInCollapsedSection(
+                  index,
+                  noStageDividerIndex ?? -1,
+                  isNoStageMethodsCollapsed
+                )
               ) {
                 return null;
               }
@@ -1002,7 +1056,18 @@ const TabContent: React.FC<TabContentProps> = ({
                       step.isDivider
                         ? {
                             ...step,
-                            onToggleCollapse: setIsCommonMethodsCollapsed,
+                            defaultCollapsed:
+                              step.dividerText === '通用方案'
+                                ? isCommonMethodsCollapsed
+                                : step.dividerText === '无步骤方案'
+                                  ? isNoStageMethodsCollapsed
+                                  : step.defaultCollapsed,
+                            onToggleCollapse:
+                              step.dividerText === '通用方案'
+                                ? handleCommonMethodsCollapsedChange
+                                : step.dividerText === '无步骤方案'
+                                  ? handleNoStageMethodsCollapsedChange
+                                  : undefined,
                           }
                         : step
                     }

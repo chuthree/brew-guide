@@ -9,12 +9,19 @@ import { modalHistory } from '@/lib/navigation/modalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { DRAWER_TRANSITION } from './ActionDrawer';
 
+export interface PageStackDrawerAction {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
 interface PageStackDrawerProps {
   isOpen: boolean;
   title: string;
   activeKey: string;
   canGoBack: boolean;
   doneLabel?: string;
+  doneActions?: PageStackDrawerAction[];
   backLabel?: string;
   doneDisabled?: boolean;
   onCancel: () => void;
@@ -30,6 +37,7 @@ type PageStackDrawerSnapshot = Pick<
   | 'activeKey'
   | 'canGoBack'
   | 'doneLabel'
+  | 'doneActions'
   | 'backLabel'
   | 'doneDisabled'
   | 'children'
@@ -94,6 +102,7 @@ const PageStackDrawer: React.FC<PageStackDrawerProps> = ({
   activeKey,
   canGoBack,
   doneLabel = '完成',
+  doneActions,
   backLabel,
   doneDisabled = false,
   onCancel,
@@ -109,6 +118,7 @@ const PageStackDrawer: React.FC<PageStackDrawerProps> = ({
     activeKey,
     canGoBack,
     doneLabel,
+    doneActions,
     backLabel,
     doneDisabled,
     children,
@@ -130,6 +140,7 @@ const PageStackDrawer: React.FC<PageStackDrawerProps> = ({
       closingSnapshot.activeKey !== activeKey ||
       closingSnapshot.canGoBack !== canGoBack ||
       closingSnapshot.doneLabel !== doneLabel ||
+      closingSnapshot.doneActions !== doneActions ||
       closingSnapshot.backLabel !== backLabel ||
       closingSnapshot.doneDisabled !== doneDisabled ||
       closingSnapshot.children !== children)
@@ -224,6 +235,7 @@ const PageStackDrawer: React.FC<PageStackDrawerProps> = ({
         activeKey: '',
         canGoBack: false,
         doneLabel: '完成',
+        doneActions: undefined,
         doneDisabled: false,
         children: null,
       });
@@ -260,14 +272,34 @@ const PageStackDrawer: React.FC<PageStackDrawerProps> = ({
               <Drawer.Title className="max-w-48 truncate px-3 text-center text-base font-semibold text-neutral-900 dark:text-neutral-50">
                 {visibleSnapshot.title}
               </Drawer.Title>
-              <button
-                type="button"
-                onClick={onDone}
-                disabled={visibleSnapshot.doneDisabled}
-                className="ml-auto w-fit cursor-pointer rounded-full bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-800 transition active:scale-95 disabled:cursor-default disabled:opacity-30 disabled:active:scale-100 dark:bg-neutral-800 dark:text-neutral-100"
-              >
-                {visibleSnapshot.doneLabel}
-              </button>
+              {visibleSnapshot.doneActions?.length ? (
+                <div className="ml-auto flex w-fit overflow-hidden rounded-full bg-neutral-100 text-sm font-semibold text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100">
+                  {visibleSnapshot.doneActions.map((action, index) => (
+                    <React.Fragment key={`${action.label}-${index}`}>
+                      {index > 0 && (
+                        <div className="my-2 w-px shrink-0 bg-neutral-300 dark:bg-neutral-700" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={action.onClick}
+                        disabled={action.disabled}
+                        className="cursor-pointer px-4 py-2 transition active:scale-95 disabled:cursor-default disabled:opacity-30 disabled:active:scale-100"
+                      >
+                        {action.label}
+                      </button>
+                    </React.Fragment>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onDone}
+                  disabled={visibleSnapshot.doneDisabled}
+                  className="ml-auto w-fit cursor-pointer rounded-full bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-800 transition active:scale-95 disabled:cursor-default disabled:opacity-30 disabled:active:scale-100 dark:bg-neutral-800 dark:text-neutral-100"
+                >
+                  {visibleSnapshot.doneLabel}
+                </button>
+              )}
             </div>
 
             <motion.div
