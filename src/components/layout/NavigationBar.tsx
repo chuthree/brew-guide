@@ -1072,8 +1072,14 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     !hasCoffeeBeans || settings.showCoffeeBeanSelectionStep === false;
   const desktopContentTopSpacingClass =
     showDesktopTopTabs && isNoCoffeeBeanMode ? 'md:mt-6' : 'md:mt-0';
+  const shouldOffsetDesktopEquipmentFromBackHeader =
+    isDesktopBackLayout && activeBrewingStep === 'method';
   const desktopEquipmentTopSpacingClass =
-    showDesktopTopTabs && isNoCoffeeBeanMode ? 'md:mt-7' : 'md:mt-0';
+    shouldOffsetDesktopEquipmentFromBackHeader
+      ? 'md:mt-2'
+      : showDesktopTopTabs && isNoCoffeeBeanMode
+        ? 'md:mt-7'
+        : 'md:mt-0';
 
   const _handleTimeChange = (value: string) => {
     if (activeBrewingStep === 'notes') {
