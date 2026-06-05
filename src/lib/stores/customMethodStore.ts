@@ -61,6 +61,7 @@ interface CustomMethodStore {
     equipmentId: string,
     methods: Method[]
   ) => Promise<void>;
+  reorderMethods: (equipmentId: string, methods: Method[]) => Promise<void>;
   deleteMethodsForEquipment: (equipmentId: string) => Promise<void>;
 
   // 查询
@@ -406,6 +407,42 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
       }
     },
 
+    reorderMethods: async (equipmentId, methods) => {
+      try {
+        const currentMethods = get().methodsByEquipment[equipmentId] || [];
+        const currentById = new Map(
+          currentMethods.map(method => [method.id || method.name, method])
+        );
+        const orderedMethods = methods
+          .map(method => currentById.get(method.id || method.name))
+          .filter((method): method is Method => Boolean(method));
+        const orderedIds = new Set(
+          orderedMethods.map(method => method.id || method.name)
+        );
+        const missingMethods = currentMethods.filter(
+          method => !orderedIds.has(method.id || method.name)
+        );
+        const nextMethods = [...orderedMethods, ...missingMethods];
+
+        await db.customMethods.put({
+          equipmentId,
+          methods: nextMethods,
+        });
+
+        set(state => ({
+          methodsByEquipment: {
+            ...state.methodsByEquipment,
+            [equipmentId]: nextMethods,
+          },
+        }));
+
+        dispatchMethodChanged('reorder', equipmentId, nextMethods);
+      } catch (error) {
+        console.error('[CustomMethodStore] reorderMethods failed:', error);
+        throw error;
+      }
+    },
+
     deleteMethodsForEquipment: async equipmentId => {
       try {
         await db.customMethods.delete(equipmentId);
@@ -448,7 +485,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
  * 与其他 Store 保持一致的事件格式：包含 action 字段
  */
 function dispatchMethodChanged(
-  action: 'create' | 'update' | 'delete' | 'set',
+  action: 'create' | 'update' | 'delete' | 'set' | 'reorder',
   equipmentId: string,
   methods: Method[]
 ): void {

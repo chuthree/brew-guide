@@ -8,6 +8,7 @@ import {
   getBaseEquipmentIdByAnimationType,
 } from '@/lib/core/config';
 import { SettingsOptions } from '@/components/settings/Settings';
+import { loadCustomMethodsForEquipment } from '@/lib/stores/customMethodStore';
 
 interface UseMethodManagementProps {
   selectedEquipment: string;
@@ -142,82 +143,32 @@ export function useMethodManagement({
 
   // 加载自定义方案
   useEffect(() => {
+    let isCancelled = false;
+
     const fetchCustomMethods = async () => {
+      if (!selectedEquipment) {
+        setCustomMethods([]);
+        return;
+      }
+
       try {
-        if (selectedEquipment) {
-          // 新版API尝试加载
-          try {
-            const methodsModule =
-              await import('@/lib/stores/customMethodStore');
-            const methods =
-              await methodsModule.loadCustomMethodsForEquipment(
-                selectedEquipment
-              );
-            if (methods && methods.length > 0) {
-              setCustomMethods(methods);
-              return;
-            }
-          } catch (_error) {
-            // 静默处理，继续尝试其他方式
-          }
-
-          // 尝试从localStorage加载
-          const { Storage } = await import('@/lib/core/storage');
-          const customMethodsStr = await Storage.get('customMethods');
-          if (customMethodsStr) {
-            const parsedData = JSON.parse(customMethodsStr);
-
-            // 检查是否是按设备分组的对象格式
-            if (typeof parsedData === 'object' && !Array.isArray(parsedData)) {
-              if (parsedData[selectedEquipment]) {
-                setCustomMethods(parsedData[selectedEquipment]);
-                return;
-              }
-            }
-
-            // 处理旧版扁平数组格式
-            if (Array.isArray(parsedData)) {
-              const filteredMethods = parsedData.filter(
-                method =>
-                  method &&
-                  method.id &&
-                  typeof method.params === 'object' &&
-                  method.params.coffee &&
-                  method.name
-              );
-              setCustomMethods(filteredMethods);
-              return;
-            }
-          }
-
-          // 尝试从旧版存储格式加载
-          try {
-            const storageKey = `customMethods_${selectedEquipment}`;
-            const methodsJson = await Storage.get(storageKey);
-            if (methodsJson) {
-              const methods = JSON.parse(methodsJson);
-              if (Array.isArray(methods) && methods.length > 0) {
-                setCustomMethods(methods);
-                return;
-              }
-            }
-          } catch (_error) {
-            // 静默处理
-          }
-
-          // 没有找到方案
-          setCustomMethods([]);
-        } else {
-          // 没有选择器具时清空方案
-          setCustomMethods([]);
+        const methods = await loadCustomMethodsForEquipment(selectedEquipment);
+        if (!isCancelled) {
+          setCustomMethods(methods);
         }
       } catch (error) {
         console.error('加载自定义方案失败:', error);
-        setCustomMethods([]);
+        if (!isCancelled) {
+          setCustomMethods([]);
+        }
       }
     };
 
     fetchCustomMethods();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedEquipment]);
 
   // 监听自定义方案数据变化，确保及时更新
@@ -231,12 +182,8 @@ export function useMethodManagement({
       ) {
         try {
           if (selectedEquipment) {
-            const methodsModule =
-              await import('@/lib/stores/customMethodStore');
             const methods =
-              await methodsModule.loadCustomMethodsForEquipment(
-                selectedEquipment
-              );
+              await loadCustomMethodsForEquipment(selectedEquipment);
             setCustomMethods(methods);
           }
         } catch (error) {

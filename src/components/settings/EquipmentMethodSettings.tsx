@@ -278,6 +278,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
   const methodsByEquipment = useCustomMethodStore(
     state => state.methodsByEquipment
   );
+  const reorderMethods = useCustomMethodStore(state => state.reorderMethods);
   const deleteEquipment = useCustomEquipmentStore(
     state => state.deleteEquipment
   );
@@ -320,6 +321,8 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
   const onCloseRef = React.useRef(onClose);
   const orderedVisibleEquipmentsRef = React.useRef<ManagedEquipment[]>([]);
   const hasPendingEquipmentOrderRef = React.useRef(false);
+  const orderedCustomMethodsRef = React.useRef<Method[]>([]);
+  const hasPendingCustomMethodOrderRef = React.useRef(false);
 
   React.useEffect(() => {
     onCloseRef.current = onClose;
@@ -421,9 +424,21 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
     }
   }, [activeEquipment, activeEquipmentId]);
 
-  const selectedCustomMethods = activeEquipmentId
-    ? methodsByEquipment[activeEquipmentId] || []
-    : [];
+  const selectedCustomMethods = React.useMemo(
+    () =>
+      activeEquipmentId ? methodsByEquipment[activeEquipmentId] || [] : [],
+    [activeEquipmentId, methodsByEquipment]
+  );
+  const [orderedCustomMethods, setOrderedCustomMethods] = React.useState<
+    Method[]
+  >(selectedCustomMethods);
+
+  React.useEffect(() => {
+    setOrderedCustomMethods(selectedCustomMethods);
+    orderedCustomMethodsRef.current = selectedCustomMethods;
+    hasPendingCustomMethodOrderRef.current = false;
+  }, [activeEquipmentId, selectedCustomMethods]);
+
   const selectedCommonMethods = React.useMemo(() => {
     if (!activeEquipment) return [];
 
@@ -822,6 +837,30 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
     modalHistory.back();
   }, [persistEquipmentOrder]);
 
+  const handleReorderCustomMethods = React.useCallback(
+    (nextMethods: Method[]) => {
+      orderedCustomMethodsRef.current = nextMethods;
+      hasPendingCustomMethodOrderRef.current = true;
+      setOrderedCustomMethods(nextMethods);
+    },
+    []
+  );
+
+  const persistCustomMethodOrder = React.useCallback(async () => {
+    if (!activeEquipmentId || !hasPendingCustomMethodOrderRef.current) return;
+
+    hasPendingCustomMethodOrderRef.current = false;
+
+    try {
+      await reorderMethods(activeEquipmentId, orderedCustomMethodsRef.current);
+    } catch (error) {
+      console.error('保存方案排序失败:', error);
+      orderedCustomMethodsRef.current = selectedCustomMethods;
+      setOrderedCustomMethods(selectedCustomMethods);
+      showToast({ type: 'error', title: '保存方案排序失败', duration: 1600 });
+    }
+  }, [activeEquipmentId, reorderMethods, selectedCustomMethods]);
+
   const equipmentSectionTitle = (
     <div className="flex items-center justify-between pl-3.5">
       <h3 className="text-sm font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
@@ -839,11 +878,19 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
     </div>
   );
 
-  const toggleCustomMethodManageMode = React.useCallback(() => {
-    setIsCustomMethodManageMode(current => !current);
+  const toggleCustomMethodManageMode = React.useCallback(async () => {
+    if (isCustomMethodManageMode) {
+      await persistCustomMethodOrder();
+      setIsCustomMethodManageMode(false);
+      setDeleteConfirmingMethodId(null);
+      triggerHaptic();
+      return;
+    }
+
+    setIsCustomMethodManageMode(true);
     setDeleteConfirmingMethodId(null);
     triggerHaptic();
-  }, [triggerHaptic]);
+  }, [isCustomMethodManageMode, persistCustomMethodOrder, triggerHaptic]);
 
   const toggleCommonMethodManageMode = React.useCallback(() => {
     setIsCommonMethodManageMode(current => !current);
@@ -955,22 +1002,55 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
             label="导入方案"
             icon={Download}
             onClick={openImportForm}
-            isLast={selectedCustomMethods.length === 0}
+            isLast={orderedCustomMethods.length === 0}
           />
-          {selectedCustomMethods.map((method, index) => (
-            <MethodRow
-              key={getMethodId(method)}
-              method={method}
-              isCustom
-              onEdit={() => openEditCustomMethod(method)}
-              onDelete={() => void handleDeleteMethod(method)}
-              isManageMode={isCustomMethodManageMode}
-              isDeleteConfirming={
-                deleteConfirmingMethodId === getMethodId(method)
-              }
-              isLast={index === selectedCustomMethods.length - 1}
-            />
-          ))}
+          {orderedCustomMethods.length > 0 && (
+            <Reorder.Group
+              axis="y"
+              values={orderedCustomMethods}
+              onReorder={handleReorderCustomMethods}
+              className="m-0 list-none p-0"
+            >
+              {orderedCustomMethods.map((method, index) => {
+                const methodId = getMethodId(method);
+                const isDeleteConfirming =
+                  deleteConfirmingMethodId === methodId;
+
+                return (
+                  <SettingReorderableRow
+                    key={methodId}
+                    value={method}
+                    label={method.name}
+                    isLast={index === orderedCustomMethods.length - 1}
+                    isReorderMode={isCustomMethodManageMode}
+                    onOpen={openEditCustomMethod}
+                    onDragEnd={() => {
+                      triggerHaptic();
+                      void persistCustomMethodOrder();
+                    }}
+                    reorderAction={
+                      isCustomMethodManageMode ? (
+                        <button
+                          type="button"
+                          onClick={event => {
+                            event.stopPropagation();
+                            void handleDeleteMethod(method);
+                          }}
+                          className={`mr-1 flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-lg px-2 text-sm font-medium whitespace-nowrap active:bg-black/5 dark:active:bg-white/5 ${
+                            isDeleteConfirming
+                              ? 'text-red-500 dark:text-red-400'
+                              : 'text-neutral-600 dark:text-neutral-300'
+                          }`}
+                        >
+                          {isDeleteConfirming ? '确认删除' : '删除'}
+                        </button>
+                      ) : null
+                    }
+                  />
+                );
+              })}
+            </Reorder.Group>
+          )}
         </SettingSection>
 
         {visibleCommonMethods.length > 0 && (
