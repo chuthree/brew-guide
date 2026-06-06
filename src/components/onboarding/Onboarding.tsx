@@ -292,11 +292,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
           <div>
             <div className="mb-6 space-y-2">
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-                按需开启功能
+                你需要哪些功能？
               </h2>
-              <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
-                {'启用所需的功能模块，你可以随时在“设置”中更改这些选项。'}
-              </p>
             </div>
 
             <ActionDrawer.Content className="mb-8! space-y-2">
