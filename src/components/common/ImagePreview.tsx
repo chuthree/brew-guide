@@ -67,7 +67,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-50/90 backdrop-blur-xs dark:bg-neutral-900/90"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-neutral-50/90 backdrop-blur-xs dark:bg-neutral-900/90"
           onClick={onClose}
         >
           {/* 图片容器 - 使用 layoutId 实现共享动画 */}

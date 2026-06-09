@@ -497,7 +497,7 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
                 {visibleBeanItems.length > 0 && (
                   <Command.Group
                     heading={`咖啡豆 ${visibleBeanItems.length}`}
-                    className="py-1 text-xs text-neutral-500 dark:text-neutral-400 [&_[cmdk-group-heading]]:mb-1 [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium"
+                    className="py-1 text-xs text-neutral-500 dark:text-neutral-400 **:[[cmdk-group-heading]]:mb-1 **:[[cmdk-group-heading]]:px-0 **:[[cmdk-group-heading]]:pt-2 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium"
                   >
                     {visibleBeanItems.map(item => (
                       <Command.Item
@@ -530,7 +530,7 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
                 {visibleNoteItems.length > 0 && (
                   <Command.Group
                     heading={`笔记 ${visibleNoteItems.length}`}
-                    className="py-1 text-xs text-neutral-500 dark:text-neutral-400 [&_[cmdk-group-heading]]:mb-1 [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium"
+                    className="py-1 text-xs text-neutral-500 dark:text-neutral-400 **:[[cmdk-group-heading]]:mb-1 **:[[cmdk-group-heading]]:px-0 **:[[cmdk-group-heading]]:pt-2 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium"
                   >
                     {visibleNoteItems.map(item => (
                       <Command.Item

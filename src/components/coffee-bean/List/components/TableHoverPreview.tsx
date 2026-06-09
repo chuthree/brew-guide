@@ -117,7 +117,7 @@ const FloatingPreviewCard: React.FC<{
 
   return (
     <motion.div
-      className="pointer-events-none fixed top-0 left-0 z-[80]"
+      className="pointer-events-none fixed top-0 left-0 z-80"
       style={floatingStyle}
       initial={
         reducedMotion
@@ -175,7 +175,7 @@ const FloatingPreviewCard: React.FC<{
                 }
           }
         />
-        <div className="pointer-events-none absolute inset-0 rounded-sm [outline:1px_solid_rgba(0,0,0,0.1)] [outline-offset:-1px] dark:[outline-color:rgba(255,255,255,0.1)]" />
+        <div className="pointer-events-none absolute inset-0 rounded-sm [outline:1px_solid_rgba(0,0,0,0.1)] -outline-offset-1 dark:outline-[rgba(255,255,255,0.1)]" />
       </div>
     </motion.div>
   );

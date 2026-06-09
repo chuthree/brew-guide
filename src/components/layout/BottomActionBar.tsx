@@ -34,7 +34,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 transition-[right,left] duration-350 ease-[cubic-bezier(0.4,0,0.2,1)] ${className}`}
+      className={`fixed bottom-0 left-0 transition-[right,left] duration-350 ease-in-out ${className}`}
       style={{
         left: isDesktopLayout ? 'var(--nav-panel-width, 144px)' : 0,
         right:
@@ -43,7 +43,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
             : 0,
       }}
     >
-      <div className="pointer-events-none absolute right-0 bottom-full left-0 h-12 bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900"></div>
+      <div className="fade-mask-to-t pointer-events-none absolute right-0 bottom-full left-0 h-12 bg-neutral-50 dark:bg-neutral-900"></div>
       <div className="pb-safe-bottom relative mx-auto flex items-center bg-neutral-50 dark:bg-neutral-900">
         <div className="grow border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
         <div className="mx-3 flex items-center space-x-3">

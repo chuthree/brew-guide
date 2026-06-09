@@ -534,7 +534,7 @@ const Settings: React.FC<SettingsProps> = ({
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {/* 顶部渐变阴影（随滚动粘附）*/}
-            <div className="pointer-events-none sticky top-0 z-10 h-12 w-full bg-linear-to-b from-neutral-50 to-transparent first:border-b-0 dark:from-neutral-900"></div>
+            <div className="fade-mask-to-b pointer-events-none sticky top-0 z-10 h-12 w-full bg-neutral-50 first:border-b-0 dark:bg-neutral-900"></div>
 
             {/* 帮助与反馈 */}
             <SettingGroup

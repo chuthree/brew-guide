@@ -371,7 +371,7 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
                     return (
                       <React.Fragment key={dimension.id}>
                         <span
-                          className="max-w-[10rem] truncate text-left text-sm font-medium text-neutral-500 dark:text-neutral-400"
+                          className="max-w-40 truncate text-left text-sm font-medium text-neutral-500 dark:text-neutral-400"
                           title={dimension.label}
                         >
                           {dimension.label}

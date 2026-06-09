@@ -605,7 +605,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
             </button>
           </div>
         </div>
-        <div className="pointer-events-none absolute right-0 -bottom-6 left-0 h-6 bg-linear-to-b from-neutral-50 to-transparent dark:from-neutral-900" />
+        <div className="fade-mask-to-b pointer-events-none absolute right-0 -bottom-6 left-0 h-6 bg-neutral-50 dark:bg-neutral-900" />
       </div>
 
       {/* 步骤列表 */}
@@ -1224,7 +1224,7 @@ const StagesStep: React.FC<StagesStepProps> = ({
       </div>
 
       {/* 底部渐变 */}
-      <div className="pointer-events-none sticky right-0 bottom-0 left-0 h-8 bg-linear-to-t from-neutral-50 to-transparent dark:from-neutral-900" />
+      <div className="fade-mask-to-t pointer-events-none sticky right-0 bottom-0 left-0 h-8 bg-neutral-50 dark:bg-neutral-900" />
     </motion.div>
   );
 };

@@ -4248,7 +4248,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               className={`relative h-full shrink-0 ${
                 isResizing
                   ? ''
-                  : 'transition-[width,border-color] duration-350 ease-[cubic-bezier(0.4,0,0.2,1)]'
+                  : 'transition-[width,border-color] duration-350 ease-in-out'
               } ${
                 beanDetailOpen || noteDetailOpen
                   ? 'border-l border-neutral-200/50 dark:border-neutral-800/50'
@@ -4285,7 +4285,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 className={`h-full overflow-hidden ${
                   isResizing
                     ? ''
-                    : 'transition-opacity duration-350 ease-[cubic-bezier(0.4,0,0.2,1)]'
+                    : 'transition-opacity duration-350 ease-in-out'
                 } ${
                   beanDetailOpen || noteDetailOpen ? 'opacity-100' : 'opacity-0'
                 }`}

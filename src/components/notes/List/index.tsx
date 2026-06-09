@@ -1120,7 +1120,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                   {navigationToggleControl}
                 </div>
               )}
-              <div className="min-w-0 text-xs font-medium tracking-wide break-words text-neutral-800 dark:text-neutral-100">
+              <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
                 {(() => {
                   // 图片流模式下显示有图片的记录统计
                   if (imageFlowStats) {

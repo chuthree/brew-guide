@@ -78,11 +78,11 @@ const PickerDrawerFrame: React.FC<PickerDrawerFrameProps> = ({
   return createPortal(
     <>
       <div
-        className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 z-60 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         onClick={onClose}
       />
       <div
-        className={`fixed inset-x-0 bottom-0 z-[70] mx-auto flex h-[85vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'} ${className}`}
+        className={`fixed inset-x-0 bottom-0 z-70 mx-auto flex h-[85vh] max-w-md flex-col rounded-t-3xl bg-white shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'} ${className}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {children}

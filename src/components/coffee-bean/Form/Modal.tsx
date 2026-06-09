@@ -170,7 +170,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
       {/* 抽屉内容 */}
       <div
         ref={modalRef}
-        className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[85vh] max-w-md flex-col overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl transition-transform duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[85vh] max-w-md flex-col overflow-hidden rounded-t-2xl bg-neutral-50 shadow-xl transition-transform duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-neutral-900 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="modal-form-container flex min-h-0 flex-1 flex-col px-6">
           <CoffeeBeanForm

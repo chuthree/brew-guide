@@ -99,7 +99,7 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
         `}</style>
 
         {allItems.map(item => (
-          <div key={item.id} className="flex flex-shrink-0 items-center">
+          <div key={item.id} className="flex shrink-0 items-center">
             <div className="relative flex items-center whitespace-nowrap">
               <TabButton
                 tab={item.name}
@@ -113,7 +113,7 @@ const EquipmentCategoryBar: React.FC<EquipmentCategoryBarProps> = ({
 
         {/* 右侧渐变效果 - 当器具过多时显示 */}
         {allItems.length > 3 && (
-          <div className="pointer-events-none absolute top-0 right-0 h-full w-5 bg-gradient-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95" />
+          <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 h-full w-5 bg-neutral-50/95 dark:bg-neutral-900/95" />
         )}
       </div>
     </div>

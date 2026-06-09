@@ -546,13 +546,13 @@ const CoffeeOriginMap: React.FC<CoffeeOriginMapProps> = memo(
         <div className="relative mt-2">
           {/* 左侧渐变阴影 */}
           <div className="pointer-events-none absolute top-0 left-0 z-10 h-full w-4">
-            <div className="h-full w-full bg-linear-to-r from-neutral-100 to-transparent dark:hidden" />
-            <div className="hidden h-full w-full bg-linear-to-r from-[#1D1D1D] to-transparent dark:block" />
+            <div className="fade-mask-to-r h-full w-full bg-neutral-100 dark:hidden" />
+            <div className="fade-mask-to-r hidden h-full w-full bg-[#1D1D1D] dark:block" />
           </div>
           {/* 右侧渐变阴影 */}
           <div className="pointer-events-none absolute top-0 right-0 z-10 h-full w-4">
-            <div className="h-full w-full bg-linear-to-l from-neutral-100 to-transparent dark:hidden" />
-            <div className="hidden h-full w-full bg-linear-to-l from-[#1D1D1D] to-transparent dark:block" />
+            <div className="fade-mask-to-l h-full w-full bg-neutral-100 dark:hidden" />
+            <div className="fade-mask-to-l hidden h-full w-full bg-[#1D1D1D] dark:block" />
           </div>
           <div
             className="overflow-x-auto"

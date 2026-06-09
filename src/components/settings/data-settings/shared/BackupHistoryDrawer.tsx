@@ -118,11 +118,11 @@ export const BackupHistoryDrawer: React.FC<BackupHistoryDrawerProps> = ({
                 <div className="relative">
                   {/* 顶部渐变阴影 */}
                   <div
-                    className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-linear-to-b from-white to-transparent transition-opacity duration-200 dark:from-neutral-900 ${showTopShadow ? 'opacity-100' : 'opacity-0'}`}
+                    className={`fade-mask-to-b pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-white transition-opacity duration-200 dark:bg-neutral-900 ${showTopShadow ? 'opacity-100' : 'opacity-0'}`}
                   />
                   {/* 底部渐变阴影 */}
                   <div
-                    className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 h-4 bg-linear-to-t from-white to-transparent transition-opacity duration-200 dark:from-neutral-900 ${showBottomShadow ? 'opacity-100' : 'opacity-0'}`}
+                    className={`fade-mask-to-t pointer-events-none absolute inset-x-0 bottom-0 z-10 h-4 bg-white transition-opacity duration-200 dark:bg-neutral-900 ${showBottomShadow ? 'opacity-100' : 'opacity-0'}`}
                   />
                   <div
                     ref={listRef}

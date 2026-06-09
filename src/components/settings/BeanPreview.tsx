@@ -122,10 +122,10 @@ const BeanPreview: React.FC<BeanPreviewProps> = ({ settings }) => {
         </div>
 
         {/* 上边缘渐变阴影 */}
-        <div className="pointer-events-none absolute top-0 right-0 left-0 z-20 h-12 bg-gradient-to-b from-neutral-50 via-neutral-50/50 to-transparent dark:from-neutral-900/95 dark:via-neutral-900/50" />
+        <div className="fade-mask-to-b pointer-events-none absolute top-0 right-0 left-0 z-20 h-12 bg-neutral-50 dark:bg-neutral-900/95" />
 
         {/* 下边缘渐变阴影 */}
-        <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-20 h-12 bg-gradient-to-t from-neutral-50 via-neutral-50/50 to-transparent dark:from-neutral-900/95 dark:via-neutral-900/50" />
+        <div className="fade-mask-to-t pointer-events-none absolute right-0 bottom-0 left-0 z-20 h-12 bg-neutral-50 dark:bg-neutral-900/95" />
       </div>
     </>
   );
@@ -238,8 +238,7 @@ const BeanPreviewItem: React.FC<{
 
   const getFullNotesContent = () => {
     const hasFlavor = showFlavorInfo && bean.flavor?.length;
-    const hasNotes =
-      showNoteContent && bean.notes && bean.notes.trim() !== '';
+    const hasNotes = showNoteContent && bean.notes && bean.notes.trim() !== '';
 
     if (hasFlavor && hasNotes) {
       return `${bean.flavor!.join(' · ')}\n${bean.notes!}`;

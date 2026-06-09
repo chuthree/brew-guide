@@ -353,9 +353,9 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
             </div>
 
             {/* 控制按钮 */}
-            <div className="flex flex-shrink-0 flex-row items-center space-x-3">
+            <div className="flex shrink-0 flex-row items-center space-x-3">
               <button
-                className={`${showFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex flex-shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
+                className={`${showFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
               >
                 <Pause
                   strokeWidth={1.5}
@@ -363,7 +363,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                 />
               </button>
               <button
-                className={`${showFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex flex-shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
+                className={`${showFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
               >
                 <RefreshCw
                   strokeWidth={1.5}
@@ -376,10 +376,10 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
       </div>
 
       {/* 上边缘渐变阴影 */}
-      <div className="pointer-events-none absolute top-0 right-0 left-0 z-20 h-6 bg-gradient-to-b from-neutral-50 via-neutral-50/80 to-transparent dark:from-neutral-900 dark:via-neutral-900/80" />
+      <div className="fade-mask-to-b pointer-events-none absolute top-0 right-0 left-0 z-20 h-6 bg-neutral-50 dark:bg-neutral-900" />
 
       {/* 下边缘渐变阴影 */}
-      <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-20 h-6 bg-gradient-to-t from-neutral-50 via-neutral-50/80 to-transparent dark:from-neutral-900 dark:via-neutral-900/80" />
+      <div className="fade-mask-to-t pointer-events-none absolute right-0 bottom-0 left-0 z-20 h-6 bg-neutral-50 dark:bg-neutral-900" />
     </div>
   );
 };

@@ -1645,10 +1645,10 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
             )}
           </div>
 
-          <div className="flex flex-shrink-0 flex-row items-center space-x-3">
+          <div className="flex shrink-0 flex-row items-center space-x-3">
             <motion.button
               onClick={isRunning ? pauseTimer : startTimer}
-              className={`${localShowFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex flex-shrink-0 transform-gpu items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
+              className={`${localShowFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex shrink-0 transform-gpu items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{
@@ -1700,7 +1700,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                   ? handleSkip // 初始状态：跳过到记录页面
                   : resetTimer // 非初始状态：重置计时器
               }
-              className={`${localShowFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex flex-shrink-0 transform-gpu items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
+              className={`${localShowFlowRate ? 'h-11 w-11 sm:h-12 sm:w-12' : 'h-12 w-12 sm:h-14 sm:w-14'} flex shrink-0 transform-gpu items-center justify-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               style={{

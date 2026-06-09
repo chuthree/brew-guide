@@ -61,7 +61,7 @@ export function ExitToast() {
 
   return (
     <div
-      className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+80px)] left-1/2 z-[9999]"
+      className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+80px)] left-1/2 z-9999"
       style={{
         transform: visible ? 'translate(-50%, 0)' : 'translate(-50%, 10px)',
         opacity: visible ? 1 : 0,

@@ -104,7 +104,7 @@ const DataMigrationModal: React.FC<DataMigrationModalProps> = ({
           {/* 头部 */}
           <div className="flex items-center justify-between border-b border-neutral-200/50 p-6 dark:border-neutral-700">
             <div className="flex items-center space-x-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
                 <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">

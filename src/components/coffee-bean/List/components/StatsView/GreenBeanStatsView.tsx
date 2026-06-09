@@ -425,7 +425,7 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
         ))}
       </div>
       {hasMore && !isExpanded && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b bg-linear-to-t from-[#F4F4F4] via-[#F4F4F4]/80 to-transparent pt-12 pb-3 dark:from-[#1D1D1D] dark:via-[#1D1D1D]/80" />
+        <div className="fade-mask-to-t pointer-events-none absolute inset-x-0 bottom-0 rounded-b bg-[#F4F4F4] pt-12 pb-3 dark:bg-[#1D1D1D]" />
       )}
     </div>
   );

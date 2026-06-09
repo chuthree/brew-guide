@@ -72,7 +72,7 @@ function SettingReorderableRow<T>({
             <span
               className={`absolute inset-0 flex items-center justify-center text-neutral-400 transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] dark:text-neutral-500 ${
                 isReorderMode
-                  ? 'scale-[0.25] opacity-0 blur-[4px]'
+                  ? 'scale-[0.25] opacity-0 blur-xs'
                   : 'blur-0 scale-100 opacity-100'
               }`}
             >
@@ -124,7 +124,7 @@ function SettingReorderableRow<T>({
           } ${
             isReorderMode
               ? 'blur-0 pointer-events-auto scale-100 opacity-100'
-              : 'pointer-events-none scale-[0.25] opacity-0 blur-[4px]'
+              : 'pointer-events-none scale-[0.25] opacity-0 blur-xs'
           }`}
           data-vaul-no-drag
         >

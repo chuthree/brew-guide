@@ -128,7 +128,7 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
 
           {/* 左边框指示器 - 移动端左侧，桌面端顶部 */}
           <div
-            className={`pointer-events-none absolute top-0 left-0 h-full w-6 bg-linear-to-r from-neutral-50/95 to-transparent transition-opacity duration-200 ease-out md:h-6 md:w-full md:bg-linear-to-b dark:from-neutral-900/95 ${
+            className={`fade-mask-to-r md:fade-mask-to-b pointer-events-none absolute top-0 left-0 h-full w-6 bg-neutral-50/95 transition-opacity duration-200 ease-out md:h-6 md:w-full dark:bg-neutral-900/95 ${
               showLeftBorder ? 'opacity-100' : 'opacity-0'
             }`}
           />
@@ -151,7 +151,7 @@ const EquipmentBar: React.FC<EquipmentBarProps> = ({
 
           {/* 右边渐变指示器 - 移动端右侧，桌面端底部 */}
           <div
-            className={`pointer-events-none absolute top-0 -left-6 h-full w-6 bg-linear-to-l from-neutral-50/95 to-transparent transition-opacity duration-200 ease-out md:top-auto md:bottom-0 md:left-0 md:h-6 md:w-full md:bg-linear-to-t dark:from-neutral-900/95 ${
+            className={`fade-mask-to-l md:fade-mask-to-t pointer-events-none absolute top-0 -left-6 h-full w-6 bg-neutral-50/95 transition-opacity duration-200 ease-out md:top-auto md:bottom-0 md:left-0 md:h-6 md:w-full dark:bg-neutral-900/95 ${
               showRightBorder ? 'opacity-100' : 'opacity-0'
             }`}
           />

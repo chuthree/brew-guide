@@ -319,8 +319,8 @@ const StackedDrawer: React.FC<StackedDrawerProps> = ({
     onClose: onCancel,
   });
 
-  const overlayZ = layer === 'top' ? 'z-[70]' : 'z-[60]';
-  const contentZ = layer === 'top' ? 'z-[71]' : 'z-[61]';
+  const overlayZ = layer === 'top' ? 'z-70' : 'z-60';
+  const contentZ = layer === 'top' ? 'z-71' : 'z-61';
 
   return (
     <Drawer.Root
@@ -726,12 +726,12 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
                 })}
               </div>
               <div
-                className={`pointer-events-none absolute inset-x-0 top-0 h-4 bg-linear-to-b from-neutral-100 to-transparent transition-opacity duration-200 dark:from-neutral-800 ${
+                className={`fade-mask-to-b pointer-events-none absolute inset-x-0 top-0 h-4 bg-neutral-100 transition-opacity duration-200 dark:bg-neutral-800 ${
                   chipScrollShadow.top ? 'opacity-100' : 'opacity-0'
                 }`}
               />
               <div
-                className={`pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-linear-to-t from-neutral-100 to-transparent transition-opacity duration-200 dark:from-neutral-800 ${
+                className={`fade-mask-to-t pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-neutral-100 transition-opacity duration-200 dark:bg-neutral-800 ${
                   chipScrollShadow.bottom ? 'opacity-100' : 'opacity-0'
                 }`}
               />
@@ -835,12 +835,12 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
             )}
           </div>
           <div
-            className={`pointer-events-none absolute inset-x-0 top-0 h-6 bg-linear-to-b from-neutral-50 to-transparent transition-opacity duration-200 dark:from-neutral-900 ${
+            className={`fade-mask-to-b pointer-events-none absolute inset-x-0 top-0 h-6 bg-neutral-50 transition-opacity duration-200 dark:bg-neutral-900 ${
               beanListScrollShadow.top ? 'opacity-100' : 'opacity-0'
             }`}
           />
           <div
-            className={`pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-linear-to-t from-neutral-50 to-transparent transition-opacity duration-200 dark:from-neutral-900 ${
+            className={`fade-mask-to-t pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-neutral-50 transition-opacity duration-200 dark:bg-neutral-900 ${
               beanListScrollShadow.bottom ? 'opacity-100' : 'opacity-0'
             }`}
           />

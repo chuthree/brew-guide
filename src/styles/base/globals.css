@@ -25,6 +25,31 @@
   }
 }
 
+@utility fade-mask-to-t {
+  -webkit-mask-image: linear-gradient(to top, #000, transparent);
+  mask-image: linear-gradient(to top, #000, transparent);
+}
+
+@utility fade-mask-to-b {
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
+  mask-image: linear-gradient(to bottom, #000, transparent);
+}
+
+@utility fade-mask-to-r {
+  -webkit-mask-image: linear-gradient(to right, #000, transparent);
+  mask-image: linear-gradient(to right, #000, transparent);
+}
+
+@utility fade-mask-to-l {
+  -webkit-mask-image: linear-gradient(to left, #000, transparent);
+  mask-image: linear-gradient(to left, #000, transparent);
+}
+
+@utility fade-mask-x-edges {
+  -webkit-mask-image: linear-gradient(to right, #000, transparent 50%, #000);
+  mask-image: linear-gradient(to right, #000, transparent 50%, #000);
+}
+
 .brew-image-viewer-pswp {
   --pswp-bg: var(--background);
   --pswp-placeholder-bg: rgb(245 245 245);

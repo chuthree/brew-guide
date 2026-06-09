@@ -54,7 +54,7 @@ export default function CrashRecoveryNotice() {
   };
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+12px)] z-[9998] flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+12px)] z-9998 flex justify-center px-4">
       <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-amber-200/80 bg-white/96 p-4 shadow-xl shadow-amber-100/60 backdrop-blur dark:border-amber-400/20 dark:bg-neutral-900/96 dark:shadow-black/30">
         <div className="flex items-start justify-between gap-3">
           <div>

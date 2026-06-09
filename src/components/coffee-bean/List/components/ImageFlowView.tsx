@@ -140,12 +140,12 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                 <div className="absolute inset-x-0 bottom-0 -z-10 h-3">
                   {/* 台面 - 使用transform让它向后向上倾斜 */}
                   <div
-                    className="absolute inset-x-0 bottom-0 h-1 origin-bottom scale-y-[3] transform bg-neutral-200 before:absolute before:inset-x-0 before:top-0 before:h-[2px] before:bg-gradient-to-b before:from-white/60 before:to-transparent dark:bg-neutral-800 dark:before:from-black/40"
+                    className="before:fade-mask-to-b absolute inset-x-0 bottom-0 h-1 origin-bottom scale-y-[3] transform bg-neutral-200 before:absolute before:inset-x-0 before:top-0 before:h-[2px] before:bg-white/60 dark:bg-neutral-800 dark:before:bg-black/40"
                     style={{ transform: 'perspective(200px) rotateX(45deg)' }}
                   />
 
                   {/* 厚度 - 与台面同色，顶部添加90度拐角的光影效果 */}
-                  <div className="absolute inset-x-0 top-full h-1 bg-neutral-200 before:absolute before:inset-x-0 before:top-0 before:h-full before:bg-gradient-to-b before:from-neutral-300/40 before:to-neutral-200 dark:bg-neutral-800 dark:before:from-neutral-700/20 dark:before:to-neutral-800" />
+                  <div className="absolute inset-x-0 top-full h-1 bg-neutral-200 before:absolute before:inset-x-0 before:top-0 before:h-full before:bg-linear-to-b before:from-neutral-300/40 before:to-neutral-200 dark:bg-neutral-800 dark:before:from-neutral-700/20 dark:before:to-neutral-800" />
                 </div>
               </div>
             </div>

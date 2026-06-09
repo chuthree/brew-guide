@@ -934,14 +934,14 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       </button>
 
                       {/* 左侧固定按钮的右侧渐变遮罩 */}
-                      <div className="bg-linear-to-rrom-transparent pointer-events-none absolute top-0 right-0 bottom-0 w-5 to-neutral-50 dark:to-neutral-900"></div>
+                      <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
                     </div>
 
                     {/* 中间滚动区域 */}
                     <div className="relative flex-1 overflow-hidden">
                       {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
                       {showRankingLeftShadow && (
-                        <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-6 bg-linear-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                        <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
                       )}
 
                       <div
@@ -1005,7 +1005,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       </div>
 
                       {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                      <div className="pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-linear-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                      <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
                     </div>
 
                     {/* 固定在右侧的搜索按钮 */}
@@ -1020,7 +1020,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       </button>
 
                       {/* 右侧固定按钮的左侧渐变遮罩 */}
-                      <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-linear-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
+                      <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
                     </div>
                   </div>
                 ) : (
@@ -1200,14 +1200,14 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </button>
 
                     {/* 左侧固定按钮的右侧渐变遮罩 */}
-                    <div className="pointer-events-none absolute top-0 right-0 bottom-0 w-5 bg-linear-to-r from-transparent to-neutral-50 dark:to-neutral-900"></div>
+                    <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
                   </div>
 
                   {/* 中间滚动区域 */}
                   <div className="relative flex-1 overflow-hidden">
                     {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
                     {showLeftShadow && (
-                      <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-6 bg-linear-to-r from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                      <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
                     )}
 
                     <div
@@ -1333,7 +1333,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </div>
 
                     {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                    <div className="pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-linear-to-l from-neutral-50/95 to-transparent dark:from-neutral-900/95"></div>
+                    <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
                   </div>
 
                   {/* 固定在右侧的搜索按钮 */}
@@ -1348,7 +1348,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                     </button>
 
                     {/* 右侧固定按钮的左侧渐变遮罩 */}
-                    <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-linear-to-l from-transparent to-neutral-50 dark:to-neutral-900"></div>
+                    <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
                   </div>
                 </div>
               ) : (
