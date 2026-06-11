@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
 import { Camera, Image as ImageIcon } from 'lucide-react';
@@ -17,6 +17,7 @@ import {
   getCoffeeBeanImageSource,
   type CoffeeBeanImageSide,
 } from '@/lib/coffee-beans/imageRepository';
+import { APP_IMAGE_MIME_TYPE } from '@/lib/images/imageFormat';
 
 // 获取烘焙商名称用于 alt 文本的辅助函数
 const getRoasterAltText = (
@@ -258,6 +259,7 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
         maxWidth: 1024,
         maxHeight: 1024,
         quality: 0.8,
+        mimeType: APP_IMAGE_MIME_TYPE,
         maxSizeMB: 0.3,
       });
 

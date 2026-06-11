@@ -16,12 +16,13 @@ import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import { SettingPage } from './atomic';
+import SettingPage from './atomic/SettingPage';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import ConfirmDrawer from '@/components/common/ui/ConfirmDrawer';
 import RoasterLogoImportExport from './RoasterLogoImportExport';
 import { renameRoasters } from '@/lib/utils/roasterRename';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
+import { compressBase64Image } from '@/lib/utils/imageCapture';
 
 interface RoasterLogoSettingsProps {
   isOpen: boolean;
@@ -198,8 +199,13 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
 
     try {
       const base64 = await fileToBase64(file);
+      const compressedBase64 = await compressBase64Image(base64, {
+        maxSizeMB: 0.12,
+        maxWidthOrHeight: 512,
+        initialQuality: 0.9,
+      });
       await getSettingsStore().updateRoasterConfig(roasterName, {
-        logoData: base64,
+        logoData: compressedBase64,
       });
       // 重新加载配置
       loadConfigs();

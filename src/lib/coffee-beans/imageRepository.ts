@@ -8,6 +8,7 @@ import {
   splitCoffeeBeanImages,
   stripCoffeeBeanImages,
 } from './imageRecords';
+import { getThumbnailMimeType } from '@/lib/images/imageFormat';
 
 const DEFAULT_THUMBNAIL_MAX_SIZE = 192;
 const DEFAULT_THUMBNAIL_QUALITY = 0.72;
@@ -73,7 +74,7 @@ export async function createCoffeeBeanImageThumbnail(
         context.imageSmoothingEnabled = true;
         context.imageSmoothingQuality = 'high';
         context.drawImage(image, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        resolve(canvas.toDataURL(getThumbnailMimeType(dataUrl), quality));
       } catch {
         resolve(dataUrl);
       }

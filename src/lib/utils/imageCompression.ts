@@ -3,11 +3,16 @@
  * 用于在上传前压缩图片，减少网络传输时间
  */
 
+import {
+  APP_IMAGE_MIME_TYPE,
+  JPEG_IMAGE_MIME_TYPE,
+} from '@/lib/images/imageFormat';
+
 export interface CompressionOptions {
   maxWidth?: number; // 最大宽度，默认 1920
   maxHeight?: number; // 最大高度，默认 1920
   quality?: number; // 图片质量 0-1，默认 0.8
-  mimeType?: string; // 输出格式，默认 'image/jpeg'
+  mimeType?: string; // 输出格式，默认应用内图片格式
   maxSizeMB?: number; // 最大文件大小（MB），如果指定则会循环压缩直到达到目标
 }
 
@@ -25,7 +30,7 @@ export async function compressImage(
     maxWidth = 1920,
     maxHeight = 1920,
     quality = 0.8,
-    mimeType = 'image/jpeg',
+    mimeType = APP_IMAGE_MIME_TYPE,
     maxSizeMB,
   } = options;
 
@@ -167,6 +172,7 @@ export async function smartCompress(file: File): Promise<File> {
     maxWidth: 1600,
     maxHeight: 1600,
     quality: 0.82,
+    mimeType: JPEG_IMAGE_MIME_TYPE,
     maxSizeMB: 0.6,
   });
 }

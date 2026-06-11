@@ -1,5 +1,9 @@
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
+import {
+  APP_IMAGE_MIME_TYPE,
+  getAppImageFileName,
+} from '@/lib/images/imageFormat';
 
 export interface ImageCaptureOptions {
   source: 'camera' | 'gallery';
@@ -258,7 +262,7 @@ export interface ImageCompressionOptions {
   maxWidthOrHeight?: number;
   /** 图片质量，0-1之间，默认 0.8 */
   initialQuality?: number;
-  /** 输出格式，默认 'image/jpeg' */
+  /** 输出格式，默认应用内图片格式 */
   fileType?: string;
 }
 
@@ -274,7 +278,7 @@ async function compressImage(
     maxSizeMB = 0.1,
     maxWidthOrHeight = 1200,
     initialQuality = 0.8,
-    fileType = 'image/jpeg',
+    fileType = APP_IMAGE_MIME_TYPE,
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -326,7 +330,7 @@ async function compressImage(
                   // 创建新的File对象
                   const compressedFile = new File(
                     [blob],
-                    file.name.replace(/\.[^/.]+$/, '.jpg'),
+                    getAppImageFileName(file.name),
                     {
                       type: fileType,
                       lastModified: Date.now(),
