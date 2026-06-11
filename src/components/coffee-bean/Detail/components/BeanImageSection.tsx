@@ -150,12 +150,12 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
   );
   const storedFrontImage = useCoffeeBeanImage(bean?.id, {
     fallback: bean?.image,
-    preferThumbnail: true,
+    mode: 'original',
   });
   const storedBackImage = useCoffeeBeanImage(bean?.id, {
     side: 'back',
     fallback: bean?.backImage,
-    preferThumbnail: true,
+    mode: 'original',
   });
   const viewBean = useMemo(
     () =>
@@ -203,7 +203,7 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
       return (
         (await getCoffeeBeanImageSource(bean.id, {
           side,
-          preferThumbnail: false,
+          mode: 'original',
         })) || fallback
       );
     } catch (error) {
@@ -233,9 +233,7 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
     }
   };
 
-  const handleRoasterLogoClick = async (
-    sourceElement?: HTMLElement | null
-  ) => {
+  const handleRoasterLogoClick = async (sourceElement?: HTMLElement | null) => {
     if (!roasterLogo) return;
 
     const backImage = await getOriginalImage('back', viewBean?.backImage);
@@ -361,7 +359,11 @@ const AddModeImages: React.FC<{
             onError={() => setImageError(true)}
             onClick={e => {
               if (!imageError && tempBean.image) {
-                onImageClick(tempBean.image, tempBean.backImage, e.currentTarget);
+                onImageClick(
+                  tempBean.image,
+                  tempBean.backImage,
+                  e.currentTarget
+                );
               }
             }}
           />
@@ -386,7 +388,11 @@ const AddModeImages: React.FC<{
             onError={() => setImageError(true)}
             onClick={e => {
               if (!imageError && tempBean.backImage) {
-                onImageClick(tempBean.backImage, tempBean.image, e.currentTarget);
+                onImageClick(
+                  tempBean.backImage,
+                  tempBean.image,
+                  e.currentTarget
+                );
               }
             }}
           />
@@ -481,7 +487,11 @@ const AddModeImages: React.FC<{
               onError={() => setImageError(true)}
               onClick={e => {
                 if (!imageError && tempBean.backImage) {
-                  onImageClick(tempBean.backImage, roasterLogo, e.currentTarget);
+                  onImageClick(
+                    tempBean.backImage,
+                    roasterLogo,
+                    e.currentTarget
+                  );
                 }
               }}
             />

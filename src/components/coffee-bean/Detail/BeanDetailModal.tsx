@@ -888,11 +888,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     const [frontImage, backImage] = await Promise.all([
       getCoffeeBeanImageSource(bean.id, {
         side: 'front',
-        preferThumbnail: false,
+        mode: 'original',
       }),
       getCoffeeBeanImageSource(bean.id, {
         side: 'back',
-        preferThumbnail: false,
+        mode: 'original',
       }),
     ]);
     const today = new Date().toISOString().split('T')[0];

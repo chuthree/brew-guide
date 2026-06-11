@@ -14,6 +14,24 @@ const DEFAULT_THUMBNAIL_QUALITY = 0.72;
 const THUMBNAIL_GENERATION_IDLE_DELAY_MS = 80;
 
 export type CoffeeBeanImageSide = 'front' | 'back';
+export type CoffeeBeanImageSourceMode = 'thumbnail' | 'original';
+
+type CoffeeBeanImageSourceOptions = {
+  side?: CoffeeBeanImageSide;
+  mode?: CoffeeBeanImageSourceMode;
+  preferThumbnail?: boolean;
+};
+
+const resolveImageSourceMode = ({
+  mode,
+  preferThumbnail,
+}: CoffeeBeanImageSourceOptions): CoffeeBeanImageSourceMode => {
+  if (mode) {
+    return mode;
+  }
+
+  return preferThumbnail === false ? 'original' : 'thumbnail';
+};
 
 export async function createCoffeeBeanImageThumbnail(
   dataUrl: string,
@@ -321,18 +339,16 @@ const queueThumbnailGeneration = (
 
 export async function getCoffeeBeanImageSource(
   beanId: string,
-  options: {
-    side?: CoffeeBeanImageSide;
-    preferThumbnail?: boolean;
-  } = {}
+  options: CoffeeBeanImageSourceOptions = {}
 ): Promise<string | undefined> {
-  const { side = 'front', preferThumbnail = true } = options;
+  const { side = 'front' } = options;
+  const mode = resolveImageSourceMode(options);
 
   const imageKey = side === 'front' ? 'image' : 'backImage';
   const thumbnailKey =
     side === 'front' ? 'imageThumbnail' : 'backImageThumbnail';
 
-  if (preferThumbnail) {
+  if (mode === 'thumbnail') {
     const thumbnailRecord = await getThumbnailRecord(beanId);
     const thumbnail = thumbnailRecord?.[thumbnailKey];
     if (thumbnail) {

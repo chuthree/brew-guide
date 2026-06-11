@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   type CoffeeBeanImageSide,
+  type CoffeeBeanImageSourceMode,
   getCoffeeBeanImageBeanIds,
   getCoffeeBeanImageSource,
 } from '@/lib/coffee-beans/imageRepository';
@@ -20,18 +21,19 @@ export function useCoffeeBeanImage(
   beanId: string | undefined,
   options: {
     side?: CoffeeBeanImageSide;
+    mode?: CoffeeBeanImageSourceMode;
     preferThumbnail?: boolean;
     fallback?: string;
   } = {}
 ): string | undefined {
-  const { side = 'front', preferThumbnail = true, fallback } = options;
+  const { side = 'front', mode, preferThumbnail = true, fallback } = options;
   const [imageSource, setImageSource] = useState<string | undefined>(fallback);
   const [refreshKey, setRefreshKey] = useState(0);
   const sourceIdentityRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
-    const sourceIdentity = [beanId, side, preferThumbnail].join('\u0001');
+    const sourceIdentity = [beanId, side, mode, preferThumbnail].join('\u0001');
     const sourceIdentityChanged = sourceIdentityRef.current !== sourceIdentity;
     sourceIdentityRef.current = sourceIdentity;
 
@@ -44,7 +46,7 @@ export function useCoffeeBeanImage(
       setImageSource(fallback);
     }
 
-    getCoffeeBeanImageSource(beanId, { side, preferThumbnail })
+    getCoffeeBeanImageSource(beanId, { side, mode, preferThumbnail })
       .then(source => {
         if (!cancelled) {
           setImageSource(source || fallback);
@@ -59,7 +61,7 @@ export function useCoffeeBeanImage(
     return () => {
       cancelled = true;
     };
-  }, [beanId, side, preferThumbnail, fallback, refreshKey]);
+  }, [beanId, side, mode, preferThumbnail, fallback, refreshKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !beanId) {
@@ -144,10 +146,11 @@ export function useCoffeeBeanImageSources(
   beanIds: string[],
   options: {
     side?: CoffeeBeanImageSide;
+    mode?: CoffeeBeanImageSourceMode;
     preferThumbnail?: boolean;
   } = {}
 ): Map<string, string> {
-  const { side = 'front', preferThumbnail = true } = options;
+  const { side = 'front', mode, preferThumbnail = true } = options;
   const [imageSources, setImageSources] = useState<Map<string, string>>(
     new Map()
   );
@@ -166,6 +169,7 @@ export function useCoffeeBeanImageSources(
       uniqueBeanIds.map(async beanId => {
         const source = await getCoffeeBeanImageSource(beanId, {
           side,
+          mode,
           preferThumbnail,
         });
         return [beanId, source] as const;
@@ -191,7 +195,7 @@ export function useCoffeeBeanImageSources(
     return () => {
       cancelled = true;
     };
-  }, [idsKey, side, preferThumbnail]);
+  }, [idsKey, side, mode, preferThumbnail]);
 
   return imageSources;
 }
