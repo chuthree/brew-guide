@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import {
   AnimatePresence,
-  motion,
+  domAnimation,
+  LazyMotion,
+  m,
   MotionValue,
-  useIsPresent,
 } from 'framer-motion';
 
 interface HoverPreviewBean {
@@ -47,24 +48,10 @@ const FloatingPreviewCard: React.FC<{
   y: MotionValue<number>;
   reducedMotion: boolean;
 }> = ({ previewBean, x, y, reducedMotion }) => {
-  const isPresent = useIsPresent();
-  const [frozenPosition, setFrozenPosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
   const [resolvedSize, setResolvedSize] = useState<{
     width: number;
     height: number;
   } | null>(() => IMAGE_SIZE_CACHE.get(previewBean.imageSrc) ?? null);
-
-  useEffect(() => {
-    if (!isPresent && frozenPosition === null) {
-      setFrozenPosition({
-        x: x.get(),
-        y: y.get(),
-      });
-    }
-  }, [frozenPosition, isPresent, x, y]);
 
   useEffect(() => {
     const cachedSize = IMAGE_SIZE_CACHE.get(previewBean.imageSrc);
@@ -103,22 +90,13 @@ const FloatingPreviewCard: React.FC<{
 
   if (!resolvedSize) return null;
 
-  const floatingStyle = frozenPosition
-    ? {
-        x: frozenPosition.x,
-        y: frozenPosition.y,
-        willChange: 'transform' as const,
-      }
-    : {
+  return (
+    <m.div
+      className="pointer-events-none fixed top-0 left-0 z-80"
+      style={{
         x,
         y,
-        willChange: 'transform' as const,
-      };
-
-  return (
-    <motion.div
-      className="pointer-events-none fixed top-0 left-0 z-80"
-      style={floatingStyle}
+      }}
       initial={
         reducedMotion
           ? { opacity: 0 }
@@ -151,7 +129,7 @@ const FloatingPreviewCard: React.FC<{
           height: resolvedSize.height,
         }}
       >
-        <motion.img
+        <m.img
           src={previewBean.imageSrc}
           alt=""
           className="block h-full w-full object-contain"
@@ -177,7 +155,7 @@ const FloatingPreviewCard: React.FC<{
         />
         <div className="pointer-events-none absolute inset-0 rounded-sm [outline:1px_solid_rgba(0,0,0,0.1)] -outline-offset-1 dark:outline-[rgba(255,255,255,0.1)]" />
       </div>
-    </motion.div>
+    </m.div>
   );
 };
 
@@ -188,17 +166,19 @@ const TableHoverPreview: React.FC<TableHoverPreviewProps> = ({
   reducedMotion = false,
 }) => {
   return (
-    <AnimatePresence initial={false}>
-      {previewBean && (
-        <FloatingPreviewCard
-          key={`${previewBean.id}-${previewBean.imageSrc}`}
-          previewBean={previewBean}
-          x={x}
-          y={y}
-          reducedMotion={reducedMotion}
-        />
-      )}
-    </AnimatePresence>
+    <LazyMotion features={domAnimation}>
+      <AnimatePresence initial={false}>
+        {previewBean && (
+          <FloatingPreviewCard
+            key={previewBean.imageSrc}
+            previewBean={previewBean}
+            x={x}
+            y={y}
+            reducedMotion={reducedMotion}
+          />
+        )}
+      </AnimatePresence>
+    </LazyMotion>
   );
 };
 

@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import { useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
 import {
   useReactTable,
@@ -49,6 +55,7 @@ const DEFAULT_SORTING: SortingState = [];
 const SORTING_STORAGE_KEY = 'brew-guide:coffee-beans:tableSorting:v2';
 const HOVER_PREVIEW_OFFSET_X = 24;
 const HOVER_PREVIEW_OFFSET_Y = 20;
+const HOVER_PREVIEW_HIDE_DELAY_MS = 40;
 const DEFAULT_COLUMN_MIN_SIZE = 96;
 const COLUMN_SIZE_CONFIG: Record<
   TableColumnKey,
@@ -182,6 +189,30 @@ const createBeanSortingFn =
     return baseSortingFn(rowA, rowB, columnId);
   };
 
+const buildBeanHoverPreview = async (
+  bean: ExtendedCoffeeBean,
+  fallback?: HoverPreviewBean | null
+): Promise<HoverPreviewBean | null> => {
+  const imageSrc =
+    (await getCoffeeBeanImageSource(bean.id, { mode: 'original' })) ||
+    bean.image ||
+    '';
+
+  if (!imageSrc) {
+    return fallback ?? null;
+  }
+
+  return {
+    id: `${bean.id}:bean`,
+    imageSrc,
+  };
+};
+
+const isSameHoverPreviewImage = (
+  current: HoverPreviewBean | null,
+  next: HoverPreviewBean | null
+): boolean => current?.imageSrc === next?.imageSrc;
+
 const createDirectionAwareBeanSortingFn =
   (
     sorting: SortingState,
@@ -288,6 +319,8 @@ const TableView: React.FC<TableViewProps> = ({
   const [supportsHoverPreview, setSupportsHoverPreview] = useState(false);
   const [hoverPreviewBean, setHoverPreviewBean] =
     useState<HoverPreviewBean | null>(null);
+  const hoverPreviewRequestIdRef = useRef(0);
+  const hidePreviewTimeoutRef = useRef<number | null>(null);
 
   // 多重排序状态（持久化）
   const [sorting, setSorting] = useState<SortingState>(loadSorting);
@@ -342,6 +375,14 @@ const TableView: React.FC<TableViewProps> = ({
     }
   }, [supportsHoverPreview]);
 
+  useEffect(() => {
+    return () => {
+      const timeoutId = hidePreviewTimeoutRef.current;
+      hidePreviewTimeoutRef.current = null;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [hidePreviewTimeoutRef]);
+
   const roasterConfigs = useSettingsStore(
     state => state.settings.roasterConfigs
   );
@@ -352,35 +393,39 @@ const TableView: React.FC<TableViewProps> = ({
     return [...filteredBeans, ...emptyBeans];
   }, [filteredBeans, emptyBeans, showEmptyBeans]);
 
-  const roasterLogos = useMemo(() => {
-    const logos: Record<string, string | null> = {};
-    allBeans.forEach(bean => {
-      if (!bean.image && bean.name) {
-        const roasterName = getRoasterName(bean, roasterSettings);
-        if (roasterName && roasterName !== '未知烘焙商') {
-          const logo = getRoasterLogoFromConfigs(roasterConfigs, roasterName);
-          logos[bean.id] = logo || null;
-        }
+  const buildRoasterHoverPreview = (
+    bean: ExtendedCoffeeBean
+  ): HoverPreviewBean | null => {
+    const roasterName = getRoasterName(bean, roasterSettings);
+    if (!roasterName || roasterName === '未知烘焙商') return null;
+
+    const imageSrc = getRoasterLogoFromConfigs(roasterConfigs, roasterName);
+    if (!imageSrc) return null;
+
+    return {
+      id: `${bean.id}:roaster:${roasterName}`,
+      imageSrc,
+    };
+  };
+
+  const setHoverPreviewBeanIfChanged = (
+    nextPreview: HoverPreviewBean | null
+  ) => {
+    setHoverPreviewBean(currentPreview => {
+      if (isSameHoverPreviewImage(currentPreview, nextPreview)) {
+        return currentPreview;
       }
+
+      return nextPreview;
     });
-    return logos;
-  }, [allBeans, roasterConfigs, roasterSettings]);
+  };
 
-  const buildHoverPreviewBean = useCallback(
-    async (bean: ExtendedCoffeeBean): Promise<HoverPreviewBean | null> => {
-      const storedImage = await getCoffeeBeanImageSource(bean.id, {
-        preferThumbnail: true,
-      });
-      const imageSrc = storedImage || bean.image || roasterLogos[bean.id] || '';
-      if (!imageSrc) return null;
+  const cancelScheduledHoverPreviewClear = () => {
+    if (hidePreviewTimeoutRef.current === null) return;
 
-      return {
-        id: bean.id,
-        imageSrc,
-      };
-    },
-    [roasterLogos]
-  );
+    window.clearTimeout(hidePreviewTimeoutRef.current);
+    hidePreviewTimeoutRef.current = null;
+  };
 
   const updatePreviewPosition = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
@@ -390,14 +435,33 @@ const TableView: React.FC<TableViewProps> = ({
     [previewX, previewY]
   );
 
-  const handleNameCellMouseEnter = useCallback(
-    (bean: ExtendedCoffeeBean, event: React.MouseEvent<HTMLElement>) => {
-      if (!supportsHoverPreview) return;
-      updatePreviewPosition(event);
-      void buildHoverPreviewBean(bean).then(setHoverPreviewBean);
-    },
-    [buildHoverPreviewBean, supportsHoverPreview, updatePreviewPosition]
-  );
+  const handlePreviewCellMouseEnter = (
+    bean: ExtendedCoffeeBean,
+    kind: 'bean' | 'roaster',
+    event: React.MouseEvent<HTMLElement>
+  ) => {
+    if (!supportsHoverPreview) return;
+    cancelScheduledHoverPreviewClear();
+    updatePreviewPosition(event);
+
+    const requestId = hoverPreviewRequestIdRef.current + 1;
+    hoverPreviewRequestIdRef.current = requestId;
+
+    if (kind === 'roaster') {
+      setHoverPreviewBeanIfChanged(buildRoasterHoverPreview(bean));
+      return;
+    }
+
+    const fallbackPreviewBean = buildRoasterHoverPreview(bean);
+    if (fallbackPreviewBean) {
+      setHoverPreviewBeanIfChanged(fallbackPreviewBean);
+    }
+
+    void buildBeanHoverPreview(bean, fallbackPreviewBean).then(previewBean => {
+      if (hoverPreviewRequestIdRef.current !== requestId) return;
+      setHoverPreviewBeanIfChanged(previewBean);
+    });
+  };
 
   const handleNameCellMouseMove = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
@@ -408,7 +472,12 @@ const TableView: React.FC<TableViewProps> = ({
   );
 
   const clearHoverPreview = useCallback(() => {
-    setHoverPreviewBean(null);
+    hoverPreviewRequestIdRef.current += 1;
+    cancelScheduledHoverPreviewClear();
+    hidePreviewTimeoutRef.current = window.setTimeout(() => {
+      hidePreviewTimeoutRef.current = null;
+      setHoverPreviewBeanIfChanged(null);
+    }, HOVER_PREVIEW_HIDE_DELAY_MS);
   }, []);
 
   const handleRateClick = useCallback(
@@ -747,11 +816,14 @@ const TableView: React.FC<TableViewProps> = ({
                       style={{
                         width: header.getSize(),
                         minWidth:
-                          header.column.columnDef.minSize ?? DEFAULT_COLUMN_MIN_SIZE,
+                          header.column.columnDef.minSize ??
+                          DEFAULT_COLUMN_MIN_SIZE,
                       }}
                     >
                       {header.isPlaceholder ? null : (
-                        <div className={`relative flex items-center ${paddingClass}`}>
+                        <div
+                          className={`relative flex items-center ${paddingClass}`}
+                        >
                           <button
                             type="button"
                             className={`inline-flex items-center ${
@@ -797,7 +869,7 @@ const TableView: React.FC<TableViewProps> = ({
                               onClick={event => event.stopPropagation()}
                             >
                               <span
-                                className={`absolute top-1/2 left-1/2 h-3 w-px rounded-full -translate-x-1/2 -translate-y-1/2 bg-neutral-200 transition-opacity dark:bg-neutral-800 ${
+                                className={`absolute top-1/2 left-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-neutral-200 transition-opacity dark:bg-neutral-800 ${
                                   isResizing ? 'opacity-100' : 'opacity-70'
                                 }`}
                               />
@@ -832,6 +904,8 @@ const TableView: React.FC<TableViewProps> = ({
                     const isLast = index === row.getVisibleCells().length - 1;
                     const isCapacity = cell.column.id === 'capacity';
                     const isName = cell.column.id === 'name';
+                    const isRoaster = cell.column.id === 'roaster';
+                    const isPreviewCell = isName || isRoaster;
                     const isRating =
                       cell.column.id === 'rating' && Boolean(onRate);
 
@@ -853,7 +927,8 @@ const TableView: React.FC<TableViewProps> = ({
                         style={{
                           width: cell.column.getSize(),
                           minWidth:
-                            cell.column.columnDef.minSize ?? DEFAULT_COLUMN_MIN_SIZE,
+                            cell.column.columnDef.minSize ??
+                            DEFAULT_COLUMN_MIN_SIZE,
                         }}
                         onClick={
                           isCapacity && !isEmpty
@@ -866,14 +941,21 @@ const TableView: React.FC<TableViewProps> = ({
                               : undefined
                         }
                         onMouseEnter={
-                          isName
-                            ? e => handleNameCellMouseEnter(bean, e)
+                          isPreviewCell
+                            ? e =>
+                                handlePreviewCellMouseEnter(
+                                  bean,
+                                  isRoaster ? 'roaster' : 'bean',
+                                  e
+                                )
                             : undefined
                         }
                         onMouseMove={
-                          isName ? handleNameCellMouseMove : undefined
+                          isPreviewCell ? handleNameCellMouseMove : undefined
                         }
-                        onMouseLeave={isName ? clearHoverPreview : undefined}
+                        onMouseLeave={
+                          isPreviewCell ? clearHoverPreview : undefined
+                        }
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
