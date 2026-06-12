@@ -35,8 +35,6 @@ interface BeanImageSectionProps {
   tempBean: Partial<CoffeeBean>;
   isAddMode: boolean;
   roasterLogo: string | null;
-  imageError: boolean;
-  setImageError: (error: boolean) => void;
   setTempBean: React.Dispatch<React.SetStateAction<Partial<CoffeeBean>>>;
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
   onImageClick: (
@@ -46,12 +44,25 @@ interface BeanImageSectionProps {
   ) => void;
 }
 
+type ImageLoadError = {
+  source: string | null;
+  failed: boolean;
+};
+
+type ImageErrorHandlers = {
+  hasImageError: (source: string | null | undefined) => boolean;
+  markImageError: (source: string | null | undefined) => void;
+};
+
 // 小尺寸咖啡豆图片组件（用于关联豆子卡片）
 export const BeanImageSmall: React.FC<{
   bean: CoffeeBean;
   onClick?: (sourceElement: HTMLElement) => void;
 }> = ({ bean, onClick }) => {
-  const [imageError, setImageError] = useState(false);
+  const [imageError, setImageError] = useState<ImageLoadError>({
+    source: null,
+    failed: false,
+  });
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -88,6 +99,8 @@ export const BeanImageSmall: React.FC<{
 
     return null;
   }, [bean.name, beanImage, configuredRoasterLogo, roasterName]);
+  const hasImageError = (source: string | null | undefined) =>
+    Boolean(source && imageError.source === source && imageError.failed);
 
   return (
     <div
@@ -99,21 +112,25 @@ export const BeanImageSmall: React.FC<{
         onClick?.(event.currentTarget);
       }}
     >
-      {beanImage && !imageError ? (
+      {beanImage && !hasImageError(beanImage) ? (
         <Image
           src={beanImage}
           alt={bean.name}
           fill
           className="object-cover"
-          onError={() => setImageError(true)}
+          sizes="40px"
+          loading="eager"
+          onError={() => setImageError({ source: beanImage, failed: true })}
         />
-      ) : roasterLogo && !imageError ? (
+      ) : roasterLogo && !hasImageError(roasterLogo) ? (
         <Image
           src={roasterLogo}
           alt={roasterName || '烘焙商图标'}
           fill
           className="object-cover"
-          onError={() => setImageError(true)}
+          sizes="40px"
+          loading="eager"
+          onError={() => setImageError({ source: roasterLogo, failed: true })}
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-[10px] font-medium text-neutral-400 dark:text-neutral-600">
@@ -129,8 +146,6 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
   tempBean,
   isAddMode,
   roasterLogo,
-  imageError,
-  setImageError,
   setTempBean,
   handleUpdateField,
   onImageClick,
@@ -149,6 +164,17 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
     }),
     [roasterFieldEnabled, roasterSeparator]
   );
+  const [imageError, setImageError] = useState<ImageLoadError>({
+    source: null,
+    failed: false,
+  });
+  const hasImageError = (source: string | null | undefined) =>
+    Boolean(source && imageError.source === source && imageError.failed);
+  const markImageError = (source: string | null | undefined) => {
+    if (source) {
+      setImageError({ source, failed: true });
+    }
+  };
   const storedFrontImage = useCoffeeBeanImage(bean?.id, {
     fallback: bean?.image,
     mode: 'original',
@@ -286,10 +312,6 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
     return null;
   }
 
-  if (!isAddMode && imageError) {
-    return null;
-  }
-
   return (
     <div className="mb-4">
       <div className="flex cursor-pointer items-end justify-center gap-3 bg-neutral-200/30 px-6 py-3 dark:bg-neutral-800/40">
@@ -297,8 +319,8 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
           <AddModeImages
             tempBean={formBean}
             roasterLogo={roasterLogo}
-            imageError={imageError}
-            setImageError={setImageError}
+            hasImageError={hasImageError}
+            markImageError={markImageError}
             setTempBean={setTempBean}
             handleImageSelect={handleImageSelect}
             onImageClick={onImageClick}
@@ -308,8 +330,8 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
           <ViewModeImages
             bean={viewBean}
             roasterLogo={roasterLogo}
-            imageError={imageError}
-            setImageError={setImageError}
+            hasImageError={hasImageError}
+            markImageError={markImageError}
             onStoredImageClick={handleStoredImageClick}
             onRoasterLogoClick={handleRoasterLogoClick}
             roasterSettings={roasterSettings}
@@ -324,8 +346,8 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
 const AddModeImages: React.FC<{
   tempBean: Partial<CoffeeBean>;
   roasterLogo: string | null;
-  imageError: boolean;
-  setImageError: (error: boolean) => void;
+  hasImageError: ImageErrorHandlers['hasImageError'];
+  markImageError: ImageErrorHandlers['markImageError'];
   setTempBean: React.Dispatch<React.SetStateAction<Partial<CoffeeBean>>>;
   handleImageSelect: (
     source: 'camera' | 'gallery',
@@ -340,30 +362,41 @@ const AddModeImages: React.FC<{
 }> = ({
   tempBean,
   roasterLogo,
-  imageError,
-  setImageError,
+  hasImageError,
+  markImageError,
   setTempBean,
   handleImageSelect,
   onImageClick,
   roasterSettings,
 }) => {
+  const tempFrontImage =
+    tempBean.image && !hasImageError(tempBean.image)
+      ? tempBean.image
+      : undefined;
+  const tempBackImage =
+    tempBean.backImage && !hasImageError(tempBean.backImage)
+      ? tempBean.backImage
+      : undefined;
+
   // 状态: 用户正面图 + 用户背面图
-  if (tempBean.image && tempBean.backImage) {
+  if (tempFrontImage && tempBackImage) {
     return (
       <>
         <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <Image
-            src={tempBean.image}
+            src={tempFrontImage}
             alt={tempBean.name || '咖啡豆正面'}
             height={192}
             width={192}
             className="h-full w-auto object-cover"
-            onError={() => setImageError(true)}
+            sizes="192px"
+            loading="eager"
+            onError={() => markImageError(tempFrontImage)}
             onClick={e => {
-              if (!imageError && tempBean.image) {
+              if (!hasImageError(tempFrontImage)) {
                 onImageClick(
-                  tempBean.image,
-                  tempBean.backImage,
+                  tempFrontImage,
+                  tempBackImage,
                   e.currentTarget
                 );
               }
@@ -382,17 +415,19 @@ const AddModeImages: React.FC<{
         </div>
         <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <Image
-            src={tempBean.backImage}
+            src={tempBackImage}
             alt={tempBean.name || '咖啡豆背面'}
             height={80}
             width={80}
             className="h-full w-auto object-cover"
-            onError={() => setImageError(true)}
+            sizes="80px"
+            loading="eager"
+            onError={() => markImageError(tempBackImage)}
             onClick={e => {
-              if (!imageError && tempBean.backImage) {
+              if (!hasImageError(tempBackImage)) {
                 onImageClick(
-                  tempBean.backImage,
-                  tempBean.image,
+                  tempBackImage,
+                  tempFrontImage,
                   e.currentTarget
                 );
               }
@@ -414,20 +449,22 @@ const AddModeImages: React.FC<{
   }
 
   // 状态: 用户正面图 + 添加背面按钮
-  if (tempBean.image && !tempBean.backImage) {
+  if (tempFrontImage && !tempBackImage) {
     return (
       <>
         <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <Image
-            src={tempBean.image}
+            src={tempFrontImage}
             alt={tempBean.name || '咖啡豆正面'}
             height={192}
             width={192}
             className="h-full w-auto object-cover"
-            onError={() => setImageError(true)}
+            sizes="192px"
+            loading="eager"
+            onError={() => markImageError(tempFrontImage)}
             onClick={e => {
-              if (!imageError && tempBean.image) {
-                onImageClick(tempBean.image, undefined, e.currentTarget);
+              if (!hasImageError(tempFrontImage)) {
+                onImageClick(tempFrontImage, undefined, e.currentTarget);
               }
             }}
           />
@@ -457,7 +494,7 @@ const AddModeImages: React.FC<{
   }
 
   // 状态: 烘焙商图标作为正面
-  if (!tempBean.image && roasterLogo) {
+  if (!tempFrontImage && roasterLogo && !hasImageError(roasterLogo)) {
     return (
       <>
         <button
@@ -472,28 +509,28 @@ const AddModeImages: React.FC<{
             height={192}
             width={192}
             className="h-full w-auto object-cover"
-            onError={() => setImageError(true)}
+            sizes="192px"
+            loading="eager"
+            onError={() => markImageError(roasterLogo)}
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity hover:opacity-100">
             <Camera className="h-6 w-6 text-white drop-shadow-md" />
           </div>
         </button>
-        {tempBean.backImage ? (
+        {tempBackImage ? (
           <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
             <Image
-              src={tempBean.backImage}
+              src={tempBackImage}
               alt={tempBean.name || '咖啡豆背面'}
               height={80}
               width={80}
               className="h-full w-auto object-cover"
-              onError={() => setImageError(true)}
+              sizes="80px"
+              loading="eager"
+              onError={() => markImageError(tempBackImage)}
               onClick={e => {
-                if (!imageError && tempBean.backImage) {
-                  onImageClick(
-                    tempBean.backImage,
-                    roasterLogo,
-                    e.currentTarget
-                  );
+                if (!hasImageError(tempBackImage)) {
+                  onImageClick(tempBackImage, roasterLogo, e.currentTarget);
                 }
               }}
             />
@@ -525,7 +562,7 @@ const AddModeImages: React.FC<{
   }
 
   // 状态: 无正面图 + 有用户背面图
-  if (!tempBean.image && tempBean.backImage) {
+  if (!tempFrontImage && tempBackImage) {
     return (
       <>
         <div className="relative h-32 overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
@@ -540,15 +577,17 @@ const AddModeImages: React.FC<{
         </div>
         <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <Image
-            src={tempBean.backImage}
+            src={tempBackImage}
             alt={tempBean.name || '咖啡豆背面'}
             height={80}
             width={80}
             className="h-full w-auto object-cover"
-            onError={() => setImageError(true)}
+            sizes="80px"
+            loading="eager"
+            onError={() => markImageError(tempBackImage)}
             onClick={e => {
-              if (!imageError && tempBean.backImage) {
-                onImageClick(tempBean.backImage, undefined, e.currentTarget);
+              if (!hasImageError(tempBackImage)) {
+                onImageClick(tempBackImage, undefined, e.currentTarget);
               }
             }}
           />
@@ -598,8 +637,8 @@ const AddModeImages: React.FC<{
 const ViewModeImages: React.FC<{
   bean: CoffeeBean | null;
   roasterLogo: string | null;
-  imageError: boolean;
-  setImageError: (error: boolean) => void;
+  hasImageError: ImageErrorHandlers['hasImageError'];
+  markImageError: ImageErrorHandlers['markImageError'];
   onStoredImageClick: (
     side: CoffeeBeanImageSide,
     sourceElement?: HTMLElement | null
@@ -609,13 +648,13 @@ const ViewModeImages: React.FC<{
 }> = ({
   bean,
   roasterLogo,
-  imageError,
-  setImageError,
+  hasImageError,
+  markImageError,
   onStoredImageClick,
   onRoasterLogoClick,
   roasterSettings,
 }) => {
-  if (bean?.image && !imageError) {
+  if (bean?.image && !hasImageError(bean.image)) {
     return (
       <>
         <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
@@ -625,15 +664,17 @@ const ViewModeImages: React.FC<{
             height={192}
             width={192}
             className="h-full w-auto object-cover"
-            onError={() => setImageError(true)}
+            sizes="192px"
+            loading="eager"
+            onError={() => markImageError(bean.image)}
             onClick={e => {
-              if (!imageError && bean.image) {
+              if (bean.image && !hasImageError(bean.image)) {
                 onStoredImageClick('front', e.currentTarget);
               }
             }}
           />
         </div>
-        {bean.backImage && (
+        {bean.backImage && !hasImageError(bean.backImage) && (
           <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
             <Image
               src={bean.backImage}
@@ -641,9 +682,11 @@ const ViewModeImages: React.FC<{
               height={80}
               width={80}
               className="h-full w-auto object-cover"
-              onError={() => setImageError(true)}
+              sizes="80px"
+              loading="eager"
+              onError={() => markImageError(bean.backImage)}
               onClick={e => {
-                if (!imageError && bean.backImage) {
+                if (bean.backImage && !hasImageError(bean.backImage)) {
                   onStoredImageClick('back', e.currentTarget);
                 }
               }}
@@ -654,7 +697,7 @@ const ViewModeImages: React.FC<{
     );
   }
 
-  if (roasterLogo && !imageError) {
+  if (roasterLogo && !hasImageError(roasterLogo)) {
     return (
       <>
         <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
@@ -664,15 +707,17 @@ const ViewModeImages: React.FC<{
             height={192}
             width={192}
             className="h-full w-auto object-cover"
-            onError={() => setImageError(true)}
+            sizes="192px"
+            loading="eager"
+            onError={() => markImageError(roasterLogo)}
             onClick={e => {
-              if (!imageError && roasterLogo) {
+              if (roasterLogo && !hasImageError(roasterLogo)) {
                 onRoasterLogoClick(e.currentTarget);
               }
             }}
           />
         </div>
-        {bean?.backImage && (
+        {bean?.backImage && !hasImageError(bean.backImage) && (
           <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
             <Image
               src={bean.backImage}
@@ -680,9 +725,11 @@ const ViewModeImages: React.FC<{
               height={80}
               width={80}
               className="h-full w-auto object-cover"
-              onError={() => setImageError(true)}
+              sizes="80px"
+              loading="eager"
+              onError={() => markImageError(bean.backImage)}
               onClick={e => {
-                if (!imageError && bean.backImage) {
+                if (bean.backImage && !hasImageError(bean.backImage)) {
                   onStoredImageClick('back', e.currentTarget);
                 }
               }}

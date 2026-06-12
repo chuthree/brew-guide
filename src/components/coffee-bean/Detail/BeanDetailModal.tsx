@@ -238,7 +238,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   }, [bean, allBeans]);
 
   // 状态
-  const [imageError, setImageError] = useState(false);
   const [lazyRelatedNotes, setLazyRelatedNotes] = useState<BrewingNote[]>([]);
   const relatedNotes = useMemo(() => {
     if (!bean?.id) return [];
@@ -524,11 +523,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       window.removeEventListener('brewingNotesUpdated', handleNotesChanged);
     };
   }, [bean?.id, isOpen, notesInitialized]);
-
-  // 图片错误重置
-  useEffect(() => {
-    if (bean?.image) setImageError(false);
-  }, [bean?.image]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -1001,8 +995,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                   tempBean={tempBean}
                   isAddMode={isFormMode}
                   roasterLogo={roasterLogo}
-                  imageError={imageError}
-                  setImageError={setImageError}
                   setTempBean={setTempBean}
                   handleUpdateField={handleUpdateField}
                   onImageClick={handleImageClick}

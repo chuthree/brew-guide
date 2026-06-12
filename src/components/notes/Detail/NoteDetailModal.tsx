@@ -63,6 +63,28 @@ interface NoteDetailSection {
   content: React.ReactNode;
 }
 
+type ImageLoadError = {
+  source: string | null;
+  failed: boolean;
+};
+
+type MultiImageViewState = {
+  key: string;
+  isOpen: boolean;
+};
+
+type MultiImageErrorState = {
+  key: string;
+  indexes: Set<number>;
+};
+
+type ImageHeightState = {
+  key: string;
+  value: number | 'auto';
+};
+
+const EMPTY_MULTI_IMAGE_ERRORS = new Set<number>();
+
 const NoteDetailDivider: React.FC = () => (
   <div className="border-t border-dashed border-neutral-200/50 dark:border-neutral-800/50" />
 );
@@ -308,17 +330,31 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     ].filter(Boolean);
   }, [normalizedParams, note]);
 
-  const [imageError, setImageError] = useState(false);
-  const [beanImageError, setBeanImageError] = useState(false); // 咖啡豆图片加载错误状态
+  const [noteImageError, setNoteImageError] = useState<ImageLoadError>({
+    source: null,
+    failed: false,
+  });
+  const [beanImageError, setBeanImageError] = useState<ImageLoadError>({
+    source: null,
+    failed: false,
+  });
 
   // 多图轮播状态
-  const [showMultiImages, setShowMultiImages] = useState(false);
-  const [multiImageErrors, setMultiImageErrors] = useState<Set<number>>(
-    new Set()
-  );
+  const [multiImageView, setMultiImageView] = useState<MultiImageViewState>({
+    key: '',
+    isOpen: false,
+  });
+  const [multiImageErrorState, setMultiImageErrorState] =
+    useState<MultiImageErrorState>({
+      key: '',
+      indexes: EMPTY_MULTI_IMAGE_ERRORS,
+    });
   const defaultImageRef = useRef<HTMLDivElement>(null);
   const multiImageRef = useRef<HTMLDivElement>(null);
-  const [currentHeight, setCurrentHeight] = useState<number | 'auto'>('auto');
+  const [imageHeightState, setImageHeightState] = useState<ImageHeightState>({
+    key: '',
+    value: 'auto',
+  });
 
   // 获取笔记图片列表 - 提前声明以便在效果中使用
   const noteImages =
@@ -327,6 +363,24 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       : note?.image
         ? [note.image]
         : [];
+  const primaryNoteImage = noteImages[0];
+  const hasPrimaryNoteImageError =
+    noteImageError.source === primaryNoteImage && noteImageError.failed;
+  const hasBeanDisplayImageError =
+    beanImageError.source === beanDisplayImage && beanImageError.failed;
+  const imageViewKey = [
+    note?.id ?? '',
+    primaryNoteImage ?? '',
+    beanDisplayImage ?? '',
+  ].join('\u0001');
+  const showMultiImages =
+    multiImageView.key === imageViewKey && multiImageView.isOpen;
+  const multiImageErrors =
+    multiImageErrorState.key === imageViewKey
+      ? multiImageErrorState.indexes
+      : EMPTY_MULTI_IMAGE_ERRORS;
+  const currentHeight =
+    imageHeightState.key === imageViewKey ? imageHeightState.value : 'auto';
 
   // 是否有多图
   const hasMultiImages = noteImages.length > 1;
@@ -386,20 +440,6 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     }
   }, [isOpen]);
 
-  // 重置图片错误状态和轮播状态
-  useEffect(() => {
-    if (note?.image) {
-      setImageError(false);
-    }
-    if (beanDisplayImage) {
-      setBeanImageError(false);
-    }
-    // 重置轮播状态
-    setShowMultiImages(false);
-    setMultiImageErrors(new Set());
-    setCurrentHeight('auto');
-  }, [note?.image, beanDisplayImage, note?.id]);
-
   // 使用 ResizeObserver 实时监听高度变化
   useEffect(() => {
     const defaultEl = defaultImageRef.current;
@@ -412,7 +452,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       if (targetEl) {
         const height = targetEl.offsetHeight;
         if (height > 0) {
-          setCurrentHeight(height);
+          setImageHeightState({ key: imageViewKey, value: height });
         }
       }
     };
@@ -433,7 +473,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [showMultiImages, isVisible, noteImages.length]);
+  }, [imageViewKey, showMultiImages, isVisible, noteImages.length]);
 
   // 切换页面时更新高度
   useEffect(() => {
@@ -443,10 +483,10 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     if (targetEl) {
       const height = targetEl.offsetHeight;
       if (height > 0) {
-        setCurrentHeight(height);
+        setImageHeightState({ key: imageViewKey, value: height });
       }
     }
-  }, [showMultiImages]);
+  }, [imageViewKey, showMultiImages]);
 
   // 初始化备注值
   useEffect(() => {
@@ -793,7 +833,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   {/* 咖啡豆图片 - 当没有笔记图片时显示大图 */}
                   {beanDisplayImage && noteImages.length === 0 && (
                     <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                      {beanImageError ? (
+                      {hasBeanDisplayImageError ? (
                         <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
                           加载失败
                         </div>
@@ -804,9 +844,16 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                           height={192}
                           width={192}
                           className="h-full w-auto object-cover"
-                          onError={() => setBeanImageError(true)}
+                          sizes="192px"
+                          loading="eager"
+                          onError={() =>
+                            setBeanImageError({
+                              source: beanDisplayImage,
+                              failed: true,
+                            })
+                          }
                           onClick={e => {
-                            if (!beanImageError) {
+                            if (!hasBeanDisplayImageError) {
                               openImageViewer({
                                 url: beanDisplayImage,
                                 alt: beanDisplayImageAlt,
@@ -828,7 +875,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                       {/* 咖啡豆图片 - 小图 */}
                       {beanDisplayImage && (
                         <div className="relative h-20 shrink-0 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                          {beanImageError ? (
+                          {hasBeanDisplayImageError ? (
                             <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
                               加载失败
                             </div>
@@ -839,10 +886,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                               height={80}
                               width={80}
                               className="h-full w-auto object-cover"
-                              onError={() => setBeanImageError(true)}
+                              sizes="80px"
+                              loading="eager"
+                              onError={() =>
+                                setBeanImageError({
+                                  source: beanDisplayImage,
+                                  failed: true,
+                                })
+                              }
                               onClick={e => {
                                 e.stopPropagation();
-                                if (!beanImageError) {
+                                if (!hasBeanDisplayImageError) {
                                   openImageViewer({
                                     url: beanDisplayImage,
                                     alt: beanDisplayImageAlt,
@@ -860,22 +914,29 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
                       {/* 笔记图片 - 显示第一张 */}
                       <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                        {imageError ? (
+                        {hasPrimaryNoteImageError ? (
                           <div className="absolute inset-0 flex items-center justify-center px-8 text-sm text-neutral-500 dark:text-neutral-400">
                             加载失败
                           </div>
                         ) : (
                           <Image
-                            src={noteImages[0]}
+                            src={primaryNoteImage}
                             alt={beanName || '笔记图片'}
                             height={192}
                             width={192}
                             className="h-full w-auto object-cover"
-                            onError={() => setImageError(true)}
+                            sizes="192px"
+                            loading="eager"
+                            onError={() =>
+                              setNoteImageError({
+                                source: primaryNoteImage,
+                                failed: true,
+                              })
+                            }
                             onClick={e => {
-                              if (!imageError) {
+                              if (!hasPrimaryNoteImageError) {
                                 openImageViewer({
-                                  url: noteImages[0],
+                                  url: primaryNoteImage,
                                   alt: beanName || '笔记图片',
                                   items: noteImages.map((url, index) => ({
                                     url,
@@ -897,7 +958,10 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                     <button
                       onClick={e => {
                         e.stopPropagation();
-                        setShowMultiImages(true);
+                        setMultiImageView({
+                          key: imageViewKey,
+                          isOpen: true,
+                        });
                       }}
                       className="absolute top-1/2 right-5 -translate-y-1/2 text-neutral-400/30 transition-colors hover:text-neutral-500 dark:text-neutral-500/30 dark:hover:text-neutral-400"
                     >
@@ -932,7 +996,10 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                     <button
                       onClick={e => {
                         e.stopPropagation();
-                        setShowMultiImages(false);
+                        setMultiImageView({
+                          key: imageViewKey,
+                          isOpen: false,
+                        });
                       }}
                       className="absolute top-1/2 left-5 z-10 -translate-y-1/2 text-neutral-400/30 transition-colors hover:text-neutral-500 dark:text-neutral-500/30 dark:hover:text-neutral-400"
                     >
@@ -997,9 +1064,14 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                                 alt={`笔记图片 ${index + 1}`}
                                 className="block h-full w-full object-cover"
                                 onError={() => {
-                                  setMultiImageErrors(prev =>
-                                    new Set(prev).add(index)
-                                  );
+                                  setMultiImageErrorState(prev => {
+                                    const indexes =
+                                      prev.key === imageViewKey
+                                        ? new Set(prev.indexes)
+                                        : new Set<number>();
+                                    indexes.add(index);
+                                    return { key: imageViewKey, indexes };
+                                  });
                                 }}
                                 loading="lazy"
                               />

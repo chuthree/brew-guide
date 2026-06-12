@@ -42,7 +42,7 @@ export function useCoffeeBeanImage(
       return;
     }
 
-    if (sourceIdentityChanged) {
+    if (sourceIdentityChanged && fallback !== undefined) {
       setImageSource(fallback);
     }
 
