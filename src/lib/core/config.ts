@@ -1615,4 +1615,5 @@ export const sponsorsList = [
   'Neuanfang Jan',
   'TáuM',
   'Elvis',
+  'Ray',
 ];
