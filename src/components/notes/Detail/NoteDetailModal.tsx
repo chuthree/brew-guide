@@ -84,6 +84,19 @@ type ImageHeightState = {
 };
 
 const EMPTY_MULTI_IMAGE_ERRORS = new Set<number>();
+const MULTI_IMAGE_TILE_SIZE_REM = 6;
+const MULTI_IMAGE_GAP_REM = 0.25;
+
+const getMultiImageColumnCount = (imageCount: number): 2 | 3 =>
+  imageCount === 2 || imageCount === 4 ? 2 : 3;
+
+const getMultiImageGridWidth = (columnCount: 2 | 3): string => {
+  const width =
+    columnCount * MULTI_IMAGE_TILE_SIZE_REM +
+    (columnCount - 1) * MULTI_IMAGE_GAP_REM;
+
+  return `min(${width}rem, calc(100vw - 4rem))`;
+};
 
 const NoteDetailDivider: React.FC = () => (
   <div className="border-t border-dashed border-neutral-200/50 dark:border-neutral-800/50" />
@@ -381,6 +394,14 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       : EMPTY_MULTI_IMAGE_ERRORS;
   const currentHeight =
     imageHeightState.key === imageViewKey ? imageHeightState.value : 'auto';
+  const multiImageColumnCount = getMultiImageColumnCount(noteImages.length);
+  const multiImageGridStyle = useMemo<React.CSSProperties>(
+    () => ({
+      gridTemplateColumns: `repeat(${multiImageColumnCount}, minmax(0, 1fr))`,
+      width: getMultiImageGridWidth(multiImageColumnCount),
+    }),
+    [multiImageColumnCount]
+  );
 
   // 是否有多图
   const hasMultiImages = noteImages.length > 1;
@@ -440,53 +461,34 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     }
   }, [isOpen]);
 
-  // 使用 ResizeObserver 实时监听高度变化
+  // 使用 ResizeObserver 只监听当前可见图片页，避免隐藏页参与高度反馈
   useEffect(() => {
-    const defaultEl = defaultImageRef.current;
-    const multiEl = multiImageRef.current;
+    const targetEl = showMultiImages
+      ? multiImageRef.current
+      : defaultImageRef.current;
 
-    if (!defaultEl) return;
+    if (!targetEl) return;
 
     const updateHeight = () => {
-      const targetEl = showMultiImages ? multiEl : defaultEl;
-      if (targetEl) {
-        const height = targetEl.offsetHeight;
-        if (height > 0) {
-          setImageHeightState({ key: imageViewKey, value: height });
-        }
+      const height = targetEl.offsetHeight;
+      if (height > 0) {
+        setImageHeightState({ key: imageViewKey, value: height });
       }
     };
 
     // 初始设置高度
     updateHeight();
 
-    // 创建 ResizeObserver 监听两个元素的高度变化
     const resizeObserver = new ResizeObserver(() => {
       updateHeight();
     });
 
-    resizeObserver.observe(defaultEl);
-    if (multiEl) {
-      resizeObserver.observe(multiEl);
-    }
+    resizeObserver.observe(targetEl);
 
     return () => {
       resizeObserver.disconnect();
     };
   }, [imageViewKey, showMultiImages, isVisible, noteImages.length]);
-
-  // 切换页面时更新高度
-  useEffect(() => {
-    const targetEl = showMultiImages
-      ? multiImageRef.current
-      : defaultImageRef.current;
-    if (targetEl) {
-      const height = targetEl.offsetHeight;
-      if (height > 0) {
-        setImageHeightState({ key: imageViewKey, value: height });
-      }
-    }
-  }, [imageViewKey, showMultiImages]);
 
   // 初始化备注值
   useEffect(() => {
@@ -1014,11 +1016,8 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                     <div className="flex justify-center">
                       <div
                         data-note-images
-                        className={`gap-1 ${
-                          noteImages.length === 2 || noteImages.length === 4
-                            ? 'grid max-w-50 grid-cols-2'
-                            : 'grid max-w-75 grid-cols-3'
-                        }`}
+                        className="grid shrink-0 gap-1"
+                        style={multiImageGridStyle}
                       >
                         {noteImages.map((img, index) => (
                           <div
