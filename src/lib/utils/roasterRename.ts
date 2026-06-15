@@ -167,9 +167,9 @@ export async function renameRoasters(
 
   const now = Date.now();
   let nextBeans: CoffeeBean[] = [];
-  let updatedBeans: CoffeeBean[] = [];
+  const updatedBeans: CoffeeBean[] = [];
   let nextNotes: BrewingNote[] = [];
-  let updatedNotes: BrewingNote[] = [];
+  const updatedNotes: BrewingNote[] = [];
   let nextGrinders = useGrinderStore.getState().grinders;
   let updatedGrinderCount = 0;
   let nextSettings = getSettingsStore().settings;

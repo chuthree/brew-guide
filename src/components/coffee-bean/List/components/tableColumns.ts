@@ -6,9 +6,16 @@ export type TableColumnKey =
   | 'price'
   | 'beanType'
   | 'origin'
+  | 'region'
   | 'estate'
+  | 'lot'
+  | 'batch'
+  | 'station'
+  | 'altitude'
+  | 'season'
   | 'process'
   | 'variety'
+  | 'agtron'
   | 'roastLevel'
   | 'flavor'
   | 'rating'
@@ -51,9 +58,16 @@ export const TABLE_COLUMN_CONFIG: {
   { key: 'price', label: '价格', defaultVisible: true },
   { key: 'beanType', label: '类型', defaultVisible: false },
   { key: 'origin', label: '产地', defaultVisible: false },
+  { key: 'region', label: '产区', defaultVisible: false },
   { key: 'estate', label: '庄园', defaultVisible: false },
+  { key: 'lot', label: '地块', defaultVisible: false },
+  { key: 'batch', label: '批次', defaultVisible: false },
+  { key: 'station', label: '处理站', defaultVisible: false },
+  { key: 'altitude', label: '海拔', defaultVisible: false },
+  { key: 'season', label: '产季', defaultVisible: false },
   { key: 'process', label: '处理法', defaultVisible: false },
   { key: 'variety', label: '品种', defaultVisible: false },
+  { key: 'agtron', label: 'Agtron值', defaultVisible: false },
   { key: 'roastLevel', label: '烘焙度', defaultVisible: false },
   { key: 'flavor', label: '风味', defaultVisible: false },
   { key: 'rating', label: '评分', defaultVisible: false },

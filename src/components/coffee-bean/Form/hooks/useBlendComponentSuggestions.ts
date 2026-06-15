@@ -1,15 +1,22 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import {
+  extractUniqueAltitudes,
+  extractUniqueBatches,
+  extractUniqueAgtrons,
   extractUniqueEstates,
+  extractUniqueLots,
   extractUniqueOrigins,
+  extractUniqueStations,
   extractUniqueProcesses,
+  extractUniqueRegions,
+  extractUniqueSeasons,
   extractUniqueVarieties,
 } from '@/lib/utils/beanVarietyUtils';
 import type { BlendComponent } from '@/types/app';
 import { getFullPresets, getVisiblePresetSuggestions } from '../constants';
 
-type PresetKey = 'origins' | 'estates' | 'processes' | 'varieties';
+type PresetKey = 'origins' | 'regions' | 'estates' | 'lots' | 'batches' | 'stations' | 'altitudes' | 'seasons' | 'processes' | 'varieties' | 'agtrons';
 type TextBlendField = Exclude<keyof BlendComponent, 'percentage'>;
 type BlendComponentSuggestions = Record<PresetKey, string[]>;
 type SuggestionMatch = {
@@ -24,16 +31,30 @@ const suggestionFieldMap: Array<{
   suggestionKey: PresetKey;
 }> = [
   { field: 'origin', suggestionKey: 'origins' },
+  { field: 'region', suggestionKey: 'regions' },
   { field: 'estate', suggestionKey: 'estates' },
+  { field: 'lot', suggestionKey: 'lots' },
+  { field: 'batch', suggestionKey: 'batches' },
+  { field: 'station', suggestionKey: 'stations' },
+  { field: 'altitude', suggestionKey: 'altitudes' },
+  { field: 'season', suggestionKey: 'seasons' },
   { field: 'process', suggestionKey: 'processes' },
   { field: 'variety', suggestionKey: 'varieties' },
+  { field: 'agtron', suggestionKey: 'agtrons' },
 ];
 
 const createEmptyBlendComponent = (): BlendComponent => ({
   origin: '',
+  region: '',
   estate: '',
+  lot: '',
+  batch: '',
+  station: '',
+  altitude: '',
+  season: '',
   process: '',
   variety: '',
+  agtron: '',
 });
 
 const mergePresetSuggestions = (usedValues: string[], key: PresetKey) => {
@@ -49,9 +70,16 @@ const normalizeBlendFieldValue = (value: unknown) =>
 
 const isEmptyBlendComponent = (component: BlendComponent) =>
   !normalizeBlendFieldValue(component.origin) &&
+  !normalizeBlendFieldValue(component.region) &&
   !normalizeBlendFieldValue(component.estate) &&
+  !normalizeBlendFieldValue(component.lot) &&
+  !normalizeBlendFieldValue(component.batch) &&
+  !normalizeBlendFieldValue(component.station) &&
+  !normalizeBlendFieldValue(component.altitude) &&
+  !normalizeBlendFieldValue(component.season) &&
   !normalizeBlendFieldValue(component.process) &&
   !normalizeBlendFieldValue(component.variety) &&
+  !normalizeBlendFieldValue(component.agtron) &&
   component.percentage === undefined;
 
 const getFieldValue = (
@@ -268,8 +296,38 @@ export function useBlendComponentSuggestions() {
     [beans, revision]
   );
 
+  const regions = useMemo(
+    () => mergePresetSuggestions(extractUniqueRegions(beans), 'regions'),
+    [beans, revision]
+  );
+
   const estates = useMemo(
     () => mergePresetSuggestions(extractUniqueEstates(beans), 'estates'),
+    [beans, revision]
+  );
+
+  const lots = useMemo(
+    () => mergePresetSuggestions(extractUniqueLots(beans), 'lots'),
+    [beans, revision]
+  );
+
+  const batches = useMemo(
+    () => mergePresetSuggestions(extractUniqueBatches(beans), 'batches'),
+    [beans, revision]
+  );
+
+  const stations = useMemo(
+    () => mergePresetSuggestions(extractUniqueStations(beans), 'stations'),
+    [beans, revision]
+  );
+
+  const altitudes = useMemo(
+    () => mergePresetSuggestions(extractUniqueAltitudes(beans), 'altitudes'),
+    [beans, revision]
+  );
+
+  const seasons = useMemo(
+    () => mergePresetSuggestions(extractUniqueSeasons(beans), 'seasons'),
     [beans, revision]
   );
 
@@ -283,11 +341,23 @@ export function useBlendComponentSuggestions() {
     [beans, revision]
   );
 
+  const agtrons = useMemo(
+    () => mergePresetSuggestions(extractUniqueAgtrons(beans), 'agtrons'),
+    [beans, revision]
+  );
+
   return {
     origins,
+    regions,
     estates,
+    lots,
+    batches,
+    stations,
+    altitudes,
+    seasons,
     processes,
     varieties,
+    agtrons,
     refresh,
   };
 }

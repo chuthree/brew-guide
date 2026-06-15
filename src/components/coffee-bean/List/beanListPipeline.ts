@@ -127,8 +127,26 @@ const buildSearchFields = (bean: ExtendedCoffeeBean): SearchField[] => {
   const originTexts = uniqueNormalizedValues(
     bean.blendComponents?.map(component => component.origin)
   );
+  const regionTexts = uniqueNormalizedValues(
+    bean.blendComponents?.map(component => component.region)
+  );
   const estateTexts = uniqueNormalizedValues(
     bean.blendComponents?.map(component => component.estate)
+  );
+  const lotTexts = uniqueNormalizedValues(
+    bean.blendComponents?.map(component => component.lot)
+  );
+  const batchTexts = uniqueNormalizedValues(
+    bean.blendComponents?.map(component => component.batch)
+  );
+  const stationTexts = uniqueNormalizedValues(
+    bean.blendComponents?.map(component => component.station)
+  );
+  const altitudeTexts = uniqueNormalizedValues(
+    bean.blendComponents?.map(component => component.altitude)
+  );
+  const seasonTexts = uniqueNormalizedValues(
+    bean.blendComponents?.map(component => component.season)
   );
   const processTexts = uniqueNormalizedValues(
     bean.blendComponents?.map(component => component.process)
@@ -136,12 +154,21 @@ const buildSearchFields = (bean: ExtendedCoffeeBean): SearchField[] => {
   const varietyTexts = uniqueNormalizedValues(
     bean.blendComponents?.map(component => component.variety)
   );
+  const agtronTexts = uniqueNormalizedValues(
+    bean.blendComponents?.map(component => component.agtron)
+  );
   const blendComponentTexts = uniqueNormalizedValues(
     bean.blendComponents?.map(
       component =>
         `${component.percentage ?? ''} ${component.origin ?? ''} ${
-          component.estate ?? ''
-        } ${component.process ?? ''} ${component.variety ?? ''}`
+          component.region ?? ''
+        } ${component.estate ?? ''} ${component.lot ?? ''} ${
+          component.batch ?? ''
+        } ${component.station ?? ''} ${component.altitude ?? ''} ${
+          component.season ?? ''
+        } ${component.process ?? ''} ${component.variety ?? ''} ${
+          component.agtron ?? ''
+        }`
     )
   );
 
@@ -149,8 +176,15 @@ const buildSearchFields = (bean: ExtendedCoffeeBean): SearchField[] => {
     { text: normalizeSearchText(bean.name || ''), weight: 3 },
     { text: normalizeSearchText(bean.roaster || ''), weight: 3 },
     { text: originTexts.join(' '), weight: 2 },
+    { text: regionTexts.join(' '), weight: 2 },
     { text: estateTexts.join(' '), weight: 2 },
+    { text: lotTexts.join(' '), weight: 1 },
+    { text: batchTexts.join(' '), weight: 1 },
+    { text: stationTexts.join(' '), weight: 1 },
+    { text: altitudeTexts.join(' '), weight: 1 },
+    { text: seasonTexts.join(' '), weight: 1 },
     { text: processTexts.join(' '), weight: 2 },
+    { text: agtronTexts.join(' '), weight: 1 },
     { text: normalizeSearchText(bean.notes || ''), weight: 1 },
     { text: normalizeSearchText(bean.roastLevel || ''), weight: 1 },
     { text: normalizeSearchText(bean.roastDate || bean.purchaseDate || ''), weight: 1 },

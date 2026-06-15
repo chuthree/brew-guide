@@ -148,7 +148,7 @@ async function recognizeBeanImageWithCustomAPI(
 // 识别咖啡豆图片（非流式版本）
 export async function recognizeBeanImage(
   imageFile: File,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   onProgress?: (chunk: string) => void,
   customConfig?: CustomBeanRecognitionConfig
 ): Promise<unknown> {

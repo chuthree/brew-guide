@@ -172,6 +172,13 @@ export const defaultSettings: AppSettings = {
   // 识图设置
   autoFillRecognitionImage: false,
   showEstateField: false,
+  showRegionField: false,
+  showLotField: true,
+  showBatchField: true,
+  showStationField: true,
+  showAltitudeField: false,
+  showSeasonField: false,
+  showAgtronField: false,
   immersiveAdd: false,
   experimentalBeanRecognitionEnabled: false,
   experimentalBeanRecognitionApiBaseUrl: '',

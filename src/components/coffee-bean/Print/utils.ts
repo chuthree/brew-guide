@@ -2,7 +2,7 @@ import { CoffeeBean } from '@/types/app';
 import { EditableContent, PrintConfig } from './types';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import { isPrintFieldVisible } from './fields';
-import { getBeanEstates, RoasterSettings } from '@/lib/utils/beanVarietyUtils';
+import { getBeanEstates, getBeanRegions, getBeanLots, getBeanBatches, getBeanStations, getBeanAltitudes, getBeanSeasons, getBeanAgtrons, RoasterSettings } from '@/lib/utils/beanVarietyUtils';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 
 // 格式化日期
@@ -61,8 +61,29 @@ export const getBottomInfoLine = (
   if (isPrintFieldVisible('origin', config, c)) {
     parts.push(c.origin.trim());
   }
+  if (isPrintFieldVisible('region', config, c)) {
+    parts.push(c.region.trim());
+  }
   if (isPrintFieldVisible('estate', config, c)) {
     parts.push(c.estate.trim());
+  }
+  if (isPrintFieldVisible('lot', config, c)) {
+    parts.push(c.lot.trim());
+  }
+  if (isPrintFieldVisible('batch', config, c)) {
+    parts.push(c.batch.trim());
+  }
+  if (isPrintFieldVisible('station', config, c)) {
+    parts.push(c.station.trim());
+  }
+  if (isPrintFieldVisible('altitude', config, c)) {
+    parts.push(c.altitude.trim());
+  }
+  if (isPrintFieldVisible('season', config, c)) {
+    parts.push(c.season.trim());
+  }
+  if (isPrintFieldVisible('agtron', config, c)) {
+    parts.push(c.agtron.trim());
   }
   if (isPrintFieldVisible('roastLevel', config, c)) {
     parts.push(c.roastLevel.trim());
@@ -85,7 +106,7 @@ export const getPreviewDimensions = (config: PrintConfig) => {
 // 从 bean 提取组件信息
 const extractComponentInfo = (
   bean: CoffeeBean,
-  field: 'origin' | 'process' | 'variety'
+  field: 'origin' | 'region' | 'estate' | 'altitude' | 'season' | 'process' | 'variety' | 'agtron'
 ): string => {
   if (!bean.blendComponents?.length) return '';
   const values = new Set(
@@ -106,11 +127,18 @@ export const createInitialContent = (
       name: '',
       roaster: '',
       origin: '',
+      region: '',
       estate: '',
+      lot: '',
+      batch: '',
+      station: '',
+      altitude: '',
+      season: '',
       roastLevel: '',
       roastDate: '',
       process: '',
       variety: '',
+      agtron: '',
       flavor: [],
       notes: '',
       weight: '',
@@ -120,11 +148,18 @@ export const createInitialContent = (
     name: bean.name || '',
     roaster: bean.roaster || '',
     origin: extractComponentInfo(bean, 'origin'),
+    region: getBeanRegions(bean).join(', '),
     estate: getBeanEstates(bean).join(', '),
+    lot: getBeanLots(bean).join(', '),
+    batch: getBeanBatches(bean).join(', '),
+    station: getBeanStations(bean).join(', '),
+    altitude: getBeanAltitudes(bean).join(', '),
+    season: getBeanSeasons(bean).join(', '),
     roastLevel: bean.roastLevel || '',
     roastDate: bean.roastDate || '',
     process: extractComponentInfo(bean, 'process'),
     variety: extractComponentInfo(bean, 'variety'),
+    agtron: getBeanAgtrons(bean).join(', '),
     flavor: bean.flavor || [],
     notes: bean.notes || '',
     weight: '',

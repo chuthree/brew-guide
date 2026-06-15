@@ -25,24 +25,122 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
   const showEstateFieldSetting = useSettingsStore(
     state => state.settings.showEstateField || false
   );
+  const showRegionFieldSetting = useSettingsStore(
+    state => state.settings.showRegionField || false
+  );
+  const showLotFieldSetting = useSettingsStore(
+    state => state.settings.showLotField !== false
+  );
+  const showBatchFieldSetting = useSettingsStore(
+    state => state.settings.showBatchField !== false
+  );
+  const showStationFieldSetting = useSettingsStore(
+    state => state.settings.showStationField !== false
+  );
+  const showAltitudeFieldSetting = useSettingsStore(
+    state => state.settings.showAltitudeField || false
+  );
+  const showSeasonFieldSetting = useSettingsStore(
+    state => state.settings.showSeasonField || false
+  );
+  const showAgtronFieldSetting = useSettingsStore(
+    state => state.settings.showAgtronField || false
+  );
 
   // 检查是否有任何成分已有庄园数据
   const hasExistingEstate = useMemo(() => {
     return components.some(comp => comp.estate && comp.estate.trim() !== '');
   }, [components]);
+  const hasExistingRegion = useMemo(() => {
+    return components.some(comp => comp.region && comp.region.trim() !== '');
+  }, [components]);
+  const hasExistingLot = useMemo(() => {
+    return components.some(comp => comp.lot && comp.lot.trim() !== '');
+  }, [components]);
+  const hasExistingBatch = useMemo(() => {
+    return components.some(comp => comp.batch && comp.batch.trim() !== '');
+  }, [components]);
+  const hasExistingProcessingStation = useMemo(() => {
+    return components.some(comp => comp.station && comp.station.trim() !== '');
+  }, [components]);
+  const hasExistingAltitude = useMemo(() => {
+    return components.some(comp => comp.altitude && comp.altitude.trim() !== '');
+  }, [components]);
+  const hasExistingSeason = useMemo(() => {
+    return components.some(comp => comp.season && comp.season.trim() !== '');
+  }, [components]);
+  const hasExistingAgtron = useMemo(() => {
+    return components.some(comp => comp.agtron && comp.agtron.trim() !== '');
+  }, [components]);
 
-  // 是否因“已有/输入过庄园”而触发显示（进入表单后保持到退出）
+  // 是否因”已有/输入过庄园”而触发显示（进入表单后保持到退出）
   const [estateFieldStickyByData, setEstateFieldStickyByData] =
     React.useState(hasExistingEstate);
+  const [regionFieldStickyByData, setRegionFieldStickyByData] =
+    React.useState(hasExistingRegion);
+  const [lotFieldStickyByData, setLotFieldStickyByData] =
+    React.useState(hasExistingLot);
+  const [batchFieldStickyByData, setBatchFieldStickyByData] =
+    React.useState(hasExistingBatch);
+  const [stationFieldStickyByData, setProcessingStationFieldStickyByData] =
+    React.useState(hasExistingProcessingStation);
+  const [altitudeFieldStickyByData, setAltitudeFieldStickyByData] =
+    React.useState(hasExistingAltitude);
+  const [seasonFieldStickyByData, setSeasonFieldStickyByData] =
+    React.useState(hasExistingSeason);
+  const [agtronFieldStickyByData, setAgtronFieldStickyByData] =
+    React.useState(hasExistingAgtron);
 
   React.useEffect(() => {
     if (hasExistingEstate) {
       setEstateFieldStickyByData(true);
     }
   }, [hasExistingEstate]);
+  React.useEffect(() => {
+    if (hasExistingRegion) {
+      setRegionFieldStickyByData(true);
+    }
+  }, [hasExistingRegion]);
+  React.useEffect(() => {
+    if (hasExistingLot) {
+      setLotFieldStickyByData(true);
+    }
+  }, [hasExistingLot]);
+  React.useEffect(() => {
+    if (hasExistingBatch) {
+      setBatchFieldStickyByData(true);
+    }
+  }, [hasExistingBatch]);
+  React.useEffect(() => {
+    if (hasExistingProcessingStation) {
+      setProcessingStationFieldStickyByData(true);
+    }
+  }, [hasExistingProcessingStation]);
+  React.useEffect(() => {
+    if (hasExistingAltitude) {
+      setAltitudeFieldStickyByData(true);
+    }
+  }, [hasExistingAltitude]);
+  React.useEffect(() => {
+    if (hasExistingSeason) {
+      setSeasonFieldStickyByData(true);
+    }
+  }, [hasExistingSeason]);
+  React.useEffect(() => {
+    if (hasExistingAgtron) {
+      setAgtronFieldStickyByData(true);
+    }
+  }, [hasExistingAgtron]);
 
   // 最终是否显示庄园字段：设置开启 或 数据触发（并在会话内保持）
   const showEstateField = showEstateFieldSetting || estateFieldStickyByData;
+  const showRegionField = showRegionFieldSetting || regionFieldStickyByData;
+  const showLotField = showLotFieldSetting || lotFieldStickyByData;
+  const showBatchField = showBatchFieldSetting || batchFieldStickyByData;
+  const showStationField = showStationFieldSetting || stationFieldStickyByData;
+  const showAltitudeField = showAltitudeFieldSetting || altitudeFieldStickyByData;
+  const showSeasonField = showSeasonFieldSetting || seasonFieldStickyByData;
+  const showAgtronField = showAgtronFieldSetting || agtronFieldStickyByData;
 
   // 计算总百分比
   const totalPercentage = components.reduce(
@@ -147,6 +245,13 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                 component={component}
                 index={index}
                 showEstateField={showEstateField}
+                showRegionField={showRegionField}
+                showLotField={showLotField}
+                showBatchField={showBatchField}
+                showStationField={showStationField}
+                showAltitudeField={showAltitudeField}
+                showSeasonField={showSeasonField}
+                showAgtronField={showAgtronField}
                 onChange={onChange}
               />
             </div>

@@ -61,9 +61,16 @@ const COLUMN_SIZE_CONFIG: Record<
   price: { size: 90, minSize: 90, maxSize: 120 },
   beanType: { size: 70, minSize: 65, maxSize: 120 },
   origin: { size: 100, minSize: 90, maxSize: 200 },
+  region: { size: 100, minSize: 90, maxSize: 200 },
   estate: { size: 100, minSize: 90, maxSize: 200 },
+  lot: { size: 100, minSize: 90, maxSize: 200 },
+  batch: { size: 100, minSize: 90, maxSize: 200 },
+  station: { size: 100, minSize: 90, maxSize: 200 },
+  altitude: { size: 100, minSize: 90, maxSize: 200 },
+  season: { size: 100, minSize: 90, maxSize: 200 },
   process: { size: 100, minSize: 90, maxSize: 200 },
   variety: { size: 100, minSize: 90, maxSize: 200 },
+  agtron: { size: 100, minSize: 90, maxSize: 200 },
   roastLevel: { size: 90, minSize: 90, maxSize: 120 },
   flavor: { size: 200, minSize: 100, maxSize: 400 },
   rating: { size: 90, minSize: 90, maxSize: 120 },
@@ -584,6 +591,16 @@ const TableView: React.FC<TableViewProps> = ({
           ...getColumnSizing('origin'),
         }
       ),
+      region: columnHelper.accessor(
+        row => row.blendComponents?.[0]?.region || '',
+        {
+          id: 'region',
+          header: '产区',
+          cell: info => info.getValue() || '-',
+          sortingFn: alphanumericSortingFn,
+          ...getColumnSizing('region'),
+        }
+      ),
       estate: columnHelper.accessor(
         row => row.blendComponents?.[0]?.estate || '',
         {
@@ -592,6 +609,56 @@ const TableView: React.FC<TableViewProps> = ({
           cell: info => info.getValue() || '-',
           sortingFn: alphanumericSortingFn,
           ...getColumnSizing('estate'),
+        }
+      ),
+      lot: columnHelper.accessor(
+        row => row.blendComponents?.[0]?.lot || '',
+        {
+          id: 'lot',
+          header: '地块',
+          cell: info => info.getValue() || '-',
+          sortingFn: alphanumericSortingFn,
+          ...getColumnSizing('lot'),
+        }
+      ),
+      batch: columnHelper.accessor(
+        row => row.blendComponents?.[0]?.batch || '',
+        {
+          id: 'batch',
+          header: '批次',
+          cell: info => info.getValue() || '-',
+          sortingFn: alphanumericSortingFn,
+          ...getColumnSizing('batch'),
+        }
+      ),
+      station: columnHelper.accessor(
+        row => row.blendComponents?.[0]?.station || '',
+        {
+          id: 'station',
+          header: '处理站',
+          cell: info => info.getValue() || '-',
+          sortingFn: alphanumericSortingFn,
+          ...getColumnSizing('station'),
+        }
+      ),
+      altitude: columnHelper.accessor(
+        row => row.blendComponents?.[0]?.altitude || '',
+        {
+          id: 'altitude',
+          header: '海拔',
+          cell: info => info.getValue() || '-',
+          sortingFn: alphanumericSortingFn,
+          ...getColumnSizing('altitude'),
+        }
+      ),
+      season: columnHelper.accessor(
+        row => row.blendComponents?.[0]?.season || '',
+        {
+          id: 'season',
+          header: '产季',
+          cell: info => info.getValue() || '-',
+          sortingFn: alphanumericSortingFn,
+          ...getColumnSizing('season'),
         }
       ),
       process: columnHelper.accessor(
@@ -612,6 +679,16 @@ const TableView: React.FC<TableViewProps> = ({
           cell: info => info.getValue() || '-',
           sortingFn: alphanumericSortingFn,
           ...getColumnSizing('variety'),
+        }
+      ),
+      agtron: columnHelper.accessor(
+        row => row.blendComponents?.[0]?.agtron || '',
+        {
+          id: 'agtron',
+          header: 'Agtron值',
+          cell: info => info.getValue() || '-',
+          sortingFn: alphanumericSortingFn,
+          ...getColumnSizing('agtron'),
         }
       ),
       roastLevel: columnHelper.accessor(row => row.roastLevel || '', {

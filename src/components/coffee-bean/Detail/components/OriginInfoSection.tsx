@@ -28,6 +28,13 @@ interface OriginInfoSectionProps {
   isAddMode: boolean;
   searchQuery: string;
   showEstateField: boolean;
+  showRegionField: boolean;
+  showLotField: boolean;
+  showBatchField: boolean;
+  showStationField: boolean;
+  showAltitudeField: boolean;
+  showSeasonField: boolean;
+  showAgtronField: boolean;
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
   handleRoastLevelSelect: (level: string) => void;
 }
@@ -119,6 +126,13 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   isAddMode,
   searchQuery,
   showEstateField,
+  showRegionField,
+  showLotField,
+  showBatchField,
+  showStationField,
+  showAltitudeField,
+  showSeasonField,
+  showAgtronField,
   handleUpdateField,
   handleRoastLevelSelect,
 }) => {
@@ -126,27 +140,55 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
     'w-10 bg-neutral-100 px-1.5 py-0.5 text-center text-xs font-medium text-neutral-700 placeholder:text-neutral-400 outline-none dark:bg-neutral-800/40 dark:text-neutral-300 dark:placeholder:text-neutral-500';
 
   const originRef = useRef<HTMLDivElement>(null);
+  const regionRef = useRef<HTMLDivElement>(null);
   const estateRef = useRef<HTMLDivElement>(null);
+  const lotRef = useRef<HTMLDivElement>(null);
+  const batchRef = useRef<HTMLDivElement>(null);
+  const stationRef = useRef<HTMLDivElement>(null);
+  const altitudeRef = useRef<HTMLDivElement>(null);
+  const seasonRef = useRef<HTMLDivElement>(null);
   const processRef = useRef<HTMLDivElement>(null);
   const varietyRef = useRef<HTMLDivElement>(null);
+  const agtronRef = useRef<HTMLDivElement>(null);
   const currentBean = isAddMode ? tempBean : bean;
   const roastLevelSuggestions = useRoastLevelSuggestions();
   const components =
     currentBean?.blendComponents && currentBean.blendComponents.length > 0
       ? currentBean.blendComponents
-      : [{ origin: '', estate: '', process: '', variety: '' }];
+      : [{ origin: '', region: '', estate: '', lot: '', batch: '', station: '', altitude: '', season: '', process: '', variety: '', agtron: '' }];
   const isMultipleBlend =
     currentBean?.blendComponents && currentBean.blendComponents.length > 1;
   const firstComponent = currentBean?.blendComponents?.[0];
 
   // 获取当前值
   const origin = firstComponent?.origin || '';
+  const region = firstComponent?.region || '';
   const estate = firstComponent?.estate || '';
+  const lot = firstComponent?.lot || '';
+  const batch = firstComponent?.batch || '';
+  const station = firstComponent?.station || '';
+  const altitude = firstComponent?.altitude || '';
+  const season = firstComponent?.season || '';
   const process = firstComponent?.process || '';
   const variety = firstComponent?.variety || '';
+  const agtron = firstComponent?.agtron || '';
   const roastLevel = currentBean?.roastLevel || '';
   const shouldShowEstateField =
     showEstateField || components.some(component => component.estate?.trim());
+  const shouldShowRegionField =
+    showRegionField || components.some(component => component.region?.trim());
+  const shouldShowLotField =
+    showLotField || components.some(component => component.lot?.trim());
+  const shouldShowBatchField =
+    showBatchField || components.some(component => component.batch?.trim());
+  const shouldShowProcessingStationField =
+    showStationField || components.some(component => component.station?.trim());
+  const shouldShowAltitudeField =
+    showAltitudeField || components.some(component => component.altitude?.trim());
+  const shouldShowSeasonField =
+    showSeasonField || components.some(component => component.season?.trim());
+  const shouldShowAgtronField =
+    showAgtronField || components.some(component => component.agtron?.trim());
 
   // 初始化成分值
   useEffect(() => {
@@ -154,14 +196,35 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
       if (originRef.current && firstComponent.origin) {
         originRef.current.textContent = firstComponent.origin;
       }
+      if (regionRef.current && firstComponent.region) {
+        regionRef.current.textContent = firstComponent.region;
+      }
       if (estateRef.current && firstComponent.estate) {
         estateRef.current.textContent = firstComponent.estate;
+      }
+      if (lotRef.current && firstComponent.lot) {
+        lotRef.current.textContent = firstComponent.lot;
+      }
+      if (batchRef.current && firstComponent.batch) {
+        batchRef.current.textContent = firstComponent.batch;
+      }
+      if (stationRef.current && firstComponent.station) {
+        stationRef.current.textContent = firstComponent.station;
+      }
+      if (altitudeRef.current && firstComponent.altitude) {
+        altitudeRef.current.textContent = firstComponent.altitude;
+      }
+      if (seasonRef.current && firstComponent.season) {
+        seasonRef.current.textContent = firstComponent.season;
       }
       if (processRef.current && firstComponent.process) {
         processRef.current.textContent = firstComponent.process;
       }
       if (varietyRef.current && firstComponent.variety) {
         varietyRef.current.textContent = firstComponent.variety;
+      }
+      if (agtronRef.current && firstComponent.agtron) {
+        agtronRef.current.textContent = firstComponent.agtron;
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -170,7 +233,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   // 处理成分编辑
   const handleBlendComponentUpdate = (
     index: number,
-    field: 'origin' | 'estate' | 'process' | 'variety',
+    field: 'origin' | 'region' | 'estate' | 'lot' | 'batch' | 'station' | 'altitude' | 'season' | 'process' | 'variety' | 'agtron',
     value: string
   ) => {
     const updatedComponents = updateBlendComponentsDelimitedField(
@@ -193,12 +256,72 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
     }
   };
 
+  const handleRegionInput = () => {
+    if (regionRef.current) {
+      handleBlendComponentUpdate(
+        0,
+        'region',
+        regionRef.current.textContent || ''
+      );
+    }
+  };
+
   const handleEstateInput = () => {
     if (estateRef.current) {
       handleBlendComponentUpdate(
         0,
         'estate',
         estateRef.current.textContent || ''
+      );
+    }
+  };
+
+  const handleLotInput = () => {
+    if (lotRef.current) {
+      handleBlendComponentUpdate(
+        0,
+        'lot',
+        lotRef.current.textContent || ''
+      );
+    }
+  };
+
+  const handleBatchInput = () => {
+    if (batchRef.current) {
+      handleBlendComponentUpdate(
+        0,
+        'batch',
+        batchRef.current.textContent || ''
+      );
+    }
+  };
+
+  const handleProcessingStationInput = () => {
+    if (stationRef.current) {
+      handleBlendComponentUpdate(
+        0,
+        'station',
+        stationRef.current.textContent || ''
+      );
+    }
+  };
+
+  const handleAltitudeInput = () => {
+    if (altitudeRef.current) {
+      handleBlendComponentUpdate(
+        0,
+        'altitude',
+        altitudeRef.current.textContent || ''
+      );
+    }
+  };
+
+  const handleSeasonInput = () => {
+    if (seasonRef.current) {
+      handleBlendComponentUpdate(
+        0,
+        'season',
+        seasonRef.current.textContent || ''
       );
     }
   };
@@ -223,6 +346,16 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
     }
   };
 
+  const handleAgtronInput = () => {
+    if (agtronRef.current) {
+      handleBlendComponentUpdate(
+        0,
+        'agtron',
+        agtronRef.current.textContent || ''
+      );
+    }
+  };
+
   const handleFlavorPeriodDayChange = (
     field: 'startDay' | 'endDay',
     value: string
@@ -238,7 +371,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   if (isMultipleBlend && !isAddMode) return null;
 
   // 查看模式下至少有一个字段有值才显示；添加模式下总是显示
-  if (!isAddMode && !origin && !estate && !process && !variety && !roastLevel) {
+  if (!isAddMode && !origin && !region && !estate && !lot && !batch && !station && !altitude && !season && !process && !variety && !roastLevel) {
     return null;
   }
 
@@ -272,6 +405,13 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
         <BlendComponentTagRows
           components={components}
           showEstateField={shouldShowEstateField}
+          showRegionField={shouldShowRegionField}
+          showLotField={shouldShowLotField}
+          showBatchField={shouldShowBatchField}
+          showStationField={shouldShowProcessingStationField}
+          showAltitudeField={shouldShowAltitudeField}
+          showSeasonField={shouldShowSeasonField}
+          showAgtronField={shouldShowAgtronField}
           onChange={handleBlendComponentUpdate}
         />
       )}
@@ -320,6 +460,46 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
         </div>
       )}
 
+      {/* 产区 */}
+      {!isAddMode && region && (
+        <div className="flex items-start">
+          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            产区
+          </div>
+          <div className="relative flex-1">
+            {isAddMode && !region && (
+              <span
+                className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
+                data-placeholder="region"
+              >
+                输入产区
+              </span>
+            )}
+            <div
+              ref={regionRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={e => {
+                const placeholder =
+                  e.currentTarget.parentElement?.querySelector(
+                    '[data-placeholder="region"]'
+                  ) as HTMLElement;
+                if (placeholder) {
+                  placeholder.style.display = e.currentTarget.textContent
+                    ? 'none'
+                    : '';
+                }
+              }}
+              onBlur={handleRegionInput}
+              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              style={{ minHeight: '1.25em' }}
+            >
+              {region}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 庄园 */}
       {!isAddMode && estate && (
         <div className="flex items-start">
@@ -355,6 +535,69 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
               style={{ minHeight: '1.25em' }}
             >
               {estate}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 地块 */}
+      {!isAddMode && shouldShowLotField && lot && (
+        <div className="flex items-start">
+          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            地块
+          </div>
+          <div className="relative flex-1">
+            <div
+              ref={lotRef}
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={handleLotInput}
+              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              style={{ minHeight: '1.25em' }}
+            >
+              {lot}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 批次 */}
+      {!isAddMode && shouldShowBatchField && batch && (
+        <div className="flex items-start">
+          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            批次
+          </div>
+          <div className="relative flex-1">
+            <div
+              ref={batchRef}
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={handleBatchInput}
+              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              style={{ minHeight: '1.25em' }}
+            >
+              {batch}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 处理站 */}
+      {!isAddMode && shouldShowProcessingStationField && station && (
+        <div className="flex items-start">
+          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            处理站
+          </div>
+          <div className="relative flex-1">
+            <div
+              ref={stationRef}
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={handleProcessingStationInput}
+              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              style={{ minHeight: '1.25em' }}
+            >
+              {station}
             </div>
           </div>
         </div>
@@ -435,6 +678,107 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
               style={{ minHeight: '1.25em' }}
             >
               {variety}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 海拔 */}
+      {!isAddMode && altitude && (
+        <div className="flex items-start">
+          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            海拔
+          </div>
+          <div className="relative flex-1">
+            {isAddMode && !altitude && (
+              <span
+                className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
+                data-placeholder="altitude"
+              >
+                输入海拔
+              </span>
+            )}
+            <div
+              ref={altitudeRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={e => {
+                const placeholder =
+                  e.currentTarget.parentElement?.querySelector(
+                    '[data-placeholder="altitude"]'
+                  ) as HTMLElement;
+                if (placeholder) {
+                  placeholder.style.display = e.currentTarget.textContent
+                    ? 'none'
+                    : '';
+                }
+              }}
+              onBlur={handleAltitudeInput}
+              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              style={{ minHeight: '1.25em' }}
+            >
+              {altitude}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 产季 */}
+      {!isAddMode && season && (
+        <div className="flex items-start">
+          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            产季
+          </div>
+          <div className="relative flex-1">
+            {isAddMode && !season && (
+              <span
+                className="pointer-events-none absolute top-0 left-0 text-xs font-medium text-neutral-400 dark:text-neutral-500"
+                data-placeholder="season"
+              >
+                输入产季
+              </span>
+            )}
+            <div
+              ref={seasonRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={e => {
+                const placeholder =
+                  e.currentTarget.parentElement?.querySelector(
+                    '[data-placeholder="season"]'
+                  ) as HTMLElement;
+                if (placeholder) {
+                  placeholder.style.display = e.currentTarget.textContent
+                    ? 'none'
+                    : '';
+                }
+              }}
+              onBlur={handleSeasonInput}
+              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              style={{ minHeight: '1.25em' }}
+            >
+              {season}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Agtron值 */}
+      {!isAddMode && shouldShowAgtronField && agtron && (
+        <div className="flex items-start">
+          <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            Agtron值
+          </div>
+          <div className="relative flex-1">
+            <div
+              ref={agtronRef}
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={handleAgtronInput}
+              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              style={{ minHeight: '1.25em' }}
+            >
+              {agtron}
             </div>
           </div>
         </div>

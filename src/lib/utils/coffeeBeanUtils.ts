@@ -13,9 +13,16 @@ const TEXT_LIST_SPLIT_REGEX = /[\n,，、;；]+/;
 
 const createEmptyBlendComponent = (): BlendComponent => ({
   origin: '',
+  region: '',
   estate: '',
+  lot: '',
+  batch: '',
+  station: '',
+  altitude: '',
+  season: '',
   process: '',
   variety: '',
+  agtron: '',
 });
 
 type BeanIdentityLike = {

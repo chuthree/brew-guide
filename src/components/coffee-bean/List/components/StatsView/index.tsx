@@ -34,6 +34,10 @@ import {
   getBeanProcesses,
   getBeanFlavors,
   getBeanEstates,
+  getBeanRegions,
+  getBeanAltitudes,
+  getBeanSeasons,
+  getBeanAgtrons,
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
 import { ExtendedCoffeeBean } from '../../types';
@@ -101,7 +105,11 @@ type RoastedStatsSectionKey =
   | 'roaster'
   | 'originMap'
   | 'origin'
+  | 'region'
   | 'estate'
+  | 'altitude'
+  | 'season'
+  | 'agtron'
   | 'variety'
   | 'process'
   | 'flavor';
@@ -115,7 +123,11 @@ const ROASTED_STATS_SECTION_DEFAULTS: StatsSectionOption[] = [
   { key: 'worstBeans', label: '最拉豆子', visible: true },
   { key: 'originMap', label: '咖啡产区地图', visible: true },
   { key: 'origin', label: '产地', visible: true },
+  { key: 'region', label: '产区', visible: true },
   { key: 'estate', label: '庄园', visible: true },
+  { key: 'altitude', label: '海拔', visible: false },
+  { key: 'season', label: '产季', visible: false },
+  { key: 'agtron', label: 'Agtron值', visible: false },
   { key: 'variety', label: '品种', visible: true },
   { key: 'process', label: '处理法', visible: true },
   { key: 'flavor', label: '风味', visible: true },
@@ -1081,6 +1093,54 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     return Array.from(estateCount.entries()).sort((a, b) => b[1] - a[1]);
   }, [filteredBeans]);
 
+  // 计算产区统计
+  const regionStats = useMemo(() => {
+    const regionCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const regions = getBeanRegions(bean);
+      regions.forEach(region => {
+        regionCount.set(region, (regionCount.get(region) || 0) + 1);
+      });
+    });
+    return Array.from(regionCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 计算海拔统计
+  const altitudeStats = useMemo(() => {
+    const altitudeCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const altitudes = getBeanAltitudes(bean);
+      altitudes.forEach(altitude => {
+        altitudeCount.set(altitude, (altitudeCount.get(altitude) || 0) + 1);
+      });
+    });
+    return Array.from(altitudeCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 计算产季统计
+  const seasonStats = useMemo(() => {
+    const seasonCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const seasons = getBeanSeasons(bean);
+      seasons.forEach(season => {
+        seasonCount.set(season, (seasonCount.get(season) || 0) + 1);
+      });
+    });
+    return Array.from(seasonCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 计算Agtron值统计
+  const agtronStats = useMemo(() => {
+    const agtronCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const agtrons = getBeanAgtrons(bean);
+      agtrons.forEach(agtron => {
+        agtronCount.set(agtron, (agtronCount.get(agtron) || 0) + 1);
+      });
+    });
+    return Array.from(agtronCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
   // 计算品种统计
   const varietyStats = useMemo(() => {
     const varietyCount = new Map<string, number>();
@@ -1262,9 +1322,33 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
         ) : null,
       ],
       [
+        'region',
+        regionStats.length > 0 ? (
+          <AttributeCard key="region" title="产区" data={regionStats} />
+        ) : null,
+      ],
+      [
         'estate',
         estateStats.length > 0 ? (
           <AttributeCard key="estate" title="庄园" data={estateStats} />
+        ) : null,
+      ],
+      [
+        'altitude',
+        altitudeStats.length > 0 ? (
+          <AttributeCard key="altitude" title="海拔" data={altitudeStats} />
+        ) : null,
+      ],
+      [
+        'season',
+        seasonStats.length > 0 ? (
+          <AttributeCard key="season" title="产季" data={seasonStats} />
+        ) : null,
+      ],
+      [
+        'agtron',
+        agtronStats.length > 0 ? (
+          <AttributeCard key="agtron" title="Agtron值" data={agtronStats} />
         ) : null,
       ],
       [
@@ -1295,6 +1379,10 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     bestBeanStats,
     cheapBeanStats,
     estateStats,
+    regionStats,
+    altitudeStats,
+    seasonStats,
+    agtronStats,
     expensiveBeanStats,
     filteredBeans,
     flavorStats,

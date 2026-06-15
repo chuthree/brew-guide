@@ -769,7 +769,7 @@ export const useStatsData = (
     }
 
     // 生成趋势数据数组
-    let trendData: TrendDataPoint[] = [];
+    const trendData: TrendDataPoint[] = [];
     if (needTrend && selectedDate) {
       // 生成完整的日期序列
       const { startTime: tStart, endTime: tEnd } = getTimeRange(

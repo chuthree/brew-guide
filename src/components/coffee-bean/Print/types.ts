@@ -7,11 +7,18 @@ export interface EditableContent {
   name: string;
   roaster: string;
   origin: string;
+  region: string;
   estate: string;
+  lot: string;
+  batch: string;
+  station: string;
+  altitude: string;
+  season: string;
   roastLevel: string;
   roastDate: string;
   process: string;
   variety: string;
+  agtron: string;
   flavor: string[];
   notes: string;
   weight: string;
@@ -25,12 +32,19 @@ export interface PrintConfig {
   fields: {
     name: boolean;
     origin: boolean;
+    region: boolean;
     estate: boolean;
+    lot: boolean;
+    batch: boolean;
+    station: boolean;
+    altitude: boolean;
+    season: boolean;
     roastLevel: boolean;
     roastDate: boolean;
     flavor: boolean;
     process: boolean;
     variety: boolean;
+    agtron: boolean;
     notes: boolean;
     weight: boolean;
   };

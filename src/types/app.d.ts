@@ -18,9 +18,16 @@ export type BrewingNoteParams = Partial<
 export interface BlendComponent {
   percentage?: number; // 百分比 (1-100)，可选
   origin?: string; // 产地
+  region?: string; // 产区
   estate?: string; // 庄园
+  lot?: string; // 地块
+  batch?: string; // 批次
+  station?: string; // 处理站
+  altitude?: string; // 海拔
+  season?: string; // 产季
   process?: string; // 处理法
   variety?: string; // 品种
+  agtron?: string; // Agtron值
 }
 
 // 待创建的咖啡豆（尚未持久化到数据库）

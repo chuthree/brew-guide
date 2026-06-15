@@ -120,7 +120,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           blendComponents:
             sourceBean.blendComponents && sourceBean.blendComponents.length > 0
               ? sourceBean.blendComponents
-              : [{ origin: '', estate: '', process: '', variety: '' }],
+              : [{ origin: '', region: '', estate: '', altitude: '', season: '', process: '', variety: '' }],
         };
       }
 
@@ -135,7 +135,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         purchaseDate: '',
         flavor: [],
         notes: '',
-        blendComponents: [{ origin: '', estate: '', process: '', variety: '' }],
+        blendComponents: [{ origin: '', region: '', estate: '', altitude: '', season: '', process: '', variety: '' }],
       };
     },
     [initialBeanState]
@@ -239,6 +239,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const [isTitleVisible, setIsTitleVisible] = useState(true);
   const [showBeanRating, setShowBeanRating] = useState(false);
   const [showEstateField, setShowEstateField] = useState(false);
+  const [showRegionField, setShowRegionField] = useState(false);
+  const [showLotField, setShowLotField] = useState(true);
+  const [showBatchField, setShowBatchField] = useState(true);
+  const [showStationField, setShowStationField] = useState(true);
+  const [showAltitudeField, setShowAltitudeField] = useState(false);
+  const [showSeasonField, setShowSeasonField] = useState(false);
+  const [showAgtronField, setShowAgtronField] = useState(false);
   const [showChangeRecords, setShowChangeRecords] = useState(false);
   const [showGreenBeanRecords, setShowGreenBeanRecords] = useState(false);
   const [editingCapacity, setEditingCapacity] = useState(false);
@@ -340,10 +347,23 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       setPrintEnabled(storeSettings.enableBeanPrint === true);
       setShowBeanRating(storeSettings.showBeanRating === true);
       setShowEstateField(storeSettings.showEstateField === true);
+      setShowRegionField(storeSettings.showRegionField === true);
+      setShowLotField(storeSettings.showLotField !== false);
+      setShowBatchField(storeSettings.showBatchField !== false);
+      setShowStationField(storeSettings.showStationField !== false);
+      setShowAltitudeField(storeSettings.showAltitudeField === true);
+      setShowSeasonField(storeSettings.showSeasonField === true);
+      setShowAgtronField(storeSettings.showAgtronField === true);
     } else {
       setPrintEnabled(false);
       setShowBeanRating(false);
       setShowEstateField(false);
+      setShowRegionField(false);
+      setShowLotField(true);
+      setShowBatchField(true);
+      setShowStationField(true);
+      setShowAltitudeField(false);
+      setShowSeasonField(false);
     }
   }, [storeSettings]);
 
@@ -1014,6 +1034,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       isAddMode={isFormMode}
                       searchQuery={searchQuery}
                       showEstateField={showEstateField}
+                      showRegionField={showRegionField}
+                      showLotField={showLotField}
+                      showBatchField={showBatchField}
+                      showStationField={showStationField}
+                      showAltitudeField={showAltitudeField}
+                      showSeasonField={showSeasonField}
+                      showAgtronField={showAgtronField}
                       handleUpdateField={handleUpdateField}
                       handleRoastLevelSelect={handleRoastLevelSelect}
                     />

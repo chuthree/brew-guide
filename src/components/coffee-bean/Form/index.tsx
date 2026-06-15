@@ -216,6 +216,9 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
           {
             origin: '',
             estate: '',
+            lot: '',
+            batch: '',
+            station: '',
             process: '',
             variety: '',
           },

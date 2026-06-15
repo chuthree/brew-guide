@@ -548,16 +548,23 @@ const isBrowser = typeof window !== 'undefined';
 // 从本地存储获取自定义预设
 export type CoffeeBeanPresetKey =
   | 'origins'
+  | 'regions'
   | 'estates'
+  | 'lots'
+  | 'batches'
+  | 'stations'
+  | 'altitudes'
+  | 'seasons'
   | 'processes'
   | 'varieties'
+  | 'agtrons'
   | 'roasters'
   | 'flavors'
   | 'roastLevels';
 
 export type BlendPresetKey = Extract<
   CoffeeBeanPresetKey,
-  'origins' | 'estates' | 'processes' | 'varieties'
+  'origins' | 'regions' | 'estates' | 'lots' | 'batches' | 'stations' | 'altitudes' | 'seasons' | 'processes' | 'varieties' | 'agtrons'
 >;
 
 const normalizePresetValue = (value: string) => value.trim();
@@ -623,12 +630,26 @@ const getDefaultPresets = (key: CoffeeBeanPresetKey): string[] => {
   switch (key) {
     case 'origins':
       return [...DEFAULT_ORIGINS];
+    case 'regions':
+      return [...DEFAULT_ORIGINS];
     case 'estates':
       return [...DEFAULT_ESTATES];
+    case 'lots':
+      return [];
+    case 'batches':
+      return [];
+    case 'stations':
+      return [];
+    case 'altitudes':
+      return [];
+    case 'seasons':
+      return [];
     case 'processes':
       return [...DEFAULT_PROCESSES];
     case 'varieties':
       return [...DEFAULT_VARIETIES];
+    case 'agtrons':
+      return [];
     case 'flavors':
       return [...FLAVOR_TAGS];
     case 'roastLevels':

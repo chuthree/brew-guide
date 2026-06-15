@@ -28,9 +28,16 @@ export interface ExtendedCoffeeBean extends CoffeeBean {
   blendComponents?: {
     percentage?: number;
     origin?: string;
+    region?: string;
     estate?: string;
+    lot?: string;
+    batch?: string;
+    station?: string;
+    altitude?: string;
+    season?: string;
     process?: string;
     variety?: string;
+    agtron?: string;
   }[];
 }
 
@@ -310,6 +317,335 @@ export const extractUniqueEstates = (beans: CoffeeBean[]): string[] => {
     .map(entry => entry[0]);
 
   return estates;
+};
+
+/**
+ * 获取咖啡豆的地块信息
+ * 从blendComponents获取地块信息
+ * @param bean 咖啡豆对象
+ * @returns 地块数组
+ */
+export const getBeanLots = (bean: CoffeeBean): string[] => {
+  const lots: string[] = [];
+
+  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+    bean.blendComponents.forEach(component => {
+      if (isValidText(component.lot)) {
+        lots.push(...normalizeDelimitedTextList(component.lot));
+      }
+    });
+  }
+
+  return Array.from(new Set(lots));
+};
+
+/**
+ * 从咖啡豆数组中提取所有唯一的地块
+ * @param beans 咖啡豆数组
+ * @returns 按数量排序的唯一地块数组（数量多的在前）
+ */
+export const extractUniqueLots = (beans: CoffeeBean[]): string[] => {
+  const lotCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    const lots = getBeanLots(bean);
+    lots.forEach(lot => {
+      lotCount.set(lot, (lotCount.get(lot) || 0) + 1);
+    });
+  });
+
+  const lots = Array.from(lotCount.entries())
+    .sort((a, b) => {
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(entry => entry[0]);
+
+  return lots;
+};
+
+/**
+ * 获取咖啡豆的批次信息
+ * 从blendComponents获取批次信息
+ * @param bean 咖啡豆对象
+ * @returns 批次数组
+ */
+export const getBeanBatches = (bean: CoffeeBean): string[] => {
+  const batches: string[] = [];
+
+  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+    bean.blendComponents.forEach(component => {
+      if (isValidText(component.batch)) {
+        batches.push(...normalizeDelimitedTextList(component.batch));
+      }
+    });
+  }
+
+  return Array.from(new Set(batches));
+};
+
+/**
+ * 从咖啡豆数组中提取所有唯一的批次
+ * @param beans 咖啡豆数组
+ * @returns 按数量排序的唯一批次数组（数量多的在前）
+ */
+export const extractUniqueBatches = (beans: CoffeeBean[]): string[] => {
+  const batchCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    const batches = getBeanBatches(bean);
+    batches.forEach(batch => {
+      batchCount.set(batch, (batchCount.get(batch) || 0) + 1);
+    });
+  });
+
+  const batches = Array.from(batchCount.entries())
+    .sort((a, b) => {
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(entry => entry[0]);
+
+  return batches;
+};
+
+/**
+ * 获取咖啡豆的处理站信息
+ * 从blendComponents获取处理站信息
+ * @param bean 咖啡豆对象
+ * @returns 处理站数组
+ */
+export const getBeanStations = (bean: CoffeeBean): string[] => {
+  const stations: string[] = [];
+
+  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+    bean.blendComponents.forEach(component => {
+      if (isValidText(component.station)) {
+        stations.push(...normalizeDelimitedTextList(component.station));
+      }
+    });
+  }
+
+  return Array.from(new Set(stations));
+};
+
+/**
+ * 从咖啡豆数组中提取所有唯一的处理站
+ * @param beans 咖啡豆数组
+ * @returns 按数量排序的唯一处理站数组（数量多的在前）
+ */
+export const extractUniqueStations = (beans: CoffeeBean[]): string[] => {
+  const stationCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    const stations = getBeanStations(bean);
+    stations.forEach(station => {
+      stationCount.set(station, (stationCount.get(station) || 0) + 1);
+    });
+  });
+
+  const stations = Array.from(stationCount.entries())
+    .sort((a, b) => {
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(entry => entry[0]);
+
+  return stations;
+};
+
+/**
+ * 获取咖啡豆的产区信息
+ * 从blendComponents获取产区信息
+ * @param bean 咖啡豆对象
+ * @returns 产区数组
+ */
+export const getBeanRegions = (bean: CoffeeBean): string[] => {
+  const regions: string[] = [];
+
+  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+    bean.blendComponents.forEach(component => {
+      if (isValidText(component.region)) {
+        regions.push(...normalizeDelimitedTextList(component.region));
+      }
+    });
+  }
+
+  return Array.from(new Set(regions));
+};
+
+/**
+ * 获取咖啡豆的海拔信息
+ * 从blendComponents获取海拔信息
+ * @param bean 咖啡豆对象
+ * @returns 海拔数组
+ */
+export const getBeanAltitudes = (bean: CoffeeBean): string[] => {
+  const altitudes: string[] = [];
+
+  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+    bean.blendComponents.forEach(component => {
+      if (isValidText(component.altitude)) {
+        altitudes.push(...normalizeDelimitedTextList(component.altitude));
+      }
+    });
+  }
+
+  return Array.from(new Set(altitudes));
+};
+
+/**
+ * 获取咖啡豆的产季信息
+ * 从blendComponents获取产季信息
+ * @param bean 咖啡豆对象
+ * @returns 产季数组
+ */
+export const getBeanSeasons = (bean: CoffeeBean): string[] => {
+  const seasons: string[] = [];
+
+  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+    bean.blendComponents.forEach(component => {
+      if (isValidText(component.season)) {
+        seasons.push(...normalizeDelimitedTextList(component.season));
+      }
+    });
+  }
+
+  return Array.from(new Set(seasons));
+};
+
+/**
+ * 从咖啡豆数组中提取所有唯一的产区
+ * @param beans 咖啡豆数组
+ * @returns 按数量排序的唯一产区数组（数量多的在前）
+ */
+export const extractUniqueRegions = (beans: CoffeeBean[]): string[] => {
+  const regionCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    const regions = getBeanRegions(bean);
+    regions.forEach(region => {
+      regionCount.set(region, (regionCount.get(region) || 0) + 1);
+    });
+  });
+
+  const regions = Array.from(regionCount.entries())
+    .sort((a, b) => {
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(entry => entry[0]);
+
+  return regions;
+};
+
+/**
+ * 从咖啡豆数组中提取所有唯一的海拔
+ * @param beans 咖啡豆数组
+ * @returns 按数量排序的唯一海拔数组（数量多的在前）
+ */
+export const extractUniqueAltitudes = (beans: CoffeeBean[]): string[] => {
+  const altitudeCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    const altitudes = getBeanAltitudes(bean);
+    altitudes.forEach(altitude => {
+      altitudeCount.set(altitude, (altitudeCount.get(altitude) || 0) + 1);
+    });
+  });
+
+  const altitudes = Array.from(altitudeCount.entries())
+    .sort((a, b) => {
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(entry => entry[0]);
+
+  return altitudes;
+};
+
+/**
+ * 从咖啡豆数组中提取所有唯一的产季
+ * @param beans 咖啡豆数组
+ * @returns 按数量排序的唯一产季数组（数量多的在前）
+ */
+export const extractUniqueSeasons = (beans: CoffeeBean[]): string[] => {
+  const seasonCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    const seasons = getBeanSeasons(bean);
+    seasons.forEach(season => {
+      seasonCount.set(season, (seasonCount.get(season) || 0) + 1);
+    });
+  });
+
+  const seasons = Array.from(seasonCount.entries())
+    .sort((a, b) => {
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(entry => entry[0]);
+
+  return seasons;
+};
+
+/**
+ * 获取咖啡豆的Agtron值信息
+ * 从blendComponents获取Agtron值信息
+ * @param bean 咖啡豆对象
+ * @returns Agtron值数组
+ */
+export const getBeanAgtrons = (bean: CoffeeBean): string[] => {
+  const agtrons: string[] = [];
+
+  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+    bean.blendComponents.forEach(component => {
+      if (isValidText(component.agtron)) {
+        agtrons.push(...normalizeDelimitedTextList(component.agtron));
+      }
+    });
+  }
+
+  return Array.from(new Set(agtrons));
+};
+
+/**
+ * 从咖啡豆数组中提取所有唯一的Agtron值
+ * @param beans 咖啡豆数组
+ * @returns 按数量排序的唯一Agtron值数组（数量多的在前）
+ */
+export const extractUniqueAgtrons = (beans: CoffeeBean[]): string[] => {
+  const agtronCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    const agtrons = getBeanAgtrons(bean);
+    agtrons.forEach(agtron => {
+      agtronCount.set(agtron, (agtronCount.get(agtron) || 0) + 1);
+    });
+  });
+
+  const agtrons = Array.from(agtronCount.entries())
+    .sort((a, b) => {
+      if (a[1] !== b[1]) {
+        return b[1] - a[1];
+      }
+      return a[0].localeCompare(b[0], 'zh-CN');
+    })
+    .map(entry => entry[0]);
+
+  return agtrons;
 };
 
 /**

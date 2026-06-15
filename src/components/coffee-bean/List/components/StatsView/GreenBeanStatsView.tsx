@@ -25,6 +25,10 @@ import {
   extractUniqueOrigins,
   extractUniqueVarieties,
   extractUniqueEstates,
+  extractUniqueRegions,
+  getBeanAltitudes,
+  getBeanSeasons,
+  getBeanAgtrons,
   getBeanProcesses,
 } from '@/lib/utils/beanVarietyUtils';
 import { ExtendedCoffeeBean } from '../../types';
@@ -56,14 +60,22 @@ type GreenBeanStatsKey =
 type GreenStatsSectionKey =
   | 'beanCount'
   | 'origin'
+  | 'region'
   | 'estate'
+  | 'altitude'
+  | 'season'
+  | 'agtron'
   | 'variety'
   | 'process';
 
 const GREEN_STATS_SECTION_DEFAULTS: StatsSectionOption[] = [
   { key: 'beanCount', label: '生豆', visible: true },
   { key: 'origin', label: '产地', visible: true },
+  { key: 'region', label: '产区', visible: true },
   { key: 'estate', label: '庄园', visible: true },
+  { key: 'altitude', label: '海拔', visible: false },
+  { key: 'season', label: '产季', visible: false },
+  { key: 'agtron', label: 'Agtron值', visible: false },
   { key: 'variety', label: '品种', visible: true },
   { key: 'process', label: '处理法', visible: true },
 ];
@@ -606,6 +618,54 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
     return Array.from(estateCount.entries()).sort((a, b) => b[1] - a[1]);
   }, [filteredBeans]);
 
+  // 计算产区统计
+  const regionStats = useMemo(() => {
+    const regionCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const regions = extractUniqueRegions([bean]);
+      regions.forEach(region => {
+        regionCount.set(region, (regionCount.get(region) || 0) + 1);
+      });
+    });
+    return Array.from(regionCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 计算海拔统计
+  const altitudeStats = useMemo(() => {
+    const altitudeCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const altitudes = getBeanAltitudes(bean);
+      altitudes.forEach(altitude => {
+        altitudeCount.set(altitude, (altitudeCount.get(altitude) || 0) + 1);
+      });
+    });
+    return Array.from(altitudeCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 计算产季统计
+  const seasonStats = useMemo(() => {
+    const seasonCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const seasons = getBeanSeasons(bean);
+      seasons.forEach(season => {
+        seasonCount.set(season, (seasonCount.get(season) || 0) + 1);
+      });
+    });
+    return Array.from(seasonCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
+  // 计算Agtron值统计
+  const agtronStats = useMemo(() => {
+    const agtronCount = new Map<string, number>();
+    filteredBeans.forEach(bean => {
+      const agtrons = getBeanAgtrons(bean);
+      agtrons.forEach(agtron => {
+        agtronCount.set(agtron, (agtronCount.get(agtron) || 0) + 1);
+      });
+    });
+    return Array.from(agtronCount.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredBeans]);
+
   // 计算品种统计
   const varietyStats = useMemo(() => {
     const varietyCount = new Map<string, number>();
@@ -658,9 +718,33 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
         ) : null,
       ],
       [
+        'region',
+        regionStats.length > 0 ? (
+          <AttributeCard key="region" title="产区" data={regionStats} />
+        ) : null,
+      ],
+      [
         'estate',
         estateStats.length > 0 ? (
           <AttributeCard key="estate" title="庄园" data={estateStats} />
+        ) : null,
+      ],
+      [
+        'altitude',
+        altitudeStats.length > 0 ? (
+          <AttributeCard key="altitude" title="海拔" data={altitudeStats} />
+        ) : null,
+      ],
+      [
+        'season',
+        seasonStats.length > 0 ? (
+          <AttributeCard key="season" title="产季" data={seasonStats} />
+        ) : null,
+      ],
+      [
+        'agtron',
+        agtronStats.length > 0 ? (
+          <AttributeCard key="agtron" title="Agtron值" data={agtronStats} />
         ) : null,
       ],
       [
@@ -678,6 +762,10 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
     ]);
   }, [
     estateStats,
+    regionStats,
+    altitudeStats,
+    seasonStats,
+    agtronStats,
     filteredBeans,
     onExplain,
     originStats,

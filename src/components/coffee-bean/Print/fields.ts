@@ -2,16 +2,23 @@ import { EditableContent, PrintConfig, PrintFieldKey } from './types';
 
 export type PrintTextFieldKey = Exclude<
   keyof EditableContent,
-  'roaster' | 'roastDate' | 'flavor' | 'notes'
+  'roaster' | 'roastDate' | 'flavor' | 'notes' | 'agtron'
 >;
 
 export const PRINT_FIELD_ORDER: PrintFieldKey[] = [
   'name',
   'roastDate',
   'origin',
+  'region',
   'estate',
+  'lot',
+  'batch',
+  'station',
+  'altitude',
+  'season',
   'process',
   'variety',
+  'agtron',
   'roastLevel',
   'flavor',
   'weight',
@@ -22,9 +29,16 @@ export const PRINT_FIELD_LABELS: Record<PrintFieldKey, string> = {
   name: '名称',
   roastDate: '日期',
   origin: '产地',
+  region: '产区',
   estate: '庄园',
+  lot: '地块',
+  batch: '批次',
+  station: '处理站',
+  altitude: '海拔',
+  season: '产季',
   process: '处理',
   variety: '品种',
+  agtron: 'Agtron值',
   roastLevel: '烘焙',
   flavor: '风味',
   weight: '克重',
@@ -35,9 +49,16 @@ export const PRINT_EDITOR_FIELD_LABELS: Record<PrintFieldKey, string> = {
   name: '名称',
   roastDate: '烘焙日期',
   origin: '产地',
+  region: '产区',
   estate: '庄园',
+  lot: '地块',
+  batch: '批次',
+  station: '处理站',
+  altitude: '海拔',
+  season: '产季',
   process: '处理法',
   variety: '品种',
+  agtron: 'Agtron值',
   roastLevel: '烘焙度',
   flavor: '风味',
   weight: '克重',
@@ -47,7 +68,13 @@ export const PRINT_EDITOR_FIELD_LABELS: Record<PrintFieldKey, string> = {
 export const PRINT_TEXT_FIELD_PLACEHOLDERS: Record<PrintTextFieldKey, string> = {
   name: '例如：野草莓',
   origin: '产地信息',
+  region: '产区信息',
   estate: '庄园信息',
+  lot: '地块信息',
+  batch: '批次信息',
+  station: '处理站信息',
+  altitude: '海拔信息',
+  season: '产季信息',
   roastLevel: '烘焙度',
   process: '例如：水洗、日晒',
   variety: '例如：卡杜拉、瑰夏',
@@ -77,10 +104,24 @@ export const hasPrintFieldContent = (
       return hasValue(content.origin);
     case 'estate':
       return hasValue(content.estate);
+    case 'lot':
+      return hasValue(content.lot);
+    case 'batch':
+      return hasValue(content.batch);
+    case 'station':
+      return hasValue(content.station);
+    case 'region':
+      return hasValue(content.region);
+    case 'altitude':
+      return hasValue(content.altitude);
+    case 'season':
+      return hasValue(content.season);
     case 'process':
       return hasValue(content.process);
     case 'variety':
       return hasValue(content.variety);
+    case 'agtron':
+      return hasValue(content.agtron);
     case 'roastLevel':
       return hasValue(content.roastLevel);
     case 'weight':

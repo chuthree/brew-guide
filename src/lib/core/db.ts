@@ -270,6 +270,13 @@ export interface AppSettings {
   // 识图设置
   autoFillRecognitionImage?: boolean;
   showEstateField?: boolean;
+  showRegionField?: boolean;
+  showLotField?: boolean;
+  showBatchField?: boolean;
+  showStationField?: boolean;
+  showAltitudeField?: boolean;
+  showSeasonField?: boolean;
+  showAgtronField?: boolean;
   immersiveAdd?: boolean;
   experimentalBeanRecognitionEnabled?: boolean;
   experimentalBeanRecognitionApiBaseUrl?: string;

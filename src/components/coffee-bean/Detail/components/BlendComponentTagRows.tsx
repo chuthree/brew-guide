@@ -11,6 +11,13 @@ type TextBlendField = Exclude<keyof BlendComponent, 'percentage'>;
 interface BlendComponentTagRowsProps {
   components: BlendComponent[];
   showEstateField: boolean;
+  showRegionField: boolean;
+  showLotField: boolean;
+  showBatchField: boolean;
+  showStationField: boolean;
+  showAltitudeField: boolean;
+  showSeasonField: boolean;
+  showAgtronField: boolean;
   onChange: (index: number, field: TextBlendField, value: string) => void;
 }
 
@@ -18,7 +25,7 @@ const fieldConfigs: Array<{
   field: TextBlendField;
   label: string;
   placeholder: string;
-  suggestionKey: 'origins' | 'estates' | 'processes' | 'varieties';
+  suggestionKey: 'origins' | 'regions' | 'estates' | 'lots' | 'batches' | 'stations' | 'altitudes' | 'seasons' | 'processes' | 'varieties' | 'agtrons';
 }> = [
   {
     field: 'origin',
@@ -27,10 +34,34 @@ const fieldConfigs: Array<{
     suggestionKey: 'origins',
   },
   {
+    field: 'region',
+    label: '产区',
+    placeholder: '输入产区，逗号分隔',
+    suggestionKey: 'regions',
+  },
+  {
     field: 'estate',
     label: '庄园',
     placeholder: '输入庄园，逗号分隔',
     suggestionKey: 'estates',
+  },
+  {
+    field: 'lot',
+    label: '地块',
+    placeholder: '输入地块，逗号分隔',
+    suggestionKey: 'lots',
+  },
+  {
+    field: 'batch',
+    label: '批次',
+    placeholder: '输入批次，逗号分隔',
+    suggestionKey: 'batches',
+  },
+  {
+    field: 'station',
+    label: '处理站',
+    placeholder: '输入处理站，逗号分隔',
+    suggestionKey: 'stations',
   },
   {
     field: 'process',
@@ -43,6 +74,24 @@ const fieldConfigs: Array<{
     label: '品种',
     placeholder: '输入品种，逗号分隔',
     suggestionKey: 'varieties',
+  },
+  {
+    field: 'altitude',
+    label: '海拔',
+    placeholder: '输入海拔，逗号分隔',
+    suggestionKey: 'altitudes',
+  },
+  {
+    field: 'season',
+    label: '产季',
+    placeholder: '输入产季，逗号分隔',
+    suggestionKey: 'seasons',
+  },
+  {
+    field: 'agtron',
+    label: 'Agtron值',
+    placeholder: '输入Agtron值，逗号分隔',
+    suggestionKey: 'agtrons',
   },
 ];
 
@@ -139,12 +188,27 @@ const BlendComponentTagField: React.FC<BlendComponentTagFieldProps> = ({
 const BlendComponentTagRows: React.FC<BlendComponentTagRowsProps> = ({
   components,
   showEstateField,
+  showRegionField,
+  showLotField,
+  showBatchField,
+  showStationField,
+  showAltitudeField,
+  showSeasonField,
+  showAgtronField,
   onChange,
 }) => {
   const suggestions = useBlendComponentSuggestions();
-  const visibleFields = showEstateField
-    ? fieldConfigs
-    : fieldConfigs.filter(config => config.field !== 'estate');
+  const visibleFields = fieldConfigs.filter(config => {
+    if (config.field === 'estate' && !showEstateField) return false;
+    if (config.field === 'region' && !showRegionField) return false;
+    if (config.field === 'lot' && !showLotField) return false;
+    if (config.field === 'batch' && !showBatchField) return false;
+    if (config.field === 'station' && !showStationField) return false;
+    if (config.field === 'altitude' && !showAltitudeField) return false;
+    if (config.field === 'season' && !showSeasonField) return false;
+    if (config.field === 'agtron' && !showAgtronField) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-3">

@@ -224,10 +224,52 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             />
           </SettingRow>
         )}
-        <SettingRow label="庄园" isLast>
+        <SettingRow label="产区">
+          <SettingToggle
+            checked={settings.showRegionField || false}
+            onChange={checked => handleChange('showRegionField', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="庄园">
           <SettingToggle
             checked={settings.showEstateField || false}
             onChange={checked => handleChange('showEstateField', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="地块">
+          <SettingToggle
+            checked={settings.showLotField !== false}
+            onChange={checked => handleChange('showLotField', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="批次">
+          <SettingToggle
+            checked={settings.showBatchField !== false}
+            onChange={checked => handleChange('showBatchField', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="处理站">
+          <SettingToggle
+            checked={settings.showStationField !== false}
+            onChange={checked => handleChange('showStationField', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="海拔">
+          <SettingToggle
+            checked={settings.showAltitudeField || false}
+            onChange={checked => handleChange('showAltitudeField', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="产季">
+          <SettingToggle
+            checked={settings.showSeasonField || false}
+            onChange={checked => handleChange('showSeasonField', checked)}
+          />
+        </SettingRow>
+        <SettingRow label="Agtron值" isLast>
+          <SettingToggle
+            checked={settings.showAgtronField || false}
+            onChange={checked => handleChange('showAgtronField', checked)}
           />
         </SettingRow>
       </SettingSection>
