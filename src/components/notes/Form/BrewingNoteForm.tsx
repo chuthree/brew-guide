@@ -48,7 +48,7 @@ import {
 } from '@/lib/notes/noteDisplay';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import { SettingsOptions } from '@/components/settings/Settings';
-import { FlavorDimension } from '@/lib/core/db';
+import { FlavorDimension, DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/core/db';
 import {
   getFlavorDimensionsSync,
   getHistoricalLabelsSync,
@@ -64,13 +64,13 @@ import {
 import CoffeeBeanPickerDrawer from './CoffeeBeanPickerDrawer';
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData';
 import ImagePreview from '@/components/common/ImagePreview';
+import GrindSizeInput from '@/components/ui/GrindSizeInput';
 import FeatureListItem from './FeatureListItem';
 import DatePickerDrawer from './DatePickerDrawer';
 import EquipmentMethodPickerDrawer, {
   type EquipmentMethodSelection,
 } from './EquipmentMethodPickerDrawer';
 import RatingDrawer from './RatingDrawer';
-import NotesTextarea from './NotesTextarea';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { BrewingNoteDraftData } from './brewingNoteDraft';
@@ -231,6 +231,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   inBrewPage = false,
   showSaveButton = true,
   onSaveSuccess,
+  hideHeader = false,
   onTimestampChange,
   settings,
   isCopy = false, // 默认不是复制操作
@@ -278,9 +279,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [previewImageIndex, setPreviewImageIndex] = useState(0); // 当前预览图片的索引
   // 🔥 标记用户是否主动选择了咖啡豆（用于防止 initialData 变化覆盖用户选择）
   const userSelectedBeanRef = useRef(false);
-  const [expandedBeanFlavorKey, setExpandedBeanFlavorKey] = useState<
-    string | null
-  >(null);
+  const [showBeanFlavorTags, setShowBeanFlavorTags] = useState(false);
   // 图片选择 input ref
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -349,11 +348,24 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     ...normalizeBrewingNoteParams(initialData?.params),
   });
 
+  // 分离的数值状态（用于输入框显示）
+  const [numericValues, setNumericValues] = useState(() => ({
+    coffee: extractNumericValue(initialData?.params?.coffee || ''),
+    water: extractNumericValue(initialData?.params?.water || ''),
+    temp: extractNumericValue(initialData?.params?.temp || ''),
+    ratio: extractNumericValue(
+      (initialData?.params?.ratio || '').split(':')[1] || ''
+    ),
+  }));
+
   // 添加器具和方案选择相关状态
   const [availableEquipments, setAvailableEquipments] = useState<
     ((typeof equipmentList)[0] | CustomEquipment)[]
   >([]);
   const [availableMethods, setAvailableMethods] = useState<Method[]>([]);
+  const [customMethods, setCustomMethods] = useState<Record<string, Method[]>>(
+    {}
+  );
   const [selectedEquipment, setSelectedEquipment] = useState(
     initialData.equipment || ''
   );
@@ -369,6 +381,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       };
 
       setMethodParams(normalizedParams);
+      setNumericValues({
+        coffee: extractNumericValue(normalizedParams.coffee),
+        water: extractNumericValue(normalizedParams.water),
+        temp: extractNumericValue(normalizedParams.temp),
+        ratio: extractNumericValue(normalizedParams.ratio.split(':')[1] || ''),
+      });
 
       if (typeof totalTimeOverride === 'string') {
         setTotalTimeStr(totalTimeOverride);
@@ -581,6 +599,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         // 加载自定义方案
         const customMethods = await loadCustomMethods();
+        setCustomMethods(customMethods);
 
         // 🔥 如果有选中的器具，加载对应的方案（兼容ID和名称）
         if (initialData.equipment) {
@@ -642,6 +661,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             coffee: `${coffeeValue}g`,
             water: `${calculatedWater}g`,
           }));
+          setNumericValues(prev => ({
+            ...prev,
+            coffee: String(coffeeValue),
+            water: String(calculatedWater),
+          }));
           break;
         }
         case 'ratio': {
@@ -653,6 +677,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             ...prev,
             ratio: `1:${ratioValue}`,
             water: `${calculatedWater}g`,
+          }));
+          setNumericValues(prev => ({
+            ...prev,
+            ratio: String(ratioValue),
+            water: String(calculatedWater),
           }));
           break;
         }
@@ -669,6 +698,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             ...prev,
             temp: formattedTemp,
           }));
+          setNumericValues(prev => ({
+            ...prev,
+            temp: value,
+          }));
           break;
         }
         case 'water': {
@@ -678,6 +711,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           setMethodParams(prev => ({
             ...prev,
             water: `${waterValue}g`,
+          }));
+          setNumericValues(prev => ({
+            ...prev,
+            water: String(waterValue),
           }));
           break;
         }
@@ -882,6 +919,24 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     };
   }, [id, handleToggleQuickMode]);
 
+  // 自适应 textarea 高度
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // 重置高度以获取正确的 scrollHeight
+    textarea.style.height = 'auto';
+    // 设置为内容高度
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, []);
+
+  // 监听内容变化，自动调整高度
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [formData.notes, adjustTextareaHeight]);
+
   // 创建评分更新函数
   // 总体评分更新函数，支持风味评分跟随设置
   const updateRating = useCallback(
@@ -920,6 +975,39 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       settings?.flavorRatingHalfStep,
       flavorDimensions,
     ]
+  );
+
+  // 风味评分更新函数，标记用户已手动修改
+  const updateTasteRating = useCallback(
+    (key: string) => (value: number) => {
+      // 标记用户已手动修改风味评分
+      userModifiedFlavorRatingsRef.current = true;
+      // 标记风味评分不再是仅同步状态
+      flavorRatingsOnlySyncedRef.current = false;
+
+      setFormData(prev => ({
+        ...prev,
+        taste: { ...prev.taste, [key]: value },
+      }));
+    },
+    []
+  );
+
+  /**
+   * 检查参数是否为空占位符（快捷记录）
+   *
+   * 快捷记录只保存 coffee 字段，其他参数为空字符串
+   * 当用户从快捷记录切换到普通笔记并选择方案时，
+   * 应该忽略这些空占位符，使用方案的默认参数
+   */
+  const isEmptyPlaceholder = useCallback(
+    (params?: Partial<Method['params']>): boolean => {
+      if (!params) return true;
+      const { coffee, water, ratio, grindSize, temp } = params;
+      // 只有 coffee 有值，其他字段都是空的，认为是空占位符
+      return !!coffee && !water && !ratio && !grindSize && !temp;
+    },
+    []
   );
 
   // 处理器具方案选择抽屉的选择结果
@@ -1505,8 +1593,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }
   };
 
-  const containerClassName =
-    'relative grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto]';
+  const containerClassName = 'relative grid min-h-full grid-rows-[1fr_auto]';
 
   // 格式化日期显示
   const formatDateDisplay = (date: Date) => {
@@ -1533,13 +1620,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     return '';
   };
 
-  const selectedCoffeeBeanFlavorKey =
+  useEffect(() => {
+    setShowBeanFlavorTags(false);
+  }, [
     selectedCoffeeBean && !isPendingCoffeeBean(selectedCoffeeBean)
       ? (selectedCoffeeBean as CoffeeBean).id
-      : 'pending';
-
-  const showBeanFlavorTags =
-    expandedBeanFlavorKey === selectedCoffeeBeanFlavorKey;
+      : 'pending',
+  ]);
 
   // 获取咖啡豆风味标签预览
   const getCoffeeBeanFlavorPreview = () => {
@@ -1565,7 +1652,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               <button
                 type="button"
                 key={`${flavor}-${index}`}
-                onClick={() => setExpandedBeanFlavorKey(null)}
+                onClick={() => setShowBeanFlavorTags(false)}
                 className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-sm font-medium text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-400"
               >
                 {flavor}
@@ -1583,9 +1670,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           >
             <button
               type="button"
-              onClick={() =>
-                setExpandedBeanFlavorKey(selectedCoffeeBeanFlavorKey)
-              }
+              onClick={() => setShowBeanFlavorTags(true)}
               className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded bg-neutral-100/80 px-1.5 py-0.5 text-sm font-medium text-neutral-500 transition-all duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-600 dark:bg-neutral-800/40 dark:text-neutral-500 dark:hover:bg-neutral-800/60 dark:hover:text-neutral-400"
             >
               <CornerDownRight className="h-3.5 w-3.5" />
@@ -1788,13 +1873,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     totalTimeStr,
   ]);
 
-  function handleNotesChange(notes: string) {
-    setFormData(prev => ({
-      ...prev,
-      notes,
-    }));
-  }
-
   return (
     <form
       id={id}
@@ -1803,7 +1881,22 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       className={containerClassName}
     >
       {/* 笔记内容输入区域 */}
-      <NotesTextarea value={formData.notes} onValueChange={handleNotesChange} />
+      <div className="flex-1 pb-4">
+        <textarea
+          ref={textareaRef}
+          id="brewing-notes"
+          name="brewingNotes"
+          value={formData.notes}
+          onChange={e => {
+            setFormData({
+              ...formData,
+              notes: e.target.value,
+            });
+          }}
+          className="min-h-[120px] w-full resize-none overflow-hidden border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
+          placeholder="记录一下这杯的感受..."
+        />
+      </div>
 
       {/* 下方：图片和功能列表 */}
       <div className="w-full min-w-0 shrink-0">
