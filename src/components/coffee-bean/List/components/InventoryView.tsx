@@ -145,6 +145,7 @@ interface InventoryViewProps {
   };
   // 外部滚动容器（Virtuoso 使用）
   scrollParentRef?: HTMLElement;
+  readOnly?: boolean;
 }
 
 const InventoryView: React.FC<InventoryViewProps> = ({
@@ -174,6 +175,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   onToggleSelect,
   settings,
   scrollParentRef,
+  readOnly = false,
 }) => {
   // 剩余量编辑状态
   const [editingRemaining, setEditingRemaining] = useState<{
@@ -219,6 +221,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({
 
   const handleQuickDecrement = async (decrementAmount: number) => {
     if (!editingRemaining) return;
+    if (readOnly) {
+      setEditingRemaining(null);
+      return;
+    }
 
     const { beanId, value, bean } = editingRemaining;
     setEditingRemaining(null);
@@ -310,7 +316,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
           onEdit={onEdit}
           onDelete={onDelete}
           onShare={onShare}
-          onRate={onRate}
+          onRate={readOnly ? undefined : onRate}
           onRemainingClick={handleRemainingClick}
           settings={settings}
           visibleColumns={tableVisibleColumns}
@@ -323,6 +329,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
           onCancel={() => setEditingRemaining(null)}
           onQuickDecrement={handleQuickDecrement}
           coffeeBean={editingRemaining?.bean}
+          readOnly={readOnly}
         />
       </>
     );
@@ -384,6 +391,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         onCancel={() => setEditingRemaining(null)}
         onQuickDecrement={handleQuickDecrement}
         coffeeBean={editingRemaining?.bean}
+        readOnly={readOnly}
       />
     </div>
   );

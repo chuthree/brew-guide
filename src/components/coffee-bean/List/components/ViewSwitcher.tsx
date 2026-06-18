@@ -426,6 +426,7 @@ interface ViewSwitcherProps {
   hasGreenBeans?: boolean;
   navigationToggleControl?: React.ReactNode;
   navigationSwipeControl?: NavigationSwipeControl;
+  showInventoryActions?: boolean;
 }
 
 const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
@@ -511,6 +512,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   hasGreenBeans = false,
   navigationToggleControl,
   navigationSwipeControl,
+  showInventoryActions = true,
 }) => {
   // 获取概要显示设置
   const showBeanSummary = useSettingsStore(
@@ -1493,20 +1495,22 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                                 </FilterButton>
                               </div>
                             )}
-                            <div className="flex flex-wrap items-center gap-2">
-                              <FilterButton
-                                isActive={showEmptyBeans || false}
-                                onClick={() => onToggleShowEmptyBeans?.()}
-                              >
-                                展示已用完
-                              </FilterButton>
-                              <FilterButton
-                                isActive={false}
-                                onClick={() => onExportPreview?.()}
-                              >
-                                导出预览图
-                              </FilterButton>
-                            </div>
+                            {showInventoryActions && (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <FilterButton
+                                  isActive={showEmptyBeans || false}
+                                  onClick={() => onToggleShowEmptyBeans?.()}
+                                >
+                                  展示已用完
+                                </FilterButton>
+                                <FilterButton
+                                  isActive={false}
+                                  onClick={() => onExportPreview?.()}
+                                >
+                                  导出预览图
+                                </FilterButton>
+                              </div>
+                            )}
                           </div>
                         </div>
 

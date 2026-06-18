@@ -260,11 +260,6 @@ const EditableParameter: React.FC<EditableParameterProps> = ({
   );
 };
 
-const getPwaBannerVisible = () => {
-  if (typeof window === 'undefined') return false;
-  return (window as any).__pwaInstallBannerVisible === true;
-};
-
 // 下拉上传的同步状态类型
 type PullSyncStatus =
   | 'idle'
@@ -1113,25 +1108,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       : Math.min(pullDistance, PULL_THRESHOLD * 1.2)
     : 0;
 
-  const [isPwaBannerVisible, setIsPwaBannerVisible] = useState(false);
-
-  useEffect(() => {
-    setIsPwaBannerVisible(getPwaBannerVisible());
-    const handleBanner = (event: Event) => {
-      const detail = (event as CustomEvent<{ visible?: boolean }>).detail;
-      if (typeof detail?.visible === 'boolean') {
-        setIsPwaBannerVisible(detail.visible);
-      }
-    };
-    window.addEventListener('pwa-install-banner', handleBanner);
-    return () => {
-      window.removeEventListener('pwa-install-banner', handleBanner);
-    };
-  }, []);
-
   return (
     <motion.div
-      className={`${isPwaBannerVisible ? 'pt-6' : 'pt-safe-top'} sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:shrink-0 md:flex-col md:overflow-y-auto md:border-b-0 ${showDesktopBorder ? 'md:border-r' : ''} ${
+      className={`pt-safe-top sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:shrink-0 md:flex-col md:overflow-y-auto md:border-b-0 ${showDesktopBorder ? 'md:border-r' : ''} ${
         activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'
           ? 'border-transparent md:border-neutral-200/50 dark:md:border-neutral-800/50'
           : 'border-neutral-200/50 dark:border-neutral-800/50'

@@ -30,6 +30,7 @@ interface OriginInfoSectionProps {
   showEstateField: boolean;
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
   handleRoastLevelSelect: (level: string) => void;
+  readOnly?: boolean;
 }
 
 interface InlineRoastLevelSelectProps {
@@ -37,6 +38,7 @@ interface InlineRoastLevelSelectProps {
   placeholder: string;
   suggestions: string[];
   onChange: (value: string) => void;
+  readOnly?: boolean;
 }
 
 const InlineRoastLevelSelect: React.FC<InlineRoastLevelSelectProps> = ({
@@ -44,9 +46,15 @@ const InlineRoastLevelSelect: React.FC<InlineRoastLevelSelectProps> = ({
   placeholder,
   suggestions,
   onChange,
+  readOnly = false,
 }) => {
   const [open, setOpen] = useState(false);
-  const { refs, floatingStyles, context } = useFloating({
+  const [referenceWidth, setReferenceWidth] = useState<number>();
+  const {
+    refs: floatingRefs,
+    floatingStyles,
+    context,
+  } = useFloating({
     open,
     onOpenChange: setOpen,
     placement: 'bottom-start',
@@ -60,18 +68,52 @@ const InlineRoastLevelSelect: React.FC<InlineRoastLevelSelectProps> = ({
     role,
   ]);
 
+  useEffect(() => {
+    if (!open) return;
+    setReferenceWidth(
+      floatingRefs.reference.current?.getBoundingClientRect().width
+    );
+  }, [floatingRefs.reference, open]);
+
+  const setReferenceElement = useCallback(
+    (node: HTMLButtonElement | null) => {
+      floatingRefs.setReference(node);
+    },
+    [floatingRefs]
+  );
+
+  const setFloatingElement = useCallback(
+    (node: HTMLDivElement | null) => {
+      floatingRefs.setFloating(node);
+    },
+    [floatingRefs]
+  );
+
   const handleSelect = useCallback(
     (selectedValue: string) => {
+      if (readOnly) return;
       onChange(selectedValue);
       setOpen(false);
     },
-    [onChange]
+    [onChange, readOnly]
   );
+
+  if (readOnly) {
+    return (
+      <span className="block min-h-[1.25em] max-w-full text-left text-xs font-medium text-neutral-800 dark:text-neutral-100">
+        {value || (
+          <span className="text-neutral-400 dark:text-neutral-500">
+            {placeholder}
+          </span>
+        )}
+      </span>
+    );
+  }
 
   return (
     <>
       <button
-        ref={refs.setReference}
+        ref={setReferenceElement}
         type="button"
         className="block min-h-[1.25em] max-w-full cursor-pointer bg-transparent p-0 text-left text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
         {...getReferenceProps({
@@ -94,16 +136,14 @@ const InlineRoastLevelSelect: React.FC<InlineRoastLevelSelectProps> = ({
       {open && suggestions.length > 0 && (
         <FloatingPortal>
           <SuggestionDropdown
-            ref={refs.setFloating}
+            ref={setFloatingElement}
             suggestions={suggestions}
             onSelect={handleSelect}
             style={{
               ...floatingStyles,
               zIndex: SUGGESTION_DROPDOWN_Z_INDEX,
               minWidth: 128,
-              width:
-                refs.reference.current?.getBoundingClientRect().width ??
-                undefined,
+              width: referenceWidth,
             }}
             {...getFloatingProps()}
           />
@@ -121,6 +161,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   showEstateField,
   handleUpdateField,
   handleRoastLevelSelect,
+  readOnly = false,
 }) => {
   const flavorPeriodDayInputClass =
     'w-10 bg-neutral-100 px-1.5 py-0.5 text-center text-xs font-medium text-neutral-700 placeholder:text-neutral-400 outline-none dark:bg-neutral-800/40 dark:text-neutral-300 dark:placeholder:text-neutral-500';
@@ -293,7 +334,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
             )}
             <div
               ref={originRef}
-              contentEditable
+              contentEditable={!readOnly}
               suppressContentEditableWarning
               onInput={e => {
                 const placeholder =
@@ -306,8 +347,8 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
                     : '';
                 }
               }}
-              onBlur={handleOriginInput}
-              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              onBlur={readOnly ? undefined : handleOriginInput}
+              className={`${readOnly ? 'cursor-default' : 'cursor-text'} text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100`}
               style={{ minHeight: '1.25em' }}
             >
               {searchQuery ? (
@@ -337,7 +378,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
             )}
             <div
               ref={estateRef}
-              contentEditable
+              contentEditable={!readOnly}
               suppressContentEditableWarning
               onInput={e => {
                 const placeholder =
@@ -350,8 +391,8 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
                     : '';
                 }
               }}
-              onBlur={handleEstateInput}
-              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              onBlur={readOnly ? undefined : handleEstateInput}
+              className={`${readOnly ? 'cursor-default' : 'cursor-text'} text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100`}
               style={{ minHeight: '1.25em' }}
             >
               {estate}
@@ -377,7 +418,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
             )}
             <div
               ref={processRef}
-              contentEditable
+              contentEditable={!readOnly}
               suppressContentEditableWarning
               onInput={e => {
                 const placeholder =
@@ -390,8 +431,8 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
                     : '';
                 }
               }}
-              onBlur={handleProcessInput}
-              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              onBlur={readOnly ? undefined : handleProcessInput}
+              className={`${readOnly ? 'cursor-default' : 'cursor-text'} text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100`}
               style={{ minHeight: '1.25em' }}
             >
               {process}
@@ -417,7 +458,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
             )}
             <div
               ref={varietyRef}
-              contentEditable
+              contentEditable={!readOnly}
               suppressContentEditableWarning
               onInput={e => {
                 const placeholder =
@@ -430,8 +471,8 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
                     : '';
                 }
               }}
-              onBlur={handleVarietyInput}
-              className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+              onBlur={readOnly ? undefined : handleVarietyInput}
+              className={`${readOnly ? 'cursor-default' : 'cursor-text'} text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100`}
               style={{ minHeight: '1.25em' }}
             >
               {variety}
@@ -451,6 +492,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
             onChange={handleRoastLevelSelect}
             placeholder="选择烘焙度"
             suggestions={roastLevelSuggestions.suggestions}
+            readOnly={readOnly}
           />
         </div>
       )}

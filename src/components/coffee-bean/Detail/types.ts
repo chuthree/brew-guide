@@ -47,6 +47,7 @@ export interface BeanDetailModalProps {
   ) => void;
   /** 转为生豆回调 - 将熟豆转换为生豆（用于迁移旧数据） */
   onConvertToGreen?: (bean: CoffeeBean) => void;
+  actionsDisabled?: boolean;
   /** 模式：view 查看现有豆子，add 添加新豆子，edit 编辑现有豆子 */
   mode?: 'view' | 'add' | 'edit';
   /** 添加模式下的保存回调 */

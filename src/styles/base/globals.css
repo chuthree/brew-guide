@@ -227,6 +227,25 @@ html[style*='--legacy-mode: 1'].dark {
   -webkit-tap-highlight-color: transparent;
 }
 
+html,
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+*,
+::before,
+::after {
+  cursor: default !important;
+}
+
 /* 移除移动端焦点边框 */
 *:focus,
 *:focus-visible {

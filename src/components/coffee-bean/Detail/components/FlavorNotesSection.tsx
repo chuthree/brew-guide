@@ -13,6 +13,7 @@ interface FlavorNotesSectionProps {
   isAddMode: boolean;
   searchQuery: string;
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
+  readOnly?: boolean;
 }
 
 const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
@@ -21,6 +22,7 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
   isAddMode,
   searchQuery,
   handleUpdateField,
+  readOnly = false,
 }) => {
   const notesRef = useRef<HTMLDivElement>(null);
 
@@ -79,15 +81,20 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
             {currentFlavors.map((flavor: string, index: number) => (
               <span
                 key={flavor}
-                contentEditable
+                contentEditable={!readOnly}
                 suppressContentEditableWarning
-                onBlur={e => {
-                  const newValue = e.currentTarget.textContent?.trim() || '';
-                  if (newValue !== flavor) {
-                    replaceFlavor(index, newValue);
-                  }
-                }}
-                className="cursor-text bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800/40 dark:text-neutral-300"
+                onBlur={
+                  readOnly
+                    ? undefined
+                    : e => {
+                        const newValue =
+                          e.currentTarget.textContent?.trim() || '';
+                        if (newValue !== flavor) {
+                          replaceFlavor(index, newValue);
+                        }
+                      }
+                }
+                className={`${readOnly ? 'cursor-default' : 'cursor-text'} bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 outline-none dark:bg-neutral-800/40 dark:text-neutral-300`}
               >
                 {flavor}
               </span>
@@ -133,7 +140,7 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
             )}
             <div
               ref={notesRef}
-              contentEditable
+              contentEditable={!readOnly}
               suppressContentEditableWarning
               onInput={e => {
                 const placeholder =
@@ -146,8 +153,8 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
                     : '';
                 }
               }}
-              onBlur={handleNotesInput}
-              className="cursor-text text-xs font-medium whitespace-pre-wrap text-neutral-800 outline-none dark:text-neutral-100"
+              onBlur={readOnly ? undefined : handleNotesInput}
+              className={`${readOnly ? 'cursor-default' : 'cursor-text'} text-xs font-medium whitespace-pre-wrap text-neutral-800 outline-none dark:text-neutral-100`}
               style={{
                 minHeight: '1.5em',
                 wordBreak: 'break-word',

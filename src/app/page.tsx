@@ -12,7 +12,6 @@ import React, {
 import dynamic from 'next/dynamic';
 import {
   equipmentList,
-  APP_VERSION,
   commonMethods,
   getBaseEquipmentIdByAnimationType,
   CustomEquipment,
@@ -31,9 +30,8 @@ import {
 import { useBrewingParameters } from '@/lib/hooks/useBrewingParameters';
 import { useBrewingContent } from '@/lib/hooks/useBrewingContent';
 import { useMethodSelector } from '@/lib/hooks/useMethodSelector';
-import { EditableParams } from '@/lib/hooks/useBrewingParameters';
+import type { EditableParams } from '@/lib/hooks/useBrewingParameters';
 import { MethodType } from '@/lib/types/method';
-import CustomMethodFormModal from '@/components/method/forms/CustomMethodFormModal';
 import NavigationBar from '@/components/layout/NavigationBar';
 import {
   CollapsedNavigationDockOverlay,
@@ -44,13 +42,12 @@ import {
   NavigationArrowButton,
   NavigationSettingsButton,
 } from '@/components/layout/NavigationControls';
-import { SettingsOptions } from '@/components/settings/Settings';
-import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
-import TabContent from '@/components/layout/TabContent';
-import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
-import Onboarding from '@/components/onboarding/Onboarding';
-import PWAInstallBanner from '@/components/layout/PWAInstallBanner';
-import AppModals from '@/components/layout/AppModals';
+import type { SettingsOptions } from '@/components/settings/Settings';
+import {
+  useSettingsStore,
+  getSettingsStore,
+  defaultSettings,
+} from '@/lib/stores/settingsStore';
 import fontZoomUtils from '@/lib/utils/fontZoomUtils';
 import {
   resolveVisibleMainTab,
@@ -77,20 +74,18 @@ import hapticsUtils from '@/lib/ui/haptics';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import type { BrewingNoteData } from '@/types/app';
 import { updateParameterInfo } from '@/lib/brewing/parameters';
-import BrewingNoteFormModal from '@/components/notes/Form/BrewingNoteFormModal';
 import CoffeeBeans from '@/components/coffee-bean/List';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import {
+  useCustomEquipmentStore,
   loadCustomEquipments,
   saveCustomEquipment,
   deleteCustomEquipment,
 } from '@/lib/stores/customEquipmentStore';
+import { useCustomMethodStore } from '@/lib/stores/customMethodStore';
 import { useDataLayer } from '@/providers/DataLayerProvider';
-import DataMigrationModal from '@/components/common/modals/DataMigrationModal';
 import { showToast } from '@/components/common/feedback/LightToast';
-import BackupReminderModal from '@/components/common/modals/BackupReminderModal';
-import BeanReadyReminderDrawer from '@/components/common/modals/BeanReadyReminderDrawer';
 import {
   BackupReminderUtils,
   BackupReminderType,
@@ -108,13 +103,27 @@ import {
 } from '@/lib/navigation/pageTransition';
 import { COFFEE_BEAN_NAVIGATION_EVENTS } from '@/lib/navigation/coffeeBeanNavigation';
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
-import NoteDetailModal from '@/components/notes/Detail/NoteDetailModal';
 import type { ConvertToGreenPreview } from '@/components/coffee-bean/ConvertToGreenDrawer';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import {
   IMAGE_VIEWER_OPEN_EVENT,
   type ImageViewerPayload,
 } from '@/lib/ui/imageViewer';
+import {
+  OFFICIAL_DEMO_MODE,
+  canOpenPreviewSettings,
+  canMutatePreviewData,
+  canUsePreviewMainTab,
+  shouldShowPreviewInventoryActions,
+  shouldRenderPreviewBeanDetailModal,
+} from '@/components/preview/previewMode';
+import {
+  previewBeans,
+  previewCustomEquipments,
+  previewMethodsByEquipment,
+  previewNotes,
+  previewSettings,
+} from '@/components/preview/demoBeans';
 import {
   normalizeBrewingNoteParams,
   normalizeBrewingNoteSelection,
@@ -216,14 +225,58 @@ const preloadBrewingTimer = () => {
 };
 
 // 动态导入客户端组件
-const BrewingTimer = dynamic(
-  loadBrewingTimer,
-  { ssr: false, loading: () => null }
-);
+const BrewingTimer = dynamic(loadBrewingTimer, {
+  ssr: false,
+  loading: () => null,
+});
 const BrewingHistory = dynamic(() => import('@/components/notes/List'), {
   ssr: false,
   loading: () => null,
 });
+const TabContent = dynamic(() => import('@/components/layout/TabContent'), {
+  ssr: false,
+  loading: () => null,
+});
+const MethodTypeSelector = dynamic(
+  () => import('@/components/method/forms/MethodTypeSelector'),
+  { ssr: false, loading: () => null }
+);
+const CustomMethodFormModal = dynamic(
+  () => import('@/components/method/forms/CustomMethodFormModal'),
+  { ssr: false, loading: () => null }
+);
+const Onboarding = dynamic(() => import('@/components/onboarding/Onboarding'), {
+  ssr: false,
+  loading: () => null,
+});
+const DataMigrationModal = dynamic(
+  () => import('@/components/common/modals/DataMigrationModal'),
+  { ssr: false, loading: () => null }
+);
+const BackupReminderModal = dynamic(
+  () => import('@/components/common/modals/BackupReminderModal'),
+  { ssr: false, loading: () => null }
+);
+const BeanReadyReminderDrawer = dynamic(
+  () => import('@/components/common/modals/BeanReadyReminderDrawer'),
+  { ssr: false, loading: () => null }
+);
+const BrewingNoteFormModal = dynamic(
+  () => import('@/components/notes/Form/BrewingNoteFormModal'),
+  { ssr: false, loading: () => null }
+);
+const NoteDetailModal = dynamic(
+  () => import('@/components/notes/Detail/NoteDetailModal'),
+  { ssr: false, loading: () => null }
+);
+const AppModals = dynamic(() => import('@/components/layout/AppModals'), {
+  ssr: false,
+  loading: () => null,
+});
+const BeanImportModal = dynamic(
+  () => import('@/components/common/modals/BeanImportModal'),
+  { ssr: false, loading: () => null }
+);
 
 const AppLoader = ({
   onInitialized,
@@ -245,32 +298,42 @@ const AppLoader = ({
       }
 
       try {
-        // 动态导入所有需要的模块
-        const [{ Storage }, { getCoffeeBeanStore }] = await Promise.all([
-          import('@/lib/core/storage'),
-          import('@/lib/stores/coffeeBeanStore'),
-        ]);
+        useCoffeeBeanStore.getState().setBeans(previewBeans);
+        useBrewingNoteStore.getState().setNotes(previewNotes);
+        useCustomEquipmentStore
+          .getState()
+          .setEquipments(previewCustomEquipments);
+        useCustomMethodStore.setState({
+          methodsByEquipment: previewMethodsByEquipment,
+          initialized: true,
+        });
+        const defaultNavigationSettings = defaultSettings.navigationSettings!;
+        const previewNavigationSettings = previewSettings.navigationSettings;
+        useSettingsStore.setState({
+          settings: {
+            ...defaultSettings,
+            ...previewSettings,
+            navigationSettings: {
+              visibleTabs:
+                previewNavigationSettings?.visibleTabs ??
+                defaultNavigationSettings.visibleTabs,
+              coffeeBeanViews:
+                previewNavigationSettings?.coffeeBeanViews ??
+                defaultNavigationSettings.coffeeBeanViews,
+              pinnedViews:
+                previewNavigationSettings?.pinnedViews ??
+                defaultNavigationSettings.pinnedViews,
+            },
+            supabaseSync: defaultSettings.supabaseSync,
+            s3Sync: defaultSettings.s3Sync,
+            webdavSync: undefined,
+            activeSyncType: 'none',
+          },
+          initialized: true,
+          isLoading: false,
+        });
 
-        // 检查咖啡豆状态
-        const store = getCoffeeBeanStore();
-        if (!store.initialized) {
-          await store.loadBeans();
-        }
-        const beans = store.beans;
-        const hasBeans = beans.length > 0;
-
-        // 初始化版本和storage
-        try {
-          const storageVersion = await Storage.get('brewingNotesVersion');
-          if (!storageVersion) {
-            await Storage.set('brewingNotesVersion', APP_VERSION);
-          }
-        } catch {
-          // 静默处理错误
-        }
-
-        // 通知初始化完成，传递咖啡豆状态
-        onInitialized({ hasBeans });
+        onInitialized({ hasBeans: true });
       } catch {
         // 出错时假定没有咖啡豆
         onInitialized({ hasBeans: false });
@@ -302,10 +365,21 @@ const AppContainer = () => {
   }
 
   // 应用准备好后，渲染主组件，传入初始咖啡豆状态
-  return <PourOverRecipes initialHasBeans={initialHasBeans} />;
+  return (
+    <PourOverRecipes
+      initialHasBeans={initialHasBeans}
+      isPreviewMode={OFFICIAL_DEMO_MODE}
+    />
+  );
 };
 
-const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
+const PourOverRecipes = ({
+  initialHasBeans,
+  isPreviewMode,
+}: {
+  initialHasBeans: boolean;
+  isPreviewMode: boolean;
+}) => {
   // 检测是否为大屏幕（lg 断点）- 用于三栏布局
   const isLargeScreen = useIsLargeScreen();
   // 检测是否启用桌面侧栏布局（md 断点）
@@ -682,6 +756,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     handleHideMethod: executeHideMethod,
     navigateToStep,
   } = brewingState;
+
+  useEffect(() => {
+    if (!isPreviewMode || activeMainTab === '咖啡豆') return;
+    setActiveMainTab('咖啡豆');
+  }, [activeMainTab, isPreviewMode, setActiveMainTab]);
 
   const hasNavigationCoffeeBeans = useCoffeeBeanStore(
     state => state.beans.length > 0
@@ -1084,6 +1163,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const { handleMethodSelect } = methodSelector;
 
   useEffect(() => {
+    if (isPreviewMode) return;
+
     let isMounted = true;
 
     const initializeApp = async () => {
@@ -1195,10 +1276,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     return () => {
       isMounted = false;
     };
-  }, [initialHasBeans]);
+  }, [initialHasBeans, isPreviewMode]);
 
   // 检查备份提醒
   useEffect(() => {
+    if (isPreviewMode) return;
+
     const checkReminders = async () => {
       try {
         const shouldShowBackup = await BackupReminderUtils.shouldShowReminder();
@@ -1216,9 +1299,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     // 延迟检查，确保应用完全加载
     const timer = setTimeout(checkReminders, 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isPreviewMode]);
 
   useEffect(() => {
+    if (isPreviewMode) return;
     if (!storeInitialized || !settings.showBeanReadyReminderPopup) return;
     if (!navigationState.visibleTabs.coffeeBean) return;
     if (showOnboarding || showDataMigration || showBackupReminder) return;
@@ -1283,6 +1367,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   }, [
     settings.customFlavorPeriod,
     settings.showBeanReadyReminderPopup,
+    isPreviewMode,
     navigationState.visibleTabs.coffeeBean,
     showBackupReminder,
     showDataMigration,
@@ -2290,6 +2375,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   ]);
 
   const handleMainTabClick = (tab: MainTabType) => {
+    if (isPreviewMode && !canUsePreviewMainTab(tab)) {
+      return;
+    }
+
     if (tab === activeMainTab) {
       return;
     }
@@ -2308,243 +2397,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     setActiveMainTab(tab);
   };
 
+  const handlePreviewDetailAction = useCallback(() => {}, []);
+  const canMutateData = canMutatePreviewData(isPreviewMode);
+
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
     if (typeof window !== 'undefined') {
       (window as any).__onboardingOpen = false;
       window.dispatchEvent(
         new CustomEvent('onboarding-visibility', { detail: { open: false } })
-      );
-    }
-  };
-
-  const handleImportBean = async (
-    jsonData: string,
-    options?: { recognitionImage?: string }
-  ) => {
-    try {
-      // 尝试从文本中提取数据
-      const extractedData = await import('@/lib/utils/jsonUtils').then(
-        ({ extractJsonFromText }) => extractJsonFromText(jsonData)
-      );
-
-      if (!extractedData) {
-        throw new Error('无法从输入中提取有效数据');
-      }
-
-      // 检查是否是咖啡豆数据类型，通过类型守卫确保安全访问属性
-      // 只要求有name字段，其他字段都是可选的
-      const isCoffeeBean = (data: unknown): data is CoffeeBean =>
-        data !== null &&
-        typeof data === 'object' &&
-        'name' in data &&
-        typeof (data as Record<string, unknown>).name === 'string' &&
-        ((data as Record<string, unknown>).name as string).trim() !== '';
-
-      // 检查是否是咖啡豆数组
-      const isCoffeeBeanArray = (data: unknown): data is CoffeeBean[] =>
-        Array.isArray(data) && data.length > 0 && data.every(isCoffeeBean);
-
-      // 确保提取的数据是咖啡豆或咖啡豆数组
-      if (!isCoffeeBean(extractedData) && !isCoffeeBeanArray(extractedData)) {
-        throw new Error('导入的数据不是有效的咖啡豆信息（缺少咖啡豆名称）');
-      }
-
-      const beansToImport = Array.isArray(extractedData)
-        ? extractedData
-        : [extractedData];
-
-      let importCount = 0;
-      let lastImportedBean: ExtendedCoffeeBean | null = null;
-      const pendingRecognitionImage = options?.recognitionImage || null;
-
-      // 动态导入 coffeeBeanStore
-      const { getCoffeeBeanStore } =
-        await import('@/lib/stores/coffeeBeanStore');
-      const store = getCoffeeBeanStore();
-
-      try {
-        for (const beanData of beansToImport) {
-          // 将导入的咖啡豆转换为ExtendedCoffeeBean类型
-          // 构建基础对象，只包含必填字段和确实有值的字段
-          const bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'> = {
-            name: beanData.name, // 必填字段
-            // 为了满足TypeScript类型要求，需要设置所有必需字段的默认值
-            // 但在实际导入时，我们会过滤掉空值，保持数据严谨
-            roastLevel:
-              (beanData.roastLevel && beanData.roastLevel.trim()) || '',
-            capacity:
-              (beanData.capacity && beanData.capacity.toString().trim()) || '',
-            remaining: '',
-            price: (beanData.price && beanData.price.toString().trim()) || '',
-            // 生豆模式下，将roastDate作为purchaseDate处理
-            roastDate:
-              importingBeanState === 'green'
-                ? ''
-                : (beanData.roastDate && beanData.roastDate.trim()) || '',
-            // 生豆模式下，使用roastDate作为purchaseDate（因为AI识别返回的是roastDate字段）
-            ...(importingBeanState === 'green' &&
-            beanData.roastDate &&
-            beanData.roastDate.trim()
-              ? { purchaseDate: beanData.roastDate.trim() }
-              : {}),
-            flavor:
-              Array.isArray(beanData.flavor) && beanData.flavor.length > 0
-                ? beanData.flavor.filter(f => f && f.trim())
-                : [],
-            notes: (beanData.notes && beanData.notes.trim()) || '',
-          };
-
-          // 特殊处理剩余量：优先使用remaining，如果没有但有capacity，则设置为capacity
-          if (beanData.remaining && beanData.remaining.toString().trim()) {
-            bean.remaining = beanData.remaining.toString().trim();
-          } else if (bean.capacity) {
-            bean.remaining = bean.capacity;
-          }
-
-          // 设置 beanState（根据当前导入模式）
-          bean.beanState = importingBeanState;
-
-          // 只在字段存在时才设置其他可选字段
-          if (beanData.roaster !== undefined) bean.roaster = beanData.roaster;
-          if (beanData.startDay !== undefined)
-            bean.startDay = beanData.startDay;
-          if (beanData.endDay !== undefined) bean.endDay = beanData.endDay;
-          if (beanData.image !== undefined) bean.image = beanData.image;
-          if (beanData.brand !== undefined) bean.brand = beanData.brand;
-          if (beanData.beanType !== undefined)
-            bean.beanType = beanData.beanType;
-          if (beanData.overallRating !== undefined)
-            bean.overallRating = beanData.overallRating;
-          if (beanData.ratingNotes !== undefined)
-            bean.ratingNotes = beanData.ratingNotes;
-          if (beanData.isFrozen !== undefined)
-            bean.isFrozen = beanData.isFrozen;
-          if (beanData.isInTransit !== undefined)
-            bean.isInTransit = beanData.isInTransit;
-
-          // 验证必要的字段（只有名称是必填的）
-          if (!bean.name || bean.name.trim() === '') {
-            // 导入数据缺少咖啡豆名称，跳过
-            continue;
-          }
-
-          // 处理拼配成分
-          const beanBlendComponents = (
-            beanData as unknown as Record<string, unknown>
-          ).blendComponents;
-          if (beanBlendComponents && Array.isArray(beanBlendComponents)) {
-            // 验证拼配成分的格式是否正确
-            const validComponents = beanBlendComponents.filter(
-              (comp: unknown) =>
-                comp &&
-                typeof comp === 'object' &&
-                comp !== null &&
-                ('origin' in comp ||
-                  'estate' in comp ||
-                  'process' in comp ||
-                  'variety' in comp)
-            );
-
-            if (validComponents.length > 0) {
-              bean.blendComponents = validComponents.map((comp: unknown) => {
-                const component = comp as Record<string, unknown>;
-                return {
-                  origin: (component.origin as string) || '',
-                  estate: (component.estate as string) || '',
-                  process: (component.process as string) || '',
-                  variety: (component.variety as string) || '',
-                  // 只在明确有百分比时才设置百分比值，否则保持为undefined
-                  ...(component.percentage !== undefined
-                    ? {
-                        percentage:
-                          typeof component.percentage === 'string'
-                            ? parseInt(component.percentage, 10)
-                            : typeof component.percentage === 'number'
-                              ? component.percentage
-                              : undefined,
-                      }
-                    : {}),
-                };
-              });
-            }
-          } else {
-            // 检查是否有旧格式的字段，如果有则转换为新格式
-            const beanDataRecord = beanData as unknown as Record<
-              string,
-              unknown
-            >;
-            const legacyOrigin = beanDataRecord.origin as string;
-            const legacyEstate = beanDataRecord.estate as string;
-            const legacyProcess = beanDataRecord.process as string;
-            const legacyVariety = beanDataRecord.variety as string;
-
-            if (
-              legacyOrigin ||
-              legacyEstate ||
-              legacyProcess ||
-              legacyVariety
-            ) {
-              bean.blendComponents = [
-                {
-                  percentage: 100,
-                  origin: legacyOrigin || '',
-                  estate: legacyEstate || '',
-                  process: legacyProcess || '',
-                  variety: legacyVariety || '',
-                },
-              ];
-            }
-          }
-
-          // beanType字段保持可选，不强制设置默认值
-
-          // 添加到数据库
-          const newBean = await store.addBean(bean);
-          lastImportedBean = newBean;
-          importCount++;
-        }
-      } finally {
-        // 批量操作完成
-      }
-
-      if (importCount === 0) {
-        throw new Error('没有导入任何有效咖啡豆数据');
-      }
-
-      setShowImportBeanForm(false);
-
-      window.dispatchEvent(
-        new CustomEvent('coffeeBeanDataChanged', {
-          detail: {
-            action: 'import',
-            importCount: importCount,
-          },
-        })
-      );
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-      handleBeanListChange();
-      handleMainTabClick('咖啡豆');
-
-      if (importCount === 1 && lastImportedBean) {
-        setRecognitionImage(pendingRecognitionImage);
-        setRecognitionImageBeanId(
-          pendingRecognitionImage ? lastImportedBean.id : null
-        );
-        setTimeout(() => {
-          setEditingBean(lastImportedBean);
-          setShowBeanForm(true);
-        }, 300);
-      } else {
-        setRecognitionImage(null);
-        setRecognitionImageBeanId(null);
-      }
-    } catch (error) {
-      // 导入失败
-      alert(
-        '导入失败: ' +
-          (error instanceof Error ? error.message : '请检查数据格式')
       );
     }
   };
@@ -2707,6 +2568,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handleSaveBean = async (
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => {
+    if (!canMutateData) {
+      setShowBeanForm(false);
+      setEditingBean(null);
+      setRecognitionImage(null);
+      setRecognitionImageBeanId(null);
+      return;
+    }
+
     try {
       const { getCoffeeBeanStore } =
         await import('@/lib/stores/coffeeBeanStore');
@@ -3231,9 +3100,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   const brewingStep = getBrewingStepNumber();
   const isInBrewingFlow = activeMainTab === '冲煮' && brewingStep > 0;
-  const isBrewingMainTab = activeMainTab === '冲煮';
-  const isNotesMainTab = activeMainTab === '笔记';
-  const isBeansMainTab = activeMainTab === '咖啡豆';
+  const isBrewingMainTab = !isPreviewMode && activeMainTab === '冲煮';
+  const isNotesMainTab = !isPreviewMode && activeMainTab === '笔记';
+  const isBeansMainTab = isPreviewMode || activeMainTab === '咖啡豆';
   const shouldShowBrewingTimer =
     activeBrewingStep === 'brewing' && currentBrewingMethod && !showHistory;
 
@@ -3889,7 +3758,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       handleParamChange={handleParamChangeWrapper}
       handleExtractionTimeChange={handleExtractionTimeChange}
       setShowHistory={setShowHistory}
-      onTitleDoubleClick={() => setIsSettingsOpen(true)}
+      onTitleDoubleClick={() => {
+        if (canOpenPreviewSettings(isPreviewMode)) {
+          setIsSettingsOpen(true);
+        }
+      }}
       settings={settings}
       hasCoffeeBeans={hasCoffeeBeans && navigationState.visibleTabs.coffeeBean}
       alternativeHeader={alternativeHeaderContent}
@@ -3994,7 +3867,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           } as React.CSSProperties
         }
       >
-        <PWAInstallBanner />
         <div className="flex h-full flex-col md:flex-row">
           {!isNavigationActuallyCollapsed && (
             <div className="md:h-full md:shrink-0 md:overflow-hidden">
@@ -4027,7 +3899,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             className={`md:pt-safe-top h-full flex-1 ${
               isMobileNavigationActuallyCollapsed ? 'pt-safe-top' : ''
             } ${
-              activeMainTab === '冲煮' &&
+              isBrewingMainTab &&
               activeBrewingStep === 'brewing' &&
               currentBrewingMethod &&
               !showHistory
@@ -4035,169 +3907,179 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 : 'overflow-y-auto md:overflow-y-scroll'
             }`}
           >
-            <div
-              className={
-                isBrewingMainTab
-                  ? `relative ${
-                      shouldShowBrewingTimer ? 'flex h-full flex-col' : 'h-full'
-                    }`
-                  : 'hidden'
-              }
-              aria-hidden={!isBrewingMainTab}
-              data-main-tab="brewing"
-            >
+            {!isPreviewMode && (
               <div
                 className={
-                  shouldShowBrewingTimer
-                    ? 'min-h-0 flex-1 overflow-y-auto'
-                    : 'h-full space-y-5 overflow-y-auto'
+                  isBrewingMainTab
+                    ? `relative ${
+                        shouldShowBrewingTimer
+                          ? 'flex h-full flex-col'
+                          : 'h-full'
+                      }`
+                    : 'hidden'
                 }
-                style={
-                  shouldShowBrewingTimer && brewingTimerHeight > 0
-                    ? { paddingBottom: `${brewingTimerHeight}px` }
-                    : undefined
-                }
+                aria-hidden={!isBrewingMainTab}
+                data-main-tab="brewing"
               >
-                <TabContent
-                  activeTab={activeTab}
-                  content={content}
-                  selectedMethod={selectedMethod as Method}
-                  currentBrewingMethod={currentBrewingMethod as Method}
-                  isTimerRunning={isTimerRunning}
-                  showComplete={showComplete}
-                  currentStage={currentStage}
-                  isWaiting={isStageWaiting}
-                  selectedEquipment={selectedEquipment}
-                  selectedCoffeeBean={
-                    navigationState.visibleTabs.coffeeBean
-                      ? selectedCoffeeBean
-                      : null
-                  }
-                  selectedCoffeeBeanData={
-                    navigationState.visibleTabs.coffeeBean
-                      ? selectedCoffeeBeanData
-                      : null
-                  }
-                  selectedCoffeeBeanCreatedFromSearch={
-                    navigationState.visibleTabs.coffeeBean &&
-                    selectedCoffeeBeanCreatedFromSearch
-                  }
-                  countdownTime={countdownTime}
-                  customMethods={customMethods}
-                  actionMenuStates={actionMenuStates}
-                  setActionMenuStates={setActionMenuStates}
-                  setShowCustomForm={setShowCustomForm}
-                  setShowImportForm={setShowImportForm}
-                  settings={settings}
-                  onMethodSelect={handleMethodSelectWrapper}
-                  onCoffeeBeanSelect={handleCoffeeBeanSelect}
-                  onEditMethod={handleEditCustomMethod}
-                  onDeleteMethod={handleDeleteCustomMethod}
-                  onHideMethod={handleHideMethod}
-                  setActiveMainTab={setActiveMainTab}
-                  resetBrewingState={resetBrewingState}
-                  customEquipments={customEquipments}
-                  expandedStages={expandedStagesRef.current}
-                  setShowEquipmentForm={setShowEquipmentForm}
-                  setEditingEquipment={setEditingEquipment}
-                  handleDeleteEquipment={handleDeleteEquipment}
-                />
-              </div>
-
-              {shouldShowBrewingTimer && (
                 <div
-                  ref={brewingTimerRef}
-                  className="pointer-events-auto absolute right-0 bottom-0 left-0 z-10"
+                  className={
+                    shouldShowBrewingTimer
+                      ? 'min-h-0 flex-1 overflow-y-auto'
+                      : 'h-full space-y-5 overflow-y-auto'
+                  }
+                  style={
+                    shouldShowBrewingTimer && brewingTimerHeight > 0
+                      ? { paddingBottom: `${brewingTimerHeight}px` }
+                      : undefined
+                  }
                 >
-                  <BrewingTimer
+                  <TabContent
+                    activeTab={activeTab}
+                    content={content}
+                    selectedMethod={selectedMethod as Method}
                     currentBrewingMethod={currentBrewingMethod as Method}
-                    onStatusChange={({ isRunning }) => {
-                      const event = new CustomEvent('brewing:timerStatus', {
-                        detail: {
-                          isRunning,
-                          status: isRunning ? 'running' : 'stopped',
-                        },
-                      });
-                      window.dispatchEvent(event);
-                    }}
-                    onStageChange={({ currentStage, progress, isWaiting }) => {
-                      const event = new CustomEvent('brewing:stageChange', {
-                        detail: {
-                          currentStage,
-                          stage: currentStage,
-                          progress,
-                          isWaiting,
-                        },
-                      });
-                      window.dispatchEvent(event);
-                    }}
-                    onCountdownChange={time => {
-                      setTimeout(() => {
-                        const event = new CustomEvent(
-                          'brewing:countdownChange',
-                          {
-                            detail: { remainingTime: time },
-                          }
-                        );
-                        window.dispatchEvent(event);
-                      }, 0);
-                    }}
-                    onComplete={isComplete => {
-                      if (isComplete) {
-                        const event = new CustomEvent('brewing:complete');
-                        window.dispatchEvent(event);
-                      }
-                    }}
-                    onTimerComplete={() => {
-                      // 冲煮完成后的处理，确保显示笔记表单
-                      // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
-                    }}
-                    onExpandedStagesChange={stages => {
-                      expandedStagesRef.current = stages;
-                    }}
-                    settings={settings}
+                    isTimerRunning={isTimerRunning}
+                    showComplete={showComplete}
+                    currentStage={currentStage}
+                    isWaiting={isStageWaiting}
                     selectedEquipment={selectedEquipment}
-                    isCoffeeBrewed={isCoffeeBrewed}
-                    layoutSettings={settings.layoutSettings}
+                    selectedCoffeeBean={
+                      navigationState.visibleTabs.coffeeBean
+                        ? selectedCoffeeBean
+                        : null
+                    }
+                    selectedCoffeeBeanData={
+                      navigationState.visibleTabs.coffeeBean
+                        ? selectedCoffeeBeanData
+                        : null
+                    }
+                    selectedCoffeeBeanCreatedFromSearch={
+                      navigationState.visibleTabs.coffeeBean &&
+                      selectedCoffeeBeanCreatedFromSearch
+                    }
+                    countdownTime={countdownTime}
+                    customMethods={customMethods}
+                    actionMenuStates={actionMenuStates}
+                    setActionMenuStates={setActionMenuStates}
+                    setShowCustomForm={setShowCustomForm}
+                    setShowImportForm={setShowImportForm}
+                    settings={settings}
+                    onMethodSelect={handleMethodSelectWrapper}
+                    onCoffeeBeanSelect={handleCoffeeBeanSelect}
+                    onEditMethod={handleEditCustomMethod}
+                    onDeleteMethod={handleDeleteCustomMethod}
+                    onHideMethod={handleHideMethod}
+                    setActiveMainTab={setActiveMainTab}
+                    resetBrewingState={resetBrewingState}
+                    customEquipments={customEquipments}
+                    expandedStages={expandedStagesRef.current}
+                    setShowEquipmentForm={setShowEquipmentForm}
+                    setEditingEquipment={setEditingEquipment}
+                    handleDeleteEquipment={handleDeleteEquipment}
                   />
                 </div>
-              )}
 
-              {activeBrewingStep === 'method' && selectedEquipment && (
-                <MethodTypeSelector
-                  methodType={methodType}
+                {shouldShowBrewingTimer && (
+                  <div
+                    ref={brewingTimerRef}
+                    className="pointer-events-auto absolute right-0 bottom-0 left-0 z-10"
+                  >
+                    <BrewingTimer
+                      currentBrewingMethod={currentBrewingMethod as Method}
+                      onStatusChange={({ isRunning }) => {
+                        const event = new CustomEvent('brewing:timerStatus', {
+                          detail: {
+                            isRunning,
+                            status: isRunning ? 'running' : 'stopped',
+                          },
+                        });
+                        window.dispatchEvent(event);
+                      }}
+                      onStageChange={({
+                        currentStage,
+                        progress,
+                        isWaiting,
+                      }) => {
+                        const event = new CustomEvent('brewing:stageChange', {
+                          detail: {
+                            currentStage,
+                            stage: currentStage,
+                            progress,
+                            isWaiting,
+                          },
+                        });
+                        window.dispatchEvent(event);
+                      }}
+                      onCountdownChange={time => {
+                        setTimeout(() => {
+                          const event = new CustomEvent(
+                            'brewing:countdownChange',
+                            {
+                              detail: { remainingTime: time },
+                            }
+                          );
+                          window.dispatchEvent(event);
+                        }, 0);
+                      }}
+                      onComplete={isComplete => {
+                        if (isComplete) {
+                          const event = new CustomEvent('brewing:complete');
+                          window.dispatchEvent(event);
+                        }
+                      }}
+                      onTimerComplete={() => {
+                        // 冲煮完成后的处理，确保显示笔记表单
+                        // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
+                      }}
+                      onExpandedStagesChange={stages => {
+                        expandedStagesRef.current = stages;
+                      }}
+                      settings={settings}
+                      selectedEquipment={selectedEquipment}
+                      isCoffeeBrewed={isCoffeeBrewed}
+                      layoutSettings={settings.layoutSettings}
+                    />
+                  </div>
+                )}
+
+                {activeBrewingStep === 'method' && selectedEquipment && (
+                  <MethodTypeSelector
+                    methodType={methodType}
+                    settings={settings}
+                    onSelectMethodType={handleMethodTypeChange}
+                    hideSelector={customEquipments.some(
+                      e =>
+                        (e.id === selectedEquipment ||
+                          e.name === selectedEquipment) &&
+                        e.animationType === 'custom'
+                    )}
+                  />
+                )}
+              </div>
+            )}
+
+            {!isPreviewMode && (
+              <div
+                className={isNotesMainTab ? 'h-full' : 'hidden'}
+                aria-hidden={!isNotesMainTab}
+                data-main-tab="notes"
+              >
+                <BrewingHistory
+                  isOpen={isNotesMainTab}
+                  onClose={() => {
+                    saveMainTabPreference('冲煮');
+                    setActiveMainTab('冲煮');
+                    setShowHistory(false);
+                  }}
+                  onAddNote={handleAddNote}
+                  setAlternativeHeaderContent={setAlternativeHeaderContent}
+                  setShowAlternativeHeader={setShowAlternativeHeader}
                   settings={settings}
-                  onSelectMethodType={handleMethodTypeChange}
-                  hideSelector={customEquipments.some(
-                    e =>
-                      (e.id === selectedEquipment ||
-                        e.name === selectedEquipment) &&
-                      e.animationType === 'custom'
-                  )}
+                  navigationToggleControl={contentNavigationControl}
+                  navigationSwipeControl={mobileNavigationSwipeControl}
                 />
-              )}
-            </div>
-
-            <div
-              className={isNotesMainTab ? 'h-full' : 'hidden'}
-              aria-hidden={!isNotesMainTab}
-              data-main-tab="notes"
-            >
-              <BrewingHistory
-                isOpen={isNotesMainTab}
-                onClose={() => {
-                  saveMainTabPreference('冲煮');
-                  setActiveMainTab('冲煮');
-                  setShowHistory(false);
-                }}
-                onAddNote={handleAddNote}
-                setAlternativeHeaderContent={setAlternativeHeaderContent}
-                setShowAlternativeHeader={setShowAlternativeHeader}
-                settings={settings}
-                navigationToggleControl={contentNavigationControl}
-                navigationSwipeControl={mobileNavigationSwipeControl}
-              />
-            </div>
+              </div>
+            )}
 
             <div
               className={isBeansMainTab ? 'h-full' : 'hidden'}
@@ -4234,31 +4116,37 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 }}
                 navigationToggleControl={contentNavigationControl}
                 navigationSwipeControl={mobileNavigationSwipeControl}
+                readOnly={!canMutateData}
+                showInventoryActions={shouldShowPreviewInventoryActions(
+                  isPreviewMode
+                )}
               />
             </div>
 
-            <CustomMethodFormModal
-              showCustomForm={showCustomForm}
-              showImportForm={showImportForm}
-              editingMethod={editingMethod}
-              selectedEquipment={selectedEquipment}
-              customMethods={customMethods}
-              onSaveCustomMethod={method => {
-                handleSaveCustomMethod(method);
-              }}
-              onCloseCustomForm={() => {
-                setShowCustomForm(false);
-                setEditingMethod(undefined);
-              }}
-              onCloseImportForm={() => {
-                setShowImportForm(false);
-              }}
-              grinderDefaultSyncEnabled={
-                settings.grinderDefaultSync?.methodForm ?? false
-              }
-            />
+            {!isPreviewMode && (
+              <CustomMethodFormModal
+                showCustomForm={showCustomForm}
+                showImportForm={showImportForm}
+                editingMethod={editingMethod}
+                selectedEquipment={selectedEquipment}
+                customMethods={customMethods}
+                onSaveCustomMethod={method => {
+                  handleSaveCustomMethod(method);
+                }}
+                onCloseCustomForm={() => {
+                  setShowCustomForm(false);
+                  setEditingMethod(undefined);
+                }}
+                onCloseImportForm={() => {
+                  setShowImportForm(false);
+                }}
+                grinderDefaultSyncEnabled={
+                  settings.grinderDefaultSync?.methodForm ?? false
+                }
+              />
+            )}
 
-            {migrationData && (
+            {!isPreviewMode && migrationData && (
               <DataMigrationModal
                 isOpen={showDataMigration}
                 onClose={() => setShowDataMigration(false)}
@@ -4267,7 +4155,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               />
             )}
 
-            {showOnboarding && (
+            {!isPreviewMode && showOnboarding && (
               <Onboarding
                 onSettingsChange={handleSettingsChange}
                 onComplete={handleOnboardingComplete}
@@ -4349,6 +4237,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     }
                     initialBeanState={beanDetailAddBeanState}
                     onSaveNew={async newBean => {
+                      if (!canMutateData) return;
+
                       try {
                         const { getCoffeeBeanStore } =
                           await import('@/lib/stores/coffeeBeanStore');
@@ -4361,6 +4251,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                       }
                     }}
                     onSaveEdit={async (bean, updates) => {
+                      if (!canMutateData) return;
+
                       try {
                         const { getCoffeeBeanStore } =
                           await import('@/lib/stores/coffeeBeanStore');
@@ -4383,6 +4275,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     }}
                     onExitEdit={() => setBeanDetailEditMode(false)}
                     onEdit={bean => {
+                      if (!canMutateData) return;
+
                       if (settings.immersiveAdd) {
                         setBeanDetailAddMode(false);
                         setBeanDetailEditMode(true);
@@ -4394,6 +4288,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                       setShowBeanForm(true);
                     }}
                     onDelete={async bean => {
+                      if (!canMutateData) return;
+
                       setBeanDetailOpen(false);
                       setBeanDetailEditMode(false);
                       try {
@@ -4527,10 +4423,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                           }
                         : undefined
                     }
+                    actionsDisabled={isPreviewMode}
                   />
                 )}
                 {/* 笔记详情 */}
-                {noteDetailOpen && noteDetailData && (
+                {!isPreviewMode && noteDetailOpen && noteDetailData && (
                   <NoteDetailModal
                     isOpen={noteDetailOpen}
                     note={noteDetailData.note}
@@ -4682,17 +4579,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           )}
         </div>
 
-        <BackupReminderModal
-          isOpen={showBackupReminder}
-          onClose={() => setShowBackupReminder(false)}
-          reminderType={reminderType}
-        />
-        <BeanReadyReminderDrawer
-          isOpen={showBeanReadyReminder}
-          items={beanReadyReminderItems}
-          onClose={() => setShowBeanReadyReminder(false)}
-          onBeanClick={handleBeanReadyReminderBeanClick}
-        />
+        {!isPreviewMode && (
+          <>
+            <BackupReminderModal
+              isOpen={showBackupReminder}
+              onClose={() => setShowBackupReminder(false)}
+              reminderType={reminderType}
+            />
+            <BeanReadyReminderDrawer
+              isOpen={showBeanReadyReminder}
+              items={beanReadyReminderItems}
+              onClose={() => setShowBeanReadyReminder(false)}
+              onBeanClick={handleBeanReadyReminderBeanClick}
+            />
+          </>
+        )}
       </div>
 
       {/* 页面级别的视图选择覆盖层 - 独立渲染，不受父容器转场影响 */}
@@ -4869,153 +4770,179 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       </AnimatePresence>
 
       {/* 所有模态框组件 */}
-      <BrewingNoteFormModal
-        key="note-form-modal"
-        showForm={showNoteFormModal}
-        draftSource={noteFormDraftSource}
-        initialNote={currentEditingNote}
-        onSave={handleSaveBrewingNote}
-        onClose={() => {
-          setShowNoteFormModal(false);
-          setNoteFormDraftSource('blank');
-          setCurrentEditingNote({});
-        }}
-        settings={settings}
-      />
+      {!isPreviewMode && (
+        <BrewingNoteFormModal
+          key="note-form-modal"
+          showForm={showNoteFormModal}
+          draftSource={noteFormDraftSource}
+          initialNote={currentEditingNote}
+          onSave={handleSaveBrewingNote}
+          onClose={() => {
+            setShowNoteFormModal(false);
+            setNoteFormDraftSource('blank');
+            setCurrentEditingNote({});
+          }}
+          settings={settings}
+        />
+      )}
 
-      <AppModals
-        // Settings 相关
-        isSettingsOpen={isSettingsOpen}
-        setIsSettingsOpen={setIsSettingsOpen}
-        hasSubSettingsOpen={hasSubSettingsOpen}
-        handleDataChange={handleDataChange}
-        settings={settings}
-        handleSubSettingChange={handleSubSettingChange}
-        customEquipments={customEquipments}
-        // 子设置页面状态
-        showDisplaySettings={showDisplaySettings}
-        setShowDisplaySettings={setShowDisplaySettings}
-        showNavigationSettings={showNavigationSettings}
-        setShowNavigationSettings={setShowNavigationSettings}
-        showStockSettings={showStockSettings}
-        setShowStockSettings={setShowStockSettings}
-        showBeanSettings={showBeanSettings}
-        setShowBeanSettings={setShowBeanSettings}
-        showGreenBeanSettings={showGreenBeanSettings}
-        setShowGreenBeanSettings={setShowGreenBeanSettings}
-        showCoffeeBeanGroupSettings={showCoffeeBeanGroupSettings}
-        setShowCoffeeBeanGroupSettings={setShowCoffeeBeanGroupSettings}
-        showFlavorPeriodSettings={showFlavorPeriodSettings}
-        setShowFlavorPeriodSettings={setShowFlavorPeriodSettings}
-        showBrewingSettings={showBrewingSettings}
-        setShowBrewingSettings={setShowBrewingSettings}
-        showTimerSettings={showTimerSettings}
-        setShowTimerSettings={setShowTimerSettings}
-        showDataSettings={showDataSettings}
-        setShowDataSettings={setShowDataSettings}
-        showNotificationSettings={showNotificationSettings}
-        setShowNotificationSettings={setShowNotificationSettings}
-        showRandomCoffeeBeanSettings={showRandomCoffeeBeanSettings}
-        setShowRandomCoffeeBeanSettings={setShowRandomCoffeeBeanSettings}
-        showEquipmentMethodSettings={showEquipmentMethodSettings}
-        setShowEquipmentMethodSettings={setShowEquipmentMethodSettings}
-        showNoteSettings={showNoteSettings}
-        setShowNoteSettings={setShowNoteSettings}
-        showFlavorDimensionSettings={showFlavorDimensionSettings}
-        setShowFlavorDimensionSettings={setShowFlavorDimensionSettings}
-        showRoasterLogoSettings={showRoasterLogoSettings}
-        setShowRoasterLogoSettings={setShowRoasterLogoSettings}
-        showGrinderSettings={showGrinderSettings}
-        setShowGrinderSettings={setShowGrinderSettings}
-        showExperimentalSettings={showExperimentalSettings}
-        setShowExperimentalSettings={setShowExperimentalSettings}
-        showAboutSettings={showAboutSettings}
-        setShowAboutSettings={setShowAboutSettings}
-        // 咖啡豆表单
-        showBeanForm={showBeanForm}
-        setShowBeanForm={setShowBeanForm}
-        editingBean={editingBean}
-        setEditingBean={setEditingBean}
-        editingBeanState={editingBeanState}
-        setEditingBeanState={setEditingBeanState}
-        roastingSourceBeanId={roastingSourceBeanId}
-        setRoastingSourceBeanId={setRoastingSourceBeanId}
-        recognitionImage={recognitionImage}
-        setRecognitionImage={setRecognitionImage}
-        recognitionImageBeanId={recognitionImageBeanId}
-        setRecognitionImageBeanId={setRecognitionImageBeanId}
-        handleSaveBean={handleSaveBean}
-        handleBeanListChange={handleBeanListChange}
-        // 咖啡豆详情（非大屏幕）
-        isLargeScreen={isLargeScreen}
-        beanDetailOpen={beanDetailOpen}
-        setBeanDetailOpen={setBeanDetailOpen}
-        beanDetailData={beanDetailData}
-        setBeanDetailData={setBeanDetailData}
-        beanDetailSearchQuery={beanDetailSearchQuery}
-        beanDetailAddMode={beanDetailAddMode}
-        setBeanDetailAddMode={setBeanDetailAddMode}
-        beanDetailEditMode={beanDetailEditMode}
-        setBeanDetailEditMode={setBeanDetailEditMode}
-        beanDetailAddBeanState={beanDetailAddBeanState}
-        onCreateNoteFromBean={handleCreateNoteFromBean}
-        onOpenNoteDetailFromBean={handleOpenNoteDetailFromBean}
-        onEditRelatedNoteFromBean={handleEditRelatedNoteFromBean}
-        // 咖啡豆导入
-        showImportBeanForm={showImportBeanForm}
-        setShowImportBeanForm={setShowImportBeanForm}
-        handleImportBean={handleImportBean}
-        // 笔记编辑
-        brewingNoteEditOpen={brewingNoteEditOpen}
-        setBrewingNoteEditOpen={setBrewingNoteEditOpen}
-        brewingNoteEditData={brewingNoteEditData}
-        setBrewingNoteEditData={setBrewingNoteEditData}
-        isBrewingNoteCopy={isBrewingNoteCopy}
-        setIsBrewingNoteCopy={setIsBrewingNoteCopy}
-        handleSaveBrewingNoteEdit={handleSaveBrewingNoteEdit}
-        // 笔记详情（非大屏幕）
-        noteDetailOpen={noteDetailOpen}
-        setNoteDetailOpen={setNoteDetailOpen}
-        noteDetailData={noteDetailData}
-        onOpenBeanDetailFromNote={handleOpenBeanDetailFromNote}
-        setNoteDetailData={setNoteDetailData}
-        // 器具相关
-        showEquipmentForm={showEquipmentForm}
-        setShowEquipmentForm={setShowEquipmentForm}
-        editingEquipment={editingEquipment}
-        setEditingEquipment={setEditingEquipment}
-        pendingImportEquipment={pendingImportEquipment}
-        setPendingImportEquipment={setPendingImportEquipment}
-        showEquipmentManagement={showEquipmentManagement}
-        setShowEquipmentManagement={setShowEquipmentManagement}
-        handleSaveEquipment={handleSaveEquipment}
-        handleDeleteEquipment={handleDeleteEquipment}
-        handleAddEquipment={handleAddEquipment}
-        handleEditEquipment={handleEditEquipment}
-        handleShareEquipment={handleShareEquipment}
-        handleImportEquipmentToForm={handleImportEquipmentToForm}
-        // 转生豆
-        showConvertToGreenDrawer={showConvertToGreenDrawer}
-        setShowConvertToGreenDrawer={setShowConvertToGreenDrawer}
-        convertToGreenPreview={convertToGreenPreview}
-        setConvertToGreenPreview={setConvertToGreenPreview}
-        handleConvertToGreenConfirm={handleConvertToGreenConfirm}
-        // 删除确认
-        showDeleteConfirm={showDeleteConfirm}
-        setShowDeleteConfirm={setShowDeleteConfirm}
-        deleteConfirmData={deleteConfirmData}
-        setDeleteConfirmData={setDeleteConfirmData}
-        // 通用确认
-        showConfirmDrawer={showConfirmDrawer}
-        setShowConfirmDrawer={setShowConfirmDrawer}
-        confirmDrawerData={confirmDrawerData}
-        setConfirmDrawerData={setConfirmDrawerData}
-        // ImageViewer
-        imageViewerOpen={imageViewerOpen}
-        setImageViewerOpen={setImageViewerOpen}
-        imageViewerData={imageViewerData}
-        setImageViewerData={setImageViewerData}
-      />
+      {isPreviewMode ? (
+        <>
+          <BeanImportModal
+            showForm={showImportBeanForm}
+            onClose={() => setShowImportBeanForm(false)}
+          />
+          {shouldRenderPreviewBeanDetailModal(isPreviewMode, isLargeScreen) && (
+            <BeanDetailModal
+              isOpen={beanDetailOpen}
+              bean={beanDetailData}
+              onClose={() => {
+                setBeanDetailOpen(false);
+                setBeanDetailAddMode(false);
+                setBeanDetailEditMode(false);
+              }}
+              searchQuery={beanDetailSearchQuery}
+              onEdit={handlePreviewDetailAction}
+              onDelete={handlePreviewDetailAction}
+              onShare={handlePreviewDetailAction}
+              actionsDisabled={true}
+            />
+          )}
+        </>
+      ) : (
+        <AppModals
+          // Settings 相关
+          isSettingsOpen={isSettingsOpen}
+          setIsSettingsOpen={setIsSettingsOpen}
+          hasSubSettingsOpen={hasSubSettingsOpen}
+          handleDataChange={handleDataChange}
+          settings={settings}
+          handleSubSettingChange={handleSubSettingChange}
+          customEquipments={customEquipments}
+          // 子设置页面状态
+          showDisplaySettings={showDisplaySettings}
+          setShowDisplaySettings={setShowDisplaySettings}
+          showNavigationSettings={showNavigationSettings}
+          setShowNavigationSettings={setShowNavigationSettings}
+          showStockSettings={showStockSettings}
+          setShowStockSettings={setShowStockSettings}
+          showBeanSettings={showBeanSettings}
+          setShowBeanSettings={setShowBeanSettings}
+          showGreenBeanSettings={showGreenBeanSettings}
+          setShowGreenBeanSettings={setShowGreenBeanSettings}
+          showCoffeeBeanGroupSettings={showCoffeeBeanGroupSettings}
+          setShowCoffeeBeanGroupSettings={setShowCoffeeBeanGroupSettings}
+          showFlavorPeriodSettings={showFlavorPeriodSettings}
+          setShowFlavorPeriodSettings={setShowFlavorPeriodSettings}
+          showBrewingSettings={showBrewingSettings}
+          setShowBrewingSettings={setShowBrewingSettings}
+          showTimerSettings={showTimerSettings}
+          setShowTimerSettings={setShowTimerSettings}
+          showDataSettings={showDataSettings}
+          setShowDataSettings={setShowDataSettings}
+          showNotificationSettings={showNotificationSettings}
+          setShowNotificationSettings={setShowNotificationSettings}
+          showRandomCoffeeBeanSettings={showRandomCoffeeBeanSettings}
+          setShowRandomCoffeeBeanSettings={setShowRandomCoffeeBeanSettings}
+          showEquipmentMethodSettings={showEquipmentMethodSettings}
+          setShowEquipmentMethodSettings={setShowEquipmentMethodSettings}
+          showNoteSettings={showNoteSettings}
+          setShowNoteSettings={setShowNoteSettings}
+          showFlavorDimensionSettings={showFlavorDimensionSettings}
+          setShowFlavorDimensionSettings={setShowFlavorDimensionSettings}
+          showRoasterLogoSettings={showRoasterLogoSettings}
+          setShowRoasterLogoSettings={setShowRoasterLogoSettings}
+          showGrinderSettings={showGrinderSettings}
+          setShowGrinderSettings={setShowGrinderSettings}
+          showExperimentalSettings={showExperimentalSettings}
+          setShowExperimentalSettings={setShowExperimentalSettings}
+          showAboutSettings={showAboutSettings}
+          setShowAboutSettings={setShowAboutSettings}
+          // 咖啡豆表单
+          showBeanForm={showBeanForm}
+          setShowBeanForm={setShowBeanForm}
+          editingBean={editingBean}
+          setEditingBean={setEditingBean}
+          editingBeanState={editingBeanState}
+          setEditingBeanState={setEditingBeanState}
+          roastingSourceBeanId={roastingSourceBeanId}
+          setRoastingSourceBeanId={setRoastingSourceBeanId}
+          recognitionImage={recognitionImage}
+          setRecognitionImage={setRecognitionImage}
+          recognitionImageBeanId={recognitionImageBeanId}
+          setRecognitionImageBeanId={setRecognitionImageBeanId}
+          handleSaveBean={handleSaveBean}
+          handleBeanListChange={handleBeanListChange}
+          // 咖啡豆详情（非大屏幕）
+          isLargeScreen={isLargeScreen}
+          beanDetailOpen={beanDetailOpen}
+          setBeanDetailOpen={setBeanDetailOpen}
+          beanDetailData={beanDetailData}
+          setBeanDetailData={setBeanDetailData}
+          beanDetailSearchQuery={beanDetailSearchQuery}
+          beanDetailAddMode={beanDetailAddMode}
+          setBeanDetailAddMode={setBeanDetailAddMode}
+          beanDetailEditMode={beanDetailEditMode}
+          setBeanDetailEditMode={setBeanDetailEditMode}
+          beanDetailAddBeanState={beanDetailAddBeanState}
+          onCreateNoteFromBean={handleCreateNoteFromBean}
+          onOpenNoteDetailFromBean={handleOpenNoteDetailFromBean}
+          onEditRelatedNoteFromBean={handleEditRelatedNoteFromBean}
+          // 咖啡豆导入
+          showImportBeanForm={showImportBeanForm}
+          setShowImportBeanForm={setShowImportBeanForm}
+          // 笔记编辑
+          brewingNoteEditOpen={brewingNoteEditOpen}
+          setBrewingNoteEditOpen={setBrewingNoteEditOpen}
+          brewingNoteEditData={brewingNoteEditData}
+          setBrewingNoteEditData={setBrewingNoteEditData}
+          isBrewingNoteCopy={isBrewingNoteCopy}
+          setIsBrewingNoteCopy={setIsBrewingNoteCopy}
+          handleSaveBrewingNoteEdit={handleSaveBrewingNoteEdit}
+          // 笔记详情（非大屏幕）
+          noteDetailOpen={noteDetailOpen}
+          setNoteDetailOpen={setNoteDetailOpen}
+          noteDetailData={noteDetailData}
+          onOpenBeanDetailFromNote={handleOpenBeanDetailFromNote}
+          setNoteDetailData={setNoteDetailData}
+          // 器具相关
+          showEquipmentForm={showEquipmentForm}
+          setShowEquipmentForm={setShowEquipmentForm}
+          editingEquipment={editingEquipment}
+          setEditingEquipment={setEditingEquipment}
+          pendingImportEquipment={pendingImportEquipment}
+          setPendingImportEquipment={setPendingImportEquipment}
+          showEquipmentManagement={showEquipmentManagement}
+          setShowEquipmentManagement={setShowEquipmentManagement}
+          handleSaveEquipment={handleSaveEquipment}
+          handleDeleteEquipment={handleDeleteEquipment}
+          handleAddEquipment={handleAddEquipment}
+          handleEditEquipment={handleEditEquipment}
+          handleShareEquipment={handleShareEquipment}
+          handleImportEquipmentToForm={handleImportEquipmentToForm}
+          // 转生豆
+          showConvertToGreenDrawer={showConvertToGreenDrawer}
+          setShowConvertToGreenDrawer={setShowConvertToGreenDrawer}
+          convertToGreenPreview={convertToGreenPreview}
+          setConvertToGreenPreview={setConvertToGreenPreview}
+          handleConvertToGreenConfirm={handleConvertToGreenConfirm}
+          // 删除确认
+          showDeleteConfirm={showDeleteConfirm}
+          setShowDeleteConfirm={setShowDeleteConfirm}
+          deleteConfirmData={deleteConfirmData}
+          setDeleteConfirmData={setDeleteConfirmData}
+          // 通用确认
+          showConfirmDrawer={showConfirmDrawer}
+          setShowConfirmDrawer={setShowConfirmDrawer}
+          confirmDrawerData={confirmDrawerData}
+          setConfirmDrawerData={setConfirmDrawerData}
+          // ImageViewer
+          imageViewerOpen={imageViewerOpen}
+          setImageViewerOpen={setImageViewerOpen}
+          imageViewerData={imageViewerData}
+          setImageViewerData={setImageViewerData}
+        />
+      )}
     </>
   );
 };

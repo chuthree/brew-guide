@@ -123,6 +123,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   activeBeanId,
   navigationToggleControl,
   navigationSwipeControl,
+  readOnly = false,
+  showInventoryActions = true,
   settings,
 }) => {
   const { copyText, failureDrawerProps } = useCopy();
@@ -227,19 +229,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     globalCache.rankingBeanType
   );
 
-  // 榜单时间筛选状态
-  const [rankingTimeFilter, setRankingTimeFilter] = useState<{
-    type: 'all' | 'year' | 'month';
-    year?: number;
-    month?: number;
-  }>({ type: 'all' });
-  const [availableTimeOptions, setAvailableTimeOptions] = useState<
-    Array<{
-      label: string;
-      filter: { type: 'all' | 'year' | 'month'; year?: number; month?: number };
-    }>
-  >([{ label: '全部时间', filter: { type: 'all' } }]);
-
   const [_isFirstLoad, setIsFirstLoad] = useState<boolean>(!storeInitialized);
   const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isLoadingRef = useRef<boolean>(false);
@@ -248,12 +237,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   // 处理初始化参数 - 只在组件首次挂载时执行
   useEffect(() => {
-    let hasChanges = false;
-
     if (initialViewMode && initialViewMode !== viewMode) {
       // 如果传入了初始视图模式且与当前不同，更新视图模式
       setViewMode(initialViewMode);
-      hasChanges = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 空依赖数组，只在组件挂载时执行一次
@@ -1773,6 +1759,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         ).some(bean => bean.beanState === 'green')}
         navigationToggleControl={navigationToggleControl}
         navigationSwipeControl={navigationSwipeControl}
+        showInventoryActions={showInventoryActions}
       />
 
       {/* 内容区域 - 可滚动 */}
@@ -1817,6 +1804,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               isShareMode={isShareMode}
               selectedBeans={selectedBeans}
               onToggleSelect={handleToggleSelect}
+              readOnly={readOnly}
             />
           </div>
         )}

@@ -94,6 +94,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onRepurchase,
   onRoast,
   onConvertToGreen,
+  actionsDisabled = false,
   mode = 'view',
   onSaveNew,
   onSaveEdit,
@@ -597,6 +598,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   // 通用字段更新
   const handleUpdateField = async (updates: Partial<CoffeeBean>) => {
+    if (actionsDisabled) return;
+
     if (isFormMode) {
       setTempBean(prev => ({ ...prev, ...updates }));
       return;
@@ -703,6 +706,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const handleRemainingQuickAction = (
     event: React.MouseEvent<HTMLSpanElement>
   ) => {
+    if (actionsDisabled) return;
     if (isFormMode || !bean) return;
 
     event.stopPropagation();
@@ -720,6 +724,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   const handleQuickDecrement = async (decrementAmount: number) => {
     if (!bean?.id) return;
+    if (actionsDisabled) {
+      setRemainingEditorTarget(null);
+      return;
+    }
 
     try {
       const beanState = bean.beanState || 'roasted';
@@ -971,6 +979,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                 onShare={onShare}
                 onRoast={onRoast}
                 onConvertToGreen={onConvertToGreen}
+                actionsDisabled={actionsDisabled}
                 onSaveNew={onSaveNew}
                 onSaveEdit={
                   isEditMode && persistedBean
@@ -1020,6 +1029,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           ? () => onRepurchase(persistedBean)
                           : undefined
                       }
+                      readOnly={actionsDisabled}
                     />
 
                     <OriginInfoSection
@@ -1030,6 +1040,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       showEstateField={showEstateField}
                       handleUpdateField={handleUpdateField}
                       handleRoastLevelSelect={handleRoastLevelSelect}
+                      readOnly={actionsDisabled}
                     />
 
                     <BlendComponentsSection
@@ -1044,13 +1055,17 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       isAddMode={isFormMode}
                       searchQuery={searchQuery}
                       handleUpdateField={handleUpdateField}
+                      readOnly={actionsDisabled}
                     />
 
                     <RatingSection
                       bean={bean}
                       isAddMode={isFormMode}
                       showBeanRating={showBeanRating}
-                      onOpenRatingModal={() => setRatingModalOpen(true)}
+                      onOpenRatingModal={() => {
+                        if (!actionsDisabled) setRatingModalOpen(true);
+                      }}
+                      readOnly={actionsDisabled}
                     />
 
                     {!isFormMode && (
@@ -1093,6 +1108,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         onCancel={() => setRemainingEditorTarget(null)}
         onQuickDecrement={handleQuickDecrement}
         coffeeBean={isFormMode ? undefined : bean || undefined}
+        readOnly={actionsDisabled}
       />
       {/* 打印模态框 */}
       {printEnabled && (
@@ -1109,6 +1125,8 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         coffeeBean={bean}
         onClose={() => setRatingModalOpen(false)}
         onSave={async (id: string, ratings: Partial<CoffeeBean>) => {
+          if (actionsDisabled) return;
+
           try {
             const { useCoffeeBeanStore } =
               await import('@/lib/stores/coffeeBeanStore');

@@ -151,10 +151,6 @@ export interface AppModalsProps {
   // 咖啡豆导入
   showImportBeanForm: boolean;
   setShowImportBeanForm: (show: boolean) => void;
-  handleImportBean: (
-    jsonData: string,
-    options?: { recognitionImage?: string }
-  ) => Promise<void>;
 
   // 笔记编辑
   brewingNoteEditOpen: boolean;
@@ -338,7 +334,6 @@ const AppModals: React.FC<AppModalsProps> = ({
   // 咖啡豆导入
   showImportBeanForm,
   setShowImportBeanForm,
-  handleImportBean,
 
   // 笔记编辑
   brewingNoteEditOpen,
@@ -1049,9 +1044,7 @@ const AppModals: React.FC<AppModalsProps> = ({
       {/* 添加咖啡豆模态框 */}
       <ImportModal
         showForm={showImportBeanForm}
-        onImport={handleImportBean}
         onClose={() => setShowImportBeanForm(false)}
-        settings={settings}
       />
 
       {/* 笔记编辑模态框 */}

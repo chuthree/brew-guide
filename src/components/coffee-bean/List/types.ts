@@ -18,16 +18,6 @@ export type BeanFilterMode =
   | 'flavorPeriod'
   | 'group';
 
-// 分类模式显示名称
-const BEAN_FILTER_LABELS: Record<BeanFilterMode, string> = {
-  roaster: '按烘焙商',
-  origin: '按产地',
-  processingMethod: '按处理法',
-  variety: '按品种',
-  flavorPeriod: '按赏味期',
-  group: '按分组',
-};
-
 export interface CoffeeBeansProps {
   isOpen: boolean;
   showBeanForm?: (
@@ -43,6 +33,8 @@ export interface CoffeeBeansProps {
   activeBeanId?: string | null;
   navigationToggleControl?: ReactNode;
   navigationSwipeControl?: NavigationSwipeControl;
+  readOnly?: boolean;
+  showInventoryActions?: boolean;
   // 添加设置参数
   settings?: {
     dateDisplayMode?: 'date' | 'flavorPeriod' | 'agingDays';

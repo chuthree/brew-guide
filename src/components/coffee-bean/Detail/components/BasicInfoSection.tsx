@@ -40,7 +40,10 @@ interface BasicInfoSectionProps {
   handlePriceBlur: (value: string) => Promise<void>;
   handleDateChange: (date: Date, field: 'roastDate' | 'purchaseDate') => void;
   onRepurchase?: () => void;
+  readOnly?: boolean;
 }
+
+export const shouldRenderStaticDateField = (readOnly: boolean) => readOnly;
 
 const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   bean,
@@ -61,6 +64,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   handlePriceBlur,
   handleDateChange,
   onRepurchase,
+  readOnly = false,
 }) => {
   const capacityInputRef = useRef<HTMLDivElement>(null);
   const remainingInputRef = useRef<HTMLDivElement>(null);
@@ -264,6 +268,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               ) : (
                 <span
                   onClick={event => {
+                    if (readOnly) return;
                     if (isAddMode) {
                       setEditingRemaining(true);
                       return;
@@ -271,7 +276,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     handleRemainingQuickAction(event);
                   }}
                   data-click-area="remaining-edit"
-                  className={`cursor-pointer ${
+                  className={`${readOnly ? 'cursor-default' : 'cursor-pointer'} ${
                     currentBean?.remaining
                       ? 'text-neutral-800 dark:text-neutral-100'
                       : 'text-neutral-400 dark:text-neutral-500'
@@ -310,7 +315,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               ) : (
                 <span
                   onClick={() => {
-                    if (isAddMode) {
+                    if (!readOnly && isAddMode) {
                       setEditingCapacity(true);
                     }
                   }}
@@ -375,7 +380,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               ) : (
                 <span
                   onClick={() => setEditingPrice(true)}
-                  className={`cursor-pointer ${
+                  className={`${readOnly ? 'cursor-default' : 'cursor-pointer'} ${
                     currentBean?.price
                       ? 'text-neutral-800 dark:text-neutral-100'
                       : 'text-neutral-400 dark:text-neutral-500'
@@ -405,22 +410,36 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               className={`flex min-h-4 items-center ${detailValueGapClass} text-xs leading-4 font-medium`}
             >
               {currentBean?.isInTransit ? (
-                <DatePicker
-                  date={undefined}
-                  onDateChange={date => handleDateChange(date, dateField)}
-                  placeholder="在途"
-                  className="w-auto leading-4 [&_button]:h-4 [&_button]:w-auto [&_button]:items-center [&_button]:justify-start [&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:leading-4 [&_button]:font-medium [&_button>span]:leading-4 [&_button>span]:text-neutral-800 dark:[&_button>span]:text-neutral-100"
-                  displayFormat="yyyy-MM-dd"
-                />
-              ) : (
-                <>
+                shouldRenderStaticDateField(readOnly) ? (
+                  <span className="text-neutral-800 dark:text-neutral-100">
+                    在途
+                  </span>
+                ) : (
                   <DatePicker
-                    date={parseDateString(dateValue)}
-                    onDateChange={date => handleDateChange(date, dateField)}
-                    placeholder={`选择${dateLabel}`}
-                    className="w-auto leading-4 [&_button]:h-4 [&_button]:w-auto [&_button]:items-center [&_button]:justify-start [&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:leading-4 [&_button]:font-medium [&_button>span]:leading-4"
+                    date={undefined}
+                    onDateChange={date => {
+                      handleDateChange(date, dateField);
+                    }}
+                    placeholder="在途"
+                    className="w-auto leading-4 [&_button]:h-4 [&_button]:w-auto [&_button]:items-center [&_button]:justify-start [&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:leading-4 [&_button]:font-medium [&_button>span]:leading-4 [&_button>span]:text-neutral-800 dark:[&_button>span]:text-neutral-100"
                     displayFormat="yyyy-MM-dd"
                   />
+                )
+              ) : (
+                <>
+                  {shouldRenderStaticDateField(readOnly) ? (
+                    <span className="text-neutral-800 dark:text-neutral-100">
+                      {dateValue}
+                    </span>
+                  ) : (
+                    <DatePicker
+                      date={parseDateString(dateValue)}
+                      onDateChange={date => handleDateChange(date, dateField)}
+                      placeholder={`选择${dateLabel}`}
+                      className="w-auto leading-4 [&_button]:h-4 [&_button]:w-auto [&_button]:items-center [&_button]:justify-start [&_button]:border-0 [&_button]:py-0 [&_button]:text-xs [&_button]:leading-4 [&_button]:font-medium [&_button>span]:leading-4"
+                      displayFormat="yyyy-MM-dd"
+                    />
+                  )}
                   {agingDays !== null && agingDays > 0 && (
                     <span className="whitespace-nowrap text-neutral-800 dark:text-neutral-100">
                       {`(已养豆 ${agingDays} 天)`}

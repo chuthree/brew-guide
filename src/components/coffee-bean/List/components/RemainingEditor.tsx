@@ -50,6 +50,7 @@ interface RemainingEditorProps {
   onOpenChange?: (open: boolean) => void;
   className?: string;
   coffeeBean?: CoffeeBean; // 添加咖啡豆对象属性，用于创建笔记
+  readOnly?: boolean;
 }
 
 const RemainingEditor: React.FC<RemainingEditorProps> = ({
@@ -61,6 +62,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
   onOpenChange,
   className,
   coffeeBean,
+  readOnly = false,
 }) => {
   // 状态管理
   const [internalOpen, setInternalOpen] = useState(false);
@@ -360,6 +362,12 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
   // 执行快捷扣除（统一逻辑）
   const performQuickDecrement = async (value: number) => {
     if (!isMounted.current || !coffeeBean) return;
+    if (readOnly) {
+      setOpen(false);
+      setCustomValue('');
+      return;
+    }
+
     try {
       const currentRemaining = remainingAmount ?? 0;
       if (currentRemaining <= 0) return;

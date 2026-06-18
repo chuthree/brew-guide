@@ -49,6 +49,7 @@ interface HeaderBarProps {
     roastedBeanTemplate: Omit<CoffeeBean, 'id' | 'timestamp'>
   ) => void;
   onConvertToGreen?: (bean: CoffeeBean) => void;
+  actionsDisabled?: boolean;
   onSaveNew?: (
     bean: Omit<CoffeeBean, 'id' | 'timestamp'>
   ) => void | Promise<void>;
@@ -80,6 +81,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   onShare,
   onRoast,
   onConvertToGreen,
+  actionsDisabled = false,
   onSaveNew,
   onSaveEdit,
   onSaveComplete,
@@ -116,13 +118,14 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     isOptionalCoffeeBeanAmount(tempBean.price) &&
     hasValidRemaining &&
     hasValidBlendPercentages;
+  const closeExpandedAction = React.useCallback(() => {}, []);
   const beanNavigationActions: ActionMenuItem[] = [
     ...(canGoToBrewing
       ? [
           {
             id: 'brewing',
             label: '去冲煮',
-            onClick: onGoToBrewing,
+            onClick: actionsDisabled ? closeExpandedAction : onGoToBrewing,
             color: 'default' as const,
           },
         ]
@@ -132,7 +135,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           {
             id: 'notes',
             label: '去记录',
-            onClick: onGoToNotes,
+            onClick: actionsDisabled ? closeExpandedAction : onGoToNotes,
             color: 'default' as const,
           },
         ]
@@ -273,7 +276,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         {/* 查看模式：生豆显示"去烘焙"按钮 */}
         {!isAddMode && bean && isGreenBean && onRoast && (
           <button
-            onClick={onGoToRoast}
+            onClick={actionsDisabled ? closeExpandedAction : onGoToRoast}
             className="flex h-8 items-center justify-center rounded-full bg-neutral-100 px-3 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
           >
             <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
@@ -324,7 +327,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                       {
                         id: 'delete',
                         label: '删除',
-                        onClick: onShowDeleteConfirm,
+                        onClick: actionsDisabled
+                          ? closeExpandedAction
+                          : onShowDeleteConfirm,
                         color: 'danger' as const,
                       },
                     ]
@@ -334,7 +339,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                       {
                         id: 'convertToGreen',
                         label: '转为生豆',
-                        onClick: () => onConvertToGreen(bean),
+                        onClick: actionsDisabled
+                          ? closeExpandedAction
+                          : () => onConvertToGreen(bean),
                         color: 'default' as const,
                       },
                     ]
@@ -344,7 +351,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                       {
                         id: 'print',
                         label: '打印',
-                        onClick: onPrint,
+                        onClick: actionsDisabled ? closeExpandedAction : onPrint,
                         color: 'default' as const,
                       },
                     ]
@@ -354,16 +361,18 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                       {
                         id: 'share',
                         label: '分享',
-                        onClick: () => {
-                          onClose();
-                          setTimeout(() => {
-                            window.dispatchEvent(
-                              new CustomEvent('beanShareTriggered', {
-                                detail: { beanId: bean.id },
-                              })
-                            );
-                          }, 300);
-                        },
+                        onClick: actionsDisabled
+                          ? closeExpandedAction
+                          : () => {
+                              onClose();
+                              setTimeout(() => {
+                                window.dispatchEvent(
+                                  new CustomEvent('beanShareTriggered', {
+                                    detail: { beanId: bean.id },
+                                  })
+                                );
+                              }, 300);
+                            },
                         color: 'default' as const,
                       },
                     ]
@@ -373,7 +382,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                       {
                         id: 'edit',
                         label: '编辑',
-                        onClick: () => onEdit(bean),
+                        onClick: actionsDisabled
+                          ? closeExpandedAction
+                          : () => onEdit(bean),
                         color: 'default' as const,
                       },
                     ]

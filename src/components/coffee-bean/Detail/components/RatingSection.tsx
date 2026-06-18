@@ -10,6 +10,7 @@ interface RatingSectionProps {
   isAddMode: boolean;
   showBeanRating: boolean;
   onOpenRatingModal: () => void;
+  readOnly?: boolean;
 }
 
 const RatingSection: React.FC<RatingSectionProps> = ({
@@ -17,6 +18,7 @@ const RatingSection: React.FC<RatingSectionProps> = ({
   isAddMode,
   showBeanRating,
   onOpenRatingModal,
+  readOnly = false,
 }) => {
   const notes = useBrewingNoteStore(state => state.notes);
 
@@ -37,7 +39,10 @@ const RatingSection: React.FC<RatingSectionProps> = ({
     <div className="border-t border-neutral-200/40 pt-3 dark:border-neutral-800/40">
       {ratingInfo && ratingInfo.rating > 0 ? (
         // 已有评价（手动或自动），显示评价内容
-        <div className="cursor-pointer space-y-3" onClick={onOpenRatingModal}>
+        <div
+          className={`${readOnly ? 'cursor-default' : 'cursor-pointer'} space-y-3`}
+          onClick={readOnly ? undefined : onOpenRatingModal}
+        >
           {/* 评分 */}
           <div className="flex items-start">
             <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -73,6 +78,7 @@ const RatingSection: React.FC<RatingSectionProps> = ({
           </div>
           <button
             onClick={onOpenRatingModal}
+            disabled={readOnly}
             className="text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-400"
           >
             + 添加评价
