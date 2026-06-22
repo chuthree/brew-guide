@@ -36,11 +36,10 @@ import {
 } from 'lucide-react';
 import {
   equipmentList,
-  commonMethods,
-  getBaseEquipmentIdByAnimationType,
   type Method,
   type CustomEquipment,
 } from '@/lib/core/config';
+import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { loadCustomMethods } from '@/lib/stores/customMethodStore';
 import {
@@ -78,50 +77,6 @@ import RatingDrawer from './RatingDrawer';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { BrewingNoteDraftData } from './brewingNoteDraft';
-
-// 工具函数：获取器具对应的通用方案
-const getCommonMethodsForEquipment = (
-  equipmentId: string,
-  availableEquipments: ((typeof equipmentList)[0] | CustomEquipment)[],
-  settings?: SettingsOptions
-): Method[] => {
-  // 先检查是否是预定义器具
-  let methods: Method[] = [];
-
-  if (commonMethods[equipmentId]) {
-    methods = commonMethods[equipmentId];
-  } else {
-    // 检查是否是自定义器具
-    const customEquipment = availableEquipments.find(
-      eq => eq.id === equipmentId && 'isCustom' in eq && eq.isCustom
-    ) as CustomEquipment | undefined;
-
-    if (customEquipment?.animationType) {
-      // 如果是自定义预设器具（animationType === 'custom'），不返回任何通用方案
-      if (customEquipment.animationType.toLowerCase() === 'custom') {
-        return [];
-      }
-
-      const baseEquipmentId = getBaseEquipmentIdByAnimationType(
-        customEquipment.animationType
-      );
-      methods = commonMethods[baseEquipmentId] || [];
-    }
-  }
-
-  // 如果有settings，过滤掉隐藏的方案
-  if (settings && settings.hiddenCommonMethods) {
-    const hiddenIds = settings.hiddenCommonMethods[equipmentId] || [];
-    if (hiddenIds.length > 0) {
-      methods = methods.filter(method => {
-        const methodId = method.id || method.name;
-        return !hiddenIds.includes(methodId);
-      });
-    }
-  }
-
-  return methods;
-};
 
 // 类型定义 - 使用动态的风味评分类型
 interface TasteRatings {
@@ -603,11 +558,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
           // 使用规范化后的ID查找方案
           const equipmentMethods = customMethods[equipmentId] || [];
+          const hiddenIds = settings?.hiddenCommonMethods?.[equipmentId] || [];
           const commonEquipmentMethods = getCommonMethodsForEquipment(
             equipmentId,
-            allEquipments,
-            settings
-          );
+            customEquips
+          ).filter(method => !hiddenIds.includes(method.id || method.name));
           setAvailableMethods([...equipmentMethods, ...commonEquipmentMethods]);
         }
       } catch (error) {

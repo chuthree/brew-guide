@@ -2,11 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Method, CustomEquipment } from '@/lib/core/config';
-import {
-  equipmentList,
-  commonMethods,
-  getBaseEquipmentIdByAnimationType,
-} from '@/lib/core/config';
+import { equipmentList } from '@/lib/core/config';
+import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { loadCustomMethods } from '@/lib/stores/customMethodStore';
 import { filterHiddenEquipments } from '@/lib/stores/settingsStore';
@@ -15,48 +12,6 @@ import hapticsUtils from '@/lib/ui/haptics';
 import EquipmentCategoryBar from './EquipmentCategoryBar';
 import MethodSelector from './MethodSelector';
 import PickerDrawerFrame from './PickerDrawerFrame';
-
-/**
- * 获取器具对应的通用方案
- */
-const getCommonMethodsForEquipment = (
-  equipmentId: string,
-  availableEquipments: ((typeof equipmentList)[0] | CustomEquipment)[],
-  settings?: SettingsOptions
-): Method[] => {
-  let methods: Method[] = [];
-
-  if (commonMethods[equipmentId]) {
-    methods = commonMethods[equipmentId];
-  } else {
-    const customEquipment = availableEquipments.find(
-      eq => eq.id === equipmentId && 'isCustom' in eq && eq.isCustom
-    ) as CustomEquipment | undefined;
-
-    if (customEquipment?.animationType) {
-      if (customEquipment.animationType.toLowerCase() === 'custom') {
-        return [];
-      }
-      const baseEquipmentId = getBaseEquipmentIdByAnimationType(
-        customEquipment.animationType
-      );
-      methods = commonMethods[baseEquipmentId] || [];
-    }
-  }
-
-  // 过滤掉隐藏的方案
-  if (settings?.hiddenCommonMethods) {
-    const hiddenIds = settings.hiddenCommonMethods[equipmentId] || [];
-    if (hiddenIds.length > 0) {
-      methods = methods.filter(method => {
-        const methodId = method.id || method.name;
-        return !hiddenIds.includes(methodId);
-      });
-    }
-  }
-
-  return methods;
-};
 
 export interface EquipmentMethodSelection {
   equipmentId: string;
@@ -163,12 +118,13 @@ const EquipmentMethodPickerDrawer: React.FC<
   // 获取当前器具的通用方案
   const commonMethodsForEquipment = React.useMemo(() => {
     if (!tempEquipmentId) return [];
+    const hiddenIds = settings?.hiddenCommonMethods?.[tempEquipmentId] || [];
+
     return getCommonMethodsForEquipment(
       tempEquipmentId,
-      availableEquipments,
-      settings
-    );
-  }, [tempEquipmentId, availableEquipments, settings]);
+      customEquipments
+    ).filter(method => !hiddenIds.includes(method.id || method.name));
+  }, [tempEquipmentId, customEquipments, settings]);
 
   // 获取当前器具的自定义方案
   const customMethodsForEquipment = React.useMemo(() => {

@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
   Method,
-  brewingMethods as commonMethods,
   CustomEquipment,
   Stage,
-  getBaseEquipmentIdByAnimationType,
-  inferBaseEquipmentIdFromCustomEquipmentId,
 } from '@/lib/core/config';
 import { Content } from './useBrewingState';
 import type { SettingsOptions } from '@/lib/core/db';
@@ -14,7 +11,10 @@ import { filterHiddenMethods } from '@/lib/stores/settingsStore';
 import { MethodType } from '@/lib/types/method';
 import { isLegacyFormat, parseWater } from '@/lib/brewing/stageMigration';
 import { calculateTotalDuration } from '@/lib/brewing/stageUtils';
-import { hasBrewingStages } from '@/lib/brewing/methodAvailability';
+import {
+  getCommonMethodsForEquipment,
+  hasBrewingStages,
+} from '@/lib/brewing/methodAvailability';
 
 // 格式化时间工具函数
 export const formatTime = (seconds: number, compact: boolean = false) => {
@@ -106,69 +106,16 @@ export function useBrewingContent({
   useEffect(() => {
     if (selectedEquipment) {
       setContent(prev => {
-        // 首先，尝试通过ID查找自定义器具（优先使用ID匹配）
-        const customEquipmentById = customEquipments?.find(
-          e => e.id === selectedEquipment
-        );
-
-        // 如果通过ID没找到，再尝试通过名称查找
-        const customEquipmentByName = !customEquipmentById
-          ? customEquipments?.find(e => e.name === selectedEquipment)
-          : null;
-
-        // 合并结果，优先使用ID匹配的结果
-        const customEquipment = customEquipmentById || customEquipmentByName;
-
-        // 确认是否为自定义器具
-        const isCustomEquipment = !!customEquipment;
-
-        // 检查是否是意式机类型（animationType === 'espresso' 或系统意式机）
-        const _isEspressoEquipment =
-          customEquipment?.animationType === 'espresso' ||
-          selectedEquipment === 'Espresso';
-
-        // 现在我们将获取两种方案列表
         let customMethodsForEquipment: Method[] = [];
         let commonMethodsForEquipment: Method[] = [];
 
         // 总是获取自定义方案。无步骤方案也保留在列表中，放入单独分组。
         customMethodsForEquipment = currentEquipmentCustomMethods;
 
-        // 获取通用方案
-        {
-          if (isCustomEquipment && customEquipment) {
-            // 自定义器具，根据animationType获取对应的通用方案
-            const baseEquipmentId = getBaseEquipmentIdByAnimationType(
-              customEquipment.animationType
-            );
-
-            if (baseEquipmentId) {
-              commonMethodsForEquipment = commonMethods[baseEquipmentId] || [];
-            } else {
-              commonMethodsForEquipment = [];
-            }
-          } else {
-            // 预定义器具，直接使用其通用方案
-            commonMethodsForEquipment =
-              commonMethods[selectedEquipment as keyof typeof commonMethods] ||
-              [];
-
-            // 从ID推断器具类型的逻辑保持不变
-            if (
-              commonMethodsForEquipment.length === 0 &&
-              selectedEquipment &&
-              selectedEquipment.startsWith('custom-')
-            ) {
-              const baseEquipmentId =
-                inferBaseEquipmentIdFromCustomEquipmentId(selectedEquipment);
-
-              if (baseEquipmentId && commonMethods[baseEquipmentId]) {
-                commonMethodsForEquipment =
-                  commonMethods[baseEquipmentId] || [];
-              }
-            }
-          }
-        }
+        commonMethodsForEquipment = getCommonMethodsForEquipment(
+          selectedEquipment,
+          customEquipments
+        );
 
         const buildMethodStep = (
           method: Method,

@@ -119,6 +119,7 @@ import {
   normalizeBrewingNoteParams,
   normalizeBrewingNoteSelection,
 } from '@/lib/notes/noteDisplay';
+import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 import {
   getConnectedManualSyncProvider,
   isPullToSyncEnabled,
@@ -1072,6 +1073,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const methodSelector = useMethodSelector({
     selectedEquipment,
     customMethods,
+    customEquipments,
     setSelectedMethod,
     setCurrentBrewingMethod,
     setEditableParams,
@@ -3077,7 +3079,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
       const allMethods =
         methodType === 'common'
-          ? commonMethods[selectedEquipment || ''] || []
+          ? getCommonMethodsForEquipment(selectedEquipment, customEquipments)
           : customMethods[selectedEquipment || ''] || [];
 
       const methodIndex = allMethods.findIndex(m => m.name === methodName);
@@ -3187,6 +3189,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     methodType,
     selectedEquipment,
     customMethods,
+    customEquipments,
     handleMethodSelectWrapper,
     setActiveMainTab,
     handleMethodTypeChange,

@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Method,
   equipmentList,
-  commonMethods,
   CustomEquipment,
 } from '@/lib/core/config';
 import { BrewingNoteData, CoffeeBean } from '@/types/app';
@@ -24,6 +23,7 @@ import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 import { MethodType } from '@/lib/types/method';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
+import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 
 // 器具选择缓存
 const MODULE_NAME = 'brewing-equipment';
@@ -602,7 +602,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
       if (selectedEquipment) {
         const methods =
           methodType === 'common'
-            ? commonMethods[selectedEquipment] || []
+            ? getCommonMethodsForEquipment(selectedEquipment, customEquipments)
             : customMethods[selectedEquipment] || [];
         newMethodSteps = methods.map(method => ({
           title: method.name,
@@ -647,7 +647,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         记录: { steps: [] },
       });
     }
-  }, [selectedEquipment, methodType, customMethods, currentBrewingMethod]);
+  }, [
+    selectedEquipment,
+    methodType,
+    customMethods,
+    customEquipments,
+    currentBrewingMethod,
+  ]);
 
   return {
     // 主要状态

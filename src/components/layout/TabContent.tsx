@@ -4,10 +4,7 @@ import {
   Method,
   equipmentList,
   CustomEquipment,
-  commonMethods,
   createEditableMethodFromCommon,
-  getBaseEquipmentIdByAnimationType,
-  inferBaseEquipmentIdFromCustomEquipmentId,
 } from '@/lib/core/config';
 import StageItem from '@/components/brewing/stages/StageItem';
 import StageDivider from '@/components/brewing/stages/StageDivider';
@@ -36,6 +33,7 @@ import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
 import { methodToReadableText } from '@/lib/utils/jsonUtils';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import { getBooleanState, saveBooleanState } from '@/lib/core/statePersistence';
+import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 
 import { Search, X, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -546,30 +544,11 @@ const TabContent: React.FC<TabContentProps> = ({
   // 编辑通用方案 - 创建临时副本进入编辑模式，不立即保存 - 使用 useCallback 优化
   const editCommonMethod = useCallback(
     (step: Step, selectedEquipment: string) => {
-      let commonMethodsList = commonMethods[selectedEquipment];
-
-      // 检查是否是自定义器具
-      if (!commonMethodsList) {
-        const customEquipment = customEquipments.find(
-          e => e.id === selectedEquipment || e.name === selectedEquipment
-        );
-        if (customEquipment) {
-          // 根据 animationType 获取对应的基础器具ID
-          const baseEquipmentId = getBaseEquipmentIdByAnimationType(
-            customEquipment.animationType
-          );
-          if (baseEquipmentId) {
-            commonMethodsList = commonMethods[baseEquipmentId];
-          }
-        } else if (selectedEquipment.startsWith('custom-')) {
-          // 向后兼容旧的ID格式
-          const baseEquipmentId =
-            inferBaseEquipmentIdFromCustomEquipmentId(selectedEquipment);
-          commonMethodsList = commonMethods[baseEquipmentId];
-        }
-      }
-
-      if (!commonMethodsList) return;
+      const commonMethodsList = getCommonMethodsForEquipment(
+        selectedEquipment,
+        customEquipments
+      );
+      if (commonMethodsList.length === 0) return;
 
       const methodIndex =
         step.methodIndex ??
@@ -641,13 +620,11 @@ const TabContent: React.FC<TabContentProps> = ({
             handleShareMethod(customMethods[selectedEquipment!][methodIndex]);
           }
         } else if (!step.isCustom && selectedEquipment) {
-          let commonMethodsList = commonMethods[selectedEquipment];
-          if (!commonMethodsList && selectedEquipment.startsWith('custom-')) {
-            const baseEquipmentId =
-              inferBaseEquipmentIdFromCustomEquipmentId(selectedEquipment);
-            commonMethodsList = commonMethods[baseEquipmentId];
-          }
-          if (commonMethodsList) {
+          const commonMethodsList = getCommonMethodsForEquipment(
+            selectedEquipment,
+            customEquipments
+          );
+          if (commonMethodsList.length > 0) {
             const methodIndex =
               step.methodIndex ??
               commonMethodsList.findIndex(
@@ -660,7 +637,13 @@ const TabContent: React.FC<TabContentProps> = ({
         }
       };
     },
-    [activeTab, selectedEquipment, customMethods, handleShareMethod]
+    [
+      activeTab,
+      selectedEquipment,
+      customEquipments,
+      customMethods,
+      handleShareMethod,
+    ]
   );
 
   // 获取分享器具的处理函数 - 使用 useCallback 优化
@@ -998,27 +981,12 @@ const TabContent: React.FC<TabContentProps> = ({
                 ) {
                   // 通用方案：改为隐藏
                   const methodId = step.methodId || step.title;
-                  let commonMethodsList = commonMethods[selectedEquipment];
+                  const commonMethodsList = getCommonMethodsForEquipment(
+                    selectedEquipment,
+                    customEquipments
+                  );
 
-                  // 检查是否是自定义器具
-                  if (!commonMethodsList) {
-                    const customEquipment = customEquipments.find(
-                      e =>
-                        e.id === selectedEquipment ||
-                        e.name === selectedEquipment
-                    );
-                    if (customEquipment) {
-                      // 根据 animationType 获取对应的基础器具ID
-                      const baseEquipmentId = getBaseEquipmentIdByAnimationType(
-                        customEquipment.animationType
-                      );
-                      if (baseEquipmentId) {
-                        commonMethodsList = commonMethods[baseEquipmentId];
-                      }
-                    }
-                  }
-
-                  if (commonMethodsList) {
+                  if (commonMethodsList.length > 0) {
                     const method = commonMethodsList.find(
                       m => (m.id || m.name) === methodId
                     );

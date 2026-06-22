@@ -1,21 +1,19 @@
 import { useCallback } from 'react';
-import {
-  Method,
-  Stage,
-  commonMethods,
-  getBaseEquipmentIdByAnimationType,
-  inferBaseEquipmentIdFromCustomEquipmentId,
-} from '@/lib/core/config';
+import { Method, Stage, type CustomEquipment } from '@/lib/core/config';
 import { EditableParams } from './useBrewingParameters';
 import { getEquipmentNameById } from '@/lib/utils/equipmentUtils';
 import { TabType, BrewingStep } from './useBrewingState';
 import { MethodStepConfig } from '@/lib/types/method';
-import { hasBrewingStages } from '@/lib/brewing/methodAvailability';
+import {
+  getCommonMethodsForEquipment,
+  hasBrewingStages,
+} from '@/lib/brewing/methodAvailability';
 import { showToast } from '@/components/common/feedback/LightToast';
 
 export interface UseMethodSelectorProps {
   selectedEquipment: string | null;
   customMethods: Record<string, Method[]>;
+  customEquipments: CustomEquipment[];
   setSelectedMethod: (method: Method | null) => void;
   setCurrentBrewingMethod: (method: Method | null) => void;
   setEditableParams: (params: EditableParams | null) => void;
@@ -32,6 +30,7 @@ export interface UseMethodSelectorProps {
 export function useMethodSelector({
   selectedEquipment,
   customMethods,
+  customEquipments,
   setSelectedMethod,
   setCurrentBrewingMethod,
   setEditableParams,
@@ -122,36 +121,10 @@ export function useMethodSelector({
       }
       // 获取方法：通用方案
       else if (methodType === 'common') {
-        let targetEquipmentId = selectedEquipment;
-
-        // 检查是否是自定义器具
-        const { equipmentList } = await import('@/lib/core/config');
-        const customEquipment = equipmentList.find(
-          e =>
-            (e.id === selectedEquipment || e.name === selectedEquipment) &&
-            'animationType' in e
-        );
-
-        if (customEquipment && 'animationType' in customEquipment) {
-          const animationType = (customEquipment as { animationType?: string })
-            .animationType;
-          if (animationType === 'custom') {
-            // 自定义预设器具不使用通用方案
-            targetEquipmentId = '';
-          } else if (animationType) {
-            targetEquipmentId =
-              getBaseEquipmentIdByAnimationType(animationType);
-          }
-        } else if (selectedEquipment.startsWith('custom-')) {
-          // 兼容旧版本：从ID推断器具类型
-          targetEquipmentId =
-            inferBaseEquipmentIdFromCustomEquipmentId(selectedEquipment);
-        }
-
         method =
-          targetEquipmentId && commonMethods?.[targetEquipmentId]?.[methodIndex]
-            ? commonMethods[targetEquipmentId][methodIndex]
-            : null;
+          getCommonMethodsForEquipment(selectedEquipment, customEquipments)[
+            methodIndex
+          ] || null;
       }
 
       if (method) {
@@ -175,7 +148,7 @@ export function useMethodSelector({
 
       return method;
     },
-    [customMethods, processSelectedMethod]
+    [customEquipments, customMethods, processSelectedMethod]
   );
 
   return {
