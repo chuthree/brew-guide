@@ -43,6 +43,7 @@ export const DEFAULT_CONFIG: PrintConfig = {
   fields: {
     name: true,
     nameSeparator: false,
+    contentBottomAligned: true,
     origin: true,
     estate: false,
     roastLevel: true,

@@ -32,6 +32,7 @@ export interface PrintConfig {
   fields: {
     name: boolean;
     nameSeparator: boolean;
+    contentBottomAligned: boolean;
     origin: boolean;
     estate: boolean;
     roastLevel: boolean;
@@ -53,7 +54,7 @@ export interface PrintConfig {
 
 export type PrintFieldKey = Exclude<
   keyof PrintConfig['fields'],
-  'nameSeparator'
+  'nameSeparator' | 'contentBottomAligned'
 >;
 
 // 预设尺寸

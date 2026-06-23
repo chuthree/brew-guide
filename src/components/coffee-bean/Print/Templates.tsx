@@ -143,9 +143,11 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
       <div
         style={{
           display: 'flex',
-          flex: '1 1 0%',
+          flex: config.fields.contentBottomAligned ? '1 1 0%' : undefined,
           flexWrap: 'wrap',
-          alignContent: 'flex-end',
+          alignContent: config.fields.contentBottomAligned
+            ? 'flex-end'
+            : 'flex-start',
           fontSize: `${fontSize}px`,
           gap: `${Math.max(fontSize * 0.4, 4)}px`,
           lineHeight: 1,

@@ -116,6 +116,39 @@ const FlavorFieldEditor: React.FC<FlavorFieldEditorProps> = ({
   );
 };
 
+type NameOptionField = 'nameSeparator' | 'contentBottomAligned';
+
+interface NameOptionSwitchProps {
+  label: string;
+  field: NameOptionField;
+  checked: boolean;
+  onToggleField: (field: keyof PrintConfig['fields']) => void;
+}
+
+const NameOptionSwitch: React.FC<NameOptionSwitchProps> = ({
+  label,
+  field,
+  checked,
+  onToggleField,
+}) => {
+  function handleChange() {
+    onToggleField(field);
+  }
+
+  return (
+    <label className="flex h-8 w-full cursor-pointer items-center justify-between gap-3 rounded bg-neutral-200/50 px-2 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700">
+      <span>{label}</span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={handleChange}
+        className="peer sr-only"
+      />
+      <span className="relative h-4 w-7 shrink-0 rounded-full bg-neutral-300 transition-colors peer-checked:bg-neutral-600 after:absolute after:top-0.5 after:left-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-transform after:content-[''] peer-checked:after:translate-x-3 dark:bg-neutral-600 dark:peer-checked:bg-neutral-400" />
+    </label>
+  );
+};
+
 interface FieldEditorPanelProps {
   config: PrintConfig;
   content: EditableContent;
@@ -225,18 +258,20 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
               {renderTextInput('name', PRINT_TEXT_FIELD_PLACEHOLDERS.name)}
             </div>
             {config.template === 'detailed' && (
-              <button
-                type="button"
-                aria-pressed={config.fields.nameSeparator}
-                onClick={() => onToggleField('nameSeparator')}
-                className={`w-full rounded border px-2 py-1.5 text-xs leading-none font-medium transition-colors ${
-                  config.fields.nameSeparator
-                    ? 'border-neutral-300 bg-neutral-200/70 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-600'
-                    : 'border-dashed border-neutral-400 text-neutral-500 hover:bg-neutral-200/60 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-700/60'
-                }`}
-              >
-                {config.fields.nameSeparator ? '关闭分隔线' : '开启分隔线'}
-              </button>
+              <div className="space-y-1.5">
+                <NameOptionSwitch
+                  label="显示分隔线"
+                  field="nameSeparator"
+                  checked={config.fields.nameSeparator}
+                  onToggleField={onToggleField}
+                />
+                <NameOptionSwitch
+                  label="内容贴底"
+                  field="contentBottomAligned"
+                  checked={config.fields.contentBottomAligned}
+                  onToggleField={onToggleField}
+                />
+              </div>
             )}
           </div>
         );
