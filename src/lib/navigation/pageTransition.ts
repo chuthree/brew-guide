@@ -258,7 +258,7 @@ export function usePageTransitionState(
   duration = IOS_TRANSITION_CONFIG.duration
 ) {
   const [shouldRender, setShouldRender] = useState(isOpen);
-  const [isVisible, setIsVisible] = useState(isOpen);
+  const [isVisible, setIsVisible] = useState(false);
   const skipExitRef = useRef(false);
 
   const skipNextExitAnimation = useCallback(() => {
@@ -301,17 +301,4 @@ export function usePageTransitionState(
   }, [duration, isOpen]);
 
   return { shouldRender, isVisible, skipNextExitAnimation };
-}
-
-/**
- * Hook: 监听是否有模态框打开
- */
-function useModalState(): boolean {
-  const [hasModal, setHasModal] = useState(false);
-
-  useEffect(() => {
-    return pageStackManager.subscribe(setHasModal);
-  }, []);
-
-  return hasModal;
 }

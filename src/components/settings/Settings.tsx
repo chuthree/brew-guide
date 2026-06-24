@@ -52,6 +52,7 @@ import Image from 'next/image';
 import {
   getChildPageStyle,
   getParentPageStyle,
+  usePageTransitionState,
 } from '@/lib/navigation/pageTransition';
 
 // 从统一的类型定义导入，避免重复定义
@@ -210,27 +211,7 @@ const Settings: React.FC<SettingsProps> = ({
   // 获取主题相关方法
   const { theme, systemTheme } = useTheme();
 
-  // 控制动画状态
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  // 处理显示/隐藏动画
-  useEffect(() => {
-    if (isOpen) {
-      setShouldRender(isOpen);
-      // 使用 requestAnimationFrame 确保 DOM 已渲染，比 setTimeout 更快更流畅
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-      });
-    } else {
-      setIsVisible(isOpen);
-      // 等待动画完成后移除DOM
-      const timer = setTimeout(() => setShouldRender(false), 350);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
+  const { shouldRender, isVisible } = usePageTransitionState(isOpen);
 
   // 关闭处理
   const handleClose = () => {
@@ -239,30 +220,8 @@ const Settings: React.FC<SettingsProps> = ({
       return;
     }
 
-    // 立即触发退出动画
-    setIsVisible(false);
-
-    // 立即通知父组件 Settings 正在关闭
-    window.dispatchEvent(new CustomEvent('settingsClosing'));
-
-    // 等待动画完成后调用 modalHistory.back()
-    setTimeout(() => {
-      modalHistory.back();
-    }, 350); // 与 IOS_TRANSITION_CONFIG.duration 一致
+    modalHistory.back();
   };
-
-  // 全局历史栈变化监控（仅在开发模式 - 简化版）
-  React.useEffect(() => {
-    const originalPushState = window.history.pushState;
-
-    window.history.pushState = function (state, title, url) {
-      return originalPushState.call(this, state, title, url);
-    };
-
-    return () => {
-      window.history.pushState = originalPushState;
-    };
-  }, []);
 
   // 监听子设置页面的关闭事件
   const [isSubSettingsClosing, setIsSubSettingsClosing] = React.useState(false);

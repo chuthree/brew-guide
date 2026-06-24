@@ -101,6 +101,7 @@ import {
   getEquipmentById,
 } from '@/lib/utils/equipmentUtils';
 import {
+  IOS_TRANSITION_CONFIG,
   pageStackManager,
   getParentPageStyle,
   useIsDesktopLayout,
@@ -171,7 +172,7 @@ const EMPTY_NOTE_TASTE = {
   body: 0,
 };
 
-const DETAIL_NAVIGATION_DELAY_MS = 320;
+const DETAIL_NAVIGATION_DELAY_MS = IOS_TRANSITION_CONFIG.duration;
 
 const createBlankBrewingNoteDraft = (): Partial<BrewingNoteData> => ({
   coffeeBeanInfo: {
@@ -3664,27 +3665,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     };
   }, []);
 
-  // 监听模态框打开状态,用于父页面转场动画
-  const [hasModalOpen, setHasModalOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    // 订阅页面栈管理器
-    return pageStackManager.subscribe(setHasModalOpen);
-  }, []);
-
-  // 监听 Settings 开始关闭的事件
-  React.useEffect(() => {
-    const handleSettingsClosing = () => {
-      // 立即更新状态，让主页面可以同时播放恢复动画
-      // pageStackManager 会通过 hasAnyModalOpen 的 useEffect 自动更新
-      setIsSettingsOpen(false);
-    };
-
-    window.addEventListener('settingsClosing', handleSettingsClosing);
-    return () =>
-      window.removeEventListener('settingsClosing', handleSettingsClosing);
-  }, []);
-
   // 监听咖啡豆详情的打开/关闭事件
   React.useEffect(() => {
     const handleBeanDetailOpened = (e: Event) => {
@@ -3997,7 +3977,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         style={
           {
             ...getParentPageStyle(
-              isLargeScreen ? hasOverlayModalOpen : hasModalOpen
+              isLargeScreen ? hasOverlayModalOpen : hasAnyModalOpen
             ),
             // CSS 变量用于 BottomActionBar 等组件
             '--nav-panel-width':
