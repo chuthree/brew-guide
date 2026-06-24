@@ -20,6 +20,7 @@ import {
   exportCoffeeBeansWithImages,
   replaceCoffeeBeansWithSplitImages,
 } from '@/lib/coffee-beans/imageRepository';
+import { exportBrewingNotesWithImages } from '@/lib/notes/imageRepository';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 
 /**
@@ -163,7 +164,7 @@ export async function exportAllData(): Promise<{
   return {
     settings: useSettingsStore.getState().settings,
     coffeeBeans: await exportCoffeeBeansWithImages(),
-    brewingNotes: useBrewingNoteStore.getState().notes,
+    brewingNotes: await exportBrewingNotesWithImages(),
     customEquipments: useCustomEquipmentStore.getState().equipments,
     customMethods: useCustomMethodStore.getState().methodsByEquipment,
     grinders: useGrinderStore.getState().grinders,
@@ -196,10 +197,16 @@ export async function importAllData(data: {
   if (data.coffeeBeans) {
     tasks.push(
       (async () => {
-        await replaceCoffeeBeansWithSplitImages(data.coffeeBeans!);
-        useCoffeeBeanStore.setState({
-          beans: data.coffeeBeans!.map(stripCoffeeBeanImages),
-        });
+        const replaced = await replaceCoffeeBeansWithSplitImages(
+          data.coffeeBeans!
+        );
+        if (replaced) {
+          useCoffeeBeanStore.setState({
+            beans: data.coffeeBeans!.map(stripCoffeeBeanImages),
+          });
+        } else {
+          await useCoffeeBeanStore.getState().refreshBeans();
+        }
       })()
     );
   }

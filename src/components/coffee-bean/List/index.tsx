@@ -110,6 +110,10 @@ import { useCoffeeBeanImageIds } from '@/lib/hooks/useCoffeeBeanImage';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
+const TABLE_VISIBLE_COLUMNS_STORAGE_KEY =
+  'brew-guide:coffee-beans:tableVisibleColumns:v1';
+const LEGACY_TABLE_VISIBLE_COLUMNS_STORAGE_KEY =
+  'brew-guide:coffee-beans:tableVisibleColumns';
 
 globalCache.selectedBeanType = globalCache.selectedBeanType || 'all';
 
@@ -454,8 +458,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     TableColumnKey[]
   >(() => {
     if (typeof window !== 'undefined') {
-      const storageKey = 'brew-guide:coffee-beans:tableVisibleColumns';
-      const saved = localStorage.getItem(storageKey);
+      const saved =
+        localStorage.getItem(TABLE_VISIBLE_COLUMNS_STORAGE_KEY) ||
+        localStorage.getItem(LEGACY_TABLE_VISIBLE_COLUMNS_STORAGE_KEY);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -476,7 +481,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     setTableVisibleColumnsState(columns);
     if (typeof window !== 'undefined') {
       localStorage.setItem(
-        'brew-guide:coffee-beans:tableVisibleColumns',
+        TABLE_VISIBLE_COLUMNS_STORAGE_KEY,
         JSON.stringify(columns)
       );
     }
@@ -530,12 +535,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   }, [enableGreenBeanInventory, selectedBeanState]);
 
   // 计算是否有图片咖啡豆（用于禁用/启用图片流按钮）
-  const beanImageIds = useCoffeeBeanImageIds(beans.map(bean => bean.id));
+  const beanIds = useMemo(() => beans.map(bean => bean.id), [beans]);
+  const beanImageIds = useCoffeeBeanImageIds(beanIds);
   const hasImageBeans = useMemo(() => {
-    return beans.some(
-      bean =>
-        beanImageIds.has(bean.id) || (bean.image && bean.image.trim() !== '')
-    );
+    return beans.some(bean => beanImageIds.has(bean.id));
   }, [beans, beanImageIds]);
 
   // 切换图片流模式（简化版，直接使用 updateDisplayMode）

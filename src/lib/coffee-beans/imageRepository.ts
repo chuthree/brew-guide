@@ -8,11 +8,11 @@ import {
   splitCoffeeBeanImages,
   stripCoffeeBeanImages,
 } from './imageRecords';
-import { getThumbnailMimeType } from '@/lib/images/imageFormat';
-
-const DEFAULT_THUMBNAIL_MAX_SIZE = 192;
-const DEFAULT_THUMBNAIL_QUALITY = 0.72;
-const THUMBNAIL_GENERATION_IDLE_DELAY_MS = 80;
+import { shouldSkipEmptyReplace } from '@/lib/core/safeReplace';
+import {
+  createImageThumbnailDataUrl,
+  getUsableThumbnailDataUrl,
+} from '@/lib/images/thumbnail';
 
 export type CoffeeBeanImageSide = 'front' | 'back';
 export type CoffeeBeanImageSourceMode = 'thumbnail' | 'original';
@@ -40,50 +40,13 @@ export async function createCoffeeBeanImageThumbnail(
     maxSize?: number;
     quality?: number;
   } = {}
-): Promise<string> {
-  if (typeof window === 'undefined' || typeof Image === 'undefined') {
-    return dataUrl;
-  }
-
-  const {
-    maxSize = DEFAULT_THUMBNAIL_MAX_SIZE,
-    quality = DEFAULT_THUMBNAIL_QUALITY,
-  } = options;
-
-  return new Promise(resolve => {
-    const image = new Image();
-
-    image.onload = () => {
-      try {
-        const ratio = Math.min(
-          1,
-          maxSize / Math.max(image.width, image.height)
-        );
-        const width = Math.max(1, Math.round(image.width * ratio));
-        const height = Math.max(1, Math.round(image.height * ratio));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const context = canvas.getContext('2d');
-        if (!context) {
-          resolve(dataUrl);
-          return;
-        }
-
-        context.imageSmoothingEnabled = true;
-        context.imageSmoothingQuality = 'high';
-        context.drawImage(image, 0, 0, width, height);
-        resolve(canvas.toDataURL(getThumbnailMimeType(dataUrl), quality));
-      } catch {
-        resolve(dataUrl);
-      }
-    };
-
-    image.onerror = () => resolve(dataUrl);
-    image.src = dataUrl;
-  });
+): Promise<string | undefined> {
+  return createImageThumbnailDataUrl(dataUrl, options);
 }
+
+const getUsableThumbnail = (
+  thumbnail: string | undefined
+): string | undefined => getUsableThumbnailDataUrl(thumbnail);
 
 const shouldDeleteImageRecord = (record: CoffeeBeanImageRecord): boolean =>
   !record.image && !record.backImage;
@@ -129,8 +92,8 @@ export async function persistCoffeeBeanImagesFromBean(
       ? undefined
       : generateThumbnails && bean.image && bean.image !== existingRecord?.image
         ? await createCoffeeBeanImageThumbnail(bean.image)
-        : existingThumbnailRecord?.imageThumbnail ||
-          existingRecord?.imageThumbnail;
+        : getUsableThumbnail(existingThumbnailRecord?.imageThumbnail) ||
+          getUsableThumbnail(existingRecord?.imageThumbnail);
   const nextBackImageThumbnail =
     bean.backImage === ''
       ? undefined
@@ -138,8 +101,8 @@ export async function persistCoffeeBeanImagesFromBean(
           bean.backImage &&
           bean.backImage !== existingRecord?.backImage
         ? await createCoffeeBeanImageThumbnail(bean.backImage)
-        : existingThumbnailRecord?.backImageThumbnail ||
-          existingRecord?.backImageThumbnail;
+        : getUsableThumbnail(existingThumbnailRecord?.backImageThumbnail) ||
+          getUsableThumbnail(existingRecord?.backImageThumbnail);
   const nextRecord: CoffeeBeanImageRecord = {
     beanId: bean.id,
     image:
@@ -201,7 +164,9 @@ export async function getCoffeeBeanImageBeanIds(
   beanIds?: string[]
 ): Promise<string[]> {
   if (!beanIds) {
-    const keys = await db.coffeeBeanImages.toCollection().primaryKeys();
+    const keys = await db.coffeeBeanImageThumbnails
+      .toCollection()
+      .primaryKeys();
     return keys.map(String);
   }
 
@@ -210,133 +175,12 @@ export async function getCoffeeBeanImageBeanIds(
     return [];
   }
 
-  const keys = await db.coffeeBeanImages
+  const keys = await db.coffeeBeanImageThumbnails
     .where('beanId')
     .anyOf(uniqueBeanIds)
     .primaryKeys();
   return keys.map(String);
 }
-
-const thumbnailQueue = new Map<
-  string,
-  {
-    beanId: string;
-    side: CoffeeBeanImageSide;
-  }
->();
-let thumbnailQueueRunning = false;
-
-const getThumbnailQueueKey = (
-  beanId: string,
-  side: CoffeeBeanImageSide
-): string => `${beanId}:${side}`;
-
-const notifyCoffeeBeanImageChanged = (beanId: string): void => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.dispatchEvent(
-    new CustomEvent('coffeeBeanImageThumbnailChanged', {
-      detail: { beanId },
-    })
-  );
-};
-
-const runThumbnailQueue = async (): Promise<void> => {
-  if (thumbnailQueueRunning) {
-    return;
-  }
-
-  thumbnailQueueRunning = true;
-
-  try {
-    while (thumbnailQueue.size > 0) {
-      const [queueKey, task] = thumbnailQueue.entries().next().value as [
-        string,
-        {
-          beanId: string;
-          side: CoffeeBeanImageSide;
-        },
-      ];
-      thumbnailQueue.delete(queueKey);
-
-      try {
-        const thumbnailKey =
-          task.side === 'front' ? 'imageThumbnail' : 'backImageThumbnail';
-        const imageKey = task.side === 'front' ? 'image' : 'backImage';
-        const existingThumbnail = await getThumbnailRecord(task.beanId);
-        if (existingThumbnail?.[thumbnailKey]) {
-          continue;
-        }
-
-        const imageRecord = await getCoffeeBeanImageRecord(task.beanId);
-        const legacyThumbnail = imageRecord?.[thumbnailKey];
-        if (legacyThumbnail) {
-          await putOrDeleteThumbnailRecord({
-            beanId: task.beanId,
-            imageThumbnail: existingThumbnail?.imageThumbnail,
-            backImageThumbnail: existingThumbnail?.backImageThumbnail,
-            [thumbnailKey]: legacyThumbnail,
-            updatedAt: imageRecord.updatedAt || Date.now(),
-          });
-          notifyCoffeeBeanImageChanged(task.beanId);
-          continue;
-        }
-
-        const image = imageRecord?.[imageKey];
-        if (!image) {
-          continue;
-        }
-
-        const nextThumbnail = await createCoffeeBeanImageThumbnail(image);
-        if (!nextThumbnail) {
-          continue;
-        }
-
-        const nextRecord: CoffeeBeanImageThumbnailRecord = {
-          beanId: task.beanId,
-          imageThumbnail: existingThumbnail?.imageThumbnail,
-          backImageThumbnail: existingThumbnail?.backImageThumbnail,
-          [thumbnailKey]: nextThumbnail,
-          updatedAt: Date.now(),
-        };
-
-        await putOrDeleteThumbnailRecord(nextRecord);
-        await db.coffeeBeanImages.update(task.beanId, {
-          [thumbnailKey]: nextThumbnail,
-        });
-        notifyCoffeeBeanImageChanged(task.beanId);
-      } catch (error) {
-        console.warn('[CoffeeBeanImage] 生成缩略图失败:', error);
-      }
-
-      if (THUMBNAIL_GENERATION_IDLE_DELAY_MS > 0) {
-        await new Promise(resolve =>
-          window.setTimeout(resolve, THUMBNAIL_GENERATION_IDLE_DELAY_MS)
-        );
-      }
-    }
-  } finally {
-    thumbnailQueueRunning = false;
-  }
-};
-
-const queueThumbnailGeneration = (
-  beanId: string,
-  side: CoffeeBeanImageSide
-): void => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  const queueKey = getThumbnailQueueKey(beanId, side);
-  if (!thumbnailQueue.has(queueKey)) {
-    thumbnailQueue.set(queueKey, { beanId, side });
-  }
-
-  void runThumbnailQueue();
-};
 
 export async function getCoffeeBeanImageSource(
   beanId: string,
@@ -351,12 +195,11 @@ export async function getCoffeeBeanImageSource(
 
   if (mode === 'thumbnail') {
     const thumbnailRecord = await getThumbnailRecord(beanId);
-    const thumbnail = thumbnailRecord?.[thumbnailKey];
+    const thumbnail = getUsableThumbnail(thumbnailRecord?.[thumbnailKey]);
     if (thumbnail) {
       return thumbnail;
     }
 
-    queueThumbnailGeneration(beanId, side);
     return undefined;
   }
 
@@ -395,8 +238,21 @@ export async function exportCoffeeBeansWithImages(): Promise<CoffeeBean[]> {
 }
 
 export async function replaceCoffeeBeansWithSplitImages(
-  beans: CoffeeBean[]
-): Promise<void> {
+  beans: CoffeeBean[],
+  options: { allowEmptyReplace?: boolean } = {}
+): Promise<boolean> {
+  const existingCount = beans.length === 0 ? await db.coffeeBeans.count() : 0;
+  if (
+    shouldSkipEmptyReplace({
+      nextCount: beans.length,
+      existingCount,
+      allowEmptyReplace: options.allowEmptyReplace,
+    })
+  ) {
+    console.warn('[CoffeeBeanImage] 跳过空咖啡豆列表替换，避免误清空数据');
+    return false;
+  }
+
   const strippedBeans: CoffeeBean[] = [];
   const imageRecords: CoffeeBeanImageRecord[] = [];
 
@@ -427,4 +283,6 @@ export async function replaceCoffeeBeansWithSplitImages(
       }
     }
   );
+
+  return true;
 }

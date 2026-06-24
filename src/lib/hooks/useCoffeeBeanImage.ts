@@ -13,8 +13,61 @@ type CoffeeBeanDataChangedDetail = {
   bean?: { id?: string };
 };
 
-type CoffeeBeanImageThumbnailChangedDetail = {
-  beanId?: string;
+type RefreshSubscriber = () => void;
+
+const refreshSubscribers = new Map<string, Set<RefreshSubscriber>>();
+
+export function getCoffeeBeanDataChangedBeanId(
+  detail: CoffeeBeanDataChangedDetail | undefined
+): string | undefined {
+  return detail?.beanId || detail?.bean?.id;
+}
+
+const notifyRefreshSubscribers = (beanId: string | undefined): void => {
+  if (beanId) {
+    refreshSubscribers.get(beanId)?.forEach(callback => callback());
+    return;
+  }
+
+  refreshSubscribers.forEach(callbacks => {
+    callbacks.forEach(callback => callback());
+  });
+};
+
+const handleCoffeeBeanDataChanged = (event: Event): void => {
+  const detail = (event as CustomEvent<CoffeeBeanDataChangedDetail>).detail;
+  notifyRefreshSubscribers(getCoffeeBeanDataChangedBeanId(detail));
+};
+
+const subscribeToCoffeeBeanImageRefresh = (
+  beanId: string,
+  callback: RefreshSubscriber
+): (() => void) => {
+  const isFirstSubscriber = refreshSubscribers.size === 0;
+  const callbacks = refreshSubscribers.get(beanId) || new Set();
+  callbacks.add(callback);
+  refreshSubscribers.set(beanId, callbacks);
+
+  if (isFirstSubscriber) {
+    window.addEventListener(
+      'coffeeBeanDataChanged',
+      handleCoffeeBeanDataChanged
+    );
+  }
+
+  return () => {
+    callbacks.delete(callback);
+    if (callbacks.size === 0) {
+      refreshSubscribers.delete(beanId);
+    }
+
+    if (refreshSubscribers.size === 0) {
+      window.removeEventListener(
+        'coffeeBeanDataChanged',
+        handleCoffeeBeanDataChanged
+      );
+    }
+  };
 };
 
 export function useCoffeeBeanImage(
@@ -68,48 +121,9 @@ export function useCoffeeBeanImage(
       return;
     }
 
-    const handleBeanDataChanged = (event: Event) => {
-      const detail = (event as CustomEvent<CoffeeBeanDataChangedDetail>).detail;
-
-      if (detail?.beanId && detail.beanId !== beanId) {
-        return;
-      }
-
-      if (detail?.bean?.id && detail.bean.id !== beanId) {
-        return;
-      }
-
-      setRefreshKey(key => key + 1);
-    };
-
-    const handleThumbnailChanged = (event: Event) => {
-      const detail = (
-        event as CustomEvent<CoffeeBeanImageThumbnailChangedDetail>
-      ).detail;
-
-      if (detail?.beanId && detail.beanId !== beanId) {
-        return;
-      }
-
-      setRefreshKey(key => key + 1);
-    };
-
-    window.addEventListener('coffeeBeanDataChanged', handleBeanDataChanged);
-    window.addEventListener(
-      'coffeeBeanImageThumbnailChanged',
-      handleThumbnailChanged
+    return subscribeToCoffeeBeanImageRefresh(beanId, () =>
+      setRefreshKey(key => key + 1)
     );
-
-    return () => {
-      window.removeEventListener(
-        'coffeeBeanDataChanged',
-        handleBeanDataChanged
-      );
-      window.removeEventListener(
-        'coffeeBeanImageThumbnailChanged',
-        handleThumbnailChanged
-      );
-    };
   }, [beanId]);
 
   return imageSource;

@@ -333,10 +333,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         );
         beanData = MOCK_BEAN_DATA;
       } else {
-        const { smartCompress } = await import('@/lib/utils/imageCompression');
+        const [{ smartCompress }, { recognizeBeanImage }] = await Promise.all([
+          import('@/lib/utils/imageCompression'),
+          import('@/lib/api/beanRecognition'),
+        ]);
         const compressedFile = await smartCompress(file);
-        const { recognizeBeanImage } =
-          await import('@/lib/api/beanRecognition');
         beanData = await recognizeBeanImage(
           compressedFile,
           undefined,
@@ -417,7 +418,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
                     });
                     recognitionImage = compressedBase64;
                   } catch (_error) {
-                    recognitionImage = base64;
+                    recognitionImage = undefined;
                   }
                 }
                 resolve();
@@ -497,7 +498,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
               });
               resolve(compressedBase64);
             } catch (_error) {
-              resolve(base64);
+              resolve(null);
             }
           } else {
             resolve(null);

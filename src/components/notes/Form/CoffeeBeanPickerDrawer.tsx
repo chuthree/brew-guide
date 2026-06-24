@@ -183,7 +183,9 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
                   clearTimeout(timer);
                   document.removeEventListener('touchend', handleTouchEnd);
                 };
-                document.addEventListener('touchend', handleTouchEnd);
+                document.addEventListener('touchend', handleTouchEnd, {
+                  passive: true,
+                });
               }}
               className="flex shrink-0 items-center justify-center rounded-full bg-neutral-100 p-3 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500"
               style={{ height: '44px', width: '44px' }}

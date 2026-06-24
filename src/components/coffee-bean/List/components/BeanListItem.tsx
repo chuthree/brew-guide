@@ -96,7 +96,6 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   const configuredRoasterLogo = useRoasterLogo(roasterName);
 
   const beanImage = useCoffeeBeanImage(bean.id, {
-    fallback: bean.image,
     preferThumbnail: true,
   });
 

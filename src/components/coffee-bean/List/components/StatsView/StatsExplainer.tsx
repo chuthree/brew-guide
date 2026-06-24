@@ -125,7 +125,10 @@ const StatsExplainer: React.FC<StatsExplainerProps> = ({
     document.addEventListener('pointerdown', handlePointerDown, true);
     document.addEventListener('pointercancel', handlePointerCancel, true);
     document.addEventListener('pointerup', handlePointerUp, true);
-    document.addEventListener('scroll', handleScroll, true);
+    document.addEventListener('scroll', handleScroll, {
+      capture: true,
+      passive: true,
+    });
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {

@@ -68,7 +68,6 @@ const BeanImage: React.FC<{
   );
   const configuredRoasterLogo = useRoasterLogo(roasterName);
   const beanImage = useCoffeeBeanImage(bean.id, {
-    fallback: bean.image,
     preferThumbnail: true,
   });
 
@@ -147,7 +146,9 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
   const storeInitialized = useCoffeeBeanStore(state => state.initialized);
   const loadBeans = useCoffeeBeanStore(state => state.loadBeans);
 
-  const beanItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const beanItemsRef = useRef<Map<string, HTMLDivElement> | null>(null);
+  beanItemsRef.current ??= new Map();
+  const beanItems = beanItemsRef.current;
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -384,25 +385,19 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
   const setItemRef = useCallback(
     (id: string) => (node: HTMLDivElement | null) => {
       if (node) {
-        beanItemsRef.current.set(id, node);
+        beanItems.set(id, node);
+        if (id === highlightedBeanId) {
+          node.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+        }
       } else {
-        beanItemsRef.current.delete(id);
+        beanItems.delete(id);
       }
     },
-    []
+    [beanItems, highlightedBeanId]
   );
-
-  // 滚动到高亮的咖啡豆
-  useEffect(() => {
-    if (highlightedBeanId && beanItemsRef.current.has(highlightedBeanId)) {
-      // 滚动到高亮的咖啡豆
-      const node = beanItemsRef.current.get(highlightedBeanId);
-      node?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-  }, [highlightedBeanId]);
 
   return (
     <div className="pb-20">

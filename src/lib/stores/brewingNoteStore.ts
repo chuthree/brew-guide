@@ -14,6 +14,11 @@ import {
   normalizeStoredBrewingNotes,
 } from '@/lib/notes/cleanup';
 import { recordCrashCheckpoint } from '@/lib/app/crashDiagnostics';
+import {
+  mergeNoteWithStoredImages,
+  persistBrewingNoteImagesFromNote,
+} from '@/lib/notes/imageRepository';
+import { stripBrewingNoteImages } from '@/lib/notes/imageRecords';
 
 interface BrewingNoteStore {
   notes: BrewingNote[];
@@ -56,7 +61,9 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
           noteCount: notes.length,
         });
         set({
-          notes: notes.map(note => normalizeBrewingNote(note).note),
+          notes: notes.map(note =>
+            stripBrewingNoteImages(normalizeBrewingNote(note).note)
+          ),
           isLoading: false,
           initialized: true,
         });
@@ -76,8 +83,9 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         updatedAt: inputNote.updatedAt || timestamp, // 创建时也设置 updatedAt，与 timestamp 相同
       } as BrewingNote).note;
 
-      await db.brewingNotes.put(newNote);
-      set(state => ({ notes: [newNote, ...state.notes] }));
+      const noteForStore = await persistBrewingNoteImagesFromNote(newNote);
+      await db.brewingNotes.put(noteForStore);
+      set(state => ({ notes: [noteForStore, ...state.notes] }));
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
@@ -120,24 +128,36 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         delete (updatedNote as any).quickDecrementAmount;
       if (shouldRemoveChangeRecord) delete (updatedNote as any).changeRecord;
 
-      await db.brewingNotes.put(updatedNote);
+      const noteForStore = await persistBrewingNoteImagesFromNote(updatedNote);
+      const eventNote = await mergeNoteWithStoredImages(noteForStore);
+      await db.brewingNotes.put(noteForStore);
       set(state => ({
-        notes: state.notes.map(n => (n.id === id ? updatedNote : n)),
+        notes: state.notes.map(n => (n.id === id ? noteForStore : n)),
       }));
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('brewingNoteDataChanged', {
-            detail: { action: 'update', noteId: id, note: updatedNote },
+            detail: { action: 'update', noteId: id, note: eventNote },
           })
         );
       }
-      return updatedNote;
+      return eventNote;
     },
 
     deleteNote: async id => {
       try {
-        await db.brewingNotes.delete(id);
+        await db.transaction(
+          'rw',
+          db.brewingNotes,
+          db.brewingNoteImages,
+          db.brewingNoteImageThumbnails,
+          async () => {
+            await db.brewingNotes.delete(id);
+            await db.brewingNoteImages.delete(id);
+            await db.brewingNoteImageThumbnails.delete(id);
+          }
+        );
         set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
 
         if (typeof window !== 'undefined') {
@@ -155,27 +175,40 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
 
     setNotes: notes =>
       set({
-        notes: notes.map(note => normalizeBrewingNote(note).note),
+        notes: notes.map(note =>
+          stripBrewingNoteImages(normalizeBrewingNote(note).note)
+        ),
         initialized: true,
       }),
 
     upsertNote: async note => {
       const cleanNote = normalizeBrewingNote(note).note;
-      await db.brewingNotes.put(cleanNote);
+      const noteForStore = await persistBrewingNoteImagesFromNote(cleanNote);
+      await db.brewingNotes.put(noteForStore);
       set(state => {
-        const exists = state.notes.some(n => n.id === cleanNote.id);
+        const exists = state.notes.some(n => n.id === noteForStore.id);
         return exists
           ? {
               notes: state.notes.map(n =>
-                n.id === cleanNote.id ? cleanNote : n
+                n.id === noteForStore.id ? noteForStore : n
               ),
             }
-          : { notes: [cleanNote, ...state.notes] };
+          : { notes: [noteForStore, ...state.notes] };
       });
     },
 
     removeNote: async id => {
-      await db.brewingNotes.delete(id);
+      await db.transaction(
+        'rw',
+        db.brewingNotes,
+        db.brewingNoteImages,
+        db.brewingNoteImageThumbnails,
+        async () => {
+          await db.brewingNotes.delete(id);
+          await db.brewingNoteImages.delete(id);
+          await db.brewingNoteImageThumbnails.delete(id);
+        }
+      );
       set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
     },
 

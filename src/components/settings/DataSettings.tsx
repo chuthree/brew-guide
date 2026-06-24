@@ -11,13 +11,12 @@ import {
   BackupReminderInterval,
 } from '@/lib/utils/backupReminderUtils';
 import hapticsUtils from '@/lib/ui/haptics';
-import { SettingPage, SettingSelector } from './atomic';
-import {
-  S3SyncSection,
-  WebDAVSyncSection,
-  SupabaseSyncSection,
-  DataManagementSection,
-} from './data-settings';
+import SettingPage from './atomic/SettingPage';
+import SettingSelector from './atomic/SettingSelector';
+import { S3SyncSection } from './data-settings/S3SyncSection';
+import { WebDAVSyncSection } from './data-settings/WebDAVSyncSection';
+import { SupabaseSyncSection } from './data-settings/SupabaseSyncSection';
+import { DataManagementSection } from './data-settings/DataManagementSection';
 import WebDAVTutorialModal from './data-settings/WebDAVTutorialModal';
 import { Capacitor } from '@capacitor/core';
 import PersistentStorageManager, {
@@ -420,12 +419,13 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         // 如果之前是 Supabase，现在切走，断开连接
         if (syncType === 'supabase' && type !== 'supabase') {
           try {
-            const { getRealtimeSyncService } =
-              await import('@/lib/supabase/realtime');
+            const [{ getRealtimeSyncService }, { useSyncStatusStore }] =
+              await Promise.all([
+                import('@/lib/supabase/realtime'),
+                import('@/lib/stores/syncStatusStore'),
+              ]);
             await getRealtimeSyncService().disconnect();
 
-            const { useSyncStatusStore } =
-              await import('@/lib/stores/syncStatusStore');
             useSyncStatusStore.setState({
               realtimeStatus: 'disconnected',
               realtimeEnabled: false,

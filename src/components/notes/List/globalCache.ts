@@ -10,8 +10,8 @@ import {
   calculateTotalCoffeeConsumption as calculateConsumption,
   formatConsumption as formatConsumptionUtil,
 } from '../utils';
-import { db } from '@/lib/core/db';
 import { getBrewingNotes } from '@/lib/notes/relatedNotes';
+import { replaceBrewingNotesWithSplitImages } from '@/lib/notes/imageRepository';
 
 // 模块名称
 const MODULE_NAME = 'brewing-notes';
@@ -266,18 +266,14 @@ const updateBrewingNotesCache = async (
   updatedNotes: BrewingNote[]
 ): Promise<void> => {
   try {
+    const replaced = await replaceBrewingNotesWithSplitImages(updatedNotes);
+    if (!replaced) return;
+
     // 更新全局缓存
     globalCache.notes = updatedNotes;
     globalCache.lastUpdated = Date.now();
     globalCache.totalConsumption = calculateConsumption(updatedNotes);
     globalCache.initialized = true; // 🔥 标记缓存已初始化
-
-    await db.transaction('rw', db.brewingNotes, async () => {
-      await db.brewingNotes.clear();
-      if (updatedNotes.length > 0) {
-        await db.brewingNotes.bulkPut(updatedNotes);
-      }
-    });
 
     // 触发立即更新事件，让笔记列表无延迟刷新
     window.dispatchEvent(new Event('brewingNotesDataChanged'));

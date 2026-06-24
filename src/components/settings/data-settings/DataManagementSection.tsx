@@ -132,6 +132,8 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
                 db.coffeeBeanImageThumbnails.clear(),
                 Storage.set('brewingNotes', JSON.stringify([])),
                 db.brewingNotes.clear(),
+                db.brewingNoteImages.clear(),
+                db.brewingNoteImageThumbnails.clear(),
               ]);
 
               const store = getCoffeeBeanStore();

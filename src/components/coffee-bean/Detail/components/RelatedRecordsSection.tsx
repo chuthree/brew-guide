@@ -15,6 +15,7 @@ import {
   type RoasterSettings,
 } from '@/lib/utils/beanVarietyUtils';
 import { getBeanUnitPrice } from '@/lib/notes/noteDisplay';
+import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
 
 interface RelatedRecordsSectionProps {
   relatedNotes: BrewingNote[];
@@ -423,6 +424,12 @@ const BrewingRecordItem: React.FC<{
   }) => {
     const validTasteRatings = getValidTasteRatings(note.taste);
     const hasTasteRatings = validTasteRatings.length > 0;
+    const inlineNoteImages = useMemo(() => {
+      if (note.images && note.images.length > 0) return note.images;
+      if (note.image) return [note.image];
+      return [];
+    }, [note.images, note.image]);
+    const noteImage = useBrewingNoteImages(note.id, inlineNoteImages)[0];
     const noteBean =
       (note.beanId
         ? allBeans.find(candidate => candidate.id === note.beanId) || null
@@ -442,13 +449,13 @@ const BrewingRecordItem: React.FC<{
         {/* 图片和标题参数区域 */}
         <div className="flex gap-3">
           {/* 笔记图片 */}
-          {note.image && (
+          {noteImage && (
             <div
               className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-700/40 dark:bg-neutral-800/20"
               onClick={e => {
                 e.stopPropagation();
-                if (!noteImageErrors[note.id] && note.image) {
-                  onImageClick(note.image, undefined);
+                if (!noteImageErrors[note.id]) {
+                  onImageClick(noteImage, undefined);
                 }
               }}
             >
@@ -458,7 +465,7 @@ const BrewingRecordItem: React.FC<{
                 </div>
               ) : (
                 <Image
-                  src={note.image}
+                  src={noteImage}
                   alt={bean?.name || '笔记图片'}
                   height={48}
                   width={48}

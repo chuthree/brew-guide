@@ -538,8 +538,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchmove', handleMouseMove);
-    document.addEventListener('touchend', handleMouseUp);
+    document.addEventListener('touchmove', handleMouseMove, { passive: true });
+    document.addEventListener('touchend', handleMouseUp, { passive: true });
 
     // 拖动时禁用文本选择
     document.body.style.userSelect = 'none';
@@ -589,8 +589,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchmove', handleMouseMove);
-    document.addEventListener('touchend', handleMouseUp);
+    document.addEventListener('touchmove', handleMouseMove, { passive: true });
+    document.addEventListener('touchend', handleMouseUp, { passive: true });
 
     // 拖动时禁用文本选择
     document.body.style.userSelect = 'none';
@@ -1450,7 +1450,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       const handleScroll = () => updateBeanButtonPosition();
 
       window.addEventListener('resize', handleResize);
-      window.addEventListener('scroll', handleScroll);
+      window.addEventListener('scroll', handleScroll, { passive: true });
 
       return () => {
         window.removeEventListener('resize', handleResize);
@@ -1623,33 +1623,48 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     [beanDetailOpen, openNoteDetailInNotes]
   );
 
-  const handleEditRelatedNoteFromBean = useCallback((note: BrewingNote) => {
-    const noteToEdit: BrewingNoteData = {
-      id: note.id,
-      timestamp: note.timestamp,
-      equipment: note.equipment,
-      method: note.method,
-      params: note.params,
-      coffeeBeanInfo: note.coffeeBeanInfo || {
-        name: '',
-        roastLevel: '',
-      },
-      image: note.image,
-      images: note.images,
-      rating: note.rating,
-      taste: note.taste,
-      notes: note.notes,
-      totalTime: note.totalTime,
-      beanId: note.beanId,
-      source: note.source,
-      quickDecrementAmount: note.quickDecrementAmount,
-      changeRecord: note.changeRecord,
-    };
+  const handleEditRelatedNoteFromBean = useCallback(
+    async (note: BrewingNote) => {
+      try {
+        const { getBrewingNoteById } = await import('@/lib/notes/relatedNotes');
+        const noteForEdit = (await getBrewingNoteById(note.id)) || note;
 
-    setBrewingNoteEditData(noteToEdit);
-    setIsBrewingNoteCopy(false);
-    setBrewingNoteEditOpen(true);
-  }, []);
+        const noteToEdit: BrewingNoteData = {
+          id: noteForEdit.id,
+          timestamp: noteForEdit.timestamp,
+          equipment: noteForEdit.equipment,
+          method: noteForEdit.method,
+          params: noteForEdit.params,
+          coffeeBeanInfo: noteForEdit.coffeeBeanInfo || {
+            name: '',
+            roastLevel: '',
+          },
+          image: noteForEdit.image,
+          images: noteForEdit.images,
+          rating: noteForEdit.rating,
+          taste: noteForEdit.taste,
+          notes: noteForEdit.notes,
+          totalTime: noteForEdit.totalTime,
+          beanId: noteForEdit.beanId,
+          source: noteForEdit.source,
+          quickDecrementAmount: noteForEdit.quickDecrementAmount,
+          changeRecord: noteForEdit.changeRecord,
+        };
+
+        setBrewingNoteEditData(noteToEdit);
+        setIsBrewingNoteCopy(false);
+        setBrewingNoteEditOpen(true);
+      } catch (error) {
+        console.error('加载完整笔记失败:', error);
+        showToast({
+          type: 'error',
+          title: '加载笔记失败，请稍后重试',
+          duration: 2000,
+        });
+      }
+    },
+    []
+  );
 
   // 点击外部关闭视图下拉菜单
   useEffect(() => {
@@ -4409,12 +4424,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     }}
                     onShare={async bean => {
                       try {
-                        const { beanToReadableText } =
-                          await import('@/lib/utils/jsonUtils');
-                        const { copyToClipboard } =
-                          await import('@/lib/utils/exportUtils');
-                        const { showToast } =
-                          await import('@/components/common/feedback/LightToast');
+                        const [
+                          { beanToReadableText },
+                          { copyToClipboard },
+                          { showToast },
+                        ] = await Promise.all([
+                          import('@/lib/utils/jsonUtils'),
+                          import('@/lib/utils/exportUtils'),
+                          import('@/components/common/feedback/LightToast'),
+                        ]);
 
                         const text = beanToReadableText(bean);
                         const result = await copyToClipboard(text);

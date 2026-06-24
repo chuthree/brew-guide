@@ -1,6 +1,7 @@
 import Dexie from 'dexie';
 import { db } from '@/lib/core/db';
 import type { BrewingNote } from '@/lib/core/config';
+import { mergeNoteWithStoredImages } from '@/lib/notes/imageRepository';
 
 export async function getRelatedNotesForBean(
   beanId: string
@@ -15,7 +16,8 @@ export async function getRelatedNotesForBean(
 export async function getBrewingNoteById(
   noteId: string
 ): Promise<BrewingNote | undefined> {
-  return db.brewingNotes.get(noteId);
+  const note = await db.brewingNotes.get(noteId);
+  return note ? mergeNoteWithStoredImages(note) : undefined;
 }
 
 export async function getBrewingNotes(): Promise<BrewingNote[]> {

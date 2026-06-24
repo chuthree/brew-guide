@@ -5,6 +5,10 @@ import Image from 'next/image';
 import { BrewingNote } from '@/lib/core/config';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import {
+  useBrewingNoteImageIds,
+  useBrewingNoteImagesWhenVisible,
+} from '@/lib/hooks/useBrewingNoteImages';
 
 interface DateImageFlowViewProps {
   notes: BrewingNote[];
@@ -54,11 +58,13 @@ const DateImageFlowView: React.FC<DateImageFlowViewProps> = ({
   const roasterSeparator = useSettingsStore(
     state => state.settings.roasterSeparator
   );
+  const noteIds = useMemo(() => notes.map(note => note.id), [notes]);
+  const noteImageIds = useBrewingNoteImageIds(noteIds);
 
   // 只显示有图片的笔记
   const notesWithImages = useMemo(
-    () => notes.filter(note => note.image),
-    [notes]
+    () => notes.filter(note => note.image || noteImageIds.has(note.id)),
+    [noteImageIds, notes]
   );
 
   // 按日期分组笔记
@@ -142,16 +148,7 @@ const DateImageFlowView: React.FC<DateImageFlowViewProps> = ({
                 >
                   {/* 图片容器 */}
                   <div className="relative h-full w-full overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                    {note.image && (
-                      <Image
-                        src={note.image}
-                        alt={beanName}
-                        fill
-                        className="object-cover"
-                        sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, 33vw"
-                        loading="lazy"
-                      />
-                    )}
+                    <DateFlowNoteImage note={note} alt={beanName} />
                   </div>
 
                   {/* 分享模式下的选择指示器 */}
@@ -186,6 +183,34 @@ const DateImageFlowView: React.FC<DateImageFlowViewProps> = ({
           </div>
         </div>
       ))}
+    </div>
+  );
+};
+
+const DateFlowNoteImage: React.FC<{ note: BrewingNote; alt: string }> = ({
+  note,
+  alt,
+}) => {
+  const fallback = React.useMemo(() => {
+    if (note.images && note.images.length > 0) return note.images;
+    if (note.image) return [note.image];
+    return [];
+  }, [note.images, note.image]);
+  const { ref, images } = useBrewingNoteImagesWhenVisible(note.id, fallback);
+  const image = images[0];
+
+  return (
+    <div ref={ref} className="absolute inset-0">
+      {image ? (
+        <Image
+          src={image}
+          alt={alt}
+          fill
+          className="object-cover"
+          sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, 33vw"
+          loading="lazy"
+        />
+      ) : null}
     </div>
   );
 };

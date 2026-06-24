@@ -615,7 +615,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       // 初始检测滚动位置
       handleScroll();
 
-      scrollContainer.addEventListener('scroll', handleScroll);
+      scrollContainer.addEventListener('scroll', handleScroll, {
+        passive: true,
+      });
       return () => {
         scrollContainer.removeEventListener('scroll', handleScroll);
       };
@@ -629,7 +631,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       // 初始检测滚动位置
       handleRankingScroll();
 
-      rankingScrollContainer.addEventListener('scroll', handleRankingScroll);
+      rankingScrollContainer.addEventListener('scroll', handleRankingScroll, {
+        passive: true,
+      });
       return () => {
         rankingScrollContainer.removeEventListener(
           'scroll',

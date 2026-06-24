@@ -328,10 +328,13 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         );
         methodData = MOCK_METHOD_DATA;
       } else {
-        const { smartCompress } = await import('@/lib/utils/imageCompression');
+        const [{ smartCompress }, { recognizeMethodImage }] = await Promise.all(
+          [
+            import('@/lib/utils/imageCompression'),
+            import('@/lib/api/methodRecognition'),
+          ]
+        );
         const compressedFile = await smartCompress(file);
-        const { recognizeMethodImage } =
-          await import('@/lib/api/methodRecognition');
         methodData = await recognizeMethodImage(compressedFile);
       }
 

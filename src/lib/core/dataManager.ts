@@ -17,7 +17,12 @@ import {
   exportCoffeeBeansWithImages,
   replaceCoffeeBeansWithSplitImages,
 } from '@/lib/coffee-beans/imageRepository';
+import {
+  exportBrewingNotesWithImages,
+  replaceBrewingNotesWithSplitImages,
+} from '@/lib/notes/imageRepository';
 import { recordCrashOperationStep } from '@/lib/app/crashDiagnostics';
+import { shouldSkipEmptyReplace } from '@/lib/core/safeReplace';
 
 // 检查是否在浏览器环境中
 const isBrowser = typeof window !== 'undefined';
@@ -189,7 +194,7 @@ export const DataManager = {
             });
           }
 
-          const notes = await db.brewingNotes.toArray();
+          const notes = await exportBrewingNotesWithImages();
           exportData.data[key] = this.cleanBrewingNotesForExport(notes);
           continue;
         }
@@ -367,8 +372,18 @@ export const DataManager = {
             );
             break;
           case 'brewingNotes':
-            await db.brewingNotes.clear();
-            await db.brewingNotes.bulkPut(data as _BrewingNote[]);
+            if (
+              shouldSkipEmptyReplace({
+                nextCount: data.length,
+                existingCount:
+                  data.length === 0 ? await db.brewingNotes.count() : 0,
+              })
+            ) {
+              console.warn('[DataManager] 跳过空笔记列表导入，避免误清空数据');
+              break;
+            }
+
+            await replaceBrewingNotesWithSplitImages(data as _BrewingNote[]);
             break;
           case 'grinders':
             await db.grinders.clear();
@@ -655,6 +670,8 @@ export const DataManager = {
 
       // 清除所有 IndexedDB 数据
       await db.brewingNotes.clear();
+      await db.brewingNoteImages.clear();
+      await db.brewingNoteImageThumbnails.clear();
       await db.coffeeBeans.clear();
       await db.coffeeBeanImages.clear();
       await db.coffeeBeanImageThumbnails.clear();

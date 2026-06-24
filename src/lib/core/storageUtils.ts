@@ -2,11 +2,18 @@ import { db, dbUtils } from './db';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import type { CoffeeBean } from '@/types/app';
+import type { BrewingNote } from '@/lib/core/config';
 import { normalizeCoffeeBeans } from '@/lib/utils/coffeeBeanUtils';
 import {
   exportCoffeeBeansWithImages,
   replaceCoffeeBeansWithSplitImages,
 } from '@/lib/coffee-beans/imageRepository';
+import {
+  exportBrewingNotesWithImages,
+  replaceBrewingNotesWithSplitImages,
+} from '@/lib/notes/imageRepository';
+import { hasLocalStorageKey } from '@/lib/core/localStorageKeys';
+import { shouldSkipEmptyReplace } from '@/lib/core/safeReplace';
 
 /**
  * 存储分类常量，用于决定不同数据的存储方式
@@ -116,26 +123,23 @@ export const StorageUtils = {
     try {
       // 检查是否已迁移完成
       const migrated = await db.settings.get('migrated');
-      if (migrated && migrated.value === 'true') {
-        // 验证数据是否实际存在
-        const beansCount = await db.coffeeBeans.count();
-        const notesCount = await db.brewingNotes.count();
+      const beansCount = await db.coffeeBeans.count();
+      const notesCount = await db.brewingNotes.count();
 
-        // 如果数据库为空但localStorage有数据，重置迁移标志强制重新迁移
-        // 检查是否在客户端环境
+      if (migrated && migrated.value === 'true') {
         const hasLocalStorageData =
           typeof window !== 'undefined' &&
-          (localStorage.getItem('coffeeBeans') ||
-            localStorage.getItem('brewingNotes'));
+          (hasLocalStorageKey('coffeeBeans') ||
+            hasLocalStorageKey('brewingNotes'));
 
         if ((beansCount === 0 || notesCount === 0) && hasLocalStorageData) {
-          console.warn('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
-          // 重置迁移标志
-          await db.settings.delete('migrated');
-        } else {
-          console.warn('数据已迁移完成，无需重复迁移');
-          return true;
+          console.warn(
+            '虽然标记为已迁移，但 IndexedDB 数据不完整；保留 localStorage 旧数据，跳过自动覆盖'
+          );
         }
+
+        console.warn('数据已迁移完成，无需重复迁移');
+        return true;
       }
 
       console.warn('开始数据迁移...');
@@ -150,6 +154,10 @@ export const StorageUtils = {
 
       for (const key in STORAGE_TYPE_MAPPING) {
         if (STORAGE_TYPE_MAPPING[key] === StorageType.INDEXED_DB) {
+          if (key === 'brewingNotes' && notesCount > 0) continue;
+          if (key === 'coffeeBeans' && beansCount > 0) continue;
+          if (!hasLocalStorageKey(key)) continue;
+
           const value = localStorage.getItem(key);
           if (value) {
             if (key === 'brewingNotes') {
@@ -157,7 +165,7 @@ export const StorageUtils = {
                 console.warn(`正在迁移 ${key} 数据...`);
                 const notes = JSON.parse(value);
                 if (notes.length > 0) {
-                  await db.brewingNotes.bulkPut(notes);
+                  await replaceBrewingNotesWithSplitImages(notes);
                   // 验证迁移是否成功
                   const migratedCount = await db.brewingNotes.count();
                   if (migratedCount === notes.length) {
@@ -334,7 +342,7 @@ export const StorageUtils = {
                 console.warn(`正在迁移 ${key} 数据...`);
                 const notes = JSON.parse(value);
                 if (notes.length > 0) {
-                  await db.brewingNotes.bulkPut(notes);
+                  await replaceBrewingNotesWithSplitImages(notes);
                   // 验证迁移是否成功
                   const migratedCount = await db.brewingNotes.count();
                   if (migratedCount === notes.length) {
@@ -448,26 +456,22 @@ export const StorageUtils = {
       // 对于大型数据，使用IndexedDB
       if (key === 'brewingNotes') {
         try {
-          const notes = JSON.parse(value);
-          // 🔥 关键修复：使用事务确保原子性，避免并发问题
-          await db.transaction('rw', db.brewingNotes, async () => {
-            // 先获取现有数据的所有ID
-            const existingNoteIds = await db.brewingNotes
-              .toCollection()
-              .primaryKeys();
-            const newNoteIds = new Set(notes.map((n: { id: string }) => n.id));
+          const notes = JSON.parse(value) as BrewingNote[];
+          if (
+            shouldSkipEmptyReplace({
+              nextCount: notes.length,
+              existingCount:
+                notes.length === 0 ? await db.brewingNotes.count() : 0,
+            })
+          ) {
+            console.warn('[StorageUtils] 跳过空笔记列表替换，避免误清空数据');
+            return;
+          }
 
-            // 删除不在新数据中的旧记录
-            const idsToDelete = existingNoteIds.filter(
-              id => !newNoteIds.has(id as string)
-            );
-            if (idsToDelete.length > 0) {
-              await db.brewingNotes.bulkDelete(idsToDelete as string[]);
-            }
-
-            // 更新/插入新数据（bulkPut 会自动判断是更新还是插入）
-            await db.brewingNotes.bulkPut(notes);
-          });
+          const replaced = await replaceBrewingNotesWithSplitImages(notes);
+          if (!replaced) {
+            return;
+          }
 
           // 同步触发事件，确保数据一致性
           const storageEvent = new CustomEvent('storage:changed', {
@@ -491,7 +495,10 @@ export const StorageUtils = {
               ensureFlavorArray: true,
             }
           );
-          await replaceCoffeeBeansWithSplitImages(beans);
+          const replaced = await replaceCoffeeBeansWithSplitImages(beans);
+          if (!replaced) {
+            return;
+          }
 
           // 同步触发事件，确保数据一致性
           const storageEvent = new CustomEvent('storage:changed', {
@@ -562,7 +569,7 @@ export const StorageUtils = {
       // 对于大型数据，从IndexedDB获取
       if (key === 'brewingNotes') {
         try {
-          const notes = await db.brewingNotes.toArray();
+          const notes = await exportBrewingNotesWithImages();
           return notes.length > 0 ? JSON.stringify(notes) : '[]';
         } catch (error) {
           console.error('从IndexedDB获取数据失败:', error);
@@ -614,6 +621,8 @@ export const StorageUtils = {
       // 对于大型数据，从IndexedDB删除
       if (key === 'brewingNotes') {
         await db.brewingNotes.clear();
+        await db.brewingNoteImages.clear();
+        await db.brewingNoteImageThumbnails.clear();
       } else if (key === 'coffeeBeans') {
         await db.coffeeBeans.clear();
         await db.coffeeBeanImages.clear();

@@ -5,6 +5,10 @@ import Image from 'next/image';
 import { BrewingNote } from '@/lib/core/config';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import {
+  useBrewingNoteImageIds,
+  useBrewingNoteImagesWhenVisible,
+} from '@/lib/hooks/useBrewingNoteImages';
 
 interface GalleryViewProps {
   notes: BrewingNote[];
@@ -28,9 +32,13 @@ const GalleryView: React.FC<GalleryViewProps> = ({
   const roasterSeparator = useSettingsStore(
     state => state.settings.roasterSeparator
   );
+  const noteIds = React.useMemo(() => notes.map(note => note.id), [notes]);
+  const noteImageIds = useBrewingNoteImageIds(noteIds);
 
   // 只显示有图片的笔记
-  const notesWithImages = notes.filter(note => note.image);
+  const notesWithImages = notes.filter(
+    note => note.image || noteImageIds.has(note.id)
+  );
 
   const handleNoteClick = (note: BrewingNote) => {
     if (isShareMode && onToggleSelect) {
@@ -66,21 +74,40 @@ const GalleryView: React.FC<GalleryViewProps> = ({
             >
               {/* 图片容器 */}
               <div className="relative h-full w-full overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                {note.image && (
-                  <Image
-                    src={note.image}
-                    alt={beanName}
-                    fill
-                    className="object-cover"
-                    sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, 33vw"
-                    loading="lazy"
-                  />
-                )}
+                <GalleryNoteImage note={note} alt={beanName} />
               </div>
             </div>
           );
         })}
       </div>
+    </div>
+  );
+};
+
+const GalleryNoteImage: React.FC<{ note: BrewingNote; alt: string }> = ({
+  note,
+  alt,
+}) => {
+  const fallback = React.useMemo(() => {
+    if (note.images && note.images.length > 0) return note.images;
+    if (note.image) return [note.image];
+    return [];
+  }, [note.images, note.image]);
+  const { ref, images } = useBrewingNoteImagesWhenVisible(note.id, fallback);
+  const image = images[0];
+
+  return (
+    <div ref={ref} className="absolute inset-0">
+      {image ? (
+        <Image
+          src={image}
+          alt={alt}
+          fill
+          className="object-cover"
+          sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, 33vw"
+          loading="lazy"
+        />
+      ) : null}
     </div>
   );
 };

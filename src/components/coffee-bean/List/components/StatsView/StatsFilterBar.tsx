@@ -265,7 +265,9 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
     const scrollContainer = scrollContainerRef.current;
     if (scrollContainer) {
       handleScroll();
-      scrollContainer.addEventListener('scroll', handleScroll);
+      scrollContainer.addEventListener('scroll', handleScroll, {
+        passive: true,
+      });
       return () => {
         scrollContainer.removeEventListener('scroll', handleScroll);
       };

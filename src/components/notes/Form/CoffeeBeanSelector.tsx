@@ -64,7 +64,6 @@ const BeanImage: React.FC<{
   );
 
   const beanImage = useCoffeeBeanImage(bean.id, {
-    fallback: bean.image,
     preferThumbnail: true,
   });
 

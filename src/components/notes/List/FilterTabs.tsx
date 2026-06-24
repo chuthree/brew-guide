@@ -584,7 +584,9 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
       // 初始检测滚动位置
       handleScroll();
 
-      scrollContainer.addEventListener('scroll', handleScroll);
+      scrollContainer.addEventListener('scroll', handleScroll, {
+        passive: true,
+      });
       return () => {
         scrollContainer.removeEventListener('scroll', handleScroll);
       };

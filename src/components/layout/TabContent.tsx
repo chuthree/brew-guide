@@ -723,7 +723,9 @@ const TabContent: React.FC<TabContentProps> = ({
                 clearTimeout(timer);
                 document.removeEventListener('touchend', handleTouchEnd);
               };
-              document.addEventListener('touchend', handleTouchEnd);
+              document.addEventListener('touchend', handleTouchEnd, {
+                passive: true,
+              });
             }}
             transition={springTransition}
             className={`${buttonBaseClass} pointer-events-auto flex items-center justify-center p-4`}

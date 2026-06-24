@@ -34,13 +34,17 @@ import {
   refreshSettingsStores,
 } from './handlers/StoreNotifier';
 import type { RealtimeSyncTable } from './types';
-import type { Method } from '@/lib/core/config';
+import type { BrewingNote, Method } from '@/lib/core/config';
 import type { CoffeeBean } from '@/types/app';
 import { showToast } from '@/components/common/feedback/LightToast';
 import {
   mergeBeansWithStoredImages,
   persistCoffeeBeanImagesFromBean,
 } from '@/lib/coffee-beans/imageRepository';
+import {
+  mergeNotesWithStoredImages,
+  persistBrewingNoteImagesFromNote,
+} from '@/lib/notes/imageRepository';
 
 // 网络请求超时时间 (ms)
 const SYNC_TIMEOUT = 60000; // 增加到 60s 以适应移动端大文件传输
@@ -370,7 +374,9 @@ export class InitialSyncManager {
         const recordsForUpload =
           table === SYNC_TABLES.COFFEE_BEANS
             ? await mergeBeansWithStoredImages(toUpload as CoffeeBean[])
-            : toUpload;
+            : table === SYNC_TABLES.BREWING_NOTES
+              ? await mergeNotesWithStoredImages(toUpload as BrewingNote[])
+              : toUpload;
 
         await upsertRecords(this.client, table, recordsForUpload, record => ({
           id: record.id,
@@ -414,6 +420,24 @@ export class InitialSyncManager {
                 }
               }
             );
+          } else if (table === SYNC_TABLES.BREWING_NOTES) {
+            await db.transaction(
+              'rw',
+              db.brewingNotes,
+              db.brewingNoteImages,
+              db.brewingNoteImageThumbnails,
+              async () => {
+                for (const record of validRecords as BrewingNote[]) {
+                  const noteForStore = await persistBrewingNoteImagesFromNote(
+                    record,
+                    {
+                      generateThumbnails: false,
+                    }
+                  );
+                  await db.brewingNotes.put(noteForStore);
+                }
+              }
+            );
           } else {
             const putRecord = dbTable.put.bind(dbTable) as (
               item: unknown
@@ -438,6 +462,9 @@ export class InitialSyncManager {
         if (table === SYNC_TABLES.COFFEE_BEANS) {
           await db.coffeeBeanImages.bulkDelete(toDeleteLocal);
           await db.coffeeBeanImageThumbnails.bulkDelete(toDeleteLocal);
+        } else if (table === SYNC_TABLES.BREWING_NOTES) {
+          await db.brewingNoteImages.bulkDelete(toDeleteLocal);
+          await db.brewingNoteImageThumbnails.bulkDelete(toDeleteLocal);
         }
       }
 

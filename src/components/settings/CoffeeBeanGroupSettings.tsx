@@ -7,12 +7,10 @@ import { Check, ChevronRight, Plus, Search, X } from 'lucide-react';
 import { Reorder } from 'framer-motion';
 
 import type { SettingsOptions } from './Settings';
-import {
-  SettingPage,
-  SettingReorderableRow,
-  SettingSection,
-  SettingRow,
-} from './atomic';
+import SettingPage from './atomic/SettingPage';
+import SettingReorderableRow from './atomic/SettingReorderableRow';
+import SettingSection from './atomic/SettingSection';
+import SettingRow from './atomic/SettingRow';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
@@ -257,7 +255,6 @@ const BeanThumbnail: React.FC<{
     string | null
   >(null);
   const imageSource = useCoffeeBeanImage(bean.id, {
-    fallback: bean.image,
     preferThumbnail: true,
   });
   const imageError = failedImageSource === imageSource;

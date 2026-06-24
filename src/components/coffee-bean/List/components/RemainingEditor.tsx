@@ -240,7 +240,10 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
 
     updatePosition();
 
-    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('scroll', updatePosition, {
+      capture: true,
+      passive: true,
+    });
     window.addEventListener('resize', updatePosition);
 
     return () => {

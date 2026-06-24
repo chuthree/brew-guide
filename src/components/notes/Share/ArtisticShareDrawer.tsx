@@ -14,6 +14,7 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { normalizeBrewingNoteParams } from '@/lib/notes/noteDisplay';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
+import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
 
 interface ArtisticShareDrawerProps {
   isOpen: boolean;
@@ -50,6 +51,12 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
     fallback: bean?.image,
     preferThumbnail: false,
   });
+  const inlineNoteImages = useMemo(() => {
+    if (note.images && note.images.length > 0) return note.images;
+    if (note.image) return [note.image];
+    return [];
+  }, [note.images, note.image]);
+  const noteImage = useBrewingNoteImages(note.id, inlineNoteImages)[0];
 
   // 获取烘焙商相关设置
   const roasterFieldEnabled = useSettingsStore(
@@ -116,10 +123,10 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
 
   const tabs = useMemo(() => {
     const list: { id: Tab; label: string }[] = [{ id: 'text', label: '文案' }];
-    if (note.image) list.push({ id: 'note-image', label: '记录图片' });
+    if (noteImage) list.push({ id: 'note-image', label: '记录图片' });
     if (beanImage) list.push({ id: 'bean-image', label: '豆子图片' });
     return list;
-  }, [beanImage, note.image]);
+  }, [beanImage, noteImage]);
 
   /**
    * 使用纯 Canvas API 生成图片
@@ -190,7 +197,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
       activeTab === 'bean-image'
         ? beanImage
         : activeTab === 'note-image'
-          ? note.image
+          ? noteImage
           : null;
     const filename =
       activeTab === 'bean-image' ? `bean-${note.id}` : `note-${note.id}`;
@@ -375,7 +382,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
           ) : activeTab === 'bean-image' ? (
             renderImagePreview(beanImage)
           ) : (
-            renderImagePreview(note.image)
+            renderImagePreview(noteImage)
           )}
         </ActionDrawer.Switcher>
 

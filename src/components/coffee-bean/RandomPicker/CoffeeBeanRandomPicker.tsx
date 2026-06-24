@@ -495,7 +495,6 @@ const RandomPickerBeanImage: React.FC<{
   priority: boolean;
 }> = ({ bean, priority }) => {
   const imageSource = useCoffeeBeanImage(bean.id, {
-    fallback: bean.image,
     preferThumbnail: true,
   });
 

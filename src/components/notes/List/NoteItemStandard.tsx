@@ -6,6 +6,7 @@ import { NoteItemProps } from '../types';
 import { formatDateAbsolute, formatRating } from '../utils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { openImageViewer } from '@/lib/ui/imageViewer';
+import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
 import {
   getBeanUnitPrice,
   normalizeBrewingNoteParams,
@@ -39,6 +40,13 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
 
   // 图片错误状态
   const [imageError, setImageError] = useState(false);
+  const inlineNoteImages = React.useMemo(() => {
+    if (note.images && note.images.length > 0) return note.images;
+    if (note.image) return [note.image];
+    return [];
+  }, [note.images, note.image]);
+  const noteImages = useBrewingNoteImages(note.id, inlineNoteImages);
+  const noteImage = noteImages[0];
 
   // 预先计算一些条件，避免在JSX中重复计算
   const validTasteRatings = getValidTasteRatings
@@ -153,14 +161,14 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
         {/* 图片和基本信息区域 */}
         <div className="flex gap-4">
           {/* 笔记图片 - 只在有图片时显示 */}
-          {note.image && (
+          {noteImage && (
             <div
               className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
               onClick={e => {
                 e.stopPropagation();
                 if (!imageError) {
                   openImageViewer({
-                    url: note.image!,
+                    url: noteImage,
                     alt: beanName || '笔记图片',
                     sourceElement: e.currentTarget,
                   });
@@ -173,7 +181,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
                 </div>
               ) : (
                 <Image
-                  src={note.image}
+                  src={noteImage}
                   alt={beanName || '笔记图片'}
                   height={48}
                   width={48}

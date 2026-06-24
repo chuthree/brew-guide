@@ -8,6 +8,21 @@ import {
   type CoffeeBeanImageThumbnailRecord,
   splitCoffeeBeanImages,
 } from '@/lib/coffee-beans/imageRecords';
+import {
+  type BrewingNoteImageRecord,
+  type BrewingNoteImageThumbnailRecord,
+  splitBrewingNoteImages,
+} from '@/lib/notes/imageRecords';
+import { hasLocalStorageKey } from '@/lib/core/localStorageKeys';
+
+const MAX_COFFEE_BEAN_THUMBNAIL_DATA_URL_CHARS = 512 * 1024;
+
+const getUsableCoffeeBeanThumbnail = (
+  thumbnail: string | undefined
+): string | undefined =>
+  thumbnail && thumbnail.length <= MAX_COFFEE_BEAN_THUMBNAIL_DATA_URL_CHARS
+    ? thumbnail
+    : undefined;
 
 /**
  * 研磨度历史记录
@@ -344,6 +359,8 @@ export type SettingsOptions = AppSettings;
  * - v7: 咖啡豆缩略图拆分到独立表，避免读取缩略图时反序列化原图
  * - v8: 为冲煮记录增加 beanId 索引，详情页按咖啡豆懒查询关联记录
  * - v9: 移除年度报告表
+ * - v10: 冲煮记录图片拆到独立表，避免列表加载反序列化原图
+ * - v11: 冲煮记录缩略图拆到独立表，避免图片流判断读取原图
  */
 export class BrewGuideDB extends Dexie {
   // 核心数据表
@@ -352,6 +369,11 @@ export class BrewGuideDB extends Dexie {
   coffeeBeanImages!: Dexie.Table<CoffeeBeanImageRecord, string>;
   coffeeBeanImageThumbnails!: Dexie.Table<
     CoffeeBeanImageThumbnailRecord,
+    string
+  >;
+  brewingNoteImages!: Dexie.Table<BrewingNoteImageRecord, string>;
+  brewingNoteImageThumbnails!: Dexie.Table<
+    BrewingNoteImageThumbnailRecord,
     string
   >;
 
@@ -500,6 +522,41 @@ export class BrewGuideDB extends Dexie {
       appSettings: 'id',
       pendingOperations: 'id, table, recordId, timestamp',
     });
+
+    // 版本10：冲煮记录图片从主记录拆分，降低日常加载内存
+    this.version(10).stores({
+      brewingNotes:
+        'id, timestamp, equipment, method, beanId, [beanId+timestamp]',
+      brewingNoteImages: 'noteId, updatedAt',
+      coffeeBeans: 'id, timestamp, name, type',
+      coffeeBeanImages: 'beanId, updatedAt',
+      coffeeBeanImageThumbnails: 'beanId, updatedAt',
+      settings: 'key',
+      customEquipments: 'id, name',
+      customMethods: 'equipmentId',
+      grinders: 'id, name',
+      yearlyReports: null,
+      appSettings: 'id',
+      pendingOperations: 'id, table, recordId, timestamp',
+    });
+
+    // 版本11：冲煮记录缩略图独立存储，列表/图片流只读取缩略图
+    this.version(11).stores({
+      brewingNotes:
+        'id, timestamp, equipment, method, beanId, [beanId+timestamp]',
+      brewingNoteImages: 'noteId, updatedAt',
+      brewingNoteImageThumbnails: 'noteId, updatedAt',
+      coffeeBeans: 'id, timestamp, name, type',
+      coffeeBeanImages: 'beanId, updatedAt',
+      coffeeBeanImageThumbnails: 'beanId, updatedAt',
+      settings: 'key',
+      customEquipments: 'id, name',
+      customMethods: 'equipmentId',
+      grinders: 'id, name',
+      yearlyReports: null,
+      appSettings: 'id',
+      pendingOperations: 'id, table, recordId, timestamp',
+    });
   }
 }
 
@@ -524,27 +581,31 @@ export const dbUtils = {
       // v6 迁移：将咖啡豆图片拆到独立表，避免主 Store 整表加载图片
       await this.migrateCoffeeBeanImages();
 
+      // v10 迁移：将冲煮记录图片拆到独立表，避免笔记列表整表加载图片
+      await this.migrateBrewingNoteImages();
+
       // 验证迁移状态与数据一致性
       const migrated = await db.settings.get('migrated');
       if (migrated && migrated.value === 'true') {
         const beansCount = await db.coffeeBeans.count();
         const notesCount = await db.brewingNotes.count();
 
-        const hasLocalBeans = localStorage.getItem('coffeeBeans') !== null;
-        const hasLocalNotes = localStorage.getItem('brewingNotes') !== null;
+        const hasLocalBeans = hasLocalStorageKey('coffeeBeans');
+        const hasLocalNotes = hasLocalStorageKey('brewingNotes');
 
         if (
           (beansCount === 0 && hasLocalBeans) ||
           (notesCount === 0 && hasLocalNotes)
         ) {
           console.warn(
-            '检测到数据不一致：IndexedDB为空但localStorage有数据，将重置迁移状态'
+            '检测到数据不一致：IndexedDB为空但localStorage有旧数据，保留旧数据并等待手动恢复'
           );
-          await db.settings.delete('migrated');
         }
       }
 
-      setTimeout(() => this.logStorageInfo(), 1000);
+      if (process.env.NODE_ENV === 'development') {
+        setTimeout(() => this.logStorageInfo(), 1000);
+      }
     } catch (error) {
       console.error('数据库初始化失败:', error);
       throw error;
@@ -828,20 +889,23 @@ export const dbUtils = {
             }
 
             const existingRecord = await db.coffeeBeanImages.get(bean.id);
+            const imageThumbnail = getUsableCoffeeBeanThumbnail(
+              existingRecord?.imageThumbnail
+            );
+            const backImageThumbnail = getUsableCoffeeBeanThumbnail(
+              existingRecord?.backImageThumbnail
+            );
             await db.coffeeBeanImages.put({
               ...split.imageRecord,
-              imageThumbnail: existingRecord?.imageThumbnail,
-              backImageThumbnail: existingRecord?.backImageThumbnail,
+              imageThumbnail,
+              backImageThumbnail,
             });
-            if (
-              existingRecord?.imageThumbnail ||
-              existingRecord?.backImageThumbnail
-            ) {
+            if (imageThumbnail || backImageThumbnail) {
               await db.coffeeBeanImageThumbnails.put({
                 beanId: bean.id,
-                imageThumbnail: existingRecord.imageThumbnail,
-                backImageThumbnail: existingRecord.backImageThumbnail,
-                updatedAt: existingRecord.updatedAt || Date.now(),
+                imageThumbnail,
+                backImageThumbnail,
+                updatedAt: existingRecord?.updatedAt || Date.now(),
               });
             }
             await db.coffeeBeans.put(split.bean);
@@ -862,37 +926,90 @@ export const dbUtils = {
     }
   },
 
+  async migrateBrewingNoteImages(): Promise<void> {
+    const migrated = await db.settings.get('brewingNoteImagesMigrated');
+    if (migrated?.value === 'true') return;
+
+    const noteIds = (await db.brewingNotes.toCollection().primaryKeys()).map(
+      String
+    );
+
+    for (const noteId of noteIds) {
+      const note = await db.brewingNotes.get(noteId);
+      if (!note?.image && (!note?.images || note.images.length === 0)) {
+        continue;
+      }
+
+      const split = splitBrewingNoteImages(note);
+      await db.transaction(
+        'rw',
+        db.brewingNotes,
+        db.brewingNoteImages,
+        async () => {
+          if (split.imageRecord) {
+            await db.brewingNoteImages.put(split.imageRecord);
+          }
+          await db.brewingNotes.put(split.note);
+        }
+      );
+    }
+
+    await db.settings.put({ key: 'brewingNoteImagesMigrated', value: 'true' });
+  },
+
   /**
    * 从localStorage迁移数据到IndexedDB
    */
   async migrateFromLocalStorage(): Promise<boolean> {
     try {
       const migrated = await db.settings.get('migrated');
-      if (migrated && migrated.value === 'true') {
-        const beansCount = await db.coffeeBeans.count();
-        const notesCount = await db.brewingNotes.count();
+      const beansCount = await db.coffeeBeans.count();
+      const notesCount = await db.brewingNotes.count();
 
+      if (migrated && migrated.value === 'true') {
         if (
           (beansCount === 0 || notesCount === 0) &&
-          (localStorage.getItem('coffeeBeans') ||
-            localStorage.getItem('brewingNotes'))
+          (hasLocalStorageKey('coffeeBeans') ||
+            hasLocalStorageKey('brewingNotes'))
         ) {
-          console.warn('虽然标记为已迁移，但数据似乎丢失，重新执行迁移...');
-          await db.settings.delete('migrated');
-        } else {
-          return true;
+          console.warn(
+            '虽然标记为已迁移，但 IndexedDB 数据不完整；保留 localStorage 旧数据，跳过自动覆盖'
+          );
         }
+
+        return true;
       }
 
       let migrationSuccessful = true;
 
       // 迁移冲煮笔记
-      const brewingNotesJson = localStorage.getItem('brewingNotes');
+      const brewingNotesJson =
+        notesCount === 0 && hasLocalStorageKey('brewingNotes')
+          ? localStorage.getItem('brewingNotes')
+          : null;
       if (brewingNotesJson) {
         try {
           const brewingNotes: BrewingNote[] = JSON.parse(brewingNotesJson);
           if (brewingNotes.length > 0) {
-            await db.brewingNotes.bulkPut(brewingNotes);
+            const strippedNotes: BrewingNote[] = [];
+            const imageRecords: BrewingNoteImageRecord[] = [];
+            for (const note of brewingNotes) {
+              const split = splitBrewingNoteImages(note);
+              strippedNotes.push(split.note);
+              if (split.imageRecord) imageRecords.push(split.imageRecord);
+            }
+
+            await db.transaction(
+              'rw',
+              db.brewingNotes,
+              db.brewingNoteImages,
+              async () => {
+                await db.brewingNotes.bulkPut(strippedNotes);
+                if (imageRecords.length > 0) {
+                  await db.brewingNoteImages.bulkPut(imageRecords);
+                }
+              }
+            );
             const migratedCount = await db.brewingNotes.count();
             if (migratedCount === brewingNotes.length) {
               console.warn(`已迁移 ${brewingNotes.length} 条冲煮笔记`);
@@ -910,7 +1027,10 @@ export const dbUtils = {
       }
 
       // 迁移咖啡豆数据
-      const coffeeBeansJson = localStorage.getItem('coffeeBeans');
+      const coffeeBeansJson =
+        beansCount === 0 && hasLocalStorageKey('coffeeBeans')
+          ? localStorage.getItem('coffeeBeans')
+          : null;
       if (coffeeBeansJson) {
         try {
           const coffeeBeans = normalizeCoffeeBeans(
@@ -976,6 +1096,8 @@ export const dbUtils = {
   async clearAllData(): Promise<void> {
     try {
       await db.brewingNotes.clear();
+      await db.brewingNoteImages.clear();
+      await db.brewingNoteImageThumbnails.clear();
       await db.coffeeBeans.clear();
       await db.coffeeBeanImages.clear();
       await db.coffeeBeanImageThumbnails.clear();
@@ -996,56 +1118,44 @@ export const dbUtils = {
    */
   async logStorageInfo(): Promise<void> {
     try {
-      const noteCount = await db.brewingNotes.count();
-      const notes = await db.brewingNotes.toArray();
-      const notesJson = JSON.stringify(notes);
-      const notesSizeInBytes = notesJson.length * 2;
-      const notesSizeInKB = Math.round(notesSizeInBytes / 1024);
-      const notesSizeInMB = (notesSizeInKB / 1024).toFixed(2);
-
-      const beanCount = await db.coffeeBeans.count();
-      const beans = await db.coffeeBeans.toArray();
-      const beansJson = JSON.stringify(beans);
-      const beansSizeInBytes = beansJson.length * 2;
-      const beansSizeInKB = Math.round(beansSizeInBytes / 1024);
-      const beansSizeInMB = (beansSizeInKB / 1024).toFixed(2);
-
-      const grinderCount = await db.grinders.count();
-      const equipmentCount = await db.customEquipments.count();
-      const beanImageCount = await db.coffeeBeanImages.count();
-      const beanThumbnailCount = await db.coffeeBeanImageThumbnails.count();
+      const [
+        noteCount,
+        beanCount,
+        grinderCount,
+        equipmentCount,
+        beanImageCount,
+        beanThumbnailCount,
+        noteImageCount,
+        noteThumbnailCount,
+      ] = await Promise.all([
+        db.brewingNotes.count(),
+        db.coffeeBeans.count(),
+        db.grinders.count(),
+        db.customEquipments.count(),
+        db.coffeeBeanImages.count(),
+        db.coffeeBeanImageThumbnails.count(),
+        db.brewingNoteImages.count(),
+        db.brewingNoteImageThumbnails.count(),
+      ]);
 
       console.warn(`IndexedDB 存储信息:`);
-      console.warn(
-        `- 笔记数量: ${noteCount}, 大小: ${notesSizeInBytes} 字节 (${notesSizeInKB} KB, ${notesSizeInMB} MB)`
-      );
-      console.warn(
-        `- 咖啡豆数量: ${beanCount}, 大小: ${beansSizeInBytes} 字节 (${beansSizeInKB} KB, ${beansSizeInMB} MB)`
-      );
+      console.warn(`- 笔记数量: ${noteCount}`);
+      console.warn(`- 咖啡豆数量: ${beanCount}`);
       console.warn(`- 咖啡豆图片数量: ${beanImageCount}`);
       console.warn(`- 咖啡豆缩略图数量: ${beanThumbnailCount}`);
+      console.warn(`- 笔记图片数量: ${noteImageCount}`);
+      console.warn(`- 笔记缩略图数量: ${noteThumbnailCount}`);
       console.warn(`- 磨豆机数量: ${grinderCount}`);
       console.warn(`- 自定义器具数量: ${equipmentCount}`);
-      console.warn(
-        `- 总大小: ${notesSizeInBytes + beansSizeInBytes} 字节 (${notesSizeInKB + beansSizeInKB} KB，不含独立图片表)`
-      );
 
       try {
-        let totalSize = 0;
+        let keyCount = 0;
         for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key) {
-            const value = localStorage.getItem(key);
-            totalSize += (key.length + (value?.length || 0)) * 2;
-          }
+          if (localStorage.key(i)) keyCount += 1;
         }
-        const lsSizeInKB = Math.round(totalSize / 1024);
-        const lsSizeInMB = (lsSizeInKB / 1024).toFixed(2);
 
         console.warn(`localStorage 存储信息:`);
-        console.warn(
-          `- 估计大小: ${totalSize} 字节 (${lsSizeInKB} KB, ${lsSizeInMB} MB)`
-        );
+        console.warn(`- key 数量: ${keyCount}`);
       } catch (e) {
         console.error('计算localStorage大小失败:', e);
       }

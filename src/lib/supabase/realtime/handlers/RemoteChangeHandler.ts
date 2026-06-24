@@ -17,7 +17,7 @@ import { shouldAcceptRemoteChange } from '../conflictResolver';
 import { getDbTable } from '../dbUtils';
 import { notifyStoreDelete, notifyStoreUpsert } from './StoreNotifier';
 import type { RealtimeSyncTable, CloudRecord } from '../types';
-import type { Method } from '@/lib/core/config';
+import type { BrewingNote, Method } from '@/lib/core/config';
 import type { CoffeeBean } from '@/types/app';
 import {
   extractRoasterFromName,
@@ -25,6 +25,7 @@ import {
 } from '@/lib/utils/beanVarietyUtils';
 import { getSettingsStore } from '@/lib/stores/settingsStore';
 import { persistCoffeeBeanImagesFromBean } from '@/lib/coffee-beans/imageRepository';
+import { persistBrewingNoteImagesFromNote } from '@/lib/notes/imageRepository';
 
 type PostgresPayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
@@ -107,6 +108,9 @@ export class RemoteChangeHandler {
       if (table === SYNC_TABLES.COFFEE_BEANS) {
         await db.coffeeBeanImages.delete(recordId);
         await db.coffeeBeanImageThumbnails.delete(recordId);
+      } else if (table === SYNC_TABLES.BREWING_NOTES) {
+        await db.brewingNoteImages.delete(recordId);
+        await db.brewingNoteImageThumbnails.delete(recordId);
       }
       await notifyStoreDelete(table, recordId);
     }
@@ -164,6 +168,19 @@ export class RemoteChangeHandler {
           table,
           recordId,
           beanForStore as unknown as Record<string, unknown>
+        );
+      } else if (table === SYNC_TABLES.BREWING_NOTES) {
+        const noteForStore = await persistBrewingNoteImagesFromNote(
+          remoteData as unknown as BrewingNote,
+          { generateThumbnails: false }
+        );
+        await (dbTable as { put: (data: unknown) => Promise<unknown> }).put(
+          noteForStore
+        );
+        await notifyStoreUpsert(
+          table,
+          recordId,
+          noteForStore as unknown as Record<string, unknown>
         );
       } else {
         await (dbTable as { put: (data: unknown) => Promise<unknown> }).put(

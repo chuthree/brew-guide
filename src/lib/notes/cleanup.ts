@@ -1,6 +1,7 @@
 import type { BrewingNote } from '@/lib/core/config';
 import { db } from '@/lib/core/db';
 import { recordCrashCheckpoint } from '@/lib/app/crashDiagnostics';
+import { splitBrewingNoteImages } from '@/lib/notes/imageRecords';
 
 type StoredBrewingNote = BrewingNote & {
   coffeeBean?: unknown;
@@ -54,19 +55,28 @@ async function runStoredBrewingNoteNormalization(): Promise<BrewingNoteNormaliza
     cleanedCount: 0,
   };
 
-  await db.transaction('rw', db.brewingNotes, async () => {
-    await db.brewingNotes.each(async note => {
-      stats.scannedCount += 1;
-      const cleaned = normalizeBrewingNote(note);
+  await db.transaction(
+    'rw',
+    db.brewingNotes,
+    db.brewingNoteImages,
+    async () => {
+      await db.brewingNotes.each(async note => {
+        stats.scannedCount += 1;
+        const cleaned = normalizeBrewingNote(note);
 
-      if (!cleaned.changed) {
-        return;
-      }
+        if (!cleaned.changed) {
+          return;
+        }
 
-      await db.brewingNotes.put(cleaned.note);
-      stats.cleanedCount += 1;
-    });
-  });
+        const split = splitBrewingNoteImages(cleaned.note);
+        if (split.imageRecord) {
+          await db.brewingNoteImages.put(split.imageRecord);
+        }
+        await db.brewingNotes.put(split.note);
+        stats.cleanedCount += 1;
+      });
+    }
+  );
 
   if (stats.cleanedCount > 0) {
     recordCrashCheckpoint('brewing-notes:normalized', {

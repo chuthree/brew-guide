@@ -13,6 +13,11 @@ import {
 } from '@/lib/utils/beanRepurchaseUtils';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { mergeBeanWithStoredImages } from '@/lib/coffee-beans/imageRepository';
+import { replaceBrewingNotesWithSplitImages } from '@/lib/notes/imageRepository';
+import {
+  getBrewingNoteById as getStoredBrewingNoteById,
+  getBrewingNotes,
+} from '@/lib/notes/relatedNotes';
 
 // 辅助函数：格式化数字
 function formatNumber(value: number): string {
@@ -25,12 +30,12 @@ const notifyBrewingNotesUpdated = (): void => {
 };
 
 const getAllBrewingNotes = async (): Promise<BrewingNoteData[]> =>
-  (await db.brewingNotes.toArray()) as BrewingNoteData[];
+  (await getBrewingNotes()) as BrewingNoteData[];
 
 const getBrewingNoteById = async (
   noteId: string
 ): Promise<BrewingNoteData | undefined> =>
-  (await db.brewingNotes.get(noteId)) as BrewingNoteData | undefined;
+  (await getStoredBrewingNoteById(noteId)) as BrewingNoteData | undefined;
 
 const addBrewingNote = async (note: BrewingNoteData): Promise<void> => {
   await getBrewingNoteStore().addNote(note as BrewingNote);
@@ -40,15 +45,19 @@ const deleteBrewingNote = async (noteId: string): Promise<void> => {
   await getBrewingNoteStore().deleteNote(noteId);
 };
 
-const replaceBrewingNotes = async (notes: BrewingNoteData[]): Promise<void> => {
-  await db.transaction('rw', db.brewingNotes, async () => {
-    await db.brewingNotes.clear();
-    if (notes.length > 0) {
-      await db.brewingNotes.bulkPut(notes as BrewingNote[]);
+const replaceBrewingNotes = async (
+  notes: BrewingNoteData[],
+  options: { allowEmptyReplace?: boolean } = {}
+): Promise<void> => {
+  const replaced = await replaceBrewingNotesWithSplitImages(
+    notes as BrewingNote[],
+    {
+      allowEmptyReplace: options.allowEmptyReplace,
     }
-  });
-
-  getBrewingNoteStore().setNotes(notes as BrewingNote[]);
+  );
+  if (replaced) {
+    getBrewingNoteStore().setNotes(notes as BrewingNote[]);
+  }
 };
 
 /**
@@ -654,7 +663,9 @@ export const RoastingManager = {
           const updatedNotes = allNotes.filter(
             n => !recordIdsToDelete.has(n.id)
           );
-          await replaceBrewingNotes(updatedNotes);
+          await replaceBrewingNotes(updatedNotes, {
+            allowEmptyReplace: updatedNotes.length === 0,
+          });
         }
 
         // 删除原熟豆 - 使用 store 的 deleteBean 方法确保触发同步事件

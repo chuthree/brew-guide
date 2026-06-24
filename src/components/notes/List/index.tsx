@@ -81,6 +81,7 @@ import {
   getNotesTableColumnConfig,
   type NotesTableColumnKey,
 } from './tableColumns';
+import { useBrewingNoteImageIds } from '@/lib/hooks/useBrewingNoteImages';
 
 const NOTES_TABLE_COLUMNS_STORAGE_KEY = 'notes-table-visible-columns';
 
@@ -97,20 +98,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const tableColumnOptions = getNotesTableColumnConfig();
 
   // 用于跟踪用户选择 - 从本地存储初始化
-  const [sortOption, setSortOption] = useState<SortOption>(
+  const [sortOption, setSortOption] = useState<SortOption>(() =>
     getSortOptionPreference()
   );
-  const [filterMode, setFilterMode] = useState<'equipment' | 'date'>(
+  const [filterMode, setFilterMode] = useState<'equipment' | 'date'>(() =>
     getFilterModePreference()
   );
   const [selectedEquipment, setSelectedEquipment] = useState<string | null>(
-    getSelectedEquipmentPreference()
+    () => getSelectedEquipmentPreference()
   );
-  const [selectedDate, setSelectedDate] = useState<string | null>(
+  const [selectedDate, setSelectedDate] = useState<string | null>(() =>
     getSelectedDatePreference()
   );
   const [dateGroupingMode, setDateGroupingMode] = useState<DateGroupingMode>(
-    getDateGroupingModePreference()
+    () => getDateGroupingModePreference()
   );
 
   // 模态显示状态（已移除 ChangeRecordEditModal 相关状态和变量）
@@ -348,6 +349,17 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
   // 🔥 从 Zustand Store 订阅笔记数据
   const notes = useBrewingNoteStore(state => state.notes);
+  const noteIds = useMemo(() => notes.map(note => note.id), [notes]);
+  const noteImageIds = useBrewingNoteImageIds(noteIds);
+  const noteHasImage = useCallback(
+    (note: BrewingNote) =>
+      Boolean(
+        noteImageIds.has(note.id) ||
+        (note.image && note.image.trim() !== '') ||
+        (note.images && note.images.length > 0)
+      ),
+    [noteImageIds]
+  );
   const loadNotes = useBrewingNoteStore(state => state.loadNotes);
   const deleteNote = useBrewingNoteStore(state => state.deleteNote);
 
@@ -717,29 +729,41 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   };
 
   // 处理笔记点击 - 统一使用 BrewingNoteForm 组件
-  const handleNoteClick = (note: BrewingNote) => {
+  const handleNoteClick = async (note: BrewingNote) => {
+    let noteForEdit: BrewingNote;
+
+    try {
+      const { getBrewingNoteById } = await import('@/lib/notes/relatedNotes');
+      noteForEdit = (await getBrewingNoteById(note.id)) || note;
+    } catch (error) {
+      console.error('加载完整笔记失败:', error);
+      showToastMessage('加载笔记失败，请稍后重试', 'error');
+      return;
+    }
+
     // 准备要编辑的笔记数据（包括快捷扣除记录和普通笔记）
     const noteToEdit = {
-      id: note.id,
-      timestamp: note.timestamp,
-      equipment: note.equipment,
-      method: note.method,
-      params: note.params,
-      coffeeBeanInfo: note.coffeeBeanInfo || {
+      id: noteForEdit.id,
+      timestamp: noteForEdit.timestamp,
+      equipment: noteForEdit.equipment,
+      method: noteForEdit.method,
+      params: noteForEdit.params,
+      coffeeBeanInfo: noteForEdit.coffeeBeanInfo || {
         name: '', // 提供默认值
         roastLevel: '',
       },
-      image: note.image,
-      rating: note.rating,
-      taste: note.taste,
-      notes: note.notes,
-      totalTime: note.totalTime,
+      image: noteForEdit.image,
+      images: noteForEdit.images,
+      rating: noteForEdit.rating,
+      taste: noteForEdit.taste,
+      notes: noteForEdit.notes,
+      totalTime: noteForEdit.totalTime,
       // 确保包含beanId字段，这是咖啡豆容量同步的关键
-      beanId: note.beanId,
+      beanId: noteForEdit.beanId,
       // 保留快捷扣除和容量调整的特殊字段
-      source: note.source,
-      quickDecrementAmount: note.quickDecrementAmount,
-      changeRecord: note.changeRecord,
+      source: noteForEdit.source,
+      quickDecrementAmount: noteForEdit.quickDecrementAmount,
+      changeRecord: noteForEdit.changeRecord,
     };
 
     // 通过事件触发模态框打开
@@ -1002,9 +1026,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       isSearching && searchQuery.trim() ? searchFilteredNotes : filteredNotes;
 
     // 过滤出有图片的笔记
-    const notesWithImages = currentNotes.filter(
-      note => note.image && note.image.trim() !== ''
-    );
+    const notesWithImages = currentNotes.filter(noteHasImage);
 
     // 计算有图片笔记的消耗量
     const imageNotesConsumption =
@@ -1022,13 +1044,14 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     searchQuery,
     searchFilteredNotes,
     filteredNotes,
+    noteHasImage,
   ]);
 
   // 计算是否有图片笔记（用于禁用/启用图片流按钮）
   const hasImageNotes = useMemo(() => {
     // 基于所有原始笔记数据检查是否有图片
-    return notes.some(note => note.image && note.image.trim() !== '');
-  }, [notes]); // 依赖notes以便在笔记数据变化时重新计算
+    return notes.some(noteHasImage);
+  }, [noteHasImage, notes]); // 依赖notes以便在笔记数据变化时重新计算
 
   // 计算图片流模式下的可用设备列表
   const imageFlowAvailableOptions = useMemo(() => {
@@ -1046,9 +1069,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       isSearching && searchQuery.trim() ? searchFilteredNotes : notes;
 
     // 过滤出有图片的记录
-    const allNotesWithImages = baseNotes.filter(
-      note => note.image && note.image.trim() !== ''
-    );
+    const allNotesWithImages = baseNotes.filter(noteHasImage);
 
     // 获取有图片记录的设备列表
     const equipmentSet = new Set<string>();
@@ -1068,6 +1089,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     searchQuery,
     searchFilteredNotes,
     availableEquipments,
+    noteHasImage,
+    notes,
   ]);
 
   // 在图片流模式下，如果当前选中的设备没有图片记录，自动切换到"全部"

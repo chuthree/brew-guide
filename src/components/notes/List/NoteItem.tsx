@@ -20,6 +20,7 @@ import {
   resolveNoteEquipmentName,
 } from '@/lib/notes/noteDisplay';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
+import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
 import { getCoffeeBeanImageSource } from '@/lib/coffee-beans/imageRepository';
 
 // 动态导入 RatingRadarDrawer 组件
@@ -119,11 +120,12 @@ const NoteItem: React.FC<NoteItemProps> = ({
   }, [note.beanId, allNotes]);
 
   // 获取笔记图片列表
-  const noteImages = React.useMemo(() => {
+  const inlineNoteImages = React.useMemo(() => {
     if (note.images && note.images.length > 0) return note.images;
     if (note.image) return [note.image];
     return [];
   }, [note.images, note.image]);
+  const noteImages = useBrewingNoteImages(note.id, inlineNoteImages);
 
   // 预先计算一些条件，避免在JSX中重复计算
   const validTasteRatings = getValidTasteRatings
@@ -152,7 +154,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
   );
   const beanUnitPrice = getBeanUnitPrice(beanInfo);
   const beanImage = useCoffeeBeanImage(beanInfo?.id, {
-    fallback: beanInfo?.image,
     preferThumbnail: true,
   });
   const beanPlaceholderInitial = beanInfo

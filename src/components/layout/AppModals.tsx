@@ -921,13 +921,15 @@ const AppModals: React.FC<AppModalsProps> = ({
           }}
           onShare={async bean => {
             try {
-              const { beanToReadableText } =
-                await import('@/lib/utils/jsonUtils');
-              const { copyToClipboard } =
-                await import('@/lib/utils/exportUtils');
-              const { showToast } =
-                await import('@/components/common/feedback/LightToast');
-              const hapticsUtils = (await import('@/lib/ui/haptics')).default;
+              const [
+                { beanToReadableText },
+                { copyToClipboard },
+                { showToast },
+              ] = await Promise.all([
+                import('@/lib/utils/jsonUtils'),
+                import('@/lib/utils/exportUtils'),
+                import('@/components/common/feedback/LightToast'),
+              ]);
 
               const text = beanToReadableText(bean);
               const result = await copyToClipboard(text);
@@ -939,6 +941,8 @@ const AppModals: React.FC<AppModalsProps> = ({
                   duration: 2000,
                 });
                 if (settings.hapticFeedback) {
+                  const hapticsUtils = (await import('@/lib/ui/haptics'))
+                    .default;
                   hapticsUtils.light();
                 }
               } else {
@@ -984,10 +988,11 @@ const AppModals: React.FC<AppModalsProps> = ({
             settings.enableGreenBeanInventory && settings.enableConvertToGreen
               ? async bean => {
                   try {
-                    const { RoastingManager } =
-                      await import('@/lib/managers/roastingManager');
-                    const { showToast } =
-                      await import('@/components/common/feedback/LightToast');
+                    const [{ RoastingManager }, { showToast }] =
+                      await Promise.all([
+                        import('@/lib/managers/roastingManager'),
+                        import('@/components/common/feedback/LightToast'),
+                      ]);
 
                     const preview =
                       await RoastingManager.previewConvertRoastedToGreen(

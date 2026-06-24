@@ -41,7 +41,13 @@ import {
   getNoteBeanAgingDaysForNote,
 } from '@/lib/notes/noteDisplay';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
+import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
+import {
+  getCoffeeBeanImageSource,
+  type CoffeeBeanImageSide,
+} from '@/lib/coffee-beans/imageRepository';
+import { getBrewingNoteImages as getStoredBrewingNoteImages } from '@/lib/notes/imageRepository';
 
 // 信息行组件
 interface InfoRowProps {
@@ -257,13 +263,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     [note, coffeeBeanLookup, initialBeanInfo]
   );
   const beanFrontImage = useCoffeeBeanImage(beanInfo?.id, {
-    fallback: beanInfo?.image,
-    preferThumbnail: false,
+    preferThumbnail: true,
   });
   const beanBackImage = useCoffeeBeanImage(beanInfo?.id, {
     side: 'back',
-    fallback: beanInfo?.backImage,
-    preferThumbnail: false,
+    preferThumbnail: true,
   });
 
   // 获取烘焙商相关设置
@@ -308,6 +312,52 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     : roasterName
       ? `${roasterName} 烘焙商图标`
       : '烘焙商图标';
+  const getOriginalBeanImage = useCallback(
+    async (
+      side: CoffeeBeanImageSide,
+      fallback?: string
+    ): Promise<string | undefined> => {
+      if (!beanInfo?.id) return fallback;
+
+      try {
+        return (
+          (await getCoffeeBeanImageSource(beanInfo.id, {
+            side,
+            mode: 'original',
+          })) || fallback
+        );
+      } catch {
+        return fallback;
+      }
+    },
+    [beanInfo?.id]
+  );
+  const openBeanImage = useCallback(
+    async (sourceElement: HTMLElement) => {
+      if (!beanDisplayImage) return;
+
+      const [frontImage, backImage] = await Promise.all([
+        getOriginalBeanImage('front', beanDisplayImage),
+        getOriginalBeanImage('back', beanBackImage),
+      ]);
+
+      openImageViewer({
+        url: isBeanDisplayImageFromBean
+          ? frontImage || beanDisplayImage
+          : beanDisplayImage,
+        alt: beanDisplayImageAlt,
+        backUrl: backImage,
+        sourceElement,
+      });
+    },
+    [
+      beanBackImage,
+      beanDisplayImage,
+      beanDisplayImageAlt,
+      getOriginalBeanImage,
+      isBeanDisplayImageFromBean,
+    ]
+  );
 
   const equipmentName = useMemo(
     () => (note ? resolveNoteEquipmentName(note, equipmentNames) : ''),
@@ -371,15 +421,51 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   });
 
   // 获取笔记图片列表 - 提前声明以便在效果中使用
-  const noteImages =
-    note?.images && note.images.length > 0
-      ? note.images
-      : note?.image
-        ? [note.image]
-        : [];
+  const inlineNoteImages = useMemo(() => {
+    if (note?.images && note.images.length > 0) return note.images;
+    if (note?.image) return [note.image];
+    return [];
+  }, [note?.images, note?.image]);
+  const noteImages = useBrewingNoteImages(note?.id, inlineNoteImages);
   const primaryNoteImage = noteImages[0];
   const hasPrimaryNoteImageError =
     noteImageError.source === primaryNoteImage && noteImageError.failed;
+  const getOriginalNoteImages = useCallback(async (): Promise<string[]> => {
+    if (!note?.id) return noteImages;
+
+    try {
+      const originalImages = await getStoredBrewingNoteImages(note.id, {
+        mode: 'original',
+      });
+      return originalImages.length > 0 ? originalImages : noteImages;
+    } catch {
+      return noteImages;
+    }
+  }, [note?.id, noteImages]);
+  const openNoteImage = useCallback(
+    async (
+      index: number,
+      sourceElement: HTMLElement,
+      sourceElements?: HTMLElement[]
+    ) => {
+      const images = await getOriginalNoteImages();
+      const selectedImage = images[index] || noteImages[index];
+      if (!selectedImage) return;
+
+      openImageViewer({
+        url: selectedImage,
+        alt: `笔记图片 ${index + 1}`,
+        items: images.map((url, itemIndex) => ({
+          url,
+          alt: `笔记图片 ${itemIndex + 1}`,
+        })),
+        index,
+        sourceElement,
+        sourceElements,
+      });
+    },
+    [getOriginalNoteImages, noteImages]
+  );
   const hasBeanDisplayImageError =
     beanImageError.source === beanDisplayImage && beanImageError.failed;
   const imageViewKey = [
@@ -851,14 +937,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                           }
                           onClick={e => {
                             if (!hasBeanDisplayImageError) {
-                              openImageViewer({
-                                url: beanDisplayImage,
-                                alt: beanDisplayImageAlt,
-                                backUrl: isBeanDisplayImageFromBean
-                                  ? beanBackImage
-                                  : undefined,
-                                sourceElement: e.currentTarget,
-                              });
+                              void openBeanImage(e.currentTarget);
                             }
                           }}
                         />
@@ -894,14 +973,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                               onClick={e => {
                                 e.stopPropagation();
                                 if (!hasBeanDisplayImageError) {
-                                  openImageViewer({
-                                    url: beanDisplayImage,
-                                    alt: beanDisplayImageAlt,
-                                    backUrl: isBeanDisplayImageFromBean
-                                      ? beanBackImage
-                                      : undefined,
-                                    sourceElement: e.currentTarget,
-                                  });
+                                  void openBeanImage(e.currentTarget);
                                 }
                               }}
                             />
@@ -932,16 +1004,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             }
                             onClick={e => {
                               if (!hasPrimaryNoteImageError) {
-                                openImageViewer({
-                                  url: primaryNoteImage,
-                                  alt: beanName || '笔记图片',
-                                  items: noteImages.map((url, index) => ({
-                                    url,
-                                    alt: `笔记图片 ${index + 1}`,
-                                  })),
-                                  index: 0,
-                                  sourceElement: e.currentTarget,
-                                });
+                                void openNoteImage(0, e.currentTarget);
                               }
                             }}
                           />
@@ -1033,17 +1096,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                                     )
                                   : [e.currentTarget];
 
-                                openImageViewer({
-                                  url: img,
-                                  alt: `笔记图片 ${index + 1}`,
-                                  items: noteImages.map((url, itemIndex) => ({
-                                    url,
-                                    alt: `笔记图片 ${itemIndex + 1}`,
-                                  })),
+                                void openNoteImage(
                                   index,
-                                  sourceElement: e.currentTarget,
-                                  sourceElements,
-                                });
+                                  e.currentTarget,
+                                  sourceElements
+                                );
                               }
                             }}
                           >

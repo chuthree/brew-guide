@@ -81,7 +81,6 @@ export const BeanImageSmall: React.FC<{
     [roasterFieldEnabled, roasterSeparator]
   );
   const beanImage = useCoffeeBeanImage(bean.id, {
-    fallback: bean.image,
     preferThumbnail: true,
   });
 
@@ -178,13 +177,13 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
     }
   };
   const storedFrontImage = useCoffeeBeanImage(bean?.id, {
-    fallback: bean?.image,
-    mode: 'original',
+    fallback: isAddMode ? bean?.image : undefined,
+    mode: isAddMode ? 'original' : undefined,
   });
   const storedBackImage = useCoffeeBeanImage(bean?.id, {
     side: 'back',
-    fallback: bean?.backImage,
-    mode: 'original',
+    fallback: isAddMode ? bean?.backImage : undefined,
+    mode: isAddMode ? 'original' : undefined,
   });
   const viewBean = useMemo(
     () =>

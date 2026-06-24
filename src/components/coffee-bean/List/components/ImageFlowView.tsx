@@ -71,18 +71,14 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
 
   // 合并正常豆子和用完的豆子（如果显示），然后过滤出有图片的
   const beansWithImages = useMemo(() => {
-    const normalBeans = filteredBeans.filter(
-      bean =>
-        imageBeanIds.has(bean.id) || (bean.image && bean.image.trim() !== '')
-    );
+    const normalBeans = filteredBeans.filter(bean => imageBeanIds.has(bean.id));
 
     if (!showEmptyBeans) {
       return normalBeans;
     }
 
-    const emptyBeansWithImages = emptyBeans.filter(
-      bean =>
-        imageBeanIds.has(bean.id) || (bean.image && bean.image.trim() !== '')
+    const emptyBeansWithImages = emptyBeans.filter(bean =>
+      imageBeanIds.has(bean.id)
     );
 
     // 正常豆子在前，用完的豆子在后
@@ -163,7 +159,6 @@ const ImageFlowBeanImage: React.FC<{
   onDetailClick: (bean: ExtendedCoffeeBean) => void;
 }> = ({ bean, columnsPerRow, isEmpty, onDetailClick }) => {
   const imageSource = useCoffeeBeanImage(bean.id, {
-    fallback: bean.image,
     preferThumbnail: true,
   });
 
