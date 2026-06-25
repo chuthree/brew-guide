@@ -68,17 +68,19 @@ describe('buildBeanReadyReminderItems', () => {
     expect(items).toEqual([]);
   });
 
-  it('uses custom flavor period defaults when bean period is not set', () => {
+  it('skips beans without an explicit aging period', () => {
     const items = buildBeanReadyReminderItems(
       [{ ...baseBean, startDay: undefined, endDay: undefined }],
-      {
-        today: '2026-05-20',
-        customFlavorPeriod: {
-          light: { startDay: 0, endDay: 0 },
-          medium: { startDay: 7, endDay: 30 },
-          dark: { startDay: 0, endDay: 0 },
-        },
-      }
+      { today: '2026-05-20' }
+    );
+
+    expect(items).toEqual([]);
+  });
+
+  it('allows an aging period without a flavor period', () => {
+    const items = buildBeanReadyReminderItems(
+      [{ ...baseBean, startDay: 7, endDay: undefined }],
+      { today: '2026-05-20' }
     );
 
     expect(items[0]?.readyDate).toBe('2026-05-20');

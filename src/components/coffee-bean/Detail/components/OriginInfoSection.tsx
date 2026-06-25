@@ -475,7 +475,9 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  value={currentBean?.startDay ?? ''}
+                  value={
+                    currentBean?.startDay ? String(currentBean.startDay) : ''
+                  }
                   onChange={e =>
                     handleFlavorPeriodDayChange('startDay', e.target.value)
                   }
@@ -487,7 +489,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  value={currentBean?.endDay ?? ''}
+                  value={currentBean?.endDay ? String(currentBean.endDay) : ''}
                   onChange={e =>
                     handleFlavorPeriodDayChange('endDay', e.target.value)
                   }

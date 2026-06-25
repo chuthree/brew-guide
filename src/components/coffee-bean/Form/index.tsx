@@ -30,7 +30,10 @@ import {
   ImageProcessingError,
   processImageFile,
 } from '@/lib/images/imageProcessing';
-import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
+import {
+  getDefaultFlavorPeriodByRoastLevelSync,
+  normalizeFlavorPeriodDay,
+} from '@/lib/utils/flavorPeriodUtils';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
 import { inferBeanType } from '@/lib/utils/beanTypeInference';
 import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
@@ -103,8 +106,8 @@ const createEmptyBeanDraft = (
   price: '',
   beanType: 'filter',
   notes: '',
-  startDay: 0,
-  endDay: 0,
+  startDay: undefined,
+  endDay: undefined,
   blendComponents: [],
   beanState: initialBeanState || 'roasted',
   purchaseDate:
@@ -138,30 +141,8 @@ const createInitialBeanDraft = ({
 
   if (isRoastingDraft(preparedBeanData, roastingSourceBeanId)) {
     preparedBeanData.roastLevel = '';
-    preparedBeanData.startDay = 0;
-    preparedBeanData.endDay = 0;
-  }
-
-  const needFlavorPeriodInit =
-    !preparedBeanData.startDay && !preparedBeanData.endDay;
-
-  if (needFlavorPeriodInit && preparedBeanData.roastLevel) {
-    let startDay = 0;
-    let endDay = 0;
-
-    if (preparedBeanData.roastLevel.includes('浅')) {
-      startDay = 7;
-      endDay = 60;
-    } else if (preparedBeanData.roastLevel.includes('深')) {
-      startDay = 14;
-      endDay = 90;
-    } else {
-      startDay = 10;
-      endDay = 60;
-    }
-
-    preparedBeanData.startDay = startDay;
-    preparedBeanData.endDay = endDay;
+    preparedBeanData.startDay = undefined;
+    preparedBeanData.endDay = undefined;
   }
 
   return preparedBeanData;
@@ -272,35 +253,6 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [recognitionImage]); // 只依赖 recognitionImage，避免重复触发
-
-    // 从设置中加载自定义赏味期设置
-    useEffect(() => {
-      // 如果是新建咖啡豆且没有设置赏味期，使用自定义设置初始化
-      if (
-        !initialBean &&
-        bean.startDay === 0 &&
-        bean.endDay === 0 &&
-        bean.roastLevel
-      ) {
-        const settings = useSettingsStore.getState().settings;
-        const customFlavorPeriod =
-          settings.customFlavorPeriod || defaultSettings.customFlavorPeriod;
-
-        const roasterName = getBeanRoasterName(bean) || undefined;
-
-        const { startDay, endDay } = getDefaultFlavorPeriodByRoastLevelSync(
-          bean.roastLevel,
-          customFlavorPeriod,
-          roasterName
-        );
-
-        setBean(prev => ({
-          ...prev,
-          startDay,
-          endDay,
-        }));
-      }
-    }, [bean.endDay, bean.roastLevel, bean.startDay, bean.name, initialBean]);
 
     // 自动聚焦输入框
     useEffect(() => {
@@ -457,8 +409,8 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
         setBean(prev => ({
           ...prev,
-          startDay,
-          endDay,
+          startDay: startDay || undefined,
+          endDay: endDay || undefined,
           isFrozen: false,
         }));
       },
@@ -471,7 +423,14 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       (value: string) => {
         const safeValue = String(value || '');
 
-        if (field === 'capacity') {
+        if (field === 'startDay' || field === 'endDay') {
+          const day = normalizeFlavorPeriodDay(safeValue);
+
+          setBean(prev => ({
+            ...prev,
+            [field]: day || undefined,
+          }));
+        } else if (field === 'capacity') {
           // 修改正则表达式以允许小数点
           const numericValue = safeValue.replace(/[^0-9.]/g, '');
 
@@ -695,8 +654,8 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         isInTransit: !prev.isInTransit,
         // 设为在途时清空烘焙日期和赏味期设置
         roastDate: !prev.isInTransit ? '' : prev.roastDate,
-        startDay: !prev.isInTransit ? 0 : prev.startDay,
-        endDay: !prev.isInTransit ? 0 : prev.endDay,
+        startDay: !prev.isInTransit ? undefined : prev.startDay,
+        endDay: !prev.isInTransit ? undefined : prev.endDay,
         isFrozen: !prev.isInTransit ? false : prev.isFrozen,
       }));
     };

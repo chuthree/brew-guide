@@ -1,5 +1,4 @@
 import type { CoffeeBean } from '../../types/app';
-import type { SettingsOptions } from '../core/db';
 import { formatCoffeeBeanDisplayName } from './coffeeBeanUtils';
 import { normalizeDate } from './dateUtils';
 
@@ -13,18 +12,11 @@ export interface BeanReadyReminderItem {
 
 export interface BuildBeanReadyReminderOptions {
   today?: string;
-  customFlavorPeriod?: SettingsOptions['customFlavorPeriod'];
-  resolveStartDay?: (bean: CoffeeBean) => number;
 }
 
 const STORAGE_KEY = 'beanReadyReminderLastShownDate';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REMINDER_WINDOW_DAYS = 1;
-const PRESET_VALUES = {
-  light: { startDay: 7 },
-  medium: { startDay: 10 },
-  dark: { startDay: 14 },
-};
 
 const parseLocalDate = (date: string): Date | null => {
   const match = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(normalizeDate(date));
@@ -69,35 +61,9 @@ const parseRemainingAmount = (remaining: string | undefined): number => {
   return Number.isFinite(amount) ? amount : 0;
 };
 
-const selectPeriodByRoastLevel = (
-  roastLevel: string | undefined | null,
-  periods: typeof PRESET_VALUES
-) => {
-  const roastLevelStr = typeof roastLevel === 'string' ? roastLevel : '';
-  if (roastLevelStr.includes('浅')) return periods.light;
-  if (roastLevelStr.includes('深')) return periods.dark;
-  return periods.medium;
-};
-
-const resolveStartDay = (
-  bean: CoffeeBean,
-  options: BuildBeanReadyReminderOptions
-): number => {
+const resolveStartDay = (bean: CoffeeBean): number => {
   const beanStartDay = Number(bean.startDay || 0);
-  const beanEndDay = Number(bean.endDay || 0);
-
-  if (beanStartDay > 0) return beanStartDay;
-  if (beanStartDay === 0 && beanEndDay !== 0) return 0;
-
-  const resolvedStartDay = options.resolveStartDay?.(bean);
-  if (resolvedStartDay && resolvedStartDay > 0) return resolvedStartDay;
-
-  const customPeriod = options.customFlavorPeriod
-    ? selectPeriodByRoastLevel(bean.roastLevel, options.customFlavorPeriod)
-    : undefined;
-  const presetPeriod = selectPeriodByRoastLevel(bean.roastLevel, PRESET_VALUES);
-
-  return customPeriod?.startDay || presetPeriod.startDay;
+  return Number.isFinite(beanStartDay) && beanStartDay > 0 ? beanStartDay : 0;
 };
 
 export const formatBeanReadyReminderDays = (daysUntilReady: number): string =>
@@ -120,7 +86,7 @@ export const buildBeanReadyReminderItems = (
       const roastDate = parseLocalDate(bean.roastDate);
       if (!roastDate) return null;
 
-      const startDay = resolveStartDay(bean, options);
+      const startDay = resolveStartDay(bean);
       if (!Number.isFinite(startDay) || startDay <= 0) return null;
 
       const readyDate = addDays(roastDate, startDay);

@@ -1,11 +1,7 @@
 'use client';
 
 import React from 'react';
-import {
-  getFlavorPeriodSettings,
-  getDefaultFlavorPeriodByRoastLevelSync,
-} from '@/lib/utils/flavorPeriodUtils';
-import { getBeanRoasterName } from '@/lib/utils/coffeeBeanUtils';
+import { normalizeFlavorPeriodDay } from '@/lib/utils/flavorPeriodUtils';
 import type { CoffeeBean } from '@/types/app';
 import { cn } from '@/lib/utils/classNameUtils';
 
@@ -211,20 +207,10 @@ const FlavorStatusRing: React.FC<FlavorStatusRingProps> = ({
     (todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  let startDay = bean.startDay || 0;
-  let endDay = bean.endDay || 0;
+  const startDay = normalizeFlavorPeriodDay(bean.startDay);
+  const endDay = normalizeFlavorPeriodDay(bean.endDay);
 
-  if (startDay === 0 && endDay === 0) {
-    const { customFlavorPeriod } = getFlavorPeriodSettings();
-    const roasterName = getBeanRoasterName(bean) || undefined;
-    const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
-      bean.roastLevel || '',
-      customFlavorPeriod,
-      roasterName
-    );
-    startDay = defaultPeriod.startDay;
-    endDay = defaultPeriod.endDay;
-  }
+  if (startDay <= 0 && endDay <= 0) return null;
 
   const radius = 9;
   const circumference = 2 * Math.PI * radius;
@@ -236,16 +222,18 @@ const FlavorStatusRing: React.FC<FlavorStatusRingProps> = ({
     progress =
       startDay > 0 ? Math.max(0, Math.min(1, daysSinceRoast / startDay)) : 1;
     colorClass = 'text-amber-500 dark:text-amber-500/60';
-  } else if (daysSinceRoast <= endDay) {
+  } else if (endDay > 0 && daysSinceRoast <= endDay) {
     const duration = endDay - startDay;
     const remaining = endDay - daysSinceRoast;
     progress =
       duration > 0 ? Math.max(0, Math.min(1, remaining / duration)) : 0;
     colorClass = 'text-green-500 dark:text-green-500/60';
-  } else {
+  } else if (endDay > 0) {
     progress = 0;
     colorClass = 'text-neutral-300 dark:text-neutral-300/60';
     isDashed = true;
+  } else {
+    return null;
   }
 
   const strokeDashoffset = circumference * (1 - progress);

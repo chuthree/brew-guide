@@ -40,6 +40,9 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
   autoSetFlavorPeriod,
   toggleFrozenState,
 }) => {
+  const startDay = Number(bean.startDay || 0);
+  const endDay = Number(bean.endDay || 0);
+
   return (
     <motion.div
       key="detail-step"
@@ -139,12 +142,17 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
               />
             </div>
           </div>
-          <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            <p>
-              说明：{bean.startDay}天前为养豆期，{bean.startDay}-{bean.endDay}
-              天为赏味期，{bean.endDay}天后赏味期结束
-            </p>
-          </div>
+          {(startDay > 0 || endDay > 0) && (
+            <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              <p>
+                说明：
+                {startDay > 0 ? `${startDay}天前为养豆期` : '未设置养豆期'}
+                {endDay > 0
+                  ? `，${startDay > 0 ? `${startDay}-` : ''}${endDay}天为赏味期，${endDay}天后赏味期结束`
+                  : '，未设置赏味期结束'}
+              </p>
+            </div>
+          )}
         </div>
       )}
 

@@ -22,7 +22,6 @@ export const useCalendarSync = (enabled: boolean): void => {
         enabled,
         coffeeBeanModuleVisible,
         calendarSync: settings.calendarSync,
-        customFlavorPeriod: settings.customFlavorPeriod,
         beans: beans.map(bean => ({
           id: bean.id,
           name: bean.name,
@@ -37,13 +36,7 @@ export const useCalendarSync = (enabled: boolean): void => {
           isInTransit: bean.isInTransit,
         })),
       }),
-    [
-      beans,
-      coffeeBeanModuleVisible,
-      enabled,
-      settings.calendarSync,
-      settings.customFlavorPeriod,
-    ]
+    [beans, coffeeBeanModuleVisible, enabled, settings.calendarSync]
   );
 
   useEffect(() => {

@@ -13,7 +13,6 @@ export interface CalendarEventCandidate {
 }
 
 export interface BuildCalendarEventCandidatesOptions {
-  resolvePeriod?: (bean: CoffeeBean) => { startDay: number; endDay: number };
   today?: string;
 }
 
@@ -74,17 +73,8 @@ export const buildBeanCalendarEventCandidates = (
   if (!bean.roastDate) return null;
   if (parseRemainingAmount(bean.remaining) <= 0) return null;
 
-  const beanStartDay = Number(bean.startDay || 0);
-  const beanEndDay = Number(bean.endDay || 0);
-  const fallbackPeriod =
-    beanStartDay === 0 && beanEndDay === 0
-      ? options.resolvePeriod?.(bean)
-      : undefined;
-  const startDay = fallbackPeriod?.startDay ?? beanStartDay;
-  const endDay = fallbackPeriod?.endDay ?? beanEndDay;
-
-  if (!Number.isFinite(startDay) || !Number.isFinite(endDay)) return null;
-  if (startDay <= 0 || endDay <= 0 || endDay < startDay) return null;
+  const startDay = Number(bean.startDay || 0);
+  if (!Number.isFinite(startDay) || startDay <= 0) return null;
 
   const flavorStart = addDays(bean.roastDate, startDay);
   if (!flavorStart) return null;

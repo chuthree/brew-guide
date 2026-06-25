@@ -5,7 +5,6 @@ import {
   getRoasterConfigSync,
   getSettingsStore,
 } from '@/lib/stores/settingsStore';
-import { getBeanRoasterName } from '@/lib/utils/coffeeBeanUtils';
 
 // 赏味期信息接口
 export interface FlavorInfo {
@@ -14,27 +13,62 @@ export interface FlavorInfo {
   status?: string;
 }
 
-// 预设值常量
+type FlavorPeriodDayValue = number | string | null | undefined;
+type FlavorPeriodValue = {
+  startDay?: FlavorPeriodDayValue;
+  endDay?: FlavorPeriodDayValue;
+};
+type FlavorPeriodMap = {
+  light?: FlavorPeriodValue;
+  medium?: FlavorPeriodValue;
+  dark?: FlavorPeriodValue;
+};
+
 const PRESET_VALUES = {
   light: { startDay: 7, endDay: 60 },
   medium: { startDay: 10, endDay: 60 },
   dark: { startDay: 14, endDay: 90 },
 };
 
+export const normalizeFlavorPeriodDay = (
+  value: FlavorPeriodDayValue
+): number => {
+  const day = Number(value);
+  return Number.isFinite(day) && day > 0 ? day : 0;
+};
+
+const normalizePeriod = (
+  period: FlavorPeriodValue | undefined
+): { startDay: number; endDay: number } => ({
+  startDay: normalizeFlavorPeriodDay(period?.startDay),
+  endDay: normalizeFlavorPeriodDay(period?.endDay),
+});
+
 // 根据烘焙度选择对应的配置类型
 const selectPeriodByRoastLevel = (
   roastLevel: string | undefined | null,
-  periods: { light: any; medium: any; dark: any }
+  periods: FlavorPeriodMap | undefined
 ) => {
   const roastLevelStr = typeof roastLevel === 'string' ? roastLevel : '';
-  if (roastLevelStr.includes('浅')) return periods.light;
-  if (roastLevelStr.includes('深')) return periods.dark;
-  return periods.medium;
+  if (roastLevelStr.includes('浅')) return normalizePeriod(periods?.light);
+  if (roastLevelStr.includes('深')) return normalizePeriod(periods?.dark);
+  return normalizePeriod(periods?.medium);
 };
 
-// 检查配置是否有效（至少有一个非0值）
-const isValidPeriod = (period: { startDay: number; endDay: number }) => {
-  return period.startDay > 0 || period.endDay > 0;
+const isValidPeriod = (period: { startDay: number; endDay: number }) =>
+  period.startDay > 0 || period.endDay > 0;
+
+const resolvePeriodWithPreset = (
+  roastLevel: string | undefined | null,
+  periodMap: FlavorPeriodMap | undefined
+) => {
+  const selectedPeriod = selectPeriodByRoastLevel(roastLevel, periodMap);
+  const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
+
+  return {
+    startDay: selectedPeriod.startDay || presetPeriod.startDay,
+    endDay: selectedPeriod.endDay || presetPeriod.endDay,
+  };
 };
 
 // 获取赏味期设置
@@ -81,15 +115,15 @@ export const getDefaultFlavorPeriodByRoastLevel = (
         roasterConfig.flavorPeriod
       );
       if (isValidPeriod(specificPeriod)) {
-        // 获取全局默认预设和硬编码预设作为回退
         const globalPeriod = selectPeriodByRoastLevel(
           roastLevel,
-          customFlavorPeriod!
+          customFlavorPeriod
         );
         const presetPeriod = selectPeriodByRoastLevel(
           roastLevel,
           PRESET_VALUES
         );
+
         return {
           startDay:
             specificPeriod.startDay ||
@@ -102,17 +136,7 @@ export const getDefaultFlavorPeriodByRoastLevel = (
     }
   }
 
-  // 使用全局自定义配置或预设值
-  const selectedPeriod = selectPeriodByRoastLevel(
-    roastLevel,
-    customFlavorPeriod!
-  );
-  const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
-
-  return {
-    startDay: selectedPeriod.startDay || presetPeriod.startDay,
-    endDay: selectedPeriod.endDay || presetPeriod.endDay,
-  };
+  return resolvePeriodWithPreset(roastLevel, customFlavorPeriod);
 };
 
 // 同步版本的赏味期参数获取
@@ -152,15 +176,15 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
         roasterConfig.flavorPeriod
       );
       if (isValidPeriod(specificPeriod)) {
-        // 获取全局默认预设和硬编码预设作为回退
         const globalPeriod = selectPeriodByRoastLevel(
           roastLevel,
-          effectiveCustomFlavorPeriod!
+          effectiveCustomFlavorPeriod
         );
         const presetPeriod = selectPeriodByRoastLevel(
           roastLevel,
           PRESET_VALUES
         );
+
         return {
           startDay:
             specificPeriod.startDay ||
@@ -173,23 +197,13 @@ export const getDefaultFlavorPeriodByRoastLevelSync = (
     }
   }
 
-  // 使用全局自定义配置或预设值
-  const selectedPeriod = selectPeriodByRoastLevel(
-    roastLevel,
-    effectiveCustomFlavorPeriod!
-  );
-  const presetPeriod = selectPeriodByRoastLevel(roastLevel, PRESET_VALUES);
-
-  return {
-    startDay: selectedPeriod.startDay || presetPeriod.startDay,
-    endDay: selectedPeriod.endDay || presetPeriod.endDay,
-  };
+  return resolvePeriodWithPreset(roastLevel, effectiveCustomFlavorPeriod);
 };
 
 // 计算咖啡豆的赏味期信息
 export const calculateFlavorInfo = (
   bean: CoffeeBean,
-  customFlavorPeriod?: SettingsOptions['customFlavorPeriod']
+  _customFlavorPeriod?: SettingsOptions['customFlavorPeriod']
 ): FlavorInfo => {
   // 处理特殊状态
   if (bean.isInTransit) {
@@ -221,38 +235,25 @@ export const calculateFlavorInfo = (
     (todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  // 优先使用自定义赏味期参数，如果没有则根据烘焙度计算
-  let startDay = bean.startDay || 0;
-  let endDay = bean.endDay || 0;
-
-  // 如果没有自定义值，则根据烘焙度设置默认值
-  if (startDay === 0 && endDay === 0) {
-    const roasterName = getBeanRoasterName(bean) || undefined;
-    const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
-      bean.roastLevel || '',
-      customFlavorPeriod,
-      roasterName
-    );
-    startDay = defaultPeriod.startDay;
-    endDay = defaultPeriod.endDay;
-  }
+  const startDay = normalizeFlavorPeriodDay(bean.startDay);
+  const endDay = normalizeFlavorPeriodDay(bean.endDay);
 
   // 判断当前阶段
-  if (daysSinceRoast < startDay) {
+  if (startDay > 0 && daysSinceRoast < startDay) {
     // 养豆期
     return {
       phase: '养豆期',
       remainingDays: startDay - daysSinceRoast,
       status: `还需养豆 ${startDay - daysSinceRoast} 天`,
     };
-  } else if (daysSinceRoast <= endDay) {
+  } else if (endDay > 0 && daysSinceRoast <= endDay) {
     // 赏味期
     return {
       phase: '赏味期',
       remainingDays: endDay - daysSinceRoast,
       status: `剩余 ${endDay - daysSinceRoast} 天`,
     };
-  } else {
+  } else if (endDay > 0) {
     // 衰退期
     return {
       phase: '衰退期',
@@ -260,4 +261,6 @@ export const calculateFlavorInfo = (
       status: '已过赏味期',
     };
   }
+
+  return { phase: '未知', remainingDays: 0 };
 };

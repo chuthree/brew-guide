@@ -20,10 +20,7 @@ import {
 } from '@/lib/utils/beanVarietyUtils';
 import { sortBeansByFlavorPeriod } from '@/lib/utils/beanSortUtils';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
-import {
-  calculateFlavorInfo,
-  getDefaultFlavorPeriodByRoastLevelSync,
-} from '@/lib/utils/flavorPeriodUtils';
+import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
 
 const LIST_VIRTUOSO_OVERSCAN = { top: 240, bottom: 480 };
@@ -241,70 +238,53 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
   }, [availableBeans, searchQuery]);
 
   // 计算赏味期信息
-  const getFlavorInfo = useCallback(
-    (bean: CoffeeBean) => {
-      if (bean.isInTransit) {
-        return { phase: '在途', status: '在途' };
-      }
+  const getFlavorInfo = useCallback((bean: CoffeeBean) => {
+    if (bean.isInTransit) {
+      return { phase: '在途', status: '在途' };
+    }
 
-      if (!bean.roastDate) {
-        return { phase: '未知', status: '未知' };
-      }
+    if (!bean.roastDate) {
+      return { phase: '未知', status: '未知' };
+    }
 
-      if (bean.isFrozen) {
-        return { phase: '冷冻', status: '冷冻' };
-      }
+    if (bean.isFrozen) {
+      return { phase: '冷冻', status: '冷冻' };
+    }
 
-      const flavorInfo = calculateFlavorInfo(bean);
-      const today = new Date();
-      const roastTimestamp = parseDateToTimestamp(bean.roastDate);
-      const roastDate = new Date(roastTimestamp);
-      const todayDate = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate()
-      );
-      const roastDateOnly = new Date(
-        roastDate.getFullYear(),
-        roastDate.getMonth(),
-        roastDate.getDate()
-      );
-      const daysSinceRoast = Math.ceil(
-        (todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24)
-      );
+    const flavorInfo = calculateFlavorInfo(bean);
+    const today = new Date();
+    const roastTimestamp = parseDateToTimestamp(bean.roastDate);
+    const roastDate = new Date(roastTimestamp);
+    const todayDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const roastDateOnly = new Date(
+      roastDate.getFullYear(),
+      roastDate.getMonth(),
+      roastDate.getDate()
+    );
+    const daysSinceRoast = Math.ceil(
+      (todayDate.getTime() - roastDateOnly.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
-      let startDay = bean.startDay || 0;
-      let endDay = bean.endDay || 0;
+    const phase = flavorInfo.phase;
+    const remainingDays = flavorInfo.remainingDays;
+    let status = '';
 
-      if (startDay === 0 && endDay === 0) {
-        const roasterName = getRoasterName(bean, roasterSettings);
-        const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
-          bean.roastLevel || '',
-          undefined,
-          roasterName
-        );
-        startDay = defaultPeriod.startDay;
-        endDay = defaultPeriod.endDay;
-      }
+    if (phase === '养豆期') {
+      status = `养豆 ${remainingDays}天`;
+    } else if (phase === '赏味期') {
+      status = `赏味 ${remainingDays}天`;
+    } else if (phase === '衰退期') {
+      status = '已衰退';
+    } else {
+      status = '';
+    }
 
-      const phase = flavorInfo.phase;
-      const remainingDays = flavorInfo.remainingDays;
-      let status = '';
-
-      if (phase === '养豆期') {
-        status = `养豆 ${remainingDays}天`;
-      } else if (phase === '赏味期') {
-        status = `赏味 ${remainingDays}天`;
-      } else if (phase === '衰退期') {
-        status = '已衰退';
-      } else {
-        status = '未知';
-      }
-
-      return { phase, status, daysSinceRoast };
-    },
-    [roasterSettings]
-  );
+    return { phase, status, daysSinceRoast };
+  }, []);
 
   const formatNumber = useCallback(
     (value: string | undefined): string =>
@@ -482,7 +462,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
 
                   {showStatusDots &&
                     bean.roastDate &&
-                    (bean.startDay || bean.endDay || bean.roastLevel) && (
+                    flavorInfo.phase !== '未知' && (
                       <div
                         className={`absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ${getStatusDotColor(flavorInfo.phase)} border-2 border-neutral-50 dark:border-neutral-900`}
                       />
@@ -510,7 +490,8 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                               : !isGreenBean &&
                                   displayDate &&
                                   dateDisplayMode === 'flavorPeriod'
-                                ? flavorInfo.status
+                                ? flavorInfo.status ||
+                                  getAgingDaysText(displayDate)
                                 : !isGreenBean &&
                                     displayDate &&
                                     dateDisplayMode === 'agingDays'

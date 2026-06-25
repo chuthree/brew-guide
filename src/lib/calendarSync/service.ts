@@ -1,7 +1,5 @@
 import type { CoffeeBean } from '../../types/app';
 import type { AppSettings } from '../core/db';
-import { getBeanRoasterName } from '../utils/coffeeBeanUtils';
-import { getDefaultFlavorPeriodByRoastLevelSync } from '../utils/flavorPeriodUtils';
 import {
   buildBeanCalendarEventCandidates,
   type CalendarEventCandidate,
@@ -43,18 +41,7 @@ const buildCandidates = (
   const calendarSettings = getCalendarSyncSettings(settings);
 
   return beans
-    .map(bean =>
-      buildBeanCalendarEventCandidates(bean, calendarSettings, {
-        resolvePeriod: targetBean => {
-          const roasterName = getBeanRoasterName(targetBean) || undefined;
-          return getDefaultFlavorPeriodByRoastLevelSync(
-            targetBean.roastLevel || '',
-            settings.customFlavorPeriod,
-            roasterName
-          );
-        },
-      })
-    )
+    .map(bean => buildBeanCalendarEventCandidates(bean, calendarSettings))
     .filter((candidate): candidate is CalendarEventCandidate =>
       Boolean(candidate)
     );

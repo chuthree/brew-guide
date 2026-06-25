@@ -51,11 +51,22 @@ describe('buildBeanCalendarEventCandidates', () => {
     expect(event?.title).toBe('Brew Guide 埃塞俄比亚 水洗');
   });
 
-  it('uses the provided period resolver when bean-level period values are not set', () => {
-    const event = buildCandidate(
-      { ...baseBean, startDay: undefined, endDay: undefined },
-      { resolvePeriod: () => ({ startDay: 7, endDay: 30 }) }
-    );
+  it('does not use default periods when bean-level period values are empty', () => {
+    const event = buildCandidate({
+      ...baseBean,
+      startDay: undefined,
+      endDay: undefined,
+    });
+
+    expect(event).toBeNull();
+  });
+
+  it('allows an aging period without a flavor period', () => {
+    const event = buildCandidate({
+      ...baseBean,
+      startDay: 7,
+      endDay: undefined,
+    });
 
     expect(event?.date).toBe('2026-05-08');
   });

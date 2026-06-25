@@ -15,7 +15,10 @@ import {
 import { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
 import { defaultSettings } from '@/components/settings/Settings';
-import { getDefaultFlavorPeriodByRoastLevelSync } from '@/lib/utils/flavorPeriodUtils';
+import {
+  getDefaultFlavorPeriodByRoastLevelSync,
+  normalizeFlavorPeriodDay,
+} from '@/lib/utils/flavorPeriodUtils';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
@@ -732,7 +735,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       endDay = flavorPeriod.endDay;
     }
 
-    handleUpdateField({ roastLevel: level, startDay, endDay });
+    handleUpdateField({
+      roastLevel: level,
+      startDay: normalizeFlavorPeriodDay(startDay) || undefined,
+      endDay: normalizeFlavorPeriodDay(endDay) || undefined,
+    });
   };
 
   // 容量/剩余量/价格处理

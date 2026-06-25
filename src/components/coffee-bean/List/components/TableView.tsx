@@ -241,7 +241,7 @@ const getFlavorStatus = (bean: ExtendedCoffeeBean): string => {
   if (info.phase === '养豆期') return `养豆${info.remainingDays}天`;
   if (info.phase === '赏味期') return `赏味${info.remainingDays}天`;
   if (info.phase === '衰退期') return '已衰退';
-  return info.phase;
+  return getAgingDaysText(bean.roastDate);
 };
 
 // 排序图标组件

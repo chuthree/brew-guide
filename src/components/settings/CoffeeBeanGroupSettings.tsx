@@ -25,10 +25,7 @@ import {
 } from '@/lib/utils/beanVarietyUtils';
 import { sortBeansByFlavorPeriod } from '@/lib/utils/beanSortUtils';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
-import {
-  calculateFlavorInfo,
-  getDefaultFlavorPeriodByRoastLevelSync,
-} from '@/lib/utils/flavorPeriodUtils';
+import { calculateFlavorInfo } from '@/lib/utils/flavorPeriodUtils';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
 
@@ -122,28 +119,12 @@ const getAgingDaysText = (dateStr: string): string => {
   }
 };
 
-const getFlavorStatusText = (
-  bean: CoffeeBean,
-  displaySettings: RoasterDisplaySettings
-) => {
+const getFlavorStatusText = (bean: CoffeeBean) => {
   if (bean.isInTransit) return '在途';
   if (bean.isFrozen) return '冷冻';
   if (!bean.roastDate) return '';
 
   const flavorInfo = calculateFlavorInfo(bean);
-  let startDay = bean.startDay || 0;
-  let endDay = bean.endDay || 0;
-
-  if (startDay === 0 && endDay === 0) {
-    const roasterName = getRoasterName(bean, displaySettings);
-    const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
-      bean.roastLevel || '',
-      undefined,
-      roasterName
-    );
-    startDay = defaultPeriod.startDay;
-    endDay = defaultPeriod.endDay;
-  }
 
   if (flavorInfo.phase === '养豆期') {
     return `养豆 ${flavorInfo.remainingDays}天`;
@@ -190,7 +171,7 @@ const getBeanMetaParts = (
     displayDate &&
     displaySettings.dateDisplayMode === 'flavorPeriod'
   ) {
-    const statusText = getFlavorStatusText(bean, displaySettings);
+    const statusText = getFlavorStatusText(bean);
     if (statusText) parts.push(statusText);
   } else if (
     !isGreenBean &&

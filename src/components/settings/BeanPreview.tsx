@@ -197,38 +197,46 @@ const BeanPreviewItem: React.FC<{
   const getFlavorPeriodStatus = (): string => {
     // 简化的赏味期计算，用于预览
     if (!bean.roastDate) return '未知状态';
+    const startDay = bean.startDay || 0;
+    const endDay = bean.endDay || 0;
 
     const daysSinceRoast = Math.ceil(
       (new Date().getTime() - new Date(bean.roastDate).getTime()) /
         (1000 * 60 * 60 * 24)
     );
 
-    if (daysSinceRoast < (bean.startDay || 3)) {
-      const remainingDays = (bean.startDay || 3) - daysSinceRoast;
+    if (startDay > 0 && daysSinceRoast < startDay) {
+      const remainingDays = startDay - daysSinceRoast;
       return `养豆 ${remainingDays}天`;
-    } else if (daysSinceRoast <= (bean.endDay || 21)) {
-      const remainingDays = (bean.endDay || 21) - daysSinceRoast;
+    } else if (endDay > 0 && daysSinceRoast <= endDay) {
+      const remainingDays = endDay - daysSinceRoast;
       return `赏味 ${remainingDays}天`;
-    } else {
+    } else if (endDay > 0) {
       return '已衰退';
     }
+
+    return getAgingDaysText(bean.roastDate);
   };
 
   const getStatusDotColor = (): string => {
     if (!bean.roastDate) return 'bg-neutral-400';
+    const startDay = bean.startDay || 0;
+    const endDay = bean.endDay || 0;
 
     const daysSinceRoast = Math.ceil(
       (new Date().getTime() - new Date(bean.roastDate).getTime()) /
         (1000 * 60 * 60 * 24)
     );
 
-    if (daysSinceRoast < (bean.startDay || 3)) {
+    if (startDay > 0 && daysSinceRoast < startDay) {
       return 'bg-amber-400'; // 养豆期
-    } else if (daysSinceRoast <= (bean.endDay || 21)) {
+    } else if (endDay > 0 && daysSinceRoast <= endDay) {
       return 'bg-green-400'; // 赏味期
-    } else {
+    } else if (endDay > 0) {
       return 'bg-red-400'; // 衰退期
     }
+
+    return 'bg-neutral-400';
   };
 
   const shouldShowNotes = () =>

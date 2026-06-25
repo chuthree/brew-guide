@@ -1237,13 +1237,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             markBeanReadyReminderShownToday,
             shouldShowBeanReadyReminderToday,
           },
-          { getDefaultFlavorPeriodByRoastLevelSync },
-          { getBeanRoasterName },
         ] = await Promise.all([
           import('@/lib/stores/coffeeBeanStore'),
           import('@/lib/utils/beanReadyReminderUtils'),
-          import('@/lib/utils/flavorPeriodUtils'),
-          import('@/lib/utils/coffeeBeanUtils'),
         ]);
 
         const today = getLocalISODate();
@@ -1254,16 +1250,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           await store.loadBeans();
         }
 
-        const items = buildBeanReadyReminderItems(store.beans, {
-          today,
-          customFlavorPeriod: settings.customFlavorPeriod,
-          resolveStartDay: bean =>
-            getDefaultFlavorPeriodByRoastLevelSync(
-              bean.roastLevel || '',
-              settings.customFlavorPeriod,
-              getBeanRoasterName(bean) || undefined
-            ).startDay,
-        });
+        const items = buildBeanReadyReminderItems(store.beans, { today });
 
         if (items.length === 0 || isCancelled) return;
         if (!(await shouldShowBeanReadyReminderToday(today)) || isCancelled) {
@@ -1284,7 +1271,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       isCancelled = true;
     };
   }, [
-    settings.customFlavorPeriod,
     settings.showBeanReadyReminderPopup,
     navigationState.visibleTabs.coffeeBean,
     showBackupReminder,

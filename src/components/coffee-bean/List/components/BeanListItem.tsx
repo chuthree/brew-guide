@@ -8,7 +8,7 @@ import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import HighlightText from '@/components/common/ui/HighlightText';
 import {
   calculateFlavorInfo,
-  getDefaultFlavorPeriodByRoastLevelSync,
+  normalizeFlavorPeriodDay,
 } from '@/lib/utils/flavorPeriodUtils';
 import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import {
@@ -226,24 +226,12 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     );
 
     // 获取赏味期参数用于进度条计算
-    let startDay = bean.startDay || 0;
-    let endDay = bean.endDay || 0;
-
-    // 如果没有自定义值，从flavorInfo中获取默认值
-    if (startDay === 0 && endDay === 0) {
-      const roasterName = getRoasterName(bean, roasterSettings);
-      const defaultPeriod = getDefaultFlavorPeriodByRoastLevelSync(
-        bean.roastLevel || '',
-        undefined,
-        roasterName
-      );
-      startDay = defaultPeriod.startDay;
-      endDay = defaultPeriod.endDay;
-    }
-
-    const progressPercent = Math.min((daysSinceRoast / endDay) * 100, 100);
-    const preFlavorPercent = (startDay / endDay) * 100;
-    const flavorPercent = ((endDay - startDay) / endDay) * 100;
+    const startDay = normalizeFlavorPeriodDay(bean.startDay);
+    const endDay = normalizeFlavorPeriodDay(bean.endDay);
+    const progressPercent =
+      endDay > 0 ? Math.min((daysSinceRoast / endDay) * 100, 100) : 0;
+    const preFlavorPercent = endDay > 0 ? (startDay / endDay) * 100 : 0;
+    const flavorPercent = endDay > 0 ? ((endDay - startDay) / endDay) * 100 : 0;
 
     // 使用flavorInfo的结果
     const phase = flavorInfo.phase;
@@ -261,7 +249,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     } else if (phase === '冷冻') {
       status = '冷冻';
     } else {
-      status = '未知';
+      status = '';
     }
 
     return {
@@ -276,7 +264,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
       isFrozen: bean.isFrozen || false,
       isInTransit: bean.isInTransit || false,
     };
-  }, [bean, roasterSettings]);
+  }, [bean]);
 
   const isEmpty = isBeanEmpty(bean);
   const displayTitle = title || formatBeanDisplayName(bean, roasterSettings);
@@ -488,7 +476,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
           {showStatusDots &&
             !isEmpty &&
             bean.roastDate &&
-            (bean.startDay || bean.endDay || bean.roastLevel) && (
+            flavorInfo.phase !== '未知' && (
               <div
                 className={`absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ${getStatusDotColor(flavorInfo.phase)} border-2 border-neutral-50 dark:border-neutral-900`}
               />
@@ -536,7 +524,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                           : !isGreenBean &&
                               displayDate &&
                               dateDisplayMode === 'flavorPeriod'
-                            ? flavorInfo.status
+                            ? flavorInfo.status || getAgingDaysText(displayDate)
                             : !isGreenBean &&
                                 displayDate &&
                                 dateDisplayMode === 'agingDays'
