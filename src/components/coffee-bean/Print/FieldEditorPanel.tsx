@@ -3,7 +3,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { DatePicker } from '@/components/common/ui/DatePicker';
-import { PrintConfig, EditableContent, PrintFieldKey } from './types';
+import {
+  PrintConfig,
+  EditableContent,
+  PrintFieldKey,
+  PrintIconSource,
+} from './types';
 import { IconFieldEditor } from './IconFieldEditor';
 import {
   PRINT_EDITOR_FIELD_LABELS,
@@ -156,6 +161,8 @@ interface FieldEditorPanelProps {
   activeStatusLabel: string;
   activeStatusButtonClass: string;
   iconInputRef: React.RefObject<HTMLInputElement | null>;
+  roasterIcon: string | null;
+  resolvedIcon: string;
   isIconProcessing: boolean;
   onToggleField: (field: keyof PrintConfig['fields']) => void;
   onUpdateField: <K extends keyof EditableContent>(
@@ -167,6 +174,7 @@ interface FieldEditorPanelProps {
   onRemoveFlavor: (index: number) => void;
   onIconFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onIconUploadClick: () => void;
+  onIconSourceChange: (source: PrintIconSource) => void;
   onRemoveIcon: () => void;
   onZoomIconIn: () => void;
   onZoomIconOut: () => void;
@@ -180,6 +188,8 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
   activeStatusLabel,
   activeStatusButtonClass,
   iconInputRef,
+  roasterIcon,
+  resolvedIcon,
   isIconProcessing,
   onToggleField,
   onUpdateField,
@@ -188,6 +198,7 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
   onRemoveFlavor,
   onIconFileChange,
   onIconUploadClick,
+  onIconSourceChange,
   onRemoveIcon,
   onZoomIconIn,
   onZoomIconOut,
@@ -322,11 +333,15 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
       case 'icon':
         return (
           <IconFieldEditor
-            icon={content.icon}
+            customIcon={content.icon}
+            roasterIcon={roasterIcon}
+            selectedSource={content.iconSource}
+            resolvedIcon={resolvedIcon}
             inputRef={iconInputRef}
             isProcessing={isIconProcessing}
             onFileChange={onIconFileChange}
             onUploadClick={onIconUploadClick}
+            onSourceChange={onIconSourceChange}
             onRemove={onRemoveIcon}
             onZoomIn={onZoomIconIn}
             onZoomOut={onZoomIconOut}

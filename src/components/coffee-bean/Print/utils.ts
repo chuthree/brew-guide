@@ -1,5 +1,5 @@
 import { CoffeeBean } from '@/types/app';
-import { EditableContent, PrintConfig } from './types';
+import { EditableContent, PrintConfig, PrintIconSource } from './types';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import { isPrintFieldVisible } from './fields';
 import { getBeanEstates, RoasterSettings } from '@/lib/utils/beanVarietyUtils';
@@ -30,6 +30,17 @@ export const getDisplayBeanName = (
   }
 
   return roaster ? `${roaster} ${beanName}` : beanName;
+};
+
+export const getResolvedPrintIcon = (
+  content: Pick<EditableContent, 'icon' | 'iconSource'>,
+  roasterIcon: string | null | undefined
+): string => {
+  if (content.iconSource === 'roaster') {
+    return roasterIcon || content.icon;
+  }
+
+  return content.icon;
 };
 
 // 生成风味行
@@ -100,7 +111,8 @@ const extractComponentInfo = (
 export const createInitialContent = (
   bean: CoffeeBean | null,
   _roasterSettings: RoasterSettings,
-  icon = ''
+  icon = '',
+  iconSource: PrintIconSource = 'custom'
 ): EditableContent => {
   if (!bean) {
     return {
@@ -116,6 +128,7 @@ export const createInitialContent = (
       notes: '',
       weight: '',
       icon,
+      iconSource,
     };
   }
   return {
@@ -131,6 +144,7 @@ export const createInitialContent = (
     notes: bean.notes || '',
     weight: '',
     icon,
+    iconSource,
   };
 };
 

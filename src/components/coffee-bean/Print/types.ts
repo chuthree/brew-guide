@@ -2,6 +2,8 @@
 
 import { CoffeeBean } from '@/types/app';
 
+export type PrintIconSource = 'custom' | 'roaster';
+
 // 可编辑内容
 export interface EditableContent {
   name: string;
@@ -16,6 +18,7 @@ export interface EditableContent {
   notes: string;
   weight: string;
   icon: string;
+  iconSource: PrintIconSource;
 }
 
 export interface PrintIconPlacement {

@@ -2,7 +2,7 @@ import { EditableContent, PrintConfig, PrintFieldKey } from './types';
 
 export type PrintTextFieldKey = Exclude<
   keyof EditableContent,
-  'roaster' | 'roastDate' | 'flavor' | 'notes' | 'icon'
+  'roaster' | 'roastDate' | 'flavor' | 'notes' | 'icon' | 'iconSource'
 >;
 
 export const PRINT_FIELD_ORDER: PrintFieldKey[] = [

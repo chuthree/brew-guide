@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { showToast } from '@/components/common/feedback/LightToast';
 import {
@@ -8,6 +8,7 @@ import {
   EditableContent,
   PrintFieldKey,
   PrintIconPlacement,
+  PrintIconSource,
 } from './types';
 import { processThermalPrintIcon } from './iconProcessing';
 import { DEFAULT_ICON_PLACEMENT, normalizePrintIconPlacement } from './config';
@@ -16,6 +17,7 @@ import {
   getPrintFieldOrder,
   hasPrintFieldContent,
 } from './fields';
+import { getResolvedPrintIcon } from './utils';
 import { FieldEditorPanel } from './FieldEditorPanel';
 
 const SOFT_BUTTON_CLASS =
@@ -30,12 +32,14 @@ const showIconToast = (type: 'success' | 'error', title: string): void => {
 interface ContentEditorProps {
   config: PrintConfig;
   content: EditableContent;
+  roasterIcon: string | null;
   onToggleField: (field: keyof PrintConfig['fields']) => void;
   onUpdateField: <K extends keyof EditableContent>(
     field: K,
     value: EditableContent[K]
   ) => void;
   onUpdateIcon: (icon: string) => void;
+  onUpdateIconSource: (source: PrintIconSource) => void;
   onUpdateIconPlacement: (placement: PrintIconPlacement) => void;
   onUpdateFlavorItem: (index: number, value: string) => void;
   onAddFlavor: () => void;
@@ -46,9 +50,11 @@ interface ContentEditorProps {
 export const ContentEditor: React.FC<ContentEditorProps> = ({
   config,
   content,
+  roasterIcon,
   onToggleField,
   onUpdateField,
   onUpdateIcon,
+  onUpdateIconSource,
   onUpdateIconPlacement,
   onUpdateFlavorItem,
   onAddFlavor,
@@ -61,6 +67,14 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
   const [isIconProcessing, setIsIconProcessing] = useState(false);
   const iconInputRef = useRef<HTMLInputElement | null>(null);
   const availableFields = getPrintFieldOrder(config.template);
+  const resolvedIcon = useMemo(
+    () => getResolvedPrintIcon(content, roasterIcon),
+    [content, roasterIcon]
+  );
+  const contentForVisibility = useMemo(
+    () => ({ ...content, icon: resolvedIcon }),
+    [content, resolvedIcon]
+  );
   const activeField =
     selectedField && availableFields.includes(selectedField)
       ? selectedField
@@ -82,6 +96,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
     try {
       const icon = await processThermalPrintIcon(file);
       onUpdateIcon(icon);
+      onUpdateIconSource('custom');
       showIconToast('success', '图标已添加');
     } catch (error) {
       const message =
@@ -108,7 +123,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
   };
 
   const isFieldEmpty = (field: PrintFieldKey): boolean =>
-    !hasPrintFieldContent(field, content, config.template);
+    !hasPrintFieldContent(field, contentForVisibility, config.template);
 
   const getFieldButtonClass = (field: PrintFieldKey) => {
     const selected = activeField === field;
@@ -178,6 +193,8 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
           activeStatusLabel={activeStatusLabel}
           activeStatusButtonClass={activeStatusButtonClass}
           iconInputRef={iconInputRef}
+          roasterIcon={roasterIcon}
+          resolvedIcon={resolvedIcon}
           isIconProcessing={isIconProcessing}
           onToggleField={onToggleField}
           onUpdateField={onUpdateField}
@@ -186,6 +203,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
           onRemoveFlavor={onRemoveFlavor}
           onIconFileChange={handleIconFileChange}
           onIconUploadClick={handleIconUploadClick}
+          onIconSourceChange={onUpdateIconSource}
           onRemoveIcon={() => onUpdateIcon('')}
           onZoomIconIn={() => handleZoomIcon(2)}
           onZoomIconOut={() => handleZoomIcon(-2)}

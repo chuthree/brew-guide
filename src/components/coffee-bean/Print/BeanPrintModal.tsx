@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Save } from 'lucide-react';
 import { BeanPrintModalProps } from './types';
 import { usePrintConfig, useEditableContent } from './hooks';
-import { savePreviewAsImage } from './utils';
+import { getResolvedPrintIcon, savePreviewAsImage } from './utils';
 import { injectPrintStyles } from './styles';
 import { SizeSettings } from './SizeSettings';
 import { LayoutSettings } from './LayoutSettings';
@@ -12,7 +12,7 @@ import { ContentEditor } from './ContentEditor';
 import { PrintPreview } from './PrintPreview';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
 import ResponsiveModal from '@/components/common/ui/ResponsiveModal';
-import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 
 const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   isOpen,
@@ -24,10 +24,14 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   }, []);
 
   const settings = useSettingsStore(state => state.settings);
-  const roasterSettings = {
-    roasterFieldEnabled: settings.roasterFieldEnabled ?? false,
-    roasterSeparator: settings.roasterSeparator ?? ' ',
-  } as const;
+  const roasterSettings = useMemo(
+    () =>
+      ({
+        roasterFieldEnabled: settings.roasterFieldEnabled ?? false,
+        roasterSeparator: settings.roasterSeparator ?? ' ',
+      }) as const,
+    [settings.roasterFieldEnabled, settings.roasterSeparator]
+  );
 
   const {
     config,
@@ -46,11 +50,21 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     content,
     updateField,
     updateIcon,
+    updateIconSource,
     updateFlavorItem,
     addFlavor,
     removeFlavor,
     resetContent,
   } = useEditableContent(bean, roasterSettings);
+
+  const roasterLogo = useRoasterLogo(content.roaster.trim() || null);
+  const previewContent = useMemo(
+    () => ({
+      ...content,
+      icon: getResolvedPrintIcon(content, roasterLogo),
+    }),
+    [content, roasterLogo]
+  );
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -141,9 +155,11 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
               <ContentEditor
                 config={config}
                 content={content}
+                roasterIcon={roasterLogo}
                 onToggleField={toggleField}
                 onUpdateField={updateField}
                 onUpdateIcon={updateIcon}
+                onUpdateIconSource={updateIconSource}
                 onUpdateIconPlacement={placement =>
                   updateConfig('iconPlacement', placement)
                 }
@@ -155,7 +171,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
 
               <PrintPreview
                 config={config}
-                content={content}
+                content={previewContent}
                 onUpdateIconPlacement={placement =>
                   updateConfig('iconPlacement', placement)
                 }

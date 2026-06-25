@@ -6,9 +6,11 @@ import {
   DEFAULT_PRESET_SIZES,
   loadConfig,
   loadPrintIcon,
+  loadPrintIconSource,
   loadPresetSizes,
   saveConfig,
   savePrintIcon,
+  savePrintIconSource,
   savePresetSizes,
 } from './config';
 import { createInitialContent } from './utils';
@@ -128,12 +130,24 @@ export function useEditableContent(
   roasterSettings: RoasterSettings
 ) {
   const [content, setContent] = useState<EditableContent>(() =>
-    createInitialContent(bean, roasterSettings, loadPrintIcon())
+    createInitialContent(
+      bean,
+      roasterSettings,
+      loadPrintIcon(),
+      loadPrintIconSource()
+    )
   );
 
   // bean 或设置变化时重新初始化
   useEffect(() => {
-    setContent(createInitialContent(bean, roasterSettings, loadPrintIcon()));
+    setContent(
+      createInitialContent(
+        bean,
+        roasterSettings,
+        loadPrintIcon(),
+        loadPrintIconSource()
+      )
+    );
   }, [
     bean,
     roasterSettings.roasterFieldEnabled,
@@ -153,6 +167,14 @@ export function useEditableContent(
     savePrintIcon(icon);
     setContent(prev => ({ ...prev, icon }));
   }, []);
+
+  const updateIconSource = useCallback(
+    (iconSource: EditableContent['iconSource']) => {
+      savePrintIconSource(iconSource);
+      setContent(prev => ({ ...prev, iconSource }));
+    },
+    []
+  );
 
   // 更新风味项
   const updateFlavorItem = useCallback((index: number, value: string) => {
@@ -178,13 +200,21 @@ export function useEditableContent(
 
   // 重置内容
   const resetContent = useCallback(() => {
-    setContent(createInitialContent(bean, roasterSettings, loadPrintIcon()));
+    setContent(
+      createInitialContent(
+        bean,
+        roasterSettings,
+        loadPrintIcon(),
+        loadPrintIconSource()
+      )
+    );
   }, [bean, roasterSettings]);
 
   return {
     content,
     updateField,
     updateIcon,
+    updateIconSource,
     updateFlavorItem,
     addFlavor,
     removeFlavor,

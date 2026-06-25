@@ -4,10 +4,16 @@ import {
   saveObjectState,
   saveStringState,
 } from '@/lib/core/statePersistence';
-import { PrintConfig, PrintIconPlacement, PresetSize } from './types';
+import {
+  PrintConfig,
+  PrintIconPlacement,
+  PrintIconSource,
+  PresetSize,
+} from './types';
 
 const MODULE = 'bean-print';
 const ICON_KEY = 'icon';
+const ICON_SOURCE_KEY = 'iconSource';
 
 export const DEFAULT_ICON_PLACEMENT: PrintIconPlacement = {
   x: 74,
@@ -100,6 +106,14 @@ export const loadPrintIcon = (): string => getStringState(MODULE, ICON_KEY, '');
 
 export const savePrintIcon = (icon: string): void =>
   saveStringState(MODULE, ICON_KEY, icon);
+
+export const loadPrintIconSource = (): PrintIconSource => {
+  const source = getStringState(MODULE, ICON_SOURCE_KEY, 'custom');
+  return source === 'roaster' ? 'roaster' : 'custom';
+};
+
+export const savePrintIconSource = (source: PrintIconSource): void =>
+  saveStringState(MODULE, ICON_SOURCE_KEY, source);
 
 // 预设尺寸读写
 export const loadPresetSizes = (): PresetSize[] =>
