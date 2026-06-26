@@ -1,4 +1,3 @@
-import type { CoffeeBean } from '@/types/app';
 import { isBeanEmpty } from './preferences';
 import { type SortOption, sortBeans } from './SortSelector';
 import type {
@@ -284,9 +283,10 @@ const matchesFilterMode = (
         ? record.processes.includes(options.selectedProcessingMethod)
         : true;
     case 'flavorPeriod':
-      return options.selectedFlavorPeriod
-        ? record.flavorStatus === options.selectedFlavorPeriod
-        : true;
+      if (!options.selectedFlavorPeriod) return true;
+      return (
+        !record.isEmpty && record.flavorStatus === options.selectedFlavorPeriod
+      );
     case 'roaster':
       return options.selectedRoaster
         ? record.roaster === options.selectedRoaster
@@ -482,8 +482,8 @@ export const createBeanInventorySnapshot = (
           incrementMapCount(availableProcessNonEmptyCounts, process);
         }
       }
-      incrementMapCount(availableFlavorCounts, record.flavorStatus);
       if (!record.isEmpty) {
+        incrementMapCount(availableFlavorCounts, record.flavorStatus);
         incrementMapCount(availableFlavorNonEmptyCounts, record.flavorStatus);
       }
     }
