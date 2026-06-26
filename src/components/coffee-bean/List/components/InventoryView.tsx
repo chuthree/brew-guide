@@ -48,6 +48,7 @@ const INVENTORY_VIRTUOSO_COMPONENTS = {
 const INVENTORY_VIRTUOSO_OVERSCAN = { top: 240, bottom: 480 };
 const EMPTY_EXPANDED_NOTES: Record<string, boolean> = {};
 const EMPTY_SELECTED_BEANS: string[] = [];
+const EMPTY_BEAN_IMAGE_IDS = new Set<string>();
 
 /** 获取空状态提示消息 */
 const getEmptyStateMessage = ({
@@ -119,6 +120,7 @@ interface InventoryViewProps {
   onBeanReducedToZero?: () => void;
   isSearching?: boolean;
   searchQuery?: string;
+  beanImageIds?: Set<string>;
   isImageFlowMode?: boolean;
   // 新增显示模式 prop，优先级高于 isImageFlowMode
   displayMode?: DisplayMode;
@@ -163,6 +165,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   onBeanReducedToZero,
   isSearching = false,
   searchQuery = '',
+  beanImageIds = EMPTY_BEAN_IMAGE_IDS,
   isImageFlowMode = false,
   displayMode: externalDisplayMode,
   tableVisibleColumns,
@@ -367,6 +370,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({
                   onRemainingClick={handleRemainingClick}
                   onDetailClick={handleDetailClick}
                   searchQuery={isSearching ? searchQuery : ''}
+                  imageSourceHint={
+                    beanImageIds.has(item.bean.id) ? 'coffeeBean' : undefined
+                  }
                   isNotesExpanded={expandedNotes[item.bean.id]}
                   onNotesExpandToggle={onNotesExpandToggle}
                   isShareMode={isShareMode}

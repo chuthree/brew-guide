@@ -1793,6 +1793,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               onBeanReducedToZero={handleBeanReducedToZero}
               isSearching={isSearching}
               searchQuery={searchQuery}
+              beanImageIds={beanImageIds}
               isImageFlowMode={isImageFlowMode}
               displayMode={displayMode}
               tableVisibleColumns={tableVisibleColumns}

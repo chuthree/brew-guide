@@ -27,6 +27,7 @@ interface BeanListItemProps {
   onRemainingClick: (bean: ExtendedCoffeeBean, event: React.MouseEvent) => void;
   onDetailClick?: (bean: ExtendedCoffeeBean) => void;
   searchQuery?: string;
+  imageSourceHint?: 'coffeeBean';
   // 外部控制的备注展开状态
   isNotesExpanded?: boolean;
   onNotesExpandToggle?: (beanId: string, expanded: boolean) => void;
@@ -54,6 +55,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   onRemainingClick,
   onDetailClick,
   searchQuery = '',
+  imageSourceHint,
   isNotesExpanded: externalNotesExpanded,
   onNotesExpandToggle,
   isShareMode = false,
@@ -98,9 +100,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   const beanImage = useCoffeeBeanImage(bean.id, {
     preferThumbnail: true,
   });
+  const hasStoredBeanImage = imageSourceHint === 'coffeeBean';
 
   const roasterLogo = useMemo(() => {
-    if (!bean.name || beanImage) {
+    if (!bean.name || beanImage || hasStoredBeanImage) {
       return null;
     }
 
@@ -109,7 +112,13 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     }
 
     return null;
-  }, [bean.name, beanImage, configuredRoasterLogo, roasterName]);
+  }, [
+    bean.name,
+    beanImage,
+    configuredRoasterLogo,
+    hasStoredBeanImage,
+    roasterName,
+  ]);
 
   const imageSource = beanImage || roasterLogo;
   const hasImageError = imageError.source === imageSource && imageError.failed;

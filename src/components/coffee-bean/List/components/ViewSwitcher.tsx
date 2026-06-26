@@ -97,6 +97,7 @@ const BEAN_TYPE_ORDER: SelectableBeanType[] = ['espresso', 'filter', 'omni'];
 interface TabButtonProps {
   isActive: boolean;
   onClick: () => void;
+  onDoubleClick?: () => void;
   children: React.ReactNode;
   className?: string;
   dataTab?: string;
@@ -107,33 +108,75 @@ interface TabButtonProps {
 const TabButton: React.FC<TabButtonProps> = ({
   isActive,
   onClick,
+  onDoubleClick,
   children,
   className = '',
   dataTab,
   title,
   layoutId = 'tab-underline',
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`relative pb-1.5 text-xs font-medium whitespace-nowrap ${
-      isActive
-        ? 'text-neutral-800 dark:text-neutral-100'
-        : 'text-neutral-600 hover:opacity-80 dark:text-neutral-400'
-    } ${className}`}
-    data-tab={dataTab}
-    title={title}
-  >
-    <span className="relative">{children}</span>
-    {isActive && (
-      <motion.span
-        layoutId={layoutId}
-        className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
-        transition={UNDERLINE_TRANSITION}
-      />
-    )}
-  </button>
-);
+}) => {
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+    },
+    []
+  );
+
+  const handleClick = useCallback(() => {
+    if (!onDoubleClick) {
+      onClick();
+      return;
+    }
+
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+    }
+
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
+      onClick();
+    }, 180);
+  }, [onClick, onDoubleClick]);
+
+  const handleDoubleClick = useCallback(() => {
+    if (!onDoubleClick) return;
+
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+
+    onDoubleClick();
+  }, [onDoubleClick]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      onDoubleClick={onDoubleClick ? handleDoubleClick : undefined}
+      className={`relative pb-1.5 text-xs font-medium whitespace-nowrap ${
+        isActive
+          ? 'text-neutral-800 dark:text-neutral-100'
+          : 'text-neutral-600 hover:opacity-80 dark:text-neutral-400'
+      } ${className}`}
+      data-tab={dataTab}
+      title={title}
+    >
+      <span className="relative">{children}</span>
+      {isActive && (
+        <motion.span
+          layoutId={layoutId}
+          className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
+          transition={UNDERLINE_TRANSITION}
+        />
+      )}
+    </button>
+  );
+};
 
 // 筛选按钮组件 - 用于筛选区域的轻量样式
 interface FilterButtonProps {
@@ -550,26 +593,72 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       }),
     [totalEspressoCount, totalFilterCount, totalOmniCount]
   );
+  const isAllBeanTypeSelected = !selectedBeanType || selectedBeanType === 'all';
   const selectedBeanTypeLabel =
     selectedBeanType && selectedBeanType !== 'all'
       ? BEAN_TYPE_LABELS[selectedBeanType]
       : '';
+  const beanStateLabel =
+    selectedBeanTypeLabel && selectedBeanState === 'roasted'
+      ? `${selectedBeanTypeLabel}豆`
+      : `${selectedBeanTypeLabel}${BEAN_STATE_LABELS[selectedBeanState]}`;
   const handleBeanTypeDoubleClick = useCallback(() => {
-    if (
-      !selectedBeanType ||
-      selectedBeanType === 'all' ||
-      availableBeanTypes.length < 2
-    ) {
+    if (availableBeanTypes.length === 0) {
+      return;
+    }
+
+    if (!selectedBeanType || selectedBeanType === 'all') {
+      onBeanTypeChange?.(availableBeanTypes[0]);
       return;
     }
 
     const currentIndex = availableBeanTypes.indexOf(selectedBeanType);
-    if (currentIndex === -1) return;
+    if (currentIndex === -1 || currentIndex === availableBeanTypes.length - 1) {
+      onBeanTypeChange?.('all');
+      return;
+    }
 
-    onBeanTypeChange?.(
-      availableBeanTypes[(currentIndex + 1) % availableBeanTypes.length]
-    );
+    onBeanTypeChange?.(availableBeanTypes[currentIndex + 1]);
   }, [availableBeanTypes, onBeanTypeChange, selectedBeanType]);
+  const handleInventoryAllClick = useCallback(() => {
+    if (!isAllBeanTypeSelected) {
+      onBeanTypeChange?.('all');
+      return;
+    }
+
+    if (filterMode === 'variety' && selectedVariety !== null) {
+      onVarietyClick?.(null);
+    } else if (filterMode === 'origin' && selectedOrigin !== null) {
+      onOriginClick?.(null);
+    } else if (
+      filterMode === 'processingMethod' &&
+      selectedProcessingMethod !== null
+    ) {
+      onProcessingMethodClick?.(null);
+    } else if (filterMode === 'flavorPeriod' && selectedFlavorPeriod !== null) {
+      onFlavorPeriodClick?.(null);
+    } else if (filterMode === 'roaster' && selectedRoaster !== null) {
+      onRoasterClick?.(null);
+    } else if (filterMode === 'group' && selectedBeanGroupId !== null) {
+      onBeanGroupClick?.(null);
+    }
+  }, [
+    filterMode,
+    isAllBeanTypeSelected,
+    onBeanGroupClick,
+    onBeanTypeChange,
+    onFlavorPeriodClick,
+    onOriginClick,
+    onProcessingMethodClick,
+    onRoasterClick,
+    onVarietyClick,
+    selectedBeanGroupId,
+    selectedFlavorPeriod,
+    selectedOrigin,
+    selectedProcessingMethod,
+    selectedRoaster,
+    selectedVariety,
+  ]);
   const beanSummaryDetailsText = useMemo(() => {
     const typeCount = [
       espressoCount > 0,
@@ -889,11 +978,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       }}
                       title="点击切换生豆/熟豆"
                     >
-                      {BEAN_STATE_LABELS[selectedBeanState]}
+                      {beanStateLabel}
                     </span>
                   ) : (
                     <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-                      {BEAN_STATE_LABELS[selectedBeanState]}
+                      {beanStateLabel}
                     </span>
                   )}
                   ，总共 {originalTotalWeight || '0g'}
@@ -917,11 +1006,11 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       }}
                       title="点击切换生豆/熟豆"
                     >
-                      {BEAN_STATE_LABELS[selectedBeanState]}
+                      {beanStateLabel}
                     </span>
                   ) : (
                     <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-                      {BEAN_STATE_LABELS[selectedBeanState]}
+                      {beanStateLabel}
                     </span>
                   )}
                   {totalWeight ? `，剩余 ${totalWeight}` : ''}
@@ -1184,49 +1273,13 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                         (filterMode === 'processingMethod' &&
                           selectedProcessingMethod === null)
                       }
-                      onClick={() => {
-                        if (
-                          filterMode === 'variety' &&
-                          selectedVariety !== null
-                        ) {
-                          onVarietyClick?.(null);
-                        } else if (
-                          filterMode === 'origin' &&
-                          selectedOrigin !== null
-                        ) {
-                          onOriginClick?.(null);
-                        } else if (
-                          filterMode === 'processingMethod' &&
-                          selectedProcessingMethod !== null
-                        ) {
-                          onProcessingMethodClick?.(null);
-                        } else if (
-                          filterMode === 'flavorPeriod' &&
-                          selectedFlavorPeriod !== null
-                        ) {
-                          onFlavorPeriodClick?.(null);
-                        } else if (
-                          filterMode === 'roaster' &&
-                          selectedRoaster !== null
-                        ) {
-                          onRoasterClick?.(null);
-                        } else if (
-                          filterMode === 'group' &&
-                          selectedBeanGroupId !== null
-                        ) {
-                          onBeanGroupClick?.(null);
-                        }
-                      }}
+                      onClick={handleInventoryAllClick}
+                      onDoubleClick={handleBeanTypeDoubleClick}
                       className="mr-1"
                       dataTab="all"
                       layoutId={`inventory-${filterMode}-underline`}
                     >
-                      <span onDoubleClick={handleBeanTypeDoubleClick}>
-                        全部
-                        {selectedBeanTypeLabel && (
-                          <span> · {selectedBeanTypeLabel}</span>
-                        )}
-                      </span>
+                      全部
                     </TabButton>
 
                     {/* 筛选图标按钮 */}

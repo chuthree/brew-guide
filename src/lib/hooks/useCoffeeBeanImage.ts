@@ -16,6 +16,44 @@ type CoffeeBeanDataChangedDetail = {
 type RefreshSubscriber = () => void;
 
 const refreshSubscribers = new Map<string, Set<RefreshSubscriber>>();
+const imageSourceCache = new Map<string, string | undefined>();
+let isCoffeeBeanDataChangedListenerAttached = false;
+
+const getImageSourceCacheKey = (
+  beanId: string,
+  side: CoffeeBeanImageSide,
+  mode: CoffeeBeanImageSourceMode | undefined,
+  preferThumbnail: boolean
+): string =>
+  [beanId, side, mode ?? (preferThumbnail ? 'thumbnail' : 'original')].join(
+    '\u0001'
+  );
+
+const invalidateImageSourceCache = (beanId: string | undefined): void => {
+  if (!beanId) {
+    imageSourceCache.clear();
+    return;
+  }
+
+  const keyPrefix = `${beanId}\u0001`;
+  imageSourceCache.forEach((_source, key) => {
+    if (key.startsWith(keyPrefix)) {
+      imageSourceCache.delete(key);
+    }
+  });
+};
+
+const ensureCoffeeBeanDataChangedListener = (): void => {
+  if (
+    typeof window === 'undefined' ||
+    isCoffeeBeanDataChangedListenerAttached
+  ) {
+    return;
+  }
+
+  window.addEventListener('coffeeBeanDataChanged', handleCoffeeBeanDataChanged);
+  isCoffeeBeanDataChangedListenerAttached = true;
+};
 
 export function getCoffeeBeanDataChangedBeanId(
   detail: CoffeeBeanDataChangedDetail | undefined
@@ -24,6 +62,8 @@ export function getCoffeeBeanDataChangedBeanId(
 }
 
 const notifyRefreshSubscribers = (beanId: string | undefined): void => {
+  invalidateImageSourceCache(beanId);
+
   if (beanId) {
     refreshSubscribers.get(beanId)?.forEach(callback => callback());
     return;
@@ -43,29 +83,15 @@ const subscribeToCoffeeBeanImageRefresh = (
   beanId: string,
   callback: RefreshSubscriber
 ): (() => void) => {
-  const isFirstSubscriber = refreshSubscribers.size === 0;
   const callbacks = refreshSubscribers.get(beanId) || new Set();
   callbacks.add(callback);
   refreshSubscribers.set(beanId, callbacks);
-
-  if (isFirstSubscriber) {
-    window.addEventListener(
-      'coffeeBeanDataChanged',
-      handleCoffeeBeanDataChanged
-    );
-  }
+  ensureCoffeeBeanDataChangedListener();
 
   return () => {
     callbacks.delete(callback);
     if (callbacks.size === 0) {
       refreshSubscribers.delete(beanId);
-    }
-
-    if (refreshSubscribers.size === 0) {
-      window.removeEventListener(
-        'coffeeBeanDataChanged',
-        handleCoffeeBeanDataChanged
-      );
     }
   };
 };
@@ -80,28 +106,40 @@ export function useCoffeeBeanImage(
   } = {}
 ): string | undefined {
   const { side = 'front', mode, preferThumbnail = true, fallback } = options;
-  const [imageSource, setImageSource] = useState<string | undefined>(fallback);
+  const sourceIdentity = beanId
+    ? getImageSourceCacheKey(beanId, side, mode, preferThumbnail)
+    : undefined;
+  const [imageSource, setImageSource] = useState<string | undefined>(() => {
+    if (!sourceIdentity || !imageSourceCache.has(sourceIdentity)) {
+      return fallback;
+    }
+
+    return imageSourceCache.get(sourceIdentity) || fallback;
+  });
   const [refreshKey, setRefreshKey] = useState(0);
   const sourceIdentityRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
-    const sourceIdentity = [beanId, side, mode, preferThumbnail].join('\u0001');
     const sourceIdentityChanged = sourceIdentityRef.current !== sourceIdentity;
     sourceIdentityRef.current = sourceIdentity;
 
-    if (!beanId) {
+    if (!beanId || !sourceIdentity) {
       setImageSource(fallback);
       return;
     }
 
-    if (sourceIdentityChanged && fallback !== undefined) {
+    if (sourceIdentityChanged && imageSourceCache.has(sourceIdentity)) {
+      setImageSource(imageSourceCache.get(sourceIdentity) || fallback);
+    } else if (sourceIdentityChanged && fallback !== undefined) {
       setImageSource(fallback);
     }
 
     getCoffeeBeanImageSource(beanId, { side, mode, preferThumbnail })
       .then(source => {
         if (!cancelled) {
+          imageSourceCache.set(sourceIdentity, source);
+          ensureCoffeeBeanDataChangedListener();
           setImageSource(source || fallback);
         }
       })
@@ -114,7 +152,15 @@ export function useCoffeeBeanImage(
     return () => {
       cancelled = true;
     };
-  }, [beanId, side, mode, preferThumbnail, fallback, refreshKey]);
+  }, [
+    beanId,
+    side,
+    mode,
+    preferThumbnail,
+    fallback,
+    refreshKey,
+    sourceIdentity,
+  ]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !beanId) {
