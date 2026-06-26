@@ -259,7 +259,9 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                   }}
                   className="min-w-[1ch] cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
                 >
-                  {currentBean?.remaining || ''}
+                  {currentBean?.remaining
+                    ? formatNumber(currentBean.remaining)
+                    : ''}
                 </div>
               ) : (
                 <span
@@ -305,7 +307,9 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                   }}
                   className="min-w-[1ch] cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
                 >
-                  {currentBean?.capacity || ''}
+                  {currentBean?.capacity
+                    ? formatNumber(currentBean.capacity)
+                    : ''}
                 </div>
               ) : (
                 <span

@@ -267,11 +267,12 @@ export const getCoffeeBeanStore = () => useCoffeeBeanStore.getState();
 /**
  * 格式化数值，对于整数不显示小数部分，非整数保留一位小数
  */
-function formatNumber(value: number): string {
-  if (Number.isInteger(value)) {
-    return value.toString();
+export function formatCoffeeBeanAmount(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  if (Number.isInteger(rounded)) {
+    return rounded.toString();
   }
-  return value.toFixed(1);
+  return rounded.toFixed(1);
 }
 
 /**
@@ -299,7 +300,7 @@ export const CapacitySyncManager = {
     const numAmount =
       typeof amount === 'number' ? amount : parseFloat(String(amount));
     if (isNaN(numAmount)) return `0${unit}`;
-    return `${formatNumber(numAmount)}${unit}`;
+    return `${formatCoffeeBeanAmount(numAmount)}${unit}`;
   },
 };
 
@@ -366,7 +367,7 @@ export async function updateBeanRemaining(
         ? parseFloat(dbBean.remaining)
         : 0;
       const newRemaining = Math.max(0, currentRemaining - usedAmount);
-      const formattedNewRemaining = formatNumber(newRemaining);
+      const formattedNewRemaining = formatCoffeeBeanAmount(newRemaining);
 
       const updatedBean = {
         ...dbBean,
@@ -380,7 +381,7 @@ export async function updateBeanRemaining(
 
     const currentRemaining = bean.remaining ? parseFloat(bean.remaining) : 0;
     const newRemaining = Math.max(0, currentRemaining - usedAmount);
-    const formattedNewRemaining = formatNumber(newRemaining);
+    const formattedNewRemaining = formatCoffeeBeanAmount(newRemaining);
 
     const result = await store.updateBean(id, {
       remaining: formattedNewRemaining,
@@ -451,7 +452,7 @@ export async function increaseBeanRemaining(
       }
     }
 
-    const formattedNewRemaining = formatNumber(finalRemaining);
+    const formattedNewRemaining = formatCoffeeBeanAmount(finalRemaining);
     const result = await store.updateBean(id, {
       remaining: formattedNewRemaining,
     });

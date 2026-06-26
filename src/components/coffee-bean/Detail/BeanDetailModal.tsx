@@ -20,7 +20,10 @@ import {
   normalizeFlavorPeriodDay,
 } from '@/lib/utils/flavorPeriodUtils';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
-import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import {
+  formatCoffeeBeanAmount,
+  useCoffeeBeanStore,
+} from '@/lib/stores/coffeeBeanStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
 import { RoastingManager } from '@/lib/managers/roastingManager';
@@ -845,7 +848,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
       const actualDecrement = Math.min(decrementAmount, currentRemaining);
       const nextRemaining = Math.max(0, currentRemaining - actualDecrement);
-      const formattedValue = nextRemaining.toFixed(1);
+      const formattedValue = formatCoffeeBeanAmount(nextRemaining);
       await useCoffeeBeanStore
         .getState()
         .updateBean(bean.id, { remaining: formattedValue });

@@ -1,4 +1,7 @@
-import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import {
+  formatCoffeeBeanAmount,
+  useCoffeeBeanStore,
+} from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '../types';
 
 export const useBeanOperations = () => {
@@ -67,7 +70,7 @@ export const useBeanOperations = () => {
 
       const actualDecrement = Math.min(decrementAmount, currentNum);
       const newValue = Math.max(0, currentNum - actualDecrement);
-      const formattedValue = newValue.toFixed(1);
+      const formattedValue = formatCoffeeBeanAmount(newValue);
       const reducedToZero = currentNum < decrementAmount;
 
       await store.updateBean(beanId, { remaining: formattedValue });
