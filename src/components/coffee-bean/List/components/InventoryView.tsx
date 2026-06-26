@@ -205,16 +205,20 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     event: React.MouseEvent
   ) => {
     event.stopPropagation();
-    const target = event.target as HTMLElement;
+    const target = event.currentTarget as HTMLElement;
 
     if (!target || !document.body.contains(target)) return;
 
-    setEditingRemaining({
-      beanId: bean.id,
-      value: bean.remaining || '',
-      targetElement: target,
-      bean: bean,
-    });
+    setEditingRemaining(current =>
+      current?.beanId === bean.id
+        ? null
+        : {
+            beanId: bean.id,
+            value: bean.remaining || '',
+            targetElement: target,
+            bean: bean,
+          }
+    );
   };
 
   const handleQuickDecrement = async (decrementAmount: number) => {
