@@ -541,11 +541,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     return beans.some(bean => beanImageIds.has(bean.id));
   }, [beans, beanImageIds]);
 
-  // 切换图片流模式（简化版，直接使用 updateDisplayMode）
-  const handleToggleImageFlowMode = useCallback(() => {
-    updateDisplayMode(isImageFlowMode ? 'list' : 'imageFlow');
-  }, [isImageFlowMode, updateDisplayMode]);
-
   // 显示模式切换处理函数（直接使用 updateDisplayMode）
   const handleDisplayModeChange = useCallback(
     (mode: DisplayMode) => {
@@ -1709,7 +1704,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         rankingFilterCount={rankingFilterCount}
         rankingOmniCount={rankingOmniCount}
         isImageFlowMode={isImageFlowMode}
-        onToggleImageFlowMode={handleToggleImageFlowMode}
         hasImageBeans={hasImageBeans}
         // 新增显示模式属性
         displayMode={displayMode}

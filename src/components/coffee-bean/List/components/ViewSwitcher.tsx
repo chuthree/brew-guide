@@ -83,6 +83,15 @@ const UNDERLINE_TRANSITION = {
 };
 
 const EMPTY_BEAN_GROUPS: CoffeeBeanGroup[] = [];
+type SelectableBeanType = Exclude<BeanType, 'all'>;
+
+const BEAN_TYPE_LABELS: Record<SelectableBeanType, string> = {
+  espresso: '意式',
+  filter: '手冲',
+  omni: '全能',
+};
+
+const BEAN_TYPE_ORDER: SelectableBeanType[] = ['espresso', 'filter', 'omni'];
 
 // 可复用的标签按钮组件 - 支持 layoutId 实现跨按钮下划线动画
 interface TabButtonProps {
@@ -377,7 +386,6 @@ interface ViewSwitcherProps {
   rankingOmniCount?: number;
   // 新增图片流模式相关props
   isImageFlowMode?: boolean;
-  onToggleImageFlowMode?: () => void;
   hasImageBeans?: boolean;
   // 新增显示模式 props（替代 isImageFlowMode）
   displayMode?: 'list' | 'imageFlow' | 'table';
@@ -462,7 +470,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   rankingFilterCount = 0,
   rankingOmniCount = 0,
   isImageFlowMode = false,
-  onToggleImageFlowMode,
   hasImageBeans = true,
   // 新增显示模式参数
   displayMode: externalDisplayMode,
@@ -534,6 +541,35 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   const beanSummaryLimitMode = useSettingsStore(state =>
     getBeanSummaryLimitMode(state.settings)
   );
+  const availableBeanTypes = useMemo(
+    () =>
+      BEAN_TYPE_ORDER.filter(type => {
+        if (type === 'espresso') return totalEspressoCount > 0;
+        if (type === 'filter') return totalFilterCount > 0;
+        return totalOmniCount > 0;
+      }),
+    [totalEspressoCount, totalFilterCount, totalOmniCount]
+  );
+  const selectedBeanTypeLabel =
+    selectedBeanType && selectedBeanType !== 'all'
+      ? BEAN_TYPE_LABELS[selectedBeanType]
+      : '';
+  const handleBeanTypeDoubleClick = useCallback(() => {
+    if (
+      !selectedBeanType ||
+      selectedBeanType === 'all' ||
+      availableBeanTypes.length < 2
+    ) {
+      return;
+    }
+
+    const currentIndex = availableBeanTypes.indexOf(selectedBeanType);
+    if (currentIndex === -1) return;
+
+    onBeanTypeChange?.(
+      availableBeanTypes[(currentIndex + 1) % availableBeanTypes.length]
+    );
+  }, [availableBeanTypes, onBeanTypeChange, selectedBeanType]);
   const beanSummaryDetailsText = useMemo(() => {
     const typeCount = [
       espressoCount > 0,
@@ -1185,17 +1221,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       dataTab="all"
                       layoutId={`inventory-${filterMode}-underline`}
                     >
-                      <span onDoubleClick={() => onToggleImageFlowMode?.()}>
+                      <span onDoubleClick={handleBeanTypeDoubleClick}>
                         全部
-                        {/* 显示当前显示模式 */}
-                        {externalDisplayMode === 'imageFlow' && (
-                          <span> · 图片流</span>
-                        )}
-                        {externalDisplayMode === 'table' && (
-                          <span> · 表格</span>
-                        )}
-                        {!externalDisplayMode && isImageFlowMode && (
-                          <span> · 图片流</span>
+                        {selectedBeanTypeLabel && (
+                          <span> · {selectedBeanTypeLabel}</span>
                         )}
                       </span>
                     </TabButton>
