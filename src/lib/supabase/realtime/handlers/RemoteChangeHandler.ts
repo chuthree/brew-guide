@@ -13,7 +13,10 @@
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { db } from '@/lib/core/db';
 import { SYNC_TABLES, DEFAULT_USER_ID } from '../../syncOperations';
-import { shouldAcceptRemoteChange } from '../conflictResolver';
+import {
+  extractTimestamp,
+  shouldAcceptRemoteChange,
+} from '../conflictResolver';
 import { getDbTable } from '../dbUtils';
 import { notifyStoreDelete, notifyStoreUpsert } from './StoreNotifier';
 import type { RealtimeSyncTable, CloudRecord } from '../types';
@@ -101,7 +104,9 @@ export class RemoteChangeHandler {
     const remoteTime = remoteRecord?.updated_at
       ? new Date(remoteRecord.updated_at as string).getTime()
       : Date.now();
-    const localTime = (localRecord as { timestamp?: number }).timestamp || 0;
+    const localTime = extractTimestamp(
+      localRecord as { id: string; timestamp?: number; updatedAt?: number }
+    );
 
     if (remoteTime >= localTime) {
       await dbTable.delete(recordId);
@@ -201,6 +206,10 @@ export class RemoteChangeHandler {
   ): Promise<void> {
     const remoteMethods = (remoteData.methods || []) as Method[];
     await db.customMethods.put({
+      equipmentId,
+      methods: remoteMethods,
+    });
+    await notifyStoreUpsert(SYNC_TABLES.CUSTOM_METHODS, equipmentId, {
       equipmentId,
       methods: remoteMethods,
     });

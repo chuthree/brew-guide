@@ -21,6 +21,7 @@ import {
   fetchRemoteLatestTimestamp,
   uploadSettingsData,
   downloadSettingsData,
+  type SyncOperationResult,
 } from '../syncOperations';
 import {
   batchResolveConflicts,
@@ -45,6 +46,10 @@ import {
   mergeNotesWithStoredImages,
   persistBrewingNoteImagesFromNote,
 } from '@/lib/notes/imageRepository';
+import {
+  getSyncStatusStore,
+  type SupabaseSyncTaskStatus,
+} from '@/lib/stores/syncStatusStore';
 
 // 网络请求超时时间 (ms)
 const SYNC_TIMEOUT = 60000; // 增加到 60s 以适应移动端大文件传输
@@ -74,6 +79,62 @@ interface SyncStats {
   deleted: number;
 }
 
+interface ProgressPatch {
+  status?: SupabaseSyncTaskStatus;
+  detail?: string;
+  completed?: number;
+  total?: number;
+  uploaded?: number;
+  downloaded?: number;
+  deleted?: number;
+  failed?: number;
+  error?: string;
+}
+
+const TABLE_LABELS: Record<string, string> = {
+  [SYNC_TABLES.COFFEE_BEANS]: '咖啡豆',
+  [SYNC_TABLES.BREWING_NOTES]: '笔记',
+  [SYNC_TABLES.CUSTOM_EQUIPMENTS]: '自定义器具',
+  [SYNC_TABLES.CUSTOM_METHODS]: '自定义方案',
+  [SYNC_TABLES.USER_SETTINGS]: '设置',
+};
+
+const INITIAL_SYNC_TASKS = [
+  {
+    id: SYNC_TABLES.COFFEE_BEANS,
+    label: TABLE_LABELS[SYNC_TABLES.COFFEE_BEANS],
+  },
+  {
+    id: SYNC_TABLES.BREWING_NOTES,
+    label: TABLE_LABELS[SYNC_TABLES.BREWING_NOTES],
+  },
+  {
+    id: SYNC_TABLES.CUSTOM_EQUIPMENTS,
+    label: TABLE_LABELS[SYNC_TABLES.CUSTOM_EQUIPMENTS],
+  },
+  {
+    id: SYNC_TABLES.CUSTOM_METHODS,
+    label: TABLE_LABELS[SYNC_TABLES.CUSTOM_METHODS],
+  },
+  {
+    id: SYNC_TABLES.USER_SETTINGS,
+    label: TABLE_LABELS[SYNC_TABLES.USER_SETTINGS],
+  },
+];
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function assertSyncSuccess<T>(
+  result: SyncOperationResult<T>,
+  fallbackMessage: string
+): asserts result is SyncOperationResult<T> & { success: true } {
+  if (!result.success) {
+    throw new Error(result.error || fallbackMessage);
+  }
+}
+
 /**
  * 初始同步管理器类
  *
@@ -85,6 +146,13 @@ export class InitialSyncManager {
 
   constructor(client: SupabaseClient) {
     this.client = client;
+  }
+
+  private updateProgressTask(taskId: string, patch: ProgressPatch): void {
+    getSyncStatusStore().updateSupabaseSyncTask(taskId, {
+      label: TABLE_LABELS[taskId] || taskId,
+      ...patch,
+    });
   }
 
   /**
@@ -107,6 +175,17 @@ export class InitialSyncManager {
     console.log(
       `[InitialSync] 开始同步, lastSync=${lastSyncTime ? new Date(lastSyncTime).toLocaleString() : '首次'}`
     );
+
+    const syncStatusStore = getSyncStatusStore();
+    if (!syncStatusStore.supabaseSyncProgress.active) {
+      syncStatusStore.startSupabaseSyncProgress(
+        lastSyncTime === 0 ? 'initial-sync' : 'background-sync',
+        lastSyncTime === 0
+          ? '正在初始化 Supabase 数据'
+          : '正在同步 Supabase 数据',
+        INITIAL_SYNC_TASKS
+      );
+    }
 
     // 仅在首次同步时显示提示，避免后台静默同步打扰用户
     // lastSyncTime 为 0 表示首次同步（或数据被重置）
@@ -144,8 +223,10 @@ export class InitialSyncManager {
       await this.syncSettings();
     } catch (e) {
       console.error('[InitialSync] 设置同步失败:', e);
-      // 设置同步失败不计入核心数据同步错误，但可以记录日志
+      errorCount++;
     }
+
+    const totalTaskCount = results.length + 1;
 
     // 刷新所有 Store
     console.log('[InitialSync] 刷新所有 Store...');
@@ -169,7 +250,7 @@ export class InitialSyncManager {
     if (typeof window !== 'undefined') {
       if (errorCount > 0) {
         // 如果有错误发生
-        if (errorCount === results.length) {
+        if (errorCount === totalTaskCount) {
           showToast({ type: 'error', title: '同步失败，请检查网络' });
         } else {
           showToast({ type: 'warning', title: '部分数据同步失败' });
@@ -201,9 +282,8 @@ export class InitialSyncManager {
       }
     }
 
-    // 只有在没有完全失败的情况下才更新时间戳
-    // 这样下次重试时可以再次尝试同步失败的部分
-    if (errorCount < results.length) {
+    // 只有整轮同步全部成功才更新时间戳，避免失败表在下次同步中被跳过
+    if (errorCount === 0) {
       const now = Date.now();
       setLastSyncTime(now);
     }
@@ -211,6 +291,10 @@ export class InitialSyncManager {
     console.log(
       `[InitialSync] 完成 (${Date.now() - startTime}ms): ↑${stats.uploaded} ↓${stats.downloaded} ×${stats.deleted}, Errors: ${errorCount}`
     );
+
+    if (errorCount > 0) {
+      throw new Error(`Supabase 同步未完全完成，失败项目 ${errorCount} 个`);
+    }
 
     return stats;
   }
@@ -222,13 +306,22 @@ export class InitialSyncManager {
     table: RealtimeSyncTable,
     lastSyncTime: number
   ): Promise<SyncStats> {
-    const emptyResult: SyncStats = { uploaded: 0, downloaded: 0, deleted: 0 };
-
     try {
+      this.updateProgressTask(table, {
+        status: 'preparing',
+        detail: '读取本地数据',
+      });
+
       const dbTable = getDbTable(table);
 
       // 获取本地和云端数据
       const localRecords = await dbTable.toArray();
+
+      this.updateProgressTask(table, {
+        status: 'fetching',
+        detail: '拉取云端索引',
+        total: localRecords.length,
+      });
 
       // 增加超时控制
       // 优化：只拉取元数据 (id, updated_at, deleted_at)，不拉取 data
@@ -254,6 +347,13 @@ export class InitialSyncManager {
         updated_at: r.updated_at,
         deleted_at: r.deleted_at,
       }));
+
+      this.updateProgressTask(table, {
+        status: 'fetching',
+        detail: `已读取 ${remoteMetaRecords.length} 条云端索引`,
+        total: Math.max(localRecords.length, remoteMetaRecords.length),
+        completed: 0,
+      });
 
       // 调试日志：检查拉取到的数据量
       if (remoteMetaRecords.length > 0) {
@@ -306,11 +406,28 @@ export class InitialSyncManager {
       // 批量下载需要的数据
       const downloadedDataMap = new Map<string, any>();
       if (idsToDownload.length > 0) {
+        this.updateProgressTask(table, {
+          status: 'downloading',
+          detail: `下载 ${idsToDownload.length} 条云端记录`,
+          total: idsToDownload.length,
+          completed: 0,
+        });
+
         console.log(
           `[InitialSync] ${table} 需要下载 ${idsToDownload.length} 条完整记录`
         );
         const fetchResult = await withTimeout(
-          fetchRemoteRecordsByIds(this.client, table, idsToDownload),
+          fetchRemoteRecordsByIds(this.client, table, idsToDownload, {
+            onProgress: (downloadedCount, totalCount) => {
+              this.updateProgressTask(table, {
+                status: 'downloading',
+                detail: `已下载 ${downloadedCount}/${totalCount} 条云端记录`,
+                total: totalCount,
+                completed: downloadedCount,
+                downloaded: downloadedCount,
+              });
+            },
+          }),
           SYNC_TIMEOUT * 2, // 下载数据给予更多时间
           `下载 ${table} 详情超时`
         );
@@ -318,6 +435,13 @@ export class InitialSyncManager {
         if (fetchResult.success && fetchResult.data) {
           fetchResult.data.forEach(item => {
             downloadedDataMap.set(item.id, item.data);
+          });
+          this.updateProgressTask(table, {
+            status: 'downloading',
+            detail: `已下载 ${downloadedDataMap.size} 条云端记录`,
+            total: idsToDownload.length,
+            completed: downloadedDataMap.size,
+            downloaded: downloadedDataMap.size,
           });
         } else {
           console.error(
@@ -371,6 +495,13 @@ export class InitialSyncManager {
 
       // 执行上传
       if (toUpload.length > 0) {
+        this.updateProgressTask(table, {
+          status: 'uploading',
+          detail: `上传 ${toUpload.length} 条本地记录`,
+          total: toUpload.length,
+          completed: 0,
+        });
+
         const recordsForUpload =
           table === SYNC_TABLES.COFFEE_BEANS
             ? await mergeBeansWithStoredImages(toUpload as CoffeeBean[])
@@ -378,19 +509,52 @@ export class InitialSyncManager {
               ? await mergeNotesWithStoredImages(toUpload as BrewingNote[])
               : toUpload;
 
-        await upsertRecords(this.client, table, recordsForUpload, record => ({
-          id: record.id,
-          data: record,
-          updated_at: new Date(
-            (record as { updatedAt?: number; timestamp?: number }).updatedAt ||
-              (record as { timestamp?: number }).timestamp ||
-              Date.now()
-          ).toISOString(),
-        }));
+        const uploadResult = await upsertRecords(
+          this.client,
+          table,
+          recordsForUpload,
+          record => ({
+            id: record.id,
+            data: record,
+            updated_at: new Date(
+              (record as { updatedAt?: number; timestamp?: number })
+                .updatedAt ||
+                (record as { timestamp?: number }).timestamp ||
+                Date.now()
+            ).toISOString(),
+          }),
+          {
+            onProgress: (uploadedCount, totalCount) => {
+              this.updateProgressTask(table, {
+                status: 'uploading',
+                detail: `已上传 ${uploadedCount}/${totalCount} 条本地记录`,
+                total: totalCount,
+                completed: uploadedCount,
+                uploaded: uploadedCount,
+              });
+            },
+          }
+        );
+        assertSyncSuccess(uploadResult, `上传 ${table} 失败`);
+
+        this.updateProgressTask(table, {
+          status: 'uploading',
+          detail: `已上传 ${uploadResult.affectedCount} 条本地记录`,
+          total: toUpload.length,
+          completed: uploadResult.affectedCount,
+          uploaded: uploadResult.affectedCount,
+        });
       }
 
       // 执行下载
       if (toDownload.length > 0) {
+        this.updateProgressTask(table, {
+          status: 'writing',
+          detail: `写入 ${toDownload.length} 条云端记录`,
+          total: toDownload.length,
+          completed: 0,
+        });
+
         // 过滤掉 null 或无效的记录，防止写入失败
         const validRecords = toDownload.filter(record => {
           if (!record || !record.id) {
@@ -451,6 +615,14 @@ export class InitialSyncManager {
             });
           }
         }
+
+        this.updateProgressTask(table, {
+          status: 'writing',
+          detail: `已写入 ${validRecords.length} 条云端记录`,
+          total: toDownload.length,
+          completed: validRecords.length,
+          downloaded: validRecords.length,
+        });
       }
 
       // 执行本地删除
@@ -468,6 +640,14 @@ export class InitialSyncManager {
         }
       }
 
+      this.updateProgressTask(table, {
+        status: 'success',
+        detail: `完成 ↑${toUpload.length} ↓${toDownload.length} ×${toDeleteLocal.length}`,
+        uploaded: toUpload.length,
+        downloaded: toDownload.length,
+        deleted: toDeleteLocal.length,
+      });
+
       return {
         uploaded: toUpload.length,
         downloaded: toDownload.length,
@@ -475,6 +655,11 @@ export class InitialSyncManager {
       };
     } catch (error) {
       console.error(`[InitialSync] ${table} 同步失败:`, error);
+      this.updateProgressTask(table, {
+        status: 'error',
+        detail: '同步失败',
+        error: getErrorMessage(error),
+      });
       throw error;
     }
   }
@@ -483,9 +668,12 @@ export class InitialSyncManager {
    * 同步方案表（特殊处理）
    */
   private async syncTableMethods(lastSyncTime: number): Promise<SyncStats> {
-    const emptyResult: SyncStats = { uploaded: 0, downloaded: 0, deleted: 0 };
-
     try {
+      this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+        status: 'preparing',
+        detail: '读取本地方案',
+      });
+
       // 获取本地方案
       const localRecords = await db.customMethods.toArray();
       const localWithId = localRecords.map(r => {
@@ -505,6 +693,12 @@ export class InitialSyncManager {
 
       // 获取云端方案
       // 增加超时控制
+      this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+        status: 'fetching',
+        detail: '拉取云端方案',
+        total: localRecords.length,
+      });
+
       const remoteResult = await withTimeout(
         fetchRemoteAllRecords<{
           equipmentId: string;
@@ -553,6 +747,13 @@ export class InitialSyncManager {
         };
       });
 
+      this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+        status: 'fetching',
+        detail: `已读取 ${(remoteResult.data || []).length} 条云端方案`,
+        total: Math.max(localRecords.length, (remoteResult.data || []).length),
+        completed: 0,
+      });
+
       // 冲突解决
       const { toUpload, toDownload, toDeleteLocal } = batchResolveConflicts(
         localWithId,
@@ -582,7 +783,14 @@ export class InitialSyncManager {
 
       // 执行上传
       if (toUpload.length > 0) {
-        await upsertRecords(
+        this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+          status: 'uploading',
+          detail: `上传 ${toUpload.length} 条本地方案`,
+          total: toUpload.length,
+          completed: 0,
+        });
+
+        const uploadResult = await upsertRecords(
           this.client,
           SYNC_TABLES.CUSTOM_METHODS,
           toUpload,
@@ -590,18 +798,53 @@ export class InitialSyncManager {
             id: r.id,
             data: { equipmentId: r.equipmentId, methods: r.methods },
             updated_at: new Date().toISOString(),
-          })
+          }),
+          {
+            onProgress: (uploadedCount, totalCount) => {
+              this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+                status: 'uploading',
+                detail: `已上传 ${uploadedCount}/${totalCount} 条本地方案`,
+                total: totalCount,
+                completed: uploadedCount,
+                uploaded: uploadedCount,
+              });
+            },
+          }
         );
+        assertSyncSuccess(uploadResult, '上传 custom_methods 失败');
+
+        this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+          status: 'uploading',
+          detail: `已上传 ${uploadResult.affectedCount} 条本地方案`,
+          total: toUpload.length,
+          completed: uploadResult.affectedCount,
+          uploaded: uploadResult.affectedCount,
+        });
       }
 
       // 执行下载
       if (toDownload.length > 0) {
+        this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+          status: 'writing',
+          detail: `写入 ${toDownload.length} 条云端方案`,
+          total: toDownload.length,
+          completed: 0,
+        });
+
         for (const item of toDownload) {
           await db.customMethods.put({
             equipmentId: item.equipmentId,
             methods: item.methods,
           });
         }
+
+        this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+          status: 'writing',
+          detail: `已写入 ${toDownload.length} 条云端方案`,
+          total: toDownload.length,
+          completed: toDownload.length,
+          downloaded: toDownload.length,
+        });
       }
 
       // 执行本地删除
@@ -611,6 +854,14 @@ export class InitialSyncManager {
         }
       }
 
+      this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+        status: 'success',
+        detail: `完成 ↑${toUpload.length} ↓${toDownload.length} ×${toDeleteLocal.length}`,
+        uploaded: toUpload.length,
+        downloaded: toDownload.length,
+        deleted: toDeleteLocal.length,
+      });
+
       return {
         uploaded: toUpload.length,
         downloaded: toDownload.length,
@@ -618,6 +869,11 @@ export class InitialSyncManager {
       };
     } catch (error) {
       console.error(`[InitialSync] custom_methods 同步失败:`, error);
+      this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+        status: 'error',
+        detail: '同步失败',
+        error: getErrorMessage(error),
+      });
       throw error;
     }
   }
@@ -627,6 +883,11 @@ export class InitialSyncManager {
    */
   private async syncSettings(): Promise<void> {
     try {
+      this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+        status: 'fetching',
+        detail: '检查云端设置',
+      });
+
       const lastSyncTime = getLastSyncTime();
 
       const remoteResult = await withTimeout(
@@ -635,51 +896,105 @@ export class InitialSyncManager {
         '获取设置时间戳超时'
       );
 
-      const remoteTimestamp = remoteResult.success ? remoteResult.data || 0 : 0;
+      assertSyncSuccess(remoteResult, '获取设置时间戳失败');
+
+      const remoteTimestamp = remoteResult.data || 0;
 
       // 首次同步特殊处理：
       // - 云端有设置：下载
       // - 云端无设置：上传本地设置（uploadSettingsData 内部有空数据保护）
       if (lastSyncTime === 0) {
         if (remoteTimestamp > 0) {
+          this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+            status: 'downloading',
+            detail: '下载云端设置',
+          });
+
           const result = await withTimeout(
             downloadSettingsData(this.client),
             SYNC_TIMEOUT,
             '下载设置超时'
           );
-          if (result.success) {
-            await refreshSettingsStores();
-          }
+          assertSyncSuccess(result, '下载设置失败');
+          await refreshSettingsStores();
+          this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+            status: 'success',
+            detail: `已下载 ${result.affectedCount} 项设置`,
+            downloaded: result.affectedCount,
+          });
         } else {
-          await withTimeout(
+          this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+            status: 'uploading',
+            detail: '上传本地设置',
+          });
+
+          const result = await withTimeout(
             uploadSettingsData(this.client),
             SYNC_TIMEOUT,
             '上传设置超时'
           );
+          assertSyncSuccess(result, '上传设置失败');
+          this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+            status: 'success',
+            detail:
+              result.affectedCount > 0
+                ? `已上传 ${result.affectedCount} 项设置`
+                : '没有需要上传的设置',
+            uploaded: result.affectedCount,
+          });
         }
         return;
       }
 
       if (remoteTimestamp > lastSyncTime) {
         // 云端更新，下载
+        this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+          status: 'downloading',
+          detail: '下载云端设置',
+        });
+
         const result = await withTimeout(
           downloadSettingsData(this.client),
           SYNC_TIMEOUT,
           '下载设置超时'
         );
-        if (result.success) {
-          await refreshSettingsStores();
-        }
+        assertSyncSuccess(result, '下载设置失败');
+        await refreshSettingsStores();
+        this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+          status: 'success',
+          detail: `已下载 ${result.affectedCount} 项设置`,
+          downloaded: result.affectedCount,
+        });
       } else {
         // 本地更新，上传
-        await withTimeout(
+        this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+          status: 'uploading',
+          detail: '上传本地设置',
+        });
+
+        const result = await withTimeout(
           uploadSettingsData(this.client),
           SYNC_TIMEOUT,
           '上传设置超时'
         );
+        assertSyncSuccess(result, '上传设置失败');
+        this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+          status: 'success',
+          detail:
+            result.affectedCount > 0
+              ? `已上传 ${result.affectedCount} 项设置`
+              : '没有需要上传的设置',
+          uploaded: result.affectedCount,
+        });
       }
     } catch (error) {
       console.error('[InitialSync] 设置同步失败:', error);
+      this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+        status: 'error',
+        detail: '同步失败',
+        error: getErrorMessage(error),
+      });
+      throw error;
     }
   }
 }

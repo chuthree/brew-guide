@@ -11,6 +11,10 @@
  */
 
 export const SUPABASE_SETUP_SQL = `-- Brew Guide Supabase 数据库初始化脚本
+-- 兼容性约定：
+-- 1. 请保留 id + user_id 复合主键、data JSONB、deleted_at 软删除结构，CLI 与旧版应用依赖该结构。
+-- 2. 图片仍保存在 data JSONB 中；应用本地会把图片拆分到 IndexedDB，导出/同步时再合并。
+-- 3. 当前脚本不创建 Supabase Storage bucket，避免数据库备份与图片对象分离导致恢复不完整。
 
 -- ==================== 表结构 ====================
 

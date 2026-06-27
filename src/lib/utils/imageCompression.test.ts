@@ -81,4 +81,10 @@ describe('smartCompress', () => {
       0.8
     );
   });
+
+  it('does not recompress GIF data URLs', async () => {
+    const gifDataUrl = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+
+    await expect(compressBase64Image(gifDataUrl)).resolves.toBe(gifDataUrl);
+  });
 });

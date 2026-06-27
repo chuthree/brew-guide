@@ -50,4 +50,26 @@ describe('processImageFile', () => {
       },
     });
   });
+
+  it('keeps GIF images as original data URLs', async () => {
+    const gifDataUrl = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+
+    const SuccessfulFileReader = class {
+      result = gifDataUrl;
+      onload: ((event: ProgressEvent<FileReader>) => void) | null = null;
+      onerror: ((event: ProgressEvent<FileReader>) => void) | null = null;
+
+      readAsDataURL() {
+        this.onload?.({} as ProgressEvent<FileReader>);
+      }
+    } as unknown as typeof FileReader;
+
+    vi.stubGlobal('FileReader', SuccessfulFileReader);
+
+    const file = new File(['gif-bytes'], 'loop.gif', {
+      type: 'image/gif',
+    });
+
+    await expect(processImageFile(file)).resolves.toBe(gifDataUrl);
+  });
 });

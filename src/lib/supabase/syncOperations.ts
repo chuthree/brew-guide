@@ -26,6 +26,16 @@ export interface SyncOperationResult<T = unknown> {
   affectedCount: number;
 }
 
+export interface UpsertRecordsOptions {
+  /** 每条记录成功后回调 */
+  onProgress?: (uploadedCount: number, totalCount: number) => void;
+}
+
+export interface FetchRemoteRecordsByIdsOptions {
+  /** 每条记录读取完成后回调 */
+  onProgress?: (downloadedCount: number, totalCount: number) => void;
+}
+
 // ============================================
 // 常量
 // ============================================
@@ -139,65 +149,38 @@ export async function fetchRemoteAllRecords<T>(
 export async function fetchRemoteRecordsByIds<T>(
   client: SupabaseClient,
   table: SyncTableName,
-  ids: string[]
+  ids: string[],
+  options: FetchRemoteRecordsByIdsOptions = {}
 ): Promise<SyncOperationResult<Array<{ id: string; data: T }>>> {
   if (ids.length === 0) {
     return { success: true, data: [], affectedCount: 0 };
   }
 
   try {
-    // Supabase URL 长度有限制，如果 ID 太多需要分批
-    // 优化：增大批次大小并使用并发请求，大幅提升下载速度
-    // 修复：添加并发限制和重试机制，防止移动端网络拥塞导致超时
-    const BATCH_SIZE = 25;
-    const CONCURRENCY_LIMIT = 4;
     const allRecords: Array<{ id: string; data: T }> = [];
 
-    // 1. 将 ID 分批
-    const batches: string[][] = [];
-    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-      batches.push(ids.slice(i, i + BATCH_SIZE));
-    }
+    for (const id of ids) {
+      const { data, error } = await client
+        .from(table)
+        .select('id, data')
+        .eq('user_id', DEFAULT_USER_ID)
+        .eq('id', id)
+        .maybeSingle();
 
-    // 2. 定义带重试的获取函数
-    const fetchBatchWithRetry = async (batchIds: string[], retries = 2) => {
-      for (let attempt = 0; attempt <= retries; attempt++) {
-        try {
-          const { data, error } = await client
-            .from(table)
-            .select('id, data')
-            .eq('user_id', DEFAULT_USER_ID)
-            .in('id', batchIds);
-
-          if (error) throw error;
-          return data as Array<{ id: string; data: T }>;
-        } catch (err) {
-          if (attempt === retries) throw err;
-          // 指数退避重试
-          await new Promise(resolve =>
-            setTimeout(resolve, 1000 * Math.pow(2, attempt))
-          );
-        }
+      if (error) {
+        console.error(`[SyncOps] 获取 ${table}/${id} 详情失败:`, error.message);
+        return {
+          success: false,
+          error: error.message,
+          data: allRecords,
+          affectedCount: allRecords.length,
+        };
       }
-      return [];
-    };
 
-    // 3. 分组并发执行
-    for (let i = 0; i < batches.length; i += CONCURRENCY_LIMIT) {
-      const currentBatches = batches.slice(i, i + CONCURRENCY_LIMIT);
-      const batchPromises = currentBatches.map(batchIds =>
-        fetchBatchWithRetry(batchIds)
-      );
-
-      // 等待当前组完成
-      const batchResults = await Promise.all(batchPromises);
-
-      // 收集结果
-      batchResults.forEach(batchData => {
-        if (batchData) {
-          allRecords.push(...batchData);
-        }
-      });
+      if (data) {
+        allRecords.push(data as { id: string; data: T });
+      }
+      options.onProgress?.(allRecords.length, ids.length);
     }
 
     return {
@@ -220,7 +203,8 @@ export async function upsertRecords<T extends { id: string }>(
   client: SupabaseClient,
   table: SyncTableName,
   records: T[],
-  mapFn: (record: T) => Record<string, unknown>
+  mapFn: (record: T) => Record<string, unknown>,
+  options: UpsertRecordsOptions = {}
 ): Promise<SyncOperationResult> {
   if (records.length === 0) {
     return { success: true, affectedCount: 0 };
@@ -233,16 +217,27 @@ export async function upsertRecords<T extends { id: string }>(
       deleted_at: null,
     }));
 
-    const { error } = await client
-      .from(table)
-      .upsert(mappedRecords, { onConflict: 'id,user_id' });
+    let affectedCount = 0;
 
-    if (error) {
-      console.error(`[SyncOps] ${table} upsert 失败:`, error.message);
-      return { success: false, error: error.message, affectedCount: 0 };
+    for (const mappedRecord of mappedRecords) {
+      const { error } = await client
+        .from(table)
+        .upsert(mappedRecord, { onConflict: 'id,user_id' });
+
+      if (error) {
+        console.error(`[SyncOps] ${table} upsert 失败:`, error.message);
+        return {
+          success: false,
+          error: error.message,
+          affectedCount,
+        };
+      }
+
+      affectedCount += 1;
+      options.onProgress?.(affectedCount, records.length);
     }
 
-    return { success: true, affectedCount: records.length };
+    return { success: true, affectedCount };
   } catch (err) {
     const message = err instanceof Error ? err.message : '未知错误';
     return { success: false, error: message, affectedCount: 0 };

@@ -2,6 +2,7 @@ export const APP_IMAGE_MIME_TYPE = 'image/webp';
 export const JPEG_IMAGE_MIME_TYPE = 'image/jpeg';
 export const PNG_IMAGE_MIME_TYPE = 'image/png';
 export const WEBP_IMAGE_MIME_TYPE = 'image/webp';
+export const GIF_IMAGE_MIME_TYPE = 'image/gif';
 
 const HEIF_IMAGE_MIME_TYPES = new Set([
   'image/heic',
@@ -15,6 +16,7 @@ const MIME_TYPE_BY_EXTENSION: Record<string, string> = {
   jpeg: JPEG_IMAGE_MIME_TYPE,
   png: PNG_IMAGE_MIME_TYPE,
   webp: WEBP_IMAGE_MIME_TYPE,
+  gif: GIF_IMAGE_MIME_TYPE,
   heic: 'image/heic',
   heif: 'image/heif',
   hif: 'image/heif',
@@ -24,6 +26,7 @@ export const SUPPORTED_SOURCE_IMAGE_MIME_TYPES = [
   JPEG_IMAGE_MIME_TYPE,
   PNG_IMAGE_MIME_TYPE,
   WEBP_IMAGE_MIME_TYPE,
+  GIF_IMAGE_MIME_TYPE,
   'image/heic',
   'image/heif',
   'image/heic-sequence',
@@ -76,6 +79,7 @@ export function getImageFormatFromMimeType(mimeType: string) {
   if (mimeType === JPEG_IMAGE_MIME_TYPE) return 'jpeg';
   if (mimeType === PNG_IMAGE_MIME_TYPE) return 'png';
   if (mimeType === WEBP_IMAGE_MIME_TYPE) return 'webp';
+  if (mimeType === GIF_IMAGE_MIME_TYPE) return 'gif';
   if (mimeType === 'image/heif' || mimeType === 'image/heif-sequence') {
     return 'heif';
   }

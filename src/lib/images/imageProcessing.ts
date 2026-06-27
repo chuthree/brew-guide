@@ -1,4 +1,5 @@
 import {
+  GIF_IMAGE_MIME_TYPE,
   isHeifImageMimeType,
   isSupportedSourceImageFile,
   normalizeImageMimeType,
@@ -134,7 +135,7 @@ export async function processImageFile(
 
   if (!isSupportedSourceImageFile(file)) {
     throw new ImageProcessingError(
-      '请上传 JPG、PNG、WebP 或 HEIF/HEIC 格式的图片',
+      '请上传 JPG、PNG、WebP、GIF 或 HEIF/HEIC 格式的图片',
       'unsupported-type',
       file
     );
@@ -155,6 +156,10 @@ export async function processImageFile(
     const readError = createImageReadFailedError(file, error);
     console.error('Image file read failed', readError.diagnostics);
     throw readError;
+  }
+
+  if (mimeType === GIF_IMAGE_MIME_TYPE) {
+    return dataUrl;
   }
 
   try {

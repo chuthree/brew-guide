@@ -455,9 +455,16 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   const syncStatus = useSyncStatusStore(state => state.status);
   const syncProvider = useSyncStatusStore(state => state.provider);
   const isInitialSyncing = useSyncStatusStore(state => state.isInitialSyncing);
+  const supabaseSyncProgress = useSyncStatusStore(
+    state => state.supabaseSyncProgress
+  );
 
   // 判断是否正在同步
-  const isSyncing = syncStatus === 'syncing' || isInitialSyncing;
+  const isSyncing =
+    syncStatus === 'syncing' || isInitialSyncing || supabaseSyncProgress.active;
+  const syncMessage = supabaseSyncProgress.active
+    ? supabaseSyncProgress.message || '同步中'
+    : '同步中';
   const showHeaderSyncSpinner =
     syncProvider === 'supabase' && isSyncing && !isDesktopLayout;
 
@@ -1959,7 +1966,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         <div className="mt-auto hidden px-6 pb-6 md:block">
           <div className="flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500">
             <AppleSpinner className="h-3 w-3" />
-            <span>同步中</span>
+            <span className="truncate">{syncMessage}</span>
           </div>
         </div>
       )}

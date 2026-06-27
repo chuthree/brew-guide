@@ -46,6 +46,7 @@ import {
 } from '@/components/layout/NavigationControls';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
+import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
 import Onboarding from '@/components/onboarding/Onboarding';
@@ -315,11 +316,29 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const isLargeScreen = useIsLargeScreen();
   // 检测是否启用桌面侧栏布局（md 断点）
   const isDesktopLayout = useIsDesktopLayout();
+  const isSupabaseSyncActive = useSyncStatusStore(
+    state => state.supabaseSyncProgress.active
+  );
   const NAVIGATION_COLLAPSED_STORAGE_KEY = 'navigationCollapsed';
   const [isNavigationCollapsed, setIsNavigationCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem(NAVIGATION_COLLAPSED_STORAGE_KEY) === 'true';
   });
+
+  useEffect(() => {
+    if (!isSupabaseSyncActive) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+      return '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isSupabaseSyncActive]);
 
   // 使用设置相关状态
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

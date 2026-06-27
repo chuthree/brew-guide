@@ -28,11 +28,72 @@ export type RealtimeStatus =
   | 'connected'
   | 'error';
 
+// Supabase 同步任务状态，用于同时展示多张表/队列的进度
+export type SupabaseSyncTaskStatus =
+  | 'pending'
+  | 'preparing'
+  | 'fetching'
+  | 'uploading'
+  | 'downloading'
+  | 'writing'
+  | 'verifying'
+  | 'queued'
+  | 'success'
+  | 'warning'
+  | 'error';
+
+export type SupabaseSyncPhase =
+  | 'idle'
+  | 'connecting'
+  | 'initial-sync'
+  | 'manual-sync'
+  | 'background-sync'
+  | 'local-change'
+  | 'settings'
+  | 'offline-queue';
+
+export interface SupabaseSyncTask {
+  id: string;
+  label: string;
+  status: SupabaseSyncTaskStatus;
+  detail?: string;
+  completed?: number;
+  total?: number;
+  uploaded?: number;
+  downloaded?: number;
+  deleted?: number;
+  failed?: number;
+  error?: string;
+  updatedAt: number;
+}
+
+export interface SupabaseSyncProgress {
+  active: boolean;
+  phase: SupabaseSyncPhase;
+  message?: string;
+  startedAt?: number;
+  updatedAt?: number;
+  tasks: SupabaseSyncTask[];
+}
+
+type SupabaseSyncTaskInput = Pick<SupabaseSyncTask, 'id' | 'label'> &
+  Partial<Omit<SupabaseSyncTask, 'id' | 'label' | 'updatedAt'>>;
+
+type SupabaseSyncTaskPatch = Partial<
+  Omit<SupabaseSyncTask, 'id' | 'updatedAt'>
+>;
+
+const createIdleSupabaseSyncProgress = (): SupabaseSyncProgress => ({
+  active: false,
+  phase: 'idle',
+  tasks: [],
+});
+
 // 状态自动重置配置
 const STATUS_AUTO_RESET_CONFIG = {
   success: 500, // 成功后快速重置
   error: 3000, // 错误状态保持 3 秒
-  syncing: 30000, // 同步超时保护
+  syncing: 300000, // 同步超时保护，需覆盖移动端图片同步
 };
 
 interface SyncStatusState {
@@ -46,6 +107,7 @@ interface SyncStatusState {
   realtimeEnabled: boolean;
   pendingChangesCount: number;
   isInitialSyncing: boolean;
+  supabaseSyncProgress: SupabaseSyncProgress;
 
   // 内部状态
   _resetTimer: ReturnType<typeof setTimeout> | null;
@@ -64,6 +126,18 @@ interface SyncStatusState {
   setRealtimeEnabled: (enabled: boolean) => void;
   setPendingChangesCount: (count: number) => void;
   setInitialSyncing: (syncing: boolean) => void;
+  startSupabaseSyncProgress: (
+    phase: SupabaseSyncPhase,
+    message?: string,
+    tasks?: SupabaseSyncTaskInput[]
+  ) => void;
+  updateSupabaseSyncTask: (
+    taskId: string,
+    patch: SupabaseSyncTaskPatch
+  ) => void;
+  finishSupabaseSyncProgress: (message?: string) => void;
+  failSupabaseSyncProgress: (message: string) => void;
+  resetSupabaseSyncProgress: () => void;
 
   // 内部方法
   _clearTimers: () => void;
@@ -82,6 +156,7 @@ export const useSyncStatusStore = create<SyncStatusState>()(
     realtimeEnabled: false,
     pendingChangesCount: 0,
     isInitialSyncing: false,
+    supabaseSyncProgress: createIdleSupabaseSyncProgress(),
 
     _resetTimer: null,
     _syncingTimeout: null,
@@ -173,6 +248,7 @@ export const useSyncStatusStore = create<SyncStatusState>()(
         provider: 'none',
         lastSyncTime: null,
         errorMessage: null,
+        supabaseSyncProgress: createIdleSupabaseSyncProgress(),
         _resetTimer: null,
         _syncingTimeout: null,
       });
@@ -193,6 +269,101 @@ export const useSyncStatusStore = create<SyncStatusState>()(
 
     setInitialSyncing: (syncing: boolean) => {
       set({ isInitialSyncing: syncing });
+    },
+
+    startSupabaseSyncProgress: (phase, message, tasks = []) => {
+      const now = Date.now();
+      set({
+        supabaseSyncProgress: {
+          active: true,
+          phase,
+          message,
+          startedAt: now,
+          updatedAt: now,
+          tasks: tasks.map(task => ({
+            status: 'pending',
+            ...task,
+            updatedAt: now,
+          })),
+        },
+      });
+    },
+
+    updateSupabaseSyncTask: (taskId, patch) => {
+      const now = Date.now();
+      set(state => {
+        const currentTasks = state.supabaseSyncProgress.tasks;
+        const existingIndex = currentTasks.findIndex(
+          task => task.id === taskId
+        );
+
+        const nextTask: SupabaseSyncTask =
+          existingIndex >= 0
+            ? {
+                ...currentTasks[existingIndex],
+                ...patch,
+                updatedAt: now,
+              }
+            : {
+                id: taskId,
+                label: patch.label ?? taskId,
+                status: patch.status ?? 'pending',
+                detail: patch.detail,
+                completed: patch.completed,
+                total: patch.total,
+                uploaded: patch.uploaded,
+                downloaded: patch.downloaded,
+                deleted: patch.deleted,
+                failed: patch.failed,
+                error: patch.error,
+                updatedAt: now,
+              };
+
+        const tasks =
+          existingIndex >= 0
+            ? currentTasks.map((task, index) =>
+                index === existingIndex ? nextTask : task
+              )
+            : [...currentTasks, nextTask];
+
+        return {
+          supabaseSyncProgress: {
+            ...state.supabaseSyncProgress,
+            updatedAt: now,
+            tasks,
+          },
+        };
+      });
+    },
+
+    finishSupabaseSyncProgress: message => {
+      const now = Date.now();
+      set(state => ({
+        supabaseSyncProgress: {
+          ...state.supabaseSyncProgress,
+          active: false,
+          phase: 'idle',
+          message,
+          updatedAt: now,
+        },
+      }));
+    },
+
+    failSupabaseSyncProgress: message => {
+      const now = Date.now();
+      set(state => ({
+        supabaseSyncProgress: {
+          ...state.supabaseSyncProgress,
+          active: false,
+          phase: 'idle',
+          message,
+          updatedAt: now,
+        },
+      }));
+    },
+
+    resetSupabaseSyncProgress: () => {
+      set({ supabaseSyncProgress: createIdleSupabaseSyncProgress() });
     },
   }))
 );

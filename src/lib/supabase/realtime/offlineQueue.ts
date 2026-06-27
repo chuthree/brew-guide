@@ -64,6 +64,8 @@ export class OfflineQueueManager {
           data,
           timestamp: Date.now(),
           retryCount: 0,
+          lastError: undefined,
+          failedAt: undefined,
         });
         console.log(`[OfflineQueue] 更新队列操作: ${table}/${recordId}`);
       } else {
@@ -134,7 +136,10 @@ export class OfflineQueueManager {
   /**
    * 标记操作失败（增加重试次数）
    */
-  async markFailed(operationId: string): Promise<boolean> {
+  async markFailed(
+    operationId: string,
+    errorMessage?: string
+  ): Promise<boolean> {
     try {
       const operation = (await db
         .table('pendingOperations')
@@ -142,18 +147,22 @@ export class OfflineQueueManager {
 
       if (!operation) return false;
 
-      if (operation.retryCount >= this.maxRetries) {
-        // 超过最大重试次数，移除操作
-        await this.dequeue(operationId);
+      const retryCount = operation.retryCount + 1;
+      const reachedLimit = retryCount >= this.maxRetries;
+
+      await db.table('pendingOperations').update(operationId, {
+        retryCount,
+        lastError: errorMessage,
+        failedAt: reachedLimit ? Date.now() : undefined,
+      });
+
+      if (reachedLimit) {
         console.warn(
-          `[OfflineQueue] 操作 ${operationId} 超过最大重试次数，已移除`
+          `[OfflineQueue] 操作 ${operationId} 超过最大重试次数，已保留等待用户重试`
         );
         return false;
       }
 
-      await db.table('pendingOperations').update(operationId, {
-        retryCount: operation.retryCount + 1,
-      });
       return true;
     } catch (error) {
       console.error('[OfflineQueue] 标记失败出错:', error);
@@ -169,45 +178,63 @@ export class OfflineQueueManager {
    */
   async processQueue(
     processor: (operation: PendingOperation) => Promise<boolean>
-  ): Promise<{ processed: number; failed: number }> {
+  ): Promise<{ processed: number; failed: number; blocked: number }> {
     if (this.isProcessing) {
       console.log('[OfflineQueue] 队列正在处理中，跳过');
-      return { processed: 0, failed: 0 };
+      return { processed: 0, failed: 0, blocked: 0 };
     }
 
     this.isProcessing = true;
     let processed = 0;
     let failed = 0;
+    let blocked = 0;
 
     try {
       const operations = await this.getPendingOperations();
       console.log(`[OfflineQueue] 开始处理 ${operations.length} 个待处理操作`);
 
       for (const operation of operations) {
+        if (operation.retryCount >= this.maxRetries) {
+          blocked++;
+          continue;
+        }
+
         try {
           const success = await processor(operation);
           if (success) {
             await this.dequeue(operation.id);
             processed++;
           } else {
-            const canRetry = await this.markFailed(operation.id);
-            if (!canRetry) failed++;
+            const canRetry = await this.markFailed(
+              operation.id,
+              '同步失败，等待下次重试'
+            );
+            if (!canRetry) {
+              failed++;
+              blocked++;
+            }
           }
         } catch (error) {
           console.error(`[OfflineQueue] 处理操作 ${operation.id} 失败:`, error);
-          await this.markFailed(operation.id);
+          const canRetry = await this.markFailed(
+            operation.id,
+            error instanceof Error ? error.message : String(error)
+          );
+          if (!canRetry) {
+            blocked++;
+          }
           failed++;
         }
       }
 
       console.log(
-        `[OfflineQueue] 处理完成 - 成功: ${processed}, 失败: ${failed}`
+        `[OfflineQueue] 处理完成 - 成功: ${processed}, 失败: ${failed}, 保留: ${blocked}`
       );
     } finally {
       this.isProcessing = false;
     }
 
-    return { processed, failed };
+    return { processed, failed, blocked };
   }
 
   /**

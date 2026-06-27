@@ -5,6 +5,7 @@
 
 import {
   APP_IMAGE_MIME_TYPE,
+  GIF_IMAGE_MIME_TYPE,
   JPEG_IMAGE_MIME_TYPE,
 } from '@/lib/images/imageFormat';
 
@@ -34,6 +35,10 @@ export async function compressImage(
   file: File,
   options: CompressionOptions = {}
 ): Promise<File> {
+  if (file.type.toLowerCase() === GIF_IMAGE_MIME_TYPE) {
+    return file;
+  }
+
   const {
     maxWidth = 1920,
     maxHeight = 1920,
@@ -163,6 +168,10 @@ export async function compressBase64Image(
   base64: string,
   options: Base64CompressionOptions = {}
 ): Promise<string> {
+  if (base64.startsWith(`data:${GIF_IMAGE_MIME_TYPE}`)) {
+    return base64;
+  }
+
   const {
     maxSizeMB = 0.1,
     maxWidthOrHeight = 1200,
@@ -242,6 +251,13 @@ function detectImageMimeTypeFromBytes(bytes: Uint8Array): string | null {
     startsWithBytes(bytes, [0x57, 0x45, 0x42, 0x50], 8)
   ) {
     return 'image/webp';
+  }
+
+  if (
+    startsWithBytes(bytes, [0x47, 0x49, 0x46, 0x38, 0x37, 0x61]) ||
+    startsWithBytes(bytes, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61])
+  ) {
+    return GIF_IMAGE_MIME_TYPE;
   }
 
   if (bytes.length >= 12 && readAscii(bytes, 4, 8) === 'ftyp') {

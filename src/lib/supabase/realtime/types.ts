@@ -51,6 +51,8 @@ export interface PendingOperation {
   data?: unknown;
   timestamp: number;
   retryCount: number;
+  lastError?: string;
+  failedAt?: number;
 }
 
 /**

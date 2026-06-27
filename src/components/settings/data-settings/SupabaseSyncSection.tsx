@@ -14,19 +14,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SUPABASE_SETUP_SQL } from '@/lib/supabase';
 import { SettingsOptions } from '../Settings';
-import {
-  Clock,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  RefreshCw,
-  Wifi,
-  WifiOff,
-} from 'lucide-react';
+import { ExternalLink, Eye, EyeOff } from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
-import { SyncHeaderButton } from './shared';
-import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
+import { SyncHeaderButton } from './shared/SyncHeaderButton';
+import {
+  useSyncStatusStore,
+  type SupabaseSyncProgress,
+  type SupabaseSyncTask,
+  type SupabaseSyncTaskStatus,
+} from '@/lib/stores/syncStatusStore';
 import { getRealtimeSyncService } from '@/lib/supabase/realtime';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
@@ -44,6 +41,161 @@ interface SupabaseSyncSectionProps {
   onEnable?: () => void;
 }
 
+const TASK_STATUS_LABELS: Record<SupabaseSyncTaskStatus, string> = {
+  pending: '等待',
+  preparing: '准备',
+  fetching: '检查',
+  uploading: '上传',
+  downloading: '下载',
+  writing: '写入',
+  verifying: '校验',
+  queued: '已排队',
+  success: '完成',
+  warning: '待处理',
+  error: '失败',
+};
+
+function getTaskProgressPercent(task: SupabaseSyncTask): number | null {
+  if (!task.total || task.total <= 0) return null;
+  const completed = task.completed ?? 0;
+  return Math.min(100, Math.max(0, Math.round((completed / task.total) * 100)));
+}
+
+function getTaskProgressUnits(task: SupabaseSyncTask) {
+  if (task.total && task.total > 0) {
+    return {
+      completed: Math.min(task.completed ?? 0, task.total),
+      total: task.total,
+    };
+  }
+
+  return {
+    completed: task.status === 'success' ? 1 : 0,
+    total: 1,
+  };
+}
+
+function getOverallProgressPercent(tasks: SupabaseSyncTask[]): number | null {
+  if (tasks.length === 0) return null;
+
+  const totals = tasks.reduce(
+    (acc, task) => {
+      const units = getTaskProgressUnits(task);
+      return {
+        completed: acc.completed + units.completed,
+        total: acc.total + units.total,
+      };
+    },
+    { completed: 0, total: 0 }
+  );
+
+  if (totals.total <= 0) return null;
+  return Math.min(
+    100,
+    Math.max(0, Math.round((totals.completed / totals.total) * 100))
+  );
+}
+
+const SupabaseSyncProgressPanel: React.FC<{
+  progress: SupabaseSyncProgress;
+  pendingChangesCount: number;
+}> = ({ progress, pendingChangesCount }) => {
+  const visibleProgressTasks = progress.tasks.filter(
+    task =>
+      progress.active ||
+      task.status === 'error' ||
+      task.status === 'warning' ||
+      task.status === 'queued'
+  );
+  const hasOfflineQueueTask = visibleProgressTasks.some(
+    task => task.id === 'offline_queue'
+  );
+  const showProgressPanel =
+    progress.active ||
+    visibleProgressTasks.length > 0 ||
+    pendingChangesCount > 0;
+  const overallPercent = progress.active
+    ? getOverallProgressPercent(visibleProgressTasks)
+    : null;
+  const panelTitle = progress.active
+    ? `同步进度${overallPercent !== null ? ` ${overallPercent}%` : ''}`
+    : pendingChangesCount > 0
+      ? '待同步变更'
+      : '上次同步未完成';
+  const panelMessage = progress.active
+    ? `${progress.message || '正在同步 Supabase 数据'}，请不要离开应用或关闭窗口。`
+    : progress.message;
+
+  if (!showProgressPanel) return null;
+
+  return (
+    <div className="rounded-md bg-white p-3 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:bg-neutral-900 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-neutral-800 tabular-nums dark:text-neutral-100">
+          {panelTitle}
+        </p>
+        {panelMessage && (
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            {panelMessage}
+          </p>
+        )}
+      </div>
+
+      {overallPercent !== null && (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+          <div
+            className="h-full rounded-full bg-neutral-800 transition-[width] duration-300 dark:bg-neutral-200"
+            style={{ width: `${overallPercent}%` }}
+          />
+        </div>
+      )}
+
+      {visibleProgressTasks.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {visibleProgressTasks.map(task => {
+            const percent = getTaskProgressPercent(task);
+            const detail = task.error || task.detail;
+            const taskLine = `${task.label} · ${TASK_STATUS_LABELS[task.status]}${
+              percent !== null ? ` ${percent}%` : ''
+            }`;
+
+            return (
+              <div
+                key={task.id}
+                className="space-y-1.5 rounded-md bg-neutral-50 p-2.5 dark:bg-neutral-950/40"
+              >
+                <p className="text-xs font-medium text-neutral-800 tabular-nums dark:text-neutral-100">
+                  {taskLine}
+                </p>
+                {detail && (
+                  <p className="text-xs break-words text-neutral-500 dark:text-neutral-400">
+                    {detail}
+                  </p>
+                )}
+
+                {percent !== null && progress.active && (
+                  <div className="h-1 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+                    <div
+                      className="h-full rounded-full bg-neutral-800 transition-[width] duration-300 dark:bg-neutral-200"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {pendingChangesCount > 0 && !hasOfflineQueueTask && (
+        <p className="mt-3 rounded-md bg-neutral-50 p-2 text-xs text-neutral-600 dark:bg-neutral-950/40 dark:text-neutral-400">
+          {pendingChangesCount} 个变更待同步
+        </p>
+      )}
+    </div>
+  );
+};
+
 export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   settings,
   enabled,
@@ -59,8 +211,8 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 实时同步状态
-  const { realtimeStatus, pendingChangesCount } = useSyncStatusStore();
+  const { realtimeStatus, pendingChangesCount, supabaseSyncProgress } =
+    useSyncStatusStore();
 
   const triggerHaptic = (style: 'light' | 'medium' = 'light') => {
     if (hapticFeedback) {
@@ -81,15 +233,18 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
   };
 
   const status = getDisplayStatus();
+  const visibleError =
+    error && status !== 'connected' && !supabaseSyncProgress.active
+      ? error
+      : '';
 
   const getStatusColor = () => {
     switch (status) {
       case 'connected':
         return 'bg-green-500';
       case 'connecting':
-        return 'bg-amber-500';
       case 'error':
-        return 'bg-red-500';
+        return 'bg-neutral-500';
       default:
         return 'bg-neutral-300 dark:bg-neutral-600';
     }
@@ -232,71 +387,18 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
             <ExternalLink className="h-4 w-4" />
           </button>
 
-          {error && (
+          {visibleError && (
             <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-              <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+              <p className="text-xs text-red-600 dark:text-red-400">
+                {visibleError}
+              </p>
             </div>
           )}
 
-          {/* 实时同步状态和控制 */}
-          <div className="rounded-md border border-neutral-200/50 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {realtimeStatus === 'connected' ? (
-                  <Wifi className="h-4 w-4 text-green-500" />
-                ) : realtimeStatus === 'connecting' || isConnecting ? (
-                  <RefreshCw className="h-4 w-4 animate-spin text-amber-500" />
-                ) : (
-                  <WifiOff className="h-4 w-4 text-neutral-400" />
-                )}
-                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                  实时同步
-                </span>
-              </div>
-              <span
-                className={`text-xs font-medium ${
-                  realtimeStatus === 'connected'
-                    ? 'text-green-600 dark:text-green-400'
-                    : realtimeStatus === 'connecting' || isConnecting
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : 'text-neutral-500'
-                }`}
-              >
-                {realtimeStatus === 'connected'
-                  ? '已连接'
-                  : realtimeStatus === 'connecting' || isConnecting
-                    ? '连接中...'
-                    : realtimeStatus === 'error'
-                      ? '连接失败'
-                      : '未连接'}
-              </span>
-            </div>
-
-            {pendingChangesCount > 0 && (
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{pendingChangesCount} 个变更待同步</span>
-              </div>
-            )}
-
-            {realtimeStatus === 'connected' && pendingChangesCount === 0 && (
-              <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-                本地变更将自动同步到云端
-              </p>
-            )}
-
-            {realtimeStatus !== 'connected' &&
-              realtimeStatus !== 'connecting' &&
-              !isConnecting && (
-                <button
-                  type="button"
-                  onClick={connectRealtimeSync}
-                  className="mt-2 w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                >
-                  {settings.url && settings.anonKey ? '连接' : '请先填写配置'}
-                </button>
-              )}
-          </div>
+          <SupabaseSyncProgressPanel
+            progress={supabaseSyncProgress}
+            pendingChangesCount={pendingChangesCount}
+          />
         </div>
       )}
 
