@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { PrintConfig, EditableContent, PrintIconPlacement } from './types';
 import { formatDate, getPreviewDimensions } from './utils';
-import { getTemplateComponent } from './Templates';
+import { DetailedTemplate, MinimalTemplate } from './Templates';
 import { isPrintFieldVisible } from './fields';
 import { PrintIconLayer } from './PrintIconLayer';
 
@@ -23,14 +23,13 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
     () => (content.roastDate ? formatDate(content.roastDate) : ''),
     [content.roastDate]
   );
-
-  const TemplateComponent = getTemplateComponent(config.template);
+  const formattedPackDate = useMemo(
+    () => (content.packDate ? formatDate(content.packDate) : ''),
+    [content.packDate]
+  );
 
   return (
     <div className="border-t border-neutral-200/50 pt-4 dark:border-neutral-800">
-      <div className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-        预览
-      </div>
       <div className="flex justify-center rounded bg-neutral-100 p-4 dark:bg-neutral-800">
         <div
           id="print-preview"
@@ -52,11 +51,21 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
             overflow: 'hidden',
           }}
         >
-          <TemplateComponent
-            config={config}
-            content={content}
-            formattedDate={formattedDate}
-          />
+          {config.template === 'minimal' ? (
+            <MinimalTemplate
+              config={config}
+              content={content}
+              formattedDate={formattedDate}
+              formattedPackDate={formattedPackDate}
+            />
+          ) : (
+            <DetailedTemplate
+              config={config}
+              content={content}
+              formattedDate={formattedDate}
+              formattedPackDate={formattedPackDate}
+            />
+          )}
           {isPrintFieldVisible('icon', config, content) && (
             <PrintIconLayer
               icon={content.icon}

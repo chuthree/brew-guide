@@ -2,7 +2,13 @@ import { EditableContent, PrintConfig, PrintFieldKey } from './types';
 
 export type PrintTextFieldKey = Exclude<
   keyof EditableContent,
-  'roaster' | 'roastDate' | 'flavor' | 'notes' | 'icon' | 'iconSource'
+  | 'roaster'
+  | 'roastDate'
+  | 'packDate'
+  | 'flavor'
+  | 'notes'
+  | 'icon'
+  | 'iconSource'
 >;
 
 export const PRINT_FIELD_ORDER: PrintFieldKey[] = [
@@ -49,7 +55,7 @@ export const PRINT_FIELD_LABELS: Record<PrintFieldKey, string> = {
 
 export const PRINT_EDITOR_FIELD_LABELS: Record<PrintFieldKey, string> = {
   name: '名称',
-  roastDate: '烘焙日期',
+  roastDate: '日期',
   origin: '产地',
   estate: '庄园',
   process: '处理法',

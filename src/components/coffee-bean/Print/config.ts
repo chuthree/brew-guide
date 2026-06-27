@@ -54,6 +54,7 @@ export const DEFAULT_CONFIG: PrintConfig = {
     estate: false,
     roastLevel: true,
     roastDate: true,
+    packDate: false,
     flavor: true,
     process: true,
     variety: true,

@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Minus, Plus } from 'lucide-react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { DatePicker } from '@/components/common/ui/DatePicker';
 import {
   PrintConfig,
@@ -15,130 +14,133 @@ import {
   PRINT_TEXT_FIELD_PLACEHOLDERS,
   PrintTextFieldKey,
 } from './fields';
+import { getLocalDateString } from './utils';
 
-const INPUT_CLASS =
-  'w-full rounded border border-neutral-200/50 bg-white px-2 py-1.5 text-xs focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800';
-const SOFT_BUTTON_CLASS =
-  'rounded bg-neutral-200/50 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700';
-
-const createEditorItemKey = (): string => {
-  if (
-    typeof crypto !== 'undefined' &&
-    typeof crypto.randomUUID === 'function'
-  ) {
-    return crypto.randomUUID();
-  }
-
-  return `editor-item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-};
+const INPUT_SHELL_CLASS =
+  'flex min-h-8 w-full gap-2 rounded bg-neutral-200/50 px-2 text-xs font-medium text-neutral-700 transition-colors focus-within:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:focus-within:bg-neutral-700';
+const INPUT_LABEL_CLASS = 'shrink-0 text-neutral-500 dark:text-neutral-400';
+const INPUT_TEXTAREA_CLASS =
+  'min-w-0 flex-1 resize-none overflow-hidden bg-transparent py-1.5 text-xs leading-[1.4] text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500';
+const DATE_PICKER_TRIGGER_CLASS =
+  'h-8 justify-start border-0 border-b-0 bg-transparent py-0 text-xs font-medium text-neutral-800 focus-within:border-transparent dark:border-transparent dark:text-neutral-100 dark:focus-within:border-transparent';
 
 const autoResizeTextarea = (textarea: HTMLTextAreaElement) => {
   textarea.style.height = 'auto';
   textarea.style.height = `${textarea.scrollHeight}px`;
 };
 
+type TextEditableField = PrintTextFieldKey | 'roaster' | 'notes';
+
+interface InlineTextAreaProps {
+  field?: TextEditableField;
+  label?: string;
+  value: string;
+  placeholder: string;
+  rows?: number;
+  multiline?: boolean;
+  textAreaClassName?: string;
+  onUpdateField?: (field: TextEditableField, value: string) => void;
+  onValueChange?: (value: string) => void;
+}
+
+const InlineTextArea: React.FC<InlineTextAreaProps> = ({
+  field,
+  label,
+  value,
+  placeholder,
+  rows = 1,
+  multiline = false,
+  textAreaClassName = 'min-h-[20px]',
+  onUpdateField,
+  onValueChange,
+}) => {
+  const handleChange = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const nextValue = event.target.value;
+
+      if (field && onUpdateField) {
+        onUpdateField(field, nextValue);
+      } else {
+        onValueChange?.(nextValue);
+      }
+    },
+    [field, onUpdateField, onValueChange]
+  );
+
+  const handleInput = useCallback(
+    (event: React.FormEvent<HTMLTextAreaElement>) => {
+      autoResizeTextarea(event.currentTarget);
+    },
+    []
+  );
+
+  return (
+    <label
+      className={`${INPUT_SHELL_CLASS} ${multiline ? 'items-start py-1.5' : 'items-center'}`}
+    >
+      {label && (
+        <span className={`${INPUT_LABEL_CLASS} ${multiline ? 'pt-1' : ''}`}>
+          {label}
+        </span>
+      )}
+      <textarea
+        data-autosize="true"
+        value={value}
+        onChange={handleChange}
+        onInput={handleInput}
+        className={`${INPUT_TEXTAREA_CLASS} ${textAreaClassName}`}
+        placeholder={placeholder}
+        rows={rows}
+      />
+    </label>
+  );
+};
+
 interface FlavorFieldEditorProps {
   flavors: string[];
-  onUpdateFlavorItem: (index: number, value: string) => void;
-  onAddFlavor: () => void;
-  onRemoveFlavor: (index: number) => void;
+  onUpdateFlavor: (flavors: string[]) => void;
 }
 
 const FlavorFieldEditor: React.FC<FlavorFieldEditorProps> = ({
   flavors,
-  onUpdateFlavorItem,
-  onAddFlavor,
-  onRemoveFlavor,
+  onUpdateFlavor,
 }) => {
-  const [flavorKeys, setFlavorKeys] = useState<string[]>(() =>
-    flavors.map(() => createEditorItemKey())
+  const value = flavors.join(' / ');
+
+  const handleChange = useCallback(
+    (nextValue: string) => {
+      onUpdateFlavor(nextValue.trim() ? [nextValue] : []);
+    },
+    [onUpdateFlavor]
   );
 
-  const visibleFlavorKeys = useMemo(() => {
-    if (flavorKeys.length >= flavors.length) {
-      return flavorKeys.slice(0, flavors.length);
-    }
-
-    return [
-      ...flavorKeys,
-      ...Array.from(
-        { length: flavors.length - flavorKeys.length },
-        createEditorItemKey
-      ),
-    ];
-  }, [flavorKeys, flavors.length]);
-
-  const handleAddFlavor = () => {
-    setFlavorKeys([...visibleFlavorKeys, createEditorItemKey()]);
-    onAddFlavor();
-  };
-
-  const handleRemoveFlavor = (index: number) => {
-    setFlavorKeys(visibleFlavorKeys.filter((_, i) => i !== index));
-    onRemoveFlavor(index);
-  };
-
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div />
-        <button
-          type="button"
-          onClick={handleAddFlavor}
-          aria-label="添加风味"
-          className={`flex h-6 w-6 items-center justify-center ${SOFT_BUTTON_CLASS}`}
-        >
-          <Plus className="h-3 w-3" />
-        </button>
-      </div>
-      <div className="space-y-2">
-        {flavors.map((flavor, index) => (
-          <div
-            key={visibleFlavorKeys[index] ?? `flavor-item-${index}`}
-            className="flex items-center gap-2"
-          >
-            <textarea
-              data-autosize="true"
-              value={flavor}
-              onChange={e => onUpdateFlavorItem(index, e.target.value)}
-              onInput={e => autoResizeTextarea(e.currentTarget)}
-              className={`${INPUT_CLASS} min-h-[32px] flex-1 resize-none overflow-hidden leading-[1.4]`}
-              placeholder="风味描述"
-              rows={1}
-            />
-            <button
-              type="button"
-              onClick={() => handleRemoveFlavor(index)}
-              aria-label="删除风味"
-              className={`flex h-6 w-6 items-center justify-center ${SOFT_BUTTON_CLASS}`}
-            >
-              <Minus className="h-3 w-3" />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
+    <InlineTextArea
+      value={value}
+      placeholder="风味描述"
+      onValueChange={handleChange}
+    />
   );
 };
 
-type NameOptionField = 'nameSeparator' | 'contentBottomAligned';
+type FieldOption = 'nameSeparator' | 'contentBottomAligned' | 'packDate';
 
-interface NameOptionSwitchProps {
+interface FieldOptionSwitchProps {
   label: string;
-  field: NameOptionField;
+  field: FieldOption;
   checked: boolean;
   onToggleField: (field: keyof PrintConfig['fields']) => void;
 }
 
-const NameOptionSwitch: React.FC<NameOptionSwitchProps> = ({
+const FieldOptionSwitch: React.FC<FieldOptionSwitchProps> = ({
   label,
   field,
   checked,
   onToggleField,
 }) => {
-  function handleChange() {
+  const handleChange = useCallback(() => {
     onToggleField(field);
-  }
+  }, [field, onToggleField]);
 
   return (
     <label className="flex h-8 w-full cursor-pointer items-center justify-between gap-3 rounded bg-neutral-200/50 px-2 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700">
@@ -169,9 +171,6 @@ interface FieldEditorPanelProps {
     field: K,
     value: EditableContent[K]
   ) => void;
-  onUpdateFlavorItem: (index: number, value: string) => void;
-  onAddFlavor: () => void;
-  onRemoveFlavor: (index: number) => void;
   onIconFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onIconUploadClick: () => void;
   onIconSourceChange: (source: PrintIconSource) => void;
@@ -193,9 +192,6 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
   isIconProcessing,
   onToggleField,
   onUpdateField,
-  onUpdateFlavorItem,
-  onAddFlavor,
-  onRemoveFlavor,
   onIconFileChange,
   onIconUploadClick,
   onIconSourceChange,
@@ -218,29 +214,39 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
     );
   }, [content, activeField]);
 
-  const renderTextInput = (field: PrintTextFieldKey, placeholder: string) => (
-    <textarea
-      data-autosize="true"
-      value={content[field]}
-      onChange={e => onUpdateField(field, e.target.value)}
-      onInput={e => autoResizeTextarea(e.currentTarget)}
-      className={`${INPUT_CLASS} min-h-[32px] resize-none overflow-hidden leading-[1.4]`}
-      placeholder={placeholder}
-      rows={1}
-    />
+  const updateTextField = useCallback(
+    (field: TextEditableField, value: string) => {
+      onUpdateField(field, value);
+    },
+    [onUpdateField]
   );
 
-  const renderDateInput = () => (
-    <div className="text-xs">
-      <DatePicker
-        date={content.roastDate ? new Date(content.roastDate) : undefined}
-        onDateChange={date => {
-          onUpdateField('roastDate', date.toISOString().split('T')[0]);
-        }}
-        placeholder="选择烘焙日期"
-        locale="zh-CN"
-      />
-    </div>
+  const handleDateChange = useCallback(
+    (date: Date) => {
+      onUpdateField('roastDate', date.toISOString().split('T')[0]);
+    },
+    [onUpdateField]
+  );
+
+  const handleToggleActiveField = useCallback(() => {
+    onToggleField(activeField);
+  }, [activeField, onToggleField]);
+
+  const handleTogglePackDate = useCallback(
+    (field: keyof PrintConfig['fields']) => {
+      if (!config.fields.packDate) {
+        onUpdateField('packDate', getLocalDateString());
+      }
+      onToggleField(field);
+    },
+    [config.fields.packDate, onToggleField, onUpdateField]
+  );
+
+  const handleUpdateFlavor = useCallback(
+    (flavors: string[]) => {
+      onUpdateField('flavor', flavors);
+    },
+    [onUpdateField]
   );
 
   const renderFieldEditor = () => {
@@ -248,35 +254,28 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
       case 'name':
         return (
           <div className="space-y-2">
-            <div className="space-y-1">
-              <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                烘焙商（可选）
-              </div>
-              <textarea
-                data-autosize="true"
-                value={content.roaster}
-                onChange={e => onUpdateField('roaster', e.target.value)}
-                onInput={e => autoResizeTextarea(e.currentTarget)}
-                className={`${INPUT_CLASS} min-h-[32px] resize-none overflow-hidden leading-[1.4]`}
-                placeholder="默认使用咖啡豆中的烘焙商，可手动修改"
-                rows={1}
-              />
-            </div>
-            <div className="space-y-1">
-              <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                名称
-              </div>
-              {renderTextInput('name', PRINT_TEXT_FIELD_PLACEHOLDERS.name)}
-            </div>
+            <InlineTextArea
+              field="roaster"
+              label="烘焙商"
+              value={content.roaster}
+              placeholder="默认使用咖啡豆中的烘焙商，可手动修改"
+              onUpdateField={updateTextField}
+            />
+            <InlineTextArea
+              field="name"
+              value={content.name}
+              placeholder={PRINT_TEXT_FIELD_PLACEHOLDERS.name}
+              onUpdateField={updateTextField}
+            />
             {config.template === 'detailed' && (
               <div className="space-y-1.5">
-                <NameOptionSwitch
+                <FieldOptionSwitch
                   label="显示分隔线"
                   field="nameSeparator"
                   checked={config.fields.nameSeparator}
                   onToggleField={onToggleField}
                 />
-                <NameOptionSwitch
+                <FieldOptionSwitch
                   label="内容贴底"
                   field="contentBottomAligned"
                   checked={config.fields.contentBottomAligned}
@@ -287,47 +286,99 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
           </div>
         );
       case 'roastDate':
-        return renderDateInput();
+        return (
+          <div className="space-y-2">
+            <div className={`${INPUT_SHELL_CLASS} items-center`}>
+              <DatePicker
+                date={
+                  content.roastDate ? new Date(content.roastDate) : undefined
+                }
+                onDateChange={handleDateChange}
+                placeholder="选择日期"
+                locale="zh-CN"
+                className="min-w-0 flex-1"
+                triggerClassName={DATE_PICKER_TRIGGER_CLASS}
+              />
+            </div>
+            <FieldOptionSwitch
+              label="分装日期"
+              field="packDate"
+              checked={config.fields.packDate}
+              onToggleField={handleTogglePackDate}
+            />
+          </div>
+        );
       case 'origin':
-        return renderTextInput('origin', PRINT_TEXT_FIELD_PLACEHOLDERS.origin);
+        return (
+          <InlineTextArea
+            field="origin"
+            value={content.origin}
+            placeholder={PRINT_TEXT_FIELD_PLACEHOLDERS.origin}
+            onUpdateField={updateTextField}
+          />
+        );
       case 'estate':
-        return renderTextInput('estate', PRINT_TEXT_FIELD_PLACEHOLDERS.estate);
+        return (
+          <InlineTextArea
+            field="estate"
+            value={content.estate}
+            placeholder={PRINT_TEXT_FIELD_PLACEHOLDERS.estate}
+            onUpdateField={updateTextField}
+          />
+        );
       case 'process':
-        return renderTextInput(
-          'process',
-          PRINT_TEXT_FIELD_PLACEHOLDERS.process
+        return (
+          <InlineTextArea
+            field="process"
+            value={content.process}
+            placeholder={PRINT_TEXT_FIELD_PLACEHOLDERS.process}
+            onUpdateField={updateTextField}
+          />
         );
       case 'variety':
-        return renderTextInput(
-          'variety',
-          PRINT_TEXT_FIELD_PLACEHOLDERS.variety
+        return (
+          <InlineTextArea
+            field="variety"
+            value={content.variety}
+            placeholder={PRINT_TEXT_FIELD_PLACEHOLDERS.variety}
+            onUpdateField={updateTextField}
+          />
         );
       case 'roastLevel':
-        return renderTextInput(
-          'roastLevel',
-          PRINT_TEXT_FIELD_PLACEHOLDERS.roastLevel
+        return (
+          <InlineTextArea
+            field="roastLevel"
+            value={content.roastLevel}
+            placeholder={PRINT_TEXT_FIELD_PLACEHOLDERS.roastLevel}
+            onUpdateField={updateTextField}
+          />
         );
       case 'flavor':
         return (
           <FlavorFieldEditor
             flavors={content.flavor}
-            onUpdateFlavorItem={onUpdateFlavorItem}
-            onAddFlavor={onAddFlavor}
-            onRemoveFlavor={onRemoveFlavor}
+            onUpdateFlavor={handleUpdateFlavor}
           />
         );
       case 'weight':
-        return renderTextInput('weight', PRINT_TEXT_FIELD_PLACEHOLDERS.weight);
+        return (
+          <InlineTextArea
+            field="weight"
+            value={content.weight}
+            placeholder={PRINT_TEXT_FIELD_PLACEHOLDERS.weight}
+            onUpdateField={updateTextField}
+          />
+        );
       case 'notes':
         return (
-          <textarea
-            data-autosize="true"
+          <InlineTextArea
+            field="notes"
             value={content.notes}
-            onChange={e => onUpdateField('notes', e.target.value)}
-            onInput={e => autoResizeTextarea(e.currentTarget)}
-            className={`${INPUT_CLASS} min-h-[72px] resize-none overflow-hidden`}
             placeholder="备注信息"
             rows={3}
+            multiline
+            textAreaClassName="min-h-[56px] py-1"
+            onUpdateField={updateTextField}
           />
         );
       case 'icon':
@@ -364,8 +415,8 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
         </div>
         <button
           type="button"
-          onClick={() => onToggleField(activeField)}
-          className={`shrink-0 rounded border px-2 py-1 text-xs leading-none font-medium whitespace-nowrap transition-colors ${activeStatusButtonClass}`}
+          onClick={handleToggleActiveField}
+          className={`shrink-0 rounded px-2 py-1 text-xs leading-none font-medium whitespace-nowrap transition-colors ${activeStatusButtonClass}`}
         >
           {activeStatusLabel}
         </button>

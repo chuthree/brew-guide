@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { RotateCcw } from 'lucide-react';
+import ElasticSlider from '@/components/common/ui/ElasticSlider';
 import { PrintConfig, TEMPLATE_OPTIONS } from './types';
 
 interface LayoutSettingsProps {
@@ -14,6 +15,19 @@ interface LayoutSettingsProps {
   onReset: () => void;
 }
 
+const formatIntegerSliderValue = (value: number) => value.toString();
+const PRINT_SETTINGS_SLIDER_HEIGHT = 32;
+const PRINT_SETTINGS_SLIDER_RADIUS = 4;
+const PRINT_SETTINGS_SLIDER_TEXT_CLASS_NAME = 'text-xs';
+const PRINT_SETTINGS_SLIDER_TRACK_CLASS_NAME =
+  'bg-neutral-100 dark:bg-neutral-800';
+const PRINT_SETTINGS_SLIDER_FILL_CLASS_NAME =
+  'bg-neutral-200/45 group-data-[active=true]/elastic-slider:bg-neutral-200/60 dark:bg-neutral-700/25 dark:group-data-[active=true]/elastic-slider:bg-neutral-700/35';
+const PRINT_SETTINGS_SLIDER_HANDLE_CLASS_NAME =
+  'bg-neutral-400/80 dark:bg-neutral-500/80';
+const PRINT_SETTINGS_SLIDER_HASH_MARK_CLASS_NAME =
+  'group-data-[active=true]/elastic-slider:bg-neutral-400/15 dark:group-data-[active=true]/elastic-slider:bg-neutral-500/25';
+
 export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   config,
   onToggleOrientation,
@@ -23,11 +37,11 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   onUpdateFontWeight,
   onReset,
 }) => {
-  const cycleTemplate = () => {
+  const cycleTemplate = React.useCallback(() => {
     const idx = TEMPLATE_OPTIONS.findIndex(t => t.id === config.template);
     const next = TEMPLATE_OPTIONS[(idx + 1) % TEMPLATE_OPTIONS.length];
     onUpdateTemplate(next.id);
-  };
+  }, [config.template, onUpdateTemplate]);
 
   const currentTemplateName =
     TEMPLATE_OPTIONS.find(t => t.id === config.template)?.name ||
@@ -44,7 +58,7 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
           onClick={onReset}
           className="flex items-center gap-1 px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
         >
-          <RotateCcw className="h-3 w-3" /> 重置
+          <RotateCcw className="h-3 w-3" /> 重置布局
         </button>
       </div>
 
@@ -68,44 +82,61 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
 
       {/* 滑块 */}
       <div className="grid grid-cols-3 gap-2">
-        <div>
-          <div className="mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-            边距 {config.margin}
-          </div>
-          <input
-            type="range"
-            min="1"
-            max="8"
+        <div data-vaul-no-drag>
+          <ElasticSlider
+            label="边距"
+            min={1}
+            max={8}
+            step={1}
+            height={PRINT_SETTINGS_SLIDER_HEIGHT}
+            radius={PRINT_SETTINGS_SLIDER_RADIUS}
             value={config.margin}
-            onChange={e => onUpdateMargin(parseInt(e.target.value))}
-            className="slider h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
+            onValueChange={onUpdateMargin}
+            formatValue={formatIntegerSliderValue}
+            trackClassName={PRINT_SETTINGS_SLIDER_TRACK_CLASS_NAME}
+            fillClassName={PRINT_SETTINGS_SLIDER_FILL_CLASS_NAME}
+            handleClassName={PRINT_SETTINGS_SLIDER_HANDLE_CLASS_NAME}
+            hashMarkClassName={PRINT_SETTINGS_SLIDER_HASH_MARK_CLASS_NAME}
+            textClassName={PRINT_SETTINGS_SLIDER_TEXT_CLASS_NAME}
+            aria-label="打印边距"
           />
         </div>
-        <div>
-          <div className="mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-            字号 {config.fontSize}
-          </div>
-          <input
-            type="range"
-            min="6"
-            max="24"
+        <div data-vaul-no-drag>
+          <ElasticSlider
+            label="字号"
+            min={6}
+            max={24}
+            step={1}
+            height={PRINT_SETTINGS_SLIDER_HEIGHT}
+            radius={PRINT_SETTINGS_SLIDER_RADIUS}
             value={config.fontSize}
-            onChange={e => onUpdateFontSize(parseInt(e.target.value))}
-            className="slider h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
+            onValueChange={onUpdateFontSize}
+            formatValue={formatIntegerSliderValue}
+            trackClassName={PRINT_SETTINGS_SLIDER_TRACK_CLASS_NAME}
+            fillClassName={PRINT_SETTINGS_SLIDER_FILL_CLASS_NAME}
+            handleClassName={PRINT_SETTINGS_SLIDER_HANDLE_CLASS_NAME}
+            hashMarkClassName={PRINT_SETTINGS_SLIDER_HASH_MARK_CLASS_NAME}
+            textClassName={PRINT_SETTINGS_SLIDER_TEXT_CLASS_NAME}
+            aria-label="打印字号"
           />
         </div>
-        <div>
-          <div className="mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-            字重 {config.fontWeight}
-          </div>
-          <input
-            type="range"
-            min="300"
-            max="900"
-            step="100"
+        <div data-vaul-no-drag>
+          <ElasticSlider
+            label="字重"
+            min={300}
+            max={900}
+            step={100}
+            height={PRINT_SETTINGS_SLIDER_HEIGHT}
+            radius={PRINT_SETTINGS_SLIDER_RADIUS}
             value={config.fontWeight}
-            onChange={e => onUpdateFontWeight(parseInt(e.target.value))}
-            className="slider h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
+            onValueChange={onUpdateFontWeight}
+            formatValue={formatIntegerSliderValue}
+            trackClassName={PRINT_SETTINGS_SLIDER_TRACK_CLASS_NAME}
+            fillClassName={PRINT_SETTINGS_SLIDER_FILL_CLASS_NAME}
+            handleClassName={PRINT_SETTINGS_SLIDER_HANDLE_CLASS_NAME}
+            hashMarkClassName={PRINT_SETTINGS_SLIDER_HASH_MARK_CLASS_NAME}
+            textClassName={PRINT_SETTINGS_SLIDER_TEXT_CLASS_NAME}
+            aria-label="打印字重"
           />
         </div>
       </div>

@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Save } from 'lucide-react';
-import { BeanPrintModalProps } from './types';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import { X } from 'lucide-react';
+import {
+  BeanPrintModalProps,
+  PrintConfig,
+  PrintIconPlacement,
+} from './types';
 import { usePrintConfig, useEditableContent } from './hooks';
 import { getResolvedPrintIcon, savePreviewAsImage } from './utils';
 import { injectPrintStyles } from './styles';
@@ -46,16 +50,8 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     resetConfig,
   } = usePrintConfig();
 
-  const {
-    content,
-    updateField,
-    updateIcon,
-    updateIconSource,
-    updateFlavorItem,
-    addFlavor,
-    removeFlavor,
-    resetContent,
-  } = useEditableContent(bean, roasterSettings);
+  const { content, updateField, updateIcon, updateIconSource, resetContent } =
+    useEditableContent(bean, roasterSettings);
 
   const roasterLogo = useRoasterLogo(content.roaster.trim() || null);
   const previewContent = useMemo(
@@ -68,9 +64,9 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const handleClose = () => modalHistory.back();
+  const handleClose = useCallback(() => modalHistory.back(), []);
 
-  const handleSaveImage = async () => {
+  const handleSaveImage = useCallback(async () => {
     try {
       await savePreviewAsImage('print-preview', bean);
     } catch (error) {
@@ -79,14 +75,43 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
         await import('@/components/common/feedback/LightToast');
       showToast({ type: 'error', title: '保存图片失败，请重试' });
     }
-  };
+  }, [bean]);
 
-  const handleResetConfig = () => setShowResetConfirm(true);
+  const handleResetConfig = useCallback(() => setShowResetConfirm(true), []);
 
-  const confirmReset = () => {
+  const handleCancelReset = useCallback(() => {
+    setShowResetConfirm(false);
+  }, []);
+
+  const confirmReset = useCallback(() => {
     resetConfig();
     setShowResetConfirm(false);
-  };
+  }, [resetConfig]);
+
+  const handleUpdateTemplate = useCallback(
+    (template: PrintConfig['template']) => updateConfig('template', template),
+    [updateConfig]
+  );
+
+  const handleUpdateMargin = useCallback(
+    (margin: number) => updateConfig('margin', margin),
+    [updateConfig]
+  );
+
+  const handleUpdateFontSize = useCallback(
+    (fontSize: number) => updateConfig('fontSize', fontSize),
+    [updateConfig]
+  );
+
+  const handleUpdateFontWeight = useCallback(
+    (fontWeight: number) => updateConfig('fontWeight', fontWeight),
+    [updateConfig]
+  );
+
+  const handleUpdateIconPlacement = useCallback(
+    (placement: PrintIconPlacement) => updateConfig('iconPlacement', placement),
+    [updateConfig]
+  );
 
   if (!bean) return null;
 
@@ -119,10 +144,10 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
             <button
               type="button"
               onClick={handleSaveImage}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700 dark:bg-neutral-700 dark:hover:bg-neutral-600"
+              className="flex h-8 items-center justify-center rounded-full bg-neutral-100 px-3 text-xs font-medium text-neutral-700 hover:bg-neutral-200 hover:text-neutral-900 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:hover:text-neutral-100"
               title="保存图片"
             >
-              <Save className="h-4 w-4 text-white" />
+              保存
             </button>
           </div>
 
@@ -145,10 +170,10 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
               <LayoutSettings
                 config={config}
                 onToggleOrientation={toggleOrientation}
-                onUpdateTemplate={t => updateConfig('template', t)}
-                onUpdateMargin={m => updateConfig('margin', m)}
-                onUpdateFontSize={s => updateConfig('fontSize', s)}
-                onUpdateFontWeight={w => updateConfig('fontWeight', w)}
+                onUpdateTemplate={handleUpdateTemplate}
+                onUpdateMargin={handleUpdateMargin}
+                onUpdateFontSize={handleUpdateFontSize}
+                onUpdateFontWeight={handleUpdateFontWeight}
                 onReset={handleResetConfig}
               />
 
@@ -160,21 +185,14 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                 onUpdateField={updateField}
                 onUpdateIcon={updateIcon}
                 onUpdateIconSource={updateIconSource}
-                onUpdateIconPlacement={placement =>
-                  updateConfig('iconPlacement', placement)
-                }
-                onUpdateFlavorItem={updateFlavorItem}
-                onAddFlavor={addFlavor}
-                onRemoveFlavor={removeFlavor}
+                onUpdateIconPlacement={handleUpdateIconPlacement}
                 onResetContent={resetContent}
               />
 
               <PrintPreview
                 config={config}
                 content={previewContent}
-                onUpdateIconPlacement={placement =>
-                  updateConfig('iconPlacement', placement)
-                }
+                onUpdateIconPlacement={handleUpdateIconPlacement}
               />
             </div>
           </div>
@@ -190,7 +208,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                 <div className="flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setShowResetConfirm(false)}
+                    onClick={handleCancelReset}
                     className="flex-1 rounded-lg bg-neutral-100 py-2 text-sm font-medium hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                   >
                     取消

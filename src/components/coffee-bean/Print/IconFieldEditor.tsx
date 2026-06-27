@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ImageIcon, Minus, Plus, RotateCcw, Upload, X } from 'lucide-react';
 import { IMAGE_FILE_ACCEPT } from '@/lib/images/imageFormat';
 import { PrintIconSource } from './types';
@@ -9,12 +9,12 @@ const SOFT_BUTTON_CLASS =
   'rounded bg-neutral-200/50 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700';
 
 const getSourceButtonClass = (selected: boolean, empty: boolean): string =>
-  `flex h-10 min-w-0 items-center gap-2 rounded border p-1 text-left text-xs font-medium transition-colors disabled:opacity-50 ${
+  `flex h-8 min-w-0 items-center gap-1.5 rounded px-1.5 text-left text-xs font-medium transition-colors disabled:opacity-50 ${
     selected
-      ? 'border-neutral-600 bg-white text-neutral-800 dark:border-neutral-400 dark:bg-neutral-900 dark:text-neutral-100'
+      ? 'bg-neutral-200 text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
       : empty
-        ? 'border-dashed border-neutral-300 bg-neutral-200/40 text-neutral-500 hover:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-800/60 dark:text-neutral-400 dark:hover:bg-neutral-700'
-        : 'border-neutral-200 bg-neutral-200/40 text-neutral-600 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700'
+        ? 'bg-neutral-200/35 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800/60 dark:text-neutral-400 dark:hover:bg-neutral-700'
+        : 'bg-neutral-200/50 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700'
   }`;
 
 interface IconSwatchProps {
@@ -23,7 +23,7 @@ interface IconSwatchProps {
 }
 
 const IconSwatch: React.FC<IconSwatchProps> = ({ icon, label }) => (
-  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
+  <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded bg-neutral-100 dark:bg-neutral-900">
     {icon ? (
       <span
         aria-hidden="true"
@@ -124,6 +124,23 @@ export const IconFieldEditor: React.FC<IconFieldEditorProps> = ({
   const hasRoasterIcon = Boolean(roasterIcon);
   const effectiveSource =
     selectedSource === 'roaster' && hasRoasterIcon ? 'roaster' : 'custom';
+  const handleSourceClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      const source = event.currentTarget.dataset.source as
+        | PrintIconSource
+        | undefined;
+
+      if (!source) return;
+
+      if (source === 'custom' && !hasCustomIcon) {
+        onUploadClick();
+        return;
+      }
+
+      onSourceChange(source);
+    },
+    [hasCustomIcon, onSourceChange, onUploadClick]
+  );
 
   return (
     <div className="space-y-2">
@@ -140,7 +157,8 @@ export const IconFieldEditor: React.FC<IconFieldEditorProps> = ({
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => onSourceChange('roaster')}
+            data-source="roaster"
+            onClick={handleSourceClick}
             disabled={isProcessing}
             aria-pressed={selectedSource === 'roaster'}
             className={getSourceButtonClass(
@@ -153,9 +171,8 @@ export const IconFieldEditor: React.FC<IconFieldEditorProps> = ({
           </button>
           <button
             type="button"
-            onClick={() =>
-              hasCustomIcon ? onSourceChange('custom') : onUploadClick()
-            }
+            data-source="custom"
+            onClick={handleSourceClick}
             disabled={isProcessing}
             aria-pressed={selectedSource === 'custom'}
             className={getSourceButtonClass(

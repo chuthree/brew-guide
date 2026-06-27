@@ -19,6 +19,13 @@ export const formatDate = (dateStr: string): string => {
   }
 };
 
+export const getLocalDateString = (date = new Date()): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 export const getDisplayBeanName = (
   content: Pick<EditableContent, 'roaster' | 'name'>
 ): string => {
@@ -62,6 +69,9 @@ export const getBottomInfoLine = (
   }
   if (isPrintFieldVisible('roastDate', config, c)) {
     parts.push(formatDate(c.roastDate));
+  }
+  if (config.fields.roastDate && config.fields.packDate && c.packDate.trim()) {
+    parts.push(`分装 ${formatDate(c.packDate)}`);
   }
   if (isPrintFieldVisible('process', config, c)) {
     parts.push(c.process.trim());
@@ -122,6 +132,7 @@ export const createInitialContent = (
       estate: '',
       roastLevel: '',
       roastDate: '',
+      packDate: getLocalDateString(),
       process: '',
       variety: '',
       flavor: [],
@@ -138,6 +149,7 @@ export const createInitialContent = (
     estate: getBeanEstates(bean).join(', '),
     roastLevel: bean.roastLevel || '',
     roastDate: bean.roastDate || '',
+    packDate: getLocalDateString(),
     process: extractComponentInfo(bean, 'process'),
     variety: extractComponentInfo(bean, 'variety'),
     flavor: bean.flavor || [],

@@ -60,9 +60,28 @@ export type ElasticSliderProps = {
   max?: number;
   step?: number;
   formatValue?: (value: number) => string;
+  height?: React.CSSProperties['height'];
+  radius?: React.CSSProperties['borderRadius'];
   className?: string;
+  trackClassName?: string;
+  fillClassName?: string;
+  handleClassName?: string;
+  hashMarkClassName?: string;
+  textClassName?: string;
+  labelClassName?: string;
+  valueClassName?: string;
   'aria-label'?: string;
 };
+
+type ElasticSliderStyle = React.CSSProperties & {
+  '--elastic-slider-height'?: string;
+  '--elastic-slider-radius'?: string;
+};
+
+function toCssLength(value: number | string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return typeof value === 'number' ? `${value}px` : value;
+}
 
 export function ElasticSlider({
   label,
@@ -73,7 +92,16 @@ export function ElasticSlider({
   max = 1,
   step = 0.01,
   formatValue,
+  height,
+  radius,
   className,
+  trackClassName,
+  fillClassName,
+  handleClassName,
+  hashMarkClassName,
+  textClassName,
+  labelClassName,
+  valueClassName,
   'aria-label': ariaLabel,
 }: ElasticSliderProps) {
   const isControlled = valueProp !== undefined;
@@ -354,6 +382,24 @@ export function ElasticSlider({
     [animateFillTo, min, percentFromValue, safeMax, safeStep, setValue, value]
   );
 
+  const handleFocus = useCallback(() => {
+    if (!pendingPointerFocusRef.current) {
+      setKeyboardFocusRing(true);
+    }
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    setKeyboardFocusRing(false);
+  }, []);
+
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false);
+  }, []);
+
   useLayoutEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -406,15 +452,27 @@ export function ElasticSlider({
     discreteSteps <= 10
       ? (((index + 1) * safeStep) / range) * 100
       : (index + 1) * 10;
+  const sliderStyle: ElasticSliderStyle = {};
+  const cssHeight = toCssLength(height);
+  const cssRadius = toCssLength(radius);
+
+  if (cssHeight) {
+    sliderStyle['--elastic-slider-height'] = cssHeight;
+  }
+
+  if (cssRadius) {
+    sliderStyle['--elastic-slider-radius'] = cssRadius;
+  }
 
   return (
     <div
       ref={wrapperRef}
       data-slot="elastic-slider"
       className={cn(
-        'relative h-9 [--elastic-slider-radius:0.75rem]',
+        'relative h-[var(--elastic-slider-height)] [--elastic-slider-height:2.25rem] [--elastic-slider-radius:0.75rem]',
         className
       )}
+      style={sliderStyle}
     >
       <motion.div
         ref={trackRef}
@@ -431,22 +489,19 @@ export function ElasticSlider({
         aria-valuetext={displayValue}
         className={cn(
           'group/elastic-slider absolute inset-0 cursor-pointer touch-none overflow-hidden rounded-[var(--elastic-slider-radius)] bg-neutral-100 outline-none select-none dark:bg-neutral-800/80',
-          'data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-neutral-400/40 data-[focus-visible=true]:ring-offset-1 data-[focus-visible=true]:ring-offset-white dark:data-[focus-visible=true]:ring-neutral-500/50 dark:data-[focus-visible=true]:ring-offset-neutral-900'
+          'data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-neutral-400/40 data-[focus-visible=true]:ring-offset-1 data-[focus-visible=true]:ring-offset-white dark:data-[focus-visible=true]:ring-neutral-500/50 dark:data-[focus-visible=true]:ring-offset-neutral-900',
+          trackClassName
         )}
         style={{ width: rubberWidth, x: rubberX }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        onFocus={() => {
-          if (!pendingPointerFocusRef.current) {
-            setKeyboardFocusRing(true);
-          }
-        }}
-        onBlur={() => setKeyboardFocusRing(false)}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <div
           data-slot="elastic-slider-hash-marks"
@@ -456,7 +511,10 @@ export function ElasticSlider({
           {Array.from({ length: hashMarkCount }, (_, index) => (
             <div
               key={index}
-              className="absolute top-1/2 h-2 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-transparent transition-colors duration-200 group-data-[active=true]/elastic-slider:bg-neutral-400/25 dark:group-data-[active=true]/elastic-slider:bg-neutral-500/40"
+              className={cn(
+                'absolute top-1/2 h-2 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-transparent transition-colors duration-200 group-data-[active=true]/elastic-slider:bg-neutral-400/25 dark:group-data-[active=true]/elastic-slider:bg-neutral-500/40',
+                hashMarkClassName
+              )}
               style={{ left: `${hashMarkPct(index)}%` }}
             />
           ))}
@@ -465,14 +523,20 @@ export function ElasticSlider({
         <motion.div
           data-slot="elastic-slider-fill"
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 bg-neutral-200/80 transition-colors group-data-[active=true]/elastic-slider:bg-neutral-300/60 dark:bg-neutral-700/55 dark:group-data-[active=true]/elastic-slider:bg-neutral-600/45"
+          className={cn(
+            'pointer-events-none absolute inset-y-0 left-0 bg-neutral-200/80 transition-colors group-data-[active=true]/elastic-slider:bg-neutral-300/60 dark:bg-neutral-700/55 dark:group-data-[active=true]/elastic-slider:bg-neutral-600/45',
+            fillClassName
+          )}
           style={{ width: fillWidth }}
         />
 
         <motion.div
           data-slot="elastic-slider-handle"
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 h-5 w-1 rounded-full bg-neutral-500 dark:bg-neutral-400"
+          className={cn(
+            'pointer-events-none absolute top-1/2 h-5 w-1 rounded-full bg-neutral-500 dark:bg-neutral-400',
+            handleClassName
+          )}
           style={{ left: handleLeft, y: '-50%' }}
           animate={{
             opacity: handleOpacity,
@@ -502,7 +566,11 @@ export function ElasticSlider({
           ref={labelRef}
           data-slot="elastic-slider-label"
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 left-3 inline-flex max-w-[calc(100%-5rem)] -translate-y-1/2 items-center truncate text-sm leading-none font-medium text-neutral-500 transition-colors dark:text-neutral-400"
+          className={cn(
+            'pointer-events-none absolute top-1/2 left-3 inline-flex max-w-[calc(100%-5rem)] -translate-y-1/2 items-center truncate text-sm leading-none font-medium text-neutral-500 transition-colors dark:text-neutral-400',
+            textClassName,
+            labelClassName
+          )}
         >
           {label}
         </span>
@@ -511,7 +579,11 @@ export function ElasticSlider({
           ref={valueRef}
           data-slot="elastic-slider-value"
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-sm leading-none font-medium text-neutral-500 transition-colors group-data-[active=true]/elastic-slider:text-neutral-700 dark:text-neutral-400 dark:group-data-[active=true]/elastic-slider:text-neutral-200"
+          className={cn(
+            'pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-sm leading-none font-medium text-neutral-500 tabular-nums transition-colors group-data-[active=true]/elastic-slider:text-neutral-700 dark:text-neutral-400 dark:group-data-[active=true]/elastic-slider:text-neutral-200',
+            textClassName,
+            valueClassName
+          )}
         >
           {displayValue}
         </span>

@@ -78,6 +78,7 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
   config,
   content,
   formattedDate,
+  formattedPackDate,
 }) => {
   const { fontSize, fontWeight } = config;
   const validFlavors = content.flavor.filter(f => f.trim());
@@ -89,15 +90,69 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
       : `${content.weight}g`
     : '';
   const rows = [
-    { field: 'roastDate', value: formattedDate },
-    { field: 'origin', value: content.origin },
-    { field: 'estate', value: content.estate },
-    { field: 'process', value: content.process },
-    { field: 'variety', value: content.variety },
-    { field: 'roastLevel', value: content.roastLevel },
-    { field: 'flavor', value: validFlavors.join('/') },
-    { field: 'weight', value: weightValue },
-    { field: 'notes', value: content.notes },
+    {
+      key: 'roastDate',
+      label: PRINT_FIELD_LABELS.roastDate,
+      value: formattedDate,
+      show: isPrintFieldVisible('roastDate', config, content),
+    },
+    {
+      key: 'packDate',
+      label: '分装',
+      value: formattedPackDate,
+      show:
+        config.fields.roastDate &&
+        config.fields.packDate &&
+        Boolean(content.packDate.trim()),
+    },
+    {
+      key: 'origin',
+      label: PRINT_FIELD_LABELS.origin,
+      value: content.origin,
+      show: isPrintFieldVisible('origin', config, content),
+    },
+    {
+      key: 'estate',
+      label: PRINT_FIELD_LABELS.estate,
+      value: content.estate,
+      show: isPrintFieldVisible('estate', config, content),
+    },
+    {
+      key: 'process',
+      label: PRINT_FIELD_LABELS.process,
+      value: content.process,
+      show: isPrintFieldVisible('process', config, content),
+    },
+    {
+      key: 'variety',
+      label: PRINT_FIELD_LABELS.variety,
+      value: content.variety,
+      show: isPrintFieldVisible('variety', config, content),
+    },
+    {
+      key: 'roastLevel',
+      label: PRINT_FIELD_LABELS.roastLevel,
+      value: content.roastLevel,
+      show: isPrintFieldVisible('roastLevel', config, content),
+    },
+    {
+      key: 'flavor',
+      label: PRINT_FIELD_LABELS.flavor,
+      value: validFlavors.join('/'),
+      show: isPrintFieldVisible('flavor', config, content),
+    },
+    {
+      key: 'weight',
+      label: PRINT_FIELD_LABELS.weight,
+      value: weightValue,
+      show: isPrintFieldVisible('weight', config, content),
+    },
+    {
+      key: 'notes',
+      label: PRINT_FIELD_LABELS.notes,
+      value: content.notes,
+      show: isPrintFieldVisible('notes', config, content),
+    },
   ] as const;
 
   return (
@@ -153,13 +208,8 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
           lineHeight: 1,
         }}
       >
-        {rows.map(({ field, value }) => (
-          <FieldRow
-            key={field}
-            show={isPrintFieldVisible(field, config, content)}
-            label={PRINT_FIELD_LABELS[field]}
-            value={value}
-          />
+        {rows.map(({ key, label, value, show }) => (
+          <FieldRow key={key} show={show} label={label} value={value} />
         ))}
       </div>
     </div>

@@ -13,6 +13,7 @@ export interface DatePickerProps {
   placeholder?: string;
   locale?: string;
   className?: string;
+  triggerClassName?: string;
   disabled?: boolean;
   displayFormat?: string;
 }
@@ -23,28 +24,41 @@ export function DatePicker({
   placeholder = '选择日期',
   locale = 'zh-CN',
   className = '',
+  triggerClassName,
   disabled = false,
   displayFormat = 'yyyy/MM/dd',
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const localeObj = locale === 'zh-CN' ? zhCN : enUS;
 
-  const handleSelect = (selectedDate: Date) => {
-    if (onDateChange) {
-      onDateChange(selectedDate);
+  const handleSelect = React.useCallback(
+    (selectedDate: Date) => {
+      if (onDateChange) {
+        onDateChange(selectedDate);
+      }
+      setTimeout(() => {
+        setOpen(false);
+      }, 300);
+    },
+    [onDateChange]
+  );
+
+  const handleTriggerClick = React.useCallback(() => {
+    if (!disabled) {
+      setOpen(true);
     }
-    setTimeout(() => {
-      setOpen(false);
-    }, 300);
-  };
+  }, [disabled]);
 
   return (
     <div className={`relative w-full ${className}`}>
       <Popover.Root open={open && !disabled} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
           <button
-            className="flex w-full cursor-pointer items-center justify-between border-b border-neutral-300 bg-transparent py-2 outline-hidden focus-within:border-neutral-800/50 dark:border-neutral-700 dark:focus-within:border-neutral-400"
-            onClick={() => !disabled && setOpen(true)}
+            className={cn(
+              'flex w-full cursor-pointer items-center justify-between border-b border-neutral-300 bg-transparent py-2 outline-hidden focus-within:border-neutral-800/50 dark:border-neutral-700 dark:focus-within:border-neutral-400',
+              triggerClassName
+            )}
+            onClick={handleTriggerClick}
             disabled={disabled}
             type="button"
           >

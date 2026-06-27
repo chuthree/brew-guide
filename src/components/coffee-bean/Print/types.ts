@@ -12,6 +12,7 @@ export interface EditableContent {
   estate: string;
   roastLevel: string;
   roastDate: string;
+  packDate: string;
   process: string;
   variety: string;
   flavor: string[];
@@ -40,6 +41,7 @@ export interface PrintConfig {
     estate: boolean;
     roastLevel: boolean;
     roastDate: boolean;
+    packDate: boolean;
     flavor: boolean;
     process: boolean;
     variety: boolean;
@@ -57,7 +59,7 @@ export interface PrintConfig {
 
 export type PrintFieldKey = Exclude<
   keyof PrintConfig['fields'],
-  'nameSeparator' | 'contentBottomAligned'
+  'nameSeparator' | 'contentBottomAligned' | 'packDate'
 >;
 
 // 预设尺寸
@@ -79,6 +81,7 @@ export interface TemplateProps {
   config: PrintConfig;
   content: EditableContent;
   formattedDate: string;
+  formattedPackDate: string;
 }
 
 // 模板选项

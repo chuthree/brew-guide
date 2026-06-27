@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { showToast } from '@/components/common/feedback/LightToast';
 import {
@@ -19,7 +19,7 @@ import { FieldEditorPanel } from './FieldEditorPanel';
 const SOFT_BUTTON_CLASS =
   'rounded bg-neutral-200/50 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700';
 const FIELD_BUTTON_BASE_CLASS =
-  'h-8 min-w-0 rounded-[3px] border px-1.5 text-center text-xs font-medium transition-all bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700';
+  'h-8 min-w-0 rounded-[3px] px-1.5 text-center text-xs font-medium bg-neutral-100 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700';
 
 const showIconToast = (type: 'success' | 'error', title: string): void => {
   showToast({ type, title, duration: type === 'error' ? 3200 : 1800 });
@@ -37,9 +37,6 @@ interface ContentEditorProps {
   onUpdateIcon: (icon: string) => void;
   onUpdateIconSource: (source: PrintIconSource) => void;
   onUpdateIconPlacement: (placement: PrintIconPlacement) => void;
-  onUpdateFlavorItem: (index: number, value: string) => void;
-  onAddFlavor: () => void;
-  onRemoveFlavor: (index: number) => void;
   onResetContent: () => void;
 }
 
@@ -52,9 +49,6 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
   onUpdateIcon,
   onUpdateIconSource,
   onUpdateIconPlacement,
-  onUpdateFlavorItem,
-  onAddFlavor,
-  onRemoveFlavor,
   onResetContent,
 }) => {
   const [selectedField, setSelectedField] = useState<PrintFieldKey | null>(
@@ -72,59 +66,97 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
       ? selectedField
       : null;
 
-  const handleIconUploadClick = () => {
+  const handleIconUploadClick = useCallback(() => {
     if (isIconProcessing) return;
     iconInputRef.current?.click();
-  };
+  }, [isIconProcessing]);
 
-  const handleIconFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const input = event.currentTarget;
-    const file = input.files?.[0];
-    if (!file) return;
+  const handleIconFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const input = event.currentTarget;
+      const file = input.files?.[0];
+      if (!file) return;
 
-    setIsIconProcessing(true);
-    try {
-      const icon = await processThermalPrintIcon(file);
-      onUpdateIcon(icon);
-      onUpdateIconSource('custom');
-      showIconToast('success', '图标已添加');
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : '图标处理失败，请更换图片后重试';
-      showIconToast('error', message);
-    }
-    setIsIconProcessing(false);
-    input.value = '';
-  };
+      setIsIconProcessing(true);
+      try {
+        const icon = await processThermalPrintIcon(file);
+        onUpdateIcon(icon);
+        onUpdateIconSource('custom');
+        showIconToast('success', '图标已添加');
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : '图标处理失败，请更换图片后重试';
+        showIconToast('error', message);
+      }
+      setIsIconProcessing(false);
+      input.value = '';
+    },
+    [onUpdateIcon, onUpdateIconSource]
+  );
 
-  const updateIconPlacement = (placement: Partial<PrintIconPlacement>) => {
-    onUpdateIconPlacement(
-      normalizePrintIconPlacement({
-        ...config.iconPlacement,
-        ...placement,
-      })
-    );
-  };
+  const updateIconPlacement = useCallback(
+    (placement: Partial<PrintIconPlacement>) => {
+      onUpdateIconPlacement(
+        normalizePrintIconPlacement({
+          ...config.iconPlacement,
+          ...placement,
+        })
+      );
+    },
+    [config.iconPlacement, onUpdateIconPlacement]
+  );
 
-  const handleZoomIcon = (delta: number) => {
-    updateIconPlacement({ size: config.iconPlacement.size + delta });
-  };
+  const handleZoomIcon = useCallback(
+    (delta: number) => {
+      updateIconPlacement({ size: config.iconPlacement.size + delta });
+    },
+    [config.iconPlacement.size, updateIconPlacement]
+  );
 
-  const getFieldButtonClass = (field: PrintFieldKey) => {
-    const selected = activeField === field;
-    const visible = config.fields[field];
-    const stateClass = visible
-      ? 'opacity-100 text-neutral-700 dark:text-neutral-200'
-      : 'opacity-50 text-neutral-700 hover:opacity-70 dark:text-neutral-200';
-    const selectedClass = selected
-      ? 'border-neutral-400/60 dark:border-neutral-500/60'
-      : 'border-transparent';
-    return `${FIELD_BUTTON_BASE_CLASS} ${stateClass} ${selectedClass}`;
-  };
+  const getFieldButtonClass = useCallback(
+    (field: PrintFieldKey) => {
+      const selected = activeField === field;
+      const visible = config.fields[field];
+      const stateClass = visible
+        ? 'opacity-100 text-neutral-700 dark:text-neutral-200'
+        : 'opacity-50 text-neutral-700 hover:opacity-70 dark:text-neutral-200';
+      const selectedClass = selected
+        ? 'bg-neutral-200 text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100'
+        : '';
+      return `${FIELD_BUTTON_BASE_CLASS} ${stateClass} ${selectedClass}`;
+    },
+    [activeField, config.fields]
+  );
+
+  const handleFieldButtonClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      const field = event.currentTarget.dataset.field as
+        | PrintFieldKey
+        | undefined;
+      if (!field) return;
+
+      setSelectedField(current => (current === field ? null : field));
+    },
+    []
+  );
+
+  const handleRemoveIcon = useCallback(() => {
+    onUpdateIcon('');
+  }, [onUpdateIcon]);
+
+  const handleZoomIconIn = useCallback(() => {
+    handleZoomIcon(2);
+  }, [handleZoomIcon]);
+
+  const handleZoomIconOut = useCallback(() => {
+    handleZoomIcon(-2);
+  }, [handleZoomIcon]);
+
+  const handleResetIconPlacement = useCallback(() => {
+    onUpdateIconPlacement(DEFAULT_ICON_PLACEMENT);
+  }, [onUpdateIconPlacement]);
 
   const activeVisible = activeField ? config.fields[activeField] : false;
   const activeStatusLabel =
@@ -134,8 +166,8 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
         ? '显示中'
         : '已隐藏';
   const activeStatusButtonClass = activeVisible
-    ? `border-transparent opacity-100 text-neutral-700 dark:text-neutral-200 ${SOFT_BUTTON_CLASS}`
-    : `border-transparent opacity-60 text-neutral-700 hover:opacity-80 dark:text-neutral-200 ${SOFT_BUTTON_CLASS}`;
+    ? `opacity-100 text-neutral-700 dark:text-neutral-200 ${SOFT_BUTTON_CLASS}`
+    : `opacity-60 text-neutral-700 hover:opacity-80 dark:text-neutral-200 ${SOFT_BUTTON_CLASS}`;
 
   return (
     <div className="space-y-3">
@@ -158,9 +190,8 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
           <button
             key={field}
             type="button"
-            onClick={() =>
-              setSelectedField(current => (current === field ? null : field))
-            }
+            data-field={field}
+            onClick={handleFieldButtonClick}
             className={getFieldButtonClass(field)}
           >
             <div className="truncate leading-none">
@@ -183,18 +214,13 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
           isIconProcessing={isIconProcessing}
           onToggleField={onToggleField}
           onUpdateField={onUpdateField}
-          onUpdateFlavorItem={onUpdateFlavorItem}
-          onAddFlavor={onAddFlavor}
-          onRemoveFlavor={onRemoveFlavor}
           onIconFileChange={handleIconFileChange}
           onIconUploadClick={handleIconUploadClick}
           onIconSourceChange={onUpdateIconSource}
-          onRemoveIcon={() => onUpdateIcon('')}
-          onZoomIconIn={() => handleZoomIcon(2)}
-          onZoomIconOut={() => handleZoomIcon(-2)}
-          onResetIconPlacement={() =>
-            onUpdateIconPlacement(DEFAULT_ICON_PLACEMENT)
-          }
+          onRemoveIcon={handleRemoveIcon}
+          onZoomIconIn={handleZoomIconIn}
+          onZoomIconOut={handleZoomIconOut}
+          onResetIconPlacement={handleResetIconPlacement}
         />
       )}
     </div>
