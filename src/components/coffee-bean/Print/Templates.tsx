@@ -84,6 +84,13 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
   const validFlavors = content.flavor.filter(f => f.trim());
   const displayBeanName = getDisplayBeanName(content);
   const showName = isPrintFieldVisible('name', config, content);
+  const hasNameSeparator = showName && config.fields.nameSeparator;
+  const separatorLineWidth = Math.max(1, fontSize / 10);
+  const separatorTopGap = Math.max(2, fontSize * 0.18);
+  const separatorBottomGap = Math.max(6, fontSize * 0.12);
+  const titleBottomGap = hasNameSeparator
+    ? separatorTopGap
+    : Math.max(4, fontSize * 0.35);
   const weightValue = content.weight
     ? content.weight.trim().toLowerCase().endsWith('g')
       ? content.weight
@@ -167,8 +174,7 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
       {showName && (
         <div
           style={{
-            marginTop: '0.2rem',
-            marginBottom: '0.35rem',
+            marginBottom: titleBottomGap,
             flexShrink: 0,
           }}
         >
@@ -184,11 +190,11 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
         </div>
       )}
 
-      {showName && config.fields.nameSeparator && (
+      {hasNameSeparator && (
         <div
           style={{
-            borderTop: '1px solid currentColor',
-            marginBottom: '0.35rem',
+            borderTop: `${separatorLineWidth}px solid currentColor`,
+            marginBottom: separatorBottomGap,
             flexShrink: 0,
           }}
         />

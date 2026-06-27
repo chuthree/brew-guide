@@ -1,4 +1,5 @@
 import {
+  clearState,
   getObjectState,
   getStringState,
   saveObjectState,
@@ -14,6 +15,8 @@ import {
 const MODULE = 'bean-print';
 const ICON_KEY = 'icon';
 const ICON_SOURCE_KEY = 'iconSource';
+const DEFAULT_WEIGHT_KEY = 'defaultWeight';
+const CUSTOM_PACK_DATE_KEY = 'customPackDate';
 
 export const DEFAULT_ICON_PLACEMENT: PrintIconPlacement = {
   x: 74,
@@ -115,6 +118,21 @@ export const loadPrintIconSource = (): PrintIconSource => {
 
 export const savePrintIconSource = (source: PrintIconSource): void =>
   saveStringState(MODULE, ICON_SOURCE_KEY, source);
+
+export const loadDefaultPrintWeight = (): string =>
+  getStringState(MODULE, DEFAULT_WEIGHT_KEY, '');
+
+export const saveDefaultPrintWeight = (weight: string): void =>
+  saveStringState(MODULE, DEFAULT_WEIGHT_KEY, weight);
+
+export const loadCustomPrintPackDate = (): string =>
+  getStringState(MODULE, CUSTOM_PACK_DATE_KEY, '');
+
+export const saveCustomPrintPackDate = (packDate: string): void =>
+  saveStringState(MODULE, CUSTOM_PACK_DATE_KEY, packDate);
+
+export const clearCustomPrintPackDate = (): void =>
+  clearState(MODULE, CUSTOM_PACK_DATE_KEY);
 
 // 预设尺寸读写
 export const loadPresetSizes = (): PresetSize[] =>

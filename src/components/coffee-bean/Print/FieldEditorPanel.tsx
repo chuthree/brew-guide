@@ -14,7 +14,7 @@ import {
   PRINT_TEXT_FIELD_PLACEHOLDERS,
   PrintTextFieldKey,
 } from './fields';
-import { getLocalDateString } from './utils';
+import { getLocalDateString, parseLocalDateString } from './utils';
 
 const INPUT_SHELL_CLASS =
   'flex min-h-8 w-full gap-2 rounded bg-neutral-200/50 px-2 text-xs font-medium text-neutral-700 transition-colors focus-within:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:focus-within:bg-neutral-700';
@@ -223,7 +223,14 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
 
   const handleDateChange = useCallback(
     (date: Date) => {
-      onUpdateField('roastDate', date.toISOString().split('T')[0]);
+      onUpdateField('roastDate', getLocalDateString(date));
+    },
+    [onUpdateField]
+  );
+
+  const handlePackDateChange = useCallback(
+    (date: Date) => {
+      onUpdateField('packDate', getLocalDateString(date));
     },
     [onUpdateField]
   );
@@ -290,14 +297,13 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
           <div className="space-y-2">
             <div className={`${INPUT_SHELL_CLASS} items-center`}>
               <DatePicker
-                date={
-                  content.roastDate ? new Date(content.roastDate) : undefined
-                }
+                date={parseLocalDateString(content.roastDate)}
                 onDateChange={handleDateChange}
                 placeholder="选择日期"
                 locale="zh-CN"
                 className="min-w-0 flex-1"
                 triggerClassName={DATE_PICKER_TRIGGER_CLASS}
+                displayFormat="yyyy-MM-dd"
               />
             </div>
             <FieldOptionSwitch
@@ -306,6 +312,19 @@ export const FieldEditorPanel: React.FC<FieldEditorPanelProps> = ({
               checked={config.fields.packDate}
               onToggleField={handleTogglePackDate}
             />
+            {config.fields.packDate && (
+              <div className={`${INPUT_SHELL_CLASS} items-center`}>
+                <DatePicker
+                  date={parseLocalDateString(content.packDate)}
+                  onDateChange={handlePackDateChange}
+                  placeholder="选择分装日期"
+                  locale="zh-CN"
+                  className="min-w-0 flex-1"
+                  triggerClassName={DATE_PICKER_TRIGGER_CLASS}
+                  displayFormat="yyyy-MM-dd"
+                />
+              </div>
+            )}
           </div>
         );
       case 'origin':

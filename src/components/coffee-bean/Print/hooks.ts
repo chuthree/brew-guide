@@ -4,16 +4,21 @@ import { PrintConfig, PresetSize, EditableContent } from './types';
 import {
   DEFAULT_CONFIG,
   DEFAULT_PRESET_SIZES,
+  clearCustomPrintPackDate,
   loadConfig,
+  loadCustomPrintPackDate,
+  loadDefaultPrintWeight,
   loadPrintIcon,
   loadPrintIconSource,
   loadPresetSizes,
   saveConfig,
+  saveCustomPrintPackDate,
+  saveDefaultPrintWeight,
   savePrintIcon,
   savePrintIconSource,
   savePresetSizes,
 } from './config';
-import { createInitialContent } from './utils';
+import { createInitialContent, getLocalDateString } from './utils';
 import { RoasterSettings } from '@/lib/utils/beanVarietyUtils';
 
 // ============================================
@@ -125,6 +130,22 @@ export function usePrintConfig() {
 // useEditableContent - 可编辑内容管理
 // ============================================
 
+const resolveInitialPackDate = (): string => {
+  const today = getLocalDateString();
+  const customPackDate = loadCustomPrintPackDate();
+
+  if (!customPackDate) {
+    return today;
+  }
+
+  if (customPackDate === today) {
+    clearCustomPrintPackDate();
+    return today;
+  }
+
+  return customPackDate;
+};
+
 export function useEditableContent(
   bean: CoffeeBean | null,
   roasterSettings: RoasterSettings
@@ -134,7 +155,9 @@ export function useEditableContent(
       bean,
       roasterSettings,
       loadPrintIcon(),
-      loadPrintIconSource()
+      loadPrintIconSource(),
+      loadDefaultPrintWeight(),
+      resolveInitialPackDate()
     )
   );
 
@@ -145,7 +168,9 @@ export function useEditableContent(
         bean,
         roasterSettings,
         loadPrintIcon(),
-        loadPrintIconSource()
+        loadPrintIconSource(),
+        loadDefaultPrintWeight(),
+        resolveInitialPackDate()
       )
     );
   }, [
@@ -157,6 +182,17 @@ export function useEditableContent(
   // 更新字段
   const updateField = useCallback(
     <K extends keyof EditableContent>(field: K, value: EditableContent[K]) => {
+      if (field === 'weight') {
+        saveDefaultPrintWeight(value as string);
+      }
+      if (field === 'packDate') {
+        const packDate = value as string;
+        if (packDate === getLocalDateString()) {
+          clearCustomPrintPackDate();
+        } else {
+          saveCustomPrintPackDate(packDate);
+        }
+      }
       setContent(prev => ({ ...prev, [field]: value }));
     },
     []
@@ -205,7 +241,9 @@ export function useEditableContent(
         bean,
         roasterSettings,
         loadPrintIcon(),
-        loadPrintIconSource()
+        loadPrintIconSource(),
+        loadDefaultPrintWeight(),
+        resolveInitialPackDate()
       )
     );
   }, [bean, roasterSettings]);

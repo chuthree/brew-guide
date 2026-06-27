@@ -1,6 +1,6 @@
 import { CoffeeBean } from '@/types/app';
 import { EditableContent, PrintConfig, PrintIconSource } from './types';
-import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
+import { normalizeDate, parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import { isPrintFieldVisible } from './fields';
 import { getBeanEstates, RoasterSettings } from '@/lib/utils/beanVarietyUtils';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
@@ -24,6 +24,32 @@ export const getLocalDateString = (date = new Date()): string => {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+};
+
+export const parseLocalDateString = (dateStr: string): Date | undefined => {
+  const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(
+    normalizeDate(dateStr.trim())
+  );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const [, year, month, day] = match;
+  const parsedYear = Number(year);
+  const parsedMonth = Number(month);
+  const parsedDay = Number(day);
+  const date = new Date(parsedYear, parsedMonth - 1, parsedDay);
+
+  if (
+    date.getFullYear() !== parsedYear ||
+    date.getMonth() !== parsedMonth - 1 ||
+    date.getDate() !== parsedDay
+  ) {
+    return undefined;
+  }
+
+  return date;
 };
 
 export const getDisplayBeanName = (
@@ -122,7 +148,9 @@ export const createInitialContent = (
   bean: CoffeeBean | null,
   _roasterSettings: RoasterSettings,
   icon = '',
-  iconSource: PrintIconSource = 'custom'
+  iconSource: PrintIconSource = 'custom',
+  defaultWeight = '',
+  packDate = getLocalDateString()
 ): EditableContent => {
   if (!bean) {
     return {
@@ -132,12 +160,12 @@ export const createInitialContent = (
       estate: '',
       roastLevel: '',
       roastDate: '',
-      packDate: getLocalDateString(),
+      packDate,
       process: '',
       variety: '',
       flavor: [],
       notes: '',
-      weight: '',
+      weight: defaultWeight,
       icon,
       iconSource,
     };
@@ -149,12 +177,12 @@ export const createInitialContent = (
     estate: getBeanEstates(bean).join(', '),
     roastLevel: bean.roastLevel || '',
     roastDate: bean.roastDate || '',
-    packDate: getLocalDateString(),
+    packDate,
     process: extractComponentInfo(bean, 'process'),
     variety: extractComponentInfo(bean, 'variety'),
     flavor: bean.flavor || [],
     notes: bean.notes || '',
-    weight: '',
+    weight: defaultWeight,
     icon,
     iconSource,
   };

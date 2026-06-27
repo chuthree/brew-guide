@@ -33,6 +33,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
       <div className="flex justify-center rounded bg-neutral-100 p-4 dark:bg-neutral-800">
         <div
           id="print-preview"
+          className="select-text"
           style={{
             width: dimensions.width,
             height: dimensions.height,
@@ -49,6 +50,9 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
             wordBreak: 'keep-all',
             whiteSpace: 'normal',
             overflow: 'hidden',
+            cursor: 'text',
+            userSelect: 'text',
+            WebkitUserSelect: 'text',
           }}
         >
           {config.template === 'minimal' ? (

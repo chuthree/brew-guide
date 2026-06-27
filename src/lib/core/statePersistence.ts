@@ -212,7 +212,7 @@ const clearModuleState = (module: string): void => {
  * @param module 模块名称
  * @param key 状态键名
  */
-const clearState = (module: string, key: string): void => {
+export const clearState = (module: string, key: string): void => {
   if (!isLocalStorageAvailable()) {
     return;
   }
