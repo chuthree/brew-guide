@@ -63,7 +63,12 @@ describe('upsertRecords', () => {
       .fn()
       .mockResolvedValueOnce({ error: null })
       .mockResolvedValueOnce({
-        error: { message: 'canceling statement due to statement timeout' },
+        error: {
+          message: 'canceling statement due to statement timeout',
+          code: '57014',
+          details: 'statement timeout while upserting row',
+          hint: 'Try a smaller payload',
+        },
       });
     const client = createMockClient({ upsert });
 
@@ -82,9 +87,50 @@ describe('upsertRecords', () => {
       success: false,
       affectedCount: 1,
       error: 'canceling statement due to statement timeout',
+      diagnostic: {
+        operation: 'upsert-record',
+        table: 'brewing_notes',
+        recordId: '1',
+        recordIndex: 2,
+        total: 4,
+        affectedCount: 1,
+        code: '57014',
+        details: 'statement timeout while upserting row',
+        hint: 'Try a smaller payload',
+      },
     });
     expect(upsert).toHaveBeenCalledTimes(2);
     expect(upsert.mock.calls.map(call => call[0].id)).toEqual(['0', '1']);
+  });
+
+  it('reports mapping failures with the record id before uploading', async () => {
+    const upsert = vi.fn();
+    const client = createMockClient({ upsert });
+
+    const result = await upsertRecords(
+      client,
+      'coffee_beans',
+      [{ id: 'bad-record' }],
+      () => ({
+        id: 'bad-record',
+        data: {},
+        updated_at: new Date(Number.NaN).toISOString(),
+      })
+    );
+
+    expect(result).toMatchObject({
+      success: false,
+      affectedCount: 0,
+      diagnostic: {
+        operation: 'map-record-for-upsert',
+        table: 'coffee_beans',
+        recordId: 'bad-record',
+        recordIndex: 1,
+        total: 1,
+        affectedCount: 0,
+      },
+    });
+    expect(upsert).not.toHaveBeenCalled();
   });
 });
 
@@ -122,7 +168,11 @@ describe('fetchRemoteRecordsByIds', () => {
       .fn()
       .mockResolvedValueOnce({ data: { id: 'a', data: { name: 'A' } } })
       .mockResolvedValueOnce({
-        error: { message: 'server responded with a status of 500' },
+        error: {
+          message: 'permission denied for table coffee_beans',
+          code: '42501',
+          hint: 'GRANT SELECT ON public.coffee_beans TO anon;',
+        },
       });
     const client = createMockClient({ maybeSingle });
 
@@ -135,7 +185,17 @@ describe('fetchRemoteRecordsByIds', () => {
     expect(result).toMatchObject({
       success: false,
       affectedCount: 1,
-      error: 'server responded with a status of 500',
+      error: 'permission denied for table coffee_beans',
+      diagnostic: {
+        operation: 'fetch-record-by-id',
+        table: 'coffee_beans',
+        recordId: 'b',
+        recordIndex: 2,
+        total: 3,
+        affectedCount: 1,
+        code: '42501',
+        hint: 'GRANT SELECT ON public.coffee_beans TO anon;',
+      },
     });
     expect(result.data?.map(record => record.id)).toEqual(['a']);
     expect(maybeSingle).toHaveBeenCalledTimes(2);

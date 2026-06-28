@@ -23,7 +23,25 @@ export interface SyncOperationResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
+  diagnostic?: SyncOperationDiagnostic;
   affectedCount: number;
+}
+
+export interface SyncOperationDiagnostic {
+  operation: string;
+  table?: SyncTableName;
+  recordId?: string;
+  recordIndex?: number;
+  total?: number;
+  affectedCount?: number;
+  columns?: string;
+  idsSample?: string[];
+  dataSections?: string[];
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+  causeName?: string;
 }
 
 export interface UpsertRecordsOptions {
@@ -34,6 +52,84 @@ export interface UpsertRecordsOptions {
 export interface FetchRemoteRecordsByIdsOptions {
   /** 每条记录读取完成后回调 */
   onProgress?: (downloadedCount: number, totalCount: number) => void;
+}
+
+function getErrorField(error: unknown, field: string): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const value = (error as Record<string, unknown>)[field];
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  const message = getErrorField(error, 'message');
+  return message || String(error);
+}
+
+function createDiagnostic(
+  operation: string,
+  table: SyncTableName,
+  error: unknown,
+  extra: Partial<
+    Omit<SyncOperationDiagnostic, 'operation' | 'table' | 'message'>
+  > = {}
+): SyncOperationDiagnostic {
+  return {
+    operation,
+    table,
+    message: getErrorMessage(error),
+    code: getErrorField(error, 'code'),
+    details: getErrorField(error, 'details'),
+    hint: getErrorField(error, 'hint'),
+    causeName:
+      error instanceof Error ? error.name : getErrorField(error, 'name'),
+    ...extra,
+  };
+}
+
+function createFailure<T>(
+  diagnostic: SyncOperationDiagnostic,
+  affectedCount: number,
+  data?: T
+): SyncOperationResult<T> {
+  return {
+    success: false,
+    error: diagnostic.message,
+    diagnostic,
+    data,
+    affectedCount,
+  };
+}
+
+export function formatSyncOperationDiagnostic(
+  diagnostic: SyncOperationDiagnostic
+): string {
+  return [
+    `操作: ${diagnostic.operation}`,
+    diagnostic.table ? `表: ${diagnostic.table}` : null,
+    diagnostic.recordId ? `记录ID: ${diagnostic.recordId}` : null,
+    typeof diagnostic.recordIndex === 'number' ||
+    typeof diagnostic.total === 'number'
+      ? `位置: ${diagnostic.recordIndex ?? '-'} / ${diagnostic.total ?? '-'}`
+      : null,
+    typeof diagnostic.affectedCount === 'number'
+      ? `已完成: ${diagnostic.affectedCount}`
+      : null,
+    diagnostic.columns ? `列: ${diagnostic.columns}` : null,
+    diagnostic.idsSample?.length
+      ? `ID样本: ${diagnostic.idsSample.join(', ')}`
+      : null,
+    diagnostic.dataSections?.length
+      ? `数据段: ${diagnostic.dataSections.join(', ')}`
+      : null,
+    diagnostic.code ? `Supabase/PostgREST code: ${diagnostic.code}` : null,
+    diagnostic.details ? `details: ${diagnostic.details}` : null,
+    diagnostic.hint ? `hint: ${diagnostic.hint}` : null,
+    diagnostic.causeName ? `cause: ${diagnostic.causeName}` : null,
+    `message: ${diagnostic.message}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // ============================================
@@ -85,7 +181,10 @@ export async function fetchRemoteLatestTimestamp(
         `[SyncOps] 获取 ${table} 云端最新时间戳失败:`,
         error.message
       );
-      return { success: false, error: error.message, affectedCount: 0 };
+      return createFailure(
+        createDiagnostic('fetch-latest-timestamp', table, error),
+        0
+      );
     }
 
     if (!data || data.length === 0) {
@@ -95,8 +194,10 @@ export async function fetchRemoteLatestTimestamp(
     const timestamp = new Date(data[0].updated_at).getTime();
     return { success: true, data: timestamp, affectedCount: 1 };
   } catch (err) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return { success: false, error: message, affectedCount: 0 };
+    return createFailure(
+      createDiagnostic('fetch-latest-timestamp', table, err),
+      0
+    );
   }
 }
 
@@ -126,7 +227,10 @@ export async function fetchRemoteAllRecords<T>(
 
     if (error) {
       console.error(`[SyncOps] 获取 ${table} 全部数据失败:`, error.message);
-      return { success: false, error: error.message, affectedCount: 0 };
+      return createFailure(
+        createDiagnostic('fetch-all-records', table, error, { columns }),
+        0
+      );
     }
 
     const records = (data || []).map((row: any) => ({
@@ -138,8 +242,10 @@ export async function fetchRemoteAllRecords<T>(
 
     return { success: true, data: records, affectedCount: records.length };
   } catch (err) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return { success: false, error: message, affectedCount: 0 };
+    return createFailure(
+      createDiagnostic('fetch-all-records', table, err, { columns }),
+      0
+    );
   }
 }
 
@@ -169,12 +275,17 @@ export async function fetchRemoteRecordsByIds<T>(
 
       if (error) {
         console.error(`[SyncOps] 获取 ${table}/${id} 详情失败:`, error.message);
-        return {
-          success: false,
-          error: error.message,
-          data: allRecords,
-          affectedCount: allRecords.length,
-        };
+        return createFailure(
+          createDiagnostic('fetch-record-by-id', table, error, {
+            recordId: id,
+            recordIndex: allRecords.length + 1,
+            total: ids.length,
+            affectedCount: allRecords.length,
+            idsSample: ids.slice(0, 10),
+          }),
+          allRecords.length,
+          allRecords
+        );
       }
 
       if (data) {
@@ -189,8 +300,13 @@ export async function fetchRemoteRecordsByIds<T>(
       affectedCount: allRecords.length,
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return { success: false, error: message, affectedCount: 0 };
+    return createFailure(
+      createDiagnostic('fetch-records-by-id', table, err, {
+        total: ids.length,
+        idsSample: ids.slice(0, 10),
+      }),
+      0
+    );
   }
 }
 
@@ -211,26 +327,45 @@ export async function upsertRecords<T extends { id: string }>(
   }
 
   try {
-    const mappedRecords = records.map(record => ({
-      ...mapFn(record),
-      user_id: DEFAULT_USER_ID,
-      deleted_at: null,
-    }));
-
     let affectedCount = 0;
 
-    for (const mappedRecord of mappedRecords) {
+    for (let index = 0; index < records.length; index++) {
+      const record = records[index];
+      let mappedRecord: Record<string, unknown>;
+
+      try {
+        mappedRecord = {
+          ...mapFn(record),
+          user_id: DEFAULT_USER_ID,
+          deleted_at: null,
+        };
+      } catch (err) {
+        return createFailure(
+          createDiagnostic('map-record-for-upsert', table, err, {
+            recordId: record.id,
+            recordIndex: index + 1,
+            total: records.length,
+            affectedCount,
+          }),
+          affectedCount
+        );
+      }
+
       const { error } = await client
         .from(table)
         .upsert(mappedRecord, { onConflict: 'id,user_id' });
 
       if (error) {
         console.error(`[SyncOps] ${table} upsert 失败:`, error.message);
-        return {
-          success: false,
-          error: error.message,
-          affectedCount,
-        };
+        return createFailure(
+          createDiagnostic('upsert-record', table, error, {
+            recordId: record.id,
+            recordIndex: index + 1,
+            total: records.length,
+            affectedCount,
+          }),
+          affectedCount
+        );
       }
 
       affectedCount += 1;
@@ -239,8 +374,7 @@ export async function upsertRecords<T extends { id: string }>(
 
     return { success: true, affectedCount };
   } catch (err) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return { success: false, error: message, affectedCount: 0 };
+    return createFailure(createDiagnostic('upsert-records', table, err), 0);
   }
 }
 
@@ -267,13 +401,24 @@ export async function markRecordsAsDeleted(
 
     if (error) {
       console.error(`[SyncOps] ${table} 软删除失败:`, error.message);
-      return { success: false, error: error.message, affectedCount: 0 };
+      return createFailure(
+        createDiagnostic('mark-records-deleted', table, error, {
+          total: ids.length,
+          idsSample: ids.slice(0, 10),
+        }),
+        0
+      );
     }
 
     return { success: true, affectedCount: ids.length };
   } catch (err) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return { success: false, error: message, affectedCount: 0 };
+    return createFailure(
+      createDiagnostic('mark-records-deleted', table, err, {
+        total: ids.length,
+        idsSample: ids.slice(0, 10),
+      }),
+      0
+    );
   }
 }
 
@@ -307,6 +452,8 @@ function shouldSkipUpload(settings: Partial<AppSettings>): boolean {
 export async function uploadSettingsData(
   client: SupabaseClient
 ): Promise<SyncOperationResult<number>> {
+  const dataSections: string[] = [];
+
   try {
     const data: Record<string, unknown> = {};
 
@@ -326,6 +473,7 @@ export async function uploadSettingsData(
       }
 
       data.appSettings = settings;
+      dataSections.push('appSettings');
     } else {
       return { success: true, data: 0, affectedCount: 0 };
     }
@@ -334,6 +482,7 @@ export async function uploadSettingsData(
     const grinders = await db.grinders.toArray();
     if (grinders.length > 0) {
       data.grinders = grinders;
+      dataSections.push('grinders');
     }
 
     // 收集自定义预设（localStorage）
@@ -349,7 +498,10 @@ export async function uploadSettingsData(
           }
         }
       }
-      if (Object.keys(presets).length) data.customPresets = presets;
+      if (Object.keys(presets).length) {
+        data.customPresets = presets;
+        dataSections.push('customPresets');
+      }
     }
 
     const { error } = await client.from(SYNC_TABLES.USER_SETTINGS).upsert(
@@ -363,14 +515,25 @@ export async function uploadSettingsData(
     );
 
     if (error) {
-      return { success: false, error: error.message, affectedCount: 0 };
+      return createFailure(
+        createDiagnostic('upload-settings', SYNC_TABLES.USER_SETTINGS, error, {
+          recordId: 'app_settings',
+          dataSections,
+        }),
+        0
+      );
     }
 
     const count = Object.keys(data).length;
     return { success: true, data: count, affectedCount: count };
   } catch (err) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return { success: false, error: message, affectedCount: 0 };
+    return createFailure(
+      createDiagnostic('upload-settings', SYNC_TABLES.USER_SETTINGS, err, {
+        recordId: 'app_settings',
+        dataSections,
+      }),
+      0
+    );
   }
 }
 
@@ -396,6 +559,8 @@ function isLocalSettingsEmpty(localSettings: Partial<AppSettings>): boolean {
 export async function downloadSettingsData(
   client: SupabaseClient
 ): Promise<SyncOperationResult<number>> {
+  let currentSection = 'fetch';
+
   try {
     const { data: row, error } = await client
       .from(SYNC_TABLES.USER_SETTINGS)
@@ -406,7 +571,18 @@ export async function downloadSettingsData(
 
     // PGRST116 = 记录不存在，不算错误
     if (error && error.code !== 'PGRST116') {
-      return { success: false, error: error.message, affectedCount: 0 };
+      return createFailure(
+        createDiagnostic(
+          'download-settings',
+          SYNC_TABLES.USER_SETTINGS,
+          error,
+          {
+            recordId: 'app_settings',
+            dataSections: [currentSection],
+          }
+        ),
+        0
+      );
     }
 
     if (!row?.data) {
@@ -418,6 +594,7 @@ export async function downloadSettingsData(
 
     // 恢复 IndexedDB appSettings
     if (settingsData.appSettings) {
+      currentSection = 'appSettings';
       const cloudAppSettings = settingsData.appSettings as AppSettings;
       const localRecord = await db.appSettings.get('main');
       const localSettings = (localRecord?.data || {}) as Partial<AppSettings>;
@@ -444,6 +621,7 @@ export async function downloadSettingsData(
 
     // 恢复磨豆机数据
     if (settingsData.grinders && Array.isArray(settingsData.grinders)) {
+      currentSection = 'grinders';
       const cloudGrinders = settingsData.grinders as Array<{
         id: string;
         name: string;
@@ -459,6 +637,7 @@ export async function downloadSettingsData(
     // 恢复自定义预设（localStorage）
     if (typeof window !== 'undefined') {
       if (settingsData.customPresets) {
+        currentSection = 'customPresets';
         const presets = settingsData.customPresets as Record<string, unknown>;
         for (const k of PRESETS_KEYS) {
           if (presets[k]) {
@@ -479,7 +658,12 @@ export async function downloadSettingsData(
 
     return { success: true, data: count, affectedCount: count };
   } catch (err) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return { success: false, error: message, affectedCount: 0 };
+    return createFailure(
+      createDiagnostic('download-settings', SYNC_TABLES.USER_SETTINGS, err, {
+        recordId: 'app_settings',
+        dataSections: [currentSection],
+      }),
+      0
+    );
   }
 }

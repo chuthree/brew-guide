@@ -12,6 +12,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { db } from '@/lib/core/db';
+import { copyToClipboard } from '@/lib/utils/exportUtils';
 import {
   SYNC_TABLES,
   DEFAULT_USER_ID,
@@ -21,6 +22,7 @@ import {
   fetchRemoteLatestTimestamp,
   uploadSettingsData,
   downloadSettingsData,
+  formatSyncOperationDiagnostic,
   type SyncOperationResult,
 } from '../syncOperations';
 import {
@@ -48,11 +50,14 @@ import {
 } from '@/lib/notes/imageRepository';
 import {
   getSyncStatusStore,
+  type SupabaseSyncTask,
   type SupabaseSyncTaskStatus,
 } from '@/lib/stores/syncStatusStore';
 
 // 网络请求超时时间 (ms)
 const SYNC_TIMEOUT = 60000; // 增加到 60s 以适应移动端大文件传输
+const SYNC_DIAGNOSTIC_TOAST_DURATION = 8000;
+const MAX_DIAGNOSTIC_ERROR_LENGTH = 500;
 
 /**
  * 带超时的 Promise 包装器
@@ -126,12 +131,291 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function getSyncOperationErrorMessage<T>(
+  result: SyncOperationResult<T>,
+  fallbackMessage: string
+): string {
+  if (result.diagnostic) {
+    return `${fallbackMessage}\n${formatSyncOperationDiagnostic(result.diagnostic)}`;
+  }
+
+  return result.error || fallbackMessage;
+}
+
+function createSyncOperationError<T>(
+  result: SyncOperationResult<T>,
+  fallbackMessage: string
+): Error {
+  return new Error(getSyncOperationErrorMessage(result, fallbackMessage));
+}
+
+function getRecordIdForDiagnostic(
+  table: RealtimeSyncTable,
+  record: unknown
+): string {
+  if (!record || typeof record !== 'object') return 'unknown';
+  const objectRecord = record as Record<string, unknown>;
+  const id =
+    table === SYNC_TABLES.CUSTOM_METHODS
+      ? objectRecord.equipmentId || objectRecord.id
+      : objectRecord.id;
+
+  return typeof id === 'string' && id ? id : 'unknown';
+}
+
+function describeValueShape(value: unknown): string {
+  if (Array.isArray(value)) return `array(length=${value.length})`;
+  if (value === null) return 'null';
+  if (typeof value !== 'object') return typeof value;
+
+  return `object(keys=${Object.keys(value as Record<string, unknown>)
+    .slice(0, 12)
+    .join(',')})`;
+}
+
+function createLocalDataError(params: {
+  table: RealtimeSyncTable;
+  operation: string;
+  record: unknown;
+  index?: number;
+  total?: number;
+  reason: string;
+  cause?: unknown;
+}): Error {
+  return new Error(
+    [
+      params.reason,
+      `操作: ${params.operation}`,
+      `表: ${params.table}`,
+      `记录ID: ${getRecordIdForDiagnostic(params.table, params.record)}`,
+      typeof params.index === 'number' || typeof params.total === 'number'
+        ? `位置: ${params.index ?? '-'} / ${params.total ?? '-'}`
+        : null,
+      `数据形状: ${describeValueShape(params.record)}`,
+      params.cause ? `原始错误: ${getErrorMessage(params.cause)}` : null,
+      '判断方向: 云端 data 字段或本地历史数据可能存在结构不兼容、缺少主键、图片字段异常或时间字段异常。',
+    ]
+      .filter(Boolean)
+      .join('\n')
+  );
+}
+
+function assertValidDownloadedRecords(
+  table: RealtimeSyncTable,
+  records: unknown[]
+): void {
+  const invalid = records
+    .map((record, index) => ({ record, index }))
+    .filter(
+      ({ record }) => getRecordIdForDiagnostic(table, record) === 'unknown'
+    );
+
+  if (invalid.length === 0) return;
+
+  const first = invalid[0];
+  throw createLocalDataError({
+    table,
+    operation: 'validate-downloaded-record',
+    record: first.record,
+    index: first.index + 1,
+    total: records.length,
+    reason: `云端 ${table} 数据格式无效，发现 ${invalid.length} 条缺少有效主键的记录`,
+  });
+}
+
+async function writeLocalRecordWithDiagnostics(
+  table: RealtimeSyncTable,
+  record: unknown,
+  index: number,
+  total: number,
+  write: () => Promise<unknown>
+): Promise<void> {
+  try {
+    await write();
+  } catch (error) {
+    throw createLocalDataError({
+      table,
+      operation: 'write-local-record',
+      record,
+      index,
+      total,
+      reason: `写入本地 ${table} 记录失败`,
+      cause: error,
+    });
+  }
+}
+
+function truncateDiagnosticValue(value: string): string {
+  if (value.length <= MAX_DIAGNOSTIC_ERROR_LENGTH) return value;
+  return `${value.slice(0, MAX_DIAGNOSTIC_ERROR_LENGTH)}...`;
+}
+
+function formatDiagnosticTime(timestamp?: number): string {
+  if (!timestamp) return '无';
+  return `${new Date(timestamp).toISOString()} (${timestamp})`;
+}
+
+function getBrowserDiagnosticLines(): string[] {
+  if (typeof navigator === 'undefined') return [];
+
+  return [
+    `在线状态: ${navigator.onLine ? 'online' : 'offline'}`,
+    `User-Agent: ${navigator.userAgent}`,
+  ];
+}
+
+function inferSyncFailureHint(tasks: SupabaseSyncTask[]): string {
+  const errorText = tasks
+    .map(task => task.error || task.detail || '')
+    .join('\n')
+    .toLowerCase();
+
+  if (!errorText) {
+    return '暂无错误明细，请结合控制台日志查看。';
+  }
+
+  if (
+    errorText.includes('permission denied') ||
+    errorText.includes('row-level security') ||
+    errorText.includes('rls') ||
+    errorText.includes('42501')
+  ) {
+    return '可能是 Supabase 表权限或 RLS 策略未按最新初始化 SQL 配置。';
+  }
+
+  if (
+    errorText.includes('does not exist') ||
+    errorText.includes('schema cache') ||
+    errorText.includes('could not find') ||
+    errorText.includes('pgrst')
+  ) {
+    return '可能是 Supabase 表结构、字段或 Data API 暴露配置不是最新版。';
+  }
+
+  if (
+    errorText.includes('timeout') ||
+    errorText.includes('timed out') ||
+    errorText.includes('network') ||
+    errorText.includes('failed to fetch')
+  ) {
+    return '可能是网络波动或 Supabase 请求超时。';
+  }
+
+  if (
+    errorText.includes('数据格式无效') ||
+    errorText.includes('写入本地') ||
+    errorText.includes('invalid time value') ||
+    errorText.includes('datacloneerror') ||
+    errorText.includes('constraint') ||
+    errorText.includes('dexie')
+  ) {
+    return '可能是某条本地或云端历史数据结构不规范，优先看诊断里的表名和记录ID。';
+  }
+
+  if (
+    errorText.includes('payload') ||
+    errorText.includes('too large') ||
+    errorText.includes('413') ||
+    errorText.includes('request entity')
+  ) {
+    return '可能是单条记录内容过大，例如图片或备注字段进入了同步 data。';
+  }
+
+  return '请根据失败任务的原始错误定位。';
+}
+
+function formatDiagnosticTask(task: SupabaseSyncTask): string {
+  return [
+    `${task.label} (${task.id})`,
+    `  状态: ${task.status}`,
+    task.detail ? `  阶段: ${task.detail}` : null,
+    typeof task.completed === 'number' || typeof task.total === 'number'
+      ? `  进度: ${task.completed ?? '-'} / ${task.total ?? '-'}`
+      : null,
+    task.uploaded || task.downloaded || task.deleted || task.failed
+      ? `  统计: ↑${task.uploaded ?? 0} ↓${task.downloaded ?? 0} ×${task.deleted ?? 0} 失败${task.failed ?? 0}`
+      : null,
+    task.error ? `  错误: ${truncateDiagnosticValue(task.error)}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+function createSyncDiagnostic(params: {
+  errorCount: number;
+  totalTaskCount: number;
+  lastSyncTime: number;
+  startedAt: number;
+  stats: SyncStats;
+}): string {
+  const progress = getSyncStatusStore().supabaseSyncProgress;
+  const failedTasks = progress.tasks.filter(
+    task => task.status === 'error' || Boolean(task.error)
+  );
+  const taskSummary =
+    progress.tasks.length > 0
+      ? progress.tasks
+          .map(
+            task =>
+              `${task.label}:${task.status}${task.detail ? `(${task.detail})` : ''}`
+          )
+          .join(' | ')
+      : '无任务记录';
+
+  const failedTaskText =
+    failedTasks.length > 0
+      ? failedTasks.map(formatDiagnosticTask).join('\n\n')
+      : '无失败任务明细';
+
+  return [
+    'Brew Guide Supabase 同步诊断',
+    `生成时间: ${new Date().toISOString()}`,
+    `同步阶段: ${progress.phase}`,
+    `进度消息: ${progress.message || '无'}`,
+    `失败项目: ${params.errorCount}/${params.totalTaskCount}`,
+    `同步统计: ↑${params.stats.uploaded} ↓${params.stats.downloaded} ×${params.stats.deleted}`,
+    `本轮耗时: ${Date.now() - params.startedAt}ms`,
+    `上次成功同步: ${formatDiagnosticTime(params.lastSyncTime)}`,
+    ...getBrowserDiagnosticLines(),
+    `判断方向: ${inferSyncFailureHint(failedTasks)}`,
+    '',
+    '失败任务:',
+    failedTaskText,
+    '',
+    '全部任务:',
+    taskSummary,
+  ].join('\n');
+}
+
+function createCopyDiagnosticAction(diagnostic: string) {
+  return {
+    label: '复制诊断',
+    onClick: async () => {
+      const result = await copyToClipboard(diagnostic);
+
+      if (result.success) {
+        showToast({
+          type: 'success',
+          title: '诊断已复制',
+          duration: 2000,
+        });
+      } else {
+        showToast({
+          type: 'error',
+          title: '复制诊断失败',
+          duration: 3000,
+        });
+      }
+    },
+  };
+}
+
 function assertSyncSuccess<T>(
   result: SyncOperationResult<T>,
   fallbackMessage: string
 ): asserts result is SyncOperationResult<T> & { success: true } {
   if (!result.success) {
-    throw new Error(result.error || fallbackMessage);
+    throw createSyncOperationError(result, fallbackMessage);
   }
 }
 
@@ -250,10 +534,29 @@ export class InitialSyncManager {
     if (typeof window !== 'undefined') {
       if (errorCount > 0) {
         // 如果有错误发生
+        const diagnostic = createSyncDiagnostic({
+          errorCount,
+          totalTaskCount,
+          lastSyncTime,
+          startedAt: startTime,
+          stats,
+        });
+        const action = createCopyDiagnosticAction(diagnostic);
+
         if (errorCount === totalTaskCount) {
-          showToast({ type: 'error', title: '同步失败，请检查网络' });
+          showToast({
+            type: 'error',
+            title: '同步失败，请检查网络',
+            duration: SYNC_DIAGNOSTIC_TOAST_DURATION,
+            action,
+          });
         } else {
-          showToast({ type: 'warning', title: '部分数据同步失败' });
+          showToast({
+            type: 'warning',
+            title: '部分数据同步失败',
+            duration: SYNC_DIAGNOSTIC_TOAST_DURATION,
+            action,
+          });
         }
       } else if (
         stats.downloaded > 0 ||
@@ -337,7 +640,7 @@ export class InitialSyncManager {
           `[InitialSync] ${table} 拉取失败:`,
           remoteMetaResult.error
         );
-        throw new Error(remoteMetaResult.error || `拉取 ${table} 失败`);
+        throw createSyncOperationError(remoteMetaResult, `拉取 ${table} 失败`);
       }
 
       const remoteMetaRecords = (remoteMetaResult.data || []).map(r => ({
@@ -449,7 +752,7 @@ export class InitialSyncManager {
             fetchResult.error
           );
           // 下载失败时中止本表同步，避免后续误将本地旧数据上传覆盖云端
-          throw new Error(fetchResult.error || `下载 ${table} 详情失败`);
+          throw createSyncOperationError(fetchResult, `下载 ${table} 详情失败`);
         }
 
         const missingIds = idsToDownload.filter(
@@ -460,7 +763,17 @@ export class InitialSyncManager {
             `[InitialSync] ${table} 详情下载不完整，缺失 ${missingIds.length} 条记录`
           );
           // 关键保护：详情缺失时不继续冲突解决，防止把旧本地数据误判为“云端不存在”
-          throw new Error(`下载 ${table} 详情不完整`);
+          throw new Error(
+            [
+              `下载 ${table} 详情不完整`,
+              `操作: verify-downloaded-records`,
+              `表: ${table}`,
+              `缺失数量: ${missingIds.length}`,
+              `缺失ID样本: ${missingIds.slice(0, 10).join(', ')}`,
+              `应下载数量: ${idsToDownload.length}`,
+              `实际下载数量: ${downloadedDataMap.size}`,
+            ].join('\n')
+          );
         }
       }
 
@@ -555,14 +868,8 @@ export class InitialSyncManager {
           completed: 0,
         });
 
-        // 过滤掉 null 或无效的记录，防止写入失败
-        const validRecords = toDownload.filter(record => {
-          if (!record || !record.id) {
-            console.warn(`[InitialSync] ${table} 跳过无效记录:`, record);
-            return false;
-          }
-          return true;
-        });
+        assertValidDownloadedRecords(table, toDownload);
+        const validRecords = toDownload;
 
         if (validRecords.length > 0) {
           console.warn(
@@ -575,12 +882,21 @@ export class InitialSyncManager {
               db.coffeeBeanImages,
               db.coffeeBeanImageThumbnails,
               async () => {
-                for (const record of validRecords as CoffeeBean[]) {
-                  const beanForStore = await persistCoffeeBeanImagesFromBean(
+                for (let index = 0; index < validRecords.length; index++) {
+                  const record = validRecords[index] as CoffeeBean;
+                  await writeLocalRecordWithDiagnostics(
+                    table,
                     record,
-                    { generateThumbnails: false }
+                    index + 1,
+                    validRecords.length,
+                    async () => {
+                      const beanForStore =
+                        await persistCoffeeBeanImagesFromBean(record, {
+                          generateThumbnails: false,
+                        });
+                      await db.coffeeBeans.put(beanForStore);
+                    }
                   );
-                  await db.coffeeBeans.put(beanForStore);
                 }
               }
             );
@@ -591,14 +907,21 @@ export class InitialSyncManager {
               db.brewingNoteImages,
               db.brewingNoteImageThumbnails,
               async () => {
-                for (const record of validRecords as BrewingNote[]) {
-                  const noteForStore = await persistBrewingNoteImagesFromNote(
+                for (let index = 0; index < validRecords.length; index++) {
+                  const record = validRecords[index] as BrewingNote;
+                  await writeLocalRecordWithDiagnostics(
+                    table,
                     record,
-                    {
-                      generateThumbnails: false,
+                    index + 1,
+                    validRecords.length,
+                    async () => {
+                      const noteForStore =
+                        await persistBrewingNoteImagesFromNote(record, {
+                          generateThumbnails: false,
+                        });
+                      await db.brewingNotes.put(noteForStore);
                     }
                   );
-                  await db.brewingNotes.put(noteForStore);
                 }
               }
             );
@@ -609,8 +932,15 @@ export class InitialSyncManager {
 
             // 批量写入以提高性能
             await db.transaction('rw', dbTable, async () => {
-              for (const record of validRecords) {
-                await putRecord(record);
+              for (let index = 0; index < validRecords.length; index++) {
+                const record = validRecords[index];
+                await writeLocalRecordWithDiagnostics(
+                  table,
+                  record,
+                  index + 1,
+                  validRecords.length,
+                  () => putRecord(record)
+                );
               }
             });
           }
@@ -713,11 +1043,28 @@ export class InitialSyncManager {
           `[InitialSync] custom_methods 拉取失败:`,
           remoteResult.error
         );
-        throw new Error(remoteResult.error || '拉取 custom_methods 失败');
+        throw createSyncOperationError(
+          remoteResult,
+          '拉取 custom_methods 失败'
+        );
       }
 
       const remoteRecords = (remoteResult.data || []).map(r => {
-        const methods = (r.data as { methods?: Method[] })?.methods || [];
+        const methodsValue = (r.data as { methods?: unknown })?.methods;
+        if (methodsValue !== undefined && !Array.isArray(methodsValue)) {
+          throw createLocalDataError({
+            table: SYNC_TABLES.CUSTOM_METHODS,
+            operation: 'validate-remote-custom-methods',
+            record: {
+              id: r.id,
+              equipmentId: r.id,
+              methods: methodsValue,
+            },
+            reason: `云端 custom_methods 数据格式无效，data.methods 应为数组，实际为 ${describeValueShape(methodsValue)}`,
+          });
+        }
+
+        const methods = methodsValue || [];
         const updatedAtTime = new Date(r.updated_at).getTime();
 
         // PATCH: 确保 methods 中的每个 method 都有 timestamp，且不小于 updated_at
@@ -831,11 +1178,21 @@ export class InitialSyncManager {
           completed: 0,
         });
 
-        for (const item of toDownload) {
-          await db.customMethods.put({
-            equipmentId: item.equipmentId,
-            methods: item.methods,
-          });
+        assertValidDownloadedRecords(SYNC_TABLES.CUSTOM_METHODS, toDownload);
+
+        for (let index = 0; index < toDownload.length; index++) {
+          const item = toDownload[index];
+          await writeLocalRecordWithDiagnostics(
+            SYNC_TABLES.CUSTOM_METHODS,
+            item,
+            index + 1,
+            toDownload.length,
+            () =>
+              db.customMethods.put({
+                equipmentId: item.equipmentId,
+                methods: item.methods,
+              })
+          );
         }
 
         this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {

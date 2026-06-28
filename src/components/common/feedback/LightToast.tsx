@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { MouseEvent } from 'react';
 
 /**
  * 轻量级提示组件
@@ -18,6 +19,10 @@ interface ToastOptions {
   type?: 'success' | 'error' | 'info' | 'warning';
   title: string;
   duration?: number;
+  action?: {
+    label: string;
+    onClick: () => void | Promise<void>;
+  };
 }
 
 let showLightToastFn: ((options: ToastOptions) => void) | null = null;
@@ -80,19 +85,33 @@ export function LightToast() {
     }
   };
 
+  const handleActionClick = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    await currentToast.action?.onClick();
+  };
+
   return (
     <div
       className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+80px)] left-1/2 z-9999"
       style={{
         transform: visible ? 'translate(-50%, 0)' : 'translate(-50%, 10px)',
         opacity: visible ? 1 : 0,
-        transition: 'all 0.2s ease-out',
+        transition: 'opacity 0.2s ease-out, transform 0.2s ease-out',
       }}
     >
-      <div className="max-w-[280px] rounded-full border border-neutral-200/50 bg-white/95 px-5 py-3 text-sm font-medium whitespace-nowrap text-neutral-900 shadow-lg shadow-neutral-200/50 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/90 dark:text-white dark:shadow-black/20">
+      <div className="max-w-[calc(100vw-32px)] rounded-full border border-neutral-200/50 bg-white/95 px-5 py-3 text-sm font-medium whitespace-nowrap text-neutral-900 shadow-lg shadow-neutral-200/50 backdrop-blur-xl sm:max-w-[360px] dark:border-white/10 dark:bg-neutral-900/90 dark:text-white dark:shadow-black/20">
         <div className="flex items-center justify-center gap-2">
-          <div className={`h-2 w-2 rounded-full ${getDotColor()}`} />
-          <span>{currentToast.title}</span>
+          <div className={`h-2 w-2 shrink-0 rounded-full ${getDotColor()}`} />
+          <span className="min-w-0 truncate">{currentToast.title}</span>
+          {currentToast.action && (
+            <button
+              type="button"
+              className="pointer-events-auto shrink-0 cursor-pointer appearance-none border-0 bg-transparent p-0 font-[inherit] text-inherit"
+              onClick={handleActionClick}
+            >
+              · {currentToast.action.label}
+            </button>
+          )}
         </div>
       </div>
     </div>
