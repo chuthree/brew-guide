@@ -96,6 +96,12 @@ interface ProgressPatch {
   error?: string;
 }
 
+type SettingsSyncMode = 'bidirectional' | 'pull-only';
+
+interface InitialSyncOptions {
+  settingsMode?: SettingsSyncMode;
+}
+
 const TABLE_LABELS: Record<string, string> = {
   [SYNC_TABLES.COFFEE_BEANS]: '咖啡豆',
   [SYNC_TABLES.BREWING_NOTES]: '笔记',
@@ -427,9 +433,11 @@ function assertSyncSuccess<T>(
 export class InitialSyncManager {
   private client: SupabaseClient;
   private aborted = false;
+  private settingsMode: SettingsSyncMode;
 
-  constructor(client: SupabaseClient) {
+  constructor(client: SupabaseClient, options: InitialSyncOptions = {}) {
     this.client = client;
+    this.settingsMode = options.settingsMode ?? 'bidirectional';
   }
 
   private updateProgressTask(taskId: string, patch: ProgressPatch): void {
@@ -1256,6 +1264,8 @@ export class InitialSyncManager {
       assertSyncSuccess(remoteResult, '获取设置时间戳失败');
 
       const remoteTimestamp = remoteResult.data || 0;
+      const settingsMode =
+        lastSyncTime === 0 ? 'bidirectional' : this.settingsMode;
 
       // 首次同步特殊处理：
       // - 云端有设置：下载
@@ -1321,6 +1331,11 @@ export class InitialSyncManager {
           status: 'success',
           detail: `已下载 ${result.affectedCount} 项设置`,
           downloaded: result.affectedCount,
+        });
+      } else if (settingsMode === 'pull-only') {
+        this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+          status: 'success',
+          detail: '设置无远端更新',
         });
       } else {
         // 本地更新，上传

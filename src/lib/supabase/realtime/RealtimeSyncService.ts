@@ -73,6 +73,8 @@ const SYNC_TIMING = {
   RECONNECT_MAX_DELAY: 30000,
 } as const;
 
+const SETTINGS_DIRTY_KEY = 'brew-guide:realtime-sync:settingsDirty';
+
 type PostgresPayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
 const TASK_LABELS: Record<string, string> = {
@@ -118,6 +120,21 @@ function assertSyncSuccess<T>(
   if (!result.success) {
     throw new Error(result.error || fallbackMessage);
   }
+}
+
+function hasDirtySettings(): boolean {
+  if (typeof localStorage === 'undefined') return false;
+  return localStorage.getItem(SETTINGS_DIRTY_KEY) === '1';
+}
+
+function markSettingsDirty(): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(SETTINGS_DIRTY_KEY, '1');
+}
+
+function clearSettingsDirty(): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(SETTINGS_DIRTY_KEY);
 }
 
 // ============================================================================
@@ -638,6 +655,8 @@ export class RealtimeSyncService {
       },
       // 设置变更回调（带防抖）
       () => {
+        markSettingsDirty();
+
         if (this.settingsDebounceTimer) {
           clearTimeout(this.settingsDebounceTimer);
         }
@@ -692,10 +711,19 @@ export class RealtimeSyncService {
       );
 
       try {
-        const syncManager = new InitialSyncManager(this.client!);
+        const settingsMode =
+          phase === 'background-sync' && !processQueue && !hasDirtySettings()
+            ? 'pull-only'
+            : 'bidirectional';
+        const syncManager = new InitialSyncManager(this.client!, {
+          settingsMode,
+        });
         await syncManager.performSync();
         if (processQueue) {
           await this.processOfflineQueue();
+        }
+        if (settingsMode === 'bidirectional') {
+          clearSettingsDirty();
         }
         const now = Date.now();
         this.setState({ lastSyncTime: now, error: null });
@@ -740,6 +768,7 @@ export class RealtimeSyncService {
     try {
       const result = await uploadSettingsData(this.client);
       assertSyncSuccess(result, '上传设置失败');
+      clearSettingsDirty();
       if (ownsProgress) {
         syncStore.updateSupabaseSyncTask(SYNC_TABLES.USER_SETTINGS, {
           status: 'success',
