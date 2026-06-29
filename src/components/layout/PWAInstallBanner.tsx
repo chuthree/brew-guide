@@ -194,7 +194,7 @@ export default function PWAInstallBanner() {
   }
 
   const description = showOnlineNativeMigration
-    ? '长期稳定版已发布，可安装离线版继续使用'
+    ? '长期稳定版已发布，如需离线使用可安装'
     : isWeChat
       ? '不建议在微信内打开，请点右上角“…”选择“在浏览器打开”'
       : '添加到主屏，离线可用';
@@ -210,7 +210,7 @@ export default function PWAInstallBanner() {
   const androidDownloadUrl = getOfflineAndroidDownloadUrl(APP_VERSION);
 
   return (
-    <div className="relative z-50 mx-auto w-full max-w-6xl border-b border-neutral-200/50 bg-neutral-50 px-6 py-3 dark:border-neutral-800/50 dark:bg-neutral-900">
+    <div className="pt-safe-top relative z-50 mx-auto w-full max-w-6xl border-b border-neutral-200/50 bg-neutral-50 px-6 pb-3 dark:border-neutral-800/50 dark:bg-neutral-900">
       <div className="flex items-center gap-3">
         <Image
           src="/images/icons/app/icon-192x192-contained.png"
