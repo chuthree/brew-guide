@@ -1,15 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { AppSettings, Grinder } from '@/lib/core/db';
 import { db } from '@/lib/core/db';
 import {
   createSettingsSyncFingerprint,
+  downloadSettingsData,
   uploadSettingsData,
 } from './syncOperations';
 
 vi.mock('@/lib/core/db', () => ({
   db: {
-    appSettings: { get: vi.fn() },
-    grinders: { toArray: vi.fn() },
+    appSettings: { get: vi.fn(), put: vi.fn() },
+    grinders: {
+      toArray: vi.fn(),
+      clear: vi.fn(),
+      bulkPut: vi.fn(),
+    },
   },
 }));
 
@@ -49,13 +55,14 @@ const localSettings = {
 };
 
 const localGrinders = [{ id: 'grinder-1', name: 'C40' }];
+const appSettingsRecord = {
+  id: 'main',
+  data: localSettings as unknown as AppSettings,
+};
 
 function mockLocalSettings() {
-  vi.mocked(db.appSettings.get).mockResolvedValue({
-    id: 'main',
-    data: localSettings as any,
-  });
-  vi.mocked(db.grinders.toArray).mockResolvedValue(localGrinders as any);
+  vi.mocked(db.appSettings.get).mockResolvedValue(appSettingsRecord);
+  vi.mocked(db.grinders.toArray).mockResolvedValue(localGrinders as Grinder[]);
 }
 
 function createSettingsClient(remoteData?: Record<string, unknown>) {
@@ -77,6 +84,24 @@ function createSettingsClient(remoteData?: Record<string, unknown>) {
   };
 }
 
+function createDownloadSettingsClient(remoteData?: Record<string, unknown>) {
+  const single = vi.fn().mockResolvedValue({
+    data: remoteData ? { data: remoteData } : null,
+    error: null,
+  });
+  const abortSignal = vi.fn(() => ({ single }));
+  const eqId = vi.fn(() => ({ abortSignal, single }));
+  const eqUser = vi.fn(() => ({ eq: eqId }));
+  const select = vi.fn(() => ({ eq: eqUser }));
+  const from = vi.fn(() => ({ select }));
+
+  return {
+    client: { from } as unknown as SupabaseClient,
+    abortSignal,
+    single,
+  };
+}
+
 describe('settings sync fingerprint', () => {
   beforeEach(() => {
     const storage = new MemoryStorage();
@@ -85,7 +110,7 @@ describe('settings sync fingerprint', () => {
       configurable: true,
     });
     Object.defineProperty(globalThis, 'window', {
-      value: { localStorage: storage },
+      value: { localStorage: storage, dispatchEvent: vi.fn() },
       configurable: true,
     });
     vi.clearAllMocks();
@@ -125,6 +150,7 @@ describe('settings sync fingerprint', () => {
     const localData = {
       appSettings: localSettings,
       grinders: localGrinders,
+      customPresets: {},
     };
     localStorage.setItem(
       SETTINGS_SYNC_FINGERPRINT_KEY,
@@ -146,6 +172,7 @@ describe('settings sync fingerprint', () => {
     const localData = {
       appSettings: localSettings,
       grinders: localGrinders,
+      customPresets: {},
     };
     const { client, maybeSingle, upsert } = createSettingsClient(localData);
 
@@ -172,7 +199,7 @@ describe('settings sync fingerprint', () => {
       skipIfUnchanged: true,
     });
 
-    expect(result).toMatchObject({ success: true, affectedCount: 2 });
+    expect(result).toMatchObject({ success: true, affectedCount: 3 });
     expect(upsert).toHaveBeenCalledTimes(1);
     expect(upsert.mock.calls[0][0]).toMatchObject({
       id: 'app_settings',
@@ -180,7 +207,66 @@ describe('settings sync fingerprint', () => {
       data: {
         appSettings: localSettings,
         grinders: localGrinders,
+        customPresets: {},
       },
     });
+  });
+
+  it('uploads empty settings sections so deletions are synced', async () => {
+    vi.mocked(db.appSettings.get).mockResolvedValue(appSettingsRecord);
+    vi.mocked(db.grinders.toArray).mockResolvedValue([]);
+    localStorage.removeItem('brew-guide:custom-presets:origins');
+    const { client, upsert } = createSettingsClient({
+      appSettings: localSettings,
+      grinders: localGrinders,
+      customPresets: { origins: ['Yirgacheffe'] },
+    });
+
+    const result = await uploadSettingsData(client, {
+      skipIfUnchanged: true,
+    });
+
+    expect(result).toMatchObject({ success: true, affectedCount: 3 });
+    expect(upsert.mock.calls[0][0]).toMatchObject({
+      data: {
+        appSettings: localSettings,
+        grinders: [],
+        customPresets: {},
+      },
+    });
+  });
+
+  it('clears local grinder and preset sections when remote settings are empty', async () => {
+    vi.mocked(db.appSettings.get).mockResolvedValue(appSettingsRecord);
+    vi.mocked(db.grinders.toArray).mockResolvedValue([]);
+    localStorage.setItem(
+      'brew-guide:custom-presets:origins',
+      JSON.stringify(['Yirgacheffe'])
+    );
+    const { client } = createDownloadSettingsClient({
+      appSettings: localSettings,
+      grinders: [],
+      customPresets: {},
+    });
+
+    const result = await downloadSettingsData(client);
+
+    expect(result).toMatchObject({ success: true });
+    expect(db.grinders.clear).toHaveBeenCalledTimes(1);
+    expect(db.grinders.bulkPut).not.toHaveBeenCalled();
+    expect(localStorage.getItem('brew-guide:custom-presets:origins')).toBeNull();
+  });
+
+  it('passes abort signals to Supabase settings downloads', async () => {
+    const { client, abortSignal, single } = createDownloadSettingsClient();
+    const controller = new AbortController();
+
+    const result = await downloadSettingsData(client, {
+      signal: controller.signal,
+    });
+
+    expect(result).toMatchObject({ success: true, affectedCount: 0 });
+    expect(abortSignal).toHaveBeenCalledWith(controller.signal);
+    expect(single).toHaveBeenCalledTimes(1);
   });
 });

@@ -54,6 +54,11 @@ export interface UploadSettingsDataOptions {
   skipIfUnchanged?: boolean;
 }
 
+export interface DownloadSettingsDataOptions {
+  /** 取消下载请求，用于移动端后台恢复时主动结束挂起的 fetch */
+  signal?: AbortSignal;
+}
+
 export interface FetchRemoteRecordsByIdsOptions {
   /** 每条记录读取完成后回调 */
   onProgress?: (downloadedCount: number, totalCount: number) => void;
@@ -234,6 +239,13 @@ function persistSettingsSyncFingerprint(fingerprint: string): void {
   getLocalStorage()?.setItem(SETTINGS_SYNC_FINGERPRINT_KEY, fingerprint);
 }
 
+function hasOwnSettingSection(
+  data: Record<string, unknown>,
+  section: string
+): boolean {
+  return Object.prototype.hasOwnProperty.call(data, section);
+}
+
 async function collectLocalSettingsSyncData(): Promise<{
   data: Record<string, unknown>;
   dataSections: string[];
@@ -248,12 +260,10 @@ async function collectLocalSettingsSyncData(): Promise<{
     dataSections.push('appSettings');
   }
 
-  // 收集磨豆机数据
+  // 收集磨豆机数据。即使为空也写入，确保删除磨豆机能同步到云端。
   const grinders = await db.grinders.toArray();
-  if (grinders.length > 0) {
-    data.grinders = grinders;
-    dataSections.push('grinders');
-  }
+  data.grinders = grinders;
+  dataSections.push('grinders');
 
   // 收集自定义预设（localStorage）
   const storage = getLocalStorage();
@@ -269,10 +279,8 @@ async function collectLocalSettingsSyncData(): Promise<{
         }
       }
     }
-    if (Object.keys(presets).length) {
-      data.customPresets = presets;
-      dataSections.push('customPresets');
-    }
+    data.customPresets = presets;
+    dataSections.push('customPresets');
   }
 
   return { data, dataSections };
@@ -703,17 +711,23 @@ function isLocalSettingsEmpty(localSettings: Partial<AppSettings>): boolean {
  * 下载设置数据并应用到本地
  */
 export async function downloadSettingsData(
-  client: SupabaseClient
+  client: SupabaseClient,
+  options: DownloadSettingsDataOptions = {}
 ): Promise<SyncOperationResult<number>> {
   let currentSection = 'fetch';
 
   try {
-    const { data: row, error } = await client
+    let query = client
       .from(SYNC_TABLES.USER_SETTINGS)
       .select('data')
       .eq('user_id', DEFAULT_USER_ID)
-      .eq('id', 'app_settings')
-      .single();
+      .eq('id', 'app_settings');
+
+    if (options.signal) {
+      query = query.abortSignal(options.signal);
+    }
+
+    const { data: row, error } = await query.single();
 
     // PGRST116 = 记录不存在，不算错误
     if (error && error.code !== 'PGRST116') {
@@ -766,8 +780,12 @@ export async function downloadSettingsData(
     }
 
     // 恢复磨豆机数据
-    if (settingsData.grinders && Array.isArray(settingsData.grinders)) {
+    if (hasOwnSettingSection(settingsData, 'grinders')) {
       currentSection = 'grinders';
+      if (!Array.isArray(settingsData.grinders)) {
+        throw new Error('云端 grinders 数据格式无效，应为数组');
+      }
+
       const cloudGrinders = settingsData.grinders as Array<{
         id: string;
         name: string;
@@ -782,16 +800,26 @@ export async function downloadSettingsData(
 
     // 恢复自定义预设（localStorage）
     if (typeof window !== 'undefined') {
-      if (settingsData.customPresets) {
+      if (hasOwnSettingSection(settingsData, 'customPresets')) {
         currentSection = 'customPresets';
+        if (
+          settingsData.customPresets === null ||
+          typeof settingsData.customPresets !== 'object' ||
+          Array.isArray(settingsData.customPresets)
+        ) {
+          throw new Error('云端 customPresets 数据格式无效，应为对象');
+        }
+
         const presets = settingsData.customPresets as Record<string, unknown>;
         for (const k of PRESETS_KEYS) {
-          if (presets[k]) {
+          if (hasOwnSettingSection(presets, k) && presets[k] !== undefined) {
             localStorage.setItem(
               `${PRESETS_PREFIX}${k}`,
               JSON.stringify(presets[k])
             );
             count++;
+          } else {
+            localStorage.removeItem(`${PRESETS_PREFIX}${k}`);
           }
         }
       }

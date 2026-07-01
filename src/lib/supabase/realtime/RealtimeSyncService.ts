@@ -737,9 +737,11 @@ export class RealtimeSyncService {
       );
 
       try {
-        const settingsMode = getSettingsSyncMode(phase, hasDirtySettings());
+        const settingsDirty = hasDirtySettings();
+        const settingsMode = getSettingsSyncMode(phase, settingsDirty);
         const syncManager = new InitialSyncManager(this.client!, {
           settingsMode,
+          settingsDirty,
         });
         await syncManager.performSync();
         if (processQueue) {

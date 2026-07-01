@@ -57,6 +57,7 @@ import {
 // 网络请求超时时间 (ms)
 const SYNC_TIMEOUT = 60000; // 增加到 60s 以适应移动端大文件传输
 const DETAIL_DOWNLOAD_IDLE_TIMEOUT = SYNC_TIMEOUT * 2;
+const BACKGROUND_SETTINGS_DOWNLOAD_TIMEOUT = 12000;
 const SYNC_DIAGNOSTIC_TOAST_DURATION = 8000;
 const MAX_DIAGNOSTIC_ERROR_LENGTH = 500;
 
@@ -152,6 +153,11 @@ type SettingsSyncMode = 'bidirectional' | 'pull-only';
 
 interface InitialSyncOptions {
   settingsMode?: SettingsSyncMode;
+  settingsDirty?: boolean;
+}
+
+interface SettingsSyncOutcome {
+  deferred: boolean;
 }
 
 const TABLE_LABELS: Record<string, string> = {
@@ -187,6 +193,46 @@ const INITIAL_SYNC_TASKS = [
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isRetryableSettingsDownloadError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+
+  return (
+    message.includes('下载设置超时') ||
+    message.includes('timeout') ||
+    message.includes('timed out') ||
+    message.includes('abort') ||
+    message.includes('network') ||
+    message.includes('failed to fetch') ||
+    message.includes('load failed')
+  );
+}
+
+function createAbortableTimeout(ms: number): {
+  signal?: AbortSignal;
+  cancel: () => void;
+  didTimeout: () => boolean;
+} {
+  if (typeof AbortController === 'undefined') {
+    return {
+      cancel: () => {},
+      didTimeout: () => false,
+    };
+  }
+
+  const controller = new AbortController();
+  let didTimeout = false;
+  const timeoutId = setTimeout(() => {
+    didTimeout = true;
+    controller.abort();
+  }, ms);
+
+  return {
+    signal: controller.signal,
+    cancel: () => clearTimeout(timeoutId),
+    didTimeout: () => didTimeout,
+  };
 }
 
 function getSyncOperationErrorMessage<T>(
@@ -510,10 +556,12 @@ export class InitialSyncManager {
   private client: SupabaseClient;
   private aborted = false;
   private settingsMode: SettingsSyncMode;
+  private settingsDirty: boolean;
 
   constructor(client: SupabaseClient, options: InitialSyncOptions = {}) {
     this.client = client;
     this.settingsMode = options.settingsMode ?? 'bidirectional';
+    this.settingsDirty = options.settingsDirty ?? false;
   }
 
   private updateProgressTask(taskId: string, patch: ProgressPatch): void {
@@ -521,6 +569,35 @@ export class InitialSyncManager {
       label: TABLE_LABELS[taskId] || taskId,
       ...patch,
     });
+  }
+
+  private async downloadSettingsWithTimeout(
+    timeoutMs: number,
+    timeoutMessage: string
+  ): Promise<SyncOperationResult<number>> {
+    const timeout = createAbortableTimeout(timeoutMs);
+
+    try {
+      const result = await withTimeout(
+        downloadSettingsData(this.client, { signal: timeout.signal }),
+        timeoutMs + 1000,
+        timeoutMessage
+      );
+
+      if (!result.success && timeout.didTimeout()) {
+        throw new Error(timeoutMessage);
+      }
+
+      return result;
+    } catch (error) {
+      if (timeout.didTimeout()) {
+        throw new Error(timeoutMessage);
+      }
+
+      throw error;
+    } finally {
+      timeout.cancel();
+    }
   }
 
   /**
@@ -573,6 +650,7 @@ export class InitialSyncManager {
     // 统计结果
     const stats: SyncStats = { uploaded: 0, downloaded: 0, deleted: 0 };
     let errorCount = 0;
+    let settingsDeferred = false;
 
     for (const result of results) {
       if (result.status === 'fulfilled') {
@@ -587,7 +665,8 @@ export class InitialSyncManager {
 
     // 同步设置
     try {
-      await this.syncSettings();
+      const settingsOutcome = await this.syncSettings();
+      settingsDeferred = settingsOutcome.deferred;
     } catch (e) {
       console.error('[InitialSync] 设置同步失败:', e);
       errorCount++;
@@ -669,7 +748,7 @@ export class InitialSyncManager {
     }
 
     // 只有整轮同步全部成功才更新时间戳，避免失败表在下次同步中被跳过
-    if (errorCount === 0) {
+    if (errorCount === 0 && !settingsDeferred) {
       const now = Date.now();
       setLastSyncTime(now);
     }
@@ -1291,7 +1370,7 @@ export class InitialSyncManager {
   /**
    * 同步设置（双向）
    */
-  private async syncSettings(): Promise<void> {
+  private async syncSettings(): Promise<SettingsSyncOutcome> {
     try {
       this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
         status: 'fetching',
@@ -1322,8 +1401,7 @@ export class InitialSyncManager {
             detail: '下载云端设置',
           });
 
-          const result = await withTimeout(
-            downloadSettingsData(this.client),
+          const result = await this.downloadSettingsWithTimeout(
             SYNC_TIMEOUT,
             '下载设置超时'
           );
@@ -1355,33 +1433,79 @@ export class InitialSyncManager {
             uploaded: result.affectedCount,
           });
         }
-        return;
+        return { deferred: false };
       }
 
       if (remoteTimestamp > lastSyncTime) {
+        if (settingsMode === 'bidirectional' && this.settingsDirty) {
+          this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+            status: 'uploading',
+            detail: '上传本地设置',
+          });
+
+          const result = await withTimeout(
+            uploadSettingsData(this.client, { skipIfUnchanged: true }),
+            SYNC_TIMEOUT,
+            '上传设置超时'
+          );
+          assertSyncSuccess(result, '上传设置失败');
+          this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+            status: 'success',
+            detail:
+              result.affectedCount > 0
+                ? `已上传 ${result.affectedCount} 项设置`
+                : '没有需要上传的设置',
+            uploaded: result.affectedCount,
+          });
+          return { deferred: false };
+        }
+
         // 云端更新，下载
         this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
           status: 'downloading',
           detail: '下载云端设置',
         });
 
-        const result = await withTimeout(
-          downloadSettingsData(this.client),
-          SYNC_TIMEOUT,
-          '下载设置超时'
-        );
-        assertSyncSuccess(result, '下载设置失败');
-        await refreshSettingsStores();
-        this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
-          status: 'success',
-          detail: `已下载 ${result.affectedCount} 项设置`,
-          downloaded: result.affectedCount,
-        });
+        const timeoutMs =
+          settingsMode === 'pull-only'
+            ? BACKGROUND_SETTINGS_DOWNLOAD_TIMEOUT
+            : SYNC_TIMEOUT;
+
+        try {
+          const result = await this.downloadSettingsWithTimeout(
+            timeoutMs,
+            '下载设置超时'
+          );
+          assertSyncSuccess(result, '下载设置失败');
+          await refreshSettingsStores();
+          this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+            status: 'success',
+            detail: `已下载 ${result.affectedCount} 项设置`,
+            downloaded: result.affectedCount,
+          });
+          return { deferred: false };
+        } catch (error) {
+          if (
+            settingsMode === 'pull-only' &&
+            isRetryableSettingsDownloadError(error)
+          ) {
+            console.warn('[InitialSync] 后台设置下载已延后:', error);
+            this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
+              status: 'warning',
+              detail: '远端设置下载超时，已延后',
+              failed: 1,
+            });
+            return { deferred: true };
+          }
+
+          throw error;
+        }
       } else if (settingsMode === 'pull-only') {
         this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
           status: 'success',
           detail: '设置无远端更新',
         });
+        return { deferred: false };
       } else {
         // 本地更新，上传
         this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
@@ -1404,6 +1528,8 @@ export class InitialSyncManager {
           uploaded: result.affectedCount,
         });
       }
+
+      return { deferred: false };
     } catch (error) {
       console.error('[InitialSync] 设置同步失败:', error);
       this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {

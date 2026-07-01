@@ -355,40 +355,40 @@ export async function syncGrinderScale(
 
   const grinderNames = store.grinders.map(g => g.name);
   const parsed = parseGrinderFromGrindSize(grindSize, grinderNames);
+  const parsedGrinder = parsed
+    ? store.grinders.find(
+        g => g.name.toLowerCase() === parsed.grinderName.toLowerCase()
+      )
+    : undefined;
+  const selectedGrinder = currentSyncState.grinderId
+    ? store.grinders.find(g => g.id === currentSyncState.grinderId)
+    : undefined;
+  const grinder = parsedGrinder || selectedGrinder;
+  const scale = parsed?.scale || grindSize.trim();
 
-  if (parsed) {
-    const grinder = store.grinders.find(
-      g => g.name.toLowerCase() === parsed.grinderName.toLowerCase()
-    );
+  if (grinder && scale) {
+    const coffeeBeanContext = normalizeGrinderCoffeeBeanContext(coffeeBean);
+    const history = grinder.grindSizeHistory || [];
+    const newHistory = [
+      {
+        grindSize: scale,
+        timestamp: Date.now(),
+        equipment,
+        method,
+        ...coffeeBeanContext,
+      },
+      ...history.filter(h => h.grindSize !== scale),
+    ].slice(0, 3);
 
-    if (grinder) {
-      const coffeeBeanContext = normalizeGrinderCoffeeBeanContext(coffeeBean);
+    await store.updateGrinder(grinder.id, {
+      currentGrindSize: scale,
+      grindSizeHistory: newHistory,
+    });
 
-      // 更新历史记录，包含器具、方案和咖啡豆信息
-      const history = grinder.grindSizeHistory || [];
-      const newHistory = [
-        {
-          grindSize: parsed.scale,
-          timestamp: Date.now(),
-          equipment,
-          method,
-          ...coffeeBeanContext,
-        },
-        ...history.filter(h => h.grindSize !== parsed.scale), // 去重
-      ].slice(0, 3); // 最多保留3条
-
-      await store.updateGrinder(grinder.id, {
-        currentGrindSize: parsed.scale,
-        grindSizeHistory: newHistory,
-      });
-    }
-
-    // 重置同步状态
     store.resetSyncState();
     return true;
   }
 
-  // 重置同步状态
   store.resetSyncState();
   return false;
 }
