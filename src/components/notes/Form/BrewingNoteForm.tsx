@@ -105,6 +105,10 @@ const EMPTY_METHOD_PARAMS = {
   temp: '',
 };
 
+const BREWING_NOTE_FORM_INTENTS = {
+  quickDecrement: 'quick-decrement',
+} as const;
+
 interface BrewingNoteFormProps {
   id?: string;
   onClose: () => void;
@@ -319,6 +323,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     initialData.method || ''
   );
 
+  // 添加时间状态
+  const [totalTimeStr, setTotalTimeStr] = useState(() =>
+    initialData.totalTime ? String(initialData.totalTime) : ''
+  );
+
   const applyMethodParams = useCallback(
     (params?: Partial<Method['params']>, totalTimeOverride?: string) => {
       const normalizedParams = {
@@ -356,16 +365,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     );
   }, [selectedEquipment, availableEquipments]);
 
-  // 添加时间状态
-  const [totalTimeStr, setTotalTimeStr] = useState(() =>
-    initialData.totalTime ? String(initialData.totalTime) : ''
-  );
-
   // 快捷扣除量状态（仅用于快捷扣除记录编辑）
   const [quickDecrementAmount, setQuickDecrementAmount] = useState<string>(
     () => {
       if (initialData.source === 'quick-decrement') {
         return String(initialData.quickDecrementAmount || 0);
+      }
+      if (initialData.params?.coffee) {
+        return extractNumericValue(initialData.params.coffee);
       }
       return '';
     }
@@ -411,9 +418,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   }, [initialData.totalTime]);
 
   const formRef = useRef<HTMLFormElement>(null);
-  const generatedNoteIdRef = useRef(
-    id || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  const [generatedNoteId] = useState(
+    () => id || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
   );
+  const generatedNoteIdRef = useRef(generatedNoteId);
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
@@ -794,9 +802,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     externalIsQuickMode !== undefined
       ? externalIsQuickMode
       : internalIsQuickMode;
+  const isPlainNoteQuickRecordMode =
+    !isAdding && !initialData.source && isQuickMode;
+  const isQuickRecordMode =
+    isQuickMode && (isQuickDecrementEdit || isPlainNoteQuickRecordMode);
+  const isCompactRecordMode =
+    (isChangeRecordEdit || isPlainNoteQuickRecordMode) && isQuickMode;
 
   // 判断是否应该隐藏图片功能（仅在变动记录/快捷扣除记录的快捷模式下隐藏）
-  const shouldHideImage = isChangeRecordEdit && isQuickMode;
+  const shouldHideImage = isCompactRecordMode;
 
   // 自适应 textarea 高度
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1090,7 +1104,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     isSubmittingRef.current = true;
     const submitter = (e.nativeEvent as SubmitEvent)
       .submitter as HTMLButtonElement | null;
-    const isQuickDecrementOnly = submitter?.value === 'quick-decrement';
+    const submitIntent = submitter?.value;
+    const isQuickDecrementIntent =
+      submitIntent === BREWING_NOTE_FORM_INTENTS.quickDecrement;
+    const isSavingQuickRecord =
+      isQuickDecrementIntent || isPlainNoteQuickRecordMode;
 
     try {
       // 提取当前咖啡用量（用于容量计算和新建豆子）
@@ -1102,10 +1120,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         updateBeanRemaining,
         increaseBeanRemaining,
       } = await import('@/lib/stores/coffeeBeanStore');
+      const quickRecordCoffeeParam = `${parseFloat(quickDecrementAmount) || 0}g`;
       const currentCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
-        isQuickDecrementEdit && isQuickMode
-          ? `${parseFloat(quickDecrementAmount) || 0}g`
-          : methodParams.coffee
+        isQuickRecordMode ? quickRecordCoffeeParam : methodParams.coffee
       );
       const getInitialCoffeeAmount = () => {
         const quickAmount = Number(initialData.quickDecrementAmount);
@@ -1121,7 +1138,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         );
       };
 
-      if (isQuickDecrementOnly) {
+      if (isSavingQuickRecord) {
         if (!selectedCoffeeBean) {
           alert('请选择咖啡豆后再扣除');
           return;
@@ -1146,9 +1163,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         try {
           const newBean = await createBeanFromBrewUsage(
             selectedCoffeeBean.name,
-            isQuickDecrementEdit && isQuickMode
-              ? `${parseFloat(quickDecrementAmount) || 0}g`
-              : methodParams.coffee
+            isQuickRecordMode ? quickRecordCoffeeParam : methodParams.coffee
           );
 
           finalBeanId = newBean.id;
@@ -1178,8 +1193,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               if (initialCoffeeBeanCreatedFromSearch) {
                 await initializeBeanFromBrewUsage(
                   selectedCoffeeBean.id,
-                  isQuickDecrementEdit && isQuickMode
-                    ? `${parseFloat(quickDecrementAmount) || 0}g`
+                  isQuickRecordMode
+                    ? quickRecordCoffeeParam
                     : methodParams.coffee
                 );
               } else {
@@ -1187,7 +1202,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                   useCoffeeBeanStore
                     .getState()
                     .getBeanById(selectedCoffeeBean.id) || selectedCoffeeBean;
-                const decrementAmount = isQuickDecrementOnly
+                const decrementAmount = isSavingQuickRecord
                   ? Math.min(
                       currentCoffeeAmount,
                       getBeanRemainingAmount(latestBean)
@@ -1195,7 +1210,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                   : currentCoffeeAmount;
                 deductedCoffeeAmount = decrementAmount;
 
-                if (isQuickDecrementOnly && decrementAmount <= 0) {
+                if (isSavingQuickRecord && decrementAmount <= 0) {
                   alert('当前咖啡豆剩余量不足，无法扣除');
                   return;
                 }
@@ -1267,7 +1282,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       const finalTotalTime = parseFloat(totalTimeStr);
       const noteBeanId = finalBeanId ?? initialData.beanId;
 
-      if (isQuickDecrementOnly && deductedCoffeeAmount <= 0) {
+      if (isSavingQuickRecord && deductedCoffeeAmount <= 0) {
         alert('扣除失败，请重试');
         return;
       }
@@ -1288,7 +1303,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       }
 
       const isConvertingToNormal = isChangeRecordEdit && !isQuickMode;
-      const preservedSource = isQuickDecrementOnly
+      const preservedSource = isSavingQuickRecord
         ? 'quick-decrement'
         : isConvertingToNormal
           ? undefined
@@ -1296,18 +1311,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       const preservedChangeRecord = isConvertingToNormal
         ? undefined
         : initialData.changeRecord;
-      const quickDecrementAmountValue = isQuickDecrementOnly
+      const quickDecrementAmountValue = isSavingQuickRecord
         ? deductedCoffeeAmount
         : preservedSource === 'quick-decrement'
           ? parseFloat(quickDecrementAmount) || 0
           : undefined;
-      const noteParams = isQuickDecrementOnly
+      const noteParams = isSavingQuickRecord
         ? {
             ...finalParams,
             coffee: CapacitySyncManager.formatCoffeeParam(deductedCoffeeAmount),
           }
         : finalParams;
-      const noteFormData = isQuickDecrementOnly
+      const noteFormData = isSavingQuickRecord
         ? {
             ...formData,
             image: '',
@@ -1316,7 +1331,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             notes: formData.notes.trim() || '快捷扣除',
           }
         : formData;
-      const noteTaste = isQuickDecrementOnly ? {} : finalTaste;
+      const noteTaste = isSavingQuickRecord ? {} : finalTaste;
 
       // 创建完整的笔记数据
       const noteData: BrewingNoteData = {
@@ -1875,8 +1890,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             />
           )}
 
-          {/* 快捷扣除量 - 仅快捷模式显示 */}
-          {isQuickDecrementEdit && isQuickMode && (
+          {/* 快捷扣除量 - 仅快捷记录模式显示 */}
+          {isQuickRecordMode && (
             <div className="flex items-center border-b border-neutral-200/50 py-3 dark:border-neutral-800/50">
               <span className="shrink-0 text-sm font-medium text-neutral-600 dark:text-neutral-400">
                 扣除量
@@ -1949,7 +1964,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
           {/* 器具方案 - 编辑模式且非快捷模式时显示 */}
           {!isAdding &&
-            (!isChangeRecordEdit || !isQuickMode) &&
+            !isCompactRecordMode &&
             (initialData?.id || selectedEquipment) && (
               <FeatureListItem
                 label="器具方案"
@@ -1960,7 +1975,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             )}
 
           {/* 评分（合并风味评分和总体评分） - 非快捷模式时显示 */}
-          {showRatingSection && (!isChangeRecordEdit || !isQuickMode) && (
+          {showRatingSection && !isCompactRecordMode && (
             <FeatureListItem
               label="评分"
               value={getOverallRatingDisplay()}
@@ -1978,7 +1993,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               <button
                 type="submit"
                 name="intent"
-                value="quick-decrement"
+                value={BREWING_NOTE_FORM_INTENTS.quickDecrement}
                 className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
               >
                 仅扣除

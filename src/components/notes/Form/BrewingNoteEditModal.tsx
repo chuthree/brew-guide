@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CornerDownRight } from 'lucide-react';
 import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
 import { SettingsOptions } from '@/components/settings/Settings';
 import AdaptiveModal from '@/components/common/ui/AdaptiveModal';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
+import type { BrewingNoteDraftData } from './brewingNoteDraft';
+import { canSwitchPlainNoteToQuickRecord } from './quickRecordConversion';
 
 interface BrewingNoteEditModalProps {
   showModal: boolean;
@@ -29,11 +31,14 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     settings?.navigationSettings
   );
   const canUseNotesModule = navigationState.visibleTabs.notes;
+  const canUseCoffeeBeanModule = navigationState.visibleTabs.coffeeBean;
   const isChangeRecordEdit =
     !isCopy &&
     (initialData?.source === 'quick-decrement' ||
       initialData?.source === 'capacity-adjustment');
   const noteId = initialData?.id;
+  const [draftSnapshot, setDraftSnapshot] =
+    useState<BrewingNoteDraftData | null>(null);
   const [quickModeOverride, setQuickModeOverride] = useState<{
     noteId: string;
     isQuickMode: boolean;
@@ -42,6 +47,40 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     quickModeOverride && quickModeOverride.noteId === noteId
       ? quickModeOverride.isQuickMode
       : isChangeRecordEdit;
+  const currentDraft =
+    draftSnapshot && draftSnapshot.id === noteId ? draftSnapshot : null;
+  const currentContent = currentDraft || initialData;
+  const canShowQuickRecordConversionButton = canSwitchPlainNoteToQuickRecord({
+    noteId,
+    isCopy,
+    source: initialData?.source,
+    canUseNotesModule,
+    canUseCoffeeBeanModule,
+    notes: currentContent?.notes,
+  });
+  const isPlainNoteQuickMode =
+    !isChangeRecordEdit && !initialData?.source && isQuickMode;
+  const canShowQuickModeToggle =
+    canUseNotesModule &&
+    (isChangeRecordEdit ||
+      canShowQuickRecordConversionButton ||
+      isPlainNoteQuickMode);
+  const quickModeToggleLabel = isQuickMode
+    ? '记录更多'
+    : isChangeRecordEdit
+      ? initialData?.source === 'capacity-adjustment'
+        ? '返回变动记录'
+        : '返回快捷记录'
+      : '转为快捷记录';
+  const saveButtonLabel =
+    isQuickMode &&
+    (isChangeRecordEdit ||
+      canShowQuickRecordConversionButton ||
+      isPlainNoteQuickMode)
+      ? '保存记录'
+      : canUseNotesModule
+        ? '保存笔记'
+        : '保存记录';
 
   // 处理切换快捷记录模式
   const handleToggleQuickMode = useCallback(() => {
@@ -49,16 +88,18 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
     setQuickModeOverride(current => ({
       noteId,
-      isQuickMode: current?.noteId === noteId ? !current.isQuickMode : false,
+      isQuickMode:
+        current?.noteId === noteId ? !current.isQuickMode : !isChangeRecordEdit,
     }));
-  }, [noteId]);
+  }, [isChangeRecordEdit, noteId, setQuickModeOverride]);
   // 处理保存
   const handleSave = useCallback(
     (updatedData: BrewingNoteData) => {
       setQuickModeOverride(null);
+      setDraftSnapshot(null);
       onSave(updatedData);
     },
-    [onSave]
+    [onSave, setDraftSnapshot, setQuickModeOverride]
   );
 
   // 处理关闭
@@ -66,8 +107,9 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     // 通知父组件编辑页正在关闭
     window.dispatchEvent(new CustomEvent('brewingNoteEditClosing'));
     setQuickModeOverride(null);
+    setDraftSnapshot(null);
     onClose();
-  }, [onClose]);
+  }, [onClose, setDraftSnapshot, setQuickModeOverride]);
 
   // 处理保存按钮点击
   const handleSaveClick = useCallback(() => {
@@ -122,27 +164,24 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                 hideHeader={true}
                 settings={settings}
                 isCopy={isCopy}
-                isQuickMode={isChangeRecordEdit ? isQuickMode : undefined}
+                isQuickMode={isQuickMode}
+                onDraftChange={setDraftSnapshot}
               />
             )}
           </div>
 
           {/* 底部保存按钮 */}
           <div className="modal-bottom-button flex shrink-0 items-center justify-center gap-3">
-            {/* 切换按钮 - 仅变动记录显示 */}
-            {canUseNotesModule && isChangeRecordEdit && (
+            {canShowQuickModeToggle && (
               <button
                 type="button"
                 onClick={handleToggleQuickMode}
-                className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
+                className="flex items-center justify-center gap-1.5 rounded-full bg-neutral-100 px-5 py-3 text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
               >
-                <span className="font-medium">
-                  {isQuickMode
-                    ? '记录更多'
-                    : initialData?.source === 'capacity-adjustment'
-                      ? '返回变动记录'
-                      : '返回快捷记录'}
-                </span>
+                {!isChangeRecordEdit && !isQuickMode && (
+                  <CornerDownRight className="h-4 w-4" />
+                )}
+                <span className="font-medium">{quickModeToggleLabel}</span>
               </button>
             )}
 
@@ -152,9 +191,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
               onClick={handleSaveClick}
               className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
             >
-              <span className="font-medium">
-                {canUseNotesModule ? '保存笔记' : '保存记录'}
-              </span>
+              <span className="font-medium">{saveButtonLabel}</span>
             </button>
           </div>
         </div>
