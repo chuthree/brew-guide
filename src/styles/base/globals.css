@@ -236,6 +236,14 @@
   --keyboard-height: 0px;
   --custom-shape-color: #000000;
   --legacy-mode: 0;
+  --page-slide-dur: 250ms;
+  --page-fade-dur: 250ms;
+  --page-slide-distance: 8px;
+  --page-blur: 3px;
+  --page-stagger: 0ms;
+  --page-exit-enabled: 1;
+  --page-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --page-fade-ease: cubic-bezier(0.22, 1, 0.36, 1);
   /* 网页版字体缩放变量 */
   --font-scale: 1;
   --base-font-size: 16px;
@@ -271,6 +279,50 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+.t-page-slide {
+  position: relative;
+  overflow: hidden;
+}
+
+.t-page-slide .t-page {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(calc(var(--page-blur) * var(--page-exit-enabled)));
+  transform: translateX(
+    calc(var(--t-page-from-x, 0px) * var(--page-exit-enabled))
+  );
+  transition:
+    opacity var(--page-fade-dur) var(--page-fade-ease),
+    transform var(--page-slide-dur) var(--page-slide-ease),
+    filter var(--page-slide-dur) var(--page-slide-ease),
+    visibility 0ms linear var(--page-slide-dur);
+  will-change: opacity, transform, filter;
+}
+
+.t-page-slide .t-page[data-active-page='true'] {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  filter: blur(0);
+  transform: translateX(0);
+  transition-delay:
+    var(--page-stagger), var(--page-stagger), var(--page-stagger), 0ms;
+}
+
+.t-page-slide[data-measured='false'] .t-page[data-active-page='true'] {
+  position: relative;
+  inset: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-page-slide .t-page {
+    transition: none !important;
+  }
 }
 
 /* 暗黑模式 */

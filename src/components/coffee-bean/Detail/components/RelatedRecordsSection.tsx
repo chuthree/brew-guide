@@ -1,6 +1,13 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
@@ -35,6 +42,25 @@ interface RelatedRecordsSectionProps {
   onEditNote?: (note: BrewingNote) => void;
 }
 
+type RelatedRecordTab = 'primary' | 'change' | 'green';
+
+interface RelatedRecordTabPage {
+  key: RelatedRecordTab;
+  label: string;
+  count: number;
+  onSelect: () => void;
+}
+
+const getPageOffsetX = (pageIndex: number, activePageIndex: number) => {
+  if (pageIndex < activePageIndex) {
+    return 'calc(var(--page-slide-distance) * -1)';
+  }
+  if (pageIndex > activePageIndex) {
+    return 'var(--page-slide-distance)';
+  }
+  return '0px';
+};
+
 const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
   ({
     relatedNotes,
@@ -51,10 +77,15 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
     onOpenNoteDetail,
     onEditNote,
   }) => {
+    const sectionId = useId();
     const { getValidTasteRatings } = useFlavorDimensions();
     const [noteImageErrors, setNoteImageErrors] = useState<
       Record<string, boolean>
     >({});
+    const pageRefs = useRef<
+      Partial<Record<RelatedRecordTab, HTMLDivElement | null>>
+    >({});
+    const [slideHeight, setSlideHeight] = useState<number | null>(null);
 
     // 获取设置：是否显示容量调整记录
     const showCapacityAdjustmentRecords = useSettingsStore(
@@ -108,10 +139,7 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
     const hasPrimaryRecords = primaryRecords.length > 0;
     const hasSecondaryRecords = secondaryRecords.length > 0;
     const showTabs =
-      isGreenBean ||
-      !hasPrimaryRecords ||
-      hasSecondaryRecords ||
-      hasSourceGreenBean;
+      !hasPrimaryRecords || hasSecondaryRecords || hasSourceGreenBean;
     const activeTab =
       showGreenBeanRecords && hasSourceGreenBean
         ? 'green'
@@ -138,6 +166,93 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
       setShowGreenBeanRecords(true);
     }, [setShowChangeRecords, setShowGreenBeanRecords]);
 
+    const primaryLabel = isGreenBean ? '烘焙记录' : '冲煮记录';
+    const secondaryLabel = '变动记录';
+    const greenBeanLabel = '生豆记录';
+
+    const recordTabs = useMemo<RelatedRecordTabPage[]>(() => {
+      const tabs: RelatedRecordTabPage[] = [];
+
+      if (hasPrimaryRecords) {
+        tabs.push({
+          key: 'primary',
+          label: primaryLabel,
+          count: primaryRecords.length,
+          onSelect: showPrimaryRecordTab,
+        });
+      }
+
+      if (hasSecondaryRecords) {
+        tabs.push({
+          key: 'change',
+          label: secondaryLabel,
+          count: secondaryRecords.length,
+          onSelect: showChangeRecordTab,
+        });
+      }
+
+      if (hasSourceGreenBean) {
+        tabs.push({
+          key: 'green',
+          label: greenBeanLabel,
+          count: relatedBeans.length,
+          onSelect: showGreenBeanRecordTab,
+        });
+      }
+
+      return tabs;
+    }, [
+      hasPrimaryRecords,
+      hasSecondaryRecords,
+      hasSourceGreenBean,
+      primaryLabel,
+      primaryRecords.length,
+      relatedBeans.length,
+      secondaryRecords.length,
+      showChangeRecordTab,
+      showGreenBeanRecordTab,
+      showPrimaryRecordTab,
+    ]);
+
+    const activePageIndex = Math.max(
+      recordTabs.findIndex(tab => tab.key === activeTab),
+      0
+    );
+    const activePageId = String(activePageIndex + 1);
+
+    const setPageRef = useCallback(
+      (tab: RelatedRecordTab, node: HTMLDivElement | null) => {
+        pageRefs.current[tab] = node;
+      },
+      []
+    );
+
+    const updateSlideHeight = useCallback(() => {
+      const activeNode = pageRefs.current[activeTab];
+      if (!activeNode) return;
+
+      const nextHeight = activeNode.offsetHeight;
+      setSlideHeight(currentHeight =>
+        currentHeight === nextHeight ? currentHeight : nextHeight
+      );
+    }, [activeTab]);
+
+    useLayoutEffect(() => {
+      const activeNode = pageRefs.current[activeTab];
+      if (!activeNode) return;
+
+      updateSlideHeight();
+
+      if (typeof ResizeObserver === 'undefined') {
+        return undefined;
+      }
+
+      const observer = new ResizeObserver(updateSlideHeight);
+      observer.observe(activeNode);
+
+      return () => observer.disconnect();
+    }, [activeTab, updateSlideHeight]);
+
     // 如果都没有记录，不显示
     if (
       relatedNotesLoading ||
@@ -146,88 +261,102 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
       return null;
     }
 
-    const primaryLabel = isGreenBean ? '烘焙记录' : '冲煮记录';
-    const secondaryLabel = '变动记录';
-    const greenBeanLabel = '生豆记录';
-
     return (
       <div className="border-t border-neutral-200/40 pt-3 dark:border-neutral-800/40">
         {/* Tab切换按钮 */}
         {showTabs && (
-          <div className="flex items-center gap-2">
-            {hasPrimaryRecords && (
+          <div
+            className="flex items-center gap-2"
+            role="tablist"
+            aria-label="关联记录分类"
+          >
+            {recordTabs.map(tab => (
               <button
+                key={tab.key}
+                id={`${sectionId}-tab-${tab.key}`}
                 type="button"
-                onClick={showPrimaryRecordTab}
-                className={`text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
-                  activeTab === 'primary' ? 'opacity-100' : 'opacity-50'
+                role="tab"
+                aria-selected={activeTab === tab.key}
+                aria-controls={`${sectionId}-panel-${tab.key}`}
+                onClick={tab.onSelect}
+                className={`text-xs font-medium text-neutral-500 tabular-nums transition-[color,opacity] duration-200 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
+                  activeTab === tab.key ? 'opacity-100' : 'opacity-50'
                 }`}
               >
-                {primaryLabel} ({primaryRecords.length})
+                {tab.label} ({tab.count})
               </button>
-            )}
-            {hasSecondaryRecords && (
-              <button
-                type="button"
-                onClick={showChangeRecordTab}
-                className={`text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
-                  activeTab === 'change' ? 'opacity-100' : 'opacity-50'
-                }`}
-              >
-                {secondaryLabel} ({secondaryRecords.length})
-              </button>
-            )}
-            {hasSourceGreenBean && (
-              <button
-                type="button"
-                onClick={showGreenBeanRecordTab}
-                className={`text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
-                  activeTab === 'green' ? 'opacity-100' : 'opacity-50'
-                }`}
-              >
-                {greenBeanLabel} ({relatedBeans.length})
-              </button>
-            )}
+            ))}
           </div>
         )}
 
         {/* 记录列表 */}
-        <div className={showTabs ? 'mt-3 space-y-2' : 'space-y-2'}>
-          {/* 生豆记录 */}
-          {activeTab === 'green' &&
-            hasSourceGreenBean &&
-            relatedBeans.map(relatedBean => (
-              <div
-                key={`source-${relatedBean.id}`}
-                className="rounded bg-neutral-100 p-1.5 dark:bg-neutral-800/40"
-              >
-                <SourceGreenBeanItem
-                  bean={relatedBean}
-                  roasterSettings={roasterSettings}
-                />
-              </div>
-            ))}
+        <div
+          className={`t-page-slide ${showTabs ? 'mt-3' : ''}`}
+          data-page={activePageId}
+          data-measured={slideHeight === null ? 'false' : 'true'}
+          style={{
+            height: slideHeight === null ? undefined : `${slideHeight}px`,
+          }}
+        >
+          {recordTabs.map((tab, index) => {
+            const isActive = tab.key === activeTab;
+            const records =
+              tab.key === 'change' ? secondaryRecords : primaryRecords;
 
-          {/* 冲煮记录或变动记录 */}
-          {activeTab !== 'green' &&
-            (activeTab === 'change' ? secondaryRecords : primaryRecords).map(
-              note => (
-                <RelatedRecordCard
-                  key={note.id}
-                  note={note}
-                  bean={bean}
-                  allBeans={allBeans}
-                  equipmentNames={equipmentNames}
-                  getValidTasteRatings={getValidTasteRatings}
-                  noteImageErrors={noteImageErrors}
-                  setNoteImageErrors={setNoteImageErrors}
-                  useClassicNotesListStyle={useClassicNotesListStyle}
-                  roasterSettings={roasterSettings}
-                  onOpenNoteDetail={onOpenNoteDetail}
-                  onEditNote={onEditNote}
-                />
-              )
-            )}
+            return (
+              <div
+                key={tab.key}
+                id={`${sectionId}-panel-${tab.key}`}
+                className="t-page"
+                role={showTabs ? 'tabpanel' : undefined}
+                aria-labelledby={
+                  showTabs ? `${sectionId}-tab-${tab.key}` : undefined
+                }
+                aria-hidden={!isActive}
+                data-active-page={isActive ? 'true' : undefined}
+                data-page-id={String(index + 1)}
+                style={
+                  {
+                    '--t-page-from-x': getPageOffsetX(index, activePageIndex),
+                  } as React.CSSProperties
+                }
+              >
+                <div
+                  ref={node => setPageRef(tab.key, node)}
+                  className="space-y-2"
+                >
+                  {tab.key === 'green'
+                    ? relatedBeans.map(relatedBean => (
+                        <div
+                          key={`source-${relatedBean.id}`}
+                          className="rounded bg-neutral-100 p-1.5 dark:bg-neutral-800/40"
+                        >
+                          <SourceGreenBeanItem
+                            bean={relatedBean}
+                            roasterSettings={roasterSettings}
+                          />
+                        </div>
+                      ))
+                    : records.map(note => (
+                        <RelatedRecordCard
+                          key={note.id}
+                          note={note}
+                          bean={bean}
+                          allBeans={allBeans}
+                          equipmentNames={equipmentNames}
+                          getValidTasteRatings={getValidTasteRatings}
+                          noteImageErrors={noteImageErrors}
+                          setNoteImageErrors={setNoteImageErrors}
+                          useClassicNotesListStyle={useClassicNotesListStyle}
+                          roasterSettings={roasterSettings}
+                          onOpenNoteDetail={onOpenNoteDetail}
+                          onEditNote={onEditNote}
+                        />
+                      ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
