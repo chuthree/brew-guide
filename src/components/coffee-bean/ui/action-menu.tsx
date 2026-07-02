@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils/classNameUtils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MoreHorizontal } from 'lucide-react';
 
+const MORPH_EASE = [0.23, 1, 0.32, 1] as const;
+
 export interface ActionMenuItem {
   id: string;
   label: string;
@@ -191,8 +193,8 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
             borderRadius: '1rem',
           }}
           transition={{
-            duration: 0.3,
-            ease: [0.4, 0, 0.2, 1],
+            duration: open ? 0.24 : 0.18,
+            ease: MORPH_EASE,
           }}
         >
           {/* 圆形按钮 - 展开时淡出 */}
@@ -205,7 +207,8 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
               opacity: open ? 0 : 1,
             }}
             transition={{
-              duration: 0.15,
+              duration: open ? 0.1 : 0.14,
+              ease: MORPH_EASE,
             }}
             style={{
               pointerEvents: open ? 'none' : 'auto',
@@ -222,15 +225,17 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
               opacity: open ? 1 : 0,
             }}
             transition={{
-              duration: 0.2,
-              delay: open ? 0.1 : 0,
+              duration: open ? 0.18 : 0.1,
+              delay: open ? 0.05 : 0,
+              ease: MORPH_EASE,
             }}
             style={{
               pointerEvents: open ? 'auto' : 'none',
             }}
           >
-            {items.map((item, index) => (
-              <motion.button
+            {items.map(item => (
+              <button
+                type="button"
                 key={item.id}
                 onClick={e => handleItemClick(e, item.onClick)}
                 className={cn(
@@ -238,17 +243,9 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
                   'transition-colors hover:bg-neutral-200/50 dark:hover:bg-neutral-700/50',
                   getColorClassName(item.color)
                 )}
-                initial={false}
-                animate={{
-                  opacity: open ? 1 : 0,
-                }}
-                transition={{
-                  duration: 0.2,
-                  delay: open ? 0.12 + index * 0.03 : 0,
-                }}
               >
                 {item.renderContent || item.label}
-              </motion.button>
+              </button>
             ))}
           </motion.div>
         </motion.div>

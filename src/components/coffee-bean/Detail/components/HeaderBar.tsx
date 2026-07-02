@@ -236,13 +236,14 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
 
       {/* 居中标题 */}
       <div
-        className={`flex min-w-0 flex-1 justify-center transition-all duration-300 ${
+        className={`flex min-w-0 flex-1 justify-center ${
           isTitleVisible
             ? 'pointer-events-none opacity-0 blur-xs'
             : 'blur-0 opacity-100'
         }`}
         style={{
           transitionProperty: 'opacity, filter, transform',
+          transitionDuration: isTitleVisible ? '140ms' : '180ms',
           transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)',
           willChange: 'opacity, filter, transform',
         }}

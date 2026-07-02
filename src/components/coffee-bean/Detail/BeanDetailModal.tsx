@@ -83,12 +83,11 @@ const BeanRatingModal = dynamic(
 
 const contentFadeTransition = {
   enter: {
-    duration: 0.24,
-    delay: 0.03,
+    duration: 0.2,
     ease: [0.23, 1, 0.32, 1],
   },
   exit: {
-    duration: 0.14,
+    duration: 0.12,
     ease: [0.23, 1, 0.32, 1],
   },
 } as const;
