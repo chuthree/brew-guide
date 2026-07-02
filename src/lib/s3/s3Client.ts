@@ -3,6 +3,8 @@
  * 支持AWS S3及兼容S3的存储服务（MinIO、阿里云OSS、腾讯云COS等）
  */
 
+import { redactSyncDiagnosticUrl, type SyncDiagnostic } from '@/lib/sync/types';
+
 export interface S3Config {
   region: string;
   accessKeyId: string;
@@ -23,6 +25,7 @@ export interface S3File {
 export class S3Client {
   private config: S3Config;
   private lastError: string | null = null;
+  private lastDiagnostic: SyncDiagnostic | null = null;
 
   constructor(config: S3Config) {
     this.config = this.normalizeConfig(config);
@@ -103,6 +106,14 @@ export class S3Client {
 
   getLastError(): string | null {
     return this.lastError;
+  }
+
+  getLastDiagnostic(): SyncDiagnostic | null {
+    return this.lastDiagnostic;
+  }
+
+  clearDiagnostic(): void {
+    this.lastDiagnostic = null;
   }
 
   private async testWriteConnection(): Promise<boolean> {
@@ -219,20 +230,30 @@ export class S3Client {
         body: content,
       });
 
+      let errorDetail: string | undefined;
+      let errorSnippet: string | undefined;
+      if (!response.ok) {
+        const responseText = await response.text();
+        errorSnippet = responseText.slice(0, 300);
+        console.error('❌ 上传失败，响应内容:', responseText.substring(0, 500));
+        errorDetail = this.formatHttpError(response, responseText);
+      }
+
       this.logSummary('upload', {
         key,
         fullKey,
-        url: requestUrl,
+        url,
         status: response.status,
+        statusText: response.statusText,
         ok: response.ok,
+        presigned: requestUrl !== url,
         contentType: headers['Content-Type'],
+        error: errorDetail,
+        errorSnippet,
       });
 
       if (!response.ok) {
-        const responseText = await response.text();
-        console.error('❌ 上传失败，响应内容:', responseText.substring(0, 500));
-        const errorDetail = this.formatHttpError(response, responseText);
-        return { success: false, error: errorDetail };
+        return { success: false, error: errorDetail || '上传失败' };
       }
 
       return response.ok;
@@ -276,8 +297,9 @@ export class S3Client {
       this.logSummary('download', {
         key,
         fullKey,
-        url: requestUrl,
+        url,
         status: response.status,
+        statusText: response.statusText,
         ok: response.ok,
         presigned: requestUrl !== url,
         errorSnippet,
@@ -351,8 +373,9 @@ export class S3Client {
       this.logSummary('list', {
         prefix,
         fullPrefix,
-        url: requestUrl,
+        url,
         status: response.status,
+        statusText: response.statusText,
         ok: response.ok,
         presigned: requestUrl !== url,
         errorSnippet,
@@ -423,7 +446,9 @@ export class S3Client {
       this.logSummary('copy', {
         source,
         destination,
+        url,
         status: response.status,
+        statusText: response.statusText,
         ok: response.ok,
       });
 
@@ -453,8 +478,9 @@ export class S3Client {
       this.logSummary('delete', {
         key,
         fullKey,
-        url: requestUrl,
+        url,
         status: response.status,
+        statusText: response.statusText,
         ok: response.ok,
       });
 
@@ -481,8 +507,9 @@ export class S3Client {
       this.logSummary('head', {
         key,
         fullKey,
-        url: response.url,
+        url: baseUrl,
         status: response.status,
+        statusText: response.statusText,
         ok: exists,
         presigned: response.url !== baseUrl,
       });
@@ -901,21 +928,100 @@ export class S3Client {
   }
 
   private logSummary(event: string, detail: Record<string, unknown>): void {
+    const diagnostic = this.buildDiagnostic(event, detail);
+    if (this.shouldKeepDiagnostic(diagnostic)) {
+      this.lastDiagnostic = diagnostic;
+    }
+
     // 只在开发环境或启用调试模式时输出
     if (typeof console !== 'undefined' && typeof console.warn === 'function') {
       // 简化日志，只输出关键信息
       const simplifiedDetail = {
         ...detail,
+        url: redactSyncDiagnosticUrl(this.asString(detail.url)),
         // 移除冗余的 URL 信息，只保留关键字段
         key: detail.key,
+        fullKey: detail.fullKey,
         status: detail.status,
+        statusText: detail.statusText,
         ok: detail.ok,
+        error: detail.error,
+        errorSnippet: detail.errorSnippet,
       };
 
       // 使用 console.log 而不是 console.warn，避免调用栈
       // eslint-disable-next-line no-console
       console.log(`[S3:${event}]`, simplifiedDetail);
     }
+  }
+
+  private buildDiagnostic(
+    event: string,
+    detail: Record<string, unknown>
+  ): SyncDiagnostic {
+    return {
+      provider: 'S3',
+      operation: event,
+      target:
+        this.asString(detail.key) ||
+        this.asString(detail.fullKey) ||
+        this.asString(detail.prefix) ||
+        this.asString(detail.destination) ||
+        this.asString(detail.source),
+      method: this.getMethodForEvent(event),
+      url: this.asString(detail.url),
+      status: this.asNumber(detail.status),
+      statusText: this.asString(detail.statusText),
+      ok: this.asBoolean(detail.ok),
+      error: this.asString(detail.error),
+      responseSnippet: this.asString(detail.errorSnippet),
+      details: {
+        fullKey: this.asString(detail.fullKey),
+        prefix: this.asString(detail.prefix),
+        fullPrefix: this.asString(detail.fullPrefix),
+        source: this.asString(detail.source),
+        destination: this.asString(detail.destination),
+        presigned: this.asBoolean(detail.presigned),
+        contentType: this.asString(detail.contentType),
+      },
+    };
+  }
+
+  private shouldKeepDiagnostic(diagnostic: SyncDiagnostic): boolean {
+    return (
+      diagnostic.ok === false ||
+      diagnostic.error !== undefined ||
+      (typeof diagnostic.status === 'number' && diagnostic.status >= 400)
+    );
+  }
+
+  private getMethodForEvent(event: string): string | undefined {
+    switch (event) {
+      case 'upload':
+      case 'copy':
+        return 'PUT';
+      case 'download':
+      case 'list':
+        return 'GET';
+      case 'delete':
+        return 'DELETE';
+      case 'head':
+        return 'HEAD';
+      default:
+        return undefined;
+    }
+  }
+
+  private asString(value: unknown): string | undefined {
+    return typeof value === 'string' && value ? value : undefined;
+  }
+
+  private asNumber(value: unknown): number | undefined {
+    return typeof value === 'number' ? value : undefined;
+  }
+
+  private asBoolean(value: unknown): boolean | undefined {
+    return typeof value === 'boolean' ? value : undefined;
   }
 
   private getCanonicalUri(pathname: string): string {

@@ -57,7 +57,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     setExpanded,
     isSyncing,
     setIsSyncing,
-    syncProgress,
     setSyncProgress,
     debugLogs,
     setDebugLogs,
@@ -188,11 +187,12 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         triggerHaptic('light');
       } else {
         setStatus('error');
-        if (settings.remotePath) {
-          setError('连接失败：请检查服务器地址、账号密码和路径是否正确');
-        } else {
-          setError('连接失败：请检查服务器地址、账号或密码');
-        }
+        setError(
+          manager.getLastError() ||
+            (settings.remotePath
+              ? '连接失败：请检查服务器地址、账号密码和路径是否正确'
+              : '连接失败：请检查服务器地址、账号或密码')
+        );
       }
     } catch (err) {
       setStatus('error');
@@ -228,7 +228,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         );
         if (!connected) {
           setStatus('error');
-          setError('连接失败，请检查配置');
+          setError(manager.getLastError() || '连接失败，请检查配置');
           setIsSyncing(false);
           return;
         }

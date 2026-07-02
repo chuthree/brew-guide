@@ -20,12 +20,15 @@ import type {
   BackupRecord,
 } from '@/lib/s3/types';
 import { BackupManager } from './BackupManager';
+import { formatSyncDiagnostic, type SyncDiagnostic } from './types';
 
 /**
  * 存储客户端接口 - S3 和 WebDAV 客户端都需要实现这个接口
  */
 export interface IStorageClient {
   testConnection(): Promise<boolean>;
+  getLastDiagnostic?(): SyncDiagnostic | null;
+  clearDiagnostic?(): void;
   uploadFile(
     key: string,
     content: string
@@ -101,6 +104,11 @@ export abstract class BaseSyncManager {
       debugLogs.push(`[${new Date().toISOString()}] ${msg}`);
       console.warn(`📝 [${this.getServiceName()}] ${msg}`);
     };
+    const addLogLines = (lines: string[]) => {
+      lines.forEach(line => {
+        debugLogs.push(line ? `[${new Date().toISOString()}] ${line}` : '');
+      });
+    };
 
     const result: SyncResult = {
       success: false,
@@ -112,6 +120,7 @@ export abstract class BaseSyncManager {
     };
 
     try {
+      this.client.clearDiagnostic?.();
       addLog(`开始同步，方向: ${options.preferredDirection || 'auto'}`);
 
       // 获取远程元数据（用于备份历史）
@@ -126,12 +135,14 @@ export abstract class BaseSyncManager {
         result.errors.push('未指定同步方向');
       }
 
+      this.appendResultDiagnostics(result, addLogLines);
       result.debugLogs = debugLogs;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '未知错误';
       addLog(`同步异常: ${errorMsg}`);
       result.errors.push(`同步失败: ${errorMsg}`);
       result.message = '同步失败';
+      this.appendResultDiagnostics(result, addLogLines);
       result.debugLogs = debugLogs;
     } finally {
       this.syncInProgress = false;
@@ -171,8 +182,9 @@ export abstract class BaseSyncManager {
     if (uploadResult !== true) {
       const errorDetail =
         typeof uploadResult === 'object' ? uploadResult.error : '未知错误';
-      result.errors.push(`上传失败: ${errorDetail}`);
-      result.message = '上传失败';
+      const errorMsg = `上传 brew-guide-data.json 失败: ${errorDetail}`;
+      result.errors.push(errorMsg);
+      result.message = errorMsg;
       return;
     }
     result.uploadedFiles = 1;
@@ -181,16 +193,32 @@ export abstract class BaseSyncManager {
     // 2. 通过服务器端复制创建备份（不消耗客户端带宽）
     addLog('正在创建备份（服务器端复制）...');
     const lastBackupHash = remoteMetadata?.backupHistory?.slice(-1)[0]?.hash;
-    await this.getBackupManager().performBackupAfterUpload(
-      this.client!,
-      'brew-guide-data.json',
-      hash,
-      lastBackupHash
-    );
+    const backupCreated =
+      await this.getBackupManager().performBackupAfterUpload(
+        this.client!,
+        'brew-guide-data.json',
+        hash,
+        lastBackupHash
+      );
+    if (!backupCreated) {
+      const warning = '备份创建失败，主文件已上传，将继续更新同步元数据';
+      result.warnings = [...(result.warnings ?? []), warning];
+      addLog(warning);
+    }
 
     // 3. 更新元数据
     const localFilesMetadata = await this.getLocalFilesMetadata();
-    await this.updateMetadataAfterSync(localFilesMetadata);
+    const metadataUpdated = await this.updateMetadataAfterSync(
+      localFilesMetadata,
+      addLog
+    );
+    if (!metadataUpdated) {
+      result.message = '上传失败：主文件已上传，但同步元数据更新失败';
+      result.errors.push(
+        '同步元数据更新失败，云端主文件可能已写入，请查看请求诊断后重试上传'
+      );
+      return;
+    }
     addLog('元数据更新完成');
 
     result.success = true;
@@ -232,20 +260,30 @@ export abstract class BaseSyncManager {
     }
 
     // 更新元数据
-    await this.updateMetadataAfterSync(remoteMetadata.files);
-    addLog('元数据更新完成');
+    const metadataUpdated = await this.updateMetadataAfterSync(
+      remoteMetadata.files,
+      addLog
+    );
+    if (metadataUpdated) {
+      addLog('元数据更新完成');
+    } else {
+      result.errors.push('同步元数据更新失败，本地数据已写入但同步状态未保存');
+    }
 
     result.success = result.errors.length === 0;
-    result.message = `已下载 ${result.downloadedFiles} 个文件`;
+    result.message = result.success
+      ? `已下载 ${result.downloadedFiles} 个文件`
+      : `下载完成但有 ${result.errors.length} 个错误`;
   }
 
   /**
    * 更新同步后的元数据
    */
   private async updateMetadataAfterSync(
-    files: Record<string, FileMetadata>
-  ): Promise<void> {
-    if (!this.metadataManager) return;
+    files: Record<string, FileMetadata>,
+    addLog?: (msg: string) => void
+  ): Promise<boolean> {
+    if (!this.metadataManager) return false;
 
     try {
       const metadata: SyncMetadataV2 = {
@@ -258,8 +296,12 @@ export abstract class BaseSyncManager {
 
       await this.metadataManager.saveLocalMetadata(metadata);
       await this.metadataManager.saveRemoteMetadata(metadata);
+      return true;
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       console.error(`❌ [${this.getServiceName()}] 更新元数据失败:`, error);
+      addLog?.(`元数据更新失败: ${errorMsg}`);
+      return false;
     }
   }
 
@@ -334,6 +376,43 @@ export abstract class BaseSyncManager {
       downloadedFiles: 0,
       errors,
     };
+  }
+
+  private appendResultDiagnostics(
+    result: SyncResult,
+    addLogLines: (lines: string[]) => void
+  ): void {
+    if (!result.success && result.message) {
+      addLogLines(['', '--- 同步结果 ---', result.message]);
+    }
+
+    if (result.errors.length > 0) {
+      addLogLines([
+        '',
+        `--- 错误详情 (${result.errors.length} 项) ---`,
+        ...result.errors.map((error, index) => `${index + 1}. ${error}`),
+      ]);
+    }
+
+    if (result.warnings && result.warnings.length > 0) {
+      addLogLines([
+        '',
+        `--- 警告 (${result.warnings.length} 项) ---`,
+        ...result.warnings.map((warning, index) => `${index + 1}. ${warning}`),
+      ]);
+    }
+
+    if (
+      !result.success ||
+      result.errors.length > 0 ||
+      result.warnings?.length
+    ) {
+      const diagnostic = this.client?.getLastDiagnostic?.() ?? null;
+      const diagnosticLines = formatSyncDiagnostic(diagnostic);
+      if (diagnosticLines.length > 0) {
+        addLogLines(['', ...diagnosticLines]);
+      }
+    }
   }
 
   /**

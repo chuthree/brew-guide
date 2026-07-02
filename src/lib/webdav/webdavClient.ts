@@ -3,6 +3,7 @@
  * 支持标准 WebDAV 协议的文件服务器（Nextcloud、ownCloud、坚果云等）
  */
 
+import { redactSyncDiagnosticUrl, type SyncDiagnostic } from '@/lib/sync/types';
 import type { WebDAVConfig, WebDAVFile } from './types';
 
 export class WebDAVClient {
@@ -10,6 +11,8 @@ export class WebDAVClient {
   private authHeader: string;
   private readonly corsProxy: string;
   private verifiedDirs = new Set<string>();
+  private lastError: string | null = null;
+  private lastDiagnostic: SyncDiagnostic | null = null;
 
   constructor(config: WebDAVConfig) {
     this.config = config;
@@ -17,6 +20,18 @@ export class WebDAVClient {
     this.authHeader = `Basic ${btoa(`${config.username}:${config.password}`)}`;
     // WebDAV 始终通过统一的 CORS 代理访问，避免端侧再分叉。
     this.corsProxy = 'https://cors.chu3.top/raw?url=';
+  }
+
+  getLastError(): string | null {
+    return this.lastError;
+  }
+
+  getLastDiagnostic(): SyncDiagnostic | null {
+    return this.lastDiagnostic;
+  }
+
+  clearDiagnostic(): void {
+    this.lastDiagnostic = null;
   }
 
   /**
@@ -91,6 +106,23 @@ export class WebDAVClient {
     return null;
   }
 
+  private getResponseErrorDetail(
+    response: Pick<Response, 'status' | 'statusText'>,
+    responseText: string
+  ): string {
+    const proxyError = this.checkProxyError(responseText);
+    if (proxyError) return `代理错误: ${proxyError}`;
+
+    const webdavError = this.checkWebDAVError(responseText);
+    if (webdavError) return `WebDAV 错误: ${webdavError}`;
+
+    const statusText = response.statusText ? ` ${response.statusText}` : '';
+    const snippet = responseText.trim().replace(/\s+/g, ' ').slice(0, 300);
+    return snippet
+      ? `HTTP ${response.status}${statusText} - ${snippet}`
+      : `HTTP ${response.status}${statusText}`;
+  }
+
   /**
    * 测试连接
    */
@@ -98,6 +130,8 @@ export class WebDAVClient {
     // 清空之前的日志
 
     try {
+      this.lastError = null;
+
       // 首先检查 WebDAV 服务器根路径是否可访问
       const baseUrl = this.config.url.endsWith('/')
         ? this.config.url.slice(0, -1)
@@ -124,6 +158,7 @@ export class WebDAVClient {
       const proxyError = this.checkProxyError(responseText);
       if (proxyError) {
         console.log(`[WebDAV] 代理返回错误: ${proxyError}`);
+        this.lastError = `代理错误: ${proxyError}`;
         return false;
       }
 
@@ -151,6 +186,7 @@ export class WebDAVClient {
         const webdavError = this.checkWebDAVError(responseText);
         if (webdavError) {
           console.log(`[WebDAV] WebDAV 错误: ${webdavError}`);
+          this.lastError = `WebDAV 错误: ${webdavError}`;
           return false;
         }
 
@@ -166,11 +202,13 @@ export class WebDAVClient {
           console.log(
             `[WebDAV] 响应内容片段: ${responseText.substring(0, 500)}`
           );
+          this.lastError = '响应包含认证错误，请检查账号、密码和访问权限';
           return false;
         }
 
         console.log(`[WebDAV] 错误: 响应不是有效的 WebDAV 格式`);
         console.log(`[WebDAV] 响应内容片段: ${responseText.substring(0, 500)}`);
+        this.lastError = '响应不是有效的 WebDAV 格式';
         return false;
       }
 
@@ -185,6 +223,7 @@ export class WebDAVClient {
 
         if (!dirCreated) {
           console.log(`[WebDAV] 错误: 远程路径检查/创建失败: ${remotePath}`);
+          this.lastError = `无法访问或创建远程目录: ${remotePath}`;
           this.logSummary('test-connection', {
             url: baseUrl,
             remotePath: this.config.remotePath,
@@ -208,6 +247,7 @@ export class WebDAVClient {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.log(`[WebDAV] 错误: 连接测试异常 - ${errorMsg}`);
+      this.lastError = errorMsg;
       this.logSummary('test-connection', {
         ok: false,
         error: errorMsg,
@@ -261,37 +301,32 @@ export class WebDAVClient {
       const success =
         response.ok || response.status === 201 || response.status === 204;
 
-      this.logSummary('upload', {
-        filename,
-        status: response.status,
-        ok: success,
-      });
-
+      let errorDetail: string | undefined;
       if (!success) {
         // 尝试读取响应体获取更多错误信息
-        let errorDetail = `HTTP ${response.status} ${response.statusText}`;
+        errorDetail = `HTTP ${response.status} ${response.statusText}`;
         try {
           const responseText = await response.text();
           if (responseText) {
-            // 检查是否有代理错误
-            const proxyError = this.checkProxyError(responseText);
-            if (proxyError) {
-              errorDetail = `代理错误: ${proxyError}`;
-            } else {
-              // 检查 WebDAV 错误
-              const webdavError = this.checkWebDAVError(responseText);
-              if (webdavError) {
-                errorDetail = `WebDAV 错误: ${webdavError}`;
-              } else if (responseText.length < 500) {
-                errorDetail = `${errorDetail} - ${responseText}`;
-              }
-            }
+            errorDetail = this.getResponseErrorDetail(response, responseText);
           }
         } catch {
           // 忽略读取响应体的错误
         }
+      }
+
+      this.logSummary('upload', {
+        filename,
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        ok: success,
+        error: errorDetail,
+      });
+
+      if (!success) {
         console.error(`[WebDAV] 上传失败: ${errorDetail}`);
-        return { success: false, error: errorDetail };
+        return { success: false, error: errorDetail || '上传失败' };
       }
 
       return success;
@@ -322,10 +357,25 @@ export class WebDAVClient {
         },
       });
 
+      let responseSnippet: string | undefined;
+      let errorDetail: string | undefined;
+      if (!response.ok) {
+        try {
+          responseSnippet = (await response.clone().text()).slice(0, 300);
+          errorDetail = this.getResponseErrorDetail(response, responseSnippet);
+        } catch {
+          errorDetail = `HTTP ${response.status} ${response.statusText}`;
+        }
+      }
+
       this.logSummary('download', {
         filename,
+        url,
         status: response.status,
+        statusText: response.statusText,
         ok: response.ok,
+        error: errorDetail,
+        errorSnippet: responseSnippet,
       });
 
       if (response.ok) {
@@ -375,11 +425,26 @@ export class WebDAVClient {
 
       const ok =
         response.ok || response.status === 201 || response.status === 204;
+      let responseSnippet: string | undefined;
+      let errorDetail: string | undefined;
+      if (!ok) {
+        try {
+          responseSnippet = (await response.clone().text()).slice(0, 300);
+          errorDetail = this.getResponseErrorDetail(response, responseSnippet);
+        } catch {
+          errorDetail = `HTTP ${response.status} ${response.statusText}`;
+        }
+      }
+
       this.logSummary('copy', {
         source,
         destination,
+        url: sourceUrl,
         status: response.status,
+        statusText: response.statusText,
         ok,
+        error: errorDetail,
+        errorSnippet: responseSnippet,
       });
       return ok;
     } catch (error) {
@@ -414,13 +479,29 @@ export class WebDAVClient {
 </D:propfind>`,
       });
 
+      const ok = response.ok || response.status === 207;
+      let responseSnippet: string | undefined;
+      let errorDetail: string | undefined;
+      if (!ok) {
+        try {
+          responseSnippet = (await response.clone().text()).slice(0, 300);
+          errorDetail = this.getResponseErrorDetail(response, responseSnippet);
+        } catch {
+          errorDetail = `HTTP ${response.status} ${response.statusText}`;
+        }
+      }
+
       this.logSummary('list', {
         path,
+        url,
         status: response.status,
-        ok: response.ok || response.status === 207,
+        statusText: response.statusText,
+        ok,
+        error: errorDetail,
+        errorSnippet: responseSnippet,
       });
 
-      if (response.ok || response.status === 207) {
+      if (ok) {
         const xmlText = await response.text();
         return this.parseListResponse(xmlText, path);
       }
@@ -467,7 +548,9 @@ export class WebDAVClient {
 
       this.logSummary('delete', {
         filename,
+        url,
         status: response.status,
+        statusText: response.statusText,
         ok: response.ok || response.status === 204,
       });
 
@@ -510,12 +593,26 @@ export class WebDAVClient {
 
       // WebDAV PROPFIND 成功返回 207 Multi-Status
       const exists = response.ok || response.status === 207;
+      let responseSnippet: string | undefined;
+      let errorDetail: string | undefined;
+      if (!exists) {
+        try {
+          responseSnippet = (await response.clone().text()).slice(0, 300);
+          errorDetail = this.getResponseErrorDetail(response, responseSnippet);
+        } catch {
+          errorDetail = `HTTP ${response.status} ${response.statusText}`;
+        }
+      }
 
       this.logSummary('fileExists', {
         filename,
+        url,
         status: response.status,
+        statusText: response.statusText,
         ok: exists,
         path: url,
+        error: errorDetail,
+        errorSnippet: responseSnippet,
       });
 
       return exists;
@@ -546,7 +643,9 @@ export class WebDAVClient {
 
       this.logSummary('mkcol', {
         path,
+        url,
         status: response.status,
+        statusText: response.statusText,
         ok: response.ok || response.status === 201 || response.status === 405, // 405 表示目录已存在
       });
 
@@ -602,7 +701,19 @@ export class WebDAVClient {
       const responseText = await checkResponse.text();
 
       const proxyError = this.checkProxyError(responseText);
-      if (proxyError) return false;
+      if (proxyError) {
+        this.lastError = `代理错误: ${proxyError}`;
+        this.logSummary('mkdir-check', {
+          path,
+          url,
+          status: checkResponse.status,
+          statusText: checkResponse.statusText,
+          ok: false,
+          error: this.lastError,
+          errorSnippet: responseText.slice(0, 300),
+        });
+        return false;
+      }
 
       // 验证是否为有效的 WebDAV 成功响应（必须包含 multistatus）
       const isValidWebDAV = responseText.includes('multistatus');
@@ -636,14 +747,39 @@ export class WebDAVClient {
 
           const mkcolText = await mkcolResponse.text();
 
-          if (this.checkProxyError(mkcolText)) return false;
+          const mkcolProxyError = this.checkProxyError(mkcolText);
+          if (mkcolProxyError) {
+            this.lastError = `代理错误: ${mkcolProxyError}`;
+            this.logSummary('mkdir', {
+              path: currentPath,
+              url: currentUrl,
+              status: mkcolResponse.status,
+              statusText: mkcolResponse.statusText,
+              ok: false,
+              error: this.lastError,
+              errorSnippet: mkcolText.slice(0, 300),
+            });
+            return false;
+          }
 
           const hasAuthError =
             mkcolText.includes('401') ||
             mkcolText.includes('403') ||
             mkcolText.includes('Unauthorized') ||
             mkcolText.includes('Forbidden');
-          if (hasAuthError) return false;
+          if (hasAuthError) {
+            this.lastError = '创建目录失败：认证或权限不足';
+            this.logSummary('mkdir', {
+              path: currentPath,
+              url: currentUrl,
+              status: mkcolResponse.status,
+              statusText: mkcolResponse.statusText,
+              ok: false,
+              error: this.lastError,
+              errorSnippet: mkcolText.slice(0, 300),
+            });
+            return false;
+          }
 
           const mkcolSuccess =
             mkcolResponse.status === 201 ||
@@ -653,6 +789,16 @@ export class WebDAVClient {
 
           if (!mkcolSuccess) {
             console.error(`[WebDAV] 创建目录失败: ${currentPath}`);
+            this.lastError = `创建目录失败: ${currentPath}`;
+            this.logSummary('mkdir', {
+              path: currentPath,
+              url: currentUrl,
+              status: mkcolResponse.status,
+              statusText: mkcolResponse.statusText,
+              ok: false,
+              error: this.getResponseErrorDetail(mkcolResponse, mkcolText),
+              errorSnippet: mkcolText.slice(0, 300),
+            });
             return false;
           }
           this.verifiedDirs.add(currentPath);
@@ -662,8 +808,25 @@ export class WebDAVClient {
         return true;
       }
 
+      this.lastError = this.getResponseErrorDetail(checkResponse, responseText);
+      this.logSummary('mkdir-check', {
+        path,
+        url,
+        status: checkResponse.status,
+        statusText: checkResponse.statusText,
+        ok: false,
+        error: this.lastError,
+        errorSnippet: responseText.slice(0, 300),
+      });
       return false;
-    } catch {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.lastError = errorMsg;
+      this.logSummary('mkdir-check', {
+        path,
+        ok: false,
+        error: errorMsg,
+      });
       return false;
     }
   }
@@ -781,16 +944,95 @@ export class WebDAVClient {
    * 记录日志摘要
    */
   private logSummary(event: string, detail: Record<string, unknown>): void {
+    const diagnostic = this.buildDiagnostic(event, detail);
+    if (this.shouldKeepDiagnostic(diagnostic)) {
+      this.lastDiagnostic = diagnostic;
+    }
+
     if (typeof console !== 'undefined' && typeof console.log === 'function') {
       // eslint-disable-next-line no-console
       console.log(`[WebDAV:${event}]`, {
         ...detail,
+        url: redactSyncDiagnosticUrl(this.asString(detail.url)),
         // 只保留关键信息
         filename: detail.filename,
         path: detail.path,
         status: detail.status,
+        statusText: detail.statusText,
         ok: detail.ok,
+        error: detail.error,
+        errorSnippet: detail.errorSnippet,
       });
     }
+  }
+
+  private buildDiagnostic(
+    event: string,
+    detail: Record<string, unknown>
+  ): SyncDiagnostic {
+    return {
+      provider: 'WebDAV',
+      operation: event,
+      target:
+        this.asString(detail.filename) ||
+        this.asString(detail.path) ||
+        this.asString(detail.destination) ||
+        this.asString(detail.source),
+      method: this.getMethodForEvent(event),
+      url: this.asString(detail.url) || this.asString(detail.path),
+      status: this.asNumber(detail.status),
+      statusText: this.asString(detail.statusText),
+      ok: this.asBoolean(detail.ok),
+      error: this.asString(detail.error),
+      responseSnippet: this.asString(detail.errorSnippet),
+      details: {
+        source: this.asString(detail.source),
+        destination: this.asString(detail.destination),
+        remotePath: this.asString(detail.remotePath),
+      },
+    };
+  }
+
+  private shouldKeepDiagnostic(diagnostic: SyncDiagnostic): boolean {
+    return (
+      diagnostic.ok === false ||
+      diagnostic.error !== undefined ||
+      (typeof diagnostic.status === 'number' && diagnostic.status >= 400)
+    );
+  }
+
+  private getMethodForEvent(event: string): string | undefined {
+    switch (event) {
+      case 'upload':
+        return 'PUT';
+      case 'download':
+        return 'GET';
+      case 'copy':
+        return 'COPY';
+      case 'delete':
+        return 'DELETE';
+      case 'list':
+      case 'fileExists':
+      case 'mkdir-check':
+      case 'test-connection':
+        return 'PROPFIND';
+      case 'mkcol':
+      case 'mkdir':
+        return 'MKCOL';
+      default:
+        return undefined;
+    }
+  }
+
+  private asString(value: unknown): string | undefined {
+    return typeof value === 'string' && value ? value : undefined;
+  }
+
+  private asNumber(value: unknown): number | undefined {
+    return typeof value === 'number' ? value : undefined;
+  }
+
+  private asBoolean(value: unknown): boolean | undefined {
+    return typeof value === 'boolean' ? value : undefined;
   }
 }

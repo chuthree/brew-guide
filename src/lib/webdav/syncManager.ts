@@ -53,6 +53,7 @@ export class WebDAVSyncManager extends BaseSyncManager {
   private config: WebDAVConfig | null = null;
   private webdavClient: WebDAVClient | null = null;
   private _initialized = false;
+  private lastError: string | null = null;
 
   /**
    * 获取服务名称（用于日志标识）
@@ -66,6 +67,10 @@ export class WebDAVSyncManager extends BaseSyncManager {
    */
   isInitialized(): boolean {
     return this._initialized && this.client !== null;
+  }
+
+  getLastError(): string | null {
+    return this.lastError || this.webdavClient?.getLastError() || null;
   }
 
   /**
@@ -84,6 +89,8 @@ export class WebDAVSyncManager extends BaseSyncManager {
     }
 
     try {
+      this.lastError = null;
+
       if (!config?.url || !config.username || !config.password) {
         throw new Error('WebDAV 配置缺少必要字段');
       }
@@ -106,7 +113,9 @@ export class WebDAVSyncManager extends BaseSyncManager {
         console.warn(`🔗 [WebDAV] 正在测试连接到 ${config.url}...`);
         const connected = await this.webdavClient.testConnection();
         if (!connected) {
-          throw new Error('无法连接到 WebDAV 服务');
+          throw new Error(
+            this.webdavClient.getLastError() || '无法连接到 WebDAV 服务'
+          );
         }
         console.warn(`✅ [WebDAV] 连接成功`);
       }
@@ -114,6 +123,7 @@ export class WebDAVSyncManager extends BaseSyncManager {
       this._initialized = true;
       return true;
     } catch (error) {
+      this.lastError = error instanceof Error ? error.message : String(error);
       console.error('❌ WebDAV 初始化失败:', error);
       this.config = null;
       this.webdavClient = null;
