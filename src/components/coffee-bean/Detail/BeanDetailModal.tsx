@@ -37,6 +37,7 @@ import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
 import { openImageViewer } from '@/lib/ui/imageViewer';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { getBeanRatingInfo } from '@/lib/utils/beanRatingUtils';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import RemainingEditor from '@/components/coffee-bean/List/components/RemainingEditor';
@@ -229,6 +230,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   ]);
 
   const bean = isFormMode ? (tempBean as CoffeeBean) : persistedBean;
+  const currentBeanId = bean?.id;
   const allBeans = useCoffeeBeanStore(state => state.beans);
   const allNotes = useBrewingNoteStore(state => state.notes);
   const notesInitialized = useBrewingNoteStore(state => state.initialized);
@@ -253,21 +255,28 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     beanId: string;
     notes: BrewingNote[];
   } | null>(null);
-  const lazyRelatedNotes =
-    lazyRelatedNotesState && lazyRelatedNotesState.beanId === bean?.id
-      ? lazyRelatedNotesState.notes
-      : [];
-  const relatedNotes = useMemo(() => {
-    if (!bean?.id) return [];
-
-    if (!notesInitialized) {
-      return lazyRelatedNotes.filter(note => note.beanId === bean.id);
+  const lazyRelatedNotes = useMemo(() => {
+    if (!currentBeanId || lazyRelatedNotesState?.beanId !== currentBeanId) {
+      return [];
     }
 
-    return [...allNotes.filter(note => note.beanId === bean.id)].sort(
+    return lazyRelatedNotesState.notes;
+  }, [currentBeanId, lazyRelatedNotesState]);
+  const relatedNotesLoading =
+    !!currentBeanId &&
+    !notesInitialized &&
+    lazyRelatedNotesState?.beanId !== currentBeanId;
+  const relatedNotes = useMemo(() => {
+    if (!currentBeanId) return [];
+
+    if (!notesInitialized) {
+      return lazyRelatedNotes.filter(note => note.beanId === currentBeanId);
+    }
+
+    return [...allNotes.filter(note => note.beanId === currentBeanId)].sort(
       (a, b) => b.timestamp - a.timestamp
     );
-  }, [allNotes, bean?.id, lazyRelatedNotes, notesInitialized]);
+  }, [allNotes, currentBeanId, lazyRelatedNotes, notesInitialized]);
   const equipmentNameOverrides = useSettingsStore(
     state =>
       state.settings.equipmentNameOverrides || EMPTY_EQUIPMENT_NAME_OVERRIDES
@@ -284,6 +293,41 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const printEnabled = storeSettings.enableBeanPrint === true;
   const showBeanRating = storeSettings.showBeanRating === true;
   const showEstateField = storeSettings.showEstateField === true;
+  const ratingInfo = useMemo(() => {
+    if (!bean) return null;
+    const info = getBeanRatingInfo(bean, allNotes);
+    return info.rating > 0 ? info : null;
+  }, [allNotes, bean]);
+  const detailBean = isFormMode ? tempBean : bean;
+  const detailBlendComponents = detailBean?.blendComponents ?? [];
+  const firstBlendComponent = detailBlendComponents[0];
+  const hasOriginInfoSection =
+    isFormMode ||
+    (detailBlendComponents.length <= 1 &&
+      !!(
+        firstBlendComponent?.origin ||
+        firstBlendComponent?.estate ||
+        firstBlendComponent?.process ||
+        firstBlendComponent?.variety ||
+        detailBean?.roastLevel
+      ));
+  const hasBlendComponentsSection =
+    !isFormMode &&
+    (bean?.blendComponents?.filter(
+      component =>
+        component.origin?.trim() ||
+        component.estate?.trim() ||
+        component.variety?.trim() ||
+        component.process?.trim() ||
+        component.percentage !== undefined
+    ).length ?? 0) > 1;
+  const hasFlavorNotesSection =
+    isFormMode || !!(bean?.flavor?.length || bean?.notes);
+  const hasRatingSection = !isFormMode && (showBeanRating || !!ratingInfo);
+  const hasBeanProfileSection =
+    hasOriginInfoSection || hasBlendComponentsSection || hasFlavorNotesSection;
+  const showBasicInfoDivider = hasBeanProfileSection || hasRatingSection;
+  const showRatingDivider = hasBeanProfileSection && hasRatingSection;
   const [relatedRecordsTabOverride, setRelatedRecordsTabOverride] = useState<{
     beanId: string;
     tab: RelatedRecordsTab;
@@ -396,7 +440,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
   const showChangeRecords = relatedRecordsTab === 'change';
   const showGreenBeanRecords = relatedRecordsTab === 'green';
-  const currentBeanId = bean?.id;
 
   const setRelatedRecordsTabForCurrentBean = React.useCallback(
     (tab: RelatedRecordsTab) => {
@@ -1123,6 +1166,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         }
                       />
 
+                      {showBasicInfoDivider && (
+                        <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70" />
+                      )}
+
                       <OriginInfoSection
                         bean={bean}
                         tempBean={tempBean}
@@ -1147,10 +1194,15 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                         handleUpdateField={handleUpdateField}
                       />
 
+                      {showRatingDivider && (
+                        <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70" />
+                      )}
+
                       <RatingSection
                         bean={bean}
                         isAddMode={isFormMode}
                         showBeanRating={showBeanRating}
+                        ratingInfo={ratingInfo}
                         onOpenRatingModal={() => setRatingModalOpen(true)}
                       />
 
@@ -1164,6 +1216,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                           bean={bean}
                           showChangeRecords={showChangeRecords}
                           showGreenBeanRecords={showGreenBeanRecords}
+                          relatedNotesLoading={relatedNotesLoading}
                           setShowChangeRecords={setShowChangeRecords}
                           setShowGreenBeanRecords={setShowGreenBeanRecords}
                           onImageClick={handleImageClick}

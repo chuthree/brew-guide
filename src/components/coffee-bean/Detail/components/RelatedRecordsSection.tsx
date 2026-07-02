@@ -18,6 +18,7 @@ interface RelatedRecordsSectionProps {
   bean: CoffeeBean | null;
   showChangeRecords: boolean;
   showGreenBeanRecords: boolean;
+  relatedNotesLoading?: boolean;
   setShowChangeRecords: (show: boolean) => void;
   setShowGreenBeanRecords: (show: boolean) => void;
   onImageClick?: (
@@ -44,6 +45,7 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
     bean,
     showChangeRecords,
     showGreenBeanRecords,
+    relatedNotesLoading = false,
     setShowChangeRecords,
     setShowGreenBeanRecords,
     onOpenNoteDetail,
@@ -103,6 +105,23 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
     const primaryRecords = isGreenBean ? roastingRecords : brewingRecords;
     const secondaryRecords = changeRecords;
     const hasSourceGreenBean = !isGreenBean && relatedBeans.length > 0;
+    const hasPrimaryRecords = primaryRecords.length > 0;
+    const hasSecondaryRecords = secondaryRecords.length > 0;
+    const showTabs =
+      isGreenBean ||
+      !hasPrimaryRecords ||
+      hasSecondaryRecords ||
+      hasSourceGreenBean;
+    const activeTab =
+      showGreenBeanRecords && hasSourceGreenBean
+        ? 'green'
+        : showChangeRecords && hasSecondaryRecords
+          ? 'change'
+          : hasPrimaryRecords
+            ? 'primary'
+            : hasSecondaryRecords
+              ? 'change'
+              : 'green';
 
     const showPrimaryRecordTab = useCallback(() => {
       setShowChangeRecords(false);
@@ -121,9 +140,8 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
 
     // 如果都没有记录，不显示
     if (
-      primaryRecords.length === 0 &&
-      secondaryRecords.length === 0 &&
-      !hasSourceGreenBean
+      relatedNotesLoading ||
+      (!hasPrimaryRecords && !hasSecondaryRecords && !hasSourceGreenBean)
     ) {
       return null;
     }
@@ -135,48 +153,48 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
     return (
       <div className="border-t border-neutral-200/40 pt-3 dark:border-neutral-800/40">
         {/* Tab切换按钮 */}
-        <div className="flex items-center gap-2">
-          {primaryRecords.length > 0 && (
-            <button
-              type="button"
-              onClick={showPrimaryRecordTab}
-              className={`text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
-                !showChangeRecords && !showGreenBeanRecords
-                  ? 'opacity-100'
-                  : 'opacity-50'
-              }`}
-            >
-              {primaryLabel} ({primaryRecords.length})
-            </button>
-          )}
-          {secondaryRecords.length > 0 && (
-            <button
-              type="button"
-              onClick={showChangeRecordTab}
-              className={`text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
-                showChangeRecords ? 'opacity-100' : 'opacity-50'
-              }`}
-            >
-              {secondaryLabel} ({secondaryRecords.length})
-            </button>
-          )}
-          {hasSourceGreenBean && (
-            <button
-              type="button"
-              onClick={showGreenBeanRecordTab}
-              className={`text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
-                showGreenBeanRecords ? 'opacity-100' : 'opacity-50'
-              }`}
-            >
-              {greenBeanLabel} ({relatedBeans.length})
-            </button>
-          )}
-        </div>
+        {showTabs && (
+          <div className="flex items-center gap-2">
+            {hasPrimaryRecords && (
+              <button
+                type="button"
+                onClick={showPrimaryRecordTab}
+                className={`text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
+                  activeTab === 'primary' ? 'opacity-100' : 'opacity-50'
+                }`}
+              >
+                {primaryLabel} ({primaryRecords.length})
+              </button>
+            )}
+            {hasSecondaryRecords && (
+              <button
+                type="button"
+                onClick={showChangeRecordTab}
+                className={`text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
+                  activeTab === 'change' ? 'opacity-100' : 'opacity-50'
+                }`}
+              >
+                {secondaryLabel} ({secondaryRecords.length})
+              </button>
+            )}
+            {hasSourceGreenBean && (
+              <button
+                type="button"
+                onClick={showGreenBeanRecordTab}
+                className={`text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
+                  activeTab === 'green' ? 'opacity-100' : 'opacity-50'
+                }`}
+              >
+                {greenBeanLabel} ({relatedBeans.length})
+              </button>
+            )}
+          </div>
+        )}
 
         {/* 记录列表 */}
-        <div className="mt-3 space-y-2">
+        <div className={showTabs ? 'mt-3 space-y-2' : 'space-y-2'}>
           {/* 生豆记录 */}
-          {showGreenBeanRecords &&
+          {activeTab === 'green' &&
             hasSourceGreenBean &&
             relatedBeans.map(relatedBean => (
               <div
@@ -191,8 +209,8 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
             ))}
 
           {/* 冲煮记录或变动记录 */}
-          {!showGreenBeanRecords &&
-            (showChangeRecords ? secondaryRecords : primaryRecords).map(
+          {activeTab !== 'green' &&
+            (activeTab === 'change' ? secondaryRecords : primaryRecords).map(
               note => (
                 <RelatedRecordCard
                   key={note.id}

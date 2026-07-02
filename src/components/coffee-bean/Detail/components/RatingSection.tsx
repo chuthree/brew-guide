@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { CoffeeBean, BrewingNoteData } from '@/types/app';
-import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
-import { getBeanRatingInfo, hasBeanRating } from '@/lib/utils/beanRatingUtils';
+import React from 'react';
+import type { CoffeeBean } from '@/types/app';
+import type { BeanRatingInfo } from '@/lib/utils/beanRatingUtils';
 
 interface RatingSectionProps {
   bean: CoffeeBean | null;
   isAddMode: boolean;
   showBeanRating: boolean;
+  ratingInfo: BeanRatingInfo | null;
   onOpenRatingModal: () => void;
 }
 
@@ -16,17 +16,9 @@ const RatingSection: React.FC<RatingSectionProps> = ({
   bean,
   isAddMode,
   showBeanRating,
+  ratingInfo,
   onOpenRatingModal,
 }) => {
-  const notes = useBrewingNoteStore(state => state.notes);
-
-  // 计算评分信息
-  const ratingInfo = useMemo(() => {
-    if (!bean) return null;
-    if (!hasBeanRating(bean, notes as BrewingNoteData[])) return null;
-    return getBeanRatingInfo(bean, notes as BrewingNoteData[]);
-  }, [bean, notes]);
-
   // 不在添加模式下显示，且需要满足显示条件
   if (isAddMode) return null;
   if (!showBeanRating && !ratingInfo) {
@@ -34,7 +26,7 @@ const RatingSection: React.FC<RatingSectionProps> = ({
   }
 
   return (
-    <div className="border-t border-neutral-200/40 pt-3 dark:border-neutral-800/40">
+    <>
       {ratingInfo && ratingInfo.rating > 0 ? (
         // 已有评价（手动或自动），显示评价内容
         <div className="cursor-pointer space-y-3" onClick={onOpenRatingModal}>
@@ -80,7 +72,7 @@ const RatingSection: React.FC<RatingSectionProps> = ({
           </button>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

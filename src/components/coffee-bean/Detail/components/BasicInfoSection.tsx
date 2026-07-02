@@ -464,9 +464,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             </div>
           )}
       </div>
-
-      {/* 虚线分割线 */}
-      <div className="border-t border-dashed border-neutral-200/70 dark:border-neutral-800/70"></div>
     </>
   );
 };
