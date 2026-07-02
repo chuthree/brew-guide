@@ -195,10 +195,12 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function isRetryableSettingsDownloadError(error: unknown): boolean {
+function isRetryableSyncInterruption(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
 
   return (
+    message.includes('超时') ||
+    message.includes('网络') ||
     message.includes('下载设置超时') ||
     message.includes('timeout') ||
     message.includes('timed out') ||
@@ -206,6 +208,30 @@ function isRetryableSettingsDownloadError(error: unknown): boolean {
     message.includes('network') ||
     message.includes('failed to fetch') ||
     message.includes('load failed')
+  );
+}
+
+function hasSyncedData(stats: SyncStats): boolean {
+  return stats.uploaded > 0 || stats.downloaded > 0 || stats.deleted > 0;
+}
+
+function shouldSilenceBackgroundNoopFailure(params: {
+  lastSyncTime: number;
+  stats: SyncStats;
+}): boolean {
+  const progress = getSyncStatusStore().supabaseSyncProgress;
+  const failedTasks = progress.tasks.filter(
+    task => task.status === 'error' || Boolean(task.error)
+  );
+
+  return (
+    progress.phase === 'background-sync' &&
+    params.lastSyncTime > 0 &&
+    !hasSyncedData(params.stats) &&
+    failedTasks.length > 0 &&
+    failedTasks.every(task =>
+      isRetryableSyncInterruption(task.error || task.detail || '')
+    )
   );
 }
 
@@ -693,8 +719,12 @@ export class InitialSyncManager {
     }
 
     // 同步完成提示
+    const silenceBackgroundFailure =
+      errorCount > 0 &&
+      shouldSilenceBackgroundNoopFailure({ lastSyncTime, stats });
+
     if (typeof window !== 'undefined') {
-      if (errorCount > 0) {
+      if (errorCount > 0 && !silenceBackgroundFailure) {
         // 如果有错误发生
         const diagnostic = createSyncDiagnostic({
           errorCount,
@@ -745,6 +775,12 @@ export class InitialSyncManager {
           showToast({ type: 'success', title: '数据已是最新' });
         }
       }
+    }
+
+    if (silenceBackgroundFailure) {
+      console.warn('[InitialSync] 后台无变更同步遇到可重试错误，已静默跳过');
+      syncStatusStore.resetSupabaseSyncProgress();
+      return stats;
     }
 
     // 只有整轮同步全部成功才更新时间戳，避免失败表在下次同步中被跳过
@@ -1487,7 +1523,7 @@ export class InitialSyncManager {
         } catch (error) {
           if (
             settingsMode === 'pull-only' &&
-            isRetryableSettingsDownloadError(error)
+            isRetryableSyncInterruption(error)
           ) {
             console.warn('[InitialSync] 后台设置下载已延后:', error);
             this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {

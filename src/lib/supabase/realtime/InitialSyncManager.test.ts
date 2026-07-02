@@ -10,6 +10,7 @@ import {
   uploadSettingsData,
 } from '../syncOperations';
 import { hydrateLastSyncTime, setLastSyncTime } from './conflictResolver';
+import { showToast } from '@/components/common/feedback/LightToast';
 
 const mocks = vi.hoisted(() => {
   const createTable = () => ({
@@ -171,6 +172,56 @@ describe('InitialSyncManager settings sync', () => {
       detail: '远端设置下载超时，已延后',
       failed: 1,
     });
+  });
+
+  it('silences retryable no-op background table timeouts', async () => {
+    vi.mocked(fetchRemoteLatestTimestamp).mockResolvedValue({
+      success: true,
+      data: 1000,
+      affectedCount: 1,
+    });
+    vi.mocked(fetchRemoteAllRecords).mockImplementation((_client, table) => {
+      if (table === SYNC_TABLES.BREWING_NOTES) {
+        return new Promise(() => {});
+      }
+
+      return Promise.resolve({
+        success: true,
+        data: [],
+        affectedCount: 0,
+      });
+    });
+
+    useSyncStatusStore.getState().startSupabaseSyncProgress(
+      'background-sync',
+      '正在同步 Supabase 数据',
+      [
+        { id: SYNC_TABLES.COFFEE_BEANS, label: '咖啡豆' },
+        { id: SYNC_TABLES.BREWING_NOTES, label: '笔记' },
+        { id: SYNC_TABLES.CUSTOM_EQUIPMENTS, label: '自定义器具' },
+        { id: SYNC_TABLES.CUSTOM_METHODS, label: '自定义方案' },
+        { id: SYNC_TABLES.USER_SETTINGS, label: '设置' },
+      ]
+    );
+
+    const manager = new InitialSyncManager({} as SupabaseClient, {
+      settingsMode: 'pull-only',
+    });
+
+    const sync = manager.performSync();
+    await vi.advanceTimersByTimeAsync(60000);
+
+    await expect(sync).resolves.toEqual({
+      uploaded: 0,
+      downloaded: 0,
+      deleted: 0,
+    });
+
+    expect(showToast).not.toHaveBeenCalled();
+    expect(setLastSyncTime).not.toHaveBeenCalled();
+    expect(useSyncStatusStore.getState().supabaseSyncProgress.tasks).toEqual(
+      []
+    );
   });
 
   it('uploads local dirty settings instead of downloading newer remote settings first', async () => {
