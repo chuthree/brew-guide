@@ -393,6 +393,14 @@ export const DataManager = {
             });
           }
 
+          if (
+            (key === 'coffeeBeans' || key === 'brewingNotes') &&
+            Array.isArray(valueToSave)
+          ) {
+            await syncToIndexedDB(key, valueToSave);
+            continue;
+          }
+
           // 特殊处理 brewGuideSettings - 使用 settingsStore 导入
           if (key === 'brewGuideSettings' && typeof valueToSave === 'object') {
             // 如果导入的数据是 Zustand 格式（包含 state.settings），则解包
