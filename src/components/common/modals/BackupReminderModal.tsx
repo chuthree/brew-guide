@@ -8,7 +8,7 @@ import {
 } from '@/lib/utils/backupReminderUtils';
 import { DataManager as DataManagerUtil } from '@/lib/core/dataManager';
 import { exportDataAsJsonFile } from '@/lib/utils/dataExportUtils';
-import BackupRestoreIcon from './settings-backup-restore.svg';
+import BackupRestoreIcon from '@public/images/icons/ui/backup-restore.svg';
 
 interface BackupReminderModalProps {
   isOpen: boolean;
