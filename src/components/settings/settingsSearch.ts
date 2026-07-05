@@ -2,6 +2,7 @@ import type { CustomEquipment, Method } from '@/lib/core/config';
 import { commonMethods, equipmentList } from '@/lib/core/config';
 import type { SettingsOptions } from '@/lib/core/db';
 import type { Grinder } from '@/lib/stores/grinderStore';
+import { pinyin } from 'pinyin-pro';
 import {
   CONFIGURABLE_COFFEE_BEAN_VIEW_ORDER,
   getMainNavigationTabLabel,
@@ -81,6 +82,52 @@ export const makeSettingRowSearchId = (label: string) =>
 
 export const makeDynamicSettingSearchId = (prefix: string, value: string) =>
   `${prefix}-${makeSettingsSearchId(value)}`;
+
+export const normalizeSettingsSearchText = (value: string) =>
+  value.toLowerCase().normalize('NFKC').replace(/\s+/g, ' ').trim();
+
+const getPinyinText = (value: string) => {
+  if (!value) return '';
+
+  const full = pinyin(value, { toneType: 'none' });
+  const initials = pinyin(value, { pattern: 'first', toneType: 'none' });
+
+  return [
+    full,
+    full.replace(/\s+/g, ''),
+    initials,
+    initials.replace(/\s+/g, ''),
+  ].join(' ');
+};
+
+const buildSettingsSearchText = (item: SettingsSearchItem) =>
+  normalizeSettingsSearchText(
+    [
+      item.label,
+      item.value,
+      item.description,
+      item.groupLabel,
+      ...(item.keywords || []),
+      getPinyinText(item.label),
+      item.groupLabel ? getPinyinText(item.groupLabel) : '',
+      ...(item.keywords || []).map(getPinyinText),
+    ]
+      .filter(Boolean)
+      .join(' ')
+  );
+
+export const filterSettingsSearchItems = (
+  items: SettingsSearchItem[],
+  query: string
+) => {
+  const tokens = normalizeSettingsSearchText(query).split(' ').filter(Boolean);
+  if (tokens.length === 0) return [];
+
+  return items.filter(item => {
+    const searchText = buildSettingsSearchText(item);
+    return tokens.every(token => searchText.includes(token));
+  });
+};
 
 const createItem = ({
   pageId,
