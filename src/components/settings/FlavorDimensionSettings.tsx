@@ -86,6 +86,10 @@ const DimensionEditorDrawer: React.FC<DimensionEditorDrawerProps> = ({
       onBack={onCancel}
       onDone={onDone}
       historyId="flavor-dimension-editor-drawer"
+      heightClassName="max-h-[88vh]"
+      bodyHeightClassName={
+        draft?.id && !draft.isDefault ? 'h-[204px]' : 'h-[112px]'
+      }
     >
       <div>
         <SettingSection title="维度名称">

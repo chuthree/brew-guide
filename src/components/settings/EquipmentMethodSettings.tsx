@@ -11,6 +11,11 @@ import CustomEquipmentForm, {
 import CustomMethodForm from '@/components/method/forms/CustomMethodForm';
 import type { CustomMethodFormHandle } from '@/components/method/forms/CustomMethodForm';
 import MethodImportModal from '@/components/method/import/MethodImportModal';
+import {
+  METHOD_FORM_DRAWER_BODY_HEIGHT_CLASS_NAME,
+  METHOD_FORM_DRAWER_CONTENT_CLASS_NAME,
+  METHOD_FORM_DRAWER_HEIGHT_CLASS_NAME,
+} from '@/components/method/forms/drawerLayout';
 import PageStackDrawer, {
   useDrawerPageStack,
 } from '@/components/common/ui/PageStackDrawer';
@@ -1277,7 +1282,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
 
     if (isMethodFormPage && activeCustomEquipment) {
       return (
-        <div className="flex h-[min(72vh,680px)] min-h-[520px] flex-col px-6 pb-2">
+        <div className={METHOD_FORM_DRAWER_CONTENT_CLASS_NAME}>
           <CustomMethodForm
             ref={methodFormRef}
             initialMethod={editingMethod}
@@ -1329,6 +1334,14 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
         onBack={handleDrawerBack}
         onDone={handleDrawerDone}
         historyId="equipment-method-drawer"
+        heightClassName={
+          isMethodFormPage ? METHOD_FORM_DRAWER_HEIGHT_CLASS_NAME : undefined
+        }
+        bodyHeightClassName={
+          isMethodFormPage
+            ? METHOD_FORM_DRAWER_BODY_HEIGHT_CLASS_NAME
+            : undefined
+        }
       >
         {/* eslint-disable-next-line react-hooks/refs -- refs are forwarded to drawer forms here, not read during render. */}
         {renderDrawerContent()}

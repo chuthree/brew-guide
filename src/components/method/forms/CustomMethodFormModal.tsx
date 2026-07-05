@@ -18,6 +18,11 @@ import MethodImportModal from '@/components/method/import/MethodImportModal';
 import PageStackDrawer from '@/components/common/ui/PageStackDrawer';
 import type { PageStackDrawerAction } from '@/components/common/ui/PageStackDrawer';
 import {
+  METHOD_FORM_DRAWER_BODY_HEIGHT_CLASS_NAME,
+  METHOD_FORM_DRAWER_CONTENT_CLASS_NAME,
+  METHOD_FORM_DRAWER_HEIGHT_CLASS_NAME,
+} from './drawerLayout';
+import {
   Method,
   CustomEquipment,
   getAnimationTypeFromEquipmentId,
@@ -236,11 +241,13 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
         onBack={handleCloseCustomForm}
         onDone={handleDoneCustomForm}
         historyId="custom-method-form"
+        heightClassName={METHOD_FORM_DRAWER_HEIGHT_CLASS_NAME}
+        bodyHeightClassName={METHOD_FORM_DRAWER_BODY_HEIGHT_CLASS_NAME}
       >
         {isCustomMethodDrawerOpen && currentCustomEquipment && (
           <div
             data-modal="custom-method-form"
-            className="flex h-[min(72vh,680px)] min-h-[520px] flex-col px-6 pb-2"
+            className={METHOD_FORM_DRAWER_CONTENT_CLASS_NAME}
           >
             <CustomMethodForm
               ref={formRef}
