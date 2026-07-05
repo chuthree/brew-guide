@@ -453,6 +453,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           !isOutOfStock &&
           flavorInfo &&
           flavorInfo.phase !== '未知' &&
+          flavorInfo.phase !== '在途' &&
           !isAddMode && (
             <div className="flex items-start">
               <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
