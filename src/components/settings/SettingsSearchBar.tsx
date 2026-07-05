@@ -7,6 +7,7 @@ import type { SettingsSearchItem } from './settingsSearch';
 interface SettingsSearchBarProps {
   query: string;
   firstResult: SettingsSearchItem | null;
+  isVisible?: boolean;
   onQueryChange: (query: string) => void;
   onSelect: (item: SettingsSearchItem) => void;
 }
@@ -14,6 +15,7 @@ interface SettingsSearchBarProps {
 const SettingsSearchBar: React.FC<SettingsSearchBarProps> = ({
   query,
   firstResult,
+  isVisible = true,
   onQueryChange,
   onSelect,
 }) => {
@@ -53,6 +55,12 @@ const SettingsSearchBar: React.FC<SettingsSearchBarProps> = ({
       window.removeEventListener('resize', updateKeyboardOffset);
     };
   }, [updateKeyboardOffset]);
+  React.useEffect(() => {
+    if (!isVisible) {
+      inputRef.current?.blur();
+      setKeyboardOffset(0);
+    }
+  }, [isVisible]);
   const handleInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       onQueryChange(event.target.value);
@@ -92,17 +100,26 @@ const SettingsSearchBar: React.FC<SettingsSearchBarProps> = ({
     setKeyboardOffset(0);
   }, []);
   const hasQuery = query.length > 0;
+  const searchBarTranslateY = isVisible ? -keyboardOffset : 24;
 
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-6 pt-8 pb-[calc(env(safe-area-inset-bottom)+0.875rem)] transition-transform duration-200 ease-out"
-      style={{ transform: `translate3d(0, -${keyboardOffset}px, 0)` }}
+      aria-hidden={!isVisible}
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-6 pt-8 pb-[calc(env(safe-area-inset-bottom)+0.875rem)] transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transform: `translate3d(0, ${searchBarTranslateY}px, 0)`,
+      }}
     >
       <div
         aria-hidden="true"
         className="fade-mask-to-t pointer-events-none absolute inset-0 bg-[var(--background)]"
       />
-      <div className="pointer-events-auto relative mx-auto w-full max-w-xl">
+      <div
+        className={`relative mx-auto w-full max-w-xl ${
+          isVisible ? 'pointer-events-auto' : 'pointer-events-none'
+        }`}
+      >
         <div className="flex items-center gap-2">
           <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full border border-black/5 bg-neutral-100/95 px-4 shadow-lg shadow-black/5 backdrop-blur-xl dark:border-white/5 dark:bg-neutral-800/95 dark:shadow-black/20">
             <Search className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />

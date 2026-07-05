@@ -339,6 +339,9 @@ const Settings: React.FC<SettingsProps> = ({
   } = useCloudSyncConnection(settings as SettingsOptions);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
   const [settingsSearchQuery, setSettingsSearchQuery] = useState('');
+  const [isSponsorSectionVisible, setIsSponsorSectionVisible] = useState(false);
+  const settingsHomeScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const sponsorSectionRef = React.useRef<HTMLDivElement | null>(null);
   const searchHighlightTimerRef = React.useRef<number | null>(null);
   const clearSearchHighlightTimer = useCallback(() => {
     if (searchHighlightTimerRef.current !== null) {
@@ -346,6 +349,39 @@ const Settings: React.FC<SettingsProps> = ({
       searchHighlightTimerRef.current = null;
     }
   }, []);
+  useEffect(() => {
+    if (
+      !shouldRender ||
+      settingsSearchQuery.trim().length > 0 ||
+      typeof IntersectionObserver === 'undefined'
+    ) {
+      setIsSponsorSectionVisible(false);
+      return;
+    }
+
+    const scrollElement = settingsHomeScrollRef.current;
+    const sponsorElement = sponsorSectionRef.current;
+
+    if (!scrollElement || !sponsorElement) {
+      setIsSponsorSectionVisible(false);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsSponsorSectionVisible(entry.isIntersecting);
+      },
+      {
+        root: scrollElement,
+        rootMargin: '0px 0px -112px 0px',
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(sponsorElement);
+
+    return () => observer.disconnect();
+  }, [settingsSearchQuery, shouldRender]);
 
   // 自动检测更新（仅在本地打包的 Capacitor 环境下）
   // 是否为自动检测触发的更新提示
@@ -842,6 +878,7 @@ const Settings: React.FC<SettingsProps> = ({
                 {headerContent}
 
                 <div
+                  ref={settingsHomeScrollRef}
                   className="relative min-h-0 flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+7rem)]"
                   style={{ WebkitOverflowScrolling: 'touch' }}
                 >
@@ -966,7 +1003,7 @@ const Settings: React.FC<SettingsProps> = ({
                   />
 
                   {/* 感谢名单 */}
-                  <div className="px-8 pt-18 pb-8">
+                  <div ref={sponsorSectionRef} className="px-8 pt-18 pb-8">
                     <div className="text-left text-xs select-none">
                       <p className="font-medium text-neutral-800 dark:text-neutral-200">
                         感谢各位一直以来的支持，自 2025 年 2 月 1
@@ -983,6 +1020,7 @@ const Settings: React.FC<SettingsProps> = ({
           <SettingsSearchBar
             query={settingsSearchQuery}
             firstResult={settingsSearchResults[0] ?? null}
+            isVisible={shouldShowSearchResults || !isSponsorSectionVisible}
             onQueryChange={setSettingsSearchQuery}
             onSelect={handleSettingsSearchSelect}
           />
