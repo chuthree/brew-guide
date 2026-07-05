@@ -42,8 +42,14 @@ import {
   SettingReorderableRow,
   SettingRow,
   SettingSection,
+  useSettingSearchHighlight,
+  useScrollToHighlightedSetting,
 } from '@/components/settings/atomic';
 import type { SettingsOptions } from './Settings';
+import {
+  makeDynamicSettingSearchId,
+  makeSettingRowSearchId,
+} from './settingsSearch';
 
 interface EquipmentMethodSettingsProps {
   settings: SettingsOptions;
@@ -136,37 +142,47 @@ const ActionRow: React.FC<{
   icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   isLast?: boolean;
   danger?: boolean;
-}> = ({ label, onClick, icon: Icon, isLast, danger = false }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex w-full cursor-pointer items-stretch px-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
-  >
-    <span
-      className={`flex min-w-0 flex-1 items-center gap-3 py-3.5 ${
-        !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
+  settingId?: string;
+}> = ({ label, onClick, icon: Icon, isLast, danger = false, settingId }) => {
+  const { highlightedSettingId } = useSettingSearchHighlight();
+  const resolvedSettingId = settingId ?? makeSettingRowSearchId(label);
+  const isHighlighted = highlightedSettingId === resolvedSettingId;
+
+  return (
+    <button
+      type="button"
+      data-settings-search-id={resolvedSettingId}
+      onClick={onClick}
+      className={`flex w-full cursor-pointer items-stretch px-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5 ${
+        isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
       }`}
     >
-      {Icon ? (
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-          <Icon
-            className="h-4 w-4 text-neutral-500 dark:text-neutral-400"
-            strokeWidth={2.25}
-          />
-        </span>
-      ) : null}
       <span
-        className={`min-w-0 flex-1 truncate text-sm font-medium ${
-          danger
-            ? 'text-red-500 dark:text-red-400'
-            : 'text-neutral-900 dark:text-neutral-100'
+        className={`flex min-w-0 flex-1 items-center gap-3 py-3.5 ${
+          !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
         }`}
       >
-        {label}
+        {Icon ? (
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+            <Icon
+              className="h-4 w-4 text-neutral-500 dark:text-neutral-400"
+              strokeWidth={2.25}
+            />
+          </span>
+        ) : null}
+        <span
+          className={`min-w-0 flex-1 truncate text-sm font-medium ${
+            danger
+              ? 'text-red-500 dark:text-red-400'
+              : 'text-neutral-900 dark:text-neutral-100'
+          }`}
+        >
+          {label}
+        </span>
       </span>
-    </span>
-  </button>
-);
+    </button>
+  );
+};
 
 const MethodRow: React.FC<{
   method: Method;
@@ -178,6 +194,7 @@ const MethodRow: React.FC<{
   onDelete?: () => void;
   onToggleHidden?: () => void;
   isLast?: boolean;
+  settingId?: string;
 }> = ({
   method,
   isCustom,
@@ -188,9 +205,12 @@ const MethodRow: React.FC<{
   onDelete,
   onToggleHidden,
   isLast,
+  settingId,
 }) => {
   const isConfirmingDelete =
     isCustom && isDeleteConfirming && Boolean(onDelete);
+  const { highlightedSettingId } = useSettingSearchHighlight();
+  const isHighlighted = settingId && highlightedSettingId === settingId;
   const actionLabel = isConfirmingDelete
     ? '确认删除'
     : isCustom
@@ -203,7 +223,12 @@ const MethodRow: React.FC<{
   const showAction = isManageMode && Boolean(action);
 
   return (
-    <div className="flex w-full items-stretch px-3.5">
+    <div
+      data-settings-search-id={settingId}
+      className={`flex w-full items-stretch px-3.5 transition-colors duration-200 ${
+        isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
+      }`}
+    >
       <div
         className={`flex min-w-0 flex-1 items-center gap-3 py-1 ${
           !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
@@ -324,6 +349,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
   const hasPendingEquipmentOrderRef = React.useRef(false);
   const orderedCustomMethodsRef = React.useRef<Method[]>([]);
   const hasPendingCustomMethodOrderRef = React.useRef(false);
+  const { highlightedSettingId } = useSettingSearchHighlight();
 
   React.useEffect(() => {
     onCloseRef.current = onClose;
@@ -453,6 +479,9 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
       ),
     [hiddenMethodIds, selectedCommonMethods]
   );
+  useScrollToHighlightedSetting(
+    `${highlightedSettingId || ''}:${activeEquipmentId || 'list'}:${orderedVisibleEquipments.length}:${orderedCustomMethods.length}:${visibleCommonMethods.length}`
+  );
   const hiddenCommonMethods = React.useMemo(
     () =>
       selectedCommonMethods.filter(method =>
@@ -505,6 +534,60 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
     },
     [triggerHaptic]
   );
+
+  React.useEffect(() => {
+    if (!highlightedSettingId) return;
+
+    const targetEquipment = managedEquipments.find(
+      equipment =>
+        makeDynamicSettingSearchId('equipment', equipment.id) ===
+        highlightedSettingId
+    );
+    if (targetEquipment) {
+      if (activeEquipmentId !== targetEquipment.id) {
+        openEquipmentDrawer(targetEquipment.id);
+      }
+      return;
+    }
+
+    for (const [equipmentId, methods] of Object.entries(methodsByEquipment)) {
+      const targetMethod = methods.find(
+        method =>
+          makeDynamicSettingSearchId(
+            'method',
+            `${equipmentId}-${getMethodId(method)}`
+          ) === highlightedSettingId
+      );
+      if (targetMethod) {
+        if (activeEquipmentId !== equipmentId) {
+          openEquipmentDrawer(equipmentId);
+        }
+        return;
+      }
+    }
+
+    for (const [equipmentId, methods] of Object.entries(commonMethods)) {
+      const targetMethod = methods.find(
+        method =>
+          makeDynamicSettingSearchId(
+            'method',
+            `${equipmentId}-${getMethodId(method)}`
+          ) === highlightedSettingId
+      );
+      if (targetMethod) {
+        if (activeEquipmentId !== equipmentId) {
+          openEquipmentDrawer(equipmentId);
+        }
+        return;
+      }
+    }
+  }, [
+    activeEquipmentId,
+    highlightedSettingId,
+    managedEquipments,
+    methodsByEquipment,
+    openEquipmentDrawer,
+  ]);
 
   const closeEquipmentDrawer = React.useCallback(() => {
     drawerModalHistory.back();
@@ -977,6 +1060,10 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
                   key={equipment.id}
                   value={equipment}
                   label={equipment.name}
+                  settingId={makeDynamicSettingSearchId(
+                    'equipment',
+                    equipment.id
+                  )}
                   isLast={index === orderedVisibleEquipments.length - 1}
                   isReorderMode={isEquipmentReorderMode}
                   onOpen={equipment => openEquipmentDrawer(equipment.id)}
@@ -994,6 +1081,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
             <SettingRow
               key={equipment.id}
               label={equipment.name}
+              settingId={makeDynamicSettingSearchId('equipment', equipment.id)}
               isLast={index === hiddenPresetEquipments.length - 1}
             >
               <button
@@ -1047,6 +1135,10 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
                     key={methodId}
                     value={method}
                     label={method.name}
+                    settingId={makeDynamicSettingSearchId(
+                      'method',
+                      `${activeEquipment.id}-${methodId}`
+                    )}
                     isLast={index === orderedCustomMethods.length - 1}
                     isReorderMode={isCustomMethodManageMode}
                     onOpen={openEditCustomMethod}
@@ -1098,6 +1190,10 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
                   isManageMode={isCommonMethodManageMode}
                   onEdit={() => openEditCommonMethod(method)}
                   onToggleHidden={() => void toggleCommonMethodHidden(method)}
+                  settingId={makeDynamicSettingSearchId(
+                    'method',
+                    `${activeEquipment.id}-${methodId}`
+                  )}
                   isLast={index === visibleCommonMethods.length - 1}
                 />
               );
@@ -1111,6 +1207,10 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
               <SettingRow
                 key={getMethodId(method)}
                 label={method.name}
+                settingId={makeDynamicSettingSearchId(
+                  'method',
+                  `${activeEquipment.id}-${getMethodId(method)}`
+                )}
                 isLast={index === hiddenCommonMethods.length - 1}
               >
                 <button
@@ -1142,6 +1242,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
           {activeEquipment.isCustom && (
             <ActionRow
               label={isDeleteConfirmingEquipment ? '确认删除' : '删除器具'}
+              settingId={makeSettingRowSearchId('删除器具')}
               onClick={() => void handleDeleteEquipment()}
               danger={isDeleteConfirmingEquipment}
               isLast
@@ -1229,6 +1330,7 @@ const EquipmentMethodSettings: React.FC<EquipmentMethodSettingsProps> = ({
         onDone={handleDrawerDone}
         historyId="equipment-method-drawer"
       >
+        {/* eslint-disable-next-line react-hooks/refs -- refs are forwarded to drawer forms here, not read during render. */}
         {renderDrawerContent()}
       </PageStackDrawer>
 

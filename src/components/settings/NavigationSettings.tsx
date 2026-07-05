@@ -26,6 +26,7 @@ import {
   normalizeNavigationSettings,
   type MainNavigationTab,
 } from '@/lib/navigation/navigationSettings';
+import { makeDynamicSettingSearchId } from './settingsSearch';
 
 interface NavigationSettingsProps {
   settings: SettingsOptions;
@@ -204,6 +205,7 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
         {MAIN_NAVIGATION_TABS.map((tab, index) => (
           <SettingRow
             key={tab}
+            settingId={makeDynamicSettingSearchId('navigation-tab', tab)}
             label={getMainNavigationTabLabel(
               tab,
               settings.simplifiedViewLabels
@@ -235,6 +237,10 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
             ).map((view, index, array) => (
               <SettingRow
                 key={view}
+                settingId={makeDynamicSettingSearchId(
+                  'navigation-view-display',
+                  view
+                )}
                 label={getLabel(view)}
                 isLast={index === array.length - 1}
               >
@@ -259,6 +265,10 @@ const NavigationSettings: React.FC<NavigationSettingsProps> = ({
           {CONFIGURABLE_COFFEE_BEAN_VIEW_ORDER.map((view, index, array) => (
             <SettingRow
               key={view}
+              settingId={makeDynamicSettingSearchId(
+                'navigation-view-pin',
+                view
+              )}
               label={getLabel(view)}
               isLast={index === array.length - 1}
             >

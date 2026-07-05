@@ -6,9 +6,13 @@ import { SettingsOptions } from './Settings';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import { useGrinderStore, type Grinder } from '@/lib/stores/grinderStore';
+import { useGrinderStore } from '@/lib/stores/grinderStore';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
-import { SettingPage } from './atomic';
+import { SettingPage, useScrollToHighlightedSetting } from './atomic';
+import {
+  makeDynamicSettingSearchId,
+  makeSettingRowSearchId,
+} from './settingsSearch';
 
 interface GrinderSettingsProps {
   settings: SettingsOptions;
@@ -42,12 +46,14 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
   );
 
   // 控制动画状态
-  const [shouldRender, setShouldRender] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 
   // 用于保存最新的 onClose 引用
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // 关闭处理函数（带动画）
   const handleCloseWithAnimation = useCallback(() => {
@@ -101,6 +107,26 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
     updateGrinder,
     deleteGrinder,
   } = useGrinderStore();
+  const highlightedSettingId = useScrollToHighlightedSetting(
+    `${grinders.map(grinder => grinder.id).join('\n')}:${addingStep}:${showBrewing}`
+  );
+  const isSearchRowHighlighted = React.useCallback(
+    (label: string) => highlightedSettingId === makeSettingRowSearchId(label),
+    [highlightedSettingId]
+  );
+  const getSearchHighlightClass = React.useCallback(
+    (label: string) =>
+      isSearchRowHighlighted(label)
+        ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
+        : '',
+    [isSearchRowHighlighted]
+  );
+  const shouldOpenDefaultSyncDetails =
+    isSearchRowHighlighted('默认同步设置') ||
+    isSearchRowHighlighted('导航栏参数栏') ||
+    isSearchRowHighlighted('方案表单') ||
+    isSearchRowHighlighted('手动添加笔记') ||
+    isSearchRowHighlighted('笔记编辑表单');
 
   // 初始化 store
   useEffect(() => {
@@ -156,15 +182,19 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
     }
   }, [deletingId]);
 
-  if (!shouldRender) return null;
-
   return (
     <SettingPage title="磨豆机" isVisible={isVisible} onClose={handleClose}>
       {/* 顶部渐变阴影 */}
       <div className="-mt-4 space-y-4 px-6">
         {/* 使用指南 - 可展开收起（仅在有磨豆机时显示） */}
         {grinders.length > 0 && (
-          <details className="group rounded bg-neutral-100 dark:bg-neutral-800">
+          <details
+            data-settings-search-id={makeSettingRowSearchId(
+              '磨豆机系统使用指南'
+            )}
+            open={isSearchRowHighlighted('磨豆机系统使用指南') || undefined}
+            className={`group rounded bg-neutral-100 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('磨豆机系统使用指南')}`}
+          >
             <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-600 dark:text-neutral-300">
               <Info className="h-3.5 w-3.5 shrink-0" />
               <span>磨豆机系统使用指南</span>
@@ -187,7 +217,11 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
 
         {/* 默认同步设置（仅在有磨豆机时显示） */}
         {grinders.length > 0 && (
-          <details className="group rounded bg-neutral-100 dark:bg-neutral-800">
+          <details
+            data-settings-search-id={makeSettingRowSearchId('默认同步设置')}
+            open={shouldOpenDefaultSyncDetails || undefined}
+            className={`group rounded bg-neutral-100 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('默认同步设置')}`}
+          >
             <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-600 dark:text-neutral-300">
               <Link2 className="h-3.5 w-3.5 shrink-0" />
               <span>默认同步设置</span>
@@ -198,7 +232,10 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                 设置各场景下同步开关的默认状态
               </p>
               {/* 导航栏参数栏 */}
-              <div className="flex items-center justify-between">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('导航栏参数栏')}
+                className={`flex items-center justify-between rounded transition-colors ${getSearchHighlightClass('导航栏参数栏')}`}
+              >
                 <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
                   导航栏参数栏
                 </span>
@@ -225,7 +262,10 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                 </label>
               </div>
               {/* 方案表单 */}
-              <div className="flex items-center justify-between">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('方案表单')}
+                className={`flex items-center justify-between rounded transition-colors ${getSearchHighlightClass('方案表单')}`}
+              >
                 <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
                   方案表单
                 </span>
@@ -252,7 +292,10 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                 </label>
               </div>
               {/* 手动添加笔记 */}
-              <div className="flex items-center justify-between">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('手动添加笔记')}
+                className={`flex items-center justify-between rounded transition-colors ${getSearchHighlightClass('手动添加笔记')}`}
+              >
                 <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
                   手动添加笔记
                 </span>
@@ -279,7 +322,10 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
                 </label>
               </div>
               {/* 笔记编辑表单 */}
-              <div className="flex items-center justify-between">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('笔记编辑表单')}
+                className={`flex items-center justify-between rounded transition-colors ${getSearchHighlightClass('笔记编辑表单')}`}
+              >
                 <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
                   笔记编辑表单
                 </span>
@@ -311,7 +357,10 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
 
         {/* 刻度指示器显示设置（仅在有磨豆机且冲煮开启时显示） */}
         {grinders.length > 0 && showBrewing && (
-          <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+          <div
+            data-settings-search-id={makeSettingRowSearchId('显示刻度指示器')}
+            className={`flex items-center justify-between rounded bg-neutral-100 px-4 py-3 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('显示刻度指示器')}`}
+          >
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
                 显示刻度指示器
@@ -346,10 +395,20 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
         {/* 磨豆机列表 */}
         {grinders.map(grinder => {
           const isEditing = editingId === grinder.id;
+          const grinderSearchId = makeDynamicSettingSearchId(
+            'grinder',
+            grinder.id
+          );
+          const isSearchHighlighted = highlightedSettingId === grinderSearchId;
           return (
             <div
               key={grinder.id}
-              className="flex items-center justify-between gap-3 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200"
+              data-settings-search-id={grinderSearchId}
+              className={`flex items-center justify-between gap-3 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors duration-200 dark:bg-neutral-800 dark:text-neutral-200 ${
+                isSearchHighlighted
+                  ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
+                  : ''
+              }`}
             >
               <div className="flex flex-1 items-center gap-2">
                 {grinder.name}
@@ -477,8 +536,9 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({
         ) : (
           <button
             type="button"
+            data-settings-search-id={makeSettingRowSearchId('添加磨豆机')}
             onClick={() => setAddingStep('name')}
-            className="flex w-full items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            className={`flex w-full items-center justify-center gap-2 rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${getSearchHighlightClass('添加磨豆机')}`}
           >
             <Plus className="h-4 w-4" />
             添加磨豆机

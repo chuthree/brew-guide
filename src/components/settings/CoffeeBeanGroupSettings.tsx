@@ -9,6 +9,7 @@ import { Reorder } from 'framer-motion';
 import type { SettingsOptions } from './Settings';
 import SettingPage from './atomic/SettingPage';
 import SettingReorderableRow from './atomic/SettingReorderableRow';
+import { makeDynamicSettingSearchId } from './settingsSearch';
 import SettingSection from './atomic/SettingSection';
 import SettingRow from './atomic/SettingRow';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
@@ -21,7 +22,6 @@ import { normalizeCoffeeBeanGroups } from '@/lib/utils/coffeeBeanGroupUtils';
 import {
   formatBeanDisplayName,
   getBeanDisplayInitial,
-  getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
 import { sortBeansByFlavorPeriod } from '@/lib/utils/beanSortUtils';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
@@ -1162,6 +1162,7 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
                     key={group.id}
                     value={group}
                     label={group.name}
+                    settingId={makeDynamicSettingSearchId('group', group.id)}
                     isLast={index === orderedGroups.length - 1}
                     isReorderMode={isReorderMode}
                     onOpen={openEditDrawer}

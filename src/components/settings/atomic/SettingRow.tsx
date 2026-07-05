@@ -1,4 +1,6 @@
 import React from 'react';
+import { makeSettingRowSearchId } from '../settingsSearch';
+import { useSettingSearchHighlight } from './SettingSearchHighlightContext';
 
 interface SettingRowProps {
   label?: string; // 改为可选
@@ -8,6 +10,7 @@ interface SettingRowProps {
   className?: string;
   vertical?: boolean; // 是否垂直布局（用于复杂控件）
   isSubSetting?: boolean; // 是否为子设置项（显示半透明横杆前缀）
+  settingId?: string;
 }
 
 /**
@@ -23,10 +26,35 @@ const SettingRow: React.FC<SettingRowProps> = ({
   className = '',
   vertical = false,
   isSubSetting = false,
+  settingId,
 }) => {
+  const { highlightedSettingId } = useSettingSearchHighlight();
+  const resolvedSettingId =
+    settingId || (label ? makeSettingRowSearchId(label) : null);
+  const isHighlighted =
+    !!resolvedSettingId && highlightedSettingId === resolvedSettingId;
+  const rowRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!isHighlighted) return;
+
+    window.setTimeout(() => {
+      rowRef.current?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    }, 120);
+  }, [isHighlighted]);
+
   if (vertical) {
     return (
-      <div className={`flex w-full flex-col ${className}`}>
+      <div
+        ref={rowRef}
+        data-settings-search-id={resolvedSettingId || undefined}
+        className={`flex w-full flex-col transition-colors duration-200 ${
+          isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
+        } ${className}`}
+      >
         <div
           className={`flex flex-col p-3.5 ${
             !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
@@ -51,7 +79,13 @@ const SettingRow: React.FC<SettingRowProps> = ({
   }
 
   return (
-    <div className={`flex w-full items-stretch px-3.5 ${className}`}>
+    <div
+      ref={rowRef}
+      data-settings-search-id={resolvedSettingId || undefined}
+      className={`flex w-full items-stretch px-3.5 transition-colors duration-200 ${
+        isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
+      } ${className}`}
+    >
       <div
         className={`flex min-w-0 flex-1 items-center justify-between py-3.5 ${
           !isLast ? 'border-b border-black/5 dark:border-white/5' : ''

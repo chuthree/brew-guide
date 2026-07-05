@@ -6,6 +6,8 @@ import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import SettingPage from './atomic/SettingPage';
 import SettingSection from './atomic/SettingSection';
 import SettingRow from './atomic/SettingRow';
+import { useScrollToHighlightedSetting } from './atomic';
+import { makeSettingRowSearchId } from './settingsSearch';
 import {
   getRoasterConfigsSync,
   getSettingsStore,
@@ -58,6 +60,11 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
     Map<string, RoasterConfig>
   >(new Map());
   const [expandedRoaster, setExpandedRoaster] = useState<string | null>(null);
+  const highlightedSettingId = useScrollToHighlightedSetting(
+    roasters.join('\n')
+  );
+  const isRoasterPresetHighlighted =
+    highlightedSettingId === makeSettingRowSearchId('烘焙商特定预设');
 
   // 关闭处理函数（带动画）
   const handleCloseWithAnimation = React.useCallback(() => {
@@ -282,144 +289,153 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
 
         {/* 烘焙商特定预设 */}
         {roasters.length > 0 && (
-          <SettingSection
-            title={`烘焙商特定预设 (${roasters.length})`}
-            footer="为特定烘焙商设置专属的赏味期，优先级高于全局默认预设。"
+          <div
+            data-settings-search-id={makeSettingRowSearchId('烘焙商特定预设')}
+            className={`transition-colors ${
+              isRoasterPresetHighlighted
+                ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
+                : ''
+            }`}
           >
-            {roasters.map((roaster, index) => {
-              const config = roasterConfigs.get(roaster);
-              const isExpanded = expandedRoaster === roaster;
-              const isLast = index === roasters.length - 1;
+            <SettingSection
+              title={`烘焙商特定预设 (${roasters.length})`}
+              footer="为特定烘焙商设置专属的赏味期，优先级高于全局默认预设。"
+            >
+              {roasters.map((roaster, index) => {
+                const config = roasterConfigs.get(roaster);
+                const isExpanded = expandedRoaster === roaster;
+                const isLast = index === roasters.length - 1;
 
-              const flavorPeriod = config?.flavorPeriod || {
-                light: { startDay: 0, endDay: 0 },
-                medium: { startDay: 0, endDay: 0 },
-                dark: { startDay: 0, endDay: 0 },
-              };
+                const flavorPeriod = config?.flavorPeriod || {
+                  light: { startDay: 0, endDay: 0 },
+                  medium: { startDay: 0, endDay: 0 },
+                  dark: { startDay: 0, endDay: 0 },
+                };
 
-              return (
-                <div key={roaster} className="flex w-full flex-col">
-                  {/* Header */}
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(roaster)}
-                    className="relative flex w-full items-center justify-between py-3.5 pr-3.5 pl-3.5"
-                  >
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                        {roaster}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ChevronDown
-                        className={`h-4 w-4 text-neutral-400/60 transition-transform duration-200 ${
-                          isExpanded ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </div>
-                    {/* Separator */}
-                    {!isLast && !isExpanded && (
-                      <div className="absolute right-0 bottom-0 left-3.5 h-px bg-black/5 dark:bg-white/5" />
-                    )}
-                  </button>
+                return (
+                  <div key={roaster} className="flex w-full flex-col">
+                    {/* Header */}
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(roaster)}
+                      className="relative flex w-full items-center justify-between py-3.5 pr-3.5 pl-3.5"
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                          {roaster}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <ChevronDown
+                          className={`h-4 w-4 text-neutral-400/60 transition-transform duration-200 ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </div>
+                      {/* Separator */}
+                      {!isLast && !isExpanded && (
+                        <div className="absolute right-0 bottom-0 left-3.5 h-px bg-black/5 dark:bg-white/5" />
+                      )}
+                    </button>
 
-                  {/* Expanded Content */}
-                  <div
-                    className={`grid transition-all duration-300 ease-in-out ${
-                      isExpanded
-                        ? 'grid-rows-[1fr] opacity-100'
-                        : 'grid-rows-[0fr] opacity-0'
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="px-3.5 pb-3.5">
-                        <div className="space-y-2.5 border-t border-black/5 pt-3 dark:border-white/5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                              浅烘
-                            </span>
-                            {renderFlavorInputs(
-                              flavorPeriod.light.startDay,
-                              flavorPeriod.light.endDay,
-                              val =>
-                                handleRoasterFlavorPeriodChange(
-                                  roaster,
-                                  'light',
-                                  'startDay',
-                                  val
-                                ),
-                              val =>
-                                handleRoasterFlavorPeriodChange(
-                                  roaster,
-                                  'light',
-                                  'endDay',
-                                  val
-                                ),
-                              '默认',
-                              '默认'
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                              中烘
-                            </span>
-                            {renderFlavorInputs(
-                              flavorPeriod.medium.startDay,
-                              flavorPeriod.medium.endDay,
-                              val =>
-                                handleRoasterFlavorPeriodChange(
-                                  roaster,
-                                  'medium',
-                                  'startDay',
-                                  val
-                                ),
-                              val =>
-                                handleRoasterFlavorPeriodChange(
-                                  roaster,
-                                  'medium',
-                                  'endDay',
-                                  val
-                                ),
-                              '默认',
-                              '默认'
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                              深烘
-                            </span>
-                            {renderFlavorInputs(
-                              flavorPeriod.dark.startDay,
-                              flavorPeriod.dark.endDay,
-                              val =>
-                                handleRoasterFlavorPeriodChange(
-                                  roaster,
-                                  'dark',
-                                  'startDay',
-                                  val
-                                ),
-                              val =>
-                                handleRoasterFlavorPeriodChange(
-                                  roaster,
-                                  'dark',
-                                  'endDay',
-                                  val
-                                ),
-                              '默认',
-                              '默认'
-                            )}
+                    {/* Expanded Content */}
+                    <div
+                      className={`grid transition-all duration-300 ease-in-out ${
+                        isExpanded
+                          ? 'grid-rows-[1fr] opacity-100'
+                          : 'grid-rows-[0fr] opacity-0'
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="px-3.5 pb-3.5">
+                          <div className="space-y-2.5 border-t border-black/5 pt-3 dark:border-white/5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                浅烘
+                              </span>
+                              {renderFlavorInputs(
+                                flavorPeriod.light.startDay,
+                                flavorPeriod.light.endDay,
+                                val =>
+                                  handleRoasterFlavorPeriodChange(
+                                    roaster,
+                                    'light',
+                                    'startDay',
+                                    val
+                                  ),
+                                val =>
+                                  handleRoasterFlavorPeriodChange(
+                                    roaster,
+                                    'light',
+                                    'endDay',
+                                    val
+                                  ),
+                                '默认',
+                                '默认'
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                中烘
+                              </span>
+                              {renderFlavorInputs(
+                                flavorPeriod.medium.startDay,
+                                flavorPeriod.medium.endDay,
+                                val =>
+                                  handleRoasterFlavorPeriodChange(
+                                    roaster,
+                                    'medium',
+                                    'startDay',
+                                    val
+                                  ),
+                                val =>
+                                  handleRoasterFlavorPeriodChange(
+                                    roaster,
+                                    'medium',
+                                    'endDay',
+                                    val
+                                  ),
+                                '默认',
+                                '默认'
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                                深烘
+                              </span>
+                              {renderFlavorInputs(
+                                flavorPeriod.dark.startDay,
+                                flavorPeriod.dark.endDay,
+                                val =>
+                                  handleRoasterFlavorPeriodChange(
+                                    roaster,
+                                    'dark',
+                                    'startDay',
+                                    val
+                                  ),
+                                val =>
+                                  handleRoasterFlavorPeriodChange(
+                                    roaster,
+                                    'dark',
+                                    'endDay',
+                                    val
+                                  ),
+                                '默认',
+                                '默认'
+                              )}
+                            </div>
                           </div>
                         </div>
+                        {!isLast && (
+                          <div className="ml-3.5 h-px bg-black/5 dark:bg-white/5" />
+                        )}
                       </div>
-                      {!isLast && (
-                        <div className="ml-3.5 h-px bg-black/5 dark:bg-white/5" />
-                      )}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </SettingSection>
+                );
+              })}
+            </SettingSection>
+          </div>
         )}
 
         {/* 底部空间 */}

@@ -3,26 +3,10 @@
 import React from 'react';
 import { ChevronRight, Search, X } from 'lucide-react';
 import { pinyin } from 'pinyin-pro';
-import type { SettingItemData } from './SettingItem';
-
-export interface SettingsSearchGroup {
-  id: string;
-  label?: string;
-  items: SettingItemData[];
-}
-
-export interface SettingsSearchItem {
-  id: string;
-  settingId: string;
-  label: string;
-  value?: string;
-  description?: string;
-  groupLabel?: string;
-  onClick: () => void;
-}
+import type { SettingsSearchItem } from './settingsSearch';
 
 interface SettingsSearchBarProps {
-  groups: SettingsSearchGroup[];
+  items: SettingsSearchItem[];
   onSelect: (item: SettingsSearchItem) => void;
 }
 
@@ -52,33 +36,13 @@ const buildSearchText = (item: SettingsSearchItem) =>
       item.value,
       item.description,
       item.groupLabel,
+      ...(item.keywords || []),
       getPinyinText(item.label),
       item.groupLabel ? getPinyinText(item.groupLabel) : '',
+      ...(item.keywords || []).map(getPinyinText),
     ]
       .filter(Boolean)
       .join(' ')
-  );
-
-const buildSearchItems = (groups: SettingsSearchGroup[]) =>
-  groups.flatMap(group =>
-    group.items
-      .filter(
-        (
-          item
-        ): item is SettingItemData & {
-          settingId: string;
-          onClick: () => void;
-        } => Boolean(item.settingId && item.onClick)
-      )
-      .map(item => ({
-        id: `${group.id}-${item.settingId}`,
-        settingId: item.settingId,
-        label: item.label,
-        value: item.value,
-        description: item.description,
-        groupLabel: group.label,
-        onClick: item.onClick,
-      }))
   );
 
 interface SettingsSearchResultButtonProps {
@@ -135,21 +99,20 @@ const SettingsSearchResultButton: React.FC<SettingsSearchResultButtonProps> = ({
 };
 
 const SettingsSearchBar: React.FC<SettingsSearchBarProps> = ({
-  groups,
+  items,
   onSelect,
 }) => {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = React.useState('');
   const [isFocused, setIsFocused] = React.useState(false);
   const deferredQuery = React.useDeferredValue(query);
-  const searchItems = React.useMemo(() => buildSearchItems(groups), [groups]);
   const searchableItems = React.useMemo(
     () =>
-      searchItems.map(item => ({
+      items.map(item => ({
         item,
         searchText: buildSearchText(item),
       })),
-    [searchItems]
+    [items]
   );
   const normalizedQuery = normalizeSearchText(deferredQuery);
   const tokens = React.useMemo(

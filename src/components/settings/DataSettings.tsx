@@ -13,6 +13,10 @@ import {
 import hapticsUtils from '@/lib/ui/haptics';
 import SettingPage from './atomic/SettingPage';
 import SettingSelector from './atomic/SettingSelector';
+import {
+  useSettingSearchHighlight,
+  useScrollToHighlightedSetting,
+} from './atomic';
 import { S3SyncSection } from './data-settings/S3SyncSection';
 import { WebDAVSyncSection } from './data-settings/WebDAVSyncSection';
 import { SupabaseSyncSection } from './data-settings/SupabaseSyncSection';
@@ -43,6 +47,7 @@ import {
   getSupabaseBackupProvider,
   isPullToSyncEnabled,
 } from '@/lib/sync/settings';
+import { makeSettingRowSearchId } from './settingsSearch';
 
 interface DataSettingsProps {
   settings: SettingsOptions;
@@ -63,6 +68,7 @@ interface SelectionDropdownProps {
     value: string;
     label: string;
   }>;
+  settingId?: string;
   onToggle: () => void;
   onSelect: (value: string) => void;
 }
@@ -73,15 +79,23 @@ const SelectionDropdown: React.FC<SelectionDropdownProps> = ({
   valueLabel,
   isOpen,
   options,
+  settingId,
   onToggle,
   onSelect,
 }) => {
+  const { highlightedSettingId } = useSettingSearchHighlight();
+  const resolvedSettingId = settingId ?? makeSettingRowSearchId(label);
+  const isHighlighted = highlightedSettingId === resolvedSettingId;
+
   return (
     <div className="relative">
       <button
         type="button"
+        data-settings-search-id={resolvedSettingId}
         onClick={onToggle}
-        className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+        className={`flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${
+          isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
+        }`}
       >
         <span>{label}</span>
         <div className="flex items-center gap-2">
@@ -148,7 +162,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
   );
 
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // 动画状态
   const [isVisible, setIsVisible] = useState(false);
@@ -321,7 +338,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   // S3 设置变更处理 - 使用 ref 避免竞态问题
   const s3SettingsRef = useRef(s3Settings);
-  s3SettingsRef.current = s3Settings;
+
+  useEffect(() => {
+    s3SettingsRef.current = s3Settings;
+  }, [s3Settings]);
 
   const handleS3SettingChange = <K extends keyof S3SyncSettings>(
     key: K,
@@ -349,7 +369,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   // WebDAV 设置变更处理 - 使用函数式更新避免状态竞态
   const webdavSettingsRef = useRef(webdavSettings);
-  webdavSettingsRef.current = webdavSettings;
+
+  useEffect(() => {
+    webdavSettingsRef.current = webdavSettings;
+  }, [webdavSettings]);
 
   const handleWebDAVSettingChange = <K extends keyof WebDAVSyncSettings>(
     key: K,
@@ -377,7 +400,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   // Supabase 设置变更处理
   const supabaseSettingsRef = useRef(supabaseSettings);
-  supabaseSettingsRef.current = supabaseSettings;
+
+  useEffect(() => {
+    supabaseSettingsRef.current = supabaseSettings;
+  }, [supabaseSettings]);
 
   const handleSupabaseSettingChange = <K extends keyof SupabaseSyncSettings>(
     key: K,
@@ -610,6 +636,17 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     }
   };
 
+  const highlightedSettingId = useScrollToHighlightedSetting(
+    `${syncType}:${supabaseBackupProvider}:${backupReminderSettings?.enabled ?? false}:${isPersisted}:${isManualSyncConnected}`
+  );
+  const getSearchHighlightClass = React.useCallback(
+    (label: string) =>
+      highlightedSettingId === makeSettingRowSearchId(label)
+        ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
+        : '',
+    [highlightedSettingId]
+  );
+
   return (
     <SettingPage title="数据与备份" isVisible={isVisible} onClose={handleClose}>
       {/* 云同步设置组 */}
@@ -655,8 +692,9 @@ const DataSettings: React.FC<DataSettingsProps> = ({
             !webdavSettings.lastConnectionSuccess && (
               <button
                 type="button"
+                data-settings-search-id={makeSettingRowSearchId('引导式配置')}
                 onClick={() => setShowWebDAVTutorial(true)}
-                className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                className={`flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${getSearchHighlightClass('引导式配置')}`}
               >
                 <span>引导式配置（推荐新手）</span>
                 <ChevronRight className="h-4 w-4 text-neutral-400" />
@@ -666,7 +704,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
           {syncType !== 'supabase' &&
             supportsPullToSync &&
             isManualSyncConnected && (
-              <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('下拉上传')}
+                className={`flex items-center justify-between rounded bg-neutral-100 px-4 py-3 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('下拉上传')}`}
+              >
                 <div>
                   <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                     下拉上传
@@ -721,8 +762,9 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               !webdavSettings.lastConnectionSuccess && (
                 <button
                   type="button"
+                  data-settings-search-id={makeSettingRowSearchId('引导式配置')}
                   onClick={() => setShowWebDAVTutorial(true)}
-                  className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                  className={`flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${getSearchHighlightClass('引导式配置')}`}
                 >
                   <span>引导式配置（推荐新手）</span>
                   <ChevronRight className="h-4 w-4 text-neutral-400" />
@@ -730,7 +772,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
               )}
 
             {supportsPullToSync && isManualSyncConnected && (
-              <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('下拉上传')}
+                className={`flex items-center justify-between rounded bg-neutral-100 px-4 py-3 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('下拉上传')}`}
+              >
                 <div>
                   <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                     下拉上传
@@ -764,7 +809,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
           <div className="space-y-3">
             {!isPWA && !isNativePlatform ? (
-              <div className="rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('持久化存储')}
+                className={`rounded bg-neutral-100 px-4 py-3 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('持久化存储')}`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                     持久化存储
@@ -792,7 +840,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('持久化存储')}
+                className={`rounded bg-neutral-100 px-4 py-3 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('持久化存储')}`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                     持久化存储
@@ -838,7 +889,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
           <div className="space-y-3">
             {/* 备份提醒开关 */}
-            <div className="flex items-center justify-between rounded bg-neutral-100 px-4 py-3 dark:bg-neutral-800">
+            <div
+              data-settings-search-id={makeSettingRowSearchId('备份提醒')}
+              className={`flex items-center justify-between rounded bg-neutral-100 px-4 py-3 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('备份提醒')}`}
+            >
               <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                 备份提醒
               </div>
@@ -857,7 +911,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
             {/* 展开的频率设置 */}
             {backupReminderSettings.enabled && (
-              <div className="space-y-2 rounded bg-neutral-100 p-4 dark:bg-neutral-800">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('提醒频率')}
+                className={`space-y-2 rounded bg-neutral-100 p-4 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('提醒频率')}`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                     提醒频率

@@ -31,6 +31,8 @@ import AboutSettings from '@/components/settings/AboutSettings';
 import NavigationSettings from '@/components/settings/NavigationSettings';
 import BrewingSettings from '@/components/settings/BrewingSettings';
 import { SettingPageLayoutProvider } from '@/components/settings/atomic/SettingPageLayoutContext';
+import { SettingSearchHighlightProvider } from '@/components/settings/atomic';
+import type { SettingsSearchTarget } from '@/components/settings/settingsSearch';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
 import CoffeeBeanFormModal from '@/components/coffee-bean/Form/Modal';
 import BeanDetailModal from '@/components/coffee-bean/Detail/BeanDetailModal';
@@ -491,6 +493,12 @@ const AppModals: React.FC<AppModalsProps> = ({
   ] as const;
   const activeSubSettingId =
     subSettingStates.find(subSetting => subSetting.isOpen)?.id ?? null;
+  const [settingsSearchTarget, setSettingsSearchTarget] =
+    React.useState<SettingsSearchTarget | null>(null);
+  const activeChildSearchSettingId =
+    settingsSearchTarget?.pageId === activeSubSettingId
+      ? settingsSearchTarget.settingId
+      : null;
 
   const closeAllSubSettings = React.useCallback(() => {
     setShowDisplaySettings(false);
@@ -733,11 +741,18 @@ const AppModals: React.FC<AppModalsProps> = ({
         hasSubSettingsOpen={hasSubSettingsOpen}
         isLargeScreen={isLargeScreen}
         activeSubSettingId={activeSubSettingId}
+        customEquipments={customEquipments}
+        settingsSearchTarget={settingsSearchTarget}
+        onSettingsSearchTargetChange={setSettingsSearchTarget}
         subSettingsContent={
           isLargeScreen ? (
-            <SettingPageLayoutProvider mode="embedded">
-              {subSettingsContent}
-            </SettingPageLayoutProvider>
+            <SettingSearchHighlightProvider
+              highlightedSettingId={activeChildSearchSettingId}
+            >
+              <SettingPageLayoutProvider mode="embedded">
+                {subSettingsContent}
+              </SettingPageLayoutProvider>
+            </SettingSearchHighlightProvider>
           ) : null
         }
         subSettingsHandlers={{
@@ -804,7 +819,13 @@ const AppModals: React.FC<AppModalsProps> = ({
       />
 
       {/* 所有子设置页面 */}
-      {!isLargeScreen && subSettingsContent}
+      {!isLargeScreen && (
+        <SettingSearchHighlightProvider
+          highlightedSettingId={activeChildSearchSettingId}
+        >
+          {subSettingsContent}
+        </SettingSearchHighlightProvider>
+      )}
 
       {/* 咖啡豆表单模态框 */}
       <CoffeeBeanFormModal

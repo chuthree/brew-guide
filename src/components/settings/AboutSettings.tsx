@@ -5,25 +5,39 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import SettingPage from './atomic/SettingPage';
+import {
+  useSettingSearchHighlight,
+  useScrollToHighlightedSetting,
+} from './atomic';
+import { makeSettingRowSearchId } from './settingsSearch';
 
 const CollapsibleSection: React.FC<{
   title: string;
   children: React.ReactNode;
 }> = ({ title, children }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { highlightedSettingId } = useSettingSearchHighlight();
+  const settingId = makeSettingRowSearchId(title);
+  const isHighlighted = highlightedSettingId === settingId;
+  const shouldShowContent = isOpen || isHighlighted;
 
   return (
-    <div>
+    <div
+      data-settings-search-id={settingId}
+      className={`rounded transition-colors ${
+        isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
+      }`}
+    >
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="flex cursor-pointer items-center gap-1 select-none"
       >
-        {isOpen ? <Minus size={16} /> : <Plus size={16} />}
+        {shouldShowContent ? <Minus size={16} /> : <Plus size={16} />}
         {title}
       </button>
       <AnimatePresence>
-        {isOpen && (
+        {shouldShowContent && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -46,6 +60,7 @@ interface AboutSettingsProps {
 const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
   const [isVisible, setIsVisible] = React.useState(false);
   const [commitCount, setCommitCount] = React.useState<number | null>(null);
+  useScrollToHighlightedSetting(commitCount);
 
   React.useEffect(() => {
     fetch('https://gitee.com/api/v5/repos/chu3/brew-guide/contributors')

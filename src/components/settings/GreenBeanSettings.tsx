@@ -10,7 +10,9 @@ import {
   SettingSection,
   SettingRow,
   SettingToggle,
+  useScrollToHighlightedSetting,
 } from './atomic';
+import { makeSettingRowSearchId } from './settingsSearch';
 
 interface GreenBeanSettingsProps {
   settings: SettingsOptions;
@@ -42,12 +44,14 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({
   );
 
   // 控制动画状态
-  const [shouldRender, setShouldRender] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 
   // 用于保存最新的 onClose 引用
   const onCloseRef = React.useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // 关闭处理函数（带动画）
   const handleCloseWithAnimation = React.useCallback(() => {
@@ -124,7 +128,11 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({
     }
   };
 
-  if (!shouldRender) return null;
+  const highlightedSettingId = useScrollToHighlightedSetting(
+    greenBeanRoastPresets.join(',')
+  );
+  const isPresetSectionHighlighted =
+    highlightedSettingId === makeSettingRowSearchId('预设快捷烘焙量');
 
   return (
     <SettingPage title="生豆库" isVisible={isVisible} onClose={handleClose}>
@@ -178,7 +186,14 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({
           </SettingSection>
 
           <SettingSection title="预设快捷烘焙量">
-            <div className="p-4">
+            <div
+              data-settings-search-id={makeSettingRowSearchId('预设快捷烘焙量')}
+              className={`p-4 transition-colors ${
+                isPresetSectionHighlighted
+                  ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
+                  : ''
+              }`}
+            >
               <div className="mb-3 flex flex-wrap gap-2">
                 {greenBeanRoastPresets.map(value => (
                   <button
@@ -239,7 +254,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({
                 </div>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                点击预设值可以删除，输入克数后按回车或点击"+"可以添加新的预设值。
+                点击预设值可以删除，输入克数后按回车或点击「+」可以添加新的预设值。
               </p>
             </div>
           </SettingSection>

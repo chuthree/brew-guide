@@ -18,6 +18,7 @@ import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { openImageViewer } from '@/lib/ui/imageViewer';
 import SettingPage from './atomic/SettingPage';
+import { useScrollToHighlightedSetting } from './atomic';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import ConfirmDrawer from '@/components/common/ui/ConfirmDrawer';
 import RoasterLogoImportExport from './RoasterLogoImportExport';
@@ -26,6 +27,7 @@ import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
 import { compressBase64Image } from '@/lib/utils/imageCapture';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { makeDynamicSettingSearchId } from './settingsSearch';
 
 interface RoasterLogoSettingsProps {
   isOpen: boolean;
@@ -89,6 +91,9 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     });
     return configMap;
   }, [roasterConfigList]);
+  const highlightedSettingId = useScrollToHighlightedSetting(
+    roasters.join('\n')
+  );
 
   // 删除确认抽屉状态
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -105,7 +110,10 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
 
   // 用于保存最新的 onClose 引用
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // 关闭处理函数（带动画）
   const handleCloseWithAnimation = React.useCallback(() => {
@@ -505,11 +513,22 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                   !isSavingRoasters &&
                   hasDraftNameChange &&
                   focusedRoasterName !== roaster;
+                const roasterSearchId = makeDynamicSettingSearchId(
+                  'roaster',
+                  roaster
+                );
+                const isSearchHighlighted =
+                  highlightedSettingId === roasterSearchId;
 
                 return (
                   <div
                     key={roaster}
-                    className="flex items-center justify-between rounded bg-neutral-100 p-2 transition-colors dark:bg-neutral-800"
+                    data-settings-search-id={roasterSearchId}
+                    className={`flex items-center justify-between rounded bg-neutral-100 p-2 transition-colors dark:bg-neutral-800 ${
+                      isSearchHighlighted
+                        ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
+                        : ''
+                    }`}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       {/* 图标预览 */}

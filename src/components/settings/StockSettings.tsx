@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { SettingsOptions, defaultSettings } from './Settings';
+import { SettingsOptions } from './Settings';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
@@ -11,7 +11,9 @@ import {
   SettingSection,
   SettingRow,
   SettingToggle,
+  useScrollToHighlightedSetting,
 } from './atomic';
+import { makeSettingRowSearchId } from './settingsSearch';
 
 interface StockSettingsProps {
   settings: SettingsOptions;
@@ -43,12 +45,14 @@ const StockSettings: React.FC<StockSettingsProps> = ({
   );
 
   // 控制动画状态
-  const [shouldRender, setShouldRender] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 
   // 用于保存最新的 onClose 引用
   const onCloseRef = React.useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // 关闭处理函数（带动画）
   const handleCloseWithAnimation = React.useCallback(() => {
@@ -120,7 +124,11 @@ const StockSettings: React.FC<StockSettingsProps> = ({
     }
   };
 
-  if (!shouldRender) return null;
+  const highlightedSettingId = useScrollToHighlightedSetting(
+    decrementPresets.join(',')
+  );
+  const isPresetSectionHighlighted =
+    highlightedSettingId === makeSettingRowSearchId('预设快捷扣除量');
 
   return (
     <SettingPage title="库存扣除" isVisible={isVisible} onClose={handleClose}>
@@ -151,7 +159,14 @@ const StockSettings: React.FC<StockSettingsProps> = ({
       </SettingSection>
 
       <SettingSection title="预设快捷扣除量">
-        <div className="p-4">
+        <div
+          data-settings-search-id={makeSettingRowSearchId('预设快捷扣除量')}
+          className={`p-4 transition-colors ${
+            isPresetSectionHighlighted
+              ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
+              : ''
+          }`}
+        >
           <div className="mb-3 flex flex-wrap gap-2">
             {decrementPresets.map(value => (
               <button
@@ -206,7 +221,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
             </div>
           </div>
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            点击预设值可以删除，输入克数后按回车或点击"+"可以添加新的预设值。
+            点击预设值可以删除，输入克数后按回车或点击「+」可以添加新的预设值。
           </p>
         </div>
       </SettingSection>

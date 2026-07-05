@@ -15,6 +15,7 @@ import {
   SettingSlider,
   SettingToggle,
 } from './atomic';
+import { makeSettingRowSearchId } from './settingsSearch';
 
 const DEFAULT_TEXT_ZOOM_LEVEL = 1;
 const TRANSITION_DURATION_MS = 350;
@@ -114,7 +115,13 @@ function DisplaySettings({ onClose }: DisplaySettingsProps) {
 
   const onCloseRef = React.useRef(onClose);
   const safeAreaPreviewTimeoutRef = React.useRef<number | null>(null);
-  onCloseRef.current = onClose;
+
+  React.useEffect(
+    function syncOnCloseRef() {
+      onCloseRef.current = onClose;
+    },
+    [onClose]
+  );
 
   const handleCloseWithAnimation = React.useCallback(
     function closeWithAnimation() {
@@ -300,7 +307,11 @@ function DisplaySettings({ onClose }: DisplaySettingsProps) {
 
       {isFontZoomEnabled ? (
         <SettingSection title="字体">
-          <SettingRow isLast vertical>
+          <SettingRow
+            settingId={makeSettingRowSearchId('字体')}
+            isLast
+            vertical
+          >
             <SettingSlider
               value={zoomLevel}
               min={0.8}

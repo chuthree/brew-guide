@@ -6,6 +6,8 @@ import {
   motion,
   useDragControls,
 } from 'framer-motion';
+import { makeSettingRowSearchId } from '../settingsSearch';
+import { useSettingSearchHighlight } from './SettingSearchHighlightContext';
 
 interface SettingReorderableRowProps<T> {
   value: T;
@@ -15,6 +17,7 @@ interface SettingReorderableRowProps<T> {
   reorderAction?: React.ReactNode;
   onOpen: (value: T) => void;
   onDragEnd: () => void;
+  settingId?: string;
 }
 
 function SettingReorderableRow<T>({
@@ -25,8 +28,24 @@ function SettingReorderableRow<T>({
   reorderAction,
   onOpen,
   onDragEnd,
+  settingId,
 }: SettingReorderableRowProps<T>) {
   const dragControls = useDragControls();
+  const { highlightedSettingId } = useSettingSearchHighlight();
+  const resolvedSettingId = settingId || makeSettingRowSearchId(label);
+  const isHighlighted = highlightedSettingId === resolvedSettingId;
+  const rowRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!isHighlighted) return;
+
+    window.setTimeout(() => {
+      rowRef.current?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    }, 120);
+  }, [isHighlighted]);
 
   const handleDragHandlePointerDown = (
     event: React.PointerEvent<HTMLButtonElement>
@@ -50,9 +69,11 @@ function SettingReorderableRow<T>({
       style={{ listStyle: 'none' }}
     >
       <div
-        className={`flex items-center py-1 ${
-          isLast ? '' : 'border-b border-black/5 dark:border-white/5'
-        }`}
+        ref={rowRef}
+        data-settings-search-id={resolvedSettingId}
+        className={`flex items-center py-1 transition-colors duration-200 ${
+          isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
+        } ${isLast ? '' : 'border-b border-black/5 dark:border-white/5'}`}
       >
         <button
           type="button"

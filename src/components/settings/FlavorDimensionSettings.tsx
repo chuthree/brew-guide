@@ -10,6 +10,7 @@ import {
   SettingRow,
   SettingSection,
 } from './atomic';
+import { makeDynamicSettingSearchId } from './settingsSearch';
 import PageStackDrawer from '@/components/common/ui/PageStackDrawer';
 import ConfirmDrawer from '@/components/common/ui/ConfirmDrawer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
@@ -345,6 +346,10 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
                     key={dimension.id}
                     value={dimension}
                     label={dimension.label}
+                    settingId={makeDynamicSettingSearchId(
+                      'dimension',
+                      dimension.id
+                    )}
                     isLast={index === dimensions.length - 1}
                     isReorderMode={isReorderMode}
                     onOpen={openEditDrawer}

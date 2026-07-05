@@ -12,6 +12,11 @@ export { default as SettingPage } from './SettingPage';
 export { default as SettingSection } from './SettingSection';
 export { default as SettingRow } from './SettingRow';
 export { default as SettingReorderableRow } from './SettingReorderableRow';
+export {
+  SettingSearchHighlightProvider,
+  useSettingSearchHighlight,
+  useScrollToHighlightedSetting,
+} from './SettingSearchHighlightContext';
 
 // 控件组件
 export { default as SettingToggle } from './SettingToggle';

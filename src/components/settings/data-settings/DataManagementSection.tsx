@@ -10,6 +10,8 @@ import {
   recordCrashOperationStart,
   recordCrashOperationStep,
 } from '@/lib/app/crashDiagnostics';
+import { useScrollToHighlightedSetting } from '../atomic';
+import { makeSettingRowSearchId } from '../settingsSearch';
 
 interface DataManagementSectionProps {
   onDataChange?: () => void;
@@ -194,10 +196,23 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
 
   const recompressImageLabel =
     isRecompressing || status.scope === 'image' ? status.message : '图片补压';
+  const highlightedSettingId = useScrollToHighlightedSetting(
+    `${showConfirmReset}:${isExporting}:${isRecompressing}`
+  );
+  const getSearchHighlightClass = React.useCallback(
+    (label: string) =>
+      highlightedSettingId === makeSettingRowSearchId(label)
+        ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
+        : '',
+    [highlightedSettingId]
+  );
 
   return (
     <>
-      <div className="px-6 py-4">
+      <div
+        data-settings-search-id={makeSettingRowSearchId('数据管理')}
+        className={`px-6 py-4 transition-colors ${getSearchHighlightClass('数据管理')}`}
+      >
         <h3 className="mb-3 text-sm font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
           数据管理
         </h3>
@@ -219,9 +234,10 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         <div className="space-y-3">
           <button
             type="button"
+            data-settings-search-id={makeSettingRowSearchId('导出数据')}
             onClick={handleExport}
             disabled={isExporting}
-            className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            className={`flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${getSearchHighlightClass('导出数据')}`}
           >
             <span>{isExporting ? '导出中...' : '导出数据'}</span>
             <ChevronRight className="size-4 text-neutral-400" />
@@ -230,8 +246,9 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
           <div>
             <button
               type="button"
+              data-settings-search-id={makeSettingRowSearchId('导入数据')}
               onClick={handleImportClick}
-              className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              className={`flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${getSearchHighlightClass('导入数据')}`}
             >
               <span>导入数据</span>
               <ChevronRight className="size-4 text-neutral-400" />
@@ -249,14 +266,18 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
           {!showConfirmReset ? (
             <button
               type="button"
+              data-settings-search-id={makeSettingRowSearchId('重置数据')}
               onClick={() => setShowConfirmReset(true)}
-              className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              className={`flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${getSearchHighlightClass('重置数据')}`}
             >
               <span>重置数据</span>
               <ChevronRight className="size-4 text-neutral-400" />
             </button>
           ) : (
-            <div className="space-y-3 rounded bg-neutral-100 p-4 dark:bg-neutral-800">
+            <div
+              data-settings-search-id={makeSettingRowSearchId('重置数据')}
+              className={`space-y-3 rounded bg-neutral-100 p-4 transition-colors dark:bg-neutral-800 ${getSearchHighlightClass('重置数据')}`}
+            >
               <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
                 确认重置数据？此操作无法撤销
               </p>
@@ -288,9 +309,10 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
 
         <button
           type="button"
+          data-settings-search-id={makeSettingRowSearchId('图片补压')}
           onClick={handleRecompressImages}
           disabled={isRecompressing}
-          className="flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          className={`flex w-full items-center justify-between rounded bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 ${getSearchHighlightClass('图片补压')}`}
         >
           <span>{recompressImageLabel}</span>
           <ChevronRight className="size-4 text-neutral-400" />

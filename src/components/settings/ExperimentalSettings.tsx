@@ -18,8 +18,10 @@ import {
   SettingSection,
   SettingRow,
   SettingToggle,
+  useScrollToHighlightedSetting,
 } from './atomic';
 import BeanSummaryCapacityLimitSection from './BeanSummaryCapacityLimitSection';
+import { makeSettingRowSearchId } from './settingsSearch';
 
 interface ExperimentalSettingsProps {
   settings: SettingsOptions;
@@ -74,7 +76,9 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
   React.useEffect(() => {
     setApiBaseUrl(settings.experimentalBeanRecognitionApiBaseUrl || '');
     setApiKey(settings.experimentalBeanRecognitionApiKey || '');
-    setModel(resolveBeanRecognitionModel(settings.experimentalBeanRecognitionModel));
+    setModel(
+      resolveBeanRecognitionModel(settings.experimentalBeanRecognitionModel)
+    );
     setPrompt(settings.experimentalBeanRecognitionPrompt || '');
   }, [
     settings.experimentalBeanRecognitionApiBaseUrl,
@@ -179,6 +183,17 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
     }
   };
 
+  const highlightedSettingId = useScrollToHighlightedSetting(
+    `${settings.experimentalBeanRecognitionEnabled}:${isTestingConfig}`
+  );
+  const getSearchHighlightClass = React.useCallback(
+    (label: string) =>
+      highlightedSettingId === makeSettingRowSearchId(label)
+        ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
+        : '',
+    [highlightedSettingId]
+  );
+
   return (
     <SettingPage title="实验性功能" isVisible={isVisible} onClose={handleClose}>
       {showCoffeeBeanExperiments && (
@@ -228,7 +243,10 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
           </SettingRow>
           {settings.experimentalBeanRecognitionEnabled && (
             <div className="space-y-2 px-3 py-3">
-              <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('API URL')}
+                className={`rounded-xl bg-white/80 px-3 py-2 transition-colors dark:bg-neutral-900/60 ${getSearchHighlightClass('API URL')}`}
+              >
                 <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
                   API URL
                 </p>
@@ -241,7 +259,10 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
                 />
               </div>
 
-              <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('API Key')}
+                className={`rounded-xl bg-white/80 px-3 py-2 transition-colors dark:bg-neutral-900/60 ${getSearchHighlightClass('API Key')}`}
+              >
                 <div className="mb-1 flex items-center justify-between">
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
                     API Key
@@ -264,7 +285,10 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
                 />
               </div>
 
-              <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
+              <div
+                data-settings-search-id={makeSettingRowSearchId('Model')}
+                className={`rounded-xl bg-white/80 px-3 py-2 transition-colors dark:bg-neutral-900/60 ${getSearchHighlightClass('Model')}`}
+              >
                 <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
                   Model
                 </p>
@@ -277,7 +301,12 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
                 />
               </div>
 
-              <div className="rounded-xl bg-white/80 px-3 py-2 dark:bg-neutral-900/60">
+              <div
+                data-settings-search-id={makeSettingRowSearchId(
+                  'System Prompt'
+                )}
+                className={`rounded-xl bg-white/80 px-3 py-2 transition-colors dark:bg-neutral-900/60 ${getSearchHighlightClass('System Prompt')}`}
+              >
                 <div className="mb-1 flex items-center justify-between">
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
                     System Prompt
@@ -301,13 +330,14 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
 
               <button
                 type="button"
+                data-settings-search-id={makeSettingRowSearchId('测试连接')}
                 onClick={testConfig}
                 disabled={isTestingConfig}
                 className={`w-full rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
                   isTestingConfig
                     ? 'bg-neutral-200 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
                     : 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                }`}
+                } ${getSearchHighlightClass('测试连接')}`}
               >
                 {isTestingConfig ? '测试中...' : '测试连接'}
               </button>

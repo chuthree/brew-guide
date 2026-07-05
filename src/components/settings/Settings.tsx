@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { APP_VERSION, sponsorsList } from '@/lib/core/config';
+import {
+  APP_VERSION,
+  sponsorsList,
+  type CustomEquipment,
+} from '@/lib/core/config';
 import { getVersionLabel } from '@/lib/core/buildInfo';
 import { pinyin } from 'pinyin-pro';
 import hapticsUtils from '@/lib/ui/haptics';
@@ -22,13 +26,19 @@ import {
 import { Capacitor } from '@capacitor/core';
 import UpdateDrawer from './UpdateDrawer';
 import SettingGroup, { type SettingItemData } from './SettingItem';
-import SettingsSearchBar, {
-  type SettingsSearchGroup,
+import SettingsSearchBar from './SettingsSearchBar';
+import {
+  buildSettingsSearchItems,
   type SettingsSearchItem,
-} from './SettingsSearchBar';
+  type SettingsSearchPageId,
+  type SettingsSearchTarget,
+} from './settingsSearch';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import { useCustomMethodStore } from '@/lib/stores/customMethodStore';
+import { useGrinderStore } from '@/lib/stores/grinderStore';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import { buildSettingsFeatureGroups } from './settingsFeatureRegistry';
 import { getNotificationSettingsVisibility } from './notificationSettingsVisibility';
@@ -97,6 +107,9 @@ interface SettingsProps {
   isLargeScreen?: boolean;
   activeSubSettingId?: string | null;
   subSettingsContent?: React.ReactNode;
+  customEquipments: CustomEquipment[];
+  settingsSearchTarget: SettingsSearchTarget | null;
+  onSettingsSearchTargetChange: (target: SettingsSearchTarget | null) => void;
 }
 
 // 获取名字的首字母（支持中文拼音）
@@ -195,6 +208,9 @@ const Settings: React.FC<SettingsProps> = ({
   isLargeScreen = false,
   activeSubSettingId = null,
   subSettingsContent = null,
+  customEquipments,
+  settingsSearchTarget,
+  onSettingsSearchTargetChange,
 }) => {
   // 使用 Zustand store 管理设置
   const settings = useSettingsStore(state => state.settings);
@@ -212,6 +228,19 @@ const Settings: React.FC<SettingsProps> = ({
   const storeInitialized = useSettingsStore(state => state.initialized);
   const loadSettings = useSettingsStore(state => state.loadSettings);
   const shouldReduceMotion = useReducedMotion();
+  const beans = useCoffeeBeanStore(state => state.beans);
+  const beansInitialized = useCoffeeBeanStore(state => state.initialized);
+  const loadBeans = useCoffeeBeanStore(state => state.loadBeans);
+  const grinders = useGrinderStore(state => state.grinders);
+  const grindersInitialized = useGrinderStore(state => state.initialized);
+  const initializeGrinders = useGrinderStore(state => state.initialize);
+  const customMethodsByEquipment = useCustomMethodStore(
+    state => state.methodsByEquipment
+  );
+  const customMethodsInitialized = useCustomMethodStore(
+    state => state.initialized
+  );
+  const loadCustomMethods = useCustomMethodStore(state => state.loadMethods);
 
   // 初始化加载设置
   useEffect(() => {
@@ -219,6 +248,30 @@ const Settings: React.FC<SettingsProps> = ({
       loadSettings();
     }
   }, [storeInitialized, loadSettings]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (!beansInitialized) {
+      void loadBeans();
+    }
+
+    if (!grindersInitialized) {
+      void initializeGrinders();
+    }
+
+    if (!customMethodsInitialized) {
+      void loadCustomMethods();
+    }
+  }, [
+    beansInitialized,
+    customMethodsInitialized,
+    grindersInitialized,
+    initializeGrinders,
+    isOpen,
+    loadBeans,
+    loadCustomMethods,
+  ]);
 
   // 获取主题相关方法
   const { theme, systemTheme } = useTheme();
@@ -280,9 +333,6 @@ const Settings: React.FC<SettingsProps> = ({
     performSync: performQuickSync,
   } = useCloudSyncConnection(settings as SettingsOptions);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
-  const [searchHighlightedSettingId, setSearchHighlightedSettingId] = useState<
-    string | null
-  >(null);
   const searchHighlightTimerRef = React.useRef<number | null>(null);
   const clearSearchHighlightTimer = useCallback(() => {
     if (searchHighlightTimerRef.current !== null) {
@@ -317,8 +367,11 @@ const Settings: React.FC<SettingsProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    return clearSearchHighlightTimer;
-  }, [clearSearchHighlightTimer]);
+    return () => {
+      clearSearchHighlightTimer();
+      onSettingsSearchTargetChange(null);
+    };
+  }, [clearSearchHighlightTimer, onSettingsSearchTargetChange]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -426,19 +479,55 @@ const Settings: React.FC<SettingsProps> = ({
     (item: SettingsSearchItem) => {
       clearSearchHighlightTimer();
 
-      setSearchHighlightedSettingId(item.settingId);
-      item.onClick();
+      onSettingsSearchTargetChange({
+        pageId: item.pageId,
+        settingId: item.settingId,
+      });
+
+      const pageHandlers: Partial<Record<SettingsSearchPageId, () => void>> = {
+        'display-settings': subSettingsHandlers.onOpenDisplaySettings,
+        'navigation-settings': subSettingsHandlers.onOpenNavigationSettings,
+        'stock-settings': subSettingsHandlers.onOpenStockSettings,
+        'bean-settings': subSettingsHandlers.onOpenBeanSettings,
+        'green-bean-settings': subSettingsHandlers.onOpenGreenBeanSettings,
+        'coffee-bean-group-settings':
+          subSettingsHandlers.onOpenCoffeeBeanGroupSettings,
+        'flavor-period-settings':
+          subSettingsHandlers.onOpenFlavorPeriodSettings,
+        'brewing-settings': subSettingsHandlers.onOpenBrewingSettings,
+        'timer-settings': subSettingsHandlers.onOpenTimerSettings,
+        'data-settings': subSettingsHandlers.onOpenDataSettings,
+        'notification-settings': subSettingsHandlers.onOpenNotificationSettings,
+        'random-coffee-bean-settings':
+          subSettingsHandlers.onOpenRandomCoffeeBeanSettings,
+        'equipment-method-settings':
+          subSettingsHandlers.onOpenEquipmentMethodSettings,
+        'note-settings': subSettingsHandlers.onOpenNoteSettings,
+        'flavor-dimension-settings':
+          subSettingsHandlers.onOpenFlavorDimensionSettings,
+        'roaster-logo-settings': subSettingsHandlers.onOpenRoasterLogoSettings,
+        'grinder-settings': subSettingsHandlers.onOpenGrinderSettings,
+        'experimental-settings': subSettingsHandlers.onOpenExperimentalSettings,
+        'about-settings': subSettingsHandlers.onOpenAboutSettings,
+      };
+
+      pageHandlers[item.pageId]?.();
 
       if (settings.hapticFeedback) {
         hapticsUtils.light();
       }
 
       searchHighlightTimerRef.current = window.setTimeout(() => {
-        setSearchHighlightedSettingId(null);
+        onSettingsSearchTargetChange(null);
         searchHighlightTimerRef.current = null;
       }, 1800);
     },
-    [clearSearchHighlightTimer, settings.hapticFeedback]
+    [
+      clearSearchHighlightTimer,
+      onSettingsSearchTargetChange,
+      settings.hapticFeedback,
+      subSettingsHandlers,
+    ]
   );
 
   // 如果shouldRender为false，不渲染任何内容
@@ -597,28 +686,58 @@ const Settings: React.FC<SettingsProps> = ({
       onClick: subSettingsHandlers.onOpenAboutSettings,
     },
   ];
-  const settingsSearchGroups: SettingsSearchGroup[] = [
+  const settingsHomeSearchItems: SettingsSearchItem[] = [
     {
-      id: 'interface',
-      label: '显示与界面',
+      groupLabel: '显示与界面',
       items: interfaceSettingsItems,
     },
     ...settingsFeatureGroups.map(group => ({
-      id: group.id,
-      label: settingsFeatureGroupLabels[group.id],
+      groupLabel: settingsFeatureGroupLabels[group.id],
       items: group.items,
     })),
     {
-      id: 'data',
-      label: '数据与备份',
+      groupLabel: '数据与备份',
       items: dataSettingsItems,
     },
     {
-      id: 'about',
-      label: '关于',
+      groupLabel: '关于',
       items: aboutSettingsItems,
     },
+  ].flatMap(group =>
+    group.items
+      .filter(
+        (
+          item
+        ): item is SettingItemData & {
+          settingId: SettingsSearchPageId;
+        } => Boolean(item.settingId)
+      )
+      .map(item => ({
+        id: `settings-entry:${item.settingId}`,
+        pageId: item.settingId,
+        settingId: item.settingId,
+        label: item.label,
+        value: item.value,
+        description: item.description,
+        groupLabel: group.groupLabel,
+      }))
+  );
+  const settingsSearchItems = [
+    ...settingsHomeSearchItems,
+    ...buildSettingsSearchItems({
+      settings: settings as SettingsOptions,
+      visibleModules: navigationState.visibleTabs,
+      hasVisibleNotificationSettings,
+      beans,
+      customEquipments,
+      customMethodsByEquipment,
+      grinders,
+    }),
   ];
+  const highlightedHomeSettingId =
+    settingsSearchTarget?.pageId === 'settings'
+      ? settingsSearchTarget.settingId
+      : null;
 
   return (
     <div
@@ -717,7 +836,7 @@ const Settings: React.FC<SettingsProps> = ({
             <SettingGroup
               paddingClass={masterGroupPaddingClass}
               activeSettingId={activeSubSettingId}
-              highlightedSettingId={searchHighlightedSettingId}
+              highlightedSettingId={highlightedHomeSettingId}
               dimUnselectedItems={shouldDimSubSettingEntries}
               items={interfaceSettingsItems}
             />
@@ -726,7 +845,7 @@ const Settings: React.FC<SettingsProps> = ({
                 key={group.id}
                 paddingClass={masterGroupPaddingClass}
                 activeSettingId={activeSubSettingId}
-                highlightedSettingId={searchHighlightedSettingId}
+                highlightedSettingId={highlightedHomeSettingId}
                 dimUnselectedItems={shouldDimSubSettingEntries}
                 items={group.items}
               />
@@ -736,7 +855,7 @@ const Settings: React.FC<SettingsProps> = ({
             <SettingGroup
               paddingClass={masterGroupPaddingClass}
               activeSettingId={activeSubSettingId}
-              highlightedSettingId={searchHighlightedSettingId}
+              highlightedSettingId={highlightedHomeSettingId}
               dimUnselectedItems={shouldDimSubSettingEntries}
               items={dataSettingsItems}
             />
@@ -745,7 +864,7 @@ const Settings: React.FC<SettingsProps> = ({
             <SettingGroup
               paddingClass={masterGroupPaddingClass}
               activeSettingId={activeSubSettingId}
-              highlightedSettingId={searchHighlightedSettingId}
+              highlightedSettingId={highlightedHomeSettingId}
               dimUnselectedItems={shouldDimSubSettingEntries}
               items={aboutSettingsItems}
             />
@@ -763,7 +882,7 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
           </div>
           <SettingsSearchBar
-            groups={settingsSearchGroups}
+            items={settingsSearchItems}
             onSelect={handleSettingsSearchSelect}
           />
         </div>
