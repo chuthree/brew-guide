@@ -24,6 +24,7 @@ interface SettingGroupProps {
   className?: string;
   paddingClass?: string;
   activeSettingId?: string | null;
+  highlightedSettingId?: string | null;
   dimUnselectedItems?: boolean;
 }
 
@@ -36,13 +37,13 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
   className = '',
   paddingClass = 'px-6',
   activeSettingId = null,
+  highlightedSettingId = null,
   dimUnselectedItems = false,
 }) => {
   return (
     <div className={`${paddingClass} pb-5 ${className}`}>
       <div className="overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-800/40">
         {items.map((item, index) => {
-          const Icon = item.icon;
           const isLast = index === items.length - 1;
           const {
             isExpanded,
@@ -57,6 +58,10 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
           } = item;
           const isSwitch = type === 'switch';
           const Container = editable || isSwitch ? 'div' : 'button';
+          const isHighlighted =
+            !!item.settingId &&
+            (item.settingId === highlightedSettingId ||
+              (dimUnselectedItems && item.settingId === activeSettingId));
           const shouldDim =
             dimUnselectedItems &&
             !!activeSettingId &&
@@ -67,16 +72,16 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
             <div key={`${item.label}-${index}`}>
               <Container
                 onClick={!editable && !isSwitch ? item.onClick : undefined}
-                className={`flex w-full items-stretch pr-3.5 pl-[7px] text-sm font-medium text-neutral-800 transition-colors transition-opacity duration-200 dark:text-neutral-200 ${
+                className={`flex w-full items-stretch pr-3.5 pl-[7px] text-sm font-medium text-neutral-800 transition-[background-color,opacity] duration-200 dark:text-neutral-200 ${
                   !editable && !isSwitch ? 'cursor-pointer' : ''
-                } ${shouldDim ? 'opacity-50' : 'opacity-100'}`}
+                } ${isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : 'bg-transparent'} ${shouldDim ? 'opacity-50' : 'opacity-100'}`}
               >
                 <div
                   className={`flex items-center pr-[7px] ${!item.icon ? 'opacity-0' : ''}`}
                 >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-neutral-200/30 dark:bg-neutral-700/10">
+                  <div className="flex size-7 items-center justify-center rounded-md bg-neutral-200/30 dark:bg-neutral-700/10">
                     {item.icon && (
-                      <item.icon className="stroke-1.4 h-4 w-4 stroke-[1.5px] text-neutral-600 dark:text-neutral-300" />
+                      <item.icon className="stroke-1.4 size-4 stroke-[1.5px] text-neutral-600 dark:text-neutral-300" />
                     )}
                   </div>
                 </div>

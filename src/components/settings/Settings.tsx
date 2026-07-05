@@ -21,7 +21,11 @@ import {
 } from '@/lib/utils/downloadUrls';
 import { Capacitor } from '@capacitor/core';
 import UpdateDrawer from './UpdateDrawer';
-import SettingGroup from './SettingItem';
+import SettingGroup, { type SettingItemData } from './SettingItem';
+import SettingsSearchBar, {
+  type SettingsSearchGroup,
+  type SettingsSearchItem,
+} from './SettingsSearchBar';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
@@ -144,6 +148,14 @@ function groupByFirstLetter(names: string[]) {
 
   return sortedKeys.map(key => ({ letter: key, names: groups[key] }));
 }
+
+const settingsFeatureGroupLabels: Record<string, string> = {
+  brewing: '冲煮',
+  brewingEquipment: '器具',
+  coffeeBean: '咖啡豆',
+  notes: '笔记',
+  experimental: '实验',
+};
 
 // 赞助者名单组件
 function SponsorList() {
@@ -268,6 +280,16 @@ const Settings: React.FC<SettingsProps> = ({
     performSync: performQuickSync,
   } = useCloudSyncConnection(settings as SettingsOptions);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
+  const [searchHighlightedSettingId, setSearchHighlightedSettingId] = useState<
+    string | null
+  >(null);
+  const searchHighlightTimerRef = React.useRef<number | null>(null);
+  const clearSearchHighlightTimer = useCallback(() => {
+    if (searchHighlightTimerRef.current !== null) {
+      window.clearTimeout(searchHighlightTimerRef.current);
+      searchHighlightTimerRef.current = null;
+    }
+  }, []);
 
   // 自动检测更新（仅在本地打包的 Capacitor 环境下）
   // 是否为自动检测触发的更新提示
@@ -293,6 +315,10 @@ const Settings: React.FC<SettingsProps> = ({
     if (!isOpen) return;
     requestPWAUpdateCheck();
   }, [isOpen]);
+
+  useEffect(() => {
+    return clearSearchHighlightTimer;
+  }, [clearSearchHighlightTimer]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -396,6 +422,25 @@ const Settings: React.FC<SettingsProps> = ({
     [updateSettings]
   );
 
+  const handleSettingsSearchSelect = useCallback(
+    (item: SettingsSearchItem) => {
+      clearSearchHighlightTimer();
+
+      setSearchHighlightedSettingId(item.settingId);
+      item.onClick();
+
+      if (settings.hapticFeedback) {
+        hapticsUtils.light();
+      }
+
+      searchHighlightTimerRef.current = window.setTimeout(() => {
+        setSearchHighlightedSettingId(null);
+        searchHighlightTimerRef.current = null;
+      }, 1800);
+    },
+    [clearSearchHighlightTimer, settings.hapticFeedback]
+  );
+
   // 如果shouldRender为false，不渲染任何内容
   if (!shouldRender) return null;
 
@@ -426,7 +471,7 @@ const Settings: React.FC<SettingsProps> = ({
         onClick={handleClose}
         className="flex flex-5 cursor-pointer items-center rounded-full text-neutral-700 dark:text-neutral-300"
       >
-        <ChevronLeft className="-ml-1 h-5 w-5" />
+        <ChevronLeft className="-ml-1 size-5" />
         <h2 className="pl-2.5 text-xl font-medium text-neutral-800 dark:text-neutral-200">
           设置
         </h2>
@@ -454,7 +499,7 @@ const Settings: React.FC<SettingsProps> = ({
             }`}
             style={{ transitionDuration: '200ms' }}
           >
-            <Upload className="h-5 w-5" />
+            <Upload className="size-5" />
           </button>
           {/* 下载按钮 - 从右侧滑入 */}
           <button
@@ -472,7 +517,7 @@ const Settings: React.FC<SettingsProps> = ({
             }`}
             style={{ transitionDuration: '250ms' }}
           >
-            <Download className="h-5 w-5" />
+            <Download className="size-5" />
           </button>
           {/* 云图标/叉号/加载动画切换按钮 */}
           <button
@@ -482,11 +527,11 @@ const Settings: React.FC<SettingsProps> = ({
             className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-[transform,background-color] duration-150 ease-out hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${isSyncing ? 'cursor-default' : ''}`}
           >
             {isSyncing ? (
-              <LoadingSpinner className="h-5 w-5" />
+              <LoadingSpinner className="size-5" />
             ) : showSyncMenu ? (
-              <X className="h-5 w-5" />
+              <X className="size-5" />
             ) : (
-              <Cloud className="h-5 w-5" />
+              <Cloud className="size-5" />
             )}
           </button>
         </div>
@@ -496,8 +541,84 @@ const Settings: React.FC<SettingsProps> = ({
   const shouldDimSubSettingEntries = isLargeScreen && !!activeSubSettingId;
   const masterGroupPaddingClass = isLargeScreen ? 'pl-6 pr-3' : 'px-6';
   const masterColumnClass = isLargeScreen
-    ? 'flex min-h-0 w-96 shrink-0 flex-col'
-    : 'flex min-h-0 flex-1 flex-col';
+    ? 'relative flex min-h-0 w-96 shrink-0 flex-col'
+    : 'relative flex min-h-0 flex-1 flex-col';
+  const interfaceSettingsItems: SettingItemData[] = [
+    {
+      icon: Monitor,
+      label: '外观',
+      settingId: 'display-settings',
+      onClick: subSettingsHandlers.onOpenDisplaySettings,
+    },
+    {
+      icon: Blocks,
+      label: '应用功能',
+      settingId: 'navigation-settings',
+      onClick: subSettingsHandlers.onOpenNavigationSettings,
+    },
+  ];
+
+  if (hasVisibleNotificationSettings) {
+    interfaceSettingsItems.push({
+      icon: Bell,
+      label: '提醒通知',
+      settingId: 'notification-settings',
+      onClick: subSettingsHandlers.onOpenNotificationSettings,
+    });
+  }
+
+  const dataSettingsItems: SettingItemData[] = [
+    {
+      icon: User,
+      label: '用户名',
+      value: settings.username,
+      placeholder: '点击输入',
+      editable: true,
+      onSave: value => {
+        handleChange('username', value);
+        if (settings.hapticFeedback) {
+          hapticsUtils.light();
+        }
+      },
+    },
+    {
+      icon: Database,
+      label: '数据与备份',
+      settingId: 'data-settings',
+      onClick: subSettingsHandlers.onOpenDataSettings,
+    },
+  ];
+  const aboutSettingsItems: SettingItemData[] = [
+    {
+      icon: Info,
+      label: '关于',
+      settingId: 'about-settings',
+      value: getVersionLabel(),
+      onClick: subSettingsHandlers.onOpenAboutSettings,
+    },
+  ];
+  const settingsSearchGroups: SettingsSearchGroup[] = [
+    {
+      id: 'interface',
+      label: '显示与界面',
+      items: interfaceSettingsItems,
+    },
+    ...settingsFeatureGroups.map(group => ({
+      id: group.id,
+      label: settingsFeatureGroupLabels[group.id],
+      items: group.items,
+    })),
+    {
+      id: 'data',
+      label: '数据与备份',
+      items: dataSettingsItems,
+    },
+    {
+      id: 'about',
+      label: '关于',
+      items: aboutSettingsItems,
+    },
+  ];
 
   return (
     <div
@@ -512,7 +633,7 @@ const Settings: React.FC<SettingsProps> = ({
           {isLargeScreen && headerContent}
 
           <div
-            className="pb-safe-bottom relative min-h-0 flex-1 overflow-y-auto"
+            className="relative min-h-0 flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+7rem)]"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {/* 顶部渐变阴影（随滚动粘附）*/}
@@ -596,37 +717,16 @@ const Settings: React.FC<SettingsProps> = ({
             <SettingGroup
               paddingClass={masterGroupPaddingClass}
               activeSettingId={activeSubSettingId}
+              highlightedSettingId={searchHighlightedSettingId}
               dimUnselectedItems={shouldDimSubSettingEntries}
-              items={[
-                {
-                  icon: Monitor,
-                  label: '外观',
-                  settingId: 'display-settings',
-                  onClick: subSettingsHandlers.onOpenDisplaySettings,
-                },
-                {
-                  icon: Blocks,
-                  label: '应用功能',
-                  settingId: 'navigation-settings',
-                  onClick: subSettingsHandlers.onOpenNavigationSettings,
-                },
-                ...(hasVisibleNotificationSettings
-                  ? [
-                      {
-                        icon: Bell,
-                        label: '提醒通知',
-                        settingId: 'notification-settings',
-                        onClick: subSettingsHandlers.onOpenNotificationSettings,
-                      },
-                    ]
-                  : []),
-              ]}
+              items={interfaceSettingsItems}
             />
             {settingsFeatureGroups.map(group => (
               <SettingGroup
                 key={group.id}
                 paddingClass={masterGroupPaddingClass}
                 activeSettingId={activeSubSettingId}
+                highlightedSettingId={searchHighlightedSettingId}
                 dimUnselectedItems={shouldDimSubSettingEntries}
                 items={group.items}
               />
@@ -636,44 +736,18 @@ const Settings: React.FC<SettingsProps> = ({
             <SettingGroup
               paddingClass={masterGroupPaddingClass}
               activeSettingId={activeSubSettingId}
+              highlightedSettingId={searchHighlightedSettingId}
               dimUnselectedItems={shouldDimSubSettingEntries}
-              items={[
-                {
-                  icon: User,
-                  label: '用户名',
-                  value: settings.username,
-                  placeholder: '点击输入',
-                  editable: true,
-                  onSave: value => {
-                    handleChange('username', value);
-                    if (settings.hapticFeedback) {
-                      hapticsUtils.light();
-                    }
-                  },
-                },
-                {
-                  icon: Database,
-                  label: '数据与备份',
-                  settingId: 'data-settings',
-                  onClick: subSettingsHandlers.onOpenDataSettings,
-                },
-              ]}
+              items={dataSettingsItems}
             />
 
             {/* 关于 */}
             <SettingGroup
               paddingClass={masterGroupPaddingClass}
               activeSettingId={activeSubSettingId}
+              highlightedSettingId={searchHighlightedSettingId}
               dimUnselectedItems={shouldDimSubSettingEntries}
-              items={[
-                {
-                  icon: Info,
-                  label: '关于',
-                  settingId: 'about-settings',
-                  value: getVersionLabel(),
-                  onClick: subSettingsHandlers.onOpenAboutSettings,
-                },
-              ]}
+              items={aboutSettingsItems}
             />
 
             {/* 感谢名单 */}
@@ -681,14 +755,17 @@ const Settings: React.FC<SettingsProps> = ({
               <div className="text-left text-xs select-none">
                 <p className="font-medium text-neutral-800 dark:text-neutral-200">
                   感谢各位一直以来的支持，自 2025 年 2 月 1
-                  日首次发布至今，项目已持续运行{' '}
-                  {runningDays}{' '}
+                  日首次发布至今，项目已持续运行 {runningDays}{' '}
                   天，你们的每一次鼓励与贡献，都是它不断成长的重要动力。
                 </p>
                 <SponsorList />
               </div>
             </div>
           </div>
+          <SettingsSearchBar
+            groups={settingsSearchGroups}
+            onSelect={handleSettingsSearchSelect}
+          />
         </div>
         {isLargeScreen && (
           <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -737,9 +814,7 @@ const Settings: React.FC<SettingsProps> = ({
       {/* 版本更新抽屉 */}
       {updateInfo && (
         <UpdateDrawer
-          isOpen={
-            showUpdateDrawer && settings.showUpdatePrompt !== false
-          }
+          isOpen={showUpdateDrawer && settings.showUpdatePrompt !== false}
           onClose={() => {
             setShowUpdateDrawer(false);
             setIsAutoCheckUpdate(false); // 关闭时重置自动检测标记
