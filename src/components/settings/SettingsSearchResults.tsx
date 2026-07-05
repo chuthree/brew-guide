@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Search } from 'lucide-react';
+import SearchEmptyIcon from '@public/images/icons/ui/settings-search-empty.svg';
 import type { SettingsSearchItem } from './settingsSearch';
 
 interface SettingsSearchResultsProps {
@@ -66,9 +67,15 @@ const SettingsSearchResults: React.FC<SettingsSearchResultsProps> = ({
 
   if (results.length === 0) {
     return (
-      <div className={`${paddingClass} pt-2 pb-8`}>
-        <p className="px-2 text-sm font-medium text-neutral-500 dark:text-neutral-400">
-          未找到“{trimmedQuery}”的相关结果
+      <div
+        className={`${paddingClass} flex min-h-[calc(100dvh-14rem)] flex-col items-center justify-center pt-2 pb-8 text-center text-neutral-700 dark:text-neutral-200`}
+      >
+        <SearchEmptyIcon
+          aria-hidden="true"
+          className="mb-5 h-32 w-32 [&_path]:stroke-[0.9px]"
+        />
+        <p className="max-w-72 text-base leading-relaxed font-medium">
+          未找到「{trimmedQuery}」的相关结果
         </p>
       </div>
     );

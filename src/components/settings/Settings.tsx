@@ -769,7 +769,31 @@ const Settings: React.FC<SettingsProps> = ({
     settingsSearchItems,
     settingsSearchQuery
   );
-  const shouldShowSearchResults = settingsSearchQuery.trim().length > 0;
+  const hasSettingsSearchQuery = settingsSearchQuery.trim().length > 0;
+  const shouldShowSearchResults = hasSettingsSearchQuery;
+  const settingsPageInitial = shouldReduceMotion
+    ? { opacity: 0 }
+    : { opacity: 0, y: 6 };
+  const settingsPageAnimate = {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: shouldReduceMotion ? 0.08 : 0.14,
+      ease: shouldReduceMotion
+        ? ('linear' as const)
+        : ([0.2, 0, 0, 1] as const),
+    },
+  };
+  const settingsPageExit = {
+    opacity: 0,
+    y: shouldReduceMotion ? 0 : -8,
+    transition: {
+      duration: shouldReduceMotion ? 0.08 : 0.1,
+      ease: shouldReduceMotion
+        ? ('linear' as const)
+        : ([0.4, 0, 1, 1] as const),
+    },
+  };
   const highlightedHomeSettingId =
     settingsSearchTarget?.pageId === 'settings'
       ? settingsSearchTarget.settingId
@@ -780,157 +804,182 @@ const Settings: React.FC<SettingsProps> = ({
       className="fixed inset-0 mx-auto flex flex-col bg-neutral-50 dark:bg-neutral-900"
       style={settingsStyle}
     >
-      {!isLargeScreen && headerContent}
-
       {/* 滚动内容区域 - 新的简洁设计 */}
       <div className="flex min-h-0 flex-1">
         <div className={masterColumnClass}>
-          {isLargeScreen && headerContent}
-
-          <div
-            className="relative min-h-0 flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+7rem)]"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
-            {/* 顶部渐变阴影（随滚动粘附）*/}
-            <div className="fade-mask-to-b pointer-events-none sticky top-0 z-10 h-12 w-full bg-neutral-50 first:border-b-0 dark:bg-neutral-900"></div>
-
+          <AnimatePresence mode="wait" initial={false}>
             {shouldShowSearchResults ? (
-              <SettingsSearchResults
-                query={settingsSearchQuery}
-                results={settingsSearchResults}
-                paddingClass={masterGroupPaddingClass}
-                onSelect={handleSettingsSearchSelect}
-              />
-            ) : (
-              <>
-                {/* 帮助与反馈 */}
-                <SettingGroup
-                  className="-mt-4"
-                  paddingClass={masterGroupPaddingClass}
-                  items={[
-                    {
-                      icon: CircleHelp,
-                      label: '帮助文档',
-                      onClick: () => {
-                        window.open(
-                          'https://chu3.top/brewguide-help',
-                          '_blank'
-                        );
-                        if (settings.hapticFeedback) {
-                          hapticsUtils.light();
-                        }
-                      },
-                    },
-                    {
-                      icon: MessageCircle,
-                      label: '交流群',
-                      isExpanded: qrCodeType === 'group',
-                      onClick: () => {
-                        setQrCodeType(qrCodeType === 'group' ? null : 'group');
-                        if (settings.hapticFeedback) {
-                          hapticsUtils.light();
-                        }
-                      },
-                      expandedContent: (
-                        <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
-                          <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
-                            <Image
-                              src="/images/content/group-code.jpg"
-                              alt="交流群二维码"
-                              width={200}
-                              height={200}
-                              className="h-auto w-50"
-                            />
-                          </div>
-                          <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                            群满 200 人哩，加开发者拉你进群吧
-                          </p>
-                        </div>
-                      ),
-                    },
-                    {
-                      icon: ThumbsUp,
-                      label: '赞赏码',
-                      isExpanded: qrCodeType === 'appreciation',
-                      onClick: () => {
-                        setQrCodeType(
-                          qrCodeType === 'appreciation' ? null : 'appreciation'
-                        );
-                        if (settings.hapticFeedback) {
-                          hapticsUtils.light();
-                        }
-                      },
-                      expandedContent: (
-                        <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
-                          <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
-                            <Image
-                              src="/images/content/appreciation-code.jpg"
-                              alt="赞赏码"
-                              width={200}
-                              height={200}
-                              className="h-auto w-50"
-                            />
-                          </div>
-                          <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                            赞赏码（开发不易，要是能支持一下就太好了 www）
-                          </p>
-                        </div>
-                      ),
-                    },
-                  ]}
-                />
+              <motion.div
+                key="settings-search-page"
+                className="flex min-h-0 flex-1 flex-col"
+                initial={settingsPageInitial}
+                animate={settingsPageAnimate}
+                exit={settingsPageExit}
+              >
+                <div
+                  className="relative min-h-0 flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+7rem)]"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                  {/* 顶部渐变阴影（随滚动粘附）*/}
+                  <div className="fade-mask-to-b pointer-events-none sticky top-0 z-10 h-12 w-full bg-neutral-50 first:border-b-0 dark:bg-neutral-900"></div>
 
-                {/* 显示与界面设置 */}
-                <SettingGroup
-                  paddingClass={masterGroupPaddingClass}
-                  activeSettingId={activeSubSettingId}
-                  highlightedSettingId={highlightedHomeSettingId}
-                  dimUnselectedItems={shouldDimSubSettingEntries}
-                  items={interfaceSettingsItems}
-                />
-                {settingsFeatureGroups.map(group => (
+                  <SettingsSearchResults
+                    query={settingsSearchQuery}
+                    results={settingsSearchResults}
+                    paddingClass={masterGroupPaddingClass}
+                    onSelect={handleSettingsSearchSelect}
+                  />
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="settings-home-page"
+                className="flex min-h-0 flex-1 flex-col"
+                initial={settingsPageInitial}
+                animate={settingsPageAnimate}
+                exit={settingsPageExit}
+              >
+                {headerContent}
+
+                <div
+                  className="relative min-h-0 flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+7rem)]"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                  {/* 顶部渐变阴影（随滚动粘附）*/}
+                  <div className="fade-mask-to-b pointer-events-none sticky top-0 z-10 h-12 w-full bg-neutral-50 first:border-b-0 dark:bg-neutral-900"></div>
+                  {/* 帮助与反馈 */}
                   <SettingGroup
-                    key={group.id}
+                    className="-mt-4"
+                    paddingClass={masterGroupPaddingClass}
+                    items={[
+                      {
+                        icon: CircleHelp,
+                        label: '帮助文档',
+                        onClick: () => {
+                          window.open(
+                            'https://chu3.top/brewguide-help',
+                            '_blank'
+                          );
+                          if (settings.hapticFeedback) {
+                            hapticsUtils.light();
+                          }
+                        },
+                      },
+                      {
+                        icon: MessageCircle,
+                        label: '交流群',
+                        isExpanded: qrCodeType === 'group',
+                        onClick: () => {
+                          setQrCodeType(
+                            qrCodeType === 'group' ? null : 'group'
+                          );
+                          if (settings.hapticFeedback) {
+                            hapticsUtils.light();
+                          }
+                        },
+                        expandedContent: (
+                          <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
+                            <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
+                              <Image
+                                src="/images/content/group-code.jpg"
+                                alt="交流群二维码"
+                                width={200}
+                                height={200}
+                                className="h-auto w-50"
+                              />
+                            </div>
+                            <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                              群满 200 人哩，加开发者拉你进群吧
+                            </p>
+                          </div>
+                        ),
+                      },
+                      {
+                        icon: ThumbsUp,
+                        label: '赞赏码',
+                        isExpanded: qrCodeType === 'appreciation',
+                        onClick: () => {
+                          setQrCodeType(
+                            qrCodeType === 'appreciation'
+                              ? null
+                              : 'appreciation'
+                          );
+                          if (settings.hapticFeedback) {
+                            hapticsUtils.light();
+                          }
+                        },
+                        expandedContent: (
+                          <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
+                            <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
+                              <Image
+                                src="/images/content/appreciation-code.jpg"
+                                alt="赞赏码"
+                                width={200}
+                                height={200}
+                                className="h-auto w-50"
+                              />
+                            </div>
+                            <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                              赞赏码（开发不易，要是能支持一下就太好了 www）
+                            </p>
+                          </div>
+                        ),
+                      },
+                    ]}
+                  />
+
+                  {/* 显示与界面设置 */}
+                  <SettingGroup
                     paddingClass={masterGroupPaddingClass}
                     activeSettingId={activeSubSettingId}
                     highlightedSettingId={highlightedHomeSettingId}
                     dimUnselectedItems={shouldDimSubSettingEntries}
-                    items={group.items}
+                    items={interfaceSettingsItems}
                   />
-                ))}
+                  {settingsFeatureGroups.map(group => (
+                    <SettingGroup
+                      key={group.id}
+                      paddingClass={masterGroupPaddingClass}
+                      activeSettingId={activeSubSettingId}
+                      highlightedSettingId={highlightedHomeSettingId}
+                      dimUnselectedItems={shouldDimSubSettingEntries}
+                      items={group.items}
+                    />
+                  ))}
 
-                {/* 数据与备份 */}
-                <SettingGroup
-                  paddingClass={masterGroupPaddingClass}
-                  activeSettingId={activeSubSettingId}
-                  highlightedSettingId={highlightedHomeSettingId}
-                  dimUnselectedItems={shouldDimSubSettingEntries}
-                  items={dataSettingsItems}
-                />
+                  {/* 数据与备份 */}
+                  <SettingGroup
+                    paddingClass={masterGroupPaddingClass}
+                    activeSettingId={activeSubSettingId}
+                    highlightedSettingId={highlightedHomeSettingId}
+                    dimUnselectedItems={shouldDimSubSettingEntries}
+                    items={dataSettingsItems}
+                  />
 
-                {/* 关于 */}
-                <SettingGroup
-                  paddingClass={masterGroupPaddingClass}
-                  activeSettingId={activeSubSettingId}
-                  highlightedSettingId={highlightedHomeSettingId}
-                  dimUnselectedItems={shouldDimSubSettingEntries}
-                  items={aboutSettingsItems}
-                />
+                  {/* 关于 */}
+                  <SettingGroup
+                    paddingClass={masterGroupPaddingClass}
+                    activeSettingId={activeSubSettingId}
+                    highlightedSettingId={highlightedHomeSettingId}
+                    dimUnselectedItems={shouldDimSubSettingEntries}
+                    items={aboutSettingsItems}
+                  />
 
-                {/* 感谢名单 */}
-                <div className="px-8 pt-18 pb-8">
-                  <div className="text-left text-xs select-none">
-                    <p className="font-medium text-neutral-800 dark:text-neutral-200">
-                      感谢各位一直以来的支持，自 2025 年 2 月 1
-                      日首次发布至今，项目已持续运行 {runningDays}{' '}
-                      天，你们的每一次鼓励与贡献，都是它不断成长的重要动力。
-                    </p>
-                    <SponsorList />
+                  {/* 感谢名单 */}
+                  <div className="px-8 pt-18 pb-8">
+                    <div className="text-left text-xs select-none">
+                      <p className="font-medium text-neutral-800 dark:text-neutral-200">
+                        感谢各位一直以来的支持，自 2025 年 2 月 1
+                        日首次发布至今，项目已持续运行 {runningDays}{' '}
+                        天，你们的每一次鼓励与贡献，都是它不断成长的重要动力。
+                      </p>
+                      <SponsorList />
+                    </div>
                   </div>
                 </div>
-              </>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
           <SettingsSearchBar
             query={settingsSearchQuery}
             firstResult={settingsSearchResults[0] ?? null}

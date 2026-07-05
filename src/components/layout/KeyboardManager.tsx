@@ -32,7 +32,7 @@ const KeyboardManager: React.FC = () => {
     // 监听输入框聚焦事件
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (isInputElement(target)) {
+      if (isInputElement(target) && !usesManualKeyboardAvoidance(target)) {
         // 原生平台立即滚动，网页版等待键盘弹出
         if (isNative) {
           setTimeout(() => {
@@ -45,7 +45,10 @@ const KeyboardManager: React.FC = () => {
     // iOS 网页版：监听 visualViewport resize 事件（键盘弹出时触发）
     const handleViewportResize = () => {
       const activeElement = document.activeElement as HTMLElement;
-      if (isInputElement(activeElement)) {
+      if (
+        isInputElement(activeElement) &&
+        !usesManualKeyboardAvoidance(activeElement)
+      ) {
         // 键盘完全弹出后滚动一次即可
         setTimeout(() => scrollToFocusedInput(activeElement), 100);
       }
@@ -54,7 +57,10 @@ const KeyboardManager: React.FC = () => {
     // 监听键盘显示事件（原生平台）
     const handleKeyboardDidShow = () => {
       const activeElement = document.activeElement as HTMLElement;
-      if (isInputElement(activeElement)) {
+      if (
+        isInputElement(activeElement) &&
+        !usesManualKeyboardAvoidance(activeElement)
+      ) {
         scrollToFocusedInput(activeElement);
       }
     };
@@ -70,9 +76,12 @@ const KeyboardManager: React.FC = () => {
       );
     };
 
+    const usesManualKeyboardAvoidance = (element: HTMLElement) =>
+      Boolean(element.closest('[data-keyboard-avoidance="manual"]'));
+
     // 滚动到聚焦的输入框
     const scrollToFocusedInput = (inputElement: HTMLElement) => {
-      if (!inputElement) return;
+      if (!inputElement || usesManualKeyboardAvoidance(inputElement)) return;
 
       // 查找包含该输入框的表单或可滚动容器
       const modal = inputElement.closest(

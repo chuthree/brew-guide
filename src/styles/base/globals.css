@@ -517,6 +517,14 @@ select:focus,
   }
 }
 
+input[data-keyboard-avoidance='manual']:focus,
+textarea[data-keyboard-avoidance='manual']:focus,
+select[data-keyboard-avoidance='manual']:focus,
+[contenteditable][data-keyboard-avoidance='manual']:focus {
+  scroll-margin-top: 0;
+  scroll-margin-bottom: 0;
+}
+
 /* 修复 vaul drawer 滚动锁定时的 body 样式问题 */
 body[data-scroll-locked] {
   overflow: hidden !important;
