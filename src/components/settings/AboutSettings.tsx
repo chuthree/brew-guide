@@ -138,6 +138,16 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
               使用图片识别功能（咖啡豆/冲煮方案）时，图片会上传至服务器进行 AI
               分析，处理完成后立即删除，不会保存。
             </p>
+            <p>
+              <a
+                href="https://chu3.top/brewguide/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-800 underline dark:text-neutral-200"
+              >
+                查看完整隐私说明
+              </a>
+            </p>
           </CollapsibleSection>
           <CollapsibleSection title="开源致谢">
             <p>
@@ -173,7 +183,7 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
                 官网
               </a>
               <a
-                href="https://chu3.top/projects/brew-guide-app/changelog"
+                href="https://chu3.top/brewguide/changelog"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-neutral-800 underline dark:text-neutral-200"
