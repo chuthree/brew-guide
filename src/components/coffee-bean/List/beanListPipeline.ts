@@ -91,13 +91,13 @@ const DEFAULT_TYPE_STATS: BeanTypeStats = {
 };
 
 const EMPTY_GROUPS: CoffeeBeanGroup[] = [];
-const FLAVOR_STATUS_PRIORITY: FlavorPeriodStatus[] = [
-  FlavorPeriodStatus.FROZEN,
+const FLAVOR_PERIOD_FILTER_PRIORITY: FlavorPeriodStatus[] = [
   FlavorPeriodStatus.OPTIMAL,
-  FlavorPeriodStatus.AGING,
   FlavorPeriodStatus.DECLINE,
-  FlavorPeriodStatus.UNKNOWN,
+  FlavorPeriodStatus.AGING,
+  FlavorPeriodStatus.FROZEN,
   FlavorPeriodStatus.IN_TRANSIT,
+  FlavorPeriodStatus.UNKNOWN,
 ];
 
 const normalizeSearchText = (value: string): string =>
@@ -199,30 +199,9 @@ const sortCategoryEntries = (
   });
 
 const sortFlavorStatuses = (
-  counts: Map<FlavorPeriodStatus, number>,
-  nonEmptyCounts: Map<FlavorPeriodStatus, number>
+  counts: Map<FlavorPeriodStatus, number>
 ): FlavorPeriodStatus[] =>
-  FLAVOR_STATUS_PRIORITY.filter(status => counts.has(status)).sort(
-    (left, right) => {
-      const leftNonEmpty = nonEmptyCounts.get(left) || 0;
-      const rightNonEmpty = nonEmptyCounts.get(right) || 0;
-
-      if (leftNonEmpty !== rightNonEmpty) {
-        return rightNonEmpty - leftNonEmpty;
-      }
-
-      const leftHasNonEmpty = leftNonEmpty > 0;
-      const rightHasNonEmpty = rightNonEmpty > 0;
-      if (leftHasNonEmpty !== rightHasNonEmpty) {
-        return leftHasNonEmpty ? -1 : 1;
-      }
-
-      return (
-        FLAVOR_STATUS_PRIORITY.indexOf(left) -
-        FLAVOR_STATUS_PRIORITY.indexOf(right)
-      );
-    }
-  );
+  FLAVOR_PERIOD_FILTER_PRIORITY.filter(status => counts.has(status));
 
 const sortInventoryRecords = (
   records: BeanListRecord[],
@@ -432,7 +411,6 @@ export const createBeanInventorySnapshot = (
   const availableProcessCounts = new Map<string, number>();
   const availableProcessNonEmptyCounts = new Map<string, number>();
   const availableFlavorCounts = new Map<FlavorPeriodStatus, number>();
-  const availableFlavorNonEmptyCounts = new Map<FlavorPeriodStatus, number>();
   const availableBeanCandidates: ExtendedCoffeeBean[] = [];
 
   let currentStateBeanCount = 0;
@@ -484,7 +462,6 @@ export const createBeanInventorySnapshot = (
       }
       if (!record.isEmpty) {
         incrementMapCount(availableFlavorCounts, record.flavorStatus);
-        incrementMapCount(availableFlavorNonEmptyCounts, record.flavorStatus);
       }
     }
 
@@ -542,10 +519,7 @@ export const createBeanInventorySnapshot = (
       availableProcessCounts,
       availableProcessNonEmptyCounts
     ),
-    availableFlavorPeriods: sortFlavorStatuses(
-      availableFlavorCounts,
-      availableFlavorNonEmptyCounts
-    ),
+    availableFlavorPeriods: sortFlavorStatuses(availableFlavorCounts),
     availableRoasters,
     availableBeanGroups: getSortedCoffeeBeanGroups(
       options.coffeeBeanGroups || EMPTY_GROUPS

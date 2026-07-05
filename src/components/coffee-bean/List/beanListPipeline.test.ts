@@ -89,6 +89,71 @@ describe('beanListPipeline', () => {
     expect(optimalSnapshot.emptyBeans).toEqual([]);
   });
 
+  it('sorts flavor period categories by fixed availability priority instead of count', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-20T12:00:00'));
+
+    const frozenBean = buildBean({
+      id: 'frozen',
+      isFrozen: true,
+      remaining: '20',
+    });
+    const declineBean = buildBean({
+      id: 'decline',
+      roastDate: '2026-03-01',
+      remaining: '20',
+    });
+    const inTransitBean = buildBean({
+      id: 'in-transit',
+      isInTransit: true,
+      remaining: '20',
+    });
+    const unknownBean = buildBean({
+      id: 'unknown',
+      roastDate: '',
+      remaining: '20',
+    });
+    const optimalBeans = [
+      buildBean({ id: 'optimal-1', remaining: '20' }),
+      buildBean({ id: 'optimal-2', remaining: '20' }),
+    ];
+    const agingBeans = [
+      buildBean({
+        id: 'aging-1',
+        roastDate: '2026-06-18',
+        remaining: '20',
+      }),
+      buildBean({
+        id: 'aging-2',
+        roastDate: '2026-06-18',
+        remaining: '20',
+      }),
+      buildBean({
+        id: 'aging-3',
+        roastDate: '2026-06-18',
+        remaining: '20',
+      }),
+    ];
+
+    const snapshot = createSnapshot([
+      ...agingBeans,
+      ...optimalBeans,
+      frozenBean,
+      declineBean,
+      inTransitBean,
+      unknownBean,
+    ]);
+
+    expect(snapshot.availableFlavorPeriods).toEqual([
+      FlavorPeriodStatus.OPTIMAL,
+      FlavorPeriodStatus.DECLINE,
+      FlavorPeriodStatus.AGING,
+      FlavorPeriodStatus.FROZEN,
+      FlavorPeriodStatus.IN_TRANSIT,
+      FlavorPeriodStatus.UNKNOWN,
+    ]);
+  });
+
   it('can search all categories without widening bean type', () => {
     const currentCategoryBean = buildBean({
       id: 'current-filter',
