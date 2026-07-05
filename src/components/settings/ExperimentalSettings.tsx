@@ -184,7 +184,7 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
   };
 
   const highlightedSettingId = useScrollToHighlightedSetting(
-    `${settings.experimentalBeanRecognitionEnabled}:${isTestingConfig}`
+    `${settings.experimentalBeanRecognitionEnabled}:${settings.experimentalSettingsSearchEnabled}:${isTestingConfig}`
   );
   const getSearchHighlightClass = React.useCallback(
     (label: string) =>
@@ -196,6 +196,20 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
 
   return (
     <SettingPage title="实验性功能" isVisible={isVisible} onClose={handleClose}>
+      <SettingSection
+        title="设置"
+        footer="开启后，可直接搜索设置项，快速找到对应入口。"
+      >
+        <SettingRow label="设置全局搜索" isLast>
+          <SettingToggle
+            checked={settings.experimentalSettingsSearchEnabled || false}
+            onChange={checked =>
+              handleChange('experimentalSettingsSearchEnabled', checked)
+            }
+          />
+        </SettingRow>
+      </SettingSection>
+
       {showCoffeeBeanExperiments && (
         <SettingSection
           title="咖啡豆"

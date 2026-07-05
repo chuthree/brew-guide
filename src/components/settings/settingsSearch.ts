@@ -593,11 +593,20 @@ export const buildSettingsSearchItems = ({
     items.push(
       ...createRowItems('experimental-settings', '实验性功能', [
         '沉浸式表单',
+        '设置全局搜索',
         '最大显示容量',
         '自定义识别咖啡豆 API',
       ])
     );
+  } else {
+    items.push(
+      ...createRowItems('experimental-settings', '实验性功能', [
+        '设置全局搜索',
+      ])
+    );
+  }
 
+  if (isModuleVisible(visibleModules, 'coffeeBean')) {
     if (settings.enableBeanSummaryCapacityLimit) {
       items.push(
         ...createRowItems('experimental-settings', '实验性功能', [

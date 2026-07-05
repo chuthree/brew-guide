@@ -223,6 +223,8 @@ const Settings: React.FC<SettingsProps> = ({
 }) => {
   // 使用 Zustand store 管理设置
   const settings = useSettingsStore(state => state.settings);
+  const settingsSearchEnabled =
+    settings.experimentalSettingsSearchEnabled === true;
   const navigationState = deriveNavigationSettings(settings.navigationSettings);
   const settingsFeatureGroups = buildSettingsFeatureGroups({
     settings: settings as SettingsOptions,
@@ -259,7 +261,7 @@ const Settings: React.FC<SettingsProps> = ({
   }, [storeInitialized, loadSettings]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !settingsSearchEnabled) return;
 
     if (!beansInitialized) {
       void loadBeans();
@@ -280,6 +282,7 @@ const Settings: React.FC<SettingsProps> = ({
     isOpen,
     loadBeans,
     loadCustomMethods,
+    settingsSearchEnabled,
   ]);
 
   // 获取主题相关方法
@@ -350,6 +353,11 @@ const Settings: React.FC<SettingsProps> = ({
     }
   }, []);
   useEffect(() => {
+    if (!settingsSearchEnabled) {
+      setIsSponsorSectionVisible(false);
+      return;
+    }
+
     if (
       !shouldRender ||
       settingsSearchQuery.trim().length > 0 ||
@@ -381,7 +389,19 @@ const Settings: React.FC<SettingsProps> = ({
     observer.observe(sponsorElement);
 
     return () => observer.disconnect();
-  }, [settingsSearchQuery, shouldRender]);
+  }, [settingsSearchEnabled, settingsSearchQuery, shouldRender]);
+
+  useEffect(() => {
+    if (settingsSearchEnabled) return;
+
+    setSettingsSearchQuery('');
+    clearSearchHighlightTimer();
+    onSettingsSearchTargetChange(null);
+  }, [
+    clearSearchHighlightTimer,
+    onSettingsSearchTargetChange,
+    settingsSearchEnabled,
+  ]);
 
   // 自动检测更新（仅在本地打包的 Capacitor 环境下）
   // 是否为自动检测触发的更新提示
@@ -786,27 +806,29 @@ const Settings: React.FC<SettingsProps> = ({
             group.groupLabel === item.label ? undefined : [group.groupLabel],
         }))
     );
-  const settingsSearchItems = applySettingsSearchEntryMetadata(
-    [
-      ...settingsHomeSearchItems,
-      ...buildSettingsSearchItems({
-        settings: settings as SettingsOptions,
-        visibleModules: navigationState.visibleTabs,
-        hasVisibleNotificationSettings,
-        beans,
-        customEquipments,
-        customMethodsByEquipment,
-        grinders,
-      }),
-    ],
-    settingsSearchEntryMetadata
-  );
-  const settingsSearchResults = filterSettingsSearchItems(
-    settingsSearchItems,
-    settingsSearchQuery
-  );
+  const settingsSearchItems = settingsSearchEnabled
+    ? applySettingsSearchEntryMetadata(
+        [
+          ...settingsHomeSearchItems,
+          ...buildSettingsSearchItems({
+            settings: settings as SettingsOptions,
+            visibleModules: navigationState.visibleTabs,
+            hasVisibleNotificationSettings,
+            beans,
+            customEquipments,
+            customMethodsByEquipment,
+            grinders,
+          }),
+        ],
+        settingsSearchEntryMetadata
+      )
+    : [];
+  const settingsSearchResults = settingsSearchEnabled
+    ? filterSettingsSearchItems(settingsSearchItems, settingsSearchQuery)
+    : [];
   const hasSettingsSearchQuery = settingsSearchQuery.trim().length > 0;
-  const shouldShowSearchResults = hasSettingsSearchQuery;
+  const shouldShowSearchResults =
+    settingsSearchEnabled && hasSettingsSearchQuery;
   const settingsPageInitial = shouldReduceMotion
     ? { opacity: 0 }
     : { opacity: 0, y: 6 };
@@ -1017,13 +1039,15 @@ const Settings: React.FC<SettingsProps> = ({
               </motion.div>
             )}
           </AnimatePresence>
-          <SettingsSearchBar
-            query={settingsSearchQuery}
-            firstResult={settingsSearchResults[0] ?? null}
-            isVisible={shouldShowSearchResults || !isSponsorSectionVisible}
-            onQueryChange={setSettingsSearchQuery}
-            onSelect={handleSettingsSearchSelect}
-          />
+          {settingsSearchEnabled && (
+            <SettingsSearchBar
+              query={settingsSearchQuery}
+              firstResult={settingsSearchResults[0] ?? null}
+              isVisible={shouldShowSearchResults || !isSponsorSectionVisible}
+              onQueryChange={setSettingsSearchQuery}
+              onSelect={handleSettingsSearchSelect}
+            />
+          )}
         </div>
         {isLargeScreen && (
           <div className="relative min-h-0 flex-1 overflow-hidden">
