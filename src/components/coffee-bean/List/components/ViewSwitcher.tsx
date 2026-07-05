@@ -93,6 +93,63 @@ const BEAN_TYPE_LABELS: Record<SelectableBeanType, string> = {
 };
 
 const BEAN_TYPE_ORDER: SelectableBeanType[] = ['espresso', 'filter', 'omni'];
+type InventoryAllClickAction =
+  | 'clear-variety'
+  | 'clear-origin'
+  | 'clear-processing-method'
+  | 'clear-flavor-period'
+  | 'clear-roaster'
+  | 'clear-group'
+  | 'clear-bean-type'
+  | 'none';
+
+export const getInventoryAllClickAction = ({
+  selectedBeanType,
+  filterMode,
+  selectedVariety,
+  selectedOrigin,
+  selectedProcessingMethod,
+  selectedFlavorPeriod,
+  selectedRoaster,
+  selectedBeanGroupId,
+}: {
+  selectedBeanType?: BeanType;
+  filterMode: BeanFilterMode;
+  selectedVariety?: string | null;
+  selectedOrigin?: string | null;
+  selectedProcessingMethod?: string | null;
+  selectedFlavorPeriod?: FlavorPeriodStatus | null;
+  selectedRoaster?: string | null;
+  selectedBeanGroupId?: string | null;
+}): InventoryAllClickAction => {
+  if (filterMode === 'variety' && selectedVariety != null) {
+    return 'clear-variety';
+  }
+  if (filterMode === 'origin' && selectedOrigin != null) {
+    return 'clear-origin';
+  }
+  if (
+    filterMode === 'processingMethod' &&
+    selectedProcessingMethod != null
+  ) {
+    return 'clear-processing-method';
+  }
+  if (filterMode === 'flavorPeriod' && selectedFlavorPeriod != null) {
+    return 'clear-flavor-period';
+  }
+  if (filterMode === 'roaster' && selectedRoaster != null) {
+    return 'clear-roaster';
+  }
+  if (filterMode === 'group' && selectedBeanGroupId != null) {
+    return 'clear-group';
+  }
+
+  if (selectedBeanType && selectedBeanType !== 'all') {
+    return 'clear-bean-type';
+  }
+
+  return 'none';
+};
 
 // 可复用的标签按钮组件 - 支持 layoutId 实现跨按钮下划线动画
 interface TabButtonProps {
@@ -598,7 +655,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       }),
     [totalEspressoCount, totalFilterCount, totalOmniCount]
   );
-  const isAllBeanTypeSelected = !selectedBeanType || selectedBeanType === 'all';
   const selectedBeanTypeLabel =
     selectedBeanType && selectedBeanType !== 'all'
       ? BEAN_TYPE_LABELS[selectedBeanType]
@@ -626,30 +682,44 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     onBeanTypeChange?.(availableBeanTypes[currentIndex + 1]);
   }, [availableBeanTypes, onBeanTypeChange, selectedBeanType]);
   const handleInventoryAllClick = useCallback(() => {
-    if (!isAllBeanTypeSelected) {
-      onBeanTypeChange?.('all');
-      return;
-    }
+    const action = getInventoryAllClickAction({
+      selectedBeanType,
+      filterMode,
+      selectedVariety,
+      selectedOrigin,
+      selectedProcessingMethod,
+      selectedFlavorPeriod,
+      selectedRoaster,
+      selectedBeanGroupId,
+    });
 
-    if (filterMode === 'variety' && selectedVariety !== null) {
-      onVarietyClick?.(null);
-    } else if (filterMode === 'origin' && selectedOrigin !== null) {
-      onOriginClick?.(null);
-    } else if (
-      filterMode === 'processingMethod' &&
-      selectedProcessingMethod !== null
-    ) {
-      onProcessingMethodClick?.(null);
-    } else if (filterMode === 'flavorPeriod' && selectedFlavorPeriod !== null) {
-      onFlavorPeriodClick?.(null);
-    } else if (filterMode === 'roaster' && selectedRoaster !== null) {
-      onRoasterClick?.(null);
-    } else if (filterMode === 'group' && selectedBeanGroupId !== null) {
-      onBeanGroupClick?.(null);
+    switch (action) {
+      case 'clear-variety':
+        onVarietyClick?.(null);
+        break;
+      case 'clear-origin':
+        onOriginClick?.(null);
+        break;
+      case 'clear-processing-method':
+        onProcessingMethodClick?.(null);
+        break;
+      case 'clear-flavor-period':
+        onFlavorPeriodClick?.(null);
+        break;
+      case 'clear-roaster':
+        onRoasterClick?.(null);
+        break;
+      case 'clear-group':
+        onBeanGroupClick?.(null);
+        break;
+      case 'clear-bean-type':
+        onBeanTypeChange?.('all');
+        break;
+      case 'none':
+        break;
     }
   }, [
     filterMode,
-    isAllBeanTypeSelected,
     onBeanGroupClick,
     onBeanTypeChange,
     onFlavorPeriodClick,
@@ -658,6 +728,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     onRoasterClick,
     onVarietyClick,
     selectedBeanGroupId,
+    selectedBeanType,
     selectedFlavorPeriod,
     selectedOrigin,
     selectedProcessingMethod,
