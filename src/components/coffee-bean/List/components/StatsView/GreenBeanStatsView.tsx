@@ -22,10 +22,14 @@ import {
 } from './useGreenBeanStatsData';
 import StatsExplainer, { StatsExplanation } from './StatsExplainer';
 import {
-  extractUniqueOrigins,
   extractUniqueVarieties,
-  extractUniqueEstates,
+  getBeanAltitudes,
+  getBeanBatches,
+  getBeanCountries,
+  getBeanEstates,
+  getBeanOriginSummaries,
   getBeanProcesses,
+  getBeanRegions,
 } from '@/lib/utils/beanVarietyUtils';
 import { ExtendedCoffeeBean } from '../../types';
 import StatsSectionEditorDrawer, {
@@ -56,16 +60,24 @@ type GreenBeanStatsKey =
 type GreenStatsSectionKey =
   | 'beanCount'
   | 'origin'
+  | 'country'
+  | 'region'
   | 'estate'
+  | 'altitude'
   | 'variety'
-  | 'process';
+  | 'process'
+  | 'batch';
 
 const GREEN_STATS_SECTION_DEFAULTS: StatsSectionOption[] = [
   { key: 'beanCount', label: '生豆', visible: true },
   { key: 'origin', label: '产地', visible: true },
+  { key: 'country', label: '产国', visible: true },
+  { key: 'region', label: '产区', visible: true },
   { key: 'estate', label: '庄园', visible: true },
+  { key: 'altitude', label: '海拔', visible: true },
   { key: 'variety', label: '品种', visible: true },
   { key: 'process', label: '处理法', visible: true },
+  { key: 'batch', label: '批次', visible: true },
 ];
 
 const hydrateStatsSectionOptions = (
@@ -73,18 +85,40 @@ const hydrateStatsSectionOptions = (
   defaults: StatsSectionOption[]
 ): StatsSectionOption[] => {
   const defaultsByKey = new Map(defaults.map(item => [item.key, item]));
+  const hydratedKeys = new Set<string>();
 
-  return preferences.flatMap(item => {
+  const hydrated = preferences.flatMap(item => {
     const defaultItem = defaultsByKey.get(item.key);
     if (!defaultItem) return [];
+    hydratedKeys.add(item.key);
     return [{ ...defaultItem, visible: item.visible }];
   });
+
+  return [
+    ...hydrated,
+    ...defaults.filter(item => !hydratedKeys.has(item.key)),
+  ];
 };
 
 const toStatsSectionPreferences = (
   sections: StatsSectionOption[]
 ): StatsViewSectionPreference[] =>
   sections.map(({ key, visible }) => ({ key, visible }));
+
+const countBeanAttributeValues = (
+  beans: ExtendedCoffeeBean[],
+  getValues: (bean: ExtendedCoffeeBean) => string[]
+): Array<[string, number]> => {
+  const valueCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    getValues(bean).forEach(value => {
+      valueCount.set(value, (valueCount.get(value) || 0) + 1);
+    });
+  });
+
+  return Array.from(valueCount.entries()).sort((a, b) => b[1] - a[1]);
+};
 
 // 生成解释内容
 const createGreenBeanExplanation = (
@@ -575,28 +609,31 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
   }, [greenBeans, selectedDate, dateGroupingMode]);
 
   // 计算产地统计
-  const originStats = useMemo(() => {
-    const originCount = new Map<string, number>();
-    filteredBeans.forEach(bean => {
-      const origins = extractUniqueOrigins([bean]);
-      origins.forEach(origin => {
-        originCount.set(origin, (originCount.get(origin) || 0) + 1);
-      });
-    });
-    return Array.from(originCount.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredBeans]);
+  const originStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanOriginSummaries),
+    [filteredBeans]
+  );
+
+  const countryStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanCountries),
+    [filteredBeans]
+  );
+
+  const regionStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanRegions),
+    [filteredBeans]
+  );
 
   // 计算庄园统计
-  const estateStats = useMemo(() => {
-    const estateCount = new Map<string, number>();
-    filteredBeans.forEach(bean => {
-      const estates = extractUniqueEstates([bean]);
-      estates.forEach(estate => {
-        estateCount.set(estate, (estateCount.get(estate) || 0) + 1);
-      });
-    });
-    return Array.from(estateCount.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredBeans]);
+  const estateStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanEstates),
+    [filteredBeans]
+  );
+
+  const altitudeStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanAltitudes),
+    [filteredBeans]
+  );
 
   // 计算品种统计
   const varietyStats = useMemo(() => {
@@ -611,16 +648,15 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
   }, [filteredBeans]);
 
   // 计算处理法统计
-  const processStats = useMemo(() => {
-    const processCount = new Map<string, number>();
-    filteredBeans.forEach(bean => {
-      const processes = getBeanProcesses(bean);
-      processes.forEach(process => {
-        processCount.set(process, (processCount.get(process) || 0) + 1);
-      });
-    });
-    return Array.from(processCount.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredBeans]);
+  const processStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanProcesses),
+    [filteredBeans]
+  );
+
+  const batchStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanBatches),
+    [filteredBeans]
+  );
 
   const handleSectionOptionsChange = useCallback(
     (nextSections: StatsSectionOption[]) => {
@@ -650,9 +686,27 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
         ) : null,
       ],
       [
+        'country',
+        countryStats.length > 0 ? (
+          <AttributeCard key="country" title="产国" data={countryStats} />
+        ) : null,
+      ],
+      [
+        'region',
+        regionStats.length > 0 ? (
+          <AttributeCard key="region" title="产区" data={regionStats} />
+        ) : null,
+      ],
+      [
         'estate',
         estateStats.length > 0 ? (
           <AttributeCard key="estate" title="庄园" data={estateStats} />
+        ) : null,
+      ],
+      [
+        'altitude',
+        altitudeStats.length > 0 ? (
+          <AttributeCard key="altitude" title="海拔" data={altitudeStats} />
         ) : null,
       ],
       [
@@ -667,13 +721,23 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
           <AttributeCard key="process" title="处理法" data={processStats} />
         ) : null,
       ],
+      [
+        'batch',
+        batchStats.length > 0 ? (
+          <AttributeCard key="batch" title="批次" data={batchStats} />
+        ) : null,
+      ],
     ]);
   }, [
+    altitudeStats,
+    batchStats,
+    countryStats,
     estateStats,
     filteredBeans,
     onExplain,
     originStats,
     processStats,
+    regionStats,
     varietyStats,
   ]);
 

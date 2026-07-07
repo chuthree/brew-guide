@@ -29,11 +29,14 @@ import { useStatsData, StatsMetadata } from './useStatsData';
 import { useGreenBeanStatsData } from './useGreenBeanStatsData';
 import StatsExplainer, { StatsExplanation } from './StatsExplainer';
 import {
-  extractUniqueCountries,
-  extractUniqueOrigins,
   extractUniqueVarieties,
   formatBeanDisplayName,
+  getBeanAltitudes,
+  getBeanBatches,
+  getBeanCountries,
+  getBeanOriginSummaries,
   getBeanProcesses,
+  getBeanRegions,
   getBeanFlavors,
   getBeanEstates,
   getRoasterName,
@@ -104,9 +107,13 @@ type RoastedStatsSectionKey =
   | 'roaster'
   | 'originMap'
   | 'origin'
+  | 'country'
+  | 'region'
   | 'estate'
+  | 'altitude'
   | 'variety'
   | 'process'
+  | 'batch'
   | 'flavor';
 
 const ROASTED_STATS_SECTION_DEFAULTS: StatsSectionOption[] = [
@@ -119,9 +126,13 @@ const ROASTED_STATS_SECTION_DEFAULTS: StatsSectionOption[] = [
   { key: 'worstBeans', label: '最拉豆子', visible: false },
   { key: 'originMap', label: '咖啡产区地图', visible: true },
   { key: 'origin', label: '产地', visible: true },
+  { key: 'country', label: '产国', visible: true },
+  { key: 'region', label: '产区', visible: true },
   { key: 'estate', label: '庄园', visible: true },
+  { key: 'altitude', label: '海拔', visible: true },
   { key: 'variety', label: '品种', visible: true },
   { key: 'process', label: '处理法', visible: true },
+  { key: 'batch', label: '批次', visible: true },
   { key: 'flavor', label: '风味', visible: true },
 ];
 
@@ -130,18 +141,40 @@ const hydrateStatsSectionOptions = (
   defaults: StatsSectionOption[]
 ): StatsSectionOption[] => {
   const defaultsByKey = new Map(defaults.map(item => [item.key, item]));
+  const hydratedKeys = new Set<string>();
 
-  return preferences.flatMap(item => {
+  const hydrated = preferences.flatMap(item => {
     const defaultItem = defaultsByKey.get(item.key);
     if (!defaultItem) return [];
+    hydratedKeys.add(item.key);
     return [{ ...defaultItem, visible: item.visible }];
   });
+
+  return [
+    ...hydrated,
+    ...defaults.filter(item => !hydratedKeys.has(item.key)),
+  ];
 };
 
 const toStatsSectionPreferences = (
   sections: StatsSectionOption[]
 ): StatsViewSectionPreference[] =>
   sections.map(({ key, visible }) => ({ key, visible }));
+
+const countBeanAttributeValues = (
+  beans: ExtendedCoffeeBean[],
+  getValues: (bean: ExtendedCoffeeBean) => string[]
+): Array<[string, number]> => {
+  const valueCount = new Map<string, number>();
+
+  beans.forEach(bean => {
+    getValues(bean).forEach(value => {
+      valueCount.set(value, (valueCount.get(value) || 0) + 1);
+    });
+  });
+
+  return Array.from(valueCount.entries()).sort((a, b) => b[1] - a[1]);
+};
 
 const createEmptyTypeSummary = (): BeanTypeSummary => ({
   espresso: {
@@ -1052,16 +1085,20 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     });
   }, [roastedBeans, selectedDate, dateGroupingMode]);
   // 计算产地统计
-  const originStats = useMemo(() => {
-    const originCount = new Map<string, number>();
-    filteredBeans.forEach(bean => {
-      const origins = extractUniqueOrigins([bean]);
-      origins.forEach(origin => {
-        originCount.set(origin, (originCount.get(origin) || 0) + 1);
-      });
-    });
-    return Array.from(originCount.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredBeans]);
+  const originStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanOriginSummaries),
+    [filteredBeans]
+  );
+
+  const countryStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanCountries),
+    [filteredBeans]
+  );
+
+  const regionStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanRegions),
+    [filteredBeans]
+  );
 
   // 计算烘焙商统计
   const roasterStats = useMemo(() => {
@@ -1076,16 +1113,15 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
   }, [filteredBeans]);
 
   // 计算庄园统计
-  const estateStats = useMemo(() => {
-    const estateCount = new Map<string, number>();
-    filteredBeans.forEach(bean => {
-      const estates = getBeanEstates(bean);
-      estates.forEach(estate => {
-        estateCount.set(estate, (estateCount.get(estate) || 0) + 1);
-      });
-    });
-    return Array.from(estateCount.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredBeans]);
+  const estateStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanEstates),
+    [filteredBeans]
+  );
+
+  const altitudeStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanAltitudes),
+    [filteredBeans]
+  );
 
   // 计算品种统计
   const varietyStats = useMemo(() => {
@@ -1100,16 +1136,15 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
   }, [filteredBeans]);
 
   // 计算处理法统计
-  const processStats = useMemo(() => {
-    const processCount = new Map<string, number>();
-    filteredBeans.forEach(bean => {
-      const processes = getBeanProcesses(bean);
-      processes.forEach(process => {
-        processCount.set(process, (processCount.get(process) || 0) + 1);
-      });
-    });
-    return Array.from(processCount.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredBeans]);
+  const processStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanProcesses),
+    [filteredBeans]
+  );
+
+  const batchStats = useMemo(
+    () => countBeanAttributeValues(filteredBeans, getBeanBatches),
+    [filteredBeans]
+  );
 
   // 计算风味统计
   const flavorStats = useMemo(() => {
@@ -1123,18 +1158,16 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     return Array.from(flavorCount.entries()).sort((a, b) => b[1] - a[1]);
   }, [filteredBeans]);
 
-  // 计算产地数量映射（用于地图上显示不同大小的点）
+  // 计算地图标记数量：优先用结构化产区，其次产国，最后旧产地。
   const originCountMap = useMemo(() => {
-    const countryCount = new Map<string, number>();
-    filteredBeans.forEach(bean => {
-      extractUniqueCountries([bean]).forEach(country => {
-        countryCount.set(country, (countryCount.get(country) || 0) + 1);
-      });
-    });
-    return countryCount.size > 0 ? countryCount : new Map(originStats);
-  }, [filteredBeans, originStats]);
+    const regionCount = new Map(regionStats);
+    if (regionCount.size > 0) return regionCount;
 
-  // 获取所有产地名称（用于地图）
+    const countryCount = new Map(countryStats);
+    return countryCount.size > 0 ? countryCount : new Map(originStats);
+  }, [countryStats, originStats, regionStats]);
+
+  // 获取地图标记名称
   const originNames = useMemo(() => {
     return Array.from(originCountMap.keys());
   }, [originCountMap]);
@@ -1203,7 +1236,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
 
   const sectionNodes = useMemo(() => {
     const originMap =
-      originStats.length > 0 ? (
+      originNames.length > 0 ? (
         <div
           key="originMap"
           className="rounded-md bg-neutral-100 p-3 dark:bg-neutral-800/40"
@@ -1293,9 +1326,27 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
         ) : null,
       ],
       [
+        'country',
+        countryStats.length > 0 ? (
+          <AttributeCard key="country" title="产国" data={countryStats} />
+        ) : null,
+      ],
+      [
+        'region',
+        regionStats.length > 0 ? (
+          <AttributeCard key="region" title="产区" data={regionStats} />
+        ) : null,
+      ],
+      [
         'estate',
         estateStats.length > 0 ? (
           <AttributeCard key="estate" title="庄园" data={estateStats} />
+        ) : null,
+      ],
+      [
+        'altitude',
+        altitudeStats.length > 0 ? (
+          <AttributeCard key="altitude" title="海拔" data={altitudeStats} />
         ) : null,
       ],
       [
@@ -1311,6 +1362,12 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
         ) : null,
       ],
       [
+        'batch',
+        batchStats.length > 0 ? (
+          <AttributeCard key="batch" title="批次" data={batchStats} />
+        ) : null,
+      ],
+      [
         'flavor',
         flavorStats.length > 0 ? (
           <AttributeCard
@@ -1323,9 +1380,12 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
       ],
     ]);
   }, [
+    altitudeStats,
+    batchStats,
     bestBeanStats,
     cheapBeanStats,
     commonMethodStats,
+    countryStats,
     estateStats,
     expensiveBeanStats,
     filteredBeans,
@@ -1335,6 +1395,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     originNames,
     originStats,
     processStats,
+    regionStats,
     roasterStats,
     varietyStats,
     worstBeanStats,

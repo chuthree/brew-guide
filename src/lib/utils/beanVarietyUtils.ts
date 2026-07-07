@@ -13,7 +13,11 @@ import {
   normalizeDelimitedTextList,
   removeRoasterFromDisplayName,
 } from './coffeeBeanUtils';
-import { getComponentOriginDisplay } from '@/lib/coffee-beans/beanFields';
+import {
+  type BeanFieldId,
+  getComponentFieldValue,
+  getComponentOriginDisplay,
+} from '@/lib/coffee-beans/beanFields';
 
 /**
  * 检查文本是否为有效值
@@ -94,6 +98,24 @@ export const beanHasVariety = (
 const _getBeanVarietyDisplay = (bean: ExtendedCoffeeBean): string | null => {
   const varieties = getBeanVarieties(bean);
   return varieties.length > 0 ? varieties.join('、') : null;
+};
+
+const getBeanComponentFieldValues = (
+  bean: CoffeeBean,
+  fieldId: BeanFieldId
+): string[] => {
+  const values: string[] = [];
+
+  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
+    bean.blendComponents.forEach(component => {
+      const fieldValue = getComponentFieldValue(component, fieldId);
+      if (isValidText(fieldValue)) {
+        values.push(...normalizeDelimitedTextList(fieldValue));
+      }
+    });
+  }
+
+  return Array.from(new Set(values));
 };
 
 /**
@@ -243,21 +265,25 @@ export const getBeanOrigins = (bean: CoffeeBean): string[] => {
 };
 
 /**
+ * 获取旧 origin 产地概括；不会把结构化产地字段组合进来。
+ */
+export const getBeanOriginSummaries = (bean: CoffeeBean): string[] =>
+  getBeanComponentFieldValues(bean, 'origin');
+
+/**
  * 获取咖啡豆的结构化产国信息；不会从旧 origin 推断。
  */
-export const getBeanCountries = (bean: CoffeeBean): string[] => {
-  const countries: string[] = [];
+export const getBeanCountries = (bean: CoffeeBean): string[] =>
+  getBeanComponentFieldValues(bean, 'country');
 
-  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
-    bean.blendComponents.forEach(component => {
-      if (isValidText(component.country)) {
-        countries.push(...normalizeDelimitedTextList(component.country));
-      }
-    });
-  }
+export const getBeanRegions = (bean: CoffeeBean): string[] =>
+  getBeanComponentFieldValues(bean, 'region');
 
-  return Array.from(new Set(countries));
-};
+export const getBeanAltitudes = (bean: CoffeeBean): string[] =>
+  getBeanComponentFieldValues(bean, 'altitude');
+
+export const getBeanBatches = (bean: CoffeeBean): string[] =>
+  getBeanComponentFieldValues(bean, 'batch');
 
 export const extractUniqueCountries = (beans: CoffeeBean[]): string[] => {
   const countryCount = new Map<string, number>();
