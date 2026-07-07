@@ -70,28 +70,60 @@ const BlendComponentsSection: React.FC<BlendComponentsSectionProps> = ({
   const renderFieldValue = (
     comp: (typeof visibleComponents)[number],
     field: Exclude<keyof BlendComponent, 'percentage'>,
-    label: string,
     value: string
   ) => {
     if (!value) return null;
 
     return (
-      <span className="inline-flex items-center gap-0.5">
-        <span className="text-neutral-500 dark:text-neutral-400">{label}</span>
-        <span
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={e => {
-            const newValue = e.currentTarget.textContent?.trim() || '';
-            if (newValue !== value) {
-              handleBlendFieldEdit(comp.index, field, newValue);
-            }
-          }}
-          className="cursor-text outline-none"
-        >
-          {value}
-        </span>
+      <span
+        key={field}
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={e => {
+          const newValue = e.currentTarget.textContent?.trim() || '';
+          if (newValue !== value) {
+            handleBlendFieldEdit(comp.index, field, newValue);
+          }
+        }}
+        className="cursor-text outline-none"
+      >
+        {value}
       </span>
+    );
+  };
+
+  const renderComponentValues = (comp: (typeof visibleComponents)[number]) => {
+    const values = [
+      renderFieldValue(comp, 'origin', comp.origin),
+      renderFieldValue(comp, 'country', comp.country),
+      renderFieldValue(comp, 'region', comp.region),
+      renderFieldValue(comp, 'estate', comp.estate),
+      renderFieldValue(comp, 'altitude', comp.altitude),
+      renderFieldValue(comp, 'process', comp.process),
+      renderFieldValue(comp, 'batch', comp.batch),
+      renderFieldValue(comp, 'variety', comp.variety),
+      comp.percentage !== undefined && comp.percentage !== null ? (
+        <span
+          key="percentage"
+          className="text-neutral-600 dark:text-neutral-400"
+        >
+          {comp.percentage}%
+        </span>
+      ) : null,
+    ].filter((value): value is React.ReactElement => Boolean(value));
+
+    return values.flatMap((value, index) =>
+      index === 0
+        ? [value]
+        : [
+            <span
+              key={`separator-${index}`}
+              className="text-neutral-400 select-none dark:text-neutral-600"
+            >
+              ·
+            </span>,
+            value,
+          ]
     );
   };
 
@@ -104,22 +136,9 @@ const BlendComponentsSection: React.FC<BlendComponentsSectionProps> = ({
         {visibleComponents.map(comp => (
           <div
             key={comp.index}
-            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-neutral-800 dark:text-neutral-100"
+            className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs font-medium text-neutral-800 dark:text-neutral-100"
           >
-            {renderFieldValue(comp, 'origin', '产地', comp.origin)}
-            {renderFieldValue(comp, 'country', '产国', comp.country)}
-            {renderFieldValue(comp, 'region', '产区', comp.region)}
-            {renderFieldValue(comp, 'estate', '庄园', comp.estate)}
-            {renderFieldValue(comp, 'altitude', '海拔', comp.altitude)}
-            {renderFieldValue(comp, 'process', '处理法', comp.process)}
-            {renderFieldValue(comp, 'batch', '批次', comp.batch)}
-            {renderFieldValue(comp, 'variety', '品种', comp.variety)}
-            {/* 百分比 */}
-            {comp.percentage !== undefined && comp.percentage !== null && (
-              <span className="ml-1 text-neutral-600 dark:text-neutral-400">
-                {comp.percentage}%
-              </span>
-            )}
+            {renderComponentValues(comp)}
           </div>
         ))}
       </div>
