@@ -11,6 +11,7 @@ interface SettingRowProps {
   vertical?: boolean; // 是否垂直布局（用于复杂控件）
   isSubSetting?: boolean; // 是否为子设置项（显示半透明横杆前缀）
   settingId?: string;
+  onClick?: () => void;
 }
 
 /**
@@ -27,6 +28,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
   vertical = false,
   isSubSetting = false,
   settingId,
+  onClick,
 }) => {
   const { highlightedSettingId } = useSettingSearchHighlight();
   const resolvedSettingId =
@@ -78,6 +80,8 @@ const SettingRow: React.FC<SettingRowProps> = ({
     );
   }
 
+  const RowContent = onClick ? 'button' : 'div';
+
   return (
     <div
       ref={rowRef}
@@ -86,8 +90,12 @@ const SettingRow: React.FC<SettingRowProps> = ({
         isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
       } ${className}`}
     >
-      <div
-        className={`flex min-w-0 flex-1 items-center justify-between py-3.5 ${
+      <RowContent
+        type={onClick ? 'button' : undefined}
+        onClick={onClick}
+        className={`flex min-w-0 flex-1 items-center justify-between py-3.5 text-left ${
+          onClick ? 'cursor-pointer transition-opacity active:opacity-70' : ''
+        } ${
           !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
         }`}
       >
@@ -109,7 +117,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
           </div>
         )}
         <div className="flex shrink-0 items-center">{children}</div>
-      </div>
+      </RowContent>
     </div>
   );
 };

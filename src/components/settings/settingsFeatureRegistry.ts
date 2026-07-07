@@ -18,10 +18,6 @@ import {
 import type { MainNavigationTab } from '@/lib/navigation/navigationSettings';
 import type { SettingsOptions } from '@/lib/core/db';
 import type { SettingItemData } from './SettingItem';
-import {
-  getEnabledBeanFieldIds,
-  resolveBeanFieldConfig,
-} from '@/lib/coffee-beans/beanFields';
 
 type SettingsFeatureGroup =
   | 'brewing'
@@ -124,8 +120,6 @@ const SETTINGS_FEATURES: SettingsFeatureDefinition[] = [
     onClick: 'onOpenBeanSettings',
     requiredModules: ['coffeeBean'],
     placements: [{ group: 'coffeeBean', module: 'coffeeBean' }],
-    getValue: settings =>
-      `${getEnabledBeanFieldIds(resolveBeanFieldConfig(settings)).length} 个字段`,
   },
   {
     id: 'coffee-bean-group-settings',

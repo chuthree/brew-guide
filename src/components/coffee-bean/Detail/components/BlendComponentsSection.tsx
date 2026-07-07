@@ -1,11 +1,8 @@
 'use client';
 
 import React from 'react';
-import { CoffeeBean } from '@/types/app';
-import {
-  getComponentOriginDisplay,
-  hasStructuredOriginFields,
-} from '@/lib/coffee-beans/beanFields';
+import { BlendComponent, CoffeeBean } from '@/types/app';
+import { hasStructuredOriginFields } from '@/lib/coffee-beans/beanFields';
 
 interface BlendComponentsSectionProps {
   bean: CoffeeBean | null;
@@ -23,20 +20,29 @@ const BlendComponentsSection: React.FC<BlendComponentsSectionProps> = ({
   }
 
   const visibleComponents = bean.blendComponents
-    .map((component, index) => ({
-      index,
-      origin: getComponentOriginDisplay(component),
-      hasStructuredOrigin: hasStructuredOriginFields(component),
-      estate: component.estate?.trim() || '',
-      batch: component.batch?.trim() || '',
-      variety: component.variety?.trim() || '',
-      process: component.process?.trim() || '',
-      percentage: component.percentage,
-    }))
+    .map((component, index) => {
+      const hasStructuredOrigin = hasStructuredOriginFields(component);
+
+      return {
+        index,
+        origin: hasStructuredOrigin ? '' : component.origin?.trim() || '',
+        country: component.country?.trim() || '',
+        region: component.region?.trim() || '',
+        estate: component.estate?.trim() || '',
+        altitude: component.altitude?.trim() || '',
+        batch: component.batch?.trim() || '',
+        variety: component.variety?.trim() || '',
+        process: component.process?.trim() || '',
+        percentage: component.percentage,
+      };
+    })
     .filter(
       component =>
         component.origin ||
+        component.country ||
+        component.region ||
         component.estate ||
+        component.altitude ||
         component.batch ||
         component.variety ||
         component.process ||
@@ -50,7 +56,7 @@ const BlendComponentsSection: React.FC<BlendComponentsSectionProps> = ({
   // 处理拼配成分字段编辑
   const handleBlendFieldEdit = (
     index: number,
-    field: 'origin' | 'estate' | 'process' | 'batch' | 'variety',
+    field: Exclude<keyof BlendComponent, 'percentage'>,
     value: string
   ) => {
     const updatedComponents = [...bean.blendComponents!];
@@ -59,6 +65,34 @@ const BlendComponentsSection: React.FC<BlendComponentsSectionProps> = ({
       [field]: value.trim(),
     };
     handleUpdateField({ blendComponents: updatedComponents });
+  };
+
+  const renderFieldValue = (
+    comp: (typeof visibleComponents)[number],
+    field: Exclude<keyof BlendComponent, 'percentage'>,
+    label: string,
+    value: string
+  ) => {
+    if (!value) return null;
+
+    return (
+      <span className="inline-flex items-center gap-0.5">
+        <span className="text-neutral-500 dark:text-neutral-400">{label}</span>
+        <span
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={e => {
+            const newValue = e.currentTarget.textContent?.trim() || '';
+            if (newValue !== value) {
+              handleBlendFieldEdit(comp.index, field, newValue);
+            }
+          }}
+          className="cursor-text outline-none"
+        >
+          {value}
+        </span>
+      </span>
+    );
   };
 
   return (
@@ -70,107 +104,16 @@ const BlendComponentsSection: React.FC<BlendComponentsSectionProps> = ({
         {visibleComponents.map(comp => (
           <div
             key={comp.index}
-            className="flex items-center gap-1 text-xs font-medium text-neutral-800 dark:text-neutral-100"
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-neutral-800 dark:text-neutral-100"
           >
-            {/* 产地 */}
-            {comp.origin && (
-              <span
-                contentEditable={!comp.hasStructuredOrigin}
-                suppressContentEditableWarning
-                onBlur={e => {
-                  if (comp.hasStructuredOrigin) return;
-                  const newValue = e.currentTarget.textContent?.trim() || '';
-                  if (newValue !== comp.origin) {
-                    handleBlendFieldEdit(comp.index, 'origin', newValue);
-                  }
-                }}
-                className={`outline-none ${
-                  comp.hasStructuredOrigin ? '' : 'cursor-text'
-                }`}
-              >
-                {comp.origin}
-              </span>
-            )}
-            {/* 分隔符 */}
-            {comp.origin && comp.estate && !comp.hasStructuredOrigin && (
-              <span className="text-neutral-400 dark:text-neutral-600">·</span>
-            )}
-            {/* 庄园 */}
-            {comp.estate && !comp.hasStructuredOrigin && (
-              <span
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={e => {
-                  const newValue = e.currentTarget.textContent?.trim() || '';
-                  if (newValue !== comp.estate) {
-                    handleBlendFieldEdit(comp.index, 'estate', newValue);
-                  }
-                }}
-                className="cursor-text outline-none"
-              >
-                {comp.estate}
-              </span>
-            )}
-            {/* 分隔符 */}
-            {(comp.origin || comp.estate) && comp.batch && (
-              <span className="text-neutral-400 dark:text-neutral-600">·</span>
-            )}
-            {/* 批次 */}
-            {comp.batch && (
-              <span
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={e => {
-                  const newValue = e.currentTarget.textContent?.trim() || '';
-                  if (newValue !== comp.batch) {
-                    handleBlendFieldEdit(comp.index, 'batch', newValue);
-                  }
-                }}
-                className="cursor-text outline-none"
-              >
-                {comp.batch}
-              </span>
-            )}
-            {(comp.origin || comp.estate || comp.batch) && comp.variety && (
-              <span className="text-neutral-400 dark:text-neutral-600">·</span>
-            )}
-            {/* 品种 */}
-            {comp.variety && (
-              <span
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={e => {
-                  const newValue = e.currentTarget.textContent?.trim() || '';
-                  if (newValue !== comp.variety) {
-                    handleBlendFieldEdit(comp.index, 'variety', newValue);
-                  }
-                }}
-                className="cursor-text outline-none"
-              >
-                {comp.variety}
-              </span>
-            )}
-            {/* 分隔符 */}
-            {(comp.origin || comp.estate || comp.batch || comp.variety) &&
-              comp.process && (
-              <span className="text-neutral-400 dark:text-neutral-600">·</span>
-            )}
-            {/* 处理法 */}
-            {comp.process && (
-              <span
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={e => {
-                  const newValue = e.currentTarget.textContent?.trim() || '';
-                  if (newValue !== comp.process) {
-                    handleBlendFieldEdit(comp.index, 'process', newValue);
-                  }
-                }}
-                className="cursor-text outline-none"
-              >
-                {comp.process}
-              </span>
-            )}
+            {renderFieldValue(comp, 'origin', '产地', comp.origin)}
+            {renderFieldValue(comp, 'country', '产国', comp.country)}
+            {renderFieldValue(comp, 'region', '产区', comp.region)}
+            {renderFieldValue(comp, 'estate', '庄园', comp.estate)}
+            {renderFieldValue(comp, 'altitude', '海拔', comp.altitude)}
+            {renderFieldValue(comp, 'process', '处理法', comp.process)}
+            {renderFieldValue(comp, 'batch', '批次', comp.batch)}
+            {renderFieldValue(comp, 'variety', '品种', comp.variety)}
             {/* 百分比 */}
             {comp.percentage !== undefined && comp.percentage !== null && (
               <span className="ml-1 text-neutral-600 dark:text-neutral-400">

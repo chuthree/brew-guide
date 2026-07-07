@@ -325,8 +325,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     (detailBlendComponents.length <= 1 &&
       !!(
         firstBlendComponent?.origin ||
+        firstBlendComponent?.country ||
+        firstBlendComponent?.region ||
         firstBlendComponent?.estate ||
+        firstBlendComponent?.altitude ||
         firstBlendComponent?.process ||
+        firstBlendComponent?.batch ||
         firstBlendComponent?.variety ||
         detailBean?.roastLevel
       ));
@@ -335,8 +339,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     (bean?.blendComponents?.filter(
       component =>
         component.origin?.trim() ||
+        component.country?.trim() ||
+        component.region?.trim() ||
         component.estate?.trim() ||
+        component.altitude?.trim() ||
         component.variety?.trim() ||
+        component.batch?.trim() ||
         component.process?.trim() ||
         component.percentage !== undefined
     ).length ?? 0) > 1;

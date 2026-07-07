@@ -6,10 +6,7 @@ import HighlightText from '@/components/common/ui/HighlightText';
 import { BEAN_TYPES } from '../types';
 import BlendComponentTagRows from './BlendComponentTagRows';
 import { updateBlendComponentsDelimitedField } from '@/lib/utils/coffeeBeanUtils';
-import {
-  getComponentOriginDisplay,
-  hasStructuredOriginFields,
-} from '@/lib/coffee-beans/beanFields';
+import { hasStructuredOriginFields } from '@/lib/coffee-beans/beanFields';
 import { useRoastLevelSuggestions } from '@/components/coffee-bean/Form/hooks/useCoffeeBeanFieldSuggestions';
 import SuggestionDropdown, {
   SUGGESTION_DROPDOWN_Z_INDEX,
@@ -130,7 +127,10 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
     'w-10 bg-neutral-100 px-1.5 py-0.5 text-center text-xs font-medium text-neutral-700 placeholder:text-neutral-400 outline-none dark:bg-neutral-800/40 dark:text-neutral-300 dark:placeholder:text-neutral-500';
 
   const originRef = useRef<HTMLDivElement>(null);
+  const countryRef = useRef<HTMLDivElement>(null);
+  const regionRef = useRef<HTMLDivElement>(null);
   const estateRef = useRef<HTMLDivElement>(null);
+  const altitudeRef = useRef<HTMLDivElement>(null);
   const processRef = useRef<HTMLDivElement>(null);
   const batchRef = useRef<HTMLDivElement>(null);
   const varietyRef = useRef<HTMLDivElement>(null);
@@ -146,9 +146,12 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
 
   // 获取当前值
   const origin = firstComponent?.origin || '';
-  const originDisplay = getComponentOriginDisplay(firstComponent);
   const hasStructuredOrigin = hasStructuredOriginFields(firstComponent);
+  const legacyOrigin = hasStructuredOrigin ? '' : origin;
+  const country = firstComponent?.country || '';
+  const region = firstComponent?.region || '';
   const estate = firstComponent?.estate || '';
+  const altitude = firstComponent?.altitude || '';
   const process = firstComponent?.process || '';
   const batch = firstComponent?.batch || '';
   const variety = firstComponent?.variety || '';
@@ -162,8 +165,17 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
       if (originRef.current && firstComponent.origin) {
         originRef.current.textContent = firstComponent.origin;
       }
+      if (countryRef.current && firstComponent.country) {
+        countryRef.current.textContent = firstComponent.country;
+      }
+      if (regionRef.current && firstComponent.region) {
+        regionRef.current.textContent = firstComponent.region;
+      }
       if (estateRef.current && firstComponent.estate) {
         estateRef.current.textContent = firstComponent.estate;
+      }
+      if (altitudeRef.current && firstComponent.altitude) {
+        altitudeRef.current.textContent = firstComponent.altitude;
       }
       if (processRef.current && firstComponent.process) {
         processRef.current.textContent = firstComponent.process;
@@ -194,54 +206,48 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
     handleUpdateField({ blendComponents: updatedComponents });
   };
 
-  const handleOriginInput = () => {
-    if (originRef.current) {
-      handleBlendComponentUpdate(
-        0,
-        'origin',
-        originRef.current.textContent || ''
-      );
+  const handleComponentTextInput = (
+    field: Exclude<
+      keyof NonNullable<CoffeeBean['blendComponents']>[number],
+      'percentage'
+    >,
+    fieldRef: React.RefObject<HTMLDivElement | null>
+  ) => {
+    if (fieldRef.current) {
+      handleBlendComponentUpdate(0, field, fieldRef.current.textContent || '');
     }
+  };
+
+  const handleOriginInput = () => {
+    handleComponentTextInput('origin', originRef);
+  };
+
+  const handleCountryInput = () => {
+    handleComponentTextInput('country', countryRef);
+  };
+
+  const handleRegionInput = () => {
+    handleComponentTextInput('region', regionRef);
   };
 
   const handleEstateInput = () => {
-    if (estateRef.current) {
-      handleBlendComponentUpdate(
-        0,
-        'estate',
-        estateRef.current.textContent || ''
-      );
-    }
+    handleComponentTextInput('estate', estateRef);
+  };
+
+  const handleAltitudeInput = () => {
+    handleComponentTextInput('altitude', altitudeRef);
   };
 
   const handleProcessInput = () => {
-    if (processRef.current) {
-      handleBlendComponentUpdate(
-        0,
-        'process',
-        processRef.current.textContent || ''
-      );
-    }
+    handleComponentTextInput('process', processRef);
   };
 
   const handleVarietyInput = () => {
-    if (varietyRef.current) {
-      handleBlendComponentUpdate(
-        0,
-        'variety',
-        varietyRef.current.textContent || ''
-      );
-    }
+    handleComponentTextInput('variety', varietyRef);
   };
 
   const handleBatchInput = () => {
-    if (batchRef.current) {
-      handleBlendComponentUpdate(
-        0,
-        'batch',
-        batchRef.current.textContent || ''
-      );
-    }
+    handleComponentTextInput('batch', batchRef);
   };
 
   const handleFlavorPeriodDayChange = (
@@ -303,8 +309,11 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   // 查看模式下至少有一个字段有值才显示；添加模式下总是显示
   if (
     !isAddMode &&
-    !originDisplay &&
+    !legacyOrigin &&
+    !country &&
+    !region &&
     !estate &&
+    !altitude &&
     !process &&
     !batch &&
     !variety &&
@@ -349,18 +358,34 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
 
       {renderEditableInfoRow({
         label: '产地',
-        value: originDisplay,
+        value: legacyOrigin,
         fieldRef: originRef,
-        onBlur: hasStructuredOrigin ? undefined : handleOriginInput,
-        editable: !hasStructuredOrigin,
+        onBlur: handleOriginInput,
       })}
-      {!hasStructuredOrigin &&
-        renderEditableInfoRow({
-          label: '庄园',
-          value: estate,
-          fieldRef: estateRef,
-          onBlur: handleEstateInput,
-        })}
+      {renderEditableInfoRow({
+        label: '产国',
+        value: country,
+        fieldRef: countryRef,
+        onBlur: handleCountryInput,
+      })}
+      {renderEditableInfoRow({
+        label: '产区',
+        value: region,
+        fieldRef: regionRef,
+        onBlur: handleRegionInput,
+      })}
+      {renderEditableInfoRow({
+        label: '庄园',
+        value: estate,
+        fieldRef: estateRef,
+        onBlur: handleEstateInput,
+      })}
+      {renderEditableInfoRow({
+        label: '海拔',
+        value: altitude,
+        fieldRef: altitudeRef,
+        onBlur: handleAltitudeInput,
+      })}
       {renderEditableInfoRow({
         label: '处理法',
         value: process,

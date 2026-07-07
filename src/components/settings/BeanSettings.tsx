@@ -1,26 +1,15 @@
 'use client';
 
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
 import { SettingsOptions } from './Settings';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
-import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import SettingPage from './atomic/SettingPage';
 import SettingSection from './atomic/SettingSection';
 import SettingRow from './atomic/SettingRow';
 import SettingSelector from './atomic/SettingSelector';
 import SettingSlider from './atomic/SettingSlider';
 import SettingToggle from './atomic/SettingToggle';
-import {
-  BEAN_FIELD_DEFINITIONS,
-  BEAN_FIELD_GROUP_LABELS,
-  getEnabledBeanFieldIds,
-  resolveBeanFieldConfig,
-  type BeanFieldConfig,
-  type BeanFieldId,
-  type BeanFieldGroupId,
-} from '@/lib/coffee-beans/beanFields';
 
 import BeanEstimatedCupSection from './BeanEstimatedCupSection';
 import BeanPreview from './BeanPreview';
@@ -57,34 +46,6 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       handleChange('beanRatingTenthStep', checked);
     },
     [handleChange]
-  );
-  const [showBeanFieldsDrawer, setShowBeanFieldsDrawer] =
-    React.useState(false);
-  const beanFieldConfig = React.useMemo(
-    () => resolveBeanFieldConfig(settings),
-    [settings]
-  );
-  const enabledBeanFieldIds = React.useMemo(
-    () => getEnabledBeanFieldIds(beanFieldConfig),
-    [beanFieldConfig]
-  );
-  const enabledBeanFieldCount = enabledBeanFieldIds.length;
-
-  const updateBeanFieldConfig = React.useCallback(
-    async (nextConfig: BeanFieldConfig) => {
-      await handleChange('beanFieldConfig', nextConfig);
-    },
-    [handleChange]
-  );
-
-  const toggleBeanField = React.useCallback(
-    (fieldId: BeanFieldId, checked: boolean) => {
-      const nextFields = beanFieldConfig.fields.map(field =>
-        field.id === fieldId ? { ...field, enabled: checked } : field
-      );
-      void updateBeanFieldConfig({ version: 1, fields: nextFields });
-    },
-    [beanFieldConfig.fields, updateBeanFieldConfig]
   );
 
   const [isVisible, setIsVisible] = React.useState(false);
@@ -254,7 +215,10 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             }
           />
         </SettingRow>
-        <SettingRow label="烘焙商">
+        <SettingRow
+          label="烘焙商"
+          isLast={settings.roasterFieldEnabled === false}
+        >
           <SettingToggle
             checked={settings.roasterFieldEnabled !== false}
             onChange={async checked => {
@@ -263,7 +227,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
           />
         </SettingRow>
         {settings.roasterFieldEnabled !== false && (
-          <SettingRow label="烘焙商分隔符" isSubSetting>
+          <SettingRow label="烘焙商分隔符" isSubSetting isLast>
             <SettingSelector
               value={settings.roasterSeparator || ' '}
               options={[
@@ -277,90 +241,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             />
           </SettingRow>
         )}
-        <SettingRow label="咖啡豆字段" isLast>
-          <button
-            type="button"
-            onClick={() => setShowBeanFieldsDrawer(true)}
-            className="flex cursor-pointer items-center gap-1 text-sm font-medium text-neutral-600 transition active:opacity-70 dark:text-neutral-300"
-          >
-            <span>{enabledBeanFieldCount} 个</span>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-          </button>
-        </SettingRow>
       </SettingSection>
-
-      <ActionDrawer
-        isOpen={showBeanFieldsDrawer}
-        onClose={() => setShowBeanFieldsDrawer(false)}
-        historyId="bean-field-settings"
-      >
-        <ActionDrawer.Content className="mb-8!">
-          <div className="mb-5 px-1">
-            <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-              咖啡豆字段
-            </h2>
-          </div>
-
-          {(['origin', 'processing', 'variety'] as BeanFieldGroupId[]).map(
-            group => {
-              const fields = BEAN_FIELD_DEFINITIONS.filter(
-                definition => definition.group === group
-              );
-
-              return (
-                <div key={group} className="mb-5">
-                  <div className="mb-2 px-1 text-xs font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-                    {BEAN_FIELD_GROUP_LABELS[group]}
-                  </div>
-                  <div className="overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-800/60">
-                    {fields.map((definition, index) => {
-                      const isEnabled = enabledBeanFieldIds.includes(
-                        definition.id
-                      );
-                      const label =
-                        definition.id === 'origin'
-                          ? '产地概括'
-                          : definition.label;
-
-                      return (
-                        <div
-                          key={definition.id}
-                          className="flex items-stretch px-3.5"
-                        >
-                          <div
-                            className={`flex min-w-0 flex-1 items-center justify-between py-3.5 ${
-                              index < fields.length - 1
-                                ? 'border-b border-black/5 dark:border-white/5'
-                                : ''
-                            }`}
-                          >
-                            <div className="mr-4 min-w-0">
-                              <div className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                {label}
-                              </div>
-                              {definition.id === 'origin' && (
-                                <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                  旧数据和概括产地使用
-                                </div>
-                              )}
-                            </div>
-                            <SettingToggle
-                              checked={isEnabled}
-                              onChange={checked =>
-                                toggleBeanField(definition.id, checked)
-                              }
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }
-          )}
-        </ActionDrawer.Content>
-      </ActionDrawer>
     </SettingPage>
   );
 };
