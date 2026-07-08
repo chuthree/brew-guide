@@ -1,13 +1,11 @@
 'use client';
 
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
 
 import { SettingsOptions } from './Settings';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { showToast } from '@/components/common/feedback/LightToast';
-import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import {
   DEFAULT_BEAN_RECOGNITION_MODEL,
@@ -15,14 +13,6 @@ import {
   resolveBeanRecognitionModel,
   testCustomBeanRecognitionConfig,
 } from '@/lib/api/beanRecognition';
-import {
-  BEAN_FIELD_DEFINITIONS,
-  BEAN_FIELD_GROUP_LABELS,
-  resolveBeanFieldConfig,
-  type BeanFieldConfig,
-  type BeanFieldId,
-  type BeanFieldGroupId,
-} from '@/lib/coffee-beans/beanFields';
 import {
   SettingPage,
   SettingSection,
@@ -67,23 +57,8 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
 
   // 控制动画状态
   const [isVisible, setIsVisible] = React.useState(false);
-  const [showBeanFieldsDrawer, setShowBeanFieldsDrawer] =
-    React.useState(false);
   const [showApiKey, setShowApiKey] = React.useState(false);
   const [isTestingConfig, setIsTestingConfig] = React.useState(false);
-  const beanFieldConfig = React.useMemo(
-    () => resolveBeanFieldConfig(settings),
-    [settings]
-  );
-  const enabledBeanFieldIdSet = React.useMemo(
-    () =>
-      new Set(
-        beanFieldConfig.fields
-          .filter(field => field.enabled)
-          .map(field => field.id)
-      ),
-    [beanFieldConfig]
-  );
 
   const [apiBaseUrl, setApiBaseUrl] = React.useState(
     settings.experimentalBeanRecognitionApiBaseUrl || ''
@@ -184,23 +159,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
     );
   };
 
-  const updateBeanFieldConfig = React.useCallback(
-    async (nextConfig: BeanFieldConfig) => {
-      await handleChange('beanFieldConfig', nextConfig);
-    },
-    [handleChange]
-  );
-
-  const toggleBeanField = React.useCallback(
-    (fieldId: BeanFieldId, checked: boolean) => {
-      const nextFields = beanFieldConfig.fields.map(field =>
-        field.id === fieldId ? { ...field, enabled: checked } : field
-      );
-      void updateBeanFieldConfig({ version: 1, fields: nextFields });
-    },
-    [beanFieldConfig.fields, updateBeanFieldConfig]
-  );
-
   const testConfig = async () => {
     try {
       setIsTestingConfig(true);
@@ -258,18 +216,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
               checked={settings.immersiveAdd || false}
               onChange={checked => handleChange('immersiveAdd', checked)}
             />
-          </SettingRow>
-        </SettingSection>
-      )}
-
-      {showCoffeeBeanExperiments && (
-        <SettingSection>
-          <SettingRow
-            label="咖啡豆字段"
-            isLast
-            onClick={() => setShowBeanFieldsDrawer(true)}
-          >
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
           </SettingRow>
         </SettingSection>
       )}
@@ -444,71 +390,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
         </SettingSection>
       )}
 
-      <ActionDrawer
-        isOpen={showBeanFieldsDrawer}
-        onClose={() => setShowBeanFieldsDrawer(false)}
-        historyId="bean-field-settings"
-      >
-        <ActionDrawer.Content className="mb-8!">
-          <div className="mb-5 px-1">
-            <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-              咖啡豆字段
-            </h2>
-          </div>
-
-          {(['origin', 'processing', 'variety'] as BeanFieldGroupId[]).map(
-            group => {
-              const fields = BEAN_FIELD_DEFINITIONS.filter(
-                definition => definition.group === group
-              );
-
-              return (
-                <div key={group} className="mb-5">
-                  <div className="mb-2 px-1 text-xs font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-                    {BEAN_FIELD_GROUP_LABELS[group]}
-                  </div>
-                  <div className="overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-800/60">
-                    {fields.map((definition, index) => {
-                      const isEnabled = enabledBeanFieldIdSet.has(
-                        definition.id
-                      );
-                      const label =
-                        definition.id === 'origin' ? '产地' : definition.label;
-
-                      return (
-                        <div
-                          key={definition.id}
-                          className="flex items-stretch px-3.5"
-                        >
-                          <div
-                            className={`flex min-w-0 flex-1 items-center justify-between py-3.5 ${
-                              index < fields.length - 1
-                                ? 'border-b border-black/5 dark:border-white/5'
-                                : ''
-                            }`}
-                          >
-                            <div className="mr-4 min-w-0">
-                              <div className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                                {label}
-                              </div>
-                            </div>
-                            <SettingToggle
-                              checked={isEnabled}
-                              onChange={checked =>
-                                toggleBeanField(definition.id, checked)
-                              }
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }
-          )}
-        </ActionDrawer.Content>
-      </ActionDrawer>
     </SettingPage>
   );
 };

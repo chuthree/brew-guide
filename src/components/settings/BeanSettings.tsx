@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ChevronRight } from 'lucide-react';
 import { SettingsOptions } from './Settings';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
@@ -13,6 +14,7 @@ import SettingToggle from './atomic/SettingToggle';
 
 import BeanEstimatedCupSection from './BeanEstimatedCupSection';
 import BeanPreview from './BeanPreview';
+import BeanFieldSettingsDrawer from './BeanFieldSettingsDrawer';
 
 interface BeanSettingsProps {
   settings: SettingsOptions;
@@ -49,6 +51,8 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
   );
 
   const [isVisible, setIsVisible] = React.useState(false);
+  const [showBeanFieldsDrawer, setShowBeanFieldsDrawer] =
+    React.useState(false);
   const onCloseRef = React.useRef(onClose);
 
   React.useEffect(() => {
@@ -242,6 +246,21 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
           </SettingRow>
         )}
       </SettingSection>
+
+      <SettingSection>
+        <SettingRow
+          label="咖啡豆字段"
+          isLast
+          onClick={() => setShowBeanFieldsDrawer(true)}
+        >
+          <ChevronRight className="h-4 w-4 text-neutral-400" />
+        </SettingRow>
+      </SettingSection>
+
+      <BeanFieldSettingsDrawer
+        isOpen={showBeanFieldsDrawer}
+        onClose={() => setShowBeanFieldsDrawer(false)}
+      />
     </SettingPage>
   );
 };
