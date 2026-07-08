@@ -136,13 +136,13 @@ const BlendComponentFieldRows: React.FC<BlendComponentFieldRowsProps> = ({
   const visibleFields = fieldConfigs.filter(config =>
     visibleFieldIds.has(config.field as BeanFieldId)
   );
+  const gridColumns =
+    visibleFields.length <= 2 || visibleFields.length === 4
+      ? 'grid-cols-2'
+      : 'grid-cols-3';
 
   return (
-    <div
-      className={`grid gap-3 ${
-        visibleFields.length <= 2 ? 'grid-cols-2' : 'grid-cols-3'
-      }`}
-    >
+    <div className={`grid gap-3 ${gridColumns}`}>
       {visibleFields.map(config => (
         <BlendComponentFieldInput
           key={config.field}
