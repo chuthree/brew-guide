@@ -43,6 +43,7 @@ import {
 import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { loadCustomMethods } from '@/lib/stores/customMethodStore';
+import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 import {
   getEquipmentNameById,
   getEquipmentIdByName,
@@ -318,6 +319,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [availableMethods, setAvailableMethods] = useState<Method[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState(
     initialData.equipment || ''
+  );
+  const setPersistedEquipment = useEquipmentStore(
+    state => state.setSelectedEquipment
   );
   const [selectedMethod, setSelectedMethod] = useState(
     initialData.method || ''
@@ -866,6 +870,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       try {
         // 更新器具
         setSelectedEquipment(selection.equipmentId);
+        if (!id) {
+          setPersistedEquipment(selection.equipmentId);
+        }
 
         // 更新方案
         if (selection.methodId) {
@@ -890,7 +897,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
       }
     },
-    [applyMethodParams, selectedMethod, updateMethodParams]
+    [
+      applyMethodParams,
+      id,
+      selectedMethod,
+      setPersistedEquipment,
+      updateMethodParams,
+    ]
   );
 
   // 获取当前器具和方案名称 - 使用useMemo优化
