@@ -119,7 +119,10 @@ import {
   searchBeanRecords,
   summarizeBeanTypeStats,
 } from './beanListPipeline';
-import { useCoffeeBeanImageIds } from '@/lib/hooks/useCoffeeBeanImage';
+import {
+  useCoffeeBeanImageIds,
+  useCoffeeBeanImageIdsState,
+} from '@/lib/hooks/useCoffeeBeanImage';
 
 const CoffeeBeanRanking = _CoffeeBeanRanking;
 const convertToRankingSortOption = _convertToRankingSortOption;
@@ -557,7 +560,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   // 计算是否有图片咖啡豆（用于禁用/启用图片流按钮）
   const beanIds = useMemo(() => beans.map(bean => bean.id), [beans]);
-  const beanImageIds = useCoffeeBeanImageIds(beanIds);
+  const { imageIds: beanImageIds, isLoaded: areBeanImageIdsLoaded } =
+    useCoffeeBeanImageIdsState(beanIds);
   const beanFrontImageIds = useCoffeeBeanImageIds(beanIds, { side: 'front' });
   const hasImageBeans = useMemo(() => {
     return beans.some(bean => beanImageIds.has(bean.id));
@@ -576,6 +580,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   useEffect(() => {
     if (
       storeInitialized &&
+      areBeanImageIdsLoaded &&
       isImageFlowMode &&
       !hasImageBeans &&
       beans.length > 0
@@ -584,6 +589,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     }
   }, [
     storeInitialized,
+    areBeanImageIdsLoaded,
     isImageFlowMode,
     hasImageBeans,
     beans.length,

@@ -17,6 +17,7 @@ type RefreshSubscriber = () => void;
 const refreshSubscribers = new Map<string, Set<RefreshSubscriber>>();
 const imageSourceCache = new Map<string, string | undefined>();
 const EMPTY_IMAGE_SOURCES = new Map<string, string>();
+const EMPTY_IMAGE_IDS = new Set<string>();
 let isCoffeeBeanDataChangedListenerAttached = false;
 
 const getImageSourceCacheKey = (
@@ -207,9 +208,27 @@ export function useCoffeeBeanImageIds(
     side?: CoffeeBeanImageSide | 'any';
   } = {}
 ): Set<string> {
+  return useCoffeeBeanImageIdsState(beanIds, options).imageIds;
+}
+
+export function useCoffeeBeanImageIdsState(
+  beanIds: string[],
+  options: {
+    side?: CoffeeBeanImageSide | 'any';
+  } = {}
+): { imageIds: Set<string>; isLoaded: boolean } {
   const { side = 'any' } = options;
-  const [imageIds, setImageIds] = useState<Set<string>>(new Set());
+  const [state, setState] = useState<{
+    imageIds: Set<string>;
+    isLoaded: boolean;
+    requestKey: string;
+  }>({
+    imageIds: new Set(),
+    isLoaded: false,
+    requestKey: '',
+  });
   const idsKey = beanIds.join('\u0001');
+  const requestKey = `${side}\u0001${idsKey}`;
   const imageBeanIds = useMemo(
     () => (idsKey ? idsKey.split('\u0001') : []),
     [idsKey]
@@ -217,25 +236,41 @@ export function useCoffeeBeanImageIds(
 
   useEffect(() => {
     let cancelled = false;
+    const uniqueBeanIds = Array.from(new Set(imageBeanIds.filter(Boolean)));
 
-    getCoffeeBeanImageBeanIds(imageBeanIds, { side })
+    if (uniqueBeanIds.length === 0) {
+      Promise.resolve().then(() => {
+        if (!cancelled) {
+          setState({ imageIds: new Set(), isLoaded: true, requestKey });
+        }
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    getCoffeeBeanImageBeanIds(uniqueBeanIds, { side })
       .then(ids => {
         if (!cancelled) {
-          setImageIds(new Set(ids));
+          setState({ imageIds: new Set(ids), isLoaded: true, requestKey });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setImageIds(new Set());
+          setState({ imageIds: new Set(), isLoaded: true, requestKey });
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [imageBeanIds, side]);
+  }, [imageBeanIds, requestKey, side]);
 
-  return imageIds;
+  return {
+    imageIds: state.requestKey === requestKey ? state.imageIds : EMPTY_IMAGE_IDS,
+    isLoaded: state.requestKey === requestKey && state.isLoaded,
+  };
 }
 
 export function useCoffeeBeanImageSources(
