@@ -22,6 +22,7 @@ import {
   replaceBrewingNotesWithSplitImages,
 } from '@/lib/notes/imageRepository';
 import { recordCrashOperationStep } from '@/lib/app/crashDiagnostics';
+import { markExpectedCoreDataMutation } from '@/lib/app/dataIntegrity';
 
 // 检查是否在浏览器环境中
 const isBrowser = typeof window !== 'undefined';
@@ -357,6 +358,13 @@ export const DataManager = {
         };
       }
 
+      if (
+        Array.isArray(importData.data.coffeeBeans) ||
+        Array.isArray(importData.data.brewingNotes)
+      ) {
+        await markExpectedCoreDataMutation('data-import');
+      }
+
       // 导入数据
       const storage = await getStorage();
 
@@ -670,6 +678,7 @@ export const DataManager = {
   async resetAllData(): Promise<{ success: boolean; message: string }> {
     try {
       const storage = await getStorage();
+      await markExpectedCoreDataMutation('reset-all-data');
 
       // 清除所有 IndexedDB 数据
       await db.brewingNotes.clear();

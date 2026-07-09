@@ -4,6 +4,8 @@ import { Preferences } from '@capacitor/preferences';
 const CURRENT_SESSION_KEY = 'brew-guide:crash-diagnostics:current-session';
 const LAST_REPORT_KEY = 'brew-guide:crash-diagnostics:last-report';
 const ACTIVE_OPERATION_KEY = 'brew-guide:crash-diagnostics:active-operation';
+export const CRASH_DIAGNOSTIC_REPORT_UPDATED_EVENT =
+  'brewGuide:crash-diagnostics-report-updated';
 const MAX_CHECKPOINTS = 24;
 const NON_FATAL_BROWSER_ERROR_PHASES = new Set([
   'window-error',
@@ -65,7 +67,7 @@ export interface CrashDiagnosticSession {
 }
 
 export interface CrashDiagnosticReport {
-  source: 'native' | 'inferred';
+  source: 'native' | 'inferred' | 'data-integrity';
   inferredReason: string;
   session: CrashDiagnosticSession;
   detectedAt: string;
@@ -217,6 +219,12 @@ const removeBrowserStorageValueSync = (key: string): void => {
   } catch {
     // 诊断清理失败不应影响用户流程。
   }
+};
+
+const notifyCrashDiagnosticReportUpdated = (): void => {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new Event(CRASH_DIAGNOSTIC_REPORT_UPDATED_EVENT));
 };
 
 const queuePersist = (session: CrashDiagnosticSession | null) => {
@@ -410,6 +418,7 @@ export async function installCrashDiagnostics(): Promise<void> {
           buildSessionWithOperation(previousSession, interruptedOperation)
         )
       );
+      notifyCrashDiagnosticReportUpdated();
     } else if (
       !existingReport &&
       previousSession &&
@@ -419,6 +428,7 @@ export async function installCrashDiagnostics(): Promise<void> {
         LAST_REPORT_KEY,
         buildInferredReport(previousSession)
       );
+      notifyCrashDiagnosticReportUpdated();
     }
 
     if (interruptedOperation) {
@@ -656,10 +666,39 @@ export async function getCrashDiagnosticReport(): Promise<CrashDiagnosticReport 
 
 export async function dismissCrashDiagnosticReport(): Promise<void> {
   await removeStorageValue(LAST_REPORT_KEY);
+  notifyCrashDiagnosticReportUpdated();
 }
 
 export async function getCurrentCrashDiagnosticSession(): Promise<CrashDiagnosticSession | null> {
   return readStorageValue<CrashDiagnosticSession>(CURRENT_SESSION_KEY);
+}
+
+export async function recordDataIntegrityReport(
+  inferredReason: string,
+  meta: Record<string, unknown>
+): Promise<void> {
+  const at = nowIso();
+  const checkpoint: CrashCheckpoint = {
+    name: 'data-integrity:unexpected-empty-core',
+    at,
+    meta: sanitizeMeta(meta),
+  };
+  const session: CrashDiagnosticSession = {
+    sessionId: createSessionId(),
+    startedAt: at,
+    updatedAt: at,
+    startupState: 'failed',
+    checkpoints: [checkpoint],
+    lastCheckpoint: checkpoint,
+  };
+
+  await writeStorageValue(LAST_REPORT_KEY, {
+    source: 'data-integrity',
+    inferredReason,
+    session,
+    detectedAt: at,
+  } satisfies CrashDiagnosticReport);
+  notifyCrashDiagnosticReportUpdated();
 }
 
 export const formatCrashDiagnosticReport = (

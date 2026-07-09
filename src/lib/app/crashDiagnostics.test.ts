@@ -65,4 +65,19 @@ describe('shouldShowCrashDiagnosticReport', () => {
 
     expect(shouldShowCrashDiagnosticReport(report)).toBe(true);
   });
+
+  it('shows data integrity reports', () => {
+    expect(
+      shouldShowCrashDiagnosticReport({
+        ...createReport({
+          startupState: 'failed',
+          lastCheckpoint: {
+            name: 'data-integrity:unexpected-empty-core',
+            at: '2026-05-24T11:28:15.116Z',
+          },
+        }),
+        source: 'data-integrity',
+      })
+    ).toBe(true);
+  });
 });

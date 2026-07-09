@@ -14,6 +14,7 @@ import { useCustomMethodStore } from '@/lib/stores/customMethodStore';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 import { useGrinderStore } from '@/lib/stores/grinderStore';
 import { recordCrashCheckpoint } from '@/lib/app/crashDiagnostics';
+import { inspectCoreDataIntegrity } from '@/lib/app/dataIntegrity';
 import { migrateRoasterField } from '@/lib/utils/roasterMigration';
 import { normalizeStoredBrewingNotes } from '@/lib/notes/cleanup';
 import {
@@ -90,6 +91,12 @@ export async function initializeDataLayer(): Promise<void> {
     console.log('📦 Step 4: 检查烘焙商字段迁移...');
     recordCrashCheckpoint('data-layer:roaster-migrate');
     await migrateRoasterField();
+
+    try {
+      await inspectCoreDataIntegrity('data-layer:init');
+    } catch (integrityError) {
+      console.error('数据完整性检查失败:', integrityError);
+    }
 
     initState.isInitialized = true;
     initState.error = null;
