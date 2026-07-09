@@ -7,7 +7,6 @@ import {
   getCoffeeBeanImageBeanIds,
   getCoffeeBeanImageSource,
 } from '@/lib/coffee-beans/imageRepository';
-
 type CoffeeBeanDataChangedDetail = {
   beanId?: string;
   bean?: { id?: string };
@@ -17,17 +16,25 @@ type RefreshSubscriber = () => void;
 
 const refreshSubscribers = new Map<string, Set<RefreshSubscriber>>();
 const imageSourceCache = new Map<string, string | undefined>();
+const EMPTY_IMAGE_SOURCES = new Map<string, string>();
 let isCoffeeBeanDataChangedListenerAttached = false;
 
 const getImageSourceCacheKey = (
   beanId: string,
   side: CoffeeBeanImageSide,
+  mode: CoffeeBeanImageSourceMode
+): string => [beanId, side, mode].join('\u0001');
+
+const resolveCoffeeBeanImageSourceMode = (
   mode: CoffeeBeanImageSourceMode | undefined,
   preferThumbnail: boolean
-): string =>
-  [beanId, side, mode ?? (preferThumbnail ? 'thumbnail' : 'original')].join(
-    '\u0001'
-  );
+): CoffeeBeanImageSourceMode =>
+  mode ?? (preferThumbnail ? 'thumbnail' : 'original');
+
+export const shouldCacheCoffeeBeanImageSource = (
+  mode: CoffeeBeanImageSourceMode,
+  cache?: boolean
+): boolean => cache ?? mode === 'thumbnail';
 
 const invalidateImageSourceCache = (beanId: string | undefined): void => {
   if (!beanId) {
@@ -103,14 +110,27 @@ export function useCoffeeBeanImage(
     mode?: CoffeeBeanImageSourceMode;
     preferThumbnail?: boolean;
     fallback?: string;
+    cache?: boolean;
   } = {}
 ): string | undefined {
-  const { side = 'front', mode, preferThumbnail = true, fallback } = options;
+  const {
+    side = 'front',
+    mode,
+    preferThumbnail = true,
+    fallback,
+    cache,
+  } = options;
+  const resolvedMode = resolveCoffeeBeanImageSourceMode(mode, preferThumbnail);
+  const shouldCache = shouldCacheCoffeeBeanImageSource(resolvedMode, cache);
   const sourceIdentity = beanId
-    ? getImageSourceCacheKey(beanId, side, mode, preferThumbnail)
+    ? getImageSourceCacheKey(beanId, side, resolvedMode)
     : undefined;
   const [imageSource, setImageSource] = useState<string | undefined>(() => {
-    if (!sourceIdentity || !imageSourceCache.has(sourceIdentity)) {
+    if (
+      !shouldCache ||
+      !sourceIdentity ||
+      !imageSourceCache.has(sourceIdentity)
+    ) {
       return fallback;
     }
 
@@ -125,11 +145,14 @@ export function useCoffeeBeanImage(
     sourceIdentityRef.current = sourceIdentity;
 
     if (!beanId || !sourceIdentity) {
-      setImageSource(fallback);
       return;
     }
 
-    if (sourceIdentityChanged && imageSourceCache.has(sourceIdentity)) {
+    if (
+      shouldCache &&
+      sourceIdentityChanged &&
+      imageSourceCache.has(sourceIdentity)
+    ) {
       setImageSource(imageSourceCache.get(sourceIdentity) || fallback);
     } else if (sourceIdentityChanged && fallback !== undefined) {
       setImageSource(fallback);
@@ -138,7 +161,9 @@ export function useCoffeeBeanImage(
     getCoffeeBeanImageSource(beanId, { side, mode, preferThumbnail })
       .then(source => {
         if (!cancelled) {
-          imageSourceCache.set(sourceIdentity, source);
+          if (shouldCache) {
+            imageSourceCache.set(sourceIdentity, source);
+          }
           ensureCoffeeBeanDataChangedListener();
           setImageSource(source || fallback);
         }
@@ -158,6 +183,7 @@ export function useCoffeeBeanImage(
     mode,
     preferThumbnail,
     fallback,
+    shouldCache,
     refreshKey,
     sourceIdentity,
   ]);
@@ -172,7 +198,7 @@ export function useCoffeeBeanImage(
     );
   }, [beanId]);
 
-  return imageSource;
+  return beanId ? imageSource : fallback;
 }
 
 export function useCoffeeBeanImageIds(
@@ -225,13 +251,16 @@ export function useCoffeeBeanImageSources(
     new Map()
   );
   const idsKey = beanIds.join('\u0001');
+  const imageBeanIds = useMemo(
+    () => (idsKey ? idsKey.split('\u0001') : []),
+    [idsKey]
+  );
 
   useEffect(() => {
     let cancelled = false;
-    const uniqueBeanIds = Array.from(new Set(beanIds.filter(Boolean)));
+    const uniqueBeanIds = Array.from(new Set(imageBeanIds.filter(Boolean)));
 
     if (uniqueBeanIds.length === 0) {
-      setImageSources(new Map());
       return;
     }
 
@@ -265,7 +294,7 @@ export function useCoffeeBeanImageSources(
     return () => {
       cancelled = true;
     };
-  }, [idsKey, side, mode, preferThumbnail]);
+  }, [imageBeanIds, side, mode, preferThumbnail]);
 
-  return imageSources;
+  return imageBeanIds.length > 0 ? imageSources : EMPTY_IMAGE_SOURCES;
 }

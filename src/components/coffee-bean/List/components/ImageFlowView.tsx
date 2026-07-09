@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useSyncExternalStore } from 'react';
 import Image from 'next/image';
 import { ExtendedCoffeeBean } from '../types';
 import { isBeanEmpty } from '../preferences';
 import {
-  useCoffeeBeanImage,
-  useCoffeeBeanImageIds,
-} from '@/lib/hooks/useCoffeeBeanImage';
+  type CoffeeBeanImageFlowSource,
+  useCoffeeBeanImageFlowSources,
+} from '@/lib/hooks/useCoffeeBeanImageFlowSources';
 
 interface ImageFlowViewProps {
   filteredBeans: ExtendedCoffeeBean[];
@@ -19,45 +19,42 @@ interface ImageFlowViewProps {
   onRate?: (bean: ExtendedCoffeeBean) => void;
 }
 
+const DEFAULT_COLUMNS_PER_ROW = 3;
+
+const getColumnsPerRowForWidth = (width: number): number => {
+  if (width >= 1280) return 6;
+  if (width >= 1024) return 5;
+  if (width >= 768) return 4;
+  return DEFAULT_COLUMNS_PER_ROW;
+};
+
+const getColumnsPerRowSnapshot = (): number => {
+  if (typeof window === 'undefined') {
+    return DEFAULT_COLUMNS_PER_ROW;
+  }
+
+  return getColumnsPerRowForWidth(window.innerWidth);
+};
+
+const subscribeToColumnsPerRow = (onStoreChange: () => void): (() => void) => {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
+  window.addEventListener('resize', onStoreChange);
+  return () => window.removeEventListener('resize', onStoreChange);
+};
+
 const ImageFlowView: React.FC<ImageFlowViewProps> = ({
   filteredBeans,
   emptyBeans,
   showEmptyBeans,
 }) => {
-  // 根据屏幕宽度确定每排的列数
-  const [columnsPerRow, setColumnsPerRow] = useState(3);
-
-  useEffect(() => {
-    const updateColumns = () => {
-      const width = window.innerWidth;
-      if (width >= 1280) {
-        // xl
-        setColumnsPerRow(6);
-      } else if (width >= 1024) {
-        // lg
-        setColumnsPerRow(5);
-      } else if (width >= 768) {
-        // md
-        setColumnsPerRow(4);
-      } else {
-        // 默认（包括 sm）
-        setColumnsPerRow(3);
-      }
-    };
-
-    updateColumns();
-    window.addEventListener('resize', updateColumns);
-    return () => window.removeEventListener('resize', updateColumns);
-  }, []);
-
-  // 处理详情点击 - 通过事件打开
-  const handleDetailClick = (bean: ExtendedCoffeeBean) => {
-    window.dispatchEvent(
-      new CustomEvent('beanDetailOpened', {
-        detail: { bean },
-      })
-    );
-  };
+  const columnsPerRow = useSyncExternalStore(
+    subscribeToColumnsPerRow,
+    getColumnsPerRowSnapshot,
+    () => DEFAULT_COLUMNS_PER_ROW
+  );
 
   const allCandidateBeans = useMemo(
     () => (showEmptyBeans ? [...filteredBeans, ...emptyBeans] : filteredBeans),
@@ -67,23 +64,24 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
     () => allCandidateBeans.map(bean => bean.id),
     [allCandidateBeans]
   );
-  const imageBeanIds = useCoffeeBeanImageIds(candidateBeanIds);
+  const { sources: imageSources, isLoading } =
+    useCoffeeBeanImageFlowSources(candidateBeanIds);
 
   // 合并正常豆子和用完的豆子（如果显示），然后过滤出有图片的
   const beansWithImages = useMemo(() => {
-    const normalBeans = filteredBeans.filter(bean => imageBeanIds.has(bean.id));
+    const normalBeans = filteredBeans.filter(bean => imageSources.has(bean.id));
 
     if (!showEmptyBeans) {
       return normalBeans;
     }
 
     const emptyBeansWithImages = emptyBeans.filter(bean =>
-      imageBeanIds.has(bean.id)
+      imageSources.has(bean.id)
     );
 
     // 正常豆子在前，用完的豆子在后
     return [...normalBeans, ...emptyBeansWithImages];
-  }, [filteredBeans, emptyBeans, showEmptyBeans, imageBeanIds]);
+  }, [filteredBeans, emptyBeans, showEmptyBeans, imageSources]);
 
   // 将咖啡豆分组，每排根据屏幕大小显示不同数量
   const rows = useMemo(() => {
@@ -97,7 +95,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
   if (beansWithImages.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-        [ 没有找到带图片的咖啡豆 ]
+        {isLoading ? '[ 正在加载咖啡豆图片 ]' : '[ 没有找到带图片的咖啡豆 ]'}
       </div>
     );
   }
@@ -107,7 +105,7 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
       <div className="min-h-full px-3 pb-20">
         <div className="flex flex-col gap-8 pt-8">
           {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="relative">
+            <div key={row[0]?.id || rowIndex} className="relative">
               {/* 架子容器 - 包含图片和架子 */}
               <div className="relative px-3">
                 {/* 咖啡豆图片 - 使用 grid 布局，底部对齐 */}
@@ -123,9 +121,9 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
                       <div key={bean.id} className="relative pb-0.5">
                         <ImageFlowBeanImage
                           bean={bean}
+                          source={imageSources.get(bean.id)}
                           columnsPerRow={columnsPerRow}
                           isEmpty={isEmpty}
-                          onDetailClick={handleDetailClick}
                         />
                       </div>
                     );
@@ -152,48 +150,51 @@ const ImageFlowView: React.FC<ImageFlowViewProps> = ({
   );
 };
 
-const ImageFlowBeanImage: React.FC<{
+const ImageFlowBeanImage = React.memo(function ImageFlowBeanImage({
+  bean,
+  source,
+  columnsPerRow,
+  isEmpty,
+}: {
   bean: ExtendedCoffeeBean;
+  source: CoffeeBeanImageFlowSource | undefined;
   columnsPerRow: number;
   isEmpty: boolean;
-  onDetailClick: (bean: ExtendedCoffeeBean) => void;
-}> = ({ bean, columnsPerRow, isEmpty, onDetailClick }) => {
-  const imageSource = useCoffeeBeanImage(bean.id, {
-    preferThumbnail: true,
-  });
+}) {
+  const openBeanDetail = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent('beanDetailOpened', {
+        detail: { bean },
+      })
+    );
+  }, [bean]);
 
-  if (!imageSource) {
+  if (!source) {
     return null;
   }
 
   return (
-    <Image
-      src={imageSource}
-      alt={bean.name || '咖啡豆图片'}
-      width={0}
-      height={0}
-      className={`w-full cursor-pointer rounded-t-xs border border-b-0 border-neutral-200/50 transition-opacity dark:border-neutral-800/50 ${
+    <button
+      type="button"
+      className={`relative block w-full cursor-pointer overflow-hidden rounded-t-xs border border-b-0 border-neutral-200/50 transition-opacity dark:border-neutral-800/50 ${
         isEmpty ? 'opacity-40' : ''
       }`}
-      style={{
-        height: 'auto',
-      }}
-      sizes={`${Math.floor(100 / columnsPerRow)}vw`}
-      priority={false}
-      loading="lazy"
-      unoptimized
-      onClick={() => onDetailClick(bean)}
-      onKeyDown={(e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onDetailClick(bean);
-        }
-      }}
-      tabIndex={0}
-      role="button"
+      onClick={openBeanDetail}
       aria-label={`查看 ${bean.name || '咖啡豆'} 详情`}
-    />
+    >
+      <Image
+        src={source.src}
+        alt={bean.name || '咖啡豆图片'}
+        width={source.dimensions.width}
+        height={source.dimensions.height}
+        className="block h-auto w-full"
+        sizes={`${Math.floor(100 / columnsPerRow)}vw`}
+        priority={false}
+        loading="lazy"
+        unoptimized
+      />
+    </button>
   );
-};
+});
 
 export default ImageFlowView;

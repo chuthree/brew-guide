@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { getCoffeeBeanDataChangedBeanId } from './useCoffeeBeanImage';
+import {
+  getCoffeeBeanDataChangedBeanId,
+  shouldCacheCoffeeBeanImageSource,
+} from './useCoffeeBeanImage';
 
 describe('getCoffeeBeanDataChangedBeanId', () => {
   it('uses the explicit bean id first', () => {
@@ -15,5 +18,20 @@ describe('getCoffeeBeanDataChangedBeanId', () => {
     expect(getCoffeeBeanDataChangedBeanId({ bean: { id: 'bean-id' } })).toBe(
       'bean-id'
     );
+  });
+});
+
+describe('shouldCacheCoffeeBeanImageSource', () => {
+  it('caches thumbnail sources by default', () => {
+    expect(shouldCacheCoffeeBeanImageSource('thumbnail')).toBe(true);
+  });
+
+  it('does not cache stored original sources by default', () => {
+    expect(shouldCacheCoffeeBeanImageSource('original')).toBe(false);
+  });
+
+  it('allows callers to override the default cache policy', () => {
+    expect(shouldCacheCoffeeBeanImageSource('original', true)).toBe(true);
+    expect(shouldCacheCoffeeBeanImageSource('thumbnail', false)).toBe(false);
   });
 });

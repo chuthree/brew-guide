@@ -1,22 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   getBrewingNoteImageCounts,
   getBrewingNoteImageNoteIds,
   getBrewingNoteImages,
 } from '@/lib/notes/imageRepository';
+import { useImageLoadGate } from './useImageLoadGate';
 
 const EMPTY_IMAGES: string[] = [];
+
+interface BrewingNoteImagesState {
+  noteId: string | undefined;
+  images: string[];
+}
 
 export function useBrewingNoteImageIds(noteIds: string[]): Set<string> {
   const [imageIds, setImageIds] = useState<Set<string>>(new Set());
   const idsKey = noteIds.join('\u0001');
+  const imageNoteIds = useMemo(
+    () => (idsKey ? idsKey.split('\u0001') : []),
+    [idsKey]
+  );
 
   useEffect(() => {
     let cancelled = false;
 
-    getBrewingNoteImageNoteIds(noteIds)
+    getBrewingNoteImageNoteIds(imageNoteIds)
       .then(ids => {
         if (!cancelled) setImageIds(new Set(ids));
       })
@@ -27,7 +37,7 @@ export function useBrewingNoteImageIds(noteIds: string[]): Set<string> {
     return () => {
       cancelled = true;
     };
-  }, [idsKey]);
+  }, [imageNoteIds]);
 
   return imageIds;
 }
@@ -40,11 +50,15 @@ export function useBrewingNoteImageCounts(
     new Map()
   );
   const idsKey = noteIds.join('\u0001');
+  const imageNoteIds = useMemo(
+    () => (idsKey ? idsKey.split('\u0001') : []),
+    [idsKey]
+  );
 
   useEffect(() => {
     let cancelled = false;
 
-    getBrewingNoteImageCounts(noteIds)
+    getBrewingNoteImageCounts(imageNoteIds)
       .then(counts => {
         if (!cancelled) setImageCounts(counts);
       })
@@ -55,7 +69,7 @@ export function useBrewingNoteImageCounts(
     return () => {
       cancelled = true;
     };
-  }, [idsKey, versionKey]);
+  }, [imageNoteIds, versionKey]);
 
   return imageCounts;
 }
@@ -64,65 +78,50 @@ export function useBrewingNoteImages(
   noteId: string | undefined,
   fallback: string[] = EMPTY_IMAGES
 ): string[] {
-  const [images, setImages] = useState<string[]>(fallback);
-  const fallbackKey = fallback.join('\u0001');
+  const [imageState, setImageState] = useState<BrewingNoteImagesState>({
+    noteId,
+    images: fallback,
+  });
 
   useEffect(() => {
     let cancelled = false;
 
     if (!noteId) {
-      setImages(fallback);
       return;
     }
 
     getBrewingNoteImages(noteId)
       .then(storedImages => {
         if (!cancelled)
-          setImages(storedImages.length > 0 ? storedImages : fallback);
+          setImageState({
+            noteId,
+            images: storedImages.length > 0 ? storedImages : fallback,
+          });
       })
       .catch(() => {
-        if (!cancelled) setImages(fallback);
+        if (!cancelled) setImageState({ noteId, images: fallback });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [noteId, fallbackKey]);
+  }, [noteId, fallback]);
 
-  return images;
+  if (!noteId) {
+    return fallback;
+  }
+
+  return imageState.noteId === noteId ? imageState.images : fallback;
 }
 
 export function useBrewingNoteImagesWhenVisible(
   noteId: string,
   fallback: string[] = EMPTY_IMAGES
 ): { ref: (node: HTMLElement | null) => void; images: string[] } {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
-  const [shouldLoad, setShouldLoad] = useState(false);
-
-  useEffect(() => {
-    if (shouldLoad || !target) return;
-
-    if (typeof IntersectionObserver === 'undefined') {
-      setShouldLoad(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries.some(entry => entry.isIntersecting)) {
-          setShouldLoad(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '600px' }
-    );
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [shouldLoad, target]);
+  const { ref, shouldLoad } = useImageLoadGate();
 
   return {
-    ref: setTarget,
+    ref,
     images: useBrewingNoteImages(
       shouldLoad ? noteId : undefined,
       shouldLoad ? fallback : EMPTY_IMAGES
