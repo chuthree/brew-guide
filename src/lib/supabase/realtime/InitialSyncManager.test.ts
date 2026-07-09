@@ -224,6 +224,46 @@ describe('InitialSyncManager settings sync', () => {
     );
   });
 
+  it('keeps dirty settings retryable when their background upload fails', async () => {
+    vi.mocked(uploadSettingsData).mockResolvedValue({
+      success: false,
+      error: '上传设置超时',
+      affectedCount: 0,
+    });
+
+    useSyncStatusStore.getState().startSupabaseSyncProgress(
+      'background-sync',
+      '正在同步 Supabase 数据',
+      [
+        { id: SYNC_TABLES.COFFEE_BEANS, label: '咖啡豆' },
+        { id: SYNC_TABLES.BREWING_NOTES, label: '笔记' },
+        { id: SYNC_TABLES.CUSTOM_EQUIPMENTS, label: '自定义器具' },
+        { id: SYNC_TABLES.CUSTOM_METHODS, label: '自定义方案' },
+        { id: SYNC_TABLES.USER_SETTINGS, label: '设置' },
+      ]
+    );
+
+    const manager = new InitialSyncManager({} as SupabaseClient, {
+      settingsMode: 'bidirectional',
+      settingsDirty: true,
+    });
+
+    await expect(manager.performSync()).rejects.toThrow('失败项目 1 个');
+    expect(setLastSyncTime).not.toHaveBeenCalled();
+
+    const settingsTask =
+      useSyncStatusStore
+        .getState()
+        .supabaseSyncProgress.tasks.find(
+          task => task.id === SYNC_TABLES.USER_SETTINGS
+        );
+
+    expect(settingsTask).toMatchObject({
+      status: 'error',
+      error: '上传设置超时',
+    });
+  });
+
   it('uploads local dirty settings instead of downloading newer remote settings first', async () => {
     const manager = new InitialSyncManager({} as SupabaseClient, {
       settingsMode: 'bidirectional',

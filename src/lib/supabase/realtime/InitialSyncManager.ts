@@ -677,6 +677,7 @@ export class InitialSyncManager {
     const stats: SyncStats = { uploaded: 0, downloaded: 0, deleted: 0 };
     let errorCount = 0;
     let settingsDeferred = false;
+    let settingsFailed = false;
 
     for (const result of results) {
       if (result.status === 'fulfilled') {
@@ -695,6 +696,7 @@ export class InitialSyncManager {
       settingsDeferred = settingsOutcome.deferred;
     } catch (e) {
       console.error('[InitialSync] 设置同步失败:', e);
+      settingsFailed = true;
       errorCount++;
     }
 
@@ -721,6 +723,7 @@ export class InitialSyncManager {
     // 同步完成提示
     const silenceBackgroundFailure =
       errorCount > 0 &&
+      !settingsFailed &&
       shouldSilenceBackgroundNoopFailure({ lastSyncTime, stats });
 
     if (typeof window !== 'undefined') {
