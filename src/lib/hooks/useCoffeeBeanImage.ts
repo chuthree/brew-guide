@@ -69,6 +69,25 @@ export function getCoffeeBeanDataChangedBeanId(
   return detail?.beanId || detail?.bean?.id;
 }
 
+export const shouldRefreshCoffeeBeanImageIds = (
+  visibleBeanIds: ReadonlySet<string>,
+  changedBeanId: string | undefined
+): boolean => !changedBeanId || visibleBeanIds.has(changedBeanId);
+
+export const mergeCoffeeBeanImageIdChange = (
+  currentImageIds: ReadonlySet<string>,
+  changedBeanId: string,
+  hasImage: boolean
+): Set<string> => {
+  const nextImageIds = new Set(currentImageIds);
+  if (hasImage) {
+    nextImageIds.add(changedBeanId);
+  } else {
+    nextImageIds.delete(changedBeanId);
+  }
+  return nextImageIds;
+};
+
 const notifyRefreshSubscribers = (beanId: string | undefined): void => {
   invalidateImageSourceCache(beanId);
 
@@ -267,8 +286,67 @@ export function useCoffeeBeanImageIdsState(
     };
   }, [imageBeanIds, requestKey, side]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const visibleBeanIds = new Set(imageBeanIds);
+    let cancelled = false;
+    const refreshImageIds = async (changedBeanId?: string) => {
+      if (!shouldRefreshCoffeeBeanImageIds(visibleBeanIds, changedBeanId)) {
+        return;
+      }
+
+      try {
+        const ids = await getCoffeeBeanImageBeanIds(
+          changedBeanId ? [changedBeanId] : imageBeanIds,
+          { side }
+        );
+        if (cancelled) return;
+
+        setState(current => {
+          if (current.requestKey !== requestKey) return current;
+
+          return {
+            requestKey,
+            isLoaded: true,
+            imageIds: changedBeanId
+              ? mergeCoffeeBeanImageIdChange(
+                  current.imageIds,
+                  changedBeanId,
+                  ids.includes(changedBeanId)
+                )
+              : new Set(ids),
+          };
+        });
+      } catch {
+        // 保留当前图片集合，等待下一次变更或同步完成后重试。
+      }
+    };
+    const handleImageIdsChanged = (event: Event) => {
+      const changedBeanId = getCoffeeBeanDataChangedBeanId(
+        (event as CustomEvent<CoffeeBeanDataChangedDetail>).detail
+      );
+      void refreshImageIds(changedBeanId);
+    };
+    const handleSyncCompleted = () => {
+      void refreshImageIds();
+    };
+
+    window.addEventListener('coffeeBeanDataChanged', handleImageIdsChanged);
+    window.addEventListener('syncCompleted', handleSyncCompleted);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(
+        'coffeeBeanDataChanged',
+        handleImageIdsChanged
+      );
+      window.removeEventListener('syncCompleted', handleSyncCompleted);
+    };
+  }, [imageBeanIds, requestKey, side]);
+
   return {
-    imageIds: state.requestKey === requestKey ? state.imageIds : EMPTY_IMAGE_IDS,
+    imageIds:
+      state.requestKey === requestKey ? state.imageIds : EMPTY_IMAGE_IDS,
     isLoaded: state.requestKey === requestKey && state.isLoaded,
   };
 }

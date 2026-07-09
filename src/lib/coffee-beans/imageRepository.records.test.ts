@@ -154,6 +154,28 @@ describe('coffee bean image repository records', () => {
     ).resolves.toEqual(expect.arrayContaining(['front-only', 'back-only']));
   });
 
+  it('reads side-specific image records in bounded batches', async () => {
+    const beanIds = Array.from({ length: 65 }, (_, index) => `bean-${index}`);
+    beanIds.forEach(beanId => {
+      mocks.images.set(beanId, {
+        beanId,
+        image: 'front-original',
+        updatedAt: 1,
+      });
+    });
+
+    await expect(
+      getCoffeeBeanImageBeanIds(beanIds, { side: 'front' })
+    ).resolves.toHaveLength(beanIds.length);
+
+    expect(mocks.db.coffeeBeanImages.bulkGet).toHaveBeenCalledTimes(3);
+    expect(
+      vi
+        .mocked(mocks.db.coffeeBeanImages.bulkGet)
+        .mock.calls.every(([ids]) => ids.length <= 32)
+    ).toBe(true);
+  });
+
   it('preserves stored images when replacing lightweight beans', async () => {
     mocks.images.set('bean-1', {
       beanId: 'bean-1',

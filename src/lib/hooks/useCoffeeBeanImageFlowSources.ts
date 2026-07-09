@@ -71,20 +71,22 @@ const rememberImageFlowSource = (
   imageFlowSourceCache.set(cacheKey, source);
 };
 
-const trimImageFlowSourceCache = (protectedKeys = new Set<string>()): void => {
-  while (
-    imageFlowSourceCache.size > MAX_COFFEE_BEAN_IMAGE_FLOW_SOURCE_CACHE_ENTRIES
-  ) {
+export const trimCoffeeBeanImageFlowSourceCache = (
+  cache: Map<string, CoffeeBeanImageFlowSource>,
+  protectedKeys = new Set<string>()
+): void => {
+  while (cache.size > MAX_COFFEE_BEAN_IMAGE_FLOW_SOURCE_CACHE_ENTRIES) {
     let oldestKey: string | undefined;
-    for (const cacheKey of imageFlowSourceCache.keys()) {
+    for (const cacheKey of cache.keys()) {
       if (!protectedKeys.has(cacheKey)) {
         oldestKey = cacheKey;
         break;
       }
     }
 
+    oldestKey ??= cache.keys().next().value;
     if (!oldestKey) break;
-    imageFlowSourceCache.delete(oldestKey);
+    cache.delete(oldestKey);
   }
 };
 
@@ -188,7 +190,8 @@ export function useCoffeeBeanImageFlowSources(
 
           rememberImageFlowSource(side, source);
         });
-        trimImageFlowSourceCache(
+        trimCoffeeBeanImageFlowSourceCache(
+          imageFlowSourceCache,
           getProtectedImageFlowCacheKeys(
             idsKey ? idsKey.split('\u0001') : [],
             side

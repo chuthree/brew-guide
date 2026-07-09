@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   getCoffeeBeanDataChangedBeanId,
+  mergeCoffeeBeanImageIdChange,
   shouldCacheCoffeeBeanImageSource,
+  shouldRefreshCoffeeBeanImageIds,
 } from './useCoffeeBeanImage';
 
 describe('getCoffeeBeanDataChangedBeanId', () => {
@@ -33,5 +35,37 @@ describe('shouldCacheCoffeeBeanImageSource', () => {
   it('allows callers to override the default cache policy', () => {
     expect(shouldCacheCoffeeBeanImageSource('original', true)).toBe(true);
     expect(shouldCacheCoffeeBeanImageSource('thumbnail', false)).toBe(false);
+  });
+});
+
+describe('shouldRefreshCoffeeBeanImageIds', () => {
+  const visibleBeanIds = new Set(['visible-bean']);
+
+  it('refreshes for visible or global image changes', () => {
+    expect(
+      shouldRefreshCoffeeBeanImageIds(visibleBeanIds, 'visible-bean')
+    ).toBe(true);
+    expect(shouldRefreshCoffeeBeanImageIds(visibleBeanIds, undefined)).toBe(
+      true
+    );
+  });
+
+  it('ignores changes outside the current bean list', () => {
+    expect(shouldRefreshCoffeeBeanImageIds(visibleBeanIds, 'other-bean')).toBe(
+      false
+    );
+  });
+});
+
+describe('mergeCoffeeBeanImageIdChange', () => {
+  it('updates one bean without clearing the other visible image ids', () => {
+    const current = new Set(['bean-a', 'bean-b']);
+
+    expect(mergeCoffeeBeanImageIdChange(current, 'bean-a', false)).toEqual(
+      new Set(['bean-b'])
+    );
+    expect(mergeCoffeeBeanImageIdChange(current, 'bean-c', true)).toEqual(
+      new Set(['bean-a', 'bean-b', 'bean-c'])
+    );
   });
 });

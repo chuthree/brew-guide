@@ -37,6 +37,8 @@ type CoffeeBeanImageIdsOptions = {
   side?: CoffeeBeanImageSide | 'any';
 };
 
+const IMAGE_RECORD_LOOKUP_BATCH_SIZE = 32;
+
 const getUsableThumbnail = (
   thumbnail: string | undefined
 ): string | undefined => getUsableThumbnailDataUrl(thumbnail);
@@ -303,20 +305,42 @@ export async function getCoffeeBeanImageBeanIds(
   }
 
   if (side !== 'any') {
-    const [thumbnailRecords, imageRecords] = await Promise.all([
-      db.coffeeBeanImageThumbnails.bulkGet(uniqueBeanIds),
-      db.coffeeBeanImages.bulkGet(uniqueBeanIds),
-    ]);
+    const imageBeanIds: string[] = [];
 
-    return uniqueBeanIds.filter((beanId, index) => {
-      const thumbnailRecord = thumbnailRecords[index];
-      const imageRecord = imageRecords[index];
-
-      return (
-        hasImageForSide(thumbnailRecord, side) ||
-        hasImageForSide(imageRecord, side)
+    for (
+      let offset = 0;
+      offset < uniqueBeanIds.length;
+      offset += IMAGE_RECORD_LOOKUP_BATCH_SIZE
+    ) {
+      const batch = uniqueBeanIds.slice(
+        offset,
+        offset + IMAGE_RECORD_LOOKUP_BATCH_SIZE
       );
-    });
+      const thumbnailRecords =
+        await db.coffeeBeanImageThumbnails.bulkGet(batch);
+      const originalCandidateIds = batch.filter(
+        (_beanId, index) => !hasImageForSide(thumbnailRecords[index], side)
+      );
+      const imageRecords =
+        originalCandidateIds.length > 0
+          ? await db.coffeeBeanImages.bulkGet(originalCandidateIds)
+          : [];
+      const imageRecordByBeanId = new Map<string, CoffeeBeanImageRecord>();
+      imageRecords.forEach(record => {
+        if (record) imageRecordByBeanId.set(record.beanId, record);
+      });
+
+      batch.forEach((beanId, index) => {
+        if (
+          hasImageForSide(thumbnailRecords[index], side) ||
+          hasImageForSide(imageRecordByBeanId.get(beanId), side)
+        ) {
+          imageBeanIds.push(beanId);
+        }
+      });
+    }
+
+    return imageBeanIds;
   }
 
   const [thumbnailKeys, imageKeys] = await Promise.all([

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createCoffeeBeanImageFlowSource } from './useCoffeeBeanImageFlowSources';
+import {
+  createCoffeeBeanImageFlowSource,
+  MAX_COFFEE_BEAN_IMAGE_FLOW_SOURCE_CACHE_ENTRIES,
+  trimCoffeeBeanImageFlowSourceCache,
+  type CoffeeBeanImageFlowSource,
+} from './useCoffeeBeanImageFlowSources';
 import type { CoffeeBeanImageRecord } from '@/lib/coffee-beans/imageRecords';
 
 const bytesToDataUrl = (mimeType: string, bytes: number[]) =>
@@ -39,5 +44,29 @@ describe('createCoffeeBeanImageFlowSource', () => {
     };
 
     expect(createCoffeeBeanImageFlowSource(record)).toBeUndefined();
+  });
+
+  it('keeps the image-flow source cache within its hard limit', () => {
+    const cache = new Map<string, CoffeeBeanImageFlowSource>();
+    const protectedKeys = new Set<string>();
+
+    for (
+      let index = 0;
+      index <= MAX_COFFEE_BEAN_IMAGE_FLOW_SOURCE_CACHE_ENTRIES;
+      index++
+    ) {
+      const key = `front:${index}`;
+      cache.set(key, {
+        beanId: String(index),
+        src: `data:image/jpeg;base64,${index}`,
+        dimensions: { width: 1, height: 1 },
+      });
+      protectedKeys.add(key);
+    }
+
+    trimCoffeeBeanImageFlowSourceCache(cache, protectedKeys);
+
+    expect(cache.size).toBe(MAX_COFFEE_BEAN_IMAGE_FLOW_SOURCE_CACHE_ENTRIES);
+    expect(cache.has('front:0')).toBe(false);
   });
 });
