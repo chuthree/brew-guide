@@ -22,6 +22,8 @@ const SPRING_TRANSITION = {
 
 const BUTTON_BASE_CLASS =
   'rounded-full border border-neutral-200/50 dark:border-neutral-700/50 bg-neutral-100 dark:bg-neutral-800';
+const SELECTED_GRINDER_STORAGE_KEY =
+  'brew-guide:grinder-scale-indicator:selectedGrinderId';
 
 // 字体大小映射
 const FONT_SIZE_MAP = [
@@ -35,6 +37,17 @@ const FONT_SIZE_MAP = [
 const getFontSize = (len: number) =>
   FONT_SIZE_MAP[Math.min(len, 5)] || 'text-[8px]';
 
+const saveSelectedGrinderId = (grinderId: string | null) => {
+  if (typeof window === 'undefined') return;
+
+  if (grinderId) {
+    localStorage.setItem(SELECTED_GRINDER_STORAGE_KEY, grinderId);
+    return;
+  }
+
+  localStorage.removeItem(SELECTED_GRINDER_STORAGE_KEY);
+};
+
 /**
  * 磨豆机刻度指示器
  * - 点击：打开研磨度抽屉
@@ -44,8 +57,10 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
   hapticFeedback = true,
 }) => {
   const { grinders, initialized, initialize } = useGrinderStore();
-  const [selectedGrinderId, setSelectedGrinderId] = useState<string | null>(
-    null
+  const [selectedGrinderId, setSelectedGrinderId] = useState<string | null>(() =>
+    typeof window === 'undefined'
+      ? null
+      : localStorage.getItem(SELECTED_GRINDER_STORAGE_KEY)
   );
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -54,15 +69,13 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
     if (!initialized) initialize();
   }, [initialized, initialize]);
 
-  // 默认选中第一个磨豆机
+  // 清理已经不存在的持久化选择，默认显示仍回退到第一台磨豆机
   useEffect(() => {
-    if (grinders.length > 0 && !selectedGrinderId) {
-      setSelectedGrinderId(grinders[0].id);
-    } else if (
+    if (
       selectedGrinderId &&
       !grinders.find(g => g.id === selectedGrinderId)
     ) {
-      setSelectedGrinderId(grinders[0]?.id ?? null);
+      saveSelectedGrinderId(null);
     }
   }, [grinders, selectedGrinderId]);
 
@@ -86,6 +99,7 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
   // 处理磨豆机切换
   const handleGrinderChange = (grinderId: string) => {
     setSelectedGrinderId(grinderId);
+    saveSelectedGrinderId(grinderId);
   };
 
   // 没有磨豆机或不显示时返回 null
@@ -114,7 +128,7 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
       <GrindSizeDrawer
         isOpen={isDrawerOpen}
         onClose={handleCloseDrawer}
-        initialGrinderId={selectedGrinderId || undefined}
+        initialGrinderId={selectedGrinder.id}
         onGrinderChange={handleGrinderChange}
       />
     </>
