@@ -3,6 +3,16 @@
 import { Capacitor } from '@capacitor/core';
 import { SafeArea, initialize } from '@capacitor-community/safe-area';
 
+const SAFE_AREA_MARGIN_MIN = 10;
+const SAFE_AREA_MARGIN_MAX = 80;
+
+function clampSafeAreaMargin(value: number): number {
+  return Math.min(
+    SAFE_AREA_MARGIN_MAX,
+    Math.max(SAFE_AREA_MARGIN_MIN, value)
+  );
+}
+
 /**
  * 安全区域管理工具
  * 统一管理所有平台的安全区域逻辑
@@ -88,7 +98,11 @@ export const SafeAreaManager = {
 
     // 默认边距
     const defaultMargins = { top: 42, bottom: 42 };
-    const margins = customMargins || defaultMargins;
+    const rawMargins = customMargins || defaultMargins;
+    const margins = {
+      top: clampSafeAreaMargin(rawMargins.top),
+      bottom: clampSafeAreaMargin(rawMargins.bottom),
+    };
 
     // 固定的左右边距
     const horizontalMargin = 12;

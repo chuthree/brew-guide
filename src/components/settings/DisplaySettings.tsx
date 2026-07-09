@@ -20,6 +20,9 @@ import { makeSettingRowSearchId } from './settingsSearch';
 const DEFAULT_TEXT_ZOOM_LEVEL = 1;
 const TRANSITION_DURATION_MS = 350;
 const SAFE_AREA_PREVIEW_HIDE_DELAY_MS = 1200;
+const SAFE_AREA_MARGIN_MIN = 10;
+const SAFE_AREA_MARGIN_MAX = 80;
+const SAFE_AREA_MARGIN_STEP = 2;
 const DEFAULT_SAFE_AREA_MARGINS: NonNullable<
   SettingsOptions['safeAreaMargins']
 > = {
@@ -42,7 +45,18 @@ function isTauri() {
 }
 
 function resolveSafeAreaMargins(margins?: SettingsOptions['safeAreaMargins']) {
-  return margins ?? DEFAULT_SAFE_AREA_MARGINS;
+  const resolvedMargins = margins ?? DEFAULT_SAFE_AREA_MARGINS;
+  return {
+    top: clampSafeAreaMargin(resolvedMargins.top),
+    bottom: clampSafeAreaMargin(resolvedMargins.bottom),
+  };
+}
+
+function clampSafeAreaMargin(value: number) {
+  return Math.min(
+    SAFE_AREA_MARGIN_MAX,
+    Math.max(SAFE_AREA_MARGIN_MIN, value)
+  );
 }
 
 interface SafeAreaMarginPreviewProps {
@@ -340,25 +354,25 @@ function DisplaySettings({ onClose }: DisplaySettingsProps) {
       <SettingSection title="安全区域边距">
         <SettingRow label="顶部边距" vertical>
           <SettingSlider
-            value={safeAreaMargins?.top ?? DEFAULT_SAFE_AREA_MARGINS.top}
-            min={DEFAULT_SAFE_AREA_MARGINS.top}
-            max={84}
-            step={2}
+            value={resolveSafeAreaMargins(safeAreaMargins).top}
+            min={SAFE_AREA_MARGIN_MIN}
+            max={SAFE_AREA_MARGIN_MAX}
+            step={SAFE_AREA_MARGIN_STEP}
             onChange={handleTopSafeAreaChange}
-            minLabel="12px"
-            maxLabel="84px"
+            minLabel="小"
+            maxLabel="大"
           />
         </SettingRow>
 
         <SettingRow label="底部边距" isLast vertical>
           <SettingSlider
-            value={safeAreaMargins?.bottom ?? DEFAULT_SAFE_AREA_MARGINS.bottom}
-            min={20}
-            max={80}
-            step={2}
+            value={resolveSafeAreaMargins(safeAreaMargins).bottom}
+            min={SAFE_AREA_MARGIN_MIN}
+            max={SAFE_AREA_MARGIN_MAX}
+            step={SAFE_AREA_MARGIN_STEP}
             onChange={handleBottomSafeAreaChange}
-            minLabel="20px"
-            maxLabel="80px"
+            minLabel="小"
+            maxLabel="大"
           />
         </SettingRow>
       </SettingSection>
