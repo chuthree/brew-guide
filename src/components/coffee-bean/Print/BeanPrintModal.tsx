@@ -3,7 +3,12 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { X } from 'lucide-react';
-import { BeanPrintModalProps, PrintConfig, PrintIconPlacement } from './types';
+import {
+  BeanPrintModalProps,
+  EditableContent,
+  PrintConfig,
+  PrintIconPlacement,
+} from './types';
 import { usePrintConfig, useEditableContent } from './hooks';
 import { getResolvedPrintIcon, savePreviewAsImage } from './utils';
 import { injectPrintStyles } from './styles';
@@ -59,21 +64,58 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     }),
     [content, roasterLogo]
   );
-
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [preparedImage, setPreparedImage] = useState<{
+    data: string;
+    config: PrintConfig;
+    content: EditableContent;
+  }>();
+  const [isSavingImage, setIsSavingImage] = useState(false);
+  const preparedImageData =
+    preparedImage?.config === config && preparedImage.content === previewContent
+      ? preparedImage.data
+      : undefined;
 
-  const handleClose = useCallback(() => modalHistory.back(), []);
+  const handleClose = useCallback(() => {
+    setPreparedImage(undefined);
+    modalHistory.back();
+  }, []);
+  const handleModalClose = useCallback(() => {
+    setPreparedImage(undefined);
+    onClose();
+  }, [onClose]);
 
   const handleSaveImage = useCallback(async () => {
+    if (isSavingImage) return;
+
+    setIsSavingImage(true);
     try {
-      await savePreviewAsImage('print-preview', bean);
+      const result = await savePreviewAsImage(
+        'print-preview',
+        bean,
+        preparedImageData
+      );
+      if (
+        result.outcome === 'activation-required' ||
+        result.outcome === 'cancelled'
+      ) {
+        setPreparedImage({
+          data: result.imageData,
+          config,
+          content: previewContent,
+        });
+      } else {
+        setPreparedImage(undefined);
+      }
     } catch (error) {
       console.error('保存图片失败:', error);
       const { showToast } =
         await import('@/components/common/feedback/LightToast');
       showToast({ type: 'error', title: '保存图片失败，请重试' });
+    } finally {
+      setIsSavingImage(false);
     }
-  }, [bean]);
+  }, [bean, config, isSavingImage, preparedImageData, previewContent]);
 
   const handleResetConfig = useCallback(() => setShowResetConfirm(true), []);
 
@@ -137,7 +179,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   return (
     <ResponsiveModal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleModalClose}
       historyId="bean-print"
       drawerMaxWidth="480px"
       drawerHeight="90vh"
@@ -163,10 +205,11 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
             <button
               type="button"
               onClick={handleSaveImage}
+              disabled={isSavingImage}
               className="flex h-8 items-center justify-center rounded-full bg-neutral-100 px-3 text-xs font-medium text-neutral-700 hover:bg-neutral-200 hover:text-neutral-900 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:hover:text-neutral-100"
-              title="保存图片"
+              title={preparedImageData ? '分享图片' : '保存图片'}
             >
-              保存
+              {isSavingImage ? '生成中' : preparedImageData ? '分享' : '保存'}
             </button>
           </div>
 

@@ -6,6 +6,7 @@ import {
   isAndroidDocumentSaverUnavailable,
   saveFileWithAndroidDocumentPicker,
 } from './nativeDocumentSaver';
+import { getIsIOS, getIsStandalone } from './pwaInstallEnvironment';
 
 /**
  * 分享选项接口
@@ -21,6 +22,13 @@ export type JsonFileSaveMode =
   | 'android-document'
   | 'native-share';
 
+export type ImageSaveOutcome =
+  | 'saved'
+  | 'downloaded'
+  | 'shared'
+  | 'cancelled'
+  | 'activation-required';
+
 /**
  * 临时文件管理器
  * 提供统一的临时文件创建、分享和自动清理功能
@@ -30,24 +38,96 @@ export class TempFileManager {
   private static readonly NATIVE_TEXT_CHUNK_SIZE = 128 * 1024;
   private static readonly JSON_MIME_TYPE = 'application/json';
 
+  private static isUserActivationExpired(): boolean {
+    return navigator.userActivation?.isActive === false;
+  }
+
   private static createTempFileName(fileName: string): string {
     const sanitizedFileName = fileName.replace(/[\\/:*?"<>|]/g, '-');
     return `${this.TEMP_FILE_PREFIX}${Date.now()}-${sanitizedFileName}`;
   }
 
+  private static createImageFile(imageData: string, fileName: string): File {
+    const match = imageData.match(/^data:([^;,]+);base64,(.+)$/);
+    if (!match) {
+      throw new Error('图片数据格式无效');
+    }
+
+    const [, mimeType, base64Data] = match;
+    const binary = atob(base64Data);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+
+    return new File([bytes], fileName, { type: mimeType });
+  }
+
+  private static downloadImage(imageData: string, fileName: string): void {
+    const link = document.createElement('a');
+    link.download = fileName;
+    link.href = imageData;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  private static async shareImageInIOSPWA(
+    imageData: string,
+    fileName: string
+  ): Promise<ImageSaveOutcome> {
+    const file = this.createImageFile(imageData, fileName);
+    const shareData: ShareData = {
+      files: [file],
+      title: 'Brew Guide 图片',
+    };
+
+    if (
+      typeof navigator.share !== 'function' ||
+      (typeof navigator.canShare === 'function' &&
+        !navigator.canShare(shareData))
+    ) {
+      throw new Error('当前设备不支持分享图片文件');
+    }
+
+    if (this.isUserActivationExpired()) {
+      return 'activation-required';
+    }
+
+    try {
+      await navigator.share(shareData);
+      return 'shared';
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return 'cancelled';
+      }
+      if (
+        error instanceof DOMException &&
+        error.name === 'NotAllowedError' &&
+        this.isUserActivationExpired()
+      ) {
+        return 'activation-required';
+      }
+      throw error;
+    }
+  }
+
   /**
    * 保存图片到相册
    * @param imageData base64格式的图片数据（支持带 data:image/png;base64, 前缀或纯 base64）
-   * @returns Promise<void>
+   * @returns 可用于区分直接保存、下载、分享和用户取消的结果
    */
-  static async saveImageToGallery(imageData: string): Promise<void> {
-    // Web 平台直接下载
+  static async saveImageToGallery(
+    imageData: string
+  ): Promise<ImageSaveOutcome> {
     if (!Capacitor.isNativePlatform()) {
-      const link = document.createElement('a');
-      link.download = `brew-guide-${new Date().getTime()}.png`;
-      link.href = imageData;
-      link.click();
-      return;
+      const fileName = `brew-guide-${Date.now()}.png`;
+      if (getIsIOS() && getIsStandalone()) {
+        return this.shareImageInIOSPWA(imageData, fileName);
+      }
+      this.downloadImage(imageData, fileName);
+      return 'downloaded';
     }
 
     if (Capacitor.getPlatform() === 'android') {
@@ -55,7 +135,7 @@ export class TempFileManager {
         imageData,
         `brew-guide-${new Date().getTime()}`
       );
-      return;
+      return 'saved';
     }
 
     const timestamp = new Date().getTime();
@@ -127,7 +207,7 @@ export class TempFileManager {
             path: fileUri.uri,
             albumIdentifier: 'BrewGuide',
           });
-        } catch (albumError) {
+        } catch (_albumError) {
           // 相册不存在，保存到系统相册
           await Media.savePhoto({
             path: fileUri.uri,
@@ -137,6 +217,7 @@ export class TempFileManager {
 
       // 步骤4: 清理临时文件
       await this.cleanupTempFile(tempFileName);
+      return 'saved';
     } catch (error) {
       // 即使失败也要尝试清理临时文件
       try {

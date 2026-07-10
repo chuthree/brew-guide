@@ -268,10 +268,16 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
           ariaLabel: `保存 ${roasterName} 图标到相册`,
           onClick: async () => {
             try {
-              await TempFileManager.saveImageToGallery(logoData);
-              showToast({ type: 'success', title: '已保存到相册' });
-              if (hapticFeedback) {
-                hapticsUtils.success();
+              const outcome =
+                await TempFileManager.saveImageToGallery(logoData);
+              if (outcome === 'saved' || outcome === 'downloaded') {
+                showToast({
+                  type: 'success',
+                  title: outcome === 'saved' ? '已保存到相册' : '图片已保存',
+                });
+                if (hapticFeedback) {
+                  hapticsUtils.success();
+                }
               }
             } catch (error) {
               console.error('Save roaster logo error:', error);

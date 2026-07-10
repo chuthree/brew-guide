@@ -1,10 +1,11 @@
+import { Capacitor } from '@capacitor/core';
 import { CoffeeBean } from '@/types/app';
 import { EditableContent, PrintConfig, PrintIconSource } from './types';
 import { normalizeDate, parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import { isPrintFieldVisible } from './fields';
 import { RoasterSettings } from '@/lib/utils/beanVarietyUtils';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
-import { getIsIOS, getIsStandalone } from '@/lib/utils/pwaInstallEnvironment';
+import type { ImageSaveOutcome } from '@/lib/utils/tempFileManager';
 
 // 格式化日期
 export const formatDate = (dateStr: string): string => {
@@ -19,9 +20,6 @@ export const formatDate = (dateStr: string): string => {
     return dateStr;
   }
 };
-
-export const shouldShowWebImageSaveSuccess = (): boolean =>
-  !getIsIOS() || !getIsStandalone();
 
 export const getLocalDateString = (date = new Date()): string => {
   const y = date.getFullYear();
@@ -353,10 +351,16 @@ const normalizeTextNodes = (element: HTMLElement): void => {
 // 保存预览为图片
 export async function savePreviewAsImage(
   elementId: string,
-  bean: CoffeeBean | null
-): Promise<void> {
+  bean: CoffeeBean | null,
+  preparedImageData?: string
+): Promise<{ outcome: ImageSaveOutcome; imageData: string }> {
   const el = document.getElementById(elementId);
   if (!el) throw new Error('预览元素未找到');
+
+  if (preparedImageData) {
+    const outcome = await TempFileManager.saveImageToGallery(preparedImageData);
+    return { outcome, imageData: preparedImageData };
+  }
 
   // 1. 等待字体加载完成
   await waitForFonts();
@@ -410,7 +414,7 @@ export async function savePreviewAsImage(
 
   try {
     const { toPng } = await import('html-to-image');
-    const dataUrl = await toPng(clonedEl, {
+    const imageData = await toPng(clonedEl, {
       backgroundColor: '#ffffff',
       pixelRatio: 6.37,
       quality: 0.95,
@@ -433,30 +437,32 @@ export async function savePreviewAsImage(
     // 清理离屏容器
     document.body.removeChild(offscreenContainer);
 
-    const { Capacitor } = await import('@capacitor/core');
-    const { showToast } =
-      await import('@/components/common/feedback/LightToast');
-
     if (Capacitor.isNativePlatform()) {
       try {
-        await TempFileManager.saveImageToGallery(dataUrl);
+        const outcome = await TempFileManager.saveImageToGallery(imageData);
+        const { showToast } =
+          await import('@/components/common/feedback/LightToast');
         showToast({ type: 'success', title: '已保存到相册' });
+        return { outcome, imageData };
       } catch (error) {
         console.error('保存到相册失败:', error);
         const fileName = `${bean?.name || '咖啡豆标签'}-${new Date().toISOString().split('T')[0]}`;
-        await TempFileManager.shareImageFile(dataUrl, fileName, {
+        await TempFileManager.shareImageFile(imageData, fileName, {
           title: '咖啡豆标签',
           text: `${bean?.name || '咖啡豆'}标签图片`,
           dialogTitle: '保存标签图片',
         });
-      }
-    } else {
-      await TempFileManager.saveImageToGallery(dataUrl);
-      // iOS PWA 会把下载交给系统分享面板，网页无法确认用户是否真的保存。
-      if (shouldShowWebImageSaveSuccess()) {
-        showToast({ type: 'success', title: '图片已保存' });
+        return { outcome: 'shared', imageData };
       }
     }
+
+    const outcome = await TempFileManager.saveImageToGallery(imageData);
+    if (outcome === 'downloaded') {
+      const { showToast } =
+        await import('@/components/common/feedback/LightToast');
+      showToast({ type: 'success', title: '图片已保存' });
+    }
+    return { outcome, imageData };
   } catch (error) {
     // 确保清理离屏容器
     if (document.body.contains(offscreenContainer)) {

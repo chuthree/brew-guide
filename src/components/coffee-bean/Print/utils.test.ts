@@ -1,13 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createInitialContent, shouldShowWebImageSaveSuccess } from './utils';
+import { describe, expect, it } from 'vitest';
+import { createInitialContent } from './utils';
 import { getAvailablePrintFieldOrder } from './fields';
 import type { EditableContent } from './types';
 import type { CoffeeBean } from '@/types/app';
 import type { AppSettings } from '@/lib/core/db';
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
 
 describe('bean print content', () => {
   it('extracts structured origin fields independently', () => {
@@ -76,35 +72,5 @@ describe('bean print content', () => {
     expect(fields).not.toContain('origin');
     expect(fields).not.toContain('estate');
     expect(fields).not.toContain('variety');
-  });
-});
-
-describe('web image save feedback', () => {
-  it('stays silent when iOS PWA hands saving to the share sheet', () => {
-    vi.stubGlobal('navigator', {
-      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',
-      platform: 'iPhone',
-      maxTouchPoints: 5,
-      standalone: true,
-    });
-    vi.stubGlobal('window', {
-      matchMedia: () => ({ matches: true }),
-    });
-
-    expect(shouldShowWebImageSaveSuccess()).toBe(false);
-  });
-
-  it('keeps success feedback for regular web downloads', () => {
-    vi.stubGlobal('navigator', {
-      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-      platform: 'MacIntel',
-      maxTouchPoints: 0,
-      standalone: false,
-    });
-    vi.stubGlobal('window', {
-      matchMedia: () => ({ matches: false }),
-    });
-
-    expect(shouldShowWebImageSaveSuccess()).toBe(true);
   });
 });
