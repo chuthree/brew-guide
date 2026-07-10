@@ -4,6 +4,7 @@ import { modalHistory, type ModalCloseSource } from './modalHistory';
 import {
   getChildPageStyle,
   getParentPageStyle,
+  shouldMoveParentPage,
   skipNextPageExitTransition,
 } from './pageTransition';
 
@@ -46,6 +47,39 @@ function installWindow({ reduceMotion = false } = {}) {
 afterEach(() => {
   modalHistory.destroy();
   vi.unstubAllGlobals();
+});
+
+describe('parent page transition policy', () => {
+  it('moves the parent while heavy content detail is still pending', () => {
+    expect(
+      shouldMoveParentPage({
+        isLargeScreen: false,
+        hasOverlayModalOpen: false,
+        hasContentDetailOpen: false,
+        isContentDetailPending: true,
+      })
+    ).toBe(true);
+  });
+
+  it('keeps the parent transition for lightweight overlay pages', () => {
+    expect(
+      shouldMoveParentPage({
+        isLargeScreen: true,
+        hasOverlayModalOpen: true,
+        hasContentDetailOpen: false,
+      })
+    ).toBe(true);
+  });
+
+  it('keeps content detail stationary in the desktop split layout', () => {
+    expect(
+      shouldMoveParentPage({
+        isLargeScreen: true,
+        hasOverlayModalOpen: false,
+        hasContentDetailOpen: true,
+      })
+    ).toBe(false);
+  });
 });
 
 describe('modalHistory navigation source', () => {

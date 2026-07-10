@@ -35,6 +35,29 @@ export const IOS_TRANSITION_CONFIG: PageTransitionConfig = {
   easing: 'cubic-bezier(0.32, 0.72, 0, 1)', // iOS 风格的快速减速曲线
 };
 
+interface ParentPageTransitionState {
+  isLargeScreen: boolean;
+  hasOverlayModalOpen: boolean;
+  hasContentDetailOpen: boolean;
+  isContentDetailPending?: boolean;
+}
+
+/**
+ * 轻量覆盖页始终推动父页面；内容详情只在移动布局中推动父页面。
+ * 该策略只依赖打开请求，不能等待详情内容完成挂载。
+ */
+export function shouldMoveParentPage({
+  isLargeScreen,
+  hasOverlayModalOpen,
+  hasContentDetailOpen,
+  isContentDetailPending = false,
+}: ParentPageTransitionState): boolean {
+  return (
+    hasOverlayModalOpen ||
+    (!isLargeScreen && (hasContentDetailOpen || isContentDetailPending))
+  );
+}
+
 const REDUCED_MOTION_DURATION = 200;
 const REDUCED_MOTION_EASING = 'cubic-bezier(0.23, 1, 0.32, 1)';
 

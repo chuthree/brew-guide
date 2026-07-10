@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useRef,
   useLayoutEffect,
+  useTransition,
   ReactNode,
 } from 'react';
 import dynamic from 'next/dynamic';
@@ -105,6 +106,7 @@ import {
   IOS_TRANSITION_CONFIG,
   pageStackManager,
   getParentPageStyle,
+  shouldMoveParentPage,
   useIsDesktopLayout,
   useIsLargeScreen,
 } from '@/lib/navigation/pageTransition';
@@ -499,6 +501,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     beanUnitPrice: number;
     beanInfo?: CoffeeBean | null;
   } | null>(null);
+  const [isContentDetailPending, startContentDetailTransition] =
+    useTransition();
 
   // 详情面板宽度拖动状态（大屏幕）
   const DETAIL_PANEL_MIN_WIDTH = 320; // 最小宽度
@@ -671,6 +675,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 其他模态框（设置页等）- 在大屏幕时仍然是全屏覆盖，主页面需要动画
   // 注意：brewingNoteEditOpen 使用 ResponsiveModal，自己管理动画，不需要触发主页面转场
   const hasOverlayModalOpen = isSettingsOpen || hasSubSettingsOpen;
+  const hasContentDetailOpen = beanDetailOpen || noteDetailOpen;
 
   // 统一管理 pageStackManager 的状态
   React.useEffect(() => {
@@ -1525,7 +1530,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         })
       );
 
-      requestAnimationFrame(() => {
+      startContentDetailTransition(() => {
         setBeanDetailAddMode(false);
         setBeanDetailEditMode(false);
         setBeanDetailSearchQuery('');
@@ -1533,7 +1538,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setBeanDetailOpen(true);
       });
     },
-    [currentBeanView, setActiveMainTab]
+    [currentBeanView, setActiveMainTab, startContentDetailTransition]
   );
 
   const handleOpenBeanDetailFromNote = useCallback(
@@ -1601,13 +1606,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }) => {
       saveMainTabPreference('笔记');
       setActiveMainTab('笔记');
-      setNoteDetailData(detail);
 
-      requestAnimationFrame(() => {
+      startContentDetailTransition(() => {
+        setNoteDetailData(detail);
         setNoteDetailOpen(true);
       });
     },
-    [setActiveMainTab]
+    [setActiveMainTab, startContentDetailTransition]
   );
 
   const handleOpenNoteDetailFromBean = useCallback(
@@ -2519,7 +2524,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             const legacyBatch = beanDataRecord.batch as string;
             const legacyVariety = beanDataRecord.variety as string;
 
-            if (BEAN_COMPONENT_TEXT_FIELD_IDS.some(field => beanDataRecord[field])) {
+            if (
+              BEAN_COMPONENT_TEXT_FIELD_IDS.some(field => beanDataRecord[field])
+            ) {
               bean.blendComponents = [
                 {
                   percentage: 100,
@@ -2613,7 +2620,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setBeanDetailEditMode(false);
       }
 
-      setBeanDetailOpen(true);
+      startContentDetailTransition(() => {
+        setBeanDetailOpen(true);
+      });
       return;
     }
 
@@ -3663,11 +3672,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         console.error('BeanDetailModal: 打开事件缺少必要数据');
         return;
       }
-      setBeanDetailAddMode(false);
-      setBeanDetailEditMode(false);
-      setBeanDetailData(customEvent.detail.bean);
-      setBeanDetailSearchQuery(customEvent.detail.searchQuery || '');
-      setBeanDetailOpen(true);
+      startContentDetailTransition(() => {
+        setBeanDetailAddMode(false);
+        setBeanDetailEditMode(false);
+        setBeanDetailData(customEvent.detail.bean);
+        setBeanDetailSearchQuery(customEvent.detail.searchQuery || '');
+        setBeanDetailOpen(true);
+      });
     };
 
     const handleBeanDetailClosing = () => {
@@ -3682,12 +3693,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       const customEvent = e as CustomEvent<{
         beanState?: 'green' | 'roasted';
       }>;
-      setBeanDetailAddMode(true);
-      setBeanDetailEditMode(false);
-      setBeanDetailAddBeanState(customEvent.detail?.beanState || 'roasted');
-      setBeanDetailData(null);
-      setBeanDetailSearchQuery('');
-      setBeanDetailOpen(true);
+      startContentDetailTransition(() => {
+        setBeanDetailAddMode(true);
+        setBeanDetailEditMode(false);
+        setBeanDetailAddBeanState(customEvent.detail?.beanState || 'roasted');
+        setBeanDetailData(null);
+        setBeanDetailSearchQuery('');
+        setBeanDetailOpen(true);
+      });
     };
 
     window.addEventListener(
@@ -3711,7 +3724,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleImmersiveAddOpened as EventListener
       );
     };
-  }, []);
+  }, [startContentDetailTransition]);
 
   // 监听笔记详情的打开/关闭事件
   React.useEffect(() => {
@@ -3727,13 +3740,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         console.error('NoteDetailModal: 打开事件缺少必要数据');
         return;
       }
-      setNoteDetailData({
-        note: customEvent.detail.note,
-        equipmentName: customEvent.detail.equipmentName,
-        beanUnitPrice: customEvent.detail.beanUnitPrice,
-        beanInfo: customEvent.detail.beanInfo,
+      startContentDetailTransition(() => {
+        setNoteDetailData({
+          note: customEvent.detail.note,
+          equipmentName: customEvent.detail.equipmentName,
+          beanUnitPrice: customEvent.detail.beanUnitPrice,
+          beanInfo: customEvent.detail.beanInfo,
+        });
+        setNoteDetailOpen(true);
       });
-      setNoteDetailOpen(true);
     };
 
     const handleNoteDetailClosing = () => {
@@ -3753,7 +3768,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       );
       window.removeEventListener('noteDetailClosing', handleNoteDetailClosing);
     };
-  }, []);
+  }, [startContentDetailTransition]);
 
   // 监听添加咖啡豆模态框的打开/关闭事件
   React.useEffect(() => {
@@ -3963,7 +3978,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         style={
           {
             ...getParentPageStyle(
-              isLargeScreen ? hasOverlayModalOpen : hasAnyModalOpen
+              shouldMoveParentPage({
+                isLargeScreen,
+                hasOverlayModalOpen,
+                hasContentDetailOpen,
+                isContentDetailPending,
+              })
             ),
             // CSS 变量用于 BottomActionBar 等组件
             '--nav-panel-width':
