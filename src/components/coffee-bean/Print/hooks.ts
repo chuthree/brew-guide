@@ -25,6 +25,18 @@ import { RoasterSettings } from '@/lib/utils/beanVarietyUtils';
 // usePrintConfig - 打印配置管理
 // ============================================
 
+const withUpdatedConfig = <K extends keyof PrintConfig>(
+  config: PrintConfig,
+  key: K,
+  value: PrintConfig[K]
+): PrintConfig => {
+  const next = { ...config, [key]: value };
+  if (key === 'fontSize') {
+    next.titleFontSize = (value as number) + 4;
+  }
+  return next;
+};
+
 export function usePrintConfig() {
   const [config, setConfig] = useState<PrintConfig>(loadConfig);
   const [presetSizes, setPresetSizes] = useState<PresetSize[]>(loadPresetSizes);
@@ -33,14 +45,18 @@ export function usePrintConfig() {
   const updateConfig = useCallback(
     <K extends keyof PrintConfig>(key: K, value: PrintConfig[K]) => {
       setConfig(prev => {
-        const next = { ...prev, [key]: value };
-        // 字体大小变化时同步更新标题字体
-        if (key === 'fontSize') {
-          next.titleFontSize = (value as number) + 4;
-        }
+        const next = withUpdatedConfig(prev, key, value);
         saveConfig(next);
         return next;
       });
+    },
+    []
+  );
+
+  // 拖动布局滑块时只更新预览，完成交互后再由 updateConfig 持久化。
+  const previewConfig = useCallback(
+    <K extends keyof PrintConfig>(key: K, value: PrintConfig[K]) => {
+      setConfig(prev => withUpdatedConfig(prev, key, value));
     },
     []
   );
@@ -116,6 +132,7 @@ export function usePrintConfig() {
     config,
     presetSizes,
     updateConfig,
+    previewConfig,
     toggleField,
     toggleOrientation,
     selectPresetSize,

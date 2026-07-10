@@ -1,12 +1,9 @@
 'use client';
 
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { X } from 'lucide-react';
-import {
-  BeanPrintModalProps,
-  PrintConfig,
-  PrintIconPlacement,
-} from './types';
+import { BeanPrintModalProps, PrintConfig, PrintIconPlacement } from './types';
 import { usePrintConfig, useEditableContent } from './hooks';
 import { getResolvedPrintIcon, savePreviewAsImage } from './utils';
 import { injectPrintStyles } from './styles';
@@ -41,6 +38,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     config,
     presetSizes,
     updateConfig,
+    previewConfig,
     toggleField,
     toggleOrientation,
     selectPresetSize,
@@ -93,17 +91,38 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
     [updateConfig]
   );
 
-  const handleUpdateMargin = useCallback(
+  const handlePreviewMargin = useCallback(
+    (margin: number) => {
+      flushSync(() => previewConfig('margin', margin));
+    },
+    [previewConfig]
+  );
+
+  const handleCommitMargin = useCallback(
     (margin: number) => updateConfig('margin', margin),
     [updateConfig]
   );
 
-  const handleUpdateFontSize = useCallback(
+  const handlePreviewFontSize = useCallback(
+    (fontSize: number) => {
+      flushSync(() => previewConfig('fontSize', fontSize));
+    },
+    [previewConfig]
+  );
+
+  const handleCommitFontSize = useCallback(
     (fontSize: number) => updateConfig('fontSize', fontSize),
     [updateConfig]
   );
 
-  const handleUpdateFontWeight = useCallback(
+  const handlePreviewFontWeight = useCallback(
+    (fontWeight: number) => {
+      flushSync(() => previewConfig('fontWeight', fontWeight));
+    },
+    [previewConfig]
+  );
+
+  const handleCommitFontWeight = useCallback(
     (fontWeight: number) => updateConfig('fontWeight', fontWeight),
     [updateConfig]
   );
@@ -171,9 +190,12 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
                 config={config}
                 onToggleOrientation={toggleOrientation}
                 onUpdateTemplate={handleUpdateTemplate}
-                onUpdateMargin={handleUpdateMargin}
-                onUpdateFontSize={handleUpdateFontSize}
-                onUpdateFontWeight={handleUpdateFontWeight}
+                onUpdateMargin={handlePreviewMargin}
+                onCommitMargin={handleCommitMargin}
+                onUpdateFontSize={handlePreviewFontSize}
+                onCommitFontSize={handleCommitFontSize}
+                onUpdateFontWeight={handlePreviewFontWeight}
+                onCommitFontWeight={handleCommitFontWeight}
                 onReset={handleResetConfig}
               />
 

@@ -10,8 +10,11 @@ interface LayoutSettingsProps {
   onToggleOrientation: () => void;
   onUpdateTemplate: (template: PrintConfig['template']) => void;
   onUpdateMargin: (margin: number) => void;
+  onCommitMargin: (margin: number) => void;
   onUpdateFontSize: (fontSize: number) => void;
+  onCommitFontSize: (fontSize: number) => void;
   onUpdateFontWeight: (fontWeight: number) => void;
+  onCommitFontWeight: (fontWeight: number) => void;
   onReset: () => void;
 }
 
@@ -33,8 +36,11 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
   onToggleOrientation,
   onUpdateTemplate,
   onUpdateMargin,
+  onCommitMargin,
   onUpdateFontSize,
+  onCommitFontSize,
   onUpdateFontWeight,
+  onCommitFontWeight,
   onReset,
 }) => {
   const cycleTemplate = React.useCallback(() => {
@@ -92,6 +98,7 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
             radius={PRINT_SETTINGS_SLIDER_RADIUS}
             value={config.margin}
             onValueChange={onUpdateMargin}
+            onValueCommit={onCommitMargin}
             formatValue={formatIntegerSliderValue}
             trackClassName={PRINT_SETTINGS_SLIDER_TRACK_CLASS_NAME}
             fillClassName={PRINT_SETTINGS_SLIDER_FILL_CLASS_NAME}
@@ -111,6 +118,7 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
             radius={PRINT_SETTINGS_SLIDER_RADIUS}
             value={config.fontSize}
             onValueChange={onUpdateFontSize}
+            onValueCommit={onCommitFontSize}
             formatValue={formatIntegerSliderValue}
             trackClassName={PRINT_SETTINGS_SLIDER_TRACK_CLASS_NAME}
             fillClassName={PRINT_SETTINGS_SLIDER_FILL_CLASS_NAME}
@@ -130,6 +138,7 @@ export const LayoutSettings: React.FC<LayoutSettingsProps> = ({
             radius={PRINT_SETTINGS_SLIDER_RADIUS}
             value={config.fontWeight}
             onValueChange={onUpdateFontWeight}
+            onValueCommit={onCommitFontWeight}
             formatValue={formatIntegerSliderValue}
             trackClassName={PRINT_SETTINGS_SLIDER_TRACK_CLASS_NAME}
             fillClassName={PRINT_SETTINGS_SLIDER_FILL_CLASS_NAME}

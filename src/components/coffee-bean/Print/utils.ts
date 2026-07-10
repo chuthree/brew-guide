@@ -4,6 +4,7 @@ import { normalizeDate, parseDateToTimestamp } from '@/lib/utils/dateUtils';
 import { isPrintFieldVisible } from './fields';
 import { RoasterSettings } from '@/lib/utils/beanVarietyUtils';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
+import { getIsIOS, getIsStandalone } from '@/lib/utils/pwaInstallEnvironment';
 
 // 格式化日期
 export const formatDate = (dateStr: string): string => {
@@ -18,6 +19,9 @@ export const formatDate = (dateStr: string): string => {
     return dateStr;
   }
 };
+
+export const shouldShowWebImageSaveSuccess = (): boolean =>
+  !getIsIOS() || !getIsStandalone();
 
 export const getLocalDateString = (date = new Date()): string => {
   const y = date.getFullYear();
@@ -448,7 +452,10 @@ export async function savePreviewAsImage(
       }
     } else {
       await TempFileManager.saveImageToGallery(dataUrl);
-      showToast({ type: 'success', title: '图片已保存' });
+      // iOS PWA 会把下载交给系统分享面板，网页无法确认用户是否真的保存。
+      if (shouldShowWebImageSaveSuccess()) {
+        showToast({ type: 'success', title: '图片已保存' });
+      }
     }
   } catch (error) {
     // 确保清理离屏容器

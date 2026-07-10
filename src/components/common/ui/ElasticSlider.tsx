@@ -56,6 +56,7 @@ export type ElasticSliderProps = {
   value?: number;
   defaultValue?: number;
   onValueChange?: (value: number) => void;
+  onValueCommit?: (value: number) => void;
   min?: number;
   max?: number;
   step?: number;
@@ -88,6 +89,7 @@ export function ElasticSlider({
   value: valueProp,
   defaultValue,
   onValueChange,
+  onValueCommit,
   min = 0,
   max = 1,
   step = 0.01,
@@ -131,6 +133,7 @@ export function ElasticSlider({
   const pendingPointerFocusRef = useRef(false);
   const isClickRef = useRef(true);
   const animRef = useRef<ReturnType<typeof animate> | null>(null);
+  const currentValueRef = useRef(value);
 
   const [isInteracting, setIsInteracting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -158,6 +161,7 @@ export function ElasticSlider({
   const setValue = useCallback(
     (nextValue: number) => {
       const next = clamp(roundValue(nextValue, safeStep), min, safeMax);
+      currentValueRef.current = next;
 
       if (!isControlled) {
         setUncontrolledValue(next);
@@ -169,6 +173,10 @@ export function ElasticSlider({
     },
     [isControlled, min, onValueChange, safeMax, safeStep, value]
   );
+
+  useEffect(() => {
+    currentValueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     if (!isInteracting && !animRef.current) {
@@ -321,6 +329,8 @@ export function ElasticSlider({
         setValue(snapped);
       }
 
+      onValueCommit?.(currentValueRef.current);
+
       if (!shouldReduceMotion && rubberStretch.get() !== 0) {
         animate(rubberStretch, 0, {
           type: 'spring',
@@ -337,6 +347,7 @@ export function ElasticSlider({
       animateFillTo,
       isInteracting,
       min,
+      onValueCommit,
       percentFromValue,
       positionToValue,
       range,
@@ -378,8 +389,18 @@ export function ElasticSlider({
       const snapped = clamp(roundValue(next, safeStep), min, safeMax);
       animateFillTo(percentFromValue(snapped));
       setValue(snapped);
+      onValueCommit?.(snapped);
     },
-    [animateFillTo, min, percentFromValue, safeMax, safeStep, setValue, value]
+    [
+      animateFillTo,
+      min,
+      onValueCommit,
+      percentFromValue,
+      safeMax,
+      safeStep,
+      setValue,
+      value,
+    ]
   );
 
   const handleFocus = useCallback(() => {
