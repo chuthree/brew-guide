@@ -92,7 +92,6 @@ const BeanImage: React.FC<{
           width={56}
           height={56}
           className="h-full w-full object-cover"
-          loading="eager"
           onError={() =>
             setImageError({ source: beanImage || null, failed: true })
           }
@@ -105,7 +104,6 @@ const BeanImage: React.FC<{
           width={56}
           height={56}
           className="h-full w-full object-cover"
-          loading="eager"
           onError={() => setImageError({ source: roasterLogo, failed: true })}
           unoptimized
         />
