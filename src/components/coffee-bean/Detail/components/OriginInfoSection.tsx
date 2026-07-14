@@ -38,6 +38,7 @@ interface InlineRoastLevelSelectProps {
   value: string;
   placeholder: string;
   suggestions: string[];
+  clearable: boolean;
   onChange: (value: string) => void;
 }
 
@@ -45,6 +46,7 @@ const InlineRoastLevelSelect: React.FC<InlineRoastLevelSelectProps> = ({
   value,
   placeholder,
   suggestions,
+  clearable,
   onChange,
 }) => {
   const [open, setOpen] = useState(false);
@@ -98,7 +100,7 @@ const InlineRoastLevelSelect: React.FC<InlineRoastLevelSelectProps> = ({
             </span>
           )}
         </button>
-        {value ? (
+        {value && clearable ? (
           <button
             type="button"
             onClick={handleClear}
@@ -459,6 +461,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
           </div>
           <InlineRoastLevelSelect
             value={roastLevel}
+            clearable={isAddMode}
             onChange={handleRoastLevelSelect}
             placeholder="选择烘焙度"
             suggestions={roastLevelSuggestions.suggestions}
