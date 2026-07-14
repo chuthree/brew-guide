@@ -25,7 +25,6 @@ const EMPTY_SEARCH_REVEAL_STATE: BeanSettingsSearchRevealState = {
   priceDetails: false,
   noteDetails: false,
   ratingDetails: false,
-  roasterDetails: false,
   beanFields: false,
 };
 
@@ -80,9 +79,6 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
   const showRatingDetails =
     Boolean(settings.showBeanRating) ||
     persistentSearchRevealState.ratingDetails;
-  const showRoasterDetails =
-    settings.roasterFieldEnabled !== false ||
-    persistentSearchRevealState.roasterDetails;
   const onCloseRef = React.useRef(onClose);
 
   React.useEffect(() => {
@@ -92,7 +88,6 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       priceDetails: current.priceDetails || searchRevealState.priceDetails,
       noteDetails: current.noteDetails || searchRevealState.noteDetails,
       ratingDetails: current.ratingDetails || searchRevealState.ratingDetails,
-      roasterDetails: current.roasterDetails || searchRevealState.roasterDetails,
       beanFields: current.beanFields || searchRevealState.beanFields,
     }));
   }, [searchRevealState]);
@@ -264,7 +259,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       </SettingSection>
 
       <SettingSection title="添加">
-        <SettingRow label="自动填充图片">
+        <SettingRow label="自动填充图片" isLast>
           <SettingToggle
             checked={settings.autoFillRecognitionImage || false}
             onChange={checked =>
@@ -272,45 +267,16 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             }
           />
         </SettingRow>
-        <SettingRow label="烘焙商" isLast={!showRoasterDetails}>
-          <SettingToggle
-            checked={settings.roasterFieldEnabled !== false}
-            onChange={async checked => {
-              await handleChange('roasterFieldEnabled', checked);
-            }}
-          />
-        </SettingRow>
-        {showRoasterDetails && (
-          <SettingRow label="烘焙商分隔符" isSubSetting isLast>
-            <SettingSelector
-              value={settings.roasterSeparator || ' '}
-              options={[
-                { value: ' ', label: '空格' },
-                { value: '/', label: '/' },
-              ]}
-              ariaLabel="烘焙商分隔符"
-              onChange={value => {
-                handleChange('roasterSeparator', value as ' ' | '/');
-              }}
-            />
-          </SettingRow>
-        )}
       </SettingSection>
 
       <SettingSection>
-        <SettingRow
-          label="咖啡豆字段"
-          isLast
-          onClick={openBeanFieldsDrawer}
-        >
+        <SettingRow label="咖啡豆字段" isLast onClick={openBeanFieldsDrawer}>
           <ChevronRight className="h-4 w-4 text-neutral-400" />
         </SettingRow>
       </SettingSection>
 
       <BeanFieldSettingsDrawer
-        isOpen={
-          showBeanFieldsDrawer || persistentSearchRevealState.beanFields
-        }
+        isOpen={showBeanFieldsDrawer || persistentSearchRevealState.beanFields}
         onClose={closeBeanFieldsDrawer}
       />
     </SettingPage>

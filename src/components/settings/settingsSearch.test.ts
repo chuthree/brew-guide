@@ -17,6 +17,12 @@ describe('settings search reveal state', () => {
 
   it('opens the bean field drawer for nested field results', () => {
     expect(
+      getBeanSettingsSearchRevealState(makeSettingRowSearchId('烘焙商'))
+    ).toMatchObject({ beanFields: true });
+    expect(
+      getBeanSettingsSearchRevealState(makeSettingRowSearchId('烘焙商分隔符'))
+    ).toMatchObject({ beanFields: true });
+    expect(
       getBeanSettingsSearchRevealState(makeSettingRowSearchId('产国'))
     ).toMatchObject({ beanFields: true });
     expect(

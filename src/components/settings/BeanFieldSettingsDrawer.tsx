@@ -13,9 +13,25 @@ import {
   type BeanFieldGroupId,
 } from '@/lib/coffee-beans/beanFields';
 import type { SettingsOptions } from './Settings';
+import SettingSelector, {
+  type SettingSelectorOption,
+} from './atomic/SettingSelector';
+import SettingRow from './atomic/SettingRow';
+import SettingSection from './atomic/SettingSection';
 import SettingToggle from './atomic/SettingToggle';
 import { useScrollToHighlightedSetting } from './atomic/SettingSearchHighlightContext';
 import { makeSettingRowSearchId } from './settingsSearch';
+
+const ROASTER_SETTING_ID = makeSettingRowSearchId('烘焙商');
+const ROASTER_SEPARATOR_SETTING_ID = makeSettingRowSearchId('烘焙商分隔符');
+const ROASTER_SEPARATOR_OPTIONS: SettingSelectorOption<' ' | '/'>[] = [
+  { value: ' ', label: '空格' },
+  { value: '/', label: '/' },
+];
+const EMPTY_SCROLL_FADE = { top: false, bottom: false };
+const SCROLL_CONTAINER_STYLE: React.CSSProperties = {
+  maxHeight: 'calc(88dvh - 3rem - env(safe-area-inset-bottom))',
+};
 
 interface BeanFieldSettingsDrawerProps {
   isOpen: boolean;
@@ -26,7 +42,6 @@ interface BeanFieldSettingsRowProps {
   fieldId: BeanFieldId;
   label: string;
   settingId: string;
-  isHighlighted: boolean;
   isEnabled: boolean;
   isLast: boolean;
   onToggle: (fieldId: BeanFieldId, checked: boolean) => void;
@@ -36,7 +51,6 @@ const BeanFieldSettingsRow: React.FC<BeanFieldSettingsRowProps> = ({
   fieldId,
   label,
   settingId,
-  isHighlighted,
   isEnabled,
   isLast,
   onToggle,
@@ -49,25 +63,9 @@ const BeanFieldSettingsRow: React.FC<BeanFieldSettingsRowProps> = ({
   );
 
   return (
-    <div
-      data-settings-search-id={settingId}
-      className={`flex items-stretch px-3.5 transition-colors ${
-        isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
-      }`}
-    >
-      <div
-        className={`flex min-w-0 flex-1 items-center justify-between py-3.5 ${
-          !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
-        }`}
-      >
-        <div className="mr-4 min-w-0">
-          <div className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-200">
-            {label}
-          </div>
-        </div>
-        <SettingToggle checked={isEnabled} onChange={handleToggle} />
-      </div>
-    </div>
+    <SettingRow label={label} settingId={settingId} isLast={isLast}>
+      <SettingToggle checked={isEnabled} onChange={handleToggle} />
+    </SettingRow>
   );
 };
 
@@ -76,8 +74,25 @@ const BeanFieldSettingsDrawer: React.FC<BeanFieldSettingsDrawerProps> = ({
   onClose,
 }) => {
   const highlightedSettingId = useScrollToHighlightedSetting(isOpen);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const [scrollFade, setScrollFade] = React.useState(EMPTY_SCROLL_FADE);
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);
+  const handleRoasterFieldToggle = React.useCallback(
+    (checked: boolean) => {
+      void updateSettings({ roasterFieldEnabled: checked });
+    },
+    [updateSettings]
+  );
+  const handleRoasterSeparatorChange = React.useCallback(
+    (value: ' ' | '/') => {
+      void updateSettings({ roasterSeparator: value });
+    },
+    [updateSettings]
+  );
+  const showRoasterSeparator =
+    settings.roasterFieldEnabled !== false ||
+    highlightedSettingId === ROASTER_SEPARATOR_SETTING_ID;
   const beanFieldConfig = React.useMemo(
     () => resolveBeanFieldConfig(settings),
     [settings]
@@ -109,55 +124,135 @@ const BeanFieldSettingsDrawer: React.FC<BeanFieldSettingsDrawerProps> = ({
     [beanFieldConfig.fields, updateBeanFieldConfig]
   );
 
+  const updateScrollFade = React.useCallback(() => {
+    const element = scrollContainerRef.current;
+    if (!element) return;
+
+    const canScroll = element.scrollHeight > element.clientHeight + 1;
+    const nextFade = {
+      top: canScroll && element.scrollTop > 1,
+      bottom:
+        canScroll &&
+        element.scrollTop + element.clientHeight < element.scrollHeight - 1,
+    };
+
+    setScrollFade(current =>
+      current.top === nextFade.top && current.bottom === nextFade.bottom
+        ? current
+        : nextFade
+    );
+  }, []);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const frame = requestAnimationFrame(updateScrollFade);
+    const element = scrollContainerRef.current;
+    const resizeObserver =
+      element && typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(updateScrollFade)
+        : null;
+
+    if (element && resizeObserver) {
+      resizeObserver.observe(element);
+    }
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+    };
+  }, [isOpen, showRoasterSeparator, updateScrollFade]);
+
   return (
     <ActionDrawer
       isOpen={isOpen}
       onClose={onClose}
       historyId="bean-field-settings"
     >
-      <ActionDrawer.Content className="mb-8!">
-        <div className="mb-5 px-1">
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-            咖啡豆字段
-          </h2>
+      <ActionDrawer.Content className="mb-0! space-y-0!">
+        <div className="relative">
+          <div
+            ref={scrollContainerRef}
+            onScroll={updateScrollFade}
+            className="overflow-x-hidden overflow-y-auto overscroll-contain"
+            style={SCROLL_CONTAINER_STYLE}
+          >
+            <SettingSection title="基础" className="-mx-6">
+              <SettingRow
+                label="烘焙商"
+                settingId={ROASTER_SETTING_ID}
+                isLast={!showRoasterSeparator}
+              >
+                <SettingToggle
+                  checked={settings.roasterFieldEnabled !== false}
+                  onChange={handleRoasterFieldToggle}
+                />
+              </SettingRow>
+              {showRoasterSeparator && (
+                <SettingRow
+                  label="烘焙商分隔符"
+                  settingId={ROASTER_SEPARATOR_SETTING_ID}
+                  isLast
+                  isSubSetting
+                >
+                  <SettingSelector
+                    value={settings.roasterSeparator || ' '}
+                    options={ROASTER_SEPARATOR_OPTIONS}
+                    ariaLabel="烘焙商分隔符"
+                    onChange={handleRoasterSeparatorChange}
+                  />
+                </SettingRow>
+              )}
+            </SettingSection>
+
+            {(['origin', 'processing', 'variety'] as BeanFieldGroupId[]).map(
+              group => {
+                const fields = BEAN_FIELD_DEFINITIONS.filter(
+                  definition => definition.group === group
+                );
+
+                return (
+                  <SettingSection
+                    key={group}
+                    title={BEAN_FIELD_GROUP_LABELS[group]}
+                    className="-mx-6"
+                  >
+                    {fields.map((definition, index) => {
+                      const isEnabled = enabledBeanFieldIdSet.has(
+                        definition.id
+                      );
+                      const label =
+                        definition.id === 'origin' ? '产地' : definition.label;
+                      const settingId = makeSettingRowSearchId(label);
+
+                      return (
+                        <BeanFieldSettingsRow
+                          key={definition.id}
+                          fieldId={definition.id}
+                          label={label}
+                          settingId={settingId}
+                          isEnabled={isEnabled}
+                          isLast={index === fields.length - 1}
+                          onToggle={toggleBeanField}
+                        />
+                      );
+                    })}
+                  </SettingSection>
+                );
+              }
+            )}
+          </div>
+          <div
+            className={`fade-mask-to-b pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-white transition-opacity duration-200 dark:bg-neutral-900 ${
+              scrollFade.top ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+          <div
+            className={`fade-mask-to-t pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-white transition-opacity duration-200 dark:bg-neutral-900 ${
+              scrollFade.bottom ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
         </div>
-
-        {(['origin', 'processing', 'variety'] as BeanFieldGroupId[]).map(
-          group => {
-            const fields = BEAN_FIELD_DEFINITIONS.filter(
-              definition => definition.group === group
-            );
-
-            return (
-              <div key={group} className="mb-5">
-                <div className="mb-2 px-1 text-xs font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-                  {BEAN_FIELD_GROUP_LABELS[group]}
-                </div>
-                <div className="overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-800/60">
-                  {fields.map((definition, index) => {
-                    const isEnabled = enabledBeanFieldIdSet.has(definition.id);
-                    const label =
-                      definition.id === 'origin' ? '产地' : definition.label;
-                    const settingId = makeSettingRowSearchId(label);
-
-                    return (
-                      <BeanFieldSettingsRow
-                        key={definition.id}
-                        fieldId={definition.id}
-                        label={label}
-                        settingId={settingId}
-                        isHighlighted={highlightedSettingId === settingId}
-                        isEnabled={isEnabled}
-                        isLast={index === fields.length - 1}
-                        onToggle={toggleBeanField}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          }
-        )}
       </ActionDrawer.Content>
     </ActionDrawer>
   );

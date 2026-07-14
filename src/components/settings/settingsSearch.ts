@@ -104,11 +104,13 @@ const BEAN_NOTE_DETAIL_SEARCH_IDS = makeSettingSearchIdSet([
   '备注内容',
   '备注行数限制',
 ]);
-const BEAN_FIELD_SEARCH_IDS = makeSettingSearchIdSet(
-  BEAN_FIELD_DEFINITIONS.map(definition =>
+const BEAN_FIELD_SEARCH_IDS = makeSettingSearchIdSet([
+  '烘焙商',
+  '烘焙商分隔符',
+  ...BEAN_FIELD_DEFINITIONS.map(definition =>
     definition.id === 'origin' ? '产地' : definition.label
-  )
-);
+  ),
+]);
 const GREEN_BEAN_DETAIL_SEARCH_IDS = makeSettingSearchIdSet([
   '启用"全部烘焙"选项',
   '启用自定义烘焙量输入',
@@ -120,7 +122,6 @@ export interface BeanSettingsSearchRevealState {
   priceDetails: boolean;
   noteDetails: boolean;
   ratingDetails: boolean;
-  roasterDetails: boolean;
   beanFields: boolean;
 }
 
@@ -133,8 +134,6 @@ export const getBeanSettingsSearchRevealState = (
     BEAN_NOTE_DETAIL_SEARCH_IDS.has(highlightedSettingId)
   ),
   ratingDetails: highlightedSettingId === makeSettingRowSearchId('十分位制'),
-  roasterDetails:
-    highlightedSettingId === makeSettingRowSearchId('烘焙商分隔符'),
   beanFields: Boolean(
     highlightedSettingId && BEAN_FIELD_SEARCH_IDS.has(highlightedSettingId)
   ),
