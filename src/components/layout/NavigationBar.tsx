@@ -143,7 +143,7 @@ const TabButton: React.FC<TabButtonProps> = ({
   dataTab,
 }) => {
   const baseClasses =
-    'rounded-sm pb-3 text-xs font-medium tracking-widest whitespace-nowrap outline-none transition-colors focus-visible:ring-2 focus-visible:ring-neutral-400/50 focus-visible:ring-offset-4 focus-visible:ring-offset-neutral-50 md:pb-0 dark:focus-visible:ring-neutral-500/60 dark:focus-visible:ring-offset-neutral-900';
+    'flex items-center rounded-sm pb-3 text-xs font-medium tracking-widest whitespace-nowrap outline-none transition-colors focus-visible:ring-2 focus-visible:ring-neutral-400/50 focus-visible:ring-offset-4 focus-visible:ring-offset-neutral-50 md:pb-0 dark:focus-visible:ring-neutral-500/60 dark:focus-visible:ring-offset-neutral-900';
   const stateClasses = isActive
     ? 'text-neutral-800 dark:text-neutral-100'
     : isDisabled
