@@ -30,10 +30,7 @@ const geistMono = localFont({
   display: 'swap',
 });
 
-const SEO_TITLE =
-  'Brew Guide 咖啡冲煮计时、豆仓管理与品鉴记录工具 | 手冲配方、参数记录与风味分析';
-const SEO_DESCRIPTION =
-  'Brew Guide 是面向手冲与精品咖啡爱好者的一站式咖啡工具，提供分阶段冲煮计时、注水可视化引导、咖啡豆库存与烘焙信息管理、风味评分与品鉴记录、冲煮历史回顾与统计分析、器具与方案自定义，并支持离线使用、数据导入导出与 Web/iOS/Android/桌面多端同步，帮助你稳定复现一杯咖啡风味，优化萃取参数与冲煮体验。';
+const SEO_TITLE = 'Brew Guide';
 
 const encodeJsonForHtml = (value: unknown) =>
   JSON.stringify(value).replace(/[<>&]/g, char => {
@@ -55,7 +52,6 @@ const STRUCTURED_DATA_JSON = encodeJsonForHtml({
   name: 'Brew Guide',
   applicationCategory: 'LifestyleApplication',
   operatingSystem: 'Web, iOS, Android',
-  description: SEO_DESCRIPTION,
   url: 'https://coffee.chu3.top/',
   author: {
     '@type': 'Person',
@@ -77,26 +73,16 @@ const STRUCTURED_DATA_JSON = encodeJsonForHtml({
 export const metadata: Metadata = {
   metadataBase: new URL('https://coffee.chu3.top/'),
   title: SEO_TITLE,
-  description: SEO_DESCRIPTION,
   keywords: [
-    '手冲咖啡',
-    '咖啡计时器',
-    'V60',
-    '手冲咖啡计时器',
-    '手冲咖啡教程',
-    '咖啡冲煮',
-    '咖啡萃取',
     'Brew Guide',
-    '咖啡小工具',
+    '咖啡计时器',
+    '手冲计时器',
+    '咖啡豆库存',
     '咖啡豆管理',
     '豆仓管理',
-    '咖啡品鉴',
-    '品鉴记录',
-    '精品咖啡',
-    '咖啡风味',
-    '咖啡器材',
-    '意式咖啡',
+    '冲煮记录',
     '咖啡笔记',
+    '品鉴记录',
   ],
   manifest: '/manifest.json',
   alternates: {
@@ -104,9 +90,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: SEO_TITLE,
-    description: SEO_DESCRIPTION,
     url: 'https://coffee.chu3.top/',
-    siteName: "Brew Guide - Chu3's Coffee Guide",
+    siteName: 'Brew Guide',
     locale: 'zh_CN',
     type: 'website',
     images: [
@@ -121,7 +106,6 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: SEO_TITLE,
-    description: SEO_DESCRIPTION,
     images: [
       'https://coffee.chu3.top/images/icons/app/icon-512x512-opaque.png',
     ],
@@ -275,54 +259,10 @@ export default function RootLayout({
         )}
       </head>
       <body className="select-none [&_[contenteditable]]:select-text [&_input]:select-text [&_textarea]:select-text">
-        <h1 className="sr-only">
-          Brew Guide 咖啡冲煮计时、豆仓管理与品鉴记录工具
-        </h1>
-        {/* SEO: 为不支持 JavaScript 的搜索引擎爬虫提供内容 */}
+        <h1 className="sr-only">Brew Guide</h1>
         <noscript>
           <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-            <h1>Brew Guide 咖啡冲煮计时、豆仓管理与品鉴记录工具</h1>
-            <p>{SEO_DESCRIPTION}</p>
-
-            <h2>冲煮管理</h2>
-            <ul>
-              <li>
-                支持多种器具：V60、聪明杯、Kalita、Origami、OREA、意式咖啡机
-              </li>
-              <li>丰富的冲煮方案库，预设和自定义方法</li>
-              <li>精确的计时器，按阶段引导冲煮</li>
-              <li>可视化注水过程</li>
-            </ul>
-
-            <h2>咖啡豆管理</h2>
-            <ul>
-              <li>详细库存记录（产地、庄园、处理法、品种、烘焙度等）</li>
-              <li>烘焙日期追踪和新鲜度监控</li>
-              <li>消耗跟踪和剩余量管理</li>
-              <li>
-                智能搜索：支持名称、品牌、产区、庄园、风味、处理法、品种筛选
-              </li>
-            </ul>
-
-            <h2>冲煮笔记</h2>
-            <ul>
-              <li>详细记录评分、口感和笔记</li>
-              <li>关联器具、方法和豆子数据</li>
-              <li>趋势分析和偏好统计</li>
-            </ul>
-
-            <h2>其他特性</h2>
-            <ul>
-              <li>PWA 支持，可离线使用</li>
-              <li>深色/浅色模式</li>
-              <li>数据导入导出</li>
-              <li>多平台支持（Web、iOS、Android、桌面）</li>
-            </ul>
-
-            <p>
-              <a href="https://coffee.chu3.top/">访问 Brew Guide 网页版</a> |
-              <a href="https://gitee.com/chu3/brew-guide/releases">下载 App</a>
-            </p>
+            <h1>Brew Guide</h1>
           </div>
         </noscript>
         <ThemeProvider
