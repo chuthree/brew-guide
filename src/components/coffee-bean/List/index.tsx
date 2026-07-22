@@ -1284,6 +1284,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [isShareMode, setIsShareMode] = useState(false);
   const [selectedBeans, setSelectedBeans] = useState<string[]>([]);
   const [isSavingShareImage, setIsSavingShareImage] = useState(false);
+  const [isSharingBeanPackage, setIsSharingBeanPackage] = useState(false);
 
   // 监听分享事件 - 从咖啡豆详情触发的分享
   useEffect(() => {
@@ -1764,10 +1765,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const handleCancelShare = () => {
     setIsShareMode(false);
     setSelectedBeans([]);
+    setIsSharingBeanPackage(false);
   };
 
   const handleSaveBeansAsImage = async () => {
-    if (selectedBeans.length === 0 || isSavingShareImage) return;
+    if (
+      selectedBeans.length === 0 ||
+      isSavingShareImage ||
+      isSharingBeanPackage
+    )
+      return;
 
     setIsSavingShareImage(true);
 
@@ -1797,7 +1804,8 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   };
 
   const handleShareText = async () => {
-    if (selectedBeans.length === 0) return;
+    if (selectedBeans.length === 0 || isSavingShareImage || isSharingBeanPackage)
+      return;
 
     try {
       // 获取选中的咖啡豆
@@ -1846,6 +1854,47 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     } catch (error) {
       console.error('分享文本失败:', error);
       showToast({ type: 'error', title: '分享文本失败', duration: 3000 });
+    }
+  };
+
+  const handleSharePackage = async () => {
+    if (
+      selectedBeans.length === 0 ||
+      isSharingBeanPackage ||
+      isSavingShareImage
+    )
+      return;
+
+    setIsSharingBeanPackage(true);
+
+    try {
+      const [{ createCoffeeBeanSharePackage }, { TempFileManager }] =
+        await Promise.all([
+          import('@/lib/coffee-beans/beanSharePackage'),
+          import('@/lib/utils/tempFileManager'),
+        ]);
+      const result = await createCoffeeBeanSharePackage(beans, selectedBeans);
+
+      await TempFileManager.shareBinaryFile(result.blob, result.fileName, {
+        title: '分享咖啡豆',
+        text: `${result.beanCount} 款咖啡豆`,
+        dialogTitle: '分享咖啡豆',
+      });
+
+      showToast({
+        type: 'success',
+        title: '咖啡豆压缩包已保存',
+        duration: 2000,
+      });
+      handleCancelShare();
+    } catch (error) {
+      console.error('分享咖啡豆压缩包失败:', error);
+      showToast({
+        type: 'error',
+        title: error instanceof Error ? error.message : '分享咖啡豆压缩包失败',
+        duration: 3000,
+      });
+      setIsSharingBeanPackage(false);
     }
   };
 
@@ -2124,7 +2173,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                 : `保存为图片 (${selectedBeans.length})`,
               onClick: handleSaveBeansAsImage,
               className:
-                selectedBeans.length === 0 || isSavingShareImage
+                selectedBeans.length === 0 ||
+                isSavingShareImage ||
+                isSharingBeanPackage
                   ? 'cursor-not-allowed opacity-50'
                   : '',
             },
@@ -2132,10 +2183,26 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
               text: '分享文本',
               onClick: handleShareText,
               className:
-                selectedBeans.length === 0
+                selectedBeans.length === 0 ||
+                isSharingBeanPackage ||
+                isSavingShareImage
                   ? 'cursor-not-allowed opacity-50'
                   : '',
             },
+            ...(settings?.experimentalBeanSharePackageEnabled
+              ? [
+                  {
+                    text: isSharingBeanPackage ? '生成中...' : '分享压缩包',
+                    onClick: handleSharePackage,
+                    className:
+                      selectedBeans.length === 0 ||
+                      isSharingBeanPackage ||
+                      isSavingShareImage
+                        ? 'cursor-not-allowed opacity-50'
+                        : '',
+                  },
+                ]
+              : []),
           ]}
         />
       )}

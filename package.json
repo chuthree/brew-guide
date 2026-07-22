@@ -68,6 +68,7 @@
     "framer-motion": "^12.23.24",
     "gsap": "^3.13.0",
     "html-to-image": "^1.11.13",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.525.0",
     "nanoid": "^5.1.5",
     "next": "16.1.0",

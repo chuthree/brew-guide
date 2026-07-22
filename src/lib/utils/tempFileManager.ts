@@ -63,6 +63,23 @@ export class TempFileManager {
     return new File([bytes], fileName, { type: mimeType });
   }
 
+  private static async blobToBase64Data(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') {
+          reject(new Error('文件数据读取失败'));
+          return;
+        }
+
+        resolve(result.includes(',') ? result.split(',')[1] : result);
+      };
+      reader.onerror = () => reject(new Error('文件数据读取失败'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
   private static downloadImage(imageData: string, fileName: string): void {
     const link = document.createElement('a');
     link.download = fileName;
@@ -312,6 +329,73 @@ export class TempFileManager {
     link.click();
 
     // Web平台不需要清理，因为没有创建持久化文件
+  }
+
+  /**
+   * 创建临时二进制文件并分享。Web 端保持与现有导出一致，直接触发下载。
+   */
+  static async shareBinaryFile(
+    data: Blob,
+    fileName: string,
+    shareOptions: ShareOptions
+  ): Promise<void> {
+    if (Capacitor.isNativePlatform()) {
+      await this.shareBinaryFileNative(data, fileName, shareOptions);
+    } else {
+      await this.shareBinaryFileWeb(data, fileName);
+    }
+  }
+
+  private static async shareBinaryFileNative(
+    data: Blob,
+    fileName: string,
+    shareOptions: ShareOptions
+  ): Promise<void> {
+    const fullFileName = this.createTempFileName(fileName);
+
+    try {
+      await Filesystem.writeFile({
+        path: fullFileName,
+        data: await this.blobToBase64Data(data),
+        directory: Directory.Cache,
+        recursive: true,
+      });
+
+      const uriResult = await Filesystem.getUri({
+        path: fullFileName,
+        directory: Directory.Cache,
+      });
+
+      await Share.share({
+        title: shareOptions.title,
+        text: shareOptions.text,
+        files: [uriResult.uri],
+        dialogTitle: shareOptions.dialogTitle,
+      });
+
+      await this.cleanupTempFile(fullFileName);
+    } catch (error) {
+      try {
+        await this.cleanupTempFile(fullFileName);
+      } catch (cleanupError) {
+        console.warn('清理临时文件失败:', cleanupError);
+      }
+      throw error;
+    }
+  }
+
+  private static async shareBinaryFileWeb(
+    data: Blob,
+    fileName: string
+  ): Promise<void> {
+    const url = URL.createObjectURL(data);
+
+    const link = document.createElement('a');
+    link.download = fileName;
+    link.href = url;
+    link.click();
+
+    URL.revokeObjectURL(url);
   }
 
   /**

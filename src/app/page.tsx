@@ -2434,6 +2434,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
       try {
         for (const beanData of beansToImport) {
+          const importedBeanState =
+            beanData.beanState === 'green' || beanData.beanState === 'roasted'
+              ? beanData.beanState
+              : importingBeanState;
           // 将导入的咖啡豆转换为ExtendedCoffeeBean类型
           // 构建基础对象，只包含必填字段和确实有值的字段
           const bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'> = {
@@ -2448,11 +2452,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             price: (beanData.price && beanData.price.toString().trim()) || '',
             // 生豆模式下，将roastDate作为purchaseDate处理
             roastDate:
-              importingBeanState === 'green'
+              importedBeanState === 'green'
                 ? ''
                 : (beanData.roastDate && beanData.roastDate.trim()) || '',
             // 生豆模式下，使用roastDate作为purchaseDate（因为AI识别返回的是roastDate字段）
-            ...(importingBeanState === 'green' &&
+            ...(importedBeanState === 'green' &&
             beanData.roastDate &&
             beanData.roastDate.trim()
               ? { purchaseDate: beanData.roastDate.trim() }
@@ -2472,7 +2476,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           }
 
           // 设置 beanState（根据当前导入模式）
-          bean.beanState = importingBeanState;
+          bean.beanState = importedBeanState;
 
           // 只在字段存在时才设置其他可选字段
           if (beanData.roaster !== undefined) bean.roaster = beanData.roaster;
@@ -2480,7 +2484,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             bean.startDay = beanData.startDay;
           if (beanData.endDay !== undefined) bean.endDay = beanData.endDay;
           if (beanData.image !== undefined) bean.image = beanData.image;
+          if (beanData.backImage !== undefined)
+            bean.backImage = beanData.backImage;
           if (beanData.brand !== undefined) bean.brand = beanData.brand;
+          if (beanData.purchaseDate !== undefined)
+            bean.purchaseDate = beanData.purchaseDate;
           if (beanData.beanType !== undefined)
             bean.beanType = beanData.beanType;
           if (beanData.overallRating !== undefined)
@@ -4289,6 +4297,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   showTotalPrice: settings.showTotalPrice,
                   showStatusDots: settings.showStatusDots,
                   immersiveAdd: settings.immersiveAdd,
+                  experimentalBeanSharePackageEnabled:
+                    settings.experimentalBeanSharePackageEnabled,
                 }}
                 navigationToggleControl={contentNavigationControl}
                 navigationSwipeControl={mobileNavigationSwipeControl}

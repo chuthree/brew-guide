@@ -84,6 +84,10 @@ type ImportStep =
 const MAX_IMAGES = 5;
 // 最大并发识别数（服务器已优化并发控制，可提高到 5）
 const MAX_CONCURRENT = 5;
+const IMAGE_FILE_ACCEPT =
+  'image/jpeg,image/png,image/webp,image/heic,image/heif';
+const BEAN_PACKAGE_FILE_ACCEPT =
+  '.brewbeans.zip,.zip,application/zip,application/x-zip-compressed';
 
 // 单张图片的识别状态
 interface ImageRecognitionState {
@@ -332,6 +336,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         settings?.experimentalBeanRecognitionModel,
       ]
     );
+  const fileInputAccept = settings?.experimentalBeanSharePackageEnabled
+    ? `${IMAGE_FILE_ACCEPT},${BEAN_PACKAGE_FILE_ACCEPT}`
+    : IMAGE_FILE_ACCEPT;
   const isDrawerDismissible =
     currentStep !== 'camera-preview' && currentStep !== 'recognizing';
 
@@ -746,20 +753,57 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     [handleRecognizeImageFile]
   );
 
+  const handleImportPackageFile = useCallback(
+    async (file: File) => {
+      if (!settings?.experimentalBeanSharePackageEnabled) {
+        showToast({ type: 'error', title: '请先开启“分享导入压缩包”' });
+        return;
+      }
+
+      try {
+        const { readCoffeeBeanSharePackage } =
+          await import('@/lib/coffee-beans/beanSharePackage');
+        const beanData = await readCoffeeBeanSharePackage(file);
+        await handleImportData(beanData);
+      } catch (error) {
+        showToast({
+          type: 'error',
+          title:
+            error instanceof Error ? error.message : '咖啡豆压缩包导入失败',
+        });
+      }
+    },
+    [handleImportData, settings?.experimentalBeanSharePackageEnabled]
+  );
+
   // 处理图片上传识别（支持单张和多张）
   const handleImageUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
       if (!files || files.length === 0) return;
 
-      await processImageFiles(Array.from(files));
+      const selectedFiles = Array.from(files);
+      const packageFiles = selectedFiles.filter(file => {
+        const name = file.name.toLowerCase();
+        return name.endsWith('.brewbeans.zip') || name.endsWith('.zip');
+      });
+
+      if (packageFiles.length > 0) {
+        if (selectedFiles.length > 1 || packageFiles.length > 1) {
+          showToast({ type: 'error', title: '一次只能导入一个压缩包' });
+        } else {
+          await handleImportPackageFile(packageFiles[0]);
+        }
+      } else {
+        await processImageFiles(selectedFiles);
+      }
 
       // 清除文件输入，以便可以再次选择同一文件
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     },
-    [processImageFiles]
+    [handleImportPackageFile, processImageFiles]
   );
 
   // 删除预览中的图片
@@ -965,6 +1009,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       });
     }
   }, [processImageFiles]);
+
+  const handleUploadPackageClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   const handleOpenCamera = useCallback(() => {
     setCurrentStep('camera-preview');
@@ -1250,6 +1298,15 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         >
           相册识别图片
         </motion.button>
+        {settings?.experimentalBeanSharePackageEnabled && (
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={handleUploadPackageClick}
+            className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
+          >
+            选择压缩包
+          </motion.button>
+        )}
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={handleInputJSON}
@@ -1778,7 +1835,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        accept={fileInputAccept}
         multiple
         className="hidden"
         onChange={handleImageUpload}

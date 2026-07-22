@@ -100,6 +100,7 @@ export interface CoffeeBeansProps {
     showStatusDots?: boolean;
     simplifiedViewLabels?: boolean;
     immersiveAdd?: boolean; // 沉浸式添加模式
+    experimentalBeanSharePackageEnabled?: boolean;
   };
 }
 

@@ -184,7 +184,7 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
   };
 
   const highlightedSettingId = useScrollToHighlightedSetting(
-    `${settings.experimentalBeanRecognitionEnabled}:${settings.experimentalSettingsSearchEnabled}:${isTestingConfig}`
+    `${settings.experimentalBeanRecognitionEnabled}:${settings.experimentalBeanSharePackageEnabled}:${settings.experimentalSettingsSearchEnabled}:${isTestingConfig}`
   );
   const getSearchHighlightClass = React.useCallback(
     (label: string) =>
@@ -196,9 +196,7 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
 
   return (
     <SettingPage title="实验性功能" isVisible={isVisible} onClose={handleClose}>
-      <SettingSection
-        title="设置"
-      >
+      <SettingSection title="设置">
         <SettingRow label="设置全局搜索" isLast>
           <SettingToggle
             checked={settings.experimentalSettingsSearchEnabled || false}
@@ -210,10 +208,25 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
       </SettingSection>
 
       {showCoffeeBeanExperiments && (
-        <BeanSummaryCapacityLimitSection
-          settings={settings}
-          handleChange={handleChange}
-        />
+        <>
+          <BeanSummaryCapacityLimitSection
+            settings={settings}
+            handleChange={handleChange}
+          />
+
+          <SettingSection
+            footer="开启后，分享咖啡豆会生成包含图片的压缩包；添加咖啡豆时也会显示选择压缩包入口。"
+          >
+            <SettingRow label="分享导入压缩包" isLast>
+              <SettingToggle
+                checked={settings.experimentalBeanSharePackageEnabled || false}
+                onChange={checked =>
+                  handleChange('experimentalBeanSharePackageEnabled', checked)
+                }
+              />
+            </SettingRow>
+          </SettingSection>
+        </>
       )}
 
       {showCoffeeBeanExperiments && (
@@ -378,7 +391,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
           )}
         </SettingSection>
       )}
-
     </SettingPage>
   );
 };

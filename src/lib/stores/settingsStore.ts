@@ -176,6 +176,7 @@ export const defaultSettings: AppSettings = {
   experimentalBeanRecognitionApiKey: '',
   experimentalBeanRecognitionModel: '',
   experimentalBeanRecognitionPrompt: '',
+  experimentalBeanSharePackageEnabled: false,
   experimentalSettingsSearchEnabled: false,
   syncNewNoteDateWithSelectedDate: false,
   syncQuickDecrementDateWithSelectedDate: false,
