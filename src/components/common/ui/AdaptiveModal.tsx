@@ -3,7 +3,6 @@
 import React, {
   useState,
   useEffect,
-  useCallback,
   useRef,
   forwardRef,
   useImperativeHandle,
@@ -350,11 +349,6 @@ const AdaptiveModal = forwardRef<AdaptiveModalHandle, AdaptiveModalProps>(
       };
     }, [shouldRender, isIOS]);
 
-    // 处理遮罩层点击关闭
-    const handleOverlayClick = useCallback(() => {
-      onClose();
-    }, [onClose]);
-
     // 渲染 children
     const renderChildren = () => {
       if (typeof children === 'function') {
@@ -378,7 +372,6 @@ const AdaptiveModal = forwardRef<AdaptiveModalHandle, AdaptiveModalProps>(
               transitionDuration: `${OVERLAY_TRANSITION.duration}ms`,
               opacity: overlayVisible ? 1 : 0,
             }}
-            onClick={handleOverlayClick}
           />
         )}
 
