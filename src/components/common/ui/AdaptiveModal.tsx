@@ -368,62 +368,54 @@ const AdaptiveModal = forwardRef<AdaptiveModalHandle, AdaptiveModalProps>(
 
     if (!shouldRender) return null;
 
-    // 大屏幕：底部抽屉模式
-    if (renderIsMediumScreen) {
-      return (
-        <>
-          {/* 背景遮罩 */}
-          {renderShowDrawerOverlay && (
-            <div
-              className={`fixed inset-0 z-40 bg-black/50 transition-opacity`}
-              style={{
-                transitionDuration: `${OVERLAY_TRANSITION.duration}ms`,
-                opacity: overlayVisible ? 1 : 0,
-              }}
-              onClick={handleOverlayClick}
-            />
-          )}
-
-          {/* 抽屉内容 */}
-          <div
-            ref={modalRef}
-            className={`pb-safe-bottom fixed inset-x-0 bottom-0 z-50 mx-auto flex flex-col rounded-t-3xl bg-neutral-50 shadow-xl dark:bg-neutral-900 ${className}`}
-            style={{
-              maxWidth: drawerMaxWidth,
-              height: drawerHeight,
-              transform: isVisible ? 'translateY(0)' : 'translateY(100%)',
-              transition: `transform ${DRAWER_TRANSITION.duration}ms ${DRAWER_TRANSITION.easing}`,
-            }}
-          >
-            <div
-              ref={contentRef}
-              className="flex h-full flex-col overflow-hidden"
-            >
-              {renderChildren()}
-            </div>
-          </div>
-        </>
-      );
-    }
-
-    // 小屏幕：全屏模式（iOS 风格转场）
     return (
-      <div
-        ref={modalRef}
-        className={`pt-safe-top pb-safe-bottom fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 ${className}`}
-        style={{
-          transform: isVisible
-            ? 'translate3d(0, 0, 0)'
-            : `translate3d(${IOS_FULLSCREEN_TRANSITION.initialX}, 0, 0)`,
-          opacity: isVisible ? 1 : 0,
-          transition: `transform ${IOS_FULLSCREEN_TRANSITION.duration}ms ${IOS_FULLSCREEN_TRANSITION.easing}, opacity ${IOS_FULLSCREEN_TRANSITION.duration}ms ${IOS_FULLSCREEN_TRANSITION.easing}`,
-          isolation: 'isolate',
-        }}
-      >
-        <div ref={contentRef} className="flex h-full flex-col overflow-hidden">
-          {renderChildren()}
+      <>
+        {/* 抽屉遮罩 */}
+        {renderIsMediumScreen && renderShowDrawerOverlay && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 transition-opacity"
+            style={{
+              transitionDuration: `${OVERLAY_TRANSITION.duration}ms`,
+              opacity: overlayVisible ? 1 : 0,
+            }}
+            onClick={handleOverlayClick}
+          />
+        )}
+
+        {/* 保持同一个内容节点，避免尺寸变化时卸载表单状态 */}
+        <div
+          ref={modalRef}
+          className={
+            renderIsMediumScreen
+              ? `pb-safe-bottom fixed inset-x-0 bottom-0 z-50 mx-auto flex flex-col rounded-t-3xl bg-neutral-50 shadow-xl dark:bg-neutral-900 ${className}`
+              : `pt-safe-top pb-safe-bottom fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-900 ${className}`
+          }
+          style={
+            renderIsMediumScreen
+              ? {
+                  maxWidth: drawerMaxWidth,
+                  height: drawerHeight,
+                  transform: isVisible ? 'translateY(0)' : 'translateY(100%)',
+                  transition: `transform ${DRAWER_TRANSITION.duration}ms ${DRAWER_TRANSITION.easing}`,
+                }
+              : {
+                  transform: isVisible
+                    ? 'translate3d(0, 0, 0)'
+                    : `translate3d(${IOS_FULLSCREEN_TRANSITION.initialX}, 0, 0)`,
+                  opacity: isVisible ? 1 : 0,
+                  transition: `transform ${IOS_FULLSCREEN_TRANSITION.duration}ms ${IOS_FULLSCREEN_TRANSITION.easing}, opacity ${IOS_FULLSCREEN_TRANSITION.duration}ms ${IOS_FULLSCREEN_TRANSITION.easing}`,
+                  isolation: 'isolate',
+                }
+          }
+        >
+          <div
+            ref={contentRef}
+            className="flex h-full flex-col overflow-hidden"
+          >
+            {renderChildren()}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 );
