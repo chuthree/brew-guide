@@ -12,6 +12,7 @@ import {
   extractUniqueVarieties,
 } from '@/lib/utils/beanVarietyUtils';
 import type { BlendComponent } from '@/types/app';
+import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
 import {
   getFullPresets,
   getVisiblePresetSuggestions,
@@ -145,10 +146,12 @@ const hasAutofillValue = (
   field: TextBlendField
 ) => Boolean(getFieldValue(previousAutofill[index], field));
 
-const hasAutofilledRow = (previousAutofill: BlendComponent[], index: number) =>
-  suggestionFieldMap.some(({ field }) =>
-    hasAutofillValue(previousAutofill, index, field)
-  );
+const hasAutofilledRow = (
+  previousAutofill: BlendComponent[],
+  index: number,
+  fields: typeof suggestionFieldMap
+) =>
+  fields.some(({ field }) => hasAutofillValue(previousAutofill, index, field));
 
 const canUpdateFieldFromName = (
   component: BlendComponent | undefined,
@@ -171,13 +174,18 @@ export function autofillBlendComponentsFromName(
   components: BlendComponent[],
   name: string,
   suggestions: BlendComponentSuggestions,
-  previousAutofill: BlendComponent[] = []
+  previousAutofill: BlendComponent[],
+  enabledFields: readonly BeanFieldId[]
 ): {
   components: BlendComponent[];
   autofillComponents: BlendComponent[];
   changed: boolean;
 } {
-  const matchedValuesByField = suggestionFieldMap.reduce(
+  const enabledFieldSet = new Set(enabledFields);
+  const autofillableFields = suggestionFieldMap.filter(({ field }) =>
+    enabledFieldSet.has(field)
+  );
+  const matchedValuesByField = autofillableFields.reduce(
     (result, { field, suggestionKey }) => {
       result[field] = collectSuggestionMatches(
         name,
@@ -190,7 +198,7 @@ export function autofillBlendComponentsFromName(
 
   const generatedComponentCount = Math.max(
     0,
-    ...suggestionFieldMap.map(({ field }) => matchedValuesByField[field].length)
+    ...autofillableFields.map(({ field }) => matchedValuesByField[field].length)
   );
 
   const baseComponents =
@@ -209,7 +217,7 @@ export function autofillBlendComponentsFromName(
 
   let hasChange = false;
 
-  suggestionFieldMap.forEach(({ field }) => {
+  autofillableFields.forEach(({ field }) => {
     const matchedValues = matchedValuesByField[field];
     const rowCount = Math.max(
       nextComponents.length,
@@ -264,7 +272,8 @@ export function autofillBlendComponentsFromName(
   for (let index = nextComponents.length - 1; index >= 1; index -= 1) {
     if (
       isEmptyBlendComponent(nextComponents[index]) &&
-      (hasAutofilledRow(previousAutofill, index) || index >= components.length)
+      (hasAutofilledRow(previousAutofill, index, autofillableFields) ||
+        index >= components.length)
     ) {
       nextComponents.splice(index, 1);
       hasChange = true;

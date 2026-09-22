@@ -11,6 +11,10 @@ import {
   autofillBlendComponentsFromName,
   useBlendComponentSuggestions,
 } from '@/components/coffee-bean/Form/hooks/useBlendComponentSuggestions';
+import {
+  getEnabledBeanFieldIds,
+  resolveBeanFieldConfig,
+} from '@/lib/coffee-beans/beanFields';
 import { useRoasterSuggestions } from '@/components/coffee-bean/Form/hooks/useCoffeeBeanFieldSuggestions';
 import {
   formatNumber,
@@ -76,6 +80,15 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   const roasterSeparator = useSettingsStore(
     state => state.settings.roasterSeparator
   );
+  const beanFieldConfig = useSettingsStore(
+    state => state.settings.beanFieldConfig
+  );
+  const showEstateField = useSettingsStore(
+    state => state.settings.showEstateField
+  );
+  const enabledBlendComponentFields = getEnabledBeanFieldIds(
+    resolveBeanFieldConfig({ beanFieldConfig, showEstateField })
+  );
   const roasterSettings = {
     roasterFieldEnabled,
     roasterSeparator,
@@ -124,7 +137,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
       currentComponents,
       name,
       blendComponentSuggestions,
-      blendComponentNameAutofillRef.current
+      blendComponentNameAutofillRef.current,
+      enabledBlendComponentFields
     );
     blendComponentNameAutofillRef.current = autofillResult.autofillComponents;
 
