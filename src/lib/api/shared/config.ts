@@ -19,5 +19,5 @@ export const API_CONFIG = {
     /\/+$/,
     ''
   ),
-  timeoutMs: 120000,
+  timeoutMs: 125000,
 } as const;

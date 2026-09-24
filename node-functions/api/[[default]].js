@@ -41,6 +41,7 @@ const IMAGE_MIME_TYPE_BY_EXTENSION = {
 const IMAGE_ALLOWED_TYPE_SET = new Set(IMAGE_ALLOWED_TYPES);
 
 const QINIU_CHAT_COMPLETIONS = 'https://api.qnaigc.com/v1/chat/completions';
+const MODEL_REQUEST_TIMEOUT_MS = 105000;
 const DEFAULT_VISION_RECOGNITION_MODEL = 'doubao-seed-2.0-mini';
 const BEAN_RECOGNITION_MAX_TOKENS = 1200;
 
@@ -354,7 +355,7 @@ function timeoutSignal(timeoutMs) {
   return { signal: controller.signal, clear: () => clearTimeout(timer) };
 }
 
-async function callModelJSON({ url, apiKey, payload, timeoutMs = 120000 }) {
+async function callModelJSON({ url, apiKey, payload, timeoutMs = MODEL_REQUEST_TIMEOUT_MS }) {
   const { signal, clear } = timeoutSignal(timeoutMs);
   try {
     const response = await fetch(url, {
@@ -384,6 +385,11 @@ async function callModelJSON({ url, apiKey, payload, timeoutMs = 120000 }) {
     }
 
     return bodyJson;
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error('模型服务响应超时，请稍后重试');
+    }
+    throw error;
   } finally {
     clear();
   }
@@ -1021,7 +1027,7 @@ async function handleBeanRecognition(context) {
     const result = await callModelJSON({
       url: QINIU_CHAT_COMPLETIONS,
       apiKey,
-      timeoutMs: 120000,
+      timeoutMs: MODEL_REQUEST_TIMEOUT_MS,
       payload: {
         model: env.BEAN_RECOGNITION_MODEL || DEFAULT_VISION_RECOGNITION_MODEL,
         messages: [
@@ -1086,7 +1092,7 @@ async function handleMethodRecognition(context) {
     const result = await callModelJSON({
       url: QINIU_CHAT_COMPLETIONS,
       apiKey,
-      timeoutMs: 120000,
+      timeoutMs: MODEL_REQUEST_TIMEOUT_MS,
       payload: {
         model: env.METHOD_RECOGNITION_MODEL || DEFAULT_VISION_RECOGNITION_MODEL,
         messages: [
