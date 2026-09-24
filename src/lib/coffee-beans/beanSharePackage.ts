@@ -1,4 +1,4 @@
-import { db } from '@/lib/core/db';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 import { mergeCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 import type { CoffeeBean } from '@/types/app';
 
@@ -167,16 +167,19 @@ export async function createCoffeeBeanSharePackage(
 
   const [{ default: JSZip }, imageRecords] = await Promise.all([
     import('jszip'),
-    db.coffeeBeanImages.bulkGet(selectedBeans.map(bean => bean.id)),
+    coffeeBeanImageRepository.getRecords(selectedBeans.map(bean => bean.id)),
   ]);
 
   const zip = new JSZip();
   const manifestBeans: CoffeeBeanSharePackageManifestBean[] = [];
+  const imageRecordByBeanId = new Map(
+    imageRecords.map(record => [record.beanId, record])
+  );
 
   selectedBeans.forEach((bean, index) => {
     const beanWithImages = mergeCoffeeBeanImages(
       bean,
-      imageRecords[index] ?? undefined
+      imageRecordByBeanId.get(bean.id)
     );
     const manifestBean = toManifestBean(beanWithImages);
 

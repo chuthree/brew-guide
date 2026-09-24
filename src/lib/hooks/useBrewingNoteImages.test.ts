@@ -20,10 +20,12 @@ vi.mock('react', () => ({
   ],
 }));
 
-vi.mock('@/lib/notes/imageRepository', () => ({
-  getBrewingNoteImageCounts: vi.fn(),
-  getBrewingNoteImageNoteIds: mocks.getBrewingNoteImageNoteIds,
-  getBrewingNoteImages: mocks.getBrewingNoteImages,
+vi.mock('@/lib/data/repositories', () => ({
+  brewingNoteImageRepository: {
+    getImageCounts: vi.fn(),
+    getNoteIds: mocks.getBrewingNoteImageNoteIds,
+    getImages: mocks.getBrewingNoteImages,
+  },
 }));
 
 vi.mock('./useImageLoadGate', () => ({
@@ -55,12 +57,9 @@ describe('useBrewingNoteImages', () => {
     useBrewingNoteImageIds(['note-1']);
     await Promise.resolve();
 
-    const otherNoteEvent = Object.assign(
-      new Event('brewingNoteDataChanged'),
-      {
-        detail: { action: 'update', noteId: 'note-2' },
-      }
-    );
+    const otherNoteEvent = Object.assign(new Event('brewingNoteDataChanged'), {
+      detail: { action: 'update', noteId: 'note-2' },
+    });
     window.dispatchEvent(otherNoteEvent);
     expect(mocks.getBrewingNoteImages).toHaveBeenCalledTimes(1);
     expect(mocks.getBrewingNoteImageNoteIds).toHaveBeenCalledTimes(1);

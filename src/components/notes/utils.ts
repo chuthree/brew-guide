@@ -6,7 +6,7 @@ import {
 } from '@/lib/utils/equipmentUtils';
 import type { BrewingNote } from '@/lib/core/config';
 import { SORT_OPTIONS, type SortOption } from './types';
-import { db } from '@/lib/core/db';
+import { coffeeBeanRepository } from '@/lib/data/repositories';
 import {
   getBeanUnitPrice,
   resolveNoteCoffeeBeanInfo,
@@ -355,7 +355,7 @@ export const getCoffeeBeanUnitPrice = async (
 ): Promise<number> => {
   try {
     // 直接从 DB 获取所有咖啡豆
-    const beans = await db.coffeeBeans.toArray();
+    const beans = await coffeeBeanRepository.list();
     const bean = findCoffeeBeanByIdentity(beans, { name: beanName, roaster });
     const unitPrice = getBeanUnitPrice(bean);
     if (unitPrice > 0) {
@@ -380,7 +380,7 @@ export const calculateNoteCost = async (note: BrewingNote): Promise<number> => {
   if (isNaN(coffeeAmount)) return 0;
 
   if (note.beanId) {
-    const linkedBean = await db.coffeeBeans.get(note.beanId);
+    const linkedBean = await coffeeBeanRepository.get(note.beanId);
     const linkedBeanUnitPrice = getBeanUnitPrice(linkedBean);
     if (linkedBeanUnitPrice > 0) {
       return coffeeAmount * linkedBeanUnitPrice;

@@ -7,7 +7,7 @@ import {
   type BeanFieldId,
 } from './beanFields';
 import type { CoffeeBean } from '@/types/app';
-import type { AppSettings } from '@/lib/core/db';
+import type { AppSettings } from '@/lib/data/models';
 
 const buildBean = (bean: Partial<CoffeeBean>): CoffeeBean => ({
   id: 'bean',

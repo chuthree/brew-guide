@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  type CoffeeBeanImageSide,
-  type CoffeeBeanImageSourceMode,
-  getCoffeeBeanImageBeanIds,
-  getCoffeeBeanImageSource,
-} from '@/lib/coffee-beans/imageRepository';
+import type {
+  CoffeeBeanImageSide,
+  CoffeeBeanImageSourceMode,
+} from '@/lib/data/contracts';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 type CoffeeBeanDataChangedDetail = {
   beanId?: string;
   bean?: { id?: string };
@@ -178,7 +177,12 @@ export function useCoffeeBeanImage(
       setImageSource(fallback);
     }
 
-    getCoffeeBeanImageSource(beanId, { side, mode, preferThumbnail })
+    coffeeBeanImageRepository
+      .getSource(beanId, {
+        side,
+        mode,
+        preferThumbnail,
+      })
       .then(source => {
         if (!cancelled) {
           if (shouldCache) {
@@ -269,7 +273,8 @@ export function useCoffeeBeanImageIdsState(
       };
     }
 
-    getCoffeeBeanImageBeanIds(uniqueBeanIds, { side })
+    coffeeBeanImageRepository
+      .getBeanIds(uniqueBeanIds, { side })
       .then(ids => {
         if (!cancelled) {
           setState({ imageIds: new Set(ids), isLoaded: true, requestKey });
@@ -297,7 +302,7 @@ export function useCoffeeBeanImageIdsState(
       }
 
       try {
-        const ids = await getCoffeeBeanImageBeanIds(
+        const ids = await coffeeBeanImageRepository.getBeanIds(
           changedBeanId ? [changedBeanId] : imageBeanIds,
           { side }
         );
@@ -379,7 +384,7 @@ export function useCoffeeBeanImageSources(
 
     Promise.all(
       uniqueBeanIds.map(async beanId => {
-        const source = await getCoffeeBeanImageSource(beanId, {
+        const source = await coffeeBeanImageRepository.getSource(beanId, {
           side,
           mode,
           preferThumbnail,

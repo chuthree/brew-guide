@@ -1,4 +1,4 @@
-import type { CoffeeBeanGroup } from '@/lib/core/db';
+import type { CoffeeBeanGroup } from '@/lib/data/models';
 import type { CoffeeBean } from '@/types/app';
 
 export const getSortedCoffeeBeanGroups = (

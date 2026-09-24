@@ -5,7 +5,6 @@
  * 遵循 Local-First 架构原则
  */
 
-import { dbUtils } from '@/lib/core/db';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
@@ -14,14 +13,13 @@ import { useCustomMethodStore } from '@/lib/stores/customMethodStore';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 import { useGrinderStore } from '@/lib/stores/grinderStore';
 import { recordCrashCheckpoint } from '@/lib/app/crashDiagnostics';
-import { inspectCoreDataIntegrity } from '@/lib/app/dataIntegrity';
 import { migrateRoasterField } from '@/lib/utils/roasterMigration';
-import { normalizeStoredBrewingNotes } from '@/lib/notes/cleanup';
+import { initializeDataRuntime } from '@/lib/data/runtime';
 import {
-  exportCoffeeBeansWithImages,
-  replaceCoffeeBeansWithSplitImages,
-} from '@/lib/coffee-beans/imageRepository';
-import { exportBrewingNotesWithImages } from '@/lib/notes/imageRepository';
+  brewingNoteImageRepository,
+  coffeeBeanImageRepository,
+  coffeeBeanPersistence,
+} from '@/lib/data/repositories';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 
 /**
@@ -59,17 +57,15 @@ export async function initializeDataLayer(): Promise<void> {
   console.log('📦 开始初始化数据层...');
 
   try {
-    // 1. 初始化数据库
-    console.log('📦 Step 1: 初始化数据库...');
+    // 1. 初始化当前选择的数据 backend，然后再初始化 Store。
+    console.log('📦 Step 1: 初始化数据运行时...');
     recordCrashCheckpoint('data-layer:db:init');
-    await dbUtils.initialize();
-
-    // 2. 维护当前 IndexedDB 数据形态
-    console.log('📦 Step 2: 检查本地数据...');
-    recordCrashCheckpoint('data-layer:db:maintain');
-    await dbUtils.migrateCoffeeBeanImages();
-    recordCrashCheckpoint('data-layer:notes:normalize');
-    await normalizeStoredBrewingNotes();
+    const runtimeInitialization = await initializeDataRuntime();
+    if (runtimeInitialization.status !== 'ready') {
+      throw new Error(
+        `Data backend "${runtimeInitialization.backend}" is not implemented: ${runtimeInitialization.reason}`
+      );
+    }
 
     // 3. 并行初始化所有 Store
     console.log('📦 Step 3: 初始化 Stores...');
@@ -92,10 +88,14 @@ export async function initializeDataLayer(): Promise<void> {
     recordCrashCheckpoint('data-layer:roaster-migrate');
     await migrateRoasterField();
 
-    try {
-      await inspectCoreDataIntegrity('data-layer:init');
-    } catch (integrityError) {
-      console.error('数据完整性检查失败:', integrityError);
+    if (runtimeInitialization.backend === 'dexie') {
+      try {
+        const { inspectCoreDataIntegrity } =
+          await import('@/lib/app/dataIntegrity');
+        await inspectCoreDataIntegrity('data-layer:init');
+      } catch (integrityError) {
+        console.error('数据完整性检查失败:', integrityError);
+      }
     }
 
     initState.isInitialized = true;
@@ -169,8 +169,8 @@ export async function exportAllData(): Promise<{
 
   return {
     settings: useSettingsStore.getState().settings,
-    coffeeBeans: await exportCoffeeBeansWithImages(),
-    brewingNotes: await exportBrewingNotesWithImages(),
+    coffeeBeans: await coffeeBeanImageRepository.exportAll(),
+    brewingNotes: await brewingNoteImageRepository.exportAll(),
     customEquipments: useCustomEquipmentStore.getState().equipments,
     customMethods: useCustomMethodStore.getState().methodsByEquipment,
     grinders: useGrinderStore.getState().grinders,
@@ -203,7 +203,7 @@ export async function importAllData(data: {
   if (data.coffeeBeans) {
     tasks.push(
       (async () => {
-        const replaced = await replaceCoffeeBeansWithSplitImages(
+        const replaced = await coffeeBeanPersistence.replaceAllWithImages(
           data.coffeeBeans!,
           { allowDestructiveReplace: true }
         );

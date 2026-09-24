@@ -8,7 +8,12 @@
  * - 远程变更必须通过 Store 通知 UI，而不是直接触发事件
  */
 
-import { db } from '@/lib/core/db';
+import {
+  brewingNoteRepository,
+  coffeeBeanRepository,
+  customEquipmentRepository,
+  customMethodRepository,
+} from '@/lib/data/repositories';
 import { SYNC_TABLES } from '../../syncOperations';
 import type { RealtimeSyncTable } from '../types';
 import type { CoffeeBean } from '@/types/app';
@@ -118,25 +123,25 @@ export async function refreshAllStores(): Promise<void> {
       (async () => {
         const { useCoffeeBeanStore } =
           await import('@/lib/stores/coffeeBeanStore');
-        const beans = await db.coffeeBeans.toArray();
+        const beans = await coffeeBeanRepository.list();
         useCoffeeBeanStore.setState({ beans });
       })(),
       (async () => {
         const { useBrewingNoteStore } =
           await import('@/lib/stores/brewingNoteStore');
-        const notes = await db.brewingNotes.toArray();
+        const notes = await brewingNoteRepository.list();
         useBrewingNoteStore.getState().setNotes(notes);
       })(),
       (async () => {
         const { useCustomEquipmentStore } =
           await import('@/lib/stores/customEquipmentStore');
-        const equipments = await db.customEquipments.toArray();
+        const equipments = await customEquipmentRepository.list();
         useCustomEquipmentStore.setState({ equipments });
       })(),
       (async () => {
         const { useCustomMethodStore } =
           await import('@/lib/stores/customMethodStore');
-        const methodsData = await db.customMethods.toArray();
+        const methodsData = await customMethodRepository.list();
         const methodsByEquipment: Record<string, Method[]> = {};
         for (const item of methodsData) {
           methodsByEquipment[item.equipmentId] = item.methods;

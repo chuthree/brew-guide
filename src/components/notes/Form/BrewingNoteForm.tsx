@@ -54,7 +54,7 @@ import {
 } from '@/lib/notes/noteDisplay';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import { SettingsOptions } from '@/components/settings/Settings';
-import { FlavorDimension } from '@/lib/core/db';
+import type { FlavorDimension } from '@/lib/data/models';
 import {
   getFlavorDimensionsSync,
   getHistoricalLabelsSync,

@@ -10,13 +10,13 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { appSettingsRepository } from '@/lib/data/repositories';
 import {
-  db,
-  AppSettings,
-  FlavorDimension,
-  RoasterConfig,
   DEFAULT_FLAVOR_DIMENSIONS,
-} from '@/lib/core/db';
+  type AppSettings,
+  type FlavorDimension,
+  type RoasterConfig,
+} from '@/lib/data/models';
 import { equipmentList } from '@/lib/core/config';
 import { LayoutSettings } from '@/components/brewing/Timer/Settings';
 import {
@@ -377,15 +377,15 @@ export const useSettingsStore = create<SettingsStore>()(
       set({ isLoading: true, error: null });
 
       try {
-        const stored = await db.appSettings.get('main');
+        const storedSettings = await appSettingsRepository.get();
 
-        if (stored && stored.data) {
-          const normalizedStoredData = normalizeSyncSettings(stored.data);
+        if (storedSettings) {
+          const normalizedStoredData = normalizeSyncSettings(storedSettings);
 
           // 合并默认设置和存储的设置，确保新字段和嵌套字段都有默认值
           const mergedSettings =
             mergeSettingsWithDefaults(normalizedStoredData);
-          const legacySettings = stored.data as AppSettings & {
+          const legacySettings = storedSettings as AppSettings & {
             notesListStyle?: string;
             grinderDefaultSync?: unknown;
             showGrinderScale?: unknown;
@@ -400,16 +400,16 @@ export const useSettingsStore = create<SettingsStore>()(
           }
 
           const shouldPersistMergedSettings =
-            mergedSettings.activeSyncType !== stored.data.activeSyncType ||
+            mergedSettings.activeSyncType !== storedSettings.activeSyncType ||
             mergedSettings.supabaseBackupProvider !==
-              stored.data.supabaseBackupProvider ||
+              storedSettings.supabaseBackupProvider ||
             JSON.stringify(mergedSettings.layoutSettings) !==
-              JSON.stringify(stored.data.layoutSettings) ||
+              JSON.stringify(storedSettings.layoutSettings) ||
             legacySettings.grinderDefaultSync !== undefined ||
             legacySettings.showGrinderScale !== undefined;
 
           if (shouldPersistMergedSettings) {
-            await db.appSettings.put({ id: 'main', data: mergedSettings });
+            await appSettingsRepository.save(mergedSettings);
           }
 
           set({
@@ -419,7 +419,7 @@ export const useSettingsStore = create<SettingsStore>()(
           });
         } else {
           // 使用默认设置
-          await db.appSettings.put({ id: 'main', data: defaultSettings });
+          await appSettingsRepository.save(defaultSettings);
           set({
             settings: defaultSettings,
             isLoading: false,
@@ -449,7 +449,7 @@ export const useSettingsStore = create<SettingsStore>()(
       };
 
       try {
-        await db.appSettings.put({ id: 'main', data: newSettings });
+        await appSettingsRepository.save(newSettings);
         set({ settings: newSettings });
 
         // 触发设置变化事件（用于兼容旧代码）
@@ -781,7 +781,7 @@ export const useSettingsStore = create<SettingsStore>()(
 
     resetSettings: async () => {
       try {
-        await db.appSettings.put({ id: 'main', data: defaultSettings });
+        await appSettingsRepository.save(defaultSettings);
         set({ settings: defaultSettings });
         dispatchSettingsChanged(defaultSettings);
       } catch (error) {
@@ -799,7 +799,7 @@ export const useSettingsStore = create<SettingsStore>()(
         normalizeSyncSettings(settings)
       );
       try {
-        await db.appSettings.put({ id: 'main', data: mergedSettings });
+        await appSettingsRepository.save(mergedSettings);
         set({ settings: mergedSettings });
         dispatchSettingsChanged(mergedSettings);
       } catch (error) {

@@ -97,6 +97,7 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^9.37.0",
     "eslint-config-next": "16.1.0",
+    "fake-indexeddb": "^6.2.5",
     "knip": "^5.66.4",
     "postcss": "^8.5.6",
     "postcss-custom-properties": "^14.0.6",

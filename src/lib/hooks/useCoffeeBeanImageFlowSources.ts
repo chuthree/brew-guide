@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  type CoffeeBeanImageSide,
-  getCoffeeBeanImageRecords,
-} from '@/lib/coffee-beans/imageRepository';
+import type { CoffeeBeanImageSide } from '@/lib/data/contracts';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 import type { CoffeeBeanImageRecord } from '@/lib/coffee-beans/imageRecords';
 import {
   getDataUrlImageDimensions,
@@ -180,7 +178,8 @@ export function useCoffeeBeanImageFlowSources(
 
     let cancelled = false;
 
-    getCoffeeBeanImageRecords(missingIds)
+    coffeeBeanImageRepository
+      .getRecords(missingIds)
       .then(records => {
         if (cancelled) return;
 

@@ -26,6 +26,42 @@ const mocks = vi.hoisted(() => {
     customMethods: createTable(),
     refreshAllStores: vi.fn().mockResolvedValue(undefined),
     refreshSettingsStores: vi.fn().mockResolvedValue(undefined),
+    repositories: {
+      appSettingsRepository: {
+        get: vi.fn().mockResolvedValue(undefined),
+        save: vi.fn().mockResolvedValue(undefined),
+      },
+      grinderRepository: {
+        list: vi.fn().mockResolvedValue([]),
+        replaceAll: vi.fn().mockResolvedValue(undefined),
+      },
+      coffeeBeanRepository: { list: vi.fn().mockResolvedValue([]) },
+      brewingNoteRepository: { list: vi.fn().mockResolvedValue([]) },
+      customEquipmentRepository: {
+        list: vi.fn().mockResolvedValue([]),
+        upsertMany: vi.fn().mockResolvedValue(undefined),
+        deleteMany: vi.fn().mockResolvedValue(undefined),
+      },
+      customMethodRepository: {
+        list: vi.fn().mockResolvedValue([]),
+        upsertMany: vi.fn().mockResolvedValue(undefined),
+        deleteMany: vi.fn().mockResolvedValue(undefined),
+      },
+      coffeeBeanImageRepository: {
+        mergeBeans: vi.fn(async (records: unknown[]) => records),
+      },
+      coffeeBeanPersistence: {
+        saveWithImages: vi.fn(async (record: unknown) => record),
+        deleteManyWithImages: vi.fn().mockResolvedValue(undefined),
+      },
+      brewingNoteImageRepository: {
+        mergeNotes: vi.fn(async (records: unknown[]) => records),
+      },
+      brewingNotePersistence: {
+        saveWithImages: vi.fn(async (record: unknown) => record),
+        deleteManyWithImages: vi.fn().mockResolvedValue(undefined),
+      },
+    },
   };
 });
 
@@ -90,14 +126,8 @@ vi.mock('@/lib/utils/roasterMigration', () => ({
   migrateRoasterField: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@/lib/coffee-beans/imageRepository', () => ({
-  mergeBeansWithStoredImages: vi.fn(async records => records),
-  persistCoffeeBeanImagesFromBean: vi.fn(async record => record),
-}));
-
-vi.mock('@/lib/notes/imageRepository', () => ({
-  mergeNotesWithStoredImages: vi.fn(async records => records),
-  persistBrewingNoteImagesFromNote: vi.fn(async record => record),
+vi.mock('@/lib/data/repositories', () => ({
+  ...mocks.repositories,
 }));
 
 describe('InitialSyncManager settings sync', () => {
@@ -160,12 +190,11 @@ describe('InitialSyncManager settings sync', () => {
     expect(setLastSyncTime).not.toHaveBeenCalled();
     expect(mocks.refreshSettingsStores).not.toHaveBeenCalled();
 
-    const settingsTask =
-      useSyncStatusStore
-        .getState()
-        .supabaseSyncProgress.tasks.find(
-          task => task.id === SYNC_TABLES.USER_SETTINGS
-        );
+    const settingsTask = useSyncStatusStore
+      .getState()
+      .supabaseSyncProgress.tasks.find(
+        task => task.id === SYNC_TABLES.USER_SETTINGS
+      );
 
     expect(settingsTask).toMatchObject({
       status: 'warning',
@@ -192,17 +221,15 @@ describe('InitialSyncManager settings sync', () => {
       });
     });
 
-    useSyncStatusStore.getState().startSupabaseSyncProgress(
-      'background-sync',
-      '正在同步 Supabase 数据',
-      [
+    useSyncStatusStore
+      .getState()
+      .startSupabaseSyncProgress('background-sync', '正在同步 Supabase 数据', [
         { id: SYNC_TABLES.COFFEE_BEANS, label: '咖啡豆' },
         { id: SYNC_TABLES.BREWING_NOTES, label: '笔记' },
         { id: SYNC_TABLES.CUSTOM_EQUIPMENTS, label: '自定义器具' },
         { id: SYNC_TABLES.CUSTOM_METHODS, label: '自定义方案' },
         { id: SYNC_TABLES.USER_SETTINGS, label: '设置' },
-      ]
-    );
+      ]);
 
     const manager = new InitialSyncManager({} as SupabaseClient, {
       settingsMode: 'pull-only',
@@ -231,17 +258,15 @@ describe('InitialSyncManager settings sync', () => {
       affectedCount: 0,
     });
 
-    useSyncStatusStore.getState().startSupabaseSyncProgress(
-      'background-sync',
-      '正在同步 Supabase 数据',
-      [
+    useSyncStatusStore
+      .getState()
+      .startSupabaseSyncProgress('background-sync', '正在同步 Supabase 数据', [
         { id: SYNC_TABLES.COFFEE_BEANS, label: '咖啡豆' },
         { id: SYNC_TABLES.BREWING_NOTES, label: '笔记' },
         { id: SYNC_TABLES.CUSTOM_EQUIPMENTS, label: '自定义器具' },
         { id: SYNC_TABLES.CUSTOM_METHODS, label: '自定义方案' },
         { id: SYNC_TABLES.USER_SETTINGS, label: '设置' },
-      ]
-    );
+      ]);
 
     const manager = new InitialSyncManager({} as SupabaseClient, {
       settingsMode: 'bidirectional',
@@ -251,12 +276,11 @@ describe('InitialSyncManager settings sync', () => {
     await expect(manager.performSync()).rejects.toThrow('失败项目 1 个');
     expect(setLastSyncTime).not.toHaveBeenCalled();
 
-    const settingsTask =
-      useSyncStatusStore
-        .getState()
-        .supabaseSyncProgress.tasks.find(
-          task => task.id === SYNC_TABLES.USER_SETTINGS
-        );
+    const settingsTask = useSyncStatusStore
+      .getState()
+      .supabaseSyncProgress.tasks.find(
+        task => task.id === SYNC_TABLES.USER_SETTINGS
+      );
 
     expect(settingsTask).toMatchObject({
       status: 'error',
@@ -281,12 +305,11 @@ describe('InitialSyncManager settings sync', () => {
     });
     expect(downloadSettingsData).not.toHaveBeenCalled();
 
-    const settingsTask =
-      useSyncStatusStore
-        .getState()
-        .supabaseSyncProgress.tasks.find(
-          task => task.id === SYNC_TABLES.USER_SETTINGS
-        );
+    const settingsTask = useSyncStatusStore
+      .getState()
+      .supabaseSyncProgress.tasks.find(
+        task => task.id === SYNC_TABLES.USER_SETTINGS
+      );
 
     expect(settingsTask).toMatchObject({
       status: 'success',

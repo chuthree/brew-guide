@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FlavorDimension, DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/core/db';
+import type { FlavorDimension } from '@/lib/data/models';
 import {
   getFlavorDimensionsSync,
   getHistoricalLabelsSync,

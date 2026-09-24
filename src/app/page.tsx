@@ -47,6 +47,7 @@ import {
 } from '@/components/layout/NavigationControls';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
+import { legacySettingsRepository } from '@/lib/data/repositories';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
@@ -1193,9 +1194,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           let isCompleted = onboardingCompleted === 'true';
           if (!isCompleted) {
             try {
-              const { db } = await import('@/lib/core/db');
-              const fallback = await db.settings.get('onboardingCompleted');
-              isCompleted = fallback?.value === 'true';
+              const fallback = await legacySettingsRepository.get(
+                'onboardingCompleted'
+              );
+              isCompleted = fallback === 'true';
             } catch {
               // 静默处理错误
             }

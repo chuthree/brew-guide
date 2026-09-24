@@ -1,4 +1,4 @@
-import type { AppSettings } from '../core/db';
+import type { AppSettings } from '../data/models';
 
 export interface CoffeeBeanCalendarSyncSettings {
   enabled: boolean;

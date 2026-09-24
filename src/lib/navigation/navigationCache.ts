@@ -4,7 +4,7 @@
  */
 
 import { getStringState, saveStringState } from '@/lib/core/statePersistence';
-import type { AppSettings } from '@/lib/core/db';
+import type { AppSettings } from '@/lib/data/models';
 import {
   deriveNavigationSettings,
   type MainNavigationTab,

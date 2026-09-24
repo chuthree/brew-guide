@@ -13,7 +13,11 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { db, AppSettings } from '@/lib/core/db';
+import {
+  appSettingsRepository,
+  grinderRepository,
+} from '@/lib/data/repositories';
+import type { AppSettings } from '@/lib/data/models';
 
 // ============================================
 // 类型定义
@@ -313,15 +317,15 @@ async function collectLocalSettingsSyncData(): Promise<{
   const data: Record<string, unknown> = {};
   const dataSections: string[] = [];
 
-  // 从 IndexedDB appSettings 表收集设置
-  const appSettingsRecord = await db.appSettings.get('main');
-  if (appSettingsRecord?.data) {
-    data.appSettings = appSettingsRecord.data as AppSettings;
+  // 收集应用设置
+  const appSettings = await appSettingsRepository.get();
+  if (appSettings) {
+    data.appSettings = appSettings as AppSettings;
     dataSections.push('appSettings');
   }
 
   // 收集磨豆机数据。即使为空也写入，确保删除磨豆机能同步到云端。
-  const grinders = await db.grinders.toArray();
+  const grinders = await grinderRepository.list();
   data.grinders = grinders;
   dataSections.push('grinders');
 
@@ -812,12 +816,12 @@ export async function downloadSettingsData(
     const settingsData = row.data as Record<string, unknown>;
     let count = 0;
 
-    // 恢复 IndexedDB appSettings
+    // 恢复应用设置
     if (settingsData.appSettings) {
       currentSection = 'appSettings';
       const cloudAppSettings = settingsData.appSettings as AppSettings;
-      const localRecord = await db.appSettings.get('main');
-      const localSettings = (localRecord?.data || {}) as Partial<AppSettings>;
+      const localSettings = ((await appSettingsRepository.get()) ||
+        {}) as Partial<AppSettings>;
 
       // 如果本地是空/默认状态，完全使用云端数据
       // 而不是合并（合并会保留本地的默认值）
@@ -835,7 +839,7 @@ export async function downloadSettingsData(
         } as AppSettings;
       }
 
-      await db.appSettings.put({ id: 'main', data: mergedSettings });
+      await appSettingsRepository.save(mergedSettings);
       count++;
     }
 
@@ -851,10 +855,7 @@ export async function downloadSettingsData(
         name: string;
         currentGrindSize?: string;
       }>;
-      await db.grinders.clear();
-      if (cloudGrinders.length > 0) {
-        await db.grinders.bulkPut(cloudGrinders);
-      }
+      await grinderRepository.replaceAll(cloudGrinders);
       count++;
     }
 

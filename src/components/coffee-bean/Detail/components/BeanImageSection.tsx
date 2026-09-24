@@ -16,10 +16,8 @@ import {
 } from '@/lib/utils/beanVarietyUtils';
 import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
-import {
-  getCoffeeBeanImageSource,
-  type CoffeeBeanImageSide,
-} from '@/lib/coffee-beans/imageRepository';
+import type { CoffeeBeanImageSide } from '@/lib/data/contracts';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 
 // 获取烘焙商名称用于 alt 文本的辅助函数
 const getRoasterAltText = (
@@ -229,7 +227,7 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
 
     try {
       return (
-        (await getCoffeeBeanImageSource(bean.id, {
+        (await coffeeBeanImageRepository.getSource(bean.id, {
           side,
           mode: 'original',
         })) || fallback

@@ -35,7 +35,7 @@ import {
   buildEquipmentNameMap,
   EMPTY_EQUIPMENT_NAME_OVERRIDES,
 } from '@/lib/notes/noteDisplay';
-import { getCoffeeBeanImageSource } from '@/lib/coffee-beans/imageRepository';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 import {
   BEAN_COMPONENT_TEXT_FIELD_IDS,
   getComponentFieldValue,
@@ -851,11 +851,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (!bean || !onRoast) return;
 
     const [frontImage, backImage] = await Promise.all([
-      getCoffeeBeanImageSource(bean.id, {
+      coffeeBeanImageRepository.getSource(bean.id, {
         side: 'front',
         mode: 'original',
       }),
-      getCoffeeBeanImageSource(bean.id, {
+      coffeeBeanImageRepository.getSource(bean.id, {
         side: 'back',
         mode: 'original',
       }),

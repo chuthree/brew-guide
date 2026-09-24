@@ -3,7 +3,7 @@ import { createInitialContent } from './utils';
 import { getAvailablePrintFieldOrder } from './fields';
 import type { EditableContent } from './types';
 import type { CoffeeBean } from '@/types/app';
-import type { AppSettings } from '@/lib/core/db';
+import type { AppSettings } from '@/lib/data/models';
 
 describe('bean print content', () => {
   it('extracts structured origin fields independently', () => {

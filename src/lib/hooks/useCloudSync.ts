@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import type { SettingsOptions } from '@/lib/core/db';
+import type { SettingsOptions } from '@/lib/data/models';
 import type { CloudProvider, SyncDirection } from '@/lib/sync/types';
 import { syncService } from '@/lib/sync/UnifiedSyncService';
 import { showToast } from '@/components/common/feedback/LightToast';

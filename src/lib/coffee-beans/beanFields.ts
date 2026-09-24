@@ -1,5 +1,5 @@
 import type { BlendComponent, CoffeeBean } from '@/types/app';
-import type { AppSettings } from '@/lib/core/db';
+import type { AppSettings } from '@/lib/data/models';
 
 export type BeanFieldId =
   | 'origin'

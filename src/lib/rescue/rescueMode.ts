@@ -1,5 +1,13 @@
 import { APP_VERSION } from '@/lib/core/config';
-import { db } from '@/lib/core/db';
+import {
+  brewingNoteImageRepository,
+  brewingNoteRepository,
+  coffeeBeanImageRepository,
+  coffeeBeanRepository,
+  customEquipmentRepository,
+  customMethodRepository,
+  grinderRepository,
+} from '@/lib/data/repositories';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 import { stripBrewingNoteImages } from '@/lib/notes/imageRecords';
 
@@ -53,27 +61,27 @@ export function openRescueMode(): void {
 export async function getRescueModeSnapshot(): Promise<RescueModeSnapshot> {
   const [
     beans,
-    beanImages,
+    beanImageCounts,
     notes,
-    noteImages,
+    noteImageCounts,
     customEquipments,
     customMethods,
     grinders,
   ] = await Promise.all([
-    db.coffeeBeans.count(),
-    db.coffeeBeanImages.count(),
-    db.brewingNotes.count(),
-    db.brewingNoteImages.count(),
-    db.customEquipments.count(),
-    db.customMethods.count(),
-    db.grinders.count(),
+    coffeeBeanRepository.count(),
+    coffeeBeanImageRepository.getRecordCounts(),
+    brewingNoteRepository.count(),
+    brewingNoteImageRepository.getRecordCounts(),
+    customEquipmentRepository.count(),
+    customMethodRepository.count(),
+    grinderRepository.count(),
   ]);
 
   return {
     beans,
-    beanImages,
+    beanImages: beanImageCounts.records,
     notes,
-    noteImages,
+    noteImages: noteImageCounts.records,
     customEquipments,
     customMethods,
     grinders,
@@ -86,11 +94,11 @@ export async function exportRescueData(): Promise<string> {
 
   const [coffeeBeans, brewingNotes, customEquipments, customMethods, grinders] =
     await Promise.all([
-      db.coffeeBeans.toArray(),
-      db.brewingNotes.toArray(),
-      db.customEquipments.toArray(),
-      db.customMethods.toArray(),
-      db.grinders.toArray(),
+      coffeeBeanRepository.list(),
+      brewingNoteRepository.list(),
+      customEquipmentRepository.list(),
+      customMethodRepository.list(),
+      grinderRepository.list(),
     ]);
 
   const customMethodsByEquipment: Record<string, unknown> = {};

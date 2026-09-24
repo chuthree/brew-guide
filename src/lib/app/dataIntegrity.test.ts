@@ -9,6 +9,8 @@ import {
 
 const mocks = vi.hoisted(() => ({
   coffeeBeansCount: vi.fn(),
+  appSettingsCount: vi.fn(),
+  legacySettingsCount: vi.fn(),
   brewingNotesCount: vi.fn(),
   preferencesGet: vi.fn(),
   preferencesRemove: vi.fn(),
@@ -27,11 +29,11 @@ vi.mock('@capacitor/preferences', () => ({
   },
 }));
 
-vi.mock('@/lib/core/db', () => ({
-  db: {
-    coffeeBeans: { count: mocks.coffeeBeansCount },
-    brewingNotes: { count: mocks.brewingNotesCount },
-  },
+vi.mock('@/lib/data/repositories', () => ({
+  appSettingsRepository: { count: mocks.appSettingsCount },
+  legacySettingsRepository: { count: mocks.legacySettingsCount },
+  brewingNoteRepository: { count: mocks.brewingNotesCount },
+  coffeeBeanRepository: { count: mocks.coffeeBeansCount },
 }));
 
 const snapshot = (
@@ -132,6 +134,7 @@ describe('markExpectedCoreDataDeletionIfEmpty', () => {
     vi.clearAllMocks();
     mocks.coffeeBeansCount.mockResolvedValue(0);
     mocks.brewingNotesCount.mockResolvedValue(0);
+    mocks.appSettingsCount.mockResolvedValue(1);
     mocks.preferencesGet.mockResolvedValue({ value: null });
     mocks.preferencesRemove.mockResolvedValue(undefined);
     mocks.preferencesSet.mockResolvedValue(undefined);

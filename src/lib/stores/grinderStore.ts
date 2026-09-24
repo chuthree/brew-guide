@@ -8,7 +8,8 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { db, Grinder } from '@/lib/core/db';
+import { grinderRepository } from '@/lib/data/repositories';
+import type { Grinder } from '@/lib/data/models';
 import { nanoid } from 'nanoid';
 import {
   normalizeCoffeeBeanName,
@@ -16,7 +17,7 @@ import {
 } from '@/lib/utils/coffeeBeanUtils';
 
 // 重新导出 Grinder 类型和历史记录类型
-export type { Grinder, GrindSizeHistory } from '@/lib/core/db';
+export type { Grinder, GrindSizeHistory } from '@/lib/data/models';
 
 // 磨豆机状态接口
 interface GrinderState {
@@ -111,13 +112,13 @@ export const useGrinderStore = create<GrinderState>()(
 
       try {
         // 从 IndexedDB 加载
-        let grinders = await db.grinders.toArray();
+        let grinders = await grinderRepository.list();
 
         // 如果 IndexedDB 为空，尝试从 localStorage 迁移
         if (grinders.length === 0) {
           grinders = await migrateGrindersFromLocalStorage();
           if (grinders.length > 0) {
-            await db.grinders.bulkPut(grinders);
+            await grinderRepository.upsertMany(grinders);
             console.log(`已迁移 ${grinders.length} 个磨豆机到 IndexedDB`);
           }
         }
@@ -137,7 +138,7 @@ export const useGrinderStore = create<GrinderState>()(
       };
 
       try {
-        await db.grinders.put(newGrinder);
+        await grinderRepository.save(newGrinder);
         set(state => ({ grinders: [...state.grinders, newGrinder] }));
 
         // 触发变化事件
@@ -158,7 +159,7 @@ export const useGrinderStore = create<GrinderState>()(
       const updated = { ...existing, ...updates };
 
       try {
-        await db.grinders.put(updated);
+        await grinderRepository.save(updated);
         set(state => ({
           grinders: state.grinders.map(g => (g.id === id ? updated : g)),
         }));
@@ -173,7 +174,7 @@ export const useGrinderStore = create<GrinderState>()(
 
     deleteGrinder: async id => {
       try {
-        await db.grinders.delete(id);
+        await grinderRepository.delete(id);
         set(state => ({
           grinders: state.grinders.filter(g => g.id !== id),
         }));
@@ -189,10 +190,7 @@ export const useGrinderStore = create<GrinderState>()(
     setGrinders: async grinders => {
       try {
         // 清空并重新写入
-        await db.grinders.clear();
-        if (grinders.length > 0) {
-          await db.grinders.bulkPut(grinders);
-        }
+        await grinderRepository.replaceAll(grinders);
         set({ grinders });
 
         // 触发变化事件

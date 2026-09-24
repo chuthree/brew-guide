@@ -10,7 +10,7 @@
  * 此策略确保导入数据或云同步后，新数据也能被正确迁移。
  */
 
-import { db } from '@/lib/core/db';
+import { coffeeBeanRepository } from '@/lib/data/repositories';
 import {
   extractRoasterFromName,
   removeRoasterFromName,
@@ -40,7 +40,7 @@ export async function migrateRoasterField(): Promise<void> {
 
   try {
     const separator = roasterSeparator || ' ';
-    const beans = await db.coffeeBeans.toArray();
+    const beans = await coffeeBeanRepository.list();
     // 按需迁移：只处理没有 roaster 字段的咖啡豆
     const beansToMigrate = beans.filter(bean => !bean.roaster);
 
@@ -59,7 +59,7 @@ export async function migrateRoasterField(): Promise<void> {
       return { ...bean, roaster, name };
     });
 
-    await db.coffeeBeans.bulkPut(updates);
+    await coffeeBeanRepository.upsertMany(updates);
     await getCoffeeBeanStore().refreshBeans();
 
     console.warn(`[RoasterMigration] 已迁移 ${updates.length} 个咖啡豆`);

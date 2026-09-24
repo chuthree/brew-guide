@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppSettings } from '@/lib/core/db';
+import type { AppSettings } from '@/lib/data/models';
 
 const mocks = vi.hoisted(() => {
   const store = {

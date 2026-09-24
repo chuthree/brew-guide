@@ -50,7 +50,7 @@ import {
   getBeanSummaryDisplayLimit,
   getBeanSummaryLimitMode,
 } from '@/lib/utils/beanSummaryDisplay';
-import type { CoffeeBeanGroup } from '@/lib/core/db';
+import type { CoffeeBeanGroup } from '@/lib/data/models';
 import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
 import SearchAllSuggestion from '@/components/common/ui/SearchAllSuggestion';
 import {

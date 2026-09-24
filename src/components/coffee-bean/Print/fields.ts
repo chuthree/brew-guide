@@ -4,7 +4,7 @@ import {
   resolveBeanFieldConfig,
   type BeanFieldId,
 } from '@/lib/coffee-beans/beanFields';
-import type { AppSettings } from '@/lib/core/db';
+import type { AppSettings } from '@/lib/data/models';
 
 export type PrintTextFieldKey = Exclude<
   keyof EditableContent,

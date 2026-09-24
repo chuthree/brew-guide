@@ -72,10 +72,10 @@ import {
 } from '@/lib/navigation/pageTransition';
 
 // 从统一的类型定义导入，避免重复定义
-// 类型定义在 db.ts，默认值在 settingsStore.ts
-export { type SettingsOptions } from '@/lib/core/db';
+// 类型定义在 models.ts，默认值在 settingsStore.ts
+export { type SettingsOptions } from '@/lib/data/models';
 export { defaultSettings } from '@/lib/stores/settingsStore';
-import type { SettingsOptions } from '@/lib/core/db';
+import type { SettingsOptions } from '@/lib/data/models';
 
 // 子设置页面的打开/关闭函数接口
 export interface SubSettingsHandlers {

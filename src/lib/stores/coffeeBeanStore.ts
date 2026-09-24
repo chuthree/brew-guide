@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { CoffeeBean } from '@/types/app';
-import { db } from '@/lib/core/db';
+import {
+  coffeeBeanImageRepository,
+  coffeeBeanPersistence,
+  coffeeBeanRepository,
+} from '@/lib/data/repositories';
 import { nanoid } from 'nanoid';
 import {
   findCoffeeBeanByDisplayName,
@@ -15,10 +19,6 @@ import {
   clearExpectedCoreDataDeletion,
   markExpectedCoreDataDeletionIfEmpty,
 } from '@/lib/app/dataIntegrity';
-import {
-  mergeBeanWithStoredImages,
-  saveCoffeeBeanWithImages,
-} from '@/lib/coffee-beans/imageRepository';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 
 interface CoffeeBeanStore {
@@ -90,10 +90,11 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
 
       set({ isLoading: true, error: null });
       try {
-        const rawBeans = await db.coffeeBeans.toArray();
+        const rawBeans = await coffeeBeanRepository.list();
         recordCrashCheckpoint('coffee-beans:raw-loaded', {
           ...collectBeanPayloadMetrics(rawBeans as CoffeeBean[]),
-          imageRecordCount: await db.coffeeBeanImages.count(),
+          imageRecordCount: (await coffeeBeanImageRepository.getRecordCounts())
+            .records,
         });
         const beans = normalizeCoffeeBeans(rawBeans, {
           ensureFlavorArray: true,
@@ -107,7 +108,7 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
           );
 
         if (repairedBeans.length > 0) {
-          await db.coffeeBeans.bulkPut(repairedBeans);
+          await coffeeBeanRepository.upsertMany(repairedBeans);
         }
 
         // A local write may finish while this read is in flight. Never let
@@ -120,7 +121,8 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
         recordCrashCheckpoint('coffee-beans:normalized', {
           beanCount: beans.length,
           repairedBeanCount: repairedBeans.length,
-          imageRecordCount: await db.coffeeBeanImages.count(),
+          imageRecordCount: (await coffeeBeanImageRepository.getRecordCounts())
+            .records,
         });
         set({ beans, initialized: true });
         finishLoading();
@@ -142,7 +144,8 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
       );
 
       try {
-        const beanForStore = await saveCoffeeBeanWithImages(newBean);
+        const beanForStore =
+          await coffeeBeanPersistence.saveWithImages(newBean);
         await clearExpectedCoreDataDeletion();
         beanMutationVersion += 1;
         set(state => ({ beans: [...state.beans, beanForStore] }));
@@ -177,8 +180,10 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
       ) as CoffeeBean;
 
       try {
-        const savedBean = await saveCoffeeBeanWithImages(updatedBean);
-        const savedEventBean = await mergeBeanWithStoredImages(savedBean);
+        const savedBean =
+          await coffeeBeanPersistence.saveWithImages(updatedBean);
+        const savedEventBean =
+          await coffeeBeanImageRepository.mergeBean(savedBean);
         beanMutationVersion += 1;
         set(state => ({
           beans: state.beans.map(b => (b.id === id ? savedBean : b)),
@@ -200,17 +205,7 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
 
     deleteBean: async id => {
       try {
-        await db.transaction(
-          'rw',
-          db.coffeeBeans,
-          db.coffeeBeanImages,
-          db.coffeeBeanImageThumbnails,
-          async () => {
-            await db.coffeeBeans.delete(id);
-            await db.coffeeBeanImages.delete(id);
-            await db.coffeeBeanImageThumbnails.delete(id);
-          }
-        );
+        await coffeeBeanPersistence.deleteWithImages(id);
         await markExpectedCoreDataDeletionIfEmpty();
         beanMutationVersion += 1;
         set(state => ({
@@ -241,7 +236,8 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
         const normalizedBean = normalizeCoffeeBean(bean, {
           ensureFlavorArray: true,
         }) as CoffeeBean;
-        const beanForStore = await saveCoffeeBeanWithImages(normalizedBean);
+        const beanForStore =
+          await coffeeBeanPersistence.saveWithImages(normalizedBean);
         await clearExpectedCoreDataDeletion();
         beanMutationVersion += 1;
         set(state => {
@@ -263,17 +259,7 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
 
     removeBean: async id => {
       try {
-        await db.transaction(
-          'rw',
-          db.coffeeBeans,
-          db.coffeeBeanImages,
-          db.coffeeBeanImageThumbnails,
-          async () => {
-            await db.coffeeBeans.delete(id);
-            await db.coffeeBeanImages.delete(id);
-            await db.coffeeBeanImageThumbnails.delete(id);
-          }
-        );
+        await coffeeBeanPersistence.deleteWithImages(id);
         await markExpectedCoreDataDeletionIfEmpty();
         beanMutationVersion += 1;
         set(state => ({ beans: state.beans.filter(b => b.id !== id) }));
@@ -393,7 +379,7 @@ export async function updateBeanRemaining(
     const bean = store.getBeanById(id);
     if (!bean) {
       // 尝试从DB加载
-      const dbBean = await db.coffeeBeans.get(id);
+      const dbBean = await coffeeBeanRepository.get(id);
       if (!dbBean) return null;
 
       const currentRemaining = dbBean.remaining
@@ -408,7 +394,7 @@ export async function updateBeanRemaining(
         timestamp: Date.now(),
       };
       const beanForStore = stripCoffeeBeanImages(updatedBean);
-      await db.coffeeBeans.put(beanForStore);
+      await coffeeBeanRepository.save(beanForStore);
       store.setBeans([
         ...store.beans.filter(currentBean => currentBean.id !== id),
         beanForStore,
@@ -454,7 +440,7 @@ export async function increaseBeanRemaining(
 
     if (!bean) {
       // 尝试从DB加载
-      bean = (await db.coffeeBeans.get(id)) ?? undefined;
+      bean = (await coffeeBeanRepository.get(id)) ?? undefined;
       if (!bean) return null;
     }
 
@@ -506,7 +492,7 @@ export async function increaseBeanRemaining(
 export async function getRatedBeans(): Promise<CoffeeBean[]> {
   const store = getCoffeeBeanStore();
   const beans =
-    store.beans.length > 0 ? store.beans : await db.coffeeBeans.toArray();
+    store.beans.length > 0 ? store.beans : await coffeeBeanRepository.list();
   return beans.filter(bean => bean.overallRating && bean.overallRating > 0);
 }
 
@@ -529,7 +515,7 @@ export async function getBeanByName(
 ): Promise<CoffeeBean | null> {
   const store = getCoffeeBeanStore();
   const beans =
-    store.beans.length > 0 ? store.beans : await db.coffeeBeans.toArray();
+    store.beans.length > 0 ? store.beans : await coffeeBeanRepository.list();
 
   if (roaster) {
     return findCoffeeBeanByIdentity(beans, { name, roaster });

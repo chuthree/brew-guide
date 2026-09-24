@@ -1,6 +1,6 @@
 import type { CustomEquipment, Method } from '@/lib/core/config';
 import { commonMethods, equipmentList } from '@/lib/core/config';
-import type { SettingsOptions } from '@/lib/core/db';
+import type { SettingsOptions } from '@/lib/data/models';
 import type { Grinder } from '@/lib/stores/grinderStore';
 import type { LucideIcon } from 'lucide-react';
 import { pinyin } from 'pinyin-pro';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Method, CustomEquipment, Stage } from '@/lib/core/config';
 import { Content } from './useBrewingState';
-import type { SettingsOptions } from '@/lib/core/db';
+import type { SettingsOptions } from '@/lib/data/models';
 import { loadCustomMethodsForEquipment } from '@/lib/stores/customMethodStore';
 import { filterHiddenMethods } from '@/lib/stores/settingsStore';
 import { MethodType } from '@/lib/types/method';

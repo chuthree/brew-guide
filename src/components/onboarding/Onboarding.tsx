@@ -29,6 +29,7 @@ import {
   getIsWeChat,
 } from '@/lib/utils/pwaInstallEnvironment';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { legacySettingsRepository } from '@/lib/data/repositories';
 
 interface OnboardingProps {
   onSettingsChange: (settings: SettingsOptions) => void;
@@ -220,8 +221,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
       Storage.setSync('onboardingCompleted', 'true');
 
       try {
-        const { db } = await import('@/lib/core/db');
-        await db.settings.put({ key: 'onboardingCompleted', value: 'true' });
+        await legacySettingsRepository.set('onboardingCompleted', 'true');
       } catch (error) {
         console.error('写入引导完成状态到 IndexedDB 失败:', error);
       }

@@ -9,7 +9,7 @@ import {
   type ImageRecompressionStats,
 } from '@/lib/images/imageRecompression';
 import { getSettingsStore } from '@/lib/stores/settingsStore';
-import type { RoasterConfig } from '@/lib/core/db';
+import type { RoasterConfig } from '@/lib/data/models';
 
 export type RecompressRoasterLogosStats = ImageRecompressionStats;
 

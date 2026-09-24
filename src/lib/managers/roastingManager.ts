@@ -11,8 +11,10 @@ import {
   getNextAvailableNumber,
 } from '@/lib/utils/beanRepurchaseUtils';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
-import { mergeBeanWithStoredImages } from '@/lib/coffee-beans/imageRepository';
-import { replaceBrewingNotesWithSplitImages } from '@/lib/notes/imageRepository';
+import {
+  brewingNotePersistence,
+  coffeeBeanImageRepository,
+} from '@/lib/data/repositories';
 import {
   getBrewingNoteById as getStoredBrewingNoteById,
   getBrewingNotes,
@@ -51,7 +53,7 @@ const replaceBrewingNotes = async (
     allowDestructiveReplace?: boolean;
   } = {}
 ): Promise<void> => {
-  const replaced = await replaceBrewingNotesWithSplitImages(
+  const replaced = await brewingNotePersistence.replaceAllWithImages(
     notes as BrewingNote[],
     {
       allowEmptyReplace: options.allowEmptyReplace,
@@ -123,7 +125,8 @@ export const RoastingManager = {
       if (!storedGreenBean) {
         return { success: false, error: '找不到生豆记录' };
       }
-      const greenBean = await mergeBeanWithStoredImages(storedGreenBean);
+      const greenBean =
+        await coffeeBeanImageRepository.mergeBean(storedGreenBean);
 
       // 确认是生豆
       const beanState = greenBean.beanState || 'roasted';
@@ -577,7 +580,8 @@ export const RoastingManager = {
       if (!storedOriginalBean) {
         return { success: false, error: '找不到咖啡豆记录' };
       }
-      const originalBean = await mergeBeanWithStoredImages(storedOriginalBean);
+      const originalBean =
+        await coffeeBeanImageRepository.mergeBean(storedOriginalBean);
 
       // 确认是熟豆
       const beanState = originalBean.beanState || 'roasted';

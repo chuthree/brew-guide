@@ -1,9 +1,8 @@
-import { recompressOversizedCoffeeBeanImages } from '@/lib/coffee-beans/imageRepository';
+import { imageMaintenance } from '@/lib/data/repositories';
 import {
   mergeImageRecompressionStats,
   type ImageRecompressionStats,
 } from '@/lib/images/imageRecompression';
-import { recompressOversizedBrewingNoteImages } from '@/lib/notes/imageRepository';
 import { recompressOversizedRoasterLogos } from '@/lib/settings/roasterLogoRecompression';
 
 export interface RecompressAppImagesStats extends ImageRecompressionStats {
@@ -15,8 +14,8 @@ export interface RecompressAppImagesStats extends ImageRecompressionStats {
 }
 
 export async function recompressOversizedAppImages(): Promise<RecompressAppImagesStats> {
-  const brewingNotes = await recompressOversizedBrewingNoteImages();
-  const coffeeBeans = await recompressOversizedCoffeeBeanImages();
+  const brewingNotes = await imageMaintenance.recompressBrewingNoteImages();
+  const coffeeBeans = await imageMaintenance.recompressCoffeeBeanImages();
   const roasterLogos = await recompressOversizedRoasterLogos();
   const total = mergeImageRecompressionStats([
     brewingNotes,

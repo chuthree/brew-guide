@@ -15,7 +15,7 @@ import PageStackDrawer from '@/components/common/ui/PageStackDrawer';
 import ConfirmDrawer from '@/components/common/ui/ConfirmDrawer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import { modalHistory, useModalHistory } from '@/lib/hooks/useModalHistory';
-import type { FlavorDimension } from '@/lib/core/db';
+import type { FlavorDimension } from '@/lib/data/models';
 import {
   getFlavorDimensionsSync,
   getSettingsStore,

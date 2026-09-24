@@ -12,7 +12,7 @@ import {
   resolveBeanFieldConfig,
   type BeanFieldId,
 } from '@/lib/coffee-beans/beanFields';
-import type { AppSettings } from '@/lib/core/db';
+import type { AppSettings } from '@/lib/data/models';
 
 export const DEFAULT_BEAN_RECOGNITION_MODEL = 'doubao-seed-2.0-mini';
 const DEPRECATED_BEAN_RECOGNITION_MODELS = new Set(['qwen-vl-max-2025-01-25']);

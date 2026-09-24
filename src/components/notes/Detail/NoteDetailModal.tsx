@@ -43,10 +43,8 @@ import {
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
 import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
-import {
-  getCoffeeBeanImageSource,
-  type CoffeeBeanImageSide,
-} from '@/lib/coffee-beans/imageRepository';
+import type { CoffeeBeanImageSide } from '@/lib/data/contracts';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 
 // 信息行组件
 interface InfoRowProps {
@@ -320,7 +318,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
       try {
         return (
-          (await getCoffeeBeanImageSource(beanInfo.id, {
+          (await coffeeBeanImageRepository.getSource(beanInfo.id, {
             side,
             mode: 'original',
           })) || fallback

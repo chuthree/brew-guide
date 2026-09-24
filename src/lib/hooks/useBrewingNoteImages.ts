@@ -1,11 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  getBrewingNoteImageCounts,
-  getBrewingNoteImageNoteIds,
-  getBrewingNoteImages,
-} from '@/lib/notes/imageRepository';
+import { brewingNoteImageRepository } from '@/lib/data/repositories';
 import { useImageLoadGate } from './useImageLoadGate';
 
 const EMPTY_IMAGES: string[] = [];
@@ -24,10 +20,7 @@ interface BrewingNoteDataChangedDetail {
 type ImageRefreshSubscriber = () => void;
 type ImageIdsRefreshSubscriber = (noteId?: string) => void;
 
-const imageRefreshSubscribers = new Map<
-  string,
-  Set<ImageRefreshSubscriber>
->();
+const imageRefreshSubscribers = new Map<string, Set<ImageRefreshSubscriber>>();
 const imageIdsRefreshSubscribers = new Set<ImageIdsRefreshSubscriber>();
 let isBrewingNoteDataChangedListenerAttached = false;
 
@@ -130,7 +123,7 @@ export function useBrewingNoteImageIds(noteIds: string[]): Set<string> {
 
       const request = ++latestRequest;
       try {
-        const ids = await getBrewingNoteImageNoteIds(
+        const ids = await brewingNoteImageRepository.getNoteIds(
           changedNoteId ? [changedNoteId] : imageNoteIds
         );
         if (cancelled || request !== latestRequest) return;
@@ -208,7 +201,8 @@ export function useBrewingNoteImageCountsState(
       };
     }
 
-    getBrewingNoteImageCounts(uniqueNoteIds)
+    brewingNoteImageRepository
+      .getImageCounts(uniqueNoteIds)
       .then(counts => {
         if (!cancelled) {
           setState({ imageCounts: counts, isLoaded: true, requestKey });
@@ -251,13 +245,14 @@ export function useBrewingNoteImages(
 
     const loadImages = () => {
       const request = ++latestRequest;
-      getBrewingNoteImages(noteId)
+      brewingNoteImageRepository
+        .getImages(noteId)
         .then(storedImages => {
           if (!cancelled && request === latestRequest)
             setImageState({
               noteId,
               images: storedImages.length > 0 ? storedImages : fallback,
-          });
+            });
         })
         .catch(() => {
           if (!cancelled && request === latestRequest) {

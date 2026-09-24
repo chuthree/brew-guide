@@ -1,4 +1,4 @@
-import type { AppSettings } from '@/lib/core/db';
+import type { AppSettings } from '@/lib/data/models';
 import {
   SIMPLIFIED_VIEW_LABELS,
   VIEW_LABELS,
