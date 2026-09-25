@@ -3,6 +3,7 @@ import Dexie, { type Table } from 'dexie';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createDexieOfflineQueueRepository } from './offlineQueueRepository';
 import type { StoredPendingOperation } from '@/lib/data/models';
+import type { PendingOperationUpdate } from '@/lib/data/contracts';
 import type { PendingOperation } from '@/lib/supabase/realtime/types';
 
 class OfflineQueueTestDatabase extends Dexie {
@@ -30,6 +31,10 @@ const operation = (
   retryCount: 0,
   ...overrides,
 });
+
+function rawPatch(value: unknown): PendingOperationUpdate {
+  return value as PendingOperationUpdate;
+}
 
 describe('Dexie OfflineQueueRepository', () => {
   let database: OfflineQueueTestDatabase;
@@ -97,15 +102,16 @@ describe('Dexie OfflineQueueRepository', () => {
     };
 
     await database.pendingOperations.add(storedOperation);
-    await repository.update('extra', { retryCount: 2 });
+    await repository.update('extra', { type: 'delete', retryCount: 2 });
 
     expect(await repository.count()).toBe(1);
     expect(await repository.get('extra')).toEqual({
       ...storedOperation,
+      type: 'delete',
       retryCount: 2,
     });
     expect(await repository.listOrdered()).toEqual([
-      { ...storedOperation, retryCount: 2 },
+      { ...storedOperation, type: 'delete', retryCount: 2 },
     ]);
   });
 
@@ -127,5 +133,149 @@ describe('Dexie OfflineQueueRepository', () => {
       new Set(['duplicate-a', 'duplicate-b'])
     );
     expect(await repository.count()).toBe(2);
+  });
+
+  it.each(['type', 'timestamp', 'retryCount'] as const)(
+    'confirms raw Dexie removes required %s when patched with undefined',
+    async field => {
+      const original = operation(`raw-required-${field}`, 70);
+      await database.pendingOperations.add({ ...original });
+
+      await database.pendingOperations.update(original.id, {
+        [field]: undefined,
+      } as never);
+
+      const updated = await database.pendingOperations.get(original.id);
+      expect(updated).toBeDefined();
+      expect(Object.hasOwn(updated!, field)).toBe(false);
+    }
+  );
+
+  it.each(['type', 'timestamp', 'retryCount'] as const)(
+    'rejects an explicit undefined %s patch without changing the row',
+    async field => {
+      const original = operation(`required-${field}`, 80);
+      await repository.add(original);
+
+      await expect(
+        repository.update(original.id, rawPatch({ [field]: undefined }))
+      ).rejects.toThrow(new RegExp(field));
+      expect(await repository.get(original.id)).toEqual(original);
+    }
+  );
+
+  it('rejects a mixed valid and invalid patch before changing any field', async () => {
+    const original = operation('mixed-invalid', 90);
+    await repository.add(original);
+
+    await expect(
+      repository.update(
+        original.id,
+        rawPatch({ retryCount: 5, type: undefined })
+      )
+    ).rejects.toThrow(/type/);
+    expect(await repository.get(original.id)).toEqual(original);
+  });
+
+  it('validates before looking up a missing row', async () => {
+    await expect(
+      repository.update('missing', rawPatch({ type: undefined }))
+    ).rejects.toThrow(/type/);
+    expect(await repository.get('missing')).toBeUndefined();
+  });
+
+  it('keeps empty and absent patches unchanged and removes optional undefined fields', async () => {
+    const original: PendingOperation = {
+      ...operation('optional-fields', 100),
+      lastError: 'offline',
+      failedAt: 99,
+    };
+    await repository.add(original);
+
+    await repository.update(original.id, {});
+    expect(await repository.get(original.id)).toEqual(original);
+
+    await repository.update(original.id, { retryCount: 1 });
+    expect(await repository.get(original.id)).toEqual({
+      ...original,
+      retryCount: 1,
+    });
+
+    await repository.update(
+      original.id,
+      rawPatch({ data: undefined, lastError: undefined, failedAt: undefined })
+    );
+    const updated = await repository.get(original.id);
+    expect(updated).toBeDefined();
+    expect(Object.hasOwn(updated!, 'data')).toBe(false);
+    expect(Object.hasOwn(updated!, 'lastError')).toBe(false);
+    expect(Object.hasOwn(updated!, 'failedAt')).toBe(false);
+    expect(updated).toMatchObject({
+      id: original.id,
+      retryCount: 1,
+      timestamp: original.timestamp,
+    });
+  });
+
+  it('applies valid field replacements and preserves contract-supported null data', async () => {
+    const original = operation('valid-patch', 120);
+    await repository.add(original);
+
+    await repository.update(original.id, {
+      type: 'delete',
+      data: null,
+      timestamp: 123,
+      retryCount: 2,
+      lastError: 'offline',
+      failedAt: 456,
+    });
+
+    expect(await repository.get(original.id)).toEqual({
+      ...original,
+      type: 'delete',
+      data: null,
+      timestamp: 123,
+      retryCount: 2,
+      lastError: 'offline',
+      failedAt: 456,
+    });
+  });
+
+  it.each(['lastError', 'failedAt'] as const)(
+    'rejects null for non-nullable %s without changing the row',
+    async field => {
+      const original: PendingOperation = {
+        ...operation(`null-${field}`, 130),
+        lastError: 'offline',
+        failedAt: 456,
+      };
+      await repository.add(original);
+
+      await expect(
+        repository.update(original.id, rawPatch({ [field]: null }))
+      ).rejects.toThrow(new RegExp(field));
+      expect(await repository.get(original.id)).toEqual(original);
+    }
+  );
+
+  it('allows valid updates to unknown stored rows without narrowing them', async () => {
+    const storedOperation: StoredPendingOperation = {
+      ...operation('unknown-row', 110),
+      table: 'legacyTable',
+      type: 'legacyAction',
+      futureField: { nested: ['preserved', 1] },
+    };
+    await database.pendingOperations.add(storedOperation);
+
+    await repository.update(storedOperation.id, {
+      type: 'delete',
+      retryCount: 3,
+    });
+
+    expect(await repository.get(storedOperation.id)).toEqual({
+      ...storedOperation,
+      type: 'delete',
+      retryCount: 3,
+    });
   });
 });

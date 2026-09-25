@@ -2,6 +2,7 @@ import type { Table } from 'dexie';
 import { db } from '@/lib/core/db';
 import type { OfflineQueueRepository } from '@/lib/data/contracts';
 import type { StoredPendingOperation } from '@/lib/data/models';
+import { assertValidPendingOperationUpdate } from '@/lib/data/pendingOperationUpdate';
 
 export function createDexieOfflineQueueRepository(
   table: Table<StoredPendingOperation, string> = db.pendingOperations
@@ -16,6 +17,7 @@ export function createDexieOfflineQueueRepository(
     },
 
     async update(id, changes) {
+      assertValidPendingOperationUpdate(changes);
       await table.update(id, changes);
     },
 
