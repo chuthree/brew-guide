@@ -1,10 +1,18 @@
 import 'fake-indexeddb/auto';
 import Dexie from 'dexie';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   openLegacyDexieReader,
   type LegacySourceTableName,
 } from './legacyDexieReader';
+
+vi.mock('@/lib/core/db', () => {
+  throw new Error('Legacy Dexie reader must not import the active database');
+});
+
+vi.mock('@/lib/data/dexieRuntime', () => {
+  throw new Error('Legacy Dexie reader must not import the active runtime');
+});
 
 const DATABASE_NAME = 'BrewGuideDB';
 
@@ -338,6 +346,94 @@ const currentVersion11Stores: Record<string, FixtureStore> = {
   },
 };
 
+const createLegacyVersion8Stores = (
+  yearlyReports: Record<string, unknown>[] = []
+): Record<string, FixtureStore> => ({
+  brewingNotes: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'timestamp', keyPath: 'timestamp' },
+      { name: 'equipment', keyPath: 'equipment' },
+      { name: 'method', keyPath: 'method' },
+      { name: 'beanId', keyPath: 'beanId' },
+      {
+        name: '[beanId+timestamp]',
+        keyPath: ['beanId', 'timestamp'],
+      },
+    ],
+    records: [
+      {
+        id: 'note-v8',
+        timestamp: 1735600000001,
+        notes: '代表性 v8 冲煮记录',
+      },
+    ],
+  },
+  coffeeBeans: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'timestamp', keyPath: 'timestamp' },
+      { name: 'name', keyPath: 'name' },
+      { name: 'type', keyPath: 'type' },
+    ],
+    records: [
+      { id: 'bean-v8', timestamp: 1735600000000, name: '咖啡豆保留检查' },
+    ],
+  },
+  coffeeBeanImages: {
+    keyPath: 'beanId',
+    indexes: [{ name: 'updatedAt', keyPath: 'updatedAt' }],
+    records: [
+      {
+        beanId: 'bean-v8',
+        image: 'data:image/jpeg;base64,representative-image',
+        updatedAt: 1735600000002,
+      },
+    ],
+  },
+  coffeeBeanImageThumbnails: {
+    keyPath: 'beanId',
+    indexes: [{ name: 'updatedAt', keyPath: 'updatedAt' }],
+    records: [],
+  },
+  settings: {
+    keyPath: 'key',
+    records: [{ key: 'v4_migrated', value: 'true' }],
+  },
+  customEquipments: {
+    keyPath: 'id',
+    indexes: [{ name: 'name', keyPath: 'name' }],
+    records: [],
+  },
+  customMethods: { keyPath: 'equipmentId', records: [] },
+  grinders: {
+    keyPath: 'id',
+    indexes: [{ name: 'name', keyPath: 'name' }],
+    records: [],
+  },
+  yearlyReports: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'year', keyPath: 'year' },
+      { name: 'createdAt', keyPath: 'createdAt' },
+    ],
+    records: yearlyReports,
+  },
+  appSettings: {
+    keyPath: 'id',
+    records: [{ id: 'main', data: { username: 'v8 user' } }],
+  },
+  pendingOperations: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'table', keyPath: 'table' },
+      { name: 'recordId', keyPath: 'recordId' },
+      { name: 'timestamp', keyPath: 'timestamp' },
+    ],
+    records: [],
+  },
+});
+
 describe('Legacy Dexie reader', () => {
   beforeEach(async () => {
     await deleteFixtureDatabase();
@@ -538,17 +634,41 @@ describe('Legacy Dexie reader', () => {
     }
   });
 
-  it('retains an old yearlyReports store instead of applying the current removal schema (Case E)', async () => {
-    await createFixture(8, {
-      coffeeBeans: { keyPath: 'id', records: [] },
-      brewingNotes: { keyPath: 'id', records: [] },
-      settings: { keyPath: 'key', records: [] },
-      yearlyReports: {
-        keyPath: 'id',
-        indexes: [{ name: 'year', keyPath: 'year' }],
-        records: [{ id: 'report-2024', year: 2024, total: 18 }],
+  it('reads non-empty yearlyReports records raw and leaves the entire v8 database unchanged (Case E / H)', async () => {
+    const reportContent = [
+      '# 2024 年度咖啡回顾 ☕',
+      '',
+      '今年从浅烘埃塞俄比亚开始，也尝试了 washed 与 natural 处理法。',
+      'The best cup was bright, floral, and unexpectedly sweet!',
+      '',
+      '最后一次冲煮：V60；水温 92°C；备注保留原始换行。',
+    ].join('\n');
+    const legacyDate = new Date('2024-12-31T16:00:00.000Z');
+    const reports = [
+      {
+        id: 'report-2024',
+        year: 2024,
+        username: '咖啡爱好者 ☕️',
+        content: reportContent,
+        createdAt: 1735689600000,
+        legacyMetadata: {
+          source: 'yearly-review-v1',
+          flags: [true, null, '保留'],
+          capturedAt: legacyDate,
+          optionalLegacyField: undefined,
+        },
       },
-    });
+      {
+        id: 'report-2025',
+        year: 2025,
+        username: 'Brew Guide',
+        content: '2025\nA longer historical report.\nEnd.',
+        createdAt: 1767225600000,
+        extraLegacyField: { archived: false, notes: ['one', 'two'] },
+      },
+    ];
+
+    await createFixture(8, createLegacyVersion8Stores(reports));
     const before = await snapshotDatabase();
     const opened = await openLegacyDexieReader();
 
@@ -558,8 +678,96 @@ describe('Legacy Dexie reader', () => {
 
     try {
       const info = opened.reader.inspect();
+      const activeData = await opened.reader.readMigrationData();
+      const historicalData = await opened.reader.readHistoricalData();
+      const yearlyReportsTable = info.tables.find(
+        ({ name }) => name === 'yearlyReports'
+      );
+
       expect(info.version).toBe(8);
-      expect(info.tables.map(({ name }) => name)).toContain('yearlyReports');
+      expect(yearlyReportsTable).toMatchObject({
+        primaryKey: { keyPath: 'id', autoIncrement: false },
+        indexes: expect.arrayContaining([
+          expect.objectContaining({ name: 'year', keyPath: 'year' }),
+          expect.objectContaining({
+            name: 'createdAt',
+            keyPath: 'createdAt',
+          }),
+        ]),
+      });
+      expect(activeData).not.toHaveProperty('yearlyReports');
+      expect(historicalData.yearlyReports.status).toBe('present');
+      expect(historicalData.yearlyReports.records).toEqual(reports);
+      expect(await serializeRecords(historicalData.yearlyReports.records)).toBe(
+        before.tables.find(({ name }) => name === 'yearlyReports')
+          ?.serializedRecords
+      );
+
+      const firstReport = historicalData.yearlyReports.records[0] as Record<
+        string,
+        unknown
+      >;
+      expect(firstReport.content).toBe(reportContent);
+      expect(firstReport.username).toBe('咖啡爱好者 ☕️');
+      expect(firstReport).toHaveProperty(
+        'legacyMetadata.optionalLegacyField',
+        undefined
+      );
+      expect(firstReport).toHaveProperty(
+        'legacyMetadata.capturedAt',
+        legacyDate
+      );
+
+      expect(await snapshotDatabase()).toEqual(before);
+    } finally {
+      opened.reader.close();
+    }
+  });
+
+  it('distinguishes a present but empty historical table from an absent one (Case I)', async () => {
+    await createFixture(8, createLegacyVersion8Stores());
+    const before = await snapshotDatabase();
+    const opened = await openLegacyDexieReader();
+
+    expect(opened.exists).toBe(true);
+    if (!opened.exists)
+      throw new Error('Expected the fixture database to exist');
+
+    try {
+      const data = await opened.reader.readHistoricalData();
+      expect(data.yearlyReports).toEqual({ status: 'present', records: [] });
+      expect(opened.reader.inspect().tables.map(({ name }) => name)).toContain(
+        'yearlyReports'
+      );
+      expect(await snapshotDatabase()).toEqual(before);
+    } finally {
+      opened.reader.close();
+    }
+  });
+
+  it('reports yearlyReports absent in v11 without creating the historical table (Case J)', async () => {
+    await createFixture(11, currentVersion11Stores);
+    const before = await snapshotDatabase();
+    const opened = await openLegacyDexieReader();
+
+    expect(opened.exists).toBe(true);
+    if (!opened.exists)
+      throw new Error('Expected the fixture database to exist');
+
+    try {
+      const activeData = await opened.reader.readMigrationData();
+      const historicalData = await opened.reader.readHistoricalData();
+      const info = opened.reader.inspect();
+
+      expect(historicalData.yearlyReports).toEqual({
+        status: 'absent',
+        records: [],
+      });
+      expect(activeData).not.toHaveProperty('yearlyReports');
+      expect(info.absentSourceTables).not.toContain('yearlyReports');
+      expect(info.tables.map(({ name }) => name)).not.toContain(
+        'yearlyReports'
+      );
       expect(await snapshotDatabase()).toEqual(before);
     } finally {
       opened.reader.close();

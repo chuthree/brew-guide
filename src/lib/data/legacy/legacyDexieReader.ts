@@ -19,6 +19,9 @@ const LEGACY_SOURCE_TABLES = [
 
 export type LegacySourceTableName = (typeof LEGACY_SOURCE_TABLES)[number];
 
+/** A historical source that is not part of the current migration targets. */
+export type LegacyHistoricalTableName = 'yearlyReports';
+
 export interface LegacyIndexInfo {
   name: string | null;
   keyPath: string | string[] | null;
@@ -46,15 +49,27 @@ export interface LegacyTableReadResult {
   records: Record<string, unknown>[];
 }
 
+/** Raw records from a historical store; no current domain model is applied. */
+export interface LegacyRawTableReadResult {
+  status: 'present' | 'absent';
+  records: unknown[];
+}
+
 export type LegacyMigrationData = Record<
   LegacySourceTableName,
   LegacyTableReadResult
 >;
 
+/** Historical-only sources kept separate from the active migration targets. */
+export interface LegacyHistoricalData {
+  yearlyReports: LegacyRawTableReadResult;
+}
+
 export interface LegacyDexieReaderHandle {
   inspect(): LegacyDatabaseInfo;
   readTable(tableName: LegacySourceTableName): Promise<LegacyTableReadResult>;
   readMigrationData(): Promise<LegacyMigrationData>;
+  readHistoricalData(): Promise<LegacyHistoricalData>;
   close(): void;
 }
 
@@ -105,16 +120,11 @@ class DexieLegacyReader implements LegacyDexieReaderHandle {
   async readTable(
     tableName: LegacySourceTableName
   ): Promise<LegacyTableReadResult> {
-    this.assertOpen();
-
-    const table = this.database.tables.find(({ name }) => name === tableName);
-    if (!table) return emptyReadResult('absent');
-
-    const records = await this.database.transaction('r', table, () =>
-      table.toArray()
-    );
-
-    return { status: 'present', records };
+    const result = await this.readRawTable(tableName);
+    return {
+      status: result.status,
+      records: result.records as Record<string, unknown>[],
+    };
   }
 
   async readMigrationData(): Promise<LegacyMigrationData> {
@@ -148,6 +158,12 @@ class DexieLegacyReader implements LegacyDexieReaderHandle {
     ) as LegacyMigrationData;
   }
 
+  async readHistoricalData(): Promise<LegacyHistoricalData> {
+    return {
+      yearlyReports: await this.readRawTable('yearlyReports'),
+    };
+  }
+
   close(): void {
     if (this.closed) return;
     this.database.close();
@@ -158,6 +174,21 @@ class DexieLegacyReader implements LegacyDexieReaderHandle {
     if (this.closed) {
       throw new Error('Legacy Dexie reader has already been closed');
     }
+  }
+
+  private async readRawTable(
+    tableName: LegacySourceTableName | LegacyHistoricalTableName
+  ): Promise<LegacyRawTableReadResult> {
+    this.assertOpen();
+
+    const table = this.database.tables.find(({ name }) => name === tableName);
+    if (!table) return { status: 'absent', records: [] };
+
+    const records = await this.database.transaction('r', table, () =>
+      table.toArray()
+    );
+
+    return { status: 'present', records };
   }
 }
 
