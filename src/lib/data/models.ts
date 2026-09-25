@@ -2,6 +2,24 @@ import type { EstimatedCupDoseSettings } from '@/lib/settings/estimatedCupDose';
 import type { BeanFieldConfig } from '@/lib/coffee-beans/beanFields';
 
 /**
+ * A canonical queue record as it is stored by any persistence backend.
+ * Historical table/action names and future JSON-safe fields are preserved
+ * until the runtime queue validates that the operation is executable.
+ */
+export interface StoredPendingOperation {
+  id: string;
+  table: string;
+  type: string;
+  recordId: string;
+  data?: unknown;
+  timestamp: number;
+  retryCount: number;
+  lastError?: string | null;
+  failedAt?: number | null;
+  [key: string]: unknown;
+}
+
+/**
  * 研磨度历史记录
  */
 export interface GrindSizeHistory {

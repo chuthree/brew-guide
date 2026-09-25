@@ -2,13 +2,14 @@ import 'fake-indexeddb/auto';
 import Dexie, { type Table } from 'dexie';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { BrewingNote } from '@/lib/core/config';
+import type { StoredPendingOperation } from '@/lib/data/models';
 import type { PendingOperation } from '@/lib/supabase/realtime/types';
 import { createDexieBrewingNoteRepository } from '@/lib/data/adapters/dexie/brewingNoteRepository';
 import { createDexieOfflineQueueRepository } from '@/lib/data/adapters/dexie/offlineQueueRepository';
 
 class OrderingTestDatabase extends Dexie {
   brewingNotes!: Table<BrewingNote, string>;
-  pendingOperations!: Table<PendingOperation, string>;
+  pendingOperations!: Table<StoredPendingOperation, string>;
 
   constructor(name: string) {
     super(name);
@@ -76,10 +77,10 @@ describe('current Dexie ordering observed by SQLite contract tests', () => {
       database.pendingOperations
     );
     await database.pendingOperations.bulkPut([
-      operation('tie-z', 200),
-      operation('tie-a', 200),
-      operation('later', 300),
-      operation('earlier', 100),
+      { ...operation('tie-z', 200) },
+      { ...operation('tie-a', 200) },
+      { ...operation('later', 300) },
+      { ...operation('earlier', 100) },
     ]);
 
     const actual = await repository.listOrdered();

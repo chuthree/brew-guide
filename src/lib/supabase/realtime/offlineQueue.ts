@@ -11,8 +11,59 @@
  */
 
 import { offlineQueueRepository } from '@/lib/data/repositories';
+import type { StoredPendingOperation } from '@/lib/data/models';
 import type { PendingOperation, RealtimeSyncTable } from './types';
+import { isRealtimeSyncTable } from './types';
 import { nanoid } from 'nanoid';
+
+/** Narrow a stored row to the operation shape the current processor supports. */
+export function isExecutablePendingOperation(
+  operation: unknown
+): operation is PendingOperation {
+  if (
+    typeof operation !== 'object' ||
+    operation === null ||
+    Array.isArray(operation)
+  ) {
+    return false;
+  }
+
+  const record = operation as Record<string, unknown>;
+  const hasOwn = (key: string) =>
+    Object.prototype.hasOwnProperty.call(record, key);
+  const optionalString = (key: string) =>
+    !hasOwn(key) ||
+    record[key] === undefined ||
+    typeof record[key] === 'string';
+  const optionalSafeInteger = (key: string) =>
+    !hasOwn(key) ||
+    record[key] === undefined ||
+    (typeof record[key] === 'number' && Number.isSafeInteger(record[key]));
+
+  return (
+    typeof record.id === 'string' &&
+    isRealtimeSyncTable(record.table) &&
+    (record.type === 'upsert' || record.type === 'delete') &&
+    typeof record.recordId === 'string' &&
+    typeof record.timestamp === 'number' &&
+    Number.isSafeInteger(record.timestamp) &&
+    typeof record.retryCount === 'number' &&
+    Number.isSafeInteger(record.retryCount) &&
+    record.retryCount >= 0 &&
+    optionalString('lastError') &&
+    optionalSafeInteger('failedAt')
+  );
+}
+
+function operationDiagnostic(operation: unknown): {
+  id?: unknown;
+  table?: unknown;
+  type?: unknown;
+} {
+  if (typeof operation !== 'object' || operation === null) return {};
+  const record = operation as Record<string, unknown>;
+  return { id: record.id, table: record.table, type: record.type };
+}
 
 /**
  * 离线队列管理器
@@ -81,13 +132,13 @@ export class OfflineQueueManager {
   private async findExistingOperation(
     table: RealtimeSyncTable,
     recordId: string
-  ): Promise<PendingOperation | undefined> {
+  ): Promise<StoredPendingOperation | undefined> {
     try {
       const operations = await offlineQueueRepository.findByTarget(
         table,
         recordId
       );
-      return operations[0] as PendingOperation | undefined;
+      return operations[0];
     } catch {
       return undefined;
     }
@@ -96,7 +147,7 @@ export class OfflineQueueManager {
   /**
    * 获取所有待处理的操作
    */
-  async getPendingOperations(): Promise<PendingOperation[]> {
+  async getPendingOperations(): Promise<StoredPendingOperation[]> {
     try {
       return await offlineQueueRepository.listOrdered();
     } catch {
@@ -186,6 +237,15 @@ export class OfflineQueueManager {
       console.log(`[OfflineQueue] 开始处理 ${operations.length} 个待处理操作`);
 
       for (const operation of operations) {
+        if (!isExecutablePendingOperation(operation)) {
+          console.error(
+            '[OfflineQueue] 存在当前版本无法执行的队列项，已保留:',
+            operationDiagnostic(operation)
+          );
+          blocked++;
+          continue;
+        }
+
         if (operation.retryCount >= this.maxRetries) {
           blocked++;
           continue;

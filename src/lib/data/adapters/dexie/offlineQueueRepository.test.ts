@@ -2,10 +2,11 @@ import 'fake-indexeddb/auto';
 import Dexie, { type Table } from 'dexie';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createDexieOfflineQueueRepository } from './offlineQueueRepository';
+import type { StoredPendingOperation } from '@/lib/data/models';
 import type { PendingOperation } from '@/lib/supabase/realtime/types';
 
 class OfflineQueueTestDatabase extends Dexie {
-  pendingOperations!: Table<PendingOperation, string>;
+  pendingOperations!: Table<StoredPendingOperation, string>;
 
   constructor(name: string) {
     super(name);
@@ -85,20 +86,27 @@ describe('Dexie OfflineQueueRepository', () => {
   });
 
   it('preserves retry fields and unknown stored fields', async () => {
-    const storedOperation = {
+    const storedOperation: StoredPendingOperation = {
       ...operation('extra', 40),
+      table: 'historical_table',
+      type: 'historical_action',
       lastError: 'Network unavailable',
       failedAt: 1234,
       legacyDiagnostic: { source: 'older-app' },
-    } as PendingOperation;
+      futureMetadata: { state: 'kept', values: [1, null, true] },
+    };
 
-    await repository.add(storedOperation);
+    await database.pendingOperations.add(storedOperation);
     await repository.update('extra', { retryCount: 2 });
 
+    expect(await repository.count()).toBe(1);
     expect(await repository.get('extra')).toEqual({
       ...storedOperation,
       retryCount: 2,
     });
+    expect(await repository.listOrdered()).toEqual([
+      { ...storedOperation, retryCount: 2 },
+    ]);
   });
 
   it('returns all target duplicates without imposing uniqueness', async () => {

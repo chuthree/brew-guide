@@ -1,4 +1,8 @@
-import type { AppSettings, Grinder } from '@/lib/data/models';
+import type {
+  AppSettings,
+  Grinder,
+  StoredPendingOperation,
+} from '@/lib/data/models';
 import type { BrewingNote, CustomEquipment, Method } from '@/lib/core/config';
 import type { CoffeeBean } from '@/types/app';
 import type { CoffeeBeanImageRecord } from '@/lib/coffee-beans/imageRecords';
@@ -226,13 +230,21 @@ export interface OfflineQueueRepository {
   findByTarget(
     table: PendingOperation['table'],
     recordId: string
-  ): Promise<PendingOperation[]>;
+  ): Promise<StoredPendingOperation[]>;
   add(operation: PendingOperation): Promise<void>;
-  update(id: string, changes: Partial<PendingOperation>): Promise<void>;
-  get(id: string): Promise<PendingOperation | undefined>;
+  update(id: string, changes: PendingOperationUpdate): Promise<void>;
+  get(id: string): Promise<StoredPendingOperation | undefined>;
   /** Returns operations in ascending timestamp order. */
-  listOrdered(): Promise<PendingOperation[]>;
+  listOrdered(): Promise<StoredPendingOperation[]>;
   count(): Promise<number>;
   delete(id: string): Promise<void>;
   clear(): Promise<void>;
 }
+
+/** Fields the current queue manager may patch without replacing a stored row. */
+export type PendingOperationUpdate = Partial<
+  Pick<
+    PendingOperation,
+    'type' | 'data' | 'timestamp' | 'retryCount' | 'lastError' | 'failedAt'
+  >
+>;

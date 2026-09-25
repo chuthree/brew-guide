@@ -1,10 +1,10 @@
 import type { Table } from 'dexie';
 import { db } from '@/lib/core/db';
 import type { OfflineQueueRepository } from '@/lib/data/contracts';
-import type { PendingOperation } from '@/lib/supabase/realtime/types';
+import type { StoredPendingOperation } from '@/lib/data/models';
 
 export function createDexieOfflineQueueRepository(
-  table: Table<PendingOperation, string> = db.pendingOperations
+  table: Table<StoredPendingOperation, string> = db.pendingOperations
 ): OfflineQueueRepository {
   return {
     findByTarget(targetTable, recordId) {
@@ -12,7 +12,7 @@ export function createDexieOfflineQueueRepository(
     },
 
     async add(operation) {
-      await table.add(operation);
+      await table.add({ ...operation });
     },
 
     async update(id, changes) {

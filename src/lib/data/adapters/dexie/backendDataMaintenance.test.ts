@@ -93,7 +93,7 @@ const seedDatabase = async (): Promise<void> => {
     data: {} as AppSettings,
   });
   await db.settings.put({ key: 'legacy-setting', value: 'legacy' });
-  await db.pendingOperations.put(pendingOperation);
+  await db.pendingOperations.put({ ...pendingOperation });
 };
 
 const countDatabaseRows = async () =>

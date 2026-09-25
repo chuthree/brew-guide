@@ -1,7 +1,7 @@
 import type { CustomEquipment, BrewingNote, Method } from '@/lib/core/config';
 import type { AppSettings, Grinder } from '@/lib/data/models';
 import type { CoffeeBean } from '@/types/app';
-import type { PendingOperation } from '@/lib/supabase/realtime/types';
+import type { StoredPendingOperation } from '@/lib/data/models';
 import type {
   AppSettingsRow,
   BrewingNoteRow,
@@ -55,18 +55,11 @@ export interface CustomMethodsSnapshot {
 }
 
 /**
- * A persisted queue snapshot, not a promise that the operation is executable.
- * Legacy table and operation names stay raw strings until the queue processor
- * validates them against its current runtime contract.
+ * @deprecated Use the backend-neutral StoredPendingOperation model.
+ * This alias remains for codec callers; raw legacy table/action names are
+ * preserved until the runtime queue validates them.
  */
-export type PendingOperationStorageSnapshot = Omit<
-  PendingOperation,
-  'table' | 'type'
-> & {
-  table: string;
-  type: string;
-  [key: string]: unknown;
-};
+export type PendingOperationStorageSnapshot = StoredPendingOperation;
 
 const ownKeysExcept = (
   value: Record<string, unknown>,
@@ -736,7 +729,7 @@ export function encodePendingOperation(value: unknown): PendingOperationRow {
 
 export function decodePendingOperation(
   row: PendingOperationRow
-): PendingOperationStorageSnapshot {
+): StoredPendingOperation {
   const context = { table: 'pending_operations', recordId: row.id };
   const id = assertStringId(row.id, context);
   const table = assertString(row.table_name, context, 'table_name');
@@ -817,7 +810,7 @@ export function decodePendingOperation(
   if (row.data_json !== null) {
     result.data = decodeJSONSnapshot(row.data_json, context, 'data_json');
   }
-  return result as PendingOperationStorageSnapshot;
+  return result as StoredPendingOperation;
 }
 
 const reportKnownKeys = new Set([

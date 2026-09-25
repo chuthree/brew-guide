@@ -5,8 +5,8 @@ import type {
   AppSettings,
   Grinder,
   RoasterFlavorPeriod,
+  StoredPendingOperation,
 } from '@/lib/data/models';
-import type { PendingOperation } from '@/lib/supabase/realtime/types';
 import {
   type CoffeeBeanImageRecord,
   type CoffeeBeanImageThumbnailRecord,
@@ -73,7 +73,7 @@ export class BrewGuideDB extends Dexie {
   settings!: Dexie.Table<{ key: string; value: string }, string>;
 
   // 实时同步离线队列表
-  pendingOperations!: Dexie.Table<PendingOperation, string>;
+  pendingOperations!: Dexie.Table<StoredPendingOperation, string>;
 
   constructor() {
     super('BrewGuideDB');

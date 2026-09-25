@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { OfflineQueueRepository } from '@/lib/data/contracts';
+import type { StoredPendingOperation } from '@/lib/data/models';
 import type { PendingOperation } from './types';
 
 const mocks = vi.hoisted(() => ({
@@ -18,7 +20,7 @@ vi.mock('@/lib/data/repositories', () => ({
   offlineQueueRepository: mocks.repository,
 }));
 
-import { offlineQueue } from './offlineQueue';
+import { isExecutablePendingOperation, offlineQueue } from './offlineQueue';
 
 const operation = (
   id: string,
@@ -33,6 +35,43 @@ const operation = (
   retryCount,
   ...overrides,
 });
+
+const storedUnknownOperation = (
+  id: string,
+  overrides: Partial<StoredPendingOperation> = {}
+): StoredPendingOperation => ({
+  ...operation(id),
+  table: 'historical_table',
+  type: 'historical_action',
+  futureMetadata: { source: 'older-app', values: [1, null, true] },
+  ...overrides,
+});
+
+const verifyQueueMutationTypes = (repository: OfflineQueueRepository) => {
+  const historicalInput = {
+    id: 'legacy-op',
+    table: 'historical_table',
+    type: 'historical_action',
+    recordId: 'legacy-record',
+    timestamp: 1,
+    retryCount: 0,
+  } as const;
+
+  // @ts-expect-error add only accepts operations executable by this runtime.
+  void repository.add(historicalInput);
+
+  // @ts-expect-error patches cannot change a stored operation's table.
+  void repository.update('legacy-op', { table: 'historical_table' });
+  // @ts-expect-error operation type patches remain limited to upsert/delete.
+  void repository.update('legacy-op', { type: 'historical_action' });
+  // @ts-expect-error patches cannot change the target record id.
+  void repository.update('legacy-op', { recordId: 'different-record' });
+  const extraPatch = { futureMetadata: { source: 'new-app' } };
+  // @ts-expect-error patches cannot add arbitrary top-level stored fields.
+  void repository.update('legacy-op', extraPatch);
+};
+
+void verifyQueueMutationTypes;
 
 describe('OfflineQueueManager repository behavior', () => {
   beforeEach(() => {
@@ -51,6 +90,34 @@ describe('OfflineQueueManager repository behavior', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
+
+  it.each([
+    ['known table and upsert', operation('upsert-op'), true],
+    [
+      'known table and delete',
+      operation('delete-op', 0, { type: 'delete' }),
+      true,
+    ],
+    [
+      'unknown table and upsert',
+      storedUnknownOperation('unknown-table', { type: 'upsert' }),
+      false,
+    ],
+    [
+      'known table and unknown type',
+      storedUnknownOperation('unknown-type', { table: 'coffee_beans' }),
+      false,
+    ],
+    ['unknown table and type', storedUnknownOperation('unknown-both'), false],
+  ] as const)(
+    'validates executable operations: %s',
+    (_label, candidate, expected) => {
+      const before = structuredClone(candidate);
+
+      expect(isExecutablePendingOperation(candidate)).toBe(expected);
+      expect(candidate).toEqual(before);
+    }
+  );
 
   it('adds one operation for a new target', async () => {
     vi.spyOn(Date, 'now').mockReturnValue(1000);
@@ -133,6 +200,31 @@ describe('OfflineQueueManager repository behavior', () => {
       ['op-3'],
     ]);
     expect(result).toEqual({ processed: 3, failed: 0, blocked: 0 });
+  });
+
+  it('preserves and diagnoses unknown operations while processing later valid rows', async () => {
+    const unknown = storedUnknownOperation('unknown-op');
+    mocks.repository.listOrdered.mockResolvedValue([
+      unknown,
+      operation('valid-op'),
+    ]);
+    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const processed: string[] = [];
+
+    const result = await offlineQueue.processQueue(async item => {
+      processed.push(item.id);
+      return true;
+    });
+
+    expect(processed).toEqual(['valid-op']);
+    expect(mocks.repository.delete).toHaveBeenCalledOnce();
+    expect(mocks.repository.delete).toHaveBeenCalledWith('valid-op');
+    expect(mocks.repository.update).not.toHaveBeenCalled();
+    expect(diagnostic).toHaveBeenCalledWith(
+      '[OfflineQueue] 存在当前版本无法执行的队列项，已保留:',
+      { id: 'unknown-op', table: 'historical_table', type: 'historical_action' }
+    );
+    expect(result).toEqual({ processed: 1, failed: 0, blocked: 1 });
   });
 
   it('increments retry state and sets failedAt only when the retry limit is reached', async () => {
