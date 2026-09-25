@@ -7,7 +7,8 @@ import { countTable, queryOptionalRow } from './sqlHelpers';
 
 const MAIN_SETTINGS_ID = 'main';
 
-async function getAppSettings(
+/** Executor-scoped operations can be composed inside a storage transaction. */
+export async function getAppSettings(
   executor: SqliteExecutor
 ): Promise<AppSettings | undefined> {
   const row = await queryOptionalRow(
@@ -19,7 +20,7 @@ async function getAppSettings(
   return decodeAppSettings(row as unknown as AppSettingsRow).data;
 }
 
-async function saveAppSettings(
+export async function saveAppSettings(
   executor: SqliteExecutor,
   settings: AppSettings
 ): Promise<void> {

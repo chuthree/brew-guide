@@ -5,7 +5,10 @@ import type { GrinderRow } from '../schemaV1';
 import type { SqliteDriver, SqliteExecutor } from '../driver';
 import { countTable } from './sqlHelpers';
 
-async function listGrinders(executor: SqliteExecutor): Promise<Grinder[]> {
+/** Executor-scoped operations can be composed inside a storage transaction. */
+export async function listGrinders(
+  executor: SqliteExecutor
+): Promise<Grinder[]> {
   const rows = await executor.query(
     'SELECT id, record_json FROM grinders ORDER BY id ASC'
   );
@@ -25,7 +28,7 @@ async function saveGrinder(
   );
 }
 
-async function upsertGrinders(
+export async function upsertGrinders(
   executor: SqliteExecutor,
   grinders: Grinder[]
 ): Promise<void> {
