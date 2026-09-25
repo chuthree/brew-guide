@@ -230,3 +230,8 @@ CREATE INDEX idx_pending_operations_table_record
 CREATE INDEX idx_pending_operations_timestamp_id
   ON pending_operations (timestamp_ms ASC, id ASC);
 `;
+
+/** One SQL statement per entry for drivers that do not support SQL batches. */
+export const SQLITE_SCHEMA_V1_STATEMENTS = SQLITE_SCHEMA_V1_SQL.split(';')
+  .map(statement => statement.trim())
+  .filter(Boolean);

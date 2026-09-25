@@ -12,6 +12,7 @@ dependencies {
     implementation project(':capacitor-community-keep-awake')
     implementation project(':capacitor-community-media')
     implementation project(':capacitor-community-safe-area')
+    implementation project(':capacitor-community-sqlite')
     implementation project(':capacitor-app')
     implementation project(':capacitor-camera')
     implementation project(':capacitor-filesystem')
