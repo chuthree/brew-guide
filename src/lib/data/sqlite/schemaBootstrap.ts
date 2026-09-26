@@ -27,6 +27,49 @@ const REQUIRED_UNIQUE_INDEXES = {
   brewing_note_images: [['note_id', 'position', 'variant']],
 } as const;
 
+const REQUIRED_IMAGE_CHECKS: Record<string, readonly string[]> = {
+  coffee_bean_images: [
+    "slot IN ('front', 'back')",
+    "variant IN ('original', 'thumbnail')",
+    "source_kind IN ('file', 'external')",
+    'size_bytes IS NULL OR size_bytes >= 0',
+    `(source_kind = 'file'
+        AND relative_path IS NOT NULL
+        AND mime_type IS NOT NULL
+        AND size_bytes IS NOT NULL
+        AND external_url IS NULL)
+      OR
+      (source_kind = 'external'
+        AND variant = 'original'
+        AND external_url IS NOT NULL
+        AND length(external_url) > 0
+        AND relative_path IS NULL
+        AND mime_type IS NULL
+        AND size_bytes IS NULL
+        AND sha256 IS NULL)`,
+  ],
+  brewing_note_images: [
+    'position >= 0',
+    "variant IN ('original', 'thumbnail')",
+    "source_kind IN ('file', 'external')",
+    'size_bytes IS NULL OR size_bytes >= 0',
+    `(source_kind = 'file'
+        AND relative_path IS NOT NULL
+        AND mime_type IS NOT NULL
+        AND size_bytes IS NOT NULL
+        AND external_url IS NULL)
+      OR
+      (source_kind = 'external'
+        AND variant = 'original'
+        AND external_url IS NOT NULL
+        AND length(external_url) > 0
+        AND relative_path IS NULL
+        AND mime_type IS NULL
+        AND size_bytes IS NULL
+        AND sha256 IS NULL)`,
+  ],
+};
+
 type ColumnContract = readonly [
   name: string,
   type: 'TEXT' | 'INTEGER',
@@ -93,10 +136,12 @@ const REQUIRED_COLUMNS: Record<string, readonly ColumnContract[]> = {
     ['bean_id', 'TEXT', 1, 0],
     ['slot', 'TEXT', 1, 0],
     ['variant', 'TEXT', 1, 0],
-    ['relative_path', 'TEXT', 1, 0],
-    ['mime_type', 'TEXT', 1, 0],
-    ['size_bytes', 'INTEGER', 1, 0],
+    ['source_kind', 'TEXT', 1, 0],
+    ['relative_path', 'TEXT', 0, 0],
+    ['mime_type', 'TEXT', 0, 0],
+    ['size_bytes', 'INTEGER', 0, 0],
     ['sha256', 'TEXT', 0, 0],
+    ['external_url', 'TEXT', 0, 0],
     ['updated_at_ms', 'INTEGER', 0, 0],
   ],
   brewing_note_images: [
@@ -104,10 +149,12 @@ const REQUIRED_COLUMNS: Record<string, readonly ColumnContract[]> = {
     ['note_id', 'TEXT', 1, 0],
     ['position', 'INTEGER', 1, 0],
     ['variant', 'TEXT', 1, 0],
-    ['relative_path', 'TEXT', 1, 0],
-    ['mime_type', 'TEXT', 1, 0],
-    ['size_bytes', 'INTEGER', 1, 0],
+    ['source_kind', 'TEXT', 1, 0],
+    ['relative_path', 'TEXT', 0, 0],
+    ['mime_type', 'TEXT', 0, 0],
+    ['size_bytes', 'INTEGER', 0, 0],
     ['sha256', 'TEXT', 0, 0],
+    ['external_url', 'TEXT', 0, 0],
     ['updated_at_ms', 'INTEGER', 0, 0],
   ],
   migration_state: [
@@ -232,6 +279,123 @@ async function validateColumns(
   });
 }
 
+function normalizeSqlExpression(expression: string): string {
+  const withoutIdentifierQuotes = expression
+    .replace(/"([A-Za-z_][A-Za-z\d_]*)"/g, '$1')
+    .replace(/`([A-Za-z_][A-Za-z\d_]*)`/g, '$1')
+    .replace(/\[([A-Za-z_][A-Za-z\d_]*)\]/g, '$1');
+  let normalized = '';
+  let inString = false;
+  let pendingSpace = false;
+
+  for (let index = 0; index < withoutIdentifierQuotes.length; index += 1) {
+    const character = withoutIdentifierQuotes[index];
+    const next = withoutIdentifierQuotes[index + 1];
+    if (character === "'" && inString && next === "'") {
+      normalized += "''";
+      index += 1;
+      continue;
+    }
+    if (character === "'") {
+      if (pendingSpace && normalized.length > 0) normalized += ' ';
+      pendingSpace = false;
+      inString = !inString;
+      normalized += character;
+      continue;
+    }
+    if (inString) {
+      normalized += character;
+      continue;
+    }
+    if (/\s/.test(character)) {
+      pendingSpace = true;
+      continue;
+    }
+    if (pendingSpace && normalized.length > 0) normalized += ' ';
+    pendingSpace = false;
+    normalized += character.toLowerCase();
+  }
+
+  return normalized.trim();
+}
+
+function extractCheckExpressions(createTableSql: string): string[] {
+  const checks: string[] = [];
+  let inString = false;
+
+  for (let index = 0; index < createTableSql.length; index += 1) {
+    const character = createTableSql[index];
+    const next = createTableSql[index + 1];
+    if (character === "'" && inString && next === "'") {
+      index += 1;
+      continue;
+    }
+    if (character === "'") {
+      inString = !inString;
+      continue;
+    }
+    if (inString || !/^check\b/i.test(createTableSql.slice(index))) continue;
+    if (index > 0 && /[A-Za-z\d_]/.test(createTableSql[index - 1])) continue;
+
+    let open = index + 5;
+    while (/\s/.test(createTableSql[open] ?? '')) open += 1;
+    if (createTableSql[open] !== '(') continue;
+
+    let depth = 1;
+    let checkString = false;
+    for (let end = open + 1; end < createTableSql.length; end += 1) {
+      const current = createTableSql[end];
+      const following = createTableSql[end + 1];
+      if (current === "'" && checkString && following === "'") {
+        end += 1;
+        continue;
+      }
+      if (current === "'") {
+        checkString = !checkString;
+        continue;
+      }
+      if (checkString) continue;
+      if (current === '(') depth += 1;
+      if (current === ')') depth -= 1;
+      if (depth === 0) {
+        checks.push(createTableSql.slice(open + 1, end));
+        index = end;
+        break;
+      }
+    }
+  }
+
+  return checks;
+}
+
+async function validateImageChecks(
+  executor: SqliteExecutor,
+  table: string
+): Promise<void> {
+  const rows = await executor.query(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
+    [table]
+  );
+  const createTableSql = rows[0]?.sql;
+  if (typeof createTableSql !== 'string') {
+    throw new SqliteSchemaBootstrapError(
+      `SQLite schema drift: ${table} has no readable table definition`
+    );
+  }
+
+  const actualChecks = new Set(
+    extractCheckExpressions(createTableSql).map(normalizeSqlExpression)
+  );
+  const missing = REQUIRED_IMAGE_CHECKS[table].filter(
+    check => !actualChecks.has(normalizeSqlExpression(check))
+  );
+  if (missing.length > 0) {
+    throw new SqliteSchemaBootstrapError(
+      `SQLite schema drift: ${table} is missing required CHECK constraints`
+    );
+  }
+}
+
 async function readIndexes(
   executor: SqliteExecutor,
   table: string
@@ -329,6 +493,9 @@ async function validateV1Schema(executor: SqliteExecutor): Promise<string[]> {
   assertExpectedTables(tables);
   for (const table of SQLITE_V1_TABLES) {
     await validateColumns(executor, table);
+  }
+  for (const table of Object.keys(REQUIRED_IMAGE_CHECKS)) {
+    await validateImageChecks(executor, table);
   }
   await validateIndexes(executor);
   return tables;

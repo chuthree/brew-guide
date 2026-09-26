@@ -36,12 +36,18 @@ function beanImage(
   beanId: string,
   slot: CoffeeBeanImageMetadata['slot'],
   variant: CoffeeBeanImageMetadata['variant'],
-  overrides: Partial<CoffeeBeanImageMetadata> = {}
+  overrides: Partial<
+    Omit<
+      Extract<CoffeeBeanImageMetadata, { sourceKind: 'file' }>,
+      'imageId' | 'beanId' | 'slot' | 'sourceKind' | 'variant'
+    >
+  > = {}
 ): CoffeeBeanImageMetadata {
   return {
     imageId,
     beanId,
     slot,
+    sourceKind: 'file',
     variant,
     relativePath: 'images/v1/objects/' + imageId,
     mimeType: 'image/jpeg',
@@ -55,17 +61,57 @@ function noteImage(
   noteId: string,
   position: number,
   variant: BrewingNoteImageMetadata['variant'],
-  overrides: Partial<BrewingNoteImageMetadata> = {}
+  overrides: Partial<
+    Omit<
+      Extract<BrewingNoteImageMetadata, { sourceKind: 'file' }>,
+      'imageId' | 'noteId' | 'position' | 'sourceKind' | 'variant'
+    >
+  > = {}
 ): BrewingNoteImageMetadata {
   return {
     imageId,
     noteId,
     position,
+    sourceKind: 'file',
     variant,
     relativePath: 'images/v1/objects/' + imageId,
     mimeType: 'image/webp',
     sizeBytes: 256,
     ...overrides,
+  };
+}
+
+function beanExternalImage(
+  imageId: string,
+  beanId: string,
+  slot: CoffeeBeanImageMetadata['slot'],
+  externalUrl: string,
+  variant: 'original' = 'original'
+): CoffeeBeanImageMetadata {
+  return {
+    imageId,
+    beanId,
+    slot,
+    sourceKind: 'external',
+    variant,
+    externalUrl,
+  };
+}
+
+function noteExternalImage(
+  imageId: string,
+  noteId: string,
+  position: number,
+  externalUrl: string,
+  variant: 'original' = 'original'
+): BrewingNoteImageMetadata {
+  return {
+    imageId,
+    noteId,
+    position,
+    sourceKind: 'external',
+    variant,
+    externalUrl,
   };
 }
 
@@ -158,6 +204,55 @@ describeNodeSqlite(nodeSqliteLabel + ' image metadata executor', () => {
     ).toBeUndefined();
   });
 
+  it('lists and replaces mixed Bean file/external sources without changing order', async () => {
+    const driver = getDriver();
+    const rows: CoffeeBeanImageMetadata[] = [
+      beanImage('bean-mixed-front-original', 'bean-mixed', 'front', 'original'),
+      beanImage(
+        'bean-mixed-front-thumbnail',
+        'bean-mixed',
+        'front',
+        'thumbnail'
+      ),
+      beanExternalImage(
+        'bean-mixed-back-external',
+        'bean-mixed',
+        'back',
+        'https://Example.COM/back.jpg?sig=fake#front'
+      ),
+    ];
+
+    await replaceCoffeeBeanImageMetadata(driver, 'bean-mixed', rows);
+    expect(await listCoffeeBeanImageMetadata(driver, 'bean-mixed')).toEqual(
+      rows
+    );
+    expect(
+      await getCoffeeBeanImageMetadata(driver, 'bean-mixed', 'back', 'original')
+    ).toEqual(rows[2]);
+
+    const externalFront = beanExternalImage(
+      'bean-mixed-front-external',
+      'bean-mixed',
+      'front',
+      'http://example.com/front.jpg?sig=fake'
+    );
+    await replaceCoffeeBeanImageMetadata(driver, 'bean-mixed', [externalFront]);
+    expect(await listCoffeeBeanImageMetadata(driver, 'bean-mixed')).toEqual([
+      externalFront,
+    ]);
+
+    const fileFront = beanImage(
+      'bean-mixed-front-file-again',
+      'bean-mixed',
+      'front',
+      'original'
+    );
+    await replaceCoffeeBeanImageMetadata(driver, 'bean-mixed', [fileFront]);
+    expect(await listCoffeeBeanImageMetadata(driver, 'bean-mixed')).toEqual([
+      fileFront,
+    ]);
+  });
+
   it('round-trips note metadata at positions 0, 1, and 8 with position and variant ordering', async () => {
     const rows = [
       noteImage('note-8-thumb', 'note-read', 8, 'thumbnail'),
@@ -191,6 +286,48 @@ describeNodeSqlite(nodeSqliteLabel + ' image metadata executor', () => {
     expect(
       await getBrewingNoteImageMetadata(getDriver(), 'note-read', 2, 'original')
     ).toBeUndefined();
+  });
+
+  it('orders mixed Note external originals and file original/thumbnail rows by position', async () => {
+    const driver = getDriver();
+    const rows: BrewingNoteImageMetadata[] = [
+      noteExternalImage(
+        'note-mixed-0-external',
+        'note-mixed',
+        0,
+        'https://example.com/first.jpg?sig=fake'
+      ),
+      noteImage('note-mixed-1-file', 'note-mixed', 1, 'original'),
+      noteImage('note-mixed-1-thumb', 'note-mixed', 1, 'thumbnail'),
+      noteExternalImage(
+        'note-mixed-2-external',
+        'note-mixed',
+        2,
+        'http://example.com/last.jpg'
+      ),
+    ];
+    await replaceBrewingNoteImageMetadata(driver, 'note-mixed', rows);
+
+    expect(await listBrewingNoteImageMetadata(driver, 'note-mixed')).toEqual([
+      rows[0],
+      rows[1],
+      rows[2],
+      rows[3],
+    ]);
+
+    const reordered = [
+      noteImage('note-mixed-1-file', 'note-mixed', 0, 'original'),
+      noteExternalImage(
+        'note-mixed-0-external',
+        'note-mixed',
+        1,
+        'https://example.com/first.jpg?sig=fake'
+      ),
+    ];
+    await replaceBrewingNoteImageMetadata(driver, 'note-mixed', reordered);
+    expect(await listBrewingNoteImageMetadata(driver, 'note-mixed')).toEqual(
+      reordered
+    );
   });
 
   it('replaces only the selected bean owner and allows an empty replacement', async () => {
@@ -317,6 +454,33 @@ describeNodeSqlite(nodeSqliteLabel + ' image metadata executor', () => {
     ]);
   });
 
+  it('rejects an invalid external URL before deleting the existing owner set', async () => {
+    const driver = getDriver();
+    const existing = beanImage(
+      'bean-a-existing',
+      'bean-a',
+      'front',
+      'original'
+    );
+    await replaceCoffeeBeanImageMetadata(driver, 'bean-a', [existing]);
+
+    await expect(
+      replaceCoffeeBeanImageMetadata(driver, 'bean-a', [
+        beanImage('bean-a-valid-desired', 'bean-a', 'front', 'original'),
+        beanExternalImage(
+          'bean-a-invalid-external',
+          'bean-a',
+          'back',
+          'https://user:secret@example.com/image.jpg?token=fake-secret'
+        ),
+      ])
+    ).rejects.toThrow(/credentials are not allowed/);
+
+    expect(await listCoffeeBeanImageMetadata(driver, 'bean-a')).toEqual([
+      existing,
+    ]);
+  });
+
   it('rejects malformed note metadata before deleting existing rows', async () => {
     const driver = getDriver();
     const existing = noteImage('note-a-existing', 'note-a', 0, 'original');
@@ -420,7 +584,12 @@ describeNodeSqlite(nodeSqliteLabel + ' image metadata executor', () => {
     await replaceCoffeeBeanImageMetadata(driver, 'bean-a', existing);
     const desired = [
       beanImage('bean-a-new-front', 'bean-a', 'front', 'original'),
-      beanImage('bean-a-new-back', 'bean-a', 'back', 'original'),
+      beanExternalImage(
+        'bean-a-new-back-external',
+        'bean-a',
+        'back',
+        'https://example.com/back.jpg?sig=fake'
+      ),
     ];
 
     await expect(
@@ -438,23 +607,140 @@ describeNodeSqlite(nodeSqliteLabel + ' image metadata executor', () => {
     );
   });
 
+  it('enforces source shape and external thumbnail CHECKs in real SQLite', async () => {
+    const driver = getDriver();
+    const validFile = encodeCoffeeBeanImageMetadata(
+      beanImage('sql-check-file', 'sql-check-valid', 'front', 'original')
+    );
+    const validExternal = encodeCoffeeBeanImageMetadata(
+      beanExternalImage(
+        'sql-check-external',
+        'sql-check-valid',
+        'back',
+        'https://example.com/image.jpg'
+      )
+    );
+    await driver.execute(
+      'INSERT INTO coffee_bean_images (' +
+        'image_id, bean_id, slot, variant, source_kind, relative_path, mime_type, size_bytes, sha256, external_url, updated_at_ms' +
+        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        validFile.image_id,
+        validFile.bean_id,
+        validFile.slot,
+        validFile.variant,
+        validFile.source_kind,
+        validFile.relative_path,
+        validFile.mime_type,
+        validFile.size_bytes,
+        validFile.sha256,
+        validFile.external_url,
+        validFile.updated_at_ms,
+      ]
+    );
+    await driver.execute(
+      'INSERT INTO coffee_bean_images (' +
+        'image_id, bean_id, slot, variant, source_kind, relative_path, mime_type, size_bytes, sha256, external_url, updated_at_ms' +
+        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        validExternal.image_id,
+        validExternal.bean_id,
+        validExternal.slot,
+        validExternal.variant,
+        validExternal.source_kind,
+        validExternal.relative_path,
+        validExternal.mime_type,
+        validExternal.size_bytes,
+        validExternal.sha256,
+        validExternal.external_url,
+        validExternal.updated_at_ms,
+      ]
+    );
+    expect(
+      await listCoffeeBeanImageMetadata(driver, 'sql-check-valid')
+    ).toEqual([
+      beanImage('sql-check-file', 'sql-check-valid', 'front', 'original'),
+      beanExternalImage(
+        'sql-check-external',
+        'sql-check-valid',
+        'back',
+        'https://example.com/image.jpg'
+      ),
+    ]);
+
+    const invalidRows: Array<readonly (string | number | null)[]> = [
+      [
+        'sql-check-external-thumbnail',
+        'sql-check-invalid',
+        'front',
+        'thumbnail',
+        'external',
+        null,
+        null,
+        null,
+        null,
+        'https://example.com/thumb.jpg',
+        null,
+      ],
+      [
+        'sql-check-external-path',
+        'sql-check-invalid',
+        'front',
+        'original',
+        'external',
+        'bean/front.jpg',
+        null,
+        null,
+        null,
+        'https://example.com/image.jpg',
+        null,
+      ],
+      [
+        'sql-check-file-no-path',
+        'sql-check-invalid',
+        'front',
+        'original',
+        'file',
+        null,
+        'image/jpeg',
+        1,
+        null,
+        null,
+        null,
+      ],
+    ];
+
+    for (const params of invalidRows) {
+      await expect(
+        driver.execute(
+          'INSERT INTO coffee_bean_images (' +
+            'image_id, bean_id, slot, variant, source_kind, relative_path, mime_type, size_bytes, sha256, external_url, updated_at_ms' +
+            ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          params
+        )
+      ).rejects.toThrow();
+    }
+  });
+
   it('rejects malformed rows returned by SQLite instead of skipping them', async () => {
     const row = encodeCoffeeBeanImageMetadata(
       beanImage('malformed-stored', 'bean-corrupt', 'front', 'original')
     );
     await getDriver().execute(
       'INSERT INTO coffee_bean_images (' +
-        'image_id, bean_id, slot, variant, relative_path, mime_type, size_bytes, sha256, updated_at_ms' +
-        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'image_id, bean_id, slot, variant, source_kind, relative_path, mime_type, size_bytes, sha256, external_url, updated_at_ms' +
+        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         row.image_id,
         row.bean_id,
         row.slot,
         row.variant,
+        row.source_kind,
         '/absolute/stored.jpg',
         row.mime_type,
         row.size_bytes,
         row.sha256,
+        row.external_url,
         row.updated_at_ms,
       ]
     );

@@ -639,9 +639,9 @@ async function insertBeanImage(
 ): Promise<void> {
   await driver.execute(
     `INSERT INTO coffee_bean_images (
-       image_id, bean_id, slot, variant, relative_path, mime_type,
-       size_bytes, sha256, updated_at_ms
-     ) VALUES (?, ?, 'front', 'original', ?, 'image/jpeg', 1, NULL, NULL)`,
+       image_id, bean_id, slot, variant, source_kind, relative_path, mime_type,
+       size_bytes, sha256, external_url, updated_at_ms
+     ) VALUES (?, ?, 'front', 'original', 'file', ?, 'image/jpeg', 1, NULL, NULL, NULL)`,
     [imageId, beanId, `coffee-beans/${imageId}.jpg`]
   );
 }
@@ -653,9 +653,9 @@ async function insertNoteImage(
 ): Promise<void> {
   await driver.execute(
     `INSERT INTO brewing_note_images (
-       image_id, note_id, position, variant, relative_path, mime_type,
-       size_bytes, sha256, updated_at_ms
-     ) VALUES (?, ?, 0, 'original', ?, 'image/jpeg', 1, NULL, NULL)`,
+       image_id, note_id, position, variant, source_kind, relative_path, mime_type,
+       size_bytes, sha256, external_url, updated_at_ms
+     ) VALUES (?, ?, 0, 'original', 'file', ?, 'image/jpeg', 1, NULL, NULL, NULL)`,
     [imageId, noteId, `brewing-notes/${imageId}.jpg`]
   );
 }

@@ -25,6 +25,7 @@ interface FakeState {
   busyTimeout: number;
   foreignKeys: number;
   tables: Map<string, FakeColumn[]>;
+  tableSql: Map<string, string>;
   indexes: Map<string, FakeIndex>;
   snapshot?: Omit<FakeState, 'snapshot'>;
 }
@@ -42,6 +43,7 @@ function cloneState(state: FakeState): Omit<FakeState, 'snapshot'> {
         columns.map(column => ({ ...column })),
       ])
     ),
+    tableSql: new Map(state.tableSql),
     indexes: new Map(
       [...state.indexes].map(([name, index]) => [
         name,
@@ -74,6 +76,7 @@ function addTable(state: FakeState, sql: string): void {
   const match = sql.match(/^CREATE TABLE (\w+) \(([\s\S]*)\)$/i);
   if (!match) throw new Error(`invalid fake CREATE TABLE: ${sql}`);
   const [, table, definition] = match;
+  state.tableSql.set(table, sql);
   const columns: FakeColumn[] = [];
   let autoIndex = 0;
   for (const part of splitTopLevel(definition)) {
@@ -88,6 +91,7 @@ function addTable(state: FakeState, sql: string): void {
       });
       continue;
     }
+    if (/^CHECK\s*\(/i.test(part)) continue;
 
     const tokens = part.split(/\s+/);
     const name = tokens[0];
@@ -116,6 +120,7 @@ function makeFakeSqlite(options: { journalModeCanChange?: boolean } = {}) {
     busyTimeout: 5000,
     foreignKeys: 1,
     tables: new Map(),
+    tableSql: new Map(),
     indexes: new Map(),
   };
   const calls: string[] = [];
@@ -160,7 +165,7 @@ function makeFakeSqlite(options: { journalModeCanChange?: boolean } = {}) {
       throw new Error(`fake SQLite rejected SQL: ${sql}`);
     },
     run: async () => ({ changes: { changes: 1 } }),
-    query: async sql => {
+    query: async (sql, params = []) => {
       calls.push(sql);
       if (/PRAGMA user_version/i.test(sql)) {
         return { values: [{ user_version: state.version }] };
@@ -182,6 +187,12 @@ function makeFakeSqlite(options: { journalModeCanChange?: boolean } = {}) {
         return { values: [{ foreign_keys: state.foreignKeys }] };
       }
       if (/sqlite_master WHERE type = 'table'/i.test(sql)) {
+        if (/AND name = \?/i.test(sql)) {
+          const name = params[0];
+          const tableSql =
+            typeof name === 'string' ? state.tableSql.get(name) : undefined;
+          return { values: tableSql ? [{ sql: tableSql }] : [] };
+        }
         return {
           values: [...state.tables.keys()].sort().map(name => ({ name })),
         };
@@ -236,6 +247,7 @@ function makeFakeSqlite(options: { journalModeCanChange?: boolean } = {}) {
         state.busyTimeout = snapshot.busyTimeout;
         state.foreignKeys = snapshot.foreignKeys;
         state.tables = snapshot.tables;
+        state.tableSql = snapshot.tableSql;
         state.indexes = snapshot.indexes;
       }
       delete state.snapshot;
@@ -331,6 +343,52 @@ describe('SQLite v1 schema bootstrap', () => {
     );
     expect(fake.state.version).toBe(1);
   });
+
+  it.each(
+    (['coffee_bean_images', 'brewing_note_images'] as const).flatMap(table => [
+      [
+        `${table} source-kind CHECK`,
+        table,
+        (sql: string) =>
+          sql.replace(
+            "source_kind TEXT NOT NULL CHECK (source_kind IN ('file', 'external'))",
+            'source_kind TEXT NOT NULL'
+          ),
+      ],
+      [
+        `${table} source-shape XOR CHECK`,
+        table,
+        (sql: string) =>
+          sql.replace(
+            /,\s*CHECK\s*\(\s*\(source_kind = 'file'[\s\S]*?sha256 IS NULL\)\s*\),(?=\s*UNIQUE)/i,
+            ''
+          ),
+      ],
+      [
+        `${table} external thumbnail prohibition`,
+        table,
+        (sql: string) =>
+          sql.replace(
+            "AND variant = 'original'",
+            "AND variant IN ('original', 'thumbnail')"
+          ),
+      ],
+    ])
+  )(
+    'rejects image-table drift when %s is missing or weakened',
+    async (_label, table, revise) => {
+      const fake = makeFakeSqlite();
+      await bootstrapSqliteSchema(fake.driver);
+      const definition = fake.state.tableSql.get(table);
+      if (!definition) throw new Error(`${table} definition is missing`);
+      fake.state.tableSql.set(table, revise(definition));
+
+      await expect(bootstrapSqliteSchema(fake.driver)).rejects.toThrow(
+        new RegExp(`${table} is missing required CHECK constraints`)
+      );
+      expect(fake.state.version).toBe(1);
+    }
+  );
 
   it('rolls back partial table creation and leaves user_version zero', async () => {
     const fake = makeFakeSqlite();

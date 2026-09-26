@@ -15,9 +15,9 @@ import type {
 import type { SqliteExecutor, SqlRow, SqlValue } from './driver';
 
 const BEAN_COLUMNS =
-  'image_id, bean_id, slot, variant, relative_path, mime_type, size_bytes, sha256, updated_at_ms';
+  'image_id, bean_id, slot, variant, source_kind, relative_path, mime_type, size_bytes, sha256, external_url, updated_at_ms';
 const NOTE_COLUMNS =
-  'image_id, note_id, position, variant, relative_path, mime_type, size_bytes, sha256, updated_at_ms';
+  'image_id, note_id, position, variant, source_kind, relative_path, mime_type, size_bytes, sha256, external_url, updated_at_ms';
 
 const BEAN_LIST_ORDER =
   " ORDER BY CASE slot WHEN 'front' THEN 0 WHEN 'back' THEN 1 ELSE 2 END ASC, CASE variant WHEN 'original' THEN 0 WHEN 'thumbnail' THEN 1 ELSE 2 END ASC, image_id ASC";
@@ -27,11 +27,11 @@ const NOTE_LIST_ORDER =
 const BEAN_INSERT_SQL =
   'INSERT INTO coffee_bean_images (' +
   BEAN_COLUMNS +
-  ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 const NOTE_INSERT_SQL =
   'INSERT INTO brewing_note_images (' +
   NOTE_COLUMNS +
-  ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 
 function beanRow(row: SqlRow): CoffeeBeanImageMetadata {
   return decodeCoffeeBeanImageMetadata(
@@ -51,10 +51,12 @@ function beanValues(row: CoffeeBeanImageMetadataRow): readonly SqlValue[] {
     row.bean_id,
     row.slot,
     row.variant,
+    row.source_kind,
     row.relative_path,
     row.mime_type,
     row.size_bytes,
     row.sha256,
+    row.external_url,
     row.updated_at_ms,
   ];
 }
@@ -65,10 +67,12 @@ function noteValues(row: BrewingNoteImageMetadataRow): readonly SqlValue[] {
     row.note_id,
     row.position,
     row.variant,
+    row.source_kind,
     row.relative_path,
     row.mime_type,
     row.size_bytes,
     row.sha256,
+    row.external_url,
     row.updated_at_ms,
   ];
 }

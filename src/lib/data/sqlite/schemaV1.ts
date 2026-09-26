@@ -71,29 +71,59 @@ export interface HistoricalYearlyReportRow {
 export type SQLiteImageVariant = 'original' | 'thumbnail';
 export type CoffeeBeanImageSlot = 'front' | 'back';
 
-export interface CoffeeBeanImageMetadataRow {
+interface CoffeeBeanImageMetadataRowBase {
   image_id: string;
   bean_id: string;
   slot: CoffeeBeanImageSlot;
   variant: SQLiteImageVariant;
-  relative_path: string;
-  mime_type: string;
-  size_bytes: number;
-  sha256: string | null;
   updated_at_ms: number | null;
 }
 
-export interface BrewingNoteImageMetadataRow {
+export type CoffeeBeanImageMetadataRow =
+  | (CoffeeBeanImageMetadataRowBase & {
+      source_kind: 'file';
+      relative_path: string;
+      mime_type: string;
+      size_bytes: number;
+      sha256: string | null;
+      external_url: null;
+    })
+  | (Omit<CoffeeBeanImageMetadataRowBase, 'variant'> & {
+      variant: 'original';
+      source_kind: 'external';
+      relative_path: null;
+      mime_type: null;
+      size_bytes: null;
+      sha256: null;
+      external_url: string;
+    });
+
+interface BrewingNoteImageMetadataRowBase {
   image_id: string;
   note_id: string;
   position: number;
   variant: SQLiteImageVariant;
-  relative_path: string;
-  mime_type: string;
-  size_bytes: number;
-  sha256: string | null;
   updated_at_ms: number | null;
 }
+
+export type BrewingNoteImageMetadataRow =
+  | (BrewingNoteImageMetadataRowBase & {
+      source_kind: 'file';
+      relative_path: string;
+      mime_type: string;
+      size_bytes: number;
+      sha256: string | null;
+      external_url: null;
+    })
+  | (Omit<BrewingNoteImageMetadataRowBase, 'variant'> & {
+      variant: 'original';
+      source_kind: 'external';
+      relative_path: null;
+      mime_type: null;
+      size_bytes: null;
+      sha256: null;
+      external_url: string;
+    });
 
 export type LegacySourcePresence = 'absent' | 'present-empty' | 'present-data';
 export type LegacySourceTableName =
@@ -195,11 +225,29 @@ CREATE TABLE coffee_bean_images (
   bean_id TEXT NOT NULL,
   slot TEXT NOT NULL CHECK (slot IN ('front', 'back')),
   variant TEXT NOT NULL CHECK (variant IN ('original', 'thumbnail')),
-  relative_path TEXT NOT NULL,
-  mime_type TEXT NOT NULL,
-  size_bytes INTEGER NOT NULL CHECK (size_bytes >= 0),
+  source_kind TEXT NOT NULL CHECK (source_kind IN ('file', 'external')),
+  relative_path TEXT,
+  mime_type TEXT,
+  size_bytes INTEGER CHECK (size_bytes IS NULL OR size_bytes >= 0),
   sha256 TEXT,
+  external_url TEXT,
   updated_at_ms INTEGER,
+  CHECK (
+    (source_kind = 'file'
+      AND relative_path IS NOT NULL
+      AND mime_type IS NOT NULL
+      AND size_bytes IS NOT NULL
+      AND external_url IS NULL)
+    OR
+    (source_kind = 'external'
+      AND variant = 'original'
+      AND external_url IS NOT NULL
+      AND length(external_url) > 0
+      AND relative_path IS NULL
+      AND mime_type IS NULL
+      AND size_bytes IS NULL
+      AND sha256 IS NULL)
+  ),
   UNIQUE (bean_id, slot, variant)
 );
 
@@ -208,11 +256,29 @@ CREATE TABLE brewing_note_images (
   note_id TEXT NOT NULL,
   position INTEGER NOT NULL CHECK (position >= 0),
   variant TEXT NOT NULL CHECK (variant IN ('original', 'thumbnail')),
-  relative_path TEXT NOT NULL,
-  mime_type TEXT NOT NULL,
-  size_bytes INTEGER NOT NULL CHECK (size_bytes >= 0),
+  source_kind TEXT NOT NULL CHECK (source_kind IN ('file', 'external')),
+  relative_path TEXT,
+  mime_type TEXT,
+  size_bytes INTEGER CHECK (size_bytes IS NULL OR size_bytes >= 0),
   sha256 TEXT,
+  external_url TEXT,
   updated_at_ms INTEGER,
+  CHECK (
+    (source_kind = 'file'
+      AND relative_path IS NOT NULL
+      AND mime_type IS NOT NULL
+      AND size_bytes IS NOT NULL
+      AND external_url IS NULL)
+    OR
+    (source_kind = 'external'
+      AND variant = 'original'
+      AND external_url IS NOT NULL
+      AND length(external_url) > 0
+      AND relative_path IS NULL
+      AND mime_type IS NULL
+      AND size_bytes IS NULL
+      AND sha256 IS NULL)
+  ),
   UNIQUE (note_id, position, variant)
 );
 
