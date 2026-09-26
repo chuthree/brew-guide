@@ -25,23 +25,23 @@ function assertImageMimeType(mimeType: unknown): asserts mimeType is string {
   }
 }
 
-function assertCanonicalBase64(base64: string): void {
-  if (base64.length === 0) {
-    throw new TypeError('Invalid image Data URL: image payload is empty');
-  }
+function assertCanonicalBase64(
+  base64: string,
+  context: 'image Data URL' | 'raw base64'
+): void {
   if (!BASE64_PATTERN.test(base64)) {
-    throw new TypeError('Invalid image Data URL: malformed base64 payload');
+    throw new TypeError(`Invalid ${context}: malformed base64 payload`);
   }
 
   if (base64.endsWith('==')) {
     const secondSextet = BASE64_VALUES[base64.charCodeAt(base64.length - 3)];
     if ((secondSextet & 0x0f) !== 0) {
-      throw new TypeError('Invalid image Data URL: malformed base64 padding');
+      throw new TypeError(`Invalid ${context}: malformed base64 padding`);
     }
   } else if (base64.endsWith('=')) {
     const thirdSextet = BASE64_VALUES[base64.charCodeAt(base64.length - 2)];
     if ((thirdSextet & 0x03) !== 0) {
-      throw new TypeError('Invalid image Data URL: malformed base64 padding');
+      throw new TypeError(`Invalid ${context}: malformed base64 padding`);
     }
   }
 }
@@ -78,6 +78,38 @@ function decodeBase64(base64: string): Uint8Array {
   return bytes;
 }
 
+export function decodeRawBase64(base64: string): Uint8Array {
+  if (typeof base64 !== 'string') {
+    throw new TypeError('Invalid raw base64 value');
+  }
+  assertCanonicalBase64(base64, 'raw base64');
+  return decodeBase64(base64);
+}
+
+export function encodeRawBase64(bytes: Uint8Array): string {
+  if (!(bytes instanceof Uint8Array)) {
+    throw new TypeError('Invalid raw base64 value: bytes must be Uint8Array');
+  }
+  if (typeof globalThis.btoa !== 'function') {
+    throw new Error('Base64 encoding is unavailable in this runtime');
+  }
+
+  const chunks: string[] = [];
+  for (
+    let offset = 0;
+    offset < bytes.byteLength;
+    offset += BASE64_CHUNK_BYTES
+  ) {
+    const chunk = bytes.subarray(
+      offset,
+      Math.min(offset + BASE64_CHUNK_BYTES, bytes.byteLength)
+    );
+    chunks.push(globalThis.btoa(String.fromCharCode(...chunk)));
+  }
+
+  return chunks.join('');
+}
+
 export function decodeImageDataUrl(value: string): ImageBinary {
   if (typeof value !== 'string') {
     throw new TypeError('Invalid image Data URL');
@@ -90,7 +122,10 @@ export function decodeImageDataUrl(value: string): ImageBinary {
 
   const [, mimeType, base64] = match;
   assertImageMimeType(mimeType);
-  assertCanonicalBase64(base64);
+  if (base64.length === 0) {
+    throw new TypeError('Invalid image Data URL: image payload is empty');
+  }
+  assertCanonicalBase64(base64, 'image Data URL');
 
   const bytes = decodeBase64(base64);
   if (bytes.byteLength === 0) {
@@ -113,22 +148,6 @@ export function encodeImageDataUrl(image: ImageBinary): string {
   if (bytes.byteLength === 0) {
     throw new TypeError('Invalid image binary value: image payload is empty');
   }
-  if (typeof globalThis.btoa !== 'function') {
-    throw new Error('Base64 encoding is unavailable in this runtime');
-  }
 
-  const chunks: string[] = [];
-  for (
-    let offset = 0;
-    offset < bytes.byteLength;
-    offset += BASE64_CHUNK_BYTES
-  ) {
-    const chunk = bytes.subarray(
-      offset,
-      Math.min(offset + BASE64_CHUNK_BYTES, bytes.byteLength)
-    );
-    chunks.push(globalThis.btoa(String.fromCharCode(...chunk)));
-  }
-
-  return `data:${mimeType};base64,${chunks.join('')}`;
+  return `data:${mimeType};base64,${encodeRawBase64(bytes)}`;
 }

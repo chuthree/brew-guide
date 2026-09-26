@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   decodeImageDataUrl,
+  decodeRawBase64,
   encodeImageDataUrl,
+  encodeRawBase64,
   type ImageBinary,
 } from './imageBinary';
 
@@ -48,6 +50,29 @@ describe('image binary Data URL helpers', () => {
     expect(decoded.mimeType).toBe('image/gif');
     expect(encodeImageDataUrl(decoded)).toBe(dataUrl);
   });
+
+  it('round-trips raw base64 without a Data URL header', () => {
+    const bytes = new Uint8Array([0x00, 0xff, 0x80, 0x01, 0x7f, 0x42]);
+    const base64 = encodeRawBase64(bytes);
+
+    expect(base64).toBe('AP+AAX9C');
+    expect(decodeRawBase64(base64)).toEqual(bytes);
+  });
+
+  it('preserves empty raw bytes while Data URL images remain non-empty', () => {
+    expect(encodeRawBase64(new Uint8Array())).toBe('');
+    expect(decodeRawBase64('')).toEqual(new Uint8Array());
+    expect(() => decodeImageDataUrl('data:image/png;base64,')).toThrow(
+      'image payload is empty'
+    );
+  });
+
+  it.each(['?', 'AA?=', 'A===', 'AB==', 'AAB='])(
+    'rejects malformed raw base64 %s',
+    base64 => {
+      expect(() => decodeRawBase64(base64)).toThrow();
+    }
+  );
 
   it('encodes large values in bounded browser-compatible chunks', () => {
     const bytes = new Uint8Array(0x6000 + 7);
