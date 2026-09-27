@@ -5,6 +5,10 @@ import type {
   LegacyMigrationData,
   LegacySourceTableName,
 } from '@/lib/data/legacy/legacyDexieReader';
+import {
+  LEGACY_LOCAL_STORAGE_MIGRATION_KEYS,
+  type LegacyLocalStorageSnapshot,
+} from '@/lib/data/legacy/legacyLocalStorageReader';
 import { planLegacySqliteMigration } from './legacyMigrationPlan';
 
 const tableNames: LegacySourceTableName[] = [
@@ -31,6 +35,7 @@ function createSource(
     yearlyReports?: unknown[];
     version?: number;
     extraTable?: string;
+    localStorage?: Partial<LegacyLocalStorageSnapshot>;
   } = {}
 ) {
   const tables = input.tables ?? {};
@@ -72,7 +77,13 @@ function createSource(
       indexes: [],
     })),
   };
-  return { info, active, historical };
+  const localStorage = Object.fromEntries(
+    LEGACY_LOCAL_STORAGE_MIGRATION_KEYS.map(key => [
+      key,
+      input.localStorage?.[key] ?? null,
+    ])
+  ) as LegacyLocalStorageSnapshot;
+  return { info, active, historical, localStorage };
 }
 
 describe('legacy SQLite migration planning', () => {
@@ -191,6 +202,7 @@ describe('legacy SQLite migration planning', () => {
     expect(plan.sourcePresence.yearlyReports).toBe('present-data');
     expect(plan.sourcePresence.appSettings).toBe('present-data');
     expect(plan.sourcePresence.grinders).toBe('present-data');
+    expect(plan.legacyLocalStoragePresence.brewGuideSettings).toBe(false);
     expect(plan.rows.coffeeBeans).toHaveLength(1);
     expect(JSON.parse(plan.rows.coffeeBeans[0].record_json)).toMatchObject({
       futureField: { retained: true },
@@ -297,6 +309,149 @@ describe('legacy SQLite migration planning', () => {
       { variant: 'thumbnail', position: 0 },
     ]);
     expect(plan.imageFiles).toHaveLength(2);
+  });
+
+  it('plans known LocalStorage-to-Dexie settings and grinder sources without mutating them', async () => {
+    const rawSettings = JSON.stringify({
+      state: {
+        settings: {
+          theme: 'dark',
+          grinders: [
+            {
+              id: 'legacy-grinder',
+              name: 'C40',
+              grindSizeHistory: [],
+              extension: { kept: true },
+            },
+          ],
+        },
+      },
+      version: 2,
+    });
+    const localStorage: LegacyLocalStorageSnapshot = {
+      brewGuideSettings: rawSettings,
+      'roaster-logos':
+        '[{"roasterName":"Roaster","logoData":"data:image/png;base64,AQID","future":"kept"}]',
+      customFlavorDimensions: '[{"id":"sweetness"}]',
+      flavorDimensionHistoricalLabels: '{"old":"Sweet"}',
+      equipmentOrder: '{"equipmentIds":["v60","custom"]}',
+    };
+    const source = createSource({
+      tables: {
+        coffeeBeans: [],
+        brewingNotes: [],
+        customEquipments: [],
+        customMethods: [],
+        grinders: [],
+        appSettings: [],
+        settings: [
+          {
+            key: 'customEquipments',
+            value:
+              '[{"id":"legacy-equipment","name":"Old Dripper","animationType":"pour","isCustom":true,"svg":"<svg/>"}]',
+          },
+        ],
+        pendingOperations: [],
+      },
+      localStorage,
+    });
+
+    const plan = await planLegacySqliteMigration(source);
+    const settings = JSON.parse(plan.rows.appSettings[0].data_json);
+
+    expect(plan.legacyLocalStoragePresence).toEqual({
+      brewGuideSettings: true,
+      'roaster-logos': true,
+      customFlavorDimensions: true,
+      flavorDimensionHistoricalLabels: true,
+      equipmentOrder: true,
+    });
+    expect(settings).toEqual({
+      theme: 'dark',
+      flavorDimensions: [{ id: 'sweetness' }],
+      flavorDimensionHistoricalLabels: { old: 'Sweet' },
+      roasterConfigs: [
+        {
+          roasterName: 'Roaster',
+          logoData: 'data:image/png;base64,AQID',
+          future: 'kept',
+        },
+      ],
+      equipmentOrder: ['v60', 'custom'],
+    });
+    expect(plan.rows.grinders.map(row => row.id)).toEqual(['legacy-grinder']);
+    expect(JSON.parse(plan.rows.grinders[0].record_json).extension).toEqual({
+      kept: true,
+    });
+    expect(plan.rows.customEquipments.map(row => row.id)).toEqual([
+      'legacy-equipment',
+    ]);
+    expect(localStorage.brewGuideSettings).toBe(rawSettings);
+    expect(source.active.settings.records[0].value).toContain(
+      'legacy-equipment'
+    );
+  });
+
+  it('fills only missing legacy settings from LocalStorage when the Dexie main row exists', async () => {
+    const source = createSource({
+      tables: {
+        appSettings: [
+          {
+            id: 'main',
+            data: {
+              theme: 'light',
+              flavorDimensions: [{ id: 'current' }],
+              roasterConfigs: [],
+              flavorDimensionHistoricalLabels: {},
+              equipmentOrder: [],
+            },
+          },
+        ],
+        grinders: [],
+      },
+      localStorage: {
+        brewGuideSettings: JSON.stringify({
+          state: { settings: { theme: 'dark' } },
+        }),
+        'roaster-logos': '[{"roasterName":"Legacy"}]',
+        customFlavorDimensions: '[{"id":"old"}]',
+        flavorDimensionHistoricalLabels: '{"old":"Old label"}',
+        equipmentOrder: '{"equipmentIds":["legacy-order"]}',
+      },
+    });
+
+    const plan = await planLegacySqliteMigration(source);
+    const settings = JSON.parse(plan.rows.appSettings[0].data_json);
+
+    expect(settings).toEqual({
+      theme: 'light',
+      flavorDimensions: [{ id: 'current' }],
+      roasterConfigs: [{ roasterName: 'Legacy' }],
+      flavorDimensionHistoricalLabels: { old: 'Old label' },
+      equipmentOrder: ['legacy-order'],
+    });
+    expect(plan.rows.grinders).toEqual([]);
+  });
+
+  it('fails closed on malformed LocalStorage migration payloads and equipment fallback rows', async () => {
+    await expect(
+      planLegacySqliteMigration(
+        createSource({
+          localStorage: { brewGuideSettings: '{invalid' },
+        })
+      )
+    ).rejects.toThrow(/brewGuideSettings.*invalid JSON/);
+
+    await expect(
+      planLegacySqliteMigration(
+        createSource({
+          tables: {
+            customEquipments: [],
+            settings: [{ key: 'customEquipments', value: '{invalid' }],
+          },
+        })
+      )
+    ).rejects.toThrow(/settings record customEquipments.*invalid JSON/);
   });
 
   it('rejects unknown tables and unsupported or conflicting image sources before any write plan is returned', async () => {

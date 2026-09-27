@@ -4,6 +4,11 @@ import type {
   LegacyHistoricalData,
   LegacyMigrationData,
 } from '@/lib/data/legacy/legacyDexieReader';
+import {
+  LEGACY_LOCAL_STORAGE_MIGRATION_KEYS,
+  type LegacyLocalStorageMigrationKey,
+  type LegacyLocalStorageSnapshot,
+} from '@/lib/data/legacy/legacyLocalStorageReader';
 import type { CoffeeBean } from '@/types/app';
 import {
   encodeAppSettings,
@@ -61,6 +66,7 @@ export interface LegacyMigrationImageFile {
 export interface LegacySqliteMigrationPlan {
   sourceVersion: number;
   sourcePresence: LegacySourcePresenceMap;
+  legacyLocalStoragePresence: Record<LegacyLocalStorageMigrationKey, boolean>;
   rows: {
     coffeeBeans: CoffeeBeanRow[];
     brewingNotes: BrewingNoteRow[];
@@ -81,6 +87,7 @@ export interface LegacyMigrationSource {
   info: LegacyDatabaseInfo;
   active: LegacyMigrationData;
   historical: LegacyHistoricalData;
+  localStorage: LegacyLocalStorageSnapshot;
 }
 
 const TABLES = [
@@ -147,6 +154,272 @@ function record(
     fail(table, String(index), 'expected a plain object');
   }
   return value as Record<string, unknown>;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    (Object.getPrototypeOf(value) === Object.prototype ||
+      Object.getPrototypeOf(value) === null)
+  );
+}
+
+function localStorageFailure(key: string, reason: string): never {
+  return fail('localStorage', key, reason);
+}
+
+type ParsedLegacyJson = { present: false } | { present: true; value: unknown };
+
+function parseLegacyLocalStorageJson(
+  source: LegacyLocalStorageSnapshot,
+  key: LegacyLocalStorageMigrationKey
+): ParsedLegacyJson {
+  const raw = source[key];
+  if (raw === null || raw === '') return { present: false };
+  try {
+    return { present: true, value: JSON.parse(raw) };
+  } catch {
+    return localStorageFailure(key, 'contains invalid JSON');
+  }
+}
+
+function legacySettingsFromLocalStorage(
+  source: LegacyLocalStorageSnapshot
+): Record<string, unknown> | undefined {
+  const parsed = parseLegacyLocalStorageJson(source, 'brewGuideSettings');
+  if (!parsed.present) return undefined;
+
+  let settings = parsed.value;
+  if (
+    isPlainRecord(settings) &&
+    isPlainRecord(settings.state) &&
+    settings.state.settings
+  ) {
+    settings = settings.state.settings;
+  }
+  if (!isPlainRecord(settings)) {
+    return localStorageFailure(
+      'brewGuideSettings',
+      'expected a settings object'
+    );
+  }
+  return settings;
+}
+
+function roasterConfigsFromLocalStorage(value: unknown): unknown[] {
+  if (!Array.isArray(value)) {
+    return localStorageFailure('roaster-logos', 'expected an array');
+  }
+  return value.map((config, index) => {
+    if (!isPlainRecord(config)) {
+      return localStorageFailure(
+        'roaster-logos',
+        'entry ' + index + ' must be an object'
+      );
+    }
+    // Keep unknown historical fields and do not synthesize updatedAt. The
+    // old Dexie initializer used Date.now() here, which is non-deterministic.
+    return { ...config };
+  });
+}
+
+function equipmentOrderFromLocalStorage(value: unknown): unknown {
+  if (!isPlainRecord(value)) {
+    return localStorageFailure('equipmentOrder', 'expected an object');
+  }
+  if (!Object.prototype.hasOwnProperty.call(value, 'equipmentIds')) return [];
+  if (!Array.isArray(value.equipmentIds)) {
+    return localStorageFailure(
+      'equipmentOrder',
+      'equipmentIds must be an array'
+    );
+  }
+  return value.equipmentIds;
+}
+
+function isEmptyArrayLike(value: unknown): boolean {
+  if (!value) return true;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'length' in value &&
+    (value as { length?: unknown }).length === 0
+  );
+}
+
+function isEmptyObjectLike(value: unknown): boolean {
+  if (!value) return true;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 0
+  );
+}
+
+function applySupplementalSettings(
+  settings: Record<string, unknown>,
+  source: LegacyLocalStorageSnapshot,
+  onlyFillEmpty: boolean
+): Record<string, unknown> {
+  const result = { ...settings };
+  if (!onlyFillEmpty || isEmptyArrayLike(result.flavorDimensions)) {
+    const flavorDimensions = parseLegacyLocalStorageJson(
+      source,
+      'customFlavorDimensions'
+    );
+    if (flavorDimensions.present) {
+      result.flavorDimensions = flavorDimensions.value;
+    }
+  }
+
+  if (
+    !onlyFillEmpty ||
+    isEmptyObjectLike(result.flavorDimensionHistoricalLabels)
+  ) {
+    const historicalLabels = parseLegacyLocalStorageJson(
+      source,
+      'flavorDimensionHistoricalLabels'
+    );
+    if (historicalLabels.present) {
+      result.flavorDimensionHistoricalLabels = historicalLabels.value;
+    }
+  }
+
+  if (!onlyFillEmpty || isEmptyArrayLike(result.roasterConfigs)) {
+    const roasterLogos = parseLegacyLocalStorageJson(source, 'roaster-logos');
+    if (roasterLogos.present) {
+      if (!Array.isArray(roasterLogos.value)) {
+        return localStorageFailure('roaster-logos', 'expected an array');
+      }
+      if (roasterLogos.value.length > 0) {
+        result.roasterConfigs = roasterConfigsFromLocalStorage(
+          roasterLogos.value
+        );
+      }
+    }
+  }
+
+  if (!onlyFillEmpty || isEmptyArrayLike(result.equipmentOrder)) {
+    const equipmentOrder = parseLegacyLocalStorageJson(
+      source,
+      'equipmentOrder'
+    );
+    if (equipmentOrder.present) {
+      result.equipmentOrder = equipmentOrderFromLocalStorage(
+        equipmentOrder.value
+      );
+    }
+  }
+  return result;
+}
+
+function appSettingsRows(
+  records: Record<string, unknown>[],
+  source: LegacyLocalStorageSnapshot,
+  localSettings: Record<string, unknown> | undefined
+): AppSettingsRow[] {
+  let hasMain = false;
+  const rows = records.map(raw => {
+    const id = idOf(raw, 'id', 'appSettings');
+    if (id !== 'main') return encodeAppSettings(raw);
+    hasMain = true;
+    const data = raw.data;
+    if (!isPlainRecord(data)) {
+      return fail('appSettings', id, 'data must be a plain object');
+    }
+    return encodeAppSettings({
+      ...raw,
+      data: applySupplementalSettings(data, source, true),
+    });
+  });
+
+  if (!hasMain && localSettings) {
+    const data = { ...localSettings };
+    if (Object.prototype.hasOwnProperty.call(data, 'grinders')) {
+      if (!Array.isArray(data.grinders)) {
+        return fail(
+          'localStorage',
+          'brewGuideSettings',
+          'grinders must be an array when present'
+        );
+      }
+      delete data.grinders;
+    }
+    rows.push(
+      encodeAppSettings({
+        id: 'main',
+        data: applySupplementalSettings(data, source, false),
+      })
+    );
+  }
+  return rows;
+}
+
+function assertUniqueIds(rows: readonly { id: string }[], table: string): void {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (seen.has(row.id)) fail(table, row.id, 'duplicate source primary key');
+    seen.add(row.id);
+  }
+}
+
+function grinderRows(
+  records: Record<string, unknown>[],
+  localSettings: Record<string, unknown> | undefined
+): GrinderRow[] {
+  const rows = records.map(encodeGrinder);
+  if (rows.length === 0 && localSettings) {
+    const grinders = localSettings.grinders;
+    if (grinders !== undefined) {
+      if (!Array.isArray(grinders)) {
+        return fail(
+          'localStorage',
+          'brewGuideSettings',
+          'grinders must be an array when present'
+        );
+      }
+      rows.push(...grinders.map(encodeGrinder));
+    }
+  }
+  assertUniqueIds(rows, 'grinders');
+  return rows;
+}
+
+function customEquipmentRows(
+  records: Record<string, unknown>[],
+  settings: Record<string, unknown>[]
+): CustomEquipmentRow[] {
+  const rows = records.map(encodeCustomEquipment);
+  if (rows.length === 0) {
+    const legacyValue = settings.find(
+      entry => entry.key === 'customEquipments'
+    )?.value;
+    if (typeof legacyValue === 'string' && legacyValue !== '') {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(legacyValue);
+      } catch {
+        return fail(
+          'settings',
+          'customEquipments',
+          'contains invalid JSON for the legacy equipment fallback'
+        );
+      }
+      if (!Array.isArray(parsed)) {
+        return fail(
+          'settings',
+          'customEquipments',
+          'legacy equipment fallback must be an array'
+        );
+      }
+      rows.push(...parsed.map(encodeCustomEquipment));
+    }
+  }
+  assertUniqueIds(rows, 'customEquipments');
+  return rows;
 }
 
 function idOf(
@@ -386,6 +659,13 @@ export async function planLegacySqliteMigration(
   const records = Object.fromEntries(
     TABLES.map(table => [table, activeRecords(source, table, names)])
   ) as Record<(typeof TABLES)[number], Record<string, unknown>[]>;
+  const hasMainAppSettings = records.appSettings.some(row => row.id === 'main');
+  const needsLocalSettings =
+    Boolean(source.localStorage.brewGuideSettings) &&
+    (records.grinders.length === 0 || !hasMainAppSettings);
+  const localSettings = needsLocalSettings
+    ? legacySettingsFromLocalStorage(source.localStorage)
+    : undefined;
   const historicalResult = source.historical.yearlyReports;
   if ((historicalResult.status === 'present') !== names.has('yearlyReports')) {
     fail('yearlyReports', undefined, 'inspection and read disagree');
@@ -516,13 +796,26 @@ export async function planLegacySqliteMigration(
   const plan: LegacySqliteMigrationPlan = {
     sourceVersion: source.info.version,
     sourcePresence: sourcePresence(source, names),
+    legacyLocalStoragePresence: Object.fromEntries(
+      LEGACY_LOCAL_STORAGE_MIGRATION_KEYS.map(key => [
+        key,
+        source.localStorage[key] !== null,
+      ])
+    ) as Record<LegacyLocalStorageMigrationKey, boolean>,
     rows: {
       coffeeBeans: [],
       brewingNotes: [],
-      customEquipments: records.customEquipments.map(encodeCustomEquipment),
+      customEquipments: customEquipmentRows(
+        records.customEquipments,
+        records.settings
+      ),
       customMethods: records.customMethods.map(encodeCustomMethods),
-      grinders: records.grinders.map(encodeGrinder),
-      appSettings: records.appSettings.map(encodeAppSettings),
+      grinders: grinderRows(records.grinders, localSettings),
+      appSettings: appSettingsRows(
+        records.appSettings,
+        source.localStorage,
+        localSettings
+      ),
       legacySettings: records.settings.map(encodeLegacySetting),
       pendingOperations: records.pendingOperations.map(encodePendingOperation),
       historicalYearlyReports: historical.map(encodeHistoricalYearlyReport),
