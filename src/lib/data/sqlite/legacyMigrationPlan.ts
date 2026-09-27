@@ -60,11 +60,15 @@ import {
 
 export interface LegacyMigrationImageFile {
   objectKey: ImageObjectKey;
-  bytes: Uint8Array;
+  /** Reference to the preflighted source string; bytes are decoded on demand. */
+  dataUrl: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string;
 }
 
 export interface LegacySqliteMigrationPlan {
-  sourceVersion: number;
+  sourceVersion: number | null;
   sourcePresence: LegacySourcePresenceMap;
   legacyLocalStoragePresence: Record<LegacyLocalStorageMigrationKey, boolean>;
   rows: {
@@ -84,7 +88,8 @@ export interface LegacySqliteMigrationPlan {
 }
 
 export interface LegacyMigrationSource {
-  info: LegacyDatabaseInfo;
+  /** null means Dexie.exists() confirmed BrewGuideDB is absent. */
+  info: LegacyDatabaseInfo | null;
   active: LegacyMigrationData;
   historical: LegacyHistoricalData;
   localStorage: LegacyLocalStorageSnapshot;
@@ -336,8 +341,16 @@ function appSettingsRows(
     });
   });
 
-  if (!hasMain && localSettings) {
-    const data = { ...localSettings };
+  const hasSupplementalStorage = (
+    [
+      'roaster-logos',
+      'customFlavorDimensions',
+      'flavorDimensionHistoricalLabels',
+      'equipmentOrder',
+    ] as const
+  ).some(key => Boolean(source[key]));
+  if (!hasMain && (localSettings || hasSupplementalStorage)) {
+    const data = { ...(localSettings ?? {}) };
     if (Object.prototype.hasOwnProperty.call(data, 'grinders')) {
       if (!Array.isArray(data.grinders)) {
         return fail(
@@ -465,6 +478,31 @@ function activeRecords(
 }
 
 function actualTableNames(source: LegacyMigrationSource): Set<string> {
+  if (source.info === null) {
+    for (const table of TABLES) {
+      if (
+        source.active[table].status !== 'absent' ||
+        source.active[table].records.length > 0
+      ) {
+        fail(
+          table,
+          undefined,
+          'database is absent but source records were returned'
+        );
+      }
+    }
+    if (
+      source.historical.yearlyReports.status !== 'absent' ||
+      source.historical.yearlyReports.records.length > 0
+    ) {
+      fail(
+        'yearlyReports',
+        undefined,
+        'database is absent but records were returned'
+      );
+    }
+    return new Set();
+  }
   if (!Number.isSafeInteger(source.info.version) || source.info.version < 1) {
     fail('BrewGuideDB', undefined, 'source version is invalid');
   }
@@ -638,18 +676,19 @@ function groupSame(
   }
 }
 
-async function tokenFor(identity: string): Promise<string> {
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const subtle = globalThis.crypto?.subtle;
   if (!subtle || typeof TextEncoder === 'undefined') {
     throw new Error('Legacy migration preflight requires Web Crypto SHA-256');
   }
-  const bytes = await subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(identity)
-  );
-  return Array.from(new Uint8Array(bytes), byte =>
+  const digest = await subtle.digest('SHA-256', new Uint8Array(bytes).buffer);
+  return Array.from(new Uint8Array(digest), byte =>
     byte.toString(16).padStart(2, '0')
   ).join('');
+}
+
+async function tokenFor(identity: string): Promise<string> {
+  return sha256Hex(new TextEncoder().encode(identity));
 }
 
 export async function planLegacySqliteMigration(
@@ -794,7 +833,7 @@ export async function planLegacySqliteMigration(
   }
 
   const plan: LegacySqliteMigrationPlan = {
-    sourceVersion: source.info.version,
+    sourceVersion: source.info?.version ?? null,
     sourcePresence: sourcePresence(source, names),
     legacyLocalStoragePresence: Object.fromEntries(
       LEGACY_LOCAL_STORAGE_MIGRATION_KEYS.map(key => [
@@ -849,6 +888,7 @@ export async function planLegacySqliteMigration(
     const updated = updatedAt === undefined ? {} : { updatedAt };
     if (image.startsWith('data:')) {
       const binary = decodeImageDataUrl(image);
+      const sha256 = await sha256Hex(binary.bytes);
       const objectKey = 'mig_' + token;
       plan.rows.coffeeBeanImages.push(
         encodeCoffeeBeanImageMetadata({
@@ -863,7 +903,13 @@ export async function planLegacySqliteMigration(
           ...updated,
         })
       );
-      plan.imageFiles.push({ objectKey, bytes: binary.bytes });
+      plan.imageFiles.push({
+        objectKey,
+        dataUrl: image,
+        mimeType: binary.mimeType,
+        sizeBytes: binary.bytes.byteLength,
+        sha256,
+      });
     } else {
       plan.rows.coffeeBeanImages.push(
         encodeCoffeeBeanImageMetadata({
@@ -905,6 +951,7 @@ export async function planLegacySqliteMigration(
     const updated = updatedAt === undefined ? {} : { updatedAt };
     if (image.startsWith('data:')) {
       const binary = decodeImageDataUrl(image);
+      const sha256 = await sha256Hex(binary.bytes);
       const objectKey = 'mig_' + token;
       plan.rows.brewingNoteImages.push(
         encodeBrewingNoteImageMetadata({
@@ -919,7 +966,13 @@ export async function planLegacySqliteMigration(
           ...updated,
         })
       );
-      plan.imageFiles.push({ objectKey, bytes: binary.bytes });
+      plan.imageFiles.push({
+        objectKey,
+        dataUrl: image,
+        mimeType: binary.mimeType,
+        sizeBytes: binary.bytes.byteLength,
+        sha256,
+      });
     } else {
       plan.rows.brewingNoteImages.push(
         encodeBrewingNoteImageMetadata({

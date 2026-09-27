@@ -36,6 +36,7 @@ function createSource(
     version?: number;
     extraTable?: string;
     localStorage?: Partial<LegacyLocalStorageSnapshot>;
+    databaseAbsent?: boolean;
   } = {}
 ) {
   const tables = input.tables ?? {};
@@ -58,25 +59,27 @@ function createSource(
     ...(historical.yearlyReports.status === 'present' ? ['yearlyReports'] : []),
     ...(input.extraTable ? [input.extraTable] : []),
   ];
-  const info: LegacyDatabaseInfo = {
-    exists: true,
-    version: input.version ?? 11,
-    absentSourceTables: tableNames.filter(
-      name => active[name].status === 'absent'
-    ),
-    tables: names.map(name => ({
-      name,
-      primaryKey: {
-        name: null,
-        keyPath: 'id',
-        source: 'id',
-        autoIncrement: false,
-        unique: true,
-        multiEntry: false,
-      },
-      indexes: [],
-    })),
-  };
+  const info: LegacyDatabaseInfo | null = input.databaseAbsent
+    ? null
+    : {
+        exists: true,
+        version: input.version ?? 11,
+        absentSourceTables: tableNames.filter(
+          name => active[name].status === 'absent'
+        ),
+        tables: names.map(name => ({
+          name,
+          primaryKey: {
+            name: null,
+            keyPath: 'id',
+            source: 'id',
+            autoIncrement: false,
+            unique: true,
+            multiEntry: false,
+          },
+          indexes: [],
+        })),
+      };
   const localStorage = Object.fromEntries(
     LEGACY_LOCAL_STORAGE_MIGRATION_KEYS.map(key => [
       key,
@@ -246,7 +249,13 @@ describe('legacy SQLite migration planning', () => {
     ).toBe(externalImage);
     expect(plan.imageFiles).toHaveLength(4);
     expect(
-      plan.imageFiles.every(file => file.bytes instanceof Uint8Array)
+      plan.imageFiles.every(
+        file =>
+          file.dataUrl.startsWith('data:image/') &&
+          file.sizeBytes > 0 &&
+          /^[0-9a-f]{64}$/.test(file.sha256) &&
+          !Object.prototype.hasOwnProperty.call(file, 'bytes')
+      )
     ).toBe(true);
     expect(
       plan.imageFiles.every(file => file.objectKey.startsWith('mig_'))
@@ -271,6 +280,42 @@ describe('legacy SQLite migration planning', () => {
     expect(plan.sourcePresence.coffeeBeans).toBe('present-empty');
     expect(plan.sourcePresence.brewingNotes).toBe('absent');
     expect(plan.sourcePresence.yearlyReports).toBe('present-empty');
+  });
+
+  it('plans an absent IndexedDB without inventing tables or a version', async () => {
+    const plan = await planLegacySqliteMigration(
+      createSource({ databaseAbsent: true })
+    );
+
+    expect(plan.sourceVersion).toBeNull();
+    expect(Object.values(plan.sourcePresence)).toEqual(
+      Array(13).fill('absent')
+    );
+    expect(Object.values(plan.rows).every(rows => rows.length === 0)).toBe(
+      true
+    );
+    expect(plan.imageFiles).toEqual([]);
+  });
+
+  it('maps LocalStorage settings even when the legacy database is absent', async () => {
+    const plan = await planLegacySqliteMigration(
+      createSource({
+        databaseAbsent: true,
+        localStorage: {
+          brewGuideSettings: JSON.stringify({
+            state: { settings: { theme: 'dark' } },
+          }),
+          'roaster-logos': '[{"roasterName":"Legacy"}]',
+        },
+      })
+    );
+
+    expect(plan.sourceVersion).toBeNull();
+    expect(plan.rows.appSettings).toHaveLength(1);
+    expect(JSON.parse(plan.rows.appSettings[0].data_json)).toEqual({
+      theme: 'dark',
+      roasterConfigs: [{ roasterName: 'Legacy' }],
+    });
   });
 
   it('uses legacy scalar note images when the image array is empty', async () => {
