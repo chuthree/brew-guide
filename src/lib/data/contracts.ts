@@ -127,6 +127,12 @@ export interface BrewingNotePersistence {
   clearWithImages(): Promise<void>;
 }
 
+/** Backend-specific validation of image payloads before batch import/write. */
+export interface ImageSourcePayloadValidator {
+  validateCoffeeBeans(records: readonly unknown[]): Promise<void>;
+  validateBrewingNotes(records: readonly unknown[]): Promise<void>;
+}
+
 export interface BrewingNoteNormalizationStats {
   scannedCount: number;
   cleanedCount: number;

@@ -20,6 +20,7 @@ import {
 import { offlineQueueRepository as dexieOfflineQueueRepository } from '@/lib/data/adapters/dexie/offlineQueueRepository';
 import { legacySettingsRepository as dexieLegacySettingsRepository } from '@/lib/data/adapters/dexie/legacySettingsRepository';
 import { roasterRenamePersistence as dexieRoasterRenamePersistence } from '@/lib/data/adapters/dexie/roasterRenamePersistence';
+import { dexieImageSourcePayloadValidator } from '@/lib/data/adapters/dexie/imageSourcePayloadValidator';
 import { configureRepositories } from '@/lib/data/repositories';
 
 const dexieRepositories = {
@@ -37,6 +38,7 @@ const dexieRepositories = {
   legacySettingsRepository: dexieLegacySettingsRepository,
   roasterRenamePersistence: dexieRoasterRenamePersistence,
   imageMaintenance: dexieImageMaintenance,
+  imageSourcePayloadValidator: dexieImageSourcePayloadValidator,
   backendDataMaintenance: dexieBackendDataMaintenance,
 };
 

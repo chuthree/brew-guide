@@ -6,11 +6,17 @@ import {
   SYNC_TABLES,
   downloadSettingsData,
   fetchRemoteAllRecords,
+  fetchRemoteRecordsByIds,
   fetchRemoteLatestTimestamp,
   uploadSettingsData,
 } from '../syncOperations';
-import { hydrateLastSyncTime, setLastSyncTime } from './conflictResolver';
+import {
+  batchResolveConflicts,
+  hydrateLastSyncTime,
+  setLastSyncTime,
+} from './conflictResolver';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { sqliteImageSourcePayloadValidator } from '@/lib/data/sqlite/imageSourcePayloadValidator';
 
 const mocks = vi.hoisted(() => {
   const createTable = () => ({
@@ -60,6 +66,10 @@ const mocks = vi.hoisted(() => {
       brewingNotePersistence: {
         saveWithImages: vi.fn(async (record: unknown) => record),
         deleteManyWithImages: vi.fn().mockResolvedValue(undefined),
+      },
+      imageSourcePayloadValidator: {
+        validateCoffeeBeans: vi.fn().mockResolvedValue(undefined),
+        validateBrewingNotes: vi.fn().mockResolvedValue(undefined),
       },
     },
   };
@@ -316,5 +326,71 @@ describe('InitialSyncManager settings sync', () => {
       detail: '已上传 1 项设置',
       uploaded: 1,
     });
+  });
+
+  it('preflights an entire Native image batch before the first aggregate write', async () => {
+    const validImage = 'data:image/png;base64,AQID';
+    const downloaded = [
+      { id: 'remote-valid', timestamp: 2000, image: validImage },
+      { id: 'remote-invalid', timestamp: 2001, image: 'blob:invalid' },
+    ];
+    vi.mocked(mocks.repositories.coffeeBeanRepository.list).mockResolvedValue(
+      []
+    );
+    vi.mocked(fetchRemoteAllRecords).mockImplementation(
+      async (_client, table) => ({
+        success: true,
+        data:
+          table === SYNC_TABLES.COFFEE_BEANS
+            ? downloaded.map(record => ({
+                id: record.id,
+                data: undefined,
+                updated_at: new Date(record.timestamp).toISOString(),
+                deleted_at: null,
+              }))
+            : [],
+        affectedCount:
+          table === SYNC_TABLES.COFFEE_BEANS ? downloaded.length : 0,
+      })
+    );
+    vi.mocked(fetchRemoteRecordsByIds).mockImplementation(
+      async (_client, table) => ({
+        success: true,
+        data:
+          table === SYNC_TABLES.COFFEE_BEANS
+            ? downloaded.map(record => ({ id: record.id, data: record }))
+            : [],
+        affectedCount:
+          table === SYNC_TABLES.COFFEE_BEANS ? downloaded.length : 0,
+      })
+    );
+    vi.mocked(batchResolveConflicts).mockImplementation((_local, remote) => {
+      const records = remote
+        .map(item => item.data)
+        .filter(Boolean) as typeof downloaded;
+      return {
+        merged: records,
+        toUpload: [],
+        toDownload: records,
+        toDeleteLocal: [],
+      };
+    });
+    vi.mocked(
+      mocks.repositories.imageSourcePayloadValidator.validateCoffeeBeans
+    ).mockImplementation(records =>
+      sqliteImageSourcePayloadValidator.validateCoffeeBeans(records)
+    );
+
+    const manager = new InitialSyncManager({} as SupabaseClient);
+    await expect(
+      manager['syncTable'](SYNC_TABLES.COFFEE_BEANS, 0)
+    ).rejects.toThrow(/Invalid external image URL/);
+
+    expect(
+      mocks.repositories.imageSourcePayloadValidator.validateCoffeeBeans
+    ).toHaveBeenCalledWith(downloaded);
+    expect(
+      mocks.repositories.coffeeBeanPersistence.saveWithImages
+    ).not.toHaveBeenCalled();
   });
 });

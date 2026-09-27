@@ -20,6 +20,7 @@ import {
   coffeeBeanRepository,
   customEquipmentRepository,
   customMethodRepository,
+  imageSourcePayloadValidator,
 } from '@/lib/data/repositories';
 import { copyToClipboard } from '@/lib/utils/exportUtils';
 import {
@@ -1084,6 +1085,12 @@ export class InitialSyncManager {
 
         assertValidDownloadedRecords(table, toDownload);
         const validRecords = toDownload;
+
+        if (table === SYNC_TABLES.COFFEE_BEANS) {
+          await imageSourcePayloadValidator.validateCoffeeBeans(validRecords);
+        } else if (table === SYNC_TABLES.BREWING_NOTES) {
+          await imageSourcePayloadValidator.validateBrewingNotes(validRecords);
+        }
 
         if (validRecords.length > 0) {
           console.warn(

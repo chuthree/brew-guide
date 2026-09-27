@@ -23,6 +23,7 @@ const BEAN_LIST_ORDER =
   " ORDER BY CASE slot WHEN 'front' THEN 0 WHEN 'back' THEN 1 ELSE 2 END ASC, CASE variant WHEN 'original' THEN 0 WHEN 'thumbnail' THEN 1 ELSE 2 END ASC, image_id ASC";
 const NOTE_LIST_ORDER =
   " ORDER BY position ASC, CASE variant WHEN 'original' THEN 0 WHEN 'thumbnail' THEN 1 ELSE 2 END ASC, image_id ASC";
+const OWNER_QUERY_BATCH_SIZE = 400;
 
 const BEAN_INSERT_SQL =
   'INSERT INTO coffee_bean_images (' +
@@ -131,6 +132,43 @@ export async function listCoffeeBeanImageMetadata(
   return rows.map(beanRow);
 }
 
+/** Read all bean image metadata in one query, or bounded owner batches. */
+export async function listCoffeeBeanImageMetadataForOwners(
+  executor: SqliteExecutor,
+  beanIds?: readonly string[]
+): Promise<CoffeeBeanImageMetadata[]> {
+  if (beanIds === undefined) {
+    const rows = await executor.query(
+      'SELECT ' +
+        BEAN_COLUMNS +
+        ' FROM coffee_bean_images ORDER BY bean_id ASC,' +
+        BEAN_LIST_ORDER.slice(' ORDER BY'.length)
+    );
+    return rows.map(beanRow);
+  }
+
+  const ownerIds = Array.from(new Set(beanIds.filter(Boolean)));
+  const records: CoffeeBeanImageMetadata[] = [];
+  for (
+    let offset = 0;
+    offset < ownerIds.length;
+    offset += OWNER_QUERY_BATCH_SIZE
+  ) {
+    const batch = ownerIds.slice(offset, offset + OWNER_QUERY_BATCH_SIZE);
+    const placeholders = batch.map(() => '?').join(', ');
+    const rows = await executor.query(
+      'SELECT ' +
+        BEAN_COLUMNS +
+        ` FROM coffee_bean_images WHERE bean_id IN (${placeholders})` +
+        ' ORDER BY bean_id ASC,' +
+        BEAN_LIST_ORDER.slice(' ORDER BY'.length),
+      batch
+    );
+    records.push(...rows.map(beanRow));
+  }
+  return records;
+}
+
 export async function replaceCoffeeBeanImageMetadata(
   executor: SqliteExecutor,
   beanId: string,
@@ -207,6 +245,43 @@ export async function listBrewingNoteImageMetadata(
     [noteId]
   );
   return rows.map(noteRow);
+}
+
+/** Read all note image metadata in one query, or bounded owner batches. */
+export async function listBrewingNoteImageMetadataForOwners(
+  executor: SqliteExecutor,
+  noteIds?: readonly string[]
+): Promise<BrewingNoteImageMetadata[]> {
+  if (noteIds === undefined) {
+    const rows = await executor.query(
+      'SELECT ' +
+        NOTE_COLUMNS +
+        ' FROM brewing_note_images ORDER BY note_id ASC,' +
+        NOTE_LIST_ORDER.slice(' ORDER BY'.length)
+    );
+    return rows.map(noteRow);
+  }
+
+  const ownerIds = Array.from(new Set(noteIds.filter(Boolean)));
+  const records: BrewingNoteImageMetadata[] = [];
+  for (
+    let offset = 0;
+    offset < ownerIds.length;
+    offset += OWNER_QUERY_BATCH_SIZE
+  ) {
+    const batch = ownerIds.slice(offset, offset + OWNER_QUERY_BATCH_SIZE);
+    const placeholders = batch.map(() => '?').join(', ');
+    const rows = await executor.query(
+      'SELECT ' +
+        NOTE_COLUMNS +
+        ` FROM brewing_note_images WHERE note_id IN (${placeholders})` +
+        ' ORDER BY note_id ASC,' +
+        NOTE_LIST_ORDER.slice(' ORDER BY'.length),
+      batch
+    );
+    records.push(...rows.map(noteRow));
+  }
+  return records;
 }
 
 export async function replaceBrewingNoteImageMetadata(

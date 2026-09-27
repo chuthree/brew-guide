@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => {
     clearCustomMethods: vi.fn(() => Promise.resolve()),
     clearGrinders: vi.fn(() => Promise.resolve()),
     clearAppSettings: vi.fn(() => Promise.resolve()),
+    validateCoffeeBeans: vi.fn(() => Promise.resolve()),
+    validateBrewingNotes: vi.fn(() => Promise.resolve()),
   };
 });
 
@@ -118,6 +120,10 @@ vi.mock('@/lib/data/repositories', () => ({
   legacySettingsRepository: {
     clear: mocks.clearLegacySettings,
   },
+  imageSourcePayloadValidator: {
+    validateCoffeeBeans: mocks.validateCoffeeBeans,
+    validateBrewingNotes: mocks.validateBrewingNotes,
+  },
   coffeeBeanImageRepository: {
     exportAll: mocks.exportCoffeeBeansWithImages,
     getRecordCounts: vi.fn(() =>
@@ -163,6 +169,12 @@ describe('DataManager.importAllData', () => {
     );
 
     expect(result.success).toBe(true);
+    expect(mocks.validateCoffeeBeans).toHaveBeenCalledWith([
+      { id: 'bean-1', timestamp: 1, name: 'Bean' },
+    ]);
+    expect(mocks.validateBrewingNotes).toHaveBeenCalledWith([
+      { id: 'note-1', timestamp: 1 },
+    ]);
     expect(mocks.storageSet).not.toHaveBeenCalledWith(
       'brewingNotes',
       expect.any(String)
@@ -179,6 +191,27 @@ describe('DataManager.importAllData', () => {
       [{ id: 'bean-1', timestamp: 1, name: 'Bean' }],
       { allowDestructiveReplace: true }
     );
+  });
+
+  it('preflights all image-bearing sections before replacing either table', async () => {
+    mocks.validateBrewingNotes.mockRejectedValueOnce(
+      new Error('invalid BrewingNote image source')
+    );
+
+    const result = await DataManager.importAllData(
+      JSON.stringify({
+        data: {
+          coffeeBeans: [
+            { id: 'bean-1', timestamp: 1, image: 'data:image/png;base64,AQ==' },
+          ],
+          brewingNotes: [{ id: 'note-1', timestamp: 1, image: 'blob:invalid' }],
+        },
+      })
+    );
+
+    expect(result.success).toBe(false);
+    expect(mocks.replaceCoffeeBeansWithSplitImages).not.toHaveBeenCalled();
+    expect(mocks.replaceBrewingNotesWithSplitImages).not.toHaveBeenCalled();
   });
 
   it('restores grinder records through the grinder repository', async () => {

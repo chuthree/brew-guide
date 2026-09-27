@@ -23,6 +23,7 @@ import {
   customMethodRepository,
   grinderRepository,
   legacySettingsRepository,
+  imageSourcePayloadValidator,
 } from '@/lib/data/repositories';
 import {
   getRoasterConfigsSync,
@@ -364,6 +365,26 @@ export const DataManager = {
           message: '导入的数据格式不正确，缺少 data 字段',
         };
       }
+
+      // Native storage needs the complete image-bearing backup payload checked
+      // before the first destructive table replacement. Dexie deliberately
+      // keeps its existing import behavior through its no-op validator.
+      const imagePreflightTasks: Promise<void>[] = [];
+      if (Array.isArray(importData.data.coffeeBeans)) {
+        imagePreflightTasks.push(
+          imageSourcePayloadValidator.validateCoffeeBeans(
+            importData.data.coffeeBeans
+          )
+        );
+      }
+      if (Array.isArray(importData.data.brewingNotes)) {
+        imagePreflightTasks.push(
+          imageSourcePayloadValidator.validateBrewingNotes(
+            importData.data.brewingNotes
+          )
+        );
+      }
+      await Promise.all(imagePreflightTasks);
 
       if (
         Array.isArray(importData.data.coffeeBeans) ||

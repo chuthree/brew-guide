@@ -11,6 +11,7 @@ import type {
   CustomMethodRepository,
   GrinderRepository,
   ImageMaintenance,
+  ImageSourcePayloadValidator,
   LegacySettingsRepository,
   OfflineQueueRepository,
   RoasterRenamePersistence,
@@ -32,6 +33,7 @@ export interface DataRepositories {
   legacySettingsRepository: LegacySettingsRepository;
   roasterRenamePersistence: RoasterRenamePersistence;
   imageMaintenance: ImageMaintenance;
+  imageSourcePayloadValidator: ImageSourcePayloadValidator;
   backendDataMaintenance: BackendDataMaintenance;
 }
 
@@ -129,6 +131,9 @@ export const roasterRenamePersistence = createRepositoryProxy(
   'roasterRenamePersistence'
 );
 export const imageMaintenance = createRepositoryProxy('imageMaintenance');
+export const imageSourcePayloadValidator = createRepositoryProxy(
+  'imageSourcePayloadValidator'
+);
 export const backendDataMaintenance = createRepositoryProxy(
   'backendDataMaintenance'
 );
