@@ -1,41 +1,203 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-describe('Native storage bootstrap module boundary', () => {
-  it('can be imported and constructed without loading core/db or Dexie startup', async () => {
-    const loadActiveDatabase = vi.fn(() => {
-      throw new Error(
-        'Native bootstrap must not load the active Dexie database'
-      );
+const mocks = vi.hoisted(() => ({
+  configureRepositories: vi.fn(),
+  openAndroidSqliteDriver: vi.fn(),
+  bootstrapSqliteSchema: vi.fn(),
+  createCapacitorAndroidImageFileStore: vi.fn(),
+  readLegacyMigrationSource: vi.fn(),
+  runLegacySqliteMigration: vi.fn(),
+  createSqliteRuntimeRepositories: vi.fn(),
+  order: [] as string[],
+}));
+
+vi.mock('@/lib/data/repositories', () => ({
+  configureRepositories: mocks.configureRepositories,
+}));
+
+describe('Native Android storage bootstrap', () => {
+  afterEach(() => {
+    vi.doUnmock('@/lib/core/db');
+    vi.doUnmock('@/lib/data/dexieRuntime');
+    vi.doUnmock('@/lib/data/sqlite/androidSqliteDriver');
+    vi.doUnmock('@/lib/data/sqlite/schemaBootstrap');
+    vi.doUnmock('@/lib/data/images/capacitorAndroidImageFileStore');
+    vi.doUnmock('@/lib/data/sqlite/legacyMigrationSource');
+    vi.doUnmock('@/lib/data/sqlite/legacyMigrationExecutor');
+    vi.doUnmock('@/lib/data/sqlite/runtimeRepositories');
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it('stays independent of Dexie before initialization and rejects unsupported runtimes', async () => {
+    const loadDexie = vi.fn(() => {
+      throw new Error('Native SQLite must not load Dexie');
+    });
+    vi.doMock('@/lib/core/db', loadDexie);
+    vi.doMock('@/lib/data/dexieRuntime', loadDexie);
+
+    const { NativeStorageBootstrap } = await import('./nativeStorageBootstrap');
+    const bootstrap = new NativeStorageBootstrap();
+
+    await expect(
+      bootstrap.initialize({ runtime: 'web', capacitorPlatform: null })
+    ).rejects.toThrow(/Capacitor Android only/);
+    await expect(
+      bootstrap.initialize({ runtime: 'capacitor', capacitorPlatform: 'ios' })
+    ).rejects.toThrow(/Capacitor Android only/);
+    await import('@/lib/core/dataLayer');
+
+    expect(loadDexie).not.toHaveBeenCalled();
+  });
+
+  it('bootstraps, migrates, and binds SQLite repositories in fail-closed order once', async () => {
+    const order = mocks.order;
+    order.length = 0;
+    const driver = { close: vi.fn(async () => undefined) };
+    const imageFileStore = {};
+    const repositories = {};
+    const localStorage = { getItem: vi.fn(() => null) };
+    vi.stubGlobal('window', { localStorage });
+
+    mocks.openAndroidSqliteDriver.mockImplementation(async () => {
+      order.push('open');
+      return driver;
+    });
+    mocks.bootstrapSqliteSchema.mockImplementation(async () => {
+      order.push('schema');
+    });
+    mocks.createCapacitorAndroidImageFileStore.mockImplementation(async () => {
+      order.push('files');
+      return imageFileStore;
+    });
+    mocks.readLegacyMigrationSource.mockImplementation(async storage => {
+      order.push('source');
+      expect(storage).toBe(localStorage);
+      return {};
+    });
+    mocks.runLegacySqliteMigration.mockImplementation(
+      async ({ loadSource }) => {
+        await loadSource();
+        order.push('migration');
+        return { status: 'fresh-install' };
+      }
+    );
+    mocks.createSqliteRuntimeRepositories.mockImplementation(() => {
+      order.push('repositories');
+      return repositories;
+    });
+    mocks.configureRepositories.mockImplementation(() => {
+      order.push('bind');
     });
 
-    vi.resetModules();
-    vi.doMock('@/lib/core/db', loadActiveDatabase);
-    vi.doMock('@/lib/data/dexieRuntime', loadActiveDatabase);
+    vi.doMock('@/lib/data/sqlite/androidSqliteDriver', () => ({
+      openAndroidSqliteDriver: mocks.openAndroidSqliteDriver,
+    }));
+    vi.doMock('@/lib/data/sqlite/schemaBootstrap', () => ({
+      bootstrapSqliteSchema: mocks.bootstrapSqliteSchema,
+    }));
+    vi.doMock('@/lib/data/images/capacitorAndroidImageFileStore', () => ({
+      createCapacitorAndroidImageFileStore:
+        mocks.createCapacitorAndroidImageFileStore,
+    }));
+    vi.doMock('@/lib/data/sqlite/legacyMigrationSource', () => ({
+      readLegacyMigrationSource: mocks.readLegacyMigrationSource,
+    }));
+    vi.doMock('@/lib/data/sqlite/legacyMigrationExecutor', () => ({
+      runLegacySqliteMigration: mocks.runLegacySqliteMigration,
+    }));
+    vi.doMock('@/lib/data/sqlite/runtimeRepositories', () => ({
+      createSqliteRuntimeRepositories: mocks.createSqliteRuntimeRepositories,
+    }));
 
-    try {
-      const { NativeStorageBootstrap } =
-        await import('./nativeStorageBootstrap');
-      const result = await new NativeStorageBootstrap().initialize({
-        runtime: 'capacitor',
-        capacitorPlatform: 'android',
-      });
+    const { NativeStorageBootstrap } = await import('./nativeStorageBootstrap');
+    const runtime = {
+      runtime: 'capacitor',
+      capacitorPlatform: 'android',
+    } as const;
+    const [first, second] = await Promise.all([
+      new NativeStorageBootstrap().initialize(runtime),
+      new NativeStorageBootstrap().initialize(runtime),
+    ]);
 
-      expect(result).toEqual({
-        status: 'not-implemented',
-        runtime: 'capacitor',
-        backend: 'native-sqlite',
-        reason: 'Native SQLite storage has not been implemented',
-      });
-      expect(loadActiveDatabase).not.toHaveBeenCalled();
+    expect(first).toEqual({
+      status: 'ready',
+      runtime: 'capacitor',
+      backend: 'native-sqlite',
+    });
+    expect(second).toEqual(first);
+    expect(order).toEqual([
+      'open',
+      'schema',
+      'files',
+      'source',
+      'migration',
+      'repositories',
+      'bind',
+    ]);
+    expect(mocks.runLegacySqliteMigration).toHaveBeenCalledWith(
+      expect.objectContaining({ driver, imageFileStore })
+    );
+    expect(mocks.configureRepositories).toHaveBeenCalledWith(repositories);
+  });
 
-      // The orchestration module itself is also safe to load before selecting
-      // a backend; its Dexie implementation is only a dynamic import.
-      await import('@/lib/core/dataLayer');
-      expect(loadActiveDatabase).not.toHaveBeenCalled();
-    } finally {
-      vi.doUnmock('@/lib/core/db');
-      vi.doUnmock('@/lib/data/dexieRuntime');
-      vi.resetModules();
-    }
+  it('does not bind repositories when migration fails and closes the driver', async () => {
+    const driver = { close: vi.fn(async () => undefined) };
+    const retryDriver = { close: vi.fn(async () => undefined) };
+    const imageFileStore = {};
+    const failure = new Error('legacy source preflight rejected');
+    mocks.openAndroidSqliteDriver
+      .mockResolvedValueOnce(driver)
+      .mockResolvedValueOnce(retryDriver);
+    mocks.bootstrapSqliteSchema.mockResolvedValue(undefined);
+    mocks.createCapacitorAndroidImageFileStore.mockResolvedValue(
+      imageFileStore
+    );
+    mocks.readLegacyMigrationSource.mockResolvedValue({});
+    mocks.runLegacySqliteMigration
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce({ status: 'fresh-install' });
+    mocks.createSqliteRuntimeRepositories.mockReturnValue({});
+    vi.stubGlobal('window', { localStorage: { getItem: () => null } });
+    vi.doMock('@/lib/data/sqlite/androidSqliteDriver', () => ({
+      openAndroidSqliteDriver: mocks.openAndroidSqliteDriver,
+    }));
+    vi.doMock('@/lib/data/sqlite/schemaBootstrap', () => ({
+      bootstrapSqliteSchema: mocks.bootstrapSqliteSchema,
+    }));
+    vi.doMock('@/lib/data/images/capacitorAndroidImageFileStore', () => ({
+      createCapacitorAndroidImageFileStore:
+        mocks.createCapacitorAndroidImageFileStore,
+    }));
+    vi.doMock('@/lib/data/sqlite/legacyMigrationSource', () => ({
+      readLegacyMigrationSource: mocks.readLegacyMigrationSource,
+    }));
+    vi.doMock('@/lib/data/sqlite/legacyMigrationExecutor', () => ({
+      runLegacySqliteMigration: mocks.runLegacySqliteMigration,
+    }));
+    vi.doMock('@/lib/data/sqlite/runtimeRepositories', () => ({
+      createSqliteRuntimeRepositories: mocks.createSqliteRuntimeRepositories,
+    }));
+
+    const { NativeStorageBootstrap } = await import('./nativeStorageBootstrap');
+    const bootstrap = new NativeStorageBootstrap();
+    const runtime = {
+      runtime: 'capacitor',
+      capacitorPlatform: 'android',
+    } as const;
+    await expect(bootstrap.initialize(runtime)).rejects.toBe(failure);
+
+    expect(mocks.configureRepositories).not.toHaveBeenCalled();
+    expect(driver.close).toHaveBeenCalledOnce();
+
+    await expect(bootstrap.initialize(runtime)).resolves.toEqual({
+      status: 'ready',
+      runtime: 'capacitor',
+      backend: 'native-sqlite',
+    });
+
+    expect(retryDriver.close).not.toHaveBeenCalled();
+    expect(mocks.configureRepositories).toHaveBeenCalledOnce();
   });
 });

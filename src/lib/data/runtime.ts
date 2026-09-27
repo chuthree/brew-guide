@@ -17,17 +17,24 @@ export type DataRuntimeInitialization =
     };
 
 /**
- * Current release compatibility policy: every app shell still uses Dexie.
- * This maps an app runtime to a storage backend without conflating the types.
+ * Android Capacitor uses SQLite; other runtimes remain on Dexie until their
+ * native backends are implemented.
  */
-export function resolveStorageBackend(_runtime: AppRuntime): StorageBackend {
+export function resolveStorageBackend(runtime: AppRuntimeInfo): StorageBackend {
+  if (
+    runtime.runtime === 'capacitor' &&
+    runtime.capacitorPlatform === 'android'
+  ) {
+    return 'native-sqlite';
+  }
+
   return 'dexie';
 }
 
 export async function initializeDataRuntime(
   runtimeInfo: AppRuntimeInfo = detectAppRuntime()
 ): Promise<DataRuntimeInitialization> {
-  const backend = resolveStorageBackend(runtimeInfo.runtime);
+  const backend = resolveStorageBackend(runtimeInfo);
 
   if (backend === 'dexie') {
     // Keep the active Dexie implementation out of the static module graph.
