@@ -31,6 +31,13 @@ vi.mock('@/lib/core/config', () => ({
   APP_VERSION: 'test',
 }));
 
+vi.mock('@/lib/app/runtime', () => ({
+  detectAppRuntime: vi.fn(() => ({
+    runtime: 'web',
+    capacitorPlatform: null,
+  })),
+}));
+
 vi.mock('@/lib/core/storage', () => ({
   Storage: {
     set: mocks.storageSet,
@@ -162,7 +169,10 @@ describe('DataManager.importAllData', () => {
       JSON.stringify({
         exportDate: '2026-07-04T00:00:00.000+08:00',
         data: {
-          brewingNotes: [{ id: 'note-1', timestamp: 1 }],
+          brewingNotes: [
+            { id: 'note-1', timestamp: 1 },
+            { id: 'note-null-rating', timestamp: 2, rating: null },
+          ],
           coffeeBeans: [{ id: 'bean-1', timestamp: 1, name: 'Bean' }],
         },
       })
@@ -174,6 +184,7 @@ describe('DataManager.importAllData', () => {
     ]);
     expect(mocks.validateBrewingNotes).toHaveBeenCalledWith([
       { id: 'note-1', timestamp: 1 },
+      { id: 'note-null-rating', timestamp: 2, rating: null },
     ]);
     expect(mocks.storageSet).not.toHaveBeenCalledWith(
       'brewingNotes',
@@ -184,7 +195,10 @@ describe('DataManager.importAllData', () => {
       expect.any(String)
     );
     expect(mocks.replaceBrewingNotesWithSplitImages).toHaveBeenCalledWith(
-      [{ id: 'note-1', timestamp: 1 }],
+      [
+        { id: 'note-1', timestamp: 1 },
+        { id: 'note-null-rating', timestamp: 2, rating: null },
+      ],
       { allowDestructiveReplace: true }
     );
     expect(mocks.replaceCoffeeBeansWithSplitImages).toHaveBeenCalledWith(

@@ -5,6 +5,7 @@ import {
 } from '@/lib/core/config';
 import { CoffeeBean as _CoffeeBean, BlendComponent } from '@/types/app';
 import { APP_VERSION } from '@/lib/core/config';
+import { detectAppRuntime } from '@/lib/app/runtime';
 import type {
   Grinder,
   RoasterConfig,
@@ -25,6 +26,7 @@ import {
   legacySettingsRepository,
   imageSourcePayloadValidator,
 } from '@/lib/data/repositories';
+import { resolveStorageBackend } from '@/lib/data/runtime';
 import {
   getRoasterConfigsSync,
   getSettingsStore,
@@ -357,6 +359,8 @@ export const DataManager = {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const importData = JSON.parse(jsonString) as ImportData;
+      const usesNativeSqlite =
+        resolveStorageBackend(detectAppRuntime()) === 'native-sqlite';
 
       // 验证数据格式
       if (!importData.data) {
@@ -412,12 +416,28 @@ export const DataManager = {
               { allowDestructiveReplace: true }
             );
             break;
-          case 'brewingNotes':
-            await brewingNotePersistence.replaceAllWithImages(
-              data as _BrewingNote[],
-              { allowDestructiveReplace: true }
-            );
+          case 'brewingNotes': {
+            // Older backups can contain unrated notes without a rating. The
+            // Native SQLite codec requires the canonical numeric value used
+            // by the legacy migration path; keep Dexie imports unchanged.
+            const notes = usesNativeSqlite
+              ? (data as _BrewingNote[]).map(note => {
+                  if (
+                    !note ||
+                    typeof note !== 'object' ||
+                    Array.isArray(note) ||
+                    (note.rating !== undefined && note.rating !== null)
+                  ) {
+                    return note;
+                  }
+                  return { ...note, rating: 0 };
+                })
+              : (data as _BrewingNote[]);
+            await brewingNotePersistence.replaceAllWithImages(notes, {
+              allowDestructiveReplace: true,
+            });
             break;
+          }
           case 'grinders':
             await grinderRepository.replaceAll(data as Grinder[]);
             break;

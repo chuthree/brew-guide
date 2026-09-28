@@ -447,6 +447,16 @@ function idOf(
   return id;
 }
 
+function normalizeLegacyBrewingNoteRating(
+  note: Record<string, unknown>
+): Record<string, unknown> {
+  // Legacy imports and records can omit an overall rating or store null for
+  // an unrated note. Forms already interpret both shapes as the canonical 0.
+  return note.rating === undefined || note.rating === null
+    ? { ...note, rating: 0 }
+    : note;
+}
+
 function assertKnownImageFields(
   value: Record<string, unknown>,
   table: keyof typeof IMAGE_FIELDS,
@@ -1102,7 +1112,10 @@ export async function planLegacySqliteMigration(
     if (resolution.originalConflicts.length > 0) {
       fail('brewingNotes', noteId, 'inline and split original images conflict');
     }
-    plan.rows.brewingNotes.push(encodeBrewingNote(resolution.mergedNote).row);
+    const canonicalNote = normalizeLegacyBrewingNoteRating(
+      resolution.mergedNote as unknown as Record<string, unknown>
+    );
+    plan.rows.brewingNotes.push(encodeBrewingNote(canonicalNote).row);
     noteIds.add(noteId);
     const images = getBrewingNoteImages(resolution.mergedNote);
     for (let position = 0; position < images.length; position += 1) {

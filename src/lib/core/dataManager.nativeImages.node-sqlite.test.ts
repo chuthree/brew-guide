@@ -137,6 +137,12 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('@/lib/core/config', () => ({ APP_VERSION: 'test' }));
+vi.mock('@/lib/app/runtime', () => ({
+  detectAppRuntime: vi.fn(() => ({
+    runtime: 'capacitor',
+    capacitorPlatform: 'android',
+  })),
+}));
 vi.mock('@/lib/core/storage', () => ({
   Storage: {
     set: mocks.storageSet,
@@ -403,6 +409,54 @@ describeNodeSqlite(
       ]);
       expect(fileEntries.map(bytes => Array.from(bytes))).toContainEqual([
         10, 11,
+      ]);
+    });
+
+    it('imports missing or null note ratings as zero on Native SQLite only', async () => {
+      const noteFields = (id: string) => ({
+        id,
+        timestamp: 1_700_000_000_000,
+        updatedAt: 1_700_000_000_001,
+        beanId: null,
+        params: { stages: [] },
+        taste: { sweet: 4 },
+        notes: `Note ${id}`,
+      });
+
+      const result = await DataManager.importAllData(
+        JSON.stringify({
+          data: {
+            brewingNotes: [
+              noteFields('missing-rating'),
+              { ...noteFields('null-rating'), rating: null },
+              { ...noteFields('rated'), rating: 3.5 },
+            ],
+          },
+        })
+      );
+
+      expect(result.success).toBe(true);
+      const repository = createSqliteBrewingNoteRepository(database!.driver);
+      const stored = await repository.list();
+      expect(stored.find(({ id }) => id === 'missing-rating')?.rating).toBe(0);
+      expect(stored.find(({ id }) => id === 'null-rating')?.rating).toBe(0);
+      expect(stored.find(({ id }) => id === 'rated')?.rating).toBe(3.5);
+
+      const invalidRating = await DataManager.importAllData(
+        JSON.stringify({
+          data: {
+            brewingNotes: [
+              { ...noteFields('invalid-rating'), rating: 'unrated' },
+            ],
+          },
+        })
+      );
+
+      expect(invalidRating.success).toBe(false);
+      expect((await repository.list()).map(({ id }) => id).sort()).toEqual([
+        'missing-rating',
+        'null-rating',
+        'rated',
       ]);
     });
 

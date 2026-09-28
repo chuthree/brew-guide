@@ -282,6 +282,59 @@ describe('legacy SQLite migration planning', () => {
     expect(plan.sourcePresence.yearlyReports).toBe('present-empty');
   });
 
+  it('maps a missing or null legacy overall rating to the canonical unrated value', async () => {
+    const source = createSource({
+      tables: {
+        brewingNotes: [
+          {
+            id: 'note-rating-missing',
+            timestamp: 1700000000000,
+            notes: '',
+            taste: {},
+          },
+          {
+            id: 'note-rating-null',
+            timestamp: 1700000000001,
+            rating: null,
+            notes: '',
+            taste: {},
+          },
+        ],
+      },
+    });
+
+    const plan = await planLegacySqliteMigration(source);
+    const persistedNotes = plan.rows.brewingNotes.map(row =>
+      JSON.parse(row.record_json)
+    );
+
+    expect(persistedNotes.map(note => note.rating)).toEqual([0, 0]);
+    expect(source.active.brewingNotes.records[0]).not.toHaveProperty('rating');
+    expect(source.active.brewingNotes.records[1].rating).toBeNull();
+  });
+
+  it('continues rejecting malformed non-null legacy ratings', async () => {
+    await expect(
+      planLegacySqliteMigration(
+        createSource({
+          tables: {
+            brewingNotes: [
+              {
+                id: 'note-rating-invalid',
+                timestamp: 1700000000000,
+                rating: 'unrated',
+                notes: '',
+                taste: {},
+              },
+            ],
+          },
+        })
+      )
+    ).rejects.toThrow(
+      /brewing_notes record note-rating-invalid at rating: expected a finite number/
+    );
+  });
+
   it('plans an absent IndexedDB without inventing tables or a version', async () => {
     const plan = await planLegacySqliteMigration(
       createSource({ databaseAbsent: true })

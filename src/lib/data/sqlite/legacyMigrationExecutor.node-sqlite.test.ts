@@ -101,7 +101,11 @@ async function deleteLegacyDatabase(): Promise<void> {
 }
 
 async function createLegacyV8Fixture(
-  options: { invalidBeanImage?: boolean } = {}
+  options: {
+    invalidBeanImage?: boolean;
+    noteRating?: unknown;
+    omitNoteRating?: boolean;
+  } = {}
 ): Promise<void> {
   const legacy = new Dexie(LEGACY_DATABASE_NAME);
   legacy.version(8).stores({
@@ -157,11 +161,10 @@ async function createLegacyV8Fixture(
           imageThumbnail: 'data:image/webp;base64,BAUG',
           updatedAt: 1_700_000_000_002,
         });
-        await legacy.table('brewingNotes').add({
+        const note: Record<string, unknown> = {
           id: 'legacy-note',
           timestamp: 1_700_000_001_000,
           updatedAt: 1_700_000_001_100,
-          rating: 4,
           notes: '保留原始记录',
           taste: { citrus: 4 },
           beanId: 'legacy-bean',
@@ -170,7 +173,16 @@ async function createLegacyV8Fixture(
             'https://images.example.test/note.jpg?sig=exact',
             'data:image/jpeg;base64,BwgJ',
           ],
-        });
+        };
+        if (!options.omitNoteRating) {
+          note.rating = Object.prototype.hasOwnProperty.call(
+            options,
+            'noteRating'
+          )
+            ? options.noteRating
+            : 4;
+        }
+        await legacy.table('brewingNotes').add(note);
         await legacy.table('customEquipments').add({
           id: 'legacy-equipment',
           name: 'Old Dripper',
@@ -350,7 +362,7 @@ describeNodeSqlite(`${nodeSqliteLabel} legacy migration executor`, () => {
   });
 
   it('migrates a real v8 IndexedDB snapshot and proves the source stays unchanged', async () => {
-    await createLegacyV8Fixture();
+    await createLegacyV8Fixture({ noteRating: null });
     const before = await snapshotLegacyDatabase();
     const fileStore = new MemoryImageFileStore();
     fileStore.beforeWrite = async () => {
@@ -395,6 +407,13 @@ describeNodeSqlite(`${nodeSqliteLabel} legacy migration executor`, () => {
     expect(JSON.parse(String(bean[0]?.record_json))).not.toHaveProperty(
       'image'
     );
+    const note = await database!.driver.query(
+      'SELECT record_json FROM brewing_notes WHERE id = ?',
+      ['legacy-note']
+    );
+    expect(JSON.parse(String(note[0]?.record_json))).toMatchObject({
+      rating: 0,
+    });
     expect(
       (
         await database!.driver.query(
@@ -469,7 +488,8 @@ describeNodeSqlite(`${nodeSqliteLabel} legacy migration executor`, () => {
   });
 
   it('resumes a failed pre-commit attempt without overwriting files or duplicating rows', async () => {
-    await createLegacyV8Fixture();
+    await createLegacyV8Fixture({ noteRating: null });
+    const sourceBefore = await snapshotLegacyDatabase();
     const base = database!.driver;
     const flakyDriver = driverWithTransactionFailure(base, 'before');
     const fileStore = new MemoryImageFileStore();
@@ -503,6 +523,30 @@ describeNodeSqlite(`${nodeSqliteLabel} legacy migration executor`, () => {
     expect(
       (await base.query('SELECT status FROM migration_state'))[0]?.status
     ).toBe('completed');
+    expect(await snapshotLegacyDatabase()).toEqual(sourceBefore);
+  });
+
+  it('rejects malformed non-null ratings before any target or image write', async () => {
+    await createLegacyV8Fixture({ noteRating: 'unrated' });
+    const sourceBefore = await snapshotLegacyDatabase();
+    const fileStore = new MemoryImageFileStore();
+
+    await expect(
+      runLegacySqliteMigration({
+        driver: database!.driver,
+        imageFileStore: fileStore,
+        loadSource: () =>
+          readLegacyMigrationSource(sourceStorage(legacyLocalStorage)),
+      })
+    ).rejects.toThrow(
+      /brewing_notes record legacy-note at rating: expected a finite number/
+    );
+
+    expect(await queryCount(database!.driver, 'migration_state')).toBe(0);
+    expect(await queryCount(database!.driver, 'coffee_beans')).toBe(0);
+    expect(await queryCount(database!.driver, 'brewing_notes')).toBe(0);
+    expect(fileStore.writeCount).toBe(0);
+    expect(await snapshotLegacyDatabase()).toEqual(sourceBefore);
   });
 
   it('recovers an uncertain FileStore write only after byte-identical read-back', async () => {
