@@ -2,7 +2,7 @@
 
 import { useStore } from 'zustand';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
-import BackupRestoreIcon from '@public/images/icons/ui/backup-restore.svg';
+import ArrowUpIcon from '@public/images/icons/ui/arrow-up.svg';
 import {
   nativeMigrationGate,
   saveNativeMigrationBackup,
@@ -43,7 +43,7 @@ export default function NativeMigrationDrawer() {
       dismissible={false}
       disableHistory
     >
-      <ActionDrawer.Icon icon={BackupRestoreIcon} />
+      <ActionDrawer.Icon icon={ArrowUpIcon} />
       <ActionDrawer.Content>
         <p
           role={error ? 'alert' : 'status'}

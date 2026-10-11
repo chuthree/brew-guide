@@ -7,8 +7,9 @@ android {
         applicationId "com.brewguide.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15
-        versionName "1.6.3"
+        // 测试版、正式版每次发包都递增；正式版须高于最后一个测试版。
+        versionCode 16
+        versionName "1.6.3-beta.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
         // 只保留中文和英文资源，减小 APK 体积

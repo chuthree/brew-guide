@@ -25,6 +25,8 @@ import {
 } from '@/lib/app/crashDiagnostics';
 import { detectAppRuntime } from '@/lib/app/runtime';
 import dynamic from 'next/dynamic';
+import { useStore } from 'zustand';
+import { nativeMigrationGate } from '@/lib/data/nativeMigrationGate';
 
 const NativeMigrationDrawer = dynamic(
   () => import('@/components/layout/NativeMigrationDrawer'),
@@ -56,6 +58,10 @@ interface DataLayerProviderProps {
 }
 
 export function DataLayerProvider({ children }: DataLayerProviderProps) {
+  const migrationActive = useStore(
+    nativeMigrationGate,
+    state => state.phase !== 'idle'
+  );
   const [nativeAndroid, setNativeAndroid] = useState<boolean | null>(null);
   const [state, setState] = useState<DataLayerContextValue>({
     isInitialized: false,
@@ -113,7 +119,7 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
     <DataLayerContext.Provider value={state}>
       {nativeAndroid === null || (nativeAndroid && !state.isInitialized) ? (
         <div className="flex min-h-dvh items-center justify-center px-6 text-sm text-neutral-500 dark:text-neutral-400">
-          {state.error ? (
+          {migrationActive ? null : state.error ? (
             <div className="space-y-4 text-center">
               <p role="alert">暂时无法加载数据，请再试一次。</p>
               <button type="button" onClick={retryInitialization}>
