@@ -13,7 +13,7 @@ import { canSwitchPlainNoteToQuickRecord } from './quickRecordConversion';
 interface BrewingNoteEditModalProps {
   showModal: boolean;
   initialData: BrewingNoteData | null;
-  onSave: (data: BrewingNoteData) => void;
+  onSave: (data: BrewingNoteData) => void | Promise<void>;
   onClose: () => void;
   settings?: SettingsOptions;
   isCopy?: boolean; // 标记是否是复制操作
@@ -39,6 +39,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   const noteId = initialData?.id;
   const [draftSnapshot, setDraftSnapshot] =
     useState<BrewingNoteDraftData | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [quickModeOverride, setQuickModeOverride] = useState<{
     noteId: string;
     isQuickMode: boolean;
@@ -94,10 +95,10 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   }, [isChangeRecordEdit, noteId, setQuickModeOverride]);
   // 处理保存
   const handleSave = useCallback(
-    (updatedData: BrewingNoteData) => {
+    async (updatedData: BrewingNoteData) => {
       setQuickModeOverride(null);
       setDraftSnapshot(null);
-      onSave(updatedData);
+      await onSave(updatedData);
     },
     [onSave, setDraftSnapshot, setQuickModeOverride]
   );
@@ -113,7 +114,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
   // 处理保存按钮点击
   const handleSaveClick = useCallback(() => {
-    if (!initialData) return;
+    if (!initialData || isSubmitting) return;
     // 触发表单提交
     const form = document.querySelector(
       `form[id="${initialData.id}"]`
@@ -123,7 +124,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
         new Event('submit', { cancelable: true, bubbles: true })
       );
     }
-  }, [initialData]);
+  }, [initialData, isSubmitting]);
 
   return (
     <AdaptiveModal
@@ -166,6 +167,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                 isCopy={isCopy}
                 isQuickMode={isQuickMode}
                 onDraftChange={setDraftSnapshot}
+                onSubmitStateChange={setIsSubmitting}
               />
             )}
           </div>
@@ -189,9 +191,13 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
             <button
               type="button"
               onClick={handleSaveClick}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
               className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
             >
-              <span className="font-medium">{saveButtonLabel}</span>
+              <span className="font-medium">
+                {isSubmitting ? '保存中…' : saveButtonLabel}
+              </span>
             </button>
           </div>
         </div>

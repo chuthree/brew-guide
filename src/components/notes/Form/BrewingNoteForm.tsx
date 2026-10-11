@@ -113,7 +113,7 @@ const BREWING_NOTE_FORM_INTENTS = {
 interface BrewingNoteFormProps {
   id?: string;
   onClose: () => void;
-  onSave: (data: BrewingNoteData) => void;
+  onSave: (data: BrewingNoteData) => void | Promise<void>;
   initialData: Partial<BrewingNoteData> & {
     coffeeBean?: SelectableCoffeeBean | null;
   };
@@ -124,6 +124,7 @@ interface BrewingNoteFormProps {
   hideHeader?: boolean;
   onTimestampChange?: (timestamp: Date) => void;
   settings?: SettingsOptions;
+  onSubmitStateChange?: (isSubmitting: boolean) => void;
   isCopy?: boolean; // 标记是否是复制操作
   // 快捷记录模式相关
   isQuickMode?: boolean;
@@ -200,6 +201,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   isCopy = false, // 默认不是复制操作
   isQuickMode: externalIsQuickMode,
   onDraftChange,
+  onSubmitStateChange,
   syncInitialDataChanges = true,
 }) => {
   const navigationState = deriveNavigationSettings(
@@ -1118,6 +1120,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
+    onSubmitStateChange?.(true);
     const submitter = (e.nativeEvent as SubmitEvent)
       .submitter as HTMLButtonElement | null;
     const submitIntent = submitter?.value;
@@ -1529,6 +1532,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       }
     } finally {
       isSubmittingRef.current = false;
+      onSubmitStateChange?.(false);
     }
   };
 
