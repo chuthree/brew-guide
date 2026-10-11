@@ -1,4 +1,4 @@
-import type { SettingsOptions } from '@/lib/core/db';
+import type { SettingsOptions } from '@/lib/data/models';
 import type { CloudProvider } from './types';
 
 export type ManualSyncProvider = Exclude<CloudProvider, 'supabase'>;

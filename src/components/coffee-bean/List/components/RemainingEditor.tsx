@@ -39,7 +39,9 @@ const POPOVER_EXIT_TRANSITION = {
 interface RemainingEditorProps {
   position?: { x: number; y: number } | null;
   targetElement?: HTMLElement | null;
-  onQuickDecrement: (amount: number) => void;
+  onQuickDecrement: (
+    amount: number
+  ) => boolean | void | Promise<boolean | void>;
   onCancel: () => void;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -364,8 +366,13 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
 
       setOpen(false);
       const actualDecrementAmount = Math.min(value, currentRemaining);
-      onQuickDecrement(actualDecrementAmount);
-      await createAutoNote(actualDecrementAmount);
+      const succeeded = await onQuickDecrement(actualDecrementAmount);
+      if (succeeded === false) return;
+
+      // Green bean roasting already creates a dedicated roasting record.
+      if (!isGreenBean) {
+        await createAutoNote(actualDecrementAmount);
+      }
       if (hapticEnabled) {
         hapticsUtils.light().catch(() => {
           // 静默处理触觉反馈错误

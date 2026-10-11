@@ -2,18 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { syncGrinderScale, useGrinderStore } from './grinderStore';
 
 const mocks = vi.hoisted(() => ({
-  put: vi.fn().mockResolvedValue(undefined),
-  toArray: vi.fn().mockResolvedValue([]),
-  bulkPut: vi.fn().mockResolvedValue(undefined),
+  save: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@/lib/core/db', () => ({
-  db: {
-    grinders: {
-      put: mocks.put,
-      toArray: mocks.toArray,
-      bulkPut: mocks.bulkPut,
-    },
+vi.mock('@/lib/data/repositories', () => ({
+  grinderRepository: {
+    save: mocks.save,
   },
 }));
 
@@ -43,13 +37,11 @@ describe('syncGrinderScale', () => {
     const synced = await syncGrinderScale('24');
 
     expect(synced).toBe(true);
-    expect(mocks.put).toHaveBeenCalledWith(
+    expect(mocks.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'c40',
         currentGrindSize: '24',
-        grindSizeHistory: [
-          expect.objectContaining({ grindSize: '24' }),
-        ],
+        grindSizeHistory: [expect.objectContaining({ grindSize: '24' })],
       })
     );
   });
@@ -58,7 +50,7 @@ describe('syncGrinderScale', () => {
     const synced = await syncGrinderScale('C40 25');
 
     expect(synced).toBe(true);
-    expect(mocks.put).toHaveBeenCalledWith(
+    expect(mocks.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'c40',
         currentGrindSize: '25',
@@ -74,6 +66,6 @@ describe('syncGrinderScale', () => {
     const synced = await syncGrinderScale('24');
 
     expect(synced).toBe(false);
-    expect(mocks.put).not.toHaveBeenCalled();
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 });

@@ -79,12 +79,13 @@ vi.mock('@/lib/utils/imageCompression', async () => {
 });
 
 import {
-  getCoffeeBeanImageBeanIds,
-  getCoffeeBeanImageSource,
-  recompressOversizedCoffeeBeanImages,
-  replaceCoffeeBeansWithSplitImages,
-  saveCoffeeBeanWithImages,
-} from './imageRepository';
+  coffeeBeanImageRepository,
+  coffeeBeanPersistence,
+} from '@/lib/data/adapters/dexie/coffeeBeanImageRepository';
+import {
+  createDexieImageMaintenance,
+  type DexieImageMaintenanceDatabase,
+} from '@/lib/data/adapters/dexie/imageMaintenance';
 
 const baseBean: CoffeeBean = {
   id: 'bean-1',
@@ -113,19 +114,68 @@ describe('coffee bean image repository records', () => {
       updatedAt: 1,
     });
 
-    await expect(getCoffeeBeanImageBeanIds()).resolves.toEqual(
+    await expect(coffeeBeanImageRepository.getBeanIds()).resolves.toEqual(
       expect.arrayContaining(['image-only', 'thumbnail-only'])
     );
   });
 
-  it('falls back to original image when thumbnail is missing', async () => {
+  it('falls back to the original when no usable thumbnail is available', async () => {
+    const original = 'data:image/jpeg;base64,original-source';
+    const unusableThumbnail = 'x'.repeat(512 * 1024 + 1);
     mocks.images.set('bean-1', {
       beanId: 'bean-1',
-      image: 'original',
+      image: original,
+      imageThumbnail: unusableThumbnail,
+      updatedAt: 1,
+    });
+    mocks.thumbnails.set('bean-1', {
+      beanId: 'bean-1',
+      imageThumbnail: unusableThumbnail,
       updatedAt: 1,
     });
 
-    await expect(getCoffeeBeanImageSource('bean-1')).resolves.toBe('original');
+    await expect(coffeeBeanImageRepository.getSource('bean-1')).resolves.toBe(
+      original
+    );
+  });
+
+  it('reads front, back, and thumbnail display sources without altering Data URLs', async () => {
+    const record: CoffeeBeanImageRecord = {
+      beanId: 'bean-1',
+      image: 'data:image/jpeg;base64,front-original',
+      backImage: 'data:image/png;base64,back-original',
+      updatedAt: 1,
+    };
+    const thumbnail: CoffeeBeanImageThumbnailRecord = {
+      beanId: 'bean-1',
+      imageThumbnail: 'data:image/webp;base64,front-thumbnail',
+      backImageThumbnail: 'data:image/webp;base64,back-thumbnail',
+      updatedAt: 1,
+    };
+    mocks.images.set('bean-1', record);
+    mocks.thumbnails.set('bean-1', thumbnail);
+
+    await expect(
+      coffeeBeanImageRepository.getSource('bean-1', { mode: 'original' })
+    ).resolves.toBe(record.image);
+    await expect(
+      coffeeBeanImageRepository.getSource('bean-1', {
+        side: 'back',
+        mode: 'original',
+      })
+    ).resolves.toBe(record.backImage);
+    await expect(coffeeBeanImageRepository.getSource('bean-1')).resolves.toBe(
+      thumbnail.imageThumbnail
+    );
+    await expect(
+      coffeeBeanImageRepository.getSource('bean-1', { side: 'back' })
+    ).resolves.toBe(thumbnail.backImageThumbnail);
+  });
+
+  it('returns no source when the bean has no image record', async () => {
+    await expect(
+      coffeeBeanImageRepository.getSource('missing', { mode: 'original' })
+    ).resolves.toBeUndefined();
   });
 
   it('filters image ids by requested side', async () => {
@@ -141,17 +191,17 @@ describe('coffee bean image repository records', () => {
     });
 
     await expect(
-      getCoffeeBeanImageBeanIds(['front-only', 'back-only'], {
+      coffeeBeanImageRepository.getBeanIds(['front-only', 'back-only'], {
         side: 'front',
       })
     ).resolves.toEqual(['front-only']);
     await expect(
-      getCoffeeBeanImageBeanIds(['front-only', 'back-only'], {
+      coffeeBeanImageRepository.getBeanIds(['front-only', 'back-only'], {
         side: 'back',
       })
     ).resolves.toEqual(['back-only']);
     await expect(
-      getCoffeeBeanImageBeanIds(['front-only', 'back-only'])
+      coffeeBeanImageRepository.getBeanIds(['front-only', 'back-only'])
     ).resolves.toEqual(expect.arrayContaining(['front-only', 'back-only']));
   });
 
@@ -166,7 +216,7 @@ describe('coffee bean image repository records', () => {
     });
 
     await expect(
-      getCoffeeBeanImageBeanIds(beanIds, { side: 'front' })
+      coffeeBeanImageRepository.getBeanIds(beanIds, { side: 'front' })
     ).resolves.toHaveLength(beanIds.length);
 
     expect(mocks.db.coffeeBeanImages.bulkGet).toHaveBeenCalledTimes(3);
@@ -184,13 +234,15 @@ describe('coffee bean image repository records', () => {
       updatedAt: 1,
     });
 
-    await replaceCoffeeBeansWithSplitImages([{ ...baseBean, timestamp: 2 }]);
+    await coffeeBeanPersistence.replaceAllWithImages([
+      { ...baseBean, timestamp: 2 },
+    ]);
 
     expect(mocks.images.get('bean-1')?.image).toBe('original');
   });
 
   it('writes the bean and its image records in one transaction', async () => {
-    await saveCoffeeBeanWithImages({
+    await coffeeBeanPersistence.saveWithImages({
       ...baseBean,
       image: 'original',
     });
@@ -215,7 +267,7 @@ describe('coffee bean image repository records', () => {
       });
     }
 
-    const replaced = await replaceCoffeeBeansWithSplitImages([
+    const replaced = await coffeeBeanPersistence.replaceAllWithImages([
       { ...baseBean, id: 'incoming-bean', name: 'Incoming Bean' },
     ]);
 
@@ -233,7 +285,7 @@ describe('coffee bean image repository records', () => {
       });
     }
 
-    const replaced = await replaceCoffeeBeansWithSplitImages(
+    const replaced = await coffeeBeanPersistence.replaceAllWithImages(
       [{ ...baseBean, id: 'incoming-bean', name: 'Incoming Bean' }],
       { allowDestructiveReplace: true }
     );
@@ -264,7 +316,9 @@ describe('coffee bean image repository records', () => {
     });
     mocks.compressBase64Image.mockResolvedValue(compressedImage);
 
-    const stats = await recompressOversizedCoffeeBeanImages();
+    const stats = await createDexieImageMaintenance(
+      mocks.db as unknown as DexieImageMaintenanceDatabase
+    ).recompressCoffeeBeanImages();
 
     expect(mocks.compressBase64Image).toHaveBeenCalledTimes(1);
     expect(mocks.images.get('bean-1')).toMatchObject({

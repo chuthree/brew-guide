@@ -1,9 +1,14 @@
-import { db, dbUtils } from './db';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
+import {
+  brewingNoteImageRepository,
+  brewingNotePersistence,
+  backendDataMaintenance,
+  coffeeBeanImageRepository,
+  coffeeBeanPersistence,
+  legacySettingsRepository,
+} from '@/lib/data/repositories';
 import { normalizeCoffeeBeans } from '@/lib/utils/coffeeBeanUtils';
-import { exportCoffeeBeansWithImages } from '@/lib/coffee-beans/imageRepository';
-import { exportBrewingNotesWithImages } from '@/lib/notes/imageRepository';
 
 /**
  * 存储分类常量，用于决定不同数据的存储方式
@@ -59,7 +64,14 @@ export const StorageUtils = {
    */
   async initialize(): Promise<void> {
     try {
-      await dbUtils.initialize();
+      const runtimeInitialization = await import('@/lib/data/runtime').then(
+        ({ initializeDataRuntime }) => initializeDataRuntime()
+      );
+      if (runtimeInitialization.status !== 'ready') {
+        throw new Error(
+          `Data backend "${runtimeInitialization.backend}" is not implemented: ${runtimeInitialization.reason}`
+        );
+      }
 
       if (process.env.NODE_ENV === 'development') {
         console.warn('存储系统初始化完成');
@@ -94,7 +106,7 @@ export const StorageUtils = {
       }
 
       // 其他使用IndexedDB的键
-      await db.settings.put({ key, value });
+      await legacySettingsRepository.set(key, value);
     } else {
       // 对于小型数据，使用Preferences/localStorage
       if (Capacitor.isNativePlatform()) {
@@ -146,7 +158,7 @@ export const StorageUtils = {
       // 对于大型数据，从IndexedDB获取
       if (key === 'brewingNotes') {
         try {
-          const notes = await exportBrewingNotesWithImages();
+          const notes = await brewingNoteImageRepository.exportAll();
           return JSON.stringify(notes);
         } catch (error) {
           console.error('从IndexedDB获取数据失败:', error);
@@ -155,7 +167,7 @@ export const StorageUtils = {
       } else if (key === 'coffeeBeans') {
         try {
           const beans = normalizeCoffeeBeans(
-            await exportCoffeeBeansWithImages(),
+            await coffeeBeanImageRepository.exportAll(),
             {
               ensureFlavorArray: true,
             }
@@ -167,8 +179,8 @@ export const StorageUtils = {
         }
       } else {
         // 其他使用IndexedDB的键
-        const data = await db.settings.get(key);
-        return data ? data.value : null;
+        const data = await legacySettingsRepository.get(key);
+        return data ?? null;
       }
     } else {
       // 对于小型数据，从Preferences/localStorage获取
@@ -197,16 +209,12 @@ export const StorageUtils = {
     if (storageType === StorageType.INDEXED_DB) {
       // 对于大型数据，从IndexedDB删除
       if (key === 'brewingNotes') {
-        await db.brewingNotes.clear();
-        await db.brewingNoteImages.clear();
-        await db.brewingNoteImageThumbnails.clear();
+        await brewingNotePersistence.clearWithImages();
       } else if (key === 'coffeeBeans') {
-        await db.coffeeBeans.clear();
-        await db.coffeeBeanImages.clear();
-        await db.coffeeBeanImageThumbnails.clear();
+        await coffeeBeanPersistence.clearWithImages();
       } else {
         // 其他使用IndexedDB的键
-        await db.settings.delete(key);
+        await legacySettingsRepository.delete(key);
       }
     } else {
       // 对于小型数据，从Preferences/localStorage删除
@@ -225,8 +233,8 @@ export const StorageUtils = {
    * 清除所有存储数据
    */
   async clearAllData(): Promise<void> {
-    // 清除IndexedDB数据
-    await dbUtils.clearAllData();
+    // Clear database data through the selected backend before local settings.
+    await backendDataMaintenance.clearAllData();
 
     // 清除Preferences/localStorage数据
     if (Capacitor.isNativePlatform()) {

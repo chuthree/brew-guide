@@ -51,15 +51,15 @@ export {
   migrateTasteRatings,
 } from './settingsStore';
 
-// 类型重导出（从 db.ts）
+// 类型重导出
 export type {
   AppSettings,
   SettingsOptions, // AppSettings 的别名，保持向后兼容
   FlavorDimension,
   RoasterConfig,
   RoasterFlavorPeriod,
-} from '@/lib/core/db';
-export { DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/core/db';
+} from '@/lib/data/models';
+export { DEFAULT_FLAVOR_DIMENSIONS } from '@/lib/data/models';
 
 // 器具相关 Store
 export {

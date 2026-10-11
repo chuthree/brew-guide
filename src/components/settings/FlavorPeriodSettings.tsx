@@ -13,7 +13,7 @@ import {
   getSettingsStore,
   useSettingsStore,
 } from '@/lib/stores/settingsStore';
-import { RoasterConfig } from '@/lib/core/db';
+import type { RoasterConfig } from '@/lib/data/models';
 import {
   extractUniqueRoasters,
   RoasterSettings,

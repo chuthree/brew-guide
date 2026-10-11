@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import ElasticSlider from '@/components/common/ui/ElasticSlider';
-import type { FlavorDimension } from '@/lib/core/db';
+import type { FlavorDimension } from '@/lib/data/models';
 
 // 星星图标组件 - 移到组件外部避免重复创建
 const StarIcon = React.memo(

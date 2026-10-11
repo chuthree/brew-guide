@@ -1,6 +1,13 @@
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
-import { db } from '@/lib/core/db';
+import {
+  appSettingsRepository,
+  brewingNoteImageRepository,
+  brewingNoteRepository,
+  coffeeBeanImageRepository,
+  coffeeBeanRepository,
+  legacySettingsRepository,
+} from '@/lib/data/repositories';
 import {
   recordCrashCheckpoint,
   recordDataIntegrityReport,
@@ -136,23 +143,24 @@ export const shouldReportUnexpectedCoreDataLoss = ({
 const collectCoreDataSnapshot = async (): Promise<CoreDataSnapshot> => {
   const [
     coffeeBeans,
-    coffeeBeanImages,
-    coffeeBeanImageThumbnails,
+    coffeeBeanImageCounts,
     brewingNotes,
-    brewingNoteImages,
-    brewingNoteImageThumbnails,
+    brewingNoteImageCounts,
     appSettings,
     settings,
   ] = await Promise.all([
-    db.coffeeBeans.count(),
-    db.coffeeBeanImages.count(),
-    db.coffeeBeanImageThumbnails.count(),
-    db.brewingNotes.count(),
-    db.brewingNoteImages.count(),
-    db.brewingNoteImageThumbnails.count(),
-    db.appSettings.count(),
-    db.settings.count(),
+    coffeeBeanRepository.count(),
+    coffeeBeanImageRepository.getRecordCounts(),
+    brewingNoteRepository.count(),
+    brewingNoteImageRepository.getRecordCounts(),
+    appSettingsRepository.count(),
+    legacySettingsRepository.count(),
   ]);
+
+  const coffeeBeanImages = coffeeBeanImageCounts.records;
+  const coffeeBeanImageThumbnails = coffeeBeanImageCounts.thumbnails;
+  const brewingNoteImages = brewingNoteImageCounts.records;
+  const brewingNoteImageThumbnails = brewingNoteImageCounts.thumbnails;
 
   return {
     capturedAt: nowIso(),
@@ -203,8 +211,8 @@ export async function markExpectedCoreDataMutation(
 export async function markExpectedCoreDataDeletionIfEmpty(): Promise<void> {
   try {
     const [coffeeBeans, brewingNotes] = await Promise.all([
-      db.coffeeBeans.count(),
-      db.brewingNotes.count(),
+      coffeeBeanRepository.count(),
+      brewingNoteRepository.count(),
     ]);
 
     if (coffeeBeans === 0 && brewingNotes === 0) {

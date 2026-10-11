@@ -5,14 +5,24 @@
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote, CustomEquipment, Method } from '@/lib/core/config';
 
-/**
- * 同步表名
- */
-export type RealtimeSyncTable =
-  | 'coffee_beans'
-  | 'brewing_notes'
-  | 'custom_equipments'
-  | 'custom_methods';
+/** 同步表名及其运行时可校验集合。 */
+export const REALTIME_SYNC_TABLES = [
+  'coffee_beans',
+  'brewing_notes',
+  'custom_equipments',
+  'custom_methods',
+] as const;
+
+export type RealtimeSyncTable = (typeof REALTIME_SYNC_TABLES)[number];
+
+export function isRealtimeSyncTable(
+  value: unknown
+): value is RealtimeSyncTable {
+  return (
+    typeof value === 'string' &&
+    REALTIME_SYNC_TABLES.some(table => table === value)
+  );
+}
 
 /**
  * 实时同步连接状态

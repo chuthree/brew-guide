@@ -178,10 +178,9 @@ export function batchResolveConflicts<T extends SyncableRecord>(
 
     if (!remote) {
       merged.push(local);
-      // 已同步过的旧本地记录不因云端索引缺失而反复重传。
-      if (lastSyncTime === 0 || localTime > lastSyncTime) {
-        toUpload.push(local);
-      }
+      // 云端索引中不存在该记录时，lastSyncTime 无法证明它曾成功上传。
+      // 上传使用按 id 幂等的 upsert；真正的云端删除由上方 deleted_at 分支处理。
+      toUpload.push(local);
     } else if (remote.deleted_at) {
       // 云端已删除（有 deleted_at 标记）
       const deleteTime = new Date(remote.deleted_at).getTime();

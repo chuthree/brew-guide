@@ -559,8 +559,10 @@ export class TempFileManager {
 
     if (Capacitor.getPlatform() === 'android') {
       try {
-        await this.saveJsonFileWithAndroidDocumentPicker(jsonData, fileName);
-        return 'android-document';
+        return await this.saveJsonFileWithAndroidDocumentPicker(
+          jsonData,
+          fileName
+        );
       } catch (error) {
         if (!isAndroidDocumentSaverUnavailable(error)) {
           throw error;
@@ -579,7 +581,7 @@ export class TempFileManager {
   private static async saveJsonFileWithAndroidDocumentPicker(
     jsonData: string,
     fileName: string
-  ): Promise<void> {
+  ): Promise<'android-document' | 'cancelled'> {
     const fullFileName = this.createTempFileName(fileName);
 
     try {
@@ -590,13 +592,14 @@ export class TempFileManager {
         directory: Directory.Cache,
       });
 
-      await saveFileWithAndroidDocumentPicker({
+      const outcome = await saveFileWithAndroidDocumentPicker({
         sourceUri: uriResult.uri,
         fileName,
         mimeType: this.JSON_MIME_TYPE,
       });
 
       await this.cleanupTempFile(fullFileName);
+      return outcome === 'cancelled' ? 'cancelled' : 'android-document';
     } catch (error) {
       try {
         await this.cleanupTempFile(fullFileName);

@@ -79,13 +79,13 @@ vi.mock('@/lib/utils/imageCompression', async () => {
 });
 
 import {
-  getBrewingNoteImageCounts,
-  getBrewingNoteImageNoteIds,
-  getBrewingNoteImages,
-  recompressOversizedBrewingNoteImages,
-  replaceBrewingNotesWithSplitImages,
-  saveBrewingNoteWithImages,
-} from './imageRepository';
+  brewingNoteImageRepository,
+  brewingNotePersistence,
+} from '@/lib/data/adapters/dexie/brewingNoteImageRepository';
+import {
+  createDexieImageMaintenance,
+  type DexieImageMaintenanceDatabase,
+} from '@/lib/data/adapters/dexie/imageMaintenance';
 
 const baseNote: BrewingNote = {
   id: 'note-1',
@@ -116,7 +116,9 @@ describe('brewing note image repository', () => {
       updatedAt: 1,
     });
 
-    await expect(getBrewingNoteImageNoteIds()).resolves.toEqual(['image-only']);
+    await expect(brewingNoteImageRepository.getNoteIds()).resolves.toEqual([
+      'image-only',
+    ]);
   });
 
   it('returns original images without generating thumbnails', async () => {
@@ -127,8 +129,34 @@ describe('brewing note image repository', () => {
       updatedAt: 1,
     });
 
-    await expect(getBrewingNoteImages('note-1')).resolves.toEqual(['original']);
+    await expect(
+      brewingNoteImageRepository.getImages('note-1')
+    ).resolves.toEqual(['original']);
     expect(mocks.thumbnails.has('note-1')).toBe(false);
+  });
+
+  it('returns multiple stored note images in their original order', async () => {
+    const images = [
+      'data:image/jpeg;base64,first',
+      'data:image/png;base64,second',
+      'data:image/webp;base64,third',
+    ];
+    mocks.images.set('note-1', {
+      noteId: 'note-1',
+      image: images[0],
+      images,
+      updatedAt: 1,
+    });
+
+    await expect(
+      brewingNoteImageRepository.getImages('note-1')
+    ).resolves.toEqual(images);
+  });
+
+  it('returns an empty list when a note has no images', async () => {
+    await expect(
+      brewingNoteImageRepository.getImages('missing')
+    ).resolves.toEqual([]);
   });
 
   it('returns stored image counts for list placeholders', async () => {
@@ -140,7 +168,7 @@ describe('brewing note image repository', () => {
     });
 
     await expect(
-      getBrewingNoteImageCounts(['note-1', 'missing'])
+      brewingNoteImageRepository.getImageCounts(['note-1', 'missing'])
     ).resolves.toEqual(new Map([['note-1', 2]]));
   });
 
@@ -152,13 +180,15 @@ describe('brewing note image repository', () => {
       updatedAt: 1,
     });
 
-    await replaceBrewingNotesWithSplitImages([{ ...baseNote, timestamp: 2 }]);
+    await brewingNotePersistence.replaceAllWithImages([
+      { ...baseNote, timestamp: 2 },
+    ]);
 
     expect(mocks.images.get('note-1')?.image).toBe('original');
   });
 
   it('writes the note and its image record in one transaction', async () => {
-    await saveBrewingNoteWithImages({
+    await brewingNotePersistence.saveWithImages({
       ...baseNote,
       image: 'original',
       images: ['original'],
@@ -184,7 +214,7 @@ describe('brewing note image repository', () => {
       });
     }
 
-    const replaced = await replaceBrewingNotesWithSplitImages([
+    const replaced = await brewingNotePersistence.replaceAllWithImages([
       { ...baseNote, id: 'incoming-note', notes: 'Incoming Note' },
     ]);
 
@@ -202,7 +232,7 @@ describe('brewing note image repository', () => {
       });
     }
 
-    const replaced = await replaceBrewingNotesWithSplitImages(
+    const replaced = await brewingNotePersistence.replaceAllWithImages(
       [{ ...baseNote, id: 'incoming-note', notes: 'Incoming Note' }],
       { allowDestructiveReplace: true }
     );
@@ -230,7 +260,9 @@ describe('brewing note image repository', () => {
     });
     mocks.compressBase64Image.mockResolvedValue(compressedImage);
 
-    const stats = await recompressOversizedBrewingNoteImages();
+    const stats = await createDexieImageMaintenance(
+      mocks.db as unknown as DexieImageMaintenanceDatabase
+    ).recompressBrewingNoteImages();
 
     expect(mocks.compressBase64Image).toHaveBeenCalledTimes(1);
     expect(mocks.images.get('note-1')).toMatchObject({

@@ -554,6 +554,18 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       const noteToDelete = notes.find(note => note.id === noteId);
       if (!noteToDelete) return;
 
+      if (noteToDelete.source === 'roasting') {
+        const { RoastingManager } =
+          await import('@/lib/managers/roastingManager');
+        const result = await RoastingManager.deleteRoastingRecord(noteId);
+        if (!result.success) {
+          throw new Error(result.error || '删除烘焙记录失败');
+        }
+
+        showToastMessage('烘焙记录已删除', 'success');
+        return;
+      }
+
       // 恢复咖啡豆容量（根据笔记类型采用不同的恢复策略）
       try {
         if (noteToDelete.source === 'capacity-adjustment') {

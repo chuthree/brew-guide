@@ -5,22 +5,33 @@ import {
 } from '@/lib/core/config';
 import { CoffeeBean as _CoffeeBean, BlendComponent } from '@/types/app';
 import { APP_VERSION } from '@/lib/core/config';
-import type { SettingsOptions as _SettingsOptions } from '@/lib/core/db';
+import { detectAppRuntime } from '@/lib/app/runtime';
+import type {
+  Grinder,
+  RoasterConfig,
+  SettingsOptions as _SettingsOptions,
+} from '@/lib/data/models';
 import { LayoutSettings as _LayoutSettings } from '@/components/brewing/Timer/Settings';
-import { db, RoasterConfig, Grinder } from '@/lib/core/db';
+import {
+  appSettingsRepository,
+  brewingNoteImageRepository,
+  brewingNotePersistence,
+  brewingNoteRepository,
+  coffeeBeanImageRepository,
+  coffeeBeanPersistence,
+  coffeeBeanRepository,
+  customEquipmentRepository,
+  customMethodRepository,
+  grinderRepository,
+  legacySettingsRepository,
+  imageSourcePayloadValidator,
+} from '@/lib/data/repositories';
+import { resolveStorageBackend } from '@/lib/data/runtime';
 import {
   getRoasterConfigsSync,
   getSettingsStore,
 } from '@/lib/stores/settingsStore';
 import { normalizeCoffeeBeans } from '@/lib/utils/coffeeBeanUtils';
-import {
-  exportCoffeeBeansWithImages,
-  replaceCoffeeBeansWithSplitImages,
-} from '@/lib/coffee-beans/imageRepository';
-import {
-  exportBrewingNotesWithImages,
-  replaceBrewingNotesWithSplitImages,
-} from '@/lib/notes/imageRepository';
 import { recordCrashOperationStep } from '@/lib/app/crashDiagnostics';
 import { markExpectedCoreDataMutation } from '@/lib/app/dataIntegrity';
 
@@ -157,9 +168,9 @@ export const DataManager = {
           continue;
         }
 
-        // 特殊处理 grinders - 从 IndexedDB 获取
+        // 特殊处理 grinders
         if (key === 'grinders') {
-          const grinders = await db.grinders.toArray();
+          const grinders = await grinderRepository.list();
           exportData.data[key] = grinders;
           continue;
         }
@@ -167,27 +178,25 @@ export const DataManager = {
         // 特殊处理 coffeeBeans - 从 IndexedDB 获取
         if (key === 'coffeeBeans') {
           if (collectDiagnostics) {
-            const [beanCount, imageRecordCount, thumbnailRecordCount] =
-              await Promise.all([
-                db.coffeeBeans.count(),
-                db.coffeeBeanImages.count(),
-                db.coffeeBeanImageThumbnails.count(),
-              ]);
+            const [beanCount, imageCounts] = await Promise.all([
+              coffeeBeanRepository.count(),
+              coffeeBeanImageRepository.getRecordCounts(),
+            ]);
 
             recordCrashOperationStep('coffee-beans:image-preflight', {
               beanCount,
-              imageRecordCount,
-              thumbnailRecordCount,
+              imageRecordCount: imageCounts.records,
+              thumbnailRecordCount: imageCounts.thumbnails,
             });
           }
 
-          exportData.data[key] = await exportCoffeeBeansWithImages();
+          exportData.data[key] = await coffeeBeanImageRepository.exportAll();
           continue;
         }
 
         // 特殊处理 customEquipments - 从 IndexedDB 获取
         if (key === 'customEquipments') {
-          exportData.data[key] = await db.customEquipments.toArray();
+          exportData.data[key] = await customEquipmentRepository.list();
           continue;
         }
 
@@ -195,11 +204,11 @@ export const DataManager = {
         if (key === 'brewingNotes') {
           if (collectDiagnostics) {
             recordCrashOperationStep('brewing-notes:preflight', {
-              noteCount: await db.brewingNotes.count(),
+              noteCount: await brewingNoteRepository.count(),
             });
           }
 
-          const notes = await exportBrewingNotesWithImages();
+          const notes = await brewingNoteImageRepository.exportAll();
           exportData.data[key] = this.cleanBrewingNotesForExport(notes);
           continue;
         }
@@ -230,7 +239,7 @@ export const DataManager = {
         exportData.data.customMethodsByEquipment = {};
 
         // 优先从IndexedDB加载自定义方案数据
-        const methodsFromDB = await db.customMethods.toArray();
+        const methodsFromDB = await customMethodRepository.list();
         if (methodsFromDB && methodsFromDB.length > 0) {
           for (const item of methodsFromDB) {
             const { equipmentId, methods } = item;
@@ -350,6 +359,8 @@ export const DataManager = {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const importData = JSON.parse(jsonString) as ImportData;
+      const usesNativeSqlite =
+        resolveStorageBackend(detectAppRuntime()) === 'native-sqlite';
 
       // 验证数据格式
       if (!importData.data) {
@@ -358,6 +369,26 @@ export const DataManager = {
           message: '导入的数据格式不正确，缺少 data 字段',
         };
       }
+
+      // Native storage needs the complete image-bearing backup payload checked
+      // before the first destructive table replacement. Dexie deliberately
+      // keeps its existing import behavior through its no-op validator.
+      const imagePreflightTasks: Promise<void>[] = [];
+      if (Array.isArray(importData.data.coffeeBeans)) {
+        imagePreflightTasks.push(
+          imageSourcePayloadValidator.validateCoffeeBeans(
+            importData.data.coffeeBeans
+          )
+        );
+      }
+      if (Array.isArray(importData.data.brewingNotes)) {
+        imagePreflightTasks.push(
+          imageSourcePayloadValidator.validateBrewingNotes(
+            importData.data.brewingNotes
+          )
+        );
+      }
+      await Promise.all(imagePreflightTasks);
 
       if (
         Array.isArray(importData.data.coffeeBeans) ||
@@ -373,25 +404,42 @@ export const DataManager = {
       const syncToIndexedDB = async (key: string, data: unknown[]) => {
         switch (key) {
           case 'customEquipments':
-            await db.customEquipments.clear();
-            await db.customEquipments.bulkPut(data as CustomEquipment[]);
+            await customEquipmentRepository.replaceAll(
+              data as CustomEquipment[]
+            );
             break;
           case 'coffeeBeans':
-            await replaceCoffeeBeansWithSplitImages(
+            await coffeeBeanPersistence.replaceAllWithImages(
               normalizeCoffeeBeans(data as _CoffeeBean[], {
                 ensureFlavorArray: true,
               }),
               { allowDestructiveReplace: true }
             );
             break;
-          case 'brewingNotes':
-            await replaceBrewingNotesWithSplitImages(data as _BrewingNote[], {
+          case 'brewingNotes': {
+            // Older backups can contain unrated notes without a rating. The
+            // Native SQLite codec requires the canonical numeric value used
+            // by the legacy migration path; keep Dexie imports unchanged.
+            const notes = usesNativeSqlite
+              ? (data as _BrewingNote[]).map(note => {
+                  if (
+                    !note ||
+                    typeof note !== 'object' ||
+                    Array.isArray(note) ||
+                    (note.rating !== undefined && note.rating !== null)
+                  ) {
+                    return note;
+                  }
+                  return { ...note, rating: 0 };
+                })
+              : (data as _BrewingNote[]);
+            await brewingNotePersistence.replaceAllWithImages(notes, {
               allowDestructiveReplace: true,
             });
             break;
+          }
           case 'grinders':
-            await db.grinders.clear();
-            await db.grinders.bulkPut(data as Grinder[]);
+            await grinderRepository.replaceAll(data as Grinder[]);
             break;
         }
       };
@@ -476,8 +524,7 @@ export const DataManager = {
                 );
 
                 if (validGrinders.length > 0) {
-                  await db.grinders.clear();
-                  await db.grinders.bulkPut(validGrinders);
+                  await grinderRepository.replaceAll(validGrinders);
                   await getGrinderStore().refreshGrinders();
                   console.log(
                     `[DataManager] Migrated ${validGrinders.length} grinders from settings`
@@ -521,7 +568,7 @@ export const DataManager = {
         typeof importData.data.customMethodsByEquipment === 'object'
       ) {
         // 清除现有方案数据
-        await db.customMethods.clear();
+        await customMethodRepository.clear();
 
         // 遍历所有器具的方案
         const customMethodsByEquipment = importData.data
@@ -535,7 +582,7 @@ export const DataManager = {
             await storage.set(storageKey, JSON.stringify(methods));
 
             // 同时更新IndexedDB
-            await db.customMethods.put({
+            await customMethodRepository.save({
               equipmentId,
               methods,
             });
@@ -682,17 +729,13 @@ export const DataManager = {
       await markExpectedCoreDataMutation('reset-all-data');
 
       // 清除所有 IndexedDB 数据
-      await db.brewingNotes.clear();
-      await db.brewingNoteImages.clear();
-      await db.brewingNoteImageThumbnails.clear();
-      await db.coffeeBeans.clear();
-      await db.coffeeBeanImages.clear();
-      await db.coffeeBeanImageThumbnails.clear();
-      await db.customEquipments.clear();
-      await db.customMethods.clear();
-      await db.grinders.clear();
-      await db.appSettings.clear();
-      await db.settings.clear();
+      await brewingNotePersistence.clearWithImages();
+      await coffeeBeanPersistence.clearWithImages();
+      await customEquipmentRepository.clear();
+      await customMethodRepository.clear();
+      await grinderRepository.clear();
+      await appSettingsRepository.clear();
+      await legacySettingsRepository.clear();
 
       // 清除 Storage 中的所有应用数据
       for (const key of APP_DATA_KEYS) {
@@ -743,7 +786,7 @@ export const DataManager = {
         // 写入默认设置到 IndexedDB 并重新加载
         const { getSettingsStore, defaultSettings } =
           await import('@/lib/stores/settingsStore');
-        await db.appSettings.put({ id: 'main', data: defaultSettings });
+        await appSettingsRepository.save(defaultSettings);
         await getSettingsStore().loadSettings();
 
         // 重置数据 Store
@@ -892,7 +935,7 @@ export const DataManager = {
   }> {
     try {
       const beans =
-        (await db.coffeeBeans.toArray()) as LegacyCoffeeBeanRecord[];
+        (await coffeeBeanRepository.list()) as LegacyCoffeeBeanRecord[];
 
       let legacyCount = 0;
 
@@ -925,7 +968,7 @@ export const DataManager = {
   async fixBlendBeansData(): Promise<{ success: boolean; fixedCount: number }> {
     try {
       const beans =
-        (await db.coffeeBeans.toArray()) as LegacyCoffeeBeanRecord[];
+        (await coffeeBeanRepository.list()) as LegacyCoffeeBeanRecord[];
       if (beans.length === 0) {
         return { success: true, fixedCount: 0 };
       }
@@ -999,7 +1042,7 @@ export const DataManager = {
 
       // 如果有修复，更新存储
       if (fixedCount > 0) {
-        await db.coffeeBeans.bulkPut(fixedBeans);
+        await coffeeBeanRepository.upsertMany(fixedBeans);
       }
 
       return { success: true, fixedCount };

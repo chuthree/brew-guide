@@ -107,26 +107,63 @@ describe('batchResolveConflicts remote-missing records', () => {
     expect(result.toDeleteLocal).toEqual([]);
   });
 
-  it('keeps already-synced local records without reuploading when remote index is empty', () => {
+  it('uploads older custom equipment and method records when the remote row is absent', () => {
     const result = batchResolveConflicts(
-      [{ id: 'note-1', updatedAt: 1000 }],
+      [
+        { id: 'custom-equipment-1', timestamp: 1000 },
+        { id: 'custom-equipment-methods-1', timestamp: 1100 },
+      ],
       [],
       2000
     );
 
-    expect(result.merged.map(record => record.id)).toEqual(['note-1']);
-    expect(result.toUpload).toEqual([]);
+    expect(result.merged.map(record => record.id)).toEqual([
+      'custom-equipment-1',
+      'custom-equipment-methods-1',
+    ]);
+    expect(result.toUpload.map(record => record.id)).toEqual([
+      'custom-equipment-1',
+      'custom-equipment-methods-1',
+    ]);
     expect(result.toDeleteLocal).toEqual([]);
   });
 
-  it('uploads remote-missing local records changed after last sync', () => {
+  it('does not restore a local record when the remote has an authoritative tombstone', () => {
     const result = batchResolveConflicts(
-      [{ id: 'note-1', updatedAt: 3000 }],
-      [],
+      [{ id: 'custom-equipment-1', timestamp: 1000 }],
+      [
+        {
+          id: 'custom-equipment-1',
+          user_id: 'default_user',
+          data: { id: 'custom-equipment-1', timestamp: 1000 },
+          updated_at: new Date(2000).toISOString(),
+          deleted_at: new Date(2000).toISOString(),
+        },
+      ],
+      500
+    );
+
+    expect(result.toUpload).toEqual([]);
+    expect(result.toDeleteLocal).toEqual(['custom-equipment-1']);
+  });
+
+  it('does not reupload an unchanged record once its remote row exists', () => {
+    const result = batchResolveConflicts(
+      [{ id: 'custom-equipment-1', timestamp: 1000 }],
+      [
+        {
+          id: 'custom-equipment-1',
+          user_id: 'default_user',
+          data: { id: 'custom-equipment-1', timestamp: 1000 },
+          updated_at: new Date(1000).toISOString(),
+          deleted_at: null,
+        },
+      ],
       2000
     );
 
-    expect(result.toUpload.map(record => record.id)).toEqual(['note-1']);
+    expect(result.toUpload).toEqual([]);
+    expect(result.toDownload).toEqual([]);
     expect(result.toDeleteLocal).toEqual([]);
   });
 });

@@ -44,7 +44,7 @@ import {
 } from './tableSizing';
 import FlavorStatusRing from './FlavorStatusRing';
 import TableHoverPreview, { type HoverPreviewBean } from './TableHoverPreview';
-import { getCoffeeBeanImageSource } from '@/lib/coffee-beans/imageRepository';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 import { getComponentOriginDisplay } from '@/lib/coffee-beans/beanFields';
 import {
   getDateDisplayColumnLabel,
@@ -186,7 +186,9 @@ const buildBeanHoverPreview = async (
   fallback?: HoverPreviewBean | null
 ): Promise<HoverPreviewBean | null> => {
   const imageSrc =
-    (await getCoffeeBeanImageSource(bean.id, { mode: 'original' })) ||
+    (await coffeeBeanImageRepository.getSource(bean.id, {
+      mode: 'original',
+    })) ||
     bean.image ||
     '';
 

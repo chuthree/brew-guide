@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { CoffeeBeanGroup } from '@/lib/core/db';
+import type { CoffeeBeanGroup } from '@/lib/data/models';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import type { FlavorPeriodStatus } from '@/lib/utils/beanVarietyUtils';
 import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';

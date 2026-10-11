@@ -16,7 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { MainNavigationTab } from '@/lib/navigation/navigationSettings';
-import type { SettingsOptions } from '@/lib/core/db';
+import type { SettingsOptions } from '@/lib/data/models';
 import type { SettingItemData } from './SettingItem';
 
 type SettingsFeatureGroup =

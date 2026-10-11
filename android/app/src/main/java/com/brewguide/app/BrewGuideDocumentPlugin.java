@@ -63,7 +63,9 @@ public class BrewGuideDocumentPlugin extends Plugin {
         }
 
         if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) {
-            call.reject("保存已取消");
+            JSObject response = new JSObject();
+            response.put("cancelled", true);
+            call.resolve(response);
             return;
         }
 

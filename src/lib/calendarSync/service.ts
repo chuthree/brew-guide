@@ -1,5 +1,5 @@
 import type { CoffeeBean } from '../../types/app';
-import type { AppSettings } from '../core/db';
+import type { AppSettings } from '../data/models';
 import {
   buildBeanCalendarEventCandidates,
   type CalendarEventCandidate,

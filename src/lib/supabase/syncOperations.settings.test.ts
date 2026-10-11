@@ -1,21 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AppSettings, Grinder } from '@/lib/core/db';
-import { db } from '@/lib/core/db';
+import type { AppSettings, Grinder } from '@/lib/data/models';
 import {
   createSettingsSyncFingerprint,
   downloadSettingsData,
   uploadSettingsData,
 } from './syncOperations';
 
-vi.mock('@/lib/core/db', () => ({
-  db: {
-    appSettings: { get: vi.fn(), put: vi.fn() },
-    grinders: {
-      toArray: vi.fn(),
-      clear: vi.fn(),
-      bulkPut: vi.fn(),
-    },
+const repositoryMocks = vi.hoisted(() => ({
+  getAppSettings: vi.fn(),
+  saveAppSettings: vi.fn(),
+  listGrinders: vi.fn(),
+  replaceAllGrinders: vi.fn(),
+}));
+
+vi.mock('@/lib/data/repositories', () => ({
+  appSettingsRepository: {
+    get: repositoryMocks.getAppSettings,
+    save: repositoryMocks.saveAppSettings,
+  },
+  grinderRepository: {
+    list: repositoryMocks.listGrinders,
+    replaceAll: repositoryMocks.replaceAllGrinders,
   },
 }));
 
@@ -65,14 +71,11 @@ const localSettings = {
 };
 
 const localGrinders = [{ id: 'grinder-1', name: 'C40' }];
-const appSettingsRecord = {
-  id: 'main',
-  data: localSettings as unknown as AppSettings,
-};
-
 function mockLocalSettings() {
-  vi.mocked(db.appSettings.get).mockResolvedValue(appSettingsRecord);
-  vi.mocked(db.grinders.toArray).mockResolvedValue(localGrinders as Grinder[]);
+  repositoryMocks.getAppSettings.mockResolvedValue(
+    localSettings as unknown as AppSettings
+  );
+  repositoryMocks.listGrinders.mockResolvedValue(localGrinders as Grinder[]);
 }
 
 function createSettingsClient(remoteData?: Record<string, unknown>) {
@@ -274,8 +277,10 @@ describe('settings sync fingerprint', () => {
   });
 
   it('uploads empty settings sections so deletions are synced', async () => {
-    vi.mocked(db.appSettings.get).mockResolvedValue(appSettingsRecord);
-    vi.mocked(db.grinders.toArray).mockResolvedValue([]);
+    repositoryMocks.getAppSettings.mockResolvedValue(
+      localSettings as unknown as AppSettings
+    );
+    repositoryMocks.listGrinders.mockResolvedValue([]);
     localStorage.removeItem('brew-guide:custom-presets:origins');
     const { client, upsert } = createSettingsClient({
       appSettings: localSettings,
@@ -298,8 +303,10 @@ describe('settings sync fingerprint', () => {
   });
 
   it('clears local grinder and preset sections when remote settings are empty', async () => {
-    vi.mocked(db.appSettings.get).mockResolvedValue(appSettingsRecord);
-    vi.mocked(db.grinders.toArray).mockResolvedValue([]);
+    repositoryMocks.getAppSettings.mockResolvedValue(
+      localSettings as unknown as AppSettings
+    );
+    repositoryMocks.listGrinders.mockResolvedValue([]);
     localStorage.setItem(
       'brew-guide:custom-presets:origins',
       JSON.stringify(['Yirgacheffe'])
@@ -313,8 +320,8 @@ describe('settings sync fingerprint', () => {
     const result = await downloadSettingsData(client);
 
     expect(result).toMatchObject({ success: true });
-    expect(db.grinders.clear).toHaveBeenCalledTimes(1);
-    expect(db.grinders.bulkPut).not.toHaveBeenCalled();
+    expect(repositoryMocks.saveAppSettings).toHaveBeenCalledOnce();
+    expect(repositoryMocks.replaceAllGrinders).toHaveBeenCalledWith([]);
     expect(
       localStorage.getItem('brew-guide:custom-presets:origins')
     ).toBeNull();

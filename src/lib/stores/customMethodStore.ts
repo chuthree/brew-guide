@@ -10,8 +10,8 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { db } from '@/lib/core/db';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
+import { customMethodRepository } from '@/lib/data/repositories';
 import { nanoid } from 'nanoid';
 import {
   isLegacyFormat,
@@ -19,14 +19,6 @@ import {
 } from '@/lib/brewing/stageMigration';
 import { exportJsonFile } from '@/lib/utils/jsonExport';
 import { methodToReadableText } from '@/lib/utils/jsonUtils';
-
-/**
- * 方案数据结构
- */
-interface MethodsData {
-  equipmentId: string;
-  methods: Method[];
-}
 
 /**
  * 自定义方案 Store 状态接口
@@ -163,8 +155,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
       set({ isLoading: true, error: null });
 
       try {
-        // 从 IndexedDB 加载所有方案
-        const methodsData = await db.customMethods.toArray();
+        const methodsData = await customMethodRepository.list();
 
         // 转换为记录格式，同时检测并迁移旧格式数据
         const methodsByEquipment: Record<string, Method[]> = {};
@@ -206,11 +197,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
             );
           }
 
-          await db.transaction('rw', db.customMethods, async () => {
-            for (const { equipmentId, methods } of equipmentsToUpdate) {
-              await db.customMethods.put({ equipmentId, methods });
-            }
-          });
+          await customMethodRepository.upsertMany(equipmentsToUpdate);
         }
 
         set({ methodsByEquipment, isLoading: false, initialized: true });
@@ -231,8 +218,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         const cached = get().methodsByEquipment[equipmentId];
         if (cached) return cached;
 
-        // 从数据库加载
-        const data = await db.customMethods.get(equipmentId);
+        const data = await customMethodRepository.get(equipmentId);
         if (data && data.methods) {
           const originalMethods = data.methods;
           const methods = originalMethods.map(ensureMethodId);
@@ -253,7 +239,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
                 `[CustomMethodStore] 迁移并持久化器具 ${equipmentId} 的方案数据`
               );
             }
-            await db.customMethods.put({ equipmentId, methods });
+            await customMethodRepository.save({ equipmentId, methods });
           }
 
           set(state => ({
@@ -288,7 +274,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         const updatedMethods = [...currentMethods, newMethod];
         const uniqueMethods = deduplicateMethods(updatedMethods);
 
-        await db.customMethods.put({
+        await customMethodRepository.save({
           equipmentId,
           methods: uniqueMethods,
         });
@@ -327,7 +313,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
           m.id === methodId ? updatedMethod : m
         );
 
-        await db.customMethods.put({
+        await customMethodRepository.save({
           equipmentId,
           methods: updatedMethods,
         });
@@ -355,12 +341,12 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         const updatedMethods = currentMethods.filter(m => m.id !== methodId);
 
         if (updatedMethods.length > 0) {
-          await db.customMethods.put({
+          await customMethodRepository.save({
             equipmentId,
             methods: updatedMethods,
           });
         } else {
-          await db.customMethods.delete(equipmentId);
+          await customMethodRepository.delete(equipmentId);
         }
 
         set(state => ({
@@ -385,7 +371,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         const methodsWithIds = methods.map(ensureMethodId);
         const uniqueMethods = deduplicateMethods(methodsWithIds);
 
-        await db.customMethods.put({
+        await customMethodRepository.save({
           equipmentId,
           methods: uniqueMethods,
         });
@@ -425,7 +411,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
         );
         const nextMethods = [...orderedMethods, ...missingMethods];
 
-        await db.customMethods.put({
+        await customMethodRepository.save({
           equipmentId,
           methods: nextMethods,
         });
@@ -446,7 +432,7 @@ export const useCustomMethodStore = create<CustomMethodStore>()(
 
     deleteMethodsForEquipment: async equipmentId => {
       try {
-        await db.customMethods.delete(equipmentId);
+        await customMethodRepository.delete(equipmentId);
 
         set(state => {
           const newMethodsByEquipment = { ...state.methodsByEquipment };

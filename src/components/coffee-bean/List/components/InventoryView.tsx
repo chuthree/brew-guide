@@ -226,8 +226,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     );
   };
 
-  const handleQuickDecrement = async (decrementAmount: number) => {
-    if (!editingRemaining) return;
+  const handleQuickDecrement = async (
+    decrementAmount: number
+  ): Promise<boolean> => {
+    if (!editingRemaining) return false;
 
     const { beanId, value, bean } = editingRemaining;
     setEditingRemaining(null);
@@ -239,6 +241,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         if (result.reducedToZero && onBeanReducedToZero) {
           onBeanReducedToZero();
         }
+        return true;
       } else if (result.error) {
         // 显示错误提示
         const isGreenBean = bean?.beanState === 'green';
@@ -251,6 +254,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
           duration: 3000,
         });
       }
+      return false;
     } catch (error) {
       console.error('快捷减量失败:', error);
       const errorMessage = error instanceof Error ? error.message : '未知错误';
@@ -259,6 +263,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         title: `操作失败: ${errorMessage}`,
         duration: 3000,
       });
+      return false;
     }
   };
 

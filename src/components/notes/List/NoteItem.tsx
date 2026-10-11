@@ -22,7 +22,7 @@ import {
 } from '@/lib/notes/noteDisplay';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
 import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
-import { getCoffeeBeanImageSource } from '@/lib/coffee-beans/imageRepository';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 import { getDataUrlImageDimensions } from '@/lib/images/dimensions';
 
 // 动态导入 RatingRadarDrawer 组件
@@ -248,8 +248,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
     () =>
       Boolean(
         note.equipment &&
-          (note.equipment.toLowerCase().includes('espresso') ||
-            note.equipment.includes('意式'))
+        (note.equipment.toLowerCase().includes('espresso') ||
+          note.equipment.includes('意式'))
       ),
     [note.equipment]
   );
@@ -310,10 +310,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
         const [frontImage, backImage] =
           beanImage && beanInfo?.id
             ? await Promise.all([
-                getCoffeeBeanImageSource(beanInfo.id, {
+                coffeeBeanImageRepository.getSource(beanInfo.id, {
                   preferThumbnail: false,
                 }),
-                getCoffeeBeanImageSource(beanInfo.id, {
+                coffeeBeanImageRepository.getSource(beanInfo.id, {
                   side: 'back',
                   preferThumbnail: false,
                 }),

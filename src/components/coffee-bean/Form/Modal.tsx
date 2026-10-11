@@ -9,7 +9,7 @@ import {
   useMultiStepModalHistory,
   modalHistory,
 } from '@/lib/hooks/useModalHistory';
-import { mergeBeanWithStoredImages } from '@/lib/coffee-beans/imageRepository';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 
 interface CoffeeBeanFormModalProps {
   showForm: boolean;
@@ -88,7 +88,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
       return;
     }
 
-    mergeBeanWithStoredImages(initialBean).then(bean => {
+    coffeeBeanImageRepository.mergeBean(initialBean).then(bean => {
       if (!cancelled) {
         setHydratedInitialBean(bean);
       }

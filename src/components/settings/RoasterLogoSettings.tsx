@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import Image from 'next/image';
 import { getSettingsStore, useSettingsStore } from '@/lib/stores/settingsStore';
-import { RoasterConfig } from '@/lib/core/db';
+import type { RoasterConfig } from '@/lib/data/models';
 import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ExtendedCoffeeBean } from '@/components/coffee-bean/List/types';

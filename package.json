@@ -1,6 +1,6 @@
 {
   "name": "brew-guide",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "private": true,
   "license": "GPL-3.0-only",
   "type": "module",
@@ -34,6 +34,7 @@
     "@capacitor-community/keep-awake": "^7.1.0",
     "@capacitor-community/media": "^8.0.1",
     "@capacitor-community/safe-area": "7.0.0-alpha.1",
+    "@capacitor-community/sqlite": "7.0.3",
     "@capacitor/android": "^7.4.4",
     "@capacitor/app": "^7.1.0",
     "@capacitor/camera": "^7.0.2",
@@ -97,6 +98,7 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^9.37.0",
     "eslint-config-next": "16.1.0",
+    "fake-indexeddb": "^6.2.5",
     "knip": "^5.66.4",
     "postcss": "^8.5.6",
     "postcss-custom-properties": "^14.0.6",

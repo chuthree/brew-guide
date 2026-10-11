@@ -16,7 +16,7 @@ import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-import type { CoffeeBeanGroup } from '@/lib/core/db';
+import type { CoffeeBeanGroup } from '@/lib/data/models';
 import type { CoffeeBean } from '@/types/app';
 import { normalizeCoffeeBeanGroups } from '@/lib/utils/coffeeBeanGroupUtils';
 import {

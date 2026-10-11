@@ -7,7 +7,7 @@ import type {
   BeanType,
 } from './types';
 import { BEAN_FIELD_ID_BY_FILTER_MODE } from './types';
-import type { CoffeeBeanGroup } from '@/lib/core/db';
+import type { CoffeeBeanGroup } from '@/lib/data/models';
 import {
   getBeanRoasterName,
   normalizeDelimitedTextList,

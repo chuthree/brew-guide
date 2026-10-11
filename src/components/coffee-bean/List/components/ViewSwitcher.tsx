@@ -51,7 +51,7 @@ import {
   getBeanSummaryDisplayLimit,
   getBeanSummaryLimitMode,
 } from '@/lib/utils/beanSummaryDisplay';
-import type { CoffeeBeanGroup } from '@/lib/core/db';
+import type { CoffeeBeanGroup } from '@/lib/data/models';
 import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
 import TabButton from '@/components/common/ui/TabButton';
 import { centerCategoryTab } from '@/lib/utils/centerCategoryTab';

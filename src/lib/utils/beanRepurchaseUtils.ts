@@ -5,7 +5,7 @@
 
 import { CoffeeBean } from '@/types/app';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
-import { mergeBeanWithStoredImages } from '@/lib/coffee-beans/imageRepository';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 
 /**
  * 从咖啡豆名称中提取基础名称和编号
@@ -71,7 +71,9 @@ export function getNextAvailableNumber(
 export async function createRepurchaseBean(
   bean: CoffeeBean
 ): Promise<Omit<CoffeeBean, 'id' | 'timestamp'>> {
-  const sourceBean = bean.id ? await mergeBeanWithStoredImages(bean) : bean;
+  const sourceBean = bean.id
+    ? await coffeeBeanImageRepository.mergeBean(bean)
+    : bean;
   // 从 Store 获取所有咖啡豆以检测编号
   const allBeans = useCoffeeBeanStore.getState().beans;
 

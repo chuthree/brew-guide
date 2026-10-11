@@ -10,12 +10,60 @@
  * https://developer.chrome.com/docs/workbox/modules/workbox-background-sync
  */
 
-import { db } from '@/lib/core/db';
+import { offlineQueueRepository } from '@/lib/data/repositories';
+import type { StoredPendingOperation } from '@/lib/data/models';
 import type { PendingOperation, RealtimeSyncTable } from './types';
+import { isRealtimeSyncTable } from './types';
 import { nanoid } from 'nanoid';
 
-// 扩展 Dexie 数据库以支持离线队列
-// 注意：需要在 db.ts 中添加 pendingOperations 表
+/** Narrow a stored row to the operation shape the current processor supports. */
+export function isExecutablePendingOperation(
+  operation: unknown
+): operation is PendingOperation {
+  if (
+    typeof operation !== 'object' ||
+    operation === null ||
+    Array.isArray(operation)
+  ) {
+    return false;
+  }
+
+  const record = operation as Record<string, unknown>;
+  const hasOwn = (key: string) =>
+    Object.prototype.hasOwnProperty.call(record, key);
+  const optionalString = (key: string) =>
+    !hasOwn(key) ||
+    record[key] === undefined ||
+    typeof record[key] === 'string';
+  const optionalSafeInteger = (key: string) =>
+    !hasOwn(key) ||
+    record[key] === undefined ||
+    (typeof record[key] === 'number' && Number.isSafeInteger(record[key]));
+
+  return (
+    typeof record.id === 'string' &&
+    isRealtimeSyncTable(record.table) &&
+    (record.type === 'upsert' || record.type === 'delete') &&
+    typeof record.recordId === 'string' &&
+    typeof record.timestamp === 'number' &&
+    Number.isSafeInteger(record.timestamp) &&
+    typeof record.retryCount === 'number' &&
+    Number.isSafeInteger(record.retryCount) &&
+    record.retryCount >= 0 &&
+    optionalString('lastError') &&
+    optionalSafeInteger('failedAt')
+  );
+}
+
+function operationDiagnostic(operation: unknown): {
+  id?: unknown;
+  table?: unknown;
+  type?: unknown;
+} {
+  if (typeof operation !== 'object' || operation === null) return {};
+  const record = operation as Record<string, unknown>;
+  return { id: record.id, table: record.table, type: record.type };
+}
 
 /**
  * 离线队列管理器
@@ -59,7 +107,7 @@ export class OfflineQueueManager {
       const existing = await this.findExistingOperation(table, recordId);
       if (existing) {
         // 更新现有操作
-        await db.table('pendingOperations').update(existing.id, {
+        await offlineQueueRepository.update(existing.id, {
           type,
           data,
           timestamp: Date.now(),
@@ -70,7 +118,7 @@ export class OfflineQueueManager {
         console.log(`[OfflineQueue] 更新队列操作: ${table}/${recordId}`);
       } else {
         // 添加新操作
-        await db.table('pendingOperations').add(operation);
+        await offlineQueueRepository.add(operation);
         console.log(`[OfflineQueue] 添加到队列: ${table}/${recordId}`);
       }
     } catch (error) {
@@ -84,13 +132,13 @@ export class OfflineQueueManager {
   private async findExistingOperation(
     table: RealtimeSyncTable,
     recordId: string
-  ): Promise<PendingOperation | undefined> {
+  ): Promise<StoredPendingOperation | undefined> {
     try {
-      const operations = await db
-        .table('pendingOperations')
-        .where({ table, recordId })
-        .toArray();
-      return operations[0] as PendingOperation | undefined;
+      const operations = await offlineQueueRepository.findByTarget(
+        table,
+        recordId
+      );
+      return operations[0];
     } catch {
       return undefined;
     }
@@ -99,12 +147,9 @@ export class OfflineQueueManager {
   /**
    * 获取所有待处理的操作
    */
-  async getPendingOperations(): Promise<PendingOperation[]> {
+  async getPendingOperations(): Promise<StoredPendingOperation[]> {
     try {
-      return (await db
-        .table('pendingOperations')
-        .orderBy('timestamp')
-        .toArray()) as PendingOperation[];
+      return await offlineQueueRepository.listOrdered();
     } catch {
       return [];
     }
@@ -115,7 +160,7 @@ export class OfflineQueueManager {
    */
   async getPendingCount(): Promise<number> {
     try {
-      return await db.table('pendingOperations').count();
+      return await offlineQueueRepository.count();
     } catch {
       return 0;
     }
@@ -126,7 +171,7 @@ export class OfflineQueueManager {
    */
   async dequeue(operationId: string): Promise<void> {
     try {
-      await db.table('pendingOperations').delete(operationId);
+      await offlineQueueRepository.delete(operationId);
       console.log(`[OfflineQueue] 移除操作: ${operationId}`);
     } catch (error) {
       console.error('[OfflineQueue] 移除失败:', error);
@@ -141,16 +186,14 @@ export class OfflineQueueManager {
     errorMessage?: string
   ): Promise<boolean> {
     try {
-      const operation = (await db
-        .table('pendingOperations')
-        .get(operationId)) as PendingOperation | undefined;
+      const operation = await offlineQueueRepository.get(operationId);
 
       if (!operation) return false;
 
       const retryCount = operation.retryCount + 1;
       const reachedLimit = retryCount >= this.maxRetries;
 
-      await db.table('pendingOperations').update(operationId, {
+      await offlineQueueRepository.update(operationId, {
         retryCount,
         lastError: errorMessage,
         failedAt: reachedLimit ? Date.now() : undefined,
@@ -194,6 +237,15 @@ export class OfflineQueueManager {
       console.log(`[OfflineQueue] 开始处理 ${operations.length} 个待处理操作`);
 
       for (const operation of operations) {
+        if (!isExecutablePendingOperation(operation)) {
+          console.error(
+            '[OfflineQueue] 存在当前版本无法执行的队列项，已保留:',
+            operationDiagnostic(operation)
+          );
+          blocked++;
+          continue;
+        }
+
         if (operation.retryCount >= this.maxRetries) {
           blocked++;
           continue;
@@ -242,7 +294,7 @@ export class OfflineQueueManager {
    */
   async clear(): Promise<void> {
     try {
-      await db.table('pendingOperations').clear();
+      await offlineQueueRepository.clear();
       console.log('[OfflineQueue] 队列已清空');
     } catch (error) {
       console.error('[OfflineQueue] 清空队列失败:', error);

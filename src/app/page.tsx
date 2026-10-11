@@ -47,6 +47,7 @@ import {
 } from '@/components/layout/NavigationControls';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
+import { legacySettingsRepository } from '@/lib/data/repositories';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
@@ -84,9 +85,9 @@ import CoffeeBeans from '@/components/coffee-bean/List';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import {
-  loadCustomEquipments,
   saveCustomEquipment,
   deleteCustomEquipment,
+  useCustomEquipmentStore,
 } from '@/lib/stores/customEquipmentStore';
 import { useDataLayer } from '@/providers/DataLayerProvider';
 import LegacyDataNoticeDrawer from '@/components/common/modals/LegacyDataNoticeDrawer';
@@ -933,8 +934,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     handleParamChange,
   } = parameterHooks;
 
-  const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>(
-    []
+  const customEquipments = useCustomEquipmentStore(state => state.equipments);
+  const loadEquipments = useCustomEquipmentStore(state => state.loadEquipments);
+  const refreshEquipments = useCustomEquipmentStore(
+    state => state.refreshEquipments
   );
   const [showEquipmentForm, setShowEquipmentForm] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<
@@ -1059,20 +1062,18 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   // 加载自定义器具
   useEffect(() => {
-    const loadEquipments = async () => {
-      try {
-        const equipments = await loadCustomEquipments();
-        setCustomEquipments(equipments);
-      } catch (error) {
-        // Log error in development only
-        if (process.env.NODE_ENV === 'development') {
-          console.error('加载自定义器具失败:', error);
-        }
+    void loadEquipments().catch(error => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('加载自定义器具失败:', error);
       }
-    };
+    });
 
     const handleEquipmentUpdate = () => {
-      loadEquipments();
+      void refreshEquipments().catch(error => {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('刷新自定义器具失败:', error);
+        }
+      });
     };
 
     const handleStorageChange = (e: Event) => {
@@ -1085,14 +1086,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       }
     };
 
-    loadEquipments();
-
-    // 添加事件监听（监听多个事件名以确保兼容）
+    // 器具 Store 是 UI 的唯一数据源；外部批量导入/重置时重新读取持久化数据。
     window.addEventListener('customEquipmentUpdate', handleEquipmentUpdate);
-    window.addEventListener(
-      'customEquipmentDataChanged',
-      handleEquipmentUpdate
-    );
     window.addEventListener('storage:changed', handleStorageChange);
 
     return () => {
@@ -1100,13 +1095,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         'customEquipmentUpdate',
         handleEquipmentUpdate
       );
-      window.removeEventListener(
-        'customEquipmentDataChanged',
-        handleEquipmentUpdate
-      );
       window.removeEventListener('storage:changed', handleStorageChange);
     };
-  }, []);
+  }, [loadEquipments, refreshEquipments]);
 
   const contentHooks = useBrewingContent({
     selectedEquipment,
@@ -1193,9 +1184,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           let isCompleted = onboardingCompleted === 'true';
           if (!isCompleted) {
             try {
-              const { db } = await import('@/lib/core/db');
-              const fallback = await db.settings.get('onboardingCompleted');
-              isCompleted = fallback?.value === 'true';
+              const fallback = await legacySettingsRepository.get(
+                'onboardingCompleted'
+              );
+              isCompleted = fallback === 'true';
             } catch {
               // 静默处理错误
             }
@@ -3499,8 +3491,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       }
 
       await saveCustomEquipment(equipment, methods);
-      const updatedEquipments = await loadCustomEquipments();
-      setCustomEquipments(updatedEquipments);
 
       // 不再在这里自动关闭表单，让模态框通过历史栈管理自己控制
       // setShowEquipmentForm(false);
@@ -3518,8 +3508,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       onConfirm: async () => {
         try {
           await deleteCustomEquipment(equipment.id);
-          const updatedEquipments = await loadCustomEquipments();
-          setCustomEquipments(updatedEquipments);
         } catch (error) {
           if (process.env.NODE_ENV === 'development') {
             console.error('删除器具失败:', error);

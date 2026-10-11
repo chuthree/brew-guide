@@ -1,17 +1,14 @@
-import { db, RoasterConfig } from '@/lib/core/db';
 import { BrewingNote } from '@/lib/core/config';
 import { CoffeeBean } from '@/types/app';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useGrinderStore } from '@/lib/stores/grinderStore';
 import { getSettingsStore, useSettingsStore } from '@/lib/stores/settingsStore';
-import { mergeBeanWithStoredImages } from '@/lib/coffee-beans/imageRepository';
 import {
-  getBeanNameWithoutRoaster,
-  getBeanRoasterName,
-  normalizeCoffeeBean,
-  normalizeCoffeeBeanRoaster,
-} from '@/lib/utils/coffeeBeanUtils';
+  coffeeBeanImageRepository,
+  roasterRenamePersistence,
+} from '@/lib/data/repositories';
+import { normalizeCoffeeBeanRoaster } from '@/lib/utils/coffeeBeanUtils';
 
 export interface RoasterRenameResult {
   renamedRoasterCount: number;
@@ -56,65 +53,10 @@ const resolveRenameTargets = (renames: RenameMap): RenameMap => {
   return resolved;
 };
 
-const mergeRoasterConfig = (
-  base: RoasterConfig,
-  incoming: RoasterConfig,
-  now: number
-): RoasterConfig => ({
-  ...base,
-  logoData: base.logoData ?? incoming.logoData,
-  flavorPeriod: base.flavorPeriod ?? incoming.flavorPeriod,
-  updatedAt: now,
-});
-
-const renameRoasterConfigs = (
-  configs: RoasterConfig[],
-  renames: RenameMap,
-  now: number
-): { configs: RoasterConfig[]; changedCount: number } => {
-  const nextConfigs = new Map<string, RoasterConfig>();
-  let changedCount = 0;
-
-  configs.forEach(config => {
-    const sourceName = normalizeCoffeeBeanRoaster(config.roasterName);
-    if (!renames.has(sourceName)) {
-      nextConfigs.set(config.roasterName, config);
-    }
-  });
-
-  configs.forEach(config => {
-    const sourceName = normalizeCoffeeBeanRoaster(config.roasterName);
-    const targetName = renames.get(sourceName);
-
-    if (!targetName) {
-      return;
-    }
-
-    changedCount += 1;
-    const renamedConfig: RoasterConfig = {
-      ...config,
-      roasterName: targetName,
-      updatedAt: now,
-    };
-    const existing = nextConfigs.get(targetName);
-    nextConfigs.set(
-      targetName,
-      existing
-        ? mergeRoasterConfig(existing, renamedConfig, now)
-        : renamedConfig
-    );
-  });
-
-  return {
-    configs: Array.from(nextConfigs.values()),
-    changedCount,
-  };
-};
-
 const dispatchBeanChanged = async (bean: CoffeeBean) => {
   if (typeof window === 'undefined') return;
 
-  const eventBean = await mergeBeanWithStoredImages(bean);
+  const eventBean = await coffeeBeanImageRepository.mergeBean(bean);
   window.dispatchEvent(
     new CustomEvent('coffeeBeanDataChanged', {
       detail: { action: 'update', beanId: bean.id, bean: eventBean },
@@ -168,152 +110,21 @@ export async function renameRoasters(
   }
 
   const now = Date.now();
-  let nextBeans: CoffeeBean[] = [];
-  const updatedBeans: CoffeeBean[] = [];
-  let nextNotes: BrewingNote[] = [];
-  const updatedNotes: BrewingNote[] = [];
-  let nextGrinders = useGrinderStore.getState().grinders;
-  let updatedGrinderCount = 0;
-  let nextSettings = getSettingsStore().settings;
-  let updatedConfigCount = 0;
-
-  await db.transaction(
-    'rw',
-    db.coffeeBeans,
-    db.brewingNotes,
-    db.grinders,
-    db.appSettings,
-    async () => {
-      const [beans, notes, grinders, settingsRecord] = await Promise.all([
-        db.coffeeBeans.toArray(),
-        db.brewingNotes.toArray(),
-        db.grinders.toArray(),
-        db.appSettings.get('main'),
-      ]);
-      const beanTargetById = new Map<string, string>();
-
-      nextBeans = beans.map(bean => {
-        const currentRoaster = normalizeCoffeeBeanRoaster(
-          getBeanRoasterName(bean)
-        );
-        const targetRoaster = renames.get(currentRoaster);
-
-        if (!targetRoaster) {
-          return bean;
-        }
-
-        const updatedBean = normalizeCoffeeBean(
-          {
-            ...bean,
-            name: getBeanNameWithoutRoaster(bean),
-            roaster: targetRoaster,
-            timestamp: now,
-          },
-          { ensureFlavorArray: true }
-        ) as CoffeeBean;
-
-        beanTargetById.set(bean.id, targetRoaster);
-        updatedBeans.push(updatedBean);
-        return updatedBean;
-      });
-
-      nextNotes = notes.map(note => {
-        const coffeeBeanInfo = note.coffeeBeanInfo;
-        if (!coffeeBeanInfo) {
-          return note;
-        }
-
-        const noteRoaster = normalizeCoffeeBeanRoaster(
-          getBeanRoasterName(coffeeBeanInfo)
-        );
-        const targetRoaster =
-          (note.beanId ? beanTargetById.get(note.beanId) : undefined) ||
-          renames.get(noteRoaster);
-
-        if (!targetRoaster) {
-          return note;
-        }
-
-        const updatedNote: BrewingNote = {
-          ...note,
-          coffeeBeanInfo: {
-            ...coffeeBeanInfo,
-            name: noteRoaster
-              ? getBeanNameWithoutRoaster({
-                  name: coffeeBeanInfo.name,
-                  roaster: noteRoaster,
-                })
-              : coffeeBeanInfo.name,
-            roaster: targetRoaster,
-          },
-          updatedAt: now,
-        };
-
-        updatedNotes.push(updatedNote);
-        return updatedNote;
-      });
-
-      nextGrinders = grinders.map(grinder => {
-        const history = grinder.grindSizeHistory || [];
-        let changed = false;
-        const nextHistory = history.map(item => {
-          const currentRoaster = normalizeCoffeeBeanRoaster(
-            item.coffeeBeanRoaster
-          );
-          const targetRoaster = renames.get(currentRoaster);
-
-          if (!targetRoaster) {
-            return item;
-          }
-
-          changed = true;
-          return {
-            ...item,
-            coffeeBeanRoaster: targetRoaster,
-          };
-        });
-
-        if (!changed) {
-          return grinder;
-        }
-
-        updatedGrinderCount += 1;
-        return {
-          ...grinder,
-          grindSizeHistory: nextHistory,
-        };
-      });
-
-      const currentSettings =
-        settingsRecord?.data || getSettingsStore().settings;
-      const renamedConfigs = renameRoasterConfigs(
-        currentSettings.roasterConfigs || [],
-        renames,
-        now
-      );
-      updatedConfigCount = renamedConfigs.changedCount;
-      nextSettings = {
-        ...currentSettings,
-        roasterConfigs: renamedConfigs.configs,
-      };
-
-      if (updatedBeans.length > 0) {
-        await db.coffeeBeans.bulkPut(updatedBeans);
-      }
-
-      if (updatedNotes.length > 0) {
-        await db.brewingNotes.bulkPut(updatedNotes);
-      }
-
-      if (updatedGrinderCount > 0) {
-        await db.grinders.bulkPut(nextGrinders);
-      }
-
-      if (updatedConfigCount > 0) {
-        await db.appSettings.put({ id: 'main', data: nextSettings });
-      }
-    }
-  );
+  const changes = await roasterRenamePersistence.renameReferences({
+    renames,
+    now,
+    getFallbackSettings: () => getSettingsStore().settings,
+  });
+  const {
+    beans: nextBeans,
+    updatedBeans,
+    notes: nextNotes,
+    updatedNotes,
+    grinders: nextGrinders,
+    updatedGrinderCount,
+    settings: nextSettings,
+    updatedConfigCount,
+  } = changes;
 
   if (updatedBeans.length > 0) {
     useCoffeeBeanStore.setState({ beans: nextBeans });

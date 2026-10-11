@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { type CustomEquipment, type Equipment } from '@/lib/core/config';
 import { equipmentUtils } from '@/lib/equipment/equipmentUtils';
-import type { SettingsOptions } from '@/lib/core/db';
+import type { SettingsOptions } from '@/lib/data/models';
 
 export interface UseEquipmentListOptions {
   customEquipments: CustomEquipment[];

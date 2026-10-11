@@ -1,5 +1,5 @@
 import { CoffeeBean } from '@/types/app';
-import { type SettingsOptions } from '@/lib/core/db';
+import { type SettingsOptions } from '@/lib/data/models';
 import {
   defaultSettings,
   getRoasterConfigSync,

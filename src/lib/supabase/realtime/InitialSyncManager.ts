@@ -11,7 +11,17 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { db } from '@/lib/core/db';
+import {
+  brewingNoteImageRepository,
+  brewingNotePersistence,
+  brewingNoteRepository,
+  coffeeBeanImageRepository,
+  coffeeBeanPersistence,
+  coffeeBeanRepository,
+  customEquipmentRepository,
+  customMethodRepository,
+  imageSourcePayloadValidator,
+} from '@/lib/data/repositories';
 import { copyToClipboard } from '@/lib/utils/exportUtils';
 import {
   SYNC_TABLES,
@@ -31,27 +41,18 @@ import {
   setLastSyncTime,
   extractTimestamp,
 } from './conflictResolver';
-import { getDbTable } from './dbUtils';
 import {
   refreshAllStores,
   refreshSettingsStores,
 } from './handlers/StoreNotifier';
 import type { RealtimeSyncTable } from './types';
-import type { BrewingNote, Method } from '@/lib/core/config';
+import type { BrewingNote, CustomEquipment, Method } from '@/lib/core/config';
 import type { CoffeeBean } from '@/types/app';
 import {
   clearExpectedCoreDataDeletion,
   markExpectedCoreDataDeletionIfEmpty,
 } from '@/lib/app/dataIntegrity';
 import { showToast } from '@/components/common/feedback/LightToast';
-import {
-  mergeBeansWithStoredImages,
-  saveCoffeeBeanWithImages,
-} from '@/lib/coffee-beans/imageRepository';
-import {
-  mergeNotesWithStoredImages,
-  saveBrewingNoteWithImages,
-} from '@/lib/notes/imageRepository';
 import {
   getSyncStatusStore,
   type SupabaseSyncTask,
@@ -811,7 +812,7 @@ export class InitialSyncManager {
    * 同步单个表
    */
   private async syncTable(
-    table: RealtimeSyncTable,
+    table: Exclude<RealtimeSyncTable, 'custom_methods'>,
     lastSyncTime: number
   ): Promise<SyncStats> {
     try {
@@ -820,10 +821,13 @@ export class InitialSyncManager {
         detail: '读取本地数据',
       });
 
-      const dbTable = getDbTable(table);
-
       // 获取本地和云端数据
-      const localRecords = await dbTable.toArray();
+      const localRecords =
+        table === SYNC_TABLES.CUSTOM_EQUIPMENTS
+          ? await customEquipmentRepository.list()
+          : table === SYNC_TABLES.COFFEE_BEANS
+            ? await coffeeBeanRepository.list()
+            : await brewingNoteRepository.list();
 
       this.updateProgressTask(table, {
         status: 'fetching',
@@ -879,11 +883,7 @@ export class InitialSyncManager {
       const idsToDownload: string[] = [];
       const localMap = new Map(
         localRecords.map(r => {
-          // 处理 customMethods 表的特殊情况：它使用 equipmentId 作为唯一标识
-          const id =
-            table === SYNC_TABLES.CUSTOM_METHODS
-              ? (r as { equipmentId: string }).equipmentId
-              : (r as { id: string }).id;
+          const id = (r as { id: string }).id;
           return [id, r];
         })
       );
@@ -1028,9 +1028,13 @@ export class InitialSyncManager {
 
         const recordsForUpload =
           table === SYNC_TABLES.COFFEE_BEANS
-            ? await mergeBeansWithStoredImages(toUpload as CoffeeBean[])
+            ? await coffeeBeanImageRepository.mergeBeans(
+                toUpload as CoffeeBean[]
+              )
             : table === SYNC_TABLES.BREWING_NOTES
-              ? await mergeNotesWithStoredImages(toUpload as BrewingNote[])
+              ? await brewingNoteImageRepository.mergeNotes(
+                  toUpload as BrewingNote[]
+                )
               : toUpload;
 
         const uploadResult = await upsertRecords(
@@ -1082,6 +1086,12 @@ export class InitialSyncManager {
         assertValidDownloadedRecords(table, toDownload);
         const validRecords = toDownload;
 
+        if (table === SYNC_TABLES.COFFEE_BEANS) {
+          await imageSourcePayloadValidator.validateCoffeeBeans(validRecords);
+        } else if (table === SYNC_TABLES.BREWING_NOTES) {
+          await imageSourcePayloadValidator.validateBrewingNotes(validRecords);
+        }
+
         if (validRecords.length > 0) {
           console.warn(
             `[InitialSync] ${table} 写入 ${validRecords.length} 条记录到本地 DB`
@@ -1095,7 +1105,7 @@ export class InitialSyncManager {
                 index + 1,
                 validRecords.length,
                 () =>
-                  saveCoffeeBeanWithImages(record, {
+                  coffeeBeanPersistence.saveWithImages(record, {
                     generateThumbnails: false,
                   })
               );
@@ -1108,14 +1118,13 @@ export class InitialSyncManager {
                 record,
                 index + 1,
                 validRecords.length,
-                () => saveBrewingNoteWithImages(record)
+                () => brewingNotePersistence.saveWithImages(record)
               );
             }
-          } else {
-            const bulkPut = dbTable.bulkPut.bind(dbTable) as (
-              items: unknown[]
-            ) => Promise<unknown>;
-            await bulkPut(validRecords);
+          } else if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
+            await customEquipmentRepository.upsertMany(
+              validRecords as CustomEquipment[]
+            );
           }
           if (
             table === SYNC_TABLES.COFFEE_BEANS ||
@@ -1139,13 +1148,12 @@ export class InitialSyncManager {
         console.log(
           `[InitialSync] ${table} 删除 ${toDeleteLocal.length} 条本地记录`
         );
-        await dbTable.bulkDelete(toDeleteLocal);
-        if (table === SYNC_TABLES.COFFEE_BEANS) {
-          await db.coffeeBeanImages.bulkDelete(toDeleteLocal);
-          await db.coffeeBeanImageThumbnails.bulkDelete(toDeleteLocal);
-        } else if (table === SYNC_TABLES.BREWING_NOTES) {
-          await db.brewingNoteImages.bulkDelete(toDeleteLocal);
-          await db.brewingNoteImageThumbnails.bulkDelete(toDeleteLocal);
+        if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
+          await customEquipmentRepository.deleteMany(toDeleteLocal);
+        } else if (table === SYNC_TABLES.COFFEE_BEANS) {
+          await coffeeBeanPersistence.deleteManyWithImages(toDeleteLocal);
+        } else {
+          await brewingNotePersistence.deleteManyWithImages(toDeleteLocal);
         }
         if (
           table === SYNC_TABLES.COFFEE_BEANS ||
@@ -1190,7 +1198,7 @@ export class InitialSyncManager {
       });
 
       // 获取本地方案
-      const localRecords = await db.customMethods.toArray();
+      const localRecords = await customMethodRepository.list();
       const localWithId = localRecords.map(r => {
         const maxTimestamp = Math.max(
           0,
@@ -1369,7 +1377,7 @@ export class InitialSyncManager {
           equipmentId: item.equipmentId,
           methods: item.methods,
         }));
-        await db.customMethods.bulkPut(recordsForStore);
+        await customMethodRepository.upsertMany(recordsForStore);
 
         this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
           status: 'writing',
@@ -1382,7 +1390,7 @@ export class InitialSyncManager {
 
       // 执行本地删除
       if (toDeleteLocal.length > 0) {
-        await db.customMethods.bulkDelete(toDeleteLocal);
+        await customMethodRepository.deleteMany(toDeleteLocal);
       }
 
       this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {

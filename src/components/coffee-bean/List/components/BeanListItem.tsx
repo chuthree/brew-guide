@@ -18,7 +18,7 @@ import {
 } from '@/lib/utils/beanVarietyUtils';
 import { openImageViewer } from '@/lib/ui/imageViewer';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
-import { getCoffeeBeanImageSource } from '@/lib/coffee-beans/imageRepository';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 
 interface BeanListItemProps {
   bean: ExtendedCoffeeBean;
@@ -139,8 +139,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
 
       void (async () => {
         const [frontImage, backImage] = await Promise.all([
-          getCoffeeBeanImageSource(bean.id, { preferThumbnail: false }),
-          getCoffeeBeanImageSource(bean.id, {
+          coffeeBeanImageRepository.getSource(bean.id, {
+            preferThumbnail: false,
+          }),
+          coffeeBeanImageRepository.getSource(bean.id, {
             side: 'back',
             preferThumbnail: false,
           }),

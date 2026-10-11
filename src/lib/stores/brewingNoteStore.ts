@@ -7,21 +7,18 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { BrewingNote } from '@/lib/core/config';
-import { db } from '@/lib/core/db';
-import { nanoid } from 'nanoid';
 import {
-  normalizeBrewingNote,
-  normalizeStoredBrewingNotes,
-} from '@/lib/notes/cleanup';
+  brewingNoteImageRepository,
+  brewingNotePersistence,
+  brewingNoteRepository,
+} from '@/lib/data/repositories';
+import { nanoid } from 'nanoid';
+import { normalizeBrewingNote } from '@/lib/notes/cleanup';
 import { recordCrashCheckpoint } from '@/lib/app/crashDiagnostics';
 import {
   clearExpectedCoreDataDeletion,
   markExpectedCoreDataDeletionIfEmpty,
 } from '@/lib/app/dataIntegrity';
-import {
-  mergeNoteWithStoredImages,
-  saveBrewingNoteWithImages,
-} from '@/lib/notes/imageRepository';
 import { stripBrewingNoteImages } from '@/lib/notes/imageRecords';
 
 interface BrewingNoteStore {
@@ -59,8 +56,7 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
       if (get().isLoading) return;
       set({ isLoading: true, error: null });
       try {
-        await normalizeStoredBrewingNotes();
-        const notes = await db.brewingNotes.toArray();
+        const notes = await brewingNoteRepository.list();
         recordCrashCheckpoint('brewing-notes:loaded', {
           noteCount: notes.length,
         });
@@ -88,7 +84,7 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         updatedAt: inputNote.updatedAt || timestamp, // 创建时也设置 updatedAt，与 timestamp 相同
       } as BrewingNote).note;
 
-      const noteForStore = await saveBrewingNoteWithImages(newNote);
+      const noteForStore = await brewingNotePersistence.saveWithImages(newNote);
       await clearExpectedCoreDataDeletion();
       set(state => ({ notes: [noteForStore, ...state.notes] }));
 
@@ -133,8 +129,10 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         delete (updatedNote as any).quickDecrementAmount;
       if (shouldRemoveChangeRecord) delete (updatedNote as any).changeRecord;
 
-      const savedNote = await saveBrewingNoteWithImages(updatedNote);
-      const savedEventNote = await mergeNoteWithStoredImages(savedNote);
+      const savedNote =
+        await brewingNotePersistence.saveWithImages(updatedNote);
+      const savedEventNote =
+        await brewingNoteImageRepository.mergeNote(savedNote);
       set(state => ({
         notes: state.notes.map(n => (n.id === id ? savedNote : n)),
       }));
@@ -151,17 +149,7 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
 
     deleteNote: async id => {
       try {
-        await db.transaction(
-          'rw',
-          db.brewingNotes,
-          db.brewingNoteImages,
-          db.brewingNoteImageThumbnails,
-          async () => {
-            await db.brewingNotes.delete(id);
-            await db.brewingNoteImages.delete(id);
-            await db.brewingNoteImageThumbnails.delete(id);
-          }
-        );
+        await brewingNotePersistence.deleteWithImages(id);
         await markExpectedCoreDataDeletionIfEmpty();
         set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
 
@@ -188,7 +176,8 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
 
     upsertNote: async note => {
       const cleanNote = normalizeBrewingNote(note).note;
-      const noteForStore = await saveBrewingNoteWithImages(cleanNote);
+      const noteForStore =
+        await brewingNotePersistence.saveWithImages(cleanNote);
       await clearExpectedCoreDataDeletion();
       set(state => {
         const exists = state.notes.some(n => n.id === noteForStore.id);
@@ -203,17 +192,7 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
     },
 
     removeNote: async id => {
-      await db.transaction(
-        'rw',
-        db.brewingNotes,
-        db.brewingNoteImages,
-        db.brewingNoteImageThumbnails,
-        async () => {
-          await db.brewingNotes.delete(id);
-          await db.brewingNoteImages.delete(id);
-          await db.brewingNoteImageThumbnails.delete(id);
-        }
-      );
+      await brewingNotePersistence.deleteWithImages(id);
       await markExpectedCoreDataDeletionIfEmpty();
       set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
     },

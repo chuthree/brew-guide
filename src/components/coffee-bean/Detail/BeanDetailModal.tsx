@@ -35,7 +35,7 @@ import {
   buildEquipmentNameMap,
   EMPTY_EQUIPMENT_NAME_OVERRIDES,
 } from '@/lib/notes/noteDisplay';
-import { getCoffeeBeanImageSource } from '@/lib/coffee-beans/imageRepository';
+import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 import {
   BEAN_COMPONENT_TEXT_FIELD_IDS,
   getComponentFieldValue,
@@ -691,8 +691,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     setRemainingEditorTarget(target);
   };
 
-  const handleQuickDecrement = async (decrementAmount: number) => {
-    if (!bean?.id) return;
+  const handleQuickDecrement = async (
+    decrementAmount: number
+  ): Promise<boolean> => {
+    if (!bean?.id) return false;
 
     try {
       const beanState = bean.beanState || 'roasted';
@@ -709,7 +711,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
               detail: { action: 'update', beanId: bean.id },
             })
           );
-          return;
+          return true;
         }
 
         showToast({
@@ -717,7 +719,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           title: result.error || '烘焙失败',
           duration: 3000,
         });
-        return;
+        return false;
       }
 
       const currentRemaining = parseFloat(bean.remaining || '0');
@@ -727,21 +729,23 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           title: '当前剩余量无效，无法扣除',
           duration: 3000,
         });
-        return;
+        return false;
       }
 
       const actualDecrement = Math.min(decrementAmount, currentRemaining);
       const nextRemaining = Math.max(0, currentRemaining - actualDecrement);
       const formattedValue = formatCoffeeBeanAmount(nextRemaining);
-      await useCoffeeBeanStore
+      const updatedBean = await useCoffeeBeanStore
         .getState()
         .updateBean(bean.id, { remaining: formattedValue });
+      if (!updatedBean) return false;
 
       window.dispatchEvent(
         new CustomEvent('coffeeBeanDataChanged', {
           detail: { action: 'update', beanId: bean.id },
         })
       );
+      return true;
     } catch (error) {
       console.error('详情页快捷扣除失败:', error);
       showToast({
@@ -749,6 +753,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         title: '扣除失败，请重试',
         duration: 3000,
       });
+      return false;
     }
   };
 
@@ -851,11 +856,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (!bean || !onRoast) return;
 
     const [frontImage, backImage] = await Promise.all([
-      getCoffeeBeanImageSource(bean.id, {
+      coffeeBeanImageRepository.getSource(bean.id, {
         side: 'front',
         mode: 'original',
       }),
-      getCoffeeBeanImageSource(bean.id, {
+      coffeeBeanImageRepository.getSource(bean.id, {
         side: 'back',
         mode: 'original',
       }),

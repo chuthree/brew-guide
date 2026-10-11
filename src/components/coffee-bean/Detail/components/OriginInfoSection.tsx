@@ -6,9 +6,7 @@ import HighlightText from '@/components/common/ui/HighlightText';
 import { BEAN_TYPES } from '../types';
 import BlendComponentTagRows from './BlendComponentTagRows';
 import { updateBlendComponentsDelimitedField } from '@/lib/utils/coffeeBeanUtils';
-import {
-  getComponentFieldValue,
-} from '@/lib/coffee-beans/beanFields';
+import { getComponentFieldValue } from '@/lib/coffee-beans/beanFields';
 import { useRoastLevelSuggestions } from '@/components/coffee-bean/Form/hooks/useCoffeeBeanFieldSuggestions';
 import SuggestionDropdown, {
   SUGGESTION_DROPDOWN_Z_INDEX,
@@ -192,38 +190,45 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
 
   // 初始化成分值
   useEffect(() => {
-    if (firstComponent) {
-      if (originRef.current && firstComponent.origin) {
-        originRef.current.textContent = firstComponent.origin;
-      }
-      if (countryRef.current && firstComponent.country) {
-        countryRef.current.textContent = firstComponent.country;
-      }
-      if (regionRef.current && firstComponent.region) {
-        regionRef.current.textContent = firstComponent.region;
-      }
-      if (estateRef.current && firstComponent.estate) {
-        estateRef.current.textContent = firstComponent.estate;
-      }
-      if (processingStationRef.current && firstComponent.processingStation) {
-        processingStationRef.current.textContent =
-          firstComponent.processingStation;
-      }
-      if (altitudeRef.current && firstComponent.altitude) {
-        altitudeRef.current.textContent = firstComponent.altitude;
-      }
-      if (processRef.current && firstComponent.process) {
-        processRef.current.textContent = firstComponent.process;
-      }
-      if (batchRef.current && firstComponent.batch) {
-        batchRef.current.textContent = firstComponent.batch;
-      }
-      if (varietyRef.current && firstComponent.variety) {
-        varietyRef.current.textContent = firstComponent.variety;
-      }
+    if (originRef.current) {
+      originRef.current.textContent = legacyOrigin;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bean?.id]);
+    if (countryRef.current) {
+      countryRef.current.textContent = country;
+    }
+    if (regionRef.current) {
+      regionRef.current.textContent = region;
+    }
+    if (estateRef.current) {
+      estateRef.current.textContent = estate;
+    }
+    if (processingStationRef.current) {
+      processingStationRef.current.textContent = processingStation;
+    }
+    if (altitudeRef.current) {
+      altitudeRef.current.textContent = altitude;
+    }
+    if (processRef.current) {
+      processRef.current.textContent = process;
+    }
+    if (batchRef.current) {
+      batchRef.current.textContent = batch;
+    }
+    if (varietyRef.current) {
+      varietyRef.current.textContent = variety;
+    }
+  }, [
+    bean?.id,
+    legacyOrigin,
+    country,
+    region,
+    estate,
+    processingStation,
+    altitude,
+    process,
+    batch,
+    variety,
+  ]);
 
   // 处理成分编辑
   const handleBlendComponentUpdate = (
