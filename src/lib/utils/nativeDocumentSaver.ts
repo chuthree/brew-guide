@@ -5,7 +5,7 @@ interface BrewGuideDocumentPlugin {
     sourceUri: string;
     fileName: string;
     mimeType: string;
-  }): Promise<{ uri?: string }>;
+  }): Promise<{ uri?: string; cancelled?: boolean }>;
 }
 
 const BrewGuideDocument =
@@ -40,7 +40,7 @@ export async function saveFileWithAndroidDocumentPicker(options: {
   sourceUri: string;
   fileName: string;
   mimeType: string;
-}): Promise<void> {
+}): Promise<'saved' | 'cancelled'> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
     throw new Error('Android document saver is only available on Android');
   }
@@ -53,11 +53,12 @@ export async function saveFileWithAndroidDocumentPicker(options: {
   }
 
   try {
-    await BrewGuideDocument.saveFile({
+    const result = await BrewGuideDocument.saveFile({
       sourceUri: options.sourceUri,
       fileName: sanitizeFileName(options.fileName),
       mimeType: options.mimeType,
     });
+    return result.cancelled ? 'cancelled' : 'saved';
   } catch (error) {
     if (isAndroidDocumentSaverUnavailable(error)) {
       throw new AndroidDocumentSaverUnavailableError(

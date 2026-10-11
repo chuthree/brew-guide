@@ -108,7 +108,7 @@ const RescueModeDrawer: React.FC = () => {
           : exportRescueData(),
       ]);
       const date = new Date().toISOString().slice(0, 10);
-      await exportJsonFile({
+      const result = await exportJsonFile({
         jsonData,
         fileName: includeImages
           ? `brew-guide-rescue-${date}.json`
@@ -116,7 +116,24 @@ const RescueModeDrawer: React.FC = () => {
         title: '导出抢救数据',
         text: '请选择保存位置',
         dialogTitle: '导出抢救数据',
+        returnIncompleteResult: true,
       });
+
+      if (
+        result.mode === 'activation-required' ||
+        result.mode === 'cancelled'
+      ) {
+        dispatch({ type: 'exportSucceeded' });
+        showToast({
+          type: 'info',
+          title:
+            result.mode === 'activation-required'
+              ? '数据已准备好，请再次点击导出'
+              : '已取消导出',
+        });
+        return;
+      }
+
       dispatch({ type: 'exportSucceeded' });
       showToast({ type: 'success', title: '已导出数据' });
     } catch (error) {
@@ -165,13 +182,30 @@ const RescueModeDrawer: React.FC = () => {
       const jsonData = await exportLegacyPreferencesRescueData();
       const date = new Date().toISOString().slice(0, 10);
 
-      await exportJsonFile({
+      const result = await exportJsonFile({
         jsonData,
         fileName: `brew-guide-legacy-preferences-rescue-${date}.json`,
         title: '导出旧版存储数据',
         text: '请选择保存位置',
         dialogTitle: '导出旧版存储数据',
+        returnIncompleteResult: true,
       });
+
+      if (
+        result.mode === 'activation-required' ||
+        result.mode === 'cancelled'
+      ) {
+        dispatch({ type: 'legacyPreferencesExportSucceeded' });
+        showToast({
+          type: 'info',
+          title:
+            result.mode === 'activation-required'
+              ? '旧版存储数据已准备好，请再次点击导出'
+              : '已取消导出',
+        });
+        return;
+      }
+
       dispatch({ type: 'legacyPreferencesExportSucceeded' });
       showToast({ type: 'success', title: '已导出旧版存储数据' });
     } catch (error) {

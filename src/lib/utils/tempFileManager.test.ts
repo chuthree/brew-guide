@@ -1,9 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
-    isNativePlatform: () => false,
-    getPlatform: () => 'web',
+    isNativePlatform: vi.fn(() => false),
+    getPlatform: vi.fn(() => 'web'),
   },
 }));
 
@@ -14,7 +14,12 @@ vi.mock('@capacitor/share', () => ({
 vi.mock('@capacitor/filesystem', () => ({
   Directory: { Cache: 'CACHE' },
   Encoding: { UTF8: 'utf8' },
-  Filesystem: {},
+  Filesystem: {
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    appendFile: vi.fn().mockResolvedValue(undefined),
+    getUri: vi.fn().mockResolvedValue({ uri: 'file:///cache/export.json' }),
+    deleteFile: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 vi.mock('./nativeGallerySaver', () => ({
@@ -28,10 +33,27 @@ vi.mock('./nativeDocumentSaver', () => ({
 
 import { TempFileManager } from './tempFileManager';
 import { exportJsonFile } from './jsonExport';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem } from '@capacitor/filesystem';
+import { saveFileWithAndroidDocumentPicker } from './nativeDocumentSaver';
 
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+beforeEach(() => {
+  vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+  vi.mocked(Capacitor.getPlatform).mockReturnValue('web');
+  vi.mocked(saveFileWithAndroidDocumentPicker).mockReset();
+  vi.mocked(Filesystem.writeFile).mockResolvedValue({
+    uri: 'file:///cache/export.json',
+  });
+  vi.mocked(Filesystem.appendFile).mockResolvedValue(undefined);
+  vi.mocked(Filesystem.getUri).mockResolvedValue({
+    uri: 'file:///cache/export.json',
+  });
+  vi.mocked(Filesystem.deleteFile).mockResolvedValue(undefined);
 });
 
 describe('TempFileManager image saving', () => {
@@ -305,6 +327,24 @@ describe('TempFileManager binary sharing', () => {
 });
 
 describe('TempFileManager JSON saving', () => {
+  it('returns Android document picker cancellation as an incomplete export', async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
+    vi.mocked(saveFileWithAndroidDocumentPicker).mockResolvedValue('cancelled');
+
+    const result = await exportJsonFile({
+      jsonData: '{"beans":[]}',
+      fileName: 'brew-guide-data',
+      returnIncompleteResult: true,
+    });
+
+    expect(result).toMatchObject({
+      mode: 'cancelled',
+      fileName: 'brew-guide-data.json',
+    });
+    expect(Filesystem.deleteFile).toHaveBeenCalledOnce();
+  });
+
   it('uses Web Share with a JSON file in an installed iOS PWA', async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     const canShare = vi.fn().mockReturnValue(true);
