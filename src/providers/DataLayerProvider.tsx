@@ -118,18 +118,16 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
   return (
     <DataLayerContext.Provider value={state}>
       {nativeAndroid === null || (nativeAndroid && !state.isInitialized) ? (
-        <div className="flex min-h-dvh items-center justify-center px-6 text-sm text-neutral-500 dark:text-neutral-400">
-          {migrationActive ? null : state.error ? (
+        !migrationActive && state.error ? (
+          <div className="flex min-h-dvh items-center justify-center px-6 text-sm text-neutral-500 dark:text-neutral-400">
             <div className="space-y-4 text-center">
               <p role="alert">暂时无法加载数据，请再试一次。</p>
               <button type="button" onClick={retryInitialization}>
                 重试
               </button>
             </div>
-          ) : (
-            <p role="status">正在准备本地数据…</p>
-          )}
-        </div>
+          </div>
+        ) : null
       ) : (
         children
       )}
