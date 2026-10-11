@@ -63,8 +63,20 @@ const collectBeanPayloadMetrics = (beans: CoffeeBean[]) => {
   };
 };
 
+const getImageRecordCountForDiagnostics = async (): Promise<
+  number | undefined
+> => {
+  try {
+    return (await coffeeBeanImageRepository.getRecordCounts()).records;
+  } catch {
+    // Diagnostic image counts must not make the primary bean load fail, such
+    // as when another SQLite transaction is active.
+    return undefined;
+  }
+};
+
 let beanMutationVersion = 0;
-let reloadRequestedWhileLoading = false;
+let refreshRequestedWhileLoading = false;
 
 export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
   subscribeWithSelector((set, get) => ({
@@ -74,16 +86,13 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
     initialized: false,
 
     loadBeans: async () => {
-      if (get().isLoading) {
-        reloadRequestedWhileLoading = true;
-        return;
-      }
+      if (get().isLoading) return;
 
       const loadVersion = beanMutationVersion;
       const finishLoading = () => {
         set({ isLoading: false });
-        if (reloadRequestedWhileLoading) {
-          reloadRequestedWhileLoading = false;
+        if (refreshRequestedWhileLoading) {
+          refreshRequestedWhileLoading = false;
           void get().loadBeans();
         }
       };
@@ -93,8 +102,7 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
         const rawBeans = await coffeeBeanRepository.list();
         recordCrashCheckpoint('coffee-beans:raw-loaded', {
           ...collectBeanPayloadMetrics(rawBeans as CoffeeBean[]),
-          imageRecordCount: (await coffeeBeanImageRepository.getRecordCounts())
-            .records,
+          imageRecordCount: await getImageRecordCountForDiagnostics(),
         });
         const beans = normalizeCoffeeBeans(rawBeans, {
           ensureFlavorArray: true,
@@ -121,13 +129,13 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
         recordCrashCheckpoint('coffee-beans:normalized', {
           beanCount: beans.length,
           repairedBeanCount: repairedBeans.length,
-          imageRecordCount: (await coffeeBeanImageRepository.getRecordCounts())
-            .records,
+          imageRecordCount: await getImageRecordCountForDiagnostics(),
         });
         set({ beans, initialized: true });
         finishLoading();
       } catch (error) {
         console.error('[CoffeeBeanStore] loadBeans failed:', error);
+        refreshRequestedWhileLoading = false;
         set({ error: '加载咖啡豆失败', isLoading: false, initialized: false });
         throw error;
       }
@@ -274,6 +282,10 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
 
     refreshBeans: async () => {
       set({ initialized: false });
+      if (get().isLoading) {
+        refreshRequestedWhileLoading = true;
+        return;
+      }
       await get().loadBeans();
     },
   }))
