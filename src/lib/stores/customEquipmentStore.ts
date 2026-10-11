@@ -10,10 +10,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { type CustomEquipment, type Method } from '@/lib/core/config';
-import {
-  customEquipmentRepository,
-  customMethodRepository,
-} from '@/lib/data/repositories';
+import { customEquipmentRepository } from '@/lib/data/repositories';
 import { nanoid } from 'nanoid';
 
 /**
@@ -151,15 +148,17 @@ export const useCustomEquipmentStore = create<CustomEquipmentStore>()(
 
     deleteEquipment: async id => {
       try {
-        // 同时删除关联的方案
-        await customMethodRepository.delete(id);
+        // 同步删除关联方案的 Store 状态、持久化记录和云端 tombstone。
+        const { useCustomMethodStore } =
+          await import('@/lib/stores/customMethodStore');
+        await useCustomMethodStore.getState().deleteMethodsForEquipment(id);
         await customEquipmentRepository.delete(id);
 
         set(state => ({
           equipments: state.equipments.filter(e => e.id !== id),
         }));
 
-        // 触发变化事件
+        // 先前一步已发出方案 tombstone，这里再同步器具删除。
         dispatchEquipmentChanged('delete', { id } as CustomEquipment);
 
         return true;

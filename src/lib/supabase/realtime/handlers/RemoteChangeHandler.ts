@@ -36,6 +36,30 @@ import { getSettingsStore } from '@/lib/stores/settingsStore';
 
 type PostgresPayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
+function getLocalConflictRecord(
+  table: RealtimeSyncTable,
+  recordId: string,
+  localRecord: unknown
+): { id: string; timestamp?: number } | undefined {
+  if (!localRecord) return undefined;
+
+  if (table === SYNC_TABLES.CUSTOM_METHODS) {
+    const methods = (localRecord as { methods?: Method[] }).methods;
+    const timestamp = Math.max(
+      0,
+      ...(Array.isArray(methods)
+        ? methods.map(method =>
+            Number.isFinite(method?.timestamp) ? method.timestamp! : 0
+          )
+        : [])
+    );
+
+    return { id: recordId, timestamp };
+  }
+
+  return localRecord as { id: string; timestamp?: number };
+}
+
 /**
  * 远程变更处理器类
  */
@@ -115,11 +139,12 @@ export class RemoteChangeHandler {
       ? new Date(remoteRecord.updated_at as string).getTime()
       : Date.now();
     const localTime = extractTimestamp(
-      localRecord as { id: string; timestamp?: number; updatedAt?: number }
+      getLocalConflictRecord(table, recordId, localRecord)!
     );
 
     if (remoteTime >= localTime) {
       if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
+        await this.deleteAssociatedMethods(recordId);
         await customEquipmentRepository.delete(recordId);
       } else if (table === SYNC_TABLES.CUSTOM_METHODS) {
         await customMethodRepository.delete(recordId);
@@ -131,6 +156,12 @@ export class RemoteChangeHandler {
       await notifyStoreDelete(table, recordId);
     }
     // 如果本地更新更晚，则忽略远程删除
+  }
+
+  /** 删除自定义器具后，清除其方案集合及对应的 Store 状态。 */
+  private async deleteAssociatedMethods(equipmentId: string): Promise<void> {
+    await customMethodRepository.delete(equipmentId);
+    await notifyStoreDelete(SYNC_TABLES.CUSTOM_METHODS, equipmentId);
   }
 
   /**
@@ -168,7 +199,7 @@ export class RemoteChangeHandler {
 
     if (
       shouldAcceptRemoteChange(
-        localRecord as { id: string; timestamp?: number } | undefined,
+        getLocalConflictRecord(table, recordId, localRecord),
         cloudRecord as CloudRecord<{ id: string; timestamp?: number }>
       )
     ) {

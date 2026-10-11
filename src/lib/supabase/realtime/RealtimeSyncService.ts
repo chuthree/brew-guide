@@ -191,6 +191,12 @@ export class RealtimeSyncService {
   private isProcessingRemoteSettings = false;
   private isInitialized = false;
   private syncRunPromise: Promise<void> | null = null;
+  private remoteChangeQueue: Promise<void> = Promise.resolve();
+  private connectionAttempt: {
+    url: string;
+    anonKey: string;
+    promise: Promise<boolean>;
+  } | null = null;
 
   private constructor() {
     if (typeof window !== 'undefined') {
@@ -287,6 +293,33 @@ export class RealtimeSyncService {
       return true;
     }
 
+    const pendingAttempt = this.connectionAttempt;
+    if (pendingAttempt) {
+      if (
+        pendingAttempt.url === config.url &&
+        pendingAttempt.anonKey === config.anonKey
+      ) {
+        return pendingAttempt.promise;
+      }
+
+      await pendingAttempt.promise.catch(() => false);
+      return this.connect(config);
+    }
+
+    const promise = this.connectOnce(config);
+    const attempt = { url: config.url, anonKey: config.anonKey, promise };
+    this.connectionAttempt = attempt;
+
+    try {
+      return await promise;
+    } finally {
+      if (this.connectionAttempt === attempt) {
+        this.connectionAttempt = null;
+      }
+    }
+  }
+
+  private async connectOnce(config: RealtimeSyncConfig): Promise<boolean> {
     // 清理旧连接（包括失败后的残留 client/channel）
     if (this.client || this.channel) {
       await this.disconnect();
@@ -624,21 +657,29 @@ export class RealtimeSyncService {
   /**
    * 处理远程变更（委托给 RemoteChangeHandler）
    */
-  private async handleRemoteChange(
+  private handleRemoteChange(
     table: RealtimeSyncTable,
     payload: PostgresPayload
   ): Promise<void> {
-    const success = await remoteChangeHandler.handleChange(
-      table,
-      payload,
-      this.pendingLocalChanges
-    );
+    const nextChange = this.remoteChangeQueue.then(async () => {
+      const success = await remoteChangeHandler.handleChange(
+        table,
+        payload,
+        this.pendingLocalChanges
+      );
 
-    if (success) {
-      const now = Date.now();
-      setLastSyncTime(now);
-      this.setState({ lastSyncTime: now });
-    }
+      if (success) {
+        const now = Date.now();
+        setLastSyncTime(now);
+        this.setState({ lastSyncTime: now });
+      }
+    });
+
+    this.remoteChangeQueue = nextChange.catch(error => {
+      console.error(`[RealtimeSync] 处理远程变更失败 ${table}:`, error);
+    });
+
+    return this.remoteChangeQueue;
   }
 
   private async handleRemoteSettingsChange(
