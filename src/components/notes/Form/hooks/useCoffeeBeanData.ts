@@ -13,14 +13,15 @@ export const useCoffeeBeanData = () => {
   const beans = useCoffeeBeanStore(state => state.beans);
   const isLoading = useCoffeeBeanStore(state => state.isLoading);
   const initialized = useCoffeeBeanStore(state => state.initialized);
+  const loadError = useCoffeeBeanStore(state => state.error);
   const loadBeans = useCoffeeBeanStore(state => state.loadBeans);
 
   // 初始化时确保数据已加载
   useEffect(() => {
-    if (!initialized && !isLoading) {
+    if (!initialized && !isLoading && !loadError) {
       loadBeans();
     }
-  }, [initialized, isLoading, loadBeans]);
+  }, [initialized, isLoading, loadError, loadBeans]);
 
   // 根据 ID 查找咖啡豆
   const findBeanById = useCallback(

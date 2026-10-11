@@ -238,11 +238,6 @@ export const initializeGlobalCache = async (): Promise<void> => {
   }
 };
 
-// 只在客户端环境下初始化全局缓存
-if (typeof window !== 'undefined') {
-  initializeGlobalCache();
-}
-
 // 初始化全局缓存的状态
 globalCache.selectedEquipment = getSelectedEquipmentPreference();
 globalCache.filterMode = getFilterModePreference();
