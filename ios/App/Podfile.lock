@@ -12,6 +12,10 @@ PODS:
     - SDWebImage
   - CapacitorCommunitySafeArea (7.0.0-alpha.1):
     - Capacitor
+  - CapacitorCommunitySqlite (7.0.3):
+    - Capacitor
+    - SQLCipher
+    - ZIPFoundation
   - CapacitorCordova (7.4.5)
   - CapacitorFilesystem (7.1.6):
     - Capacitor
@@ -36,6 +40,12 @@ PODS:
   - SDWebImage (5.21.5):
     - SDWebImage/Core (= 5.21.5)
   - SDWebImage/Core (5.21.5)
+  - SQLCipher (4.10.0):
+    - SQLCipher/standard (= 4.10.0)
+  - SQLCipher/common (4.10.0)
+  - SQLCipher/standard (4.10.0):
+    - SQLCipher/common
+  - ZIPFoundation (0.9.20)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.4.5_@capacitor+core@7.4.5/node_modules/@capacitor/ios`)"
@@ -44,6 +54,7 @@ DEPENDENCIES:
   - "CapacitorCommunityKeepAwake (from `../../node_modules/.pnpm/@capacitor-community+keep-awake@7.1.0_@capacitor+core@7.4.5/node_modules/@capacitor-community/keep-awake`)"
   - "CapacitorCommunityMedia (from `../../node_modules/.pnpm/@capacitor-community+media@8.0.1_@capacitor+core@7.4.5/node_modules/@capacitor-community/media`)"
   - "CapacitorCommunitySafeArea (from `../../node_modules/.pnpm/@capacitor-community+safe-area@7.0.0-alpha.1_@capacitor+core@7.4.5/node_modules/@capacitor-community/safe-area`)"
+  - "CapacitorCommunitySqlite (from `../../node_modules/.pnpm/@capacitor-community+sqlite@7.0.3_@capacitor+core@7.4.5/node_modules/@capacitor-community/sqlite`)"
   - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@7.4.5_@capacitor+core@7.4.5/node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@7.1.6_@capacitor+core@7.4.5/node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@7.0.3_@capacitor+core@7.4.5/node_modules/@capacitor/haptics`)"
@@ -59,6 +70,8 @@ SPEC REPOS:
   trunk:
     - IONFilesystemLib
     - SDWebImage
+    - SQLCipher
+    - ZIPFoundation
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -73,6 +86,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor-community+media@8.0.1_@capacitor+core@7.4.5/node_modules/@capacitor-community/media"
   CapacitorCommunitySafeArea:
     :path: "../../node_modules/.pnpm/@capacitor-community+safe-area@7.0.0-alpha.1_@capacitor+core@7.4.5/node_modules/@capacitor-community/safe-area"
+  CapacitorCommunitySqlite:
+    :path: "../../node_modules/.pnpm/@capacitor-community+sqlite@7.0.3_@capacitor+core@7.4.5/node_modules/@capacitor-community/sqlite"
   CapacitorCordova:
     :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.5_@capacitor+core@7.4.5/node_modules/@capacitor/ios"
   CapacitorFilesystem:
@@ -101,6 +116,7 @@ SPEC CHECKSUMS:
   CapacitorCommunityKeepAwake: 05c75aab989f60e621870cf03b24a144a5544c30
   CapacitorCommunityMedia: d1538b56a3303298e7cf45a18b11e624fbcbdc8e
   CapacitorCommunitySafeArea: 3f049619072ab5d0da2529bcb05b358ff6c13dc1
+  CapacitorCommunitySqlite: 4813d82ad33001e612a39d313cb5d28066cbafda
   CapacitorCordova: 31bbe4466000c6b86d9b7f1181ee286cff0205aa
   CapacitorFilesystem: 66f05ee0d8b1ccdc00d509091273a9b3b57c4a0b
   CapacitorHaptics: ce15be8f287fa2c61c7d2d9e958885b90cf0bebc
@@ -113,7 +129,9 @@ SPEC CHECKSUMS:
   EbarooniCapacitorCalendar: 4568a8a318b940245bf6e257a8b115626581bb7d
   IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
   SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838
+  SQLCipher: eb79c64049cb002b4e9fcb30edb7979bf4706dfc
+  ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: a48a4472675ebeaf5e61d19ff11c5a12a6c57177
+PODFILE CHECKSUM: 255528b2953283f23e03d1ecc5d40011290d4aff
 
 COCOAPODS: 1.16.2
