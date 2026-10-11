@@ -30,11 +30,10 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
 
   // 初始化备注值
   useEffect(() => {
-    if (bean?.notes && notesRef.current) {
-      notesRef.current.innerText = bean.notes;
+    if (notesRef.current) {
+      notesRef.current.innerText = bean?.notes || '';
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bean?.id]);
+  }, [bean?.id, bean?.notes]);
 
   // 处理备注内容变化
   const handleNotesInput = () => {
