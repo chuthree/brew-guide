@@ -71,10 +71,16 @@ export interface BeanRatingHighlights {
   worst: BeanRatingHighlight[];
 }
 
+export interface RoasterRatingStatsItem {
+  roasterName: string;
+  averageRating: number;
+  beanCount: number; // 有评分的咖啡豆数量，每款豆子等权
+}
+
 // 基于冲煮记录统计出的常用方案组合
 export interface CommonMethodStatsItem {
   key: string;
-  label: string; // 例如 "V60 / 粕谷 4:6" 或单独的方案名
+  label: string; // 例如 "V60 · 粕谷 4:6" 或单独的方案名
   count: number;
   latestTimestamp: number;
 }
@@ -96,6 +102,7 @@ export interface UnifiedStatsData {
   inventoryByType: TypeInventoryStats[] | null;
   // 全部/年/月视图下的评分最高和最低咖啡豆
   ratingHighlights: BeanRatingHighlights | null;
+  roasterRatings: RoasterRatingStatsItem[];
   // 全部/年/月视图下常用的器具 + 方案组合
   commonMethods: CommonMethodStatsItem[];
 }

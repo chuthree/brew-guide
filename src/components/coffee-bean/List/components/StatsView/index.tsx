@@ -8,6 +8,7 @@ import {
   BrewingDetailItem,
   BeanType,
   BeanRatingHighlights,
+  RoasterRatingStatsItem,
   CommonMethodStatsItem,
 } from './types';
 import { formatNumber } from './utils';
@@ -105,6 +106,7 @@ type RoastedStatsSectionKey =
   | 'worstBeans'
   | 'expensiveBeans'
   | 'cheapBeans'
+  | 'roasterRatings'
   | 'roaster'
   | 'originMap'
   | 'origin'
@@ -122,6 +124,7 @@ const ROASTED_STATS_SECTION_DEFAULTS: StatsSectionOption[] = [
   { key: 'beanCount', label: '咖啡豆', visible: true },
   { key: 'commonMethods', label: '常用方案', visible: true },
   { key: 'roaster', label: '烘焙商', visible: true },
+  { key: 'roasterRatings', label: '烘焙商平均分', visible: false },
   { key: 'expensiveBeans', label: '最贵豆子', visible: false },
   { key: 'cheapBeans', label: '最便宜豆子', visible: false },
   { key: 'bestBeans', label: '最夯豆子', visible: false },
@@ -715,14 +718,21 @@ const BrewingDetails: React.FC<{ data: BrewingDetailItem[] }> = ({ data }) => {
 interface BeanAttributeItemProps {
   label: string;
   value: string | number;
+  count?: number;
 }
 
 const BeanAttributeItem: React.FC<BeanAttributeItemProps> = ({
   label,
   value,
+  count,
 }) => (
-  <div className="grid grid-cols-[1fr_auto] gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+  <div
+    className={`grid gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100 ${count !== undefined ? 'grid-cols-[minmax(0,1fr)_3rem_4rem]' : 'grid-cols-[1fr_auto]'}`}
+  >
     <div className="truncate">{label}</div>
+    {count !== undefined && (
+      <div className="text-right tabular-nums">{count}</div>
+    )}
     <div className="text-right tabular-nums">{value}</div>
   </div>
 );
@@ -731,6 +741,7 @@ interface AttributeCardRow {
   key: string;
   label: string;
   value: string | number;
+  count?: number;
 }
 
 type AttributeCardItem = readonly [string, string | number] | AttributeCardRow;
@@ -753,6 +764,7 @@ interface AttributeCardProps {
   title: string;
   data: AttributeCardItem[];
   valueLabel?: string;
+  countLabel?: string;
   initialLimit?: number;
   displayMode?: 'list' | 'tags'; // 新增：显示模式
 }
@@ -761,6 +773,7 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
   title,
   data,
   valueLabel = '数量',
+  countLabel,
   initialLimit = 5,
   displayMode = 'list',
 }) => {
@@ -900,8 +913,11 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
       onClick={handleToggle}
     >
       {/* 表头 */}
-      <div className="mb-2 grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+      <div
+        className={`mb-2 grid gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 ${countLabel ? 'grid-cols-[minmax(0,1fr)_3rem_4rem]' : 'grid-cols-[1fr_auto]'}`}
+      >
         <div>{title}</div>
+        {countLabel && <div className="text-right">{countLabel}</div>}
         <div className="text-right">{valueLabel}</div>
       </div>
       {/* 数据行容器 - 添加动画 */}
@@ -919,6 +935,9 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
             key={getAttributeCardItemKey(item)}
             label={getAttributeCardItemLabel(item)}
             value={getAttributeCardItemValue(item)}
+            count={
+              countLabel && isAttributeCardRow(item) ? item.count : undefined
+            }
           />
         ))}
       </div>
@@ -1019,6 +1038,7 @@ interface BeanAttributeStatsProps {
   selectedDate: string | null;
   dateGroupingMode: DateGroupingMode;
   ratingHighlights: BeanRatingHighlights | null;
+  roasterRatings: RoasterRatingStatsItem[];
   commonMethods: CommonMethodStatsItem[];
   onExplain: (
     key: StatsKey,
@@ -1032,6 +1052,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
   selectedDate,
   dateGroupingMode,
   ratingHighlights,
+  roasterRatings,
   commonMethods,
   onExplain,
 }) => {
@@ -1187,6 +1208,15 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     );
   }, [ratingHighlights]);
 
+  const roasterRatingStats = useMemo<AttributeCardItem[]>(() => {
+    return roasterRatings.map(roaster => ({
+      key: roaster.roasterName,
+      label: roaster.roasterName,
+      count: roaster.beanCount,
+      value: formatNumber(roaster.averageRating),
+    }));
+  }, [roasterRatings]);
+
   const worstBeanStats = useMemo<AttributeCardItem[]>(() => {
     return (
       ratingHighlights?.worst.map(bean => ({
@@ -1323,6 +1353,18 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
           <AttributeCard key="roaster" title="烘焙商" data={roasterStats} />
         ) : null,
       ],
+      [
+        'roasterRatings',
+        roasterRatingStats.length > 0 ? (
+          <AttributeCard
+            key="roasterRatings"
+            title="烘焙商平均分"
+            data={roasterRatingStats}
+            countLabel="款数"
+            valueLabel="平均分"
+          />
+        ) : null,
+      ],
       ['originMap', originMap],
       [
         'origin',
@@ -1413,6 +1455,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     processingStationStats,
     regionStats,
     roasterStats,
+    roasterRatingStats,
     varietyStats,
     worstBeanStats,
   ]);
@@ -1926,6 +1969,7 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
                 selectedDate={selectedDate}
                 dateGroupingMode={dateGroupingMode}
                 ratingHighlights={stats.ratingHighlights}
+                roasterRatings={stats.roasterRatings}
                 commonMethods={stats.commonMethods}
                 onExplain={handleExplain}
               />

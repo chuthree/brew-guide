@@ -13,7 +13,11 @@ import {
   BeanRatingHighlights,
   CommonMethodStatsItem,
 } from './types';
-import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import {
+  formatBeanDisplayName,
+  getRoasterName,
+} from '@/lib/utils/beanVarietyUtils';
+import { buildRoasterRatingStats } from './utils';
 import { findCoffeeBeanByIdentity } from '@/lib/utils/coffeeBeanUtils';
 import { getBeanRatingInfo } from '@/lib/utils/beanRatingUtils';
 import { getBrewingNotes } from '@/lib/notes/relatedNotes';
@@ -179,13 +183,8 @@ const compareWorstRatedBeans = (
 };
 
 const buildBeanRatingHighlights = (
-  candidates: Map<string, BeanRatingCandidate>,
-  notes: BrewingNote[]
+  ratedBeans: BeanRatingHighlight[]
 ): BeanRatingHighlights | null => {
-  const ratedBeans = Array.from(candidates.values()).flatMap(candidate => {
-    const highlight = toBeanRatingHighlight(candidate, notes);
-    return highlight ? [highlight] : [];
-  });
   if (ratedBeans.length === 0) return null;
 
   return {
@@ -216,7 +215,7 @@ const buildCommonMethodLabel = (
   if (!equipment) return method;
 
   const equipmentName = getEquipmentNameById(equipment, customEquipments);
-  return `${equipmentName} / ${method}`;
+  return `${equipmentName} · ${method}`;
 };
 
 const addCommonMethodStats = (
@@ -879,6 +878,15 @@ export const useStatsData = (
           )
         : actualDays;
 
+    const ratedBeans = Array.from(beanRatingCandidates.values()).flatMap(
+      candidate => {
+        const highlight = toBeanRatingHighlight(candidate, notes);
+        return highlight
+          ? [{ ...highlight, roasterName: getRoasterName(candidate.bean) }]
+          : [];
+      }
+    );
+
     return {
       totalConsumption,
       totalCost,
@@ -890,7 +898,8 @@ export const useStatsData = (
       typePricedConsumption,
       todayTypeConsumption,
       todayTypeCost,
-      ratingHighlights: buildBeanRatingHighlights(beanRatingCandidates, notes),
+      ratingHighlights: buildBeanRatingHighlights(ratedBeans),
+      roasterRatings: buildRoasterRatingStats(ratedBeans),
       actualDays,
       averageConsumptionPeriods,
       averageConsumptionUnit,
@@ -991,6 +1000,7 @@ export const useStatsData = (
       inventoryByType,
       ratingHighlights,
       commonMethods: computedData.commonMethods,
+      roasterRatings: computedData.roasterRatings,
     };
   }, [computedData, roastedBeans, isHistoricalView]);
 
