@@ -250,6 +250,22 @@ export function getComponentFieldValue(
   return stringifyFieldValue(component[fieldId]);
 }
 
+/** 开关决定空字段是否可填；已有内容始终可查看、编辑。 */
+export function getVisibleBeanFieldIds(
+  config: BeanFieldConfig,
+  components: readonly BlendComponent[]
+): BeanFieldId[] {
+  return config.fields
+    .filter(
+      field =>
+        field.enabled ||
+        components.some(component =>
+          getComponentFieldValue(component, field.id)
+        )
+    )
+    .map(field => field.id);
+}
+
 export function hasStructuredOriginFields(
   component: BlendComponent | undefined
 ): boolean {

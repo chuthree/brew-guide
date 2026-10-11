@@ -45,7 +45,7 @@ describe('buildBlendComponentDisplayRows', () => {
     ]);
   });
 
-  it('keeps legacy origin only for components without structured origin data', () => {
+  it('keeps enabled origin even when structured origin data exists', () => {
     const rows = buildBlendComponentDisplayRows([
       { origin: '哥伦比亚 蕙兰', process: '水洗' },
       {
@@ -58,6 +58,7 @@ describe('buildBlendComponentDisplayRows', () => {
 
     expect(rows.find(row => row.field === 'origin')?.entries).toEqual([
       { componentIndex: 0, value: '哥伦比亚 蕙兰' },
+      { componentIndex: 1, value: '旧产地' },
     ]);
   });
 });

@@ -37,8 +37,9 @@ import {
 } from '@/lib/notes/noteDisplay';
 import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 import {
-  BEAN_COMPONENT_TEXT_FIELD_IDS,
-  getComponentFieldValue,
+  getComponentConfiguredValues,
+  getVisibleBeanFieldIds,
+  resolveBeanFieldConfig,
 } from '@/lib/coffee-beans/beanFields';
 import {
   getCapacityChangeUpdates,
@@ -57,7 +58,9 @@ import HeaderBar from './components/HeaderBar';
 import BeanImageSection from './components/BeanImageSection';
 import BasicInfoSection from './components/BasicInfoSection';
 import OriginInfoSection from './components/OriginInfoSection';
-import BlendComponentsSection from './components/BlendComponentsSection';
+import BlendComponentsSection, {
+  buildBlendComponentDisplayRows,
+} from './components/BlendComponentsSection';
 import FlavorNotesSection from './components/FlavorNotesSection';
 import RatingSection from './components/RatingSection';
 import RelatedRecordsSection from './components/RelatedRecordsSection';
@@ -199,7 +202,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const [observedTitleVisible, setObservedTitleVisible] = useState(true);
   const printEnabled = storeSettings.enableBeanPrint === true;
   const showBeanRating = storeSettings.showBeanRating === true;
-  const showEstateField = storeSettings.showEstateField === true;
   const ratingInfo = useMemo(() => {
     if (!bean) return null;
     const info = getBeanRatingInfo(bean, allNotes);
@@ -207,31 +209,26 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   }, [allNotes, bean]);
   const detailBean = isFormMode ? tempBean : bean;
   const detailBlendComponents = detailBean?.blendComponents ?? [];
-  const firstBlendComponent = detailBlendComponents[0];
+  const visibleBeanFieldIds = getVisibleBeanFieldIds(
+    resolveBeanFieldConfig(storeSettings),
+    [
+      ...detailBlendComponents,
+      ...(isEditMode ? (persistedBean?.blendComponents ?? []) : []),
+    ]
+  );
   const hasOriginInfoSection =
     isFormMode ||
     (detailBlendComponents.length <= 1 &&
-      !!(
-        firstBlendComponent?.origin ||
-        firstBlendComponent?.country ||
-        firstBlendComponent?.region ||
-        firstBlendComponent?.estate ||
-        firstBlendComponent?.processingStation ||
-        firstBlendComponent?.altitude ||
-        firstBlendComponent?.process ||
-        firstBlendComponent?.batch ||
-        firstBlendComponent?.variety ||
-        detailBean?.roastLevel
-      ));
+      (getComponentConfiguredValues(
+        detailBlendComponents[0],
+        visibleBeanFieldIds
+      ).length > 0 ||
+        !!detailBean?.roastLevel));
   const hasBlendComponentsSection =
     !isFormMode &&
-    (bean?.blendComponents?.filter(
-      component =>
-        component.percentage !== undefined ||
-        BEAN_COMPONENT_TEXT_FIELD_IDS.some(fieldId =>
-          Boolean(getComponentFieldValue(component, fieldId))
-        )
-    ).length ?? 0) > 1;
+    detailBlendComponents.length > 1 &&
+    buildBlendComponentDisplayRows(detailBlendComponents, visibleBeanFieldIds)
+      .length > 0;
   const hasFlavorNotesSection =
     isFormMode || !!(bean?.flavor?.length || bean?.notes);
   const hasRatingSection = !isFormMode && (showBeanRating || !!ratingInfo);
@@ -997,16 +994,17 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                   )}
 
                   <OriginInfoSection
+                    fieldIds={visibleBeanFieldIds}
                     bean={bean}
                     tempBean={tempBean}
                     isAddMode={isFormMode}
                     searchQuery={searchQuery}
-                    showEstateField={showEstateField}
                     handleUpdateField={handleUpdateField}
                     handleRoastLevelSelect={handleRoastLevelSelect}
                   />
 
                   <BlendComponentsSection
+                    fieldIds={visibleBeanFieldIds}
                     bean={bean}
                     isAddMode={isFormMode}
                     handleUpdateField={handleUpdateField}

@@ -28,8 +28,8 @@ type SuggestionMatch = {
   suggestionIndex: number;
 };
 
-const suggestionFieldMap: Array<{
-  field: TextBlendField;
+export const BLEND_COMPONENT_FIELDS: Array<{
+  field: BeanFieldId;
   suggestionKey: BlendPresetKey;
 }> = [
   { field: 'origin', suggestionKey: 'origins' },
@@ -149,7 +149,7 @@ const hasAutofillValue = (
 const hasAutofilledRow = (
   previousAutofill: BlendComponent[],
   index: number,
-  fields: typeof suggestionFieldMap
+  fields: typeof BLEND_COMPONENT_FIELDS
 ) =>
   fields.some(({ field }) => hasAutofillValue(previousAutofill, index, field));
 
@@ -182,7 +182,7 @@ export function autofillBlendComponentsFromName(
   changed: boolean;
 } {
   const enabledFieldSet = new Set(enabledFields);
-  const autofillableFields = suggestionFieldMap.filter(({ field }) =>
+  const autofillableFields = BLEND_COMPONENT_FIELDS.filter(({ field }) =>
     enabledFieldSet.has(field)
   );
   const matchedValuesByField = autofillableFields.reduce(

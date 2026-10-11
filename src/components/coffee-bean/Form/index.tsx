@@ -50,6 +50,7 @@ import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { getCapacityChangeUpdates } from '@/lib/coffee-beans/capacityAdjustment';
 import {
   getEnabledBeanFieldIds,
+  getVisibleBeanFieldIds,
   resolveBeanFieldConfig,
 } from '@/lib/coffee-beans/beanFields';
 
@@ -246,6 +247,10 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         ];
       }
     );
+    // 保留本次编辑开始时已有值的字段，清空后也能在保存前重新填写。
+    const [initialBlendComponents] = useState(() =>
+      blendComponents.map(component => ({ ...component }))
+    );
     const blendComponentNameAutofillRef = useRef<BlendComponent[]>([]);
 
     const [bean, setBean] = useState<
@@ -277,6 +282,10 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     const settings = useSettingsStore(state => state.settings);
     const enabledBlendComponentFields = getEnabledBeanFieldIds(
       resolveBeanFieldConfig(settings)
+    );
+    const visibleBlendComponentFields = getVisibleBeanFieldIds(
+      resolveBeanFieldConfig(settings),
+      [...initialBlendComponents, ...blendComponents]
     );
     const allBeans = useCoffeeBeanStore(state => state.beans);
 
@@ -805,6 +814,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
               bean={bean}
               onBeanChange={handleInputChange}
               blendComponents={blendComponents}
+              fieldIds={visibleBlendComponentFields}
               onBlendComponentsChange={{
                 add: handleAddBlendComponent,
                 remove: handleRemoveBlendComponent,

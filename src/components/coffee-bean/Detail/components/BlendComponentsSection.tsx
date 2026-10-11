@@ -4,13 +4,15 @@ import React from 'react';
 import { BlendComponent, CoffeeBean } from '@/types/app';
 import {
   BEAN_FIELD_DEFINITIONS,
+  getBeanFieldDefinition,
   getComponentFieldValue,
-  hasStructuredOriginFields,
+  type BeanFieldId,
 } from '@/lib/coffee-beans/beanFields';
 
 type TextBlendField = Exclude<keyof BlendComponent, 'percentage'>;
 
 interface BlendComponentsSectionProps {
+  fieldIds: BeanFieldId[];
   bean: CoffeeBean | null;
   isAddMode: boolean;
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
@@ -36,23 +38,22 @@ export type BlendComponentDisplayRow =
     };
 
 export const buildBlendComponentDisplayRows = (
-  components: BlendComponent[]
+  components: BlendComponent[],
+  fieldIds: BeanFieldId[] = BEAN_FIELD_DEFINITIONS.map(
+    definition => definition.id
+  )
 ): BlendComponentDisplayRow[] => {
-  const fieldRows = BEAN_FIELD_DEFINITIONS.flatMap(definition => {
+  const fieldRows = fieldIds.flatMap(fieldId => {
     const entries = components.flatMap((component, componentIndex) => {
-      if (definition.id === 'origin' && hasStructuredOriginFields(component)) {
-        return [];
-      }
-
-      const value = getComponentFieldValue(component, definition.id);
+      const value = getComponentFieldValue(component, fieldId);
       return value ? [{ componentIndex, value }] : [];
     });
 
     return entries.length > 0
       ? [
           {
-            field: definition.id,
-            label: definition.label,
+            field: fieldId,
+            label: getBeanFieldDefinition(fieldId).label,
             editable: true as const,
             entries,
           },
@@ -120,6 +121,7 @@ const EditableBlendValue: React.FC<EditableBlendValueProps> = ({
 };
 
 const BlendComponentsSection: React.FC<BlendComponentsSectionProps> = ({
+  fieldIds,
   bean,
   isAddMode,
   handleUpdateField,
@@ -128,14 +130,11 @@ const BlendComponentsSection: React.FC<BlendComponentsSectionProps> = ({
     return null;
   }
 
-  const displayRows = buildBlendComponentDisplayRows(bean.blendComponents);
-  const visibleComponentIndexes = new Set(
-    displayRows.flatMap(row => row.entries.map(entry => entry.componentIndex))
+  const displayRows = buildBlendComponentDisplayRows(
+    bean.blendComponents,
+    fieldIds
   );
-
-  if (visibleComponentIndexes.size <= 1) {
-    return null;
-  }
+  if (displayRows.length === 0) return null;
 
   const renderRowEntries = (row: BlendComponentDisplayRow) =>
     row.entries.flatMap((entry, entryIndex) => {

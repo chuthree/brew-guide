@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useCallback, useRef, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { CoffeeBean } from '@/types/app';
 import HighlightText from '@/components/common/ui/HighlightText';
 import { BEAN_TYPES } from '../types';
 import BlendComponentTagRows from './BlendComponentTagRows';
 import { updateBlendComponentsDelimitedField } from '@/lib/utils/coffeeBeanUtils';
-import { getComponentFieldValue } from '@/lib/coffee-beans/beanFields';
+import {
+  getComponentConfiguredValues,
+  type BeanFieldId,
+} from '@/lib/coffee-beans/beanFields';
 import { useRoastLevelSuggestions } from '@/components/coffee-bean/Form/hooks/useCoffeeBeanFieldSuggestions';
 import SuggestionDropdown, {
   SUGGESTION_DROPDOWN_Z_INDEX,
@@ -25,11 +28,11 @@ import {
 import { X } from 'lucide-react';
 
 interface OriginInfoSectionProps {
+  fieldIds: BeanFieldId[];
   bean: CoffeeBean | null;
   tempBean: Partial<CoffeeBean>;
   isAddMode: boolean;
   searchQuery: string;
-  showEstateField: boolean;
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
   handleRoastLevelSelect: (level: string) => void;
 }
@@ -135,100 +138,23 @@ const InlineRoastLevelSelect: React.FC<InlineRoastLevelSelectProps> = ({
 };
 
 const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
+  fieldIds,
   bean,
   tempBean,
   isAddMode,
   searchQuery,
-  showEstateField,
   handleUpdateField,
   handleRoastLevelSelect,
 }) => {
   const flavorPeriodDayInputClass =
     'w-10 bg-neutral-100 px-1.5 py-0.5 text-center text-xs font-medium text-neutral-700 placeholder:text-neutral-400 outline-none dark:bg-neutral-800/40 dark:text-neutral-300 dark:placeholder:text-neutral-500';
 
-  const originRef = useRef<HTMLDivElement>(null);
-  const countryRef = useRef<HTMLDivElement>(null);
-  const regionRef = useRef<HTMLDivElement>(null);
-  const estateRef = useRef<HTMLDivElement>(null);
-  const processingStationRef = useRef<HTMLDivElement>(null);
-  const altitudeRef = useRef<HTMLDivElement>(null);
-  const processRef = useRef<HTMLDivElement>(null);
-  const batchRef = useRef<HTMLDivElement>(null);
-  const varietyRef = useRef<HTMLDivElement>(null);
   const currentBean = isAddMode ? tempBean : bean;
   const roastLevelSuggestions = useRoastLevelSuggestions();
-  const components =
-    currentBean?.blendComponents && currentBean.blendComponents.length > 0
-      ? currentBean.blendComponents
-      : [
-          {
-            origin: '',
-            estate: '',
-            processingStation: '',
-            process: '',
-            variety: '',
-          },
-        ];
-  const isMultipleBlend =
-    currentBean?.blendComponents && currentBean.blendComponents.length > 1;
-  const firstComponent = currentBean?.blendComponents?.[0];
-
-  // 获取当前值
-  const legacyOrigin = firstComponent?.origin || '';
-  const country = firstComponent?.country || '';
-  const region = firstComponent?.region || '';
-  const estate = firstComponent?.estate || '';
-  const processingStation = firstComponent?.processingStation || '';
-  const altitude = firstComponent?.altitude || '';
-  const process = firstComponent?.process || '';
-  const batch = firstComponent?.batch || '';
-  const variety = firstComponent?.variety || '';
+  const components = currentBean?.blendComponents ?? [];
+  const isMultipleBlend = components.length > 1;
+  const displayFields = getComponentConfiguredValues(components[0], fieldIds);
   const roastLevel = currentBean?.roastLevel || '';
-  const shouldShowEstateField =
-    showEstateField ||
-    components.some(component => getComponentFieldValue(component, 'estate'));
-
-  // 初始化成分值
-  useEffect(() => {
-    if (originRef.current) {
-      originRef.current.textContent = legacyOrigin;
-    }
-    if (countryRef.current) {
-      countryRef.current.textContent = country;
-    }
-    if (regionRef.current) {
-      regionRef.current.textContent = region;
-    }
-    if (estateRef.current) {
-      estateRef.current.textContent = estate;
-    }
-    if (processingStationRef.current) {
-      processingStationRef.current.textContent = processingStation;
-    }
-    if (altitudeRef.current) {
-      altitudeRef.current.textContent = altitude;
-    }
-    if (processRef.current) {
-      processRef.current.textContent = process;
-    }
-    if (batchRef.current) {
-      batchRef.current.textContent = batch;
-    }
-    if (varietyRef.current) {
-      varietyRef.current.textContent = variety;
-    }
-  }, [
-    bean?.id,
-    legacyOrigin,
-    country,
-    region,
-    estate,
-    processingStation,
-    altitude,
-    process,
-    batch,
-    variety,
-  ]);
 
   // 处理成分编辑
   const handleBlendComponentUpdate = (
@@ -249,54 +175,6 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
     handleUpdateField({ blendComponents: updatedComponents });
   };
 
-  const handleComponentTextInput = (
-    field: Exclude<
-      keyof NonNullable<CoffeeBean['blendComponents']>[number],
-      'percentage'
-    >,
-    fieldRef: React.RefObject<HTMLDivElement | null>
-  ) => {
-    if (fieldRef.current) {
-      handleBlendComponentUpdate(0, field, fieldRef.current.textContent || '');
-    }
-  };
-
-  const handleOriginInput = () => {
-    handleComponentTextInput('origin', originRef);
-  };
-
-  const handleCountryInput = () => {
-    handleComponentTextInput('country', countryRef);
-  };
-
-  const handleRegionInput = () => {
-    handleComponentTextInput('region', regionRef);
-  };
-
-  const handleEstateInput = () => {
-    handleComponentTextInput('estate', estateRef);
-  };
-
-  const handleProcessingStationInput = () => {
-    handleComponentTextInput('processingStation', processingStationRef);
-  };
-
-  const handleAltitudeInput = () => {
-    handleComponentTextInput('altitude', altitudeRef);
-  };
-
-  const handleProcessInput = () => {
-    handleComponentTextInput('process', processRef);
-  };
-
-  const handleVarietyInput = () => {
-    handleComponentTextInput('variety', varietyRef);
-  };
-
-  const handleBatchInput = () => {
-    handleComponentTextInput('batch', batchRef);
-  };
-
   const handleFlavorPeriodDayChange = (
     field: 'startDay' | 'endDay',
     value: string
@@ -308,64 +186,9 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
     });
   };
 
-  const renderEditableInfoRow = ({
-    label,
-    value,
-    fieldRef,
-    onBlur,
-    editable = true,
-  }: {
-    label: string;
-    value: string;
-    fieldRef?: React.RefObject<HTMLDivElement | null>;
-    onBlur?: () => void;
-    editable?: boolean;
-  }) => {
-    if (isAddMode || !value) return null;
-
-    return (
-      <div className="flex items-start">
-        <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-          {label}
-        </div>
-        <div className="relative flex-1">
-          <div
-            ref={fieldRef}
-            contentEditable={editable}
-            suppressContentEditableWarning
-            onBlur={onBlur}
-            className={`text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100 ${
-              editable ? 'cursor-text' : ''
-            }`}
-            style={{ minHeight: '1.25em' }}
-          >
-            {searchQuery ? (
-              <HighlightText text={value} highlight={searchQuery} />
-            ) : (
-              value
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // 单品豆且有成分信息时显示可编辑区域
-  if (isMultipleBlend && !isAddMode) return null;
-
-  // 查看模式下至少有一个字段有值才显示；添加模式下总是显示
   if (
     !isAddMode &&
-    !legacyOrigin &&
-    !country &&
-    !region &&
-    !estate &&
-    !processingStation &&
-    !altitude &&
-    !process &&
-    !batch &&
-    !variety &&
-    !roastLevel
+    (isMultipleBlend || (!displayFields.length && !roastLevel))
   ) {
     return null;
   }
@@ -398,66 +221,41 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
 
       {isAddMode && (
         <BlendComponentTagRows
+          fieldIds={fieldIds}
           components={components}
-          showEstateField={shouldShowEstateField}
           onChange={handleBlendComponentUpdate}
         />
       )}
 
-      {renderEditableInfoRow({
-        label: '产地',
-        value: legacyOrigin,
-        fieldRef: originRef,
-        onBlur: handleOriginInput,
-      })}
-      {renderEditableInfoRow({
-        label: '产国',
-        value: country,
-        fieldRef: countryRef,
-        onBlur: handleCountryInput,
-      })}
-      {renderEditableInfoRow({
-        label: '产区',
-        value: region,
-        fieldRef: regionRef,
-        onBlur: handleRegionInput,
-      })}
-      {renderEditableInfoRow({
-        label: '庄园',
-        value: estate,
-        fieldRef: estateRef,
-        onBlur: handleEstateInput,
-      })}
-      {renderEditableInfoRow({
-        label: '处理站',
-        value: processingStation,
-        fieldRef: processingStationRef,
-        onBlur: handleProcessingStationInput,
-      })}
-      {renderEditableInfoRow({
-        label: '海拔',
-        value: altitude,
-        fieldRef: altitudeRef,
-        onBlur: handleAltitudeInput,
-      })}
-      {renderEditableInfoRow({
-        label: '处理法',
-        value: process,
-        fieldRef: processRef,
-        onBlur: handleProcessInput,
-      })}
-      {renderEditableInfoRow({
-        label: '批次',
-        value: batch,
-        fieldRef: batchRef,
-        onBlur: handleBatchInput,
-      })}
-      {renderEditableInfoRow({
-        label: '品种',
-        value: variety,
-        fieldRef: varietyRef,
-        onBlur: handleVarietyInput,
-      })}
+      {!isAddMode &&
+        displayFields.map(({ id, label, value }) => (
+          <div key={`${bean?.id}-${id}`} className="flex items-start">
+            <div className="w-16 shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              {label}
+            </div>
+            <div className="relative flex-1">
+              <div
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={event => {
+                  const nextValue =
+                    event.currentTarget.textContent?.trim() || '';
+                  if (nextValue !== value) {
+                    handleBlendComponentUpdate(0, id, nextValue);
+                  }
+                }}
+                className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
+                style={{ minHeight: '1.25em' }}
+              >
+                {searchQuery ? (
+                  <HighlightText text={value} highlight={searchQuery} />
+                ) : (
+                  value
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
 
       {/* 烘焙度 */}
       {(isAddMode || roastLevel) && (

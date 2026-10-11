@@ -2,87 +2,29 @@
 
 import React from 'react';
 import { BlendComponent } from '@/types/app';
-import { useBlendComponentSuggestions } from '@/components/coffee-bean/Form/hooks/useBlendComponentSuggestions';
+import {
+  BLEND_COMPONENT_FIELDS,
+  useBlendComponentSuggestions,
+} from '@/components/coffee-bean/Form/hooks/useBlendComponentSuggestions';
 import { usePresetSuggestions } from '@/components/coffee-bean/Form/hooks/usePresetSuggestions';
 import TagAutocompleteInput from './TagAutocompleteInput';
-import { useSettingsStore } from '@/lib/stores/settingsStore';
 import {
-  getComponentFieldValue,
-  getEnabledBeanFieldIds,
-  resolveBeanFieldConfig,
+  getBeanFieldDefinition,
   type BeanFieldId,
 } from '@/lib/coffee-beans/beanFields';
-import type { BlendPresetKey } from '@/components/coffee-bean/Form/constants';
 
 type TextBlendField = Exclude<keyof BlendComponent, 'percentage'>;
 
 interface BlendComponentTagRowsProps {
+  fieldIds: BeanFieldId[];
   components: BlendComponent[];
-  showEstateField: boolean;
   onChange: (index: number, field: TextBlendField, value: string) => void;
 }
 
-const fieldConfigs: Array<{
-  field: TextBlendField;
-  label: string;
-  placeholder: string;
-  suggestionKey?: BlendPresetKey;
-}> = [
-  {
-    field: 'origin',
-    label: '产地',
-    placeholder: '输入产地，逗号分隔',
-    suggestionKey: 'origins',
-  },
-  {
-    field: 'country',
-    label: '产国',
-    placeholder: '输入产国，逗号分隔',
-    suggestionKey: 'countries',
-  },
-  {
-    field: 'region',
-    label: '产区',
-    placeholder: '输入产区，逗号分隔',
-    suggestionKey: 'regions',
-  },
-  {
-    field: 'estate',
-    label: '庄园',
-    placeholder: '输入庄园，逗号分隔',
-    suggestionKey: 'estates',
-  },
-  {
-    field: 'processingStation',
-    label: '处理站',
-    placeholder: '输入处理站，逗号分隔',
-    suggestionKey: 'processingStations',
-  },
-  {
-    field: 'altitude',
-    label: '海拔',
-    placeholder: '输入海拔，逗号分隔',
-    suggestionKey: 'altitudes',
-  },
-  {
-    field: 'process',
-    label: '处理法',
-    placeholder: '输入处理法，逗号分隔',
-    suggestionKey: 'processes',
-  },
-  {
-    field: 'batch',
-    label: '批次',
-    placeholder: '输入批次，逗号分隔',
-    suggestionKey: 'batches',
-  },
-  {
-    field: 'variety',
-    label: '品种',
-    placeholder: '输入品种，逗号分隔',
-    suggestionKey: 'varieties',
-  },
-];
+const fieldConfigs = BLEND_COMPONENT_FIELDS.map(config => ({
+  ...config,
+  label: getBeanFieldDefinition(config.field).label,
+}));
 
 const getAppendIndex = (
   components: BlendComponent[],
@@ -117,10 +59,11 @@ const BlendComponentTagField: React.FC<BlendComponentTagFieldProps> = ({
   onChange,
 }) => {
   const entries = getFieldEntries(components, config.field);
-  const placeholder = entries.length === 0 ? config.placeholder : '+ ';
+  const placeholder =
+    entries.length === 0 ? `输入${config.label}，逗号分隔` : '+ ';
   const presetSuggestions = usePresetSuggestions(
-    config.suggestionKey || 'origins',
-    config.suggestionKey ? suggestions[config.suggestionKey] : []
+    config.suggestionKey,
+    suggestions[config.suggestionKey]
   );
 
   return (
@@ -175,34 +118,16 @@ const BlendComponentTagField: React.FC<BlendComponentTagFieldProps> = ({
 };
 
 const BlendComponentTagRows: React.FC<BlendComponentTagRowsProps> = ({
+  fieldIds,
   components,
-  showEstateField,
   onChange,
 }) => {
   const suggestions = useBlendComponentSuggestions();
-  const settings = useSettingsStore(state => state.settings);
-  const enabledFieldIds = getEnabledBeanFieldIds(
-    resolveBeanFieldConfig(settings)
+  const visibleFields = fieldIds.map(
+    fieldId => fieldConfigs.find(config => config.field === fieldId)!
   );
-  const visibleFieldIds = new Set<BeanFieldId>(enabledFieldIds);
 
-  fieldConfigs.forEach(config => {
-    if (
-      components.some(component =>
-        getComponentFieldValue(component, config.field as BeanFieldId)
-      )
-    ) {
-      visibleFieldIds.add(config.field as BeanFieldId);
-    }
-  });
-
-  if (showEstateField) {
-    visibleFieldIds.add('estate');
-  }
-
-  const visibleFields = fieldConfigs.filter(config =>
-    visibleFieldIds.has(config.field as BeanFieldId)
-  );
+  if (visibleFields.length === 0) return null;
 
   return (
     <div className="space-y-3">

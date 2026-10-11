@@ -1,11 +1,12 @@
-import React, { useMemo } from 'react';
+import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
+import React from 'react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { BlendComponent } from '@/types/app';
-import { useSettingsStore } from '@/lib/stores/settingsStore';
 import BlendComponentFieldRows from './BlendComponentFieldRows';
 
 interface BlendComponentsProps {
   components: BlendComponent[];
+  fieldIds: BeanFieldId[];
   onAdd: () => void;
   onRemove: (index: number) => void;
   onChange: (
@@ -17,33 +18,11 @@ interface BlendComponentsProps {
 
 const BlendComponents: React.FC<BlendComponentsProps> = ({
   components,
+  fieldIds,
   onAdd,
   onRemove,
   onChange,
 }) => {
-  // 庄园字段显示设置 - 从 settingsStore 获取
-  const showEstateFieldSetting = useSettingsStore(
-    state => state.settings.showEstateField || false
-  );
-
-  // 检查是否有任何成分已有庄园数据
-  const hasExistingEstate = useMemo(() => {
-    return components.some(comp => comp.estate && comp.estate.trim() !== '');
-  }, [components]);
-
-  // 是否因“已有/输入过庄园”而触发显示（进入表单后保持到退出）
-  const [estateFieldStickyByData, setEstateFieldStickyByData] =
-    React.useState(hasExistingEstate);
-
-  React.useEffect(() => {
-    if (hasExistingEstate) {
-      setEstateFieldStickyByData(true);
-    }
-  }, [hasExistingEstate]);
-
-  // 最终是否显示庄园字段：设置开启 或 数据触发（并在会话内保持）
-  const showEstateField = showEstateFieldSetting || estateFieldStickyByData;
-
   // 计算总百分比
   const totalPercentage = components.reduce(
     (sum, component) =>
@@ -150,7 +129,7 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                 key="fields"
                 component={component}
                 index={index}
-                showEstateField={showEstateField}
+                fieldIds={fieldIds}
                 onChange={onChange}
               />
             </div>

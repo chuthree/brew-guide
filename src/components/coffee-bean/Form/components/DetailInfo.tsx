@@ -1,3 +1,4 @@
+import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
 import React from 'react';
 import { motion } from 'framer-motion';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
@@ -12,6 +13,7 @@ interface DetailInfoProps {
     field: keyof Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => (value: string) => void;
   blendComponents: BlendComponent[];
+  fieldIds: BeanFieldId[];
   onBlendComponentsChange: {
     add: () => void;
     remove: (index: number) => void;
@@ -36,6 +38,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
   bean,
   onBeanChange,
   blendComponents,
+  fieldIds,
   onBlendComponentsChange,
   autoSetFlavorPeriod,
   toggleFrozenState,
@@ -86,6 +89,7 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
 
       <BlendComponents
         components={blendComponents}
+        fieldIds={fieldIds}
         onAdd={onBlendComponentsChange.add}
         onRemove={onBlendComponentsChange.remove}
         onChange={onBlendComponentsChange.change}
