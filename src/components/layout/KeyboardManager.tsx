@@ -22,8 +22,12 @@ const KeyboardManager: React.FC = () => {
         document.documentElement.classList.add('ios-device');
       }
 
-      // 确保键盘不会禁用页面滚动
-      Keyboard.setScroll({ isDisabled: false });
+      // setScroll 仅由 iOS Keyboard 插件实现；Android 调用会返回 UNIMPLEMENTED。
+      if (platform === 'ios') {
+        void Keyboard.setScroll({ isDisabled: false }).catch(error => {
+          console.warn('设置键盘滚动行为失败:', error);
+        });
+      }
     } else if (isIOS) {
       // 网页版 iOS 也添加类名
       document.documentElement.classList.add('ios-web');
