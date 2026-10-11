@@ -159,6 +159,46 @@ vi.mock('@/lib/app/crashDiagnostics', () => ({
 
 import { DataManager } from './dataManager';
 
+describe('DataManager.exportAllData upgrade snapshot', () => {
+  it('uses the normal backup format without querying uninitialized core repositories or duplicating source data', async () => {
+    vi.clearAllMocks();
+    const snapshot = {
+      coffeeBeans: [{ id: 'bean-1', image: 'data:image/png;base64,AQID' }],
+      brewingNotes: [
+        {
+          id: 'note-1',
+          images: ['data:image/png;base64,BAUG'],
+          coffeeBean: { id: 'bean-1', image: 'duplicate-image' },
+        },
+      ],
+      customEquipments: [],
+      grinders: [],
+      brewGuideSettings: { roasterConfigs: [{ id: 'roaster-1' }] },
+      customMethodsByEquipment: { v60: [{ id: 'method-1' }] },
+    };
+    const backup = JSON.parse(await DataManager.exportAllData({ snapshot }));
+    expect(Object.keys(backup).sort()).toEqual([
+      'appVersion',
+      'data',
+      'exportDate',
+      'timeZone',
+    ]);
+    expect(backup.data.coffeeBeans).toEqual(snapshot.coffeeBeans);
+    expect(backup.data.brewingNotes).toEqual([
+      { id: 'note-1', images: ['data:image/png;base64,BAUG'] },
+    ]);
+    expect(backup.data.customMethodsByEquipment).toEqual(
+      snapshot.customMethodsByEquipment
+    );
+    expect(backup.data.roasterConfigs).toEqual(
+      snapshot.brewGuideSettings.roasterConfigs
+    );
+    expect(mocks.exportCoffeeBeansWithImages).not.toHaveBeenCalled();
+    expect(mocks.exportBrewingNotesWithImages).not.toHaveBeenCalled();
+    expect(snapshot.brewingNotes[0].coffeeBean).toBeDefined();
+  });
+});
+
 describe('DataManager.importAllData', () => {
   beforeEach(() => {
     vi.clearAllMocks();

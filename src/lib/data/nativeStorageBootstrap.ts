@@ -1,6 +1,11 @@
 import type { AppRuntimeInfo } from '@/lib/app/runtime';
 import { configureRepositories } from '@/lib/data/repositories';
 import type { SqliteDriver } from '@/lib/data/sqlite/driver';
+import {
+  requestNativeMigrationApproval,
+  cleanupApprovedLegacyDatabase,
+  finishNativeMigration,
+} from './nativeMigrationGate';
 
 export interface NativeStorageBootstrapResult {
   status: 'ready';
@@ -47,13 +52,16 @@ async function initializeAndroid(): Promise<NativeStorageBootstrapResult> {
       driver,
       imageFileStore,
       loadSource: () => readLegacyMigrationSource(getWebViewLocalStorage()),
+      beforeMigration: requestNativeMigrationApproval,
     });
+    await cleanupApprovedLegacyDatabase(driver);
 
     const { createSqliteRuntimeRepositories } =
       await import('@/lib/data/sqlite/runtimeRepositories');
     configureRepositories(
       createSqliteRuntimeRepositories(driver, imageFileStore)
     );
+    finishNativeMigration();
 
     return {
       status: 'ready',
@@ -61,6 +69,7 @@ async function initializeAndroid(): Promise<NativeStorageBootstrapResult> {
       backend: 'native-sqlite',
     };
   } catch (error) {
+    finishNativeMigration(error);
     try {
       await driver?.close();
     } catch {

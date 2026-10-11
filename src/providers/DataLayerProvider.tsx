@@ -23,6 +23,17 @@ import {
   recordCrashCheckpoint,
   recordCrashError,
 } from '@/lib/app/crashDiagnostics';
+import { detectAppRuntime } from '@/lib/app/runtime';
+import dynamic from 'next/dynamic';
+
+const NativeMigrationDrawer = dynamic(
+  () => import('@/components/layout/NativeMigrationDrawer'),
+  { ssr: false }
+);
+
+function retryInitialization() {
+  window.location.reload();
+}
 
 interface DataLayerContextValue {
   isInitialized: boolean;
@@ -45,6 +56,7 @@ interface DataLayerProviderProps {
 }
 
 export function DataLayerProvider({ children }: DataLayerProviderProps) {
+  const [nativeAndroid, setNativeAndroid] = useState<boolean | null>(null);
   const [state, setState] = useState<DataLayerContextValue>({
     isInitialized: false,
     isInitializing: true,
@@ -56,6 +68,11 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
 
     async function init() {
       try {
+        const runtime = detectAppRuntime();
+        setNativeAndroid(
+          runtime.runtime === 'capacitor' &&
+            runtime.capacitorPlatform === 'android'
+        );
         recordCrashCheckpoint('data-layer-provider:init:start');
         await initializeDataLayer();
 
@@ -90,10 +107,27 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
     };
   }, []);
 
-  // 不阻塞渲染，让组件自行处理加载状态
+  // Android must not load editable screens or connect cloud sync before the
+  // user has backed up, approved and completed the storage upgrade.
   return (
     <DataLayerContext.Provider value={state}>
-      {children}
+      {nativeAndroid === null || (nativeAndroid && !state.isInitialized) ? (
+        <div className="flex min-h-dvh items-center justify-center px-6 text-sm text-neutral-500 dark:text-neutral-400">
+          {state.error ? (
+            <div className="space-y-4 text-center">
+              <p role="alert">暂时无法加载数据，请再试一次。</p>
+              <button type="button" onClick={retryInitialization}>
+                重试
+              </button>
+            </div>
+          ) : (
+            <p role="status">正在准备本地数据…</p>
+          )}
+        </div>
+      ) : (
+        children
+      )}
+      {nativeAndroid && <NativeMigrationDrawer />}
     </DataLayerContext.Provider>
   );
 }

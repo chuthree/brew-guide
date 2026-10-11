@@ -16,6 +16,9 @@ import { readLegacyMigrationSource } from './legacyMigrationSource';
 import { createSqliteImageDataServices } from './imageDataServices';
 import { createSqliteBrewingNoteRepository } from './repositories/brewingNote';
 import { createSqliteCoffeeBeanRepository } from './repositories/coffeeBean';
+import { createLegacyMigrationBackupData } from '../legacy/legacyMigrationBackup';
+import type { CoffeeBean } from '@/types/app';
+import type { BrewingNote } from '@/lib/core/config';
 
 const LEGACY_DATABASE_NAME = 'BrewGuideDB';
 const describeNodeSqlite = supportsNodeSqlite() ? describe : describe.skip;
@@ -359,6 +362,70 @@ describeNodeSqlite(`${nodeSqliteLabel} legacy migration executor`, () => {
     await database?.close();
     database = undefined;
     await deleteLegacyDatabase();
+  });
+
+  it('waits for backup and explicit approval before writing files or SQLite rows', async () => {
+    await createLegacyV8Fixture();
+    const before = await snapshotLegacyDatabase();
+    const fileStore = new MemoryImageFileStore();
+    let approve!: () => void;
+    let arrived!: () => void;
+    const waiting = new Promise<void>(resolve => {
+      arrived = resolve;
+    });
+    const approval = new Promise<void>(resolve => {
+      approve = resolve;
+    });
+    const beforeMigration = vi.fn(async (source, plan, digest) => {
+      const data = createLegacyMigrationBackupData(source, plan);
+      expect((data.coffeeBeans as CoffeeBean[])[0].image).toBe(
+        'data:image/png;base64,AQID'
+      );
+      expect((data.brewingNotes as BrewingNote[])[0].images).toHaveLength(3);
+      expect(data.customMethodsByEquipment).toHaveProperty('legacy-equipment');
+      expect(data).not.toHaveProperty('legacySource');
+      expect(digest).toMatch(/^[a-f0-9]{64}$/);
+      arrived();
+      await approval;
+    });
+    const operation = runLegacySqliteMigration({
+      driver: database!.driver,
+      imageFileStore: fileStore,
+      loadSource: () =>
+        readLegacyMigrationSource(sourceStorage(legacyLocalStorage)),
+      beforeMigration,
+    });
+    await waiting;
+    expect(await queryCount(database!.driver, 'migration_state')).toBe(0);
+    expect(await queryCount(database!.driver, 'coffee_beans')).toBe(0);
+    expect(fileStore.writeCount).toBe(0);
+    expect(await snapshotLegacyDatabase()).toEqual(before);
+    approve();
+    await expect(operation).resolves.toMatchObject({ status: 'migrated' });
+    expect(beforeMigration).toHaveBeenCalledOnce();
+    expect(await queryCount(database!.driver, 'coffee_beans')).toBe(1);
+    await expect(
+      runLegacySqliteMigration({
+        driver: database!.driver,
+        imageFileStore: fileStore,
+        loadSource: vi.fn(),
+        beforeMigration,
+      })
+    ).resolves.toEqual({ status: 'already-completed' });
+    expect(beforeMigration).toHaveBeenCalledOnce();
+  });
+
+  it('does not request approval on a fresh installation', async () => {
+    const beforeMigration = vi.fn();
+    await expect(
+      runLegacySqliteMigration({
+        driver: database!.driver,
+        imageFileStore: new MemoryImageFileStore(),
+        loadSource: () => readLegacyMigrationSource(sourceStorage({})),
+        beforeMigration,
+      })
+    ).resolves.toEqual({ status: 'fresh-install' });
+    expect(beforeMigration).not.toHaveBeenCalled();
   });
 
   it('migrates a real v8 IndexedDB snapshot and proves the source stays unchanged', async () => {

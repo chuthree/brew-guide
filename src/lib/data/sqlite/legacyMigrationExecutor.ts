@@ -24,6 +24,11 @@ export interface LegacySqliteMigrationOptions {
   driver: SqliteDriver;
   imageFileStore: NativeImageFileStore;
   loadSource: () => Promise<LegacyMigrationSource>;
+  beforeMigration?: (
+    source: LegacyMigrationSource,
+    plan: LegacySqliteMigrationPlan,
+    planSha256: string
+  ) => Promise<void>;
 }
 
 interface MigrationState {
@@ -759,6 +764,10 @@ async function migrate(
     // ownership in case another initializer wrote to this database meanwhile.
     await assertTargetAndFilesEmpty(driver, imageFileStore, specs);
   }
+
+  // Native startup pauses here: preflight passed, but no migration writes have
+  // happened. The same frozen source is backed up and migrated after consent.
+  await options.beforeMigration?.(source, plan, digest);
 
   if (!existingState) {
     await writeInitialState(driver, sourceJson, details);

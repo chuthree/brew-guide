@@ -8,11 +8,19 @@ const mocks = vi.hoisted(() => ({
   readLegacyMigrationSource: vi.fn(),
   runLegacySqliteMigration: vi.fn(),
   createSqliteRuntimeRepositories: vi.fn(),
+  requestNativeMigrationApproval: vi.fn(),
+  cleanupApprovedLegacyDatabase: vi.fn(),
+  finishNativeMigration: vi.fn(),
   order: [] as string[],
 }));
 
 vi.mock('@/lib/data/repositories', () => ({
   configureRepositories: mocks.configureRepositories,
+}));
+vi.mock('./nativeMigrationGate', () => ({
+  requestNativeMigrationApproval: mocks.requestNativeMigrationApproval,
+  cleanupApprovedLegacyDatabase: mocks.cleanupApprovedLegacyDatabase,
+  finishNativeMigration: mocks.finishNativeMigration,
 }));
 
 describe('Native Android storage bootstrap', () => {
@@ -137,8 +145,13 @@ describe('Native Android storage bootstrap', () => {
       'bind',
     ]);
     expect(mocks.runLegacySqliteMigration).toHaveBeenCalledWith(
-      expect.objectContaining({ driver, imageFileStore })
+      expect.objectContaining({
+        driver,
+        imageFileStore,
+        beforeMigration: mocks.requestNativeMigrationApproval,
+      })
     );
+    expect(mocks.cleanupApprovedLegacyDatabase).toHaveBeenCalledWith(driver);
     expect(mocks.configureRepositories).toHaveBeenCalledWith(repositories);
   });
 
@@ -190,6 +203,7 @@ describe('Native Android storage bootstrap', () => {
 
     expect(mocks.configureRepositories).not.toHaveBeenCalled();
     expect(driver.close).toHaveBeenCalledOnce();
+    expect(mocks.cleanupApprovedLegacyDatabase).not.toHaveBeenCalled();
 
     await expect(bootstrap.initialize(runtime)).resolves.toEqual({
       status: 'ready',
