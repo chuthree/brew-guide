@@ -701,7 +701,16 @@ export class TempFileManager {
     data: string
   ): Promise<void> {
     const chunkSize = this.NATIVE_TEXT_CHUNK_SIZE;
-    const firstChunk = data.slice(0, chunkSize);
+    const chunkEnd = (offset: number): number => {
+      const end = Math.min(offset + chunkSize, data.length);
+      // Each bridge call encodes UTF-8 separately. Keep surrogate pairs whole.
+      const last = data.charCodeAt(end - 1);
+      return end < data.length && last >= 0xd800 && last <= 0xdbff
+        ? end - 1
+        : end;
+    };
+    let end = chunkEnd(0);
+    const firstChunk = data.slice(0, end);
 
     await Filesystem.writeFile({
       path,
@@ -711,10 +720,11 @@ export class TempFileManager {
       recursive: true,
     });
 
-    for (let offset = chunkSize; offset < data.length; offset += chunkSize) {
+    for (let offset = end; offset < data.length; offset = end) {
+      end = chunkEnd(offset);
       await Filesystem.appendFile({
         path,
-        data: data.slice(offset, offset + chunkSize),
+        data: data.slice(offset, end),
         directory: Directory.Cache,
         encoding: Encoding.UTF8,
       });

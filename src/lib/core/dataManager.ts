@@ -163,7 +163,18 @@ export const DataManager = {
       // Startup migration exports a frozen legacy snapshot before repositories
       // are bound. Never mix it with live settings or silently omit fields.
       if (snapshot) {
-        exportData.data = snapshot;
+        exportData.data = { ...snapshot };
+        if (Array.isArray(snapshot.brewingNotes)) {
+          exportData.data.brewingNotes = this.cleanBrewingNotesForExport(
+            snapshot.brewingNotes as _BrewingNote[]
+          );
+        }
+        const roasters = (
+          snapshot.brewGuideSettings as _SettingsOptions | undefined
+        )?.roasterConfigs;
+        if (roasters?.length && !Object.hasOwn(snapshot, 'roasterConfigs')) {
+          exportData.data.roasterConfigs = roasters;
+        }
         return JSON.stringify(exportData, null, pretty ? 2 : undefined);
       }
 

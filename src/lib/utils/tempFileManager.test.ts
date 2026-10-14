@@ -37,6 +37,29 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem } from '@capacitor/filesystem';
 import { saveFileWithAndroidDocumentPicker } from './nativeDocumentSaver';
 
+it('keeps Unicode intact across native backup chunks', async () => {
+  vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+  vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
+  vi.mocked(saveFileWithAndroidDocumentPicker).mockResolvedValue('saved');
+  vi.mocked(Filesystem.writeFile).mockClear();
+  vi.mocked(Filesystem.appendFile).mockClear();
+  const prefix = '{"data":{"notes":"';
+  const json = prefix + 'a'.repeat(128 * 1024 - prefix.length - 1) + '😀"}}';
+  await TempFileManager.saveJsonFile(json, 'unicode-backup.json');
+  const chunks = [
+    vi.mocked(Filesystem.writeFile).mock.calls[0][0].data,
+    ...vi
+      .mocked(Filesystem.appendFile)
+      .mock.calls.map(([options]) => options.data),
+  ];
+  const written = chunks
+    .map(chunk =>
+      new TextDecoder().decode(new TextEncoder().encode(String(chunk)))
+    )
+    .join('');
+  expect(written).toBe(json);
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();

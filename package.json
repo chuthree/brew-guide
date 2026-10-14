@@ -117,5 +117,10 @@
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "brace-expansion": ">=2.0.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "@tauri-apps/api": "2.9.1"
+    }
   }
 }

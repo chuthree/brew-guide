@@ -7,6 +7,22 @@ const config = JSON.parse(read('src-tauri/tauri.conf.json'));
 const pkg = JSON.parse(read('package.json'));
 const cargo = read('src-tauri/Cargo.toml');
 const lock = read('src-tauri/Cargo.lock');
+const jsApiVersions = new Set(
+  Array.from(
+    read('pnpm-lock.yaml').matchAll(/^  '@tauri-apps\/api@([^']+)':/gm),
+    match => match[1]
+  )
+);
+assert.deepEqual(
+  [...jsApiVersions],
+  [pkg.devDependencies['@tauri-apps/api']],
+  'Use one locked Tauri JS API version, including plugins'
+);
+assert.equal(
+  pkg.pnpm?.overrides?.['@tauri-apps/api'],
+  pkg.devDependencies['@tauri-apps/api'],
+  'Keep plugin API resolution aligned with the native runtime'
+);
 assert.equal(
   config.build.frontendDist,
   '../out',

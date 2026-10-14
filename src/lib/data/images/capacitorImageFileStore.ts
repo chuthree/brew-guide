@@ -49,6 +49,15 @@ function isFilesystemMissingError(error: unknown): boolean {
   );
 }
 
+function isFilesystemOperationFailure(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'OS-PLUG-FILE-0013'
+  );
+}
+
 function operationError(
   operation: string,
   objectKey: string | undefined,
@@ -90,12 +99,7 @@ function createFileStore(
       if (isFilesystemMissingError(error)) return undefined;
       // iOS can wrap Cocoa not-found errors as generic operation failures.
       // Prove absence by listing the parent, preserving real access errors.
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'OS-PLUG-FILE-0013'
-      ) {
+      if (platformName === 'iOS' && isFilesystemOperationFailure(error)) {
         const slash = path.lastIndexOf('/');
         const parent = slash < 0 ? '' : path.slice(0, slash);
         const name = path.slice(slash + 1);
@@ -182,7 +186,12 @@ function createFileStore(
         await filesystem.deleteFile({ path, directory });
       } catch (error) {
         if (isFilesystemMissingError(error)) return;
-        if (!(await statOrMissing(path))) return;
+        if (
+          platformName === 'iOS' &&
+          isFilesystemOperationFailure(error) &&
+          !(await statOrMissing(path))
+        )
+          return;
         throw operationError('delete', objectKey, error, platformName);
       }
     },
@@ -209,13 +218,15 @@ function createFileStore(
       try {
         // iOS readdir reports a generic operation failure for a missing
         // directory; statOrMissing confirms absence without hiding access errors.
-        const root = await statOrMissing(IMAGE_OBJECT_RELATIVE_ROOT);
-        if (!root) return [];
-        if (root.type !== 'directory') {
-          throw unexpectedEntryError(
-            'object root is not a directory',
-            platformName
-          );
+        if (platformName === 'iOS') {
+          const root = await statOrMissing(IMAGE_OBJECT_RELATIVE_ROOT);
+          if (!root) return [];
+          if (root.type !== 'directory') {
+            throw unexpectedEntryError(
+              'object root is not a directory',
+              platformName
+            );
+          }
         }
         const result = await filesystem.readdir({
           path: IMAGE_OBJECT_RELATIVE_ROOT,
