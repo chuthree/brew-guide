@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const read = path =>
-  readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+  readFileSync(new URL(`../${path}`, import.meta.url), 'utf8').replace(
+    /\r\n/g,
+    '\n'
+  );
 const config = JSON.parse(read('src-tauri/tauri.conf.json'));
 const pkg = JSON.parse(read('package.json'));
 const cargo = read('src-tauri/Cargo.toml');
