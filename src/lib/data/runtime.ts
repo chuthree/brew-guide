@@ -17,13 +17,14 @@ export type DataRuntimeInitialization =
     };
 
 /**
- * Android Capacitor uses SQLite; other runtimes remain on Dexie until their
- * native backends are implemented.
+ * Native apps share SQLite repositories; browsers and PWAs keep existing Dexie storage.
  */
 export function resolveStorageBackend(runtime: AppRuntimeInfo): StorageBackend {
   if (
-    runtime.runtime === 'capacitor' &&
-    runtime.capacitorPlatform === 'android'
+    runtime.runtime === 'tauri' ||
+    (runtime.runtime === 'capacitor' &&
+      (runtime.capacitorPlatform === 'android' ||
+        runtime.capacitorPlatform === 'ios'))
   ) {
     return 'native-sqlite';
   }

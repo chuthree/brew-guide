@@ -48,42 +48,8 @@ describe('app runtime detection and current backend resolution', () => {
     expect(mocks.initializeDexieDataRuntime).toHaveBeenCalledOnce();
   });
 
-  it('uses SQLite for Capacitor Android', async () => {
-    mocks.isNativePlatform.mockReturnValue(true);
-    mocks.getPlatform.mockReturnValue('android');
-
-    const runtime = detectAppRuntime();
-
-    expect(runtime).toEqual({
-      runtime: 'capacitor',
-      capacitorPlatform: 'android',
-    });
-    expect(resolveStorageBackend(runtime)).toBe('native-sqlite');
-    const nativeInitialize = vi.fn().mockResolvedValue({
-      status: 'ready',
-      runtime: 'capacitor',
-      backend: 'native-sqlite',
-    });
-    vi.doMock('@/lib/data/nativeStorageBootstrap', () => ({
-      NativeStorageBootstrap: class {
-        initialize = nativeInitialize;
-      },
-    }));
-    try {
-      await expect(initializeDataRuntime(runtime)).resolves.toEqual({
-        status: 'ready',
-        runtime: 'capacitor',
-        backend: 'native-sqlite',
-      });
-      expect(nativeInitialize).toHaveBeenCalledWith(runtime);
-      expect(mocks.initializeDexieDataRuntime).not.toHaveBeenCalled();
-    } finally {
-      vi.doUnmock('@/lib/data/nativeStorageBootstrap');
-    }
-  });
-
-  it.each(['ios'] as const)(
-    'keeps Capacitor %s on Dexie until its native backend is implemented',
+  it.each(['android', 'ios'] as const)(
+    'uses SQLite for Capacitor %s',
     async platform => {
       mocks.isNativePlatform.mockReturnValue(true);
       mocks.getPlatform.mockReturnValue(platform);
@@ -94,13 +60,28 @@ describe('app runtime detection and current backend resolution', () => {
         runtime: 'capacitor',
         capacitorPlatform: platform,
       });
-      expect(resolveStorageBackend(runtime)).toBe('dexie');
-      await expect(initializeDataRuntime(runtime)).resolves.toMatchObject({
+      expect(resolveStorageBackend(runtime)).toBe('native-sqlite');
+      const nativeInitialize = vi.fn().mockResolvedValue({
         status: 'ready',
         runtime: 'capacitor',
-        backend: 'dexie',
+        backend: 'native-sqlite',
       });
-      expect(mocks.initializeDexieDataRuntime).toHaveBeenCalledOnce();
+      vi.doMock('@/lib/data/nativeStorageBootstrap', () => ({
+        NativeStorageBootstrap: class {
+          initialize = nativeInitialize;
+        },
+      }));
+      try {
+        await expect(initializeDataRuntime(runtime)).resolves.toEqual({
+          status: 'ready',
+          runtime: 'capacitor',
+          backend: 'native-sqlite',
+        });
+        expect(nativeInitialize).toHaveBeenCalledWith(runtime);
+        expect(mocks.initializeDexieDataRuntime).not.toHaveBeenCalled();
+      } finally {
+        vi.doUnmock('@/lib/data/nativeStorageBootstrap');
+      }
     }
   );
 
@@ -113,13 +94,7 @@ describe('app runtime detection and current backend resolution', () => {
 
     expect(runtime).toEqual({ runtime: 'tauri', capacitorPlatform: null });
     expect(mocks.isNativePlatform).not.toHaveBeenCalled();
-    expect(resolveStorageBackend(runtime)).toBe('dexie');
-    await expect(initializeDataRuntime(runtime)).resolves.toMatchObject({
-      status: 'ready',
-      runtime: 'tauri',
-      backend: 'dexie',
-    });
-    expect(mocks.initializeDexieDataRuntime).toHaveBeenCalledOnce();
+    expect(resolveStorageBackend(runtime)).toBe('native-sqlite');
   });
 
   it('keeps an unknown native Capacitor platform classified as Capacitor', async () => {

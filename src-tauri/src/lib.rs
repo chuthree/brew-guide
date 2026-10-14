@@ -7,6 +7,8 @@ use tauri::{
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
+mod storage;
+
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
 
@@ -360,6 +362,7 @@ fn update_tray_with_beans(app: &tauri::AppHandle, beans: Vec<CoffeeBean>) -> Res
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(storage::Storage::default())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -510,7 +513,12 @@ pub fn run() {
             
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![update_tray_menu, set_tray_visible])
+        .invoke_handler(tauri::generate_handler![
+            update_tray_menu,
+            set_tray_visible,
+            storage::storage_sqlite,
+            storage::storage_image
+        ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|_app, _event| {

@@ -50,10 +50,13 @@ describe('Native Android storage bootstrap', () => {
 
     await expect(
       bootstrap.initialize({ runtime: 'web', capacitorPlatform: null })
-    ).rejects.toThrow(/Capacitor Android only/);
+    ).rejects.toThrow(/Capacitor Android/);
     await expect(
-      bootstrap.initialize({ runtime: 'capacitor', capacitorPlatform: 'ios' })
-    ).rejects.toThrow(/Capacitor Android only/);
+      bootstrap.initialize({
+        runtime: 'capacitor',
+        capacitorPlatform: 'unknown',
+      })
+    ).rejects.toThrow(/Capacitor Android/);
     await import('@/lib/core/dataLayer');
 
     expect(loadDexie).not.toHaveBeenCalled();

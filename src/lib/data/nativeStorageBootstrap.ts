@@ -9,7 +9,7 @@ import {
 
 export interface NativeStorageBootstrapResult {
   status: 'ready';
-  runtime: 'capacitor';
+  runtime: 'capacitor' | 'tauri';
   backend: 'native-sqlite';
 }
 
@@ -23,26 +23,50 @@ function getWebViewLocalStorage(): Storage {
     return window.localStorage;
   } catch (cause) {
     throw new Error(
-      'Android SQLite startup cannot read the legacy WebView storage source',
+      'Native SQLite startup cannot read the legacy WebView storage source',
       { cause }
     );
   }
 }
 
-async function initializeAndroid(): Promise<NativeStorageBootstrapResult> {
+async function initializeNative(
+  runtimeInfo: AppRuntimeInfo
+): Promise<NativeStorageBootstrapResult> {
   let driver: SqliteDriver | undefined;
   try {
-    const { openAndroidSqliteDriver } =
-      await import('@/lib/data/sqlite/androidSqliteDriver');
-    driver = await openAndroidSqliteDriver();
+    const isAndroid =
+      runtimeInfo.runtime === 'capacitor' &&
+      runtimeInfo.capacitorPlatform === 'android';
+    if (runtimeInfo.runtime === 'tauri') {
+      const { openTauriSqliteDriver } =
+        await import('./sqlite/tauriSqliteDriver');
+      driver = await openTauriSqliteDriver();
+    } else if (isAndroid) {
+      const { openAndroidSqliteDriver } =
+        await import('./sqlite/androidSqliteDriver');
+      driver = await openAndroidSqliteDriver();
+    } else {
+      const { openCapacitorSqliteDriver } =
+        await import('./sqlite/capacitorSqliteDriver');
+      driver = await openCapacitorSqliteDriver();
+    }
 
     const { bootstrapSqliteSchema } =
       await import('@/lib/data/sqlite/schemaBootstrap');
     await bootstrapSqliteSchema(driver);
 
-    const { createCapacitorAndroidImageFileStore } =
-      await import('@/lib/data/images/capacitorAndroidImageFileStore');
-    const imageFileStore = await createCapacitorAndroidImageFileStore();
+    const imageFileStore =
+      runtimeInfo.runtime === 'tauri'
+        ? await (
+            await import('./images/tauriImageFileStore')
+          ).createTauriImageFileStore()
+        : isAndroid
+          ? await (
+              await import('./images/capacitorAndroidImageFileStore')
+            ).createCapacitorAndroidImageFileStore()
+          : await (
+              await import('./images/capacitorImageFileStore')
+            ).createCapacitorImageFileStore();
 
     const { readLegacyMigrationSource } =
       await import('@/lib/data/sqlite/legacyMigrationSource');
@@ -52,9 +76,11 @@ async function initializeAndroid(): Promise<NativeStorageBootstrapResult> {
       driver,
       imageFileStore,
       loadSource: () => readLegacyMigrationSource(getWebViewLocalStorage()),
-      beforeMigration: requestNativeMigrationApproval,
+      // Android retains its existing explicit backup/cleanup flow. Other
+      // native shells retain the read-only legacy source indefinitely.
+      beforeMigration: isAndroid ? requestNativeMigrationApproval : undefined,
     });
-    await cleanupApprovedLegacyDatabase(driver);
+    if (isAndroid) await cleanupApprovedLegacyDatabase(driver);
 
     const { createSqliteRuntimeRepositories } =
       await import('@/lib/data/sqlite/runtimeRepositories');
@@ -65,7 +91,7 @@ async function initializeAndroid(): Promise<NativeStorageBootstrapResult> {
 
     return {
       status: 'ready',
-      runtime: 'capacitor',
+      runtime: runtimeInfo.runtime as 'capacitor' | 'tauri',
       backend: 'native-sqlite',
     };
   } catch (error) {
@@ -79,25 +105,26 @@ async function initializeAndroid(): Promise<NativeStorageBootstrapResult> {
   }
 }
 
-/** Android Native startup is SQLite-only and fails closed without Dexie fallback. */
+/** Native startup is SQLite-only and fails closed without Dexie fallback. */
 export class NativeStorageBootstrap {
   initialize(
     runtimeInfo: AppRuntimeInfo
   ): Promise<NativeStorageBootstrapResult> {
     if (
-      runtimeInfo.runtime !== 'capacitor' ||
-      runtimeInfo.capacitorPlatform !== 'android'
+      runtimeInfo.runtime !== 'tauri' &&
+      (runtimeInfo.runtime !== 'capacitor' ||
+        !['android', 'ios'].includes(runtimeInfo.capacitorPlatform ?? ''))
     ) {
       return Promise.reject(
         new Error(
-          'Native SQLite bootstrap currently supports Capacitor Android only'
+          'Native SQLite bootstrap currently supports Capacitor Android only, iOS and Tauri'
         )
       );
     }
 
     if (initialization) return initialization;
 
-    const current = initializeAndroid();
+    const current = initializeNative(runtimeInfo);
     initialization = current;
     return current.catch(error => {
       if (initialization === current) initialization = null;
