@@ -395,10 +395,24 @@ export const DataManager = {
       // keeps its existing import behavior through its no-op validator.
       const imagePreflightTasks: Promise<void>[] = [];
       if (Array.isArray(importData.data.coffeeBeans)) {
+        let coffeeBeans = importData.data.coffeeBeans;
+        if (usesNativeSqlite) {
+          // Legacy backups use null for empty image slots. Normalize before
+          // preflight so validation and persistence share Native's undefined
+          // representation, preserving explicit empties and absent fields.
+          coffeeBeans = coffeeBeans.map(bean => {
+            if (!bean || typeof bean !== 'object' || Array.isArray(bean))
+              return bean;
+            return {
+              ...bean,
+              ...(bean.image === null ? { image: undefined } : {}),
+              ...(bean.backImage === null ? { backImage: undefined } : {}),
+            };
+          });
+          importData.data.coffeeBeans = coffeeBeans;
+        }
         imagePreflightTasks.push(
-          imageSourcePayloadValidator.validateCoffeeBeans(
-            importData.data.coffeeBeans
-          )
+          imageSourcePayloadValidator.validateCoffeeBeans(coffeeBeans)
         );
       }
       if (Array.isArray(importData.data.brewingNotes)) {

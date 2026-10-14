@@ -20,6 +20,9 @@ import {
 } from '@/lib/data/adapters/dexie/brewingNoteImageRepository';
 import { createSqliteCoffeeBeanRepository } from '@/lib/data/sqlite/repositories/coffeeBean';
 import { createSqliteBrewingNoteRepository } from '@/lib/data/sqlite/repositories/brewingNote';
+import { readLegacyMigrationSource } from '@/lib/data/sqlite/legacyMigrationSource';
+import { planLegacySqliteMigration } from '@/lib/data/sqlite/legacyMigrationPlan';
+import { createLegacyMigrationBackupData } from '@/lib/data/legacy/legacyMigrationBackup';
 import {
   createNodeSqliteTestDatabase,
   supportsNodeSqlite,
@@ -412,6 +415,69 @@ describeNodeSqlite(
       ]);
     });
 
+    it('restores an upgrade backup of legal legacy null images through Native validation and persistence', async () => {
+      await db.open();
+      const localImage = image('image/png', [0, 255, 18, 33]);
+      const remoteImage = 'https://Example.COM/bag%2Fback?signature=exact';
+      const legacyBeans = [
+        { ...bean('both-null'), image: null, backImage: null },
+        { ...bean('front-null'), image: null, backImage: localImage },
+        { ...bean('back-null'), image: localImage, backImage: null },
+        { ...bean('external'), image: null, backImage: remoteImage },
+        { ...bean('split'), image: null, backImage: null },
+        bean('empty', { image: '', backImage: '' }),
+        bean('absent'),
+      ];
+      await db.table('coffeeBeans').bulkPut(legacyBeans);
+      await db.coffeeBeanImages.put({
+        beanId: 'split',
+        image: localImage,
+        updatedAt: 1_700_000_000_000,
+      });
+      const source = await readLegacyMigrationSource({ getItem: () => null });
+      const plan = await planLegacySqliteMigration(source);
+      const backup = await DataManager.exportAllData({
+        snapshot: createLegacyMigrationBackupData(source, plan),
+      });
+      expect(JSON.parse(backup).data.coffeeBeans).toContainEqual(
+        legacyBeans[0]
+      );
+
+      // Explicit legacy empties must also clear an existing Native image.
+      await services.coffeeBeanPersistence.saveWithImages(
+        bean('both-null', { image: localImage }),
+        { generateThumbnails: false }
+      );
+      expect((await DataManager.importAllData(backup)).success).toBe(true);
+      const restored = await services.coffeeBeanImageRepository.exportAll();
+      const byId = new Map(restored.map(record => [record.id, record]));
+      expect(restored).toHaveLength(legacyBeans.length);
+      for (const id of ['both-null', 'empty', 'absent']) {
+        expect(byId.get(id)).toEqual(bean(id));
+      }
+      expect(byId.get('front-null')).toEqual(
+        bean('front-null', { backImage: localImage })
+      );
+      expect(byId.get('back-null')).toEqual(
+        bean('back-null', { image: localImage })
+      );
+      expect(byId.get('external')).toEqual(
+        bean('external', { backImage: remoteImage })
+      );
+      expect(byId.get('split')).toEqual(bean('split', { image: localImage }));
+      expect(Array.from(fileStore.objects.values())).toEqual([
+        new Uint8Array([0, 255, 18, 33]),
+        new Uint8Array([0, 255, 18, 33]),
+        new Uint8Array([0, 255, 18, 33]),
+      ]);
+      expect(await db.table('coffeeBeans').toArray()).toEqual(
+        source.active.coffeeBeans.records
+      );
+      expect(source.active.coffeeBeans.records).toEqual(
+        expect.arrayContaining(legacyBeans)
+      );
+    });
+
     it('imports missing or null note ratings as zero on Native SQLite only', async () => {
       const noteFields = (id: string) => ({
         id,
@@ -473,9 +539,12 @@ describeNodeSqlite(
         JSON.stringify({
           data: {
             coffeeBeans: [
-              bean('replacement-bean', {
-                image: image('image/png', [3, 3]),
-              }),
+              {
+                ...bean('replacement-bean', {
+                  image: image('image/png', [3, 3]),
+                }),
+                backImage: null,
+              },
             ],
             brewingNotes: [
               note('late-invalid-note', { image: 'blob:unsupported' }),

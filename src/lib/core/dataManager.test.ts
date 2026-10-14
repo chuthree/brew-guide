@@ -247,6 +247,27 @@ describe('DataManager.importAllData', () => {
     );
   });
 
+  it('preserves legacy null image fields in Web imports', async () => {
+    const coffeeBeans = [
+      {
+        id: 'bean-1',
+        timestamp: 1,
+        name: 'Bean',
+        image: null,
+        backImage: null,
+      },
+    ];
+    const result = await DataManager.importAllData(
+      JSON.stringify({ data: { coffeeBeans } })
+    );
+    expect(result.success).toBe(true);
+    expect(mocks.validateCoffeeBeans).toHaveBeenCalledWith(coffeeBeans);
+    expect(mocks.replaceCoffeeBeansWithSplitImages).toHaveBeenCalledWith(
+      coffeeBeans,
+      { allowDestructiveReplace: true }
+    );
+  });
+
   it('preflights all image-bearing sections before replacing either table', async () => {
     mocks.validateBrewingNotes.mockRejectedValueOnce(
       new Error('invalid BrewingNote image source')
