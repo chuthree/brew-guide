@@ -88,6 +88,21 @@ function createFileStore(
       return await filesystem.stat({ path, directory });
     } catch (error) {
       if (isFilesystemMissingError(error)) return undefined;
+      // iOS can wrap Cocoa not-found errors as generic operation failures.
+      // Prove absence by listing the parent, preserving real access errors.
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'OS-PLUG-FILE-0013'
+      ) {
+        const slash = path.lastIndexOf('/');
+        const parent = slash < 0 ? '' : path.slice(0, slash);
+        const name = path.slice(slash + 1);
+        if (parent && !(await statOrMissing(parent))) return undefined;
+        const result = await filesystem.readdir({ path: parent, directory });
+        if (!result.files.some(entry => entry.name === name)) return undefined;
+      }
       throw error;
     }
   }
@@ -167,6 +182,7 @@ function createFileStore(
         await filesystem.deleteFile({ path, directory });
       } catch (error) {
         if (isFilesystemMissingError(error)) return;
+        if (!(await statOrMissing(path))) return;
         throw operationError('delete', objectKey, error, platformName);
       }
     },
@@ -191,6 +207,16 @@ function createFileStore(
 
     async listObjectKeys() {
       try {
+        // iOS readdir reports a generic operation failure for a missing
+        // directory; statOrMissing confirms absence without hiding access errors.
+        const root = await statOrMissing(IMAGE_OBJECT_RELATIVE_ROOT);
+        if (!root) return [];
+        if (root.type !== 'directory') {
+          throw unexpectedEntryError(
+            'object root is not a directory',
+            platformName
+          );
+        }
         const result = await filesystem.readdir({
           path: IMAGE_OBJECT_RELATIVE_ROOT,
           directory,
