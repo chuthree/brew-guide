@@ -29,11 +29,14 @@ let pending: {
   resolve: () => void;
 } | null = null;
 
-export function requestNativeMigrationApproval(
+export async function requestNativeMigrationApproval(
   source: LegacyMigrationSource,
   plan: LegacySqliteMigrationPlan,
   digest: string
 ): Promise<void> {
+  // A restart may resume the exact migration whose backup and consent were
+  // already saved. A changed source must go through backup and consent again.
+  if ((await readCleanupApproval()) === digest) return;
   return new Promise(resolve => {
     pending = { source, plan, digest, resolve };
     nativeMigrationGate.setState({
@@ -62,9 +65,12 @@ export async function saveNativeMigrationBackup(): Promise<void> {
     const result = await exportDataAsJsonFile(jsonData, {
       returnIncompleteResult: true,
     });
-    // Sharing a file is not proof of saving it. Only the Android document
-    // plugin's successful file write unlocks this destructive upgrade.
-    if (result.mode !== 'android-document') {
+    // Native savers resolve only after a confirmed file write, never a share.
+    if (
+      !['android-document', 'ios-document', 'tauri-document'].includes(
+        result.mode
+      )
+    ) {
       nativeMigrationGate.setState({
         phase: 'backup',
         error:
@@ -85,13 +91,9 @@ export async function confirmNativeMigration(): Promise<void> {
   if (!approval || nativeMigrationGate.getState().phase !== 'ready') return;
   nativeMigrationGate.setState({ phase: 'migrating', error: null });
   try {
-    const { Preferences } = await import('@capacitor/preferences');
     // Durable consent lets startup finish cleanup if the app closes after
     // the verified SQLite commit but before IndexedDB deletion.
-    await Preferences.set({
-      key: CLEANUP_APPROVAL_KEY,
-      value: approval.digest,
-    });
+    await writeCleanupApproval(approval.digest);
     approval.resolve();
     pending = null;
   } catch (error) {
@@ -100,10 +102,10 @@ export async function confirmNativeMigration(): Promise<void> {
 }
 
 export async function cleanupApprovedLegacyDatabase(
-  driver: SqliteDriver
+  driver: SqliteDriver,
+  verifyBeforeCleanup: (digest: string) => Promise<void>
 ): Promise<void> {
-  const { Preferences } = await import('@capacitor/preferences');
-  const { value } = await Preferences.get({ key: CLEANUP_APPROVAL_KEY });
+  const value = await readCleanupApproval();
   if (!value) return;
   const rows = await driver.query(
     'SELECT status, details_json FROM migration_state WHERE id = ?',
@@ -118,6 +120,7 @@ export async function cleanupApprovedLegacyDatabase(
     throw new Error('升级校验尚未完成，已保留旧数据。');
   }
   nativeMigrationGate.setState({ phase: 'cleaning', error: null });
+  await verifyBeforeCleanup(value);
   await new Promise<void>((resolve, reject) => {
     const request = indexedDB.deleteDatabase('BrewGuideDB');
     request.onsuccess = () => resolve();
@@ -126,7 +129,52 @@ export async function cleanupApprovedLegacyDatabase(
     request.onblocked = () =>
       reject(new Error('旧数据库仍被占用，请关闭应用后重试升级。'));
   });
-  await Preferences.remove({ key: CLEANUP_APPROVAL_KEY });
+  // Some WebKit filesystem failures can still report deletion success. Probe
+  // a fresh connection; abort creation so verification never leaves a new DB.
+  await new Promise<void>((resolve, reject) => {
+    let absent = false;
+    const request = indexedDB.open('BrewGuideDB');
+    request.onupgradeneeded = () => {
+      absent = true;
+      request.transaction!.abort();
+    };
+    request.onerror = () =>
+      absent
+        ? resolve()
+        : reject(request.error ?? new Error('无法确认旧数据库已清理'));
+    request.onsuccess = () => {
+      request.result.close();
+      reject(new Error('旧数据库尚未清理，已保留授权，请重启后重试。'));
+    };
+    request.onblocked = () =>
+      reject(new Error('旧数据库清理验证被占用，请重启后重试。'));
+  });
+  await writeCleanupApproval(null);
+}
+
+async function readCleanupApproval(): Promise<string | null> {
+  if (typeof window !== 'undefined' && '__TAURI__' in window) {
+    const { invoke } = await import('@tauri-apps/api/core');
+    return invoke<string | null>('migration_cleanup_approval', {
+      operation: 'get',
+    });
+  }
+  const { Preferences } = await import('@capacitor/preferences');
+  return (await Preferences.get({ key: CLEANUP_APPROVAL_KEY })).value;
+}
+
+async function writeCleanupApproval(value: string | null): Promise<void> {
+  if (typeof window !== 'undefined' && '__TAURI__' in window) {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('migration_cleanup_approval', {
+      operation: value === null ? 'remove' : 'set',
+      value,
+    });
+    return;
+  }
+  const { Preferences } = await import('@capacitor/preferences');
+  if (value === null) await Preferences.remove({ key: CLEANUP_APPROVAL_KEY });
+  else await Preferences.set({ key: CLEANUP_APPROVAL_KEY, value });
 }
 
 export function finishNativeMigration(error?: unknown): void {

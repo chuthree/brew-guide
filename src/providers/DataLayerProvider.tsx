@@ -62,7 +62,7 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
     nativeMigrationGate,
     state => state.phase !== 'idle'
   );
-  const [nativeAndroid, setNativeAndroid] = useState<boolean | null>(null);
+  const [nativeApp, setNativeApp] = useState<boolean | null>(null);
   const [state, setState] = useState<DataLayerContextValue>({
     isInitialized: false,
     isInitializing: true,
@@ -75,9 +75,10 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
     async function init() {
       try {
         const runtime = detectAppRuntime();
-        setNativeAndroid(
-          runtime.runtime === 'capacitor' &&
-            runtime.capacitorPlatform === 'android'
+        setNativeApp(
+          runtime.runtime === 'tauri' ||
+            (runtime.runtime === 'capacitor' &&
+              ['android', 'ios'].includes(runtime.capacitorPlatform ?? ''))
         );
         recordCrashCheckpoint('data-layer-provider:init:start');
         await initializeDataLayer();
@@ -113,11 +114,11 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
     };
   }, []);
 
-  // Android must not load editable screens or connect cloud sync before the
+  // Native apps must not load editable screens or connect cloud sync before the
   // user has backed up, approved and completed the storage upgrade.
   return (
     <DataLayerContext.Provider value={state}>
-      {nativeAndroid === null || (nativeAndroid && !state.isInitialized) ? (
+      {nativeApp === null || (nativeApp && !state.isInitialized) ? (
         !migrationActive && state.error ? (
           <div className="flex min-h-dvh items-center justify-center px-6 text-sm text-neutral-500 dark:text-neutral-400">
             <div className="space-y-4 text-center">
@@ -131,7 +132,7 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
       ) : (
         children
       )}
-      {nativeAndroid && <NativeMigrationDrawer />}
+      {nativeApp && <NativeMigrationDrawer />}
     </DataLayerContext.Provider>
   );
 }

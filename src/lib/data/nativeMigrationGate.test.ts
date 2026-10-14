@@ -50,12 +50,13 @@ function driver(status = 'completed', digest = 'approved-plan') {
   } as unknown as SqliteDriver;
 }
 
-describe('Android migration backup and cleanup gate', () => {
+describe('Native migration backup and cleanup gate', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.resetAllMocks();
     mocks.exportAllData.mockResolvedValue('{"data":{}}');
     mocks.set.mockResolvedValue(undefined);
+    mocks.get.mockResolvedValue({ value: null });
     mocks.remove.mockResolvedValue(undefined);
   });
   afterEach(async () => {
@@ -73,6 +74,9 @@ describe('Android migration backup and cleanup gate', () => {
       void gate
         .requestNativeMigrationApproval(source, plan, 'approved-plan')
         .then(proceeded);
+      await vi.waitFor(() =>
+        expect(gate.nativeMigrationGate.getState().phase).toBe('backup')
+      );
       await gate.confirmNativeMigration();
       mocks.exportDataAsJsonFile.mockResolvedValue({ mode });
       await gate.saveNativeMigrationBackup();
@@ -89,6 +93,9 @@ describe('Android migration backup and cleanup gate', () => {
     const waiting = gate
       .requestNativeMigrationApproval(source, plan, 'approved-plan')
       .then(proceeded);
+    await vi.waitFor(() =>
+      expect(gate.nativeMigrationGate.getState().phase).toBe('backup')
+    );
     mocks.exportDataAsJsonFile.mockRejectedValueOnce(new Error('disk full'));
     await gate.saveNativeMigrationBackup();
     expect(gate.nativeMigrationGate.getState()).toMatchObject({
@@ -121,6 +128,9 @@ describe('Android migration backup and cleanup gate', () => {
     void gate
       .requestNativeMigrationApproval(source, plan, 'approved-plan')
       .then(proceeded);
+    await vi.waitFor(() =>
+      expect(gate.nativeMigrationGate.getState().phase).toBe('backup')
+    );
     mocks.exportDataAsJsonFile.mockResolvedValue({ mode: 'android-document' });
     await gate.saveNativeMigrationBackup();
     mocks.set.mockRejectedValueOnce(new Error('preferences write failed'));
@@ -131,7 +141,7 @@ describe('Android migration backup and cleanup gate', () => {
       error: 'preferences write failed',
     });
     await gate.confirmNativeMigration();
-    expect(proceeded).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(proceeded).toHaveBeenCalledOnce());
   });
 
   it.each([
@@ -142,7 +152,7 @@ describe('Android migration backup and cleanup gate', () => {
     mocks.get.mockResolvedValue({ value: 'approved-plan' });
     const gate = await import('./nativeMigrationGate');
     await expect(
-      gate.cleanupApprovedLegacyDatabase(driver(status, digest))
+      gate.cleanupApprovedLegacyDatabase(driver(status, digest), async () => {})
     ).rejects.toThrow('已保留旧数据');
     expect(await legacyExists()).toBe(true);
     expect(mocks.remove).not.toHaveBeenCalled();
@@ -152,12 +162,12 @@ describe('Android migration backup and cleanup gate', () => {
     await createLegacyDatabase();
     mocks.get.mockResolvedValueOnce({ value: null });
     let gate = await import('./nativeMigrationGate');
-    await gate.cleanupApprovedLegacyDatabase(driver());
+    await gate.cleanupApprovedLegacyDatabase(driver(), async () => {});
     expect(await legacyExists()).toBe(true);
     vi.resetModules();
     gate = await import('./nativeMigrationGate');
     mocks.get.mockResolvedValue({ value: 'approved-plan' });
-    await gate.cleanupApprovedLegacyDatabase(driver());
+    await gate.cleanupApprovedLegacyDatabase(driver(), async () => {});
     expect(await legacyExists()).toBe(false);
     expect(mocks.remove).toHaveBeenCalledOnce();
   });
@@ -173,15 +183,50 @@ describe('Android migration backup and cleanup gate', () => {
     const gate = await import('./nativeMigrationGate');
     try {
       await expect(
-        gate.cleanupApprovedLegacyDatabase(driver())
+        gate.cleanupApprovedLegacyDatabase(driver(), async () => {})
       ).rejects.toThrow('旧数据库仍被占用');
       expect(await legacyExists()).toBe(true);
       expect(mocks.remove).not.toHaveBeenCalled();
     } finally {
       connection.close();
     }
-    await gate.cleanupApprovedLegacyDatabase(driver());
+    await gate.cleanupApprovedLegacyDatabase(driver(), async () => {});
     expect(await legacyExists()).toBe(false);
     expect(mocks.remove).toHaveBeenCalledOnce();
+  });
+
+  it('retains the legacy database and consent when read-back verification fails', async () => {
+    await createLegacyDatabase();
+    mocks.get.mockResolvedValue({ value: 'approved-plan' });
+    const gate = await import('./nativeMigrationGate');
+    await expect(
+      gate.cleanupApprovedLegacyDatabase(driver(), async () => {
+        throw new Error('SQLite record changed after the verified commit');
+      })
+    ).rejects.toThrow('SQLite record changed');
+    expect(await legacyExists()).toBe(true);
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
+
+  it('retains consent if WebKit reports successful deletion but the old database remains', async () => {
+    await createLegacyDatabase();
+    mocks.get.mockResolvedValue({ value: 'approved-plan' });
+    vi.spyOn(indexedDB, 'deleteDatabase').mockImplementationOnce(() => {
+      const request = {} as IDBOpenDBRequest;
+      queueMicrotask(() => request.onsuccess?.call(request, new Event('success')));
+      return request;
+    });
+    const gate = await import('./nativeMigrationGate');
+    await expect(gate.cleanupApprovedLegacyDatabase(driver(), async () => {})).rejects.toThrow('旧数据库尚未清理');
+    expect(await legacyExists()).toBe(true);
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
+
+  it('resumes the exact already-backed-up and authorized plan after restart', async () => {
+    mocks.get.mockResolvedValue({ value: 'approved-plan' });
+    const gate = await import('./nativeMigrationGate');
+    await gate.requestNativeMigrationApproval(source, plan, 'approved-plan');
+    expect(gate.nativeMigrationGate.getState().phase).toBe('idle');
+    expect(mocks.exportDataAsJsonFile).not.toHaveBeenCalled();
   });
 });

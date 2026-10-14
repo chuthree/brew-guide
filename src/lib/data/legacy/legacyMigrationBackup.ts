@@ -62,5 +62,13 @@ export function createLegacyMigrationBackupData(
   data.brewGuideSettings = plan.rows.appSettings[0]
     ? decodeAppSettings(plan.rows.appSettings[0]).data
     : {};
+  // Keep historical rows, queue entries, thumbnails and unknown legacy fields
+  // in the backup too, including records outside the public export format.
+  data.legacyIndexedDB = {
+    info: source.info,
+    active: source.active,
+    historical: source.historical,
+    localStorage: source.localStorage,
+  };
   return data;
 }

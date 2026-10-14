@@ -850,3 +850,41 @@ export function runLegacySqliteMigration(
   inFlightByDriver.set(options.driver, operation);
   return operation;
 }
+
+/** Recheck durable data against the approved source before destructive cleanup. */
+export async function verifyLegacyMigrationBeforeCleanup(
+  options: LegacySqliteMigrationOptions,
+  approvedDigest: string
+): Promise<void> {
+  const { driver, imageFileStore } = options;
+  const state = (await readMigrationState(driver)).state;
+  if (state?.status !== 'completed')
+    throw new Error('升级校验尚未完成，已保留旧数据。');
+  const source = await options.loadSource();
+  // Deletion may have succeeded immediately before the previous process quit.
+  // There is no legacy database left to destroy in this idempotent retry.
+  if (source.info === null) return;
+  const plan = await planLegacySqliteMigration(source);
+  const specs = tableSpecs(plan);
+  const files = imageFileMap(plan);
+  const digest = await planDigest(plan, specs);
+  if (digest !== approvedDigest)
+    throw new Error('旧数据已变化，已保留旧数据库。');
+  validateExistingPlanState(
+    state,
+    sourcePresenceJson(plan),
+    detailsJson(plan, digest, specs, [...files.keys()])
+  );
+  assertTargetRowsAreOwnedSubset(
+    await readTargetSnapshot(driver, specs),
+    specs,
+    true
+  );
+  await assertFileObjectsAreOwnedSubset(
+    driver,
+    imageFileStore,
+    files,
+    true,
+    false
+  );
+}

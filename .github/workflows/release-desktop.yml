@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '!v*-online'
   workflow_dispatch:
     inputs:
       create_release:
@@ -102,7 +103,10 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install frontend dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify offline native release configuration
+        run: pnpm check:native-release
 
       # Read version from tauri.conf.json
       - name: Get app version
@@ -162,11 +166,11 @@ jobs:
             xattr -cr /Applications/Brew\ Guide.app
             ```
           releaseDraft: true
-          prerelease: false
+          prerelease: ${{ contains(steps.app_version.outputs.version, '-') }}
           retryAttempts: 3
           # Naming pattern: BrewGuide_1.5.10-beta.1_macos_arm64.dmg
           assetNamePattern: '${{ env.APP_NAME }}_[version]_[platform]_[arch][ext]'
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} -- --locked
 
       # Rename and upload artifacts with standardized names
       - name: Rename and upload macOS artifacts

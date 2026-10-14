@@ -117,6 +117,7 @@ describe('Native Android storage bootstrap', () => {
     }));
     vi.doMock('@/lib/data/sqlite/legacyMigrationExecutor', () => ({
       runLegacySqliteMigration: mocks.runLegacySqliteMigration,
+      verifyLegacyMigrationBeforeCleanup: vi.fn(),
     }));
     vi.doMock('@/lib/data/sqlite/runtimeRepositories', () => ({
       createSqliteRuntimeRepositories: mocks.createSqliteRuntimeRepositories,
@@ -154,7 +155,10 @@ describe('Native Android storage bootstrap', () => {
         beforeMigration: mocks.requestNativeMigrationApproval,
       })
     );
-    expect(mocks.cleanupApprovedLegacyDatabase).toHaveBeenCalledWith(driver);
+    expect(mocks.cleanupApprovedLegacyDatabase).toHaveBeenCalledWith(
+      driver,
+      expect.any(Function)
+    );
     expect(mocks.configureRepositories).toHaveBeenCalledWith(repositories);
   });
 
@@ -191,6 +195,7 @@ describe('Native Android storage bootstrap', () => {
     }));
     vi.doMock('@/lib/data/sqlite/legacyMigrationExecutor', () => ({
       runLegacySqliteMigration: mocks.runLegacySqliteMigration,
+      verifyLegacyMigrationBeforeCleanup: vi.fn(),
     }));
     vi.doMock('@/lib/data/sqlite/runtimeRepositories', () => ({
       createSqliteRuntimeRepositories: mocks.createSqliteRuntimeRepositories,

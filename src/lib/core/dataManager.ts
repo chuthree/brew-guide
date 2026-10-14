@@ -160,16 +160,16 @@ export const DataManager = {
         data: {},
       };
 
+      // Startup migration exports a frozen legacy snapshot before repositories
+      // are bound. Never mix it with live settings or silently omit fields.
+      if (snapshot) {
+        exportData.data = snapshot;
+        return JSON.stringify(exportData, null, pretty ? 2 : undefined);
+      }
+
       // 获取数据
       const storage = await getStorage();
       for (const key of APP_DATA_KEYS) {
-        if (snapshot && Object.hasOwn(snapshot, key)) {
-          exportData.data[key] =
-            key === 'brewingNotes'
-              ? this.cleanBrewingNotesForExport(snapshot[key] as _BrewingNote[])
-              : snapshot[key];
-          continue;
-        }
         // 特殊处理 brewGuideSettings - 从 settingsStore 获取
         if (key === 'brewGuideSettings') {
           const settingsFromStore = getSettingsStore().settings;
@@ -248,14 +248,7 @@ export const DataManager = {
         exportData.data.customMethodsByEquipment = {};
 
         // 优先从IndexedDB加载自定义方案数据
-        const methodsFromDB = snapshot
-          ? Object.entries(
-              (snapshot.customMethodsByEquipment ?? {}) as Record<
-                string,
-                unknown
-              >
-            ).map(([equipmentId, methods]) => ({ equipmentId, methods }))
-          : await customMethodRepository.list();
+        const methodsFromDB = await customMethodRepository.list();
         if (methodsFromDB && methodsFromDB.length > 0) {
           for (const item of methodsFromDB) {
             const { equipmentId, methods } = item;
@@ -268,7 +261,7 @@ export const DataManager = {
               )[equipmentId] = methods;
             }
           }
-        } else if (!snapshot) {
+        } else {
           // 如果IndexedDB中没有数据，从Storage加载
           const allKeys = await storage.keys();
           const methodKeys = allKeys.filter((key: string) =>
@@ -330,10 +323,7 @@ export const DataManager = {
       // 注意：roasterConfigs 已包含在 brewGuideSettings 中，无需单独导出
       // 为了向后兼容，仍然单独导出一份（使用新的 key 名称）
       try {
-        const roasterConfigs = snapshot
-          ? ((snapshot.brewGuideSettings as _SettingsOptions).roasterConfigs ??
-            [])
-          : getRoasterConfigsSync();
+        const roasterConfigs = getRoasterConfigsSync();
         if (roasterConfigs.length > 0) {
           exportData.data['roasterConfigs'] = roasterConfigs;
         }

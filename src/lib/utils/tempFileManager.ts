@@ -20,6 +20,8 @@ interface ShareOptions {
 export type JsonFileSaveMode =
   | 'web-download'
   | 'android-document'
+  | 'ios-document'
+  | 'tauri-document'
   | 'native-share'
   | 'cancelled'
   | 'activation-required';
@@ -553,6 +555,14 @@ export class TempFileManager {
       dialogTitle: '导出数据',
     }
   ): Promise<JsonFileSaveMode> {
+    if (typeof window !== 'undefined' && '__TAURI__' in window) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const saved = await invoke<boolean>('migration_save_backup', {
+        data: jsonData,
+        fileName,
+      });
+      return saved ? 'tauri-document' : 'cancelled';
+    }
     if (!Capacitor.isNativePlatform()) {
       return this.shareJsonFileWeb(jsonData, fileName, shareOptions);
     }
@@ -574,8 +584,43 @@ export class TempFileManager {
       }
     }
 
+    if (Capacitor.getPlatform() === 'ios') {
+      return this.saveJsonFileWithIOSDocumentPicker(jsonData, fileName);
+    }
     await this.shareJsonFileNative(jsonData, fileName, shareOptions);
     return 'native-share';
+  }
+
+  private static async saveJsonFileWithIOSDocumentPicker(
+    jsonData: string,
+    fileName: string
+  ): Promise<'ios-document' | 'cancelled'> {
+    const tempName = this.createTempFileName(fileName);
+    try {
+      await this.writeUtf8TextFile(tempName, jsonData);
+      const { uri } = await Filesystem.getUri({
+        path: tempName,
+        directory: Directory.Cache,
+      });
+      const { saveFileWithIOSDocumentPicker } =
+        await import('./nativeDocumentSaver');
+      const hash = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(jsonData)
+      );
+      const sha256 = Array.from(new Uint8Array(hash), byte =>
+        byte.toString(16).padStart(2, '0')
+      ).join('');
+      const outcome = await saveFileWithIOSDocumentPicker({
+        sourceUri: uri,
+        fileName,
+        mimeType: this.JSON_MIME_TYPE,
+        sha256,
+      });
+      return outcome === 'saved' ? 'ios-document' : 'cancelled';
+    } finally {
+      await this.cleanupTempFile(tempName);
+    }
   }
 
   private static async saveJsonFileWithAndroidDocumentPicker(

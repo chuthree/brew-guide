@@ -28,7 +28,8 @@
     "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu",
     "perf:check": "./scripts/perf-check.sh",
     "perf:analyze": "ANALYZE=true pnpm build",
-    "doctor": "npx react-doctor@latest"
+    "doctor": "npx react-doctor@latest",
+    "check:native-release": "node scripts/check-native-release.mjs"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^7.1.0",
@@ -58,7 +59,7 @@
     "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@tanstack/react-table": "^8.21.3",
-    "@tauri-apps/plugin-opener": "^2.5.3",
+    "@tauri-apps/plugin-opener": "2.5.3",
     "@use-gesture/react": "^10.3.1",
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
@@ -91,8 +92,8 @@
   "devDependencies": {
     "@csstools/postcss-oklab-function": "^4.0.12",
     "@svgr/webpack": "^8.1.0",
-    "@tauri-apps/api": "^2.9.1",
-    "@tauri-apps/cli": "^2.9.6",
+    "@tauri-apps/api": "2.9.1",
+    "@tauri-apps/cli": "2.9.6",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@types/uuid": "^10.0.0",

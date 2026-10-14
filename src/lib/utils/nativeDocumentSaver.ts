@@ -5,6 +5,7 @@ interface BrewGuideDocumentPlugin {
     sourceUri: string;
     fileName: string;
     mimeType: string;
+    sha256?: string;
   }): Promise<{ uri?: string; cancelled?: boolean }>;
 }
 
@@ -22,6 +23,24 @@ class AndroidDocumentSaverUnavailableError extends Error {
 
 const sanitizeFileName = (fileName: string): string =>
   fileName.replace(/[\\/:*?"<>|]/g, '-').trim() || 'brew-guide-export';
+
+export async function saveFileWithIOSDocumentPicker(options: {
+  sourceUri: string;
+  fileName: string;
+  mimeType: string;
+  sha256: string;
+}): Promise<'saved' | 'cancelled'> {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') {
+    throw new Error('iOS document saver is only available on iOS');
+  }
+  const result = await BrewGuideDocument.saveFile({
+    ...options,
+    fileName: sanitizeFileName(options.fileName),
+  });
+  if (!result.cancelled && !result.uri)
+    throw new Error('备份文件保存结果不完整');
+  return result.cancelled ? 'cancelled' : 'saved';
+}
 
 export function isAndroidDocumentSaverUnavailable(error: unknown): boolean {
   if (error instanceof AndroidDocumentSaverUnavailableError) {

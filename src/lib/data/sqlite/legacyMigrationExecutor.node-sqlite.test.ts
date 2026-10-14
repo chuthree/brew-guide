@@ -11,6 +11,7 @@ import {
 import {
   LEGACY_DEXIE_MIGRATION_ID,
   runLegacySqliteMigration,
+  verifyLegacyMigrationBeforeCleanup,
 } from './legacyMigrationExecutor';
 import { readLegacyMigrationSource } from './legacyMigrationSource';
 import { createSqliteImageDataServices } from './imageDataServices';
@@ -765,6 +766,34 @@ describeNodeSqlite(`${nodeSqliteLabel} legacy migration executor`, () => {
     expect(await queryCount(database!.driver, 'brewing_note_images')).toBe(0);
     expect(fileStore.writeCount).toBe(0);
     expect(await snapshotLegacyDatabase()).toEqual(before);
+  });
+
+  it('revalidates the approved source and durable rows before cleanup after a restart', async () => {
+    await createLegacyV8Fixture();
+    const options = {
+      driver: database!.driver,
+      imageFileStore: new MemoryImageFileStore(),
+      loadSource: () =>
+        readLegacyMigrationSource(sourceStorage(legacyLocalStorage)),
+    };
+    let digest = '';
+    await runLegacySqliteMigration({
+      ...options,
+      beforeMigration: async (_source, _plan, sha) => {
+        digest = sha;
+      },
+    });
+    await expect(
+      verifyLegacyMigrationBeforeCleanup(options, digest)
+    ).resolves.toBeUndefined();
+    await expect(
+      verifyLegacyMigrationBeforeCleanup(options, 'different-plan')
+    ).rejects.toThrow('旧数据已变化');
+    await options.driver.execute('DELETE FROM brewing_notes');
+    await expect(
+      verifyLegacyMigrationBeforeCleanup(options, digest)
+    ).rejects.toThrow('missing expected rows');
+    expect(await legacyDatabaseExists()).toBe(true);
   });
 
   it('records an absent-source fresh install without creating BrewGuideDB', async () => {

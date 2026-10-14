@@ -70,17 +70,24 @@ async function initializeNative(
 
     const { readLegacyMigrationSource } =
       await import('@/lib/data/sqlite/legacyMigrationSource');
-    const { runLegacySqliteMigration } =
+    const { runLegacySqliteMigration, verifyLegacyMigrationBeforeCleanup } =
       await import('@/lib/data/sqlite/legacyMigrationExecutor');
     await runLegacySqliteMigration({
       driver,
       imageFileStore,
       loadSource: () => readLegacyMigrationSource(getWebViewLocalStorage()),
-      // Android retains its existing explicit backup/cleanup flow. Other
-      // native shells retain the read-only legacy source indefinitely.
-      beforeMigration: isAndroid ? requestNativeMigrationApproval : undefined,
+      beforeMigration: requestNativeMigrationApproval,
     });
-    if (isAndroid) await cleanupApprovedLegacyDatabase(driver);
+    await cleanupApprovedLegacyDatabase(driver, digest =>
+      verifyLegacyMigrationBeforeCleanup(
+        {
+          driver: driver!,
+          imageFileStore,
+          loadSource: () => readLegacyMigrationSource(getWebViewLocalStorage()),
+        },
+        digest
+      )
+    );
 
     const { createSqliteRuntimeRepositories } =
       await import('@/lib/data/sqlite/runtimeRepositories');

@@ -39,7 +39,7 @@ describe.each([
   ['iOS', { runtime: 'capacitor', capacitorPlatform: 'ios' }],
   ['Desktop', { runtime: 'tauri', capacitorPlatform: null }],
 ] as const)('%s SQLite startup', (_name, runtime) => {
-  it('reuses the shared migration and repositories without deleting the legacy database', async () => {
+  it('reuses the shared migration and repositories with the shared backup approval and verified cleanup gate', async () => {
     const driver = { close: vi.fn() };
     const imageFileStore = {};
     mocks.openCapacitorSqliteDriver.mockResolvedValue(driver);
@@ -73,6 +73,7 @@ describe.each([
     }));
     vi.doMock('@/lib/data/sqlite/legacyMigrationExecutor', () => ({
       runLegacySqliteMigration: mocks.runLegacySqliteMigration,
+      verifyLegacyMigrationBeforeCleanup: vi.fn(),
     }));
     vi.doMock('@/lib/data/sqlite/runtimeRepositories', () => ({
       createSqliteRuntimeRepositories: mocks.createSqliteRuntimeRepositories,
@@ -89,10 +90,13 @@ describe.each([
       expect.objectContaining({
         driver,
         imageFileStore,
-        beforeMigration: undefined,
+        beforeMigration: expect.any(Function),
       })
     );
-    expect(mocks.cleanupApprovedLegacyDatabase).not.toHaveBeenCalled();
+    expect(mocks.cleanupApprovedLegacyDatabase).toHaveBeenCalledWith(
+      driver,
+      expect.any(Function)
+    );
     expect(mocks.configureRepositories).toHaveBeenCalledOnce();
   });
 });
