@@ -313,6 +313,33 @@ describe('legacy SQLite migration planning', () => {
     expect(source.active.brewingNotes.records[1].rating).toBeNull();
   });
 
+  it('migrates historical non-finite update times without changing the source', async () => {
+    const source = createSource({
+      tables: {
+        brewingNotes: [NaN, Infinity, -Infinity].map((updatedAt, index) => ({
+          id: `note-invalid-update-${index}`,
+          timestamp: 1700000000000,
+          updatedAt,
+          rating: 0,
+          notes: 'historical note',
+          taste: {},
+        })),
+      },
+    });
+    const plan = await planLegacySqliteMigration(source);
+    for (const row of plan.rows.brewingNotes) {
+      expect(row.updated_at_ms).toBeNull();
+      expect(JSON.parse(row.record_json)).toMatchObject({
+        updatedAt: null,
+        timestamp: 1700000000000,
+        notes: 'historical note',
+      });
+    }
+    expect(
+      source.active.brewingNotes.records.map(note => note.updatedAt)
+    ).toEqual([NaN, Infinity, -Infinity]);
+  });
+
   it('continues rejecting malformed non-null legacy ratings', async () => {
     await expect(
       planLegacySqliteMigration(

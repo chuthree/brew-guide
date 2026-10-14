@@ -1112,9 +1112,17 @@ export async function planLegacySqliteMigration(
     if (resolution.originalConflicts.length > 0) {
       fail('brewingNotes', noteId, 'inline and split original images conflict');
     }
-    const canonicalNote = normalizeLegacyBrewingNoteRating(
+    let canonicalNote = normalizeLegacyBrewingNoteRating(
       resolution.mergedNote as unknown as Record<string, unknown>
     );
+    // Historical IndexedDB records can contain NaN update times. Treat the
+    // optional field as unknown without changing the read-only legacy record.
+    if (
+      typeof canonicalNote.updatedAt === 'number' &&
+      !Number.isFinite(canonicalNote.updatedAt)
+    ) {
+      canonicalNote = { ...canonicalNote, updatedAt: null };
+    }
     plan.rows.brewingNotes.push(encodeBrewingNote(canonicalNote).row);
     noteIds.add(noteId);
     const images = getBrewingNoteImages(resolution.mergedNote);
