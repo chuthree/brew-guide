@@ -126,7 +126,10 @@ const PageStackDrawer: React.FC<PageStackDrawerProps> = ({
   const pageControls = useAnimationControls();
   const visibleSnapshot = isOpen ? currentSnapshot : closingSnapshot;
 
-  useThemeColor({ useOverlay: true, enabled: isOpen });
+  const themeColorOverlayRef = useThemeColor({
+    useOverlay: true,
+    enabled: isOpen,
+  });
 
   if (
     isOpen &&
@@ -196,7 +199,10 @@ const PageStackDrawer: React.FC<PageStackDrawerProps> = ({
       repositionInputs={false}
     >
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-60 bg-black/50" />
+        <Drawer.Overlay
+          ref={themeColorOverlayRef}
+          className="fixed inset-0 z-60 bg-black/50"
+        />
         <Drawer.Content
           className="fixed inset-x-0 bottom-0 z-61 mx-auto flex max-h-[88vh] max-w-md flex-col rounded-t-3xl bg-neutral-50 outline-none dark:bg-neutral-900"
           aria-describedby={undefined}

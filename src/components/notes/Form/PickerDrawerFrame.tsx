@@ -38,7 +38,10 @@ const PickerDrawerFrame: React.FC<PickerDrawerFrameProps> = ({
     onAfterCloseRef.current = onAfterClose;
   });
 
-  useThemeColor({ useOverlay: true, enabled: isOpen });
+  const themeColorOverlayRef = useThemeColor({
+    useOverlay: true,
+    enabled: isVisible,
+  });
 
   useModalHistory({
     id: historyId,
@@ -78,7 +81,8 @@ const PickerDrawerFrame: React.FC<PickerDrawerFrameProps> = ({
   return createPortal(
     <>
       <div
-        className={`fixed inset-0 z-60 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        ref={themeColorOverlayRef}
+        className={`fixed inset-0 z-60 bg-black/50 transition-opacity duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         onClick={onClose}
       />
       <div

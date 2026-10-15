@@ -98,7 +98,10 @@ const StatsSectionEditorDrawer: React.FC<StatsSectionEditorDrawerProps> = ({
     useState<StatsSectionOption[]>(sections);
   const [isDraggingSection, setIsDraggingSection] = useState(false);
 
-  useThemeColor({ useOverlay: true, enabled: isOpen });
+  const themeColorOverlayRef = useThemeColor({
+    useOverlay: true,
+    enabled: isOpen,
+  });
 
   useModalHistory({
     id: 'stats-section-editor',
@@ -145,7 +148,10 @@ const StatsSectionEditorDrawer: React.FC<StatsSectionEditorDrawerProps> = ({
       repositionInputs={false}
     >
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/50" />
+        <Drawer.Overlay
+          ref={themeColorOverlayRef}
+          className="fixed inset-0 z-50 bg-black/50"
+        />
         <Drawer.Content
           className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[82vh] max-w-md flex-col rounded-t-3xl bg-neutral-50 outline-none select-none dark:bg-neutral-900"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}

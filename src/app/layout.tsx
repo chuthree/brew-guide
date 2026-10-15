@@ -5,6 +5,7 @@ import localFont from 'next/font/local';
 import { LightToast } from '@/components/common/feedback/LightToast';
 import { ExitToast } from '@/components/common/feedback/ExitToast';
 import '@/styles/base/globals.css';
+import BrowserChrome from '@/components/layout/BrowserChrome';
 import KeyboardManager from '@/components/layout/KeyboardManager';
 import { Suspense } from 'react';
 import CapacitorInit from '@/providers/CapacitorProvider';
@@ -145,7 +146,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'Brew Guide',
   },
   verification: {
@@ -207,12 +208,6 @@ export default function RootLayout({
           }}
         />
         <meta name="application-name" content="Brew Guide" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta
-          name="apple-mobile-web-app-status-bar-style"
-          content="black-translucent"
-        />
-        <meta name="apple-mobile-web-app-title" content="Brew Guide" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-tap-highlight" content="no" />
@@ -275,7 +270,7 @@ export default function RootLayout({
           <DataLayerProvider>
             <TauriDragRegion />
             <DevTools />
-            <div className="h-dvh overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+            <div className="app-viewport overflow-hidden bg-neutral-50 dark:bg-neutral-900">
               <Suspense>
                 <CrashDiagnosticsProvider />
                 <CapacitorInit />
@@ -291,6 +286,7 @@ export default function RootLayout({
               <ExitToast />
             </div>
           </DataLayerProvider>
+          <BrowserChrome />
         </ThemeProvider>
       </body>
     </html>

@@ -423,6 +423,7 @@ select:focus,
 }
 
 html {
+  background: var(--edge-top-background, var(--background));
   /* 动态字体大小：基础大小 × 缩放比例 */
   font-size: calc(var(--base-font-size) * var(--font-scale));
   /* 高度 100% 确保覆盖视口 */
@@ -432,7 +433,7 @@ html {
 
 body {
   color: var(--foreground);
-  /* 不设置背景 - 让 Vaul 动态控制 */
+  background: var(--edge-top-background, var(--background));
   min-height: 100%;
   touch-action: manipulation;
   -webkit-text-size-adjust: 100%;
@@ -816,4 +817,67 @@ body[data-scroll-locked] {
 /* 拖动区域内的元素不可交互 */
 [data-tauri-drag-region] * {
   pointer-events: none;
+}
+
+/* Keep the existing browser layout. Installed apps fill the viewport directly
+   so changing status-bar mode cannot leave a dvh-sized gap at the bottom. */
+.app-viewport {
+  height: 100dvh;
+}
+
+@media (display-mode: standalone) {
+  .app-viewport {
+    position: fixed;
+    inset: 0;
+    height: auto;
+  }
+}
+
+/* One writer owns visible opacity. Presence animations below never touch opacity. */
+[data-browser-overlay] {
+  opacity: var(--browser-overlay-progress, 0) !important;
+  transition: none !important;
+}
+
+[data-browser-overlay][data-vaul-overlay] {
+  animation-duration: var(--browser-overlay-duration, 0s) !important;
+}
+
+[data-browser-overlay][data-vaul-overlay][data-state='open'] {
+  animation-name: browser-overlay-enter !important;
+}
+
+[data-browser-overlay][data-vaul-overlay][data-state='closed'] {
+  animation-name: browser-overlay-exit !important;
+}
+
+@keyframes browser-overlay-enter {
+  from {
+    --browser-overlay-presence: 0;
+  }
+  to {
+    --browser-overlay-presence: 1;
+  }
+}
+
+@keyframes browser-overlay-exit {
+  from {
+    --browser-overlay-presence: 1;
+  }
+  to {
+    --browser-overlay-presence: 0;
+  }
+}
+
+/* A solid sampling edge, outside every page transform. The document and this
+   strip use exactly the color published with the real scrim's opacity. */
+.browser-edge-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: max(12px, env(safe-area-inset-top));
+  z-index: 9999;
+  pointer-events: none;
+  background: var(--edge-top-background, var(--background));
 }

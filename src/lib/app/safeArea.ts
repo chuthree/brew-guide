@@ -2,6 +2,7 @@
 
 import { Capacitor } from '@capacitor/core';
 import { SafeArea, initialize } from '@capacitor-community/safe-area';
+import { getIsStandalone } from '@/lib/utils/pwaInstallEnvironment';
 
 const SAFE_AREA_MARGIN_MIN = 10;
 const SAFE_AREA_MARGIN_MAX = 80;
@@ -144,7 +145,12 @@ export const SafeAreaManager = {
       root.style.setProperty('--safe-area-right', `${horizontalMargin}px`);
     } else {
       // 网页版：用户自定义边距
-      root.style.setProperty('--safe-area-top', `${margins.top}px`);
+      root.style.setProperty(
+        '--safe-area-top',
+        getIsStandalone()
+          ? `max(env(safe-area-inset-top, 0px), ${margins.top}px, 12px)`
+          : `${margins.top}px`
+      );
       root.style.setProperty('--safe-area-bottom', `${margins.bottom}px`);
       root.style.setProperty('--safe-area-left', `${horizontalMargin}px`);
       root.style.setProperty('--safe-area-right', `${horizontalMargin}px`);

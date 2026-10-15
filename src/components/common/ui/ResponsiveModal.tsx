@@ -159,7 +159,10 @@ const ResponsiveModal = forwardRef<ResponsiveModalHandle, ResponsiveModalProps>(
     );
 
     // 同步顶部安全区颜色（用于 meta theme-color）
-    useThemeColor({ useOverlay: showOverlay, enabled: isOpen });
+    const themeColorOverlayRef = useThemeColor({
+      useOverlay: showOverlay,
+      enabled: isOpen && isMediumScreen,
+    });
 
     // 集成历史栈管理，支持返回键关闭
     useModalHistory({
@@ -200,6 +203,7 @@ const ResponsiveModal = forwardRef<ResponsiveModalHandle, ResponsiveModalProps>(
             {/* 背景遮罩 - 不响应点击 */}
             {showOverlay && (
               <Drawer.Overlay
+                ref={themeColorOverlayRef}
                 className="pointer-events-none fixed! inset-0 z-50 bg-black/50"
                 style={{ position: 'fixed' }}
               />

@@ -44,7 +44,10 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     useState<ExtendedCoffeeBean | null>(initialBean || null);
 
   // 同步顶部安全区颜色
-  useThemeColor({ useOverlay: true, enabled: showForm });
+  const themeColorOverlayRef = useThemeColor({
+    useOverlay: true,
+    enabled: isVisible,
+  });
 
   // 添加对模态框的引用
   const modalRef = useRef<HTMLDivElement>(null);
@@ -164,7 +167,8 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
     <>
       {/* 背景遮罩 */}
       <div
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        ref={themeColorOverlayRef}
+        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       />
 
       {/* 抽屉内容 */}

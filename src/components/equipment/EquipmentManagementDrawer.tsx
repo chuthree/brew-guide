@@ -232,7 +232,10 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
   const isVisible = isOpen && enteredContext.isOpen;
 
   // 同步顶部安全区颜色
-  useThemeColor({ useOverlay: true, enabled: isOpen });
+  const themeColorOverlayRef = useThemeColor({
+    useOverlay: true,
+    enabled: isVisible,
+  });
 
   // 使用自定义Hook管理器具列表
   const { allEquipments: baseEquipments } = useEquipmentList({
@@ -410,7 +413,8 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
       {/* 背景遮罩 */}
       <div
         data-modal={isOpen ? 'equipment-management' : undefined}
-        className={`fixed inset-0 bg-black/50 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'} `}
+        ref={themeColorOverlayRef}
+        className={`fixed inset-0 bg-black/50 transition-opacity duration-350 ease-[cubic-bezier(0.36,0.66,0.04,1)] ${isVisible ? 'opacity-100' : 'opacity-0'} `}
         onClick={handleClose}
       />
 

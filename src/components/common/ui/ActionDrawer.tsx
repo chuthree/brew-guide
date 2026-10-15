@@ -227,7 +227,10 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   const modalId = historyId || autoId;
 
   // 同步顶部安全区颜色（用于 meta theme-color）
-  useThemeColor({ useOverlay: true, enabled: isOpen });
+  const themeColorOverlayRef = useThemeColor({
+    useOverlay: true,
+    enabled: isOpen,
+  });
 
   // 集成历史栈管理，支持返回键关闭
   // 当 disableHistory 为 true 时，传入空 id 和 false 来禁用
@@ -268,6 +271,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
       <Drawer.Portal>
         {/* 背景遮罩 - 强制 fixed 定位确保覆盖安全区 */}
         <Drawer.Overlay
+          ref={themeColorOverlayRef}
           className="fixed! inset-0 z-80 bg-black/50"
           style={{ position: 'fixed' }}
         />

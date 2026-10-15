@@ -288,7 +288,10 @@ const StackedDrawer: React.FC<StackedDrawerProps> = ({
   historyId,
   layer = 'base',
 }) => {
-  useThemeColor({ useOverlay: true, enabled: isOpen });
+  const themeColorOverlayRef = useThemeColor({
+    useOverlay: true,
+    enabled: isOpen,
+  });
 
   useModalHistory({
     id: historyId,
@@ -306,7 +309,10 @@ const StackedDrawer: React.FC<StackedDrawerProps> = ({
       repositionInputs={false}
     >
       <Drawer.Portal>
-        <Drawer.Overlay className={`fixed inset-0 ${overlayZ} bg-black/50`} />
+        <Drawer.Overlay
+          ref={themeColorOverlayRef}
+          className={`fixed inset-0 ${overlayZ} bg-black/50`}
+        />
         <Drawer.Content
           className={`fixed inset-x-0 bottom-0 ${contentZ} mx-auto flex h-[88vh] max-w-md flex-col rounded-t-3xl bg-neutral-50 outline-none dark:bg-neutral-900`}
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}

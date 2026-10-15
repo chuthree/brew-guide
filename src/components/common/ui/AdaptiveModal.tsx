@@ -40,7 +40,8 @@ export const DRAWER_TRANSITION = {
  * 遮罩层动画配置
  */
 export const OVERLAY_TRANSITION = {
-  duration: 400, // ms - 与抽屉动画同步
+  duration: DRAWER_TRANSITION.duration, // ms - 与抽屉动画同步
+  easing: DRAWER_TRANSITION.easing,
 };
 
 /**
@@ -239,7 +240,7 @@ const AdaptiveModal = forwardRef<AdaptiveModalHandle, AdaptiveModalProps>(
     );
 
     // 同步顶部安全区颜色（仅在遮罩层可见时）
-    useThemeColor({
+    const themeColorOverlayRef = useThemeColor({
       useOverlay: overlayVisible,
       enabled: isOpen && overlayVisible,
     });
@@ -367,9 +368,11 @@ const AdaptiveModal = forwardRef<AdaptiveModalHandle, AdaptiveModalProps>(
         {/* 抽屉遮罩 */}
         {renderIsMediumScreen && renderShowDrawerOverlay && (
           <div
+            ref={themeColorOverlayRef}
             className="fixed inset-0 z-40 bg-black/50 transition-opacity"
             style={{
               transitionDuration: `${OVERLAY_TRANSITION.duration}ms`,
+              transitionTimingFunction: OVERLAY_TRANSITION.easing,
               opacity: overlayVisible ? 1 : 0,
             }}
           />
