@@ -6,6 +6,15 @@
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
-    "opener:allow-open-url"
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://chu3.top/*" },
+        { "url": "https://github.com/*" },
+        { "url": "https://www.isocons.app/*" },
+        { "url": "https://creativecommons.org/*" },
+        { "url": "https://www.jianguoyun.com/*" }
+      ]
+    }
   ]
 }
