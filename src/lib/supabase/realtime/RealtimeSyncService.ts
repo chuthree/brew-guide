@@ -38,8 +38,14 @@ import {
   markRecordsAsDeleted,
   uploadSettingsData,
   downloadSettingsData,
+  formatSyncOperationDiagnostic,
   type SyncOperationResult,
 } from '../syncOperations';
+import {
+  clearSupabaseDiagnosticEvents,
+  diagnosticSupabaseFetch,
+  recordSupabaseDiagnosticEvent,
+} from '../syncDiagnostics';
 import { offlineQueue } from './offlineQueue';
 import { hydrateLastSyncTime, setLastSyncTime } from './conflictResolver';
 import { InitialSyncManager } from './InitialSyncManager';
@@ -119,7 +125,11 @@ function assertSyncSuccess<T>(
   fallbackMessage: string
 ): asserts result is SyncOperationResult<T> & { success: true } {
   if (!result.success) {
-    throw new Error(result.error || fallbackMessage);
+    throw new Error(
+      result.diagnostic
+        ? `${fallbackMessage}\n${formatSyncOperationDiagnostic(result.diagnostic)}`
+        : result.error || fallbackMessage
+    );
   }
 }
 
@@ -320,6 +330,12 @@ export class RealtimeSyncService {
   }
 
   private async connectOnce(config: RealtimeSyncConfig): Promise<boolean> {
+    if (
+      this.config &&
+      (this.config.url !== config.url || this.config.anonKey !== config.anonKey)
+    ) {
+      clearSupabaseDiagnosticEvents();
+    }
     // 清理旧连接（包括失败后的残留 client/channel）
     if (this.client || this.channel) {
       await this.disconnect();
@@ -334,18 +350,21 @@ export class RealtimeSyncService {
     syncStore.setProvider('supabase');
     syncStore.setRealtimeEnabled(true);
 
+    recordSupabaseDiagnosticEvent('开始连接 Supabase');
     this.config = config;
     this.setState({ connectionStatus: 'connecting', error: null });
     this.clearReconnectTimer();
 
     try {
       this.client = createClient(config.url, config.anonKey, {
+        global: { fetch: diagnosticSupabaseFetch },
         auth: { persistSession: false, autoRefreshToken: false },
         realtime: { params: { eventsPerSecond: 10 } },
       });
 
       await this.setupRealtimeChannel();
       // setupLocalChangeListeners 已在 initialize 中调用
+      recordSupabaseDiagnosticEvent('Realtime 订阅已连接');
       this.setState({ connectionStatus: 'connected' });
       this.reconnectAttempts = 0;
       await this.updatePendingCount();
@@ -361,6 +380,7 @@ export class RealtimeSyncService {
       return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : '连接失败';
+      recordSupabaseDiagnosticEvent(`连接失败: ${message}`, true);
       console.error('[RealtimeSync] 连接失败:', message);
       this.setState({ connectionStatus: 'error', error: message });
       this.scheduleReconnect(`connect-failed:${message}`);

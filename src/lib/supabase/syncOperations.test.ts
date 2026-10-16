@@ -143,6 +143,42 @@ describe('upsertRecords', () => {
     expect(upsert.mock.calls.map(call => call[0].id)).toEqual(['0', '1']);
   });
 
+  it('learns the required equipment_id once per batch without double-counting progress', async () => {
+    const upsert = vi
+      .fn()
+      .mockResolvedValueOnce({
+        error: {
+          code: '23502',
+          message:
+            'null value in column "equipment_id" of relation "custom_methods" violates not-null constraint',
+        },
+        status: 400,
+      })
+      .mockResolvedValue({ error: null, status: 201 });
+    const onProgress = vi.fn();
+    const result = await upsertRecords(
+      createMockClient({ upsert }),
+      'custom_methods',
+      [{ id: 'equipment-1' }, { id: 'equipment-2' }],
+      record => ({
+        id: record.id,
+        data: { equipmentId: record.id, methods: [] },
+      }),
+      { onProgress }
+    );
+
+    expect(result).toMatchObject({ success: true, affectedCount: 2 });
+    expect(upsert).toHaveBeenCalledTimes(3);
+    expect(upsert.mock.calls[0][0]).not.toHaveProperty('equipment_id');
+    expect(
+      upsert.mock.calls.slice(1).map(call => call[0].equipment_id)
+    ).toEqual(['equipment-1', 'equipment-2']);
+    expect(onProgress.mock.calls).toEqual([
+      [1, 2],
+      [2, 2],
+    ]);
+  });
+
   it('reports mapping failures with the record id before uploading', async () => {
     const upsert = vi.fn();
     const client = createMockClient({ upsert });

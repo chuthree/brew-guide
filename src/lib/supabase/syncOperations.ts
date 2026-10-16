@@ -14,6 +14,11 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  describeSyncPayload,
+  recordSupabaseDiagnosticEvent,
+  sanitizeDiagnosticText,
+} from './syncDiagnostics';
+import {
   appSettingsRepository,
   grinderRepository,
 } from '@/lib/data/repositories';
@@ -46,6 +51,11 @@ export interface SyncOperationDiagnostic {
   details?: string;
   hint?: string;
   causeName?: string;
+  payloadShape?: string;
+  httpStatus?: number;
+  durationMs?: number;
+  attempts?: number;
+  recovery?: string;
 }
 
 export interface UpsertRecordsOptions {
@@ -91,10 +101,17 @@ function createDiagnostic(
   return {
     operation,
     table,
-    message: getErrorMessage(error),
+    message: sanitizeDiagnosticText(getErrorMessage(error)),
     code: getErrorField(error, 'code'),
-    details: getErrorField(error, 'details'),
-    hint: getErrorField(error, 'hint'),
+    details:
+      sanitizeDiagnosticText(
+        (getErrorField(error, 'details') || '').replace(
+          /Failing row contains[\s\S]*/gi,
+          'Failing row contains [已隐藏记录内容]'
+        )
+      ) || undefined,
+    hint:
+      sanitizeDiagnosticText(getErrorField(error, 'hint') || '') || undefined,
     causeName:
       error instanceof Error ? error.name : getErrorField(error, 'name'),
     ...extra,
@@ -106,6 +123,10 @@ function createFailure<T>(
   affectedCount: number,
   data?: T
 ): SyncOperationResult<T> {
+  recordSupabaseDiagnosticEvent(
+    `失败\n${formatSyncOperationDiagnostic(diagnostic)}`,
+    true
+  );
   return {
     success: false,
     error: diagnostic.message,
@@ -130,6 +151,15 @@ export function formatSyncOperationDiagnostic(
       ? `已完成: ${diagnostic.affectedCount}`
       : null,
     diagnostic.columns ? `列: ${diagnostic.columns}` : null,
+    diagnostic.payloadShape ? `上传字段结构: ${diagnostic.payloadShape}` : null,
+    diagnostic.httpStatus !== undefined
+      ? `HTTP 状态: ${diagnostic.httpStatus}`
+      : null,
+    diagnostic.durationMs !== undefined
+      ? `操作耗时: ${diagnostic.durationMs}ms`
+      : null,
+    diagnostic.attempts ? `请求次数: ${diagnostic.attempts}` : null,
+    diagnostic.recovery ? `兼容处理: ${diagnostic.recovery}` : null,
     diagnostic.idsSample?.length
       ? `ID样本: ${diagnostic.idsSample.join(', ')}`
       : null,
@@ -143,6 +173,7 @@ export function formatSyncOperationDiagnostic(
     `message: ${diagnostic.message}`,
   ]
     .filter(Boolean)
+    .map(line => sanitizeDiagnosticText(String(line)))
     .join('\n');
 }
 
@@ -588,11 +619,18 @@ export async function upsertRecords<T extends { id: string }>(
     return { success: true, affectedCount: 0 };
   }
 
+  let affectedCount = 0;
+  let requiresEquipmentId = false;
+  let currentContext: Partial<SyncOperationDiagnostic> = {};
   try {
-    let affectedCount = 0;
-
     for (let index = 0; index < records.length; index++) {
       const record = records[index];
+      currentContext = {
+        recordId: record.id,
+        recordIndex: index + 1,
+        total: records.length,
+        affectedCount,
+      };
       let mappedRecord: Record<string, unknown>;
 
       try {
@@ -601,42 +639,85 @@ export async function upsertRecords<T extends { id: string }>(
           user_id: DEFAULT_USER_ID,
           deleted_at: null,
         };
+        if (requiresEquipmentId && mappedRecord.equipment_id === undefined) {
+          mappedRecord.equipment_id = mappedRecord.id;
+        }
       } catch (err) {
         return createFailure(
-          createDiagnostic('map-record-for-upsert', table, err, {
-            recordId: record.id,
-            recordIndex: index + 1,
-            total: records.length,
-            affectedCount,
-          }),
+          createDiagnostic('map-record-for-upsert', table, err, currentContext),
           affectedCount
         );
       }
 
-      const { error } = await client
+      currentContext.payloadShape = describeSyncPayload(mappedRecord);
+      currentContext.attempts = 1;
+      const startedAt = Date.now();
+      let response = await client
         .from(table)
         .upsert(mappedRecord, { onConflict: 'id,user_id' });
 
+      // Some existing clouds require a legacy equipment_id column. New tables do
+      // not have it, so only send it after the server explicitly requests it.
+      if (
+        table === SYNC_TABLES.CUSTOM_METHODS &&
+        response.error?.code === '23502' &&
+        response.error.message.includes(
+          'null value in column "equipment_id" of relation "custom_methods"'
+        ) &&
+        typeof mappedRecord.id === 'string' &&
+        mappedRecord.id.length > 0 &&
+        mappedRecord.equipment_id === undefined
+      ) {
+        currentContext.recovery =
+          '云端要求 equipment_id，使用本条记录的器具 ID 补齐并重试一次';
+        recordSupabaseDiagnosticEvent(
+          `兼容重试触发\n${formatSyncOperationDiagnostic(
+            createDiagnostic('upsert-record', table, response.error, {
+              ...currentContext,
+              httpStatus: response.status,
+            })
+          )}`,
+          true
+        );
+        mappedRecord = { ...mappedRecord, equipment_id: mappedRecord.id };
+        currentContext.payloadShape = describeSyncPayload(mappedRecord);
+        currentContext.attempts = 2;
+        response = await client
+          .from(table)
+          .upsert(mappedRecord, { onConflict: 'id,user_id' });
+      }
+
+      const { error } = response;
       if (error) {
         console.error(`[SyncOps] ${table} upsert 失败:`, error.message);
         return createFailure(
           createDiagnostic('upsert-record', table, error, {
-            recordId: record.id,
-            recordIndex: index + 1,
-            total: records.length,
-            affectedCount,
+            ...currentContext,
+            httpStatus: response.status,
+            durationMs: Date.now() - startedAt,
           }),
           affectedCount
         );
       }
 
+      if (currentContext.recovery) requiresEquipmentId = true;
+      recordSupabaseDiagnosticEvent(
+        `上传成功 ${table}/${record.id} duration=${Date.now() - startedAt}ms attempts=${currentContext.attempts} fields=${currentContext.payloadShape}${currentContext.recovery ? ' 兼容重试成功：已补齐 equipment_id' : ''}`,
+        Boolean(currentContext.recovery)
+      );
       affectedCount += 1;
       options.onProgress?.(affectedCount, records.length);
     }
 
     return { success: true, affectedCount };
   } catch (err) {
-    return createFailure(createDiagnostic('upsert-records', table, err), 0);
+    return createFailure(
+      createDiagnostic('upsert-record', table, err, {
+        ...currentContext,
+        affectedCount,
+      }),
+      affectedCount
+    );
   }
 }
 

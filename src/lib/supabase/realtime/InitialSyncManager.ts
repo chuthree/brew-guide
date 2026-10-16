@@ -11,6 +11,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createSupabaseSyncDiagnostic } from '../syncDiagnostics';
 import {
   brewingNoteImageRepository,
   brewingNotePersistence,
@@ -55,7 +56,6 @@ import {
 import { showToast } from '@/components/common/feedback/LightToast';
 import {
   getSyncStatusStore,
-  type SupabaseSyncTask,
   type SupabaseSyncTaskStatus,
 } from '@/lib/stores/syncStatusStore';
 
@@ -64,7 +64,6 @@ const SYNC_TIMEOUT = 60000; // 增加到 60s 以适应移动端大文件传输
 const DETAIL_DOWNLOAD_IDLE_TIMEOUT = SYNC_TIMEOUT * 2;
 const BACKGROUND_SETTINGS_DOWNLOAD_TIMEOUT = 12000;
 const SYNC_DIAGNOSTIC_TOAST_DURATION = 8000;
-const MAX_DIAGNOSTIC_ERROR_LENGTH = 500;
 
 /**
  * 带超时的 Promise 包装器
@@ -380,156 +379,6 @@ async function writeLocalRecordWithDiagnostics<T>(
   }
 }
 
-function truncateDiagnosticValue(value: string): string {
-  if (value.length <= MAX_DIAGNOSTIC_ERROR_LENGTH) return value;
-  return `${value.slice(0, MAX_DIAGNOSTIC_ERROR_LENGTH)}...`;
-}
-
-function formatDiagnosticTime(timestamp?: number): string {
-  if (!timestamp) return '无';
-  return `${new Date(timestamp).toISOString()} (${timestamp})`;
-}
-
-function getBrowserDiagnosticLines(): string[] {
-  if (typeof navigator === 'undefined') return [];
-
-  return [
-    `在线状态: ${navigator.onLine ? 'online' : 'offline'}`,
-    `User-Agent: ${navigator.userAgent}`,
-  ];
-}
-
-function inferSyncFailureHint(tasks: SupabaseSyncTask[]): string {
-  const errorText = tasks
-    .map(task => task.error || task.detail || '')
-    .join('\n')
-    .toLowerCase();
-
-  if (!errorText) {
-    return '暂无错误明细，请结合控制台日志查看。';
-  }
-
-  if (
-    errorText.includes('permission denied') ||
-    errorText.includes('row-level security') ||
-    errorText.includes('rls') ||
-    errorText.includes('42501')
-  ) {
-    return '可能是 Supabase 表权限或 RLS 策略未按最新初始化 SQL 配置。';
-  }
-
-  if (
-    errorText.includes('does not exist') ||
-    errorText.includes('schema cache') ||
-    errorText.includes('could not find') ||
-    errorText.includes('pgrst')
-  ) {
-    return '可能是 Supabase 表结构、字段或 Data API 暴露配置不是最新版。';
-  }
-
-  if (
-    errorText.includes('timeout') ||
-    errorText.includes('timed out') ||
-    errorText.includes('network') ||
-    errorText.includes('failed to fetch')
-  ) {
-    return '可能是网络波动或 Supabase 请求超时。';
-  }
-
-  if (
-    errorText.includes('in-progress transaction') ||
-    errorText.includes('indexeddb') ||
-    errorText.includes('unknownerror')
-  ) {
-    return '可能是浏览器本地 IndexedDB 事务在后台恢复时失效，可优先检查本地读写事务。';
-  }
-
-  if (
-    errorText.includes('数据格式无效') ||
-    errorText.includes('写入本地') ||
-    errorText.includes('invalid time value') ||
-    errorText.includes('datacloneerror') ||
-    errorText.includes('constraint') ||
-    errorText.includes('dexie')
-  ) {
-    return '可能是某条本地或云端历史数据结构不规范，优先看诊断里的表名和记录ID。';
-  }
-
-  if (
-    errorText.includes('payload') ||
-    errorText.includes('too large') ||
-    errorText.includes('413') ||
-    errorText.includes('request entity')
-  ) {
-    return '可能是单条记录内容过大，例如图片或备注字段进入了同步 data。';
-  }
-
-  return '请根据失败任务的原始错误定位。';
-}
-
-function formatDiagnosticTask(task: SupabaseSyncTask): string {
-  return [
-    `${task.label} (${task.id})`,
-    `  状态: ${task.status}`,
-    task.detail ? `  阶段: ${task.detail}` : null,
-    typeof task.completed === 'number' || typeof task.total === 'number'
-      ? `  进度: ${task.completed ?? '-'} / ${task.total ?? '-'}`
-      : null,
-    task.uploaded || task.downloaded || task.deleted || task.failed
-      ? `  统计: ↑${task.uploaded ?? 0} ↓${task.downloaded ?? 0} ×${task.deleted ?? 0} 失败${task.failed ?? 0}`
-      : null,
-    task.error ? `  错误: ${truncateDiagnosticValue(task.error)}` : null,
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
-
-function createSyncDiagnostic(params: {
-  errorCount: number;
-  totalTaskCount: number;
-  lastSyncTime: number;
-  startedAt: number;
-  stats: SyncStats;
-}): string {
-  const progress = getSyncStatusStore().supabaseSyncProgress;
-  const failedTasks = progress.tasks.filter(
-    task => task.status === 'error' || Boolean(task.error)
-  );
-  const taskSummary =
-    progress.tasks.length > 0
-      ? progress.tasks
-          .map(
-            task =>
-              `${task.label}:${task.status}${task.detail ? `(${task.detail})` : ''}`
-          )
-          .join(' | ')
-      : '无任务记录';
-
-  const failedTaskText =
-    failedTasks.length > 0
-      ? failedTasks.map(formatDiagnosticTask).join('\n\n')
-      : '无失败任务明细';
-
-  return [
-    'Brew Guide Supabase 同步诊断',
-    `生成时间: ${new Date().toISOString()}`,
-    `同步阶段: ${progress.phase}`,
-    `进度消息: ${progress.message || '无'}`,
-    `失败项目: ${params.errorCount}/${params.totalTaskCount}`,
-    `同步统计: ↑${params.stats.uploaded} ↓${params.stats.downloaded} ×${params.stats.deleted}`,
-    `本轮耗时: ${Date.now() - params.startedAt}ms`,
-    `上次成功同步: ${formatDiagnosticTime(params.lastSyncTime)}`,
-    ...getBrowserDiagnosticLines(),
-    `判断方向: ${inferSyncFailureHint(failedTasks)}`,
-    '',
-    '失败任务:',
-    failedTaskText,
-    '',
-    '全部任务:',
-    taskSummary,
-  ].join('\n');
-}
-
 function createCopyDiagnosticAction(diagnostic: string) {
   return {
     label: '复制诊断',
@@ -734,7 +583,11 @@ export class InitialSyncManager {
     if (typeof window !== 'undefined') {
       if (errorCount > 0 && !silenceBackgroundFailure) {
         // 如果有错误发生
-        const diagnostic = createSyncDiagnostic({
+        const state = getSyncStatusStore();
+        const diagnostic = createSupabaseSyncDiagnostic({
+          progress: state.supabaseSyncProgress,
+          connectionStatus: state.realtimeStatus,
+          pendingChangesCount: state.pendingChangesCount,
           errorCount,
           totalTaskCount,
           lastSyncTime,
@@ -746,7 +599,7 @@ export class InitialSyncManager {
         if (errorCount === totalTaskCount) {
           showToast({
             type: 'error',
-            title: '同步失败，请检查网络',
+            title: '同步失败，可复制诊断反馈',
             duration: SYNC_DIAGNOSTIC_TOAST_DURATION,
             action,
           });
