@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install --global \"$(node -p \"require('./package.json').packageManager\")\" && pnpm install --frozen-lockfile",
+  "installCommand": "npm install --global pnpm@12.11.2 && pnpm install --frozen-lockfile",
   "nodeVersion": "24.18.0",
   "cloudFunctions": {
     "nodejs": {
