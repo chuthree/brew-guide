@@ -20,7 +20,7 @@ import {
   normalizeBrewingNoteParams,
   resolveNoteEquipmentName,
 } from '@/lib/notes/noteDisplay';
-import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
+import { useBrewingNoteImagesWhenVisible } from '@/lib/hooks/useBrewingNoteImages';
 import { getDataUrlImageDimensions } from '@/lib/images/dimensions';
 import { isSimpleChangeRecord, isRoastingRecord } from '../types';
 import { openImageViewer } from '@/lib/ui/imageViewer';
@@ -534,7 +534,8 @@ export const BrewingRecordItem: React.FC<{
       if (note.image) return [note.image];
       return [];
     }, [note.images, note.image]);
-    const noteImages = useBrewingNoteImages(note.id, inlineNoteImages);
+    const { ref: imageLoadRef, images: noteImages } =
+      useBrewingNoteImagesWhenVisible(note.id, inlineNoteImages);
     const noteImage = noteImages[0];
     const imageSlotCount = noteImages.length;
     const noteImageError = Boolean(noteImageErrors[note.id]);
@@ -695,11 +696,18 @@ export const BrewingRecordItem: React.FC<{
       });
     }, [beanUnitPrice, equipmentName, note, noteBean, onOpenNoteDetail]);
     if (!onOpenNoteDetail) {
-      return <div className="block w-full space-y-3 text-left">{content}</div>;
+      return (
+        <div ref={imageLoadRef} className="block w-full space-y-3 text-left">
+          {content}
+        </div>
+      );
     }
 
     return (
-      <div className="relative block w-full space-y-3 text-left">
+      <div
+        ref={imageLoadRef}
+        className="relative block w-full space-y-3 text-left"
+      >
         <button
           type="button"
           aria-label="查看冲煮记录详情"

@@ -533,7 +533,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     const updateHeight = () => {
       const height = targetEl.offsetHeight;
       if (height > 0) {
-        setImageHeightState({ key: imageViewKey, value: height });
+        setImageHeightState(current =>
+          current.key === imageViewKey && current.value === height
+            ? current
+            : { key: imageViewKey, value: height }
+        );
       }
     };
 
