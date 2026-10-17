@@ -9,8 +9,7 @@
       "src/app/**/layout.tsx",
       "src/app/**/not-found.tsx",
       "capacitor.config.ts",
-      "next.config.mjs",
-      "server.js"
+      "next.config.mjs"
     ]
   }
 }

@@ -28,8 +28,8 @@ Brew Guide 是一个面向精品咖啡爱好者的开源应用，聚焦冲煮辅
 
 ### 环境要求
 
-- Node.js `>= 18.19.0`
-- pnpm
+- Node.js 24（本地版本见 `.node-version`）
+- pnpm `12.11.2`（版本固定在 `package.json`）
 
 ### 本地运行
 

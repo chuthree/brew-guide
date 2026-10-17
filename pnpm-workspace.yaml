@@ -1,0 +1,8 @@
+overrides:
+  "@tauri-apps/api": "2.9.1"
+
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: false
+  sharp: false
+  unrs-resolver: true

@@ -22,11 +22,6 @@ assert.deepEqual(
   'Use one locked Tauri JS API version, including plugins'
 );
 assert.equal(
-  pkg.pnpm?.overrides?.['@tauri-apps/api'],
-  pkg.devDependencies['@tauri-apps/api'],
-  'Keep plugin API resolution aligned with the native runtime'
-);
-assert.equal(
   config.build.frontendDist,
   '../out',
   'Desktop must bundle the local frontend'

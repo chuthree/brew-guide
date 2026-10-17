@@ -5,7 +5,7 @@
   "license": "GPL-3.0-only",
   "type": "module",
   "engines": {
-    "node": ">=18.19.0"
+    "node": ">=24.18.0 <25"
   },
   "scripts": {
     "dev": "next dev",
@@ -26,8 +26,6 @@
     "tauri:build:mac": "tauri build --target universal-apple-darwin",
     "tauri:build:windows": "tauri build --target x86_64-pc-windows-msvc",
     "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu",
-    "perf:check": "./scripts/perf-check.sh",
-    "perf:analyze": "ANALYZE=true pnpm build",
     "doctor": "npx react-doctor@latest",
     "check:native-release": "node scripts/check-native-release.mjs"
   },
@@ -118,9 +116,5 @@
     "@types/react-dom": "19.2.3",
     "brace-expansion": ">=2.0.2"
   },
-  "pnpm": {
-    "overrides": {
-      "@tauri-apps/api": "2.9.1"
-    }
-  }
+  "packageManager": "pnpm@12.11.2"
 }

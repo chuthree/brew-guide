@@ -1,6 +1,6 @@
 {
-  "installCommand": "pnpm install --no-frozen-lockfile",
-  "nodeVersion": "22.11.0",
+  "installCommand": "npm install --global \"$(node -p \"require('./package.json').packageManager\")\" && pnpm install --frozen-lockfile",
+  "nodeVersion": "24.18.0",
   "cloudFunctions": {
     "nodejs": {
       "maxDuration": 120

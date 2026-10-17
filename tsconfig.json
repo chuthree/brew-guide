@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "tsBuildInfoFile": ".next/cache/tsconfig.tsbuildinfo",
     "plugins": [
       {
         "name": "next"
@@ -26,8 +27,6 @@
     "baseUrl": "."
   },
   "include": [
-    "types/css.d.ts",
-    "types/svg.d.ts",
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
