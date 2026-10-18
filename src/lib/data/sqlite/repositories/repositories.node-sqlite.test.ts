@@ -414,6 +414,61 @@ describeNodeSqlite(`${nodeSqliteLabel} repository integration`, () => {
       expect(await repository.count()).toBe(0);
     });
   });
+
+  it('queues custom equipment and method sync work behind a failed SQLite transaction', async () => {
+    const driver = getDatabase().driver;
+    const equipmentRepository = createSqliteCustomEquipmentRepository(driver);
+    const methodRepository = createSqliteCustomMethodRepository(driver);
+    const transactionError = new Error('simulated transaction failure');
+
+    let releaseTransaction!: () => void;
+    const transactionGate = new Promise<void>(resolve => {
+      releaseTransaction = resolve;
+    });
+    let markTransactionStarted!: () => void;
+    const transactionStarted = new Promise<void>(resolve => {
+      markTransactionStarted = resolve;
+    });
+
+    const transaction = driver.transaction(async tx => {
+      await tx.execute(
+        'INSERT INTO app_settings (id, data_json) VALUES (?, ?)',
+        ['main', '{}']
+      );
+      markTransactionStarted();
+      await transactionGate;
+      throw transactionError;
+    });
+    await transactionStarted;
+
+    const syncOperations = Promise.allSettled([
+      equipmentRepository.list(),
+      equipmentRepository.upsertMany([equipment('sync-equipment', 'Sync')]),
+      methodRepository.list(),
+      methodRepository.upsertMany([
+        customMethods('sync-equipment', [method('Sync method')]),
+      ]),
+    ]);
+
+    releaseTransaction();
+    await expect(transaction).rejects.toBe(transactionError);
+    const outcomes = await syncOperations;
+
+    expect(
+      outcomes.map(outcome =>
+        outcome.status === 'fulfilled' ? 'ok' : outcome.reason.message
+      )
+    ).toEqual(['ok', 'ok', 'ok', 'ok']);
+    expect(await createSqliteAppSettingsRepository(driver).count()).toBe(0);
+    expect(await equipmentRepository.get('sync-equipment')).toMatchObject({
+      id: 'sync-equipment',
+      name: 'Sync',
+    });
+    expect(await methodRepository.get('sync-equipment')).toMatchObject({
+      equipmentId: 'sync-equipment',
+      methods: [{ name: 'Sync method' }],
+    });
+  });
 });
 
 function appSettings(extra: Record<string, unknown> = {}): AppSettings {

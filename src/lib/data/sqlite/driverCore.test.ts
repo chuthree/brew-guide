@@ -182,19 +182,16 @@ describe('SQLite driver core', () => {
     expect(original).toHaveProperty('rollbackDiagnostic');
   });
 
-  it('rejects nested transactions and global operations during a transaction', async () => {
+  it('rejects nested transactions', async () => {
     const { driver } = makeDriver();
     await driver.transaction(async () => {
       await expect(driver.transaction(async () => undefined)).rejects.toThrow(
         'nested transaction not supported'
       );
-      await expect(driver.execute('DELETE FROM t')).rejects.toThrow(
-        'use the transaction executor'
-      );
     });
   });
 
-  it('serializes concurrent writes and rejects a write attempted during an active transaction', async () => {
+  it('serializes concurrent writes and queues global operations behind an active transaction', async () => {
     let writesInFlight = 0;
     let maximumWritesInFlight = 0;
     const { driver } = makeDriver({
@@ -227,11 +224,12 @@ describe('SQLite driver core', () => {
       });
     });
     await transactionEntered;
-    await expect(
-      driver.execute('INSERT INTO t VALUES (?)', [3])
-    ).rejects.toThrow('use the transaction executor');
+    const queuedWrite = driver.execute('INSERT INTO t VALUES (?)', [3]);
+    const queuedRead = driver.query('SELECT 1');
     releaseTransaction?.();
     await transaction;
+    await expect(queuedWrite).resolves.toEqual({ changes: 1 });
+    await expect(queuedRead).resolves.toEqual([]);
   });
 
   it('expires the callback-scoped transaction executor after commit', async () => {

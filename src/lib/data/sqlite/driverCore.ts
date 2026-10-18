@@ -272,33 +272,19 @@ export function createSqliteDriverCore(
     };
   };
 
+  // Ordinary driver calls queue behind transactions. Transaction callbacks
+  // must use their scoped executor.
   return {
-    execute: (sql, params) => {
-      if (transactionActive) {
-        return Promise.reject(
-          new SqliteDriverError(
-            'use the transaction executor while a transaction is active'
-          )
-        );
-      }
-      return mutex.runExclusive(async () => {
+    execute: (sql, params) =>
+      mutex.runExclusive(async () => {
         assertOpen();
         return executeOnConnection(sql, params);
-      });
-    },
-    query: (sql, params) => {
-      if (transactionActive) {
-        return Promise.reject(
-          new SqliteDriverError(
-            'use the transaction executor while a transaction is active'
-          )
-        );
-      }
-      return mutex.runExclusive(async () => {
+      }),
+    query: (sql, params) =>
+      mutex.runExclusive(async () => {
         assertOpen();
         return queryOnConnection(sql, params);
-      });
-    },
+      }),
     transaction: async work => {
       if (transactionActive) {
         throw new SqliteDriverError('nested transaction not supported');
