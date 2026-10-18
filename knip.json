@@ -1,7 +1,13 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["node-functions/**/*.js", "edge-functions/**/*.js"],
   "ignoreExportsUsedInFile": true,
-  "ignore": ["eslint.config.mjs", "android/app/src/main/assets/**"],
+  "ignore": [
+    "eslint.config.mjs",
+    "android/app/src/main/assets/**",
+    "ios/App/App/public/**",
+    "src-tauri/target/**"
+  ],
   "ignoreDependencies": ["@svgr/webpack", "eslint-config-next"],
   "next": {
     "entry": [
