@@ -584,6 +584,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       setSelectedBeanState('roasted');
       globalCache.selectedBeanState = 'roasted';
       saveSelectedBeanStatePreference('roasted');
+      window.dispatchEvent(
+        new CustomEvent(COFFEE_BEAN_NAVIGATION_EVENTS.INVENTORY_STATE_CHANGED, {
+          detail: { beanState: 'roasted' },
+        })
+      );
     }
   }, [enableGreenBeanInventory, selectedBeanState]);
 
@@ -896,6 +901,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       setSelectedBeanState(beanState);
       globalCache.selectedBeanState = beanState;
       saveSelectedBeanStatePreference(beanState);
+      window.dispatchEvent(
+        new CustomEvent(COFFEE_BEAN_NAVIGATION_EVENTS.INVENTORY_STATE_CHANGED, {
+          detail: { beanState },
+        })
+      );
 
       // 加载目标 beanState 的 filterMode
       const targetFilterMode =

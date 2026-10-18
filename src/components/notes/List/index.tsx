@@ -87,6 +87,12 @@ import {
 import { useBrewingNoteImageCountsState } from '@/lib/hooks/useBrewingNoteImages';
 import { revertCapacityAdjustmentRecord } from '@/lib/coffee-beans/capacityAdjustment';
 import { createBrewingNoteCopyData } from './brewingNoteCopy';
+import { filterNotesByBeanState } from './noteListModel';
+import { getValidBeanState } from '@/components/coffee-bean/List/preferences';
+import {
+  COFFEE_BEAN_NAVIGATION_EVENTS,
+  type CoffeeBeanInventoryState,
+} from '@/lib/navigation/coffeeBeanNavigation';
 
 const NOTES_TABLE_COLUMNS_STORAGE_KEY = 'notes-table-visible-columns';
 
@@ -277,6 +283,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
   // 🔥 从 Zustand Store 订阅咖啡豆数据
   const coffeeBeans = useCoffeeBeanStore(state => state.beans);
+  const [beanInventoryState, setBeanInventoryState] =
+    useState<CoffeeBeanInventoryState>(() => getValidBeanState());
   const customEquipments = useCustomEquipmentStore(state => state.equipments);
   const customEquipmentInitialized = useCustomEquipmentStore(
     state => state.initialized
@@ -286,6 +294,26 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     state =>
       state.settings.equipmentNameOverrides || EMPTY_EQUIPMENT_NAME_OVERRIDES
   );
+
+  useEffect(() => {
+    const handleInventoryStateChanged = (
+      event: CustomEvent<{ beanState: CoffeeBeanInventoryState }>
+    ) => {
+      setBeanInventoryState(event.detail.beanState);
+    };
+
+    window.addEventListener(
+      COFFEE_BEAN_NAVIGATION_EVENTS.INVENTORY_STATE_CHANGED,
+      handleInventoryStateChanged as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        COFFEE_BEAN_NAVIGATION_EVENTS.INVENTORY_STATE_CHANGED,
+        handleInventoryStateChanged as EventListener
+      );
+    };
+  }, []);
 
   const equipmentNames = useMemo(
     () => buildEquipmentNameMap(customEquipments, equipmentNameOverrides),
@@ -309,8 +337,12 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const sortedNotes = useMemo(() => {
     if (!notes || notes.length === 0) return [];
 
-    return sortNotes(notes, sortOption);
-  }, [notes, sortOption]);
+    return filterNotesByBeanState(
+      sortNotes(notes, sortOption),
+      beanInventoryState,
+      coffeeBeans
+    );
+  }, [notes, sortOption, beanInventoryState, coffeeBeans]);
 
   //  简化：直接用 useMemo 筛选和排序，不需要复杂的 hook
   const filteredNotes = useMemo(() => {
