@@ -1,87 +1,80 @@
-# Brew Guide APP
+<div align="center">
 
-Brew Guide 是一个面向精品咖啡爱好者的开源应用，聚焦冲煮辅助、库存管理与品鉴记录等实际需求。
+<img src="public/images/icons/app/icon-192x192-contained.png" alt="Brew Guide" width="128" height="128" />
 
-[在线体验](https://coffee.chu3.top/) · [下载与安装](https://chu3.top/brewguide) · [更新日志](https://chu3.top/brewguide/changelog) · [帮助文档](https://chu3.top/brewguide-help)
+<h1>Brew Guide</h1>
 
-![应用截图](https://pic1.imgdb.cn/item/6913fbc43203f7be00f6dedd.png)
+一个管理咖啡豆库存、记录品鉴笔记与辅助冲煮的开源应用。
 
-## 核心能力
+[![最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=Release&color=525252)](https://github.com/chuthree/brew-guide/releases/latest)
+[![下载量](https://img.shields.io/github/downloads/chuthree/brew-guide/total?label=Downloads&color=525252)](https://github.com/chuthree/brew-guide/releases)
+[![最近提交](https://img.shields.io/github/last-commit/chuthree/brew-guide?label=Updated&color=525252)](https://github.com/chuthree/brew-guide/commits/main)
+[![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-525252)](LICENSE)
 
-- **冲煮引导**：支持多种器具与冲煮方案，提供分阶段计时和注水可视化，帮助稳定复现参数。
-- **豆仓管理**：集中管理咖啡豆信息、产地、处理法、品种、烘焙度、容量和新鲜度。
-- **烘焙与库存追踪**：支持生豆与熟豆管理、烘焙转换、消耗记录和剩余量查看。
-- **品鉴记录**：记录评分、风味、口感、冲煮参数和备注，并关联器具、方案与豆子数据。
-- **统计与回顾**：提供偏好统计、历史趋势和年度咖啡报告，方便回看自己的冲煮与喝豆习惯。
-- **数据掌控**：默认本地存储，支持导入导出、备份，以及 `Supabase`、`WebDAV`、`S3` 多种同步方式。
-- **多端体验**：支持 Web、PWA、iOS、Android、macOS、Windows、Linux，并适配深浅色模式与墨水屏场景。
+[官网](https://chu3.top/brewguide) · [下载](#使用) · [使用教程](https://chu3.top/brewguide-help) · [更新日志](https://chu3.top/brewguide/changelog) · [网页版](https://coffee.chu3.top/)
 
-## 平台支持
+</div>
 
-| 平台 | 说明 |
-| --- | --- |
-| Web / PWA | 可直接访问网页使用，也可安装为类原生应用，并支持离线访问 |
-| iOS / Android | 基于 Capacitor 打包，便于接入原生能力 |
-| macOS / Windows / Linux | 基于 Tauri 构建桌面端 |
+## 功能
+
+- **咖啡豆库存**：拍照识别咖啡豆信息，快捷扣除用量，查看库存与最佳赏味期。
+- **品鉴笔记**：按豆子、时间和评分回看品鉴，用雷达图比较各项评分维度。
+- **冲煮计时**：预设每段的注水方式、时间与水量，冲煮时实时查看进度。
+
+更多功能介绍见[官网](https://chu3.top/brewguide)。
+
+## 使用
+
+| 平台         | 使用方式                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| iOS / iPadOS | [![打开网页版](https://img.shields.io/badge/PWA-%E7%BD%91%E9%A1%B5%E7%89%88-525252)](https://coffee.chu3.top/) [![下载 iOS / iPadOS arm64 IPA 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=arm64%20IPA&color=525252)](https://github.com/chuthree/brew-guide/releases/latest)                                                                |
+| Android      | [![下载 Android universal APK 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=universal%20APK&color=525252)](https://github.com/chuthree/brew-guide/releases/latest)                                                                                                                                                                            |
+| macOS        | [![下载 macOS arm64 DMG 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=arm64%20DMG&color=525252)](https://github.com/chuthree/brew-guide/releases/latest) [![下载 macOS x64 DMG 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=x64%20DMG&color=525252)](https://github.com/chuthree/brew-guide/releases/latest) |
+| Windows      | [![下载 Windows x64 EXE 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=x64%20EXE&color=525252)](https://github.com/chuthree/brew-guide/releases/latest)                                                                                                                                                                                        |
+| Linux        | [![下载 Linux x64 AppImage 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=x64%20AppImage&color=525252)](https://github.com/chuthree/brew-guide/releases/latest)                                                                                                                                                                                |
+
+## 数据
+
+数据默认保存在设备本地，无需注册账号。网页版和 PWA 使用 IndexedDB，移动端和桌面端应用使用 SQLite。
+
+支持导入导出和备份，也可以自行配置 Supabase、WebDAV 或 S3，在设备之间同步数据。
+
+## 隐私
+
+Brew Guide 不内置遥测或行为分析，不收集用户使用数据，也不会自动上传错误日志。
+
+使用图片识别时，你选择的图片会发送到识别服务，由大模型分析咖啡豆或冲煮方案信息，完成后立即从 Brew Guide 服务器删除。第三方识别服务如何使用和保存数据，请查看对应服务的隐私政策。
+
+完整说明见[隐私说明](https://chu3.top/brewguide/privacy)。
 
 ## 开发
 
-### 环境要求
+基于 Next.js、React、TypeScript 和 Tailwind CSS。移动端使用 Capacitor，桌面端使用 Tauri。
 
-- Node.js 24（本地版本见 `.node-version`）
-- pnpm `12.11.2`（版本固定在 `package.json`）
-
-### 本地运行
+使用 Node.js 24 和 pnpm 12.11.2。
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-### 常用命令
+| 命令                                  | 用途                                                    |
+| ------------------------------------- | ------------------------------------------------------- |
+| `pnpm build`                          | 构建 Web 静态产物与 PWA Service Worker，输出到 `out/`。 |
+| `pnpm cap:build`                      | 构建并同步至移动端工程。                                |
+| `pnpm cap:ios` / `pnpm cap:android`   | 打开 iOS / Android 工程。                               |
+| `pnpm tauri:dev` / `pnpm tauri:build` | 开发或构建桌面端。                                      |
 
-```bash
-# Web 构建
-pnpm build
+移动端开发需安装 Xcode 或 Android Studio；桌面端开发需安装 Rust 和 Tauri 对应的系统依赖。
 
-# 代码检查
-pnpm lint
+## 反馈
 
-# HTTPS 开发环境（测试 PWA、相机等能力时使用）
-pnpm dev --experimental-https
-
-# 移动端
-pnpm cap:build
-pnpm cap:ios
-pnpm cap:android
-
-# 桌面端
-pnpm tauri:dev
-pnpm tauri:build
-```
-
-## 技术栈
-
-- [Next.js 16](https://nextjs.org/)
-- [React 19](https://react.dev/)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Tailwind CSS 4](https://tailwindcss.com/)
-- [Framer Motion](https://www.framer.com/motion/)
-- [Dexie](https://dexie.org/)
-- [Supabase](https://supabase.com/)
-- [Capacitor](https://capacitorjs.com/)
-- [Tauri](https://tauri.app/)
+问题和建议请提交到 [Issues](https://github.com/chuthree/brew-guide/issues)。报告问题时，请附上应用版本、使用平台和复现步骤。
 
 ## 相关项目
 
-- [brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli)：社区开发的命令行工具，可直接在终端中管理 Brew Guide 的 Supabase 同步数据。
-
-## 贡献
-
-目前暂不接受 Pull Request。欢迎通过 Issue 提交问题、使用反馈和改进建议。
+[brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli)：社区维护的命令行工具，用于管理 Brew Guide 的 Supabase 同步数据。
 
 ## 许可证
 
-本项目采用 [GPL-3.0-only](https://spdx.org/licenses/GPL-3.0-only.html) 开源协议。
-
-Copyright © 2026 chu3 (chuthree)
+[GPL-3.0-only](LICENSE) · © 2026 [chu3](https://github.com/chuthree)
