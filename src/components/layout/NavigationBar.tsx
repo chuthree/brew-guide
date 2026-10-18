@@ -1104,6 +1104,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     activeMainTab === '冲煮' &&
     (!isTimerRunning || showComplete || activeBrewingStep === 'notes');
   const shouldShowParams = parameterInfo.method;
+  const hasGrindSizeParameter =
+    parameterInfo.params?.grindSize !== undefined &&
+    parameterInfo.params?.grindSize !== null;
   const isNoCoffeeBeanMode =
     !hasCoffeeBeans || settings.showCoffeeBeanSelectionStep === false;
   const desktopContentTopSpacingClass =
@@ -1819,7 +1822,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                                   unit=""
                                   prefix="1:"
                                 />
-                                {parameterInfo.params?.grindSize && (
+                                {hasGrindSizeParameter && (
                                   <>
                                     <span className="shrink-0 select-none md:hidden">
                                       ·
