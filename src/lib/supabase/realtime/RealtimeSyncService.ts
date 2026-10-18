@@ -205,6 +205,7 @@ export class RealtimeSyncService {
   private reconnectAttempts = 0;
   private isDisconnecting = false;
   private isProcessingRemoteSettings = false;
+  private remoteSettingsApplyPromise: Promise<void> | null = null;
   private isInitialized = false;
   private syncRunPromise: Promise<void> | null = null;
   private remoteChangeQueue: Promise<void> = Promise.resolve();
@@ -715,21 +716,28 @@ export class RealtimeSyncService {
     if (this.isProcessingRemoteSettings) return;
 
     this.isProcessingRemoteSettings = true;
+    const remoteApply = (async () => {
+      if (!this.client) return;
+
+      const result = await downloadSettingsData(this.client);
+      assertSyncSuccess(result, '下载远端设置失败');
+      await refreshSettingsStores();
+      const now = Date.now();
+      setLastSyncTime(now);
+      this.setState({ lastSyncTime: now });
+    })();
+    this.remoteSettingsApplyPromise = remoteApply;
 
     try {
-      if (this.client) {
-        const result = await downloadSettingsData(this.client);
-        assertSyncSuccess(result, '下载远端设置失败');
-        await refreshSettingsStores();
-        const now = Date.now();
-        setLastSyncTime(now);
-        this.setState({ lastSyncTime: now });
-      }
+      await remoteApply;
     } catch (error) {
       const message = getErrorMessage(error);
       console.error('[RealtimeSync] 处理远程设置变更失败:', error);
       useSyncStatusStore.getState().setSyncError(message);
     } finally {
+      if (this.remoteSettingsApplyPromise === remoteApply) {
+        this.remoteSettingsApplyPromise = null;
+      }
       setTimeout(() => {
         this.isProcessingRemoteSettings = false;
       }, SYNC_TIMING.SETTINGS_COOLDOWN);
@@ -754,13 +762,9 @@ export class RealtimeSyncService {
           clearTimeout(this.settingsDebounceTimer);
         }
 
-        const delay = this.isProcessingRemoteSettings
-          ? SYNC_TIMING.SETTINGS_COOLDOWN + SYNC_TIMING.SETTINGS_DEBOUNCE
-          : SYNC_TIMING.SETTINGS_DEBOUNCE;
-
         this.settingsDebounceTimer = setTimeout(
           () => this.syncSettingsUpload(),
-          delay
+          SYNC_TIMING.SETTINGS_DEBOUNCE
         );
       }
     );
@@ -851,6 +855,21 @@ export class RealtimeSyncService {
 
       if (!hasDirtySettings()) {
         return;
+      }
+    }
+
+    const remoteApply = this.remoteSettingsApplyPromise;
+    if (remoteApply) {
+      let cooldownTimer: ReturnType<typeof setTimeout> | null = null;
+      try {
+        await Promise.race([
+          remoteApply.catch(() => undefined),
+          new Promise<void>(resolve => {
+            cooldownTimer = setTimeout(resolve, SYNC_TIMING.SETTINGS_COOLDOWN);
+          }),
+        ]);
+      } finally {
+        if (cooldownTimer) clearTimeout(cooldownTimer);
       }
     }
 
