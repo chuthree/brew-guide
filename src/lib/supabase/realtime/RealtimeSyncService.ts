@@ -34,6 +34,7 @@ import {
 import {
   SYNC_TABLES,
   DEFAULT_USER_ID,
+  completeHydratedImageSnapshot,
   upsertRecords,
   markRecordsAsDeleted,
   uploadSettingsData,
@@ -55,6 +56,10 @@ import {
   remoteChangeHandler,
 } from './handlers';
 import {
+  brewingNoteImageRepository,
+  coffeeBeanImageRepository,
+} from '@/lib/data/repositories';
+import {
   useSyncStatusStore,
   type SupabaseSyncPhase,
 } from '@/lib/stores/syncStatusStore';
@@ -64,7 +69,8 @@ import type {
   RealtimeSyncTable,
   PendingOperation,
 } from './types';
-import type { Method } from '@/lib/core/config';
+import type { BrewingNote, Method } from '@/lib/core/config';
+import type { CoffeeBean } from '@/types/app';
 
 // ============================================================================
 // 常量
@@ -490,7 +496,7 @@ export class RealtimeSyncService {
         ]);
         assertSyncSuccess(result, `删除 ${table}/${recordId} 失败`);
       } else {
-        const record = this.prepareRecordForUpload(table, recordId, data);
+        const record = await this.prepareRecordForUpload(table, recordId, data);
         const result = await upsertRecords(
           this.client,
           table,
@@ -950,7 +956,7 @@ export class RealtimeSyncService {
         return true;
       }
 
-      const record = this.prepareRecordForUpload(
+      const record = await this.prepareRecordForUpload(
         op.table,
         op.recordId,
         op.data as Record<string, unknown>
@@ -1036,11 +1042,11 @@ export class RealtimeSyncService {
     });
   }
 
-  private prepareRecordForUpload(
+  private async prepareRecordForUpload(
     table: RealtimeSyncTable,
     recordId: string,
     data?: Record<string, unknown>
-  ): { id: string } & Record<string, unknown> {
+  ): Promise<{ id: string } & Record<string, unknown>> {
     if (table === SYNC_TABLES.CUSTOM_METHODS) {
       return {
         id: recordId,
@@ -1048,7 +1054,31 @@ export class RealtimeSyncService {
         methods: (data?.methods as Method[]) || [],
       };
     }
-    return { ...(data || {}), id: recordId };
+    const record = { ...(data || {}), id: recordId };
+
+    if (table === SYNC_TABLES.COFFEE_BEANS) {
+      const hydrated = await coffeeBeanImageRepository.mergeBean(
+        record as unknown as CoffeeBean
+      );
+      return completeHydratedImageSnapshot(
+        table,
+        hydrated,
+        data as CoffeeBean | undefined
+      ) as unknown as { id: string } & Record<string, unknown>;
+    }
+
+    if (table === SYNC_TABLES.BREWING_NOTES) {
+      const hydrated = await brewingNoteImageRepository.mergeNote(
+        record as unknown as BrewingNote
+      );
+      return completeHydratedImageSnapshot(
+        table,
+        hydrated,
+        data as BrewingNote | undefined
+      ) as unknown as { id: string } & Record<string, unknown>;
+    }
+
+    return record;
   }
 
   private createMapFn(

@@ -193,6 +193,45 @@ export const SYNC_TABLES = {
 
 export type SyncTableName = (typeof SYNC_TABLES)[keyof typeof SYNC_TABLES];
 
+/**
+ * Complete image fields only after the caller has hydrated a record from the
+ * local image repository. Missing fields then represent a confirmed removal.
+ */
+export function completeHydratedImageSnapshot<T extends object>(
+  table: SyncTableName,
+  record: T,
+  sourceRecord?: T
+): T {
+  const data = record as T & Record<string, unknown>;
+  const source = sourceRecord as (T & Record<string, unknown>) | undefined;
+  const value = (field: string): unknown =>
+    data[field] === undefined && source?.[field] !== undefined
+      ? source[field]
+      : data[field];
+
+  if (table === SYNC_TABLES.COFFEE_BEANS) {
+    const image = value('image');
+    const backImage = value('backImage');
+    return {
+      ...data,
+      image: image === undefined ? '' : image,
+      backImage: backImage === undefined ? '' : backImage,
+    } as T;
+  }
+
+  if (table === SYNC_TABLES.BREWING_NOTES) {
+    const image = value('image');
+    const images = value('images');
+    return {
+      ...data,
+      image: image === undefined ? '' : image,
+      images: images === undefined ? [] : images,
+    } as T;
+  }
+
+  return record;
+}
+
 const REMOTE_SELECT_PAGE_SIZE = 1000;
 
 // 自定义预设键（存储在 localStorage）

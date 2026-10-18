@@ -25,6 +25,7 @@ import {
 } from '@/lib/data/repositories';
 import { copyToClipboard } from '@/lib/utils/exportUtils';
 import {
+  completeHydratedImageSnapshot,
   SYNC_TABLES,
   DEFAULT_USER_ID,
   upsertRecords,
@@ -879,7 +880,7 @@ export class InitialSyncManager {
           completed: 0,
         });
 
-        const recordsForUpload =
+        const hydratedRecordsForUpload =
           table === SYNC_TABLES.COFFEE_BEANS
             ? await coffeeBeanImageRepository.mergeBeans(
                 toUpload as CoffeeBean[]
@@ -889,6 +890,13 @@ export class InitialSyncManager {
                   toUpload as BrewingNote[]
                 )
               : toUpload;
+        const recordsForUpload =
+          table === SYNC_TABLES.COFFEE_BEANS ||
+          table === SYNC_TABLES.BREWING_NOTES
+            ? hydratedRecordsForUpload.map((record, index) =>
+                completeHydratedImageSnapshot(table, record, toUpload[index])
+              )
+            : hydratedRecordsForUpload;
 
         const uploadResult = await upsertRecords(
           this.client,

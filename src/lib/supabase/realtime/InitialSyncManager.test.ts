@@ -144,6 +144,12 @@ describe('InitialSyncManager settings sync', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    vi.mocked(
+      mocks.repositories.coffeeBeanImageRepository.mergeBeans
+    ).mockImplementation(async records => records);
+    vi.mocked(
+      mocks.repositories.brewingNoteImageRepository.mergeNotes
+    ).mockImplementation(async records => records);
     useSyncStatusStore.getState().reset();
     vi.mocked(hydrateLastSyncTime).mockResolvedValue(1000);
     vi.mocked(fetchRemoteAllRecords).mockResolvedValue({
@@ -325,6 +331,50 @@ describe('InitialSyncManager settings sync', () => {
       status: 'success',
       detail: '已上传 1 项设置',
       uploaded: 1,
+    });
+  });
+
+  it('hydrates bean images before completing initial-sync upload snapshots', async () => {
+    const localBean = {
+      id: 'local-bean',
+      name: 'Text-only update',
+      timestamp: 2000,
+    };
+    const image = 'data:image/png;base64,AQID';
+    const hydratedBean = { ...localBean, image };
+    const upsert = vi.fn(async (_record: Record<string, unknown>) => ({
+      error: null,
+    }));
+    vi.mocked(mocks.repositories.coffeeBeanRepository.list).mockResolvedValue([
+      localBean,
+    ] as never);
+    vi.mocked(
+      mocks.repositories.coffeeBeanImageRepository.mergeBeans
+    ).mockResolvedValue([hydratedBean] as never);
+    vi.mocked(batchResolveConflicts).mockReturnValue({
+      merged: [localBean],
+      toUpload: [localBean],
+      toDownload: [],
+      toDeleteLocal: [],
+    } as never);
+
+    const manager = new InitialSyncManager({
+      from: vi.fn(() => ({ upsert })),
+    } as unknown as SupabaseClient);
+
+    await expect(
+      manager['syncTable'](SYNC_TABLES.COFFEE_BEANS, 0)
+    ).resolves.toMatchObject({
+      uploaded: 1,
+      downloaded: 0,
+      deleted: 0,
+    });
+
+    expect(
+      mocks.repositories.coffeeBeanImageRepository.mergeBeans
+    ).toHaveBeenCalledWith([localBean]);
+    expect(upsert.mock.calls[0]?.[0]).toMatchObject({
+      data: { id: 'local-bean', name: 'Text-only update', image },
     });
   });
 
