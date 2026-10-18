@@ -39,7 +39,10 @@ import {
   SettingVerticalSelector,
   SettingCardSelector,
 } from '@/components/settings/atomic';
-import { sanitizeSvgMarkup } from '@/lib/utils/svgUtils';
+import {
+  sanitizeSvgMarkup,
+  setSvgDimensions,
+} from '@/lib/utils/svgUtils';
 
 // 从CustomEquipment类型中提取PourAnimation类型
 type CustomPourAnimation = NonNullable<
@@ -1668,10 +1671,7 @@ const CustomEquipmentForm = forwardRef<
               className="custom-cup-shape outline-only flex h-full w-full items-center justify-center"
               dangerouslySetInnerHTML={{
                 __html: sanitizeSvgMarkup(
-                  activeCupReference.svg.replace(
-                    /<svg/,
-                    '<svg width="100%" height="100%"'
-                  )
+                  setSvgDimensions(activeCupReference.svg, '100%', '100%')
                 ),
               }}
             />
@@ -1739,10 +1739,7 @@ const CustomEquipmentForm = forwardRef<
                       className="custom-cup-shape outline-only flex h-full w-full items-center justify-center"
                       dangerouslySetInnerHTML={{
                         __html: sanitizeSvgMarkup(
-                          svgData.replace(
-                            /<svg/,
-                            '<svg width="100%" height="100%"'
-                          )
+                          setSvgDimensions(svgData, '100%', '100%')
                         ),
                       }}
                     />
@@ -1759,9 +1756,10 @@ const CustomEquipmentForm = forwardRef<
                     className="custom-cup-shape outline-only flex h-full w-full items-center justify-center"
                     dangerouslySetInnerHTML={{
                       __html: sanitizeSvgMarkup(
-                        animation.customAnimationSvg.replace(
-                          /<svg/,
-                          '<svg width="100%" height="100%"'
+                        setSvgDimensions(
+                          animation.customAnimationSvg,
+                          '100%',
+                          '100%'
                         )
                       ),
                     }}
@@ -1871,9 +1869,10 @@ const CustomEquipmentForm = forwardRef<
                       className="flex h-full w-full items-center justify-center"
                       dangerouslySetInnerHTML={{
                         __html: sanitizeSvgMarkup(
-                          equipment.customShapeSvg.replace(
-                            /<svg/,
-                            '<svg width="100%" height="100%"'
+                          setSvgDimensions(
+                            equipment.customShapeSvg,
+                            '100%',
+                            '100%'
                           )
                         ),
                       }}

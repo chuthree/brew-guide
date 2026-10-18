@@ -47,6 +47,28 @@ export const linesToSvgPath = (
   </svg>`;
 };
 
+export const setSvgDimensions = (
+  svgString: string,
+  width: string,
+  height: string
+): string =>
+  svgString.replace(/<svg\b[^>]*>/i, svgTag => {
+    const setAttribute = (tag: string, name: string, value: string) => {
+      const attributePattern = new RegExp(
+        `\\s${name}\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)`,
+        'i'
+      );
+
+      if (attributePattern.test(tag)) {
+        return tag.replace(attributePattern, ` ${name}="${value}"`);
+      }
+
+      return tag.replace(/(\/?)>$/, ` ${name}="${value}"$1>`);
+    };
+
+    return setAttribute(setAttribute(svgTag, 'width', width), 'height', height);
+  });
+
 export const sanitizeSvgMarkup = (svgString: string): string => {
   if (
     typeof DOMParser === 'undefined' ||

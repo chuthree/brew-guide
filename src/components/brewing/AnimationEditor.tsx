@@ -93,7 +93,10 @@ import React, {
 import DrawingCanvas, { DrawingCanvasRef } from '../common/ui/DrawingCanvas';
 import hapticsUtils from '@/lib/ui/haptics';
 import Image from 'next/image';
-import { sanitizeSvgMarkup } from '@/lib/utils/svgUtils';
+import {
+  sanitizeSvgMarkup,
+  setSvgDimensions,
+} from '@/lib/utils/svgUtils';
 
 // 定义单帧数据结构
 export interface AnimationFrame {
@@ -567,9 +570,10 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
                       className="h-full w-full"
                       dangerouslySetInnerHTML={{
                         __html: sanitizeSvgMarkup(
-                          frame.svgData.replace(
-                            /<svg/,
-                            `<svg width="${thumbnailSize}" height="${thumbnailSize}"`
+                          setSvgDimensions(
+                            frame.svgData,
+                            `${thumbnailSize}`,
+                            `${thumbnailSize}`
                           )
                         ),
                       }}
