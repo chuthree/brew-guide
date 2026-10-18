@@ -43,7 +43,10 @@ function createConnectionPort(
   connection: SQLiteDBConnection
 ): SqliteConnectionPort {
   return {
-    execute: (sql, transaction) => connection.execute(sql, transaction, true),
+    // iOS splits DELETE statements on ';' and drops the final segment.
+    // A newline also terminates any trailing SQL line comment before ';'.
+    execute: (sql, transaction) =>
+      connection.execute(`${sql}\n;`, transaction, true),
     run: (sql, params, transaction) =>
       connection.run(sql, [...params], transaction, 'no', true),
     query: (sql, params) => connection.query(sql, [...params], true),

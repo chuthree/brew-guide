@@ -63,7 +63,7 @@ describe.each(['android', 'ios'])(
       await driver.execute('CREATE TABLE test (value TEXT)');
       await driver.execute('INSERT INTO test VALUES (?)', ['原始数据']);
       expect(mocks.connection.execute).toHaveBeenCalledWith(
-        'CREATE TABLE test (value TEXT)',
+        'CREATE TABLE test (value TEXT)\n;',
         false,
         true
       );
@@ -83,6 +83,11 @@ describe.each(['android', 'ios'])(
         true
       );
       await driver.transaction(tx => tx.execute('DELETE FROM test'));
+      expect(mocks.connection.execute).toHaveBeenLastCalledWith(
+        'DELETE FROM test\n;',
+        false,
+        true
+      );
       expect(mocks.connection.commitTransaction).toHaveBeenCalledOnce();
       const error = new Error('failed during transaction');
       await expect(
