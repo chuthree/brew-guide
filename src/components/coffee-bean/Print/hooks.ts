@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CoffeeBean } from '@/types/app';
 import { PrintConfig, PresetSize, EditableContent } from './types';
 import {
@@ -165,8 +165,10 @@ const resolveInitialPackDate = (): string => {
 
 export function useEditableContent(
   bean: CoffeeBean | null,
-  roasterSettings: RoasterSettings
+  roasterSettings: RoasterSettings,
+  isOpen: boolean
 ) {
+  const editingBeanId = useRef<string | null | undefined>(undefined);
   const [content, setContent] = useState<EditableContent>(() =>
     createInitialContent(
       bean,
@@ -178,8 +180,15 @@ export function useEditableContent(
     )
   );
 
-  // bean 或设置变化时重新初始化
+  // 每次打开或切换豆子时初始化；同步刷新不能覆盖本次打印编辑。
   useEffect(() => {
+    if (!isOpen) {
+      editingBeanId.current = undefined;
+      return;
+    }
+    const beanId = bean?.id ?? null;
+    if (editingBeanId.current === beanId) return;
+    editingBeanId.current = beanId;
     setContent(
       createInitialContent(
         bean,
@@ -190,11 +199,7 @@ export function useEditableContent(
         resolveInitialPackDate()
       )
     );
-  }, [
-    bean,
-    roasterSettings.roasterFieldEnabled,
-    roasterSettings.roasterSeparator,
-  ]);
+  }, [isOpen, bean, roasterSettings]);
 
   // 更新字段
   const updateField = useCallback(

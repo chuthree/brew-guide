@@ -54,7 +54,7 @@ const BeanPrintModal: React.FC<BeanPrintModalProps> = ({
   } = usePrintConfig();
 
   const { content, updateField, updateIcon, updateIconSource, resetContent } =
-    useEditableContent(bean, roasterSettings);
+    useEditableContent(bean, roasterSettings, isOpen);
 
   const roasterLogo = useRoasterLogo(content.roaster.trim() || null);
   const previewContent = useMemo(
