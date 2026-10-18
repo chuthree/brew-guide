@@ -47,7 +47,10 @@ import {
 } from '@/components/layout/NavigationControls';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
-import { legacySettingsRepository } from '@/lib/data/repositories';
+import {
+  coffeeBeanImageRepository,
+  legacySettingsRepository,
+} from '@/lib/data/repositories';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
@@ -136,6 +139,7 @@ import {
   revertCapacityAdjustmentRecord,
   updateBeanWithCapacityAdjustmentRecord,
 } from '@/lib/coffee-beans/capacityAdjustment';
+import { createRoastingCopyTemplate } from '@/lib/coffee-beans/roastingCopy';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -2781,6 +2785,63 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 注意：从咖啡豆页面切换回冲煮页面的特殊处理已在上面的 useEffect 中统一处理
   // shouldStartFromCoffeeBeanStep 标记会在主 Tab 切换逻辑中被检查和清除
 
+  const handleCopyRoastingRecord = async (
+    note: BrewingNote
+  ): Promise<boolean> => {
+    const roastingRecord = note.changeRecord?.roastingRecord;
+    if (
+      !roastingRecord ||
+      !Number.isFinite(roastingRecord.roastedAmount) ||
+      roastingRecord.roastedAmount <= 0
+    ) {
+      showToast({
+        type: 'error',
+        title: '烘焙记录数据不完整，无法复制',
+        duration: 2000,
+      });
+      return false;
+    }
+
+    const store = useCoffeeBeanStore.getState();
+    const greenBean = store.getBeanById(roastingRecord.greenBeanId);
+    if (!greenBean || greenBean.beanState !== 'green') {
+      showToast({
+        type: 'error',
+        title: '找不到关联的生豆记录，无法复制',
+        duration: 2000,
+      });
+      return false;
+    }
+
+    const roastedBean = roastingRecord.roastedBeanId
+      ? store.getBeanById(roastingRecord.roastedBeanId)
+      : undefined;
+    const [frontImage, backImage] = await Promise.all([
+      coffeeBeanImageRepository.getSource(greenBean.id, {
+        side: 'front',
+        mode: 'original',
+      }),
+      coffeeBeanImageRepository.getSource(greenBean.id, {
+        side: 'back',
+        mode: 'original',
+      }),
+    ]);
+    const template = createRoastingCopyTemplate(
+      greenBean,
+      roastedBean,
+      roastingRecord.roastedAmount
+    );
+
+    setRoastingSourceBeanId(greenBean.id);
+    setEditingBean({
+      ...template,
+      image: frontImage || template.image,
+      backImage: backImage || template.backImage,
+    } as ExtendedCoffeeBean);
+    setShowBeanForm(true);
+    return true;
+  };
+
   const handleSaveBean = async (
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => {
@@ -4231,6 +4292,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   setShowHistory(false);
                 }}
                 onAddNote={handleAddNote}
+                onCopyRoastingRecord={handleCopyRoastingRecord}
                 setAlternativeHeaderContent={setAlternativeHeaderContent}
                 setShowAlternativeHeader={setShowAlternativeHeader}
                 settings={settings}

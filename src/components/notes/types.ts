@@ -35,6 +35,7 @@ export interface BrewingHistoryProps {
   isOpen: boolean;
   onClose: () => void;
   onAddNote?: (draft?: Partial<BrewingNoteData>) => void;
+  onCopyRoastingRecord?: (note: BrewingNote) => boolean | Promise<boolean>;
   setAlternativeHeaderContent?: (content: React.ReactNode | null) => void;
   setShowAlternativeHeader?: (show: boolean) => void;
   settings?: import('@/components/settings/Settings').SettingsOptions; // 添加可选的设置参数

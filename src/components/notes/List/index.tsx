@@ -31,7 +31,6 @@ import AddNoteButton from './AddNoteButton';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import { showToast } from '@/components/common/feedback/LightToast';
 
-import { BrewingNoteData } from '@/types/app';
 import {
   globalCache,
   saveSelectedEquipmentPreference,
@@ -87,6 +86,7 @@ import {
 } from './tableColumns';
 import { useBrewingNoteImageCountsState } from '@/lib/hooks/useBrewingNoteImages';
 import { revertCapacityAdjustmentRecord } from '@/lib/coffee-beans/capacityAdjustment';
+import { createBrewingNoteCopyData } from './brewingNoteCopy';
 
 const NOTES_TABLE_COLUMNS_STORAGE_KEY = 'notes-table-visible-columns';
 
@@ -94,6 +94,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   isOpen,
   onClose: _onClose,
   onAddNote,
+  onCopyRoastingRecord,
   setAlternativeHeaderContent: _setAlternativeHeaderContent, // 不再使用，保留以兼容接口
   setShowAlternativeHeader: _setShowAlternativeHeader, // 不再使用，保留以兼容接口
   settings,
@@ -607,40 +608,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         return;
       }
 
-      // 创建新的笔记ID和时间戳
-      const newTimestamp = Date.now();
-      const newId = newTimestamp.toString();
+      if (noteToCopy.source === 'roasting') {
+        const opened = await onCopyRoastingRecord?.(noteToCopy);
+        if (!opened) return;
 
-      // 检查是否为变动记录（统一使用 BrewingNoteForm 处理）
-      const isChangeRecord =
-        noteToCopy.source === 'quick-decrement' ||
-        noteToCopy.source === 'capacity-adjustment';
+        showToastMessage('请修改后保存', 'info');
+        return;
+      }
 
       // 统一使用 BrewingNoteForm 处理所有类型的笔记复制
-      const noteToEdit: Partial<BrewingNoteData> = {
-        timestamp: newTimestamp,
-        equipment: noteToCopy.equipment,
-        method: noteToCopy.method,
-        params: noteToCopy.params,
-        coffeeBeanInfo: noteToCopy.coffeeBeanInfo || {
-          name: '',
-          roastLevel: '',
-        },
-        image: undefined, // 不包含图片
-        rating: noteToCopy.rating,
-        taste: noteToCopy.taste,
-        notes: noteToCopy.notes,
-        totalTime: noteToCopy.totalTime,
-        beanId: noteToCopy.beanId,
-        // 添加一个临时 ID 用于表单提交识别，但让表单知道这是新笔记
-        id: newId,
-        // 如果是变动记录，保留相关字段
-        ...(isChangeRecord && {
-          source: noteToCopy.source,
-          quickDecrementAmount: noteToCopy.quickDecrementAmount,
-          changeRecord: noteToCopy.changeRecord,
-        }),
-      };
+      const noteToEdit = createBrewingNoteCopyData(noteToCopy);
 
       // 通过事件触发模态框打开
       window.dispatchEvent(
