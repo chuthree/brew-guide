@@ -28,6 +28,59 @@ function parseStoredValue(value: string): unknown {
   }
 }
 
+/**
+ * Keep a lossless legacy supplement without serializing public data twice.
+ * To reconstruct the raw snapshot, assign each dataPath from export.data to
+ * its snapshotPath in snapshot. Paths are arrays so legacy keys need no escaping.
+ */
+export function compactLegacyBackupSnapshot(
+  snapshot: unknown,
+  data: Record<string, unknown>
+) {
+  const exported = new Map<string, string[]>();
+  const references: { snapshotPath: string[]; dataPath: string[] }[] = [];
+  const children = (value: unknown): [string, unknown][] =>
+    value !== null && typeof value === 'object' ? Object.entries(value) : [];
+  const index = (value: unknown, path: string[]) => {
+    const json = JSON.stringify(value);
+    // Small values cost less to repeat than a reference and its paths.
+    if (json && json.length > 256 && !exported.has(json)) {
+      exported.set(json, path);
+    }
+    for (const [key, child] of children(value)) index(child, [...path, key]);
+  };
+  for (const [key, value] of Object.entries(data)) {
+    if (key !== 'legacyIndexedDB') index(value, [key]);
+  }
+  const compact = (value: unknown, path: string[]): unknown => {
+    const json = JSON.stringify(value);
+    const dataPath = json && exported.get(json);
+    if (dataPath) {
+      references.push({ snapshotPath: path, dataPath });
+      return null;
+    }
+    if (Array.isArray(value)) {
+      return value.map((child, index) =>
+        compact(child, [...path, String(index)])
+      );
+    }
+    if (value !== null && typeof value === 'object') {
+      return Object.fromEntries(
+        children(value).map(([key, child]) => [
+          key,
+          compact(child, [...path, key]),
+        ])
+      );
+    }
+    return value;
+  };
+  return {
+    format: 'export-data-references-v1',
+    snapshot: compact(snapshot, []),
+    references,
+  };
+}
+
 /** Frozen public data for the normal exporter before SQLite is initialized. */
 export function createLegacyMigrationBackupData(
   source: LegacyMigrationSource,

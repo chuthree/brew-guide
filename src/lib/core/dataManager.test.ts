@@ -160,6 +160,60 @@ vi.mock('@/lib/app/crashDiagnostics', () => ({
 import { DataManager } from './dataManager';
 
 describe('DataManager.exportAllData upgrade snapshot', () => {
+  it('stores duplicate legacy payloads by reference and preserves the complete raw snapshot', async () => {
+    const image = `data:image/png;base64,${'A'.repeat(4096)}`;
+    const cachedBean = { id: 'bean-1', image };
+    const bean = { ...cachedBean, unknownField: 'preserved' };
+    const note = { id: 'note-1', image, coffeeBean: cachedBean };
+    const raw = {
+      active: {
+        coffeeBeans: { status: 'present', records: [bean] },
+        brewingNotes: { status: 'present', records: [note] },
+        coffeeBeanImages: {
+          status: 'present',
+          records: [{ beanId: bean.id, image, updatedAt: 123 }],
+        },
+        pendingOperations: { records: [{ id: 'pending-1' }] },
+      },
+      historical: { yearlyReports: { records: [{ id: 'report-1' }] } },
+      localStorage: { 'unknown/key': 'retained' },
+    };
+    const snapshot = {
+      coffeeBeans: [bean],
+      brewingNotes: [note],
+      legacyIndexedDB: raw,
+    };
+    const json = await DataManager.exportAllData({ snapshot });
+    const { data } = JSON.parse(json);
+    expect(data.coffeeBeans).toEqual([bean]);
+    expect(data.brewingNotes).toEqual([{ id: note.id, image }]);
+    const supplement = data.legacyIndexedDB;
+    expect(supplement.format).toBe('export-data-references-v1');
+    expect(supplement.references.length).toBeGreaterThan(0);
+    expect(json.length).toBeLessThan(
+      JSON.stringify({ data: snapshot }).length / 2
+    );
+    // Rebuild using only the saved JSON, including raw cached fields that
+    // the public note exporter intentionally removes.
+    const restored = structuredClone(supplement.snapshot);
+    for (const { snapshotPath, dataPath } of supplement.references) {
+      const value = dataPath.reduce(
+        (current: Record<string, unknown>, key: string) => current[key],
+        data
+      );
+      const parent = snapshotPath
+        .slice(0, -1)
+        .reduce(
+          (current: Record<string, unknown>, key: string) => current[key],
+          restored
+        );
+      parent[snapshotPath.at(-1)] = value;
+    }
+    expect(restored).toEqual(raw);
+    expect(snapshot.legacyIndexedDB).toEqual(raw);
+    expect(snapshot.brewingNotes[0].coffeeBean).toEqual(cachedBean);
+  });
+
   it('uses the normal backup format without querying uninitialized core repositories or duplicating source data', async () => {
     vi.clearAllMocks();
     const snapshot = {

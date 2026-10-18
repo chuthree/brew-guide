@@ -175,6 +175,14 @@ export const DataManager = {
         if (roasters?.length && !Object.hasOwn(snapshot, 'roasterConfigs')) {
           exportData.data.roasterConfigs = roasters;
         }
+        if (Object.hasOwn(snapshot, 'legacyIndexedDB')) {
+          const { compactLegacyBackupSnapshot } =
+            await import('@/lib/data/legacy/legacyMigrationBackup');
+          exportData.data.legacyIndexedDB = compactLegacyBackupSnapshot(
+            snapshot.legacyIndexedDB,
+            exportData.data
+          );
+        }
         return JSON.stringify(exportData, null, pretty ? 2 : undefined);
       }
 
