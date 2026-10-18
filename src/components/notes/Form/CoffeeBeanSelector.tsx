@@ -27,6 +27,7 @@ interface CoffeeBeanSelectorProps {
   showStatusDots?: boolean;
   /** 是否显示顶部的"跳过咖啡豆选择 / 不使用咖啡豆"选项，默认 true */
   showSkipOption?: boolean;
+  beanStateFilter?: 'green';
 }
 
 // 定义列表项类型
@@ -177,6 +178,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
   highlightedBeanId = null,
   showStatusDots = true,
   showSkipOption = true,
+  beanStateFilter,
 }) => {
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
 
@@ -208,9 +210,8 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
 
   const availableBeans = useMemo(() => {
     const filtered = coffeeBeans.filter(bean => {
-      if (bean.beanState === 'green') {
-        return false;
-      }
+      if (beanStateFilter === 'green') return bean.beanState === 'green';
+      if (bean.beanState === 'green') return false;
       if (!bean.capacity || bean.capacity === '0' || bean.capacity === '0g') {
         return true;
       }
@@ -221,7 +222,7 @@ const CoffeeBeanSelector: React.FC<CoffeeBeanSelectorProps> = ({
       return remaining > 0;
     });
     return sortBeansByFlavorPeriod(filtered);
-  }, [coffeeBeans]);
+  }, [beanStateFilter, coffeeBeans]);
 
   const filteredBeans = useMemo(() => {
     if (!searchQuery?.trim()) return availableBeans;

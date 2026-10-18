@@ -32,6 +32,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   );
   const canUseNotesModule = navigationState.visibleTabs.notes;
   const canUseCoffeeBeanModule = navigationState.visibleTabs.coffeeBean;
+  const isRoastingRecordEdit = !isCopy && initialData?.source === 'roasting';
   const isChangeRecordEdit =
     !isCopy &&
     (initialData?.source === 'quick-decrement' ||
@@ -47,7 +48,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   const isQuickMode =
     quickModeOverride && quickModeOverride.noteId === noteId
       ? quickModeOverride.isQuickMode
-      : isChangeRecordEdit;
+      : isChangeRecordEdit || isRoastingRecordEdit;
   const currentDraft =
     draftSnapshot && draftSnapshot.id === noteId ? draftSnapshot : null;
   const currentContent = currentDraft || initialData;
@@ -73,11 +74,12 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
         ? '返回变动记录'
         : '返回快捷记录'
       : '转为快捷记录';
-  const saveButtonLabel =
-    isQuickMode &&
-    (isChangeRecordEdit ||
-      canShowQuickRecordConversionButton ||
-      isPlainNoteQuickMode)
+  const saveButtonLabel = isRoastingRecordEdit
+    ? '保存记录'
+    : isQuickMode &&
+        (isChangeRecordEdit ||
+          canShowQuickRecordConversionButton ||
+          isPlainNoteQuickMode)
       ? '保存记录'
       : canUseNotesModule
         ? '保存笔记'

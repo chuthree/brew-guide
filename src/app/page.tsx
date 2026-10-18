@@ -3479,7 +3479,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       const isNewNote = isBrewingNoteCopy || !note.id;
 
       // 构建保存数据
-      const noteToSave = buildPersistedBrewingNote(note, {
+      let noteToSave = buildPersistedBrewingNote(note, {
         id: isNewNote ? Date.now().toString() : note.id,
         timestamp: isNewNote ? Date.now() : note.timestamp || Date.now(),
       });
@@ -3491,12 +3491,23 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 注意：咖啡豆剩余量的扣除已在 BrewingNoteForm.handleSubmit 中处理
         // 这里不再重复扣除，避免重复减少剩余量
       } else {
-        // 🔥 更新现有笔记 - 使用 Store 方法
-        const { useBrewingNoteStore } =
-          await import('@/lib/stores/brewingNoteStore');
-        await useBrewingNoteStore
-          .getState()
-          .updateNote(noteToSave.id, noteToSave);
+        if (noteToSave.source === 'roasting') {
+          const { RoastingManager } =
+            await import('@/lib/managers/roastingManager');
+          const result = await RoastingManager.updateRoastingRecord(noteToSave);
+          if (!result.success) {
+            showToast({
+              title: result.error || '更新烘焙记录失败',
+              type: 'error',
+            });
+            return;
+          }
+          noteToSave = result.note || noteToSave;
+        } else {
+          await useBrewingNoteStore
+            .getState()
+            .updateNote(noteToSave.id, noteToSave);
+        }
 
         // 🔥 更新笔记详情页的数据，使其与编辑后的数据同步
         if (noteDetailData && noteDetailData.note.id === noteToSave.id) {
@@ -3512,8 +3523,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       setIsBrewingNoteCopy(false);
 
       // 显示成功提示（事件触发已在 store 中自动完成）
-      const { showToast } =
-        await import('@/components/common/feedback/LightToast');
       showToast({
         title: isNewNote ? '笔记已复制' : '笔记已更新',
         type: 'success',

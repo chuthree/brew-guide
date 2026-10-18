@@ -387,6 +387,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       return '';
     }
   );
+  const [roastingAmount, setRoastingAmount] = useState(() =>
+    String(initialData.changeRecord?.roastingRecord?.roastedAmount ?? '')
+  );
   // 容量调整量状态（仅用于容量调整记录编辑）
   const [capacityAdjustmentAmount, setCapacityAdjustmentAmount] =
     useState<string>(() => {
@@ -419,6 +422,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       }
       return false;
     });
+
+  useEffect(() => {
+    setRoastingAmount(
+      String(initialData.changeRecord?.roastingRecord?.roastedAmount ?? '')
+    );
+  }, [id, initialData.changeRecord?.roastingRecord?.roastedAmount]);
 
   // 监听initialData.totalTime的变化
   useEffect(() => {
@@ -803,6 +812,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   // 判断是否是容量调整记录编辑模式
   const isCapacityAdjustmentEdit =
     !isAdding && initialData.source === 'capacity-adjustment';
+  const isRoastingRecordEdit = !isAdding && initialData.source === 'roasting';
   const isChangeRecordEdit = isQuickDecrementEdit || isCapacityAdjustmentEdit;
 
   // 跟踪当前是否处于快捷记录模式（用于切换按钮）
@@ -817,7 +827,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const isQuickRecordMode =
     isQuickMode && (isQuickDecrementEdit || isPlainNoteQuickRecordMode);
   const isCompactRecordMode =
-    (isChangeRecordEdit || isPlainNoteQuickRecordMode) && isQuickMode;
+    (isChangeRecordEdit ||
+      isPlainNoteQuickRecordMode ||
+      isRoastingRecordEdit) &&
+    isQuickMode;
 
   // 判断是否应该隐藏图片功能（仅在变动记录/快捷扣除记录的快捷模式下隐藏）
   const shouldHideImage = isCompactRecordMode;
@@ -1243,7 +1256,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               console.error('扣除咖啡豆剩余量失败:', error);
             }
           }
-        } else if (initialData.source !== 'capacity-adjustment') {
+        } else if (
+          initialData.source !== 'capacity-adjustment' &&
+          initialData.source !== 'roasting'
+        ) {
           // 编辑模式且非容量调整记录：处理容量同步
           try {
             const currentBeanId = selectedCoffeeBean.id;
@@ -1291,7 +1307,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         userSelectedBeanRef.current &&
         initialData.id &&
         !isCopy &&
-        initialData.source !== 'capacity-adjustment'
+        initialData.source !== 'capacity-adjustment' &&
+        initialData.source !== 'roasting'
       ) {
         try {
           const originalCoffeeAmount = getInitialCoffeeAmount();
@@ -1471,6 +1488,62 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         if (noteBeanId && currentCoffeeAmount > 0) {
           await updateBeanRemaining(noteBeanId, currentCoffeeAmount);
         }
+      }
+
+      if (isRoastingRecordEdit) {
+        const roastingRecord = preservedChangeRecord?.roastingRecord;
+        const amount = Number.parseFloat(roastingAmount);
+        if (!roastingRecord || !Number.isFinite(amount) || amount <= 0) {
+          alert('请输入有效烘焙量');
+          return;
+        }
+        if (
+          !noteBeanId ||
+          (selectedCoffeeBean && isPendingCoffeeBean(selectedCoffeeBean))
+        ) {
+          alert('请选择生豆');
+          return;
+        }
+
+        const selectedGreenBean =
+          selectedCoffeeBean &&
+          !isPendingCoffeeBean(selectedCoffeeBean) &&
+          selectedCoffeeBean.id === noteBeanId
+            ? selectedCoffeeBean
+            : coffeeBeans.find(bean => bean.id === noteBeanId);
+        if (selectedGreenBean && selectedGreenBean.beanState !== 'green') {
+          alert('只能选择生豆');
+          return;
+        }
+
+        const greenBeanName =
+          selectedGreenBean?.name ||
+          formData.coffeeBeanInfo.name ||
+          roastingRecord.greenBeanName;
+        noteData.source = 'roasting';
+        noteData.beanId = noteBeanId;
+        noteData.changeRecord = {
+          ...preservedChangeRecord,
+          roastingRecord: {
+            ...roastingRecord,
+            greenBeanId: noteBeanId,
+            greenBeanName,
+            roastedAmount: amount,
+          },
+        };
+        noteData.coffeeBeanInfo = {
+          name: greenBeanName,
+          roastLevel:
+            selectedGreenBean?.roastLevel ||
+            initialData.coffeeBeanInfo?.roastLevel ||
+            formData.coffeeBeanInfo.roastLevel,
+          roastDate:
+            selectedGreenBean?.roastDate ||
+            initialData.coffeeBeanInfo?.roastDate,
+          roaster:
+            selectedGreenBean?.roaster || formData.coffeeBeanInfo.roaster,
+        };
+        noteData.notes = `烘焙了 ${amount}g 生豆${roastingRecord.roastedBeanName ? ` → ${roastingRecord.roastedBeanName}` : ''}`;
       }
 
       // 如果是快捷扣除记录且处于快捷模式，同步更新 params.coffee 字段
@@ -1821,23 +1894,25 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       className={containerClassName}
     >
       {/* 笔记内容输入区域 */}
-      <div className="flex-1 pb-4">
-        <textarea
-          ref={textareaRef}
-          id="brewing-notes"
-          name="brewingNotes"
-          aria-label="笔记内容"
-          value={formData.notes}
-          onChange={e => {
-            setFormData({
-              ...formData,
-              notes: e.target.value,
-            });
-          }}
-          className="min-h-[120px] w-full resize-none overflow-hidden border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
-          placeholder="记录一下这杯的感受..."
-        />
-      </div>
+      {!isRoastingRecordEdit && (
+        <div className="flex-1 pb-4">
+          <textarea
+            ref={textareaRef}
+            id="brewing-notes"
+            name="brewingNotes"
+            aria-label="笔记内容"
+            value={formData.notes}
+            onChange={e => {
+              setFormData({
+                ...formData,
+                notes: e.target.value,
+              });
+            }}
+            className="min-h-[120px] w-full resize-none overflow-hidden border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
+            placeholder="记录一下这杯的感受..."
+          />
+        </div>
+      )}
 
       {/* 下方：图片和功能列表 */}
       <div className="w-full min-w-0 shrink-0">
@@ -1949,6 +2024,33 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                     const nextValue = e.target.value;
                     if (!validateNumericInput(nextValue)) return;
                     setQuickDecrementAmount(nextValue);
+                  }}
+                  className="w-20 bg-transparent py-1 text-right text-sm font-medium text-neutral-800 outline-none dark:text-neutral-300"
+                  placeholder="0"
+                />
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                  g
+                </span>
+              </div>
+            </div>
+          )}
+
+          {isRoastingRecordEdit && (
+            <div className="flex items-center border-b border-neutral-200/50 py-3 dark:border-neutral-800/50">
+              <span className="shrink-0 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                烘焙量
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <input
+                  type="tel"
+                  inputMode="decimal"
+                  pattern="^\\d*(\\.\\d+)?$"
+                  aria-label="烘焙量"
+                  value={roastingAmount}
+                  onChange={e => {
+                    const nextValue = e.target.value;
+                    if (!validateNumericInput(nextValue)) return;
+                    setRoastingAmount(nextValue);
                   }}
                   className="w-20 bg-transparent py-1 text-right text-sm font-medium text-neutral-800 outline-none dark:text-neutral-300"
                   placeholder="0"
@@ -2092,6 +2194,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           selectedBean={selectedCoffeeBean}
           showStatusDots={settings?.showStatusDots}
           hapticFeedback={settings?.hapticFeedback}
+          beanStateFilter={isRoastingRecordEdit ? 'green' : undefined}
+          showSkipOption={!isRoastingRecordEdit}
         />
       )}
 

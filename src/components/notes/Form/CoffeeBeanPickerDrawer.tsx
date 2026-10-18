@@ -29,6 +29,8 @@ interface CoffeeBeanPickerDrawerProps {
   selectedBean?: SelectableCoffeeBean | null;
   showStatusDots?: boolean;
   hapticFeedback?: boolean;
+  beanStateFilter?: 'green';
+  showSkipOption?: boolean;
 }
 
 const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
@@ -38,6 +40,8 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
   selectedBean,
   showStatusDots = true,
   hapticFeedback = true,
+  beanStateFilter,
+  showSkipOption = true,
 }) => {
   // 搜索状态
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,6 +55,9 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
   const allBeans = useCoffeeBeanStore(state => state.beans);
   const storeInitialized = useCoffeeBeanStore(state => state.initialized);
   const loadBeans = useCoffeeBeanStore(state => state.loadBeans);
+  const selectableBeans = beanStateFilter
+    ? allBeans.filter(bean => bean.beanState === 'green')
+    : allBeans;
 
   // 确保 Store 已初始化
   useEffect(() => {
@@ -172,29 +179,37 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
             </div>
 
             {/* 随机选择按钮 */}
-            <button
-              type="button"
-              {...randomBeanPressHandlers}
-              className="flex shrink-0 items-center justify-center rounded-full bg-neutral-100 p-3 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500"
-              style={{ height: '44px', width: '44px' }}
-            >
-              <Shuffle className="h-4 w-4" strokeWidth="2.5" />
-            </button>
+            {!beanStateFilter && (
+              <button
+                type="button"
+                {...randomBeanPressHandlers}
+                className="flex shrink-0 items-center justify-center rounded-full bg-neutral-100 p-3 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500"
+                style={{ height: '44px', width: '44px' }}
+              >
+                <Shuffle className="h-4 w-4" strokeWidth="2.5" />
+              </button>
+            )}
           </div>
 
           {/* 咖啡豆列表 */}
           <div className="min-h-0 flex-1 overflow-hidden pb-4">
             <CoffeeBeanSelector
-              coffeeBeans={allBeans}
+              coffeeBeans={selectableBeans}
               selectedCoffeeBean={
                 selectedBean && !isPendingCoffeeBean(selectedBean)
                   ? selectedBean
                   : null
               }
               onSelect={handleSelect}
-              onCreatePendingBean={handleCreatePendingBean}
+              onCreatePendingBean={
+                beanStateFilter === 'green'
+                  ? undefined
+                  : handleCreatePendingBean
+              }
               searchQuery={searchQuery}
               showStatusDots={showStatusDots}
+              beanStateFilter={beanStateFilter}
+              showSkipOption={showSkipOption}
             />
           </div>
         </div>
@@ -202,7 +217,7 @@ const CoffeeBeanPickerDrawer: React.FC<CoffeeBeanPickerDrawerProps> = ({
 
       {/* 随机选择器 */}
       <CoffeeBeanRandomPicker
-        beans={allBeans}
+        beans={selectableBeans}
         isOpen={showRandomPicker}
         onClose={() => {
           setShowRandomPicker(false);

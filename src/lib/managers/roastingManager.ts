@@ -377,6 +377,201 @@ export const RoastingManager = {
     );
   },
 
+  async updateRoastingRecord(updatedData: BrewingNote): Promise<{
+    success: boolean;
+    note?: BrewingNote;
+    error?: string;
+  }> {
+    const note = await getBrewingNoteById(updatedData.id);
+    if (!note || note.source !== 'roasting') {
+      return { success: false, error: '找不到烘焙记录' };
+    }
+
+    const roastingRecord = note.changeRecord?.roastingRecord;
+    const updatedRecord = updatedData.changeRecord?.roastingRecord;
+    if (!roastingRecord || !updatedRecord) {
+      return { success: false, error: '烘焙记录数据不完整' };
+    }
+
+    const greenBeanId = updatedData.beanId || updatedRecord.greenBeanId;
+    const roastedAmount = Number(updatedRecord.roastedAmount);
+    const previousAmount = Number(roastingRecord.roastedAmount);
+    if (!greenBeanId || !Number.isFinite(roastedAmount) || roastedAmount <= 0) {
+      return { success: false, error: '请选择生豆并填写有效烘焙量' };
+    }
+    if (!Number.isFinite(previousAmount) || previousAmount <= 0) {
+      return { success: false, error: '原烘焙量无效，无法调整库存' };
+    }
+    if (!Number.isFinite(updatedData.timestamp)) {
+      return { success: false, error: '烘焙日期无效' };
+    }
+
+    const beanStore = getCoffeeBeanStore();
+    const newGreenBean = beanStore.getBeanById(greenBeanId);
+    if (!newGreenBean) {
+      return { success: false, error: '找不到所选生豆' };
+    }
+    if ((newGreenBean.beanState || 'roasted') !== 'green') {
+      return { success: false, error: '只能选择生豆' };
+    }
+
+    const previousGreenBeanId =
+      roastingRecord.greenBeanId || note.beanId || undefined;
+    const oldGreenBean = previousGreenBeanId
+      ? beanStore.getBeanById(previousGreenBeanId)
+      : undefined;
+    if (oldGreenBean && (oldGreenBean.beanState || 'roasted') !== 'green') {
+      return { success: false, error: '原关联咖啡豆不是生豆' };
+    }
+
+    const parseRemaining = (bean: CoffeeBean): number => {
+      const amount = Number.parseFloat(bean.remaining || '0');
+      return Number.isFinite(amount) ? amount : 0;
+    };
+    const patchesToRollback: Array<{
+      id: string;
+      updates: Partial<CoffeeBean>;
+    }> = [];
+    const updateBean = async (
+      bean: CoffeeBean,
+      updates: Partial<CoffeeBean>
+    ) => {
+      const previousValues: Partial<CoffeeBean> = {};
+      if ('remaining' in updates) previousValues.remaining = bean.remaining;
+      if ('sourceGreenBeanId' in updates) {
+        previousValues.sourceGreenBeanId = bean.sourceGreenBeanId;
+      }
+
+      patchesToRollback.push({ id: bean.id, updates: previousValues });
+      const updatedBean = await beanStore.updateBean(bean.id, updates);
+      if (!updatedBean) throw new Error('更新咖啡豆失败');
+    };
+
+    let noteWriteAttempted = false;
+    try {
+      if (previousGreenBeanId === greenBeanId) {
+        const newRemaining =
+          parseRemaining(newGreenBean) + previousAmount - roastedAmount;
+        if (newRemaining < 0) {
+          return { success: false, error: '生豆剩余量不足' };
+        }
+        if (newRemaining !== parseRemaining(newGreenBean)) {
+          await updateBean(newGreenBean, {
+            remaining: formatNumber(newRemaining),
+          });
+        }
+      } else {
+        const newRemaining = parseRemaining(newGreenBean) - roastedAmount;
+        if (newRemaining < 0) {
+          return { success: false, error: '生豆剩余量不足' };
+        }
+
+        await updateBean(newGreenBean, {
+          remaining: formatNumber(newRemaining),
+        });
+
+        if (oldGreenBean) {
+          await updateBean(oldGreenBean, {
+            remaining: formatNumber(
+              parseRemaining(oldGreenBean) + previousAmount
+            ),
+          });
+        }
+
+        const roastedBeanId = roastingRecord.roastedBeanId;
+        const roastedBean = roastedBeanId
+          ? beanStore.getBeanById(roastedBeanId)
+          : undefined;
+        if (roastedBean) {
+          await updateBean(roastedBean, {
+            sourceGreenBeanId: greenBeanId,
+          });
+        }
+      }
+
+      const updatedRoastingRecord = {
+        ...roastingRecord,
+        greenBeanId,
+        greenBeanName: newGreenBean.name,
+        roastedAmount,
+      };
+      const roastedBeanLabel = roastingRecord.roastedBeanName
+        ? ` → ${roastingRecord.roastedBeanName}`
+        : '';
+      noteWriteAttempted = true;
+      const updatedNote = await getBrewingNoteStore().updateNote(note.id, {
+        timestamp: updatedData.timestamp,
+        source: 'roasting',
+        beanId: greenBeanId,
+        coffeeBeanInfo: {
+          name: newGreenBean.name,
+          roastLevel:
+            newGreenBean.roastLevel ||
+            note.coffeeBeanInfo?.roastLevel ||
+            '未知',
+          roastDate: newGreenBean.roastDate,
+          roaster: newGreenBean.roaster,
+        },
+        notes: `烘焙了 ${formatNumber(roastedAmount)}g 生豆${roastedBeanLabel}`,
+        changeRecord: {
+          ...note.changeRecord,
+          roastingRecord: updatedRoastingRecord,
+        },
+      });
+      if (!updatedNote) throw new Error('更新烘焙记录失败');
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
+        window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
+      }
+      return { success: true, note: updatedNote as BrewingNote };
+    } catch (error) {
+      let rollbackFailed = false;
+      for (const patch of patchesToRollback.reverse()) {
+        try {
+          const restoredBean = await beanStore.updateBean(
+            patch.id,
+            patch.updates
+          );
+          if (!restoredBean) rollbackFailed = true;
+        } catch {
+          rollbackFailed = true;
+        }
+      }
+      let noteRollbackFailed = false;
+      if (noteWriteAttempted) {
+        try {
+          const restoredNote = await brewingNotePersistence.saveWithImages(
+            note as BrewingNote
+          );
+          const noteStore = getBrewingNoteStore();
+          const currentNotes = noteStore.notes;
+          noteStore.setNotes(
+            currentNotes.some(currentNote => currentNote.id === note.id)
+              ? currentNotes.map(currentNote =>
+                  currentNote.id === note.id ? restoredNote : currentNote
+                )
+              : [restoredNote, ...currentNotes]
+          );
+        } catch {
+          noteRollbackFailed = true;
+        }
+      }
+      const originalError =
+        error instanceof Error ? error.message : '更新烘焙记录失败';
+      const rollbackWarnings = [
+        rollbackFailed && '库存回滚失败，请检查咖啡豆库存',
+        noteRollbackFailed && '记录回滚失败，数据可能不完整',
+      ].filter(Boolean);
+      return {
+        success: false,
+        error: rollbackWarnings.length
+          ? `${originalError}；${rollbackWarnings.join('；')}`
+          : originalError,
+      };
+    }
+  },
+
   /**
    * 删除烘焙记录
    * 策略：
