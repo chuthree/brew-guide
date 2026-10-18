@@ -146,14 +146,10 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
           <hr className="my-6" />
           <CollapsibleSection title="隐私政策">
             <p>
-              本应用不接入网页统计或第三方分析服务，不收集页面访问、设备信息等使用数据。
+              本应用不接入广告或行为分析服务，不自动上传用于产品分析的使用数据或崩溃报告。咖啡豆和冲煮记录默认保存在您的设备本地。
             </p>
             <p>
-              所有咖啡豆和冲煮记录均存储在您的设备本地。如启用云同步，数据将同步至您自行配置的服务器（WebDAV/S3/Supabase），本应用不访问或存储这些数据。
-            </p>
-            <p>
-              使用图片识别功能（咖啡豆/冲煮方案）时，图片会上传至服务器进行 AI
-              分析，处理完成后立即删除，不会保存。
+              图片识别、云同步等可选功能会按需传输相关数据，联网请求也可能产生必要的运行与安全日志。
             </p>
             <p>
               <a
@@ -163,7 +159,7 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
                 onClick={handleExternalUrlClick}
                 className="text-neutral-800 underline dark:text-neutral-200"
               >
-                查看完整隐私说明
+                查看完整隐私政策
               </a>
             </p>
           </CollapsibleSection>
