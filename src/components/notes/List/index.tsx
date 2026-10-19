@@ -29,6 +29,7 @@ import { BrewingHistoryProps } from '../types';
 import FilterTabs from './FilterTabs';
 import AddNoteButton from './AddNoteButton';
 import BottomActionBar from '@/components/layout/BottomActionBar';
+import TabButton from '@/components/common/ui/TabButton';
 import { showToast } from '@/components/common/feedback/LightToast';
 
 import {
@@ -95,6 +96,20 @@ import {
 } from '@/lib/navigation/coffeeBeanNavigation';
 
 const NOTES_TABLE_COLUMNS_STORAGE_KEY = 'notes-table-visible-columns';
+type NotesDisplayMode = 'notes' | 'roasting';
+
+const calculateNotesDisplayAmount = (
+  notes: BrewingNote[],
+  displayMode: NotesDisplayMode
+): number => {
+  if (displayMode === 'notes') return calculateTotalCoffeeConsumption(notes);
+
+  return notes.reduce((total, note) => {
+    if (note.source !== 'roasting') return total;
+    const amount = note.changeRecord?.roastingRecord?.roastedAmount ?? 0;
+    return total + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
+};
 
 const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   isOpen,
@@ -205,9 +220,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   }, []);
 
   const [viewPreference, setViewPreference] = useState(getNotesViewPreference);
-  const { viewMode, imageFlowType } = viewPreference;
-  const isImageFlowMode = viewMode === 'gallery' && imageFlowType === 'normal';
-  const isDateImageFlowMode = viewMode === 'gallery' && imageFlowType === 'date';
+  const { viewMode: savedViewMode, imageFlowType } = viewPreference;
 
   const updateViewPreference = useCallback((preference: NotesViewPreference) => {
     setViewPreference(preference);
@@ -285,6 +298,19 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const coffeeBeans = useCoffeeBeanStore(state => state.beans);
   const [beanInventoryState, setBeanInventoryState] =
     useState<CoffeeBeanInventoryState>(() => getValidBeanState());
+  const [noteDisplayModeOverride, setNoteDisplayModeOverride] =
+    useState<NotesDisplayMode | null>(null);
+  const noteDisplayMode: NotesDisplayMode =
+    noteDisplayModeOverride ??
+    (beanInventoryState === 'green' ? 'roasting' : 'notes');
+  const recordLabel = noteDisplayMode === 'roasting' ? '烘焙记录' : '普通笔记';
+  const usageLabel = noteDisplayMode === 'roasting' ? '烘焙量' : '冲煮消耗';
+  const viewMode =
+    noteDisplayMode === 'roasting' && savedViewMode === 'gallery'
+      ? 'list'
+      : savedViewMode;
+  const isImageFlowMode = viewMode === 'gallery' && imageFlowType === 'normal';
+  const isDateImageFlowMode = viewMode === 'gallery' && imageFlowType === 'date';
   const customEquipments = useCustomEquipmentStore(state => state.equipments);
   const customEquipmentInitialized = useCustomEquipmentStore(
     state => state.initialized
@@ -300,6 +326,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       event: CustomEvent<{ beanState: CoffeeBeanInventoryState }>
     ) => {
       setBeanInventoryState(event.detail.beanState);
+      setNoteDisplayModeOverride(null);
     };
 
     window.addEventListener(
@@ -334,7 +361,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     setNotesScrollEl(el);
   }, []);
 
-  const sortedNotes = useMemo(() => {
+  const inventoryNotes = useMemo(() => {
     if (!notes || notes.length === 0) return [];
 
     return filterNotesByBeanState(
@@ -343,6 +370,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       coffeeBeans
     );
   }, [notes, sortOption, beanInventoryState, coffeeBeans]);
+
+  const sortedNotes = useMemo(
+    () =>
+      inventoryNotes.filter(note =>
+        noteDisplayMode === 'roasting'
+          ? note.source === 'roasting'
+          : note.source !== 'roasting'
+      ),
+    [inventoryNotes, noteDisplayMode]
+  );
 
   //  简化：直接用 useMemo 筛选和排序，不需要复杂的 hook
   const filteredNotes = useMemo(() => {
@@ -407,7 +444,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // � 计算可用的设备、日期列表
   const availableEquipments = useMemo(() => {
     const equipmentSet = new Set<string>();
-    notes.forEach((note: BrewingNote) => {
+    sortedNotes.forEach((note: BrewingNote) => {
       if (note.equipment) {
         const normalizedId = getEquipmentIdByName(
           note.equipment,
@@ -417,11 +454,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       }
     });
     return Array.from(equipmentSet).sort();
-  }, [notes, customEquipments]);
+  }, [sortedNotes, customEquipments]);
 
   const availableDates = useMemo(() => {
     const dateSet = new Set<string>();
-    notes.forEach((note: BrewingNote) => {
+    sortedNotes.forEach((note: BrewingNote) => {
       if (note.timestamp) {
         const date = new Date(note.timestamp);
         const year = date.getFullYear();
@@ -437,12 +474,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       }
     });
     return Array.from(dateSet).sort((a, b) => b.localeCompare(a));
-  }, [notes, dateGroupingMode]);
+  }, [sortedNotes, dateGroupingMode]);
 
   const totalCount = filteredNotes.length;
-  const totalConsumption = useMemo(() => {
-    return calculateTotalCoffeeConsumption(filteredNotes);
-  }, [filteredNotes]);
 
   const searchableFilteredNotes = useMemo(
     () =>
@@ -922,15 +956,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   }, [searchQuery, isSearching]);
 
   // 计算当前显示的消耗量 - 使用Hook提供的数据
-  const currentConsumption = useMemo(() => {
-    // 搜索状态下，计算搜索结果的消耗量
-    if (isSearching && searchQuery.trim()) {
-      return calculateTotalCoffeeConsumption(searchFilteredNotes);
-    }
-
-    // 其他情况使用Hook计算的总消耗量
-    return totalConsumption;
-  }, [isSearching, searchQuery, searchFilteredNotes, totalConsumption]);
+  const currentConsumption = useMemo(
+    () =>
+      calculateNotesDisplayAmount(
+        isSearching && searchQuery.trim() ? searchFilteredNotes : filteredNotes,
+        noteDisplayMode
+      ),
+    [
+      filteredNotes,
+      isSearching,
+      noteDisplayMode,
+      searchFilteredNotes,
+      searchQuery,
+    ]
+  );
 
   // 计算图片流模式下的统计信息
   const imageFlowCandidateNotes = useMemo(
@@ -948,8 +987,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const notesWithImages = imageFlowCandidateNotes.filter(noteHasImage);
 
     // 计算有图片笔记的消耗量
-    const imageNotesConsumption =
-      calculateTotalCoffeeConsumption(notesWithImages);
+    const imageNotesConsumption = calculateNotesDisplayAmount(
+      notesWithImages,
+      noteDisplayMode
+    );
 
     return {
       count: notesWithImages.length,
@@ -961,12 +1002,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     isDateImageFlowMode,
     imageFlowCandidateNotes,
     noteHasImage,
+    noteDisplayMode,
   ]);
 
   // 计算是否有图片笔记（用于禁用/启用图片流按钮）
   const hasImageNotes = useMemo(() => {
-    return imageFlowCandidateNotes.some(noteHasImage);
-  }, [imageFlowCandidateNotes, noteHasImage]);
+    return (
+      noteDisplayMode === 'notes' &&
+      imageFlowCandidateNotes.some(noteHasImage)
+    );
+  }, [imageFlowCandidateNotes, noteDisplayMode, noteHasImage]);
 
   // 计算图片流模式下的可用设备列表
   const imageFlowAvailableOptions = useMemo(() => {
@@ -981,7 +1026,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
     // 如果是搜索模式，基于搜索结果；否则基于所有原始笔记
     const baseNotes =
-      isSearching && searchQuery.trim() ? searchFilteredNotes : notes;
+      isSearching && searchQuery.trim() ? searchFilteredNotes : sortedNotes;
 
     // 过滤出有图片的记录
     const allNotesWithImages = baseNotes.filter(noteHasImage);
@@ -1005,7 +1050,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     searchFilteredNotes,
     availableEquipments,
     noteHasImage,
-    notes,
+    sortedNotes,
   ]);
 
   // 在图片流模式下，如果当前选中的设备没有图片记录，自动切换到"全部"
@@ -1039,45 +1084,61 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         isOpen ? '' : 'hidden'
       }`}
     >
-      {/* 笔记筛选分类栏 - 只有当有笔记数据时才显示 */}
-      {notes.length > 0 && (
-        <div
-          className={`sticky top-0 z-10 flex-none space-y-6 bg-neutral-50 ${
-            navigationSwipeControl?.isCollapsed ? 'pt-0' : 'pt-6'
-          } md:pt-0 dark:bg-neutral-900`}
-          {...navigationSwipeHandlers}
-        >
-          {/* 数量显示 */}
-          <div className="mb-6 flex items-center justify-between px-6">
-            <div
-              className={`relative min-w-0 ${navigationToggleControl ? 'pl-6' : ''}`}
-            >
-              {navigationToggleControl && (
-                <div className="absolute top-1/2 -left-1.5 -translate-y-1/2">
-                  {navigationToggleControl}
-                </div>
-              )}
-              <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
-                {(() => {
-                  // 图片流模式下显示有图片的记录统计
-                  if (imageFlowStats) {
-                    return `${imageFlowStats.count} 条图片记录，已消耗 ${formatConsumption(imageFlowStats.consumption)}`;
-                  }
+      <div
+        className={`sticky top-0 z-10 flex-none space-y-6 bg-neutral-50 ${
+          navigationSwipeControl?.isCollapsed ? 'pt-0' : 'pt-6'
+        } md:pt-0 dark:bg-neutral-900`}
+        {...navigationSwipeHandlers}
+      >
+        <div className="flex items-center px-6">
+          <TabButton
+            isActive={noteDisplayMode === 'notes'}
+            onClick={() => setNoteDisplayModeOverride('notes')}
+            className="mr-4"
+            dataTab="ordinary-notes"
+            layoutId="notes-display-mode-underline"
+          >
+            普通笔记
+          </TabButton>
+          <TabButton
+            isActive={noteDisplayMode === 'roasting'}
+            onClick={() => setNoteDisplayModeOverride('roasting')}
+            className="mr-4"
+            dataTab="roasting-notes"
+            layoutId="notes-display-mode-underline"
+          >
+            烘焙记录
+          </TabButton>
+        </div>
 
-                  // 普通模式下显示总记录统计
-                  // 搜索模式：显示搜索结果的统计
-                  if (isSearching && searchQuery.trim()) {
-                    return `${searchFilteredNotes.length} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
-                  }
-
-                  // 普通模式：显示当前筛选结果的统计
-                  return `${totalCount} 条记录，已消耗 ${formatConsumption(currentConsumption)}`;
-                })()}
+        {/* 数量显示 */}
+        <div className="mb-6 flex items-center justify-between px-6">
+          <div
+            className={`relative min-w-0 ${navigationToggleControl ? 'pl-6' : ''}`}
+          >
+            {navigationToggleControl && (
+              <div className="absolute top-1/2 -left-1.5 -translate-y-1/2">
+                {navigationToggleControl}
               </div>
+            )}
+            <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
+              {(() => {
+                if (imageFlowStats) {
+                  return `${imageFlowStats.count} 条图片记录，${usageLabel} ${formatConsumption(imageFlowStats.consumption)}`;
+                }
+
+                if (isSearching && searchQuery.trim()) {
+                  return `${searchFilteredNotes.length} 条${recordLabel}，${usageLabel} ${formatConsumption(currentConsumption)}`;
+                }
+
+                return `${totalCount} 条${recordLabel}，${usageLabel} ${formatConsumption(currentConsumption)}`;
+              })()}
             </div>
           </div>
+        </div>
 
-          {/* 设备筛选选项卡 */}
+        {/* 设备筛选选项卡 */}
+        {(notes.length > 0 || isSearching) && (
           <FilterTabs
             filterMode={filterMode}
             selectedEquipment={selectedEquipment}
@@ -1114,8 +1175,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             tableVisibleColumns={effectiveTableVisibleColumns}
             onTableColumnsChange={updateTableVisibleColumns}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* 内容区域 - 可滚动 */}
       <div className="flex-1 overflow-hidden">
@@ -1140,6 +1201,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             searchQuery={searchQuery}
             isSearching={isSearching}
             emptyStateMessage={searchAllScopeLabel ? null : undefined}
+            emptyRecordLabel={recordLabel}
             preFilteredNotes={
               isSearching && searchQuery.trim()
                 ? searchFilteredNotes
@@ -1187,6 +1249,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           ]}
         />
       ) : (
+        noteDisplayMode === 'notes' &&
         !isImageFlowMode &&
         !isDateImageFlowMode && <AddNoteButton onAddNote={handleAddNote} />
       )}

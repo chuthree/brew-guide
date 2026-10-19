@@ -564,7 +564,13 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   }, [isFilterExpanded]);
 
   // 如果没有可筛选的设备或日期，不渲染任何内容
-  if (availableEquipments.length === 0 && availableDates.length === 0)
+  if (
+    !isSearching &&
+    availableEquipments.length === 0 &&
+    availableDates.length === 0 &&
+    !selectedEquipment &&
+    !selectedDate
+  )
     return null;
 
   return (
