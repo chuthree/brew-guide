@@ -307,7 +307,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     ? (noteDisplayModeOverride ??
       (beanInventoryState === 'green' ? 'roasting' : 'notes'))
     : 'notes';
-  const recordLabel = noteDisplayMode === 'roasting' ? '烘焙记录' : '笔记';
+  const recordLabel = noteDisplayMode === 'roasting' ? '烘焙记录' : '记录';
   const usageLabel = noteDisplayMode === 'roasting' ? '烘焙量' : '已消耗';
   const viewMode =
     noteDisplayMode === 'roasting' && savedViewMode === 'gallery'
@@ -1111,7 +1111,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                         noteDisplayMode === 'roasting' ? 'notes' : 'roasting';
                       setNoteDisplayModeOverride(nextMode);
                     }}
-                    title="点击切换笔记/烘焙记录"
+                    title="点击切换记录/烘焙记录"
                   >
                     {recordLabel}
                   </span>
