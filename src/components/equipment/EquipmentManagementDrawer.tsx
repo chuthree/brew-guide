@@ -82,6 +82,13 @@ const EquipmentRow: React.FC<EquipmentRowProps> = ({
     getEquipmentDisplayParts(equipment);
   const equipmentDisplayName = getEquipmentDisplayName(equipment);
 
+  const handleDragHandlePointerDown = (
+    event: React.PointerEvent<HTMLButtonElement>
+  ) => {
+    event.preventDefault();
+    dragControls.start(event);
+  };
+
   return (
     <Reorder.Item
       value={equipment}
@@ -107,8 +114,8 @@ const EquipmentRow: React.FC<EquipmentRowProps> = ({
           type="button"
           aria-label={`拖动调整 ${equipmentDisplayName} 排序`}
           title="拖动排序"
-          onPointerDown={event => dragControls.start(event)}
-          className="mr-3 cursor-grab rounded-md p-1 pl-0 transition-colors duration-150 active:cursor-grabbing"
+          onPointerDown={handleDragHandlePointerDown}
+          className="mr-3 cursor-grab touch-none rounded-md p-1 pl-0 select-none transition-colors duration-150 active:cursor-grabbing"
         >
           <motion.span
             className="flex"
