@@ -993,6 +993,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     />
                   )}
 
+                  <BlendComponentsSection
+                    fieldIds={visibleBeanFieldIds}
+                    bean={bean}
+                    isAddMode={isFormMode}
+                    handleUpdateField={handleUpdateField}
+                  />
+
                   <OriginInfoSection
                     fieldIds={visibleBeanFieldIds}
                     bean={bean}
@@ -1001,13 +1008,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     searchQuery={searchQuery}
                     handleUpdateField={handleUpdateField}
                     handleRoastLevelSelect={handleRoastLevelSelect}
-                  />
-
-                  <BlendComponentsSection
-                    fieldIds={visibleBeanFieldIds}
-                    bean={bean}
-                    isAddMode={isFormMode}
-                    handleUpdateField={handleUpdateField}
                   />
 
                   <FlavorNotesSection
