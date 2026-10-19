@@ -29,7 +29,6 @@ import { BrewingHistoryProps } from '../types';
 import FilterTabs from './FilterTabs';
 import AddNoteButton from './AddNoteButton';
 import BottomActionBar from '@/components/layout/BottomActionBar';
-import TabButton from '@/components/common/ui/TabButton';
 import { showToast } from '@/components/common/feedback/LightToast';
 
 import {
@@ -303,8 +302,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const noteDisplayMode: NotesDisplayMode =
     noteDisplayModeOverride ??
     (beanInventoryState === 'green' ? 'roasting' : 'notes');
-  const recordLabel = noteDisplayMode === 'roasting' ? '烘焙记录' : '普通笔记';
-  const usageLabel = noteDisplayMode === 'roasting' ? '烘焙量' : '冲煮消耗';
+  const recordLabel = noteDisplayMode === 'roasting' ? '烘焙记录' : '笔记';
+  const usageLabel = noteDisplayMode === 'roasting' ? '烘焙量' : '已消耗';
   const viewMode =
     noteDisplayMode === 'roasting' && savedViewMode === 'gallery'
       ? 'list'
@@ -1084,27 +1083,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         } md:pt-0 dark:bg-neutral-900`}
         {...navigationSwipeHandlers}
       >
-        <div className="flex items-center px-6">
-          <TabButton
-            isActive={noteDisplayMode === 'notes'}
-            onClick={() => setNoteDisplayModeOverride('notes')}
-            className="mr-4"
-            dataTab="ordinary-notes"
-            layoutId="notes-display-mode-underline"
-          >
-            普通笔记
-          </TabButton>
-          <TabButton
-            isActive={noteDisplayMode === 'roasting'}
-            onClick={() => setNoteDisplayModeOverride('roasting')}
-            className="mr-4"
-            dataTab="roasting-notes"
-            layoutId="notes-display-mode-underline"
-          >
-            烘焙记录
-          </TabButton>
-        </div>
-
         {/* 数量显示 */}
         <div className="mb-6 flex items-center justify-between px-6">
           <div
@@ -1116,17 +1094,23 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
               </div>
             )}
             <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
-              {(() => {
-                if (imageFlowStats) {
-                  return `${imageFlowStats.count} 条图片记录，${usageLabel} ${formatConsumption(imageFlowStats.consumption)}`;
-                }
-
-                if (isSearching && searchQuery.trim()) {
-                  return `${searchFilteredNotes.length} 条${recordLabel}，${usageLabel} ${formatConsumption(currentConsumption)}`;
-                }
-
-                return `${totalCount} 条${recordLabel}，${usageLabel} ${formatConsumption(currentConsumption)}`;
-              })()}
+              <span>
+                {imageFlowStats
+                  ? `${imageFlowStats.count} 条图片`
+                  : `${isSearching && searchQuery.trim() ? searchFilteredNotes.length : totalCount} 条`}
+                <span
+                  className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                  onClick={() => {
+                    const nextMode =
+                      noteDisplayMode === 'roasting' ? 'notes' : 'roasting';
+                    setNoteDisplayModeOverride(nextMode);
+                  }}
+                  title="点击切换笔记/烘焙记录"
+                >
+                  {recordLabel}
+                </span>
+                {`，${usageLabel} ${formatConsumption(imageFlowStats?.consumption ?? currentConsumption)}`}
+              </span>
             </div>
           </div>
         </div>
@@ -1195,7 +1179,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             searchQuery={searchQuery}
             isSearching={isSearching}
             emptyStateMessage={searchAllScopeLabel ? null : undefined}
-            emptyRecordLabel={recordLabel}
+            emptyRecordLabel={
+              noteDisplayMode === 'roasting' ? '烘焙记录' : undefined
+            }
             preFilteredNotes={
               isSearching && searchQuery.trim()
                 ? searchFilteredNotes
