@@ -25,7 +25,8 @@ describe('smartCompress', () => {
     expect(result.size).toBe(file.size);
   });
 
-  it('falls back to JPEG when canvas cannot encode WebP', async () => {
+  it('keeps transparency when canvas cannot encode WebP', async () => {
+    let alpha = 255;
     class MockFileReader {
       result: string | null = null;
       onload: ((event: ProgressEvent<FileReader>) => void) | null = null;
@@ -60,6 +61,9 @@ describe('smartCompress', () => {
       createElement: () => ({
         getContext: () => ({
           drawImage: vi.fn(),
+          getImageData: () => ({
+            data: new Uint8ClampedArray([0, 0, 0, alpha]),
+          }),
           imageSmoothingEnabled: false,
           imageSmoothingQuality: 'low',
         }),
@@ -80,6 +84,13 @@ describe('smartCompress', () => {
       'image/jpeg',
       0.8
     );
+
+    alpha = 0;
+    const transparentResult = await compressBase64Image(
+      'data:image/png;base64,c291cmNl'
+    );
+    expect(transparentResult.startsWith('data:image/png;base64,')).toBe(true);
+    expect(toBlob).toHaveBeenCalledWith(expect.any(Function), 'image/png', 0.8);
   });
 
   it('does not recompress GIF data URLs', async () => {

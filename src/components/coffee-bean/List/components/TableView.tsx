@@ -197,7 +197,6 @@ const buildBeanHoverPreview = async (
   }
 
   return {
-    id: `${bean.id}:bean`,
     imageSrc,
   };
 };
@@ -546,7 +545,6 @@ const TableView: React.FC<TableViewProps> = ({
       if (!imageSrc) return null;
 
       return {
-        id: `${bean.id}:roaster:${roasterName}`,
         imageSrc,
       };
     },

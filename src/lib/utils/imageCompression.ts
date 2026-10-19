@@ -101,7 +101,14 @@ export async function compressImage(
             return blob;
           }
 
-          return createBlob(JPEG_IMAGE_MIME_TYPE, outputQuality);
+          const pixels = ctx.getImageData(0, 0, width, height).data;
+          const hasTransparency = pixels.some(
+            (channel, index) => index % 4 === 3 && channel < 255
+          );
+          return createBlob(
+            hasTransparency ? 'image/png' : JPEG_IMAGE_MIME_TYPE,
+            outputQuality
+          );
         };
 
         try {
@@ -112,6 +119,7 @@ export async function compressImage(
           while (
             targetSize > 0 &&
             blob.size > targetSize &&
+            blob.type !== 'image/png' &&
             currentQuality > 0.1
           ) {
             currentQuality = Math.max(0.1, currentQuality - 0.1);
