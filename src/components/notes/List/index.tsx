@@ -88,7 +88,6 @@ import {
 import { useBrewingNoteImageCountsState } from '@/lib/hooks/useBrewingNoteImages';
 import { revertCapacityAdjustmentRecord } from '@/lib/coffee-beans/capacityAdjustment';
 import { createBrewingNoteCopyData } from './brewingNoteCopy';
-import { filterNotesByBeanState } from './noteListModel';
 import { getValidBeanState } from '@/components/coffee-bean/List/preferences';
 import {
   COFFEE_BEAN_NAVIGATION_EVENTS,
@@ -298,6 +297,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const coffeeBeans = useCoffeeBeanStore(state => state.beans);
   const [beanInventoryState, setBeanInventoryState] =
     useState<CoffeeBeanInventoryState>(() => getValidBeanState());
+  const beanInventoryStateRef = useRef(beanInventoryState);
   const [noteDisplayModeOverride, setNoteDisplayModeOverride] =
     useState<NotesDisplayMode | null>(null);
   const noteDisplayMode: NotesDisplayMode =
@@ -325,6 +325,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const handleInventoryStateChanged = (
       event: CustomEvent<{ beanState: CoffeeBeanInventoryState }>
     ) => {
+      if (beanInventoryStateRef.current === event.detail.beanState) return;
+
+      beanInventoryStateRef.current = event.detail.beanState;
       setBeanInventoryState(event.detail.beanState);
       setNoteDisplayModeOverride(null);
     };
@@ -361,25 +364,16 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     setNotesScrollEl(el);
   }, []);
 
-  const inventoryNotes = useMemo(() => {
+  const sortedNotes = useMemo(() => {
     if (!notes || notes.length === 0) return [];
 
-    return filterNotesByBeanState(
-      sortNotes(notes, sortOption),
-      beanInventoryState,
-      coffeeBeans
-    );
-  }, [notes, sortOption, beanInventoryState, coffeeBeans]);
-
-  const sortedNotes = useMemo(
-    () =>
-      inventoryNotes.filter(note =>
+    return sortNotes(notes, sortOption).filter(
+      note =>
         noteDisplayMode === 'roasting'
           ? note.source === 'roasting'
           : note.source !== 'roasting'
-      ),
-    [inventoryNotes, noteDisplayMode]
-  );
+    );
+  }, [notes, sortOption, noteDisplayMode]);
 
   //  简化：直接用 useMemo 筛选和排序，不需要复杂的 hook
   const filteredNotes = useMemo(() => {
