@@ -19,6 +19,38 @@ import type { RealtimeSyncTable } from '../types';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote, CustomEquipment, Method } from '@/lib/core/config';
 
+function dispatchRemoteImageRefresh(
+  table: RealtimeSyncTable,
+  recordId: string,
+  data: Record<string, unknown>
+): void {
+  if (typeof window === 'undefined') return;
+
+  if (table === SYNC_TABLES.COFFEE_BEANS) {
+    window.dispatchEvent(
+      new CustomEvent('coffeeBeanDataChanged', {
+        detail: {
+          action: 'update',
+          beanId: recordId,
+          bean: data,
+          source: 'remote',
+        },
+      })
+    );
+  } else if (table === SYNC_TABLES.BREWING_NOTES) {
+    window.dispatchEvent(
+      new CustomEvent('brewingNoteDataChanged', {
+        detail: {
+          action: 'update',
+          noteId: recordId,
+          note: data,
+          source: 'remote',
+        },
+      })
+    );
+  }
+}
+
 /**
  * 通知 Store 删除记录
  */
@@ -80,12 +112,16 @@ export async function notifyStoreUpsert(
             : [...s.beans, bean],
         };
       });
+      // Image hooks read the separate image repository and key caches by ID.
+      // Reuse the store's data-change event so they reload after remote writes.
+      dispatchRemoteImageRefresh(table, recordId, data);
     } else if (table === SYNC_TABLES.BREWING_NOTES) {
       const { useBrewingNoteStore } =
         await import('@/lib/stores/brewingNoteStore');
       await useBrewingNoteStore
         .getState()
         .upsertNote(data as unknown as BrewingNote);
+      dispatchRemoteImageRefresh(table, recordId, data);
     } else if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
       const { useCustomEquipmentStore } =
         await import('@/lib/stores/customEquipmentStore');
