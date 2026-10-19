@@ -5,7 +5,11 @@ export type AppRuntime = 'web' | 'capacitor' | 'tauri';
 export interface AppRuntimeInfo {
   runtime: AppRuntime;
   capacitorPlatform: 'android' | 'ios' | 'unknown' | null;
+  /** False for the OL shell, which loads the hosted app and keeps IndexedDB. */
+  capacitorBundled?: boolean;
 }
+
+export const BUNDLED_WEB_HOSTNAME = 'app';
 
 function isTauriRuntime(): boolean {
   return typeof window !== 'undefined' && '__TAURI__' in window;
@@ -41,5 +45,11 @@ export function detectAppRuntime(): AppRuntimeInfo {
     // implementation is not one of the currently supported platforms.
   }
 
-  return { runtime: 'capacitor', capacitorPlatform };
+  return {
+    runtime: 'capacitor',
+    capacitorPlatform,
+    capacitorBundled:
+      typeof window !== 'undefined' &&
+      window.location.hostname === BUNDLED_WEB_HOSTNAME,
+  };
 }

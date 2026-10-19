@@ -17,12 +17,13 @@ export type DataRuntimeInitialization =
     };
 
 /**
- * Native apps share SQLite repositories; browsers and PWAs keep existing Dexie storage.
+ * Bundled native apps use SQLite; OL shells, browsers and PWAs keep Dexie storage.
  */
 export function resolveStorageBackend(runtime: AppRuntimeInfo): StorageBackend {
   if (
     runtime.runtime === 'tauri' ||
     (runtime.runtime === 'capacitor' &&
+      runtime.capacitorBundled !== false &&
       (runtime.capacitorPlatform === 'android' ||
         runtime.capacitorPlatform === 'ios'))
   ) {

@@ -24,6 +24,7 @@ import {
   recordCrashError,
 } from '@/lib/app/crashDiagnostics';
 import { detectAppRuntime } from '@/lib/app/runtime';
+import { resolveStorageBackend } from '@/lib/data/runtime';
 import dynamic from 'next/dynamic';
 import { useStore } from 'zustand';
 import { nativeMigrationGate } from '@/lib/data/nativeMigrationGate';
@@ -75,11 +76,7 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
     async function init() {
       try {
         const runtime = detectAppRuntime();
-        setNativeApp(
-          runtime.runtime === 'tauri' ||
-            (runtime.runtime === 'capacitor' &&
-              ['android', 'ios'].includes(runtime.capacitorPlatform ?? ''))
-        );
+        setNativeApp(resolveStorageBackend(runtime) === 'native-sqlite');
         recordCrashCheckpoint('data-layer-provider:init:start');
         await initializeDataLayer();
 
