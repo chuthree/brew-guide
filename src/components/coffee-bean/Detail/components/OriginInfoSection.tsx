@@ -152,8 +152,10 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   const currentBean = isAddMode ? tempBean : bean;
   const roastLevelSuggestions = useRoastLevelSuggestions();
   const components = currentBean?.blendComponents ?? [];
-  const isMultipleBlend = components.length > 1;
-  const displayFields = getComponentConfiguredValues(components[0], fieldIds);
+  const displayFields =
+    components.length <= 1
+      ? getComponentConfiguredValues(components[0], fieldIds)
+      : [];
   const roastLevel = currentBean?.roastLevel || '';
 
   // 处理成分编辑
@@ -186,10 +188,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
     });
   };
 
-  if (
-    !isAddMode &&
-    (isMultipleBlend || (!displayFields.length && !roastLevel))
-  ) {
+  if (!isAddMode && !displayFields.length && !roastLevel) {
     return null;
   }
 

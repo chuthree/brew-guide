@@ -218,12 +218,12 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   );
   const hasOriginInfoSection =
     isFormMode ||
+    !!detailBean?.roastLevel ||
     (detailBlendComponents.length <= 1 &&
-      (getComponentConfiguredValues(
+      getComponentConfiguredValues(
         detailBlendComponents[0],
         visibleBeanFieldIds
-      ).length > 0 ||
-        !!detailBean?.roastLevel));
+      ).length > 0);
   const hasBlendComponentsSection =
     !isFormMode &&
     detailBlendComponents.length > 1 &&
