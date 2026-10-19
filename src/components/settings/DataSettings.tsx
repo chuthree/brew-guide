@@ -26,7 +26,8 @@ import { WebDAVSyncSection } from './data-settings/WebDAVSyncSection';
 import { SupabaseSyncSection } from './data-settings/SupabaseSyncSection';
 import { DataManagementSection } from './data-settings/DataManagementSection';
 import WebDAVTutorialModal from './data-settings/WebDAVTutorialModal';
-import { Capacitor } from '@capacitor/core';
+import { detectAppRuntime } from '@/lib/app/runtime';
+import { resolveStorageBackend } from '@/lib/data/runtime';
 import PersistentStorageManager, {
   isPersistentStorageSupported,
   isPWAMode,
@@ -128,8 +129,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     getBooleanState('setting-notices', storageNoticeId)
   );
   const [isRequestingPersist, setIsRequestingPersist] = useState(false);
-  const [isNativePlatform] = useState(() => Capacitor.isNativePlatform());
-  const [isPWA] = useState(() => !Capacitor.isNativePlatform() && isPWAMode());
+  const [usesBrowserStorage] = useState(
+    () => resolveStorageBackend(detectAppRuntime()) === 'dexie'
+  );
+  const [isPWA] = useState(() => usesBrowserStorage && isPWAMode());
   const [supportsPullToSync, setSupportsPullToSync] = useState(false);
 
   // 云同步类型选择
@@ -201,11 +204,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
   // 加载持久化存储状态
   useEffect(() => {
     const loadStorageStatus = async () => {
-      if (isNativePlatform) {
-        // 原生平台沿用已有的数据保护状态，无需申请浏览器权限。
-        setIsPersisted(true);
-        return;
-      }
+      // 原生 SQLite 不使用浏览器持久化权限，此处不判断其初始化状态。
+      if (!usesBrowserStorage) return;
 
       try {
         const persisted = await PersistentStorageManager.checkPersisted();
@@ -216,7 +216,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     };
 
     loadStorageStatus();
-  }, [isNativePlatform]);
+  }, [usesBrowserStorage]);
 
   // 加载备份提醒设置
   useEffect(() => {
@@ -526,7 +526,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   // 请求持久化存储
   const handleRequestPersist = async () => {
-    if (isNativePlatform || !isPWA || !isPersistentStorageSupported()) {
+    if (!usesBrowserStorage || !isPWA || !isPersistentStorageSupported()) {
       return;
     }
 
@@ -630,9 +630,10 @@ const DataSettings: React.FC<DataSettingsProps> = ({
   );
 
   const showStorageNotice =
+    usesBrowserStorage &&
     isPersisted === false &&
     !isStorageNoticeDismissed &&
-    (!isPersistentStorageSupported() || (!isPWA && !isNativePlatform));
+    (!isPersistentStorageSupported() || !isPWA);
 
   return (
     <SettingPage title="数据与备份" isVisible={isVisible} onClose={handleClose}>
