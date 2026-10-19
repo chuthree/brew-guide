@@ -272,6 +272,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
   // 🔥 从 Zustand Store 订阅笔记数据
   const notes = useBrewingNoteStore(state => state.notes);
+  const hasRoastingNotes = useMemo(
+    () => notes.some(note => note.source === 'roasting'),
+    [notes]
+  );
   const noteIds = useMemo(() => notes.map(note => note.id), [notes]);
   const noteImageVersionKey = useMemo(
     () =>
@@ -299,9 +303,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const beanInventoryStateRef = useRef(beanInventoryState);
   const [noteDisplayModeOverride, setNoteDisplayModeOverride] =
     useState<NotesDisplayMode | null>(null);
-  const noteDisplayMode: NotesDisplayMode =
-    noteDisplayModeOverride ??
-    (beanInventoryState === 'green' ? 'roasting' : 'notes');
+  const noteDisplayMode: NotesDisplayMode = hasRoastingNotes
+    ? (noteDisplayModeOverride ??
+      (beanInventoryState === 'green' ? 'roasting' : 'notes'))
+    : 'notes';
   const recordLabel = noteDisplayMode === 'roasting' ? '烘焙记录' : '笔记';
   const usageLabel = noteDisplayMode === 'roasting' ? '烘焙量' : '已消耗';
   const viewMode =
@@ -1098,17 +1103,23 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
                 {imageFlowStats
                   ? `${imageFlowStats.count} 条图片`
                   : `${isSearching && searchQuery.trim() ? searchFilteredNotes.length : totalCount} 条`}
-                <span
-                  className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-                  onClick={() => {
-                    const nextMode =
-                      noteDisplayMode === 'roasting' ? 'notes' : 'roasting';
-                    setNoteDisplayModeOverride(nextMode);
-                  }}
-                  title="点击切换笔记/烘焙记录"
-                >
-                  {recordLabel}
-                </span>
+                {hasRoastingNotes ? (
+                  <span
+                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                    onClick={() => {
+                      const nextMode =
+                        noteDisplayMode === 'roasting' ? 'notes' : 'roasting';
+                      setNoteDisplayModeOverride(nextMode);
+                    }}
+                    title="点击切换笔记/烘焙记录"
+                  >
+                    {recordLabel}
+                  </span>
+                ) : (
+                  <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                    {recordLabel}
+                  </span>
+                )}
                 {`，${usageLabel} ${formatConsumption(imageFlowStats?.consumption ?? currentConsumption)}`}
               </span>
             </div>
