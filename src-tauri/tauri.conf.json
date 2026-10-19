@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Brew Guide",
-  "version": "1.6.3-beta.1",
+  "version": "1.7.0",
   "identifier": "com.brewguide.desktop",
   "build": {
     "frontendDist": "../out",
