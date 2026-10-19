@@ -7,6 +7,7 @@ import { CoffeeBean, BrewingNoteData } from '@/types/app';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { formatCoffeeBeanDisplayName } from '@/lib/utils/coffeeBeanUtils';
 import {
   getBeanRatingInfo,
   hasBeanRating,
@@ -121,10 +122,20 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
           });
 
         case SORT_OPTIONS.NAME_ASC:
-          return sorted.sort((a, b) => a.name.localeCompare(b.name));
+          return sorted.sort((a, b) =>
+            formatCoffeeBeanDisplayName(a).localeCompare(
+              formatCoffeeBeanDisplayName(b),
+              'zh-CN'
+            )
+          );
 
         case SORT_OPTIONS.NAME_DESC:
-          return sorted.sort((a, b) => b.name.localeCompare(a.name));
+          return sorted.sort((a, b) =>
+            formatCoffeeBeanDisplayName(b).localeCompare(
+              formatCoffeeBeanDisplayName(a),
+              'zh-CN'
+            )
+          );
 
         case SORT_OPTIONS.PRICE_ASC:
           return sorted.sort((a, b) => {

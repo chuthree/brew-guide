@@ -20,7 +20,6 @@ import {
 } from '../types';
 import {
   SortOption,
-  SORT_ORDERS,
   getSortTypeAndOrder,
   getSortOption,
   getSortOrderLabel,
@@ -255,7 +254,10 @@ const SortSection: React.FC<SortSectionProps> = ({
                 key={type}
                 isActive={type === currentType}
                 onClick={() => {
-                  const newOption = getSortOption(type, SORT_ORDERS.DESC);
+                  const newOption = getSortOption(
+                    type,
+                    getSortOrdersForType(type)[0]
+                  );
                   onSortChange(newOption);
                 }}
               >

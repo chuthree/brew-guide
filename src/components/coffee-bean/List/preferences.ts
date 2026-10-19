@@ -143,16 +143,6 @@ export const globalCache: {
 
 // ==================== 偏好设置读写函数 ====================
 
-const migrateSortOption = (
-  value: string,
-  viewMode: string = 'inventory'
-): SortOption => {
-  if (value === 'name_asc' || value === 'name_desc') {
-    return viewMode === 'ranking' ? 'rating_desc' : 'last_modified_desc';
-  }
-  return value as SortOption;
-};
-
 // 显示空豆子
 export const getShowEmptyBeansPreference = () =>
   getBooleanState(MODULE_NAME, 'showEmptyBeans', DEFAULT_SHOW_EMPTY_BEANS);
@@ -224,16 +214,15 @@ export const saveViewModePreference = (v: ViewOption) =>
 
 // 排序选项
 export const getSortOptionPreference = () =>
-  migrateSortOption(
-    getStringState(MODULE_NAME, 'sortOption', 'remaining_days_asc')
-  );
+  getStringState(MODULE_NAME, 'sortOption', 'remaining_days_asc') as SortOption;
 export const saveSortOptionPreference = (v: SortOption) =>
   saveStringState(MODULE_NAME, 'sortOption', v);
 export const getInventorySortOptionPreference = () =>
-  migrateSortOption(
-    getStringState(MODULE_NAME, 'inventorySortOption', 'remaining_days_asc'),
-    'inventory'
-  );
+  getStringState(
+    MODULE_NAME,
+    'inventorySortOption',
+    'remaining_days_asc'
+  ) as SortOption;
 export const saveInventorySortOptionPreference = (v: SortOption) =>
   saveStringState(MODULE_NAME, 'inventorySortOption', v);
 export const getInventorySortOptionByStatePreference = (s: BeanState) => {
@@ -241,17 +230,14 @@ export const getInventorySortOptionByStatePreference = (s: BeanState) => {
   const v = getStringState(MODULE_NAME, `inventorySortOption_${s}`, def);
   if (s === 'green' && v.includes('remaining_days'))
     return 'last_modified_desc';
-  return migrateSortOption(v, 'inventory');
+  return v as SortOption;
 };
 export const saveInventorySortOptionByStatePreference = (
   s: BeanState,
   v: SortOption
 ) => saveStringState(MODULE_NAME, `inventorySortOption_${s}`, v);
 export const getRankingSortOptionPreference = () =>
-  migrateSortOption(
-    getStringState(MODULE_NAME, 'rankingSortOption', 'rating_desc'),
-    'ranking'
-  );
+  getStringState(MODULE_NAME, 'rankingSortOption', 'rating_desc') as SortOption;
 export const saveRankingSortOptionPreference = (v: SortOption) =>
   saveStringState(MODULE_NAME, 'rankingSortOption', v);
 export const getRankingBeanTypePreference = () =>

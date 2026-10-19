@@ -2,6 +2,7 @@ import React from 'react';
 import { CoffeeBean } from '@/types/app';
 import { cn } from '@/lib/utils/classNameUtils';
 import { parseDateToTimestamp } from '@/lib/utils/dateUtils';
+import { formatCoffeeBeanDisplayName } from '@/lib/utils/coffeeBeanUtils';
 import { Select, SelectContent, SelectTrigger } from '../ui/select';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import {
@@ -95,17 +96,17 @@ export const sortBeans = (
       return sortBeansByFlavorPeriodReverse(sorted);
     case SORT_OPTIONS.NAME_ASC:
       return sorted.sort((a, b) => {
-        // 安全地进行字符串比较（A → Z）
-        const nameA = a.name || '';
-        const nameB = b.name || '';
-        return nameA.localeCompare(nameB);
+        return formatCoffeeBeanDisplayName(a).localeCompare(
+          formatCoffeeBeanDisplayName(b),
+          'zh-CN'
+        );
       });
     case SORT_OPTIONS.NAME_DESC:
       return sorted.sort((a, b) => {
-        // 安全地进行字符串比较（Z → A）
-        const nameA = a.name || '';
-        const nameB = b.name || '';
-        return nameB.localeCompare(nameA);
+        return formatCoffeeBeanDisplayName(b).localeCompare(
+          formatCoffeeBeanDisplayName(a),
+          'zh-CN'
+        );
       });
     case SORT_OPTIONS.RATING_ASC:
       return sorted.sort(
@@ -528,6 +529,7 @@ export const getAvailableSortTypesForView = (
       if (isGreenBean) {
         return [
           SORT_TYPES.LAST_MODIFIED,
+          SORT_TYPES.NAME,
           SORT_TYPES.ROAST_DATE, // 生豆显示为"购买日期"
           SORT_TYPES.REMAINING_AMOUNT,
           SORT_TYPES.PRICE,
@@ -535,13 +537,14 @@ export const getAvailableSortTypesForView = (
       }
       return [
         SORT_TYPES.LAST_MODIFIED,
+        SORT_TYPES.NAME,
         SORT_TYPES.ROAST_DATE,
         SORT_TYPES.REMAINING_DAYS,
         SORT_TYPES.REMAINING_AMOUNT,
         SORT_TYPES.PRICE,
       ];
     case 'ranking':
-      return [SORT_TYPES.RATING, SORT_TYPES.LAST_MODIFIED];
+      return [SORT_TYPES.RATING, SORT_TYPES.LAST_MODIFIED, SORT_TYPES.NAME];
     case 'stats':
       return [
         SORT_TYPES.REMAINING_DAYS,
