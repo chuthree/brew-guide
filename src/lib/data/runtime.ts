@@ -21,7 +21,7 @@ export type DataRuntimeInitialization =
  */
 export function resolveStorageBackend(runtime: AppRuntimeInfo): StorageBackend {
   if (
-    runtime.runtime === 'tauri' ||
+    (runtime.runtime === 'tauri' && runtime.tauriBundled !== false) ||
     (runtime.runtime === 'capacitor' &&
       runtime.capacitorBundled !== false &&
       (runtime.capacitorPlatform === 'android' ||
