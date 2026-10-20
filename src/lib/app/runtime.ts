@@ -7,6 +7,8 @@ export interface AppRuntimeInfo {
   capacitorPlatform: 'android' | 'ios' | 'unknown' | null;
   /** False for the OL shell, which loads the hosted app and keeps IndexedDB. */
   capacitorBundled?: boolean;
+  /** False for the desktop OL shell; omitted for bundled Tauri apps. */
+  tauriBundled?: boolean;
 }
 
 export const BUNDLED_WEB_HOSTNAME = 'app';
@@ -20,6 +22,19 @@ export function detectAppRuntime(): AppRuntimeInfo {
   // Tauri is checked first so a WebView or an injected Capacitor API cannot
   // cause the desktop shell to be treated as Capacitor Native.
   if (isTauriRuntime()) {
+    const location = window.location;
+    if (
+      (location?.protocol === 'http:' || location?.protocol === 'https:') &&
+      !['localhost', 'tauri.localhost', '127.0.0.1', '[::1]'].includes(
+        location.hostname
+      )
+    ) {
+      return {
+        runtime: 'tauri',
+        capacitorPlatform: null,
+        tauriBundled: false,
+      };
+    }
     return { runtime: 'tauri', capacitorPlatform: null };
   }
 
