@@ -23,6 +23,10 @@ import {
   grinderRepository,
 } from '@/lib/data/repositories';
 import type { AppSettings } from '@/lib/data/models';
+import {
+  omitDeviceSettings,
+  preserveDeviceSettings,
+} from '@/lib/settings/deviceSettings';
 
 // ============================================
 // 类型定义
@@ -307,6 +311,10 @@ function normalizeSettingsFingerprintData(
     appSettings.supabaseSync = stableSupabaseSync;
   }
 
+  if (appSettings) {
+    normalized.appSettings = omitDeviceSettings(appSettings);
+  }
+
   return normalized;
 }
 
@@ -390,7 +398,7 @@ async function collectLocalSettingsSyncData(): Promise<{
   // 收集应用设置
   const appSettings = await appSettingsRepository.get();
   if (appSettings) {
-    data.appSettings = appSettings as AppSettings;
+    data.appSettings = omitDeviceSettings(appSettings);
     dataSections.push('appSettings');
   }
 
@@ -959,7 +967,9 @@ export async function downloadSettingsData(
         } as AppSettings;
       }
 
-      await appSettingsRepository.save(mergedSettings);
+      await appSettingsRepository.save(
+        preserveDeviceSettings(mergedSettings, localSettings) as AppSettings
+      );
       count++;
     }
 

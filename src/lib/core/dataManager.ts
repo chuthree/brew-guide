@@ -34,6 +34,10 @@ import {
 import { normalizeCoffeeBeans } from '@/lib/utils/coffeeBeanUtils';
 import { recordCrashOperationStep } from '@/lib/app/crashDiagnostics';
 import { markExpectedCoreDataMutation } from '@/lib/app/dataIntegrity';
+import {
+  omitDeviceSettings,
+  preserveDeviceSettings,
+} from '@/lib/settings/deviceSettings';
 
 // 检查是否在浏览器环境中
 const isBrowser = typeof window !== 'undefined';
@@ -61,6 +65,8 @@ interface ImportData {
 }
 
 interface ExportAllDataOptions {
+  /** 跨设备备份排除设备设置；本地导出默认保留完整设置。 */
+  excludeDeviceSettings?: boolean;
   pretty?: boolean;
   collectDiagnostics?: boolean;
   /** Upgrade backup: use frozen core data before repositories are bound. */
@@ -192,7 +198,9 @@ export const DataManager = {
         // 特殊处理 brewGuideSettings - 从 settingsStore 获取
         if (key === 'brewGuideSettings') {
           const settingsFromStore = getSettingsStore().settings;
-          exportData.data[key] = settingsFromStore;
+          exportData.data[key] = options.excludeDeviceSettings
+            ? omitDeviceSettings(settingsFromStore)
+            : settingsFromStore;
           continue;
         }
 
@@ -383,7 +391,8 @@ export const DataManager = {
    * @returns 导入结果
    */
   async importAllData(
-    jsonString: string
+    jsonString: string,
+    options: { preserveDeviceSettings?: boolean } = {}
   ): Promise<{ success: boolean; message: string }> {
     try {
       const importData = JSON.parse(jsonString) as ImportData;
@@ -509,6 +518,13 @@ export const DataManager = {
             // 如果导入的数据是 Zustand 格式（包含 state.settings），则解包
             if ((valueToSave as any)?.state?.settings) {
               valueToSave = (valueToSave as any).state.settings;
+            }
+
+            if (options.preserveDeviceSettings) {
+              valueToSave = preserveDeviceSettings(
+                valueToSave as Partial<_SettingsOptions>,
+                getSettingsStore().settings
+              );
             }
 
             const settingsObj = valueToSave as any;
