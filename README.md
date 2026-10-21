@@ -73,6 +73,8 @@ pnpm dev
 
 [brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli)：社区维护的命令行工具，用于管理 Brew Guide 的 Supabase 同步数据。
 
+[bookoo-brew](https://github.com/iamzzz774/bookoo-brew)：支持蓝牙连接 BOOKOO 咖啡秤和可选的 MT80 磨豆参数，配合 Brew Guide 管理笔记与库存。
+
 ## 许可证
 
 [GPL-3.0-only](LICENSE) · © 2026 [chu3](https://github.com/chuthree)
