@@ -235,6 +235,10 @@ function assertExpectedTables(actual: readonly string[]): void {
   const actualSet = new Set(actual);
   const missing = SQLITE_V1_TABLES.filter(name => !actualSet.has(name));
   const expected = new Set<string>(SQLITE_V1_TABLES);
+  // Device-local MCP ledgers are additive and are not part of synced v1 data.
+  expected.add('mcp_operations');
+  expected.add('mcp_activity');
+  expected.add('mcp_publications');
   const unexpected = actual.filter(name => !expected.has(name));
   if (missing.length || unexpected.length) {
     throw new SqliteSchemaBootstrapError(

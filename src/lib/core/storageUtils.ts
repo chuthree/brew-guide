@@ -233,8 +233,17 @@ export const StorageUtils = {
    * 清除所有存储数据
    */
   async clearAllData(): Promise<void> {
+    const { isDesktopMcpAvailable } = await import('@/lib/mcp/client');
+    if (isDesktopMcpAvailable()) {
+      const { stopDesktopMcpForDataReset } = await import('@/lib/mcp/bridge');
+      await stopDesktopMcpForDataReset();
+    }
     // Clear database data through the selected backend before local settings.
     await backendDataMaintenance.clearAllData();
+    if (isDesktopMcpAvailable()) {
+      const { clearMcpLocalHistory } = await import('@/lib/mcp/storage');
+      await clearMcpLocalHistory();
+    }
 
     // 清除Preferences/localStorage数据
     if (Capacitor.isNativePlatform()) {

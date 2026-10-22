@@ -2,6 +2,7 @@ import type { BackendDataMaintenance } from '@/lib/data/contracts';
 import type { NativeImageFileStore } from '@/lib/data/images/nativeImageFileStore';
 import { validateImageObjectKey } from '@/lib/data/images/nativeImageFileStore';
 import type { SqliteDriver } from './driver';
+import { clearOptionalMcpTables } from './mcpMaintenance';
 
 const CLEARED_TABLES = [
   'brewing_notes',
@@ -29,6 +30,7 @@ export function createSqliteBackendDataMaintenance(
         for (const table of CLEARED_TABLES) {
           await tx.execute(`DELETE FROM ${table}`);
         }
+        await clearOptionalMcpTables(tx);
       });
 
       for (const objectKey of objectKeys) {

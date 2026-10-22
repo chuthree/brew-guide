@@ -67,15 +67,14 @@ import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-import {
-  isSameEquipment,
-  getEquipmentIdByName,
-} from '@/lib/utils/equipmentUtils';
+import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 import ArtisticShareDrawer from '../Share/ArtisticShareDrawer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import {
   buildCoffeeBeanLookup,
   buildEquipmentNameMap,
+  noteEquipmentFilterKey,
+  resolveNoteEquipmentName,
   EMPTY_EQUIPMENT_NAME_OVERRIDES,
 } from '@/lib/notes/noteDisplay';
 import { useNavigationSwipe } from '@/lib/navigation/navigationSwipe';
@@ -220,10 +219,13 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const [viewPreference, setViewPreference] = useState(getNotesViewPreference);
   const { viewMode: savedViewMode, imageFlowType } = viewPreference;
 
-  const updateViewPreference = useCallback((preference: NotesViewPreference) => {
-    setViewPreference(preference);
-    saveNotesViewPreference(preference);
-  }, []);
+  const updateViewPreference = useCallback(
+    (preference: NotesViewPreference) => {
+      setViewPreference(preference);
+      saveNotesViewPreference(preference);
+    },
+    []
+  );
 
   const [tableVisibleColumns, setTableVisibleColumns] = useState<
     NotesTableColumnKey[]
@@ -314,7 +316,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       ? 'list'
       : savedViewMode;
   const isImageFlowMode = viewMode === 'gallery' && imageFlowType === 'normal';
-  const isDateImageFlowMode = viewMode === 'gallery' && imageFlowType === 'date';
+  const isDateImageFlowMode =
+    viewMode === 'gallery' && imageFlowType === 'date';
   const customEquipments = useCustomEquipmentStore(state => state.equipments);
   const customEquipmentInitialized = useCustomEquipmentStore(
     state => state.initialized
@@ -349,10 +352,20 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     };
   }, []);
 
-  const equipmentNames = useMemo(
-    () => buildEquipmentNameMap(customEquipments, equipmentNameOverrides),
-    [customEquipments, equipmentNameOverrides]
-  );
+  const equipmentNames = useMemo(() => {
+    const names = buildEquipmentNameMap(
+      customEquipments,
+      equipmentNameOverrides
+    );
+    for (const note of notes) {
+      const key = noteEquipmentFilterKey(note, value =>
+        getEquipmentIdByName(value, customEquipments)
+      );
+      if (key && (!names[key] || note.equipmentId === null))
+        names[key] = resolveNoteEquipmentName(note, names);
+    }
+    return names;
+  }, [customEquipments, equipmentNameOverrides, notes]);
   const coffeeBeanLookup = useMemo(
     () => buildCoffeeBeanLookup(coffeeBeans),
     [coffeeBeans]
@@ -371,11 +384,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const sortedNotes = useMemo(() => {
     if (!notes || notes.length === 0) return [];
 
-    return sortNotes(notes, sortOption).filter(
-      note =>
-        noteDisplayMode === 'roasting'
-          ? note.source === 'roasting'
-          : note.source !== 'roasting'
+    return sortNotes(notes, sortOption).filter(note =>
+      noteDisplayMode === 'roasting'
+        ? note.source === 'roasting'
+        : note.source !== 'roasting'
     );
   }, [notes, sortOption, noteDisplayMode]);
 
@@ -385,10 +397,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
     if (filterMode === 'equipment' && selectedEquipment) {
       return sortedNotes.filter((note: BrewingNote) => {
-        return isSameEquipment(
-          note.equipment,
-          selectedEquipment,
-          customEquipments
+        return (
+          noteEquipmentFilterKey(note, value =>
+            getEquipmentIdByName(value, customEquipments)
+          ) === selectedEquipment
         );
       });
     } else if (filterMode === 'date' && selectedDate) {
@@ -443,13 +455,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   const availableEquipments = useMemo(() => {
     const equipmentSet = new Set<string>();
     sortedNotes.forEach((note: BrewingNote) => {
-      if (note.equipment) {
-        const normalizedId = getEquipmentIdByName(
-          note.equipment,
-          customEquipments
-        );
-        equipmentSet.add(normalizedId);
-      }
+      const key = noteEquipmentFilterKey(note, value =>
+        getEquipmentIdByName(value, customEquipments)
+      );
+      if (key) equipmentSet.add(key);
     });
     return Array.from(equipmentSet).sort();
   }, [sortedNotes, customEquipments]);
@@ -720,6 +729,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       timestamp: noteForEdit.timestamp,
       equipment: noteForEdit.equipment,
       method: noteForEdit.method,
+      equipmentId: noteForEdit.equipmentId,
+      equipmentName: noteForEdit.equipmentName,
+      methodId: noteForEdit.methodId,
+      methodName: noteForEdit.methodName,
       params: noteForEdit.params,
       coffeeBeanInfo: noteForEdit.coffeeBeanInfo || {
         name: '', // 提供默认值
@@ -1006,8 +1019,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   // 计算是否有图片笔记（用于禁用/启用图片流按钮）
   const hasImageNotes = useMemo(() => {
     return (
-      noteDisplayMode === 'notes' &&
-      imageFlowCandidateNotes.some(noteHasImage)
+      noteDisplayMode === 'notes' && imageFlowCandidateNotes.some(noteHasImage)
     );
   }, [imageFlowCandidateNotes, noteDisplayMode, noteHasImage]);
 
@@ -1032,9 +1044,10 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     // 获取有图片记录的设备列表
     const equipmentSet = new Set<string>();
     allNotesWithImages.forEach(note => {
-      if (note.equipment) {
-        equipmentSet.add(note.equipment);
-      }
+      const key = noteEquipmentFilterKey(note, value =>
+        getEquipmentIdByName(value, customEquipments)
+      );
+      if (key) equipmentSet.add(key);
     });
 
     return {
@@ -1049,6 +1062,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     availableEquipments,
     noteHasImage,
     sortedNotes,
+    customEquipments,
   ]);
 
   // 在图片流模式下，如果当前选中的设备没有图片记录，自动切换到"全部"

@@ -10,9 +10,11 @@ import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
 import {
   getBeanUnitPrice,
   normalizeBrewingNoteParams,
+  getNoteEspressoParamParts,
   resolveNoteBean,
   resolveNoteBeanDisplayName,
   resolveNoteEquipmentName,
+  resolveNoteMethodName,
 } from '@/lib/notes/noteDisplay';
 
 const formatTasteRatingValue = (value: number): string =>
@@ -91,7 +93,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
   }, [note.equipment]);
 
   const titleText = React.useMemo(() => {
-    const methodName = note.method?.trim() || '';
+    const methodName = resolveNoteMethodName(note);
 
     if (methodName) {
       if (beanName) return `${beanName} · ${methodName}`;
@@ -108,7 +110,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
 
     const notePreview = note.notes?.trim();
     return notePreview || '未命名记录';
-  }, [beanName, equipmentName, note.method, note.notes]);
+  }, [beanName, equipmentName, note.method, note.methodName, note.notes]);
 
   const paramTexts = React.useMemo(() => {
     if (!normalizedParams) {
@@ -118,12 +120,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
     const coffeeText = normalizedParams.coffee || '';
 
     if (isEspresso) {
-      return [
-        coffeeText,
-        normalizedParams.grindSize,
-        note.totalTime ? `${note.totalTime}s` : '',
-        normalizedParams.water,
-      ].filter(Boolean);
+      return getNoteEspressoParamParts(note);
     }
 
     const combinedTexture = [normalizedParams.grindSize, normalizedParams.temp]
@@ -133,7 +130,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
     return [coffeeText, normalizedParams.ratio, combinedTexture].filter(
       Boolean
     );
-  }, [isEspresso, normalizedParams, note.totalTime]);
+  }, [isEspresso, normalizedParams, note]);
 
   // 处理笔记点击事件
   const handleNoteClick = () => {
@@ -219,8 +216,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
                     {/* 如果有方案且有咖啡豆名称，显示器具名称 */}
                     {beanName &&
                       equipmentName &&
-                      note.method &&
-                      note.method.trim() !== '' && (
+                      resolveNoteMethodName(note) && (
                         <>
                           <span>{equipmentName}</span>
                           <span>·</span>

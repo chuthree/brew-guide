@@ -122,13 +122,14 @@ const toSearchTokens = (value: string): string[] =>
     .filter(Boolean);
 
 const uniqueNormalizedValues = (
-  values?: Array<string | number | null | undefined>
+  values?: Array<string | string[] | number | null | undefined>
 ): string[] => {
   if (!values) {
     return [];
   }
 
   const normalized = values
+    .flatMap(value => (Array.isArray(value) ? value : [value]))
     .map(value => normalizeSearchText(String(value ?? '')))
     .filter(Boolean);
   return Array.from(new Set(normalized));

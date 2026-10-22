@@ -15,6 +15,10 @@ export const createBrewingNoteCopyData = (
     timestamp,
     equipment: note.equipment,
     method: note.method,
+    equipmentId: note.equipmentId,
+    equipmentName: note.equipmentName,
+    methodId: note.methodId,
+    methodName: note.methodName,
     params: note.params,
     coffeeBeanInfo: note.coffeeBeanInfo || {
       name: '',

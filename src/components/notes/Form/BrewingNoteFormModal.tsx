@@ -34,8 +34,11 @@ import {
 import {
   normalizeBrewingNoteParams,
   normalizeBrewingNoteDraftSelection,
-  normalizeBrewingNoteSelection,
 } from '@/lib/notes/noteDisplay';
+import {
+  pickNoteSelection,
+  resolveFormNoteSelection,
+} from './noteCatalogSelection';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import {
   clearBrewingNoteDraftSession,
@@ -240,8 +243,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     ? draftSession.note.coffeeBean || null
     : null;
   const selectedEquipment = draftSession.note.equipment || '';
-  const [methodStepEquipmentId, setMethodStepEquipmentId] =
-    useState(getInitialDraftEquipmentId);
+  const [methodStepEquipmentId, setMethodStepEquipmentId] = useState(
+    getInitialDraftEquipmentId
+  );
   const selectedMethodId = draftSession.note.method || '';
   const currentStep = draftSession.step;
   const maxStepIndex = availableCoffeeBeans.length > 0 ? 2 : 1;
@@ -483,6 +487,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
         return {
           ...prev,
+          equipmentId: undefined,
+          equipmentName: undefined,
+          methodId: undefined,
+          methodName: undefined,
           equipment: equipmentId,
           method: shouldResetMethod ? '' : prev.method,
           params: shouldResetMethod
@@ -570,6 +578,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       setSelectedMethod(methodIdentifier);
       updateDraftNote(prev => ({
         ...prev,
+        equipmentId: undefined,
+        equipmentName: undefined,
+        methodId: undefined,
+        methodName: undefined,
         equipment: methodStepEquipmentId,
         method: methodIdentifier,
         params: nextParams,
@@ -635,27 +647,17 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     async (note: BrewingNoteData) => {
       shouldAutoPersistRef.current = false;
 
-      let methodName = selectedMethodId || '';
-
-      if (selectedMethodId) {
-        const allMethods = [...commonMethodsOnly, ...customMethods];
-        const methodObj = allMethods.find(
-          m => m.id === selectedMethodId || m.name === selectedMethodId
-        );
-        if (methodObj) {
-          methodName = methodObj.name;
-        }
-      }
-
-      const normalizedSelection = normalizeBrewingNoteSelection({
-        equipment: selectedEquipment,
-        method: methodName,
-      });
+      const selection =
+        note.equipmentId !== undefined || note.methodId !== undefined
+          ? pickNoteSelection(note)
+          : await resolveFormNoteSelection({
+              equipment: selectedEquipment,
+              method: selectedMethodId,
+            });
 
       const completeNote: BrewingNoteData = {
         ...note,
-        equipment: normalizedSelection.equipment,
-        method: normalizedSelection.method,
+        ...selection,
         coffeeBean: undefined,
         params: normalizeBrewingNoteParams(note.params),
       };
@@ -840,16 +842,24 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                   setSelectedMethod(methodId);
                   updateDraftNote(prev => ({
                     ...prev,
+                    equipmentId: undefined,
+                    equipmentName: undefined,
+                    methodId: undefined,
+                    methodName: undefined,
                     equipment: methodStepEquipmentId,
                     method: methodId,
                     params: normalizeBrewingNoteParams(undefined),
                     totalTime: undefined,
-                }));
+                  }));
                 }}
                 onSkipMethodSelect={() => {
                   setSelectedMethod('');
                   updateDraftNote(prev => ({
                     ...prev,
+                    equipmentId: undefined,
+                    equipmentName: undefined,
+                    methodId: undefined,
+                    methodName: undefined,
                     equipment: '',
                     method: '',
                     params: normalizeBrewingNoteParams(undefined),
@@ -857,8 +867,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                   }));
                   setDraftStep(prev => prev + 1);
                 }}
-              onParamsChange={handleMethodParamsChange}
-            />
+                onParamsChange={handleMethodParamsChange}
+              />
             )}
           </div>
         ),

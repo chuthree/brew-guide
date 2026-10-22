@@ -101,6 +101,19 @@ export async function initializeDataLayer(): Promise<void> {
     initState.isInitialized = true;
     initState.error = null;
     console.log('✅ 数据层初始化完成');
+
+    if (
+      runtimeInitialization.runtime === 'tauri' &&
+      runtimeInitialization.backend === 'native-sqlite'
+    ) {
+      try {
+        const { initializeDesktopMcpBridge } = await import('@/lib/mcp/bridge');
+        await initializeDesktopMcpBridge();
+      } catch {
+        // An optional external connection must never prevent using local data.
+        console.error('MCP 连接初始化失败，可在数据设置中检查后重新启动应用');
+      }
+    }
   } catch (error) {
     console.error('❌ 数据层初始化失败:', error);
     initState.error = error instanceof Error ? error.message : '初始化失败';

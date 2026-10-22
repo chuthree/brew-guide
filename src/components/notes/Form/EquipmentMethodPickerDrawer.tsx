@@ -263,6 +263,10 @@ const EquipmentMethodPickerDrawer: React.FC<
             onSkipMethodSelect={handleSkipMethodSelect}
             onParamsChange={handleParamsChange}
             initialParams={initialParams}
+            preserveMeasuredParams={
+              tempEquipmentId === selectedEquipmentId &&
+              tempMethodId === selectedMethodId
+            }
           />
         </div>
 

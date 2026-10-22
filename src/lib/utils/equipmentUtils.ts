@@ -170,27 +170,16 @@ export const getPourTypeOptions = (
   }
 
   const options: PourTypeOption[] = [];
-  const customPourAnimations = customEquipment.customPourAnimations || [];
-
-  for (const animation of customPourAnimations) {
-    if (!animation.isSystemDefault) {
-      appendPourTypeOption(options, {
-        value: animation.id,
-        label: animation.name,
-      });
-    }
-  }
-
-  if (customEquipment.animationType !== 'custom') {
-    for (const animation of customPourAnimations) {
-      if (animation.isSystemDefault && animation.pourType) {
+  if (customEquipment.animationType === 'custom') {
+    for (const animation of customEquipment.customPourAnimations || []) {
+      if (!animation.isSystemDefault) {
         appendPourTypeOption(options, {
-          value: animation.pourType,
+          value: animation.id,
           label: animation.name,
         });
       }
     }
-
+  } else {
     for (const pourType of REGULAR_SYSTEM_POUR_TYPES) {
       appendPourTypeOption(options, toPourTypeOption(pourType));
     }

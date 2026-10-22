@@ -12,9 +12,11 @@ import { grinderRepository } from '@/lib/data/repositories';
 import type { Grinder } from '@/lib/data/models';
 import { nanoid } from 'nanoid';
 import {
-  normalizeCoffeeBeanName,
-  normalizeCoffeeBeanRoaster,
-} from '@/lib/utils/coffeeBeanUtils';
+  applyBrewGrinderScale,
+  parseGrinderFromGrindSize,
+  type GrinderCoffeeBeanContext,
+} from '@/lib/grinder/scaleHistory';
+export { parseGrinderFromGrindSize } from '@/lib/grinder/scaleHistory';
 
 // 重新导出 Grinder 类型和历史记录类型
 export type { Grinder, GrindSizeHistory } from '@/lib/data/models';
@@ -64,33 +66,6 @@ interface GrinderState {
  * 解析研磨度字符串，提取磨豆机名称和刻度
  * 支持格式: "磨豆机名 刻度" 或 "磨豆机名 · 刻度"（兼容旧格式）
  */
-export function parseGrinderFromGrindSize(
-  grindSize: string,
-  grinderNames: string[]
-): { grinderName: string; scale: string } | null {
-  if (!grindSize || grinderNames.length === 0) return null;
-
-  // 按名称长度降序排序，优先匹配较长的名称（避免 "C40" 匹配到 "C4"）
-  const sortedNames = [...grinderNames].sort((a, b) => b.length - a.length);
-
-  for (const name of sortedNames) {
-    // 检查是否以磨豆机名开头
-    if (grindSize.startsWith(name)) {
-      // 获取剩余部分
-      const remainder = grindSize.slice(name.length).trim();
-
-      // 去掉可能的分隔符
-      const scale = remainder.replace(/^[·\s]+/, '').trim();
-
-      // 如果有刻度值，返回解析结果
-      if (scale) {
-        return { grinderName: name, scale };
-      }
-    }
-  }
-
-  return null;
-}
 
 /**
  * 磨豆机 Store
@@ -285,44 +260,6 @@ function dispatchGrinderChanged(): void {
  */
 export const getGrinderStore = () => useGrinderStore.getState();
 
-type GrinderCoffeeBeanContext =
-  | string
-  | {
-      name?: string;
-      roaster?: string;
-    }
-  | undefined;
-
-const normalizeGrinderCoffeeBeanContext = (
-  coffeeBean?: GrinderCoffeeBeanContext
-) => {
-  if (!coffeeBean) {
-    return {
-      coffeeBean: undefined,
-      coffeeBeanName: undefined,
-      coffeeBeanRoaster: undefined,
-    };
-  }
-
-  if (typeof coffeeBean === 'string') {
-    const legacyDisplayName = normalizeCoffeeBeanName(coffeeBean);
-    return {
-      coffeeBean: legacyDisplayName || undefined,
-      coffeeBeanName: legacyDisplayName || undefined,
-      coffeeBeanRoaster: undefined,
-    };
-  }
-
-  const coffeeBeanName = normalizeCoffeeBeanName(coffeeBean.name);
-  const coffeeBeanRoaster = normalizeCoffeeBeanRoaster(coffeeBean.roaster);
-
-  return {
-    coffeeBean: coffeeBeanName || undefined,
-    coffeeBeanName: coffeeBeanName || undefined,
-    coffeeBeanRoaster: coffeeBeanRoaster || undefined,
-  };
-};
-
 /**
  * 同步磨豆机刻度
  * @param grindSize 研磨度字符串，如 "C40 24"
@@ -366,22 +303,16 @@ export async function syncGrinderScale(
   const scale = parsed?.scale || grindSize.trim();
 
   if (grinder && scale) {
-    const coffeeBeanContext = normalizeGrinderCoffeeBeanContext(coffeeBean);
-    const history = grinder.grindSizeHistory || [];
-    const newHistory = [
-      {
-        grindSize: scale,
-        timestamp: Date.now(),
-        equipment,
-        method,
-        ...coffeeBeanContext,
-      },
-      ...history.filter(h => h.grindSize !== scale),
-    ].slice(0, 3);
-
+    const updated = applyBrewGrinderScale(
+      grinder,
+      scale,
+      equipment,
+      method,
+      coffeeBean
+    );
     await store.updateGrinder(grinder.id, {
-      currentGrindSize: scale,
-      grindSizeHistory: newHistory,
+      currentGrindSize: updated.currentGrindSize,
+      grindSizeHistory: updated.grindSizeHistory,
     });
 
     store.resetSyncState();

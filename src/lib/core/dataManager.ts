@@ -783,6 +783,13 @@ export const DataManager = {
    */
   async resetAllData(): Promise<{ success: boolean; message: string }> {
     try {
+      const desktopRuntime = detectAppRuntime();
+      const hasDesktopMcp =
+        desktopRuntime.runtime === 'tauri' && desktopRuntime.tauriBundled !== false;
+      if (hasDesktopMcp) {
+        const { stopDesktopMcpForDataReset } = await import('@/lib/mcp/bridge');
+        await stopDesktopMcpForDataReset();
+      }
       const storage = await getStorage();
       await markExpectedCoreDataMutation('reset-all-data');
 
@@ -794,6 +801,10 @@ export const DataManager = {
       await grinderRepository.clear();
       await appSettingsRepository.clear();
       await legacySettingsRepository.clear();
+      if (hasDesktopMcp) {
+        const { clearMcpLocalHistory } = await import('@/lib/mcp/storage');
+        await clearMcpLocalHistory();
+      }
 
       // 清除 Storage 中的所有应用数据
       for (const key of APP_DATA_KEYS) {

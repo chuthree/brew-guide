@@ -6,6 +6,7 @@ import {
 import { type CoffeeBean, type BlendComponent } from '@/types/app';
 import {
   getComponentOriginDisplay,
+  getComponentFieldValue,
   hasStructuredOriginFields,
 } from '@/lib/coffee-beans/beanFields';
 import {
@@ -729,12 +730,18 @@ export function beanToReadableText(
           const usesStructuredOrigin = hasStructuredOriginFields(component);
           const componentText = [
             getComponentOriginDisplay(component),
-            usesStructuredOrigin ? '' : component.estate || '',
-            usesStructuredOrigin ? '' : component.processingStation || '',
-            usesStructuredOrigin ? '' : component.altitude || '',
-            component.process || '',
-            component.batch || '',
-            component.variety || '',
+            usesStructuredOrigin
+              ? ''
+              : getComponentFieldValue(component, 'estate'),
+            usesStructuredOrigin
+              ? ''
+              : getComponentFieldValue(component, 'processingStation'),
+            usesStructuredOrigin
+              ? ''
+              : getComponentFieldValue(component, 'altitude'),
+            getComponentFieldValue(component, 'process'),
+            getComponentFieldValue(component, 'batch'),
+            getComponentFieldValue(component, 'variety'),
           ]
             .filter(v => v) // 过滤掉空值
             .join(' | ');
@@ -763,24 +770,33 @@ export function beanToReadableText(
       ) {
         text += `成分信息:\n`;
         if (hasStructuredOriginFields(component)) {
-          if (component.country) text += `产国: ${component.country}\n`;
-          if (component.region) text += `产区: ${component.region}\n`;
-          if (component.estate) text += `庄园: ${component.estate}\n`;
+          if (component.country)
+            text += `产国: ${getComponentFieldValue(component, 'country')}\n`;
+          if (component.region)
+            text += `产区: ${getComponentFieldValue(component, 'region')}\n`;
+          if (component.estate)
+            text += `庄园: ${getComponentFieldValue(component, 'estate')}\n`;
           if (component.processingStation) {
-            text += `处理站: ${component.processingStation}\n`;
+            text += `处理站: ${getComponentFieldValue(component, 'processingStation')}\n`;
           }
-          if (component.altitude) text += `海拔: ${component.altitude}\n`;
+          if (component.altitude)
+            text += `海拔: ${getComponentFieldValue(component, 'altitude')}\n`;
         } else if (component.origin) {
-          text += `产地: ${component.origin}\n`;
-          if (component.estate) text += `庄园: ${component.estate}\n`;
+          text += `产地: ${getComponentFieldValue(component, 'origin')}\n`;
+          if (component.estate)
+            text += `庄园: ${getComponentFieldValue(component, 'estate')}\n`;
           if (component.processingStation) {
-            text += `处理站: ${component.processingStation}\n`;
+            text += `处理站: ${getComponentFieldValue(component, 'processingStation')}\n`;
           }
-          if (component.altitude) text += `海拔: ${component.altitude}\n`;
+          if (component.altitude)
+            text += `海拔: ${getComponentFieldValue(component, 'altitude')}\n`;
         }
-        if (component.process) text += `处理法: ${component.process}\n`;
-        if (component.batch) text += `批次: ${component.batch}\n`;
-        if (component.variety) text += `品种: ${component.variety}\n`;
+        if (component.process)
+          text += `处理法: ${getComponentFieldValue(component, 'process')}\n`;
+        if (component.batch)
+          text += `批次: ${getComponentFieldValue(component, 'batch')}\n`;
+        if (component.variety)
+          text += `品种: ${getComponentFieldValue(component, 'variety')}\n`;
       }
     }
   }

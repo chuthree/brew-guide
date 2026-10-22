@@ -10,8 +10,6 @@ for (let index = 0; index < BASE64_ALPHABET.length; index += 1) {
   BASE64_VALUES[BASE64_ALPHABET.charCodeAt(index)] = index;
 }
 
-const BASE64_PATTERN =
-  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 const IMAGE_MIME_PATTERN = /^image\/[A-Za-z0-9!#$%&'*+.^_`|~-]+$/i;
 const BASE64_CHUNK_BYTES = 0x6000;
 
@@ -29,8 +27,17 @@ function assertCanonicalBase64(
   base64: string,
   context: 'image Data URL' | 'raw base64'
 ): void {
-  if (!BASE64_PATTERN.test(base64)) {
+  // Avoid repeated grouped regexes: multi-MiB images can overflow the engine's stack.
+  const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  const payloadLength = base64.length - padding;
+  if (base64.length % 4 !== 0) {
     throw new TypeError(`Invalid ${context}: malformed base64 payload`);
+  }
+  for (let index = 0; index < payloadLength; index++) {
+    const code = base64.charCodeAt(index);
+    if (code >= BASE64_VALUES.length || BASE64_VALUES[code] < 0) {
+      throw new TypeError(`Invalid ${context}: malformed base64 payload`);
+    }
   }
 
   if (base64.endsWith('==')) {

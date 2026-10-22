@@ -10,6 +10,7 @@ import { usePresetSuggestions } from '@/components/coffee-bean/Form/hooks/usePre
 import TagAutocompleteInput from './TagAutocompleteInput';
 import {
   getBeanFieldDefinition,
+  getComponentFieldValue,
   type BeanFieldId,
 } from '@/lib/coffee-beans/beanFields';
 
@@ -31,7 +32,7 @@ const getAppendIndex = (
   field: TextBlendField
 ) => {
   const emptyIndex = components.findIndex(
-    component => !String(component[field] || '').trim()
+    component => !getComponentFieldValue(component, field)
   );
 
   return emptyIndex === -1 ? components.length : emptyIndex;
@@ -41,7 +42,7 @@ const getFieldEntries = (components: BlendComponent[], field: TextBlendField) =>
   components
     .map((component, index) => ({
       index,
-      value: String(component[field] || '').trim(),
+      value: getComponentFieldValue(component, field),
     }))
     .filter(entry => entry.value);
 

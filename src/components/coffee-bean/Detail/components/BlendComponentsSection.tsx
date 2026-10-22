@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { updateBlendComponentsDelimitedField } from '@/lib/utils/coffeeBeanUtils';
 import { BlendComponent, CoffeeBean } from '@/types/app';
 import {
   BEAN_FIELD_DEFINITIONS,
@@ -98,11 +99,12 @@ const EditableBlendValue: React.FC<EditableBlendValueProps> = ({
       const nextValue = event.currentTarget.textContent?.trim() || '';
       if (nextValue === entry.value) return;
 
-      const updatedComponents = [...components];
-      updatedComponents[entry.componentIndex] = {
-        ...updatedComponents[entry.componentIndex],
-        [field]: nextValue,
-      };
+      const updatedComponents = updateBlendComponentsDelimitedField(
+        components,
+        entry.componentIndex,
+        field,
+        nextValue
+      );
       void handleUpdateField({ blendComponents: updatedComponents });
     },
     [components, entry.componentIndex, entry.value, field, handleUpdateField]

@@ -69,16 +69,16 @@ export const setSvgDimensions = (
     return setAttribute(setAttribute(svgTag, 'width', width), 'height', height);
   });
 
-export const sanitizeSvgMarkup = (svgString: string): string => {
+const parseSafeSvg = (svgString: string): Document | null => {
   if (
     typeof DOMParser === 'undefined' ||
     typeof XMLSerializer === 'undefined'
   ) {
-    return '';
+    return null;
   }
 
   const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml');
-  if (doc.querySelector('parsererror')) return '';
+  if (doc.querySelector('parsererror')) return null;
 
   doc
     .querySelectorAll('script, foreignObject, iframe, object, embed')
@@ -101,136 +101,141 @@ export const sanitizeSvgMarkup = (svgString: string): string => {
     });
   });
 
-  return new XMLSerializer().serializeToString(doc.documentElement);
+  return doc;
 };
 
-/**
- * 从SVG字符串中提取路径数据
- * @param svgString SVG字符串
- * @returns 路径数据数组
- */
-export const extractPathsFromSvg = (
-  svgString: string
-): Array<{
-  path: string;
-  stroke: string;
-  strokeWidth: string;
-}> => {
-  const paths: Array<{ path: string; stroke: string; strokeWidth: string }> =
-    [];
-
-  try {
-    // 使用DOMParser解析SVG字符串，这种方式更可靠
-    const parser = new DOMParser();
-    const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
-
-    // 获取所有path元素
-    const pathElements = svgDoc.querySelectorAll('path');
-
-    pathElements.forEach(path => {
-      // 提取每个path的属性
-      const d = path.getAttribute('d') || '';
-      const stroke = path.getAttribute('stroke') || 'var(--custom-shape-color)';
-      const strokeWidth = path.getAttribute('stroke-width') || '1.5';
-
-      if (d) {
-        paths.push({
-          path: d,
-          stroke: stroke,
-          strokeWidth: strokeWidth,
-        });
-      }
-    });
-
-    // 如果没有找到任何path元素，尝试使用备用的正则表达式方法
-    if (paths.length === 0) {
-      fallbackExtractPaths(svgString, paths);
-    }
-  } catch (error) {
-    console.error('解析SVG时出错:', error);
-    // 出错时使用备用方法
-    fallbackExtractPaths(svgString, paths);
-  }
-
-  return paths;
+export const sanitizeSvgMarkup = (svgString: string): string => {
+  const doc = parseSafeSvg(svgString);
+  return doc ? new XMLSerializer().serializeToString(doc.documentElement) : '';
 };
 
-/**
- * 备用方法：使用正则表达式从SVG字符串中提取路径
- */
-const fallbackExtractPaths = (
+/** All equipment previews and canvas references use the same theme-colored outlines. */
+export const prepareOutlineSvg = (
   svgString: string,
-  paths: Array<{ path: string; stroke: string; strokeWidth: string }>
-) => {
-  // 更灵活的正则表达式，匹配各种格式的path元素
-  const pathRegex =
-    /<path[^>]*d="([^"]*)"[^>]*(?:stroke="([^"]*)")?[^>]*(?:stroke-width="([^"]*)")?[^>]*>/g;
-  let match;
-
-  while ((match = pathRegex.exec(svgString)) !== null) {
-    paths.push({
-      path: match[1],
-      stroke: match[2] || 'var(--custom-shape-color)',
-      strokeWidth: match[3] || '1.5',
-    });
+  color = 'var(--custom-shape-color)'
+): string => {
+  const doc = parseSafeSvg(svgString);
+  if (!doc) return '';
+  const svg = doc.documentElement;
+  if (svg.localName !== 'svg') return '';
+  if (!svg.hasAttribute('viewBox')) {
+    const width = parseFloat(svg.getAttribute('width') || '') || 300;
+    const height = parseFloat(svg.getAttribute('height') || '') || 300;
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   }
-
-  // 如果还没找到，尝试不同的属性顺序
-  if (paths.length === 0) {
-    const altPathRegex =
-      /<path[^>]*(?:stroke-width="([^"]*)")?[^>]*(?:stroke="([^"]*)")?[^>]*d="([^"]*)"[^>]*>/g;
-    while ((match = altPathRegex.exec(svgString)) !== null) {
-      paths.push({
-        path: match[3],
-        stroke: match[2] || 'var(--custom-shape-color)',
-        strokeWidth: match[1] || '1.5',
-      });
+  for (const element of [svg, ...Array.from(svg.querySelectorAll('*'))]) {
+    element.removeAttribute('style');
+    element.removeAttribute('color');
+    for (const attribute of [
+      'opacity',
+      'fill-opacity',
+      'stroke-opacity',
+      'stroke-dasharray',
+      'stroke-dashoffset',
+    ]) {
+      element.removeAttribute(attribute);
     }
+    element.setAttribute('stroke-linecap', 'round');
+    element.setAttribute('stroke-linejoin', 'round');
+    element.setAttribute('fill', 'none');
+    element.setAttribute('stroke', color);
   }
+  svg.setAttribute('stroke-width', svg.getAttribute('stroke-width') || '3');
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '100%');
+  return new XMLSerializer().serializeToString(svg);
 };
 
-/**
- * 将SVG转换为Canvas上可以使用的线条数据
- * @param svgString SVG字符串
- * @returns 线条数据数组
- */
+/** Import old curves, transforms and viewBoxes without silently dropping geometry. */
 export const svgToLines = (
-  svgString: string
+  svgString: string,
+  width = 300,
+  height = 300
 ): Array<{
   points: Array<{ x: number; y: number }>;
   strokeWidth: number;
   color: string;
 }> => {
-  const pathData = extractPathsFromSvg(svgString);
-  const lines: Array<{
-    points: Array<{ x: number; y: number }>;
-    strokeWidth: number;
-    color: string;
-  }> = [];
-
-  pathData.forEach(({ path, stroke, strokeWidth }) => {
-    // 解析路径命令
-    const commands = path.match(/[MLZ][^MLZ]*/g) || [];
-    const points: Array<{ x: number; y: number }> = [];
-
-    commands.forEach(cmd => {
-      const type = cmd[0];
-      const coords = cmd.substring(1).trim().split(/\s+/);
-
-      if (type === 'M' || type === 'L') {
-        points.push({
-          x: parseFloat(coords[0]),
-          y: parseFloat(coords[1]),
-        });
+  const markup = prepareOutlineSvg(svgString);
+  if (!markup) return [];
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none';
+  host.innerHTML = setSvgDimensions(markup, String(width), String(height));
+  const svg = host.querySelector('svg')!;
+  document.body.appendChild(host);
+  const lines: ReturnType<typeof svgToLines> = [];
+  try {
+    // Separate subpaths before sampling so pen lifts never become connecting lines.
+    svg.querySelectorAll('path').forEach(path => {
+      const parts = path.getAttribute('d')?.match(/[Mm][^Mm]*/g) || [];
+      if (parts.length <= 1) return;
+      let endpoint = { x: 0, y: 0 };
+      for (const d of parts) {
+        const part = path.cloneNode() as SVGPathElement;
+        const absoluteStart = d.replace(
+          /^m\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)[\s,]*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)/,
+          (match, x, y) => {
+            const rest = d.slice(match.length).trimStart();
+            const implicitLine = /^[+\-.\d]/.test(rest) ? 'l ' : '';
+            return `M ${Number(x) + endpoint.x} ${Number(y) + endpoint.y} ${implicitLine}`;
+          }
+        );
+        part.setAttribute('d', absoluteStart);
+        path.before(part);
+        endpoint = part.getPointAtLength(part.getTotalLength());
       }
+      path.remove();
     });
-
-    lines.push({
-      points,
-      strokeWidth: parseFloat(strokeWidth),
-      color: stroke,
-    });
-  });
-
-  return lines;
+    svg
+      .querySelectorAll<SVGGeometryElement>(
+        'path, line, polyline, polygon, rect, circle, ellipse'
+      )
+      .forEach(shape => {
+        if (shape.closest('defs, clipPath, mask')) return;
+        const matrix = shape.getCTM();
+        if (!matrix) return;
+        const length = shape.getTotalLength();
+        if (!Number.isFinite(length) || length <= 0) return;
+        const count = Math.min(10000, Math.max(1, Math.ceil(length / 2)));
+        const d = shape.getAttribute('d') || '';
+        const linear =
+          shape.localName === 'path' &&
+          /^M/.test(d) &&
+          !/[a-df-km-y]/i.test(d.slice(1)) &&
+          !/[lz]/.test(d);
+        const coordinates = linear
+          ? (d.match(/[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g) || []).map(
+              Number
+            )
+          : [];
+        const points = linear
+          ? Array.from({ length: coordinates.length / 2 }, (_, index) => {
+              const point = new DOMPoint(
+                coordinates[index * 2],
+                coordinates[index * 2 + 1]
+              ).matrixTransform(matrix);
+              return { x: point.x, y: point.y };
+            })
+          : Array.from({ length: count + 1 }, (_, index) => {
+              const point = shape
+                .getPointAtLength((length * index) / count)
+                .matrixTransform(matrix);
+              return { x: point.x, y: point.y };
+            });
+        if (linear && /Z\s*$/.test(d) && points.length)
+          points.push({ ...points[0] });
+        const scale = Math.sqrt(
+          Math.abs(matrix.a * matrix.d - matrix.b * matrix.c)
+        );
+        lines.push({
+          points,
+          strokeWidth:
+            (parseFloat(getComputedStyle(shape).strokeWidth) || 3) * scale,
+          color: 'var(--custom-shape-color)',
+        });
+      });
+    return lines;
+  } finally {
+    host.remove();
+  }
 };

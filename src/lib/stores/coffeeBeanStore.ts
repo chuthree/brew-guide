@@ -20,6 +20,7 @@ import {
   markExpectedCoreDataDeletionIfEmpty,
 } from '@/lib/app/dataIntegrity';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
 
 interface CoffeeBeanStore {
   beans: CoffeeBean[];
@@ -141,97 +142,106 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
       }
     },
 
-    addBean: async beanData => {
-      const newBean = normalizeCoffeeBean(
-        {
-          ...beanData,
-          id: nanoid(),
-          timestamp: Date.now(),
-        } as CoffeeBean,
-        { ensureFlavorArray: true }
-      );
+    addBean: beanData =>
+      withDataMutation(async () => {
+        const newBean = normalizeCoffeeBean(
+          {
+            ...beanData,
+            id: nanoid(),
+            timestamp: Date.now(),
+          } as CoffeeBean,
+          { ensureFlavorArray: true }
+        );
 
-      try {
-        const beanForStore =
-          await coffeeBeanPersistence.saveWithImages(newBean);
-        await clearExpectedCoreDataDeletion();
-        beanMutationVersion += 1;
-        set(state => ({ beans: [...state.beans, beanForStore] }));
+        try {
+          const beanForStore =
+            await coffeeBeanPersistence.saveWithImages(newBean);
+          await clearExpectedCoreDataDeletion();
+          beanMutationVersion += 1;
+          set(state => ({ beans: [...state.beans, beanForStore] }));
 
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('coffeeBeanDataChanged', {
-              detail: { action: 'create', beanId: newBean.id, bean: newBean },
-            })
-          );
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('coffeeBeanDataChanged', {
+                detail: { action: 'create', beanId: newBean.id, bean: newBean },
+              })
+            );
+          }
+          return newBean;
+        } catch (error) {
+          console.error('[CoffeeBeanStore] addBean failed:', error);
+          throw error;
         }
-        return newBean;
-      } catch (error) {
-        console.error('[CoffeeBeanStore] addBean failed:', error);
-        throw error;
-      }
-    },
+      }),
 
-    updateBean: async (id, updates) => {
+    updateBean: (id, updates) => {
       const { beans } = get();
+      // Keep the caller's snapshot while queued, including precomputed stock edits.
       const existingBean = beans.find(b => b.id === id);
-      if (!existingBean) return null;
+      return withDataMutation(async () => {
+        if (!existingBean) return null;
 
-      const updatedBean = normalizeCoffeeBean(
-        {
-          ...existingBean,
-          ...updates,
-          id,
-          timestamp: Date.now(),
-        },
-        { ensureFlavorArray: true }
-      ) as CoffeeBean;
+        const updatedBean = normalizeCoffeeBean(
+          {
+            ...existingBean,
+            ...updates,
+            id,
+            timestamp: Math.max(Date.now(), existingBean.timestamp + 1),
+          },
+          { ensureFlavorArray: true }
+        ) as CoffeeBean;
 
-      try {
-        const savedBean =
-          await coffeeBeanPersistence.saveWithImages(updatedBean);
-        const savedEventBean =
-          await coffeeBeanImageRepository.mergeBean(savedBean);
-        beanMutationVersion += 1;
-        set(state => ({
-          beans: state.beans.map(b => (b.id === id ? savedBean : b)),
-        }));
-
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('coffeeBeanDataChanged', {
-              detail: { action: 'update', beanId: id, bean: savedEventBean },
-            })
+        try {
+          const savedBean = await coffeeBeanPersistence.saveWithImages(
+            updatedBean,
+            { expectedRecord: existingBean }
           );
+          const savedEventBean =
+            await coffeeBeanImageRepository.mergeBean(savedBean);
+          beanMutationVersion += 1;
+          set(state => ({
+            beans: state.beans.map(b => (b.id === id ? savedBean : b)),
+          }));
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('coffeeBeanDataChanged', {
+                detail: { action: 'update', beanId: id, bean: savedEventBean },
+              })
+            );
+          }
+          return savedEventBean;
+        } catch (error) {
+          console.error('[CoffeeBeanStore] updateBean failed:', error);
+          throw error;
         }
-        return savedEventBean;
-      } catch (error) {
-        console.error('[CoffeeBeanStore] updateBean failed:', error);
-        throw error;
-      }
+      });
     },
 
-    deleteBean: async id => {
-      try {
-        await coffeeBeanPersistence.deleteWithImages(id);
-        await markExpectedCoreDataDeletionIfEmpty();
-        beanMutationVersion += 1;
-        set(state => ({
-          beans: state.beans.filter(b => b.id !== id),
-        }));
+    deleteBean: id => {
+      const expectedRecord = get().beans.find(bean => bean.id === id);
+      return withDataMutation(async () => {
+        try {
+          await coffeeBeanPersistence.deleteWithImages(id, { expectedRecord });
+          await markExpectedCoreDataDeletionIfEmpty();
+          beanMutationVersion += 1;
+          set(state => ({
+            beans: state.beans.filter(b => b.id !== id),
+          }));
 
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('coffeeBeanDataChanged', {
-              detail: { action: 'delete', beanId: id },
-            })
-          );
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('coffeeBeanDataChanged', {
+                detail: { action: 'delete', beanId: id },
+              })
+            );
+          }
+          return true;
+        } catch (error) {
+          console.error('[CoffeeBeanStore] deleteBean failed:', error);
+          return false;
         }
-        return true;
-      } catch (error) {
-        console.error('[CoffeeBeanStore] deleteBean failed:', error);
-        return false;
-      }
+      });
     },
 
     setBeans: beans => {

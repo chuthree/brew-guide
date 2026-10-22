@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { CoffeeBean } from '@/types/app';
 import {
   extractUniqueAltitudes,
+  getBeanVarieties,
+  getBeanProcesses,
   extractUniqueBatches,
   extractUniqueCountries,
   extractUniqueOriginSummaries,
@@ -48,4 +50,19 @@ describe('beanVarietyUtils structured bean fields', () => {
     expect(extractUniqueAltitudes([bean])).toEqual(['2100m']);
     expect(extractUniqueBatches([bean])).toEqual(['A12']);
   });
+});
+
+it('projects every explicit component variety and process without splitting cultivar names', () => {
+  const bean = buildBean({
+    blendComponents: [
+      {
+        origin: ['Ethiopia'],
+        variety: ['SL28/34', '74110', '74112'],
+        process: ['Natural', 'Anaerobic'],
+      },
+    ],
+  });
+  expect(getBeanVarieties(bean)).toEqual(['SL28/34', '74110', '74112']);
+  expect(getBeanProcesses(bean)).toEqual(['Natural', 'Anaerobic']);
+  expect(bean.blendComponents).toHaveLength(1);
 });

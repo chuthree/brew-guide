@@ -14,15 +14,15 @@ export type BrewingNoteParams = Partial<
 // 拼配成分接口定义
 export interface BlendComponent {
   percentage?: number; // 百分比 (1-100)，可选
-  origin?: string; // 产地概括（legacy / fallback）
-  country?: string; // 产国
-  region?: string; // 产区
-  estate?: string; // 庄园
-  processingStation?: string; // 处理站
-  altitude?: string; // 海拔
-  process?: string; // 处理法
-  batch?: string; // 批次
-  variety?: string; // 品种
+  origin?: string | string[]; // 产地概括（legacy / fallback）
+  country?: string | string[]; // 产国
+  region?: string | string[]; // 产区
+  estate?: string | string[]; // 庄园
+  processingStation?: string | string[]; // 处理站
+  altitude?: string | string[]; // 海拔
+  process?: string | string[]; // 处理法
+  batch?: string | string[]; // 批次
+  variety?: string | string[]; // 品种
 }
 
 // 待创建的咖啡豆（尚未持久化到数据库）
@@ -115,6 +115,12 @@ export interface BrewingNoteData {
   updatedAt?: number; // 最后修改时间（用于同步，向后兼容）
   equipment?: string;
   method?: string;
+  /** Optional stable catalog identities; null preserves an explicit free-form selection. */
+  equipmentId?: string | null;
+  methodId?: string | null;
+  /** Names as recorded, independent of later catalog rename/deletion. */
+  equipmentName?: string;
+  methodName?: string;
   params?: BrewingNoteParams;
   stages?: Stage[];
   totalTime?: number;

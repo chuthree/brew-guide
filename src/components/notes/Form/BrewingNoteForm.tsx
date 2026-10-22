@@ -50,8 +50,12 @@ import {
 } from '@/lib/utils/equipmentUtils';
 import {
   normalizeBrewingNoteParams,
-  normalizeBrewingNoteSelection,
+  getNoteEspressoMeasurements,
 } from '@/lib/notes/noteDisplay';
+import {
+  pickNoteSelection,
+  resolveFormNoteSelection,
+} from './noteCatalogSelection';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import { SettingsOptions } from '@/components/settings/Settings';
 import type { FlavorDimension } from '@/lib/data/models';
@@ -333,6 +337,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     initialData.method || ''
   );
 
+  const [selectionChanged, setSelectionChanged] = useState(false);
+  const selectedReferenceRef = useRef(pickNoteSelection(initialData));
+
   // 添加时间状态
   const [totalTimeStr, setTotalTimeStr] = useState(() =>
     initialData.totalTime ? String(initialData.totalTime) : ''
@@ -373,7 +380,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       name.toLowerCase().includes('espresso') ||
       name.toLowerCase().includes('意式')
     );
-  }, [selectedEquipment, availableEquipments]);
+  }, [
+    selectedEquipment,
+    availableEquipments,
+    initialData.equipmentName,
+    selectionChanged,
+  ]);
 
   // 快捷扣除量状态（仅用于快捷扣除记录编辑）
   const [quickDecrementAmount, setQuickDecrementAmount] = useState<string>(
@@ -887,6 +899,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const handleEquipmentMethodSelection = useCallback(
     (selection: EquipmentMethodSelection) => {
       try {
+        setSelectionChanged(true);
+        selectedReferenceRef.current = {
+          equipment: selection.equipmentId,
+          method: selection.methodId || selection.methodName,
+        };
         // 更新器具
         setSelectedEquipment(selection.equipmentId);
         if (selection.equipmentId) {
@@ -917,12 +934,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
       }
     },
-    [
-      applyMethodParams,
-      id,
-      setPersistedEquipment,
-      updateMethodParams,
-    ]
+    [applyMethodParams, id, setPersistedEquipment, updateMethodParams]
   );
 
   // 获取当前器具和方案名称 - 使用useMemo优化
@@ -931,11 +943,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const customEquips = availableEquipments.filter(
       eq => 'isCustom' in eq && eq.isCustom
     ) as CustomEquipment[];
+    if (!selectionChanged && initialData.equipmentName)
+      return initialData.equipmentName;
     if (!selectedEquipment) return '';
     return getEquipmentNameById(selectedEquipment, customEquips) || '';
-  }, [selectedEquipment, availableEquipments]);
+  }, [
+    selectedEquipment,
+    availableEquipments,
+    initialData.equipmentName,
+    selectionChanged,
+  ]);
 
   const currentMethodName = useMemo(() => {
+    if (!selectionChanged && initialData.methodName)
+      return initialData.methodName;
     if (!selectedMethod || selectedMethod.trim() === '') {
       return '';
     }
@@ -943,11 +964,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       m => m.name === selectedMethod || m.id === selectedMethod
     );
     return method?.name || selectedMethod || '';
-  }, [availableMethods, selectedMethod]);
+  }, [
+    availableMethods,
+    selectedMethod,
+    initialData.methodName,
+    selectionChanged,
+  ]);
 
   const equipmentMethodValue = useMemo(
-    () =>
-      [currentEquipmentName, currentMethodName].filter(Boolean).join(' · '),
+    () => [currentEquipmentName, currentMethodName].filter(Boolean).join(' · '),
     [currentEquipmentName, currentMethodName]
   );
 
@@ -1143,6 +1168,19 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       isQuickDecrementIntent || isPlainNoteQuickRecordMode;
 
     try {
+      const selection = selectionChanged
+        ? await resolveFormNoteSelection(selectedReferenceRef.current)
+        : initialData.id ||
+            initialData.equipmentId !== undefined ||
+            initialData.methodId !== undefined
+          ? pickNoteSelection(initialData)
+          : await resolveFormNoteSelection({
+              equipment: selectedEquipment,
+              method: selectedMethod,
+            });
+      const finalEquipment = selection.equipment;
+      const finalMethod = selection.method;
+
       // 提取当前咖啡用量（用于容量计算和新建豆子）
       const {
         CapacitySyncManager,
@@ -1321,16 +1359,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
       }
 
-      // 规范化器具ID（将名称转换为ID）
-      const { normalizeEquipmentId } = await import('@/components/notes/utils');
-      const normalizedEquipmentId =
-        await normalizeEquipmentId(selectedEquipment);
-      const normalizedSelection = normalizeBrewingNoteSelection({
-        equipment: normalizedEquipmentId,
-        method: selectedMethod,
-      });
-      const finalEquipment = normalizedSelection.equipment;
-      const finalMethod = normalizedSelection.method;
       const finalParams = normalizeBrewingNoteParams(methodParams);
       const finalTotalTime = parseFloat(totalTimeStr);
       const noteBeanId =
@@ -1399,8 +1427,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         timestamp: timestamp.getTime(),
         ...noteFormData,
         taste: noteTaste, // 使用处理后的风味评分
-        ...(finalEquipment && { equipment: finalEquipment }),
-        ...(finalMethod && { method: finalMethod }),
+        ...selection,
         ...(noteParams && { params: noteParams }),
         ...(finalTotalTime > 0 && { totalTime: finalTotalTime }),
         // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
@@ -1696,9 +1723,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   // 获取方案参数预览
   const getMethodParamsPreview = () => {
     if (isEspresso) {
-      const parsedTime = parseFloat(totalTimeStr);
+      const measured = getNoteEspressoMeasurements({
+        params: methodParams,
+        totalTime: parseFloat(totalTimeStr),
+      });
+      const parsedTime = measured.extractionTime;
       const timeValue =
-        !Number.isNaN(parsedTime) && parsedTime > 0 ? `${parsedTime}s` : '';
+        parsedTime && !Number.isNaN(parsedTime) && parsedTime > 0
+          ? `${parsedTime}s`
+          : '';
 
       const params = [
         methodParams.coffee && { label: '粉量', value: methodParams.coffee },
@@ -1707,7 +1740,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           value: methodParams.grindSize,
         },
         timeValue && { label: '时长', value: timeValue },
-        methodParams.water && { label: '液重', value: methodParams.water },
+        measured.liquidWeight && {
+          label: '液重',
+          value: measured.liquidWeight,
+        },
       ].filter(Boolean) as { label: string; value: string }[];
 
       if (params.length === 0) return null;
@@ -1854,8 +1890,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       rating: formData.rating,
       taste: formData.taste,
       notes: formData.notes,
-      equipment: selectedEquipment,
-      method: selectedMethod,
+      ...(selectionChanged
+        ? {
+            equipment: selectedReferenceRef.current.equipment,
+            method: selectedReferenceRef.current.method,
+            equipmentId: undefined,
+            methodId: undefined,
+            equipmentName: undefined,
+            methodName: undefined,
+          }
+        : pickNoteSelection(initialData)),
       params: methodParams,
       totalTime,
       source: initialData.source,
@@ -1874,12 +1918,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     canUseCoffeeBeanModule,
     formData,
     id,
+    initialData,
     initialData.changeRecord,
     initialData.quickDecrementAmount,
     initialData.source,
     methodParams,
     onDraftChange,
     selectedCoffeeBean,
+    selectionChanged,
     selectedEquipment,
     selectedMethod,
     timestamp,

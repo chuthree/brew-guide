@@ -12,6 +12,7 @@ import {
   extractUniqueVarieties,
 } from '@/lib/utils/beanVarietyUtils';
 import type { BlendComponent } from '@/types/app';
+import { normalizeDelimitedTextList } from '@/lib/utils/coffeeBeanUtils';
 import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
 import {
   getFullPresets,
@@ -64,7 +65,7 @@ const mergePresetSuggestions = (usedValues: string[], key: BlendPresetKey) => {
 };
 
 const normalizeBlendFieldValue = (value: unknown) =>
-  typeof value === 'string' ? value.trim() : '';
+  normalizeDelimitedTextList(value).join('、');
 
 const isEmptyBlendComponent = (component: BlendComponent) =>
   !normalizeBlendFieldValue(component.origin) &&
@@ -196,10 +197,11 @@ export function autofillBlendComponentsFromName(
     {} as Record<TextBlendField, string[]>
   );
 
-  const generatedComponentCount = Math.max(
-    0,
-    ...autofillableFields.map(({ field }) => matchedValuesByField[field].length)
-  );
+  const generatedComponentCount = autofillableFields.some(
+    ({ field }) => matchedValuesByField[field].length > 0
+  )
+    ? 1
+    : 0;
 
   const baseComponents =
     components.length > 0
@@ -222,11 +224,17 @@ export function autofillBlendComponentsFromName(
     const rowCount = Math.max(
       nextComponents.length,
       previousAutofill.length,
-      matchedValues.length
+      generatedComponentCount
     );
 
     for (let index = 0; index < rowCount; index += 1) {
-      const nextValue = matchedValues[index] || '';
+      const nextStoredValue =
+        index === 0
+          ? matchedValues.length > 1
+            ? matchedValues
+            : matchedValues[0] || ''
+          : '';
+      const nextValue = normalizeBlendFieldValue(nextStoredValue);
       const component = nextComponents[index];
       const currentValue = getFieldValue(component, field);
       const previousValue = getFieldValue(previousAutofill[index], field);
@@ -246,13 +254,13 @@ export function autofillBlendComponentsFromName(
           }
 
           if (currentValue !== nextValue) {
-            nextComponents[index][field] = nextValue;
+            nextComponents[index][field] = nextStoredValue;
             hasChange = true;
           }
 
           nextAutofill[index] = {
             ...(nextAutofill[index] || createEmptyBlendComponent()),
-            [field]: nextValue,
+            [field]: nextStoredValue,
           };
         }
         continue;

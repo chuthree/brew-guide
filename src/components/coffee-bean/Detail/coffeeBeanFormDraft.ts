@@ -1,5 +1,6 @@
 'use client';
 
+import { normalizeBeanComponentFieldValue } from '@/lib/coffee-beans/beanFields';
 import type { BlendComponent, CoffeeBean } from '@/types/app';
 import { getObjectState, saveObjectState } from '@/lib/core/statePersistence';
 import { normalizeDelimitedTextList } from '@/lib/utils/coffeeBeanUtils';
@@ -37,15 +38,18 @@ const normalizeBlendComponents = (
     ...(typeof component.percentage === 'number'
       ? { percentage: component.percentage }
       : {}),
-    origin: normalizeText(component.origin),
-    country: normalizeText(component.country),
-    region: normalizeText(component.region),
-    estate: normalizeText(component.estate),
-    processingStation: normalizeText(component.processingStation),
-    altitude: normalizeText(component.altitude),
-    process: normalizeText(component.process),
-    batch: normalizeText(component.batch),
-    variety: normalizeText(component.variety),
+    origin: normalizeBeanComponentFieldValue('origin', component.origin),
+    country: normalizeBeanComponentFieldValue('country', component.country),
+    region: normalizeBeanComponentFieldValue('region', component.region),
+    estate: normalizeBeanComponentFieldValue('estate', component.estate),
+    processingStation: normalizeBeanComponentFieldValue(
+      'processingStation',
+      component.processingStation
+    ),
+    altitude: normalizeBeanComponentFieldValue('altitude', component.altitude),
+    process: normalizeBeanComponentFieldValue('process', component.process),
+    batch: normalizeBeanComponentFieldValue('batch', component.batch),
+    variety: normalizeBeanComponentFieldValue('variety', component.variety),
   }));
 };
 

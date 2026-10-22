@@ -26,9 +26,11 @@ import {
   getBeanUnitPrice,
   getNoteBeanAgingDaysForNote,
   normalizeBrewingNoteParams,
+  getNoteEspressoParamParts,
   resolveNoteBean,
   resolveNoteBeanDisplayName,
   resolveNoteEquipmentName,
+  resolveNoteMethodName,
 } from '@/lib/notes/noteDisplay';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
@@ -187,7 +189,7 @@ const getSchemeDisplay = (
   equipmentNames: Record<string, string>
 ): string => {
   const equipmentName = resolveNoteEquipmentName(note, equipmentNames);
-  const methodName = note.method?.trim() || '';
+  const methodName = resolveNoteMethodName(note);
   const parts = [equipmentName, methodName].filter(Boolean);
 
   return parts.length > 0 ? parts.join(' / ') : '-';
@@ -203,12 +205,7 @@ const getParamsDisplay = (note: BrewingNote): string => {
     note.equipment?.toLowerCase().includes('espresso') ||
     note.equipment?.includes('意式')
   ) {
-    const parts = [
-      normalizedParams.coffee,
-      normalizedParams.grindSize,
-      note.totalTime ? `${note.totalTime}s` : '',
-      normalizedParams.water,
-    ].filter(Boolean);
+    const parts = getNoteEspressoParamParts(note);
 
     return parts.length > 0 ? parts.join(' / ') : '-';
   }

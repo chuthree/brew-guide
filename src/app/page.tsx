@@ -125,6 +125,7 @@ import {
 } from '@/lib/ui/imageViewer';
 import {
   BEAN_COMPONENT_TEXT_FIELD_IDS,
+  normalizeBeanComponentFieldValue,
   normalizeCoffeeBeanForFieldConfig,
 } from '@/lib/coffee-beans/beanFields';
 import {
@@ -154,18 +155,7 @@ interface ExtendedStep extends Step {
   customParams?: Record<string, string>;
 }
 
-interface BlendComponent {
-  percentage?: number;
-  origin?: string;
-  country?: string;
-  region?: string;
-  estate?: string;
-  processingStation?: string;
-  altitude?: string;
-  process?: string;
-  batch?: string;
-  variety?: string;
-}
+type BlendComponent = import('@/types/app').BlendComponent;
 
 interface ExtendedCoffeeBean extends CoffeeBean {
   blendComponents?: BlendComponent[];
@@ -1651,6 +1641,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           timestamp: noteForEdit.timestamp,
           equipment: noteForEdit.equipment,
           method: noteForEdit.method,
+          equipmentId: noteForEdit.equipmentId,
+          equipmentName: noteForEdit.equipmentName,
+          methodId: noteForEdit.methodId,
+          methodName: noteForEdit.methodName,
           params: noteForEdit.params,
           coffeeBeanInfo: noteForEdit.coffeeBeanInfo || {
             name: '',
@@ -2529,7 +2523,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                 };
                 BEAN_COMPONENT_TEXT_FIELD_IDS.forEach(field => {
                   if (component[field] !== undefined) {
-                    nextComponent[field] = String(component[field] || '');
+                    nextComponent[field] = normalizeBeanComponentFieldValue(
+                      field,
+                      component[field]
+                    );
                   }
                 });
                 return nextComponent;

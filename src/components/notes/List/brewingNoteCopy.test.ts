@@ -36,6 +36,45 @@ describe('createBrewingNoteCopyData', () => {
     expect(copy.image).toBeUndefined();
   });
 
+  it('preserves stable references and historical snapshots in a copy', () => {
+    const original = {
+      id: 'original',
+      timestamp: 1,
+      rating: 0,
+      taste: {},
+      notes: '',
+      equipment: 'deleted-id',
+      equipmentId: 'deleted-id',
+      equipmentName: 'Old brewer',
+      method: 'Free recipe',
+      methodId: null,
+      methodName: 'Free recipe',
+    } satisfies BrewingNote;
+    expect(createBrewingNoteCopyData(original, 2, 'copy')).toMatchObject({
+      equipmentId: 'deleted-id',
+      equipmentName: 'Old brewer',
+      methodId: null,
+      methodName: 'Free recipe',
+    });
+  });
+
+  it('copies espresso measured fields without manufacturing water or totalTime aliases', () => {
+    const original = {
+      id: 'espresso',
+      timestamp: 1,
+      rating: 0,
+      taste: {},
+      notes: '',
+      equipment: 'Espresso',
+      method: '浓缩',
+      params: { coffee: '18g', extractionTime: 25, liquidWeight: '36g' },
+    } satisfies BrewingNote;
+    const copy = createBrewingNoteCopyData(original, 2, 'copy');
+    expect(copy.params).toEqual(original.params);
+    expect(copy.params).not.toHaveProperty('water');
+    expect(copy.totalTime).toBeUndefined();
+  });
+
   it('requires roasting records to use the inventory-aware roasting flow', () => {
     const original: BrewingNote = {
       id: 'original-note',

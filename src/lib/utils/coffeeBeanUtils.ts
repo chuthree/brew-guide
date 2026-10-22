@@ -2,6 +2,7 @@
  * 咖啡豆相关工具函数
  */
 
+import { normalizeBeanComponentFieldValue } from '@/lib/coffee-beans/beanFields';
 import type {
   BlendComponent,
   CoffeeBean,
@@ -112,7 +113,10 @@ export function extractCoffeeAmount(coffeeParam: string | undefined): number {
 
 export function normalizeDelimitedTextList(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.flatMap(item => normalizeDelimitedTextList(item));
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map(item => item.trim())
+      .filter(Boolean);
   }
 
   if (typeof value === 'string') {
@@ -153,21 +157,14 @@ export function updateBlendComponentsDelimitedField(
     nextComponents.push(createEmptyBlendComponent());
   }
 
-  const hasSeparator = TEXT_LIST_SPLIT_REGEX.test(value);
-  const fieldValues = hasSeparator
-    ? value.split(TEXT_LIST_SPLIT_REGEX).map(item => item.trim())
-    : [value.trim()];
-
-  while (nextComponents.length < index + fieldValues.length) {
-    nextComponents.push(createEmptyBlendComponent());
-  }
-
-  fieldValues.forEach((fieldValue, offset) => {
-    nextComponents[index + offset] = {
-      ...nextComponents[index + offset],
-      [field]: fieldValue,
-    };
-  });
+  const fieldValues = normalizeDelimitedTextList(value);
+  nextComponents[index] = {
+    ...nextComponents[index],
+    [field]: normalizeBeanComponentFieldValue(
+      field,
+      fieldValues.length > 1 ? fieldValues : fieldValues[0] || ''
+    ),
+  };
 
   return nextComponents;
 }

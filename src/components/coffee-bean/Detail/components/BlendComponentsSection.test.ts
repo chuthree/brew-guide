@@ -62,3 +62,14 @@ describe('buildBlendComponentDisplayRows', () => {
     ]);
   });
 });
+
+it('displays all variety values as one component without splitting SL28/34', () => {
+  const rows = buildBlendComponentDisplayRows([
+    { variety: ['SL28/34', '74110', '74112'], percentage: 100 },
+  ]);
+  const entries = rows.find(row => row.field === 'variety')?.entries;
+  expect(entries).toHaveLength(1);
+  expect(entries?.[0].componentIndex).toBe(0);
+  for (const value of ['SL28/34', '74110', '74112'])
+    expect(entries?.[0].value).toContain(value);
+});

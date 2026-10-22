@@ -168,7 +168,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       const addPresetValues = (
         key: BlendPresetKey,
         defaultValues: string[],
-        value?: string
+        value?: string | string[]
       ) => {
         normalizeDelimitedTextList(value).forEach(item => {
           if (!defaultValues.includes(item)) {

@@ -1,4 +1,8 @@
 import { nanoid } from 'nanoid';
+import {
+  assertRecordUnchanged,
+  coffeeBeanSnapshot,
+} from '@/lib/data/recordConflict';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 import { shouldSkipDestructiveReplace } from '@/lib/core/safeReplace';
 import type { CoffeeBeanPersistence } from '@/lib/data/contracts';
@@ -33,6 +37,7 @@ import {
 import {
   clearCoffeeBeans,
   countCoffeeBeans,
+  getCoffeeBean,
   deleteCoffeeBean,
   deleteManyCoffeeBeans,
   listCoffeeBeans,
@@ -701,6 +706,224 @@ function originalRows(metadata: readonly CoffeeBeanImageMetadata[]): string[] {
   return filePaths(metadata);
 }
 
+async function planSaveSide(
+  beanId: string,
+  side: ImageSide,
+  patch: SidePatch,
+  existing: SideRows,
+  updatedAt: number,
+  generateThumbnails: boolean,
+  identity: IdentityAllocator,
+  fileStore: NativeImageFileStore,
+  thumbnailGenerator: (dataUrl: string) => Promise<string | undefined>
+): Promise<{ metadata: CoffeeBeanImageMetadata[]; writes: PlannedFile[] }> {
+  if (patch.kind === 'absent') {
+    return {
+      metadata: [existing.original, existing.thumbnail]
+        .filter((row): row is CoffeeBeanImageMetadata => row !== undefined)
+        .map(row => updateMetadataTimestamp(row, updatedAt)),
+      writes: [],
+    };
+  }
+  if (patch.kind === 'clear') return { metadata: [], writes: [] };
+
+  if (patch.kind === 'undefined') {
+    return {
+      metadata: [existing.original, existing.thumbnail]
+        .filter((row): row is CoffeeBeanImageMetadata => row !== undefined)
+        .map(row => updateMetadataTimestamp(row, updatedAt)),
+      writes: [],
+    };
+  }
+
+  if (patch.kind === 'external') {
+    if (
+      existing.original?.sourceKind === 'external' &&
+      existing.original.externalUrl === patch.url
+    ) {
+      return {
+        metadata: [updateMetadataTimestamp(existing.original, updatedAt)],
+        writes: [],
+      };
+    }
+    return {
+      metadata: [externalRow(beanId, side, patch.url, updatedAt, identity)],
+      writes: [],
+    };
+  }
+
+  const unchanged = await fileSourceIsUnchanged(
+    existing.original,
+    {
+      mimeType: patch.binary.mimeType,
+      sizeBytes: patch.binary.bytes.byteLength,
+      bytes: patch.binary.bytes,
+    },
+    fileStore
+  );
+  if (unchanged && existing.original?.sourceKind === 'file') {
+    const metadata: CoffeeBeanImageMetadata[] = [
+      fileMetadataWithTimestamp(existing.original, updatedAt),
+    ];
+    if (existing.thumbnail) {
+      metadata.push(updateMetadataTimestamp(existing.thumbnail, updatedAt));
+    }
+    return { metadata, writes: [] };
+  }
+
+  const original = fileRow(
+    beanId,
+    side,
+    'original',
+    updatedAt,
+    patch.dataUrl,
+    patch.binary,
+    identity
+  );
+  const metadata: CoffeeBeanImageMetadata[] = [original.metadata];
+  const writes = [original.write];
+
+  if (!generateThumbnails) {
+    if (existing.thumbnail) {
+      metadata.push(updateMetadataTimestamp(existing.thumbnail, updatedAt));
+    }
+    return { metadata, writes };
+  }
+
+  const thumbnailDataUrl = await thumbnailGenerator(patch.dataUrl);
+  if (!thumbnailDataUrl) return { metadata, writes };
+
+  const thumbnailSource = classifyPersistentImageString(thumbnailDataUrl);
+  if (thumbnailSource.kind !== 'file-data-url') {
+    throw new TypeError(
+      'CoffeeBean thumbnail generator must return an image Data URL'
+    );
+  }
+  const thumbnail = fileRow(
+    beanId,
+    side,
+    'thumbnail',
+    updatedAt,
+    thumbnailDataUrl,
+    thumbnailSource.binary,
+    identity,
+    true
+  );
+  metadata.push(thumbnail.metadata);
+  writes.push(thumbnail.write);
+  return { metadata, writes };
+}
+
+export interface PreparedCoffeeBeanImageWrite {
+  bean: CoffeeBean;
+  metadata: CoffeeBeanImageMetadata[];
+  created: Array<{ objectKey: string; relativePath: string }>;
+  supersededPaths: string[];
+  /** Caller owns the surrounding transaction and both cleanup boundaries. */
+  apply(executor: SqliteExecutor): Promise<void>;
+}
+
+/** Prepare files using the canonical app planner, without opening or committing SQL. */
+export async function prepareCoffeeBeanImageWrite(
+  executor: SqliteExecutor,
+  fileStore: NativeImageFileStore,
+  bean: CoffeeBean,
+  options: SqliteCoffeeBeanPersistenceOptions & {
+    generateThumbnails?: boolean;
+  } = {}
+): Promise<PreparedCoffeeBeanImageWrite> {
+  const cleanBean = stripCoffeeBeanImages(bean);
+  saveCoffeeBeanValidation(cleanBean);
+  const patches = {
+    front: parseSavePatch(bean, 'front'),
+    back: parseSavePatch(bean, 'back'),
+  };
+  const imageIdFactory = options.imageIdFactory ?? nanoid;
+  const objectKeyFactory = options.objectKeyFactory ?? createImageObjectKey;
+  const now = options.now ?? Date.now;
+  const thumbnailGenerator =
+    options.thumbnailGenerator ?? createImageThumbnailDataUrl;
+  const reportCleanupError = createCleanupReporter(options.onCleanupError);
+  const currentMetadata = await listBeanImageMetadata(executor, bean.id);
+  validateStoredPaths(currentMetadata);
+  const updatedAt = bean.timestamp || now();
+  const identity = createIdentityAllocator(
+    imageIdFactory,
+    objectKeyFactory,
+    currentMetadata
+  );
+  const currentFront = sideRows(currentMetadata, 'front');
+  const currentBack = sideRows(currentMetadata, 'back');
+  const generateThumbnails = options.generateThumbnails !== false;
+  const [frontPlan, backPlan] = await Promise.all([
+    planSaveSide(
+      bean.id,
+      'front',
+      patches.front,
+      currentFront,
+      updatedAt,
+      generateThumbnails,
+      identity,
+      fileStore,
+      thumbnailGenerator
+    ),
+    planSaveSide(
+      bean.id,
+      'back',
+      patches.back,
+      currentBack,
+      updatedAt,
+      generateThumbnails,
+      identity,
+      fileStore,
+      thumbnailGenerator
+    ),
+  ]);
+  const desiredMetadata = [...frontPlan.metadata, ...backPlan.metadata];
+  const writes = [...frontPlan.writes, ...backPlan.writes];
+  await verifyMetadataRows(desiredMetadata, writes);
+  saveCoffeeBeanValidation(cleanBean);
+  await assertPlannedObjectsAbsent(fileStore, writes);
+
+  const { created, failedOptionalImageIds } = await writePlannedObjects(
+    fileStore,
+    writes,
+    reportCleanupError
+  );
+
+  const committedMetadata = desiredMetadata.filter(
+    row => !failedOptionalImageIds.has(row.imageId)
+  );
+  const supersededPaths = replacedFilePaths(currentMetadata, committedMetadata);
+
+  return {
+    bean: cleanBean,
+    metadata: committedMetadata,
+    created,
+    supersededPaths,
+    async apply(tx) {
+      await replaceBeanImageMetadata(tx, bean.id, committedMetadata);
+      await saveCoffeeBean(tx, cleanBean);
+    },
+  };
+}
+
+/** Run only after commit/rollback; uncertain rollback retains all candidates. */
+export async function cleanupPreparedCoffeeBeanImageFiles(
+  driver: SqliteDriver,
+  fileStore: NativeImageFileStore,
+  relativePaths: readonly string[],
+  error?: unknown
+): Promise<void> {
+  if (hasRollbackDiagnostic(error)) return;
+  await cleanupUnreferencedPaths(
+    driver,
+    fileStore,
+    relativePaths,
+    createCleanupReporter()
+  );
+}
+
 export function createSqliteCoffeeBeanPersistence(
   driver: SqliteDriver,
   fileStore: NativeImageFileStore,
@@ -709,116 +932,8 @@ export function createSqliteCoffeeBeanPersistence(
   const imageIdFactory = options.imageIdFactory ?? nanoid;
   const objectKeyFactory = options.objectKeyFactory ?? createImageObjectKey;
   const now = options.now ?? Date.now;
-  const thumbnailGenerator =
-    options.thumbnailGenerator ?? createImageThumbnailDataUrl;
   const reportCleanupError = createCleanupReporter(options.onCleanupError);
   const coordinator = coordinatorFor(driver);
-
-  async function planSaveSide(
-    beanId: string,
-    side: ImageSide,
-    patch: SidePatch,
-    existing: SideRows,
-    updatedAt: number,
-    generateThumbnails: boolean,
-    identity: IdentityAllocator
-  ): Promise<{ metadata: CoffeeBeanImageMetadata[]; writes: PlannedFile[] }> {
-    if (patch.kind === 'absent') {
-      return {
-        metadata: [existing.original, existing.thumbnail]
-          .filter((row): row is CoffeeBeanImageMetadata => row !== undefined)
-          .map(row => updateMetadataTimestamp(row, updatedAt)),
-        writes: [],
-      };
-    }
-    if (patch.kind === 'clear') return { metadata: [], writes: [] };
-
-    if (patch.kind === 'undefined') {
-      return {
-        metadata: [existing.original, existing.thumbnail]
-          .filter((row): row is CoffeeBeanImageMetadata => row !== undefined)
-          .map(row => updateMetadataTimestamp(row, updatedAt)),
-        writes: [],
-      };
-    }
-
-    if (patch.kind === 'external') {
-      if (
-        existing.original?.sourceKind === 'external' &&
-        existing.original.externalUrl === patch.url
-      ) {
-        return {
-          metadata: [updateMetadataTimestamp(existing.original, updatedAt)],
-          writes: [],
-        };
-      }
-      return {
-        metadata: [externalRow(beanId, side, patch.url, updatedAt, identity)],
-        writes: [],
-      };
-    }
-
-    const unchanged = await fileSourceIsUnchanged(
-      existing.original,
-      {
-        mimeType: patch.binary.mimeType,
-        sizeBytes: patch.binary.bytes.byteLength,
-        bytes: patch.binary.bytes,
-      },
-      fileStore
-    );
-    if (unchanged && existing.original?.sourceKind === 'file') {
-      const metadata: CoffeeBeanImageMetadata[] = [
-        fileMetadataWithTimestamp(existing.original, updatedAt),
-      ];
-      if (existing.thumbnail) {
-        metadata.push(updateMetadataTimestamp(existing.thumbnail, updatedAt));
-      }
-      return { metadata, writes: [] };
-    }
-
-    const original = fileRow(
-      beanId,
-      side,
-      'original',
-      updatedAt,
-      patch.dataUrl,
-      patch.binary,
-      identity
-    );
-    const metadata: CoffeeBeanImageMetadata[] = [original.metadata];
-    const writes = [original.write];
-
-    if (!generateThumbnails) {
-      if (existing.thumbnail) {
-        metadata.push(updateMetadataTimestamp(existing.thumbnail, updatedAt));
-      }
-      return { metadata, writes };
-    }
-
-    const thumbnailDataUrl = await thumbnailGenerator(patch.dataUrl);
-    if (!thumbnailDataUrl) return { metadata, writes };
-
-    const thumbnailSource = classifyPersistentImageString(thumbnailDataUrl);
-    if (thumbnailSource.kind !== 'file-data-url') {
-      throw new TypeError(
-        'CoffeeBean thumbnail generator must return an image Data URL'
-      );
-    }
-    const thumbnail = fileRow(
-      beanId,
-      side,
-      'thumbnail',
-      updatedAt,
-      thumbnailDataUrl,
-      thumbnailSource.binary,
-      identity,
-      true
-    );
-    metadata.push(thumbnail.metadata);
-    writes.push(thumbnail.write);
-    return { metadata, writes };
-  }
 
   async function transactAndResolve(
     work: (tx: SqliteExecutor) => Promise<void>,
@@ -849,6 +964,7 @@ export function createSqliteCoffeeBeanPersistence(
 
   return {
     async saveWithImages(bean, saveOptions) {
+      const expectedSnapshot = coffeeBeanSnapshot(saveOptions?.expectedRecord);
       const patches = {
         front: parseSavePatch(bean, 'front'),
         back: parseSavePatch(bean, 'back'),
@@ -861,63 +977,39 @@ export function createSqliteCoffeeBeanPersistence(
         saveCoffeeBeanValidation(cleanBean);
 
         if (!touched) {
-          await driver.transaction(tx => saveCoffeeBean(tx, cleanBean));
+          await driver.transaction(async tx => {
+            if (expectedSnapshot !== undefined)
+              assertRecordUnchanged(
+                coffeeBeanSnapshot(await getCoffeeBean(tx, bean.id)),
+                expectedSnapshot
+              );
+            await saveCoffeeBean(tx, cleanBean);
+          });
           return cleanBean;
         }
 
-        const currentMetadata = await listBeanImageMetadata(driver, bean.id);
-        validateStoredPaths(currentMetadata);
-        const updatedAt = bean.timestamp || now();
-        const identity = createIdentityAllocator(
-          imageIdFactory,
-          objectKeyFactory,
-          currentMetadata
-        );
-        const currentFront = sideRows(currentMetadata, 'front');
-        const currentBack = sideRows(currentMetadata, 'back');
-        const generateThumbnails = saveOptions?.generateThumbnails !== false;
-        const [frontPlan, backPlan] = await Promise.all([
-          planSaveSide(
-            bean.id,
-            'front',
-            patches.front,
-            currentFront,
-            updatedAt,
-            generateThumbnails,
-            identity
-          ),
-          planSaveSide(
-            bean.id,
-            'back',
-            patches.back,
-            currentBack,
-            updatedAt,
-            generateThumbnails,
-            identity
-          ),
-        ]);
-        const desiredMetadata = [...frontPlan.metadata, ...backPlan.metadata];
-        const writes = [...frontPlan.writes, ...backPlan.writes];
-        await verifyMetadataRows(desiredMetadata, writes);
-        saveCoffeeBeanValidation(cleanBean);
-        await assertPlannedObjectsAbsent(fileStore, writes);
-
-        const { created, failedOptionalImageIds } = await writePlannedObjects(
+        const prepared = await prepareCoffeeBeanImageWrite(
+          driver,
           fileStore,
-          writes,
-          reportCleanupError
+          bean,
+          {
+            ...options,
+            generateThumbnails: saveOptions?.generateThumbnails,
+          }
         );
-
-        const committedMetadata = desiredMetadata.filter(
-          row => !failedOptionalImageIds.has(row.imageId)
-        );
-        const supersededPaths = replacedFilePaths(
-          currentMetadata,
-          committedMetadata
-        );
+        const {
+          created,
+          supersededPaths,
+          metadata: committedMetadata,
+        } = prepared;
         try {
           await transactAndResolve(
             async tx => {
+              if (expectedSnapshot !== undefined)
+                assertRecordUnchanged(
+                  coffeeBeanSnapshot(await getCoffeeBean(tx, bean.id)),
+                  expectedSnapshot
+                );
               await replaceBeanImageMetadata(tx, bean.id, committedMetadata);
               await saveCoffeeBean(tx, cleanBean);
             },
@@ -932,13 +1024,21 @@ export function createSqliteCoffeeBeanPersistence(
       });
     },
 
-    async deleteWithImages(id) {
+    async deleteWithImages(id, deleteOptions) {
+      const expectedSnapshot = coffeeBeanSnapshot(
+        deleteOptions?.expectedRecord
+      );
       await coordinator.withOwners([id], async () => {
         const existing = await listBeanImageMetadata(driver, id);
         validateStoredPaths(existing);
         const oldPaths = originalRows(existing);
         await transactAndResolve(
           async tx => {
+            if (expectedSnapshot !== undefined)
+              assertRecordUnchanged(
+                coffeeBeanSnapshot(await getCoffeeBean(tx, id)),
+                expectedSnapshot
+              );
             await deleteCoffeeBean(tx, id);
             await replaceBeanImageMetadata(tx, id, []);
           },

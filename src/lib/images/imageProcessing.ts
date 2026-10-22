@@ -11,6 +11,12 @@ import {
 } from '@/lib/utils/imageCompression';
 
 const DEFAULT_MAX_IMAGE_SIZE_BYTES = 50 * 1024 * 1024;
+/** Shared by bean upload UI and MCP; keep the same compression policy. */
+export const BEAN_IMAGE_COMPRESSION_OPTIONS = {
+  maxSizeMB: 0.1,
+  maxWidthOrHeight: 1200,
+  initialQuality: 0.8,
+} as const;
 export const NOTE_IMAGE_COMPRESSION_OPTIONS = {
   maxSizeMB: 0.1,
   maxWidthOrHeight: 1200,

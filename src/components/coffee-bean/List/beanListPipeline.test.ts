@@ -323,3 +323,16 @@ describe('beanListPipeline', () => {
     ]);
   });
 });
+
+it('searches each variety from one multi-valued component without creating blend rows', () => {
+  const bean = buildBean({
+    blendComponents: [
+      { origin: 'Ethiopia', variety: ['SL28/34', '74110', '74112'] },
+    ],
+  });
+  const records = buildBeanListRecords([bean]);
+  for (const query of ['SL28/34', '74110', '74112']) {
+    expect(searchBeanRecords(records, query)).toHaveLength(1);
+  }
+  expect(bean.blendComponents).toHaveLength(1);
+});

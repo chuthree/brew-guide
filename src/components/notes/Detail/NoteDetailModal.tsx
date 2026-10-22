@@ -35,9 +35,11 @@ import {
   buildEquipmentNameMap,
   EMPTY_EQUIPMENT_NAME_OVERRIDES,
   normalizeBrewingNoteParams,
+  getNoteEspressoParamParts,
   resolveNoteBean,
   resolveNoteBeanDisplayName,
   resolveNoteEquipmentName,
+  resolveNoteMethodName,
   getNoteBeanAgingDaysForNote,
 } from '@/lib/notes/noteDisplay';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
@@ -364,7 +366,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     () => normalizeBrewingNoteParams(note?.params),
     [note?.params]
   );
-  const methodName = note?.method?.trim() || '';
+  const methodName = note ? resolveNoteMethodName(note) : '';
   const schemeParts = [equipmentName, methodName].filter(Boolean);
   const paramParts = useMemo(() => {
     if (!normalizedParams || !note) {
@@ -375,12 +377,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       note.equipment?.toLowerCase().includes('espresso') ||
       note.equipment?.includes('意式')
     ) {
-      return [
-        normalizedParams.coffee,
-        normalizedParams.grindSize,
-        note.totalTime ? `${note.totalTime}s` : '',
-        normalizedParams.water,
-      ].filter(Boolean);
+      return getNoteEspressoParamParts(note);
     }
 
     return [
@@ -713,7 +710,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           id: n.id,
           timestamp: n.timestamp,
           taste: n.taste,
-          method: n.method,
+          method: n.methodName || n.method,
         });
       }
 

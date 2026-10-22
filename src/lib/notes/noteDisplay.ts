@@ -111,11 +111,35 @@ export const resolveEquipmentName = (
 };
 
 export const resolveNoteEquipmentName = (
-  note: Pick<BrewingNote, 'equipment'>,
+  note: Pick<BrewingNote, 'equipment' | 'equipmentId' | 'equipmentName'>,
   equipmentNames: Record<string, string>,
   fallbackLabel?: string
 ): string =>
-  resolveEquipmentName(note.equipment, equipmentNames, fallbackLabel);
+  note.equipmentName?.trim() ||
+  (note.equipmentId === null
+    ? note.equipment?.trim() || fallbackLabel || ''
+    : resolveEquipmentName(
+        note.equipmentId || note.equipment,
+        equipmentNames,
+        fallbackLabel
+      ));
+
+export const resolveNoteMethodName = (
+  note: Pick<BrewingNote, 'method' | 'methodName'>
+): string => note.methodName?.trim() || note.method?.trim() || '';
+
+/** Filter identity keeps explicitly free labels separate from configured equipment. */
+export const noteEquipmentFilterKey = (
+  note: Pick<BrewingNote, 'equipment' | 'equipmentId' | 'equipmentName'>,
+  normalizeLegacy: (value: string) => string = value => value
+): string => {
+  if (note.equipmentId) return note.equipmentId;
+  const label = note.equipment?.trim() || note.equipmentName?.trim() || '';
+  if (!label) return '';
+  return note.equipmentId === null
+    ? `label:${JSON.stringify(label)}`
+    : normalizeLegacy(label);
+};
 
 export const normalizeBrewingNoteParams = (
   params?: BrewingNote['params'] | null
@@ -137,6 +161,43 @@ export const normalizeBrewingNoteParams = (
   return Object.values(normalized).some(Boolean) ? normalized : undefined;
 };
 
+export const isCoffeeOnlyNoteParams = (
+  params?: BrewingNote['params']
+): boolean => {
+  if (!params) return true;
+  return (
+    !!params.coffee &&
+    !params.water &&
+    !params.ratio &&
+    !params.grindSize &&
+    !params.temp &&
+    params.extractionTime === undefined &&
+    !params.liquidWeight
+  );
+};
+
+/** Read measured espresso values; old notes used totalTime/water for these fields. */
+export const getNoteEspressoMeasurements = (
+  note: Pick<BrewingNote, 'params' | 'totalTime'>
+): { extractionTime: number | undefined; liquidWeight: string } => ({
+  extractionTime: note.params?.extractionTime ?? note.totalTime,
+  liquidWeight:
+    note.params?.liquidWeight?.trim() || note.params?.water?.trim() || '',
+});
+
+export const getNoteEspressoParamParts = (
+  note: Pick<BrewingNote, 'params' | 'totalTime'>
+): string[] => {
+  const params = normalizeBrewingNoteParams(note.params);
+  const measured = getNoteEspressoMeasurements(note);
+  return [
+    params?.coffee,
+    params?.grindSize,
+    measured.extractionTime ? `${measured.extractionTime}s` : '',
+    measured.liquidWeight,
+  ].filter((value): value is string => !!value);
+};
+
 export const hasBrewingNoteParams = (
   params?: BrewingNote['params'] | null
 ): boolean => !!normalizeBrewingNoteParams(params);
@@ -145,19 +206,7 @@ export const normalizeBrewingNoteSelection = (
   selection: Pick<BrewingNote, 'equipment' | 'method'>
 ): Pick<BrewingNote, 'equipment' | 'method'> => {
   const draftSelection = normalizeBrewingNoteDraftSelection(selection);
-  const method = draftSelection.method;
-
-  if (!method) {
-    return {
-      equipment: undefined,
-      method: undefined,
-    };
-  }
-
-  return {
-    equipment: draftSelection.equipment,
-    method,
-  };
+  return draftSelection;
 };
 
 export const normalizeBrewingNoteDraftSelection = (

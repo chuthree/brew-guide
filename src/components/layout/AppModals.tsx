@@ -55,20 +55,7 @@ import {
   updateBeanWithCapacityAdjustmentRecord,
 } from '@/lib/coffee-beans/capacityAdjustment';
 
-interface ExtendedCoffeeBean extends CoffeeBean {
-  blendComponents?: {
-    percentage?: number;
-    origin?: string;
-    country?: string;
-    region?: string;
-    estate?: string;
-    processingStation?: string;
-    altitude?: string;
-    process?: string;
-    batch?: string;
-    variety?: string;
-  }[];
-}
+type ExtendedCoffeeBean = CoffeeBean;
 
 export interface AppModalsProps {
   // Settings 相关

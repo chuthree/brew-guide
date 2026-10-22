@@ -85,11 +85,15 @@ export interface CoffeeBeanImageRepository {
 }
 
 export interface CoffeeBeanPersistence {
+  /** expectedRecord adds an optimistic guard on native SQLite backends. */
   saveWithImages(
     bean: CoffeeBean,
-    options?: { generateThumbnails?: boolean }
+    options?: { generateThumbnails?: boolean; expectedRecord?: CoffeeBean }
   ): Promise<CoffeeBean>;
-  deleteWithImages(id: string): Promise<void>;
+  deleteWithImages(
+    id: string,
+    options?: { expectedRecord?: CoffeeBean }
+  ): Promise<void>;
   deleteManyWithImages(ids: string[]): Promise<void>;
   replaceAllWithImages(
     beans: CoffeeBean[],
@@ -114,8 +118,15 @@ export interface BrewingNoteImageRepository {
 }
 
 export interface BrewingNotePersistence {
-  saveWithImages(note: BrewingNote): Promise<BrewingNote>;
-  deleteWithImages(id: string): Promise<void>;
+  /** expectedRecord adds an optimistic guard on native SQLite backends. */
+  saveWithImages(
+    note: BrewingNote,
+    options?: { expectedRecord?: BrewingNote }
+  ): Promise<BrewingNote>;
+  deleteWithImages(
+    id: string,
+    options?: { expectedRecord?: BrewingNote }
+  ): Promise<void>;
   deleteManyWithImages(ids: string[]): Promise<void>;
   replaceAllWithImages(
     notes: BrewingNote[],

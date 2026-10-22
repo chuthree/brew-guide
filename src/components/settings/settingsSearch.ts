@@ -18,6 +18,7 @@ import type { CoffeeBean } from '@/types/app';
 import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
 import { normalizeCoffeeBeanGroups } from '@/lib/utils/coffeeBeanGroupUtils';
 import { BEAN_FIELD_DEFINITIONS } from '@/lib/coffee-beans/beanFields';
+import { isDesktopMcpAvailable } from '@/lib/mcp/client';
 
 export type SettingsSearchPageId =
   | 'settings'
@@ -307,6 +308,23 @@ export const buildSettingsSearchItems = ({
       '相关链接',
     ]),
   ];
+
+  if (isDesktopMcpAvailable()) {
+    items.push(
+      ...createRowItems('experimental-settings', 'MCP 连接', [
+        '启用 MCP 连接',
+        '允许新增与修改',
+        '允许删除',
+        '本机端口',
+        '连接配置',
+        '数据范围',
+        '重置连接密钥',
+      ]).map(item => ({
+        ...item,
+        keywords: ['MCP', '客户端', '本机连接', '工具调用'],
+      }))
+    );
+  }
 
   if (hasVisibleNotificationSettings) {
     items.push(

@@ -223,7 +223,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
         id: n.id,
         timestamp: n.timestamp,
         taste: n.taste,
-        method: n.method,
+        method: n.methodName || n.method,
       }));
   }, [note.beanId, allNotes]);
 
