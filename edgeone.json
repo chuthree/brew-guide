@@ -1,6 +1,6 @@
 {
   "installCommand": "npm install --global pnpm@12.11.2 && pnpm install --frozen-lockfile",
-  "nodeVersion": "24.18.0",
+  "nodeVersion": "24.22.1",
   "cloudFunctions": {
     "nodejs": {
       "maxDuration": 120
