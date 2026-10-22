@@ -237,8 +237,6 @@ export default function ProviderAuthorizationDrawer() {
               ))}
             </ul>
             <p className="text-xs text-neutral-500">
-              {Object.values(pending.scopes).includes('edit') &&
-                '查看与编辑包含新增、修改和删除。'}
               请仅向你信任的应用授予权限。你可以随时在“设置 ＞
               授权管理”中调整或撤销授权。
             </p>

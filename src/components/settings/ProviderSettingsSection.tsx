@@ -17,7 +17,6 @@ import type { DataDomain } from '@/lib/permissions/access';
 import {
   accessLevelOptions,
   updateScopeAccess,
-  EDIT_ACCESS_DESCRIPTION,
   type AccessSelection,
 } from '@/lib/permissions/presentation';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
@@ -251,9 +250,6 @@ function AndroidProviderSettings() {
                   </p>
                 )}
               </SettingSection>
-              <p className="px-3.5 py-3 text-xs text-neutral-500">
-                {EDIT_ACCESS_DESCRIPTION}
-              </p>
               {visibleScopes.map(scope => (
                 <ProviderScopeControls
                   key={scope.id}
