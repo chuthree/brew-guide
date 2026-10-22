@@ -150,9 +150,7 @@ public final class RhinoSmoke {
       if (new JSONArray(Context.toString(invoke(context, scope, "catalog"))).length() != 80) {
         throw new AssertionError("Incomplete tool catalog");
       }
-      String grants =
-          "{\"allowWrite\":true,\"allowDelete\":true,"
-              + "\"grantedDomains\":[\"beans\",\"notes\",\"brewing\",\"settings\"]}";
+      String grants = "{\"scopes\":{\"beans\":\"edit\",\"notes\":\"edit\",\"brewing\":\"edit\",\"settings\":\"edit\"}}";
       requireSuccess(invoke(context, scope, "execute", "list_beans", "{}", grants));
       requireSuccess(
           invoke(

@@ -12,18 +12,20 @@ import {
   isAndroidProviderAvailable,
   type ProviderAccessState,
   type ProviderCaller,
-  type ProviderScope,
 } from '@/lib/android-provider/client';
-import type { McpDomain } from '@/lib/mcp/types';
+import type { DataDomain } from '@/lib/permissions/access';
+import {
+  accessLevelOptions,
+  updateScopeAccess,
+  EDIT_ACCESS_DESCRIPTION,
+  type AccessSelection,
+} from '@/lib/permissions/presentation';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
-import {
-  visibleProviderScopes,
-  updateProviderScope,
-} from '@/lib/android-provider/permissionPresentation';
+import { visibleProviderScopes } from '@/lib/android-provider/permissionPresentation';
 import SettingSection from './atomic/SettingSection';
 import SettingRow from './atomic/SettingRow';
-import SettingToggle from './atomic/SettingToggle';
+import SettingSelect from './atomic/SettingSelect';
 import { SettingPageLayoutProvider } from './atomic/SettingPageLayoutContext';
 import PageStackDrawer, {
   useDrawerPageStack,
@@ -64,65 +66,32 @@ function ProviderScopeControls({
   scope,
   caller,
   busy,
-  attempt,
   onChange,
 }: {
   scope: ReturnType<typeof visibleProviderScopes>[number];
   caller: ProviderCaller;
   busy: boolean;
-  attempt: number;
   onChange: (
     caller: ProviderCaller,
-    domain: McpDomain,
-    patch: Partial<ProviderScope>
+    domain: DataDomain,
+    level: AccessSelection
   ) => void;
 }) {
-  const grant = caller.scopes[scope.id];
-  const changeRead = useCallback(
-    (read: boolean) => onChange(caller, scope.id, { read }),
-    [caller, scope.id, onChange]
-  );
-  const changeWrite = useCallback(
-    (write: boolean) => onChange(caller, scope.id, { write }),
-    [caller, scope.id, onChange]
-  );
-  const changeDelete = useCallback(
-    (value: boolean) => onChange(caller, scope.id, { delete: value }),
+  const change = useCallback(
+    (level: AccessSelection) => onChange(caller, scope.id, level),
     [caller, scope.id, onChange]
   );
   return (
     <SettingSection title={scope.label} contentShape="card">
-      <SettingRow label="允许读取" isLast={!grant?.read}>
-        <SettingToggle
-          key={`${attempt}-read`}
-          ariaLabel={`${scope.label}允许读取`}
-          checked={!!grant?.read}
+      <SettingRow label="访问权限" isLast>
+        <SettingSelect
+          value={caller.scopes[scope.id] ?? 'none'}
+          options={accessLevelOptions}
+          ariaLabel={`${scope.label}访问权限`}
           disabled={busy || !caller.identityCurrent}
-          onChange={changeRead}
+          onChange={change}
         />
       </SettingRow>
-      {grant?.read && (
-        <>
-          <SettingRow label="允许新增与修改">
-            <SettingToggle
-              key={`${attempt}-write`}
-              ariaLabel={`${scope.label}允许新增与修改`}
-              checked={grant.write}
-              disabled={busy || !caller.identityCurrent}
-              onChange={changeWrite}
-            />
-          </SettingRow>
-          <SettingRow label="允许删除" isLast>
-            <SettingToggle
-              key={`${attempt}-delete`}
-              ariaLabel={`${scope.label}允许删除`}
-              checked={grant.delete}
-              disabled={busy || !caller.identityCurrent}
-              onChange={changeDelete}
-            />
-          </SettingRow>
-        </>
-      )}
     </SettingSection>
   );
 }
@@ -141,7 +110,6 @@ function AndroidProviderSettings() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [attempt, setAttempt] = useState(0);
   const active = useRef(true);
   const inFlight = useRef(false);
   const close = useCallback(() => setSelectedKey(null), []);
@@ -175,7 +143,6 @@ function AndroidProviderSettings() {
         inFlight.current = false;
         if (active.current) {
           setBusy(false);
-          setAttempt(value => value + 1);
         }
       }
     },
@@ -200,13 +167,9 @@ function AndroidProviderSettings() {
   }, [refresh]);
 
   const change = useCallback(
-    (
-      caller: ProviderCaller,
-      domain: McpDomain,
-      patch: Partial<ProviderScope>
-    ) => {
+    (caller: ProviderCaller, domain: DataDomain, level: AccessSelection) => {
       if (!state || !caller.identityCurrent) return;
-      const next = updateProviderScope(caller.scopes, domain, patch);
+      const next = updateScopeAccess(caller.scopes, domain, level);
       void perform(() =>
         providerAccess.grant({
           key: caller.key,
@@ -288,13 +251,15 @@ function AndroidProviderSettings() {
                   </p>
                 )}
               </SettingSection>
+              <p className="px-3.5 py-3 text-xs text-neutral-500">
+                {EDIT_ACCESS_DESCRIPTION}
+              </p>
               {visibleScopes.map(scope => (
                 <ProviderScopeControls
                   key={scope.id}
                   scope={scope}
                   caller={selected}
                   busy={busy}
-                  attempt={attempt}
                   onChange={change}
                 />
               ))}

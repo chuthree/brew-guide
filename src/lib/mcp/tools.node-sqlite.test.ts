@@ -45,9 +45,7 @@ type Result = {
   impact: Record<string, unknown>;
 };
 const permissions: McpPermissions = {
-  allowWrite: true,
-  allowDelete: true,
-  grantedDomains: ['beans', 'notes'],
+  scopes: { beans: 'edit', notes: 'edit' },
 };
 let sequence = 0;
 const requestId = () => `mcp-test-operation-${++sequence}`;

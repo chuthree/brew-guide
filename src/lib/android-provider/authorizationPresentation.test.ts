@@ -6,7 +6,7 @@ import {
   verifiedProviderIcon,
   providerAuthorizationOutcomeMessage,
 } from './permissionPresentation';
-import type { PendingProviderAuthorization, ProviderScopes } from './client';
+import type { PendingProviderAuthorization } from './client';
 
 const request: PendingProviderAuthorization = {
   requestId: 'native-ticket',
@@ -16,7 +16,7 @@ const request: PendingProviderAuthorization = {
     identityCurrent: true,
   },
   brewGuide: { label: 'Brew Guide' },
-  scopes: { notes: { read: true, write: true, delete: false } },
+  scopes: { notes: 'edit' },
   expiresAt: 2000,
   status: 'pending',
 };
@@ -39,16 +39,20 @@ describe('Provider consent presentation', () => {
       providerAuthorizationOutcomeMessage('cancel', 'cancelled')
     ).toBeNull();
   });
-  it('describes only requested domains and exact permission bits', () => {
+  it('describes only requested domains and exact access levels', () => {
     expect(describeRequestedProviderScopes(request.scopes)).toEqual([
-      { id: 'notes', label: '笔记', description: '读取、新增与修改' },
+      {
+        id: 'notes',
+        label: '笔记',
+        description: '查看与编辑（含新增、修改和删除）',
+      },
     ]);
     expect(
       describeRequestedProviderScopes({
-        beans: { read: true, write: false, delete: true },
+        beans: 'read',
       })
-    ).toEqual([{ id: 'beans', label: '咖啡豆', description: '读取、删除' }]);
-    // Showing note write must not silently imply beans/settings write.
+    ).toEqual([{ id: 'beans', label: '咖啡豆', description: '仅查看' }]);
+    // Editing notes must not silently authorize beans/settings.
     expect(Object.keys(request.scopes)).toEqual(['notes']);
   });
   it('enables a current valid request and rejects missing, expired or mismatched callers', () => {
@@ -68,27 +72,12 @@ describe('Provider consent presentation', () => {
       false
     );
   });
-  it('fails closed on incomplete, unknown or inconsistent scope fields', () => {
-    expect(
-      hasValidRequestedProviderScopes({
-        notes: { read: false, write: true, delete: false },
-      })
-    ).toBe(false);
-    expect(
-      hasValidRequestedProviderScopes({
-        unknown: { read: true, write: false, delete: false },
-      } as ProviderScopes)
-    ).toBe(false);
-    expect(
-      hasValidRequestedProviderScopes({
-        notes: { read: true, write: true },
-      } as ProviderScopes)
-    ).toBe(false);
-    expect(
-      hasValidRequestedProviderScopes({
-        notes: { read: true, write: false, delete: false, extra: true },
-      } as ProviderScopes)
-    ).toBe(false);
+  it('rejects invalid levels, unknown domains and empty requests', () => {
+    expect(hasValidRequestedProviderScopes({ notes: 'write' })).toBe(false);
+    expect(hasValidRequestedProviderScopes({ unknown: 'read' })).toBe(false);
+    expect(hasValidRequestedProviderScopes({ notes: true })).toBe(false);
+    expect(hasValidRequestedProviderScopes({ notes: 'none' })).toBe(false);
+    expect(hasValidRequestedProviderScopes({})).toBe(false);
   });
   it('renders only bounded native PNG icons, never URLs or SVG', () => {
     expect(verifiedProviderIcon('data:image/png;base64,aGVsbG8=')).toBe(

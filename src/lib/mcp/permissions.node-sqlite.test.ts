@@ -14,6 +14,7 @@ vi.mock('@/lib/data/sqlite/tauriSqliteDriver', () => ({
 import { executeMcpTool, MCP_TOOLS } from './tools';
 import {
   commitMcpMutation,
+  getMcpDriver,
   pendingMcpPublications,
   flushMcpPublications,
 } from './storage';
@@ -36,22 +37,67 @@ describe('MCP explicit scopes and durable publication', () => {
     const view = (await executeMcpTool(
       'get_capabilities',
       {},
-      { allowWrite: true, allowDelete: true, grantedDomains: [] }
+      { scopes: {} }
     )) as {
-      permissions: { grantedDomains: string[] };
+      scopes: Record<string, string>;
       tools: Array<{ name: string }>;
     };
-    expect(view.permissions.grantedDomains).toEqual([]);
+    expect(view.scopes).toEqual({});
     expect(view.tools.some(t => t.name === 'get_bean')).toBe(false);
     for (const t of MCP_TOOLS.filter(t => mcpToolDomain(t.name) !== null)) {
       await expect(
-        executeMcpTool(
-          t.name,
-          {},
-          { allowWrite: true, allowDelete: true, grantedDomains: [] }
-        )
+        executeMcpTool(t.name, {}, { scopes: {} })
       ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
     }
+  });
+  it('permits brewing-only edit of method overrides stored in the settings row', async () => {
+    const permissions = { scopes: { brewing: 'edit' as const } };
+    const listed = (await executeMcpTool(
+      'list_method',
+      { equipmentId: 'V60' },
+      permissions
+    )) as { items: Array<{ id: string }> };
+    const method = (
+      (await executeMcpTool(
+        'get_method',
+        { equipmentId: 'V60', id: listed.items[0].id },
+        permissions
+      )) as { method: { version: string; overrideVersion: string } }
+    ).method;
+    await expect(
+      executeMcpTool(
+        'set_method_override',
+        {
+          requestId: 'brewing-only-override',
+          equipmentId: 'V60',
+          id: listed.items[0].id,
+          expectedVersion: method.version,
+          expectedOverrideVersion: method.overrideVersion,
+          params: { coffee: '17g' },
+        },
+        permissions
+      )
+    ).resolves.toHaveProperty('method');
+  });
+  it('adds replay scope metadata without modifying existing operation records', async () => {
+    await db.driver.execute(`CREATE TABLE mcp_operations (
+      request_id TEXT PRIMARY KEY, tool TEXT NOT NULL, args_hash TEXT NOT NULL,
+      result_json TEXT NOT NULL, created_at_ms INTEGER NOT NULL
+    )`);
+    await db.driver.execute(
+      "INSERT INTO mcp_operations VALUES ('old-operation','create_bean','hash','{}',1)"
+    );
+    await getMcpDriver();
+    expect(await db.driver.query('SELECT * FROM mcp_operations')).toEqual([
+      {
+        request_id: 'old-operation',
+        tool: 'create_bean',
+        args_hash: 'hash',
+        result_json: '{}',
+        created_at_ms: 1,
+        result_domains_json: null,
+      },
+    ]);
   });
   it('reopens the app schema after optional publication ledgers exist', async () => {
     await pendingMcpPublications();
@@ -63,9 +109,7 @@ describe('MCP explicit scopes and durable publication', () => {
         'create_bean',
         {},
         {
-          allowWrite: false,
-          allowDelete: false,
-          grantedDomains: ['beans', 'notes'],
+          scopes: { beans: 'read', notes: 'read' },
         }
       )
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
@@ -74,24 +118,18 @@ describe('MCP explicit scopes and durable publication', () => {
         'delete_bean',
         {},
         {
-          allowWrite: true,
-          allowDelete: false,
-          grantedDomains: ['beans', 'notes'],
+          scopes: { beans: 'read', notes: 'read' },
         }
       )
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
     await expect(
-      executeMcpTool(
-        'list_beans',
-        {},
-        { allowWrite: true, allowDelete: true, grantedDomains: [] }
-      )
+      executeMcpTool('list_beans', {}, { scopes: {} })
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
     await expect(
       executeMcpTool(
         'preview_delete',
         { entity: 'bean', id: 'x' },
-        { allowWrite: true, allowDelete: true, grantedDomains: ['notes'] }
+        { scopes: { notes: 'edit' } }
       )
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
   });
@@ -115,16 +153,14 @@ describe('MCP explicit scopes and durable publication', () => {
     const restricted = (await executeMcpTool(
       'list_mcp_activity',
       {},
-      { allowWrite: false, allowDelete: false, grantedDomains: ['settings'] }
+      { scopes: { settings: 'read' } }
     )) as { items: unknown[] };
     expect(restricted.items).toEqual([]);
     const permitted = (await executeMcpTool(
       'list_mcp_activity',
       {},
       {
-        allowWrite: false,
-        allowDelete: false,
-        grantedDomains: ['settings', 'beans', 'notes'],
+        scopes: { settings: 'read', beans: 'read', notes: 'read' },
       }
     )) as { items: unknown[] };
     expect(permitted.items).toHaveLength(1);

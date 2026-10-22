@@ -1,4 +1,13 @@
-import { publishThroughBusinessHost, isBusinessActivityVisible } from './runtimeHost';
+import {
+  DATA_DOMAINS,
+  hasDataAccess,
+  parseAccessScopes,
+  type AccessScopes,
+} from '@/lib/permissions/access';
+import {
+  publishThroughBusinessHost,
+  isBusinessActivityVisible,
+} from './runtimeHost';
 import {
   beanConversionDefinitions,
   readBeanConversionTool,
@@ -78,6 +87,7 @@ import {
   mcpToolDomain,
   requiredMcpDomains,
   hasMcpDomainAccess,
+  assertMutationScopeAccess,
 } from './permissions';
 import { nanoid } from 'nanoid';
 import type { CoffeeBean } from '@/types/app';
@@ -718,8 +728,16 @@ export async function publishMcpChanges(
   source = 'mcp'
 ): Promise<void> {
   if (await publishThroughBusinessHost(changes)) return;
-  await publishCatalogChanges(changes, suppliedDriver, source === 'remote' ? 'remote' : 'local');
-  await publishPreferencesChanges(changes, suppliedDriver, source === 'remote' ? 'remote' : 'local');
+  await publishCatalogChanges(
+    changes,
+    suppliedDriver,
+    source === 'remote' ? 'remote' : 'local'
+  );
+  await publishPreferencesChanges(
+    changes,
+    suppliedDriver,
+    source === 'remote' ? 'remote' : 'local'
+  );
   if (!changes.length || typeof window === 'undefined') return;
   const [
     { useCoffeeBeanStore },
@@ -813,13 +831,24 @@ export async function recoverMcpPublications(): Promise<void> {
 async function mutate(
   name: string,
   args: Arguments,
-  grants: McpDomain[]
+  grants: McpDomain[],
+  scopes: AccessScopes
 ): Promise<DataView> {
   const createdImagePaths: string[] = [];
   let committed: Awaited<ReturnType<typeof commitMcpMutation<DataView>>>;
   try {
-    committed = await commitMcpMutation(name, args, tx =>
-      performMutation(tx, name, args, grants, createdImagePaths)
+    committed = await commitMcpMutation(
+      name,
+      args,
+      tx => performMutation(tx, name, args, grants, createdImagePaths),
+      changes => assertMutationScopeAccess(name, changes, scopes),
+      domains => {
+        if (domains.some(domain => !hasDataAccess(scopes, domain, 'read')))
+          throw new McpToolError(
+            'PERMISSION_DENIED',
+            'Read access to one or more stored response scopes has been revoked.'
+          );
+      }
     );
   } catch (error) {
     if (createdImagePaths.length) {
@@ -1310,6 +1339,15 @@ async function performMutation(
     }
     if (!before && after.beanId && fields.coffeeGrams === undefined)
       invalid('coffeeGrams is required for a linked brew note');
+    if (
+      after.beanId &&
+      (!before || before.beanId !== after.beanId || !before.coffeeBeanInfo) &&
+      !grants.includes('beans')
+    )
+      throw new McpToolError(
+        'PERMISSION_DENIED',
+        'Populating a linked bean snapshot requires coffee bean read access.'
+      );
     if (!before || Object.keys(fields).length)
       await linkNote(tx, after, before);
     const grinders = grants.includes('settings') ? await listGrinders(tx) : [];
@@ -1808,6 +1846,15 @@ async function readTool(
       if (entity === 'bean') {
         await assertBeanUnreferenced(tx, id);
       } else checkDeletableNote(record as BrewingNote);
+      if (
+        entity === 'brew_note' &&
+        (record as BrewingNote).beanId &&
+        !grants.includes('beans')
+      )
+        throw new McpToolError(
+          'PERMISSION_DENIED',
+          'Previewing linked inventory requires coffee bean read access.'
+        );
       const version = await recordVersion(record);
       const token = nanoid(32);
       const expiresAt = Date.now() + 5 * 60_000;
@@ -1950,28 +1997,24 @@ export async function executeMcpTool(
           ? 'beans'
           : 'notes'
         : mcpToolDomain(name);
-    const grants = activePermissions.grantedDomains;
+    let scopes: AccessScopes;
+    try {
+      if (Object.keys(activePermissions).some(key => key !== 'scopes'))
+        throw new Error('Unknown permissions');
+      scopes = parseAccessScopes(activePermissions.scopes);
+    } catch {
+      throw new McpToolError('PERMISSION_DENIED', 'Invalid permission scopes.');
+    }
+    const grants = DATA_DOMAINS.filter(domain => hasDataAccess(scopes, domain));
+    const access = tool._meta['brewGuide/access'];
     if (
       domain === undefined ||
-      (domain !== null && !grants.includes(domain)) ||
-      requiredMcpDomains(name).some(required => !grants.includes(required))
+      (domain !== null && !hasDataAccess(scopes, domain, access)) ||
+      !hasMcpDomainAccess(name, scopes, access)
     )
       throw new McpToolError(
         'PERMISSION_DENIED',
-        'This MCP data domain has not been enabled in Brew Guide.'
-      );
-    if (!tool.annotations.readOnlyHint && !activePermissions.allowWrite)
-      throw new McpToolError(
-        'PERMISSION_DENIED',
-        'The user has not enabled MCP write access in Brew Guide.'
-      );
-    if (
-      tool._meta['brewGuide/access'] === 'delete' &&
-      !activePermissions.allowDelete
-    )
-      throw new McpToolError(
-        'PERMISSION_DENIED',
-        'The user has not enabled MCP delete access in Brew Guide.'
+        'The requested access to this data scope has not been authorized.'
       );
     validate(args, schema);
     const argumentsRecord = args as Arguments;
@@ -2020,23 +2063,17 @@ export async function executeMcpTool(
               },
             }
           : {}),
-        permissions: {
-          allowWrite: activePermissions.allowWrite,
-          allowDelete: activePermissions.allowDelete,
-          grantedDomains: grants,
-        },
+        scopes,
         domains: Object.entries(MCP_DOMAIN_LABELS).map(([id, label]) => ({
           id,
           label,
           enabled: grants.includes(id as (typeof grants)[number]),
         })),
         tools: MCP_TOOLS.filter(t => {
-          return (
-            hasMcpDomainAccess(t.name, grants) &&
-            (t.annotations.readOnlyHint ||
-              (activePermissions.allowWrite &&
-                (t._meta['brewGuide/access'] !== 'delete' ||
-                  activePermissions.allowDelete)))
+          return hasMcpDomainAccess(
+            t.name,
+            scopes,
+            t._meta['brewGuide/access']
           );
         }).map(t => ({ name: t.name, readOnly: t.annotations.readOnlyHint })),
         excluded: [
@@ -2050,7 +2087,7 @@ export async function executeMcpTool(
 
     const result = tool.annotations.readOnlyHint
       ? await readTool(name, argumentsRecord, grants)
-      : await mutate(name, argumentsRecord, grants);
+      : await mutate(name, argumentsRecord, grants, scopes);
     if (name.startsWith('delete_') && !(result as DataView).replayed)
       deletePreviews.delete(argumentsRecord.confirmationToken as string);
     return result;

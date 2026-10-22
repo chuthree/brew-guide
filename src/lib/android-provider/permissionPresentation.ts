@@ -1,13 +1,12 @@
 import type { MainNavigationTab } from '@/lib/navigation/navigationSettings';
-import type { McpDomain } from '@/lib/mcp/types';
-import type {
-  ProviderScopes,
-  ProviderScope,
-  PendingProviderAuthorization,
-} from './client';
-
+import {
+  parseAccessScopes,
+  type AccessScopes,
+  type DataDomain,
+} from '@/lib/permissions/access';
+import type { PendingProviderAuthorization } from './client';
 export const providerScopeOptions: {
-  id: McpDomain;
+  id: DataDomain;
   label: string;
   module?: MainNavigationTab;
 }[] = [
@@ -19,68 +18,36 @@ export const providerScopeOptions: {
 
 export function visibleProviderScopes(
   visibleTabs: Record<MainNavigationTab, boolean>,
-  grants: ProviderScopes = {}
+  grants: AccessScopes = {}
 ) {
   return providerScopeOptions.filter(
-    scope =>
-      !scope.module || visibleTabs[scope.module] || grants[scope.id]?.read
+    scope => !scope.module || visibleTabs[scope.module] || grants[scope.id]
   );
 }
 
-export function updateProviderScope(
-  grants: ProviderScopes,
-  domain: McpDomain,
-  patch: Partial<ProviderScope>
-): ProviderScopes {
-  const next = { ...grants };
-  const value = {
-    read: false,
-    write: false,
-    delete: false,
-    ...next[domain],
-    ...patch,
-  };
-  if (!value.read) delete next[domain];
-  else next[domain] = value;
-  return next;
-}
-
-/** Describes exactly the requested grant bits, never expands to implied domains. */
-export function describeRequestedProviderScopes(scopes: ProviderScopes) {
+/** Only requested groups are shown; edit truthfully includes deletion. */
+export function describeRequestedProviderScopes(scopes: AccessScopes) {
   return providerScopeOptions.flatMap(scope => {
-    const permissions = scopes[scope.id];
-    if (!permissions) return [];
-    const actions = [
-      permissions.read && '读取',
-      permissions.write && '新增与修改',
-      permissions.delete && '删除',
-    ].filter(Boolean);
-    return actions.length
-      ? [{ id: scope.id, label: scope.label, description: actions.join('、') }]
+    const level = scopes[scope.id];
+    return level === 'read' || level === 'edit'
+      ? [
+          {
+            id: scope.id,
+            label: scope.label,
+            description:
+              level === 'read' ? '仅查看' : '查看与编辑（含新增、修改和删除）',
+          },
+        ]
       : [];
   });
 }
 
-export function hasValidRequestedProviderScopes(
-  scopes: ProviderScopes
-): boolean {
-  if (!scopes || typeof scopes !== 'object' || Array.isArray(scopes))
+export function hasValidRequestedProviderScopes(scopes: unknown): boolean {
+  try {
+    return Object.keys(parseAccessScopes(scopes)).length > 0;
+  } catch {
     return false;
-  const entries = Object.entries(scopes);
-  return (
-    entries.length > 0 &&
-    entries.every(
-      ([domain, permissions]) =>
-        providerScopeOptions.some(scope => scope.id === domain) &&
-        permissions &&
-        permissions.read === true &&
-        typeof permissions.write === 'boolean' &&
-        typeof permissions.delete === 'boolean' &&
-        Object.keys(permissions).every(key =>
-          ['read', 'write', 'delete'].includes(key)
-        )
-    )
-  );
+  }
 }
 
 // Native PackageManager rasterizes icons to PNG; never render external URLs or SVGs.

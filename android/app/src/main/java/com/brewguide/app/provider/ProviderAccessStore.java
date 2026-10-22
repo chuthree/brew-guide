@@ -41,17 +41,27 @@ public final class ProviderAccessStore {
 
   private ProviderAccessStore(Context context) {
     this.context = context;
-    this.file = new AtomicFile(new File(context.getNoBackupFilesDir(), "provider-access-v1.json"));
+    this.file = new AtomicFile(new File(context.getNoBackupFilesDir(), "provider-access-v2.json"));
   }
 
   private void load() {
     if (records != null) return;
     try {
       JSONObject state = new JSONObject(new String(file.readFully(), StandardCharsets.UTF_8));
-      records = state.getJSONObject("callers");
-      requests = state.optJSONObject("requests");
-      if (requests == null) requests = new JSONObject();
-      revision = state.getLong("revision");
+      if (state.getInt("schemaVersion") != 2)
+        throw new SecurityException("Unsupported authorization schema");
+      JSONObject loadedRecords = state.getJSONObject("callers");
+      JSONObject loadedRequests = state.getJSONObject("requests");
+      java.util.Iterator<String> callers = loadedRecords.keys();
+      while (callers.hasNext())
+        validateScopes(loadedRecords.getJSONObject(callers.next()).getJSONObject("scopes"));
+      java.util.Iterator<String> ids = loadedRequests.keys();
+      while (ids.hasNext())
+        validateScopes(loadedRequests.getJSONObject(ids.next()).getJSONObject("scopes"));
+      long loadedRevision = state.getLong("revision");
+      records = loadedRecords;
+      requests = loadedRequests;
+      revision = loadedRevision;
     } catch (java.io.FileNotFoundException missing) {
       records = new JSONObject();
       requests = new JSONObject();
@@ -71,6 +81,7 @@ public final class ProviderAccessStore {
     try {
       JSONObject state =
           new JSONObject()
+              .put("schemaVersion", 2)
               .put("revision", nextRevision)
               .put("callers", next)
               .put("requests", nextRequests);
@@ -149,25 +160,10 @@ public final class ProviderAccessStore {
       throw new SecurityException("Caller identity changed");
   }
 
-  public synchronized void requestAccess(Caller caller) {
-    recordCaller(caller, true);
-  }
-
-  private synchronized void recordCaller(Caller caller, boolean manualPending) {
+  private synchronized void recordCaller(Caller caller) {
     load();
     verify(caller);
-    if (records.has(caller.key)) {
-      if (manualPending) {
-        try {
-          JSONObject next = new JSONObject(records.toString());
-          next.getJSONObject(caller.key).put("manualPending", true);
-          persist(next, requests, false);
-        } catch (Exception failure) {
-          throw new IllegalStateException(failure);
-        }
-      }
-      return;
-    }
+    if (records.has(caller.key)) return;
     if (records.length() >= 64) throw new SecurityException("Too many pending callers");
     try {
       JSONObject next = new JSONObject(records.toString());
@@ -186,7 +182,6 @@ public final class ProviderAccessStore {
               .put("signingDigest", caller.signingDigest)
               .put("label", label)
               .put("requestedAt", System.currentTimeMillis())
-              .put("manualPending", manualPending)
               .put("scopes", new JSONObject()));
       persist(next, requests, false);
     } catch (Exception failure) {
@@ -202,7 +197,7 @@ public final class ProviderAccessStore {
       JSONObject clean = validateScopes(scopes);
       if (clean.length() == 0)
         throw new IllegalArgumentException("Request at least one readable scope");
-      recordCaller(caller, false);
+      recordCaller(caller);
       long now = System.currentTimeMillis();
       JSONObject next = new JSONObject(requests.toString());
       java.util.Iterator<String> ids = requests.keys();
@@ -273,11 +268,7 @@ public final class ProviderAccessStore {
 
   private static boolean sameScopes(JSONObject left, JSONObject right) {
     for (String domain : DOMAINS)
-      for (String permission : Arrays.asList("read", "write", "delete")) {
-        JSONObject a = left.optJSONObject(domain), b = right.optJSONObject(domain);
-        if ((a != null && a.optBoolean(permission)) != (b != null && b.optBoolean(permission)))
-          return false;
-      }
+      if (!java.util.Objects.equals(left.opt(domain), right.opt(domain))) return false;
     return true;
   }
 
@@ -349,15 +340,9 @@ public final class ProviderAccessStore {
         JSONObject merged = new JSONObject(record.getJSONObject("scopes").toString());
         JSONObject requested = view.getJSONObject("scopes");
         for (String domain : DOMAINS) {
-          JSONObject requestedGrant = requested.optJSONObject(domain);
-          if (requestedGrant == null) continue;
-          JSONObject old = merged.optJSONObject(domain);
-          JSONObject grant = old == null ? new JSONObject() : new JSONObject(old.toString());
-          for (String access : Arrays.asList("read", "write", "delete"))
-            grant.put(
-                access,
-                grant.optBoolean(access, false) || requestedGrant.optBoolean(access, false));
-          merged.put(domain, grant);
+          if (!requested.has(domain)) continue;
+          String level = requested.getString(domain);
+          if (!"edit".equals(merged.optString(domain))) merged.put(domain, level);
         }
         record.put("scopes", validateScopes(merged));
         status = "approved";
@@ -423,9 +408,8 @@ public final class ProviderAccessStore {
       java.util.Iterator<String> keys = records.keys();
       while (keys.hasNext()) {
         JSONObject item = new JSONObject(records.getJSONObject(keys.next()).toString());
-        if (item.getJSONObject("scopes").length() == 0
-            && !item.optBoolean("manualPending", true)
-            && !hasLiveRequest(item.getString("key"))) continue;
+        if (item.getJSONObject("scopes").length() == 0 && !hasLiveRequest(item.getString("key")))
+          continue;
         boolean current;
         try {
           current = item.getString("key").equals(captureCaller(item.getInt("uid")).key);
@@ -463,29 +447,23 @@ public final class ProviderAccessStore {
   }
 
   static JSONObject validateScopes(JSONObject scopes) throws Exception {
+    if (scopes == null) throw new IllegalArgumentException("Missing scopes");
     JSONObject clean = new JSONObject();
     java.util.Iterator<String> domains = scopes.keys();
     while (domains.hasNext()) {
       String domain = domains.next();
       if (!DOMAINS.contains(domain)) throw new IllegalArgumentException("Unknown data scope");
-      JSONObject value = scopes.getJSONObject(domain);
-      java.util.Iterator<String> fields = value.keys();
-      while (fields.hasNext()) {
-        String field = fields.next();
-        if (!Arrays.asList("read", "write", "delete").contains(field)
-            || !(value.get(field) instanceof Boolean))
-          throw new IllegalArgumentException("Invalid scope permission");
-      }
-      boolean read = value.optBoolean("read", false),
-          write = value.optBoolean("write", false),
-          delete = value.optBoolean("delete", false);
-      if ((write || delete) && !read)
-        throw new IllegalArgumentException("Reading must be granted before mutations");
-      if (read)
-        clean.put(
-            domain, new JSONObject().put("read", true).put("write", write).put("delete", delete));
+      Object value = scopes.get(domain);
+      if (!(value instanceof String) || !("read".equals(value) || "edit".equals(value)))
+        throw new IllegalArgumentException("Scope level must be read or edit");
+      clean.put(domain, value);
     }
     return clean;
+  }
+
+  private static boolean allows(JSONObject scopes, String domain, String operation) {
+    Object level = scopes == null ? null : scopes.opt(domain);
+    return "edit".equals(level) || ("read".equals(operation) && "read".equals(level));
   }
 
   public synchronized void revoke(String key, long expectedRevision) {
@@ -507,18 +485,35 @@ public final class ProviderAccessStore {
     try {
       JSONObject record = records.optJSONObject(caller.key);
       JSONObject scopes = record == null ? null : record.optJSONObject("scopes");
-      JSONObject permissions = new JSONObject();
-      for (String domain : DOMAINS) {
-        JSONObject grant = scopes == null ? null : scopes.optJSONObject(domain);
-        JSONObject allowed = new JSONObject();
-        for (String mode : Arrays.asList("read", "write", "delete"))
-          allowed.put(mode, grant != null && grant.optBoolean(mode, false));
-        permissions.put(domain, allowed);
-      }
-      return new JSONObject().put("domainPermissions", permissions);
+      return new JSONObject()
+          .put("scopes", scopes == null ? new JSONObject() : new JSONObject(scopes.toString()));
     } catch (Exception failure) {
       throw new IllegalStateException(failure);
     }
+  }
+
+  static Set<String> validateResultDomains(Object metadata) {
+    if (!(metadata instanceof String))
+      throw new SecurityException("Cached result lacks verified scope metadata");
+    try {
+      JSONArray values = new JSONArray((String) metadata);
+      Set<String> domains = new HashSet<>();
+      for (int i = 0; i < values.length(); i++) {
+        Object domain = values.get(i);
+        if (!(domain instanceof String) || !DOMAINS.contains(domain))
+          throw new SecurityException("Invalid cached result scope metadata");
+        domains.add((String) domain);
+      }
+      return domains;
+    } catch (SecurityException denied) {
+      throw denied;
+    } catch (Exception malformed) {
+      throw new SecurityException("Invalid cached result scope metadata", malformed);
+    }
+  }
+
+  public synchronized void authorizeCachedResult(Caller caller, Object metadata) {
+    authorize(caller, validateResultDomains(metadata), "read").check();
   }
 
   public synchronized Set<String> grantedDomains(Caller caller, String access) {
@@ -531,8 +526,7 @@ public final class ProviderAccessStore {
     Set<String> result = new HashSet<>();
     if (scopes != null)
       for (String domain : DOMAINS) {
-        JSONObject grant = scopes.optJSONObject(domain);
-        if (grant != null && grant.optBoolean(access, false)) result.add(domain);
+        if (allows(scopes, domain, access)) result.add(domain);
       }
     return java.util.Collections.unmodifiableSet(result);
   }
@@ -548,8 +542,7 @@ public final class ProviderAccessStore {
     if (scopes == null || scopes.length() == 0)
       throw new SecurityException("Caller is not authorized");
     for (String domain : domains) {
-      JSONObject grant = scopes.optJSONObject(domain);
-      if (!DOMAINS.contains(domain) || grant == null || !grant.optBoolean(access, false))
+      if (!DOMAINS.contains(domain) || !allows(scopes, domain, access))
         throw new SecurityException("Caller lacks " + access + " access to " + domain);
     }
     return new Lease(caller, new HashSet<>(domains), access, revision);

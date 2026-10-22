@@ -19,9 +19,7 @@ const bundle = readFileSync(
   'utf8'
 );
 const permissions = {
-  allowWrite: true,
-  allowDelete: true,
-  grantedDomains: ['beans', 'notes', 'brewing', 'settings'],
+  scopes: { beans: 'edit', notes: 'edit', brewing: 'edit', settings: 'edit' },
 };
 function native(operation, payload) {
   const a = JSON.parse(payload);
@@ -128,14 +126,14 @@ try {
   );
   assert.equal(call('get_capabilities').transport, 'Android ContentProvider');
   assert.equal(
-    raw('list_beans', {}, { ...permissions, grantedDomains: [] }).error.code,
+    raw('list_beans', {}, { scopes: {} }).error.code,
     'PERMISSION_DENIED'
   );
   assert.equal(
     raw(
       'create_bean',
       { requestId: 'denied-create', bean: { name: 'Denied' } },
-      { ...permissions, allowWrite: false }
+      { scopes: { beans: 'read' } }
     ).error.code,
     'PERMISSION_DENIED'
   );

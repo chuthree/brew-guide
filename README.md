@@ -33,14 +33,6 @@
 | Windows      | [![下载 Windows x64 EXE 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=x64%20EXE&color=525252)](https://github.com/chuthree/brew-guide/releases/latest)                                                                                                                                                                                        |
 | Linux        | [![下载 Linux x64 AppImage 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=x64%20AppImage&color=525252)](https://github.com/chuthree/brew-guide/releases/latest)                                                                                                                                                                                |
 
-## MCP
-
-桌面版内置 MCP 服务，可通过 AI 客户端查询和管理咖啡豆、品鉴笔记、冲煮方案及应用设置。
-
-在「设置 → 实验性功能 → MCP 连接」中开启服务并授权数据范围，再打开「连接配置」，将配置复制到支持本机 HTTP MCP 的客户端。
-
-开启后默认开放全部数据范围并允许新增与修改，删除需单独授权。使用期间需保持 Brew Guide 运行。
-
 ## 数据
 
 数据默认保存在设备本地，无需注册账号。网页版和 PWA 使用 IndexedDB，移动端和桌面端应用使用 SQLite。

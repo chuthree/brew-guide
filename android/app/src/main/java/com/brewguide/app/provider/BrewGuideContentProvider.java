@@ -80,11 +80,6 @@ public final class BrewGuideContentProvider extends ContentProvider {
       if ("request_access".equals(method)) {
         if (arg != null) throw new IllegalArgumentException("Use extras.arguments, not arg");
         JSONObject args = arguments(extras == null ? null : extras.getString("arguments"));
-        if (args.length() == 0) {
-          access.requestAccess(caller);
-          return response(
-              new JSONObject().put("status", "pending_user_approval").put("contractVersion", 1));
-        }
         if (args.length() != 1 || !(args.opt("scopes") instanceof JSONObject))
           throw new IllegalArgumentException("request_access accepts only scopes");
         JSONObject request =
@@ -301,19 +296,7 @@ public final class BrewGuideContentProvider extends ContentProvider {
                         || selection.optBoolean("applyMethodPreset")))
                   accessStore.authorize(caller, Collections.singleton("brewing"), "read").check();
                 boolean capabilities = method.equals("get_capabilities");
-                JSONObject permissions =
-                    new JSONObject()
-                        .put(
-                            "allowWrite",
-                            !mode.equals("read")
-                                || (capabilities
-                                    && !accessStore.grantedDomains(caller, "write").isEmpty()))
-                        .put(
-                            "allowDelete",
-                            mode.equals("delete")
-                                || (capabilities
-                                    && !accessStore.grantedDomains(caller, "delete").isEmpty()))
-                        .put("grantedDomains", new JSONArray(readable));
+                JSONObject permissions = accessStore.accessStatus(caller);
                 JSONObject bound = new JSONObject(args.toString());
                 if (bound.has("requestId")
                     && (!(bound.get("requestId") instanceof String)
@@ -345,7 +328,8 @@ public final class BrewGuideContentProvider extends ContentProvider {
                         MessageDigest.getInstance("SHA-256")
                             .digest(canonical(args).getBytes(StandardCharsets.UTF_8)));
                 if (requestKey != null) {
-                  JSONObject replay = replay(db, owner, requestKey, originalHash, method);
+                  JSONObject replay =
+                      replay(db, owner, requestKey, originalHash, method, caller, accessStore);
                   if (replay != null) {
                     restoreRequestId(replay, args.getString("requestId"));
                     authorization.check();
@@ -450,7 +434,13 @@ public final class BrewGuideContentProvider extends ContentProvider {
   }
 
   private JSONObject replay(
-      ProviderDatabase db, String owner, String requestId, String hash, String method)
+      ProviderDatabase db,
+      String owner,
+      String requestId,
+      String hash,
+      String method,
+      ProviderAccessStore.Caller caller,
+      ProviderAccessStore access)
       throws Exception {
     if (db.query(
                 owner,
@@ -458,10 +448,17 @@ public final class BrewGuideContentProvider extends ContentProvider {
                 new JSONArray())
             .length()
         == 0) return null;
+    boolean hasResultDomains = false;
+    JSONArray columns = db.query(owner, "PRAGMA table_info(mcp_operations)", new JSONArray());
+    for (int i = 0; i < columns.length(); i++)
+      if ("result_domains_json".equals(columns.getJSONObject(i).getString("name")))
+        hasResultDomains = true;
     JSONArray rows =
         db.query(
             owner,
-            "SELECT p.original_args_hash, m.tool, m.result_json FROM provider_requests p JOIN"
+            "SELECT p.original_args_hash, m.tool, m.result_json, "
+                + (hasResultDomains ? "m.result_domains_json" : "NULL AS result_domains_json")
+                + " FROM provider_requests p JOIN"
                 + " mcp_operations m ON m.request_id=p.request_id WHERE p.request_id=?",
             new JSONArray().put(requestId));
     if (rows.length() == 0) return null;
@@ -474,6 +471,9 @@ public final class BrewGuideContentProvider extends ContentProvider {
               new JSONObject()
                   .put("code", "IDEMPOTENCY_CONFLICT")
                   .put("message", "requestId was used with different arguments"));
+    // Cached output may contain cross-domain objects even though this retry performs no writes.
+    // Missing legacy metadata fails closed; never re-execute a committed mutation.
+    access.authorizeCachedResult(caller, row.opt("result_domains_json"));
     JSONObject result =
         new JSONObject(row.getString("result_json"))
             .put("requestId", requestId)
@@ -484,25 +484,16 @@ public final class BrewGuideContentProvider extends ContentProvider {
   private void projectCapabilities(
       JSONObject result, ProviderAccessStore.Caller caller, ProviderAccessStore access)
       throws Exception {
-    JSONObject grants = new JSONObject();
     Set<String> read = access.grantedDomains(caller, "read"),
-        write = access.grantedDomains(caller, "write"),
-        delete = access.grantedDomains(caller, "delete");
-    for (String domain : DOMAINS)
-      grants.put(
-          domain,
-          new JSONObject()
-              .put("read", read.contains(domain))
-              .put("write", write.contains(domain))
-              .put("delete", delete.contains(domain)));
-    result.put("domainPermissions", grants);
+        edit = access.grantedDomains(caller, "write");
+    result.put("scopes", access.accessStatus(caller).getJSONObject("scopes"));
     JSONArray exposed = new JSONArray();
     for (int i = 0; i < catalog.length(); i++) {
       JSONObject definition = catalog.getJSONObject(i);
       String name = definition.getString("name");
       String mode = definition.getJSONObject("_meta").getString("brewGuide/access");
       Set<String> required = requiredDomains(definition, name, new JSONObject());
-      Set<String> allowed = mode.equals("delete") ? delete : mode.equals("write") ? write : read;
+      Set<String> allowed = mode.equals("read") ? read : edit;
       if (name.equals("preview_delete")) {
         if (!read.contains("beans") && !read.contains("notes")) continue;
       } else if (!read.containsAll(required)) continue;

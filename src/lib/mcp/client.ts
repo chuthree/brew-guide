@@ -1,5 +1,7 @@
 import { detectAppRuntime } from '@/lib/app/runtime';
 import type { McpConfig, McpStatus } from './types';
+import { parseAccessScopes } from '@/lib/permissions/access';
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
 
 export function isDesktopMcpAvailable(): boolean {
   const runtime = detectAppRuntime();
@@ -17,11 +19,12 @@ async function nativeInvoke<T>(
   return invoke<T>(command, args);
 }
 
-export function getMcpStatus(): Promise<McpStatus> {
-  return nativeInvoke('mcp_status');
+export async function getMcpStatus(): Promise<McpStatus> {
+  const status = await nativeInvoke<McpStatus>('mcp_status');
+  return { ...status, scopes: parseAccessScopes(status.scopes) };
 }
 
-export function configureMcp(
+export async function configureMcp(
   config: McpConfig,
   rotateToken = false
 ): Promise<McpStatus> {
@@ -32,9 +35,15 @@ export function configureMcp(
   ) {
     return Promise.reject(new Error('端口应为 1024 至 65535 之间的整数'));
   }
-  return nativeInvoke('mcp_configure', {
-    config,
-    rotateToken,
+  const nextConfig = { ...config, scopes: parseAccessScopes(config.scopes) };
+  // Permission changes share the write boundary: revocation is acknowledged only
+  // after the current edit commits; queued edits then read the updated grants.
+  return withDataMutation(async () => {
+    const status = await nativeInvoke<McpStatus>('mcp_configure', {
+      config: nextConfig,
+      rotateToken,
+    });
+    return { ...status, scopes: parseAccessScopes(status.scopes) };
   });
 }
 

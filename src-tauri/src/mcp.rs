@@ -23,7 +23,7 @@ use rmcp::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     fs::{self, OpenOptions},
     io::{Read, Write},
     path::Path,
@@ -35,17 +35,48 @@ use tokio::sync::{oneshot, Mutex as AsyncMutex};
 use tokio_util::sync::CancellationToken;
 
 const DEFAULT_PORT: u16 = 57345;
+// A new contract starts disabled; obsolete permission files never grant authority.
+const CONFIG_FILE_NAME: &str = "mcp-config-v2.json";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_PENDING: usize = 16;
+
+/// Device-local scopes use the same closed domain/level contract as permissions/access.ts.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DataDomain {
+    Brewing,
+    Beans,
+    Notes,
+    Settings,
+}
+
+impl DataDomain {
+    fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "brewing" => Some(Self::Brewing),
+            "beans" => Some(Self::Beans),
+            "notes" => Some(Self::Notes),
+            "settings" => Some(Self::Settings),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AccessLevel {
+    Read,
+    Edit,
+}
+
+type AccessScopes = BTreeMap<DataDomain, AccessLevel>;
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct McpConfig {
     pub enabled: bool,
     pub port: u16,
-    pub allow_write: bool,
-    pub allow_delete: bool,
-    pub granted_domains: Vec<String>,
+    pub scopes: AccessScopes,
 }
 
 impl Default for McpConfig {
@@ -53,9 +84,7 @@ impl Default for McpConfig {
         Self {
             enabled: false,
             port: DEFAULT_PORT,
-            allow_write: true,
-            allow_delete: false,
-            granted_domains: vec!["brewing".into(), "beans".into(), "notes".into(), "settings".into()],
+            scopes: AccessScopes::new(),
         }
     }
 }
@@ -80,9 +109,7 @@ pub struct McpStatus {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpPermissions {
-    allow_write: bool,
-    allow_delete: bool,
-    granted_domains: Vec<String>,
+    scopes: AccessScopes,
 }
 
 struct PendingRequest {
@@ -130,14 +157,9 @@ fn random_token() -> Result<String, String> {
 }
 
 fn validate_config(config: &McpConfig) -> Result<(), String> {
-    if config.granted_domains.iter().any(|d| !["brewing", "beans", "notes", "settings"].contains(&d.as_str())) {
-        return Err("Unknown MCP domain".into());
-    }
+    // Domain names and access levels are checked by serde's closed enums.
     if config.port < 1024 {
         return Err("MCP port must be between 1024 and 65535".into());
-    }
-    if config.allow_delete && !config.allow_write {
-        return Err("Enable MCP write permission before delete permission".into());
     }
     Ok(())
 }
@@ -163,11 +185,11 @@ fn trusted_window(window: &tauri::WebviewWindow) -> Result<(), String> {
 
 fn persist_config(root: &Path, stored: &StoredConfig) -> Result<(), String> {
     fs::create_dir_all(root).map_err(|error| error.to_string())?;
-    let path = root.join("mcp-config.json");
+    let path = root.join(CONFIG_FILE_NAME);
     if fs::symlink_metadata(&path).is_ok_and(|meta| meta.file_type().is_symlink()) {
         return Err("MCP configuration must not be a symbolic link".into());
     }
-    let temporary = root.join(format!(".mcp-config-{}.tmp", random_token()?));
+    let temporary = root.join(format!(".{CONFIG_FILE_NAME}-{}.tmp", random_token()?));
     let result = (|| {
         let mut options = OpenOptions::new();
         options.write(true).create_new(true);
@@ -200,7 +222,7 @@ fn ensure_config(app: &tauri::AppHandle, state: &McpState) -> Result<(), String>
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?;
-    let path = root.join("mcp-config.json");
+    let path = root.join(CONFIG_FILE_NAME);
     let stored = match fs::symlink_metadata(&path) {
         Ok(metadata) => {
             if !metadata.is_file() || metadata.file_type().is_symlink() || metadata.len() > 16384 {
@@ -265,25 +287,39 @@ fn tool_domain(name: &str) -> Option<&'static str> {
     Some("unknown")
 }
 
+fn has_access(config: &McpConfig, domain: &str, operation: &str) -> bool {
+    let Some(domain) = DataDomain::from_name(domain) else {
+        return false;
+    };
+    match (config.scopes.get(&domain), operation) {
+        (Some(AccessLevel::Read | AccessLevel::Edit), "read") => true,
+        (Some(AccessLevel::Edit), "write" | "delete") => true,
+        _ => false,
+    }
+}
+
 fn allowed(config: &McpConfig, tool: &Tool) -> bool {
-    if tool.name == "preview_delete" && !config.granted_domains.iter().any(|d| d == "beans" || d == "notes") { return false; }
-
-    if ["convert_roasted_to_green", "preview_convert_roasted_to_green"].contains(&tool.name.as_ref()) && ["beans", "notes", "settings"].iter().any(|domain| !config.granted_domains.iter().any(|d| d.as_str() == *domain)) { return false; }
-
-    if ["rename_roaster", "preview_roaster_rename"].contains(&tool.name.as_ref())
-        && ["settings", "beans", "notes"].iter().any(|domain| !config.granted_domains.iter().any(|d| d.as_str() == *domain)) {
+    let access = tool.meta.as_ref()
+        .and_then(|meta| meta.get("brewGuide/access"))
+        .and_then(Value::as_str);
+    let Some(operation @ ("read" | "write" | "delete")) = access else {
+        return false;
+    };
+    if tool.name == "preview_delete" {
+        return operation == "read"
+            && ["beans", "notes"].iter().any(|domain| has_access(config, domain, "read"));
+    }
+    if ["convert_roasted_to_green", "preview_convert_roasted_to_green",
+        "rename_roaster", "preview_roaster_rename"].contains(&tool.name.as_ref())
+        && ["beans", "notes", "settings"].iter()
+            .any(|domain| !has_access(config, domain, operation))
+    {
         return false;
     }
-
-    if let Some(domain) = tool_domain(&tool.name) {
-        if !config.granted_domains.iter().any(|d| d == domain) { return false; }
-    }
-    let access = tool.meta.as_ref().and_then(|m| m.get("brewGuide/access")).and_then(Value::as_str);
-    match access {
-        Some("read") => true,
-        Some("write") => config.allow_write,
-        Some("delete") => config.allow_write && config.allow_delete,
-        _ => false,
+    match tool_domain(&tool.name) {
+        Some(domain) => has_access(config, domain, operation),
+        // Core capability/activity reads remain available with zero scopes.
+        None => operation == "read",
     }
 }
 
@@ -714,9 +750,7 @@ pub fn mcp_authorize_request(
         .ok_or("MCP request expired")?
         .authorized = true;
     Ok(McpPermissions {
-        allow_write: config.allow_write,
-        allow_delete: config.allow_delete,
-        granted_domains: config.granted_domains,
+        scopes: config.scopes,
     })
 }
 
@@ -761,42 +795,138 @@ pub fn invalidate_bridge(app: &tauri::AppHandle) {
 #[cfg(test)]
 mod domain_tests {
     use super::*;
+
+    fn tool(name: &str, operation: &str) -> Tool {
+        serde_json::from_value(json!({
+            "name": name,
+            "inputSchema": {"type": "object"},
+            "_meta": {"brewGuide/access": operation,
+                "brewGuide/domain": tool_domain(name).unwrap_or("core")}
+        })).unwrap()
+    }
+
     #[test]
-    fn config_requires_explicit_domains() {
-        assert!(serde_json::from_value::<McpConfig>(serde_json::json!({"enabled":true,"port":57345,"allowWrite":true,"allowDelete":true})).is_err());
+    fn defaults_are_disabled_with_no_scopes() {
         let config = McpConfig::default();
         assert!(!config.enabled);
-        assert!(config.allow_write);
-        assert!(!config.allow_delete);
-        assert_eq!(config.granted_domains, vec!["brewing", "beans", "notes", "settings"]);
+        assert!(config.scopes.is_empty());
+        assert!(allowed(&config, &tool("get_capabilities", "read")));
+        assert!(allowed(&config, &tool("list_mcp_activity", "read")));
+        assert!(!allowed(&config, &tool("get_capabilities", "write")));
+        assert!(!allowed(&config, &tool("list_beans", "read")));
+        assert!(!allowed(&config, &tool("unknown", "read")));
+    }
+
+    #[test]
+    fn config_accepts_only_explicit_canonical_scope_levels() {
+        let config: McpConfig = serde_json::from_value(json!({
+            "enabled": true, "port": 57345,
+            "scopes": {"brewing": "read", "beans": "edit"}
+        })).unwrap();
+        assert_eq!(config.scopes.get(&DataDomain::Brewing), Some(&AccessLevel::Read));
+        assert_eq!(config.scopes.get(&DataDomain::Beans), Some(&AccessLevel::Edit));
+        assert!(validate_config(&config).is_ok());
+        for bad in [
+            json!({"enabled": true, "port": 57345}),
+            json!({"enabled": true, "port": 57345, "allowWrite": true, "allowDelete": true, "grantedDomains": ["beans"]}),
+            json!({"enabled": true, "port": 57345, "scopes": {}, "allowDelete": false}),
+            json!({"enabled": true, "port": 57345, "scopes": {"secrets": "read"}}),
+            json!({"enabled": true, "port": 57345, "scopes": {"beans": "write"}}),
+            json!({"enabled": true, "port": 57345, "scopes": {"beans": "delete"}}),
+            json!({"enabled": true, "port": 57345, "scopes": {"beans": true}}),
+            json!({"enabled": true, "port": 57345, "scopes": {"beans": null}}),
+            json!({"enabled": true, "port": 57345, "scopes": []}),
+        ] {
+            assert!(serde_json::from_value::<McpConfig>(bad).is_err());
+        }
+        let mut invalid_port = McpConfig::default();
+        invalid_port.port = 1023;
+        assert!(validate_config(&invalid_port).is_err());
+    }
+
+    #[test]
+    fn fresh_versioned_config_ignores_legacy_authority_without_rewriting_it() {
+        let root = std::env::temp_dir().join(format!("brew-guide-mcp-config-test-{}", random_token().unwrap()));
+        fs::create_dir_all(&root).unwrap();
+        let legacy = root.join("mcp-config.json");
+        let legacy_bytes = br#"{"config":{"enabled":true,"allowWrite":true,"allowDelete":true},"token":"old-token"}"#;
+        fs::write(&legacy, legacy_bytes).unwrap();
+        let stored = StoredConfig { config: McpConfig::default(), token: random_token().unwrap() };
+        persist_config(&root, &stored).unwrap();
+        let actual: StoredConfig = serde_json::from_slice(&fs::read(root.join(CONFIG_FILE_NAME)).unwrap()).unwrap();
+        assert_eq!(CONFIG_FILE_NAME, "mcp-config-v2.json");
+        assert!(!actual.config.enabled);
+        assert!(actual.config.scopes.is_empty());
+        assert_eq!(actual.token, stored.token);
+        assert_eq!(fs::read(legacy).unwrap(), legacy_bytes);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn permission_payload_contains_only_scopes() {
+        let scopes = BTreeMap::from([(DataDomain::Settings, AccessLevel::Edit)]);
+        assert_eq!(serde_json::to_value(McpPermissions { scopes }).unwrap(),
+            json!({"scopes": {"settings": "edit"}}));
+    }
+
+    #[test]
+    fn edit_includes_create_update_and_delete_but_read_does_not() {
+        let mut config = McpConfig::default();
+        for operation in ["read", "write", "delete"] {
+            assert!(!allowed(&config, &tool("delete_grinder", operation)));
+        }
+        config.scopes.insert(DataDomain::Settings, AccessLevel::Read);
+        assert!(allowed(&config, &tool("list_grinders", "read")));
+        for name in ["create_grinder", "update_grinder", "delete_grinder"] {
+            assert!(!allowed(&config, &tool(name, if name.starts_with("delete") { "delete" } else { "write" })));
+        }
+        config.scopes.insert(DataDomain::Settings, AccessLevel::Edit);
+        for (name, operation) in [("list_grinders", "read"), ("create_grinder", "write"),
+            ("update_grinder", "write"), ("delete_grinder", "delete")] {
+            assert!(allowed(&config, &tool(name, operation)));
+        }
+        assert!(!allowed(&config, &tool("list_beans", "read")));
+        assert!(!allowed(&config, &tool("delete_grinder", "admin")));
+    }
+
+    #[test]
+    fn destructive_cross_scope_operations_require_edit_in_every_scope() {
+        for (name, operation) in [("convert_roasted_to_green", "delete"), ("rename_roaster", "write")] {
+            let mut config = McpConfig::default();
+            config.scopes.insert(DataDomain::Beans, AccessLevel::Edit);
+            config.scopes.insert(DataDomain::Notes, AccessLevel::Edit);
+            assert!(!allowed(&config, &tool(name, operation)));
+            config.scopes.insert(DataDomain::Settings, AccessLevel::Read);
+            assert!(!allowed(&config, &tool(name, operation)));
+            config.scopes.insert(DataDomain::Settings, AccessLevel::Edit);
+            assert!(allowed(&config, &tool(name, operation)));
+        }
+        assert_eq!(MAX_REGISTERED_TOOLS, 128);
+    }
+
+    #[test]
+    fn previews_require_reads_without_implicitly_granting_mutation() {
+        let mut config = McpConfig::default();
+        assert!(!allowed(&config, &tool("preview_delete", "read")));
+        config.scopes.insert(DataDomain::Beans, AccessLevel::Read);
+        assert!(allowed(&config, &tool("preview_delete", "read")));
+        assert!(!allowed(&config, &tool("preview_delete", "delete")));
+        config.scopes.insert(DataDomain::Notes, AccessLevel::Read);
+        config.scopes.insert(DataDomain::Settings, AccessLevel::Read);
+        for name in ["preview_convert_roasted_to_green", "preview_roaster_rename"] {
+            assert!(allowed(&config, &tool(name, "read")));
+        }
+        assert!(!allowed(&config, &tool("convert_roasted_to_green", "delete")));
+    }
+
+    #[test]
+    fn domain_classification_remains_shared_with_tool_catalog() {
         assert_eq!(tool_domain("create_equipment"), Some("brewing"));
         assert_eq!(tool_domain("delete_roasting_record"), Some("beans"));
         assert_eq!(tool_domain("create_brew_note"), Some("notes"));
         assert_eq!(tool_domain("unknown"), Some("unknown"));
     }
-    #[test]
-    fn effective_access_enforces_scope_and_delete_class() {
-        let tool: Tool = serde_json::from_value(serde_json::json!({
-            "name":"delete_grinder", "inputSchema":{"type":"object"},
-            "annotations":{"readOnlyHint":false},
-            "_meta":{"brewGuide/access":"delete", "brewGuide/domain":"settings"}
-        })).unwrap();
-        let mut config = McpConfig::default();
-        config.allow_write = true;
-        config.allow_delete = true;
-        config.granted_domains.clear();
-        assert!(!allowed(&config, &tool));
-        config.granted_domains.push("settings".into());
-        assert!(allowed(&config, &tool));
-        config.allow_delete = false;
-        assert!(!allowed(&config, &tool));
-    }
-    #[test]
-    fn rejects_unknown_grant_names() {
-        let mut config = McpConfig::default();
-        config.granted_domains.push("secrets".into());
-        assert!(validate_config(&config).is_err());
-    }
+
     #[test]
     fn asset_results_accept_standard_images_and_opaque_resources() {
         let result: CallToolResult = serde_json::from_value(json!({"content":[
@@ -805,19 +935,4 @@ mod domain_tests {
         ],"structuredContent":{"image":{"imageId":"owned-id","sizeBytes":3}}})).unwrap();
         assert_eq!(result.content.len(), 2);
     }
-    #[test]
-    fn conversion_requires_settings_scope_and_explicit_delete_access() {
-        let tool: Tool = serde_json::from_value(json!({"name":"convert_roasted_to_green","inputSchema":{"type":"object"},"_meta":{"brewGuide/access":"delete","brewGuide/domain":"beans"}})).unwrap();
-        let mut config = McpConfig::default();
-        config.allow_write = true;
-        config.allow_delete = true;
-        config.granted_domains = vec!["beans".into(),"notes".into()];
-        assert!(!allowed(&config, &tool));
-        config.granted_domains.push("settings".into());
-        assert!(allowed(&config, &tool));
-        config.allow_delete = false;
-        assert!(!allowed(&config, &tool));
-        assert_eq!(MAX_REGISTERED_TOOLS, 128);
-    }
-
 }

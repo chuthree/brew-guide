@@ -29,9 +29,7 @@ type BeanView = {
 };
 type Result = { bean: BeanView; items: BeanView[] };
 const permissions: McpPermissions = {
-  allowWrite: true,
-  allowDelete: true,
-  grantedDomains: ['beans', 'notes'],
+  scopes: { beans: 'edit', notes: 'edit' },
 };
 let seq = 0;
 let db: NodeSqliteTestDatabase;

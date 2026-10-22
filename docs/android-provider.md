@@ -19,8 +19,8 @@ fun invoke(method: String, arguments: JSONObject): JSONObject {
 }
 // Run ContentResolver calls off the main thread. Request only what this feature needs.
 val scopes = JSONObject("""{
-  "beans":{"read":true,"write":true,"delete":false},
-  "notes":{"read":true,"write":true,"delete":false}
+  "beans":"edit",
+  "notes":"edit"
 }""")
 val request = contentResolver.call(root, "request_access", null, Bundle().apply {
     putString("arguments", JSONObject().put("scopes", scopes).toString())
@@ -41,14 +41,17 @@ val capabilities = invoke("get_capabilities", JSONObject()) // Load schemas when
 
 The native service verifies UID, installed package, signing identity and installation identity.
 Ambiguous shared UIDs are rejected. Four independent scopes are `brewing`, `beans`, `notes`,
-`settings`, each with read, add/edit and delete permissions. Grants stay in device-local,
+`settings`. Both MCP and Android use `scopes: { domain: "read" | "edit" }`:
+`read` permits queries; `edit` permits queries, creation, updates **and deletion**.
+An omitted domain is not authorized. Defaults grant no domains. Unknown domains, levels,
+boolean permission objects and empty authorization requests are rejected. Grants stay in device-local,
 no-backup storage, outside SQLite data exports and synchronization. Revocation invalidates
 queued operations and is synchronized with transaction commit. Android URI permission grants
 never bypass these business permissions.
 
 The visible confirmation drawer lists only the requested scopes and operations, without
 permission toggles. Approval merges exactly those permissions with existing grants; cancel,
-back and dismissal do not change grants. Invalid or unknown scopes/flags are rejected, not
+back and dismissal do not change grants. Invalid or unknown scopes/levels are rejected, not
 silently expanded. The immutable authorization entry and expiring request are bound to the
 system-verified caller identity and expire after five minutes. Do not send a caller package
 name or return Intent. Open the entry only from an explicit foreground user action.
@@ -56,12 +59,16 @@ An already open Brew Guide retains its screen and drafts; a cold authorization e
 the ordinary UI. Business data operations remain headless.
 
 Manage existing applications in **Settings → 授权管理**, the independent row immediately
-below **数据与备份**. The row is hidden until an application has requested or received access.
-Legacy `request_access` with `{}` still records a manual request and grants nothing; it does
-not open a broad authorization prompt. A linked brewing note that deducts inventory needs
-both notes and beans read/write access; deleting that note and restoring inventory needs
-notes delete and beans write. `write` permits general add/edit in that scope, not only stock
-consumption. Use one `create_brew_note`, not a separate inventory deduction plus note.
+below **数据备份**. The row is hidden until an application has requested or received access.
+A linked brewing note that deducts inventory needs `notes: "edit"` and `beans: "edit"`;
+deleting that note and restoring inventory needs the same two levels. Grinder-history
+changes additionally need `settings: "edit"`; merely referring to saved brewing equipment
+or recipes needs brewing read access. `edit` is general management permission, not only
+stock consumption. Use one `create_brew_note`, not a separate inventory deduction plus note.
+`get_access_status.result.scopes` and `get_capabilities.result.scopes` report actual grants.
+This development-stage contract replaces the former boolean permission configuration;
+unsupported stored authorization is not converted or upgraded. Reconfigure MCP permissions
+and request Android authorization again. Application business data is unchanged.
 
 `get_capabilities` returns schemas and currently authorized tools. The complete shared MCP
 catalog is the source of truth, including inventory/roasting/conversion, equipment/recipes/SVG,
@@ -124,24 +131,28 @@ open Brew Guide once to run its existing migration; the Provider never replaces 
 
 Builds generate `android/app/src/main/assets/provider/business.js` and `business.bin` from the
 shared source; do not edit or commit these generated artifacts. Shared transactions authorize their actual changes before
-commit, and desktop execution keeps its original behavior through an optional runtime port.
+commit. Both desktop MCP and Android enforce the requested and actually affected domains;
+tool metadata `read` / `write` / `delete` describes operations, not extra grant levels.
 
 ## Verification commands
 
 The `provider-caller` and `provider-caller-other` apps and their signing configuration
-are local-only tools, excluded from Git and the default build. The cross-app commands
-below require those local modules and their includes in `android/settings.local.gradle`.
-Automated regression tests remain in the repository.
+are local-only tools, excluded from Git and the default build. Automated regression tests
+remain in the repository. The ordinary build does not require those caller modules:
 
 ```sh
 pnpm build:provider
 pnpm test:provider
 pnpm build && pnpm exec cap sync android
 cd android
-./gradlew :app:assembleDebug :app:assembleDebugAndroidTest \
-  :provider-caller:assembleDebug :provider-caller:assembleDebugAndroidTest \
-  :provider-caller-other:assembleDebug :provider-caller-other:assembleDebugAndroidTest
-# Install the six debug APKs on a disposable emulator, then from repository root:
+./gradlew :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest
+```
+
+Optional cross-app verification requires current caller modules and their includes in
+`android/settings.local.gradle`, using the same `scopes` contract. Build/install their app
+and instrumentation APKs alongside Brew Guide, then from the repository root:
+
+```sh
 ANDROID_SERIAL=emulator-5554 bash scripts/provider/run-android-integration.sh
 ```
 

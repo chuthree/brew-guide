@@ -24,8 +24,8 @@ public class ProviderAuthorizationFixture {
     if (action.equals("revoke")) {
       store.revoke(caller.key, store.getState().getLong("revision"));
     } else if (action.equals("grant")) {
-      store.requestAccess(caller);
       JSONObject scopes = new JSONObject(args.getString("scopes", "{}"));
+      store.createAuthorizationRequest(caller, scopes);
       store.grant(caller.key, scopes, store.getState().getLong("revision"));
     } else throw new IllegalArgumentException("Unknown fixture action");
   }

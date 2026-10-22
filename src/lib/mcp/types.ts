@@ -1,4 +1,5 @@
-export type McpDomain = 'brewing' | 'beans' | 'notes' | 'settings';
+import type { AccessScopes, DataDomain } from '@/lib/permissions/access';
+export type McpDomain = DataDomain;
 
 /** Public tool metadata shared with the native MCP transport. */
 export interface McpToolDefinition {
@@ -21,9 +22,7 @@ export interface McpToolDefinition {
 export interface McpConfig {
   enabled: boolean;
   port: number;
-  allowWrite: boolean;
-  allowDelete: boolean;
-  grantedDomains: McpDomain[];
+  scopes: AccessScopes;
 }
 
 export interface McpStatus extends McpConfig {
@@ -33,9 +32,7 @@ export interface McpStatus extends McpConfig {
 }
 
 export interface McpPermissions {
-  allowWrite: boolean;
-  allowDelete: boolean;
-  grantedDomains: McpDomain[];
+  scopes: AccessScopes;
 }
 
 export interface McpBridgeRequest {

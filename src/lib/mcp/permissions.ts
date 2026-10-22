@@ -1,3 +1,10 @@
+import {
+  hasDataAccess,
+  type AccessScopes,
+  type DataOperation,
+} from '@/lib/permissions/access';
+import type { MutationChange } from './storage';
+import { McpToolError } from './validation';
 import type { McpDomain } from './types';
 
 export const MCP_DOMAIN_LABELS: Record<McpDomain, string> = {
@@ -62,11 +69,57 @@ export function requiredMcpDomains(name: string): McpDomain[] {
   return domain ? [domain] : [];
 }
 
-export function hasMcpDomainAccess(name: string, grants: McpDomain[]): boolean {
+export function hasMcpDomainAccess(
+  name: string,
+  scopes: AccessScopes,
+  operation: DataOperation = 'read'
+): boolean {
   if (name === 'preview_delete')
-    return grants.includes('beans') || grants.includes('notes');
+    return (
+      hasDataAccess(scopes, 'beans', operation) ||
+      hasDataAccess(scopes, 'notes', operation)
+    );
   return (
     mcpToolDomain(name) !== undefined &&
-    requiredMcpDomains(name).every(domain => grants.includes(domain))
+    requiredMcpDomains(name).every(domain =>
+      hasDataAccess(scopes, domain, operation)
+    )
   );
+}
+
+/** Settings rows can hold brewing catalog preferences; all other entities have one owner. */
+export function mutationChangeDomain(
+  tool: string,
+  change: MutationChange
+): McpDomain | undefined {
+  if (change.entity === 'settings')
+    return mcpToolDomain(tool) === 'brewing' ? 'brewing' : 'settings';
+  return (
+    {
+      bean: 'beans',
+      brew_note: 'notes',
+      equipment: 'brewing',
+      method: 'brewing',
+      grinder: 'settings',
+      historical_report: 'beans',
+    } as const
+  )[change.entity];
+}
+
+export function assertMutationScopeAccess(
+  tool: string,
+  changes: MutationChange[],
+  scopes: AccessScopes
+): void {
+  for (const change of changes) {
+    const domain = mutationChangeDomain(tool, change);
+    if (
+      !domain ||
+      !hasDataAccess(scopes, domain, change.after === null ? 'delete' : 'write')
+    )
+      throw new McpToolError(
+        'PERMISSION_DENIED',
+        'Editing one or more affected data scopes has not been authorized.'
+      );
+  }
 }

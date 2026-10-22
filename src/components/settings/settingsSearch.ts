@@ -314,8 +314,6 @@ export const buildSettingsSearchItems = ({
     items.push(
       ...createRowItems('experimental-settings', 'MCP 连接', [
         '启用 MCP 连接',
-        '允许新增与修改',
-        '允许删除',
         '本机端口',
         '连接配置',
         '数据范围',

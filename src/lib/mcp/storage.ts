@@ -1,3 +1,5 @@
+import { DATA_DOMAINS, type DataDomain } from '@/lib/permissions/access';
+import { mutationChangeDomain, requiredMcpDomains } from './permissions';
 import type { SqliteDriver, SqliteExecutor } from '@/lib/data/sqlite/driver';
 import { openTauriSqliteDriver } from '@/lib/data/sqlite/tauriSqliteDriver';
 import { canonicalJson, McpToolError, recordVersion } from './validation';
@@ -16,8 +18,14 @@ export async function getMcpDriver(): Promise<SqliteDriver> {
         tool TEXT NOT NULL,
         args_hash TEXT NOT NULL,
         result_json TEXT NOT NULL,
+        result_domains_json TEXT,
         created_at_ms INTEGER NOT NULL
       )`);
+      const columns = await tx.query('PRAGMA table_info(mcp_operations)');
+      if (!columns.some(column => column.name === 'result_domains_json'))
+        await tx.execute(
+          'ALTER TABLE mcp_operations ADD COLUMN result_domains_json TEXT'
+        );
       await tx.execute(`CREATE TABLE IF NOT EXISTS mcp_publications (
         request_id TEXT NOT NULL PRIMARY KEY,
         changes_json TEXT NOT NULL,
@@ -63,7 +71,9 @@ export interface MutationWork<T> {
 export async function commitMcpMutation<T extends Record<string, unknown>>(
   tool: string,
   args: Record<string, unknown>,
-  work: (tx: SqliteExecutor) => Promise<MutationWork<T>>
+  work: (tx: SqliteExecutor) => Promise<MutationWork<T>>,
+  authorize?: (changes: MutationChange[]) => void | Promise<void>,
+  authorizeReplay?: (domains: DataDomain[]) => void | Promise<void>
 ): Promise<{
   result: T & { requestId: string; replayed: boolean };
   changes: MutationChange[];
@@ -74,7 +84,7 @@ export async function commitMcpMutation<T extends Record<string, unknown>>(
   const argsHash = await recordVersion(args);
   return driver.transaction(async tx => {
     const existing = await tx.query(
-      'SELECT tool, args_hash, result_json FROM mcp_operations WHERE request_id = ?',
+      'SELECT tool, args_hash, result_json, result_domains_json FROM mcp_operations WHERE request_id = ?',
       [requestId]
     );
     if (existing.length > 0) {
@@ -83,6 +93,24 @@ export async function commitMcpMutation<T extends Record<string, unknown>>(
           'IDEMPOTENCY_CONFLICT',
           'This requestId was already used with different arguments. Use a new requestId for a different operation.'
         );
+      }
+      if (authorizeReplay) {
+        let domains: DataDomain[];
+        try {
+          const value = JSON.parse(String(existing[0].result_domains_json));
+          if (
+            !Array.isArray(value) ||
+            value.some(domain => !DATA_DOMAINS.includes(domain))
+          )
+            throw new Error('Invalid result scope metadata');
+          domains = value;
+        } catch {
+          throw new McpToolError(
+            'PERMISSION_DENIED',
+            'Cannot verify the scopes of this stored response.'
+          );
+        }
+        await authorizeReplay(domains);
       }
       const pending = await tx.query(
         'SELECT changes_json FROM mcp_publications WHERE request_id = ?',
@@ -103,11 +131,29 @@ export async function commitMcpMutation<T extends Record<string, unknown>>(
     const { result, changes, summary, cleanupPaths = [] } = await work(tx);
     // This runs inside the same transaction: denial must roll back inventory,
     // history and any other cross-domain side effects before recording success.
+    await authorize?.(changes);
     await authorizeMutationChanges(changes);
+    const resultDomains = new Set<DataDomain>(requiredMcpDomains(tool));
+    for (const change of changes) {
+      const domain = mutationChangeDomain(tool, change);
+      if (!domain)
+        throw new McpToolError(
+          'PERMISSION_DENIED',
+          'Unknown changed data scope.'
+        );
+      resultDomains.add(domain);
+    }
     const timestamp = Date.now();
     await tx.execute(
-      'INSERT INTO mcp_operations (request_id, tool, args_hash, result_json, created_at_ms) VALUES (?, ?, ?, ?, ?)',
-      [requestId, tool, argsHash, canonicalJson(result), timestamp]
+      'INSERT INTO mcp_operations (request_id, tool, args_hash, result_json, created_at_ms, result_domains_json) VALUES (?, ?, ?, ?, ?, ?)',
+      [
+        requestId,
+        tool,
+        argsHash,
+        canonicalJson(result),
+        timestamp,
+        canonicalJson([...resultDomains].sort()),
+      ]
     );
     await tx.execute(
       'INSERT INTO mcp_activity (request_id, tool, timestamp_ms, summary, snapshots_json) VALUES (?, ?, ?, ?, ?)',

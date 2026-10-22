@@ -75,9 +75,7 @@ let db: NodeSqliteTestDatabase;
 let files: Files;
 let seq = 0;
 const permissions: McpPermissions = {
-  allowWrite: true,
-  allowDelete: true,
-  grantedDomains: ['beans', 'notes'],
+  scopes: { beans: 'edit', notes: 'edit' },
 };
 const call = async (
   name: string,
@@ -145,7 +143,7 @@ describe('MCP image central transaction integration (real SQLite)', () => {
     for (const key of files.objects.keys())
       expect(serialized).not.toContain(key);
     const rows = await db.driver.query(
-      'SELECT * FROM mcp_operations UNION ALL SELECT request_id,tool,summary,snapshots_json,timestamp_ms FROM mcp_activity'
+      'SELECT request_id,tool,args_hash,result_json,created_at_ms,result_domains_json FROM mcp_operations UNION ALL SELECT request_id,tool,summary,snapshots_json,timestamp_ms,NULL FROM mcp_activity'
     );
     expect(JSON.stringify(rows)).not.toContain(PNG);
   });
@@ -157,17 +155,13 @@ describe('MCP image central transaction integration (real SQLite)', () => {
     const args = { id: first.bean.id, imageId: info.imageId };
     expect(
       await executeMcpTool('get_bean_image', args, {
-        allowWrite: false,
-        allowDelete: false,
-        grantedDomains: ['beans'],
+        scopes: { beans: 'read' },
       })
     ).toMatchObject({ image: { status: 'available', dataUrl: PNG } });
     const reads = files.read.mock.calls.length;
     await expect(
       executeMcpTool('get_bean_image', args, {
-        allowWrite: false,
-        allowDelete: false,
-        grantedDomains: ['notes'],
+        scopes: { notes: 'read' },
       })
     ).rejects.toThrow();
     expect(files.read).toHaveBeenCalledTimes(reads);
@@ -204,9 +198,7 @@ describe('MCP image central transaction integration (real SQLite)', () => {
     const args = deletion(result.bean, p.confirmationToken);
     await expect(
       call('delete_bean_image', args, {
-        allowWrite: true,
-        allowDelete: false,
-        grantedDomains: ['beans', 'notes'],
+        scopes: { beans: 'read', notes: 'edit' },
       })
     ).rejects.toThrow();
     await expect(
@@ -245,9 +237,7 @@ describe('MCP image central transaction integration (real SQLite)', () => {
     ).rejects.toThrow();
     await expect(
       call('set_bean_image', setArgs(second.bean), {
-        allowWrite: false,
-        allowDelete: false,
-        grantedDomains: ['beans', 'notes'],
+        scopes: { beans: 'read', notes: 'read' },
       })
     ).rejects.toThrow();
     await db.driver.execute(

@@ -13,9 +13,7 @@ export async function stopDesktopMcpForDataReset(): Promise<void> {
     {
       enabled: false,
       port: status.port,
-      allowWrite: false,
-      allowDelete: false,
-      grantedDomains: [],
+      scopes: {},
     },
     true
   );

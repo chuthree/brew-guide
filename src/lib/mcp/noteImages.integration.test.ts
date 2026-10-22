@@ -78,9 +78,7 @@ let files: Files;
 let seq = 0;
 let beanId: string;
 const permissions: McpPermissions = {
-  allowWrite: true,
-  allowDelete: true,
-  grantedDomains: ['beans', 'notes'],
+  scopes: { beans: 'edit', notes: 'edit' },
 };
 const call = async (
   name: string,
@@ -173,9 +171,7 @@ describe('MCP note images centralized transactions (real SQLite)', () => {
     const first = await call('create_brew_note', createArgs());
     const args = { id: first.note.id, imageId: first.note.images[0].imageId };
     const content = await executeMcpTool('get_brew_note_image', args, {
-      allowWrite: false,
-      allowDelete: false,
-      grantedDomains: ['notes'],
+      scopes: { notes: 'read' },
     });
     expect(content).toMatchObject({
       image: { status: 'available', dataUrl: PNG, width: 1, height: 1 },
@@ -183,9 +179,7 @@ describe('MCP note images centralized transactions (real SQLite)', () => {
     const reads = files.read.mock.calls.length;
     await expect(
       executeMcpTool('get_brew_note_image', args, {
-        allowWrite: false,
-        allowDelete: false,
-        grantedDomains: ['beans'],
+        scopes: { beans: 'read' },
       })
     ).rejects.toThrow();
     expect(files.read).toHaveBeenCalledTimes(reads);
@@ -248,7 +242,7 @@ describe('MCP note images centralized transactions (real SQLite)', () => {
       changed.note
     );
   });
-  it('permits targeted photo replacement with write-only permission, but never removal', async () => {
+  it('edit permits targeted photo replacement and confirmed removal', async () => {
     const first = await call('create_brew_note', createArgs());
     const changed = await call(
       'update_brew_note',
@@ -257,9 +251,7 @@ describe('MCP note images centralized transactions (real SQLite)', () => {
         replaceImage: { imageId: first.note.images[0].imageId, dataUrl: OTHER },
       },
       {
-        allowWrite: true,
-        allowDelete: false,
-        grantedDomains: ['beans', 'notes'],
+        scopes: { beans: 'edit', notes: 'edit' },
       }
     );
     expect(changed.note.images).toHaveLength(2);
@@ -270,12 +262,10 @@ describe('MCP note images centralized transactions (real SQLite)', () => {
         'delete_brew_note_image',
         deleteArgs(changed.note, p.confirmationToken),
         {
-          allowWrite: true,
-          allowDelete: false,
-          grantedDomains: ['beans', 'notes'],
+          scopes: { beans: 'edit', notes: 'edit' },
         }
       )
-    ).rejects.toThrow();
+    ).resolves.toMatchObject({ note: { images: [expect.any(Object)] } });
   });
   it('reorders only existing photo handles without rewriting pixels or changing dose', async () => {
     const first = await call('create_brew_note', createArgs());
@@ -325,9 +315,7 @@ describe('MCP note images centralized transactions (real SQLite)', () => {
     const args = deleteArgs(first.note, p.confirmationToken);
     await expect(
       call('delete_brew_note_image', args, {
-        allowWrite: true,
-        allowDelete: false,
-        grantedDomains: ['beans', 'notes'],
+        scopes: { beans: 'edit', notes: 'read' },
       })
     ).rejects.toThrow();
     const removed = await call('delete_brew_note_image', args);

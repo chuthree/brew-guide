@@ -26,6 +26,13 @@ import {
 import SettingRow from './atomic/SettingRow';
 import SettingSection from './atomic/SettingSection';
 import SettingToggle from './atomic/SettingToggle';
+import SettingSelect from './atomic/SettingSelect';
+import {
+  accessLevelOptions,
+  updateScopeAccess,
+  EDIT_ACCESS_DESCRIPTION,
+  type AccessSelection,
+} from '@/lib/permissions/presentation';
 import SettingInput from './atomic/SettingInput';
 import { SettingPageLayoutProvider } from './atomic/SettingPageLayoutContext';
 import { SyncHeaderButton } from './data-settings/shared/SyncHeaderButton';
@@ -90,9 +97,7 @@ function DesktopMcpSettings() {
   );
   const configSearch =
     advancedSearch ||
-    ['允许新增与修改', '允许删除', '连接配置'].some(
-      label => makeSettingRowSearchId(label) === highlightedSettingId
-    );
+    makeSettingRowSearchId('连接配置') === highlightedSettingId;
   const expanded = configExpanded ?? configSearch;
   const advancedOpen =
     showAdvanced ||
@@ -166,12 +171,9 @@ function DesktopMcpSettings() {
         const config: McpConfig = {
           enabled: status.enabled,
           port: status.port,
-          allowWrite: status.allowWrite,
-          allowDelete: status.allowDelete,
-          grantedDomains: status.grantedDomains,
+          scopes: status.scopes,
           ...changes,
         };
-        if (!config.allowWrite) config.allowDelete = false;
         const next = await configureMcp(config, rotateToken);
         if (!mounted.current) return;
         setStatus(next);
@@ -249,18 +251,6 @@ function DesktopMcpSettings() {
     },
     [update]
   );
-  const handleWriteChange = useCallback(
-    (allowWrite: boolean) => {
-      void update({ allowWrite });
-    },
-    [update]
-  );
-  const handleDeleteChange = useCallback(
-    (allowDelete: boolean) => {
-      void update({ allowDelete });
-    },
-    [update]
-  );
   const handleRefresh = useCallback(() => {
     void refresh();
   }, [refresh]);
@@ -276,21 +266,16 @@ function DesktopMcpSettings() {
     },
     [savePort]
   );
-  const grantedDomains = status?.grantedDomains ?? [];
+  const scopes = status?.scopes ?? {};
   const visibleDomainOptions = domainOptions
     .filter(
       option =>
-        !option.module ||
-        visibleTabs[option.module] ||
-        grantedDomains.includes(option.value)
+        !option.module || visibleTabs[option.module] || scopes[option.value]
     )
     .map(option => ({
       ...option,
-      onChange: (enabled: boolean) => {
-        const domains = new Set(grantedDomains);
-        if (enabled) domains.add(option.value);
-        else domains.delete(option.value);
-        void update({ grantedDomains: [...domains] });
+      onChange: (level: AccessSelection) => {
+        void update({ scopes: updateScopeAccess(scopes, option.value, level) });
       },
     }));
   const handlePortBlur = useCallback(() => {
@@ -354,24 +339,6 @@ function DesktopMcpSettings() {
             />
             {expanded ? (
               <>
-                <SettingRow label="允许新增与修改" isSubSetting>
-                  <SettingToggle
-                    key={`write-${toggleRevision}`}
-                    checked={status.allowWrite}
-                    disabled={disabled}
-                    onChange={handleWriteChange}
-                    ariaLabel="允许 MCP 新增与修改"
-                  />
-                </SettingRow>
-                <SettingRow label="允许删除" isSubSetting>
-                  <SettingToggle
-                    key={`delete-${toggleRevision}`}
-                    checked={status.allowDelete}
-                    disabled={disabled || !status.allowWrite}
-                    onChange={handleDeleteChange}
-                    ariaLabel="允许 MCP 删除"
-                  />
-                </SettingRow>
                 <SettingRow
                   label="连接配置"
                   isSubSetting
@@ -463,7 +430,7 @@ function DesktopMcpSettings() {
             <SettingSection
               title="数据范围"
               contentShape="card"
-              footer="默认开放全部数据范围并允许新增与修改，删除需单独授权。设置不含账号密钥、同步配置和 MCP 权限。"
+              footer={`${EDIT_ACCESS_DESCRIPTION} 设置不含账号密钥、同步配置和 MCP 权限。`}
             >
               <div data-settings-search-id={makeSettingRowSearchId('数据范围')}>
                 {visibleDomainOptions.map((option, index) => (
@@ -472,11 +439,11 @@ function DesktopMcpSettings() {
                     label={option.label}
                     isLast={index === visibleDomainOptions.length - 1}
                   >
-                    <SettingToggle
-                      key={`${option.value}-${toggleRevision}`}
-                      checked={grantedDomains.includes(option.value)}
+                    <SettingSelect
+                      value={scopes[option.value] ?? 'none'}
+                      options={accessLevelOptions}
                       disabled={disabled}
-                      ariaLabel={`允许 MCP 访问${option.label}`}
+                      ariaLabel={`MCP ${option.label}访问权限`}
                       onChange={option.onChange}
                     />
                   </SettingRow>

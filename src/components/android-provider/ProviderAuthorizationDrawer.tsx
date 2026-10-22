@@ -229,8 +229,7 @@ export default function ProviderAuthorizationDrawer() {
                 >
                   <span>{scope.label}</span>
                   <span className="shrink-0 text-neutral-500">
-                    {pending.scopes[scope.id]?.write ||
-                    pending.scopes[scope.id]?.delete
+                    {pending.scopes[scope.id] === 'edit'
                       ? '查看与编辑'
                       : '仅查看'}
                   </span>
@@ -238,7 +237,10 @@ export default function ProviderAuthorizationDrawer() {
               ))}
             </ul>
             <p className="text-xs text-neutral-500">
-              请仅向你信任的应用授予权限。你可以随时在“设置 ＞ 授权管理”中调整或撤销授权。
+              {Object.values(pending.scopes).includes('edit') &&
+                '查看与编辑包含新增、修改和删除。'}
+              请仅向你信任的应用授予权限。你可以随时在“设置 ＞
+              授权管理”中调整或撤销授权。
             </p>
             {(error || !valid) && (
               <p role="alert" className="mt-3 text-sm text-red-600">

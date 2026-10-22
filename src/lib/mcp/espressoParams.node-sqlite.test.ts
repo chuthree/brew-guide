@@ -28,9 +28,7 @@ vi.mock('@/lib/data/sqlite/tauriSqliteDriver', () => ({
 }));
 import { executeMcpTool } from './tools';
 const full: McpPermissions = {
-  allowWrite: true,
-  allowDelete: true,
-  grantedDomains: ['beans', 'notes', 'brewing'],
+  scopes: { beans: 'edit', notes: 'edit', brewing: 'edit' },
 };
 type View = {
   id: string;

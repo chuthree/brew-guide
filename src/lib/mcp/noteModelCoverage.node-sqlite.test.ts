@@ -30,14 +30,10 @@ import {
 } from '@/lib/data/sqlite/repositories/grinder';
 import type { AppSettings } from '@/lib/data/models';
 const full: McpPermissions = {
-  allowWrite: true,
-  allowDelete: true,
-  grantedDomains: ['beans', 'notes', 'brewing', 'settings'],
+  scopes: { beans: 'edit', notes: 'edit', brewing: 'edit', settings: 'edit' },
 };
 const limited: McpPermissions = {
-  allowWrite: true,
-  allowDelete: true,
-  grantedDomains: ['beans', 'notes', 'brewing'],
+  scopes: { beans: 'edit', notes: 'edit', brewing: 'edit' },
 };
 type View = {
   id: string;
@@ -267,6 +263,85 @@ describe('MCP full note model and grinder integration (real SQLite)', () => {
     expect(await listGrinders(db.driver)).toEqual(before);
     await create({ grindSize: 'TestMill · 26' }, {}, limited);
     expect(await listGrinders(db.driver)).toEqual(before);
+  });
+  it('rolls back note, inventory and grinder when settings are read-only', async () => {
+    const before = await listGrinders(db.driver);
+    await expect(
+      create(
+        { grindSize: 'TestMill · 24' },
+        {},
+        {
+          scopes: { beans: 'edit', notes: 'edit', settings: 'read' },
+        }
+      )
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    expect(await balance()).toBe(100);
+    expect(await listBrewingNotes(db.driver)).toHaveLength(0);
+    expect(await listGrinders(db.driver)).toEqual(before);
+    expect(await db.driver.query('SELECT * FROM mcp_operations')).toHaveLength(
+      0
+    );
+  });
+  it('requires bean read access before revealing linked inventory in a deletion preview', async () => {
+    const result = await create();
+    await expect(
+      call(
+        'preview_delete',
+        { entity: 'brew_note', id: result.note.id },
+        {
+          scopes: { notes: 'read' },
+        }
+      )
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(
+      call(
+        'preview_delete',
+        { entity: 'brew_note', id: result.note.id },
+        {
+          scopes: { notes: 'read', beans: 'read' },
+        }
+      )
+    ).resolves.toHaveProperty('impact.inventoryRestoration');
+  });
+  it('revalidates durable response scopes on replay without repeating stock or grinder changes', async () => {
+    const id = requestId();
+    const note = { grindSize: 'TestMill · 24' };
+    const original = await create(note, { requestId: id });
+    await db.driver.execute('DELETE FROM mcp_activity');
+    await expect(
+      create(note, { requestId: id }, limited)
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    const replay = await create(
+      note,
+      { requestId: id },
+      {
+        scopes: {
+          beans: 'edit',
+          notes: 'edit',
+          brewing: 'edit',
+          settings: 'read',
+        },
+      }
+    );
+    expect(replay.replayed).toBe(true);
+    expect(replay.note.id).toBe(original.note.id);
+    expect(await balance()).toBe(90);
+    expect(await listBrewingNotes(db.driver)).toHaveLength(1);
+    await db.driver.execute(
+      'UPDATE mcp_operations SET result_domains_json = NULL WHERE request_id = ?',
+      [id]
+    );
+    await expect(create(note, { requestId: id })).rejects.toMatchObject({
+      code: 'PERMISSION_DENIED',
+    });
+    expect(await balance()).toBe(90);
+  });
+  it('does not populate a new live bean snapshot without bean read access even at zero dose', async () => {
+    await expect(
+      create({ coffeeGrams: 0 }, {}, { scopes: { notes: 'edit' } })
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    expect(await listBrewingNotes(db.driver)).toHaveLength(0);
+    expect(await balance()).toBe(100);
   });
   it('filters grinder activity snapshots after grinder grant revocation while retaining note changes', async () => {
     const id = requestId();

@@ -7,9 +7,9 @@ ADB_ARGS=(-s "$SERIAL")
 CALLER_RUNNER=com.brewguide.providercaller.test/androidx.test.runner.AndroidJUnitRunner
 APP_RUNNER=com.brewguide.app.test/androidx.test.runner.AndroidJUnitRunner
 CLASS=com.brewguide.providercaller.ProviderIntegrationTest
-FULL='{"brewing":{"read":true,"write":true,"delete":true},"beans":{"read":true,"write":true,"delete":true},"notes":{"read":true,"write":true,"delete":true},"settings":{"read":true,"write":true,"delete":true}}'
-SETTINGS_READ='{"brewing":{"read":true,"write":true,"delete":true},"beans":{"read":true,"write":true,"delete":true},"notes":{"read":true,"write":true,"delete":true},"settings":{"read":true,"write":false,"delete":false}}'
-READ='{"beans":{"read":true,"write":false,"delete":false}}'
+FULL='{"brewing":"edit","beans":"edit","notes":"edit","settings":"edit"}'
+SETTINGS_READ='{"brewing":"edit","beans":"edit","notes":"edit","settings":"read"}'
+READ='{"beans":"read"}'
 run_test() {
   local output
   output=$("$ADB" "${ADB_ARGS[@]}" shell am instrument -w -r -e class "$CLASS#$1" "$CALLER_RUNNER")

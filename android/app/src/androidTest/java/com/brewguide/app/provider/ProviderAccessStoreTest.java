@@ -59,12 +59,11 @@ public class ProviderAccessStoreTest {
   }
 
   private JSONObject scopes() throws Exception {
-    return new JSONObject()
-        .put("beans", new JSONObject().put("read", true).put("write", true).put("delete", false));
+    return new JSONObject().put("beans", "edit");
   }
 
   private void approved() throws Exception {
-    store.requestAccess(caller);
+    store.createAuthorizationRequest(caller, scopes());
     store.grant(caller.key, scopes(), revision());
   }
 
@@ -78,17 +77,17 @@ public class ProviderAccessStoreTest {
   }
 
   @Test
-  public void pendingRequestCannotReadOrWrite() {
-    store.requestAccess(caller);
+  public void pendingRequestCannotReadOrWrite() throws Exception {
+    store.createAuthorizationRequest(caller, scopes());
     denied(() -> store.authorize(caller, Collections.singleton("beans"), "read"));
     denied(() -> store.authorize(caller, Collections.singleton("beans"), "write"));
   }
 
   @Test
-  public void scopeAndDeleteChecksAreIndependent() throws Exception {
+  public void editIncludesDeleteButDomainsRemainIndependent() throws Exception {
     approved();
     store.authorize(caller, Collections.singleton("beans"), "write").check();
-    denied(() -> store.authorize(caller, Collections.singleton("beans"), "delete"));
+    store.authorize(caller, Collections.singleton("beans"), "delete").check();
     denied(() -> store.authorize(caller, Arrays.asList("beans", "notes"), "read"));
     denied(() -> store.authorize(caller, Collections.singleton("unknown"), "read"));
   }
@@ -135,7 +134,7 @@ public class ProviderAccessStoreTest {
 
   @Test
   public void corruptionNeverFallsBackToAllow() throws Exception {
-    File file = new File(isolated.getNoBackupFilesDir(), "provider-access-v1.json");
+    File file = new File(isolated.getNoBackupFilesDir(), "provider-access-v2.json");
     try (java.io.FileOutputStream stream = new java.io.FileOutputStream(file)) {
       stream.write("not-json".getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -185,10 +184,12 @@ public class ProviderAccessStoreTest {
   public void malformedScopesFailClosed() throws Exception {
     for (String input :
         new String[] {
-          "{\"sql\":{\"read\":true}}",
-          "{\"beans\":{\"write\":true}}",
-          "{\"beans\":{\"read\":\"true\"}}",
-          "{\"beans\":{\"read\":true,\"admin\":true}}"
+          "{\"sql\":\"edit\"}",
+          "{\"beans\":\"write\"}",
+          "{\"beans\":\"delete\"}",
+          "{\"beans\":true}",
+          "{\"beans\":null}",
+          "{\"beans\":{\"read\":true,\"write\":true,\"delete\":true}}"
         }) {
       try {
         ProviderAccessStore.validateScopes(new JSONObject(input));
@@ -204,8 +205,7 @@ public class ProviderAccessStoreTest {
     approved();
     long before = revision();
     JSONObject request =
-        store.createAuthorizationRequest(
-            caller, new JSONObject("{\"notes\":{\"read\":true,\"write\":true}}"));
+        store.createAuthorizationRequest(caller, new JSONObject("{\"notes\":\"edit\"}"));
     assertEquals(1, request.getJSONObject("scopes").length());
     assertFalse(request.getJSONObject("scopes").has("beans"));
     assertEquals(before, revision());
@@ -217,11 +217,10 @@ public class ProviderAccessStoreTest {
   }
 
   @Test
-  public void approvalMergesOnlyRequestedBitsAndReplayDoesNotGrantAgain() throws Exception {
+  public void approvalMergesOnlyRequestedLevelsAndReplayDoesNotGrantAgain() throws Exception {
     approved();
     JSONObject request =
-        store.createAuthorizationRequest(
-            caller, new JSONObject("{\"notes\":{\"read\":true,\"write\":true}}"));
+        store.createAuthorizationRequest(caller, new JSONObject("{\"notes\":\"edit\"}"));
     String id = request.getString("requestId");
     long before = revision();
     assertEquals("approved", store.resolveAuthorization(id, "approve").getString("status"));
@@ -229,7 +228,7 @@ public class ProviderAccessStoreTest {
     assertEquals(
         new java.util.HashSet<>(Arrays.asList("beans", "notes")),
         store.grantedDomains(caller, "write"));
-    assertTrue(store.grantedDomains(caller, "delete").isEmpty());
+    assertEquals(store.grantedDomains(caller, "write"), store.grantedDomains(caller, "delete"));
     store.resolveAuthorization(id, "approve");
     assertEquals(before + 1, revision());
     store.revoke(caller.key, revision());
@@ -267,7 +266,7 @@ public class ProviderAccessStoreTest {
             .toString());
     reopened.resolveAuthorization(id, "cancel");
     assertEquals(0, reopened.getState().getJSONArray("callers").length());
-    reopened.requestAccess(caller);
+    reopened.createAuthorizationRequest(caller, scopes());
     assertEquals(1, reopened.getState().getJSONArray("callers").length());
   }
 
@@ -315,15 +314,12 @@ public class ProviderAccessStoreTest {
 
   @Test
   public void accessStatusIsCoherentOwnFourDomainSnapshot() throws Exception {
-    JSONObject permissions = store.accessStatus(caller).getJSONObject("domainPermissions");
-    assertEquals(4, permissions.length());
-    for (String domain : ProviderAccessStore.DOMAINS)
-      for (String access : Arrays.asList("read", "write", "delete"))
-        assertFalse(permissions.getJSONObject(domain).getBoolean(access));
+    JSONObject permissions = store.accessStatus(caller).getJSONObject("scopes");
+    assertEquals(0, permissions.length());
     approved();
-    permissions = store.accessStatus(caller).getJSONObject("domainPermissions");
-    assertTrue(permissions.getJSONObject("beans").getBoolean("write"));
-    assertFalse(permissions.getJSONObject("notes").getBoolean("write"));
+    permissions = store.accessStatus(caller).getJSONObject("scopes");
+    assertEquals("edit", permissions.getString("beans"));
+    assertFalse(permissions.has("notes"));
     Constructor<ProviderAccessStore.Caller> constructor =
         ProviderAccessStore.Caller.class.getDeclaredConstructor(
             int.class, String.class, String.class, long.class);
@@ -331,5 +327,103 @@ public class ProviderAccessStoreTest {
     ProviderAccessStore.Caller forged =
         constructor.newInstance(caller.uid, "fake.package", caller.signingDigest, 0L);
     denied(() -> store.accessStatus(forged));
+  }
+
+  @Test
+  public void readCannotWriteOrDeleteAndEditCoversAllOperations() throws Exception {
+    for (String domain : ProviderAccessStore.DOMAINS) {
+      for (String level : Arrays.asList("read", "edit")) {
+        JSONObject scopes = new JSONObject().put(domain, level);
+        store.createAuthorizationRequest(caller, scopes);
+        store.grant(caller.key, scopes, revision());
+        store.authorize(caller, Collections.singleton(domain), "read").check();
+        for (String operation : Arrays.asList("write", "delete")) {
+          if ("edit".equals(level))
+            store.authorize(caller, Collections.singleton(domain), operation).check();
+          else denied(() -> store.authorize(caller, Collections.singleton(domain), operation));
+        }
+        store.revoke(caller.key, revision());
+      }
+    }
+  }
+
+  @Test
+  public void requestedReadNeverDowngradesExistingEditOrAddsOtherDomains() throws Exception {
+    approved();
+    JSONObject request =
+        store.createAuthorizationRequest(
+            caller, new JSONObject().put("beans", "read").put("notes", "read"));
+    store.resolveAuthorization(request.getString("requestId"), "approve");
+    JSONObject scopes = store.accessStatus(caller).getJSONObject("scopes");
+    assertEquals(2, scopes.length());
+    assertEquals("edit", scopes.getString("beans"));
+    assertEquals("read", scopes.getString("notes"));
+    denied(() -> store.authorize(caller, Collections.singleton("notes"), "delete"));
+  }
+
+  @Test
+  public void legacyGrantFileIsNeverLoadedOrConverted() throws Exception {
+    File old = new File(isolated.getNoBackupFilesDir(), "provider-access-v1.json");
+    JSONObject legacyCaller =
+        new JSONObject()
+            .put("uid", caller.uid)
+            .put(
+                "scopes",
+                new JSONObject()
+                    .put(
+                        "beans",
+                        new JSONObject().put("read", true).put("write", true).put("delete", true)));
+    JSONObject legacy =
+        new JSONObject()
+            .put("revision", 42)
+            .put("callers", new JSONObject().put(caller.key, legacyCaller));
+    try (java.io.FileOutputStream out = new java.io.FileOutputStream(old)) {
+      out.write(legacy.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+    assertEquals(0, open().accessStatus(caller).getJSONObject("scopes").length());
+    denied(() -> openUnchecked().authorize(caller, Collections.singleton("beans"), "read"));
+    assertTrue(old.exists());
+  }
+
+  private ProviderAccessStore openUnchecked() {
+    try {
+      return open();
+    } catch (Exception failure) {
+      throw new AssertionError(failure);
+    }
+  }
+
+  @Test
+  public void malformedPersistedScopesFailClosedOnEveryRetry() throws Exception {
+    approved();
+    File file = new File(isolated.getNoBackupFilesDir(), "provider-access-v2.json");
+    JSONObject state =
+        new JSONObject(
+            new String(
+                java.nio.file.Files.readAllBytes(file.toPath()),
+                java.nio.charset.StandardCharsets.UTF_8));
+    state
+        .getJSONObject("callers")
+        .getJSONObject(caller.key)
+        .put("scopes", new JSONObject().put("beans", new JSONObject().put("read", true)));
+    try (java.io.FileOutputStream out = new java.io.FileOutputStream(file)) {
+      out.write(state.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+    ProviderAccessStore reopened = open();
+    denied(() -> reopened.accessStatus(caller));
+    denied(() -> reopened.accessStatus(caller));
+  }
+
+  @Test
+  public void cachedCrossDomainResultRequiresCurrentReadWithoutRepeatWrite() throws Exception {
+    approved();
+    denied(() -> store.authorizeCachedResult(caller, "[\"beans\",\"notes\"]"));
+    JSONObject scopes = new JSONObject().put("beans", "edit").put("notes", "read");
+    store.grant(caller.key, scopes, revision());
+    store.authorizeCachedResult(caller, "[\"beans\",\"notes\"]");
+    denied(() -> store.authorize(caller, Collections.singleton("notes"), "write"));
+    for (Object metadata :
+        new Object[] {null, JSONObject.NULL, "null", "{}", "[\"unknown\"]", "[true]"})
+      denied(() -> store.authorizeCachedResult(caller, metadata));
   }
 }
