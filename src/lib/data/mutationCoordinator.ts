@@ -13,10 +13,21 @@ let mutationTail: Promise<void> = Promise.resolve();
  */
 export function withDataMutation<T>(work: () => Promise<T>): Promise<T> {
   const runtime = detectAppRuntime();
-  if (runtime.runtime !== 'tauri' || runtime.tauriBundled === false) {
+  const coordinatedDesktop =
+    runtime.runtime === 'tauri' && runtime.tauriBundled !== false;
+  const coordinatedAndroid =
+    runtime.runtime === 'capacitor' &&
+    runtime.capacitorPlatform === 'android' &&
+    runtime.capacitorBundled !== false;
+  if (!coordinatedDesktop && !coordinatedAndroid) {
     return work();
   }
-  const operation = mutationTail.then(work);
+  const operation = mutationTail.then(async () => {
+    if (!coordinatedAndroid) return work();
+    const { withAndroidDatabaseMutation } =
+      await import('./sqlite/providerSqliteDriver');
+    return withAndroidDatabaseMutation(work);
+  });
   mutationTail = operation.then(
     () => undefined,
     () => undefined

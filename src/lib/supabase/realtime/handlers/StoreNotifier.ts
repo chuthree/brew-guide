@@ -118,9 +118,13 @@ export async function notifyStoreUpsert(
     } else if (table === SYNC_TABLES.BREWING_NOTES) {
       const { useBrewingNoteStore } =
         await import('@/lib/stores/brewingNoteStore');
-      await useBrewingNoteStore
-        .getState()
-        .upsertNote(data as unknown as BrewingNote);
+      const note = data as unknown as BrewingNote;
+      // The remote handler already persisted the note and owns its mutation.
+      useBrewingNoteStore.setState(s => ({
+        notes: s.notes.some(n => n.id === recordId)
+          ? s.notes.map(n => (n.id === recordId ? note : n))
+          : [note, ...s.notes],
+      }));
       dispatchRemoteImageRefresh(table, recordId, data);
     } else if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
       const { useCustomEquipmentStore } =

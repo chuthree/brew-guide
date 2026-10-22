@@ -1,3 +1,4 @@
+import { publishThroughBusinessHost, isBusinessActivityVisible } from './runtimeHost';
 import {
   beanConversionDefinitions,
   readBeanConversionTool,
@@ -102,7 +103,7 @@ import {
   calculateFlavorInfo,
   getDefaultFlavorPeriodByRoastLevelSync,
 } from '@/lib/utils/flavorPeriodUtils';
-import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/capacityAdjustment';
+import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/amount';
 import {
   buildCapacityAdjustmentRecord,
   buildQuickDecrementRecord,
@@ -711,9 +712,14 @@ async function recordChange(
 }
 
 /** Publish only after commit; sync listeners receive the existing event shapes. */
-async function publishChanges(changes: MutationChange[]): Promise<void> {
-  await publishCatalogChanges(changes);
-  await publishPreferencesChanges(changes);
+export async function publishMcpChanges(
+  changes: MutationChange[],
+  suppliedDriver?: import('@/lib/data/sqlite/driver').SqliteDriver,
+  source = 'mcp'
+): Promise<void> {
+  if (await publishThroughBusinessHost(changes)) return;
+  await publishCatalogChanges(changes, suppliedDriver, source === 'remote' ? 'remote' : 'local');
+  await publishPreferencesChanges(changes, suppliedDriver, source === 'remote' ? 'remote' : 'local');
   if (!changes.length || typeof window === 'undefined') return;
   const [
     { useCoffeeBeanStore },
@@ -726,7 +732,7 @@ async function publishChanges(changes: MutationChange[]): Promise<void> {
     import('@/lib/data/repositories'),
     import('@/lib/app/dataIntegrity'),
   ]);
-  const driver = await getMcpDriver();
+  const driver = suppliedDriver ?? (await getMcpDriver());
   for (const change of changes) {
     if (change.entity === 'bean') {
       const current = await getCoffeeBean(driver, change.id);
@@ -749,14 +755,14 @@ async function publishChanges(changes: MutationChange[]): Promise<void> {
               action: change.before ? 'update' : 'create',
               beanId: change.id,
               bean,
-              source: 'mcp',
+              source,
             },
           })
         );
       } else {
         window.dispatchEvent(
           new CustomEvent('coffeeBeanDataChanged', {
-            detail: { action: 'delete', beanId: change.id, source: 'mcp' },
+            detail: { action: 'delete', beanId: change.id, source },
           })
         );
       }
@@ -780,14 +786,14 @@ async function publishChanges(changes: MutationChange[]): Promise<void> {
               action: change.before ? 'update' : 'create',
               noteId: change.id,
               note,
-              source: 'mcp',
+              source,
             },
           })
         );
       } else {
         window.dispatchEvent(
           new CustomEvent('brewingNoteDataChanged', {
-            detail: { action: 'delete', noteId: change.id, source: 'mcp' },
+            detail: { action: 'delete', noteId: change.id, source },
           })
         );
       }
@@ -801,7 +807,7 @@ async function publishChanges(changes: MutationChange[]): Promise<void> {
 
 /** Recover notifications after a crash/failure without replaying business writes. */
 export async function recoverMcpPublications(): Promise<void> {
-  await flushMcpPublications(publishChanges);
+  await flushMcpPublications(publishMcpChanges);
 }
 
 async function mutate(
@@ -839,7 +845,7 @@ async function mutate(
   }
   if (committed.changes.length) {
     try {
-      await publishChanges(committed.changes);
+      await publishMcpChanges(committed.changes);
       await acknowledgeMcpPublication(String(args.requestId));
     } catch {
       // Committed writes must not be reported as failures and retried as new operations.
@@ -1871,6 +1877,7 @@ async function readTool(
       'SELECT request_id, tool, timestamp_ms, summary, snapshots_json FROM mcp_activity ORDER BY timestamp_ms DESC, request_id DESC'
     );
     const rows = all
+      .filter(row => isBusinessActivityVisible(String(row.request_id)))
       .filter(row => {
         const domain = mcpToolDomain(String(row.tool));
         return (

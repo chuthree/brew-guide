@@ -443,4 +443,36 @@ describe('InitialSyncManager settings sync', () => {
       mocks.repositories.coffeeBeanPersistence.saveWithImages
     ).not.toHaveBeenCalled();
   });
+  it.each(['update', 'delete'])(
+    'rejects a stale sync %s after a concurrent local mutation',
+    async operation => {
+      const original = {
+        id: 'changed-during-fetch',
+        name: 'Original',
+        timestamp: 1,
+        remaining: '100',
+      };
+      const concurrent = { ...original, timestamp: 3, remaining: '88' };
+      const remote = { ...original, timestamp: 2, remaining: '90' };
+      mocks.repositories.coffeeBeanRepository.list
+        .mockResolvedValueOnce([original])
+        .mockResolvedValue([concurrent]);
+      vi.mocked(batchResolveConflicts).mockReturnValue({
+        merged: [remote],
+        toUpload: [],
+        toDownload: operation === 'update' ? [remote] : [],
+        toDeleteLocal: operation === 'delete' ? [original.id] : [],
+      } as never);
+      const manager = new InitialSyncManager({} as SupabaseClient);
+      await expect(
+        manager['syncTable'](SYNC_TABLES.COFFEE_BEANS, 0)
+      ).rejects.toThrow('Local record changed during sync');
+      expect(
+        mocks.repositories.coffeeBeanPersistence.saveWithImages
+      ).not.toHaveBeenCalled();
+      expect(
+        mocks.repositories.coffeeBeanPersistence.deleteManyWithImages
+      ).not.toHaveBeenCalled();
+    }
+  );
 });

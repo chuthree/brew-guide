@@ -1,3 +1,4 @@
+import { coordinateStoreActions } from '@/lib/data/storeMutationBoundary';
 /**
  * 离线操作队列管理器
  *
@@ -74,7 +75,22 @@ export class OfflineQueueManager {
   private maxRetries = 3;
   private retryInterval = 5000; // 5 秒
 
-  private constructor() {}
+  private constructor() {
+    // Queue only local read/compute/write sections; processQueue never holds a
+    // database lease while awaiting the network or retry delay.
+    Object.assign(
+      this,
+      coordinateStoreActions(
+        {
+          enqueue: this.enqueue.bind(this),
+          dequeue: this.dequeue.bind(this),
+          markFailed: this.markFailed.bind(this),
+          clear: this.clear.bind(this),
+        },
+        ['enqueue', 'dequeue', 'markFailed', 'clear']
+      )
+    );
+  }
 
   static getInstance(): OfflineQueueManager {
     if (!OfflineQueueManager.instance) {

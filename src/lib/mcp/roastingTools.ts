@@ -16,9 +16,9 @@ import {
 import {
   parseBeanName,
   getNextAvailableNumber,
-} from '@/lib/utils/beanRepurchaseUtils';
+} from '@/lib/coffee-beans/repurchaseNaming';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
-import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/capacityAdjustment';
+import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/amount';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 import { stripBrewingNoteImages } from '@/lib/notes/imageRecords';
 import type { Schema } from './toolDefinitions';

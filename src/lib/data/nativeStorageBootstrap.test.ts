@@ -14,6 +14,17 @@ const mocks = vi.hoisted(() => ({
   order: [] as string[],
 }));
 
+vi.mock('./sqlite/providerSqliteDriver', () => ({
+  withAndroidDatabaseMutation: async (work: () => Promise<unknown>) => {
+    mocks.order.push('lease:acquire');
+    try {
+      return await work();
+    } finally {
+      mocks.order.push('lease:release');
+    }
+  },
+}));
+
 vi.mock('@/lib/data/repositories', () => ({
   configureRepositories: mocks.configureRepositories,
 }));
@@ -141,7 +152,9 @@ describe('Native Android storage bootstrap', () => {
     expect(second).toEqual(first);
     expect(order).toEqual([
       'open',
+      'lease:acquire',
       'schema',
+      'lease:release',
       'files',
       'source',
       'migration',

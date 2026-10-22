@@ -1,6 +1,7 @@
 import type { SqliteDriver, SqliteExecutor } from '@/lib/data/sqlite/driver';
 import { openTauriSqliteDriver } from '@/lib/data/sqlite/tauriSqliteDriver';
 import { canonicalJson, McpToolError, recordVersion } from './validation';
+import { authorizeMutationChanges } from './runtimeHost';
 
 const initialized = new WeakMap<SqliteDriver, Promise<void>>();
 export let localHistoryGeneration = 0;
@@ -100,6 +101,9 @@ export async function commitMcpMutation<T extends Record<string, unknown>>(
       };
     }
     const { result, changes, summary, cleanupPaths = [] } = await work(tx);
+    // This runs inside the same transaction: denial must roll back inventory,
+    // history and any other cross-domain side effects before recording success.
+    await authorizeMutationChanges(changes);
     const timestamp = Date.now();
     await tx.execute(
       'INSERT INTO mcp_operations (request_id, tool, args_hash, result_json, created_at_ms) VALUES (?, ?, ?, ?, ?)',

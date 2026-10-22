@@ -48,7 +48,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.clearAllMocks());
 
-describe.each(['android', 'ios'])(
+describe.each(['ios'])(
   '%s Capacitor SQLite connection',
   platform => {
     it('shares one connection and preserves bridge parameters, commit and rollback semantics', async () => {

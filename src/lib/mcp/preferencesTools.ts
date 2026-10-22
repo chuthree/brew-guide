@@ -32,7 +32,7 @@ import {
 import { listCoffeeBeans } from '@/lib/data/sqlite/repositories/coffeeBean';
 import { listBrewingNotes } from '@/lib/data/sqlite/repositories/brewingNote';
 import { normalizeCoffeeBeanGroups } from '@/lib/utils/coffeeBeanGroupUtils';
-import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/capacityAdjustment';
+import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/amount';
 import type { Schema } from './toolDefinitions';
 import type { MutationChange, MutationWork } from './storage';
 import { getMcpDriver, localHistoryGeneration } from './storage';
@@ -851,7 +851,9 @@ export async function mutatePreferencesTool(
   };
 }
 export async function publishPreferencesChanges(
-  changes: MutationChange[]
+  changes: MutationChange[],
+  suppliedDriver?: import('@/lib/data/sqlite/driver').SqliteDriver,
+  source = 'local'
 ): Promise<void> {
   if (
     typeof window === 'undefined' ||
@@ -860,7 +862,7 @@ export async function publishPreferencesChanges(
     return;
   const { useSettingsStore, defaultSettings } =
     await import('@/lib/stores/settingsStore');
-  const stored = await settingsAt(await getMcpDriver());
+  const stored = await settingsAt(suppliedDriver ?? (await getMcpDriver()));
   const settings = { ...useSettingsStore.getState().settings, ...stored };
   // Cleared overrides must not survive in the existing in-memory store.
   for (const key of Object.keys(safePreferenceSchema) as Array<
@@ -876,7 +878,7 @@ export async function publishPreferencesChanges(
   {
     window.dispatchEvent(
       new CustomEvent('settingsChanged', {
-        detail: { source: 'local', settings },
+        detail: { source, settings },
       })
     );
     window.dispatchEvent(

@@ -1,3 +1,7 @@
+import {
+  coordinateStoreActions,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 /**
  * 统一设置 Store
  *
@@ -20,191 +24,19 @@ import {
 import { equipmentList } from '@/lib/core/config';
 import { LayoutSettings } from '@/components/brewing/Timer/Settings';
 import {
-  DEFAULT_NAVIGATION_SETTINGS,
   mergeNavigationSettings,
   normalizeNavigationSettings,
 } from '@/lib/navigation/navigationSettings';
-import {
-  DEFAULT_ESTIMATED_CUP_DOSE_SETTINGS,
-  normalizeEstimatedCupDoseSettings,
-} from '@/lib/settings/estimatedCupDose';
+import { normalizeEstimatedCupDoseSettings } from '@/lib/settings/estimatedCupDose';
 import { normalizeSyncSettings } from '@/lib/sync/settings';
-import {
-  defaultCalendarSyncSettings,
-  normalizeCalendarSyncSettings,
-} from '@/lib/calendarSync/settings';
+import { normalizeCalendarSyncSettings } from '@/lib/calendarSync/settings';
 import { normalizeBeanFieldConfig } from '@/lib/coffee-beans/beanFields';
 
 /**
  * 默认设置值
  */
-export const defaultSettings: AppSettings = {
-  // 通用设置
-  notificationSound: true,
-  hapticFeedback: true,
-  showUpdatePrompt: true,
-  textZoomLevel: 1.0,
-  showFlowRate: false,
-  username: '',
-
-  // 布局设置
-  layoutSettings: {
-    progressBarHeight: 12,
-    dataFontSize: '2xl',
-    stepDisplayMode: 'cumulative',
-  },
-
-  // 雷达图设置
-  radarChartScale: 1,
-  radarChartShape: 'polygon',
-  radarChartAlign: 'center',
-
-  // 咖啡豆显示设置
-  decrementPresets: [15, 16, 18],
-  enableAllDecrementOption: false,
-  enableCustomDecrementInput: true,
-  greenBeanRoastPresets: [50, 100, 200],
-  enableAllGreenBeanRoastOption: false,
-  enableCustomGreenBeanRoastInput: true,
-  simplifiedViewLabels: false,
-  dateDisplayMode: 'agingDays',
-  showFlavorInfo: false,
-  showBeanNotes: true,
-  showNoteContent: true,
-  limitNotesLines: true,
-  notesMaxLines: 3,
-  showPrice: true,
-  showTotalPrice: false,
-  showStatusDots: false,
-  showBeanSummary: false,
-  showEstimatedCups: false,
-  estimatedCupDoseSettings: { ...DEFAULT_ESTIMATED_CUP_DOSE_SETTINGS },
-  enableBeanSummaryCapacityLimit: false,
-  beanSummaryMaxDisplayCapacity: 1000,
-  enableBeanSummaryOverflowWrap: false,
-
-  // 安全区域设置
-  safeAreaMargins: {
-    top: 12,
-    bottom: 38,
-  },
-
-  // 导航栏设置
-  navigationSettings: DEFAULT_NAVIGATION_SETTINGS,
-
-  // 赏味期设置
-  customFlavorPeriod: {
-    light: { startDay: 0, endDay: 0 },
-    medium: { startDay: 0, endDay: 0 },
-    dark: { startDay: 0, endDay: 0 },
-  },
-  calendarSync: { ...defaultCalendarSyncSettings },
-  showBeanReadyReminderPopup: false,
-
-  // 备份提醒设置
-  backupReminder: undefined,
-
-  // 同步设置
-  s3Sync: {
-    enabled: false,
-    accessKeyId: '',
-    secretAccessKey: '',
-    region: 'us-east-1',
-    bucketName: '',
-    prefix: 'brew-guide-data/',
-    endpoint: '',
-    syncMode: 'manual',
-    enablePullToSync: true,
-  },
-  webdavSync: undefined,
-  supabaseSync: {
-    enabled: false,
-    url: '',
-    anonKey: '',
-  },
-  activeSyncType: 'none',
-  supabaseBackupProvider: 'none',
-
-  // 随机咖啡豆设置
-  randomCoffeeBeans: {
-    enableLongPressRandomType: false,
-    defaultRandomType: 'espresso',
-    flavorPeriodRanges: {
-      aging: false,
-      optimal: true,
-      decline: true,
-      frozen: true,
-      inTransit: false,
-      unknown: true,
-    },
-  },
-
-  // 其他设置
-  enableBeanPrint: false,
-  showBeanRating: false,
-  beanRatingTenthStep: false,
-  hiddenCommonMethods: {},
-  hiddenEquipments: [],
-  equipmentNameOverrides: {},
-  // 笔记设置
-  showFlavorRatingInForm: true,
-  showOverallRatingInForm: true,
-  flavorRatingFollowOverall: false,
-  flavorRatingHalfStep: false,
-  flavorRatingTenthStep: false,
-  overallRatingUseSlider: false,
-  showRatingDimensionsEntry: false,
-  showUnitPriceInNote: false,
-  showBeanAgingDaysInNote: false,
-  showFlavorInNote: true,
-  showNoteTimeInNote: true,
-  showCapacityAdjustmentRecords: true,
-  useClassicNotesListStyle: false,
-  artisticShareRatingStyle: 'dots',
-  artisticShareTags: '#咖啡 #手冲咖啡 #咖啡笔记 #BrewGuide',
-
-  // 生豆库设置
-  enableGreenBeanInventory: false,
-  enableConvertToGreen: false,
-
-  // 识图设置
-  autoFillRecognitionImage: false,
-  showEstateField: false,
-  immersiveAdd: false,
-  experimentalBeanRecognitionEnabled: false,
-  experimentalBeanRecognitionApiBaseUrl: '',
-  experimentalBeanRecognitionApiKey: '',
-  experimentalBeanRecognitionModel: '',
-  experimentalBeanRecognitionPrompt: '',
-  experimentalBeanSharePackageEnabled: false,
-  syncNewNoteDateWithSelectedDate: false,
-  syncQuickDecrementDateWithSelectedDate: false,
-
-  // 菜单栏图标设置
-  showMenuBarIcon: true,
-
-  // 风味维度设置
-  flavorDimensions: [...DEFAULT_FLAVOR_DIMENSIONS],
-  flavorDimensionHistoricalLabels: {},
-
-  // 烘焙商配置
-  roasterConfigs: [],
-
-  // 分组
-  coffeeBeanGroups: [],
-
-  // 器具排序
-  equipmentOrder: [],
-
-  // 冲煮设置
-  showCoffeeBeanSelectionStep: true, // 默认显示咖啡豆选择步骤
-  showBrewingVisualizer: true, // 默认显示可视化冲煮界面
-
-  // 烘焙商字段设置
-  roasterFieldEnabled: true, // 是否启用独立烘焙商字段
-  roasterSeparator: ' ', // 烘焙商分隔符，默认空格
-  roasterMigrationCompleted: false, // @deprecated 已废弃，按需迁移策略不再使用此标记
-};
+export { defaultSettings } from '@/lib/settings/defaultSettings';
+import { defaultSettings } from '@/lib/settings/defaultSettings';
 
 const LEGACY_DEFAULT_SAFE_AREA_MARGINS = {
   top: 38,
@@ -364,449 +196,506 @@ const normalizeLayoutSettings = (
  * 设置 Store
  */
 export const useSettingsStore = create<SettingsStore>()(
-  subscribeWithSelector((set, get) => ({
-    settings: { ...defaultSettings },
-    isLoading: false,
-    initialized: false,
-    error: null,
+  subscribeWithSelector((set, get) =>
+    coordinateStoreActions<SettingsStore>(
+      {
+        settings: { ...defaultSettings },
+        isLoading: false,
+        initialized: false,
+        error: null,
 
-    loadSettings: async () => {
-      if (get().isLoading) return;
+        loadSettings: async () => {
+          if (get().isLoading) return;
 
-      set({ isLoading: true, error: null });
+          set({ isLoading: true, error: null });
 
-      try {
-        const storedSettings = await appSettingsRepository.get();
+          try {
+            const storedSettings = await appSettingsRepository.get();
 
-        if (storedSettings) {
-          const normalizedStoredData = normalizeSyncSettings(storedSettings);
+            if (storedSettings) {
+              const normalizedStoredData =
+                normalizeSyncSettings(storedSettings);
 
-          // 合并默认设置和存储的设置，确保新字段和嵌套字段都有默认值
-          const mergedSettings =
-            mergeSettingsWithDefaults(normalizedStoredData);
-          const legacySettings = storedSettings as AppSettings & {
-            notesListStyle?: string;
-            grinderDefaultSync?: unknown;
-            showGrinderScale?: unknown;
+              // 合并默认设置和存储的设置，确保新字段和嵌套字段都有默认值
+              const mergedSettings =
+                mergeSettingsWithDefaults(normalizedStoredData);
+              const legacySettings = storedSettings as AppSettings & {
+                notesListStyle?: string;
+                grinderDefaultSync?: unknown;
+                showGrinderScale?: unknown;
+              };
+
+              // 兼容旧字段：notesListStyle -> useClassicNotesListStyle
+              if (
+                legacySettings.notesListStyle === 'standard' &&
+                mergedSettings.useClassicNotesListStyle === undefined
+              ) {
+                mergedSettings.useClassicNotesListStyle = true;
+              }
+
+              const shouldPersistMergedSettings =
+                mergedSettings.activeSyncType !==
+                  storedSettings.activeSyncType ||
+                mergedSettings.supabaseBackupProvider !==
+                  storedSettings.supabaseBackupProvider ||
+                JSON.stringify(mergedSettings.layoutSettings) !==
+                  JSON.stringify(storedSettings.layoutSettings) ||
+                legacySettings.grinderDefaultSync !== undefined ||
+                legacySettings.showGrinderScale !== undefined;
+
+              if (shouldPersistMergedSettings) {
+                await appSettingsRepository.save(mergedSettings);
+              }
+
+              set({
+                settings: mergedSettings,
+                isLoading: false,
+                initialized: true,
+              });
+            } else {
+              // 使用默认设置
+              await appSettingsRepository.save(defaultSettings);
+              set({
+                settings: defaultSettings,
+                isLoading: false,
+                initialized: true,
+              });
+            }
+          } catch (error) {
+            console.error('[SettingsStore] loadSettings failed:', error);
+            set({
+              error: '加载设置失败',
+              isLoading: false,
+              initialized: false,
+            });
+            throw error;
+          }
+        },
+
+        updateSettings: async updates => {
+          const currentSettings = get().settings;
+          const newSettings = {
+            ...currentSettings,
+            ...updates,
+            layoutSettings:
+              updates.layoutSettings === undefined
+                ? currentSettings.layoutSettings
+                : normalizeLayoutSettings(updates.layoutSettings),
           };
 
-          // 兼容旧字段：notesListStyle -> useClassicNotesListStyle
-          if (
-            legacySettings.notesListStyle === 'standard' &&
-            mergedSettings.useClassicNotesListStyle === undefined
-          ) {
-            mergedSettings.useClassicNotesListStyle = true;
+          try {
+            await appSettingsRepository.save(newSettings);
+            set({ settings: newSettings });
+
+            // 触发设置变化事件（用于兼容旧代码）
+            dispatchSettingsChanged(newSettings);
+          } catch (error) {
+            console.error('[SettingsStore] updateSettings failed:', error);
+            throw error;
+          }
+        },
+
+        updateLayoutSettings: async layout => {
+          const currentSettings = get().settings;
+          const currentLayout = currentSettings.layoutSettings;
+          const defaultLayout = defaultSettings.layoutSettings!; // defaultSettings.layoutSettings 在定义中有值
+
+          // 确保所有字段都有值，使用类型断言来确保类型安全
+          const newLayoutSettings: NonNullable<AppSettings['layoutSettings']> =
+            {
+              progressBarHeight:
+                layout.progressBarHeight ??
+                currentLayout?.progressBarHeight ??
+                defaultLayout.progressBarHeight,
+              dataFontSize:
+                layout.dataFontSize ??
+                currentLayout?.dataFontSize ??
+                defaultLayout.dataFontSize,
+              stepDisplayMode:
+                layout.stepDisplayMode ??
+                currentLayout?.stepDisplayMode ??
+                defaultLayout.stepDisplayMode,
+            };
+          await callStoreActionInMutation(get().updateSettings, {
+            layoutSettings: newLayoutSettings,
+          });
+        },
+
+        updateNavigationSettings: async nav => {
+          const currentSettings = get().settings;
+          const newNavSettings = mergeNavigationSettings(
+            currentSettings.navigationSettings,
+            nav
+          );
+          await callStoreActionInMutation(get().updateSettings, {
+            navigationSettings:
+              newNavSettings as AppSettings['navigationSettings'],
+          });
+        },
+
+        updateS3SyncSettings: async s3 => {
+          const currentSettings = get().settings;
+          const newS3Settings = {
+            ...currentSettings.s3Sync,
+            ...s3,
+          };
+          await callStoreActionInMutation(get().updateSettings, {
+            s3Sync: newS3Settings as AppSettings['s3Sync'],
+          });
+        },
+
+        updateWebDAVSyncSettings: async webdav => {
+          const currentSettings = get().settings;
+          const newWebDAVSettings = {
+            ...currentSettings.webdavSync,
+            ...webdav,
+          } as Record<string, unknown>;
+          delete newWebDAVSettings.useProxy;
+          await callStoreActionInMutation(get().updateSettings, {
+            webdavSync: newWebDAVSettings as AppSettings['webdavSync'],
+          });
+        },
+
+        updateSupabaseSyncSettings: async supabase => {
+          const currentSettings = get().settings;
+          const newSupabaseSettings = {
+            ...currentSettings.supabaseSync,
+            ...supabase,
+          };
+          await callStoreActionInMutation(get().updateSettings, {
+            supabaseSync: newSupabaseSettings as AppSettings['supabaseSync'],
+          });
+        },
+
+        hideEquipment: async equipmentId => {
+          const currentSettings = get().settings;
+          const hiddenEquipments = [
+            ...(currentSettings.hiddenEquipments || []),
+          ];
+
+          if (!hiddenEquipments.includes(equipmentId)) {
+            hiddenEquipments.push(equipmentId);
+            await callStoreActionInMutation(get().updateSettings, {
+              hiddenEquipments,
+            });
+          }
+        },
+
+        unhideEquipment: async equipmentId => {
+          const currentSettings = get().settings;
+          const hiddenEquipments = (
+            currentSettings.hiddenEquipments || []
+          ).filter(id => id !== equipmentId);
+          const equipmentOrder = currentSettings.equipmentOrder || [];
+          const nextEquipmentOrder = equipmentOrder.includes(equipmentId)
+            ? equipmentOrder
+            : [...equipmentOrder, equipmentId];
+
+          await callStoreActionInMutation(get().updateSettings, {
+            hiddenEquipments,
+            equipmentOrder: nextEquipmentOrder,
+          });
+        },
+
+        hideMethod: async (equipmentId, methodId) => {
+          const currentSettings = get().settings;
+          const hiddenCommonMethods = {
+            ...(currentSettings.hiddenCommonMethods || {}),
+          };
+          const equipmentHidden = [...(hiddenCommonMethods[equipmentId] || [])];
+
+          if (!equipmentHidden.includes(methodId)) {
+            equipmentHidden.push(methodId);
+            hiddenCommonMethods[equipmentId] = equipmentHidden;
+            await callStoreActionInMutation(get().updateSettings, {
+              hiddenCommonMethods,
+            });
+          }
+        },
+
+        unhideMethod: async (equipmentId, methodId) => {
+          const currentSettings = get().settings;
+          const hiddenCommonMethods = {
+            ...(currentSettings.hiddenCommonMethods || {}),
+          };
+          const equipmentHidden = (
+            hiddenCommonMethods[equipmentId] || []
+          ).filter(id => id !== methodId);
+
+          if (equipmentHidden.length > 0) {
+            hiddenCommonMethods[equipmentId] = equipmentHidden;
+          } else {
+            delete hiddenCommonMethods[equipmentId];
           }
 
-          const shouldPersistMergedSettings =
-            mergedSettings.activeSyncType !== storedSettings.activeSyncType ||
-            mergedSettings.supabaseBackupProvider !==
-              storedSettings.supabaseBackupProvider ||
-            JSON.stringify(mergedSettings.layoutSettings) !==
-              JSON.stringify(storedSettings.layoutSettings) ||
-            legacySettings.grinderDefaultSync !== undefined ||
-            legacySettings.showGrinderScale !== undefined;
+          await callStoreActionInMutation(get().updateSettings, {
+            hiddenCommonMethods,
+          });
+        },
 
-          if (shouldPersistMergedSettings) {
+        // ==================== 风味维度管理 ====================
+
+        getFlavorDimensions: () => {
+          const settings = get().settings;
+          return settings.flavorDimensions || [...DEFAULT_FLAVOR_DIMENSIONS];
+        },
+
+        addFlavorDimension: async label => {
+          const settings = get().settings;
+          const dimensions = [
+            ...(settings.flavorDimensions || DEFAULT_FLAVOR_DIMENSIONS),
+          ];
+          const maxOrder = Math.max(...dimensions.map(d => d.order), -1);
+
+          const newDimension: FlavorDimension = {
+            id: `custom_${Date.now()}`,
+            label,
+            order: maxOrder + 1,
+            isDefault: false,
+          };
+
+          dimensions.push(newDimension);
+
+          // 更新历史标签
+          const historicalLabels = {
+            ...(settings.flavorDimensionHistoricalLabels || {}),
+            [newDimension.id]: label,
+          };
+
+          await callStoreActionInMutation(get().updateSettings, {
+            flavorDimensions: dimensions,
+            flavorDimensionHistoricalLabels: historicalLabels,
+          });
+
+          dispatchFlavorDimensionsChanged(dimensions);
+          return newDimension;
+        },
+
+        updateFlavorDimension: async (id, updates) => {
+          const settings = get().settings;
+          const dimensions = [
+            ...(settings.flavorDimensions || DEFAULT_FLAVOR_DIMENSIONS),
+          ];
+          const index = dimensions.findIndex(d => d.id === id);
+
+          if (index === -1) return;
+
+          dimensions[index] = { ...dimensions[index], ...updates };
+
+          // 更新历史标签
+          const historicalLabels = {
+            ...(settings.flavorDimensionHistoricalLabels || {}),
+          };
+          if (updates.label) {
+            historicalLabels[id] = updates.label;
+          }
+
+          await callStoreActionInMutation(get().updateSettings, {
+            flavorDimensions: dimensions,
+            flavorDimensionHistoricalLabels: historicalLabels,
+          });
+
+          dispatchFlavorDimensionsChanged(dimensions);
+        },
+
+        deleteFlavorDimension: async id => {
+          const settings = get().settings;
+          const dimensions = (
+            settings.flavorDimensions || DEFAULT_FLAVOR_DIMENSIONS
+          ).filter(d => d.id !== id);
+
+          await callStoreActionInMutation(get().updateSettings, {
+            flavorDimensions: dimensions,
+          });
+          dispatchFlavorDimensionsChanged(dimensions);
+        },
+
+        reorderFlavorDimensions: async dimensions => {
+          // 更新 order 字段
+          const reorderedDimensions = dimensions.map((d, index) => ({
+            ...d,
+            order: index,
+          }));
+
+          await callStoreActionInMutation(get().updateSettings, {
+            flavorDimensions: reorderedDimensions,
+          });
+          dispatchFlavorDimensionsChanged(reorderedDimensions);
+        },
+
+        resetFlavorDimensions: async () => {
+          await callStoreActionInMutation(get().updateSettings, {
+            flavorDimensions: [...DEFAULT_FLAVOR_DIMENSIONS],
+          });
+          dispatchFlavorDimensionsChanged([...DEFAULT_FLAVOR_DIMENSIONS]);
+        },
+
+        getHistoricalLabel: id => {
+          const settings = get().settings;
+          return settings.flavorDimensionHistoricalLabels?.[id];
+        },
+
+        // ==================== 烘焙商配置管理 ====================
+
+        getRoasterConfigs: () => {
+          return get().settings.roasterConfigs || [];
+        },
+
+        getRoasterConfig: roasterName => {
+          const configs = get().settings.roasterConfigs || [];
+          return configs.find(c => c.roasterName === roasterName);
+        },
+
+        updateRoasterConfig: async (roasterName, updates) => {
+          const settings = get().settings;
+          const configs = [...(settings.roasterConfigs || [])];
+          const existingIndex = configs.findIndex(
+            c => c.roasterName === roasterName
+          );
+
+          if (existingIndex >= 0) {
+            configs[existingIndex] = {
+              ...configs[existingIndex],
+              ...updates,
+              updatedAt: Date.now(),
+            };
+          } else {
+            configs.push({
+              roasterName,
+              ...updates,
+              updatedAt: Date.now(),
+            });
+          }
+
+          await callStoreActionInMutation(get().updateSettings, {
+            roasterConfigs: configs,
+          });
+        },
+
+        deleteRoasterConfig: async roasterName => {
+          const settings = get().settings;
+          const configs = (settings.roasterConfigs || []).filter(
+            c => c.roasterName !== roasterName
+          );
+          await callStoreActionInMutation(get().updateSettings, {
+            roasterConfigs: configs,
+          });
+        },
+
+        // ==================== 器具排序 ====================
+
+        setEquipmentOrder: async order => {
+          await callStoreActionInMutation(get().updateSettings, {
+            equipmentOrder: order,
+          });
+        },
+
+        // ==================== 方案参数覆盖管理 ====================
+
+        setMethodParamOverride: async (equipmentId, methodId, params) => {
+          const settings = get().settings;
+          const overrides = { ...(settings.methodParamOverrides || {}) };
+          const key = `${equipmentId}:${methodId}`;
+
+          overrides[key] = {
+            ...params,
+            modifiedAt: Date.now(),
+          };
+
+          await callStoreActionInMutation(get().updateSettings, {
+            methodParamOverrides: overrides,
+          });
+
+          // 触发方案参数覆盖变化事件
+          dispatchMethodParamOverrideChanged(equipmentId, methodId, params);
+        },
+
+        clearMethodParamOverride: async (equipmentId, methodId) => {
+          const settings = get().settings;
+          const overrides = { ...(settings.methodParamOverrides || {}) };
+          const key = `${equipmentId}:${methodId}`;
+
+          if (overrides[key]) {
+            delete overrides[key];
+            await callStoreActionInMutation(get().updateSettings, {
+              methodParamOverrides: overrides,
+            });
+
+            // 触发方案参数覆盖清除事件
+            dispatchMethodParamOverrideChanged(equipmentId, methodId, null);
+          }
+        },
+
+        getMethodParamOverride: (equipmentId, methodId) => {
+          const settings = get().settings;
+          const overrides = settings.methodParamOverrides || {};
+          const key = `${equipmentId}:${methodId}`;
+          const override = overrides[key];
+
+          if (override) {
+            // 返回时排除 modifiedAt 字段
+            const { modifiedAt: _, ...params } = override;
+            return params;
+          }
+          return null;
+        },
+
+        resetSettings: async () => {
+          try {
+            await appSettingsRepository.save(defaultSettings);
+            set({ settings: defaultSettings });
+            dispatchSettingsChanged(defaultSettings);
+          } catch (error) {
+            console.error('[SettingsStore] resetSettings failed:', error);
+            throw error;
+          }
+        },
+
+        getSettingsForSync: () => {
+          return get().settings;
+        },
+
+        importSettings: async settings => {
+          const mergedSettings = mergeSettingsWithDefaults(
+            normalizeSyncSettings(settings)
+          );
+          try {
             await appSettingsRepository.save(mergedSettings);
+            set({ settings: mergedSettings });
+            dispatchSettingsChanged(mergedSettings);
+          } catch (error) {
+            console.error('[SettingsStore] importSettings failed:', error);
+            throw error;
           }
-
-          set({
-            settings: mergedSettings,
-            isLoading: false,
-            initialized: true,
-          });
-        } else {
-          // 使用默认设置
-          await appSettingsRepository.save(defaultSettings);
-          set({
-            settings: defaultSettings,
-            isLoading: false,
-            initialized: true,
-          });
-        }
-      } catch (error) {
-        console.error('[SettingsStore] loadSettings failed:', error);
-        set({
-          error: '加载设置失败',
-          isLoading: false,
-          initialized: false,
-        });
-        throw error;
-      }
-    },
-
-    updateSettings: async updates => {
-      const currentSettings = get().settings;
-      const newSettings = {
-        ...currentSettings,
-        ...updates,
-        layoutSettings:
-          updates.layoutSettings === undefined
-            ? currentSettings.layoutSettings
-            : normalizeLayoutSettings(updates.layoutSettings),
-      };
-
-      try {
-        await appSettingsRepository.save(newSettings);
-        set({ settings: newSettings });
-
-        // 触发设置变化事件（用于兼容旧代码）
-        dispatchSettingsChanged(newSettings);
-      } catch (error) {
-        console.error('[SettingsStore] updateSettings failed:', error);
-        throw error;
-      }
-    },
-
-    updateLayoutSettings: async layout => {
-      const currentSettings = get().settings;
-      const currentLayout = currentSettings.layoutSettings;
-      const defaultLayout = defaultSettings.layoutSettings!; // defaultSettings.layoutSettings 在定义中有值
-
-      // 确保所有字段都有值，使用类型断言来确保类型安全
-      const newLayoutSettings: NonNullable<AppSettings['layoutSettings']> = {
-        progressBarHeight:
-          layout.progressBarHeight ??
-          currentLayout?.progressBarHeight ??
-          defaultLayout.progressBarHeight,
-        dataFontSize:
-          layout.dataFontSize ??
-          currentLayout?.dataFontSize ??
-          defaultLayout.dataFontSize,
-        stepDisplayMode:
-          layout.stepDisplayMode ??
-          currentLayout?.stepDisplayMode ??
-          defaultLayout.stepDisplayMode,
-      };
-      await get().updateSettings({ layoutSettings: newLayoutSettings });
-    },
-
-    updateNavigationSettings: async nav => {
-      const currentSettings = get().settings;
-      const newNavSettings = mergeNavigationSettings(
-        currentSettings.navigationSettings,
-        nav
-      );
-      await get().updateSettings({
-        navigationSettings: newNavSettings as AppSettings['navigationSettings'],
-      });
-    },
-
-    updateS3SyncSettings: async s3 => {
-      const currentSettings = get().settings;
-      const newS3Settings = {
-        ...currentSettings.s3Sync,
-        ...s3,
-      };
-      await get().updateSettings({
-        s3Sync: newS3Settings as AppSettings['s3Sync'],
-      });
-    },
-
-    updateWebDAVSyncSettings: async webdav => {
-      const currentSettings = get().settings;
-      const newWebDAVSettings = {
-        ...currentSettings.webdavSync,
-        ...webdav,
-      } as Record<string, unknown>;
-      delete newWebDAVSettings.useProxy;
-      await get().updateSettings({
-        webdavSync: newWebDAVSettings as AppSettings['webdavSync'],
-      });
-    },
-
-    updateSupabaseSyncSettings: async supabase => {
-      const currentSettings = get().settings;
-      const newSupabaseSettings = {
-        ...currentSettings.supabaseSync,
-        ...supabase,
-      };
-      await get().updateSettings({
-        supabaseSync: newSupabaseSettings as AppSettings['supabaseSync'],
-      });
-    },
-
-    hideEquipment: async equipmentId => {
-      const currentSettings = get().settings;
-      const hiddenEquipments = [...(currentSettings.hiddenEquipments || [])];
-
-      if (!hiddenEquipments.includes(equipmentId)) {
-        hiddenEquipments.push(equipmentId);
-        await get().updateSettings({ hiddenEquipments });
-      }
-    },
-
-    unhideEquipment: async equipmentId => {
-      const currentSettings = get().settings;
-      const hiddenEquipments = (currentSettings.hiddenEquipments || []).filter(
-        id => id !== equipmentId
-      );
-      const equipmentOrder = currentSettings.equipmentOrder || [];
-      const nextEquipmentOrder = equipmentOrder.includes(equipmentId)
-        ? equipmentOrder
-        : [...equipmentOrder, equipmentId];
-
-      await get().updateSettings({
-        hiddenEquipments,
-        equipmentOrder: nextEquipmentOrder,
-      });
-    },
-
-    hideMethod: async (equipmentId, methodId) => {
-      const currentSettings = get().settings;
-      const hiddenCommonMethods = {
-        ...(currentSettings.hiddenCommonMethods || {}),
-      };
-      const equipmentHidden = [...(hiddenCommonMethods[equipmentId] || [])];
-
-      if (!equipmentHidden.includes(methodId)) {
-        equipmentHidden.push(methodId);
-        hiddenCommonMethods[equipmentId] = equipmentHidden;
-        await get().updateSettings({ hiddenCommonMethods });
-      }
-    },
-
-    unhideMethod: async (equipmentId, methodId) => {
-      const currentSettings = get().settings;
-      const hiddenCommonMethods = {
-        ...(currentSettings.hiddenCommonMethods || {}),
-      };
-      const equipmentHidden = (hiddenCommonMethods[equipmentId] || []).filter(
-        id => id !== methodId
-      );
-
-      if (equipmentHidden.length > 0) {
-        hiddenCommonMethods[equipmentId] = equipmentHidden;
-      } else {
-        delete hiddenCommonMethods[equipmentId];
-      }
-
-      await get().updateSettings({ hiddenCommonMethods });
-    },
-
-    // ==================== 风味维度管理 ====================
-
-    getFlavorDimensions: () => {
-      const settings = get().settings;
-      return settings.flavorDimensions || [...DEFAULT_FLAVOR_DIMENSIONS];
-    },
-
-    addFlavorDimension: async label => {
-      const settings = get().settings;
-      const dimensions = [
-        ...(settings.flavorDimensions || DEFAULT_FLAVOR_DIMENSIONS),
-      ];
-      const maxOrder = Math.max(...dimensions.map(d => d.order), -1);
-
-      const newDimension: FlavorDimension = {
-        id: `custom_${Date.now()}`,
-        label,
-        order: maxOrder + 1,
-        isDefault: false,
-      };
-
-      dimensions.push(newDimension);
-
-      // 更新历史标签
-      const historicalLabels = {
-        ...(settings.flavorDimensionHistoricalLabels || {}),
-        [newDimension.id]: label,
-      };
-
-      await get().updateSettings({
-        flavorDimensions: dimensions,
-        flavorDimensionHistoricalLabels: historicalLabels,
-      });
-
-      dispatchFlavorDimensionsChanged(dimensions);
-      return newDimension;
-    },
-
-    updateFlavorDimension: async (id, updates) => {
-      const settings = get().settings;
-      const dimensions = [
-        ...(settings.flavorDimensions || DEFAULT_FLAVOR_DIMENSIONS),
-      ];
-      const index = dimensions.findIndex(d => d.id === id);
-
-      if (index === -1) return;
-
-      dimensions[index] = { ...dimensions[index], ...updates };
-
-      // 更新历史标签
-      const historicalLabels = {
-        ...(settings.flavorDimensionHistoricalLabels || {}),
-      };
-      if (updates.label) {
-        historicalLabels[id] = updates.label;
-      }
-
-      await get().updateSettings({
-        flavorDimensions: dimensions,
-        flavorDimensionHistoricalLabels: historicalLabels,
-      });
-
-      dispatchFlavorDimensionsChanged(dimensions);
-    },
-
-    deleteFlavorDimension: async id => {
-      const settings = get().settings;
-      const dimensions = (
-        settings.flavorDimensions || DEFAULT_FLAVOR_DIMENSIONS
-      ).filter(d => d.id !== id);
-
-      await get().updateSettings({ flavorDimensions: dimensions });
-      dispatchFlavorDimensionsChanged(dimensions);
-    },
-
-    reorderFlavorDimensions: async dimensions => {
-      // 更新 order 字段
-      const reorderedDimensions = dimensions.map((d, index) => ({
-        ...d,
-        order: index,
-      }));
-
-      await get().updateSettings({ flavorDimensions: reorderedDimensions });
-      dispatchFlavorDimensionsChanged(reorderedDimensions);
-    },
-
-    resetFlavorDimensions: async () => {
-      await get().updateSettings({
-        flavorDimensions: [...DEFAULT_FLAVOR_DIMENSIONS],
-      });
-      dispatchFlavorDimensionsChanged([...DEFAULT_FLAVOR_DIMENSIONS]);
-    },
-
-    getHistoricalLabel: id => {
-      const settings = get().settings;
-      return settings.flavorDimensionHistoricalLabels?.[id];
-    },
-
-    // ==================== 烘焙商配置管理 ====================
-
-    getRoasterConfigs: () => {
-      return get().settings.roasterConfigs || [];
-    },
-
-    getRoasterConfig: roasterName => {
-      const configs = get().settings.roasterConfigs || [];
-      return configs.find(c => c.roasterName === roasterName);
-    },
-
-    updateRoasterConfig: async (roasterName, updates) => {
-      const settings = get().settings;
-      const configs = [...(settings.roasterConfigs || [])];
-      const existingIndex = configs.findIndex(
-        c => c.roasterName === roasterName
-      );
-
-      if (existingIndex >= 0) {
-        configs[existingIndex] = {
-          ...configs[existingIndex],
-          ...updates,
-          updatedAt: Date.now(),
-        };
-      } else {
-        configs.push({
-          roasterName,
-          ...updates,
-          updatedAt: Date.now(),
-        });
-      }
-
-      await get().updateSettings({ roasterConfigs: configs });
-    },
-
-    deleteRoasterConfig: async roasterName => {
-      const settings = get().settings;
-      const configs = (settings.roasterConfigs || []).filter(
-        c => c.roasterName !== roasterName
-      );
-      await get().updateSettings({ roasterConfigs: configs });
-    },
-
-    // ==================== 器具排序 ====================
-
-    setEquipmentOrder: async order => {
-      await get().updateSettings({ equipmentOrder: order });
-    },
-
-    // ==================== 方案参数覆盖管理 ====================
-
-    setMethodParamOverride: async (equipmentId, methodId, params) => {
-      const settings = get().settings;
-      const overrides = { ...(settings.methodParamOverrides || {}) };
-      const key = `${equipmentId}:${methodId}`;
-
-      overrides[key] = {
-        ...params,
-        modifiedAt: Date.now(),
-      };
-
-      await get().updateSettings({ methodParamOverrides: overrides });
-
-      // 触发方案参数覆盖变化事件
-      dispatchMethodParamOverrideChanged(equipmentId, methodId, params);
-    },
-
-    clearMethodParamOverride: async (equipmentId, methodId) => {
-      const settings = get().settings;
-      const overrides = { ...(settings.methodParamOverrides || {}) };
-      const key = `${equipmentId}:${methodId}`;
-
-      if (overrides[key]) {
-        delete overrides[key];
-        await get().updateSettings({ methodParamOverrides: overrides });
-
-        // 触发方案参数覆盖清除事件
-        dispatchMethodParamOverrideChanged(equipmentId, methodId, null);
-      }
-    },
-
-    getMethodParamOverride: (equipmentId, methodId) => {
-      const settings = get().settings;
-      const overrides = settings.methodParamOverrides || {};
-      const key = `${equipmentId}:${methodId}`;
-      const override = overrides[key];
-
-      if (override) {
-        // 返回时排除 modifiedAt 字段
-        const { modifiedAt: _, ...params } = override;
-        return params;
-      }
-      return null;
-    },
-
-    resetSettings: async () => {
-      try {
-        await appSettingsRepository.save(defaultSettings);
-        set({ settings: defaultSettings });
-        dispatchSettingsChanged(defaultSettings);
-      } catch (error) {
-        console.error('[SettingsStore] resetSettings failed:', error);
-        throw error;
-      }
-    },
-
-    getSettingsForSync: () => {
-      return get().settings;
-    },
-
-    importSettings: async settings => {
-      const mergedSettings = mergeSettingsWithDefaults(
-        normalizeSyncSettings(settings)
-      );
-      try {
-        await appSettingsRepository.save(mergedSettings);
-        set({ settings: mergedSettings });
-        dispatchSettingsChanged(mergedSettings);
-      } catch (error) {
-        console.error('[SettingsStore] importSettings failed:', error);
-        throw error;
-      }
-    },
-  }))
+        },
+      },
+      [
+        'loadSettings',
+        'updateSettings',
+        'updateLayoutSettings',
+        'updateNavigationSettings',
+        'updateS3SyncSettings',
+        'updateWebDAVSyncSettings',
+        'updateSupabaseSyncSettings',
+        'hideEquipment',
+        'unhideEquipment',
+        'hideMethod',
+        'unhideMethod',
+        'addFlavorDimension',
+        'updateFlavorDimension',
+        'deleteFlavorDimension',
+        'reorderFlavorDimensions',
+        'resetFlavorDimensions',
+        'updateRoasterConfig',
+        'deleteRoasterConfig',
+        'setEquipmentOrder',
+        'setMethodParamOverride',
+        'clearMethodParamOverride',
+        'resetSettings',
+        'importSettings',
+      ]
+    )
+  )
 );
 
 /**

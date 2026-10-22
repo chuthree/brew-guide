@@ -1,5 +1,7 @@
 'use client';
 
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
+
 import React, { useEffect, useReducer } from 'react';
 import Image from 'next/image';
 import { Capacitor } from '@capacitor/core';
@@ -221,7 +223,9 @@ const Onboarding: React.FC<OnboardingProps> = ({
       Storage.setSync('onboardingCompleted', 'true');
 
       try {
-        await legacySettingsRepository.set('onboardingCompleted', 'true');
+        await withDataMutation(() =>
+          legacySettingsRepository.set('onboardingCompleted', 'true')
+        );
       } catch (error) {
         console.error('写入引导完成状态到 IndexedDB 失败:', error);
       }

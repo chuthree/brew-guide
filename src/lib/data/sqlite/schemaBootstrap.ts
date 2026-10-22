@@ -228,7 +228,9 @@ async function readTableNames(executor: SqliteExecutor): Promise<string[]> {
       'sqlite_master returned a table without a string name'
     );
   }
-  return names as string[];
+  // Android creates this locale metadata table before application schema setup.
+  // Exclude it from fresh-database, v1 validation, and rollback checks alike.
+  return (names as string[]).filter(name => name !== 'android_metadata');
 }
 
 function assertExpectedTables(actual: readonly string[]): void {
@@ -239,6 +241,9 @@ function assertExpectedTables(actual: readonly string[]): void {
   expected.add('mcp_operations');
   expected.add('mcp_activity');
   expected.add('mcp_publications');
+  // Android ContentProvider durable projection outbox is device-local as well.
+  expected.add('provider_publications');
+  expected.add('provider_requests');
   const unexpected = actual.filter(name => !expected.has(name));
   if (missing.length || unexpected.length) {
     throw new SqliteSchemaBootstrapError(

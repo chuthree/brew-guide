@@ -1,4 +1,6 @@
 'use client';
+import { useCoordinatedAction } from '@/lib/hooks/useCoordinatedAction';
+import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 
 import React, {
   useCallback,
@@ -643,14 +645,14 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }, 0);
   }, []);
 
-  const handleSaveNote = useCallback(
+  const handleSaveNoteRaw = useCallback(
     async (note: BrewingNoteData) => {
       shouldAutoPersistRef.current = false;
 
       const selection =
         note.equipmentId !== undefined || note.methodId !== undefined
           ? pickNoteSelection(note)
-          : await resolveFormNoteSelection({
+          : await callStoreActionInMutation(resolveFormNoteSelection, {
               equipment: selectedEquipment,
               method: selectedMethodId,
             });
@@ -665,10 +667,12 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       if (
         canUseCoffeeBeanModule &&
         selectedCoffeeBean &&
-        isPendingCoffeeBean(selectedCoffeeBean)
+        isPendingCoffeeBean(selectedCoffeeBean) &&
+        !completeNote.beanId
       ) {
         try {
-          const newBean = await createBeanFromBrewUsage(
+          const newBean = await callStoreActionInMutation(
+            createBeanFromBrewUsage,
             selectedCoffeeBean.name,
             completeNote.params?.coffee
           );
@@ -680,8 +684,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           );
         } catch (error) {
           console.error('创建咖啡豆失败:', error);
-          alert('创建咖啡豆失败，请重试');
-          return;
+          throw error;
         }
       } else if (
         canUseCoffeeBeanModule &&
@@ -697,7 +700,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       }
 
       clearBrewingNoteDraftSession();
-      await Promise.resolve(onSave(completeNote));
+      await callStoreActionInMutation(onSave, completeNote);
       onClose();
     },
     [
@@ -711,6 +714,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       selectedMethodId,
     ]
   );
+
+  const handleSaveNote = useCoordinatedAction(handleSaveNoteRaw);
 
   const handleDraftChange = useCallback(
     (nextDraft: BrewingNoteDraftData) => {

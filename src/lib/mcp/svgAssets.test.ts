@@ -46,12 +46,12 @@ describe('MCP inline SVG assets', () => {
     });
     expect(animations[0].frames?.[1].svgData).toBe('');
   });
-  it('supports local gradients and text entities without rewriting imported drawing styles', () => {
+  it('rejects non-editable gradients and text in newly supplied canvas assets', () => {
     expect(() =>
       validateInlineSvg(
-        '<svg xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g"><stop offset="0" stop-color="#fff"/></linearGradient></defs><path d="M0 0L1 1" fill="url(#g)"/><title>杯 &amp; 豆</title></svg>'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><defs><linearGradient id="g"><stop offset="0" stop-color="#fff"/></linearGradient></defs><path d="M0 0L1 1" fill="url(#g)"/><title>杯 &amp; 豆</title></svg>'
       )
-    ).not.toThrow();
+    ).toThrow('Unsupported SVG element: defs');
   });
   it.each([
     '<svg><script>alert(1)</script></svg>',
@@ -75,7 +75,7 @@ describe('MCP inline SVG assets', () => {
     expect(() => validateInlineSvg(svg)).toThrow()
   );
   it('bounds the aggregate frame payload', () => {
-    const frameSvg = `<svg>${' '.repeat(250 * 1024)}</svg>`;
+    const frameSvg = `<svg viewBox="0 0 300 300">${' '.repeat(250 * 1024)}</svg>`;
     expect(() =>
       normalizeEquipmentSvgFields({
         customPourAnimations: [

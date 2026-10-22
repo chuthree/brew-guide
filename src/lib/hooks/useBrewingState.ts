@@ -1,4 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  callStoreActionInMutation,
+  coordinateStoreActions,
+} from '@/lib/data/storeMutationBoundary';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Method, equipmentList, CustomEquipment } from '@/lib/core/config';
 import { BrewingNoteData, CoffeeBean } from '@/types/app';
 import {
@@ -361,7 +365,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
   }, []);
 
   // 简化的保存笔记函数 - 统一数据流避免竞态条件
-  const handleSaveNote = useCallback(
+  const handleSaveNoteRaw = useCallback(
     async (data: BrewingNoteData) => {
       try {
         const stages = selectedMethod?.params.stages || [];
@@ -381,28 +385,38 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
           stages,
         };
 
-        // 🔥 使用 Zustand store 保存笔记
-        const { useBrewingNoteStore } =
-          await import('@/lib/stores/brewingNoteStore');
-        await useBrewingNoteStore.getState().addNote(newNote);
+        {
+          // 🔥 使用 Zustand store 保存笔记
+          const { useBrewingNoteStore } =
+            await import('@/lib/stores/brewingNoteStore');
+          await callStoreActionInMutation(
+            useBrewingNoteStore.getState().addNote,
+            newNote
+          );
 
-        // 🎯 扣减咖啡豆用量 - 使用笔记中保存的参数值,而不是冲煮步骤的原始值
-        // 这样才能正确处理用户在笔记步骤中修改参数的情况
-        if (selectedCoffeeBean && newNote.params?.coffee) {
-          const match = newNote.params.coffee.match(/(\d+\.?\d*)/);
-          if (match) {
-            const coffeeAmount = parseFloat(match[1]);
-            if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-              const { initializeBeanFromBrewUsage, updateBeanRemaining } =
-                await import('@/lib/stores/coffeeBeanStore');
+          // 🎯 扣减咖啡豆用量 - 使用笔记中保存的参数值,而不是冲煮步骤的原始值
+          // 这样才能正确处理用户在笔记步骤中修改参数的情况
+          if (selectedCoffeeBean && newNote.params?.coffee) {
+            const match = newNote.params.coffee.match(/(\d+\.?\d*)/);
+            if (match) {
+              const coffeeAmount = parseFloat(match[1]);
+              if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+                const { initializeBeanFromBrewUsage, updateBeanRemaining } =
+                  await import('@/lib/stores/coffeeBeanStore');
 
-              if (selectedCoffeeBeanCreatedFromSearch) {
-                await initializeBeanFromBrewUsage(
-                  selectedCoffeeBean,
-                  newNote.params.coffee
-                );
-              } else {
-                await updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
+                if (selectedCoffeeBeanCreatedFromSearch) {
+                  await callStoreActionInMutation(
+                    initializeBeanFromBrewUsage,
+                    selectedCoffeeBean,
+                    newNote.params.coffee
+                  );
+                } else {
+                  await callStoreActionInMutation(
+                    updateBeanRemaining,
+                    selectedCoffeeBean,
+                    coffeeAmount
+                  );
+                }
               }
             }
           }
@@ -415,7 +429,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         setShowHistory(true);
         resetBrewingState();
       } catch (_error) {
-        alert('保存笔记时出错，请重试');
+        throw _error;
       }
     },
     [
@@ -425,6 +439,11 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
       currentBrewingMethod,
       resetBrewingState,
     ]
+  );
+
+  const handleSaveNote = useMemo(
+    () => coordinateStoreActions({ save: handleSaveNoteRaw }, ['save']).save,
+    [handleSaveNoteRaw]
   );
 
   // 简化的自定义方案保存

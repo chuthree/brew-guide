@@ -2,6 +2,7 @@ overrides:
   "@tauri-apps/api": "2.9.1"
 
 allowBuilds:
+  core-js: false
   esbuild: true
   msgpackr-extract: false
   sharp: false

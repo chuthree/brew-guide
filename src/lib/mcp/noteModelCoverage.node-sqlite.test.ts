@@ -293,7 +293,7 @@ describe('MCP full note model and grinder integration (real SQLite)', () => {
       method: '一刀流',
       coffeeBeanName: 'Original bean',
     });
-    expect((await stored(result)).params?.grindSize).toBe('TestMill · 20');
+    expect((await stored(result)).params?.grindSize).toBe('TestMill 20');
     expect(await balance()).toBe(90);
   });
 });

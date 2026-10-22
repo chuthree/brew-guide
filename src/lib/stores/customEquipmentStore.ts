@@ -1,3 +1,7 @@
+import {
+  coordinateStoreActions,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 /**
  * 自定义器具 Store
  *
@@ -58,151 +62,180 @@ function generateEquipmentId(animationType: string): string {
  * 自定义器具 Store
  */
 export const useCustomEquipmentStore = create<CustomEquipmentStore>()(
-  subscribeWithSelector((set, get) => ({
-    equipments: [],
-    isLoading: false,
-    initialized: false,
-    error: null,
+  subscribeWithSelector((set, get) =>
+    coordinateStoreActions<CustomEquipmentStore>(
+      {
+        equipments: [],
+        isLoading: false,
+        initialized: false,
+        error: null,
 
-    loadEquipments: async () => {
-      if (get().isLoading) return;
+        loadEquipments: async () => {
+          if (get().isLoading) return;
 
-      set({ isLoading: true, error: null });
+          set({ isLoading: true, error: null });
 
-      try {
-        let equipments = await customEquipmentRepository.list();
+          try {
+            let equipments = await customEquipmentRepository.list();
 
-        // 如果 IndexedDB 为空，尝试从 localStorage 迁移
-        if (equipments.length === 0) {
-          equipments = await migrateFromLocalStorage();
-          if (equipments.length > 0) {
-            await customEquipmentRepository.upsertMany(equipments);
-            console.log(`已迁移 ${equipments.length} 个自定义器具到本地数据库`);
+            // 如果 IndexedDB 为空，尝试从 localStorage 迁移
+            if (equipments.length === 0) {
+              equipments = await migrateFromLocalStorage();
+              if (equipments.length > 0) {
+                await customEquipmentRepository.upsertMany(equipments);
+                console.log(
+                  `已迁移 ${equipments.length} 个自定义器具到本地数据库`
+                );
+              }
+            }
+
+            set({ equipments, isLoading: false, initialized: true });
+          } catch (error) {
+            console.error(
+              '[CustomEquipmentStore] loadEquipments failed:',
+              error
+            );
+            set({
+              error: '加载自定义器具失败',
+              isLoading: false,
+              initialized: false,
+            });
+            throw error;
           }
-        }
+        },
 
-        set({ equipments, isLoading: false, initialized: true });
-      } catch (error) {
-        console.error('[CustomEquipmentStore] loadEquipments failed:', error);
-        set({
-          error: '加载自定义器具失败',
-          isLoading: false,
-          initialized: false,
-        });
-        throw error;
-      }
-    },
+        addEquipment: async equipmentData => {
+          const newEquipment: CustomEquipment = {
+            ...equipmentData,
+            id: generateEquipmentId(equipmentData.animationType),
+            isCustom: true,
+            timestamp: Date.now(),
+          } as CustomEquipment;
 
-    addEquipment: async equipmentData => {
-      const newEquipment: CustomEquipment = {
-        ...equipmentData,
-        id: generateEquipmentId(equipmentData.animationType),
-        isCustom: true,
-        timestamp: Date.now(),
-      } as CustomEquipment;
+          try {
+            await customEquipmentRepository.save(newEquipment);
+            set(state => ({ equipments: [...state.equipments, newEquipment] }));
 
-      try {
-        await customEquipmentRepository.save(newEquipment);
-        set(state => ({ equipments: [...state.equipments, newEquipment] }));
+            // 触发变化事件
+            dispatchEquipmentChanged('create', newEquipment);
 
-        // 触发变化事件
-        dispatchEquipmentChanged('create', newEquipment);
+            return newEquipment;
+          } catch (error) {
+            console.error('[CustomEquipmentStore] addEquipment failed:', error);
+            throw error;
+          }
+        },
 
-        return newEquipment;
-      } catch (error) {
-        console.error('[CustomEquipmentStore] addEquipment failed:', error);
-        throw error;
-      }
-    },
+        updateEquipment: async (id, updates) => {
+          const { equipments } = get();
+          const existingEquipment = equipments.find(e => e.id === id);
+          if (!existingEquipment) return null;
 
-    updateEquipment: async (id, updates) => {
-      const { equipments } = get();
-      const existingEquipment = equipments.find(e => e.id === id);
-      if (!existingEquipment) return null;
+          const updatedEquipment: CustomEquipment = {
+            ...existingEquipment,
+            ...updates,
+            id,
+            isCustom: true,
+            timestamp: Date.now(),
+          };
 
-      const updatedEquipment: CustomEquipment = {
-        ...existingEquipment,
-        ...updates,
-        id,
-        isCustom: true,
-        timestamp: Date.now(),
-      };
-
-      try {
-        await customEquipmentRepository.save(updatedEquipment);
-        set(state => ({
-          equipments: state.equipments.map(e =>
-            e.id === id ? updatedEquipment : e
-          ),
-        }));
-
-        // 触发变化事件
-        dispatchEquipmentChanged('update', updatedEquipment);
-
-        return updatedEquipment;
-      } catch (error) {
-        console.error('[CustomEquipmentStore] updateEquipment failed:', error);
-        throw error;
-      }
-    },
-
-    deleteEquipment: async id => {
-      try {
-        // 同步删除关联方案的 Store 状态、持久化记录和云端 tombstone。
-        const { useCustomMethodStore } =
-          await import('@/lib/stores/customMethodStore');
-        await useCustomMethodStore.getState().deleteMethodsForEquipment(id);
-        await customEquipmentRepository.delete(id);
-
-        set(state => ({
-          equipments: state.equipments.filter(e => e.id !== id),
-        }));
-
-        // 先前一步已发出方案 tombstone，这里再同步器具删除。
-        dispatchEquipmentChanged('delete', { id } as CustomEquipment);
-
-        return true;
-      } catch (error) {
-        console.error('[CustomEquipmentStore] deleteEquipment failed:', error);
-        return false;
-      }
-    },
-
-    setEquipments: equipments => {
-      set({ equipments, initialized: true });
-    },
-
-    upsertEquipment: async equipment => {
-      try {
-        const equipmentWithFlag = { ...equipment, isCustom: true as const };
-        await customEquipmentRepository.save(equipmentWithFlag);
-
-        set(state => {
-          const exists = state.equipments.some(e => e.id === equipment.id);
-          if (exists) {
-            return {
+          try {
+            await customEquipmentRepository.save(updatedEquipment);
+            set(state => ({
               equipments: state.equipments.map(e =>
-                e.id === equipment.id ? equipmentWithFlag : e
+                e.id === id ? updatedEquipment : e
               ),
-            };
-          } else {
-            return { equipments: [...state.equipments, equipmentWithFlag] };
+            }));
+
+            // 触发变化事件
+            dispatchEquipmentChanged('update', updatedEquipment);
+
+            return updatedEquipment;
+          } catch (error) {
+            console.error(
+              '[CustomEquipmentStore] updateEquipment failed:',
+              error
+            );
+            throw error;
           }
-        });
-      } catch (error) {
-        console.error('[CustomEquipmentStore] upsertEquipment failed:', error);
-      }
-    },
+        },
 
-    getEquipmentById: id => {
-      return get().equipments.find(e => e.id === id);
-    },
+        deleteEquipment: async id => {
+          try {
+            // 同步删除关联方案的 Store 状态、持久化记录和云端 tombstone。
+            const { useCustomMethodStore } =
+              await import('@/lib/stores/customMethodStore');
+            await callStoreActionInMutation(
+              useCustomMethodStore.getState().deleteMethodsForEquipment,
+              id
+            );
+            await customEquipmentRepository.delete(id);
 
-    refreshEquipments: async () => {
-      set({ initialized: false });
-      await get().loadEquipments();
-    },
-  }))
+            set(state => ({
+              equipments: state.equipments.filter(e => e.id !== id),
+            }));
+
+            // 先前一步已发出方案 tombstone，这里再同步器具删除。
+            dispatchEquipmentChanged('delete', { id } as CustomEquipment);
+
+            return true;
+          } catch (error) {
+            console.error(
+              '[CustomEquipmentStore] deleteEquipment failed:',
+              error
+            );
+            return false;
+          }
+        },
+
+        setEquipments: equipments => {
+          set({ equipments, initialized: true });
+        },
+
+        upsertEquipment: async equipment => {
+          try {
+            const equipmentWithFlag = { ...equipment, isCustom: true as const };
+            await customEquipmentRepository.save(equipmentWithFlag);
+
+            set(state => {
+              const exists = state.equipments.some(e => e.id === equipment.id);
+              if (exists) {
+                return {
+                  equipments: state.equipments.map(e =>
+                    e.id === equipment.id ? equipmentWithFlag : e
+                  ),
+                };
+              } else {
+                return { equipments: [...state.equipments, equipmentWithFlag] };
+              }
+            });
+          } catch (error) {
+            console.error(
+              '[CustomEquipmentStore] upsertEquipment failed:',
+              error
+            );
+          }
+        },
+
+        getEquipmentById: id => {
+          return get().equipments.find(e => e.id === id);
+        },
+
+        refreshEquipments: async () => {
+          set({ initialized: false });
+          await callStoreActionInMutation(get().loadEquipments);
+        },
+      },
+      [
+        'loadEquipments',
+        'addEquipment',
+        'updateEquipment',
+        'deleteEquipment',
+        'upsertEquipment',
+        'refreshEquipments',
+      ]
+    )
+  )
 );
 
 /**
@@ -262,18 +295,18 @@ export function isEquipmentNameAvailable(
 /**
  * 便捷函数：加载器具（兼容旧 API）
  */
-export async function loadCustomEquipments(): Promise<CustomEquipment[]> {
+async function loadCustomEquipmentsInMutation(): Promise<CustomEquipment[]> {
   const store = getCustomEquipmentStore();
   if (!store.initialized) {
-    await store.loadEquipments();
+    await callStoreActionInMutation(store.loadEquipments);
   }
-  return store.equipments;
+  return getCustomEquipmentStore().equipments;
 }
 
 /**
  * 便捷函数：保存器具（兼容旧 API）
  */
-export async function saveCustomEquipment(
+async function saveCustomEquipmentInMutation(
   equipment: CustomEquipment,
   methods?: Method[]
 ): Promise<void> {
@@ -281,10 +314,17 @@ export async function saveCustomEquipment(
 
   if (equipment.id && store.equipments.some(e => e.id === equipment.id)) {
     // 更新现有器具
-    await store.updateEquipment(equipment.id, equipment);
+    await callStoreActionInMutation(
+      store.updateEquipment,
+      equipment.id,
+      equipment
+    );
   } else {
     // 创建新器具
-    const newEquipment = await store.addEquipment(equipment);
+    const newEquipment = await callStoreActionInMutation(
+      store.addEquipment,
+      equipment
+    );
     equipment.id = newEquipment.id;
   }
 
@@ -293,35 +333,66 @@ export async function saveCustomEquipment(
     const { useCustomMethodStore } =
       await import('@/lib/stores/customMethodStore');
     const methodStore = useCustomMethodStore.getState();
-    await methodStore.setMethodsForEquipment(equipment.id, methods);
+    await callStoreActionInMutation(
+      methodStore.setMethodsForEquipment,
+      equipment.id,
+      methods
+    );
   }
 }
 
 /**
  * 便捷函数：删除器具（兼容旧 API）
  */
-export async function deleteCustomEquipment(id: string): Promise<void> {
+async function deleteCustomEquipmentInMutation(id: string): Promise<void> {
   const store = getCustomEquipmentStore();
-  await store.deleteEquipment(id);
+  await callStoreActionInMutation(store.deleteEquipment, id);
 }
 
 /**
  * 便捷函数：添加器具及其方案
  */
-export async function addEquipmentWithMethods(
+async function addEquipmentWithMethodsInMutation(
   equipment: Omit<CustomEquipment, 'id' | 'isCustom'>,
   methods?: Method[]
 ): Promise<CustomEquipment> {
   const store = getCustomEquipmentStore();
-  const newEquipment = await store.addEquipment(equipment);
+  const newEquipment = await callStoreActionInMutation(
+    store.addEquipment,
+    equipment
+  );
 
   if (methods && methods.length > 0) {
     // 动态导入以避免循环依赖
     const { useCustomMethodStore } =
       await import('@/lib/stores/customMethodStore');
     const methodStore = useCustomMethodStore.getState();
-    await methodStore.setMethodsForEquipment(newEquipment.id, methods);
+    await callStoreActionInMutation(
+      methodStore.setMethodsForEquipment,
+      newEquipment.id,
+      methods
+    );
   }
 
   return newEquipment;
 }
+
+export const {
+  loadCustomEquipments,
+  saveCustomEquipment,
+  deleteCustomEquipment,
+  addEquipmentWithMethods,
+} = coordinateStoreActions(
+  {
+    loadCustomEquipments: loadCustomEquipmentsInMutation,
+    saveCustomEquipment: saveCustomEquipmentInMutation,
+    deleteCustomEquipment: deleteCustomEquipmentInMutation,
+    addEquipmentWithMethods: addEquipmentWithMethodsInMutation,
+  },
+  [
+    'loadCustomEquipments',
+    'saveCustomEquipment',
+    'deleteCustomEquipment',
+    'addEquipmentWithMethods',
+  ]
+);

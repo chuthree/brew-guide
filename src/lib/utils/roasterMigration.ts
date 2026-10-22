@@ -1,3 +1,4 @@
+import { coordinateStoreActions } from '@/lib/data/storeMutationBoundary';
 /**
  * 烘焙商字段迁移模块
  *
@@ -34,7 +35,7 @@ import { getCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
  * - 数据导入后
  * - 云同步下载后
  */
-export async function migrateRoasterField(): Promise<void> {
+async function migrateRoasterFieldInMutation(): Promise<void> {
   const settingsStore = getSettingsStore();
   const { roasterSeparator } = settingsStore.settings;
 
@@ -83,3 +84,8 @@ export async function resetRoasterMigration(): Promise<void> {
     '[RoasterMigration] resetRoasterMigration 已废弃，按需迁移策略不再需要重置状态'
   );
 }
+
+export const { migrateRoasterField } = coordinateStoreActions(
+  { migrateRoasterField: migrateRoasterFieldInMutation },
+  ['migrateRoasterField']
+);

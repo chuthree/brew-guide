@@ -21,6 +21,7 @@ import {
 } from '@/lib/utils/downloadUrls';
 import { Capacitor } from '@capacitor/core';
 import UpdateDrawer from './UpdateDrawer';
+import { useProviderAccessState, refreshProviderAccessState } from '@/lib/android-provider/accessState';
 import SettingGroup, { type SettingItemData } from './SettingItem';
 import SettingsSearchBar from './SettingsSearchBar';
 import SettingsSearchResults from './SettingsSearchResults';
@@ -50,6 +51,7 @@ import {
   ChevronLeft,
   Monitor,
   Database,
+  ShieldCheck,
   Bell,
   Cloud,
   Upload,
@@ -89,6 +91,7 @@ export interface SubSettingsHandlers {
   onOpenBrewingSettings: () => void;
   onOpenTimerSettings: () => void;
   onOpenDataSettings: () => void;
+  onOpenProviderSettings: () => void;
   onOpenNotificationSettings: () => void;
   onOpenRandomCoffeeBeanSettings: () => void;
   onOpenEquipmentMethodSettings: () => void;
@@ -223,6 +226,10 @@ const Settings: React.FC<SettingsProps> = ({
   settingsSearchTarget,
   onSettingsSearchTargetChange,
 }) => {
+  const hasProviderCallers = useProviderAccessState(state => !!state.state?.callers.length);
+  useEffect(() => {
+    if (isOpen) void refreshProviderAccessState().catch(() => {});
+  }, [isOpen]);
   // 使用 Zustand store 管理设置
   const settings = useSettingsStore(state => state.settings);
   const navigationState = deriveNavigationSettings(settings.navigationSettings);
@@ -505,6 +512,7 @@ const Settings: React.FC<SettingsProps> = ({
         'brewing-settings': subSettingsHandlers.onOpenBrewingSettings,
         'timer-settings': subSettingsHandlers.onOpenTimerSettings,
         'data-settings': subSettingsHandlers.onOpenDataSettings,
+        'provider-settings': subSettingsHandlers.onOpenProviderSettings,
         'notification-settings': subSettingsHandlers.onOpenNotificationSettings,
         'random-coffee-bean-settings':
           subSettingsHandlers.onOpenRandomCoffeeBeanSettings,
@@ -686,6 +694,14 @@ const Settings: React.FC<SettingsProps> = ({
       onClick: subSettingsHandlers.onOpenDataSettings,
     },
   ];
+  if (hasProviderCallers) {
+    dataSettingsItems.push({
+      icon: ShieldCheck,
+      label: '授权管理',
+      settingId: 'provider-settings',
+      onClick: subSettingsHandlers.onOpenProviderSettings,
+    });
+  }
   const aboutSettingsItems: SettingItemData[] = [
     {
       icon: Info,

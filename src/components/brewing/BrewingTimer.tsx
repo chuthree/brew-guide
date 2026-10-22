@@ -1,4 +1,8 @@
 'use client';
+import {
+  callStoreActionInMutation,
+  coordinateStoreActions,
+} from '@/lib/data/storeMutationBoundary';
 
 import React, {
   useState,
@@ -583,7 +587,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   }, [countdownTime, onCountdownChange]);
 
   // 修改保存笔记函数，统一数据流避免竞态条件
-  const handleSaveNote = useCallback(async (note: BrewingNoteData) => {
+  const handleSaveNoteRaw = useCallback(async (note: BrewingNoteData) => {
     try {
       // 🔥 使用 Zustand store 保存笔记
       const { useBrewingNoteStore } =
@@ -617,10 +621,17 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
       if (isExistingNote) {
         // 更新现有笔记
-        await useBrewingNoteStore.getState().updateNote(noteData.id, noteData);
+        await callStoreActionInMutation(
+          useBrewingNoteStore.getState().updateNote,
+          noteData.id,
+          noteData
+        );
       } else {
         // 添加新笔记
-        await useBrewingNoteStore.getState().addNote(noteData);
+        await callStoreActionInMutation(
+          useBrewingNoteStore.getState().addNote,
+          noteData
+        );
       }
 
       // 设置笔记已保存标记
@@ -630,10 +641,14 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
 
       // 关闭笔记表单
       setShowNoteForm(false);
-    } catch {
-      alert('保存失败，请重试');
+    } catch (error) {
+      throw error;
     }
   }, []);
+  const handleSaveNote = useMemo(
+    () => coordinateStoreActions({ save: handleSaveNoteRaw }, ['save']).save,
+    [handleSaveNoteRaw]
+  );
 
   useEffect(() => {
     if (

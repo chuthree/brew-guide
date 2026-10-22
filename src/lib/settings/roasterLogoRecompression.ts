@@ -1,3 +1,8 @@
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
+import {
+  registerCoordinatedAction,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 import {
   ROASTER_LOGO_COMPRESSION_OPTIONS,
   ROASTER_LOGO_MAX_SIZE_BYTES,
@@ -18,7 +23,7 @@ const ROASTER_LOGO_RECOMPRESSION_PROFILE = {
   compression: ROASTER_LOGO_COMPRESSION_OPTIONS,
 };
 
-export async function recompressOversizedRoasterLogos(): Promise<RecompressRoasterLogosStats> {
+async function recompressRoasterLogosInMutation(): Promise<RecompressRoasterLogosStats> {
   const stats = createImageRecompressionStats();
   const settingsStore = getSettingsStore();
   const roasterConfigs = settingsStore.settings.roasterConfigs || [];
@@ -59,8 +64,15 @@ export async function recompressOversizedRoasterLogos(): Promise<RecompressRoast
   }
 
   if (changed) {
-    await settingsStore.updateSettings({ roasterConfigs: nextConfigs });
+    await callStoreActionInMutation(settingsStore.updateSettings, {
+      roasterConfigs: nextConfigs,
+    });
   }
 
   return stats;
 }
+
+export const recompressOversizedRoasterLogos = registerCoordinatedAction(
+  () => withDataMutation(recompressRoasterLogosInMutation),
+  recompressRoasterLogosInMutation
+);

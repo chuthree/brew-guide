@@ -1180,10 +1180,12 @@ export async function mutateCatalogTool(
 }
 
 export async function publishCatalogChanges(
-  changes: MutationChange[]
+  changes: MutationChange[],
+  suppliedDriver?: import('@/lib/data/sqlite/driver').SqliteDriver,
+  source = 'local'
 ): Promise<void> {
   if (typeof window === 'undefined') return;
-  const driver = await getMcpDriver();
+  const driver = suppliedDriver ?? (await getMcpDriver());
   const [currentEquipment, currentMethods, currentGrinders] = await Promise.all(
     [equipments(driver), methods(driver), grinders(driver)]
   );
@@ -1218,7 +1220,7 @@ export async function publishCatalogChanges(
             action: equipment ? 'update' : 'delete',
             equipmentId: change.id,
             equipment,
-            source: 'local',
+            source,
           },
         })
       );
@@ -1233,7 +1235,7 @@ export async function publishCatalogChanges(
             action: record ? 'update' : 'delete',
             equipmentId: change.id,
             methods: record?.methods || [],
-            source: 'local',
+            source,
           },
         })
       );
@@ -1245,7 +1247,7 @@ export async function publishCatalogChanges(
     }
     if (change.entity === 'grinder')
       window.dispatchEvent(
-        new CustomEvent('grinderDataChanged', { detail: { source: 'local' } })
+        new CustomEvent('grinderDataChanged', { detail: { source } })
       );
   }
 }

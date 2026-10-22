@@ -53,7 +53,15 @@ async function initializeNative(
 
     const { bootstrapSqliteSchema } =
       await import('@/lib/data/sqlite/schemaBootstrap');
-    await bootstrapSqliteSchema(driver);
+    if (isAndroid) {
+      // Prevent first-launch UI schema checks from racing a headless Provider.
+      // Release before legacy migration, which may await explicit user consent.
+      const { withAndroidDatabaseMutation } =
+        await import('./sqlite/providerSqliteDriver');
+      await withAndroidDatabaseMutation(() => bootstrapSqliteSchema(driver!));
+    } else {
+      await bootstrapSqliteSchema(driver);
+    }
 
     const imageFileStore =
       runtimeInfo.runtime === 'tauri'

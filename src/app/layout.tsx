@@ -1,3 +1,4 @@
+import ProviderAuthorizationDrawer from '@/components/android-provider/ProviderAuthorizationDrawer';
 import { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { ThemeProvider } from 'next-themes';
@@ -282,6 +283,7 @@ export default function RootLayout({
                 <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
               </div>
               {!isDevelopment && <PWAUpdatePrompt />}
+              <ProviderAuthorizationDrawer />
               <LightToast />
               <ExitToast />
             </div>

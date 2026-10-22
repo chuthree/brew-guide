@@ -9,7 +9,7 @@ import {
   getBrewingNote,
   saveBrewingNote,
 } from '@/lib/data/sqlite/repositories/brewingNote';
-import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/capacityAdjustment';
+import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/amount';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 import { stripBrewingNoteImages } from '@/lib/notes/imageRecords';
 import type { Schema } from './toolDefinitions';

@@ -560,7 +560,7 @@ describe('catalog preferences', () => {
 describe('MCP persisted equipment SVG assets', () => {
   it('roundtrips drawings and frame animation configuration through SQLite, preserving imported fields on unrelated edits', async () => {
     const svg =
-      '<svg viewBox="0 0 10 10"><path d="M0 0L10 10" stroke="var(--custom-shape-color)"/></svg>';
+      '<svg viewBox="0 0 10 10"><path d="M0 0L10 10" stroke="var(--custom-shape-color)" stroke-width="1" fill="none"/></svg>';
     const created = (
       await mutate('create_equipment', {
         equipment: {
@@ -667,11 +667,11 @@ describe('MCP legacy SVG retention', () => {
 });
 
 describe('MCP custom animation reference integrity', () => {
-  it('rejects removing or changing used IDs, allows names and unused removal, and preserves unknown imported references', async () => {
+  it('rejects removing or changing used IDs and allows labels and unused removal', async () => {
     const animations = ['used', 'unused'].map(id => ({
       id,
       name: id,
-      customAnimationSvg: '<svg/>',
+      customAnimationSvg: '<svg viewBox="0 0 10 10"/>',
     }));
     const created = (
       await mutate('create_equipment', {
@@ -689,10 +689,7 @@ describe('MCP custom animation reference integrity', () => {
           ...method,
           params: {
             ...method.params,
-            stages: [
-              { ...method.params.stages[0], pourType: 'used' },
-              { ...method.params.stages[0], pourType: 'imported-unknown' },
-            ],
+            stages: [{ ...method.params.stages[0], pourType: 'used' }],
           },
         },
       })
@@ -707,7 +704,7 @@ describe('MCP custom animation reference integrity', () => {
           expectedVersion: created.version,
           changes: { customPourAnimations },
         })
-      ).rejects.toThrow('References:');
+      ).rejects.toThrow('Unavailable pourType "used"');
       const readback = (await read('get_equipment', { id: created.id }))
         .equipment as View;
       expect(readback.version).toBe(created.version);
@@ -728,12 +725,12 @@ describe('MCP custom animation reference integrity', () => {
           equipmentId: created.id,
         })
       )
-    ).toContain('imported-unknown');
+    ).toContain('used');
     await mutate('update_method', {
       id: createdMethod.id,
       equipmentId: created.id,
       expectedVersion: createdMethod.version,
-      changes: { params: method.params },
+      changes: { params: { ...method.params, stages: [] } },
     });
     await expect(
       mutate('update_equipment', {
@@ -742,5 +739,46 @@ describe('MCP custom animation reference integrity', () => {
         changes: { customPourAnimations: [] },
       })
     ).resolves.toBeDefined();
+  });
+  it('preserves unknown imported animation references on unrelated edits but requires repair before changing available animations', async () => {
+    const equipment = (
+      await mutate('create_equipment', {
+        equipment: { name: 'Imported animation refs', animationType: 'custom' },
+      })
+    ).result.equipment as View;
+    const imported = {
+      ...method,
+      id: 'legacy-animation-method',
+      params: {
+        ...method.params,
+        stages: [{ ...method.params.stages[0], pourType: 'imported-unknown' }],
+      },
+    };
+    await db.driver.execute(
+      'INSERT INTO custom_methods (equipment_id, methods_json, extra_json) VALUES (?, ?, ?)',
+      [equipment.id, JSON.stringify([imported]), '{}']
+    );
+    const updated = (
+      await mutate('update_equipment', {
+        id: equipment.id,
+        expectedVersion: equipment.version,
+        changes: { note: 'Unrelated metadata edit' },
+      })
+    ).result.equipment as View;
+    expect(
+      JSON.stringify(
+        await read('get_method', {
+          equipmentId: equipment.id,
+          id: imported.id,
+        })
+      )
+    ).toContain('imported-unknown');
+    await expect(
+      mutate('update_equipment', {
+        id: equipment.id,
+        expectedVersion: updated.version,
+        changes: { customPourAnimations: [] },
+      })
+    ).rejects.toThrow('Unavailable pourType "imported-unknown"');
   });
 });

@@ -1,3 +1,7 @@
+import {
+  coordinateStoreActions,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 /**
  * 数据层统一初始化器
  *
@@ -103,6 +107,19 @@ export async function initializeDataLayer(): Promise<void> {
     console.log('✅ 数据层初始化完成');
 
     if (
+      runtimeInitialization.runtime === 'capacitor' &&
+      runtimeInitialization.backend === 'native-sqlite'
+    ) {
+      try {
+        const { initializeAndroidProviderBridge } =
+          await import('@/lib/provider/foregroundBridge');
+        await initializeAndroidProviderBridge();
+      } catch {
+        console.error('ContentProvider 数据恢复失败，将在下次打开时重试');
+      }
+    }
+
+    if (
       runtimeInitialization.runtime === 'tauri' &&
       runtimeInitialization.backend === 'native-sqlite'
     ) {
@@ -193,7 +210,7 @@ export async function exportAllData(): Promise<{
 /**
  * 导入所有数据（用于恢复/同步）
  */
-export async function importAllData(data: {
+async function importAllDataInMutation(data: {
   settings?: ReturnType<typeof useSettingsStore.getState>['settings'];
   coffeeBeans?: ReturnType<typeof useCoffeeBeanStore.getState>['beans'];
   brewingNotes?: ReturnType<typeof useBrewingNoteStore.getState>['notes'];
@@ -210,7 +227,12 @@ export async function importAllData(data: {
   const tasks: Promise<void>[] = [];
 
   if (data.settings) {
-    tasks.push(useSettingsStore.getState().importSettings(data.settings));
+    tasks.push(
+      callStoreActionInMutation(
+        useSettingsStore.getState().importSettings,
+        data.settings
+      )
+    );
   }
 
   if (data.coffeeBeans) {
@@ -235,7 +257,10 @@ export async function importAllData(data: {
     tasks.push(
       (async () => {
         for (const note of data.brewingNotes!) {
-          await useBrewingNoteStore.getState().upsertNote(note);
+          await callStoreActionInMutation(
+            useBrewingNoteStore.getState().upsertNote,
+            note
+          );
         }
       })()
     );
@@ -245,7 +270,10 @@ export async function importAllData(data: {
     tasks.push(
       (async () => {
         for (const equipment of data.customEquipments!) {
-          await useCustomEquipmentStore.getState().upsertEquipment(equipment);
+          await callStoreActionInMutation(
+            useCustomEquipmentStore.getState().upsertEquipment,
+            equipment
+          );
         }
       })()
     );
@@ -257,18 +285,30 @@ export async function importAllData(data: {
         for (const [equipmentId, methods] of Object.entries(
           data.customMethods!
         )) {
-          await useCustomMethodStore
-            .getState()
-            .setMethodsForEquipment(equipmentId, methods);
+          await callStoreActionInMutation(
+            useCustomMethodStore.getState().setMethodsForEquipment,
+            equipmentId,
+            methods
+          );
         }
       })()
     );
   }
 
   if (data.grinders) {
-    tasks.push(useGrinderStore.getState().setGrinders(data.grinders));
+    tasks.push(
+      callStoreActionInMutation(
+        useGrinderStore.getState().setGrinders,
+        data.grinders
+      )
+    );
   }
 
   await Promise.all(tasks);
   console.log('✅ 数据导入完成');
 }
+
+export const { importAllData } = coordinateStoreActions(
+  { importAllData: importAllDataInMutation },
+  ['importAllData']
+);

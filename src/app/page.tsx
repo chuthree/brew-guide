@@ -1,4 +1,8 @@
 'use client';
+import { useCoordinatedAction } from '@/lib/hooks/useCoordinatedAction';
+
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
+import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 
 // 导入React和必要的hooks
 import React, {
@@ -1950,43 +1954,56 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           CapacitySyncManager.extractCoffeeAmount(coffeeParam);
 
         if (coffeeAmount > 0) {
-          if (selectedCoffeeBeanCreatedFromSearch) {
-            await initializeBeanFromBrewUsage(selectedCoffeeBean, coffeeParam);
-          } else {
-            await updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
-          }
+          await withDataMutation(async () => {
+            if (selectedCoffeeBeanCreatedFromSearch) {
+              await callStoreActionInMutation(
+                initializeBeanFromBrewUsage,
+                selectedCoffeeBean,
+                coffeeParam
+              );
+            } else {
+              await callStoreActionInMutation(
+                updateBeanRemaining,
+                selectedCoffeeBean,
+                coffeeAmount
+              );
+            }
 
-          const now = Date.now();
-          const quickDecrementNote: BrewingNote = {
-            id: `${now}`,
-            timestamp: now,
-            equipment: selectedEquipment || '',
-            method: currentBrewingMethod.name,
-            params: normalizeBrewingNoteParams({
-              ...currentBrewingMethod.params,
-              coffee: CapacitySyncManager.formatCoffeeParam(coffeeAmount),
-            }),
-            totalTime: currentBrewingMethod.params.stages?.reduce(
-              (total, stage) => total + (stage.duration ?? stage.time ?? 0),
-              0
-            ),
-            coffeeBeanInfo: selectedCoffeeBeanData
-              ? {
-                  name: selectedCoffeeBeanData.name,
-                  roastLevel: selectedCoffeeBeanData.roastLevel || '中度烘焙',
-                  roastDate: selectedCoffeeBeanData.roastDate || '',
-                  roaster: selectedCoffeeBeanData.roaster,
-                }
-              : undefined,
-            beanId: selectedCoffeeBean,
-            source: 'quick-decrement',
-            quickDecrementAmount: coffeeAmount,
-            rating: 0,
-            taste: {},
-            notes: '',
-          };
+            const now = Date.now();
+            const quickDecrementNote: BrewingNote = {
+              id: `${now}`,
+              timestamp: now,
+              equipment: selectedEquipment || '',
+              method: currentBrewingMethod.name,
+              params: normalizeBrewingNoteParams({
+                ...currentBrewingMethod.params,
+                coffee: CapacitySyncManager.formatCoffeeParam(coffeeAmount),
+              }),
+              totalTime: currentBrewingMethod.params.stages?.reduce(
+                (total, stage) => total + (stage.duration ?? stage.time ?? 0),
+                0
+              ),
+              coffeeBeanInfo: selectedCoffeeBeanData
+                ? {
+                    name: selectedCoffeeBeanData.name,
+                    roastLevel: selectedCoffeeBeanData.roastLevel || '中度烘焙',
+                    roastDate: selectedCoffeeBeanData.roastDate || '',
+                    roaster: selectedCoffeeBeanData.roaster,
+                  }
+                : undefined,
+              beanId: selectedCoffeeBean,
+              source: 'quick-decrement',
+              quickDecrementAmount: coffeeAmount,
+              rating: 0,
+              taste: {},
+              notes: '',
+            };
 
-          await useBrewingNoteStore.getState().addNote(quickDecrementNote);
+            await callStoreActionInMutation(
+              useBrewingNoteStore.getState().addNote,
+              quickDecrementNote
+            );
+          });
           didDeductCoffee = true;
         }
       } catch (error) {
@@ -3425,109 +3442,128 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     []
   );
 
-  const handleSaveBrewingNote = async (note: BrewingNoteData) => {
-    try {
-      // 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } =
-        await import('@/lib/stores/brewingNoteStore');
+  const handleSaveBrewingNote = useCoordinatedAction(
+    async (note: BrewingNoteData) => {
+      try {
+        // 使用 Zustand store 保存笔记
+        const { useBrewingNoteStore } =
+          await import('@/lib/stores/brewingNoteStore');
 
-      const newNoteId = note.id || Date.now().toString();
-      const timestamp = note.timestamp || Date.now();
+        const newNoteId = note.id || Date.now().toString();
+        const timestamp = note.timestamp || Date.now();
 
-      // 🔥 修复：检查笔记是否真的存在于 store 中，而不是仅判断是否有 ID
-      const currentNotes = useBrewingNoteStore.getState().notes;
-      const isExistingNote =
-        !!note.id && currentNotes.some(n => n.id === note.id);
+        // 🔥 修复：检查笔记是否真的存在于 store 中，而不是仅判断是否有 ID
+        const currentNotes = useBrewingNoteStore.getState().notes;
+        const isExistingNote =
+          !!note.id && currentNotes.some(n => n.id === note.id);
 
-      const noteToSave = buildPersistedBrewingNote(note, {
-        id: newNoteId,
-        timestamp,
-      });
+        const noteToSave = buildPersistedBrewingNote(note, {
+          id: newNoteId,
+          timestamp,
+        });
 
-      if (isExistingNote) {
-        // 更新现有笔记
-        await useBrewingNoteStore.getState().updateNote(newNoteId, noteToSave);
-      } else {
-        // 添加新笔记
-        await useBrewingNoteStore.getState().addNote(noteToSave);
+        if (isExistingNote) {
+          // 更新现有笔记
+          await callStoreActionInMutation(
+            useBrewingNoteStore.getState().updateNote,
+            newNoteId,
+            noteToSave
+          );
+        } else {
+          // 添加新笔记
+          await callStoreActionInMutation(
+            useBrewingNoteStore.getState().addNote,
+            noteToSave
+          );
+        }
+
+        setShowNoteFormModal(false);
+        setNoteFormDraftSource('blank');
+        setCurrentEditingNote({});
+
+        // 事件触发已在 store 中自动完成
+        saveMainTabPreference('笔记');
+        setActiveMainTab('笔记');
+      } catch (_error) {
+        // 保存冲煮笔记失败
+        throw _error;
       }
-
-      setShowNoteFormModal(false);
-      setNoteFormDraftSource('blank');
-      setCurrentEditingNote({});
-
-      // 事件触发已在 store 中自动完成
-      saveMainTabPreference('笔记');
-      setActiveMainTab('笔记');
-    } catch (_error) {
-      // 保存冲煮笔记失败
-      alert('保存失败，请重试');
     }
-  };
+  );
 
   // 处理笔记编辑模态框的保存
-  const handleSaveBrewingNoteEdit = async (note: BrewingNoteData) => {
-    try {
-      // 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } =
-        await import('@/lib/stores/brewingNoteStore');
+  const handleSaveBrewingNoteEdit = useCoordinatedAction(
+    async (note: BrewingNoteData) => {
+      try {
+        // 使用 Zustand store 保存笔记
+        const { useBrewingNoteStore } =
+          await import('@/lib/stores/brewingNoteStore');
 
-      // 复制操作应该被视为新笔记，即使它有 id
-      const isNewNote = isBrewingNoteCopy || !note.id;
+        // 复制操作应该被视为新笔记，即使它有 id
+        const isNewNote = isBrewingNoteCopy || !note.id;
 
-      // 构建保存数据
-      let noteToSave = buildPersistedBrewingNote(note, {
-        id: isNewNote ? Date.now().toString() : note.id,
-        timestamp: isNewNote ? Date.now() : note.timestamp || Date.now(),
-      });
+        // 构建保存数据
+        let noteToSave = buildPersistedBrewingNote(note, {
+          id: isNewNote ? Date.now().toString() : note.id,
+          timestamp: isNewNote ? Date.now() : note.timestamp || Date.now(),
+        });
 
-      if (isNewNote) {
-        // 添加新笔记
-        await useBrewingNoteStore.getState().addNote(noteToSave);
+        if (isNewNote) {
+          // 添加新笔记
+          await callStoreActionInMutation(
+            useBrewingNoteStore.getState().addNote,
+            noteToSave
+          );
 
-        // 注意：咖啡豆剩余量的扣除已在 BrewingNoteForm.handleSubmit 中处理
-        // 这里不再重复扣除，避免重复减少剩余量
-      } else {
-        if (noteToSave.source === 'roasting') {
-          const { RoastingManager } =
-            await import('@/lib/managers/roastingManager');
-          const result = await RoastingManager.updateRoastingRecord(noteToSave);
-          if (!result.success) {
-            showToast({
-              title: result.error || '更新烘焙记录失败',
-              type: 'error',
-            });
-            return;
-          }
-          noteToSave = result.note || noteToSave;
+          // 注意：咖啡豆剩余量的扣除已在 BrewingNoteForm.handleSubmit 中处理
+          // 这里不再重复扣除，避免重复减少剩余量
         } else {
-          await useBrewingNoteStore
-            .getState()
-            .updateNote(noteToSave.id, noteToSave);
+          if (noteToSave.source === 'roasting') {
+            const { RoastingManager } =
+              await import('@/lib/managers/roastingManager');
+            const result = await callStoreActionInMutation(
+              RoastingManager.updateRoastingRecord,
+              noteToSave
+            );
+            if (!result.success) {
+              showToast({
+                title: result.error || '更新烘焙记录失败',
+                type: 'error',
+              });
+              return;
+            }
+            noteToSave = result.note || noteToSave;
+          } else {
+            await callStoreActionInMutation(
+              useBrewingNoteStore.getState().updateNote,
+              noteToSave.id,
+              noteToSave
+            );
+          }
+
+          // 🔥 更新笔记详情页的数据，使其与编辑后的数据同步
+          if (noteDetailData && noteDetailData.note.id === noteToSave.id) {
+            setNoteDetailData({
+              ...noteDetailData,
+              note: noteToSave,
+            });
+          }
         }
 
-        // 🔥 更新笔记详情页的数据，使其与编辑后的数据同步
-        if (noteDetailData && noteDetailData.note.id === noteToSave.id) {
-          setNoteDetailData({
-            ...noteDetailData,
-            note: noteToSave,
-          });
-        }
+        setBrewingNoteEditOpen(false);
+        setBrewingNoteEditData(null);
+        setIsBrewingNoteCopy(false);
+
+        // 显示成功提示（事件触发已在 store 中自动完成）
+        showToast({
+          title: isNewNote ? '笔记已复制' : '笔记已更新',
+          type: 'success',
+        });
+      } catch (_error) {
+        throw _error;
       }
-
-      setBrewingNoteEditOpen(false);
-      setBrewingNoteEditData(null);
-      setIsBrewingNoteCopy(false);
-
-      // 显示成功提示（事件触发已在 store 中自动完成）
-      showToast({
-        title: isNewNote ? '笔记已复制' : '笔记已更新',
-        type: 'success',
-      });
-    } catch (_error) {
-      alert('保存失败，请重试');
     }
-  };
+  );
 
   const handleSaveEquipment = async (
     equipment: CustomEquipment,

@@ -3,3 +3,8 @@ include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
 
 apply from: 'capacitor.settings.gradle'
+// Optional local-only modules are not part of the shared application build.
+def localSettings = file('settings.local.gradle')
+if (localSettings.exists()) {
+    apply from: localSettings
+}

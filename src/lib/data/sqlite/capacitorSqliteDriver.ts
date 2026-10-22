@@ -62,6 +62,18 @@ function createConnectionPort(
 }
 
 async function openDriver(databaseName: string): Promise<SqliteDriver> {
+  if (Capacitor.getPlatform() === 'android') {
+    const { openProviderSqliteDriver } = await import('./providerSqliteDriver');
+    const driver = await openProviderSqliteDriver(databaseName, () => {
+      if (currentDriver === driver) {
+        currentDriver = null;
+        currentDatabaseName = null;
+      }
+    });
+    currentDriver = driver;
+    currentDatabaseName = databaseName;
+    return driver;
+  }
   let sqlite: SQLiteConnection | null = null;
   let connection: SQLiteDBConnection | null = null;
   let registered = false;
@@ -187,57 +199,9 @@ export async function deleteAndroidSqliteTestDatabase(): Promise<void> {
     await currentDriver.close();
   }
 
-  const plugin = await import('@capacitor-community/sqlite');
-  const exists = await plugin.CapacitorSQLite.isDatabase({
+  const { providerDatabase } = await import('./providerSqliteDriver');
+  await providerDatabase.command({
     database: SQLITE_STAGE3D_TEST_DATABASE_NAME,
-    readonly: false,
+    operation: 'deleteTestDatabase',
   });
-  if (typeof exists.result !== 'boolean') {
-    throw new Error(
-      'isDatabase returned no boolean result during test cleanup'
-    );
-  }
-  if (!exists.result) return;
-
-  const sqlite = new plugin.SQLiteConnection(plugin.CapacitorSQLite);
-  requireResult(
-    await sqlite.checkConnectionsConsistency(),
-    'checkConnectionsConsistency during test cleanup'
-  );
-
-  const hasConnection = requireResult(
-    await sqlite.isConnection(SQLITE_STAGE3D_TEST_DATABASE_NAME, false),
-    'isConnection during test cleanup'
-  );
-  const connection = hasConnection
-    ? await sqlite.retrieveConnection(SQLITE_STAGE3D_TEST_DATABASE_NAME, false)
-    : await sqlite.createConnection(
-        SQLITE_STAGE3D_TEST_DATABASE_NAME,
-        false,
-        'no-encryption',
-        1,
-        false
-      );
-
-  try {
-    if (
-      !requireResult(
-        await connection.isDBOpen(),
-        'isDBOpen during test cleanup'
-      )
-    ) {
-      await connection.open();
-    }
-    await connection.delete();
-  } finally {
-    await sqlite.closeConnection(SQLITE_STAGE3D_TEST_DATABASE_NAME, false);
-  }
-
-  const remainingDatabase = await plugin.CapacitorSQLite.isDatabase({
-    database: SQLITE_STAGE3D_TEST_DATABASE_NAME,
-    readonly: false,
-  });
-  if (remainingDatabase.result !== false) {
-    throw new Error('Stage 3D test database still exists after cleanup');
-  }
 }

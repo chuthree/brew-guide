@@ -32,6 +32,7 @@ export type SettingsSearchPageId =
   | 'brewing-settings'
   | 'timer-settings'
   | 'data-settings'
+  | 'provider-settings'
   | 'notification-settings'
   | 'random-coffee-bean-settings'
   | 'equipment-method-settings'

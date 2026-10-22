@@ -101,7 +101,12 @@ const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
   }, [exportStatus, handleBackupNow, onClose]);
 
   return (
-    <ActionDrawer isOpen={isOpen} onClose={onClose} historyId="backup-reminder">
+    <ActionDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      historyId="backup-reminder"
+      priority={-1}
+    >
       <ActionDrawer.Icon icon={BackupRestoreIcon} />
       <ActionDrawer.Content>
         <p className="text-neutral-500 dark:text-neutral-400">{message}</p>

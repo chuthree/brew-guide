@@ -335,6 +335,18 @@ importers:
         specifier: ^5.0.8
         version: 5.0.10(@types/react@19.2.7)(react@19.2.3)
     devDependencies:
+      '@babel/core':
+        specifier: 7.28.6
+        version: 7.28.6
+      '@babel/preset-env':
+        specifier: 7.28.6
+        version: 7.28.6(@babel/core@7.28.6)
+      core-js:
+        specifier: 3.51.0
+        version: 3.51.0
+      esbuild:
+        specifier: 0.25.12
+        version: 0.25.12
       '@csstools/postcss-oklab-function':
         specifier: ^4.0.12
         version: 4.0.12(postcss@8.5.6)
@@ -4010,6 +4022,9 @@ packages:
 
   core-js-compat@3.48.0:
     resolution: {integrity: sha512-OM4cAF3D6VtH/WkLtWvyNC56EZVXsZdU3iqaMG2B4WvYrlqU831pc4UtG5yp0sE9z8Y02wVN7PjW5Zf9Gt0f1Q==}
+
+  core-js@3.51.0:
+    resolution: {integrity: sha512-7bDKx/5jm5MxzsXxc93g6Z2+4ZsuT/MddrfRmTDJNAkWsYWHU8EVNEsBiIEWnMAMCHMmRfUEjkuo3jeNBOIHRw==}
 
   core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
@@ -9920,6 +9935,8 @@ snapshots:
   core-js-compat@3.48.0:
     dependencies:
       browserslist: 4.28.1
+
+  core-js@3.51.0: {}
 
   core-util-is@1.0.3: {}
 

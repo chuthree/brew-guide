@@ -1,3 +1,7 @@
+import {
+  callStoreActionInMutation,
+  coordinateStoreActions,
+} from '@/lib/data/storeMutationBoundary';
 import type { BrewingNote } from '@/lib/core/config';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
 import { loadCustomMethods } from '@/lib/stores/customMethodStore';
@@ -26,13 +30,13 @@ export const pickNoteSelection = (note: NoteSelection): NoteSelection => ({
   methodName: note.methodName,
 });
 
-export async function resolveFormNoteSelection(
+async function resolveFormNoteSelectionRaw(
   input: NoteSelection,
   previous?: NoteSelection
 ): Promise<NoteSelection> {
   const [equipment, methods] = await Promise.all([
-    loadCustomEquipments(),
-    loadCustomMethods(),
+    callStoreActionInMutation(loadCustomEquipments),
+    callStoreActionInMutation(loadCustomMethods),
   ]);
   const catalog = buildNoteReferenceCatalog(
     equipment,
@@ -44,3 +48,8 @@ export async function resolveFormNoteSelection(
   );
   return resolveNoteReferences(input, catalog, previous);
 }
+
+export const resolveFormNoteSelection = coordinateStoreActions(
+  { resolve: resolveFormNoteSelectionRaw },
+  ['resolve']
+).resolve;

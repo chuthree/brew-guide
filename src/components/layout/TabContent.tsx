@@ -1,3 +1,5 @@
+import { useCoordinatedAction } from '@/lib/hooks/useCoordinatedAction';
+import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 import React, { useCallback, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import {
@@ -274,7 +276,7 @@ const TabContent: React.FC<TabContentProps> = ({
   }, [storeInitialized, loadBeansFromStore]);
 
   // 简化的保存笔记处理 - 统一数据流避免竞态条件
-  const handleSaveNote = async (note: BrewingNoteData) => {
+  const handleSaveNote = useCoordinatedAction(async (note: BrewingNoteData) => {
     try {
       // 🔥 使用 Zustand store 保存笔记
       const { useBrewingNoteStore } =
@@ -302,10 +304,17 @@ const TabContent: React.FC<TabContentProps> = ({
 
       if (isExistingNote) {
         // 更新现有笔记
-        await useBrewingNoteStore.getState().updateNote(noteData.id, noteData);
+        await callStoreActionInMutation(
+          useBrewingNoteStore.getState().updateNote,
+          noteData.id,
+          noteData
+        );
       } else {
         // 添加新笔记
-        await useBrewingNoteStore.getState().addNote(noteData);
+        await callStoreActionInMutation(
+          useBrewingNoteStore.getState().addNote,
+          noteData
+        );
       }
 
       setNoteSaved(true);
@@ -326,10 +335,10 @@ const TabContent: React.FC<TabContentProps> = ({
         resetBrewingState(false);
         localStorage.setItem('shouldStartFromCoffeeBeanStep', 'true');
       }
-    } catch {
-      alert('保存失败，请重试');
+    } catch (error) {
+      throw error;
     }
-  };
+  });
 
   // 处理关闭笔记表单
   const handleCloseNoteForm = () => {

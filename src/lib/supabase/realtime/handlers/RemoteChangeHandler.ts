@@ -1,3 +1,4 @@
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
 /**
  * 远程变更处理器
  *
@@ -99,11 +100,13 @@ export class RemoteChangeHandler {
       const isDelete =
         payload.eventType === 'DELETE' || newRecord?.deleted_at != null;
 
-      if (isDelete) {
-        await this.handleDelete(table, recordId, newRecord);
-      } else {
-        await this.handleUpsert(table, recordId, newRecord);
-      }
+      await withDataMutation(async () => {
+        if (isDelete) {
+          await this.handleDelete(table, recordId, newRecord);
+        } else {
+          await this.handleUpsert(table, recordId, newRecord);
+        }
+      });
       return true;
     } catch (error) {
       console.error(
