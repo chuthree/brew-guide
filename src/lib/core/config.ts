@@ -213,7 +213,15 @@ export interface BrewingNote {
   updatedAt?: number; // 最后修改时间（用于同步）
   equipment?: string;
   method?: string;
+  /** Optional stable catalog identities; null preserves an explicit free-form selection. */
+  equipmentId?: string | null;
+  methodId?: string | null;
+  /** Names as recorded, independent of later catalog rename/deletion. */
+  equipmentName?: string;
+  methodName?: string;
   params?: BrewingNoteParams;
+  /** Historical or explicitly recorded stage snapshots; never filled from current presets. */
+  stages?: Stage[];
   coffeeBeanInfo?: {
     name: string;
     roastLevel: string;

@@ -33,6 +33,8 @@
 | Windows      | [![下载 Windows x64 EXE 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=x64%20EXE&color=525252)](https://github.com/chuthree/brew-guide/releases/latest)                                                                                                                                                                                        |
 | Linux        | [![下载 Linux x64 AppImage 最新正式版](https://img.shields.io/github/v/release/chuthree/brew-guide?label=x64%20AppImage&color=525252)](https://github.com/chuthree/brew-guide/releases/latest)                                                                                                                                                                                |
 
+桌面版支持 MCP，可在“设置 → 实验性功能 → MCP 连接”获取配置，供本机客户端按权限查询和管理数据。连接期间需保持应用运行。
+
 ## 数据
 
 数据默认保存在设备本地，无需注册账号。网页版和 PWA 使用 IndexedDB，移动端和桌面端应用使用 SQLite。
@@ -63,7 +65,9 @@ pnpm dev
 | `pnpm cap:ios` / `pnpm cap:android`   | 打开 iOS / Android 工程。                               |
 | `pnpm tauri:dev` / `pnpm tauri:build` | 开发或构建桌面端。                                      |
 
-移动端开发需安装 Xcode 或 Android Studio；桌面端开发需安装 Rust 和 Tauri 对应的系统依赖。
+移动端开发需安装 Xcode 或 Android Studio；桌面端开发需安装 Rust 1.88 或以上版本和 Tauri 对应的系统依赖。
+
+Android 版提供 ContentProvider 接口，供其他应用经用户授权后查询和管理本机数据，详见 [接入指南](docs/android-provider.md)。
 
 ## 反馈
 

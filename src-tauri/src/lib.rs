@@ -9,6 +9,8 @@ use std::sync::{Arc, Mutex};
 
 mod storage;
 mod migration;
+#[cfg(desktop)]
+mod mcp;
 
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
@@ -361,10 +363,21 @@ fn update_tray_with_beans(app: &tauri::AppHandle, beans: Vec<CoffeeBean>) -> Res
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(desktop)]
+    let builder = builder.manage(mcp::McpState::default());
+    builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(storage::Storage::default())
+        .on_page_load(|webview, payload| {
+            #[cfg(desktop)]
+            if webview.label() == "main"
+                && matches!(payload.event(), tauri::webview::PageLoadEvent::Started)
+            {
+                mcp::invalidate_bridge(webview.app_handle());
+            }
+        })
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -522,6 +535,18 @@ pub fn run() {
             storage::storage_image,
             migration::migration_save_backup,
             migration::migration_cleanup_approval,
+            #[cfg(desktop)]
+            mcp::mcp_status,
+            #[cfg(desktop)]
+            mcp::mcp_configure,
+            #[cfg(desktop)]
+            mcp::mcp_bridge_ready,
+            #[cfg(desktop)]
+            mcp::mcp_bridge_unready,
+            #[cfg(desktop)]
+            mcp::mcp_authorize_request,
+            #[cfg(desktop)]
+            mcp::mcp_respond,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

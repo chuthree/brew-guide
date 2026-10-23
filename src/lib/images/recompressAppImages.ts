@@ -1,3 +1,8 @@
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
+import {
+  registerCoordinatedAction,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 import { imageMaintenance } from '@/lib/data/repositories';
 import {
   mergeImageRecompressionStats,
@@ -13,10 +18,12 @@ export interface RecompressAppImagesStats extends ImageRecompressionStats {
   };
 }
 
-export async function recompressOversizedAppImages(): Promise<RecompressAppImagesStats> {
+async function recompressAppImagesInMutation(): Promise<RecompressAppImagesStats> {
   const brewingNotes = await imageMaintenance.recompressBrewingNoteImages();
   const coffeeBeans = await imageMaintenance.recompressCoffeeBeanImages();
-  const roasterLogos = await recompressOversizedRoasterLogos();
+  const roasterLogos = await callStoreActionInMutation(
+    recompressOversizedRoasterLogos
+  );
   const total = mergeImageRecompressionStats([
     brewingNotes,
     coffeeBeans,
@@ -32,3 +39,8 @@ export async function recompressOversizedAppImages(): Promise<RecompressAppImage
     },
   };
 }
+
+export const recompressOversizedAppImages = registerCoordinatedAction(
+  () => withDataMutation(recompressAppImagesInMutation),
+  recompressAppImagesInMutation
+);

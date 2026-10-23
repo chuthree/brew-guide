@@ -15,7 +15,6 @@ import {
 } from './coffeeBeanUtils';
 import {
   type BeanFieldId,
-  getComponentFieldValue,
   getComponentOriginDisplay,
 } from '@/lib/coffee-beans/beanFields';
 
@@ -24,25 +23,12 @@ import {
  * @param text 要检查的文本
  * @returns 是否为有效的真实数据（非空、非undefined、非null）
  */
-const isValidText = (text: string | undefined | null): boolean => {
-  return Boolean(text && typeof text === 'string' && text.trim() !== '');
+const isValidText = (text: string | string[] | undefined | null): boolean => {
+  return normalizeDelimitedTextList(text).length > 0;
 };
 
 // 扩展咖啡豆类型，包含blendComponents
-export interface ExtendedCoffeeBean extends CoffeeBean {
-  blendComponents?: {
-    percentage?: number;
-    origin?: string;
-    country?: string;
-    region?: string;
-    estate?: string;
-    processingStation?: string;
-    altitude?: string;
-    process?: string;
-    batch?: string;
-    variety?: string;
-  }[];
-}
+export type ExtendedCoffeeBean = CoffeeBean;
 
 /**
  * 获取咖啡豆的所有品种信息
@@ -109,7 +95,7 @@ const getBeanComponentFieldValues = (
 
   if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
     bean.blendComponents.forEach(component => {
-      const fieldValue = getComponentFieldValue(component, fieldId);
+      const fieldValue = component[fieldId];
       if (isValidText(fieldValue)) {
         values.push(...normalizeDelimitedTextList(fieldValue));
       }

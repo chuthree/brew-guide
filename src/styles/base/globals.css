@@ -383,23 +383,6 @@ html[style*='--legacy-mode: 1'].dark {
   filter: invert(1);
 }
 
-/* SVG 样式 */
-.custom-cup-shape svg *,
-.custom-shape-svg-container svg *,
-.outline-only svg * {
-  stroke: var(--custom-shape-color) !important;
-  fill: none !important;
-  stroke-width: 1.5px !important;
-}
-
-.custom-cup-shape svg,
-.custom-shape-svg-container svg {
-  width: 300px !important;
-  height: 300px !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-}
-
 /* 基础样式 */
 * {
   -webkit-tap-highlight-color: transparent;

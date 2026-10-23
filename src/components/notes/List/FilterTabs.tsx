@@ -1,8 +1,8 @@
 'use client';
 
 import TabButton from '@/components/common/ui/TabButton';
-import { centerCategoryTab } from '@/lib/utils/centerCategoryTab';
-import React, { memo, useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import TabBar from '@/components/common/ui/TabBar';
+import React, { memo, useRef, useState, useEffect, useCallback } from 'react';
 import {
   FilterTabsProps,
   SORT_OPTIONS,
@@ -14,33 +14,8 @@ import {
 import { X, AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useInputFocus } from '@/lib/hooks/useInputFocus';
-import { useHorizontalWheelScroll } from '@/lib/hooks/useHorizontalWheelScroll';
+import { useFilterPanelAnimation } from '@/lib/hooks/useFilterPanelAnimation';
 import SearchAllSuggestion from '@/components/common/ui/SearchAllSuggestion';
-
-// Apple风格动画配置
-const FILTER_ANIMATION = {
-  initial: {
-    height: 0,
-    opacity: 0,
-    y: -10,
-  },
-  animate: {
-    height: 'auto',
-    opacity: 1,
-    y: 0,
-  },
-  exit: {
-    height: 0,
-    opacity: 0,
-    y: -10,
-  },
-  transition: {
-    duration: 0.35,
-    opacity: {
-      duration: 0.25,
-    },
-  },
-};
 
 const isInsideFilterInteraction = (
   event: PointerEvent,
@@ -464,55 +439,16 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   // 筛选交互边界：只包含触发按钮和下拉内容，点击其他分类标签会按外部点击处理
-  const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const {
+    filterDropdownRef,
+    filterContentRef,
+    filterAnimation,
+    instantFilterTransition,
+    setKeyboardInteraction,
+  } = useFilterPanelAnimation(
+    Boolean(isFilterExpanded && sortOption && onSortChange)
+  );
   const filterToggleButtonRef = useRef<HTMLButtonElement>(null);
-
-  // 滚动容器引用
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  useHorizontalWheelScroll(scrollContainerRef);
-
-  // 处理滚动阴影效果
-  const [showLeftShadow, setShowLeftShadow] = useState(false);
-
-  // 监听滚动事件以控制阴影显示
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      setShowLeftShadow(scrollContainerRef.current.scrollLeft > 2);
-    }
-  };
-
-  const categoryTabsKey = (filterMode === 'equipment'
-    ? availableEquipments
-    : availableDates
-  ).join('\u0001');
-
-  useLayoutEffect(() => {
-    centerCategoryTab(scrollContainerRef.current);
-  }, [
-    filterMode,
-    selectedEquipment,
-    selectedDate,
-    dateGroupingMode,
-    isSearching,
-    viewMode,
-    categoryTabsKey,
-  ]);
-
-  // 添加滚动事件监听
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (scrollContainer) {
-      // 初始检测滚动位置
-      handleScroll();
-
-      scrollContainer.addEventListener('scroll', handleScroll, {
-        passive: true,
-      });
-      return () => {
-        scrollContainer.removeEventListener('scroll', handleScroll);
-      };
-    }
-  }, []);
 
   // 处理搜索图标点击
   const handleSearchClick = () => {
@@ -540,6 +476,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     if (!isFilterExpanded) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
+      setKeyboardInteraction(false);
       if (
         isInsideFilterInteraction(event, [
           filterToggleButtonRef.current,
@@ -553,15 +490,23 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     };
 
     document.addEventListener('pointerdown', handlePointerDownOutside, true);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setKeyboardInteraction(true);
+      setIsFilterExpanded(false);
+      filterToggleButtonRef.current?.focus();
+    };
+    document.addEventListener('keydown', handleEscape);
 
     return () => {
+      document.removeEventListener('keydown', handleEscape);
       document.removeEventListener(
         'pointerdown',
         handlePointerDownOutside,
         true
       );
     };
-  }, [isFilterExpanded]);
+  }, [isFilterExpanded, filterDropdownRef, setKeyboardInteraction]);
 
   // 如果没有可筛选的设备或日期，不渲染任何内容
   if (
@@ -574,12 +519,16 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     return null;
 
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onKeyDownCapture={() => setKeyboardInteraction(true)}
+      onPointerDownCapture={() => setKeyboardInteraction(false)}
+    >
       {/* 整个分类栏容器 - 下边框在这里 */}
       <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
         <div className="relative px-6">
           {!isSearching ? (
-            <div className="relative flex items-center">
+            <TabBar className="relative flex items-center">
               {/* 固定在左侧的"全部"和筛选按钮 */}
               <div className="relative flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
                 <TabButton
@@ -598,7 +547,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                   onDoubleClick={onSmartToggleImageFlow}
                   className="mr-1"
                   dataTab="all"
-                  layoutId={`notes-${filterMode}-underline`}
                 >
                   全部
                 </TabButton>
@@ -621,27 +569,12 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
               {/* 中间滚动区域 */}
               <div className="relative flex-1 overflow-hidden">
                 {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
-                {showLeftShadow && (
-                  <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
-                )}
-
                 <div
-                  ref={scrollContainerRef}
-                  data-category-scroll
-                  className="flex overflow-x-auto"
-                  style={{
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                    WebkitOverflowScrolling: 'touch',
-                  }}
-                  onScroll={handleScroll}
-                >
-                  <style jsx>{`
-                    div::-webkit-scrollbar {
-                      display: none;
-                    }
-                  `}</style>
+                  data-scroll-shadow="left"
+                  className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
+                />
 
+                <div data-category-scroll className="flex overflow-x-auto">
                   {/* 动态筛选按钮 */}
                   {filterMode === 'equipment' ? (
                     availableEquipments.map(equipment => (
@@ -654,7 +587,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                         }
                         className="mr-3"
                         dataTab={equipment}
-                        layoutId="notes-equipment-underline"
                       >
                         {equipmentNames[equipment] || equipment}
                       </TabButton>
@@ -694,7 +626,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 }
                                 className="mr-3"
                                 dataTab="today"
-                                layoutId="notes-date-underline"
                               >
                                 今天
                               </TabButton>
@@ -712,7 +643,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 }
                                 className="mr-3"
                                 dataTab="yesterday"
-                                layoutId="notes-date-underline"
                               >
                                 昨天
                               </TabButton>
@@ -730,7 +660,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 }
                                 className="mr-3"
                                 dataTab="dayBeforeYesterday"
-                                layoutId="notes-date-underline"
                               >
                                 前天
                               </TabButton>
@@ -770,7 +699,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                             }
                             className="mr-3"
                             dataTab={date}
-                            layoutId="notes-date-underline"
                           >
                             {formatDateLabel(date, dateGroupingMode)}
                           </TabButton>
@@ -780,7 +708,10 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                 </div>
 
                 {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
+                <div
+                  data-scroll-shadow="right"
+                  className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
+                />
               </div>
 
               {/* 固定在右侧的搜索按钮 */}
@@ -798,7 +729,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                 {/* 右侧固定按钮的左侧渐变遮罩 */}
                 <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
               </div>
-            </div>
+            </TabBar>
           ) : (
             /* 搜索框 - 替换整个分类栏 */
             <div className="relative flex items-center pb-1.5">
@@ -862,7 +793,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
         />
 
         {/* 展开式筛选栏 - 在同一个容器内 */}
-        <AnimatePresence>
+        <AnimatePresence custom={instantFilterTransition}>
           {isFilterExpanded && sortOption && onSortChange && (
             <>
               {/* 固定的半透明分割线 - 只在展开时显示 */}
@@ -870,14 +801,14 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
 
               <motion.div
                 ref={filterDropdownRef}
-                initial={FILTER_ANIMATION.initial}
-                animate={FILTER_ANIMATION.animate}
-                exit={FILTER_ANIMATION.exit}
-                transition={FILTER_ANIMATION.transition}
+                custom={instantFilterTransition}
+                variants={filterAnimation}
+                initial="closed"
+                animate="open"
+                exit="closed"
                 className="overflow-hidden"
-                style={{ willChange: 'height, opacity, transform' }}
               >
-                <div className="px-6 py-4">
+                <div ref={filterContentRef} className="px-6 py-4">
                   <div className="space-y-4">
                     <FilterModeSection
                       filterMode={filterMode}

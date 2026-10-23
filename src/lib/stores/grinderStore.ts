@@ -1,3 +1,7 @@
+import {
+  coordinateStoreActions,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 /**
  * 磨豆机状态管理 - 使用 Zustand + IndexedDB 实现
  *
@@ -12,9 +16,11 @@ import { grinderRepository } from '@/lib/data/repositories';
 import type { Grinder } from '@/lib/data/models';
 import { nanoid } from 'nanoid';
 import {
-  normalizeCoffeeBeanName,
-  normalizeCoffeeBeanRoaster,
-} from '@/lib/utils/coffeeBeanUtils';
+  applyBrewGrinderScale,
+  parseGrinderFromGrindSize,
+  type GrinderCoffeeBeanContext,
+} from '@/lib/grinder/scaleHistory';
+export { parseGrinderFromGrindSize } from '@/lib/grinder/scaleHistory';
 
 // 重新导出 Grinder 类型和历史记录类型
 export type { Grinder, GrindSizeHistory } from '@/lib/data/models';
@@ -64,181 +70,167 @@ interface GrinderState {
  * 解析研磨度字符串，提取磨豆机名称和刻度
  * 支持格式: "磨豆机名 刻度" 或 "磨豆机名 · 刻度"（兼容旧格式）
  */
-export function parseGrinderFromGrindSize(
-  grindSize: string,
-  grinderNames: string[]
-): { grinderName: string; scale: string } | null {
-  if (!grindSize || grinderNames.length === 0) return null;
-
-  // 按名称长度降序排序，优先匹配较长的名称（避免 "C40" 匹配到 "C4"）
-  const sortedNames = [...grinderNames].sort((a, b) => b.length - a.length);
-
-  for (const name of sortedNames) {
-    // 检查是否以磨豆机名开头
-    if (grindSize.startsWith(name)) {
-      // 获取剩余部分
-      const remainder = grindSize.slice(name.length).trim();
-
-      // 去掉可能的分隔符
-      const scale = remainder.replace(/^[·\s]+/, '').trim();
-
-      // 如果有刻度值，返回解析结果
-      if (scale) {
-        return { grinderName: name, scale };
-      }
-    }
-  }
-
-  return null;
-}
 
 /**
  * 磨豆机 Store
  */
 export const useGrinderStore = create<GrinderState>()(
-  subscribeWithSelector((set, get) => ({
-    grinders: [],
-    initialized: false,
-    isLoading: false,
-    currentSyncState: {
-      grinderId: null,
-      isSyncEnabled: true,
-    },
+  subscribeWithSelector((set, get) =>
+    coordinateStoreActions<GrinderState>(
+      {
+        grinders: [],
+        initialized: false,
+        isLoading: false,
+        currentSyncState: {
+          grinderId: null,
+          isSyncEnabled: true,
+        },
 
-    initialize: async () => {
-      if (get().initialized || get().isLoading) return;
+        initialize: async () => {
+          if (get().initialized || get().isLoading) return;
 
-      set({ isLoading: true });
+          set({ isLoading: true });
 
-      try {
-        // 从 IndexedDB 加载
-        let grinders = await grinderRepository.list();
+          try {
+            // 从 IndexedDB 加载
+            let grinders = await grinderRepository.list();
 
-        // 如果 IndexedDB 为空，尝试从 localStorage 迁移
-        if (grinders.length === 0) {
-          grinders = await migrateGrindersFromLocalStorage();
-          if (grinders.length > 0) {
-            await grinderRepository.upsertMany(grinders);
-            console.log(`已迁移 ${grinders.length} 个磨豆机到 IndexedDB`);
+            // 如果 IndexedDB 为空，尝试从 localStorage 迁移
+            if (grinders.length === 0) {
+              grinders = await migrateGrindersFromLocalStorage();
+              if (grinders.length > 0) {
+                await grinderRepository.upsertMany(grinders);
+                console.log(`已迁移 ${grinders.length} 个磨豆机到 IndexedDB`);
+              }
+            }
+
+            set({ grinders, initialized: true, isLoading: false });
+          } catch (error) {
+            console.error('加载磨豆机数据失败:', error);
+            set({ initialized: false, isLoading: false });
+            throw error;
           }
-        }
+        },
 
-        set({ grinders, initialized: true, isLoading: false });
-      } catch (error) {
-        console.error('加载磨豆机数据失败:', error);
-        set({ initialized: false, isLoading: false });
-        throw error;
-      }
-    },
+        addGrinder: async grinderData => {
+          const newGrinder: Grinder = {
+            ...grinderData,
+            id: nanoid(),
+          };
 
-    addGrinder: async grinderData => {
-      const newGrinder: Grinder = {
-        ...grinderData,
-        id: nanoid(),
-      };
+          try {
+            await grinderRepository.save(newGrinder);
+            set(state => ({ grinders: [...state.grinders, newGrinder] }));
 
-      try {
-        await grinderRepository.save(newGrinder);
-        set(state => ({ grinders: [...state.grinders, newGrinder] }));
+            // 触发变化事件
+            dispatchGrinderChanged();
 
-        // 触发变化事件
-        dispatchGrinderChanged();
+            return newGrinder;
+          } catch (error) {
+            console.error('添加磨豆机失败:', error);
+            throw error;
+          }
+        },
 
-        return newGrinder;
-      } catch (error) {
-        console.error('添加磨豆机失败:', error);
-        throw error;
-      }
-    },
+        updateGrinder: async (id, updates) => {
+          const { grinders } = get();
+          const existing = grinders.find(g => g.id === id);
+          if (!existing) return;
 
-    updateGrinder: async (id, updates) => {
-      const { grinders } = get();
-      const existing = grinders.find(g => g.id === id);
-      if (!existing) return;
+          const updated = { ...existing, ...updates };
 
-      const updated = { ...existing, ...updates };
+          try {
+            await grinderRepository.save(updated);
+            set(state => ({
+              grinders: state.grinders.map(g => (g.id === id ? updated : g)),
+            }));
 
-      try {
-        await grinderRepository.save(updated);
-        set(state => ({
-          grinders: state.grinders.map(g => (g.id === id ? updated : g)),
-        }));
+            // 触发变化事件
+            dispatchGrinderChanged();
+          } catch (error) {
+            console.error('更新磨豆机失败:', error);
+            throw error;
+          }
+        },
 
-        // 触发变化事件
-        dispatchGrinderChanged();
-      } catch (error) {
-        console.error('更新磨豆机失败:', error);
-        throw error;
-      }
-    },
+        deleteGrinder: async id => {
+          try {
+            await grinderRepository.delete(id);
+            set(state => ({
+              grinders: state.grinders.filter(g => g.id !== id),
+            }));
 
-    deleteGrinder: async id => {
-      try {
-        await grinderRepository.delete(id);
-        set(state => ({
-          grinders: state.grinders.filter(g => g.id !== id),
-        }));
+            // 触发变化事件
+            dispatchGrinderChanged();
+          } catch (error) {
+            console.error('删除磨豆机失败:', error);
+            throw error;
+          }
+        },
 
-        // 触发变化事件
-        dispatchGrinderChanged();
-      } catch (error) {
-        console.error('删除磨豆机失败:', error);
-        throw error;
-      }
-    },
+        setGrinders: async grinders => {
+          try {
+            // 清空并重新写入
+            await grinderRepository.replaceAll(grinders);
+            set({ grinders });
 
-    setGrinders: async grinders => {
-      try {
-        // 清空并重新写入
-        await grinderRepository.replaceAll(grinders);
-        set({ grinders });
+            // 触发变化事件
+            dispatchGrinderChanged();
+          } catch (error) {
+            console.error('设置磨豆机列表失败:', error);
+            throw error;
+          }
+        },
 
-        // 触发变化事件
-        dispatchGrinderChanged();
-      } catch (error) {
-        console.error('设置磨豆机列表失败:', error);
-        throw error;
-      }
-    },
+        updateGrinderScaleByName: async (name, scale) => {
+          const { grinders } = get();
+          const grinder = grinders.find(
+            g => g.name.toLowerCase() === name.toLowerCase()
+          );
 
-    updateGrinderScaleByName: async (name, scale) => {
-      const { grinders } = get();
-      const grinder = grinders.find(
-        g => g.name.toLowerCase() === name.toLowerCase()
-      );
+          if (grinder) {
+            // 更新历史记录
+            const history = grinder.grindSizeHistory || [];
+            const newHistory = [
+              { grindSize: scale, timestamp: Date.now() },
+              ...history.filter(h => h.grindSize !== scale), // 去重
+            ].slice(0, 10); // 最多保留10条
 
-      if (grinder) {
-        // 更新历史记录
-        const history = grinder.grindSizeHistory || [];
-        const newHistory = [
-          { grindSize: scale, timestamp: Date.now() },
-          ...history.filter(h => h.grindSize !== scale), // 去重
-        ].slice(0, 10); // 最多保留10条
+            await callStoreActionInMutation(get().updateGrinder, grinder.id, {
+              currentGrindSize: scale,
+              grindSizeHistory: newHistory,
+            });
+          }
+        },
 
-        await get().updateGrinder(grinder.id, {
-          currentGrindSize: scale,
-          grindSizeHistory: newHistory,
-        });
-      }
-    },
+        setSyncState: (grinderId, isSyncEnabled) => {
+          set({
+            currentSyncState: { grinderId, isSyncEnabled },
+          });
+        },
 
-    setSyncState: (grinderId, isSyncEnabled) => {
-      set({
-        currentSyncState: { grinderId, isSyncEnabled },
-      });
-    },
+        resetSyncState: () => {
+          set({
+            currentSyncState: { grinderId: null, isSyncEnabled: true },
+          });
+        },
 
-    resetSyncState: () => {
-      set({
-        currentSyncState: { grinderId: null, isSyncEnabled: true },
-      });
-    },
-
-    refreshGrinders: async () => {
-      set({ initialized: false });
-      await get().initialize();
-    },
-  }))
+        refreshGrinders: async () => {
+          set({ initialized: false });
+          await callStoreActionInMutation(get().initialize);
+        },
+      },
+      [
+        'initialize',
+        'addGrinder',
+        'updateGrinder',
+        'deleteGrinder',
+        'setGrinders',
+        'updateGrinderScaleByName',
+        'refreshGrinders',
+      ]
+    )
+  )
 );
 
 /**
@@ -285,44 +277,6 @@ function dispatchGrinderChanged(): void {
  */
 export const getGrinderStore = () => useGrinderStore.getState();
 
-type GrinderCoffeeBeanContext =
-  | string
-  | {
-      name?: string;
-      roaster?: string;
-    }
-  | undefined;
-
-const normalizeGrinderCoffeeBeanContext = (
-  coffeeBean?: GrinderCoffeeBeanContext
-) => {
-  if (!coffeeBean) {
-    return {
-      coffeeBean: undefined,
-      coffeeBeanName: undefined,
-      coffeeBeanRoaster: undefined,
-    };
-  }
-
-  if (typeof coffeeBean === 'string') {
-    const legacyDisplayName = normalizeCoffeeBeanName(coffeeBean);
-    return {
-      coffeeBean: legacyDisplayName || undefined,
-      coffeeBeanName: legacyDisplayName || undefined,
-      coffeeBeanRoaster: undefined,
-    };
-  }
-
-  const coffeeBeanName = normalizeCoffeeBeanName(coffeeBean.name);
-  const coffeeBeanRoaster = normalizeCoffeeBeanRoaster(coffeeBean.roaster);
-
-  return {
-    coffeeBean: coffeeBeanName || undefined,
-    coffeeBeanName: coffeeBeanName || undefined,
-    coffeeBeanRoaster: coffeeBeanRoaster || undefined,
-  };
-};
-
 /**
  * 同步磨豆机刻度
  * @param grindSize 研磨度字符串，如 "C40 24"
@@ -331,17 +285,18 @@ const normalizeGrinderCoffeeBeanContext = (
  * @param coffeeBean 咖啡豆上下文（可选）
  * @returns 是否成功同步
  */
-export async function syncGrinderScale(
+async function syncGrinderScaleInMutation(
   grindSize: string,
   equipment?: string,
   method?: string,
   coffeeBean?: GrinderCoffeeBeanContext
 ): Promise<boolean> {
-  const store = useGrinderStore.getState();
+  let store = useGrinderStore.getState();
 
   // 确保已初始化
   if (!store.initialized) {
-    await store.initialize();
+    await callStoreActionInMutation(store.initialize);
+    store = useGrinderStore.getState();
   }
 
   // 检查当前同步状态，如果用户禁用了同步则跳过
@@ -366,22 +321,16 @@ export async function syncGrinderScale(
   const scale = parsed?.scale || grindSize.trim();
 
   if (grinder && scale) {
-    const coffeeBeanContext = normalizeGrinderCoffeeBeanContext(coffeeBean);
-    const history = grinder.grindSizeHistory || [];
-    const newHistory = [
-      {
-        grindSize: scale,
-        timestamp: Date.now(),
-        equipment,
-        method,
-        ...coffeeBeanContext,
-      },
-      ...history.filter(h => h.grindSize !== scale),
-    ].slice(0, 3);
-
-    await store.updateGrinder(grinder.id, {
-      currentGrindSize: scale,
-      grindSizeHistory: newHistory,
+    const updated = applyBrewGrinderScale(
+      grinder,
+      scale,
+      equipment,
+      method,
+      coffeeBean
+    );
+    await callStoreActionInMutation(store.updateGrinder, grinder.id, {
+      currentGrindSize: updated.currentGrindSize,
+      grindSizeHistory: updated.grindSizeHistory,
     });
 
     store.resetSyncState();
@@ -391,3 +340,8 @@ export async function syncGrinderScale(
   store.resetSyncState();
   return false;
 }
+
+export const syncGrinderScale = coordinateStoreActions(
+  { syncGrinderScale: syncGrinderScaleInMutation },
+  ['syncGrinderScale']
+).syncGrinderScale;

@@ -18,6 +18,7 @@ import type { CoffeeBean } from '@/types/app';
 import { extractUniqueRoasters } from '@/lib/utils/beanVarietyUtils';
 import { normalizeCoffeeBeanGroups } from '@/lib/utils/coffeeBeanGroupUtils';
 import { BEAN_FIELD_DEFINITIONS } from '@/lib/coffee-beans/beanFields';
+import { isDesktopMcpAvailable } from '@/lib/mcp/client';
 
 export type SettingsSearchPageId =
   | 'settings'
@@ -31,6 +32,7 @@ export type SettingsSearchPageId =
   | 'brewing-settings'
   | 'timer-settings'
   | 'data-settings'
+  | 'provider-settings'
   | 'notification-settings'
   | 'random-coffee-bean-settings'
   | 'equipment-method-settings'
@@ -308,6 +310,21 @@ export const buildSettingsSearchItems = ({
     ]),
   ];
 
+  if (isDesktopMcpAvailable()) {
+    items.push(
+      ...createRowItems('experimental-settings', 'MCP 连接', [
+        '启用 MCP 连接',
+        '本机端口',
+        '连接配置',
+        '数据范围',
+        '重置连接密钥',
+      ]).map(item => ({
+        ...item,
+        keywords: ['MCP', '客户端', '本机连接', '工具调用'],
+      }))
+    );
+  }
+
   if (hasVisibleNotificationSettings) {
     items.push(
       ...createRowItems('notification-settings', '提醒通知', [
@@ -394,6 +411,7 @@ export const buildSettingsSearchItems = ({
   if (isModuleVisible(visibleModules, 'coffeeBean')) {
     items.push(
       ...createRowItems('bean-settings', '咖啡豆', [
+        '筛选模式',
         '日期模式',
         '价格',
         '总价',

@@ -1,3 +1,7 @@
+import {
+  coordinateStoreActions,
+  registerCoordinatedAction,
+} from '@/lib/data/storeMutationBoundary';
 /**
  * 冲煮笔记 Store
  *
@@ -20,6 +24,7 @@ import {
   markExpectedCoreDataDeletionIfEmpty,
 } from '@/lib/app/dataIntegrity';
 import { stripBrewingNoteImages } from '@/lib/notes/imageRecords';
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
 
 interface BrewingNoteStore {
   notes: BrewingNote[];
@@ -46,60 +51,12 @@ interface BrewingNoteStore {
 }
 
 export const useBrewingNoteStore = create<BrewingNoteStore>()(
-  subscribeWithSelector((set, get) => ({
-    notes: [],
-    isLoading: false,
-    error: null,
-    initialized: false,
-
-    loadNotes: async () => {
-      if (get().isLoading) return;
-      set({ isLoading: true, error: null });
-      try {
-        const notes = await brewingNoteRepository.list();
-        recordCrashCheckpoint('brewing-notes:loaded', {
-          noteCount: notes.length,
-        });
-        set({
-          notes: notes.map(note =>
-            stripBrewingNoteImages(normalizeBrewingNote(note).note)
-          ),
-          isLoading: false,
-          initialized: true,
-        });
-      } catch (error) {
-        set({ error: '加载笔记失败', isLoading: false, initialized: false });
-        throw error;
-      }
-    },
-
-    addNote: async noteData => {
-      const inputNote = noteData as BrewingNote;
-      const now = Date.now();
-      const timestamp = inputNote.timestamp || now;
-      const newNote = normalizeBrewingNote({
-        ...noteData,
-        id: inputNote.id || nanoid(),
-        timestamp,
-        updatedAt: inputNote.updatedAt || timestamp, // 创建时也设置 updatedAt，与 timestamp 相同
-      } as BrewingNote).note;
-
-      const noteForStore = await brewingNotePersistence.saveWithImages(newNote);
-      await clearExpectedCoreDataDeletion();
-      set(state => ({ notes: [noteForStore, ...state.notes] }));
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('brewingNoteDataChanged', {
-            detail: { action: 'create', noteId: newNote.id, note: newNote },
-          })
-        );
-      }
-      return newNote;
-    },
-
-    updateNote: async (id, updates) => {
-      const existingNote = get().notes.find(n => n.id === id);
+  subscribeWithSelector((set, get) => {
+    const updateNoteInMutation = async (
+      id: string,
+      updates: Partial<BrewingNote>,
+      existingNote: BrewingNote | undefined
+    ) => {
       if (!existingNote) return null;
 
       // 检测需要移除的变动记录字段（显式设为 undefined 表示要删除）
@@ -120,7 +77,10 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
           'timestamp' in updates && updates.timestamp !== undefined
             ? updates.timestamp
             : existingNote.timestamp,
-        updatedAt: Date.now(), // 更新时间用于同步
+        updatedAt: Math.max(
+          Date.now(),
+          (existingNote.updatedAt ?? existingNote.timestamp) + 1
+        ), // 更新时间用于同步
       } as BrewingNote).note;
 
       // 移除变动记录字段
@@ -129,8 +89,10 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         delete (updatedNote as any).quickDecrementAmount;
       if (shouldRemoveChangeRecord) delete (updatedNote as any).changeRecord;
 
-      const savedNote =
-        await brewingNotePersistence.saveWithImages(updatedNote);
+      const savedNote = await brewingNotePersistence.saveWithImages(
+        updatedNote,
+        { expectedRecord: existingNote }
+      );
       const savedEventNote =
         await brewingNoteImageRepository.mergeNote(savedNote);
       set(state => ({
@@ -145,11 +107,13 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         );
       }
       return savedEventNote;
-    },
-
-    deleteNote: async id => {
+    };
+    const deleteNoteInMutation = async (
+      id: string,
+      expectedRecord: BrewingNote | undefined
+    ) => {
       try {
-        await brewingNotePersistence.deleteWithImages(id);
+        await brewingNotePersistence.deleteWithImages(id, { expectedRecord });
         await markExpectedCoreDataDeletionIfEmpty();
         set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
 
@@ -164,46 +128,133 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
       } catch {
         return false;
       }
-    },
+    };
+    return coordinateStoreActions<BrewingNoteStore>(
+      {
+        notes: [],
+        isLoading: false,
+        error: null,
+        initialized: false,
 
-    setNotes: notes =>
-      set({
-        notes: notes.map(note =>
-          stripBrewingNoteImages(normalizeBrewingNote(note).note)
-        ),
-        initialized: true,
-      }),
-
-    upsertNote: async note => {
-      const cleanNote = normalizeBrewingNote(note).note;
-      const noteForStore =
-        await brewingNotePersistence.saveWithImages(cleanNote);
-      await clearExpectedCoreDataDeletion();
-      set(state => {
-        const exists = state.notes.some(n => n.id === noteForStore.id);
-        return exists
-          ? {
-              notes: state.notes.map(n =>
-                n.id === noteForStore.id ? noteForStore : n
+        loadNotes: async () => {
+          if (get().isLoading) return;
+          set({ isLoading: true, error: null });
+          try {
+            const notes = await brewingNoteRepository.list();
+            recordCrashCheckpoint('brewing-notes:loaded', {
+              noteCount: notes.length,
+            });
+            set({
+              notes: notes.map(note =>
+                stripBrewingNoteImages(normalizeBrewingNote(note).note)
               ),
-            }
-          : { notes: [noteForStore, ...state.notes] };
-      });
-    },
+              isLoading: false,
+              initialized: true,
+            });
+          } catch (error) {
+            set({
+              error: '加载笔记失败',
+              isLoading: false,
+              initialized: false,
+            });
+            throw error;
+          }
+        },
 
-    removeNote: async id => {
-      await brewingNotePersistence.deleteWithImages(id);
-      await markExpectedCoreDataDeletionIfEmpty();
-      set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
-    },
+        addNote: async noteData => {
+          const inputNote = noteData as BrewingNote;
+          const now = Date.now();
+          const timestamp = inputNote.timestamp || now;
+          const newNote = normalizeBrewingNote({
+            ...noteData,
+            id: inputNote.id || nanoid(),
+            timestamp,
+            updatedAt: inputNote.updatedAt || timestamp, // 创建时也设置 updatedAt，与 timestamp 相同
+          } as BrewingNote).note;
 
-    getNoteById: id => get().notes.find(n => n.id === id),
+          const noteForStore =
+            await brewingNotePersistence.saveWithImages(newNote);
+          await clearExpectedCoreDataDeletion();
+          set(state => ({ notes: [noteForStore, ...state.notes] }));
 
-    refreshNotes: async () => {
-      set({ initialized: false });
-      await get().loadNotes();
-    },
-  }))
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('brewingNoteDataChanged', {
+                detail: { action: 'create', noteId: newNote.id, note: newNote },
+              })
+            );
+          }
+          return newNote;
+        },
+
+        updateNote: registerCoordinatedAction(
+          (id: string, updates: Partial<BrewingNote>) => {
+            const snapshot = get().notes.find(record => record.id === id);
+            return withDataMutation(() =>
+              updateNoteInMutation(id, updates, snapshot)
+            );
+          },
+          (id: string, updates: Partial<BrewingNote>) =>
+            updateNoteInMutation(
+              id,
+              updates,
+              get().notes.find(record => record.id === id)
+            )
+        ),
+
+        deleteNote: registerCoordinatedAction(
+          (id: string) => {
+            const snapshot = get().notes.find(record => record.id === id);
+            return withDataMutation(() => deleteNoteInMutation(id, snapshot));
+          },
+          (id: string) =>
+            deleteNoteInMutation(
+              id,
+              get().notes.find(record => record.id === id)
+            )
+        ),
+
+        setNotes: notes =>
+          set({
+            notes: notes.map(note =>
+              stripBrewingNoteImages(normalizeBrewingNote(note).note)
+            ),
+            initialized: true,
+          }),
+
+        upsertNote: async note => {
+          const cleanNote = normalizeBrewingNote(note).note;
+          const noteForStore =
+            await brewingNotePersistence.saveWithImages(cleanNote);
+          await clearExpectedCoreDataDeletion();
+          set(state => {
+            const exists = state.notes.some(n => n.id === noteForStore.id);
+            return exists
+              ? {
+                  notes: state.notes.map(n =>
+                    n.id === noteForStore.id ? noteForStore : n
+                  ),
+                }
+              : { notes: [noteForStore, ...state.notes] };
+          });
+        },
+
+        removeNote: async id => {
+          await brewingNotePersistence.deleteWithImages(id);
+          await markExpectedCoreDataDeletionIfEmpty();
+          set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
+        },
+
+        getNoteById: id => get().notes.find(n => n.id === id),
+
+        refreshNotes: async () => {
+          set({ initialized: false });
+          await get().loadNotes();
+        },
+      },
+      ['addNote', 'upsertNote', 'removeNote']
+    );
+  })
 );
 
 export const getBrewingNoteStore = () => useBrewingNoteStore.getState();

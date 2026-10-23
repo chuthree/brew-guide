@@ -312,8 +312,8 @@ export abstract class BaseSyncManager {
     Record<string, FileMetadata>
   > {
     try {
-      const { DataManager } = await import('@/lib/core/dataManager');
-      const fullExportString = await DataManager.exportAllData();
+      const fullExportString = await this.getFileContent('brew-guide-data.json');
+      if (!fullExportString) return {};
       const exportDataObj = safeJsonParse(fullExportString, {});
       const dataMap: Record<string, unknown> = {
         'brew-guide-data.json': exportDataObj,
@@ -332,7 +332,9 @@ export abstract class BaseSyncManager {
     try {
       if (key === 'brew-guide-data.json' || key === 'brew-guide-data') {
         const { DataManager } = await import('@/lib/core/dataManager');
-        return await DataManager.exportAllData();
+        return await DataManager.exportAllData({
+          excludeDeviceSettings: true,
+        });
       }
       return await Storage.get(key);
     } catch (error) {
@@ -347,7 +349,9 @@ export abstract class BaseSyncManager {
   protected async saveFileContent(key: string, content: string): Promise<void> {
     if (key === 'brew-guide-data.json' || key === 'brew-guide-data') {
       const { DataManager } = await import('@/lib/core/dataManager');
-      await DataManager.importAllData(content);
+      await DataManager.importAllData(content, {
+        preserveDeviceSettings: true,
+      });
     } else {
       await Storage.set(key, content);
     }

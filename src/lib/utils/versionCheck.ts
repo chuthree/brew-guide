@@ -56,10 +56,24 @@ function compareVersions(v1: string, v2: string): number {
   if (parsed1.preRelease && !parsed2.preRelease) return -1;
   if (!parsed1.preRelease && !parsed2.preRelease) return 0;
 
-  // 都有预发布标识，字符串比较
-  // beta.1 < beta.2 < rc.1 < rc.2
-  if (parsed1.preRelease! > parsed2.preRelease!) return 1;
-  if (parsed1.preRelease! < parsed2.preRelease!) return -1;
+  // 按标识逐段比较，数字按数值排序：beta.2 < beta.10 < rc.1。
+  const identifiers1 = parsed1.preRelease!.split('.');
+  const identifiers2 = parsed2.preRelease!.split('.');
+  for (let i = 0; i < Math.max(identifiers1.length, identifiers2.length); i++) {
+    const identifier1 = identifiers1[i];
+    const identifier2 = identifiers2[i];
+    if (identifier1 === undefined) return -1;
+    if (identifier2 === undefined) return 1;
+    if (identifier1 === identifier2) continue;
+
+    const numeric1 = /^\d+$/.test(identifier1);
+    const numeric2 = /^\d+$/.test(identifier2);
+    if (numeric1 && numeric2) {
+      return BigInt(identifier1) > BigInt(identifier2) ? 1 : -1;
+    }
+    if (numeric1 !== numeric2) return numeric1 ? -1 : 1;
+    return identifier1 > identifier2 ? 1 : -1;
+  }
 
   return 0;
 }

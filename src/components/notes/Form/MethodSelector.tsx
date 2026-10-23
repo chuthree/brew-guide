@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { measuredMethodParams, editMethodParams } from './methodParamEditing';
 import { Method } from '@/lib/core/config';
+import { isCoffeeOnlyNoteParams } from '@/lib/notes/noteDisplay';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import {
@@ -20,6 +22,7 @@ interface MethodSelectorProps {
   onParamsChange: (method: Method) => void;
   /** 笔记保存的方案参数（编辑模式时优先使用） */
   initialParams?: Partial<Method['params']>;
+  preserveMeasuredParams?: boolean;
   /** 是否显示顶部的跳过方案选项，默认 true */
   showSkipOption?: boolean;
 }
@@ -98,6 +101,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   onSkipMethodSelect,
   onParamsChange,
   initialParams,
+  preserveMeasuredParams = false,
   showSkipOption = true,
 }) => {
   const isEspresso =
@@ -110,6 +114,9 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
   // 记录当前初始化的方案，避免重复初始化
   const initializedMethodRef = useRef<string | null>(null);
+  const [effectiveParams, setEffectiveParams] = useState<Method['params']>(() =>
+    measuredMethodParams(initialParams)
+  );
   const selectedMethodElementRef = useRef<HTMLDivElement | null>(null);
 
   // Store 方法 - 使用 stable selector
@@ -159,10 +166,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
    */
   const isEmptyPlaceholder = useCallback(
     (params?: Partial<Method['params']>): boolean => {
-      if (!params) return true;
-      const { coffee, water, ratio, grindSize, temp } = params;
-      // 只有 coffee 有值，其他字段都是空的，认为是空占位符
-      return !!coffee && !water && !ratio && !grindSize && !temp;
+      return isCoffeeOnlyNoteParams(params);
     },
     []
   );
@@ -194,26 +198,32 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     initializedMethodRef.current = initKey;
 
     // 如果有 initialParams（从笔记传入），且不是空占位符，优先使用它
-    if (initialParams && !isEmptyPlaceholder(initialParams)) {
+    if (
+      preserveMeasuredParams ||
+      (initialParams && !isEmptyPlaceholder(initialParams))
+    ) {
+      const measured = measuredMethodParams(initialParams);
+      setEffectiveParams(measured);
       setEditingValues({
-        coffee: extractNumber(initialParams.coffee || ''),
-        ratio: extractRatioNumber(initialParams.ratio || ''),
-        grindSize: initialParams.grindSize || '',
-        water: extractNumber(initialParams.water || ''),
+        coffee: extractNumber(measured.coffee || ''),
+        ratio: extractRatioNumber(measured.ratio || ''),
+        grindSize: measured.grindSize || '',
+        water: extractNumber(
+          (isEspresso
+            ? measured.liquidWeight || measured.water
+            : measured.water) || ''
+        ),
         time:
-          initialParams.extractionTime?.toString() ??
-          initialParams.stages?.[0]?.duration?.toString() ??
+          measured.extractionTime?.toString() ??
+          measured.stages?.[0]?.duration?.toString() ??
           '',
-        temp: extractNumber(initialParams.temp || ''),
+        temp: extractNumber(measured.temp || ''),
       });
 
       // 通知父组件
       const methodWithNoteParams = {
         ...method,
-        params: {
-          ...method.params,
-          ...initialParams,
-        },
+        params: measured,
       };
       onParamsChange(methodWithNoteParams);
       return;
@@ -293,6 +303,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               : {}),
           },
         };
+    setEffectiveParams(effectiveMethod.params);
     onParamsChange(effectiveMethod);
   }, [
     selectedMethod,
@@ -301,6 +312,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     getOverride,
     onParamsChange,
     initialParams,
+    preserveMeasuredParams,
     isEspresso,
     isEmptyPlaceholder,
     extractCoffeeFromPlaceholder,
@@ -308,9 +320,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
   useEffect(() => {
     if (!selectedMethod) return;
-
-    let animationFrameId: number | null = null;
-    let fallbackTimerId: ReturnType<typeof setTimeout> | null = null;
 
     const scrollSelectedMethodIntoView = () => {
       const selectedElement = selectedMethodElementRef.current;
@@ -336,19 +345,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       });
     };
 
-    animationFrameId = requestAnimationFrame(() => {
-      scrollSelectedMethodIntoView();
-      fallbackTimerId = setTimeout(scrollSelectedMethodIntoView, 120);
-    });
-
-    return () => {
-      if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId);
-      }
-      if (fallbackTimerId !== null) {
-        clearTimeout(fallbackTimerId);
-      }
-    };
+    const animationFrameId = requestAnimationFrame(scrollSelectedMethodIntoView);
+    return () => cancelAnimationFrame(animationFrameId);
   }, [selectedEquipment, selectedMethod, customMethods, commonMethods]);
 
   // 处理方案选择
@@ -374,6 +372,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       const methodId = method.id || method.name;
       await clearMethodParamOverride(selectedEquipment, methodId);
       setEditingValues(extractEditingValues(method, isEspresso));
+      setEffectiveParams(method.params);
       onParamsChange(method);
     },
     [selectedEquipment, clearMethodParamOverride, isEspresso, onParamsChange]
@@ -399,28 +398,9 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       // 构建方案参数
       const updatedMethod: Method = {
         ...method,
-        params: {
-          ...method.params,
-          coffee: newValues.coffee ? `${newValues.coffee}g` : '',
-          water: newValues.water ? `${newValues.water}g` : '',
-          ratio: newValues.ratio ? `1:${newValues.ratio}` : '',
-          grindSize: newValues.grindSize,
-          temp: newValues.temp ? `${newValues.temp}°C` : '',
-          extractionTime:
-            isEspresso && newValues.time
-              ? parseFloat(newValues.time) || 0
-              : method.params.extractionTime,
-          liquidWeight:
-            isEspresso && newValues.water ? `${newValues.water}g` : undefined,
-          stages: method.params.stages?.map((s, i) => ({
-            ...s,
-            duration:
-              i === 0 && newValues.time
-                ? parseFloat(newValues.time) || 0
-                : s.duration,
-          })),
-        },
+        params: editMethodParams(effectiveParams, key, newValues, isEspresso),
       };
+      setEffectiveParams(updatedMethod.params);
 
       // 保存覆盖参数
       const methodId = method.id || method.name;
@@ -442,6 +422,7 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       findMethod,
       selectedMethod,
       editingValues,
+      effectiveParams,
       isEspresso,
       selectedEquipment,
       setMethodParamOverride,

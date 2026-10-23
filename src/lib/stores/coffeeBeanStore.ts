@@ -1,3 +1,8 @@
+import {
+  coordinateStoreActions,
+  registerCoordinatedAction,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { CoffeeBean } from '@/types/app';
@@ -20,6 +25,7 @@ import {
   markExpectedCoreDataDeletionIfEmpty,
 } from '@/lib/app/dataIntegrity';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
 
 interface CoffeeBeanStore {
   beans: CoffeeBean[];
@@ -79,102 +85,12 @@ let beanMutationVersion = 0;
 let refreshRequestedWhileLoading = false;
 
 export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
-  subscribeWithSelector((set, get) => ({
-    beans: [],
-    isLoading: false,
-    error: null,
-    initialized: false,
-
-    loadBeans: async () => {
-      if (get().isLoading) return;
-
-      const loadVersion = beanMutationVersion;
-      const finishLoading = () => {
-        set({ isLoading: false });
-        if (refreshRequestedWhileLoading) {
-          refreshRequestedWhileLoading = false;
-          void get().loadBeans();
-        }
-      };
-
-      set({ isLoading: true, error: null });
-      try {
-        const rawBeans = await coffeeBeanRepository.list();
-        recordCrashCheckpoint('coffee-beans:raw-loaded', {
-          ...collectBeanPayloadMetrics(rawBeans as CoffeeBean[]),
-          imageRecordCount: await getImageRecordCountForDiagnostics(),
-        });
-        const beans = normalizeCoffeeBeans(rawBeans, {
-          ensureFlavorArray: true,
-        }).map(stripCoffeeBeanImages);
-        const repairedBeans = rawBeans
-          .filter(bean => hasInvalidFlavorValue(bean.flavor))
-          .map(bean =>
-            stripCoffeeBeanImages(
-              normalizeCoffeeBean(bean, { ensureFlavorArray: true })
-            )
-          );
-
-        if (repairedBeans.length > 0) {
-          await coffeeBeanRepository.upsertMany(repairedBeans);
-        }
-
-        // A local write may finish while this read is in flight. Never let
-        // that older snapshot overwrite the newer Zustand state.
-        if (loadVersion !== beanMutationVersion) {
-          finishLoading();
-          return;
-        }
-
-        recordCrashCheckpoint('coffee-beans:normalized', {
-          beanCount: beans.length,
-          repairedBeanCount: repairedBeans.length,
-          imageRecordCount: await getImageRecordCountForDiagnostics(),
-        });
-        set({ beans, initialized: true });
-        finishLoading();
-      } catch (error) {
-        console.error('[CoffeeBeanStore] loadBeans failed:', error);
-        refreshRequestedWhileLoading = false;
-        set({ error: '加载咖啡豆失败', isLoading: false, initialized: false });
-        throw error;
-      }
-    },
-
-    addBean: async beanData => {
-      const newBean = normalizeCoffeeBean(
-        {
-          ...beanData,
-          id: nanoid(),
-          timestamp: Date.now(),
-        } as CoffeeBean,
-        { ensureFlavorArray: true }
-      );
-
-      try {
-        const beanForStore =
-          await coffeeBeanPersistence.saveWithImages(newBean);
-        await clearExpectedCoreDataDeletion();
-        beanMutationVersion += 1;
-        set(state => ({ beans: [...state.beans, beanForStore] }));
-
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('coffeeBeanDataChanged', {
-              detail: { action: 'create', beanId: newBean.id, bean: newBean },
-            })
-          );
-        }
-        return newBean;
-      } catch (error) {
-        console.error('[CoffeeBeanStore] addBean failed:', error);
-        throw error;
-      }
-    },
-
-    updateBean: async (id, updates) => {
-      const { beans } = get();
-      const existingBean = beans.find(b => b.id === id);
+  subscribeWithSelector((set, get) => {
+    const updateBeanInMutation = async (
+      id: string,
+      updates: Partial<CoffeeBean>,
+      existingBean: CoffeeBean | undefined
+    ) => {
       if (!existingBean) return null;
 
       const updatedBean = normalizeCoffeeBean(
@@ -182,14 +98,16 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
           ...existingBean,
           ...updates,
           id,
-          timestamp: Date.now(),
+          timestamp: Math.max(Date.now(), existingBean.timestamp + 1),
         },
         { ensureFlavorArray: true }
       ) as CoffeeBean;
 
       try {
-        const savedBean =
-          await coffeeBeanPersistence.saveWithImages(updatedBean);
+        const savedBean = await coffeeBeanPersistence.saveWithImages(
+          updatedBean,
+          { expectedRecord: existingBean }
+        );
         const savedEventBean =
           await coffeeBeanImageRepository.mergeBean(savedBean);
         beanMutationVersion += 1;
@@ -209,11 +127,13 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
         console.error('[CoffeeBeanStore] updateBean failed:', error);
         throw error;
       }
-    },
-
-    deleteBean: async id => {
+    };
+    const deleteBeanInMutation = async (
+      id: string,
+      expectedRecord: CoffeeBean | undefined
+    ) => {
       try {
-        await coffeeBeanPersistence.deleteWithImages(id);
+        await coffeeBeanPersistence.deleteWithImages(id, { expectedRecord });
         await markExpectedCoreDataDeletionIfEmpty();
         beanMutationVersion += 1;
         set(state => ({
@@ -232,63 +152,194 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
         console.error('[CoffeeBeanStore] deleteBean failed:', error);
         return false;
       }
-    },
+    };
+    return coordinateStoreActions<CoffeeBeanStore>(
+      {
+        beans: [],
+        isLoading: false,
+        error: null,
+        initialized: false,
 
-    setBeans: beans => {
-      beanMutationVersion += 1;
-      set({ beans, initialized: true });
-    },
+        loadBeans: async () => {
+          if (get().isLoading) return;
 
-    upsertBean: async bean => {
-      try {
-        const normalizedBean = normalizeCoffeeBean(bean, {
-          ensureFlavorArray: true,
-        }) as CoffeeBean;
-        const beanForStore =
-          await coffeeBeanPersistence.saveWithImages(normalizedBean);
-        await clearExpectedCoreDataDeletion();
-        beanMutationVersion += 1;
-        set(state => {
-          const exists = state.beans.some(b => b.id === beanForStore.id);
-          if (exists) {
-            return {
-              beans: state.beans.map(b =>
-                b.id === beanForStore.id ? beanForStore : b
-              ),
-            };
-          } else {
-            return { beans: [...state.beans, beanForStore] };
+          const loadVersion = beanMutationVersion;
+          const finishLoading = () => {
+            set({ isLoading: false });
+            if (refreshRequestedWhileLoading) {
+              refreshRequestedWhileLoading = false;
+              void get().loadBeans();
+            }
+          };
+
+          set({ isLoading: true, error: null });
+          try {
+            const rawBeans = await coffeeBeanRepository.list();
+            recordCrashCheckpoint('coffee-beans:raw-loaded', {
+              ...collectBeanPayloadMetrics(rawBeans as CoffeeBean[]),
+              imageRecordCount: await getImageRecordCountForDiagnostics(),
+            });
+            const beans = normalizeCoffeeBeans(rawBeans, {
+              ensureFlavorArray: true,
+            }).map(stripCoffeeBeanImages);
+            const repairedBeans = rawBeans
+              .filter(bean => hasInvalidFlavorValue(bean.flavor))
+              .map(bean =>
+                stripCoffeeBeanImages(
+                  normalizeCoffeeBean(bean, { ensureFlavorArray: true })
+                )
+              );
+
+            if (repairedBeans.length > 0) {
+              await coffeeBeanRepository.upsertMany(repairedBeans);
+            }
+
+            // A local write may finish while this read is in flight. Never let
+            // that older snapshot overwrite the newer Zustand state.
+            if (loadVersion !== beanMutationVersion) {
+              finishLoading();
+              return;
+            }
+
+            recordCrashCheckpoint('coffee-beans:normalized', {
+              beanCount: beans.length,
+              repairedBeanCount: repairedBeans.length,
+              imageRecordCount: await getImageRecordCountForDiagnostics(),
+            });
+            set({ beans, initialized: true });
+            finishLoading();
+          } catch (error) {
+            console.error('[CoffeeBeanStore] loadBeans failed:', error);
+            refreshRequestedWhileLoading = false;
+            set({
+              error: '加载咖啡豆失败',
+              isLoading: false,
+              initialized: false,
+            });
+            throw error;
           }
-        });
-      } catch (error) {
-        console.error('[CoffeeBeanStore] upsertBean failed:', error);
-      }
-    },
+        },
 
-    removeBean: async id => {
-      try {
-        await coffeeBeanPersistence.deleteWithImages(id);
-        await markExpectedCoreDataDeletionIfEmpty();
-        beanMutationVersion += 1;
-        set(state => ({ beans: state.beans.filter(b => b.id !== id) }));
-      } catch (error) {
-        console.error('[CoffeeBeanStore] removeBean failed:', error);
-      }
-    },
+        addBean: async beanData => {
+          const newBean = normalizeCoffeeBean(
+            {
+              ...beanData,
+              id: nanoid(),
+              timestamp: Date.now(),
+            } as CoffeeBean,
+            { ensureFlavorArray: true }
+          );
 
-    getBeanById: id => {
-      return get().beans.find(b => b.id === id);
-    },
+          try {
+            const beanForStore =
+              await coffeeBeanPersistence.saveWithImages(newBean);
+            await clearExpectedCoreDataDeletion();
+            beanMutationVersion += 1;
+            set(state => ({ beans: [...state.beans, beanForStore] }));
 
-    refreshBeans: async () => {
-      set({ initialized: false });
-      if (get().isLoading) {
-        refreshRequestedWhileLoading = true;
-        return;
-      }
-      await get().loadBeans();
-    },
-  }))
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('coffeeBeanDataChanged', {
+                  detail: {
+                    action: 'create',
+                    beanId: newBean.id,
+                    bean: newBean,
+                  },
+                })
+              );
+            }
+            return newBean;
+          } catch (error) {
+            console.error('[CoffeeBeanStore] addBean failed:', error);
+            throw error;
+          }
+        },
+
+        updateBean: registerCoordinatedAction(
+          (id: string, updates: Partial<CoffeeBean>) => {
+            const snapshot = get().beans.find(record => record.id === id);
+            return withDataMutation(() =>
+              updateBeanInMutation(id, updates, snapshot)
+            );
+          },
+          (id: string, updates: Partial<CoffeeBean>) =>
+            updateBeanInMutation(
+              id,
+              updates,
+              get().beans.find(record => record.id === id)
+            )
+        ),
+
+        deleteBean: registerCoordinatedAction(
+          (id: string) => {
+            const snapshot = get().beans.find(record => record.id === id);
+            return withDataMutation(() => deleteBeanInMutation(id, snapshot));
+          },
+          (id: string) =>
+            deleteBeanInMutation(
+              id,
+              get().beans.find(record => record.id === id)
+            )
+        ),
+
+        setBeans: beans => {
+          beanMutationVersion += 1;
+          set({ beans, initialized: true });
+        },
+
+        upsertBean: async bean => {
+          try {
+            const normalizedBean = normalizeCoffeeBean(bean, {
+              ensureFlavorArray: true,
+            }) as CoffeeBean;
+            const beanForStore =
+              await coffeeBeanPersistence.saveWithImages(normalizedBean);
+            await clearExpectedCoreDataDeletion();
+            beanMutationVersion += 1;
+            set(state => {
+              const exists = state.beans.some(b => b.id === beanForStore.id);
+              if (exists) {
+                return {
+                  beans: state.beans.map(b =>
+                    b.id === beanForStore.id ? beanForStore : b
+                  ),
+                };
+              } else {
+                return { beans: [...state.beans, beanForStore] };
+              }
+            });
+          } catch (error) {
+            console.error('[CoffeeBeanStore] upsertBean failed:', error);
+          }
+        },
+
+        removeBean: async id => {
+          try {
+            await coffeeBeanPersistence.deleteWithImages(id);
+            await markExpectedCoreDataDeletionIfEmpty();
+            beanMutationVersion += 1;
+            set(state => ({ beans: state.beans.filter(b => b.id !== id) }));
+          } catch (error) {
+            console.error('[CoffeeBeanStore] removeBean failed:', error);
+          }
+        },
+
+        getBeanById: id => {
+          return get().beans.find(b => b.id === id);
+        },
+
+        refreshBeans: async () => {
+          set({ initialized: false });
+          if (get().isLoading) {
+            refreshRequestedWhileLoading = true;
+            return;
+          }
+          await get().loadBeans();
+        },
+      },
+      ['addBean', 'upsertBean', 'removeBean']
+    );
+  })
 );
 
 export const getCoffeeBeanStore = () => useCoffeeBeanStore.getState();
@@ -351,23 +402,24 @@ export function buildInitialBrewBeanInventory(
   };
 }
 
-export async function createBeanFromBrewUsage(
+async function createBeanFromBrewUsageInMutation(
   name: string,
   coffeeParam: string | undefined
 ): Promise<CoffeeBean> {
-  return getCoffeeBeanStore().addBean({
+  return callStoreActionInMutation(getCoffeeBeanStore().addBean, {
     name,
     ...buildInitialBrewBeanInventory(coffeeParam),
   });
 }
 
-export async function initializeBeanFromBrewUsage(
+async function initializeBeanFromBrewUsageInMutation(
   id: string,
   coffeeParam: string | undefined
 ): Promise<CoffeeBean | null> {
   if (!id) return null;
 
-  return getCoffeeBeanStore().updateBean(
+  return callStoreActionInMutation(
+    getCoffeeBeanStore().updateBean,
     id,
     buildInitialBrewBeanInventory(coffeeParam)
   );
@@ -379,7 +431,7 @@ export async function initializeBeanFromBrewUsage(
  * @param usedAmount 使用的咖啡量(g)
  * @returns 更新后的咖啡豆对象，如果不存在则返回null
  */
-export async function updateBeanRemaining(
+async function updateBeanRemainingInMutation(
   id: string,
   usedAmount: number
 ): Promise<CoffeeBean | null> {
@@ -388,37 +440,16 @@ export async function updateBeanRemaining(
     if (isNaN(usedAmount) || usedAmount <= 0) return null;
 
     const store = getCoffeeBeanStore();
-    const bean = store.getBeanById(id);
-    if (!bean) {
-      // 尝试从DB加载
-      const dbBean = await coffeeBeanRepository.get(id);
-      if (!dbBean) return null;
-
-      const currentRemaining = dbBean.remaining
-        ? parseFloat(dbBean.remaining)
-        : 0;
-      const newRemaining = Math.max(0, currentRemaining - usedAmount);
-      const formattedNewRemaining = formatCoffeeBeanAmount(newRemaining);
-
-      const updatedBean = {
-        ...dbBean,
-        remaining: formattedNewRemaining,
-        timestamp: Date.now(),
-      };
-      const beanForStore = stripCoffeeBeanImages(updatedBean);
-      await coffeeBeanRepository.save(beanForStore);
-      store.setBeans([
-        ...store.beans.filter(currentBean => currentBean.id !== id),
-        beanForStore,
-      ]);
-      return beanForStore;
-    }
+    const bean = await coffeeBeanRepository.get(id);
+    if (!bean) return null;
+    // Compute against the latest persisted stock while holding the native lease.
+    store.setBeans([...store.beans.filter(current => current.id !== id), bean]);
 
     const currentRemaining = bean.remaining ? parseFloat(bean.remaining) : 0;
     const newRemaining = Math.max(0, currentRemaining - usedAmount);
     const formattedNewRemaining = formatCoffeeBeanAmount(newRemaining);
 
-    const result = await store.updateBean(id, {
+    const result = await callStoreActionInMutation(store.updateBean, id, {
       remaining: formattedNewRemaining,
     });
     return result;
@@ -434,7 +465,7 @@ export async function updateBeanRemaining(
  * @param restoreAmount 要恢复的咖啡量(g)
  * @returns 更新后的咖啡豆对象，如果不存在则返回null
  */
-export async function increaseBeanRemaining(
+async function increaseBeanRemainingInMutation(
   id: string,
   restoreAmount: number
 ): Promise<CoffeeBean | null> {
@@ -448,13 +479,9 @@ export async function increaseBeanRemaining(
       return null;
 
     const store = getCoffeeBeanStore();
-    let bean = store.getBeanById(id);
-
-    if (!bean) {
-      // 尝试从DB加载
-      bean = (await coffeeBeanRepository.get(id)) ?? undefined;
-      if (!bean) return null;
-    }
+    const bean = await coffeeBeanRepository.get(id);
+    if (!bean) return null;
+    store.setBeans([...store.beans.filter(current => current.id !== id), bean]);
 
     // 转换为数字计算
     let currentRemaining = 0;
@@ -488,7 +515,7 @@ export async function increaseBeanRemaining(
     }
 
     const formattedNewRemaining = formatCoffeeBeanAmount(finalRemaining);
-    const result = await store.updateBean(id, {
+    const result = await callStoreActionInMutation(store.updateBean, id, {
       remaining: formattedNewRemaining,
     });
     return result;
@@ -538,3 +565,23 @@ export async function getBeanByName(
     findCoffeeBeanByIdentity(beans, { name })
   );
 }
+
+export const {
+  createBeanFromBrewUsage,
+  initializeBeanFromBrewUsage,
+  updateBeanRemaining,
+  increaseBeanRemaining,
+} = coordinateStoreActions(
+  {
+    createBeanFromBrewUsage: createBeanFromBrewUsageInMutation,
+    initializeBeanFromBrewUsage: initializeBeanFromBrewUsageInMutation,
+    updateBeanRemaining: updateBeanRemainingInMutation,
+    increaseBeanRemaining: increaseBeanRemainingInMutation,
+  },
+  [
+    'createBeanFromBrewUsage',
+    'initializeBeanFromBrewUsage',
+    'updateBeanRemaining',
+    'increaseBeanRemaining',
+  ]
+);

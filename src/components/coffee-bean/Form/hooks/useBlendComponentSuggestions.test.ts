@@ -48,3 +48,33 @@ describe('autofillBlendComponentsFromName', () => {
     });
   });
 });
+
+it('does not turn varieties detected in a single-origin name into blend rows', () => {
+  const result = autofillBlendComponentsFromName(
+    [{ origin: 'Ethiopia', percentage: 100 }],
+    'SL28/34 74110 74112',
+    { ...suggestions, varieties: ['SL28/34', '74110', '74112'] },
+    [],
+    ['variety']
+  );
+  expect(result.components).toHaveLength(1);
+  expect(result.components[0]).toMatchObject({
+    origin: 'Ethiopia',
+    percentage: 100,
+    variety: ['SL28/34', '74110', '74112'],
+  });
+});
+
+it('keeps a populated variety array without creating extra rows on name changes', () => {
+  const components = [
+    { origin: 'Ethiopia', variety: ['SL28/34', '74110', '74112'] },
+  ];
+  const result = autofillBlendComponentsFromName(
+    components,
+    'SL28/34 74110 74112',
+    { ...suggestions, varieties: ['SL28/34', '74110', '74112'] },
+    [],
+    ['variety']
+  );
+  expect(result.components).toEqual(components);
+});

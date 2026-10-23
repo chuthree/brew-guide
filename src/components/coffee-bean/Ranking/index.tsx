@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import TabButton from '@/components/common/ui/TabButton';
+import TabBar from '@/components/common/ui/TabBar';
 import { Virtuoso } from 'react-virtuoso';
 import { CoffeeBean, BrewingNoteData } from '@/types/app';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
@@ -18,14 +19,6 @@ import {
   type RankingDateGroupingMode,
   type RankingFilterMode,
 } from '../List/rankingFilters';
-
-// 下划线动画配置
-const UNDERLINE_TRANSITION = {
-  type: 'spring' as const,
-  stiffness: 500,
-  damping: 35,
-  mass: 1,
-};
 
 export const SORT_OPTIONS = {
   ORIGINAL: 'original', // 添加原始排序选项
@@ -352,50 +345,29 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
         <>
           {/* 豆子筛选选项卡 */}
           <div className="flex justify-between border-b border-neutral-200/50 px-3 dark:border-neutral-800">
-            <div className="flex">
-              <button
-                type="button"
-                className={`relative px-3 pb-1.5 text-xs ${beanType === 'all' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+            <TabBar className="flex">
+              <TabButton
+                isActive={beanType === 'all'}
                 onClick={() => setBeanType('all')}
+                className="px-3"
               >
-                <span className="relative">全部豆子</span>
-                {beanType === 'all' && (
-                  <motion.span
-                    layoutId="ranking-internal-underline"
-                    className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
-                    transition={UNDERLINE_TRANSITION}
-                  />
-                )}
-              </button>
-              <button
-                type="button"
-                className={`relative px-3 pb-1.5 text-xs ${beanType === 'espresso' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                全部豆子
+              </TabButton>
+              <TabButton
+                isActive={beanType === 'espresso'}
                 onClick={() => setBeanType('espresso')}
+                className="px-3"
               >
-                <span className="relative">意式豆</span>
-                {beanType === 'espresso' && (
-                  <motion.span
-                    layoutId="ranking-internal-underline"
-                    className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
-                    transition={UNDERLINE_TRANSITION}
-                  />
-                )}
-              </button>
-              <button
-                type="button"
-                className={`relative px-3 pb-1.5 text-xs ${beanType === 'filter' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-600 dark:text-neutral-400'}`}
+                意式豆
+              </TabButton>
+              <TabButton
+                isActive={beanType === 'filter'}
                 onClick={() => setBeanType('filter')}
+                className="px-3"
               >
-                <span className="relative">手冲豆</span>
-                {beanType === 'filter' && (
-                  <motion.span
-                    layoutId="ranking-internal-underline"
-                    className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
-                    transition={UNDERLINE_TRANSITION}
-                  />
-                )}
-              </button>
-            </div>
+                手冲豆
+              </TabButton>
+            </TabBar>
           </div>
         </>
       )}

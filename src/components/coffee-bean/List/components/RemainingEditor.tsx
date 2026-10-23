@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils/classNameUtils';
 import { CoffeeBean } from '@/types/app';
 import { BrewingNoteData } from '@/types/app';
+import { buildQuickDecrementRecord } from '@/lib/coffee-beans/inventoryRecords';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { resolveSelectedDateTimestamp } from '@/lib/utils/dateUtils';
@@ -321,29 +322,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
       // 创建一个默认的笔记数据
       const newNote: BrewingNoteData = {
         id: processingTimestamp.toString(),
-        timestamp: noteTimestamp,
-        source: 'quick-decrement',
-        quickDecrementAmount: actualAmount, // 使用实际扣除量
-        beanId: coffeeBean.id,
-        equipment: '', // 添加空的equipment字段，避免显示"未知器具"
-        method: '', // 添加空的method字段
-        coffeeBeanInfo: {
-          name: coffeeBean.name || '',
-          roastLevel: coffeeBean.roastLevel || '中度烘焙',
-          roastDate: coffeeBean.roastDate,
-          roaster: coffeeBean.roaster,
-        },
-        notes: '',
-        rating: 0,
-        taste: { acidity: 0, sweetness: 0, bitterness: 0, body: 0 },
-        params: {
-          coffee: `${actualAmount}g`, // 使用实际扣除量
-          water: '',
-          ratio: '',
-          grindSize: '',
-          temp: '',
-        },
-        totalTime: 0, // 添加totalTime字段，快捷扣除记录没有时间概念
+        ...buildQuickDecrementRecord(coffeeBean, actualAmount, noteTimestamp),
       };
 
       if (!isMounted.current) return;

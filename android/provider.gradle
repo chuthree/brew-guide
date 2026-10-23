@@ -1,0 +1,46 @@
+// Compile the same domain rules used by desktop MCP into a headless Android asset.
+// No downloaded runtime script, frontend server, Activity, or WebView is involved.
+def providerRoot = rootProject.projectDir.parentFile
+tasks.register('generateProviderBusinessRuntime', Exec) {
+    workingDir providerRoot
+    commandLine 'node', 'scripts/provider/build.mjs'
+    inputs.files(fileTree(new File(providerRoot, 'src/lib')) { include '**/*.ts'; exclude '**/*.test.ts' })
+    inputs.files(new File(providerRoot, 'scripts/provider/build.mjs'), new File(providerRoot, 'package.json'), new File(providerRoot, 'pnpm-lock.yaml'))
+    outputs.files(new File(projectDir, 'src/main/assets/provider/business.js'), new File(projectDir, 'src/main/assets/provider/business.inputs.json'))
+}
+tasks.named('preBuild').configure { dependsOn 'generateProviderBusinessRuntime' }
+
+// The pinned Rhino interpreter format is produced during this build. Avoid parsing
+// the entire shared engine during a background cold start on low-power devices.
+configurations { providerCompiler }
+dependencies { providerCompiler 'org.mozilla:rhino:1.8.0' }
+def compileProviderCompiler = tasks.register('compileProviderCompiler', JavaCompile) {
+    source new File(providerRoot, 'scripts/provider/jvm/CompileScript.java')
+    classpath = configurations.providerCompiler
+    destinationDirectory = layout.buildDirectory.dir('provider-compiler')
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
+}
+def compileProviderScript = tasks.register('compileProviderInterpreterScript', JavaExec) {
+    dependsOn 'generateProviderBusinessRuntime', compileProviderCompiler
+    classpath = files(compileProviderCompiler.flatMap { it.destinationDirectory }) + configurations.providerCompiler
+    mainClass = 'CompileScript'
+    args new File(projectDir, 'src/main/assets/provider/business.js').absolutePath,
+         new File(projectDir, 'src/main/assets/provider/business.bin').absolutePath
+    inputs.file(new File(projectDir, 'src/main/assets/provider/business.js'))
+    outputs.file(new File(projectDir, 'src/main/assets/provider/business.bin'))
+    maxHeapSize = '512m'
+}
+tasks.named('preBuild').configure { dependsOn compileProviderScript }
+
+// A debug APK cannot expose R8 stripping reflective or serialized runtime classes.
+// Fail the real release build if that contract is accidentally weakened later.
+def verifyProviderReleaseRuntime = tasks.register('verifyProviderReleaseRuntime', Exec) {
+    dependsOn 'minifyReleaseWithR8'
+    workingDir providerRoot
+    commandLine 'node', 'scripts/provider/verify-release-runtime.mjs',
+        layout.buildDirectory.dir('outputs/mapping/release').get().asFile.absolutePath
+}
+tasks.matching { it.name == 'assembleRelease' || it.name == 'bundleRelease' }.configureEach {
+    dependsOn verifyProviderReleaseRuntime
+}

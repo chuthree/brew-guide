@@ -20,6 +20,7 @@ import {
   SettingToggle,
   useScrollToHighlightedSetting,
 } from './atomic';
+import { McpSettingsSection } from './McpSettingsSection';
 import BeanSummaryCapacityLimitSection from './BeanSummaryCapacityLimitSection';
 import { makeSettingRowSearchId } from './settingsSearch';
 import { handleExternalUrlClick } from '@/lib/utils/openExternalUrl';
@@ -197,6 +198,8 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
 
   return (
     <SettingPage title="实验性功能" isVisible={isVisible} onClose={handleClose}>
+      <McpSettingsSection />
+
       {showCoffeeBeanExperiments && (
         <>
           <BeanSummaryCapacityLimitSection

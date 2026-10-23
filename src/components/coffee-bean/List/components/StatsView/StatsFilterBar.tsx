@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { AlignLeft } from 'lucide-react';
+import TabButton from '@/components/common/ui/TabButton';
+import TabBar from '@/components/common/ui/TabBar';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateGroupingMode } from './types';
 import {
@@ -110,53 +112,6 @@ const formatDateLabel = (
   }
 };
 
-// 下划线动画配置 - 使用 spring 动画实现丝滑效果
-const UNDERLINE_TRANSITION = {
-  type: 'spring' as const,
-  stiffness: 500,
-  damping: 35,
-  mass: 1,
-};
-
-// 可复用的标签按钮组件
-interface TabButtonProps {
-  isActive: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
-  dataTab?: string;
-  layoutId?: string;
-}
-
-const TabButton: React.FC<TabButtonProps> = ({
-  isActive,
-  onClick,
-  children,
-  className = '',
-  dataTab,
-  layoutId = 'stats-tab-underline',
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`relative pb-1.5 text-xs font-medium whitespace-nowrap ${
-      isActive
-        ? 'text-neutral-800 dark:text-neutral-100'
-        : 'text-neutral-600 dark:text-neutral-400'
-    } ${className}`}
-    data-tab={dataTab}
-  >
-    <span className="relative">{children}</span>
-    {isActive && (
-      <motion.span
-        layoutId={layoutId}
-        className="absolute inset-x-0 bottom-0 h-px bg-neutral-800 dark:bg-white"
-        transition={UNDERLINE_TRANSITION}
-      />
-    )}
-  </button>
-);
-
 // 筛选按钮组件
 interface FilterButtonProps {
   isActive: boolean;
@@ -216,31 +171,6 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const filterExpandRef = useRef<HTMLDivElement>(null);
   const navigationSwipeHandlers = useNavigationSwipe(navigationSwipeControl);
-
-  // 滚动容器引用
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [showLeftShadow, setShowLeftShadow] = useState(false);
-
-  // 监听滚动事件以控制阴影显示
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      setShowLeftShadow(scrollContainerRef.current.scrollLeft > 2);
-    }
-  };
-
-  // 添加滚动事件监听
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (scrollContainer) {
-      handleScroll();
-      scrollContainer.addEventListener('scroll', handleScroll, {
-        passive: true,
-      });
-      return () => {
-        scrollContainer.removeEventListener('scroll', handleScroll);
-      };
-    }
-  }, []);
 
   // 处理筛选展开栏
   const handleFilterToggle = () => {
@@ -327,7 +257,7 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
       {/* 整个分类栏容器 */}
       <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
         <div className="relative px-6">
-          <div className="relative flex items-center">
+          <TabBar className="relative flex items-center">
             {/* 固定在左侧的"全部"和筛选按钮 */}
             <div className="relative z-10 flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
               <TabButton
@@ -355,26 +285,15 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
             {/* 中间滚动区域 */}
             <div className="relative flex-1 overflow-hidden">
               {/* 左侧渐变阴影 */}
-              {showLeftShadow && (
-                <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
-              )}
+              <div
+                data-scroll-shadow="left"
+                className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
+              />
 
               <div
-                ref={scrollContainerRef}
+                data-category-scroll
                 className="flex overflow-x-auto"
-                style={{
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
-                  WebkitOverflowScrolling: 'touch',
-                }}
-                onScroll={handleScroll}
               >
-                <style jsx>{`
-                  div::-webkit-scrollbar {
-                    display: none;
-                  }
-                `}</style>
-
                 {/* 日期选项 */}
                 {availableDates.map(date => (
                   <TabButton
@@ -390,9 +309,12 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
               </div>
 
               {/* 右侧渐变阴影 */}
-              <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
+              <div
+                data-scroll-shadow="right"
+                className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
+              />
             </div>
-          </div>
+          </TabBar>
         </div>
 
         {/* 展开式筛选栏 */}

@@ -29,6 +29,7 @@ import {
 import { defaultSettings } from '@/components/settings/Settings';
 import {
   ImageProcessingError,
+  BEAN_IMAGE_COMPRESSION_OPTIONS,
   processImageFile,
 } from '@/lib/images/imageProcessing';
 import {
@@ -642,7 +643,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       const addPresetValues = (
         key: BlendPresetKey,
         defaultValues: string[],
-        value?: string
+        value?: string | string[]
       ) => {
         normalizeDelimitedTextList(value).forEach(item => {
           if (!defaultValues.includes(item)) {
@@ -732,11 +733,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     const handleImageUpload = async (file: File) => {
       try {
         const image = await processImageFile(file, {
-          compression: {
-            maxSizeMB: 0.1,
-            maxWidthOrHeight: 1200,
-            initialQuality: 0.8,
-          },
+          compression: BEAN_IMAGE_COMPRESSION_OPTIONS,
         });
         setBean(prev => ({ ...prev, image }));
       } catch (error) {
@@ -752,11 +749,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     const handleBackImageUpload = async (file: File) => {
       try {
         const backImage = await processImageFile(file, {
-          compression: {
-            maxSizeMB: 0.1,
-            maxWidthOrHeight: 1200,
-            initialQuality: 0.8,
-          },
+          compression: BEAN_IMAGE_COMPRESSION_OPTIONS,
         });
         setBean(prev => ({ ...prev, backImage }));
       } catch (error) {

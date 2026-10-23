@@ -8,6 +8,30 @@ import {
 } from './imageBinary';
 
 describe('image binary Data URL helpers', () => {
+  it('validates and decodes a full 8 MiB payload without regex stack overflow', () => {
+    const bytes = new Uint8Array(8 * 1024 * 1024);
+    bytes[0] = 255;
+    bytes[bytes.length - 1] = 127;
+    const encoded = encodeImageDataUrl({ mimeType: 'image/png', bytes });
+    const decoded = decodeImageDataUrl(encoded).bytes;
+    expect(decoded.length).toBe(bytes.length);
+    expect(decoded[0]).toBe(255);
+    expect(decoded[decoded.length - 1]).toBe(127);
+  });
+  it.each([
+    'A===',
+    'AA=A',
+    'AAAA=',
+    '=AAA',
+    'AA==AA==',
+    'ＡAAA',
+    'AA A',
+    'AB==',
+    'AAB=',
+  ])('rejects malformed/noncanonical padding %s', value => {
+    expect(() => decodeRawBase64(value)).toThrow();
+  });
+
   it.each([
     'image/jpeg',
     'image/png',

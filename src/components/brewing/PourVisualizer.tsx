@@ -12,6 +12,7 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { Stage } from '@/components/method/forms/components/types';
 import type { EquipmentAnimationType } from '@/lib/core/config';
 import { AnimationFrame } from './AnimationEditor';
+import { prepareOutlineSvg } from '@/lib/utils/svgUtils';
 
 // 定义扩展阶段类型
 interface ExtendedStage extends Partial<Stage> {
@@ -89,6 +90,11 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
   const animationContextRef = useRef<string | null>(null);
   const [isEasterEggActive, setIsEasterEggActive] = useState(false);
 
+  const isCustomType = customEquipment?.animationType === 'custom';
+  const customShapeSvg = isCustomType
+    ? customEquipment?.customShapeSvg
+    : undefined;
+
   // 添加动画控制器
   const controls = useAnimation();
 
@@ -143,31 +149,21 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     }
   }, [controls, isEasterEggActive]);
 
-  // 移除旧的样式定义
-  useEffect(() => {
-    // 动态添加深色模式样式
-    const style = document.createElement('style');
-    style.innerHTML = `
-            /* 移除所有旧的样式定义，现在使用全局 CSS */
-        `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
   // 获取设备图片路径
   const getEquipmentImageSrc = () => {
     try {
-      // 如果是自定义器具且有自定义SVG路径，使用自定义SVG
-      if (customEquipment?.customShapeSvg) {
-        // 自定义杯型的SVG数据直接返回，作为内联SVG使用
+      // 自定义类型只使用自己的杯型，不回退到预设。
+      if (isCustomType) {
+        // 杯型由下面的内联 SVG 分支渲染。
         return null;
       }
 
       // 如果是自定义器具，使用对应的基础动画类型
       if (customEquipment && customEquipment.animationType) {
-        const type = customEquipment.animationType.toLowerCase();
+        const type =
+          customEquipment.animationType === 'clever'
+            ? 'v60'
+            : customEquipment.animationType.toLowerCase();
         return `/images/icons/ui/${type}-base.svg`;
       }
 
@@ -214,58 +210,21 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     }
   };
 
-  // 获取当前注水类型，优化错误处理和回退逻辑
-  const getCurrentPourType = useCallback(() => {
-    try {
-      if (!stages[currentStage]) return 'center';
-
-      // 获取当前阶段的pourType，如果未设置，默认使用center
-      const pourType = stages[currentStage]?.pourType || 'center';
-
-      // 检查是否是意式萃取类型或 Bypass 类型，如果是则不显示注水动画
-      if (pourType === 'extraction' || pourType === 'bypass') {
-        return 'none'; // 返回特殊值表示不显示动画
-      }
-
-      // 检查是否是自定义动画ID
-      if (
-        customEquipment?.customPourAnimations?.some(
-          anim => anim.id === pourType
-        )
-      ) {
-        return pourType;
-      }
-
-      // 检查是否是标准注水类型
-      if (
-        pourType === 'center' ||
-        pourType === 'circle' ||
-        pourType === 'ice' ||
-        pourType === 'bypass' ||
-        pourType === 'other'
-      ) {
-        return pourType;
-      }
-
-      // 如果是其他自定义动画ID，直接返回
-      return pourType;
-    } catch (_error) {
-      return 'center';
-    }
-  }, [stages, currentStage, customEquipment]);
-
   // 定义可用的动画图片及其最大索引 - 移到组件顶部
   const availableAnimations = useMemo<Record<string, AnimationConfig>>(() => {
     // 基础动画配置
-    const baseAnimations: Record<string, AnimationConfig> = {
-      center: { maxIndex: 3 }, // center 只有3张图片
-      circle: { maxIndex: 4 }, // circle 有4张图片
-      ice: { maxIndex: 4, isStacking: true }, // 冰块动画，有4张图片，需要叠加显示
-    };
+    const baseAnimations: Record<string, AnimationConfig> = isCustomType
+      ? {}
+      : {
+          center: { maxIndex: 3 }, // center 只有3张图片
+          circle: { maxIndex: 4 }, // circle 有4张图片
+          ice: { maxIndex: 4, isStacking: true }, // 冰块动画，有4张图片，需要叠加显示
+        };
 
     // 如果有自定义器具，添加自定义动画配置
-    if (customEquipment?.customPourAnimations?.length) {
+    if (isCustomType && customEquipment?.customPourAnimations?.length) {
       customEquipment.customPourAnimations.forEach(animation => {
+        if (animation.isSystemDefault) return;
         // 使用动画ID作为键
         const animationId = animation.id;
         if (animation.frames && animation.frames.length > 0) {
@@ -285,7 +244,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     }
 
     return baseAnimations;
-  }, [customEquipment]);
+  }, [customEquipment, isCustomType]);
 
   // 优化预加载图片逻辑
   const imagesToPreload = useMemo(() => {
@@ -307,17 +266,17 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     const animationImages = [
       // center 动画图片
       ...Array.from(
-        { length: availableAnimations.center.maxIndex },
+        { length: availableAnimations.center?.maxIndex || 0 },
         (_, i) => `/images/icons/ui/pour-center-motion-${i + 1}.svg`
       ),
       // circle 动画图片
       ...Array.from(
-        { length: availableAnimations.circle.maxIndex },
+        { length: availableAnimations.circle?.maxIndex || 0 },
         (_, i) => `/images/icons/ui/pour-circle-motion-${i + 1}.svg`
       ),
       // ice 动画图片
       ...Array.from(
-        { length: availableAnimations.ice.maxIndex },
+        { length: availableAnimations.ice?.maxIndex || 0 },
         (_, i) => `/images/icons/ui/pour-ice-motion-${i + 1}.svg`
       ),
     ];
@@ -378,7 +337,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
   const currentStageType =
     (currentStageData as ExtendedStage | undefined)?.type || 'pour';
   const currentPourTime = currentStageData?.pourTime;
-  const currentPourType = getCurrentPourType();
+  const currentPourType = stages[currentStage]?.pourType || 'none';
   const currentAnimationConfig = availableAnimations[currentPourType];
   const currentAnimationMaxIndex = currentAnimationConfig?.maxIndex || 3;
   const isStackingAnimation = Boolean(currentAnimationConfig?.isStacking);
@@ -461,7 +420,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
   }, [animationContext, currentAnimationMaxIndex, isStackingAnimation]);
 
   // 检查是否使用自定义SVG
-  const hasCustomSvg = Boolean(customEquipment?.customShapeSvg);
+  const hasCustomSvg = Boolean(customShapeSvg);
   const equipmentImageSrc = getEquipmentImageSrc();
 
   // 计算杯体透明度 - 在注水时为完全不透明，否则为半透明
@@ -472,7 +431,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     try {
       if (!isRunning) return null;
 
-      const pourType = getCurrentPourType();
+      const pourType = currentPourType;
 
       // 检查对应的动画类型是否存在
       if (!pourType || !(pourType in availableAnimations)) return null;
@@ -485,7 +444,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         const frame =
           availableAnimations[pourType].frames?.[currentMotionIndex - 1];
         if (frame?.svgData) {
-          return processCustomSvg(frame.svgData);
+          return prepareOutlineSvg(frame.svgData);
         }
       }
 
@@ -493,7 +452,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
     } catch (_error) {
       return null;
     }
-  }, [isRunning, getCurrentPourType, currentMotionIndex, availableAnimations]);
+  }, [isRunning, currentPourType, currentMotionIndex, availableAnimations]);
 
   // 渲染静态视图的辅助函数（用于倒计时、未运行和无当前阶段的情况）
   const renderStaticView = () => {
@@ -504,12 +463,12 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
           <div
             className={`absolute inset-0 ${equipmentOpacity} custom-shape-svg-container outline-only custom-cup-shape transition-opacity duration-300`}
             dangerouslySetInnerHTML={{
-              __html: processCustomSvg(customEquipment?.customShapeSvg || ''),
+              __html: prepareOutlineSvg(customShapeSvg || ''),
             }}
           />
-        ) : (
+        ) : equipmentImageSrc ? (
           <Image
-            src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
+            src={equipmentImageSrc}
             alt={equipmentId}
             fill
             className={`object-contain invert-0 dark:invert ${equipmentOpacity} transition-opacity duration-300`}
@@ -518,7 +477,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
             quality={85}
             onError={() => {}}
           />
-        )}
+        ) : null}
         {/* 阀门显示 */}
         {(equipmentId === 'CleverDripper' || customEquipment?.hasValve) &&
           getValveImageSrc() && (
@@ -536,72 +495,6 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
           )}
       </div>
     );
-  };
-
-  // 更新 processCustomSvg 函数
-  const processCustomSvg = (svgContent: string) => {
-    if (!svgContent) return '';
-
-    // 处理 SVG 内容，确保使用 CSS 变量
-    let processedSvg = svgContent;
-
-    // 替换所有颜色相关的属性为 CSS 变量
-    processedSvg = processedSvg
-      .replace(/stroke="black"/g, 'stroke="var(--custom-shape-color)"')
-      .replace(/stroke="white"/g, 'stroke="var(--custom-shape-color)"')
-      .replace(/stroke="#000000"/g, 'stroke="var(--custom-shape-color)"')
-      .replace(/stroke="#FFFFFF"/g, 'stroke="var(--custom-shape-color)"')
-      .replace(/stroke="#ffffff"/g, 'stroke="var(--custom-shape-color)"')
-      .replace(/stroke="#000"/g, 'stroke="var(--custom-shape-color)"')
-      .replace(/stroke="#fff"/g, 'stroke="var(--custom-shape-color)"')
-      .replace(/stroke="currentColor"/g, 'stroke="var(--custom-shape-color)"')
-      .replace(/fill="black"/g, 'fill="none"')
-      .replace(/fill="white"/g, 'fill="none"')
-      .replace(/fill="#000000"/g, 'fill="none"')
-      .replace(/fill="#FFFFFF"/g, 'fill="none"')
-      .replace(/fill="#ffffff"/g, 'fill="none"')
-      .replace(/fill="#000"/g, 'fill="none"')
-      .replace(/fill="#fff"/g, 'fill="none"')
-      .replace(/fill="currentColor"/g, 'fill="none"');
-
-    // 检查是否已经包含 viewBox
-    const hasViewBox = /viewBox="[^"]*"/.test(processedSvg);
-
-    // 添加 SVG 属性和类名
-    processedSvg = processedSvg.replace(/<svg([^>]*)>/, (_, attributes) => {
-      // 添加缺失的 viewBox
-      const viewBoxAttr = hasViewBox ? '' : ' viewBox="0 0 300 300"';
-      // 添加统一的宽高和类名
-      return `<svg${attributes}${viewBoxAttr} width="300" height="300" class="custom-cup-shape outline-only">`;
-    });
-
-    // 确保所有路径使用统一的线条粗细（保持原有的stroke-width属性）
-    processedSvg = processedSvg.replace(/<path([^>]*)>/g, (_, attributes) => {
-      // 如果属性中没有stroke属性，添加默认stroke
-      if (!attributes.includes('stroke=')) {
-        attributes += ' stroke="var(--custom-shape-color)"';
-      }
-
-      // 如果属性中没有stroke-width属性，添加默认stroke-width
-      if (!attributes.includes('stroke-width=')) {
-        attributes += ' stroke-width="1.5"';
-      }
-
-      // 如果属性中没有fill属性，或者fill不是none，设置为none
-      if (
-        !attributes.includes('fill=') ||
-        !attributes.includes('fill="none"')
-      ) {
-        attributes = attributes.replace(/fill="[^"]*"/g, 'fill="none"');
-        if (!attributes.includes('fill=')) {
-          attributes += ' fill="none"';
-        }
-      }
-
-      return `<path${attributes}>`;
-    });
-
-    return processedSvg;
   };
 
   // 检查当前阶段是否存在
@@ -650,24 +543,26 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
           transition={{ duration: 0.2 }}
           className="absolute inset-0"
         >
-          {!customEquipment?.customShapeSvg ? (
-            // 标准SVG图像文件
-            <Image
-              src={equipmentImageSrc || '/images/icons/ui/v60-base.svg'}
-              alt={equipmentId || 'V60'}
-              fill
-              className={`object-contain invert-0 dark:invert ${equipmentOpacity}`}
-              sizes="(max-width: 768px) 100vw, 300px"
-              quality={85}
-              priority={true}
-              onError={() => {}}
-            />
+          {!hasCustomSvg ? (
+            equipmentImageSrc ? (
+              // 标准SVG图像文件
+              <Image
+                src={equipmentImageSrc}
+                alt={equipmentId || 'V60'}
+                fill
+                className={`object-contain invert-0 dark:invert ${equipmentOpacity}`}
+                sizes="(max-width: 768px) 100vw, 300px"
+                quality={85}
+                priority={true}
+                onError={() => {}}
+              />
+            ) : null
           ) : (
             // 自定义SVG内联数据
             <div
               className={`custom-cup-shape outline-only h-full w-full ${equipmentOpacity}`}
               dangerouslySetInnerHTML={{
-                __html: processCustomSvg(customEquipment.customShapeSvg),
+                __html: prepareOutlineSvg(customShapeSvg || ''),
               }}
             />
           )}
@@ -713,7 +608,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
                   <div
                     className="custom-cup-shape outline-only flex h-full w-full items-center justify-center"
                     dangerouslySetInnerHTML={{
-                      __html: processCustomSvg(
+                      __html: prepareOutlineSvg(
                         availableAnimations[
                           currentPourType as keyof typeof availableAnimations
                         ]?.frames?.[currentMotionIndex - 1]?.svgData || ''

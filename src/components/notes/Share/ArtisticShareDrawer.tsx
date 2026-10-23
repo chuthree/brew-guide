@@ -13,7 +13,11 @@ import CopyFailureDrawer from '@/components/common/feedback/CopyFailureDrawer';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
-import { normalizeBrewingNoteParams } from '@/lib/notes/noteDisplay';
+import {
+  normalizeBrewingNoteParams,
+  getNoteEspressoMeasurements,
+  resolveNoteMethodName,
+} from '@/lib/notes/noteDisplay';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
 import { useBrewingNoteImages } from '@/lib/hooks/useBrewingNoteImages';
 
@@ -83,7 +87,9 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
     activeTab: 'text' as Tab,
     isSettingsOpen: false,
   });
-  const [equipmentName, setEquipmentName] = useState(note.equipment || '');
+  const [equipmentName, setEquipmentName] = useState(
+    note.equipmentName || note.equipment || ''
+  );
   const [isEspresso, setIsEspresso] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
@@ -177,12 +183,16 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
   useEffect(() => {
     const loadEquipmentName = async () => {
       // Reset first
-      setIsEspresso(note.equipment === 'Espresso');
+      const equipmentId = note.equipmentId || note.equipment;
+      const snapshotName =
+        note.equipmentName || (note.equipmentId === null ? note.equipment : '');
+      setIsEspresso(equipmentId === 'Espresso');
+      setEquipmentName(snapshotName || note.equipment || '');
 
       // 1. Check system equipment
-      const systemEquipment = equipmentList.find(e => e.id === note.equipment);
+      const systemEquipment = equipmentList.find(e => e.id === equipmentId);
       if (systemEquipment) {
-        setEquipmentName(systemEquipment.name);
+        setEquipmentName(snapshotName || systemEquipment.name);
         return;
       }
 
@@ -190,10 +200,10 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
       try {
         const customEquipments = await loadCustomEquipments();
         const customEquipment = customEquipments.find(
-          (e: CustomEquipment) => e.id === note.equipment
+          (e: CustomEquipment) => e.id === equipmentId
         );
         if (customEquipment) {
-          setEquipmentName(customEquipment.name);
+          setEquipmentName(snapshotName || customEquipment.name);
           if (customEquipment.animationType === 'espresso') {
             setIsEspresso(true);
           }
@@ -203,7 +213,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
       }
     };
     loadEquipmentName();
-  }, [note.equipment]);
+  }, [note.equipment, note.equipmentName, note.equipmentId]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -359,7 +369,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
     // Basic Info - Combine Equipment and Method
     const metaInfo = [];
     if (equipmentName) metaInfo.push(equipmentName);
-    if (note.method) metaInfo.push(note.method);
+    if (resolveNoteMethodName(note)) metaInfo.push(resolveNoteMethodName(note));
 
     if (metaInfo.length > 0) {
       parts.push(metaInfo.join(' · '));
@@ -378,11 +388,11 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
       if (normalizedParams.grindSize)
         params.push(`研磨度 ${normalizedParams.grindSize}`);
 
-      if (note.totalTime && note.totalTime > 0)
-        params.push(`时间 ${note.totalTime}s`);
-
-      if (normalizedParams.water && normalizedParams.water !== '0')
-        params.push(`液重 ${cleanValue(normalizedParams.water)}g`);
+      const measured = getNoteEspressoMeasurements(note);
+      if (measured.extractionTime && measured.extractionTime > 0)
+        params.push(`时间 ${measured.extractionTime}s`);
+      if (measured.liquidWeight && measured.liquidWeight !== '0')
+        params.push(`液重 ${cleanValue(measured.liquidWeight)}g`);
     } else if (normalizedParams) {
       // 手冲：粉量、粉水比、研磨度、水温
       if (normalizedParams.coffee && normalizedParams.coffee !== '0')

@@ -121,6 +121,7 @@ interface InventoryViewProps {
   isSearching?: boolean;
   searchQuery?: string;
   hideEmptyState?: boolean;
+  onClearFilters?: () => void;
   beanFrontImageIds?: Set<string>;
   isImageFlowMode?: boolean;
   // 新增显示模式 prop，优先级高于 isImageFlowMode
@@ -167,6 +168,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
   isSearching = false,
   searchQuery = '',
   hideEmptyState = false,
+  onClearFilters,
   beanFrontImageIds = EMPTY_BEAN_IMAGE_IDS,
   isImageFlowMode = false,
   displayMode: externalDisplayMode,
@@ -297,6 +299,27 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     : isImageFlowMode
       ? 'imageFlow'
       : 'list';
+
+  if (
+    onClearFilters &&
+    !isSearching &&
+    !hideEmptyState &&
+    filteredBeans.length === 0 &&
+    (!showEmptyBeans || emptyBeans.length === 0)
+  ) {
+    return (
+      <div className="flex h-32 flex-col items-center justify-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
+        <p role="status">没有符合条件的{isGreenBean ? '生豆' : '咖啡豆'}</p>
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="px-2 py-1 text-neutral-600 underline decoration-neutral-300 underline-offset-4 hover:text-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-neutral-300 dark:decoration-neutral-600 dark:hover:text-neutral-100"
+        >
+          清除筛选
+        </button>
+      </div>
+    );
+  }
 
   // 如果是图片流模式，直接返回图片流视图
   if (currentDisplayMode === 'imageFlow') {

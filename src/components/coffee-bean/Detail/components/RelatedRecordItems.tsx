@@ -18,7 +18,9 @@ import {
 import {
   getBeanUnitPrice,
   normalizeBrewingNoteParams,
+  getNoteEspressoParamParts,
   resolveNoteEquipmentName,
+  resolveNoteMethodName,
 } from '@/lib/notes/noteDisplay';
 import { useBrewingNoteImagesWhenVisible } from '@/lib/hooks/useBrewingNoteImages';
 import { getDataUrlImageDimensions } from '@/lib/images/dimensions';
@@ -551,8 +553,8 @@ export const BrewingRecordItem: React.FC<{
     );
 
     const titleParts = useMemo(
-      () => [equipmentName, note.method?.trim() || ''].filter(isVisibleText),
-      [equipmentName, note.method]
+      () => [equipmentName, resolveNoteMethodName(note)].filter(isVisibleText),
+      [equipmentName, note.method, note.methodName]
     );
     const isEspresso = useMemo(
       () =>
@@ -569,12 +571,7 @@ export const BrewingRecordItem: React.FC<{
       }
 
       if (isEspresso) {
-        return [
-          normalizedParams.coffee,
-          normalizedParams.grindSize,
-          note.totalTime ? `${note.totalTime}s` : '',
-          normalizedParams.liquidWeight || normalizedParams.water,
-        ].filter(isVisibleText);
+        return getNoteEspressoParamParts(note);
       }
 
       const textureText = [normalizedParams.grindSize, normalizedParams.temp]
@@ -586,7 +583,7 @@ export const BrewingRecordItem: React.FC<{
         normalizedParams.ratio,
         textureText,
       ].filter(isVisibleText);
-    }, [isEspresso, normalizedParams, note.totalTime]);
+    }, [isEspresso, normalizedParams, note]);
     const footerGrindSize = isEspresso ? normalizedParams?.grindSize : '';
 
     const handleNoteImageError = React.useCallback(() => {

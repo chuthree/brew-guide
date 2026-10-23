@@ -19,6 +19,7 @@ import CoffeeBeanGroupSettings from '@/components/settings/CoffeeBeanGroupSettin
 import FlavorPeriodSettings from '@/components/settings/FlavorPeriodSettings';
 import TimerSettings from '@/components/settings/TimerSettings';
 import DataSettings from '@/components/settings/DataSettings';
+import ProviderSettings from '@/components/settings/ProviderSettings';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import RandomCoffeeBeanSettings from '@/components/settings/RandomCoffeeBeanSettings';
 import NoteSettings from '@/components/settings/NoteSettings';
@@ -55,20 +56,7 @@ import {
   updateBeanWithCapacityAdjustmentRecord,
 } from '@/lib/coffee-beans/capacityAdjustment';
 
-interface ExtendedCoffeeBean extends CoffeeBean {
-  blendComponents?: {
-    percentage?: number;
-    origin?: string;
-    country?: string;
-    region?: string;
-    estate?: string;
-    processingStation?: string;
-    altitude?: string;
-    process?: string;
-    batch?: string;
-    variety?: string;
-  }[];
-}
+type ExtendedCoffeeBean = CoffeeBean;
 
 export interface AppModalsProps {
   // Settings 相关
@@ -408,6 +396,10 @@ const AppModals: React.FC<AppModalsProps> = ({
   imageViewerData,
   setImageViewerData,
 }) => {
+  const [showProviderSettings, setShowProviderSettings] = React.useState(false);
+
+  const closeProviderSettings = React.useCallback(() => setShowProviderSettings(false), []);
+
   // 标记未使用的变量
   void setNoteDetailData;
 
@@ -458,6 +450,10 @@ const AppModals: React.FC<AppModalsProps> = ({
     {
       id: 'data-settings',
       isOpen: showDataSettings,
+    },
+    {
+      id: 'provider-settings',
+      isOpen: showProviderSettings,
     },
     {
       id: 'notification-settings',
@@ -516,6 +512,7 @@ const AppModals: React.FC<AppModalsProps> = ({
     setShowBrewingSettings(false);
     setShowTimerSettings(false);
     setShowDataSettings(false);
+    setShowProviderSettings(false);
     setShowNotificationSettings(false);
     setShowRandomCoffeeBeanSettings(false);
     setShowEquipmentMethodSettings(false);
@@ -653,6 +650,10 @@ const AppModals: React.FC<AppModalsProps> = ({
         />
       )}
 
+      {showProviderSettings && (
+        <ProviderSettings onClose={closeProviderSettings} />
+      )}
+
       {showDataSettings && (
         <DataSettings
           settings={settings}
@@ -743,7 +744,7 @@ const AppModals: React.FC<AppModalsProps> = ({
         isOpen={isSettingsOpen}
         onClose={handleSettingsClose}
         onDataChange={handleDataChange}
-        hasSubSettingsOpen={hasSubSettingsOpen}
+        hasSubSettingsOpen={hasSubSettingsOpen || showProviderSettings}
         isLargeScreen={isLargeScreen}
         activeSubSettingId={activeSubSettingId}
         customEquipments={customEquipments}
@@ -787,6 +788,8 @@ const AppModals: React.FC<AppModalsProps> = ({
             openSubSetting('timer-settings', setShowTimerSettings),
           onOpenDataSettings: () =>
             openSubSetting('data-settings', setShowDataSettings),
+          onOpenProviderSettings: () =>
+            openSubSetting('provider-settings', setShowProviderSettings),
           onOpenNotificationSettings: () =>
             openSubSetting(
               'notification-settings',

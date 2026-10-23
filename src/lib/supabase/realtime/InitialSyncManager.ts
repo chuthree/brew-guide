@@ -1,3 +1,4 @@
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
 /**
  * 初始同步管理器
  *
@@ -935,94 +936,120 @@ export class InitialSyncManager {
         });
       }
 
-      // 执行下载
-      if (toDownload.length > 0) {
-        this.updateProgressTask(table, {
-          status: 'writing',
-          detail: `写入 ${toDownload.length} 条云端记录`,
-          total: toDownload.length,
-          completed: 0,
-        });
+      await withDataMutation(async () => {
+        const currentRecords =
+          table === SYNC_TABLES.CUSTOM_EQUIPMENTS
+            ? await customEquipmentRepository.list()
+            : table === SYNC_TABLES.COFFEE_BEANS
+              ? await coffeeBeanRepository.list()
+              : await brewingNoteRepository.list();
+        const currentById = new Map(
+          currentRecords.map(record => [record.id, record])
+        );
+        for (const id of new Set([
+          ...toDownload.map(record => record.id),
+          ...toDeleteLocal,
+        ])) {
+          if (
+            JSON.stringify(currentById.get(id)) !==
+            JSON.stringify(localMap.get(id))
+          ) {
+            throw new Error(
+              `Local record changed during sync: ${table}/${id}; retry sync`
+            );
+          }
+        }
+        // 执行下载
+        if (toDownload.length > 0) {
+          this.updateProgressTask(table, {
+            status: 'writing',
+            detail: `写入 ${toDownload.length} 条云端记录`,
+            total: toDownload.length,
+            completed: 0,
+          });
 
-        assertValidDownloadedRecords(table, toDownload);
-        const validRecords = toDownload;
+          assertValidDownloadedRecords(table, toDownload);
+          const validRecords = toDownload;
 
-        if (table === SYNC_TABLES.COFFEE_BEANS) {
-          await imageSourcePayloadValidator.validateCoffeeBeans(validRecords);
-        } else if (table === SYNC_TABLES.BREWING_NOTES) {
-          await imageSourcePayloadValidator.validateBrewingNotes(validRecords);
+          if (table === SYNC_TABLES.COFFEE_BEANS) {
+            await imageSourcePayloadValidator.validateCoffeeBeans(validRecords);
+          } else if (table === SYNC_TABLES.BREWING_NOTES) {
+            await imageSourcePayloadValidator.validateBrewingNotes(
+              validRecords
+            );
+          }
+
+          if (validRecords.length > 0) {
+            console.warn(
+              `[InitialSync] ${table} 写入 ${validRecords.length} 条记录到本地 DB`
+            );
+            if (table === SYNC_TABLES.COFFEE_BEANS) {
+              for (let index = 0; index < validRecords.length; index++) {
+                const record = validRecords[index] as CoffeeBean;
+                await writeLocalRecordWithDiagnostics(
+                  table,
+                  record,
+                  index + 1,
+                  validRecords.length,
+                  () =>
+                    coffeeBeanPersistence.saveWithImages(record, {
+                      generateThumbnails: false,
+                    })
+                );
+              }
+            } else if (table === SYNC_TABLES.BREWING_NOTES) {
+              for (let index = 0; index < validRecords.length; index++) {
+                const record = validRecords[index] as BrewingNote;
+                await writeLocalRecordWithDiagnostics(
+                  table,
+                  record,
+                  index + 1,
+                  validRecords.length,
+                  () => brewingNotePersistence.saveWithImages(record)
+                );
+              }
+            } else if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
+              await customEquipmentRepository.upsertMany(
+                validRecords as CustomEquipment[]
+              );
+            }
+            if (
+              table === SYNC_TABLES.COFFEE_BEANS ||
+              table === SYNC_TABLES.BREWING_NOTES
+            ) {
+              await clearExpectedCoreDataDeletion();
+            }
+          }
+
+          this.updateProgressTask(table, {
+            status: 'writing',
+            detail: `已写入 ${validRecords.length} 条云端记录`,
+            total: toDownload.length,
+            completed: validRecords.length,
+            downloaded: validRecords.length,
+          });
         }
 
-        if (validRecords.length > 0) {
-          console.warn(
-            `[InitialSync] ${table} 写入 ${validRecords.length} 条记录到本地 DB`
+        // 执行本地删除
+        if (toDeleteLocal.length > 0) {
+          console.log(
+            `[InitialSync] ${table} 删除 ${toDeleteLocal.length} 条本地记录`
           );
-          if (table === SYNC_TABLES.COFFEE_BEANS) {
-            for (let index = 0; index < validRecords.length; index++) {
-              const record = validRecords[index] as CoffeeBean;
-              await writeLocalRecordWithDiagnostics(
-                table,
-                record,
-                index + 1,
-                validRecords.length,
-                () =>
-                  coffeeBeanPersistence.saveWithImages(record, {
-                    generateThumbnails: false,
-                  })
-              );
-            }
-          } else if (table === SYNC_TABLES.BREWING_NOTES) {
-            for (let index = 0; index < validRecords.length; index++) {
-              const record = validRecords[index] as BrewingNote;
-              await writeLocalRecordWithDiagnostics(
-                table,
-                record,
-                index + 1,
-                validRecords.length,
-                () => brewingNotePersistence.saveWithImages(record)
-              );
-            }
-          } else if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
-            await customEquipmentRepository.upsertMany(
-              validRecords as CustomEquipment[]
-            );
+          if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
+            await customEquipmentRepository.deleteMany(toDeleteLocal);
+          } else if (table === SYNC_TABLES.COFFEE_BEANS) {
+            await coffeeBeanPersistence.deleteManyWithImages(toDeleteLocal);
+          } else {
+            await brewingNotePersistence.deleteManyWithImages(toDeleteLocal);
           }
           if (
             table === SYNC_TABLES.COFFEE_BEANS ||
             table === SYNC_TABLES.BREWING_NOTES
           ) {
-            await clearExpectedCoreDataDeletion();
+            await markExpectedCoreDataDeletionIfEmpty();
           }
         }
-
-        this.updateProgressTask(table, {
-          status: 'writing',
-          detail: `已写入 ${validRecords.length} 条云端记录`,
-          total: toDownload.length,
-          completed: validRecords.length,
-          downloaded: validRecords.length,
-        });
-      }
-
-      // 执行本地删除
-      if (toDeleteLocal.length > 0) {
-        console.log(
-          `[InitialSync] ${table} 删除 ${toDeleteLocal.length} 条本地记录`
-        );
-        if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
-          await customEquipmentRepository.deleteMany(toDeleteLocal);
-        } else if (table === SYNC_TABLES.COFFEE_BEANS) {
-          await coffeeBeanPersistence.deleteManyWithImages(toDeleteLocal);
-        } else {
-          await brewingNotePersistence.deleteManyWithImages(toDeleteLocal);
-        }
-        if (
-          table === SYNC_TABLES.COFFEE_BEANS ||
-          table === SYNC_TABLES.BREWING_NOTES
-        ) {
-          await markExpectedCoreDataDeletionIfEmpty();
-        }
-      }
+      });
 
       this.updateProgressTask(table, {
         status: 'success',
@@ -1223,36 +1250,60 @@ export class InitialSyncManager {
         });
       }
 
-      // 执行下载
-      if (toDownload.length > 0) {
-        this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
-          status: 'writing',
-          detail: `写入 ${toDownload.length} 条云端方案`,
-          total: toDownload.length,
-          completed: 0,
-        });
+      await withDataMutation(async () => {
+        const currentById = new Map(
+          (await customMethodRepository.list()).map(record => [
+            record.equipmentId,
+            record,
+          ])
+        );
+        const originalById = new Map(
+          localRecords.map(record => [record.equipmentId, record])
+        );
+        for (const id of new Set([
+          ...toDownload.map(record => record.equipmentId),
+          ...toDeleteLocal,
+        ])) {
+          if (
+            JSON.stringify(currentById.get(id)) !==
+            JSON.stringify(originalById.get(id))
+          ) {
+            throw new Error(
+              `Local methods changed during sync: ${id}; retry sync`
+            );
+          }
+        }
+        // 执行下载
+        if (toDownload.length > 0) {
+          this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+            status: 'writing',
+            detail: `写入 ${toDownload.length} 条云端方案`,
+            total: toDownload.length,
+            completed: 0,
+          });
 
-        assertValidDownloadedRecords(SYNC_TABLES.CUSTOM_METHODS, toDownload);
+          assertValidDownloadedRecords(SYNC_TABLES.CUSTOM_METHODS, toDownload);
 
-        const recordsForStore = toDownload.map(item => ({
-          equipmentId: item.equipmentId,
-          methods: item.methods,
-        }));
-        await customMethodRepository.upsertMany(recordsForStore);
+          const recordsForStore = toDownload.map(item => ({
+            equipmentId: item.equipmentId,
+            methods: item.methods,
+          }));
+          await customMethodRepository.upsertMany(recordsForStore);
 
-        this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
-          status: 'writing',
-          detail: `已写入 ${toDownload.length} 条云端方案`,
-          total: toDownload.length,
-          completed: toDownload.length,
-          downloaded: toDownload.length,
-        });
-      }
+          this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
+            status: 'writing',
+            detail: `已写入 ${toDownload.length} 条云端方案`,
+            total: toDownload.length,
+            completed: toDownload.length,
+            downloaded: toDownload.length,
+          });
+        }
 
-      // 执行本地删除
-      if (toDeleteLocal.length > 0) {
-        await customMethodRepository.deleteMany(toDeleteLocal);
-      }
+        // 执行本地删除
+        if (toDeleteLocal.length > 0) {
+          await customMethodRepository.deleteMany(toDeleteLocal);
+        }
+      });
 
       this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
         status: 'success',

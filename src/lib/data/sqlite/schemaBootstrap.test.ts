@@ -297,6 +297,36 @@ describe('SQLite v1 schema bootstrap', () => {
     );
   });
 
+  it('preserves Android locale metadata through fresh creation and subsequent validation', async () => {
+    const fake = makeFakeSqlite();
+    addTable(fake.state, 'CREATE TABLE android_metadata (locale TEXT)');
+    await bootstrapSqliteSchema(fake.driver);
+    expect(fake.state.tables.has('android_metadata')).toBe(true);
+    const creates = fake.calls.filter(sql =>
+      sql.startsWith('CREATE TABLE')
+    ).length;
+    await bootstrapSqliteSchema(fake.driver);
+    expect(
+      fake.calls.filter(sql => sql.startsWith('CREATE TABLE'))
+    ).toHaveLength(creates);
+    expect(fake.state.version).toBe(SQLITE_SCHEMA_VERSION);
+    expect(fake.state.tables.has('android_metadata')).toBe(true);
+  });
+
+  it('preserves only Android locale metadata when fresh schema creation rolls back', async () => {
+    const fake = makeFakeSqlite();
+    addTable(fake.state, 'CREATE TABLE android_metadata (locale TEXT)');
+    await expect(
+      bootstrapSqliteSchema(fake.driver, [
+        SQLITE_SCHEMA_V1_STATEMENTS[0],
+        'INVALID SQL',
+      ])
+    ).rejects.toThrow(/fake SQLite rejected SQL/);
+    expect([...fake.state.tables.keys()]).toEqual(['android_metadata']);
+    expect(fake.state.version).toBe(0);
+    expect(fake.calls).toContain('ROLLBACK');
+  });
+
   it('rejects a newer user_version without creating or deleting schema', async () => {
     const fake = makeFakeSqlite();
     fake.state.version = SQLITE_SCHEMA_VERSION + 1;

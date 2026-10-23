@@ -35,6 +35,16 @@ function emptyHistoricalData(): LegacyHistoricalData {
   return { yearlyReports: { status: 'absent', records: [] } };
 }
 
+/** Only use after the platform proves that no legacy source exists. */
+export function createAbsentLegacyMigrationSource(): LegacyMigrationSource {
+  return {
+    info: null,
+    active: emptyMigrationData(),
+    historical: emptyHistoricalData(),
+    localStorage: readLegacyLocalStorageSnapshot({ getItem: () => null }),
+  };
+}
+
 export async function readLegacyMigrationSource(
   storage: Pick<Storage, 'getItem'>
 ): Promise<LegacyMigrationSource> {

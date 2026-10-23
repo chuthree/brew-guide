@@ -61,3 +61,15 @@ agents.markdown
 /server/server.js.bak
 /server/data/
 /allorigins/
+
+# Generated headless Provider business bundle (Gradle preBuild).
+/android/app/src/main/assets/provider/
+
+# Local Provider test/demo apps and their build configuration.
+/android/provider-caller/
+/android/provider-caller-other/
+/android/provider-test-signing.gradle
+/android/settings.local.gradle
+
+# Exported Android debug build metadata and APKs.
+/android/**/debug/

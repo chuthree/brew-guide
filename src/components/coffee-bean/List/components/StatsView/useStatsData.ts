@@ -18,7 +18,13 @@ import {
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
 import { buildRoasterRatingStats } from './utils';
-import { findCoffeeBeanByIdentity } from '@/lib/utils/coffeeBeanUtils';
+import {
+  parseNum,
+  parseNoteConsumption,
+  findBeanForNote,
+  calculateNoteCost,
+  hasBeanPrice,
+} from '@/lib/statistics/recordMetrics';
 import { getBeanRatingInfo } from '@/lib/utils/beanRatingUtils';
 import { getBrewingNotes } from '@/lib/notes/relatedNotes';
 import { getEquipmentNameById } from '@/lib/utils/equipmentUtils';
@@ -83,56 +89,6 @@ const COMMON_METHOD_STATS_MAX_COUNT = 15;
 // ============================================================================
 // 工具函数
 // ============================================================================
-
-/** 解析数字字段（处理字符串如 "100g" 或 "¥50"） */
-const parseNum = (value: string | number | undefined | null): number => {
-  if (value === undefined || value === null) return 0;
-  const parsed = parseFloat(value.toString().replace(/[^\d.]/g, ''));
-  return isNaN(parsed) ? 0 : parsed;
-};
-
-/** 解析笔记中的咖啡消耗量 */
-const parseNoteConsumption = (note: BrewingNote): number => {
-  if (note.source === 'capacity-adjustment') return 0;
-  if (note.source === 'quick-decrement' && note.quickDecrementAmount) {
-    return note.quickDecrementAmount;
-  }
-  if (note.params?.coffee) {
-    const match = note.params.coffee.match(/(\d+(\.\d+)?)/);
-    if (match) return parseFloat(match[0]);
-  }
-  return 0;
-};
-
-/** 根据笔记查找对应的咖啡豆（优先 beanId，降级到名称） */
-const findBeanForNote = (
-  note: BrewingNote,
-  beans: ExtendedCoffeeBean[]
-): ExtendedCoffeeBean | null => {
-  if (note.beanId) {
-    const bean = beans.find(b => b.id === note.beanId);
-    if (bean) return bean;
-  }
-  return findCoffeeBeanByIdentity(beans, note.coffeeBeanInfo);
-};
-
-/** 计算笔记的花费 */
-const calculateNoteCost = (
-  amount: number,
-  bean: ExtendedCoffeeBean | null
-): number => {
-  if (!bean?.price || !bean?.capacity) return 0;
-  const price = parseNum(bean.price);
-  const capacity = parseNum(bean.capacity);
-  if (capacity <= 0) return 0;
-  return (amount * price) / capacity;
-};
-
-/** 判断咖啡豆是否具备可用于克价计算的价格与容量 */
-const hasBeanPrice = (bean: ExtendedCoffeeBean | null): boolean => {
-  if (!bean?.price || !bean?.capacity) return false;
-  return parseNum(bean.price) > 0 && parseNum(bean.capacity) > 0;
-};
 
 const toBeanRatingHighlight = (
   item: BeanRatingCandidate,
@@ -208,13 +164,17 @@ const buildCommonMethodLabel = (
   note: BrewingNote,
   customEquipments: Parameters<typeof getEquipmentNameById>[1]
 ): string | null => {
-  const method = normalizeStatsText(note.method);
+  const method = normalizeStatsText(note.methodName || note.method);
   if (!method) return null;
 
   const equipment = normalizeStatsText(note.equipment);
   if (!equipment) return method;
 
-  const equipmentName = getEquipmentNameById(equipment, customEquipments);
+  const equipmentName =
+    note.equipmentName?.trim() ||
+    (note.equipmentId === null
+      ? equipment
+      : getEquipmentNameById(note.equipmentId || equipment, customEquipments));
   return `${equipmentName} · ${method}`;
 };
 
@@ -227,8 +187,15 @@ const addCommonMethodStats = (
   if (!label) return;
 
   const equipment = normalizeStatsText(note.equipment);
-  const method = normalizeStatsText(note.method);
-  const key = `${equipment || 'none'}::${method}`;
+  const method = normalizeStatsText(note.methodName || note.method);
+  const key = JSON.stringify([
+    note.equipmentId === null
+      ? ['label', equipment]
+      : ['id', note.equipmentId || equipment || 'none'],
+    note.methodId === null
+      ? ['label', method]
+      : ['id', note.methodId || method],
+  ]);
   const current = map.get(key);
 
   if (current) {

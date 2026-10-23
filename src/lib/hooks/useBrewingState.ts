@@ -1,4 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  callStoreActionInMutation,
+  coordinateStoreActions,
+} from '@/lib/data/storeMutationBoundary';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Method, equipmentList, CustomEquipment } from '@/lib/core/config';
 import { BrewingNoteData, CoffeeBean } from '@/types/app';
 import {
@@ -19,7 +23,6 @@ import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 import { MethodType } from '@/lib/types/method';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
-import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 
 // 器具选择缓存
 const MODULE_NAME = 'brewing-equipment';
@@ -361,7 +364,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
   }, []);
 
   // 简化的保存笔记函数 - 统一数据流避免竞态条件
-  const handleSaveNote = useCallback(
+  const handleSaveNoteRaw = useCallback(
     async (data: BrewingNoteData) => {
       try {
         const stages = selectedMethod?.params.stages || [];
@@ -381,28 +384,38 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
           stages,
         };
 
-        // 🔥 使用 Zustand store 保存笔记
-        const { useBrewingNoteStore } =
-          await import('@/lib/stores/brewingNoteStore');
-        await useBrewingNoteStore.getState().addNote(newNote);
+        {
+          // 🔥 使用 Zustand store 保存笔记
+          const { useBrewingNoteStore } =
+            await import('@/lib/stores/brewingNoteStore');
+          await callStoreActionInMutation(
+            useBrewingNoteStore.getState().addNote,
+            newNote
+          );
 
-        // 🎯 扣减咖啡豆用量 - 使用笔记中保存的参数值,而不是冲煮步骤的原始值
-        // 这样才能正确处理用户在笔记步骤中修改参数的情况
-        if (selectedCoffeeBean && newNote.params?.coffee) {
-          const match = newNote.params.coffee.match(/(\d+\.?\d*)/);
-          if (match) {
-            const coffeeAmount = parseFloat(match[1]);
-            if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-              const { initializeBeanFromBrewUsage, updateBeanRemaining } =
-                await import('@/lib/stores/coffeeBeanStore');
+          // 🎯 扣减咖啡豆用量 - 使用笔记中保存的参数值,而不是冲煮步骤的原始值
+          // 这样才能正确处理用户在笔记步骤中修改参数的情况
+          if (selectedCoffeeBean && newNote.params?.coffee) {
+            const match = newNote.params.coffee.match(/(\d+\.?\d*)/);
+            if (match) {
+              const coffeeAmount = parseFloat(match[1]);
+              if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
+                const { initializeBeanFromBrewUsage, updateBeanRemaining } =
+                  await import('@/lib/stores/coffeeBeanStore');
 
-              if (selectedCoffeeBeanCreatedFromSearch) {
-                await initializeBeanFromBrewUsage(
-                  selectedCoffeeBean,
-                  newNote.params.coffee
-                );
-              } else {
-                await updateBeanRemaining(selectedCoffeeBean, coffeeAmount);
+                if (selectedCoffeeBeanCreatedFromSearch) {
+                  await callStoreActionInMutation(
+                    initializeBeanFromBrewUsage,
+                    selectedCoffeeBean,
+                    newNote.params.coffee
+                  );
+                } else {
+                  await callStoreActionInMutation(
+                    updateBeanRemaining,
+                    selectedCoffeeBean,
+                    coffeeAmount
+                  );
+                }
               }
             }
           }
@@ -415,7 +428,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         setShowHistory(true);
         resetBrewingState();
       } catch (_error) {
-        alert('保存笔记时出错，请重试');
+        throw _error;
       }
     },
     [
@@ -425,6 +438,11 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
       currentBrewingMethod,
       resetBrewingState,
     ]
+  );
+
+  const handleSaveNote = useMemo(
+    () => coordinateStoreActions({ save: handleSaveNoteRaw }, ['save']).save,
+    [handleSaveNoteRaw]
   );
 
   // 简化的自定义方案保存
@@ -574,89 +592,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     []
   );
 
-  // 简化的content状态
-  const [content, setContent] = useState<Content>({
-    咖啡豆: { steps: [] },
-    方案: { steps: [], type: 'common' },
-    注水: { steps: [] },
-    记录: { steps: [] },
-  });
-
-  // 优化的content更新 - 使用 useMemo 缓存计算结果
-  const methodSteps = useRef<Step[]>([]);
-  const stageSteps = useRef<Step[]>([]);
-  const prevEquipment = useRef<string | null>(null);
-  const prevMethodType = useRef<'common' | 'custom'>(methodType);
-  const prevBrewingMethod = useRef<Method | null>(null);
-
-  // 简化的content更新 - 批量更新，减少重渲染
-  useEffect(() => {
-    let needsUpdate = false;
-    let newMethodSteps = methodSteps.current;
-    let newStageSteps = stageSteps.current;
-
-    // 只在方案相关数据变化时更新方案列表
-    if (
-      prevEquipment.current !== selectedEquipment ||
-      prevMethodType.current !== methodType ||
-      customMethods !== undefined // 自定义方案变化
-    ) {
-      if (selectedEquipment) {
-        const methods =
-          methodType === 'common'
-            ? getCommonMethodsForEquipment(selectedEquipment, customEquipments)
-            : customMethods[selectedEquipment] || [];
-        newMethodSteps = methods.map(method => ({
-          title: method.name,
-          methodId: method.id,
-        }));
-        methodSteps.current = newMethodSteps;
-        needsUpdate = true;
-      }
-      prevEquipment.current = selectedEquipment;
-      prevMethodType.current = methodType;
-    }
-
-    // 只在冲煮方法变化时更新注水列表
-    if (prevBrewingMethod.current !== currentBrewingMethod) {
-      if (currentBrewingMethod) {
-        newStageSteps = currentBrewingMethod.params.stages.map(
-          (stage, index) => ({
-            title: stage.label,
-            // 支持新旧格式：新格式使用 duration，旧格式使用 time
-            time: stage.time,
-            duration: stage.duration,
-            pourTime: stage.pourTime,
-            water: stage.water,
-            detail: stage.detail,
-            pourType: stage.pourType,
-            valveStatus: stage.valveStatus,
-            originalIndex: index,
-          })
-        );
-        stageSteps.current = newStageSteps;
-        needsUpdate = true;
-      }
-      prevBrewingMethod.current = currentBrewingMethod;
-    }
-
-    // 批量更新，减少重渲染
-    if (needsUpdate) {
-      setContent({
-        咖啡豆: { steps: [] },
-        方案: { steps: newMethodSteps, type: methodType },
-        注水: { steps: newStageSteps },
-        记录: { steps: [] },
-      });
-    }
-  }, [
-    selectedEquipment,
-    methodType,
-    customMethods,
-    customEquipments,
-    currentBrewingMethod,
-  ]);
-
   return {
     // 主要状态
     activeMainTab,
@@ -712,8 +647,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     setCustomMethods,
     customEquipments,
     setCustomEquipments,
-    content,
-    setContent,
     prevMainTabRef,
     isPourVisualizerPreloaded,
 

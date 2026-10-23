@@ -57,6 +57,7 @@ export interface BeanTypeStats {
 }
 
 export interface BeanInventorySnapshotOptions {
+  multiFilters?: Partial<Record<BeanFilterMode, string>>;
   filterMode: BeanFilterMode;
   selectedVariety: string | null;
   selectedOrigin: string | null;
@@ -71,7 +72,12 @@ export interface BeanInventorySnapshotOptions {
   sortOption?: SortOption;
 }
 
+export type BeanFilterOptionCounts = Partial<
+  Record<BeanFilterMode | 'type', Map<string, number>>
+>;
+
 export interface BeanInventorySnapshot {
+  filterOptionCounts: BeanFilterOptionCounts;
   filteredRecords: BeanListRecord[];
   emptyRecords: BeanListRecord[];
   searchableEmptyRecords: BeanListRecord[];
@@ -122,13 +128,14 @@ const toSearchTokens = (value: string): string[] =>
     .filter(Boolean);
 
 const uniqueNormalizedValues = (
-  values?: Array<string | number | null | undefined>
+  values?: Array<string | string[] | number | null | undefined>
 ): string[] => {
   if (!values) {
     return [];
   }
 
   const normalized = values
+    .flatMap(value => (Array.isArray(value) ? value : [value]))
     .map(value => normalizeSearchText(String(value ?? '')))
     .filter(Boolean);
   return Array.from(new Set(normalized));
@@ -302,6 +309,20 @@ const matchesFilterMode = (
   options: BeanInventorySnapshotOptions,
   selectedGroupIds: Set<string> | null
 ): boolean => {
+  if (options.multiFilters) {
+    return Object.entries(options.multiFilters).every(([mode, value]) => {
+      const fieldId = BEAN_FIELD_ID_BY_FILTER_MODE[mode as BeanFilterMode];
+      if (fieldId)
+        return (record.beanFieldValues[fieldId] || []).includes(value);
+      if (mode === 'roaster') return record.roaster === value;
+      if (mode === 'flavorPeriod') {
+        return !record.isEmpty && record.flavorStatus === value;
+      }
+      if (mode === 'group')
+        return matchesSelectedGroup(record, selectedGroupIds);
+      return true;
+    });
+  }
   const fieldId = BEAN_FIELD_ID_BY_FILTER_MODE[options.filterMode];
   if (fieldId) {
     const selectedValue = getSelectedFieldValue(options);
@@ -447,7 +468,13 @@ export const createBeanInventorySnapshot = (
 ): BeanInventorySnapshot => {
   const selectedGroup = getSortedCoffeeBeanGroups(
     options.coffeeBeanGroups || EMPTY_GROUPS
-  ).find(group => group.id === options.selectedBeanGroupId);
+  ).find(
+    group =>
+      group.id ===
+      (options.multiFilters
+        ? options.multiFilters.group
+        : options.selectedBeanGroupId)
+  );
   const selectedGroupIds = selectedGroup
     ? new Set(selectedGroup.beanIds || [])
     : null;
@@ -474,6 +501,33 @@ export const createBeanInventorySnapshot = (
   let currentStateBeanCount = 0;
   let hasEmptyBeansInCurrentState = false;
   const typeStats = { ...DEFAULT_TYPE_STATS };
+  const filterOptionCounts: BeanFilterOptionCounts = {};
+  const countModes: Array<BeanFilterMode | 'type'> = options.multiFilters
+    ? [
+        'type',
+        'roaster',
+        'flavorPeriod',
+        'group',
+        ...(Object.keys(BEAN_FIELD_ID_BY_FILTER_MODE) as BeanFilterMode[]),
+      ]
+    : [];
+  const countScopes = countModes.map(mode => {
+    const multiFilters = { ...options.multiFilters };
+    if (mode !== 'type') delete multiFilters[mode];
+    const counts = new Map<string, number>();
+    filterOptionCounts[mode] = counts;
+    return { mode, counts, options: { ...options, multiFilters } };
+  });
+  const groupIdsByBean = new Map<string, string[]>();
+  if (options.multiFilters) {
+    for (const group of options.coffeeBeanGroups || EMPTY_GROUPS) {
+      for (const beanId of group.beanIds || []) {
+        const ids = groupIdsByBean.get(beanId) ?? [];
+        ids.push(group.id);
+        groupIdsByBean.set(beanId, ids);
+      }
+    }
+  }
 
   for (const record of records) {
     if (record.beanState !== options.selectedBeanState) {
@@ -493,6 +547,33 @@ export const createBeanInventorySnapshot = (
       record,
       options.selectedBeanType
     );
+
+    if (includeByEmpty) {
+      // 每个分类仅排除自身条件；同一款豆在同一选项中只计一次。
+      for (const scope of countScopes) {
+        if (scope.mode !== 'type' && !matchesBeanType) continue;
+        if (!matchesFilterMode(record, scope.options, selectedGroupIds))
+          continue;
+        const fieldId =
+          scope.mode === 'type'
+            ? undefined
+            : BEAN_FIELD_ID_BY_FILTER_MODE[scope.mode];
+        const values = fieldId
+          ? (record.beanFieldValues[fieldId] ?? [])
+          : scope.mode === 'type'
+            ? [record.beanType]
+            : scope.mode === 'roaster'
+              ? [record.roaster]
+              : scope.mode === 'flavorPeriod'
+                ? record.isEmpty
+                  ? []
+                  : [record.flavorStatus]
+                : (groupIdsByBean.get(record.bean.id) ?? []);
+        for (const value of new Set(values)) {
+          if (value) incrementMapCount(scope.counts, value);
+        }
+      }
+    }
 
     if (includeByEmpty && matchesMode) {
       recordTypeStat(typeStats, record);
@@ -590,6 +671,7 @@ export const createBeanInventorySnapshot = (
 
   return {
     filteredRecords: sortedFilteredRecords,
+    filterOptionCounts,
     emptyRecords: options.showEmptyBeans ? sortedEmptyRecords : [],
     searchableEmptyRecords,
     tableFilteredRecords: filteredRecords,

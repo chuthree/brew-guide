@@ -26,9 +26,11 @@ import {
   getBeanUnitPrice,
   getNoteBeanAgingDaysForNote,
   normalizeBrewingNoteParams,
+  getNoteEspressoParamParts,
   resolveNoteBean,
   resolveNoteBeanDisplayName,
   resolveNoteEquipmentName,
+  resolveNoteMethodName,
 } from '@/lib/notes/noteDisplay';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
@@ -112,12 +114,12 @@ const SortIcon: React.FC<{
 }> = ({ direction, index }) => {
   if (!direction) {
     return (
-      <ChevronsUpDown className="ml-0.5 inline-block h-3 w-3 text-neutral-300 dark:text-neutral-600" />
+      <ChevronsUpDown className="ml-0.5 inline-block h-3 w-3 text-neutral-400 dark:text-neutral-600" />
     );
   }
 
   return (
-    <span className="ml-0.5 inline-flex items-center text-neutral-800 dark:text-neutral-200">
+    <span className="ml-0.5 inline-flex items-center text-neutral-500 dark:text-neutral-400">
       {direction === 'asc' ? (
         <ChevronUp className="h-3 w-3" />
       ) : (
@@ -187,7 +189,7 @@ const getSchemeDisplay = (
   equipmentNames: Record<string, string>
 ): string => {
   const equipmentName = resolveNoteEquipmentName(note, equipmentNames);
-  const methodName = note.method?.trim() || '';
+  const methodName = resolveNoteMethodName(note);
   const parts = [equipmentName, methodName].filter(Boolean);
 
   return parts.length > 0 ? parts.join(' / ') : '-';
@@ -203,12 +205,7 @@ const getParamsDisplay = (note: BrewingNote): string => {
     note.equipment?.toLowerCase().includes('espresso') ||
     note.equipment?.includes('意式')
   ) {
-    const parts = [
-      normalizedParams.coffee,
-      normalizedParams.grindSize,
-      note.totalTime ? `${note.totalTime}s` : '',
-      normalizedParams.water,
-    ].filter(Boolean);
+    const parts = getNoteEspressoParamParts(note);
 
     return parts.length > 0 ? parts.join(' / ') : '-';
   }
@@ -608,7 +605,7 @@ const NotesTableView: React.FC<NotesTableViewProps> = ({
                                 : undefined
                             }
                           >
-                            <span className="min-w-0 truncate">
+                            <span className={`min-w-0 truncate ${isSorted ? 'text-neutral-800 dark:text-neutral-200' : ''}`}>
                               {flexRender(
                                 header.column.columnDef.header,
                                 header.getContext()

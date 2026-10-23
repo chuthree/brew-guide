@@ -1,3 +1,4 @@
+import { parseNum } from '@/lib/statistics/recordMetrics';
 import { useState, useEffect, useMemo } from 'react';
 import type { BrewingNote } from '@/lib/core/config';
 import { ExtendedCoffeeBean } from '../../types';
@@ -70,13 +71,6 @@ interface UseGreenBeanStatsDataResult {
 // ============================================================================
 // 工具函数
 // ============================================================================
-
-/** 解析数字字段 */
-const parseNum = (value: string | number | undefined | null): number => {
-  if (value === undefined || value === null) return 0;
-  const parsed = parseFloat(value.toString().replace(/[^\d.]/g, ''));
-  return isNaN(parsed) ? 0 : parsed;
-};
 
 /** 判断时间戳是否在今天 */
 const isToday = (timestamp: number): boolean => {

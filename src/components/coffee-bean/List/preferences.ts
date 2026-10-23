@@ -4,6 +4,7 @@ import {
   BeanState,
   ViewOption,
   BeanFilterMode,
+  BEAN_FIELD_ID_BY_FILTER_MODE,
 } from './types';
 import {
   getBooleanState,
@@ -24,6 +25,38 @@ import type {
 const MODULE_NAME = 'coffee-beans';
 const MAX_SEARCH_HISTORY = 15;
 const DEFAULT_SHOW_EMPTY_BEANS = true;
+
+export const getMultiFiltersByStatePreference = (state: BeanState) => {
+  const saved = getObjectState<unknown>(
+    MODULE_NAME,
+    `multiFilters_${state}`,
+    {}
+  );
+  const filters: Partial<Record<BeanFilterMode, string>> = {};
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved))
+    return filters;
+  const modes: BeanFilterMode[] = [
+    'roaster',
+    ...(Object.keys(BEAN_FIELD_ID_BY_FILTER_MODE) as BeanFilterMode[]),
+    ...(state === 'roasted' ? ['flavorPeriod' as const, 'group' as const] : []),
+  ];
+  for (const mode of modes) {
+    const value = (saved as Record<string, unknown>)[mode];
+    if (typeof value !== 'string' || !value.trim()) continue;
+    if (
+      mode === 'flavorPeriod' &&
+      !Object.values(FlavorPeriodStatus).includes(value as FlavorPeriodStatus)
+    )
+      continue;
+    filters[mode] = value;
+  }
+  return filters;
+};
+
+export const saveMultiFiltersByStatePreference = (
+  state: BeanState,
+  filters: Partial<Record<BeanFilterMode, string>>
+) => saveObjectState(MODULE_NAME, `multiFilters_${state}`, filters);
 
 // UI 偏好设置缓存（不存储数据，只存储 UI 状态）
 export const globalCache: {

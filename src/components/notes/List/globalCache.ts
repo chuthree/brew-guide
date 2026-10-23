@@ -10,6 +10,11 @@ import {
   calculateTotalCoffeeConsumption as calculateConsumption,
   formatConsumption as formatConsumptionUtil,
 } from '../utils';
+import {
+  noteEquipmentFilterKey,
+  resolveNoteEquipmentName,
+} from '@/lib/notes/noteDisplay';
+import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 import { getBrewingNotes } from '@/lib/notes/relatedNotes';
 
 // 模块名称
@@ -157,15 +162,20 @@ export const initializeGlobalCache = async (): Promise<void> => {
     const totalConsumption = calculateConsumption(parsedNotes);
     globalCache.totalConsumption = totalConsumption;
 
+    const { loadCustomEquipments } =
+      await import('@/lib/stores/customEquipmentStore');
+    const customEquipments = await loadCustomEquipments();
+    const equipmentKey = (note: BrewingNote) =>
+      noteEquipmentFilterKey(note, value =>
+        getEquipmentIdByName(value, customEquipments)
+      );
+
     // 并行加载设备数据和收集ID
     const [namesMap, equipmentIds, datesList] = await Promise.all([
       // 获取设备名称映射
       (async () => {
         const map: Record<string, string> = {};
         const { equipmentList } = await import('@/lib/core/config');
-        const { loadCustomEquipments } =
-          await import('@/lib/stores/customEquipmentStore');
-        const customEquipments = await loadCustomEquipments();
 
         // 处理标准设备和自定义设备
         equipmentList.forEach(equipment => {
@@ -176,15 +186,18 @@ export const initializeGlobalCache = async (): Promise<void> => {
           map[equipment.id] = equipment.name;
         });
 
+        for (const note of parsedNotes) {
+          const key = equipmentKey(note);
+          if (key && (!map[key] || note.equipmentId === null))
+            map[key] = resolveNoteEquipmentName(note, map);
+        }
         return map;
       })(),
 
       // 收集设备ID
       (async () => {
         return Array.from(
-          new Set(
-            parsedNotes.map(note => note.equipment).filter(Boolean) as string[]
-          )
+          new Set(parsedNotes.map(equipmentKey).filter(Boolean))
         );
       })(),
 
@@ -215,7 +228,7 @@ export const initializeGlobalCache = async (): Promise<void> => {
       globalCache.selectedEquipment
     ) {
       filteredNotes = parsedNotes.filter(
-        note => note.equipment === globalCache.selectedEquipment
+        note => equipmentKey(note) === globalCache.selectedEquipment
       );
     } else if (globalCache.filterMode === 'date' && globalCache.selectedDate) {
       filteredNotes = parsedNotes.filter(note => {

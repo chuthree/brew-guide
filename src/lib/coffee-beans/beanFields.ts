@@ -111,14 +111,9 @@ const stringifyFieldValue = (value: unknown): string => {
   return '';
 };
 
-const normalizeNoteParts = (notes: unknown): string[] => {
-  const values = Array.isArray(notes) ? notes : [notes];
-  return values
-    .flatMap(value => stringifyFieldValue(value).split(/\s*(?:\/|；)\s*/))
-    .filter(Boolean);
-};
+type StoredFieldValue = string | string[];
 
-const formatFieldValue = (fieldId: BeanFieldId, value: unknown): string => {
+const scalarFieldValue = (fieldId: BeanFieldId, value: unknown): string => {
   const formatted = stringifyFieldValue(value);
   if (fieldId !== 'altitude') return formatted;
   return formatted
@@ -129,18 +124,122 @@ const formatFieldValue = (fieldId: BeanFieldId, value: unknown): string => {
     .replace(/\s*m$/i, 'm');
 };
 
-const normalizeFieldValue = (fieldId: BeanFieldId, value: unknown): string =>
-  formatFieldValue(fieldId, value)
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/[\s._·•:：;,，。/\\()[\]{}]+/g, '');
+/** Preserve explicit list boundaries; never split cultivar names such as SL28/34. */
+export const normalizeBeanComponentFieldValue = (
+  fieldId: BeanFieldId,
+  value: unknown
+): StoredFieldValue => {
+  if (!Array.isArray(value)) return scalarFieldValue(fieldId, value);
+  return Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === 'string')
+        .map(item => scalarFieldValue(fieldId, item))
+        .filter(Boolean)
+    )
+  );
+};
+
+const formatFieldValue = normalizeBeanComponentFieldValue;
+const noteFieldValue = (value: StoredFieldValue): string =>
+  Array.isArray(value) ? JSON.stringify(value) : value;
+const decodeNoteFieldValue = (value: string): StoredFieldValue => {
+  if (value.trim().startsWith('[')) {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (
+        Array.isArray(parsed) &&
+        parsed.every(item => typeof item === 'string')
+      )
+        return parsed;
+    } catch {
+      /* Old free-form values are not JSON. */
+    }
+  }
+  return value;
+};
+
+const startsLabeledField = (value: string): boolean =>
+  BEAN_FIELD_DEFINITIONS.some(({ noteLabel }) =>
+    new RegExp(`^(?:成分\\s*\\d+\\s*)?${noteLabel}\\s*[:：]`).test(
+      value.trimStart()
+    )
+  );
+
+/** Split canonical field separators, not slashes inside a value or JSON array. */
+const normalizeNoteParts = (notes: unknown): string[] => {
+  const values = Array.isArray(notes) ? notes : [notes];
+  return values.flatMap(value => {
+    if (typeof value !== 'string') return [];
+    const parts: string[] = [];
+    let start = 0,
+      depth = 0,
+      quoted = false,
+      escaped = false;
+    for (let index = 0; index < value.length; index++) {
+      const char = value[index];
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (char === '\\') escaped = true;
+        else if (char === '"') quoted = false;
+        continue;
+      }
+      if (char === '"' && depth > 0) {
+        quoted = true;
+        continue;
+      }
+      if (char === '[') {
+        depth++;
+        continue;
+      }
+      if (char === ']' && depth > 0) {
+        depth--;
+        continue;
+      }
+      if (depth > 0 || (char !== '/' && char !== '；')) continue;
+      const current = value.slice(start, index).trim();
+      const tail = value.slice(index + 1);
+      const spacedSlash =
+        char === '/' &&
+        /\s/.test(value[index - 1] || '') &&
+        /\s/.test(value[index + 1] || '');
+      if (
+        startsLabeledField(tail) ||
+        ((char === '；' || spacedSlash) && startsLabeledField(current))
+      ) {
+        if (current) parts.push(current);
+        start = index + 1;
+      }
+    }
+    const last = value.slice(start).trim();
+    if (last) parts.push(last);
+    return parts;
+  });
+};
+
+const normalizeFieldValue = (fieldId: BeanFieldId, value: unknown): string => {
+  const normalized = formatFieldValue(fieldId, value);
+  const key = (text: string) =>
+    text
+      .normalize('NFKD')
+      .replace(/\p{M}/gu, '')
+      .toLowerCase()
+      .replace(
+        fieldId === 'variety'
+          ? /[\s._·•:：;,，。\\()[\]{}]+/g
+          : /[\s._·•:：;,，。/\\()[\]{}]+/g,
+        ''
+      );
+  return Array.isArray(normalized)
+    ? JSON.stringify(normalized.map(key))
+    : key(normalized);
+};
 
 const parseFieldNote = (
   note: string
 ): {
   fieldId: BeanFieldId;
-  value: string;
+  value: StoredFieldValue;
   componentIndex: number | null;
 } | null => {
   for (const definition of BEAN_FIELD_DEFINITIONS) {
@@ -152,7 +251,7 @@ const parseFieldNote = (
     if (match) {
       return {
         fieldId: definition.id,
-        value: match[2],
+        value: decodeNoteFieldValue(match[2]),
         componentIndex: match[1] ? Number(match[1]) - 1 : null,
       };
     }
@@ -369,11 +468,8 @@ export function normalizeCoffeeBeanForFieldConfig<
     }
     if (components.length === 0) components.push({});
 
-    const currentValue = getComponentFieldValue(
-      components[componentIndex],
-      parsed.fieldId
-    );
-    if (!currentValue) {
+    const currentValue = components[componentIndex][parsed.fieldId];
+    if (!stringifyFieldValue(currentValue)) {
       components[componentIndex][parsed.fieldId] = formatFieldValue(
         parsed.fieldId,
         parsed.value
@@ -395,7 +491,7 @@ export function normalizeCoffeeBeanForFieldConfig<
 
       TEXT_FIELD_IDS.forEach(fieldId => {
         const value = formatFieldValue(fieldId, component[fieldId]);
-        if (!value) return;
+        if (!stringifyFieldValue(value)) return;
         if (enabledFieldIds.has(fieldId)) {
           nextComponent[fieldId] = value;
           return;
@@ -403,13 +499,15 @@ export function normalizeCoffeeBeanForFieldConfig<
         const prefix =
           components.length > 1 ? `成分${componentIndex + 1} ` : '';
         appendNote(
-          `${prefix}${getBeanFieldDefinition(fieldId).noteLabel}：${value}`
+          `${prefix}${getBeanFieldDefinition(fieldId).noteLabel}：${noteFieldValue(value)}`
         );
       });
       return nextComponent;
     })
     .filter(
       component =>
+        // Retain component positions while their fields live in scoped notes.
+        components.length > 1 ||
         component.percentage !== undefined ||
         TEXT_FIELD_IDS.some(fieldId =>
           getComponentFieldValue(component, fieldId)
@@ -422,6 +520,78 @@ export function normalizeCoffeeBeanForFieldConfig<
       normalizedComponents.length > 0 ? normalizedComponents : undefined,
     notes: noteParts.length > 0 ? noteParts.join(' / ') : undefined,
   };
+}
+
+/** Route only explicitly replaced component data; unrelated edits preserve history. */
+export function normalizeCoffeeBeanFieldUpdate<T extends Partial<CoffeeBean>>(
+  previous: T,
+  patch: Partial<CoffeeBean>,
+  settings?: Pick<AppSettings, 'beanFieldConfig' | 'showEstateField'> | null
+): T {
+  if (!Object.prototype.hasOwnProperty.call(patch, 'blendComponents')) {
+    return { ...previous, ...patch };
+  }
+  const components = patch.blendComponents ?? [];
+  const hasExplicitNotes = Object.prototype.hasOwnProperty.call(patch, 'notes');
+  const previousComponents = previous.blendComponents ?? [];
+  if (!hasExplicitNotes) {
+    // Components have no stable IDs. Never guess a new owner for historical
+    // scoped notes after replacement/reordering; require an explicit note map.
+    const componentKey = (component: BlendComponent | undefined) =>
+      JSON.stringify([
+        component?.percentage,
+        ...TEXT_FIELD_IDS.map(id => component?.[id]),
+      ]);
+    const ambiguous = normalizeNoteParts(previous.notes).some(note => {
+      const parsed = parseFieldNote(note);
+      if (!parsed) return false;
+      if (components.length !== previousComponents.length) {
+        return parsed.componentIndex !== null || previousComponents.length > 1;
+      }
+      if (parsed.componentIndex === null) return false;
+      const index = parsed.componentIndex;
+      const replacement = components[index];
+      if (
+        replacement &&
+        Object.prototype.hasOwnProperty.call(replacement, parsed.fieldId)
+      )
+        return false;
+      return (
+        componentKey(previousComponents[index]) !== componentKey(replacement)
+      );
+    });
+    if (ambiguous) {
+      throw Object.assign(
+        new Error(
+          'Changing components with scoped field notes requires explicit notes to preserve their intended component mapping.'
+        ),
+        { code: 'INVALID_ARGUMENT' }
+      );
+    }
+  }
+  const notes = hasExplicitNotes
+    ? patch.notes
+    : normalizeNoteParts(previous.notes)
+        .filter(note => {
+          const parsed = parseFieldNote(note);
+          if (!parsed) return true;
+          const index =
+            parsed.componentIndex ??
+            (components.length <= 1 &&
+            (previous.blendComponents?.length ?? 0) <= 1
+              ? 0
+              : -1);
+          const replacement = components[index];
+          return (
+            !replacement ||
+            !Object.prototype.hasOwnProperty.call(replacement, parsed.fieldId)
+          );
+        })
+        .join(' / ');
+  return normalizeCoffeeBeanForFieldConfig(
+    { ...previous, ...patch, notes },
+    settings
+  );
 }
 
 export function normalizeCoffeeBeanPayloadForFieldConfig(

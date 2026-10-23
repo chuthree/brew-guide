@@ -1,84 +1,3 @@
-/**
- * AnimationEditor组件功能整理
- *
- * 当前实现存在一些问题，以下是整理后的功能说明和重构建议。
- * 这可以作为您重新实现动画编辑器的参考。
- *
- * ## 当前组件主要功能
- *
- * 1. 帧管理
- *    - 添加/删除/复制/切换帧
- *    - 保存帧内容为SVG
- *    - 播放动画（循环和单次播放）
- *
- * 2. 绘图功能
- *    - 基于Canvas的绘图
- *    - 支持参考图像
- *    - 深色模式适配
- *
- * 3. 底图功能 (当前主要问题所在)
- *    - 显示前面帧作为半透明底图
- *    - 用于动画绘制参考
- *
- * ## 当前实现的主要问题
- *
- * 1. 底图实现复杂且不可靠
- *    - 使用SVG合并方式实现底图
- *    - 状态更新时序问题
- *    - 深色模式适配困难
- *
- * 2. 组件职责不清晰
- *    - AnimationEditor和DrawingCanvas职责混淆
- *    - 过多的状态和副作用
- *
- * 3. 性能问题
- *    - SVG解析和合并开销大
- *    - 频繁的DOM操作
- *
- * ## 建议的重构方案 (Canvas图层方案)
- *
- * 1. 数据结构
- *    ```typescript
- *    interface AnimationFrame {
- *      id: string;
- *      imageData: ImageData | null; // 使用Canvas的ImageData而非SVG
- *      thumbnail: string;           // 缩略图数据URL
- *    }
- *    ```
- *
- * 2. 使用叠加Canvas替代SVG合并
- *    - 底层Canvas: 显示参考图像
- *    - 中间Canvas: 显示前帧合成底图
- *    - 顶层Canvas: 当前绘制内容
- *
- * 3. 底图实现
- *    - 切换帧时直接将前帧渲染到中间Canvas
- *    - 设置适当的globalAlpha值
- *    - 深色模式使用CSS滤镜
- *
- * 4. 状态管理
- *    - 使用useReducer替代多个useState
- *    - 清晰的动作类型和状态转换
- *
- * ## 实现建议
- *
- * 1. 帧数据使用ImageData而非SVG
- *    - 更高效的数据结构
- *    - 避免SVG解析和操作
- *
- * 2. 分离关注点
- *    - 帧管理逻辑独立
- *    - 绘图功能独立
- *    - UI控制独立
- *
- * 3. 优化性能
- *    - 使用requestAnimationFrame实现平滑播放
- *    - 缓存底图和缩略图
- *    - 避免不必要的重渲染
- *
- * 这些建议可以帮助您实现一个更可靠、更高效的动画编辑器组件。
- */
-
 'use client';
 
 import React, {
@@ -93,10 +12,7 @@ import React, {
 import DrawingCanvas, { DrawingCanvasRef } from '../common/ui/DrawingCanvas';
 import hapticsUtils from '@/lib/ui/haptics';
 import Image from 'next/image';
-import {
-  sanitizeSvgMarkup,
-  setSvgDimensions,
-} from '@/lib/utils/svgUtils';
+import { prepareOutlineSvg } from '@/lib/utils/svgUtils';
 
 // 定义单帧数据结构
 export interface AnimationFrame {
@@ -154,9 +70,6 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
     // 计算当前帧
     const currentFrame = frames[currentFrameIndex];
 
-    // 获取缩略图大小
-    const thumbnailSize = 64;
-
     // 合并指定帧范围的SVG
     const mergePreviousFrames = useCallback(
       (endIndex: number) => {
@@ -169,82 +82,11 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
         )
           return '';
 
-        // 创建一个全新的SVG文档，避免累积偏移问题
-        const newSvg = document.createElementNS(
-          'http://www.w3.org/2000/svg',
-          'svg'
-        );
-        newSvg.setAttribute('width', width.toString());
-        newSvg.setAttribute('height', height.toString());
-        newSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-        newSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        newSvg.setAttribute('class', 'custom-cup-shape outline-only');
-
-        const parser = new DOMParser();
-
-        // 遍历所有之前的帧，提取其SVG路径并合并
-        for (let i = 0; i < endIndex; i++) {
-          const frameSvg = frames[i]?.svgData || '';
-          if (!frameSvg || frameSvg.trim() === '') {
-            // 跳过空帧
-            continue;
-          }
-
-          try {
-            const svgDoc = parser.parseFromString(frameSvg, 'image/svg+xml');
-
-            if (
-              svgDoc.documentElement &&
-              svgDoc.documentElement.tagName === 'svg'
-            ) {
-              // 获取所有path元素
-              const pathElements = svgDoc.querySelectorAll('path');
-
-              pathElements.forEach(originalPath => {
-                // 创建一个全新的path元素，确保坐标系统正确
-                const newPath = document.createElementNS(
-                  'http://www.w3.org/2000/svg',
-                  'path'
-                );
-
-                // 复制关键属性，确保坐标系统不变
-                const dAttribute = originalPath.getAttribute('d');
-                if (dAttribute) {
-                  // 直接使用原始的路径数据，不进行任何变换
-                  newPath.setAttribute('d', dAttribute);
-                }
-
-                // 复制其他样式属性
-                const stroke =
-                  originalPath.getAttribute('stroke') ||
-                  'var(--custom-shape-color)';
-                const strokeWidth =
-                  originalPath.getAttribute('stroke-width') || '3';
-                const fill = originalPath.getAttribute('fill') || 'none';
-
-                newPath.setAttribute('stroke', stroke);
-                newPath.setAttribute('stroke-width', strokeWidth);
-                newPath.setAttribute('fill', fill);
-                newPath.setAttribute('stroke-linecap', 'round');
-                newPath.setAttribute('stroke-linejoin', 'round');
-
-                // 添加到新的SVG中
-                newSvg.appendChild(newPath);
-              });
-            }
-          } catch (error) {
-            // Log error in development only
-            if (process.env.NODE_ENV === 'development') {
-              console.error(`合并第${i}帧时出错:`, error);
-            }
-          }
-        }
-
-        // 将DOM转换回字符串
-        const serializer = new XMLSerializer();
-        const result = serializer.serializeToString(newSvg);
-
-        return result;
+        const layers = frames
+          .slice(0, endIndex)
+          .map(frame => prepareOutlineSvg(frame.svgData))
+          .join('');
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${layers}</svg>`;
       },
       [frames, width, height]
     );
@@ -569,13 +411,7 @@ const AnimationEditor = forwardRef<AnimationEditorRef, AnimationEditorProps>(
                     <div
                       className="h-full w-full"
                       dangerouslySetInnerHTML={{
-                        __html: sanitizeSvgMarkup(
-                          setSvgDimensions(
-                            frame.svgData,
-                            `${thumbnailSize}`,
-                            `${thumbnailSize}`
-                          )
-                        ),
+                        __html: prepareOutlineSvg(frame.svgData),
                       }}
                     />
                   ) : (

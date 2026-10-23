@@ -8,7 +8,11 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import { linesToSvgPath, svgToLines } from '@/lib/utils/svgUtils';
+import {
+  linesToSvgPath,
+  svgToLines,
+  prepareOutlineSvg,
+} from '@/lib/utils/svgUtils';
 import hapticsUtils from '@/lib/ui/haptics';
 
 interface Point {
@@ -193,7 +197,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
     useEffect(() => {
       if (defaultSvg && defaultSvg.trim() !== '') {
         try {
-          const importedLines = svgToLines(defaultSvg);
+          const importedLines = svgToLines(defaultSvg, width, height);
           setLines(importedLines);
         } catch (error) {
           // Log error in development only
@@ -201,8 +205,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
             console.error('无法导入SVG:', error);
           }
         }
+      } else {
+        setLines([]);
       }
-    }, [defaultSvg]);
+    }, [defaultSvg, width, height]);
 
     // 清理函数
     const cleanupBlobUrl = useCallback(() => {
@@ -238,20 +244,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
           console.warn('[SVG加载] 开始处理SVG数据，长度:', svgToUse.length);
         }
 
-        // 处理SVG颜色 - 根据当前主题模式设置颜色
-        let processedSvg = svgToUse;
-        const themeColor = isDark ? '#FFFFFF' : '#000000';
-
-        // 统一替换所有颜色为当前主题色
-        processedSvg = processedSvg
-          .replace(
-            /stroke="var\(--custom-shape-color\)"/g,
-            `stroke="${themeColor}"`
-          )
-          .replace(/stroke="#000000"/g, `stroke="${themeColor}"`)
-          .replace(/stroke="#FFFFFF"/g, `stroke="${themeColor}"`)
-          .replace(/stroke="black"/g, `stroke="${themeColor}"`)
-          .replace(/stroke="white"/g, `stroke="${themeColor}"`);
+        const processedSvg = prepareOutlineSvg(
+          svgToUse,
+          isDark ? '#FFFFFF' : '#000000'
+        );
 
         const svgBlob = new Blob([processedSvg], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(svgBlob);
@@ -384,20 +380,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
           );
         }
 
-        // 处理SVG颜色 - 根据当前主题模式设置颜色
-        let processedSvg = _customReferenceSvg;
-        const themeColor = isDark ? '#FFFFFF' : '#000000';
-
-        // 统一替换所有颜色为当前主题色
-        processedSvg = processedSvg
-          .replace(
-            /stroke="var\(--custom-shape-color\)"/g,
-            `stroke="${themeColor}"`
-          )
-          .replace(/stroke="#000000"/g, `stroke="${themeColor}"`)
-          .replace(/stroke="#FFFFFF"/g, `stroke="${themeColor}"`)
-          .replace(/stroke="black"/g, `stroke="${themeColor}"`)
-          .replace(/stroke="white"/g, `stroke="${themeColor}"`);
+        const processedSvg = prepareOutlineSvg(
+          _customReferenceSvg,
+          isDark ? '#FFFFFF' : '#000000'
+        );
 
         const svgBlob = new Blob([processedSvg], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(svgBlob);
@@ -524,8 +510,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
         // 设置透明度 - 深色模式下进一步提高透明度使图像更清晰
         context.globalAlpha = isDark ? 0.8 : 0.2;
 
-        if (isDark) {
-          // 在深色模式下使用更柔和的效果
+        if (isDark && !_customReferenceSvg) {
+          // 系统参考图使用黑色线条，需要反色
           context.filter = 'invert(1) contrast(1.5) brightness(1.5)';
           context.drawImage(
             urlReferenceImage,
@@ -602,6 +588,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
       referenceLoaded,
       urlReferenceImage,
       urlReferenceLoaded,
+      _customReferenceSvg,
       showReference,
       isDark,
       getCurrentDrawingColor,

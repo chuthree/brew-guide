@@ -1,3 +1,7 @@
+import {
+  coordinateStoreActions,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 /**
  * 自定义方案 Store
  *
@@ -143,328 +147,345 @@ function deduplicateMethods(methods: Method[]): Method[] {
  * 自定义方案 Store
  */
 export const useCustomMethodStore = create<CustomMethodStore>()(
-  subscribeWithSelector((set, get) => ({
-    methodsByEquipment: {},
-    isLoading: false,
-    initialized: false,
-    error: null,
+  subscribeWithSelector((set, get) =>
+    coordinateStoreActions<CustomMethodStore>(
+      {
+        methodsByEquipment: {},
+        isLoading: false,
+        initialized: false,
+        error: null,
 
-    loadMethods: async () => {
-      if (get().isLoading) return;
+        loadMethods: async () => {
+          if (get().isLoading) return;
 
-      set({ isLoading: true, error: null });
+          set({ isLoading: true, error: null });
 
-      try {
-        const methodsData = await customMethodRepository.list();
+          try {
+            const methodsData = await customMethodRepository.list();
 
-        // 转换为记录格式，同时检测并迁移旧格式数据
-        const methodsByEquipment: Record<string, Method[]> = {};
-        const equipmentsToUpdate: Array<{
-          equipmentId: string;
-          methods: Method[];
-        }> = [];
+            // 转换为记录格式，同时检测并迁移旧格式数据
+            const methodsByEquipment: Record<string, Method[]> = {};
+            const equipmentsToUpdate: Array<{
+              equipmentId: string;
+              methods: Method[];
+            }> = [];
 
-        for (const item of methodsData) {
-          const originalMethods = item.methods;
-          const processedMethods = originalMethods.map(ensureMethodId);
+            for (const item of methodsData) {
+              const originalMethods = item.methods;
+              const processedMethods = originalMethods.map(ensureMethodId);
 
-          // 检查是否有任何方案被迁移（通过比较 stages 结构）
-          const hasMigration = originalMethods.some((original, index) => {
-            const processed = processedMethods[index];
-            // 如果原始数据有 time 字段但处理后没有，说明发生了迁移
-            if (original.params?.stages && processed.params?.stages) {
-              return isLegacyFormat(original.params.stages);
+              // 检查是否有任何方案被迁移（通过比较 stages 结构）
+              const hasMigration = originalMethods.some((original, index) => {
+                const processed = processedMethods[index];
+                // 如果原始数据有 time 字段但处理后没有，说明发生了迁移
+                if (original.params?.stages && processed.params?.stages) {
+                  return isLegacyFormat(original.params.stages);
+                }
+                return false;
+              });
+
+              methodsByEquipment[item.equipmentId] = processedMethods;
+
+              // 如果发生了迁移，记录需要更新的数据
+              if (hasMigration) {
+                equipmentsToUpdate.push({
+                  equipmentId: item.equipmentId,
+                  methods: processedMethods,
+                });
+              }
             }
-            return false;
-          });
 
-          methodsByEquipment[item.equipmentId] = processedMethods;
+            // 批量更新已迁移的数据到 IndexedDB
+            if (equipmentsToUpdate.length > 0) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn(
+                  `[CustomMethodStore] 正在持久化 ${equipmentsToUpdate.length} 个器具的迁移数据`
+                );
+              }
 
-          // 如果发生了迁移，记录需要更新的数据
-          if (hasMigration) {
-            equipmentsToUpdate.push({
-              equipmentId: item.equipmentId,
-              methods: processedMethods,
+              await customMethodRepository.upsertMany(equipmentsToUpdate);
+            }
+
+            set({ methodsByEquipment, isLoading: false, initialized: true });
+          } catch (error) {
+            console.error('[CustomMethodStore] loadMethods failed:', error);
+            set({
+              error: '加载自定义方案失败',
+              isLoading: false,
+              initialized: false,
             });
+            throw error;
           }
-        }
+        },
 
-        // 批量更新已迁移的数据到 IndexedDB
-        if (equipmentsToUpdate.length > 0) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn(
-              `[CustomMethodStore] 正在持久化 ${equipmentsToUpdate.length} 个器具的迁移数据`
+        loadMethodsForEquipment: async equipmentId => {
+          try {
+            // 先检查内存缓存
+            const cached = get().methodsByEquipment[equipmentId];
+            if (cached) return cached;
+
+            const data = await customMethodRepository.get(equipmentId);
+            if (data && data.methods) {
+              const originalMethods = data.methods;
+              const methods = originalMethods.map(ensureMethodId);
+
+              // 检查是否发生了迁移
+              const hasMigration = originalMethods.some((original, index) => {
+                const processed = methods[index];
+                if (original.params?.stages && processed.params?.stages) {
+                  return isLegacyFormat(original.params.stages);
+                }
+                return false;
+              });
+
+              // 如果发生了迁移，持久化更新
+              if (hasMigration) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn(
+                    `[CustomMethodStore] 迁移并持久化器具 ${equipmentId} 的方案数据`
+                  );
+                }
+                await customMethodRepository.save({ equipmentId, methods });
+              }
+
+              set(state => ({
+                methodsByEquipment: {
+                  ...state.methodsByEquipment,
+                  [equipmentId]: methods,
+                },
+              }));
+
+              return methods;
+            }
+
+            return [];
+          } catch (error) {
+            console.error(
+              '[CustomMethodStore] loadMethodsForEquipment failed:',
+              error
             );
+            return [];
           }
+        },
 
-          await customMethodRepository.upsertMany(equipmentsToUpdate);
-        }
+        addMethod: async (equipmentId, methodData) => {
+          const newMethod: Method = {
+            ...methodData,
+            id: generateMethodId(),
+            timestamp: Date.now(),
+          } as Method;
 
-        set({ methodsByEquipment, isLoading: false, initialized: true });
-      } catch (error) {
-        console.error('[CustomMethodStore] loadMethods failed:', error);
-        set({
-          error: '加载自定义方案失败',
-          isLoading: false,
-          initialized: false,
-        });
-        throw error;
-      }
-    },
+          try {
+            const currentMethods = get().methodsByEquipment[equipmentId] || [];
+            const updatedMethods = [...currentMethods, newMethod];
+            const uniqueMethods = deduplicateMethods(updatedMethods);
 
-    loadMethodsForEquipment: async equipmentId => {
-      try {
-        // 先检查内存缓存
-        const cached = get().methodsByEquipment[equipmentId];
-        if (cached) return cached;
+            await customMethodRepository.save({
+              equipmentId,
+              methods: uniqueMethods,
+            });
 
-        const data = await customMethodRepository.get(equipmentId);
-        if (data && data.methods) {
-          const originalMethods = data.methods;
-          const methods = originalMethods.map(ensureMethodId);
+            set(state => ({
+              methodsByEquipment: {
+                ...state.methodsByEquipment,
+                [equipmentId]: uniqueMethods,
+              },
+            }));
 
-          // 检查是否发生了迁移
-          const hasMigration = originalMethods.some((original, index) => {
-            const processed = methods[index];
-            if (original.params?.stages && processed.params?.stages) {
-              return isLegacyFormat(original.params.stages);
+            // 触发变化事件
+            dispatchMethodChanged('create', equipmentId, uniqueMethods);
+
+            return newMethod;
+          } catch (error) {
+            console.error('[CustomMethodStore] addMethod failed:', error);
+            throw error;
+          }
+        },
+
+        updateMethod: async (equipmentId, methodId, updates) => {
+          const currentMethods = get().methodsByEquipment[equipmentId] || [];
+          const existingMethod = currentMethods.find(m => m.id === methodId);
+          if (!existingMethod) return null;
+
+          const updatedMethod: Method = {
+            ...existingMethod,
+            ...updates,
+            id: methodId,
+            timestamp: Date.now(),
+          };
+
+          try {
+            const updatedMethods = currentMethods.map(m =>
+              m.id === methodId ? updatedMethod : m
+            );
+
+            await customMethodRepository.save({
+              equipmentId,
+              methods: updatedMethods,
+            });
+
+            set(state => ({
+              methodsByEquipment: {
+                ...state.methodsByEquipment,
+                [equipmentId]: updatedMethods,
+              },
+            }));
+
+            // 触发变化事件
+            dispatchMethodChanged('update', equipmentId, updatedMethods);
+
+            return updatedMethod;
+          } catch (error) {
+            console.error('[CustomMethodStore] updateMethod failed:', error);
+            throw error;
+          }
+        },
+
+        deleteMethod: async (equipmentId, methodId) => {
+          try {
+            const currentMethods = get().methodsByEquipment[equipmentId] || [];
+            const updatedMethods = currentMethods.filter(
+              m => m.id !== methodId
+            );
+
+            if (updatedMethods.length > 0) {
+              await customMethodRepository.save({
+                equipmentId,
+                methods: updatedMethods,
+              });
+            } else {
+              await customMethodRepository.delete(equipmentId);
             }
+
+            set(state => ({
+              methodsByEquipment: {
+                ...state.methodsByEquipment,
+                [equipmentId]: updatedMethods,
+              },
+            }));
+
+            // 触发变化事件
+            dispatchMethodChanged('delete', equipmentId, updatedMethods);
+
+            return true;
+          } catch (error) {
+            console.error('[CustomMethodStore] deleteMethod failed:', error);
             return false;
-          });
-
-          // 如果发生了迁移，持久化更新
-          if (hasMigration) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn(
-                `[CustomMethodStore] 迁移并持久化器具 ${equipmentId} 的方案数据`
-              );
-            }
-            await customMethodRepository.save({ equipmentId, methods });
           }
+        },
 
-          set(state => ({
-            methodsByEquipment: {
-              ...state.methodsByEquipment,
-              [equipmentId]: methods,
-            },
-          }));
+        setMethodsForEquipment: async (equipmentId, methods) => {
+          try {
+            const methodsWithIds = methods.map(ensureMethodId);
+            const uniqueMethods = deduplicateMethods(methodsWithIds);
 
-          return methods;
-        }
+            await customMethodRepository.save({
+              equipmentId,
+              methods: uniqueMethods,
+            });
 
-        return [];
-      } catch (error) {
-        console.error(
-          '[CustomMethodStore] loadMethodsForEquipment failed:',
-          error
-        );
-        return [];
-      }
-    },
+            set(state => ({
+              methodsByEquipment: {
+                ...state.methodsByEquipment,
+                [equipmentId]: uniqueMethods,
+              },
+            }));
 
-    addMethod: async (equipmentId, methodData) => {
-      const newMethod: Method = {
-        ...methodData,
-        id: generateMethodId(),
-        timestamp: Date.now(),
-      } as Method;
+            // 触发变化事件
+            dispatchMethodChanged('set', equipmentId, uniqueMethods);
+          } catch (error) {
+            console.error(
+              '[CustomMethodStore] setMethodsForEquipment failed:',
+              error
+            );
+            throw error;
+          }
+        },
 
-      try {
-        const currentMethods = get().methodsByEquipment[equipmentId] || [];
-        const updatedMethods = [...currentMethods, newMethod];
-        const uniqueMethods = deduplicateMethods(updatedMethods);
+        reorderMethods: async (equipmentId, methods) => {
+          try {
+            const currentMethods = get().methodsByEquipment[equipmentId] || [];
+            const currentById = new Map(
+              currentMethods.map(method => [method.id || method.name, method])
+            );
+            const orderedMethods = methods
+              .map(method => currentById.get(method.id || method.name))
+              .filter((method): method is Method => Boolean(method));
+            const orderedIds = new Set(
+              orderedMethods.map(method => method.id || method.name)
+            );
+            const missingMethods = currentMethods.filter(
+              method => !orderedIds.has(method.id || method.name)
+            );
+            const nextMethods = [...orderedMethods, ...missingMethods];
 
-        await customMethodRepository.save({
-          equipmentId,
-          methods: uniqueMethods,
-        });
+            await customMethodRepository.save({
+              equipmentId,
+              methods: nextMethods,
+            });
 
-        set(state => ({
-          methodsByEquipment: {
-            ...state.methodsByEquipment,
-            [equipmentId]: uniqueMethods,
-          },
-        }));
+            set(state => ({
+              methodsByEquipment: {
+                ...state.methodsByEquipment,
+                [equipmentId]: nextMethods,
+              },
+            }));
 
-        // 触发变化事件
-        dispatchMethodChanged('create', equipmentId, uniqueMethods);
+            dispatchMethodChanged('reorder', equipmentId, nextMethods);
+          } catch (error) {
+            console.error('[CustomMethodStore] reorderMethods failed:', error);
+            throw error;
+          }
+        },
 
-        return newMethod;
-      } catch (error) {
-        console.error('[CustomMethodStore] addMethod failed:', error);
-        throw error;
-      }
-    },
+        deleteMethodsForEquipment: async equipmentId => {
+          try {
+            await customMethodRepository.delete(equipmentId);
 
-    updateMethod: async (equipmentId, methodId, updates) => {
-      const currentMethods = get().methodsByEquipment[equipmentId] || [];
-      const existingMethod = currentMethods.find(m => m.id === methodId);
-      if (!existingMethod) return null;
+            set(state => {
+              const newMethodsByEquipment = { ...state.methodsByEquipment };
+              delete newMethodsByEquipment[equipmentId];
+              return { methodsByEquipment: newMethodsByEquipment };
+            });
 
-      const updatedMethod: Method = {
-        ...existingMethod,
-        ...updates,
-        id: methodId,
-        timestamp: Date.now(),
-      };
+            // 触发变化事件
+            dispatchMethodChanged('delete', equipmentId, []);
+          } catch (error) {
+            console.error(
+              '[CustomMethodStore] deleteMethodsForEquipment failed:',
+              error
+            );
+            throw error;
+          }
+        },
 
-      try {
-        const updatedMethods = currentMethods.map(m =>
-          m.id === methodId ? updatedMethod : m
-        );
+        getMethodById: (equipmentId, methodId) => {
+          const methods = get().methodsByEquipment[equipmentId] || [];
+          return methods.find(m => m.id === methodId);
+        },
 
-        await customMethodRepository.save({
-          equipmentId,
-          methods: updatedMethods,
-        });
+        getMethodsForEquipment: equipmentId => {
+          return get().methodsByEquipment[equipmentId] || [];
+        },
 
-        set(state => ({
-          methodsByEquipment: {
-            ...state.methodsByEquipment,
-            [equipmentId]: updatedMethods,
-          },
-        }));
-
-        // 触发变化事件
-        dispatchMethodChanged('update', equipmentId, updatedMethods);
-
-        return updatedMethod;
-      } catch (error) {
-        console.error('[CustomMethodStore] updateMethod failed:', error);
-        throw error;
-      }
-    },
-
-    deleteMethod: async (equipmentId, methodId) => {
-      try {
-        const currentMethods = get().methodsByEquipment[equipmentId] || [];
-        const updatedMethods = currentMethods.filter(m => m.id !== methodId);
-
-        if (updatedMethods.length > 0) {
-          await customMethodRepository.save({
-            equipmentId,
-            methods: updatedMethods,
-          });
-        } else {
-          await customMethodRepository.delete(equipmentId);
-        }
-
-        set(state => ({
-          methodsByEquipment: {
-            ...state.methodsByEquipment,
-            [equipmentId]: updatedMethods,
-          },
-        }));
-
-        // 触发变化事件
-        dispatchMethodChanged('delete', equipmentId, updatedMethods);
-
-        return true;
-      } catch (error) {
-        console.error('[CustomMethodStore] deleteMethod failed:', error);
-        return false;
-      }
-    },
-
-    setMethodsForEquipment: async (equipmentId, methods) => {
-      try {
-        const methodsWithIds = methods.map(ensureMethodId);
-        const uniqueMethods = deduplicateMethods(methodsWithIds);
-
-        await customMethodRepository.save({
-          equipmentId,
-          methods: uniqueMethods,
-        });
-
-        set(state => ({
-          methodsByEquipment: {
-            ...state.methodsByEquipment,
-            [equipmentId]: uniqueMethods,
-          },
-        }));
-
-        // 触发变化事件
-        dispatchMethodChanged('set', equipmentId, uniqueMethods);
-      } catch (error) {
-        console.error(
-          '[CustomMethodStore] setMethodsForEquipment failed:',
-          error
-        );
-        throw error;
-      }
-    },
-
-    reorderMethods: async (equipmentId, methods) => {
-      try {
-        const currentMethods = get().methodsByEquipment[equipmentId] || [];
-        const currentById = new Map(
-          currentMethods.map(method => [method.id || method.name, method])
-        );
-        const orderedMethods = methods
-          .map(method => currentById.get(method.id || method.name))
-          .filter((method): method is Method => Boolean(method));
-        const orderedIds = new Set(
-          orderedMethods.map(method => method.id || method.name)
-        );
-        const missingMethods = currentMethods.filter(
-          method => !orderedIds.has(method.id || method.name)
-        );
-        const nextMethods = [...orderedMethods, ...missingMethods];
-
-        await customMethodRepository.save({
-          equipmentId,
-          methods: nextMethods,
-        });
-
-        set(state => ({
-          methodsByEquipment: {
-            ...state.methodsByEquipment,
-            [equipmentId]: nextMethods,
-          },
-        }));
-
-        dispatchMethodChanged('reorder', equipmentId, nextMethods);
-      } catch (error) {
-        console.error('[CustomMethodStore] reorderMethods failed:', error);
-        throw error;
-      }
-    },
-
-    deleteMethodsForEquipment: async equipmentId => {
-      try {
-        await customMethodRepository.delete(equipmentId);
-
-        set(state => {
-          const newMethodsByEquipment = { ...state.methodsByEquipment };
-          delete newMethodsByEquipment[equipmentId];
-          return { methodsByEquipment: newMethodsByEquipment };
-        });
-
-        // 触发变化事件
-        dispatchMethodChanged('delete', equipmentId, []);
-      } catch (error) {
-        console.error(
-          '[CustomMethodStore] deleteMethodsForEquipment failed:',
-          error
-        );
-        throw error;
-      }
-    },
-
-    getMethodById: (equipmentId, methodId) => {
-      const methods = get().methodsByEquipment[equipmentId] || [];
-      return methods.find(m => m.id === methodId);
-    },
-
-    getMethodsForEquipment: equipmentId => {
-      return get().methodsByEquipment[equipmentId] || [];
-    },
-
-    refreshMethods: async () => {
-      set({ initialized: false });
-      await get().loadMethods();
-    },
-  }))
+        refreshMethods: async () => {
+          set({ initialized: false });
+          await callStoreActionInMutation(get().loadMethods);
+        },
+      },
+      [
+        'loadMethods',
+        'loadMethodsForEquipment',
+        'addMethod',
+        'updateMethod',
+        'deleteMethod',
+        'setMethodsForEquipment',
+        'reorderMethods',
+        'deleteMethodsForEquipment',
+        'refreshMethods',
+      ]
+    )
+  )
 );
 
 /**
@@ -500,29 +521,31 @@ export const getCustomMethodStore = () => useCustomMethodStore.getState();
 /**
  * 便捷函数：加载所有方案（兼容旧 API）
  */
-export async function loadCustomMethods(): Promise<Record<string, Method[]>> {
+async function loadCustomMethodsInMutation(): Promise<
+  Record<string, Method[]>
+> {
   const store = getCustomMethodStore();
   if (!store.initialized) {
-    await store.loadMethods();
+    await callStoreActionInMutation(store.loadMethods);
   }
-  return store.methodsByEquipment;
+  return getCustomMethodStore().methodsByEquipment;
 }
 
 /**
  * 便捷函数：加载特定器具的方案（兼容旧 API）
  */
-export async function loadCustomMethodsForEquipment(
+async function loadCustomMethodsForEquipmentInMutation(
   equipmentId: string
 ): Promise<Method[]> {
   const store = getCustomMethodStore();
-  return store.loadMethodsForEquipment(equipmentId);
+  return callStoreActionInMutation(store.loadMethodsForEquipment, equipmentId);
 }
 
 /**
  * 便捷函数：保存或更新方案
  * 兼容旧的 saveCustomMethod 调用方式
  */
-export async function saveMethod(
+async function saveMethodInMutation(
   equipmentId: string,
   method: Method,
   editingMethodId?: string
@@ -531,7 +554,8 @@ export async function saveMethod(
 
   if (editingMethodId) {
     // 更新现有方案
-    const updated = await store.updateMethod(
+    const updated = await callStoreActionInMutation(
+      store.updateMethod,
       equipmentId,
       editingMethodId,
       method
@@ -545,30 +569,35 @@ export async function saveMethod(
     const existingMethods = store.getMethodsForEquipment(equipmentId);
     const exists = existingMethods.some(m => m.id === method.id);
     if (exists) {
-      const updated = await store.updateMethod(equipmentId, method.id, method);
+      const updated = await callStoreActionInMutation(
+        store.updateMethod,
+        equipmentId,
+        method.id,
+        method
+      );
       if (updated) return updated;
     }
   }
 
   // 添加新方案
-  return store.addMethod(equipmentId, method);
+  return callStoreActionInMutation(store.addMethod, equipmentId, method);
 }
 
 /**
  * 便捷函数：删除方案（兼容旧 API）
  */
-export async function deleteCustomMethod(
+async function deleteCustomMethodInMutation(
   equipmentId: string,
   methodId: string
 ): Promise<boolean> {
   const store = getCustomMethodStore();
-  return store.deleteMethod(equipmentId, methodId);
+  return callStoreActionInMutation(store.deleteMethod, equipmentId, methodId);
 }
 
 /**
  * 便捷函数：保存自定义方案（兼容旧 API 签名）
  */
-export async function saveCustomMethod(
+async function saveCustomMethodInMutation(
   arg1: Method | string,
   arg2: string | null | Method,
   _customMethods?: Record<string, Method[]>,
@@ -596,13 +625,13 @@ export async function saveCustomMethod(
     return null;
   }
 
-  return saveMethod(equipmentId, method, editingId);
+  return callStoreActionInMutation(saveMethod, equipmentId, method, editingId);
 }
 
 /**
  * 便捷函数：复制方案到另一个器具
  */
-export async function copyMethodToEquipment(
+async function copyMethodToEquipmentInMutation(
   method: Method,
   targetEquipmentId: string
 ): Promise<Method> {
@@ -612,7 +641,11 @@ export async function copyMethodToEquipment(
   const newMethod = { ...method };
   delete (newMethod as { id?: string }).id;
 
-  return store.addMethod(targetEquipmentId, newMethod);
+  return callStoreActionInMutation(
+    store.addMethod,
+    targetEquipmentId,
+    newMethod
+  );
 }
 
 // ==================== 文本生成/导出工具函数 ====================
@@ -684,3 +717,29 @@ export async function copyMethodToClipboard(
  * @deprecated 使用 exportEquipmentToFile 代替
  */
 export const copyEquipmentToClipboard = exportEquipmentToFile;
+
+export const {
+  loadCustomMethods,
+  loadCustomMethodsForEquipment,
+  saveMethod,
+  deleteCustomMethod,
+  saveCustomMethod,
+  copyMethodToEquipment,
+} = coordinateStoreActions(
+  {
+    loadCustomMethods: loadCustomMethodsInMutation,
+    loadCustomMethodsForEquipment: loadCustomMethodsForEquipmentInMutation,
+    saveMethod: saveMethodInMutation,
+    deleteCustomMethod: deleteCustomMethodInMutation,
+    saveCustomMethod: saveCustomMethodInMutation,
+    copyMethodToEquipment: copyMethodToEquipmentInMutation,
+  },
+  [
+    'loadCustomMethods',
+    'loadCustomMethodsForEquipment',
+    'saveMethod',
+    'deleteCustomMethod',
+    'saveCustomMethod',
+    'copyMethodToEquipment',
+  ]
+);

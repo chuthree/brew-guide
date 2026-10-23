@@ -1,3 +1,7 @@
+import {
+  registerCoordinatedAction,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { StorageUtils } from './storageUtils';
@@ -138,3 +142,11 @@ export const Storage = {
     }
   },
 };
+
+// Explicit nested variants for import/reset workflows that already own a mutation.
+Storage.set = registerCoordinatedAction(Storage.set, (key, value) =>
+  callStoreActionInMutation(StorageUtils.saveData, key, value)
+);
+Storage.remove = registerCoordinatedAction(Storage.remove, key =>
+  callStoreActionInMutation(StorageUtils.removeData, key)
+);

@@ -1,3 +1,5 @@
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
+import { registerCoordinatedAction } from '@/lib/data/storeMutationBoundary';
 import { BrewingNote } from '@/lib/core/config';
 import { CoffeeBean } from '@/types/app';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
@@ -94,7 +96,7 @@ const dispatchGrinderChanged = () => {
   );
 };
 
-export async function renameRoasters(
+async function renameRoastersInMutation(
   renameEntries: Record<string, string>
 ): Promise<RoasterRenameResult> {
   const renames = resolveRenameTargets(normalizeRenameEntries(renameEntries));
@@ -158,3 +160,9 @@ export async function renameRoasters(
     updatedConfigCount,
   };
 }
+
+export const renameRoasters = registerCoordinatedAction(
+  (entries: Record<string, string>) =>
+    withDataMutation(() => renameRoastersInMutation(entries)),
+  renameRoastersInMutation
+);

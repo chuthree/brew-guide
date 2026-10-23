@@ -137,6 +137,7 @@ export interface AppSettings {
   showTotalPrice: boolean;
   showStatusDots: boolean;
   showBeanSummary: boolean;
+  beanFilterStyle?: 'single' | 'multiple';
   showEstimatedCups: boolean;
   estimatedCupDoseSettings: EstimatedCupDoseSettings;
   enableBeanSummaryCapacityLimit: boolean;

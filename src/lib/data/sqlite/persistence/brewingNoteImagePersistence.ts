@@ -1,4 +1,8 @@
 import { nanoid } from 'nanoid';
+import {
+  assertRecordUnchanged,
+  brewingNoteSnapshot,
+} from '@/lib/data/recordConflict';
 import { shouldSkipDestructiveReplace } from '@/lib/core/safeReplace';
 import type { BrewingNotePersistence } from '@/lib/data/contracts';
 import {
@@ -28,6 +32,7 @@ import {
 import {
   clearBrewingNotes,
   countBrewingNotes,
+  getBrewingNote,
   deleteBrewingNote,
   deleteManyBrewingNotes,
   listBrewingNotes,
@@ -493,7 +498,7 @@ function createCleanupReporter(
 }
 
 async function cleanupUnreferencedPaths(
-  driver: SqliteDriver,
+  driver: SqliteExecutor,
   fileStore: NativeImageFileStore,
   relativePaths: readonly string[],
   reportCleanupError: (message: string) => void
@@ -522,7 +527,7 @@ async function cleanupUnreferencedPaths(
 }
 
 async function assertPlannedObjectsAbsent(
-  driver: SqliteDriver,
+  driver: SqliteExecutor,
   fileStore: NativeImageFileStore,
   plans: readonly PlannedFile[]
 ): Promise<void> {
@@ -542,7 +547,7 @@ async function assertPlannedObjectsAbsent(
 }
 
 async function writePlannedObjects(
-  driver: SqliteDriver,
+  driver: SqliteExecutor,
   fileStore: NativeImageFileStore,
   plans: readonly PlannedFile[],
   reportCleanupError: (message: string) => void
@@ -568,7 +573,7 @@ async function writePlannedObjects(
 async function compensateTransactionFailure(
   driver: SqliteDriver,
   fileStore: NativeImageFileStore,
-  created: readonly PlannedFile[],
+  created: readonly Pick<PlannedFile, 'relativePath'>[],
   supersededPaths: readonly string[],
   error: unknown,
   reportCleanupError: (message: string) => void
@@ -664,7 +669,7 @@ async function persistTransactionAndCleanup(
   driver: SqliteDriver,
   fileStore: NativeImageFileStore,
   work: (executor: SqliteExecutor) => Promise<void>,
-  created: readonly PlannedFile[],
+  created: readonly Pick<PlannedFile, 'relativePath'>[],
   supersededPaths: readonly string[],
   reportCleanupError: (message: string) => void
 ): Promise<void> {
@@ -690,6 +695,149 @@ async function persistTransactionAndCleanup(
   );
 }
 
+export interface PreparedBrewingNoteImageWrite {
+  note: BrewingNote;
+  metadata: BrewingNoteImageMetadata[];
+  created: Array<{ objectKey: string; relativePath: string }>;
+  supersededPaths: string[];
+  apply(executor: SqliteExecutor): Promise<void>;
+}
+
+/** Internal ID-based selection never accepts filesystem paths or external source URLs. */
+export type BrewingNoteImageSelection =
+  | { appendImages: readonly string[] }
+  | { imageIds: readonly string[] }
+  | { replaceImage: { imageId: string; image: string } };
+
+/** Prepare file objects, but leave metadata/record commit to the caller's transaction. */
+export async function prepareBrewingNoteImageWrite(
+  executor: SqliteExecutor,
+  fileStore: NativeImageFileStore,
+  note: BrewingNote,
+  options: SqliteBrewingNotePersistenceOptions = {},
+  selection?: BrewingNoteImageSelection
+): Promise<PreparedBrewingNoteImageWrite> {
+  validateNote(note);
+  const cleanNote = stripBrewingNoteImages(note);
+  const existing = await listBrewingNoteImageMetadata(executor, note.id);
+  validateStoredPaths(existing);
+  const identity = createIdentityAllocator(
+    options.imageIdFactory ?? nanoid,
+    options.objectKeyFactory ?? createImageObjectKey,
+    existing
+  );
+  const now = options.now ?? Date.now;
+  let plan: { metadata: BrewingNoteImageMetadata[]; writes: PlannedFile[] };
+  if (selection && 'imageIds' in selection) {
+    const originals = noteOriginalRows(existing);
+    const byId = new Map(originals.map(row => [row.imageId, row]));
+    if (
+      new Set(selection.imageIds).size !== selection.imageIds.length ||
+      selection.imageIds.some(id => !byId.has(id))
+    )
+      throw new Error('Invalid note image selection');
+    plan = {
+      metadata: selection.imageIds.flatMap((id, position) => {
+        const original = byId.get(id)!;
+        return existing
+          .filter(row => row.position === original.position)
+          .map(row => ({ ...row, position }));
+      }),
+      writes: [],
+    };
+  } else if (selection && 'replaceImage' in selection) {
+    const original = noteOriginalRows(existing).find(
+      row => row.imageId === selection.replaceImage.imageId
+    );
+    if (!original) throw new Error('Unknown note image');
+    const replacement = await buildImageRecord(
+      {
+        noteId: note.id,
+        images: [selection.replaceImage.image],
+        updatedAt: effectiveTimestamp(note, now),
+      },
+      existing.filter(row => row.position === original.position),
+      identity,
+      fileStore
+    );
+    plan = {
+      metadata: [
+        ...existing.filter(row => row.position !== original.position),
+        ...replacement.metadata.map(row => ({
+          ...row,
+          position: original.position,
+        })),
+      ].sort((a, b) => a.position - b.position),
+      writes: replacement.writes,
+    };
+  } else if (selection && 'appendImages' in selection) {
+    const added = await buildImageRecord(
+      {
+        noteId: note.id,
+        images: [...selection.appendImages],
+        updatedAt: effectiveTimestamp(note, now),
+      },
+      [],
+      identity,
+      fileStore
+    );
+    const position = existing.length
+      ? Math.max(...existing.map(row => row.position)) + 1
+      : 0;
+    plan = {
+      metadata: [
+        ...existing,
+        ...added.metadata.map(row => ({
+          ...row,
+          position: row.position + position,
+        })),
+      ],
+      writes: added.writes,
+    };
+  } else {
+    plan = await buildImageRecord(
+      imageSnapshot(note, now),
+      existing,
+      identity,
+      fileStore
+    );
+  }
+  validateDesiredMetadata(plan.metadata);
+  await assertPlannedObjectsAbsent(executor, fileStore, plan.writes);
+  const created = await writePlannedObjects(
+    executor,
+    fileStore,
+    plan.writes,
+    createCleanupReporter(options.onCleanupError)
+  );
+  const supersededPaths = replacedFilePaths(existing, plan.metadata);
+  return {
+    note: cleanNote,
+    metadata: plan.metadata,
+    created,
+    supersededPaths,
+    async apply(tx) {
+      await replaceBrewingNoteImageMetadata(tx, note.id, plan.metadata);
+      await saveBrewingNote(tx, cleanNote);
+    },
+  };
+}
+
+export async function cleanupPreparedBrewingNoteImageFiles(
+  executor: SqliteExecutor,
+  fileStore: NativeImageFileStore,
+  paths: readonly string[],
+  error?: unknown
+): Promise<void> {
+  if (hasRollbackDiagnostic(error)) return;
+  await cleanupUnreferencedPaths(
+    executor,
+    fileStore,
+    paths,
+    createCleanupReporter()
+  );
+}
+
 export function createSqliteBrewingNotePersistence(
   driver: SqliteDriver,
   fileStore: NativeImageFileStore,
@@ -706,47 +854,42 @@ export function createSqliteBrewingNotePersistence(
   }
 
   return {
-    async saveWithImages(note) {
+    async saveWithImages(note, saveOptions) {
+      const expectedSnapshot = brewingNoteSnapshot(saveOptions?.expectedRecord);
       const cleanNote = stripBrewingNoteImages(note);
       validateNote(note);
 
       return coordinator.withOwners([note.id], async () => {
         if (!hasImageFieldUpdate(note)) {
-          await driver.transaction(tx => saveBrewingNote(tx, cleanNote));
+          await driver.transaction(async tx => {
+            if (expectedSnapshot !== undefined)
+              assertRecordUnchanged(
+                brewingNoteSnapshot(await getBrewingNote(tx, note.id)),
+                expectedSnapshot
+              );
+            await saveBrewingNote(tx, cleanNote);
+          });
           return cleanNote;
         }
 
-        const currentMetadata = await listBrewingNoteImageMetadata(
-          driver,
-          note.id
-        );
-        validateStoredPaths(currentMetadata);
-        const identity = makeIdentity(currentMetadata);
-        const snapshot = imageSnapshot(note, now);
-        const plan = await buildImageRecord(
-          snapshot,
-          currentMetadata,
-          identity,
-          fileStore
-        );
-        await assertPlannedObjectsAbsent(driver, fileStore, plan.writes);
-        const created = await writePlannedObjects(
+        const prepared = await prepareBrewingNoteImageWrite(
           driver,
           fileStore,
-          plan.writes,
-          reportCleanupError
+          note,
+          options
         );
-        const supersededPaths = replacedFilePaths(
-          currentMetadata,
-          plan.metadata
-        );
+        const { created, supersededPaths } = prepared;
 
         await persistTransactionAndCleanup(
           driver,
           fileStore,
           async tx => {
-            await replaceBrewingNoteImageMetadata(tx, note.id, plan.metadata);
-            await saveBrewingNote(tx, cleanNote);
+            if (expectedSnapshot !== undefined)
+              assertRecordUnchanged(
+                brewingNoteSnapshot(await getBrewingNote(tx, note.id)),
+                expectedSnapshot
+              );
+            await prepared.apply(tx);
           },
           created,
           supersededPaths,
@@ -756,7 +899,10 @@ export function createSqliteBrewingNotePersistence(
       });
     },
 
-    async deleteWithImages(id) {
+    async deleteWithImages(id, deleteOptions) {
+      const expectedSnapshot = brewingNoteSnapshot(
+        deleteOptions?.expectedRecord
+      );
       await coordinator.withOwners([id], async () => {
         const existing = await listBrewingNoteImageMetadata(driver, id);
         validateStoredPaths(existing);
@@ -764,6 +910,11 @@ export function createSqliteBrewingNotePersistence(
           driver,
           fileStore,
           async tx => {
+            if (expectedSnapshot !== undefined)
+              assertRecordUnchanged(
+                brewingNoteSnapshot(await getBrewingNote(tx, id)),
+                expectedSnapshot
+              );
             await deleteBrewingNote(tx, id);
             await replaceBrewingNoteImageMetadata(tx, id, []);
           },

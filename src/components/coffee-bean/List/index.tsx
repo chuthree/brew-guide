@@ -32,6 +32,8 @@ import {
 } from './types';
 import {
   globalCache,
+  getMultiFiltersByStatePreference,
+  saveMultiFiltersByStatePreference,
   saveShowEmptyBeansPreference,
   saveShowEmptyBeansByStatePreference,
   getShowEmptyBeansByStatePreference,
@@ -371,8 +373,84 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [rankingScrollEl, setRankingScrollEl] =
     React.useState<HTMLElement | null>(null);
 
+  const multipleFiltering = useSettingsStore(
+    state => state.settings.beanFilterStyle === 'multiple'
+  );
+  const coffeeBeanGroups = useSettingsStore(
+    state => state.settings.coffeeBeanGroups
+  );
+  const beanFieldConfigSetting = useSettingsStore(
+    state => state.settings.beanFieldConfig
+  );
+  const showEstateField = useSettingsStore(
+    state => state.settings.showEstateField === true
+  );
+  const enabledBeanFieldFilterModes = useMemo(
+    () =>
+      getEnabledBeanFieldIds(
+        resolveBeanFieldConfig({
+          beanFieldConfig: beanFieldConfigSetting,
+          showEstateField,
+        })
+      )
+        .map(fieldId => BEAN_FIELD_FILTER_MODE_BY_FIELD_ID[fieldId])
+        .filter((mode): mode is BeanFilterMode => Boolean(mode)),
+    [beanFieldConfigSetting, showEstateField]
+  );
+  const enabledBeanFieldFilterModeSet = useMemo(
+    () => new Set<BeanFilterMode>(enabledBeanFieldFilterModes),
+    [enabledBeanFieldFilterModes]
+  );
+  const [multiFiltersByState, setMultiFiltersByState] = useState<
+    Record<BeanState, Partial<Record<BeanFilterMode, string>>>
+  >(() => ({
+    green: getMultiFiltersByStatePreference('green'),
+    roasted: getMultiFiltersByStatePreference('roasted'),
+  }));
+  useEffect(() => {
+    saveMultiFiltersByStatePreference('green', multiFiltersByState.green);
+    saveMultiFiltersByStatePreference('roasted', multiFiltersByState.roasted);
+  }, [multiFiltersByState]);
+  const multiFilters = useMemo(() => {
+    if (!multipleFiltering) return undefined;
+    const filters = { ...multiFiltersByState[selectedBeanState] };
+    for (const mode of Object.keys(filters) as BeanFilterMode[]) {
+      if (
+        BEAN_FIELD_ID_BY_FILTER_MODE[mode] &&
+        !enabledBeanFieldFilterModeSet.has(mode)
+      ) {
+        delete filters[mode];
+      }
+    }
+    if (selectedBeanState === 'green') {
+      delete filters.flavorPeriod;
+      delete filters.group;
+    } else if (!coffeeBeanGroups?.some(group => group.id === filters.group)) {
+      delete filters.group;
+    }
+    return filters;
+  }, [
+    multipleFiltering,
+    multiFiltersByState,
+    selectedBeanState,
+    enabledBeanFieldFilterModeSet,
+    coffeeBeanGroups,
+  ]);
+  const handleMultiFilterChange = useCallback(
+    (mode: BeanFilterMode, value: string | null) => {
+      setMultiFiltersByState(current => {
+        const next = { ...current[selectedBeanState] };
+        if (value === null) delete next[mode];
+        else next[mode] = value;
+        return { ...current, [selectedBeanState]: next };
+      });
+    },
+    [selectedBeanState]
+  );
+
   // 使用增强的筛选Hook
   const {
+    filterOptionCounts,
     records,
     filteredRecords,
     emptyRecords,
@@ -390,6 +468,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     hasEmptyBeansInCurrentState,
     typeStats,
   } = useEnhancedBeanFiltering({
+    multiFilters,
     beans,
     filterMode,
     selectedVariety,
@@ -538,32 +617,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const enableGreenBeanInventory = useSettingsStore(
     state => state.settings.enableGreenBeanInventory === true
   );
-  const coffeeBeanGroups = useSettingsStore(
-    state => state.settings.coffeeBeanGroups
-  );
-  const beanFieldConfigSetting = useSettingsStore(
-    state => state.settings.beanFieldConfig
-  );
-  const showEstateField = useSettingsStore(
-    state => state.settings.showEstateField === true
-  );
-  const enabledBeanFieldFilterModes = useMemo(
-    () =>
-      getEnabledBeanFieldIds(
-        resolveBeanFieldConfig({
-          beanFieldConfig: beanFieldConfigSetting,
-          showEstateField,
-        })
-      )
-        .map(fieldId => BEAN_FIELD_FILTER_MODE_BY_FIELD_ID[fieldId])
-        .filter((mode): mode is BeanFilterMode => Boolean(mode)),
-    [beanFieldConfigSetting, showEstateField]
-  );
-  const enabledBeanFieldFilterModeSet = useMemo(
-    () => new Set<BeanFilterMode>(enabledBeanFieldFilterModes),
-    [enabledBeanFieldFilterModes]
-  );
-
   // 预计杯数设置
   const showEstimatedCups = useSettingsStore(
     state => state.settings.showEstimatedCups === true
@@ -845,6 +898,14 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     },
     [selectedBeanType, selectedBeanState]
   );
+
+  const clearMultiFilters = useCallback(() => {
+    setMultiFiltersByState(current => ({
+      ...current,
+      [selectedBeanState]: {},
+    }));
+    handleBeanTypeChange('all');
+  }, [selectedBeanState, handleBeanTypeChange]);
 
   // 处理豆子状态切换（生豆/熟豆）
   const handleBeanStateChange = useCallback(
@@ -1462,6 +1523,20 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   ]);
 
   const activeCategorySearchScopeLabel = React.useMemo(() => {
+    if (multiFilters) {
+      return Object.entries(multiFilters)
+        .map(([mode, value]) => {
+          if (mode === 'flavorPeriod')
+            return FLAVOR_PERIOD_LABELS[value as FlavorPeriodStatus];
+          if (mode === 'group')
+            return (
+              coffeeBeanGroups?.find(group => group.id === value)?.name ||
+              '当前分组'
+            );
+          return value;
+        })
+        .join('、');
+    }
     switch (filterMode) {
       case 'variety':
         return selectedVariety || '';
@@ -1489,6 +1564,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     }
   }, [
     availableBeanGroups,
+    multiFilters,
     coffeeBeanGroups,
     filterMode,
     selectedBeanGroupId,
@@ -2049,6 +2125,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
       {/* ViewSwitcher - 固定在顶部 */}
       <ViewSwitcher
+        filterOptionCounts={filterOptionCounts}
+        multiFilters={multiFilters}
+        onMultiFilterChange={handleMultiFilterChange}
+        onClearMultiFilters={clearMultiFilters}
         viewMode={viewMode}
         sortOption={sortOption}
         onSortChange={handleSortChange}
@@ -2190,13 +2270,21 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             }}
           >
             <InventoryView
+              onClearFilters={
+                storeInitialized &&
+                multiFilters &&
+                (Object.keys(multiFilters).length > 0 ||
+                  selectedBeanType !== 'all')
+                  ? clearMultiFilters
+                  : undefined
+              }
               filteredBeans={
                 isSearching ? searchFilteredBeans : inventoryFilteredBeans
               }
               emptyBeans={
                 isSearching ? searchFilteredEmptyBeans : inventoryEmptyBeans
               }
-              selectedVariety={selectedVariety}
+              selectedVariety={multipleFiltering ? null : selectedVariety}
               showEmptyBeans={showEmptyBeansInResults}
               selectedBeanType={selectedBeanType}
               selectedBeanState={selectedBeanState}

@@ -7,7 +7,8 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
+import NavigationSection from './NavigationSection';
 import { equipmentList, type CustomEquipment } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '@/components/settings/Settings';
@@ -18,6 +19,7 @@ import {
   getEquipmentName,
 } from '@/lib/brewing/parameters';
 import EquipmentBar from '@/components/equipment/EquipmentBar';
+import TabButton from '@/components/common/ui/TabButton';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import {
@@ -121,46 +123,6 @@ const espressoUtils = {
   },
 
   formatTime: (seconds: number) => `${seconds}`,
-};
-
-// 优化的 TabButton 组件 - 使用更简洁的条件渲染和样式计算
-interface TabButtonProps {
-  tab: React.ReactNode;
-  isActive: boolean;
-  isDisabled?: boolean;
-  onClick?: () => void;
-  className?: string;
-  dataTab?: string;
-}
-
-const TabButton: React.FC<TabButtonProps> = ({
-  tab,
-  isActive,
-  isDisabled = false,
-  onClick,
-  className = '',
-  dataTab,
-}) => {
-  const baseClasses =
-    'flex items-center rounded-sm pb-3 text-xs font-medium tracking-widest whitespace-nowrap outline-none transition-colors focus-visible:ring-2 focus-visible:ring-neutral-400/50 focus-visible:ring-offset-4 focus-visible:ring-offset-neutral-50 md:pb-0 dark:focus-visible:ring-neutral-500/60 dark:focus-visible:ring-offset-neutral-900';
-  const stateClasses = isActive
-    ? 'text-neutral-800 dark:text-neutral-100'
-    : isDisabled
-      ? 'text-neutral-300 dark:text-neutral-600'
-      : 'cursor-pointer text-neutral-500 dark:text-neutral-400';
-
-  return (
-    <button
-      type="button"
-      onClick={!isDisabled && onClick ? onClick : undefined}
-      disabled={isDisabled}
-      aria-current={isActive ? 'page' : undefined}
-      className={`${baseClasses} ${stateClasses} ${className}`}
-      data-tab={dataTab}
-    >
-      <span className="relative inline-block">{tab}</span>
-    </button>
-  );
 };
 
 // 优化的EditableParameter组件 - 使用更简洁的逻辑和hooks
@@ -446,6 +408,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   sidebarControlVisibility: _sidebarControlVisibility = 'reveal',
   showDesktopBorder = true,
 }) => {
+  const reduceMotion = useReducedMotion();
+  const animateNavigation = !isDesktopLayout && !reduceMotion;
   const { canGoBack } = useNavigation(
     activeBrewingStep,
     activeMainTab,
@@ -509,7 +473,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   useScrollToSelected({
     selectedItem: getSelectedTabId(),
     containerRef: scrollContainerRef,
-    delay: 100,
+    itemCount: tabCount,
   });
 
   const { showLeftBorder, showRightBorder } = useScrollBorder({
@@ -1169,7 +1133,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   }, []);
 
   return (
-    <motion.div
+    <div
       className={`${isPwaBannerVisible ? 'pt-6' : 'pt-safe-top'} sticky top-0 border-b transition-colors duration-300 ease-in-out md:relative md:flex md:h-full md:shrink-0 md:flex-col md:overflow-y-auto md:border-b-0 ${showDesktopBorder ? 'md:border-r' : ''} ${
         activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'
           ? 'border-transparent md:border-neutral-200/50 dark:md:border-neutral-800/50'
@@ -1178,7 +1142,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       style={{
         width: isDesktopLayout && width ? `${width}px` : '100%',
       }}
-      transition={{ duration: 0.3 }}
       onTouchStart={handlePullTouchStart}
       onTouchMove={handlePullTouchMove}
       onTouchEnd={handlePullTouchEnd}
@@ -1217,18 +1180,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         }}
       />
 
-      <AnimatePresence initial={false}>
+      <React.Fragment>
         {activeMainTab !== '冲煮' && (
-          <motion.div
+          <div
             key="desktop-global-search"
             className="hidden overflow-hidden md:block"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{
-              height: { duration: 0.22, ease: [0.4, 0, 0.2, 1] },
-              opacity: { duration: 0.16 },
-            }}
           >
             <DesktopGlobalSearch
               enabled={true}
@@ -1264,37 +1220,35 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                 );
               }}
             />
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </React.Fragment>
 
       {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 */}
-      {/* 移动端使用 min-h 和绝对定位实现切换动画，桌面端使用常规流式布局 */}
+      {/* 移动端固定头部占位，桌面端使用常规流式布局 */}
       <div className="relative min-h-7.5 w-full md:static md:min-h-0">
-        {/* 修改：将AnimatePresence用于透明度变化而非高度变化 */}
-        <AnimatePresence mode="wait">
+        {/* 直接替换头部，不保留已退出页面的内容 */}
+        <React.Fragment>
           {showAlternativeHeader ? (
             // 替代头部 - 移动端绝对定位，桌面端相对定位
-            <motion.div
+            <div
               key="alternative-header"
               className="absolute top-0 right-0 left-0 w-full px-6 md:relative md:inset-auto"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
             >
               {alternativeHeader}
-            </motion.div>
+            </div>
           ) : (
             // 默认头部 - 移动端绝对定位，桌面端相对定位
-            <motion.div
+            <div
               key="default-header"
               className="absolute top-0 right-0 left-0 w-full px-6 md:relative md:inset-auto"
-              initial={{ opacity: shouldHideHeader ? 0 : 1 }}
-              animate={{ opacity: shouldHideHeader ? 0 : 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ pointerEvents: shouldHideHeader ? 'none' : 'auto' }}
+              style={{
+                opacity: shouldHideHeader ? 0 : 1,
+                pointerEvents: shouldHideHeader ? 'none' : 'auto',
+                transition: animateNavigation
+                  ? 'opacity 160ms cubic-bezier(0.23, 1, 0.32, 1)'
+                  : 'none',
+              }}
             >
               <div className="flex items-start justify-between md:block">
                 <div
@@ -1320,55 +1274,17 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                     ariaLabel={canGoBack() && onBackClick ? '返回' : '设置'}
                     onClick={handleTitleClick}
                   >
-                    <AnimatePresence mode="popLayout" initial={false}>
+                    <React.Fragment>
                       {showHeaderSyncSpinner ? (
-                        <motion.div
+                        <div
                           key="spinner"
-                          initial={{
-                            opacity: 0,
-                            scale: 0.5,
-                            filter: 'blur(4px)',
-                          }}
-                          animate={{
-                            opacity: 1,
-                            scale: 1,
-                            filter: 'blur(0px)',
-                          }}
-                          exit={{
-                            opacity: 0,
-                            scale: 0.5,
-                            filter: 'blur(4px)',
-                          }}
-                          transition={{
-                            duration: 0.3,
-                            ease: [0.23, 1, 0.32, 1], // cubic-bezier for smooth feel
-                          }}
                           className="absolute inset-0 flex items-center justify-center"
                         >
                           <AppleSpinner className="h-3.5 w-3.5" />
-                        </motion.div>
+                        </div>
                       ) : (
-                        <motion.div
+                        <div
                           key="icon"
-                          initial={{
-                            opacity: 0,
-                            scale: 0.5,
-                            filter: 'blur(4px)',
-                          }}
-                          animate={{
-                            opacity: 1,
-                            scale: 1,
-                            filter: 'blur(0px)',
-                          }}
-                          exit={{
-                            opacity: 0,
-                            scale: 0.5,
-                            filter: 'blur(4px)',
-                          }}
-                          transition={{
-                            duration: 0.3,
-                            ease: [0.23, 1, 0.32, 1],
-                          }}
                           className="absolute inset-0 flex items-center justify-center"
                         >
                           {canGoBack() && onBackClick ? (
@@ -1376,9 +1292,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                           ) : (
                             <Equal className="h-4 w-4" />
                           )}
-                        </motion.div>
+                        </div>
                       )}
-                    </AnimatePresence>
+                    </React.Fragment>
                   </NavigationSettingsButton>
 
                   {showSidebarCollapseControl && isSidebarControlVisible && (
@@ -1419,11 +1335,15 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                     {visibleTabs.brewing && (
                       <div className="shrink-0">
                         <TabButton
-                          tab="冲煮"
                           isActive={activeMainTab === '冲煮'}
                           onClick={() => handleMainTabClick('冲煮')}
                           dataTab="冲煮"
-                        />
+                          aria-current={activeMainTab === '冲煮' ? 'page' : undefined}
+                          aria-pressed={undefined}
+                          className="flex items-center border-b-0 pb-3 tracking-widest md:pb-0"
+                        >
+                          冲煮
+                        </TabButton>
                       </div>
                     )}
 
@@ -1491,70 +1411,27 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             {getCurrentViewLabel()}
                           </span>
 
-                          {/* 下拉图标容器 - 使用动画宽度避免布局抖动 */}
-                          <motion.div
+                          {/* 下拉图标随当前视图直接切换 */}
+                          <div
                             className="flex items-center justify-center overflow-hidden"
-                            initial={false}
-                            animate={{
-                              width:
-                                activeMainTab === '咖啡豆' &&
-                                !isCurrentViewPinned &&
-                                availableViewsCount > 1
-                                  ? '12px'
-                                  : '0px',
-                              marginLeft:
-                                activeMainTab === '咖啡豆' &&
-                                !isCurrentViewPinned &&
-                                availableViewsCount > 1
-                                  ? '4px'
-                                  : '0px',
-                              transition: {
-                                duration: 0.35,
-                                ease: [0.25, 0.46, 0.45, 0.94], // Apple的标准缓动
-                              },
-                            }}
                           >
-                            <AnimatePresence mode="wait">
+                            <React.Fragment>
                               {activeMainTab === '咖啡豆' &&
                                 !isCurrentViewPinned &&
                                 availableViewsCount > 1 && (
-                                  <motion.div
+                                  <div
                                     key="chevron-icon"
-                                    initial={{
-                                      opacity: 0,
-                                      scale: 0.8,
-                                    }}
-                                    animate={{
-                                      opacity: 1,
-                                      scale: 1,
-                                      transition: {
-                                        duration: 0.35,
-                                        ease: [0.25, 0.46, 0.45, 0.94], // Apple的标准缓动
-                                        opacity: { duration: 0.25, delay: 0.1 }, // 稍微延迟透明度动画
-                                        scale: { duration: 0.35 },
-                                      },
-                                    }}
-                                    exit={{
-                                      opacity: 0,
-                                      scale: 0.8,
-                                      transition: {
-                                        duration: 0.15,
-                                        ease: [0.4, 0.0, 1, 1], // Apple的退出缓动
-                                        opacity: { duration: 0.15 },
-                                        scale: { duration: 0.15 },
-                                      },
-                                    }}
-                                    className="flex h-3 w-3 shrink-0 items-center justify-center"
+                                    className="ml-1 flex h-3 w-3 shrink-0 items-center justify-center"
                                   >
                                     <ChevronsUpDown
                                       size={12}
                                       className="text-neutral-400 dark:text-neutral-600"
                                       color="currentColor"
                                     />
-                                  </motion.div>
+                                  </div>
                                 )}
-                            </AnimatePresence>
-                          </motion.div>
+                            </React.Fragment>
+                          </div>
                         </button>
                       </div>
                     )}
@@ -1563,29 +1440,39 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                     {typedPinnedViews.map(view => (
                       <div key={view} className="shrink-0">
                         <TabButton
-                          tab={
-                            settings.simplifiedViewLabels
-                              ? SIMPLIFIED_VIEW_LABELS[view]
-                              : VIEW_LABELS[view]
-                          }
                           isActive={
                             activeMainTab === '咖啡豆' &&
                             currentBeanView === view
                           }
                           onClick={() => handlePinnedViewClick(view)}
                           dataTab={view}
-                        />
+                          aria-current={
+                            activeMainTab === '咖啡豆' && currentBeanView === view
+                              ? 'page'
+                              : undefined
+                          }
+                          aria-pressed={undefined}
+                          className="flex items-center border-b-0 pb-3 tracking-widest md:pb-0"
+                        >
+                          {settings.simplifiedViewLabels
+                            ? SIMPLIFIED_VIEW_LABELS[view]
+                            : VIEW_LABELS[view]}
+                        </TabButton>
                       </div>
                     ))}
 
                     {visibleTabs.notes && (
                       <div className="shrink-0">
                         <TabButton
-                          tab="笔记"
                           isActive={activeMainTab === '笔记'}
                           onClick={() => handleMainTabClick('笔记')}
                           dataTab="笔记"
-                        />
+                          aria-current={activeMainTab === '笔记' ? 'page' : undefined}
+                          aria-pressed={undefined}
+                          className="flex items-center border-b-0 pb-3 tracking-widest md:pb-0"
+                        >
+                          笔记
+                        </TabButton>
                       </div>
                     )}
                   </div>
@@ -1602,355 +1489,322 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   />
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
+        </React.Fragment>
       </div>
 
       {/* 仅当不显示替代头部内容时才显示参数栏和步骤指示器 */}
-      {!showAlternativeHeader && (
-        <AnimatePresence mode="wait">
-          {shouldShowContent && (
-            <motion.div
-              key="content-container"
-              className="overflow-hidden"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{
-                duration: 0.25,
+      <div className="overflow-hidden">
+        {/* 参数栏 */}
+        <NavigationSection
+          open={
+            !showAlternativeHeader && shouldShowContent && Boolean(shouldShowParams)
+          }
+          animated={animateNavigation}
+          className="overflow-hidden"
+        >
+          <div
+            className={`bg-neutral-100 px-6 py-2 text-xs font-medium text-neutral-500 select-text md:px-6 md:py-3 dark:bg-neutral-800/40 dark:text-neutral-400 ${desktopContentTopSpacingClass}`}
+          >
+            <div className="flex items-center justify-between gap-3 md:flex-col md:items-start md:gap-6">
+              {/* 左侧：方案名称区域 - 使用省略号 */}
+              <div className="flex min-w-0 flex-1 items-center overflow-hidden md:w-full md:flex-none md:flex-col md:items-start md:gap-1">
+                {parameterInfo.method && (
+                  <>
+                    {getSelectedEquipmentName() && (
+                      <span className="truncate md:text-wrap">
+                        {getSelectedEquipmentName()}
+                      </span>
+                    )}
+                    {getSelectedEquipmentName() && (
+                      <>
+                        <span className="mx-1 shrink-0 select-none md:hidden">
+                          ·
+                        </span>
+                        <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                          /
+                        </span>
+                      </>
+                    )}
+                    <span className="truncate md:text-wrap">
+                      {parameterInfo.method}
+                    </span>
+                  </>
+                )}
+              </div>
 
-                opacity: { duration: 0.15 },
-              }}
-            >
-              {/* 参数栏 - 添加高度动画 */}
-              <AnimatePresence mode="wait">
-                {shouldShowParams && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{
-                      duration: 0.3,
-                      ease: [0.4, 0, 0.2, 1],
-                      opacity: { duration: 0.2 },
-                    }}
-                    className="overflow-hidden"
-                  >
-                    <div
-                      className={`bg-neutral-100 px-6 py-2 text-xs font-medium text-neutral-500 select-text md:px-6 md:py-3 dark:bg-neutral-800/40 dark:text-neutral-400 ${desktopContentTopSpacingClass}`}
-                    >
-                      <div className="flex items-center justify-between gap-3 md:flex-col md:items-start md:gap-6">
-                        {/* 左侧：方案名称区域 - 使用省略号 */}
-                        <div className="flex min-w-0 flex-1 items-center overflow-hidden md:w-full md:flex-none md:flex-col md:items-start md:gap-1">
-                          {parameterInfo.method && (
-                            <>
-                              {getSelectedEquipmentName() && (
-                                <span className="truncate md:text-wrap">
-                                  {getSelectedEquipmentName()}
-                                </span>
-                              )}
-                              {getSelectedEquipmentName() && (
-                                <>
-                                  <span className="mx-1 shrink-0 select-none md:hidden">
-                                    ·
-                                  </span>
-                                  <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                    /
-                                  </span>
-                                </>
-                              )}
-                              <span className="truncate md:text-wrap">
-                                {parameterInfo.method}
-                              </span>
-                            </>
-                          )}
-                        </div>
-
-                        {/* 右侧：参数区域 - 固定不压缩 - 桌面端全宽显示 */}
-                        {parameterInfo.params && (
-                          <div className="flex shrink-0 items-center md:w-full md:flex-col md:items-start md:gap-1">
-                            {espressoUtils.isEspresso(selectedMethod) ? (
-                              // 意式参数显示
-                              editableParams ? (
-                                <div className="flex items-center space-x-1 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0">
-                                  <EditableParameter
-                                    value={(
-                                      displayOverlay?.coffee ||
-                                      editableParams.coffee
-                                    ).replace('g', '')}
-                                    onChange={v =>
-                                      handleParamChange('coffee', v)
-                                    }
-                                    unit="g"
-                                  />
-                                  <span className="shrink-0 select-none md:hidden">
-                                    ·
-                                  </span>
-                                  <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                    /
-                                  </span>
-                                  <GrindSizeInput
-                                    value={
-                                      displayOverlay?.grindSize ||
-                                      editableParams.grindSize
-                                    }
-                                    onChange={v =>
-                                      handleParamChange('grindSize', v)
-                                    }
-                                    className="inline-flex min-w-0"
-                                    inputClassName="w-auto bg-transparent text-center text-xs outline-hidden border-b border-dashed border-neutral-300 pb-0.5 dark:border-neutral-600"
-                                    autoWidth
-                                  />
-                                  <span className="shrink-0 select-none md:hidden">
-                                    ·
-                                  </span>
-                                  <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                    /
-                                  </span>
-                                  <EditableParameter
-                                    value={
-                                      displayOverlay?.time ||
-                                      editableParams.time ||
-                                      espressoUtils.formatTime(
-                                        espressoUtils.getExtractionTime(
-                                          selectedMethod
-                                        )
-                                      )
-                                    }
-                                    onChange={v => _handleTimeChange(v)}
-                                    unit="s"
-                                  />
-                                  <span className="shrink-0 select-none md:hidden">
-                                    ·
-                                  </span>
-                                  <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                    /
-                                  </span>
-                                  <EditableParameter
-                                    value={(
-                                      displayOverlay?.water ||
-                                      editableParams.water
-                                    ).replace('g', '')}
-                                    onChange={v =>
-                                      handleParamChange('water', v)
-                                    }
-                                    unit="g"
-                                  />
-                                </div>
-                              ) : (
-                                <div
-                                  className="flex cursor-pointer items-center space-x-1 transition-colors hover:text-neutral-700 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0 dark:hover:text-neutral-300"
-                                  onClick={() => {
-                                    if (selectedMethod && !isTimerRunning) {
-                                      setEditableParams({
-                                        coffee: selectedMethod.params.coffee,
-                                        water: selectedMethod.params.water,
-                                        ratio: selectedMethod.params.ratio,
-                                        grindSize:
-                                          selectedMethod.params.grindSize,
-                                        temp: selectedMethod.params.temp,
-                                        time: espressoUtils.formatTime(
-                                          espressoUtils.getExtractionTime(
-                                            selectedMethod
-                                          )
-                                        ),
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <span className="whitespace-nowrap">
-                                    {parameterInfo.params.coffee}
-                                  </span>
-                                  <span className="shrink-0 select-none md:hidden">
-                                    ·
-                                  </span>
-                                  <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                    /
-                                  </span>
-                                  <span className="whitespace-nowrap">
-                                    {parameterInfo.params.grindSize || ''}
-                                  </span>
-                                  <span className="shrink-0 select-none md:hidden">
-                                    ·
-                                  </span>
-                                  <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                    /
-                                  </span>
-                                  <span className="whitespace-nowrap">
-                                    {espressoUtils.formatTime(
-                                      espressoUtils.getExtractionTime(
-                                        selectedMethod
-                                      )
-                                    )}
-                                    s
-                                  </span>
-                                  <span className="shrink-0 select-none md:hidden">
-                                    ·
-                                  </span>
-                                  <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                    /
-                                  </span>
-                                  <span className="whitespace-nowrap">
-                                    {parameterInfo.params.water}
-                                  </span>
-                                </div>
+              {/* 右侧：参数区域 - 固定不压缩 - 桌面端全宽显示 */}
+              {parameterInfo.params && (
+                <div className="flex shrink-0 items-center md:w-full md:flex-col md:items-start md:gap-1">
+                  {espressoUtils.isEspresso(selectedMethod) ? (
+                    // 意式参数显示
+                    editableParams ? (
+                      <div className="flex items-center space-x-1 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0">
+                        <EditableParameter
+                          value={(
+                            displayOverlay?.coffee ||
+                            editableParams.coffee
+                          ).replace('g', '')}
+                          onChange={v =>
+                            handleParamChange('coffee', v)
+                          }
+                          unit="g"
+                        />
+                        <span className="shrink-0 select-none md:hidden">
+                          ·
+                        </span>
+                        <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                          /
+                        </span>
+                        <GrindSizeInput
+                          value={
+                            displayOverlay?.grindSize ||
+                            editableParams.grindSize
+                          }
+                          onChange={v =>
+                            handleParamChange('grindSize', v)
+                          }
+                          className="inline-flex min-w-0"
+                          inputClassName="w-auto bg-transparent text-center text-xs outline-hidden border-b border-dashed border-neutral-300 pb-0.5 dark:border-neutral-600"
+                          autoWidth
+                        />
+                        <span className="shrink-0 select-none md:hidden">
+                          ·
+                        </span>
+                        <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                          /
+                        </span>
+                        <EditableParameter
+                          value={
+                            displayOverlay?.time ||
+                            editableParams.time ||
+                            espressoUtils.formatTime(
+                              espressoUtils.getExtractionTime(
+                                selectedMethod
                               )
-                            ) : // 原有参数显示
-                            editableParams ? (
-                              <div className="flex items-center space-x-1 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0">
-                                <EditableParameter
-                                  value={(
-                                    displayOverlay?.coffee ||
-                                    editableParams.coffee
-                                  ).replace('g', '')}
-                                  onChange={v => handleParamChange('coffee', v)}
-                                  unit="g"
-                                />
-                                <span className="shrink-0 select-none md:hidden">
-                                  ·
-                                </span>
-                                <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                  /
-                                </span>
-                                <EditableParameter
-                                  value={(
-                                    displayOverlay?.ratio ||
-                                    editableParams.ratio
-                                  ).replace('1:', '')}
-                                  onChange={v => handleParamChange('ratio', v)}
-                                  unit=""
-                                  prefix="1:"
-                                />
-                                {hasGrindSizeParameter && (
-                                  <>
-                                    <span className="shrink-0 select-none md:hidden">
-                                      ·
-                                    </span>
-                                    <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                      /
-                                    </span>
-                                    <GrindSizeInput
-                                      value={
-                                        displayOverlay?.grindSize ||
-                                        editableParams.grindSize
-                                      }
-                                      onChange={v =>
-                                        handleParamChange('grindSize', v)
-                                      }
-                                      className="inline-flex min-w-0"
-                                      inputClassName="w-auto bg-transparent text-center text-xs outline-hidden border-b border-dashed border-neutral-300 pb-0.5 dark:border-neutral-600"
-                                      autoWidth
-                                    />
-                                  </>
-                                )}
-                                {parameterInfo.params?.temp && (
-                                  <>
-                                    <span className="shrink-0 select-none md:hidden">
-                                      ·
-                                    </span>
-                                    <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                      /
-                                    </span>
-                                    <EditableParameter
-                                      value={(
-                                        displayOverlay?.temp ||
-                                        editableParams.temp
-                                      ).replace('°C', '')}
-                                      onChange={v =>
-                                        handleParamChange('temp', v)
-                                      }
-                                      unit="°C"
-                                    />
-                                  </>
-                                )}
-                              </div>
-                            ) : (
-                              <div
-                                className="flex cursor-pointer items-center space-x-1 transition-colors hover:text-neutral-700 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0 dark:hover:text-neutral-300"
-                                onClick={() => {
-                                  if (selectedMethod && !isTimerRunning) {
-                                    setEditableParams({
-                                      coffee: selectedMethod.params.coffee,
-                                      water: selectedMethod.params.water,
-                                      ratio: selectedMethod.params.ratio,
-                                      grindSize:
-                                        selectedMethod.params.grindSize,
-                                      temp: selectedMethod.params.temp,
-                                    });
-                                  }
-                                }}
-                              >
-                                <span className="whitespace-nowrap">
-                                  {parameterInfo.params.coffee}
-                                </span>
-                                <span className="shrink-0 select-none md:hidden">
-                                  ·
-                                </span>
-                                <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                  /
-                                </span>
-                                <span className="whitespace-nowrap">
-                                  {parameterInfo.params.ratio}
-                                </span>
-                                <span className="shrink-0 select-none md:hidden">
-                                  ·
-                                </span>
-                                <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
-                                  /
-                                </span>
-                                <span className="whitespace-nowrap">
-                                  {parameterInfo.params.grindSize || ''}
-                                </span>
-                                <span className="shrink-0 select-none md:hidden">
-                                  ·
-                                </span>
-                                <span className="hidden shrink-0 select-none md:inline">
-                                  /
-                                </span>
-                                <span className="whitespace-nowrap">
-                                  {parameterInfo.params.temp}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                            )
+                          }
+                          onChange={v => _handleTimeChange(v)}
+                          unit="s"
+                        />
+                        <span className="shrink-0 select-none md:hidden">
+                          ·
+                        </span>
+                        <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                          /
+                        </span>
+                        <EditableParameter
+                          value={(
+                            displayOverlay?.water ||
+                            editableParams.water
+                          ).replace('g', '')}
+                          onChange={v =>
+                            handleParamChange('water', v)
+                          }
+                          unit="g"
+                        />
                       </div>
+                    ) : (
+                      <div
+                        className="flex cursor-pointer items-center space-x-1 transition-colors hover:text-neutral-700 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0 dark:hover:text-neutral-300"
+                        onClick={() => {
+                          if (selectedMethod && !isTimerRunning) {
+                            setEditableParams({
+                              coffee: selectedMethod.params.coffee,
+                              water: selectedMethod.params.water,
+                              ratio: selectedMethod.params.ratio,
+                              grindSize:
+                                selectedMethod.params.grindSize,
+                              temp: selectedMethod.params.temp,
+                              time: espressoUtils.formatTime(
+                                espressoUtils.getExtractionTime(
+                                  selectedMethod
+                                )
+                              ),
+                            });
+                          }
+                        }}
+                      >
+                        <span className="whitespace-nowrap">
+                          {parameterInfo.params.coffee}
+                        </span>
+                        <span className="shrink-0 select-none md:hidden">
+                          ·
+                        </span>
+                        <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                          /
+                        </span>
+                        <span className="whitespace-nowrap">
+                          {parameterInfo.params.grindSize || ''}
+                        </span>
+                        <span className="shrink-0 select-none md:hidden">
+                          ·
+                        </span>
+                        <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                          /
+                        </span>
+                        <span className="whitespace-nowrap">
+                          {espressoUtils.formatTime(
+                            espressoUtils.getExtractionTime(
+                              selectedMethod
+                            )
+                          )}
+                          s
+                        </span>
+                        <span className="shrink-0 select-none md:hidden">
+                          ·
+                        </span>
+                        <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                          /
+                        </span>
+                        <span className="whitespace-nowrap">
+                          {parameterInfo.params.water}
+                        </span>
+                      </div>
+                    )
+                  ) : // 原有参数显示
+                  editableParams ? (
+                    <div className="flex items-center space-x-1 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0">
+                      <EditableParameter
+                        value={(
+                          displayOverlay?.coffee ||
+                          editableParams.coffee
+                        ).replace('g', '')}
+                        onChange={v => handleParamChange('coffee', v)}
+                        unit="g"
+                      />
+                      <span className="shrink-0 select-none md:hidden">
+                        ·
+                      </span>
+                      <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                        /
+                      </span>
+                      <EditableParameter
+                        value={(
+                          displayOverlay?.ratio ||
+                          editableParams.ratio
+                        ).replace('1:', '')}
+                        onChange={v => handleParamChange('ratio', v)}
+                        unit=""
+                        prefix="1:"
+                      />
+                      {hasGrindSizeParameter && (
+                        <>
+                          <span className="shrink-0 select-none md:hidden">
+                            ·
+                          </span>
+                          <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                            /
+                          </span>
+                          <GrindSizeInput
+                            value={
+                              displayOverlay?.grindSize ||
+                              editableParams.grindSize
+                            }
+                            onChange={v =>
+                              handleParamChange('grindSize', v)
+                            }
+                            className="inline-flex min-w-0"
+                            inputClassName="w-auto bg-transparent text-center text-xs outline-hidden border-b border-dashed border-neutral-300 pb-0.5 dark:border-neutral-600"
+                            autoWidth
+                          />
+                        </>
+                      )}
+                      {parameterInfo.params?.temp && (
+                        <>
+                          <span className="shrink-0 select-none md:hidden">
+                            ·
+                          </span>
+                          <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                            /
+                          </span>
+                          <EditableParameter
+                            value={(
+                              displayOverlay?.temp ||
+                              editableParams.temp
+                            ).replace('°C', '')}
+                            onChange={v =>
+                              handleParamChange('temp', v)
+                            }
+                            unit="°C"
+                          />
+                        </>
+                      )}
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  ) : (
+                    <div
+                      className="flex cursor-pointer items-center space-x-1 transition-colors hover:text-neutral-700 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0 dark:hover:text-neutral-300"
+                      onClick={() => {
+                        if (selectedMethod && !isTimerRunning) {
+                          setEditableParams({
+                            coffee: selectedMethod.params.coffee,
+                            water: selectedMethod.params.water,
+                            ratio: selectedMethod.params.ratio,
+                            grindSize:
+                              selectedMethod.params.grindSize,
+                            temp: selectedMethod.params.temp,
+                          });
+                        }
+                      }}
+                    >
+                      <span className="whitespace-nowrap">
+                        {parameterInfo.params.coffee}
+                      </span>
+                      <span className="shrink-0 select-none md:hidden">
+                        ·
+                      </span>
+                      <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                        /
+                      </span>
+                      <span className="whitespace-nowrap">
+                        {parameterInfo.params.ratio}
+                      </span>
+                      <span className="shrink-0 select-none md:hidden">
+                        ·
+                      </span>
+                      <span className="hidden shrink-0 text-neutral-300 select-none md:inline dark:text-neutral-700">
+                        /
+                      </span>
+                      <span className="whitespace-nowrap">
+                        {parameterInfo.params.grindSize || ''}
+                      </span>
+                      <span className="shrink-0 select-none md:hidden">
+                        ·
+                      </span>
+                      <span className="hidden shrink-0 select-none md:inline">
+                        /
+                      </span>
+                      <span className="whitespace-nowrap">
+                        {parameterInfo.params.temp}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </NavigationSection>
 
-              {/* 器具分类栏 - 只在方案步骤时显示，添加动画效果 */}
-              <AnimatePresence mode="wait" initial={false}>
-                {activeBrewingStep === 'method' && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{
-                      duration: 0.3,
-                      ease: [0.4, 0, 0.2, 1],
-                      opacity: { duration: 0.2 },
-                    }}
-                    className="mx-6 overflow-hidden"
-                  >
-                    <EquipmentBar
-                      selectedEquipment={selectedEquipment}
-                      customEquipments={customEquipments}
-                      onEquipmentSelect={onEquipmentSelect || (() => {})}
-                      onToggleManagementDrawer={handleToggleManagementDrawer}
-                      settings={settings}
-                      className={desktopEquipmentTopSpacingClass}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
-    </motion.div>
+        {/* 器具分类栏 - 只在方案步骤时显示 */}
+        <NavigationSection
+          open={
+            !showAlternativeHeader && shouldShowContent && activeBrewingStep === 'method'
+          }
+          animated={animateNavigation}
+          className="mx-6 overflow-hidden md:mr-3"
+        >
+          <EquipmentBar
+            selectedEquipment={selectedEquipment}
+            customEquipments={customEquipments}
+            onEquipmentSelect={onEquipmentSelect || (() => {})}
+            onToggleManagementDrawer={handleToggleManagementDrawer}
+            settings={settings}
+            className={desktopEquipmentTopSpacingClass}
+          />
+        </NavigationSection>
+      </div>
+    </div>
   );
 };
 

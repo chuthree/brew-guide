@@ -1,5 +1,13 @@
+import {
+  coordinateStoreActions,
+  callStoreActionInMutation,
+} from '@/lib/data/storeMutationBoundary';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
+import {
+  buildCapacityAdjustmentRecord,
+  getCapacityAdjustmentReversal,
+} from './inventoryRecords';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import {
   getCoffeeBeanStore,
@@ -7,31 +15,9 @@ import {
   updateBeanRemaining,
 } from '@/lib/stores/coffeeBeanStore';
 
-const AMOUNT_REGEX = /\d+(?:\.\d+)?/;
-const NEGATIVE_AMOUNT_REGEX = /-\s*\d/;
+import { parseCoffeeBeanAmount } from './amount';
+export { parseCoffeeBeanAmount } from './amount';
 const MIN_CAPACITY_CHANGE = 0.01;
-
-export const parseCoffeeBeanAmount = (value: unknown): number | null => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) && value >= 0 ? value : null;
-  }
-
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  if (NEGATIVE_AMOUNT_REGEX.test(value)) {
-    return null;
-  }
-
-  const match = value.match(AMOUNT_REGEX);
-  if (!match) {
-    return null;
-  }
-
-  const amount = Number.parseFloat(match[0]);
-  return Number.isFinite(amount) ? amount : null;
-};
 
 export const isOptionalCoffeeBeanAmount = (value: unknown): boolean => {
   if (typeof value === 'string' && !value.trim()) {
@@ -68,54 +54,18 @@ export const getCapacityChangeUpdates = (
   };
 };
 
-export async function createCapacityAdjustmentRecord(
+async function createCapacityAdjustmentRecordInMutation(
   bean: CoffeeBean,
   originalAmount: number,
   newAmount: number
 ): Promise<BrewingNote> {
-  const changeAmount = newAmount - originalAmount;
-  const timestamp = Date.now();
-  const changeType =
-    changeAmount > 0 ? 'increase' : changeAmount < 0 ? 'decrease' : 'set';
-
-  const noteContent = '容量调整(不计入统计)';
-  const adjustmentRecord: Omit<BrewingNote, 'id'> = {
-    timestamp,
-    source: 'capacity-adjustment',
-    beanId: bean.id,
-    equipment: '',
-    method: '',
-    coffeeBeanInfo: {
-      name: bean.name || '',
-      roastLevel: bean.roastLevel || '中度烘焙',
-      roastDate: bean.roastDate,
-      roaster: bean.roaster,
-    },
-    notes: noteContent,
-    rating: 0,
-    taste: { acidity: 0, sweetness: 0, bitterness: 0, body: 0 },
-    params: {
-      coffee: `${Math.abs(changeAmount)}g`,
-      water: '',
-      ratio: '',
-      grindSize: '',
-      temp: '',
-    },
-    totalTime: 0,
-    changeRecord: {
-      capacityAdjustment: {
-        originalAmount,
-        newAmount,
-        changeAmount,
-        changeType,
-      },
-    },
-  };
-
-  return useBrewingNoteStore.getState().addNote(adjustmentRecord);
+  return callStoreActionInMutation(
+    useBrewingNoteStore.getState().addNote,
+    buildCapacityAdjustmentRecord(bean, originalAmount, newAmount)
+  );
 }
 
-export async function createCapacityAdjustmentRecordIfNeeded(
+async function createCapacityAdjustmentRecordIfNeededInMutation(
   bean: CoffeeBean,
   previousRemaining: unknown,
   nextRemaining: unknown
@@ -132,15 +82,19 @@ export async function createCapacityAdjustmentRecordIfNeeded(
     return null;
   }
 
-  return createCapacityAdjustmentRecord(bean, originalAmount, newAmount);
+  return createCapacityAdjustmentRecordInMutation(
+    bean,
+    originalAmount,
+    newAmount
+  );
 }
 
-export async function addBeanWithInitialCapacityAdjustmentRecord(
+async function addBeanWithInitialCapacityAdjustmentRecordInMutation(
   beanData: Omit<CoffeeBean, 'id' | 'timestamp'>
 ): Promise<CoffeeBean> {
   const store = getCoffeeBeanStore();
-  const bean = await store.addBean(beanData);
-  await createCapacityAdjustmentRecordIfNeeded(
+  const bean = await callStoreActionInMutation(store.addBean, beanData);
+  await createCapacityAdjustmentRecordIfNeededInMutation(
     bean,
     bean.capacity,
     bean.remaining
@@ -148,7 +102,7 @@ export async function addBeanWithInitialCapacityAdjustmentRecord(
   return bean;
 }
 
-export async function updateBeanWithCapacityAdjustmentRecord(
+async function updateBeanWithCapacityAdjustmentRecordInMutation(
   beanId: string,
   updates: Partial<CoffeeBean>
 ): Promise<CoffeeBean | null> {
@@ -156,11 +110,15 @@ export async function updateBeanWithCapacityAdjustmentRecord(
   const bean = store.getBeanById(beanId);
   if (!bean) return null;
 
-  const updatedBean = await store.updateBean(beanId, updates);
+  const updatedBean = await callStoreActionInMutation(
+    store.updateBean,
+    beanId,
+    updates
+  );
   if (!updatedBean) return null;
 
   if ('remaining' in updates) {
-    await createCapacityAdjustmentRecordIfNeeded(
+    await createCapacityAdjustmentRecordIfNeededInMutation(
       bean,
       bean.remaining,
       updatedBean.remaining
@@ -170,7 +128,7 @@ export async function updateBeanWithCapacityAdjustmentRecord(
   return updatedBean;
 }
 
-export async function applyCapacityAdjustmentDelta(
+async function applyCapacityAdjustmentDeltaInMutation(
   beanId: string | undefined,
   delta: number
 ): Promise<CoffeeBean | null> {
@@ -178,15 +136,44 @@ export async function applyCapacityAdjustmentDelta(
   if (Math.abs(delta) < MIN_CAPACITY_CHANGE) return null;
 
   return delta > 0
-    ? increaseBeanRemaining(beanId, delta)
-    : updateBeanRemaining(beanId, Math.abs(delta));
+    ? callStoreActionInMutation(increaseBeanRemaining, beanId, delta)
+    : callStoreActionInMutation(updateBeanRemaining, beanId, Math.abs(delta));
 }
 
-export async function revertCapacityAdjustmentRecord(
+async function revertCapacityAdjustmentRecordInMutation(
   note: Pick<BrewingNote, 'beanId' | 'changeRecord'>
 ): Promise<CoffeeBean | null> {
-  const changeAmount = note.changeRecord?.capacityAdjustment?.changeAmount;
-  return typeof changeAmount === 'number' && Number.isFinite(changeAmount)
-    ? applyCapacityAdjustmentDelta(note.beanId, -changeAmount)
+  const delta = getCapacityAdjustmentReversal(note);
+  return delta !== null
+    ? applyCapacityAdjustmentDeltaInMutation(note.beanId, delta)
     : null;
 }
+
+export const {
+  createCapacityAdjustmentRecord,
+  createCapacityAdjustmentRecordIfNeeded,
+  addBeanWithInitialCapacityAdjustmentRecord,
+  updateBeanWithCapacityAdjustmentRecord,
+  applyCapacityAdjustmentDelta,
+  revertCapacityAdjustmentRecord,
+} = coordinateStoreActions(
+  {
+    createCapacityAdjustmentRecord: createCapacityAdjustmentRecordInMutation,
+    createCapacityAdjustmentRecordIfNeeded:
+      createCapacityAdjustmentRecordIfNeededInMutation,
+    addBeanWithInitialCapacityAdjustmentRecord:
+      addBeanWithInitialCapacityAdjustmentRecordInMutation,
+    updateBeanWithCapacityAdjustmentRecord:
+      updateBeanWithCapacityAdjustmentRecordInMutation,
+    applyCapacityAdjustmentDelta: applyCapacityAdjustmentDeltaInMutation,
+    revertCapacityAdjustmentRecord: revertCapacityAdjustmentRecordInMutation,
+  },
+  [
+    'createCapacityAdjustmentRecord',
+    'createCapacityAdjustmentRecordIfNeeded',
+    'addBeanWithInitialCapacityAdjustmentRecord',
+    'updateBeanWithCapacityAdjustmentRecord',
+    'applyCapacityAdjustmentDelta',
+    'revertCapacityAdjustmentRecord',
+  ]
+);

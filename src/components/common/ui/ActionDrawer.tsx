@@ -13,6 +13,7 @@ import { Drawer } from 'vaul';
 import { motion, Transition, AnimatePresence } from 'framer-motion';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useActionDrawerQueue } from '@/lib/hooks/useActionDrawerQueue';
 
 /**
  * 统一动画规范
@@ -25,6 +26,8 @@ export const DRAWER_TRANSITION: Transition = {
 };
 
 export interface ActionDrawerProps {
+  /** Accessible dialog title; existing drawers keep the default. */
+  title?: string;
   /** 控制抽屉是否打开 */
   isOpen: boolean;
   /** 关闭抽屉的回调 */
@@ -53,6 +56,10 @@ export interface ActionDrawerProps {
   repositionInputs?: boolean;
   /** 是否允许通过拖拽、返回键或遮罩关闭抽屉，默认 true */
   dismissible?: boolean;
+  /** Runs only while actually presented, with optional cleanup when hidden. */
+  onPresent?: () => void | (() => void);
+  /** Opt into the shared queue; higher priorities display first. */
+  priority?: number;
 }
 
 export interface ActionDrawerIconProps {
@@ -213,12 +220,22 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   isOpen,
   onClose,
   children,
+  title = '操作面板',
   historyId,
   disableHistory = false,
   onExitComplete,
   repositionInputs = false,
   dismissible = true,
+  onPresent,
+  priority,
 }) => {
+  const queued = useActionDrawerQueue(isOpen && priority !== undefined, priority);
+  const presented = priority === undefined ? isOpen : queued;
+
+  useEffect(() => {
+    if (presented) return onPresent?.();
+  }, [presented, onPresent]);
+
   // 生成稳定的唯一 ID（如果未提供 historyId）
   const [autoId] = useState(
     () =>
@@ -229,14 +246,14 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   // 同步顶部安全区颜色（用于 meta theme-color）
   const themeColorOverlayRef = useThemeColor({
     useOverlay: true,
-    enabled: isOpen,
+    enabled: presented,
   });
 
   // 集成历史栈管理，支持返回键关闭
   // 当 disableHistory 为 true 时，传入空 id 和 false 来禁用
   useModalHistory({
     id: disableHistory ? '' : modalId,
-    isOpen: disableHistory || !dismissible ? false : isOpen,
+    isOpen: disableHistory || !dismissible ? false : presented,
     onClose,
   });
 
@@ -253,16 +270,16 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   // 动画结束回调
   const handleAnimationEnd = useCallback(
     (open: boolean) => {
-      if (!open) {
+      if (!open && !isOpen) {
         onExitComplete?.();
       }
     },
-    [onExitComplete]
+    [isOpen, onExitComplete]
   );
 
   return (
     <Drawer.Root
-      open={isOpen}
+      open={presented}
       onOpenChange={handleOpenChange}
       onAnimationEnd={handleAnimationEnd}
       repositionInputs={repositionInputs}
@@ -283,7 +300,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
           aria-describedby={undefined}
         >
           {/* 无障碍标题 - 视觉隐藏 */}
-          <Drawer.Title className="sr-only">操作面板</Drawer.Title>
+          <Drawer.Title className="sr-only">{title}</Drawer.Title>
 
           {/* 拖拽手柄 - 可选，提供视觉提示 */}
           {/* <Drawer.Handle className="mx-auto mt-4 h-1.5 w-12 shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-600" /> */}

@@ -1,5 +1,7 @@
 import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
 import React from 'react';
+import TabButton from '@/components/common/ui/TabButton';
+import TabBar from '@/components/common/ui/TabBar';
 import { motion } from 'framer-motion';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import AutoResizeTextarea from '@/components/common/forms/AutoResizeTextarea';
@@ -61,29 +63,18 @@ const DetailInfo: React.FC<DetailInfoProps> = ({
           <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
             咖啡豆类型
           </label>
-          <div className="flex w-full border-b border-neutral-300 dark:border-neutral-700">
+          <TabBar className="flex w-full border-b border-neutral-300 dark:border-neutral-700">
             {BEAN_TYPES.map(type => (
-              <div
+              <TabButton
                 key={type.value}
-                className="relative flex-1 py-2"
+                isActive={bean.beanType === type.value}
+                className="flex-1 py-2 text-center"
                 onClick={() => onBeanChange('beanType')(type.value)}
               >
-                <button
-                  type="button"
-                  className={`w-full text-center transition-colors duration-200 ${
-                    bean.beanType === type.value
-                      ? 'text-neutral-800 dark:text-neutral-200'
-                      : 'text-neutral-500 dark:text-neutral-400'
-                  }`}
-                >
-                  {type.label}
-                </button>
-                {bean.beanType === type.value && (
-                  <div className="absolute -bottom-px left-0 h-px w-full bg-neutral-800 dark:bg-neutral-200"></div>
-                )}
-              </div>
+                {type.label}
+              </TabButton>
             ))}
-          </div>
+          </TabBar>
         </div>
       </div>
 

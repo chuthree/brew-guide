@@ -1,3 +1,4 @@
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
 /**
  * Supabase 同步操作模块
  *
@@ -23,6 +24,10 @@ import {
   grinderRepository,
 } from '@/lib/data/repositories';
 import type { AppSettings } from '@/lib/data/models';
+import {
+  omitDeviceSettings,
+  preserveDeviceSettings,
+} from '@/lib/settings/deviceSettings';
 
 // ============================================
 // 类型定义
@@ -307,6 +312,10 @@ function normalizeSettingsFingerprintData(
     appSettings.supabaseSync = stableSupabaseSync;
   }
 
+  if (appSettings) {
+    normalized.appSettings = omitDeviceSettings(appSettings);
+  }
+
   return normalized;
 }
 
@@ -390,7 +399,7 @@ async function collectLocalSettingsSyncData(): Promise<{
   // 收集应用设置
   const appSettings = await appSettingsRepository.get();
   if (appSettings) {
-    data.appSettings = appSettings as AppSettings;
+    data.appSettings = omitDeviceSettings(appSettings);
     dataSections.push('appSettings');
   }
 
@@ -933,83 +942,87 @@ export async function downloadSettingsData(
       return { success: true, data: 0, affectedCount: 0 };
     }
 
-    const settingsData = row.data as Record<string, unknown>;
     let count = 0;
+    await withDataMutation(async () => {
+      const settingsData = row.data as Record<string, unknown>;
 
-    // 恢复应用设置
-    if (settingsData.appSettings) {
-      currentSection = 'appSettings';
-      const cloudAppSettings = settingsData.appSettings as AppSettings;
-      const localSettings = ((await appSettingsRepository.get()) ||
-        {}) as Partial<AppSettings>;
+      // 恢复应用设置
+      if (settingsData.appSettings) {
+        currentSection = 'appSettings';
+        const cloudAppSettings = settingsData.appSettings as AppSettings;
+        const localSettings = ((await appSettingsRepository.get()) ||
+          {}) as Partial<AppSettings>;
 
-      // 如果本地是空/默认状态，完全使用云端数据
-      // 而不是合并（合并会保留本地的默认值）
-      let mergedSettings: AppSettings;
-      const localIsEmpty = isLocalSettingsEmpty(localSettings);
+        // 如果本地是空/默认状态，完全使用云端数据
+        // 而不是合并（合并会保留本地的默认值）
+        let mergedSettings: AppSettings;
+        const localIsEmpty = isLocalSettingsEmpty(localSettings);
 
-      if (localIsEmpty) {
-        // 本地无用户数据，直接使用云端设置
-        mergedSettings = cloudAppSettings;
-      } else {
-        // 本地有用户数据，进行合并（云端优先）
-        mergedSettings = {
-          ...localSettings,
-          ...cloudAppSettings,
-        } as AppSettings;
-      }
-
-      await appSettingsRepository.save(mergedSettings);
-      count++;
-    }
-
-    // 恢复磨豆机数据
-    if (hasOwnSettingSection(settingsData, 'grinders')) {
-      currentSection = 'grinders';
-      if (!Array.isArray(settingsData.grinders)) {
-        throw new Error('云端 grinders 数据格式无效，应为数组');
-      }
-
-      const cloudGrinders = settingsData.grinders as Array<{
-        id: string;
-        name: string;
-        currentGrindSize?: string;
-      }>;
-      await grinderRepository.replaceAll(cloudGrinders);
-      count++;
-    }
-
-    // 恢复自定义预设（localStorage）
-    if (typeof window !== 'undefined') {
-      if (hasOwnSettingSection(settingsData, 'customPresets')) {
-        currentSection = 'customPresets';
-        if (
-          settingsData.customPresets === null ||
-          typeof settingsData.customPresets !== 'object' ||
-          Array.isArray(settingsData.customPresets)
-        ) {
-          throw new Error('云端 customPresets 数据格式无效，应为对象');
+        if (localIsEmpty) {
+          // 本地无用户数据，直接使用云端设置
+          mergedSettings = cloudAppSettings;
+        } else {
+          // 本地有用户数据，进行合并（云端优先）
+          mergedSettings = {
+            ...localSettings,
+            ...cloudAppSettings,
+          } as AppSettings;
         }
 
-        const presets = settingsData.customPresets as Record<string, unknown>;
-        for (const k of PRESETS_KEYS) {
-          if (hasOwnSettingSection(presets, k) && presets[k] !== undefined) {
-            localStorage.setItem(
-              `${PRESETS_PREFIX}${k}`,
-              JSON.stringify(presets[k])
-            );
-            count++;
-          } else {
-            localStorage.removeItem(`${PRESETS_PREFIX}${k}`);
+        await appSettingsRepository.save(
+          preserveDeviceSettings(mergedSettings, localSettings) as AppSettings
+        );
+        count++;
+      }
+
+      // 恢复磨豆机数据
+      if (hasOwnSettingSection(settingsData, 'grinders')) {
+        currentSection = 'grinders';
+        if (!Array.isArray(settingsData.grinders)) {
+          throw new Error('云端 grinders 数据格式无效，应为数组');
+        }
+
+        const cloudGrinders = settingsData.grinders as Array<{
+          id: string;
+          name: string;
+          currentGrindSize?: string;
+        }>;
+        await grinderRepository.replaceAll(cloudGrinders);
+        count++;
+      }
+
+      // 恢复自定义预设（localStorage）
+      if (typeof window !== 'undefined') {
+        if (hasOwnSettingSection(settingsData, 'customPresets')) {
+          currentSection = 'customPresets';
+          if (
+            settingsData.customPresets === null ||
+            typeof settingsData.customPresets !== 'object' ||
+            Array.isArray(settingsData.customPresets)
+          ) {
+            throw new Error('云端 customPresets 数据格式无效，应为对象');
+          }
+
+          const presets = settingsData.customPresets as Record<string, unknown>;
+          for (const k of PRESETS_KEYS) {
+            if (hasOwnSettingSection(presets, k) && presets[k] !== undefined) {
+              localStorage.setItem(
+                `${PRESETS_PREFIX}${k}`,
+                JSON.stringify(presets[k])
+              );
+              count++;
+            } else {
+              localStorage.removeItem(`${PRESETS_PREFIX}${k}`);
+            }
           }
         }
-      }
 
-      // 触发 UI 刷新
-      window.dispatchEvent(
-        new CustomEvent('settingsChanged', { detail: { source: 'remote' } })
-      );
-    }
+        // 触发 UI 刷新
+        window.dispatchEvent(
+          new CustomEvent('settingsChanged', { detail: { source: 'remote' } })
+        );
+      }
+    });
 
     const syncedLocalData = await collectLocalSettingsSyncData();
     if (Object.keys(syncedLocalData.data).length > 0) {

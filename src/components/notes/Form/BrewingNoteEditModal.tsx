@@ -1,6 +1,10 @@
 'use client';
+import {
+  callStoreActionInMutation,
+  coordinateStoreActions,
+} from '@/lib/data/storeMutationBoundary';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ArrowLeft, CornerDownRight } from 'lucide-react';
 import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
@@ -96,13 +100,18 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     }));
   }, [isChangeRecordEdit, noteId, setQuickModeOverride]);
   // 处理保存
-  const handleSave = useCallback(
+  const handleSaveRaw = useCallback(
     async (updatedData: BrewingNoteData) => {
       setQuickModeOverride(null);
       setDraftSnapshot(null);
-      await onSave(updatedData);
+      await callStoreActionInMutation(onSave, updatedData);
     },
     [onSave, setDraftSnapshot, setQuickModeOverride]
+  );
+
+  const handleSave = useMemo(
+    () => coordinateStoreActions({ save: handleSaveRaw }, ['save']).save,
+    [handleSaveRaw]
   );
 
   // 处理关闭

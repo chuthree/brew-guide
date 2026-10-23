@@ -15,7 +15,7 @@ export async function listGrinders(
   return rows.map(row => decodeGrinder(row as unknown as GrinderRow));
 }
 
-async function saveGrinder(
+export async function saveGrinder(
   executor: SqliteExecutor,
   grinder: Grinder
 ): Promise<void> {

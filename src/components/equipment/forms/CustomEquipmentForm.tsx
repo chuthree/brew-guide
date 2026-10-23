@@ -8,6 +8,8 @@ import React, {
   forwardRef,
 } from 'react';
 import { CustomEquipment, equipmentList } from '@/lib/core/config';
+import { customMethodRepository } from '@/lib/data/repositories';
+import { isPourTypeAvailable } from '@/lib/utils/equipmentUtils';
 import { isEquipmentNameAvailable } from '@/lib/stores/customEquipmentStore';
 import { getSettingsStore } from '@/lib/stores/settingsStore';
 import DrawingCanvas, { DrawingCanvasRef } from '../../common/ui/DrawingCanvas';
@@ -39,10 +41,7 @@ import {
   SettingVerticalSelector,
   SettingCardSelector,
 } from '@/components/settings/atomic';
-import {
-  sanitizeSvgMarkup,
-  setSvgDimensions,
-} from '@/lib/utils/svgUtils';
+import { prepareOutlineSvg } from '@/lib/utils/svgUtils';
 
 // 从CustomEquipment类型中提取PourAnimation类型
 type CustomPourAnimation = NonNullable<
@@ -195,42 +194,6 @@ const isPresetEquipmentNameAvailable = (
   });
 };
 
-// 修改默认注水类型常量
-const DEFAULT_POUR_TYPES = [
-  {
-    id: 'system-center',
-    name: '中心注水',
-    pourType: 'center' as const,
-    description: '中心定点注水，降低萃取率',
-    isSystemDefault: true,
-    previewFrames: 3,
-  },
-  {
-    id: 'system-circle',
-    name: '绕圈注水',
-    pourType: 'circle' as const,
-    description: '中心向外缓慢画圈注水，均匀萃取咖啡风味',
-    isSystemDefault: true,
-    previewFrames: 4,
-  },
-  {
-    id: 'system-ice',
-    name: '添加冰块',
-    pourType: 'ice' as const,
-    description: '适用于冰滴和冰手冲咖啡',
-    isSystemDefault: true,
-    previewFrames: 4,
-  },
-  {
-    id: 'system-bypass',
-    name: 'Bypass',
-    pourType: 'bypass' as const,
-    description: '冲煮完成后添加到咖啡液中，调节浓度和口感',
-    isSystemDefault: true,
-    previewFrames: 1,
-  },
-];
-
 const CustomEquipmentForm = forwardRef<
   CustomEquipmentFormHandle,
   CustomEquipmentFormProps
@@ -260,16 +223,9 @@ const CustomEquipmentForm = forwardRef<
       () => getPresetValueFromAnimationType(initialEquipment?.animationType)
     );
 
-    // 添加杯型选择状态（默认/自定义）
-    // 初始化逻辑：只有在既有customShapeSvg数据，且当前器具不是espresso时，才显示为自定义
-    const [cupShapeType, setCupShapeType] = useState<CupShapeType>(() => {
-      // espresso不支持杯型选择，始终为default
-      if (initialEquipment?.animationType === 'espresso') {
-        return 'default';
-      }
-      // 只有同时满足两个条件才判定为custom：1) 有customShapeSvg数据 2) 器具支持自定义
-      return initialEquipment?.customShapeSvg ? 'custom' : 'default';
-    });
+    const [cupShapeType, setCupShapeType] = useState<CupShapeType>(() =>
+      initialEquipment?.animationType === 'custom' ? 'custom' : 'default'
+    );
 
     // 添加阀门样式选择状态（默认/自定义）
     const [_valveShapeType, setValveShapeType] = useState<string>('default');
@@ -327,48 +283,17 @@ const CustomEquipmentForm = forwardRef<
       Record<string, number>
     >({});
 
-    // 初始化注水方式，合并系统默认和用户自定义
+    // 预设动画由类型提供；表单只维护真正可编辑的自定义动画。
     const [customPourAnimations, setCustomPourAnimations] = useState<
       CustomPourAnimation[]
-    >(() => {
-      // 处理用户自定义的注水动画
-      const userCustom = initialEquipment?.customPourAnimations || [];
-
-      // 为自定义动画计算previewFrames
-      const processedUserCustom = userCustom
-        .filter(anim => !anim.isSystemDefault)
-        .map(anim => {
-          // 如果有frames属性，则将previewFrames设置为frames的长度
-          if (anim.frames && anim.frames.length > 0) {
-            return {
-              ...anim,
-              previewFrames: anim.frames.length,
-            };
-          }
-          // 否则保持原样
-          return anim;
-        });
-
-      // 根据初始器具的animationType判断是否为自定义器具
-      const isCustomPreset = initialEquipment?.animationType === 'custom';
-
-      // 如果是自定义器具，只返回用户自定义的注水动画
-      if (isCustomPreset) {
-        return processedUserCustom;
-      }
-
-      // 否则包含系统默认注水方式
-      const defaults: CustomPourAnimation[] = DEFAULT_POUR_TYPES.map(type => ({
-        id: type.id,
-        name: type.name,
-        customAnimationSvg: '',
-        isSystemDefault: true,
-        pourType: type.pourType,
-        previewFrames: type.previewFrames,
-      }));
-
-      return [...defaults, ...processedUserCustom];
-    });
+    >(() =>
+      (initialEquipment?.customPourAnimations || [])
+        .filter(animation => !animation.isSystemDefault)
+        .map(animation => ({
+          ...animation,
+          previewFrames: animation.frames?.length || animation.previewFrames,
+        }))
+    );
 
     // 添加一个ref用于跟踪最新的customPourAnimations
     const customPourAnimationsRef =
@@ -489,17 +414,8 @@ const CustomEquipmentForm = forwardRef<
         animationType: preset.animationType,
         ...(preset.hasValve === undefined ? {} : { hasValve: preset.hasValve }),
       }));
-      if (preset.animationType === 'espresso') {
-        // 意式机不支持杯型绘制
-        setCupShapeType('default');
-      } else if (preset.animationType === 'custom') {
-        // 自定义器具强制使用自定义杯型
-        setCupShapeType('custom');
-        // 自定义器具只保留用户自定义注水方式
-        setCustomPourAnimations(prev =>
-          prev.filter(anim => !anim.isSystemDefault)
-        );
-      }
+      setCupShapeType(preset.animationType === 'custom' ? 'custom' : 'default');
+      setErrors({});
     };
 
     // 计算画布尺寸
@@ -544,6 +460,25 @@ const CustomEquipmentForm = forwardRef<
         newErrors.name = '器具名称已存在';
       }
 
+      if (initialEquipment?.id) {
+        const draft = {
+          ...equipment,
+          customPourAnimations:
+            selectedPreset === 'custom' ? customPourAnimations : undefined,
+        } as CustomEquipment;
+        const savedMethods = await customMethodRepository.get(
+          initialEquipment.id
+        );
+        const incompatibleMethod = savedMethods?.methods.find(method =>
+          method.params.stages.some(
+            stage => !isPourTypeAvailable(draft, stage.pourType)
+          )
+        );
+        if (incompatibleMethod) {
+          newErrors.equipmentType = `方案「${incompatibleMethod.name}」使用了当前器具不支持的注水方式。请先调整方案，再切换器具类型或删除注水方式。`;
+        }
+      }
+
       setErrors(newErrors);
       return Object.keys(newErrors).length === 0;
     };
@@ -553,20 +488,9 @@ const CustomEquipmentForm = forwardRef<
 
       try {
         if (await validateForm()) {
-          // 检查自定义注水动画的帧数据
-          const processedAnimations = customPourAnimations
-            .filter(animation => !animation.isSystemDefault) // 确保过滤掉系统默认注水方式
-            .map(animation => {
-              if (animation.frames && animation.frames.length > 1) {
-                // 多帧动画处理逻辑
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn(
-                    `处理多帧动画: ${animation.name}, 帧数: ${animation.frames.length}`
-                  );
-                }
-              }
-              return animation;
-            });
+          const processedAnimations = customPourAnimations.filter(
+            animation => !animation.isSystemDefault
+          );
 
           const equipmentToSave = {
             ...(equipment as CustomEquipment),
@@ -1670,9 +1594,7 @@ const CustomEquipmentForm = forwardRef<
             <div
               className="custom-cup-shape outline-only flex h-full w-full items-center justify-center"
               dangerouslySetInnerHTML={{
-                __html: sanitizeSvgMarkup(
-                  setSvgDimensions(activeCupReference.svg, '100%', '100%')
-                ),
+                __html: prepareOutlineSvg(activeCupReference.svg),
               }}
             />
           ) : (
@@ -1738,9 +1660,7 @@ const CustomEquipmentForm = forwardRef<
                     <div
                       className="custom-cup-shape outline-only flex h-full w-full items-center justify-center"
                       dangerouslySetInnerHTML={{
-                        __html: sanitizeSvgMarkup(
-                          setSvgDimensions(svgData, '100%', '100%')
-                        ),
+                        __html: prepareOutlineSvg(svgData),
                       }}
                     />
                   );
@@ -1755,13 +1675,7 @@ const CustomEquipmentForm = forwardRef<
                   <div
                     className="custom-cup-shape outline-only flex h-full w-full items-center justify-center"
                     dangerouslySetInnerHTML={{
-                      __html: sanitizeSvgMarkup(
-                        setSvgDimensions(
-                          animation.customAnimationSvg,
-                          '100%',
-                          '100%'
-                        )
-                      ),
+                      __html: prepareOutlineSvg(animation.customAnimationSvg),
                     }}
                   />
                 );
@@ -1837,6 +1751,15 @@ const CustomEquipmentForm = forwardRef<
           )}
         </SettingSection>
 
+        {errors.equipmentType && (
+          <p
+            role="alert"
+            className="mb-4 px-3.5 text-xs text-red-500 dark:text-red-400"
+          >
+            {errors.equipmentType}
+          </p>
+        )}
+
         {shouldShowCustomShapeControls && (
           <SettingSection title="杯型" contentShape="none">
             <SettingCardSelector<CupShapeType>
@@ -1868,13 +1791,7 @@ const CustomEquipmentForm = forwardRef<
                     <div
                       className="flex h-full w-full items-center justify-center"
                       dangerouslySetInnerHTML={{
-                        __html: sanitizeSvgMarkup(
-                          setSvgDimensions(
-                            equipment.customShapeSvg,
-                            '100%',
-                            '100%'
-                          )
-                        ),
+                        __html: prepareOutlineSvg(equipment.customShapeSvg),
                       }}
                     />
                   ) : (
@@ -1929,6 +1846,11 @@ const CustomEquipmentForm = forwardRef<
 
         {shouldShowPourAnimationControls && (
           <SettingSection title="注水方式" contentShape="none">
+            {customPourAnimations.length === 0 && (
+              <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+                自定义器具不继承预设注水动画。请为当前杯型添加注水方式，再在方案中选择。
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-3">
               {customPourAnimations.map(animation => (
                 <div

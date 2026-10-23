@@ -1,3 +1,7 @@
+import {
+  callStoreActionInMutation,
+  coordinateStoreActions,
+} from '@/lib/data/storeMutationBoundary';
 import { CoffeeBean, BrewingNoteData } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
 import {
@@ -39,11 +43,14 @@ const getBrewingNoteById = async (
   (await getStoredBrewingNoteById(noteId)) as BrewingNoteData | undefined;
 
 const addBrewingNote = async (note: BrewingNoteData): Promise<void> => {
-  await getBrewingNoteStore().addNote(note as BrewingNote);
+  await callStoreActionInMutation(
+    getBrewingNoteStore().addNote,
+    note as BrewingNote
+  );
 };
 
 const deleteBrewingNote = async (noteId: string): Promise<void> => {
-  await getBrewingNoteStore().deleteNote(noteId);
+  await callStoreActionInMutation(getBrewingNoteStore().deleteNote, noteId);
 };
 
 const replaceBrewingNotes = async (
@@ -68,7 +75,7 @@ const replaceBrewingNotes = async (
 /**
  * 烘焙管理器 - 处理生豆到熟豆的转换
  */
-export const RoastingManager = {
+const roastingManager = {
   /**
    * 生成熟豆名称（使用续购逻辑）
    * @param greenBeanName 生豆名称
@@ -147,7 +154,8 @@ export const RoastingManager = {
 
       // 3. 扣除生豆容量
       const newRemaining = currentRemaining - roastedAmount;
-      const updatedGreenBean = await getCoffeeBeanStore().updateBean(
+      const updatedGreenBean = await callStoreActionInMutation(
+        getCoffeeBeanStore().updateBean,
         greenBeanId,
         {
           remaining: formatNumber(newRemaining),
@@ -203,7 +211,10 @@ export const RoastingManager = {
           sourceGreenBeanId: greenBeanId,
         };
 
-        roastedBean = await getCoffeeBeanStore().addBean(newRoastedBean);
+        roastedBean = await callStoreActionInMutation(
+          getCoffeeBeanStore().addBean,
+          newRoastedBean
+        );
 
         // 4.1 如果容量和剩余量不同，为熟豆创建一个变动记录
         if (roastedBean && userCapacity !== userRemaining) {
@@ -443,7 +454,11 @@ export const RoastingManager = {
       }
 
       patchesToRollback.push({ id: bean.id, updates: previousValues });
-      const updatedBean = await beanStore.updateBean(bean.id, updates);
+      const updatedBean = await callStoreActionInMutation(
+        beanStore.updateBean,
+        bean.id,
+        updates
+      );
       if (!updatedBean) throw new Error('更新咖啡豆失败');
     };
 
@@ -499,25 +514,29 @@ export const RoastingManager = {
         ? ` → ${roastingRecord.roastedBeanName}`
         : '';
       noteWriteAttempted = true;
-      const updatedNote = await getBrewingNoteStore().updateNote(note.id, {
-        timestamp: updatedData.timestamp,
-        source: 'roasting',
-        beanId: greenBeanId,
-        coffeeBeanInfo: {
-          name: newGreenBean.name,
-          roastLevel:
-            newGreenBean.roastLevel ||
-            note.coffeeBeanInfo?.roastLevel ||
-            '未知',
-          roastDate: newGreenBean.roastDate,
-          roaster: newGreenBean.roaster,
-        },
-        notes: `烘焙了 ${formatNumber(roastedAmount)}g 生豆${roastedBeanLabel}`,
-        changeRecord: {
-          ...note.changeRecord,
-          roastingRecord: updatedRoastingRecord,
-        },
-      });
+      const updatedNote = await callStoreActionInMutation(
+        getBrewingNoteStore().updateNote,
+        note.id,
+        {
+          timestamp: updatedData.timestamp,
+          source: 'roasting',
+          beanId: greenBeanId,
+          coffeeBeanInfo: {
+            name: newGreenBean.name,
+            roastLevel:
+              newGreenBean.roastLevel ||
+              note.coffeeBeanInfo?.roastLevel ||
+              '未知',
+            roastDate: newGreenBean.roastDate,
+            roaster: newGreenBean.roaster,
+          },
+          notes: `烘焙了 ${formatNumber(roastedAmount)}g 生豆${roastedBeanLabel}`,
+          changeRecord: {
+            ...note.changeRecord,
+            roastingRecord: updatedRoastingRecord,
+          },
+        }
+      );
       if (!updatedNote) throw new Error('更新烘焙记录失败');
 
       if (typeof window !== 'undefined') {
@@ -529,7 +548,8 @@ export const RoastingManager = {
       let rollbackFailed = false;
       for (const patch of patchesToRollback.reverse()) {
         try {
-          const restoredBean = await beanStore.updateBean(
+          const restoredBean = await callStoreActionInMutation(
+            beanStore.updateBean,
             patch.id,
             patch.updates
           );
@@ -615,7 +635,8 @@ export const RoastingManager = {
         const greenBean = await getCoffeeBeanStore().getBeanById(greenBeanId);
         if (greenBean) {
           // 使用 increaseBeanRemaining 恢复容量
-          const restored = await increaseBeanRemaining(
+          const restored = await callStoreActionInMutation(
+            increaseBeanRemaining,
             greenBeanId,
             roastedAmount
           );
@@ -631,9 +652,13 @@ export const RoastingManager = {
         const roastedBean =
           await getCoffeeBeanStore().getBeanById(roastedBeanId);
         if (roastedBean && roastedBean.sourceGreenBeanId) {
-          const updated = await getCoffeeBeanStore().updateBean(roastedBeanId, {
-            sourceGreenBeanId: undefined,
-          });
+          const updated = await callStoreActionInMutation(
+            getCoffeeBeanStore().updateBean,
+            roastedBeanId,
+            {
+              sourceGreenBeanId: undefined,
+            }
+          );
           if (updated) {
             updatedRoastedBean = updated;
           }
@@ -709,9 +734,13 @@ export const RoastingManager = {
       // 1. 清除派生熟豆的 sourceGreenBeanId
       const derivedBeans = await this.getDerivedRoastedBeans(greenBeanId);
       for (const bean of derivedBeans) {
-        await getCoffeeBeanStore().updateBean(bean.id, {
-          sourceGreenBeanId: undefined,
-        });
+        await callStoreActionInMutation(
+          getCoffeeBeanStore().updateBean,
+          bean.id,
+          {
+            sourceGreenBeanId: undefined,
+          }
+        );
       }
 
       // 2. 清除烘焙记录中的 greenBeanId
@@ -857,7 +886,10 @@ export const RoastingManager = {
           purchaseDate: originalBean.roastDate,
         };
 
-        const greenBean = await getCoffeeBeanStore().addBean(greenBeanData);
+        const greenBean = await callStoreActionInMutation(
+          getCoffeeBeanStore().addBean,
+          greenBeanData
+        );
 
         // 删除原熟豆关联的所有变动记录（虽然未使用通常没有，但保险起见）
         if (recordNotes.length > 0) {
@@ -872,7 +904,10 @@ export const RoastingManager = {
         }
 
         // 删除原熟豆 - 使用 store 的 deleteBean 方法确保触发同步事件
-        await getCoffeeBeanStore().deleteBean(roastedBeanId);
+        await callStoreActionInMutation(
+          getCoffeeBeanStore().deleteBean,
+          roastedBeanId
+        );
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
@@ -909,7 +944,10 @@ export const RoastingManager = {
         purchaseDate: originalBean.roastDate,
       };
 
-      const greenBean = await getCoffeeBeanStore().addBean(greenBeanData);
+      const greenBean = await callStoreActionInMutation(
+        getCoffeeBeanStore().addBean,
+        greenBeanData
+      );
 
       // 6. 创建新熟豆
       // 直接使用原熟豆名称，因为原熟豆会被删除，不会产生重名
@@ -943,8 +981,10 @@ export const RoastingManager = {
         sourceGreenBeanId: greenBean.id, // 关联到新创建的生豆
       };
 
-      const newRoastedBean =
-        await getCoffeeBeanStore().addBean(newRoastedBeanData);
+      const newRoastedBean = await callStoreActionInMutation(
+        getCoffeeBeanStore().addBean,
+        newRoastedBeanData
+      );
 
       // 7. 创建烘焙记录
       const roastingNote: BrewingNoteData = {
@@ -1006,7 +1046,10 @@ export const RoastingManager = {
       });
 
       // 9. 删除原熟豆 - 使用 store 的 deleteBean 方法确保触发同步事件
-      await getCoffeeBeanStore().deleteBean(roastedBeanId);
+      await callStoreActionInMutation(
+        getCoffeeBeanStore().deleteBean,
+        roastedBeanId
+      );
 
       // 10. 触发笔记更新事件（咖啡豆事件已由 deleteBean 触发）
       if (typeof window !== 'undefined') {
@@ -1175,3 +1218,31 @@ export const RoastingManager = {
     }
   },
 };
+
+// Public workflows own one lease; nested Store actions above explicitly reuse it.
+export const RoastingManager = coordinateStoreActions(
+  {
+    ...roastingManager,
+    roastGreenBean: roastingManager.roastGreenBean.bind(roastingManager),
+    simpleRoast: roastingManager.simpleRoast.bind(roastingManager),
+    updateRoastingRecord:
+      roastingManager.updateRoastingRecord.bind(roastingManager),
+    deleteRoastingRecord:
+      roastingManager.deleteRoastingRecord.bind(roastingManager),
+    onRoastedBeanDeleted:
+      roastingManager.onRoastedBeanDeleted.bind(roastingManager),
+    onGreenBeanDeleted:
+      roastingManager.onGreenBeanDeleted.bind(roastingManager),
+    convertRoastedToGreen:
+      roastingManager.convertRoastedToGreen.bind(roastingManager),
+  },
+  [
+    'roastGreenBean',
+    'simpleRoast',
+    'updateRoastingRecord',
+    'deleteRoastingRecord',
+    'onRoastedBeanDeleted',
+    'onGreenBeanDeleted',
+    'convertRoastedToGreen',
+  ]
+);

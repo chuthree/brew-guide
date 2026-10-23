@@ -1,0 +1,40 @@
+.bar {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bar:not(:has([data-category-scroll])) {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.bar [data-category-scroll] {
+  scrollbar-width: none;
+}
+
+.bar::-webkit-scrollbar,
+.bar [data-category-scroll]::-webkit-scrollbar {
+  display: none;
+}
+
+.bar:not([data-scroll-left='true']) [data-scroll-shadow='left'],
+.bar:not([data-scroll-right='true']) [data-scroll-shadow='right'] {
+  visibility: hidden;
+}
+
+.bar:not([data-multiple='true']) [data-tab-active] {
+  border-bottom-color: transparent;
+}
+
+.indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  transform-origin: left center;
+}

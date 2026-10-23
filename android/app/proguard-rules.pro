@@ -34,7 +34,12 @@
     @android.webkit.JavascriptInterface <methods>;
 }
 
-# 移除未使用的 PDF.js 相关代码
+# Provider uses Rhino's reflective VMBridge and a build-time serialized interpreter.
+# Preserve classes AND members: renaming serialized fields/classes breaks business.bin.
+# Keep this pinned runtime intact while the rest of the release remains optimized.
+-keep class org.mozilla.javascript.** { *; }
+
+# Optional dependencies are not part of the Android runtime.
 -dontwarn org.mozilla.javascript.**
 -dontwarn org.apache.commons.**
 

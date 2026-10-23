@@ -58,9 +58,8 @@ class FailingFingerprintStorage extends MemoryStorage {
   }
 }
 
-const localSettings = {
+const sharedSettings = {
   username: '',
-  textZoomLevel: 1.1,
   supabaseSync: {
     enabled: true,
     url: 'https://example.supabase.co',
@@ -69,6 +68,8 @@ const localSettings = {
   },
   activeSyncType: 'supabase',
 };
+
+const localSettings = { ...sharedSettings, textZoomLevel: 1.1 };
 
 const localGrinders = [{ id: 'grinder-1', name: 'C40' }];
 function mockLocalSettings() {
@@ -255,7 +256,7 @@ describe('settings sync fingerprint', () => {
   it('uploads settings when remote data differs from local data', async () => {
     mockLocalSettings();
     const { client, upsert } = createSettingsClient({
-      appSettings: { ...localSettings, textZoomLevel: 1 },
+      appSettings: { ...localSettings, username: '另一台设备' },
       grinders: localGrinders,
     });
 
@@ -269,7 +270,7 @@ describe('settings sync fingerprint', () => {
       id: 'app_settings',
       user_id: 'default_user',
       data: {
-        appSettings: localSettings,
+        appSettings: sharedSettings,
         grinders: localGrinders,
         customPresets: {},
       },
@@ -295,7 +296,7 @@ describe('settings sync fingerprint', () => {
     expect(result).toMatchObject({ success: true, affectedCount: 3 });
     expect(upsert.mock.calls[0][0]).toMatchObject({
       data: {
-        appSettings: localSettings,
+        appSettings: sharedSettings,
         grinders: [],
         customPresets: {},
       },

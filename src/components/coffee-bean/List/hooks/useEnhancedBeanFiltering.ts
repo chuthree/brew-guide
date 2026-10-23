@@ -15,9 +15,11 @@ import {
   createBeanInventorySnapshot,
   type BeanListRecord,
   type BeanTypeStats,
+  type BeanFilterOptionCounts,
 } from '../beanListPipeline';
 
 interface UseEnhancedBeanFilteringProps {
+  multiFilters?: Partial<Record<BeanFilterMode, string>>;
   beans: ExtendedCoffeeBean[];
   filterMode: BeanFilterMode;
   selectedVariety: string | null;
@@ -33,6 +35,7 @@ interface UseEnhancedBeanFilteringProps {
 }
 
 interface UseEnhancedBeanFilteringReturn {
+  filterOptionCounts: BeanFilterOptionCounts;
   records: BeanListRecord[];
   filteredRecords: BeanListRecord[];
   emptyRecords: BeanListRecord[];
@@ -56,6 +59,7 @@ interface UseEnhancedBeanFilteringReturn {
 }
 
 export const useEnhancedBeanFiltering = ({
+  multiFilters,
   beans,
   filterMode,
   selectedVariety,
@@ -78,6 +82,7 @@ export const useEnhancedBeanFiltering = ({
   const snapshot = useMemo(
     () =>
       createBeanInventorySnapshot(records, {
+        multiFilters,
         filterMode,
         selectedVariety,
         selectedOrigin,
@@ -93,6 +98,7 @@ export const useEnhancedBeanFiltering = ({
       }),
     [
       records,
+      multiFilters,
       filterMode,
       selectedVariety,
       selectedOrigin,
@@ -109,6 +115,7 @@ export const useEnhancedBeanFiltering = ({
   );
 
   return {
+    filterOptionCounts: snapshot.filterOptionCounts,
     records,
     filteredRecords: snapshot.filteredRecords,
     emptyRecords: snapshot.emptyRecords,

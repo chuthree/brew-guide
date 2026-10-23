@@ -391,10 +391,20 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
           roasterSeparator: settings.roasterSeparator,
         });
         const equipmentName =
-          getEquipmentNameById(note.equipment, customEquipments) || '未知器具';
+          note.equipmentName ||
+          (note.equipmentId === null
+            ? note.equipment
+            : getEquipmentNameById(
+                note.equipmentId || note.equipment,
+                customEquipments
+              )) ||
+          '未知器具';
         const dateText = toDesktopDate(note.timestamp);
 
-        const title = [beanDisplayName, note.method || equipmentName]
+        const title = [
+          beanDisplayName,
+          note.methodName || note.method || equipmentName,
+        ]
           .filter(Boolean)
           .join(' · ');
         const subtitle = [
@@ -412,8 +422,8 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
             title || equipmentName,
             subtitle,
             note.notes || '',
-            note.method || '',
-            note.equipment || '',
+            note.methodName || note.method || '',
+            note.equipmentName || note.equipment || '',
             equipmentName,
             beanDisplayName,
             note.params?.coffee || '',

@@ -3,12 +3,12 @@
  * 统一管理滚动到选中项的逻辑，避免重复代码
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 
 export interface UseScrollToSelectedOptions {
   selectedItem: string | null;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  delay?: number;
+  itemCount: number;
 }
 
 export interface UseScrollToSelectedReturn {
@@ -22,17 +22,21 @@ export interface UseScrollToSelectedReturn {
 export function useScrollToSelected({
   selectedItem,
   containerRef,
-  delay = 100,
+  itemCount,
 }: UseScrollToSelectedOptions): UseScrollToSelectedReturn {
   const scrollToSelected = useCallback(() => {
     if (!containerRef.current || !selectedItem) return;
 
-    const selectedElement = containerRef.current.querySelector(
-      `[data-tab="${selectedItem}"]`
-    );
+    const selectedElement = Array.from(
+      containerRef.current.querySelectorAll<HTMLElement>('[data-tab]')
+    ).find(element => element.dataset.tab === selectedItem);
     if (!selectedElement) return;
 
     const container = containerRef.current;
+    // Desktop equipment lists use normal vertical flow, not horizontal scrolling.
+    const { overflowX } = getComputedStyle(container);
+    if (overflowX !== 'auto' && overflowX !== 'scroll') return;
+
     const containerRect = container.getBoundingClientRect();
     const elementRect = selectedElement.getBoundingClientRect();
 
@@ -45,18 +49,19 @@ export function useScrollToSelected({
     // 计算目标滚动位置（将选中项居中）
     const targetScrollLeft = elementLeft - (containerWidth - elementWidth) / 2;
 
-    // 平滑滚动到目标位置
+    // 直接定位，避免快速切换时多个平滑滚动相互打断。
     container.scrollTo({
       left: Math.max(0, targetScrollLeft),
-      behavior: 'smooth',
+      behavior: 'instant',
     });
   }, [containerRef, selectedItem]);
 
   // 当选中项变化时自动滚动
-  useEffect(() => {
-    const timer = setTimeout(scrollToSelected, delay);
-    return () => clearTimeout(timer);
-  }, [scrollToSelected, delay]);
+  useLayoutEffect(() => {
+    scrollToSelected();
+    window.addEventListener('resize', scrollToSelected);
+    return () => window.removeEventListener('resize', scrollToSelected);
+  }, [scrollToSelected, itemCount]);
 
   return { scrollToSelected };
 }
@@ -82,7 +87,7 @@ export function useScrollBorder({
   const [showLeftBorder, setShowLeftBorder] = useState(false);
   const [showRightBorder, setShowRightBorder] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -101,14 +106,16 @@ export function useScrollBorder({
       setShowRightBorder(canScrollRight);
     };
 
-    // 延迟初始检查，确保DOM已完全渲染
-    const timer = setTimeout(handleScroll, 100);
+    handleScroll();
+    const observer = new ResizeObserver(handleScroll);
+    observer.observe(container);
+    for (const child of container.children) observer.observe(child);
 
     container.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', handleScroll);
 
     return () => {
-      clearTimeout(timer);
+      observer.disconnect();
       container.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
     };
