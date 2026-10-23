@@ -1,325 +1,47 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import type { Method, CustomEquipment } from '@/lib/core/config';
+import type { SettingsOptions } from '@/components/settings/Settings';
 import {
-  type Method,
-  type CustomEquipment,
-  brewingMethods,
-  getBaseEquipmentIdByAnimationType,
-} from '@/lib/core/config';
-import { SettingsOptions } from '@/components/settings/Settings';
-import { loadCustomMethodsForEquipment } from '@/lib/stores/customMethodStore';
+  loadCustomMethods,
+  useCustomMethodStore,
+} from '@/lib/stores/customMethodStore';
+import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
+
+const EMPTY_METHODS: Method[] = [];
 
 interface UseMethodManagementProps {
   selectedEquipment: string;
-  initialMethod?: string;
   customEquipments: CustomEquipment[];
   settings?: SettingsOptions;
 }
 
-interface UseMethodManagementResult {
-  methodType: 'common' | 'custom';
-  selectedMethod: string;
-  availableMethods: Method[];
-  customMethods: Method[];
-  commonMethodsOnly: Method[]; // 新增：仅返回通用方案，不受 methodType 影响
-  handleMethodTypeChange: (type: 'common' | 'custom') => void;
-  setSelectedMethod: (method: string) => void;
-  initMethodParams: (method: Method) => void;
-}
-
 export function useMethodManagement({
   selectedEquipment,
-  initialMethod,
   customEquipments,
   settings,
-}: UseMethodManagementProps): UseMethodManagementResult {
-  const [methodTypePreference, setMethodTypePreference] = useState<
-    'common' | 'custom'
-  >('common');
-  const [selectedMethod, setSelectedMethod] = useState<string>(
-    initialMethod || ''
+}: UseMethodManagementProps) {
+  const customMethods = useCustomMethodStore(
+    state => state.methodsByEquipment[selectedEquipment] ?? EMPTY_METHODS
   );
-  const [customMethods, setCustomMethods] = useState<Method[]>([]);
-  const selectedCustomEquipment = useMemo(
-    () => customEquipments.find(e => e.id === selectedEquipment),
-    [customEquipments, selectedEquipment]
-  );
-  const isCustomPresetEquipment =
-    selectedCustomEquipment?.animationType === 'custom';
-  const hasCommonMethodsForSelectedEquipment = useMemo(() => {
-    if (!selectedEquipment) {
-      return false;
-    }
-
-    if (selectedCustomEquipment) {
-      const baseEquipmentId = getBaseEquipmentIdByAnimationType(
-        selectedCustomEquipment.animationType
-      );
-      return (brewingMethods[baseEquipmentId]?.length || 0) > 0;
-    }
-
-    return (brewingMethods[selectedEquipment]?.length || 0) > 0;
-  }, [selectedCustomEquipment, selectedEquipment]);
-  const methodType =
-    isCustomPresetEquipment && methodTypePreference === 'common'
-      ? 'custom'
-      : !isCustomPresetEquipment &&
-          methodTypePreference === 'custom' &&
-          hasCommonMethodsForSelectedEquipment
-        ? 'common'
-        : methodTypePreference;
-
-  // 计算可用方法
-  const availableMethods = useMemo(() => {
-    if (!selectedEquipment) {
-      return [];
-    }
-
-    const customEquipment = customEquipments.find(
-      e => e.id === selectedEquipment || e.name === selectedEquipment
-    );
-    const isCustomEquipment = !!customEquipment;
-    const isCustomPresetEquipment =
-      isCustomEquipment && customEquipment.animationType === 'custom';
-
-    let methods: Method[] = [];
-
-    if (methodType === 'common') {
-      if (isCustomPresetEquipment) {
-        // 自定义预设器具没有通用方案
-        return [];
-      } else if (isCustomEquipment) {
-        // 基于预设的自定义器具
-        const baseEquipmentId = getBaseEquipmentIdByAnimationType(
-          customEquipment?.animationType
-        );
-        methods = brewingMethods[baseEquipmentId] || [];
-      } else {
-        // 预定义器具
-        methods = brewingMethods[selectedEquipment] || [];
-      }
-
-      // 过滤掉隐藏的通用方案
-      if (settings && settings.hiddenCommonMethods) {
-        const hiddenIds = settings.hiddenCommonMethods[selectedEquipment] || [];
-        if (hiddenIds.length > 0) {
-          methods = methods.filter(method => {
-            const methodId = method.id || method.name;
-            return !hiddenIds.includes(methodId);
-          });
-        }
-      }
-
-      return methods;
-    } else if (methodType === 'custom') {
-      // 对于自定义方案，直接使用已加载的当前设备的自定义方案列表
-      return customMethods;
-    }
-
-    return [];
-  }, [
-    selectedEquipment,
-    methodType,
-    customEquipments,
-    customMethods,
-    settings,
-  ]);
-
-  // 计算通用方案（不受 methodType 影响，专门用于同时显示自定义和通用方案的场景）
+  const hiddenIds = settings?.hiddenCommonMethods?.[selectedEquipment];
   const commonMethodsOnly = useMemo(() => {
-    if (!selectedEquipment) {
-      return [];
-    }
-
-    const customEquipment = customEquipments.find(
-      e => e.id === selectedEquipment || e.name === selectedEquipment
+    const methods = getCommonMethodsForEquipment(
+      selectedEquipment,
+      customEquipments
     );
-    const isCustomEquipment = !!customEquipment;
-    const isCustomPresetEquipment =
-      isCustomEquipment && customEquipment.animationType === 'custom';
+    return hiddenIds?.length
+      ? methods.filter(method => !hiddenIds.includes(method.id || method.name))
+      : methods;
+  }, [selectedEquipment, customEquipments, hiddenIds]);
 
-    // 如果是自定义预设器具，不返回任何通用方案
-    if (isCustomPresetEquipment) {
-      return [];
-    }
-
-    let methods: Method[] = [];
-
-    if (isCustomEquipment) {
-      // 基于预设的自定义器具
-      const baseEquipmentId = getBaseEquipmentIdByAnimationType(
-        customEquipment?.animationType
-      );
-      methods = brewingMethods[baseEquipmentId] || [];
-    } else {
-      // 预定义器具
-      methods = brewingMethods[selectedEquipment] || [];
-    }
-
-    // 过滤掉隐藏的通用方案
-    if (settings && settings.hiddenCommonMethods) {
-      const hiddenIds = settings.hiddenCommonMethods[selectedEquipment] || [];
-      if (hiddenIds.length > 0) {
-        methods = methods.filter(method => {
-          const methodId = method.id || method.name;
-          return !hiddenIds.includes(methodId);
-        });
-      }
-    }
-
-    return methods;
-  }, [selectedEquipment, customEquipments, settings]);
-
-  // 加载自定义方案
+  // Initialize the shared store once; switching equipment only selects its data.
   useEffect(() => {
-    let isCancelled = false;
+    void loadCustomMethods().catch(error => {
+      console.error('加载自定义方案失败:', error);
+    });
+  }, []);
 
-    const fetchCustomMethods = async () => {
-      if (!selectedEquipment) {
-        setCustomMethods([]);
-        return;
-      }
-
-      try {
-        const methods = await loadCustomMethodsForEquipment(selectedEquipment);
-        if (!isCancelled) {
-          setCustomMethods(methods);
-        }
-      } catch (error) {
-        console.error('加载自定义方案失败:', error);
-        if (!isCancelled) {
-          setCustomMethods([]);
-        }
-      }
-    };
-
-    fetchCustomMethods();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [selectedEquipment]);
-
-  // 监听自定义方案数据变化，确保及时更新
-  useEffect(() => {
-    const handleCustomMethodsChange = async (e: Event) => {
-      const customEvent = e as CustomEvent;
-      // 检查变化是否与当前选择的器具相关
-      if (
-        customEvent.detail?.equipmentId === selectedEquipment ||
-        !customEvent.detail?.equipmentId
-      ) {
-        try {
-          if (selectedEquipment) {
-            const methods =
-              await loadCustomMethodsForEquipment(selectedEquipment);
-            setCustomMethods(methods);
-          }
-        } catch (error) {
-          console.error('响应方案变化时重新加载失败:', error);
-        }
-      }
-    };
-
-    // 监听自定义方案变化事件（监听多个事件名以确保兼容）
-    window.addEventListener('customMethodsChanged', handleCustomMethodsChange);
-    window.addEventListener(
-      'customMethodDataChanged',
-      handleCustomMethodsChange
-    );
-
-    return () => {
-      window.removeEventListener(
-        'customMethodsChanged',
-        handleCustomMethodsChange
-      );
-      window.removeEventListener(
-        'customMethodDataChanged',
-        handleCustomMethodsChange
-      );
-    };
-  }, [selectedEquipment]);
-
-  // 切换方案类型
-  const handleMethodTypeChange = (type: 'common' | 'custom') => {
-    // 检查是否是自定义预设器具
-    if (selectedEquipment) {
-      const customEquipment = customEquipments.find(
-        e => e.id === selectedEquipment
-      );
-      const isCustomPresetEquipment =
-        customEquipment?.animationType === 'custom';
-
-      // 如果是自定义预设器具，只能使用自定义方案
-      if (isCustomPresetEquipment && type === 'common') {
-        // 强制切换到自定义方案
-        if (methodType !== 'custom') {
-          setMethodTypePreference('custom');
-          if (customMethods.length > 0) {
-            setSelectedMethod(
-              customMethods[0]?.id || customMethods[0]?.name || ''
-            );
-          }
-        }
-        return;
-      }
-    }
-
-    // 只有当类型实际变化时才执行操作
-    if (type !== methodType) {
-      setMethodTypePreference(type);
-
-      // 确保有选择的器具
-      if (!selectedEquipment) return;
-
-      // 当切换方案类型时，根据新类型重置选中的方案
-      if (type === 'common') {
-        // 切换到通用方案
-        const customEquipment = customEquipments.find(
-          e => e.id === selectedEquipment
-        );
-        let targetEquipmentId = selectedEquipment;
-
-        // 如果是自定义器具，需要找到对应的基础器具ID
-        if (customEquipment) {
-          targetEquipmentId = getBaseEquipmentIdByAnimationType(
-            customEquipment.animationType
-          );
-        }
-
-        if (brewingMethods[targetEquipmentId]?.length > 0) {
-          const firstMethod = brewingMethods[targetEquipmentId][0];
-          setSelectedMethod(firstMethod.id || firstMethod.name);
-        } else {
-          setSelectedMethod(''); // 没有通用方案，清空选择
-        }
-      } else {
-        // 切换到自定义方案
-        if (customMethods.length > 0) {
-          const firstMethod = customMethods[0];
-          setSelectedMethod(firstMethod?.id || firstMethod?.name || '');
-        } else {
-          setSelectedMethod(''); // 没有自定义方案，清空选择
-        }
-      }
-    }
-  };
-
-  // 初始化方法参数
-  const initMethodParams = (_method: Method) => {
-    // 该方法由父组件实现具体逻辑
-    // 在此仅提供接口
-  };
-
-  return {
-    methodType,
-    selectedMethod,
-    availableMethods,
-    customMethods,
-    commonMethodsOnly,
-    handleMethodTypeChange,
-    setSelectedMethod,
-    initMethodParams,
-  };
+  return { customMethods, commonMethodsOnly };
 }

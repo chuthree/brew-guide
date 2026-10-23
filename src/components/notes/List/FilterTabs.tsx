@@ -1,8 +1,8 @@
 'use client';
 
 import TabButton from '@/components/common/ui/TabButton';
-import { centerCategoryTab } from '@/lib/utils/centerCategoryTab';
-import React, { memo, useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import TabBar from '@/components/common/ui/TabBar';
+import React, { memo, useRef, useState, useEffect, useCallback } from 'react';
 import {
   FilterTabsProps,
   SORT_OPTIONS,
@@ -14,7 +14,6 @@ import {
 import { X, AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useInputFocus } from '@/lib/hooks/useInputFocus';
-import { useHorizontalWheelScroll } from '@/lib/hooks/useHorizontalWheelScroll';
 import SearchAllSuggestion from '@/components/common/ui/SearchAllSuggestion';
 
 // Apple风格动画配置
@@ -467,53 +466,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const filterToggleButtonRef = useRef<HTMLButtonElement>(null);
 
-  // 滚动容器引用
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  useHorizontalWheelScroll(scrollContainerRef);
-
-  // 处理滚动阴影效果
-  const [showLeftShadow, setShowLeftShadow] = useState(false);
-
-  // 监听滚动事件以控制阴影显示
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      setShowLeftShadow(scrollContainerRef.current.scrollLeft > 2);
-    }
-  };
-
-  const categoryTabsKey = (filterMode === 'equipment'
-    ? availableEquipments
-    : availableDates
-  ).join('\u0001');
-
-  useLayoutEffect(() => {
-    centerCategoryTab(scrollContainerRef.current);
-  }, [
-    filterMode,
-    selectedEquipment,
-    selectedDate,
-    dateGroupingMode,
-    isSearching,
-    viewMode,
-    categoryTabsKey,
-  ]);
-
-  // 添加滚动事件监听
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (scrollContainer) {
-      // 初始检测滚动位置
-      handleScroll();
-
-      scrollContainer.addEventListener('scroll', handleScroll, {
-        passive: true,
-      });
-      return () => {
-        scrollContainer.removeEventListener('scroll', handleScroll);
-      };
-    }
-  }, []);
-
   // 处理搜索图标点击
   const handleSearchClick = () => {
     if (!onSearchClick) return;
@@ -579,7 +531,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
       <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
         <div className="relative px-6">
           {!isSearching ? (
-            <div className="relative flex items-center">
+            <TabBar className="relative flex items-center">
               {/* 固定在左侧的"全部"和筛选按钮 */}
               <div className="relative flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
                 <TabButton
@@ -598,7 +550,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                   onDoubleClick={onSmartToggleImageFlow}
                   className="mr-1"
                   dataTab="all"
-                  layoutId={`notes-${filterMode}-underline`}
                 >
                   全部
                 </TabButton>
@@ -621,27 +572,15 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
               {/* 中间滚动区域 */}
               <div className="relative flex-1 overflow-hidden">
                 {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
-                {showLeftShadow && (
-                  <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
-                )}
+                <div
+                  data-scroll-shadow="left"
+                  className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
+                />
 
                 <div
-                  ref={scrollContainerRef}
                   data-category-scroll
                   className="flex overflow-x-auto"
-                  style={{
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                    WebkitOverflowScrolling: 'touch',
-                  }}
-                  onScroll={handleScroll}
                 >
-                  <style jsx>{`
-                    div::-webkit-scrollbar {
-                      display: none;
-                    }
-                  `}</style>
-
                   {/* 动态筛选按钮 */}
                   {filterMode === 'equipment' ? (
                     availableEquipments.map(equipment => (
@@ -654,7 +593,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                         }
                         className="mr-3"
                         dataTab={equipment}
-                        layoutId="notes-equipment-underline"
                       >
                         {equipmentNames[equipment] || equipment}
                       </TabButton>
@@ -694,7 +632,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 }
                                 className="mr-3"
                                 dataTab="today"
-                                layoutId="notes-date-underline"
                               >
                                 今天
                               </TabButton>
@@ -712,7 +649,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 }
                                 className="mr-3"
                                 dataTab="yesterday"
-                                layoutId="notes-date-underline"
                               >
                                 昨天
                               </TabButton>
@@ -730,7 +666,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                                 }
                                 className="mr-3"
                                 dataTab="dayBeforeYesterday"
-                                layoutId="notes-date-underline"
                               >
                                 前天
                               </TabButton>
@@ -770,7 +705,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                             }
                             className="mr-3"
                             dataTab={date}
-                            layoutId="notes-date-underline"
                           >
                             {formatDateLabel(date, dateGroupingMode)}
                           </TabButton>
@@ -780,7 +714,10 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                 </div>
 
                 {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"></div>
+                <div
+                  data-scroll-shadow="right"
+                  className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
+                />
               </div>
 
               {/* 固定在右侧的搜索按钮 */}
@@ -798,7 +735,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                 {/* 右侧固定按钮的左侧渐变遮罩 */}
                 <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
               </div>
-            </div>
+            </TabBar>
           ) : (
             /* 搜索框 - 替换整个分类栏 */
             <div className="relative flex items-center pb-1.5">

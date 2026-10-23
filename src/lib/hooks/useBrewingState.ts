@@ -23,7 +23,6 @@ import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 import { MethodType } from '@/lib/types/method';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
 import { modalHistory } from '@/lib/hooks/useModalHistory';
-import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 
 // 器具选择缓存
 const MODULE_NAME = 'brewing-equipment';
@@ -593,89 +592,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     []
   );
 
-  // 简化的content状态
-  const [content, setContent] = useState<Content>({
-    咖啡豆: { steps: [] },
-    方案: { steps: [], type: 'common' },
-    注水: { steps: [] },
-    记录: { steps: [] },
-  });
-
-  // 优化的content更新 - 使用 useMemo 缓存计算结果
-  const methodSteps = useRef<Step[]>([]);
-  const stageSteps = useRef<Step[]>([]);
-  const prevEquipment = useRef<string | null>(null);
-  const prevMethodType = useRef<'common' | 'custom'>(methodType);
-  const prevBrewingMethod = useRef<Method | null>(null);
-
-  // 简化的content更新 - 批量更新，减少重渲染
-  useEffect(() => {
-    let needsUpdate = false;
-    let newMethodSteps = methodSteps.current;
-    let newStageSteps = stageSteps.current;
-
-    // 只在方案相关数据变化时更新方案列表
-    if (
-      prevEquipment.current !== selectedEquipment ||
-      prevMethodType.current !== methodType ||
-      customMethods !== undefined // 自定义方案变化
-    ) {
-      if (selectedEquipment) {
-        const methods =
-          methodType === 'common'
-            ? getCommonMethodsForEquipment(selectedEquipment, customEquipments)
-            : customMethods[selectedEquipment] || [];
-        newMethodSteps = methods.map(method => ({
-          title: method.name,
-          methodId: method.id,
-        }));
-        methodSteps.current = newMethodSteps;
-        needsUpdate = true;
-      }
-      prevEquipment.current = selectedEquipment;
-      prevMethodType.current = methodType;
-    }
-
-    // 只在冲煮方法变化时更新注水列表
-    if (prevBrewingMethod.current !== currentBrewingMethod) {
-      if (currentBrewingMethod) {
-        newStageSteps = currentBrewingMethod.params.stages.map(
-          (stage, index) => ({
-            title: stage.label,
-            // 支持新旧格式：新格式使用 duration，旧格式使用 time
-            time: stage.time,
-            duration: stage.duration,
-            pourTime: stage.pourTime,
-            water: stage.water,
-            detail: stage.detail,
-            pourType: stage.pourType,
-            valveStatus: stage.valveStatus,
-            originalIndex: index,
-          })
-        );
-        stageSteps.current = newStageSteps;
-        needsUpdate = true;
-      }
-      prevBrewingMethod.current = currentBrewingMethod;
-    }
-
-    // 批量更新，减少重渲染
-    if (needsUpdate) {
-      setContent({
-        咖啡豆: { steps: [] },
-        方案: { steps: newMethodSteps, type: methodType },
-        注水: { steps: newStageSteps },
-        记录: { steps: [] },
-      });
-    }
-  }, [
-    selectedEquipment,
-    methodType,
-    customMethods,
-    customEquipments,
-    currentBrewingMethod,
-  ]);
-
   return {
     // 主要状态
     activeMainTab,
@@ -731,8 +647,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     setCustomMethods,
     customEquipments,
     setCustomEquipments,
-    content,
-    setContent,
     prevMainTabRef,
     isPourVisualizerPreloaded,
 

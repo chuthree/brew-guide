@@ -148,9 +148,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   );
   const canUseCoffeeBeanModule = navigationState.visibleTabs.coffeeBean;
   const availableCoffeeBeans = canUseCoffeeBeanModule ? coffeeBeans : [];
-  const setPersistedEquipment = useEquipmentStore(
-    state => state.setSelectedEquipment
-  );
   const [customEquipments, setCustomEquipments] = useState<CustomEquipment[]>(
     []
   );
@@ -295,13 +292,11 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }
   }, [showForm]);
 
-  const { customMethods, commonMethodsOnly, setSelectedMethod } =
-    useMethodManagement({
-      selectedEquipment: methodStepEquipmentId,
-      initialMethod: selectedMethodId,
-      customEquipments,
-      settings,
-    });
+  const { customMethods, commonMethodsOnly } = useMethodManagement({
+    selectedEquipment: methodStepEquipmentId,
+    customEquipments,
+    settings,
+  });
 
   useEffect(() => {
     if (!showForm) {
@@ -483,6 +478,12 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
   const handleEquipmentSelect = useCallback(
     (equipmentId: string) => {
+      if (
+        equipmentId === methodStepEquipmentId &&
+        equipmentId === selectedEquipment
+      ) {
+        return;
+      }
       setMethodStepEquipmentId(equipmentId);
       updateDraftNote(prev => {
         const shouldResetMethod = equipmentId !== (prev.equipment || '');
@@ -501,18 +502,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           totalTime: shouldResetMethod ? undefined : prev.totalTime,
         };
       });
-
-      setPersistedEquipment(equipmentId);
-      if (equipmentId !== methodStepEquipmentId) {
-        setSelectedMethod('');
-      }
     },
-    [
-      methodStepEquipmentId,
-      setPersistedEquipment,
-      setSelectedMethod,
-      updateDraftNote,
-    ]
+    [methodStepEquipmentId, selectedEquipment, updateDraftNote]
   );
 
   const handleCoffeeBeanSelect = useCallback(
@@ -577,7 +568,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           0
         ) || undefined;
 
-      setSelectedMethod(methodIdentifier);
       updateDraftNote(prev => ({
         ...prev,
         equipmentId: undefined,
@@ -590,45 +580,8 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         totalTime,
       }));
 
-      setTimeout(() => {
-        document.dispatchEvent(
-          new CustomEvent('methodParamsChanged', {
-            detail: { params: method.params },
-          })
-        );
-
-        const params = method.params;
-        if (params.coffee) {
-          window.dispatchEvent(
-            new CustomEvent('brewing:updateNavbarDisplay', {
-              detail: { type: 'coffee', value: params.coffee.replace('g', '') },
-            })
-          );
-        }
-        if (params.ratio) {
-          window.dispatchEvent(
-            new CustomEvent('brewing:updateNavbarDisplay', {
-              detail: { type: 'ratio', value: params.ratio.replace('1:', '') },
-            })
-          );
-        }
-        if (params.grindSize) {
-          window.dispatchEvent(
-            new CustomEvent('brewing:updateNavbarDisplay', {
-              detail: { type: 'grindSize', value: params.grindSize },
-            })
-          );
-        }
-        if (params.temp) {
-          window.dispatchEvent(
-            new CustomEvent('brewing:updateNavbarDisplay', {
-              detail: { type: 'temp', value: params.temp.replace('°C', '') },
-            })
-          );
-        }
-      }, 0);
     },
-    [methodStepEquipmentId, setSelectedMethod, updateDraftNote]
+    [methodStepEquipmentId, updateDraftNote]
   );
 
   const handleStepComplete = useCallback(() => {
@@ -701,12 +654,13 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
 
       clearBrewingNoteDraftSession();
       await callStoreActionInMutation(onSave, completeNote);
+      if (selectedEquipment) {
+        useEquipmentStore.getState().setSelectedEquipment(selectedEquipment);
+      }
       onClose();
     },
     [
-      commonMethodsOnly,
       canUseCoffeeBeanModule,
-      customMethods,
       onClose,
       onSave,
       selectedCoffeeBean,
@@ -844,7 +798,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                 customMethods={customMethods}
                 commonMethods={commonMethodsOnly}
                 onMethodSelect={(methodId: string) => {
-                  setSelectedMethod(methodId);
                   updateDraftNote(prev => ({
                     ...prev,
                     equipmentId: undefined,
@@ -858,7 +811,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                   }));
                 }}
                 onSkipMethodSelect={() => {
-                  setSelectedMethod('');
                   updateDraftNote(prev => ({
                     ...prev,
                     equipmentId: undefined,
@@ -917,7 +869,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       methodStepEquipmentId,
       selectedMethodId,
       setDraftStep,
-      setSelectedMethod,
       settings,
       updateDraftNote,
     ]

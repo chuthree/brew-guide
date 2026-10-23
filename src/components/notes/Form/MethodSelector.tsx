@@ -321,9 +321,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   useEffect(() => {
     if (!selectedMethod) return;
 
-    let animationFrameId: number | null = null;
-    let fallbackTimerId: ReturnType<typeof setTimeout> | null = null;
-
     const scrollSelectedMethodIntoView = () => {
       const selectedElement = selectedMethodElementRef.current;
       if (!selectedElement) return;
@@ -348,19 +345,8 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       });
     };
 
-    animationFrameId = requestAnimationFrame(() => {
-      scrollSelectedMethodIntoView();
-      fallbackTimerId = setTimeout(scrollSelectedMethodIntoView, 120);
-    });
-
-    return () => {
-      if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId);
-      }
-      if (fallbackTimerId !== null) {
-        clearTimeout(fallbackTimerId);
-      }
-    };
+    const animationFrameId = requestAnimationFrame(scrollSelectedMethodIntoView);
+    return () => cancelAnimationFrame(animationFrameId);
   }, [selectedEquipment, selectedMethod, customMethods, commonMethods]);
 
   // 处理方案选择

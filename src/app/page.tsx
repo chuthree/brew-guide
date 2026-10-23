@@ -40,6 +40,7 @@ import { EditableParams } from '@/lib/hooks/useBrewingParameters';
 import { MethodType } from '@/lib/types/method';
 import CustomMethodFormModal from '@/components/method/forms/CustomMethodFormModal';
 import NavigationBar from '@/components/layout/NavigationBar';
+import NavigationSection from '@/components/layout/NavigationSection';
 import {
   CollapsedNavigationDockOverlay,
   CollapsedNavigationDockTrigger,
@@ -81,7 +82,7 @@ import {
   SIMPLIFIED_VIEW_LABELS,
 } from '@/components/coffee-bean/List/constants';
 import { getStringState, saveStringState } from '@/lib/core/statePersistence';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ChevronsUpDown } from 'lucide-react';
 import hapticsUtils from '@/lib/ui/haptics';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
@@ -346,6 +347,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const isLargeScreen = useIsLargeScreen();
   // 检测是否启用桌面侧栏布局（md 断点）
   const isDesktopLayout = useIsDesktopLayout();
+  const reduceNavigationMotion = useReducedMotion();
   const isSupabaseSyncActive = useSyncStatusStore(
     state => state.supabaseSyncProgress.active
   );
@@ -4114,33 +4116,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       >
         <PWAInstallBanner />
         <div className="flex h-full flex-col md:flex-row">
-          <AnimatePresence initial={false}>
-            {shouldRenderNavigation && (
-              <motion.div
-                key={`navigation-bar-shell-${isDesktopLayout ? 'side' : 'top'}`}
-                className="md:h-full md:shrink-0 md:overflow-hidden"
-                initial={
-                  isDesktopLayout
-                    ? { width: 0, opacity: 0 }
-                    : { height: 0, opacity: 0 }
-                }
-                animate={
-                  isDesktopLayout
-                    ? { width: navPanelWidth, opacity: 1 }
-                    : { height: 'auto', opacity: 1 }
-                }
-                exit={
-                  isDesktopLayout
-                    ? { width: 0, opacity: 0 }
-                    : { height: 0, opacity: 0 }
-                }
-                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                style={isDesktopLayout ? { width: navPanelWidth } : undefined}
-              >
-                {renderNavigationBar('navigation-bar', expandedSidebarControl)}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <NavigationSection
+            open={shouldRenderNavigation}
+            animated={!isDesktopLayout && !reduceNavigationMotion}
+            className="shrink-0 md:h-full md:overflow-hidden"
+            style={isDesktopLayout ? { width: navPanelWidth } : undefined}
+          >
+            {renderNavigationBar('navigation-bar', expandedSidebarControl)}
+          </NavigationSection>
 
           {!shouldSuppressBrewingNavigation && collapsedNavigationOverlay}
 
