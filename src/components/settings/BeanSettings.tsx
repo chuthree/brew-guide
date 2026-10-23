@@ -144,6 +144,22 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
         handleChange={handleChange}
       />
 
+      <SettingSection title="分类">
+        <SettingRow label="筛选模式" isLast>
+          <SettingSelect
+            value={settings.beanFilterStyle ?? 'single'}
+            options={[
+              { value: 'single', label: '普通' },
+              { value: 'multiple', label: '多重' },
+            ]}
+            ariaLabel="筛选模式"
+            onChange={value =>
+              handleChange('beanFilterStyle', value as 'single' | 'multiple')
+            }
+          />
+        </SettingRow>
+      </SettingSection>
+
       <SettingSection title="列表">
         <SettingRow label="日期模式">
           <SettingSelect

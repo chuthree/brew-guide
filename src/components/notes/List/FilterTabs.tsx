@@ -14,32 +14,8 @@ import {
 import { X, AlignLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useInputFocus } from '@/lib/hooks/useInputFocus';
+import { useFilterPanelAnimation } from '@/lib/hooks/useFilterPanelAnimation';
 import SearchAllSuggestion from '@/components/common/ui/SearchAllSuggestion';
-
-// Apple风格动画配置
-const FILTER_ANIMATION = {
-  initial: {
-    height: 0,
-    opacity: 0,
-    y: -10,
-  },
-  animate: {
-    height: 'auto',
-    opacity: 1,
-    y: 0,
-  },
-  exit: {
-    height: 0,
-    opacity: 0,
-    y: -10,
-  },
-  transition: {
-    duration: 0.35,
-    opacity: {
-      duration: 0.25,
-    },
-  },
-};
 
 const isInsideFilterInteraction = (
   event: PointerEvent,
@@ -463,7 +439,15 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   // 筛选展开栏状态
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   // 筛选交互边界：只包含触发按钮和下拉内容，点击其他分类标签会按外部点击处理
-  const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const {
+    filterDropdownRef,
+    filterContentRef,
+    filterAnimation,
+    instantFilterTransition,
+    setKeyboardInteraction,
+  } = useFilterPanelAnimation(
+    Boolean(isFilterExpanded && sortOption && onSortChange)
+  );
   const filterToggleButtonRef = useRef<HTMLButtonElement>(null);
 
   // 处理搜索图标点击
@@ -492,6 +476,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     if (!isFilterExpanded) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
+      setKeyboardInteraction(false);
       if (
         isInsideFilterInteraction(event, [
           filterToggleButtonRef.current,
@@ -505,15 +490,23 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     };
 
     document.addEventListener('pointerdown', handlePointerDownOutside, true);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setKeyboardInteraction(true);
+      setIsFilterExpanded(false);
+      filterToggleButtonRef.current?.focus();
+    };
+    document.addEventListener('keydown', handleEscape);
 
     return () => {
+      document.removeEventListener('keydown', handleEscape);
       document.removeEventListener(
         'pointerdown',
         handlePointerDownOutside,
         true
       );
     };
-  }, [isFilterExpanded]);
+  }, [isFilterExpanded, filterDropdownRef, setKeyboardInteraction]);
 
   // 如果没有可筛选的设备或日期，不渲染任何内容
   if (
@@ -526,7 +519,11 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     return null;
 
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onKeyDownCapture={() => setKeyboardInteraction(true)}
+      onPointerDownCapture={() => setKeyboardInteraction(false)}
+    >
       {/* 整个分类栏容器 - 下边框在这里 */}
       <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
         <div className="relative px-6">
@@ -577,10 +574,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                   className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
                 />
 
-                <div
-                  data-category-scroll
-                  className="flex overflow-x-auto"
-                >
+                <div data-category-scroll className="flex overflow-x-auto">
                   {/* 动态筛选按钮 */}
                   {filterMode === 'equipment' ? (
                     availableEquipments.map(equipment => (
@@ -799,7 +793,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
         />
 
         {/* 展开式筛选栏 - 在同一个容器内 */}
-        <AnimatePresence>
+        <AnimatePresence custom={instantFilterTransition}>
           {isFilterExpanded && sortOption && onSortChange && (
             <>
               {/* 固定的半透明分割线 - 只在展开时显示 */}
@@ -807,14 +801,14 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
 
               <motion.div
                 ref={filterDropdownRef}
-                initial={FILTER_ANIMATION.initial}
-                animate={FILTER_ANIMATION.animate}
-                exit={FILTER_ANIMATION.exit}
-                transition={FILTER_ANIMATION.transition}
+                custom={instantFilterTransition}
+                variants={filterAnimation}
+                initial="closed"
+                animate="open"
+                exit="closed"
                 className="overflow-hidden"
-                style={{ willChange: 'height, opacity, transform' }}
               >
-                <div className="px-6 py-4">
+                <div ref={filterContentRef} className="px-6 py-4">
                   <div className="space-y-4">
                     <FilterModeSection
                       filterMode={filterMode}

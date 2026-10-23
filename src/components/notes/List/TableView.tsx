@@ -114,12 +114,12 @@ const SortIcon: React.FC<{
 }> = ({ direction, index }) => {
   if (!direction) {
     return (
-      <ChevronsUpDown className="ml-0.5 inline-block h-3 w-3 text-neutral-300 dark:text-neutral-600" />
+      <ChevronsUpDown className="ml-0.5 inline-block h-3 w-3 text-neutral-400 dark:text-neutral-600" />
     );
   }
 
   return (
-    <span className="ml-0.5 inline-flex items-center text-neutral-800 dark:text-neutral-200">
+    <span className="ml-0.5 inline-flex items-center text-neutral-500 dark:text-neutral-400">
       {direction === 'asc' ? (
         <ChevronUp className="h-3 w-3" />
       ) : (
@@ -605,7 +605,7 @@ const NotesTableView: React.FC<NotesTableViewProps> = ({
                                 : undefined
                             }
                           >
-                            <span className="min-w-0 truncate">
+                            <span className={`min-w-0 truncate ${isSorted ? 'text-neutral-800 dark:text-neutral-200' : ''}`}>
                               {flexRender(
                                 header.column.columnDef.header,
                                 header.getContext()

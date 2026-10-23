@@ -24,7 +24,7 @@
   visibility: hidden;
 }
 
-.bar [data-tab-active] {
+.bar:not([data-multiple='true']) [data-tab-active] {
   border-bottom-color: transparent;
 }
 
@@ -38,4 +38,3 @@
   pointer-events: none;
   transform-origin: left center;
 }
-

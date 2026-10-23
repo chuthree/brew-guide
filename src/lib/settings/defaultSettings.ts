@@ -42,6 +42,7 @@ export const defaultSettings: AppSettings = {
   showTotalPrice: false,
   showStatusDots: false,
   showBeanSummary: false,
+  beanFilterStyle: 'single',
   showEstimatedCups: false,
   estimatedCupDoseSettings: { ...DEFAULT_ESTIMATED_CUP_DOSE_SETTINGS },
   enableBeanSummaryCapacityLimit: false,

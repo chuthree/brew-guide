@@ -411,6 +411,7 @@ export const buildSettingsSearchItems = ({
   if (isModuleVisible(visibleModules, 'coffeeBean')) {
     items.push(
       ...createRowItems('bean-settings', '咖啡豆', [
+        '筛选模式',
         '日期模式',
         '价格',
         '总价',

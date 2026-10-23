@@ -13,8 +13,9 @@ import styles from './TabBar.module.css';
 export default function TabBar({
   children,
   className,
+  multiple = false,
   ...props
-}: Omit<ComponentProps<'div'>, 'ref'>) {
+}: Omit<ComponentProps<'div'>, 'ref'> & { multiple?: boolean }) {
   const barRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
   const previousTab = useRef<HTMLElement | null>(null);
@@ -71,18 +72,29 @@ export default function TabBar({
       animation.current = null;
     };
     const update = (smooth: boolean, center = false) => {
+      if (multiple) {
+        stop();
+        indicator.hidden = true;
+        updateEdges();
+        return;
+      }
       const tab = bar.querySelector<HTMLElement>('[data-tab-active="true"]');
       stop();
       const fromScroll = scroller.scrollLeft;
       const toScroll = center ? scrollTarget(tab, true) : fromScroll;
       updateEdges();
-      if (
-        !tab ||
-        !tab.getClientRects().length ||
-        parseFloat(getComputedStyle(tab).borderBottomWidth) === 0
-      ) {
+      if (!tab || !tab.getClientRects().length) {
         indicator.hidden = true;
         previousTab.current = null;
+        return;
+      }
+
+      // 背景按钮也需要选中项定位，只是不绘制下划线。
+      if (parseFloat(getComputedStyle(tab).borderBottomWidth) === 0) {
+        indicator.hidden = true;
+        if (center && fromScroll !== toScroll) scroller.scrollLeft = toScroll;
+        previousTab.current = tab;
+        updateEdges();
         return;
       }
 
@@ -124,7 +136,7 @@ export default function TabBar({
       // One clock drives both positions. All geometry is read before animation.
       const draw = (progress: number) => {
         const scroll = fromScroll + (toScroll - fromScroll) * progress;
-        scroller.scrollLeft = scroll;
+        if (center && fromScroll !== toScroll) scroller.scrollLeft = scroll;
         const currentX =
           fromX + (x - fromX) * progress +
           (bar === scroller ? scroll : barScrollLeft);
@@ -156,12 +168,20 @@ export default function TabBar({
     const reposition = () => {
       if (!animation.current) update(false);
     };
+    let viewportWidth = scroller.clientWidth;
     const resize = () => {
       stop();
-      scroller.scrollLeft = scrollTarget(
-        bar.querySelector('[data-tab-active="true"]'),
-        false
-      );
+      const widthChanged = scroller.clientWidth !== viewportWidth;
+      viewportWidth = scroller.clientWidth;
+      if (!multiple && widthChanged) {
+        const nextScrollLeft = scrollTarget(
+          bar.querySelector('[data-tab-active="true"]'),
+          false
+        );
+        if (scroller.scrollLeft !== nextScrollLeft) {
+          scroller.scrollLeft = nextScrollLeft;
+        }
+      }
       reposition();
     };
     const handleClick = (event: MouseEvent) => {
@@ -217,7 +237,12 @@ export default function TabBar({
   });
 
   return (
-    <div {...props} ref={barRef} className={cn(styles.bar, className)}>
+    <div
+      {...props}
+      ref={barRef}
+      data-multiple={multiple}
+      className={cn(styles.bar, className)}
+    >
       {children}
       <span
         ref={indicatorRef}
