@@ -483,8 +483,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     return Array.from(dateSet).sort((a, b) => b.localeCompare(a));
   }, [sortedNotes, dateGroupingMode]);
 
-  const totalCount = filteredNotes.length;
-
   const searchableFilteredNotes = useMemo(
     () =>
       filteredNotes.map(note => ({
@@ -966,62 +964,25 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery, isSearching]);
 
-  // 计算当前显示的消耗量 - 使用Hook提供的数据
+  const displayedNotes =
+    isSearching && searchQuery.trim() ? searchFilteredNotes : filteredNotes;
+  const isGalleryView = viewMode === 'gallery';
+  const summaryNotes = useMemo(
+    () =>
+      isGalleryView ? displayedNotes.filter(noteHasImage) : displayedNotes,
+    [displayedNotes, isGalleryView, noteHasImage]
+  );
   const currentConsumption = useMemo(
-    () =>
-      calculateNotesDisplayAmount(
-        isSearching && searchQuery.trim() ? searchFilteredNotes : filteredNotes,
-        noteDisplayMode
-      ),
-    [
-      filteredNotes,
-      isSearching,
-      noteDisplayMode,
-      searchFilteredNotes,
-      searchQuery,
-    ]
+    () => calculateNotesDisplayAmount(summaryNotes, noteDisplayMode),
+    [summaryNotes, noteDisplayMode]
   );
-
-  // 计算图片流模式下的统计信息
-  const imageFlowCandidateNotes = useMemo(
-    () =>
-      isSearching && searchQuery.trim() ? searchFilteredNotes : filteredNotes,
-    [filteredNotes, isSearching, searchFilteredNotes, searchQuery]
-  );
-
-  const imageFlowStats = useMemo(() => {
-    if (!isImageFlowMode && !isDateImageFlowMode) {
-      return null;
-    }
-
-    // 过滤出有图片的笔记
-    const notesWithImages = imageFlowCandidateNotes.filter(noteHasImage);
-
-    // 计算有图片笔记的消耗量
-    const imageNotesConsumption = calculateNotesDisplayAmount(
-      notesWithImages,
-      noteDisplayMode
-    );
-
-    return {
-      count: notesWithImages.length,
-      consumption: imageNotesConsumption,
-      notes: notesWithImages,
-    };
-  }, [
-    isImageFlowMode,
-    isDateImageFlowMode,
-    imageFlowCandidateNotes,
-    noteHasImage,
-    noteDisplayMode,
-  ]);
+  // 基于全部记录判断空状态，保留筛选无结果时的操作入口。
+  const showHeader = notes.length > 0 || isSearching;
 
   // 计算是否有图片笔记（用于禁用/启用图片流按钮）
   const hasImageNotes = useMemo(() => {
-    return (
-      noteDisplayMode === 'notes' && imageFlowCandidateNotes.some(noteHasImage)
-    );
-  }, [imageFlowCandidateNotes, noteDisplayMode, noteHasImage]);
+    return noteDisplayMode === 'notes' && displayedNotes.some(noteHasImage);
+  }, [displayedNotes, noteDisplayMode, noteHasImage]);
 
   // 计算图片流模式下的可用设备列表
   const imageFlowAvailableOptions = useMemo(() => {
@@ -1067,7 +1028,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
   // 在图片流模式下，如果当前选中的设备没有图片记录，自动切换到"全部"
   useEffect(() => {
-    if (!imageFlowStats || !areNoteImageCountsLoaded) return;
+    if (!isGalleryView || !areNoteImageCountsLoaded) return;
 
     const { equipments } = imageFlowAvailableOptions;
 
@@ -1081,7 +1042,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     }
   }, [
     areNoteImageCountsLoaded,
-    imageFlowStats,
+    isGalleryView,
     imageFlowAvailableOptions,
     filterMode,
     selectedEquipment,
@@ -1096,52 +1057,50 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         isOpen ? '' : 'hidden'
       }`}
     >
-      <div
-        className={`sticky top-0 z-10 flex-none space-y-6 bg-neutral-50 ${
-          navigationSwipeControl?.isCollapsed ? 'pt-0' : 'pt-6'
-        } md:pt-0 dark:bg-neutral-900`}
-        {...navigationSwipeHandlers}
-      >
-        {/* 数量显示 */}
-        <div className="mb-6 flex items-center justify-between px-6">
-          <div
-            className={`relative min-w-0 ${navigationToggleControl ? 'pl-6' : ''}`}
-          >
-            {navigationToggleControl && (
-              <div className="absolute top-1/2 -left-1.5 -translate-y-1/2">
-                {navigationToggleControl}
+      {showHeader && (
+        <div
+          className={`sticky top-0 z-10 flex-none space-y-6 bg-neutral-50 ${
+            navigationSwipeControl?.isCollapsed ? 'pt-0' : 'pt-6'
+          } md:pt-0 dark:bg-neutral-900`}
+          {...navigationSwipeHandlers}
+        >
+          {/* 数量显示 */}
+          <div className="mb-6 flex items-center justify-between px-6">
+            <div
+              className={`relative min-w-0 ${navigationToggleControl ? 'pl-6' : ''}`}
+            >
+              {navigationToggleControl && (
+                <div className="absolute top-1/2 -left-1.5 -translate-y-1/2">
+                  {navigationToggleControl}
+                </div>
+              )}
+              <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
+                <span>
+                  {`${summaryNotes.length} 条${isGalleryView ? '图片' : ''}`}
+                  {hasRoastingNotes ? (
+                    <span
+                      className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                      onClick={() => {
+                        const nextMode =
+                          noteDisplayMode === 'roasting' ? 'notes' : 'roasting';
+                        setNoteDisplayModeOverride(nextMode);
+                      }}
+                      title="点击切换记录/烘焙记录"
+                    >
+                      {recordLabel}
+                    </span>
+                  ) : (
+                    <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                      {recordLabel}
+                    </span>
+                  )}
+                  {`，${usageLabel} ${formatConsumption(currentConsumption)}`}
+                </span>
               </div>
-            )}
-            <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
-              <span>
-                {imageFlowStats
-                  ? `${imageFlowStats.count} 条图片`
-                  : `${isSearching && searchQuery.trim() ? searchFilteredNotes.length : totalCount} 条`}
-                {hasRoastingNotes ? (
-                  <span
-                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-                    onClick={() => {
-                      const nextMode =
-                        noteDisplayMode === 'roasting' ? 'notes' : 'roasting';
-                      setNoteDisplayModeOverride(nextMode);
-                    }}
-                    title="点击切换记录/烘焙记录"
-                  >
-                    {recordLabel}
-                  </span>
-                ) : (
-                  <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-                    {recordLabel}
-                  </span>
-                )}
-                {`，${usageLabel} ${formatConsumption(imageFlowStats?.consumption ?? currentConsumption)}`}
-              </span>
             </div>
           </div>
-        </div>
 
-        {/* 设备筛选选项卡 */}
-        {(notes.length > 0 || isSearching) && (
+          {/* 设备筛选选项卡 */}
           <FilterTabs
             filterMode={filterMode}
             selectedEquipment={selectedEquipment}
@@ -1178,8 +1137,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             tableVisibleColumns={effectiveTableVisibleColumns}
             onTableColumnsChange={updateTableVisibleColumns}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 内容区域 - 可滚动 */}
       <div className="flex-1 overflow-hidden">
@@ -1207,11 +1166,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             emptyRecordLabel={
               noteDisplayMode === 'roasting' ? '烘焙记录' : undefined
             }
-            preFilteredNotes={
-              isSearching && searchQuery.trim()
-                ? searchFilteredNotes
-                : filteredNotes
-            }
+            preFilteredNotes={displayedNotes}
             viewMode={viewMode}
             isDateImageFlowMode={isDateImageFlowMode}
             scrollParentRef={notesScrollEl ?? undefined}
