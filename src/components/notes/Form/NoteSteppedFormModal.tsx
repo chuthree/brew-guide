@@ -19,7 +19,9 @@ import { useLongPress } from '@/lib/hooks/useLongPress';
 export interface Step {
   id: string;
   label: string;
-  content: ReactNode;
+  content:
+    | ReactNode
+    | ((searchQuery: string, closeSearch: () => void) => ReactNode);
   isValid?: boolean;
 }
 
@@ -74,6 +76,12 @@ const NoteSteppedFormModal = forwardRef<
 
     const allBeans = useCoffeeBeanStore(state => state.beans);
 
+    useEffect(() => {
+      setIsSearching(false);
+      setSearchQuery('');
+      setHighlightedBeanId(null);
+    }, [currentStepIndex, showForm]);
+
     // 当 showForm 变化时重置步骤
     useEffect(() => {
       if (showForm && currentStep === undefined) {
@@ -115,6 +123,8 @@ const NoteSteppedFormModal = forwardRef<
     const currentStepContent = steps[currentStepIndex];
     const progress = ((currentStepIndex + 1) / steps.length) * 100;
     const isCoffeeBeanStep = currentStepContent?.id === 'coffeeBean';
+    const isMethodStep = currentStepContent?.id === 'method';
+    const isSearchableStep = isCoffeeBeanStep || isMethodStep;
 
     const handleBack = () => {
       setIsSearching(false);
@@ -193,7 +203,9 @@ const NoteSteppedFormModal = forwardRef<
               highlightedBeanId,
             }
           )
-        : currentStepContent?.content;
+        : typeof currentStepContent?.content === 'function'
+          ? currentStepContent.content(searchQuery, handleCloseSearch)
+          : currentStepContent?.content;
 
     const isLastStep = currentStepIndex === steps.length - 1;
     const isValid = currentStepContent?.isValid !== false;
@@ -248,21 +260,29 @@ const NoteSteppedFormModal = forwardRef<
             {/* 底部按钮区域 */}
             <div className="flex items-center justify-center gap-2 pt-3">
               {/* 搜索输入框 */}
-              {isValid && isCoffeeBeanStep && isSearching && (
-                <div className="flex items-center gap-2">
+              {isValid && isSearchableStep && isSearching && (
+                <div className="flex min-w-0 items-center gap-2">
                   <input
                     ref={searchInputRef}
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder={COFFEE_BEAN_SEARCH_OR_CREATE_PLACEHOLDER}
-                    className="w-48 rounded-full border-none bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
+                    placeholder={
+                      isMethodStep
+                        ? '搜索或新建方案'
+                        : COFFEE_BEAN_SEARCH_OR_CREATE_PLACEHOLDER
+                    }
+                    aria-label={
+                      isMethodStep ? '搜索或新建方案' : '搜索或新建咖啡豆'
+                    }
+                    className="w-48 min-w-0 rounded-full border-none bg-neutral-100 px-5 py-[14px] text-sm font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500"
                     autoComplete="off"
                     onKeyDown={e => e.key === 'Escape' && handleCloseSearch()}
                   />
                   <button
                     type="button"
                     onClick={handleCloseSearch}
+                    aria-label="关闭搜索"
                     className={`${buttonBaseClass} shrink-0 p-4`}
                   >
                     <X className="h-4 w-4" strokeWidth="3" />
@@ -271,10 +291,10 @@ const NoteSteppedFormModal = forwardRef<
               )}
 
               {/* 下一步/完成按钮 */}
-              {isValid && !(isCoffeeBeanStep && isSearching) && (
+              {isValid && !(isSearchableStep && isSearching) && (
                 <button
                   type="button"
-                  onClick={isCoffeeBeanStep ? handleSearchClick : handleNext}
+                  onClick={isSearchableStep ? handleSearchClick : handleNext}
                   className={`${buttonBaseClass} flex items-center justify-center ${isLastStep && !isCoffeeBeanStep ? 'px-6 py-3' : 'px-5 py-3'}`}
                 >
                   {isLastStep && !isCoffeeBeanStep ? (
@@ -282,15 +302,26 @@ const NoteSteppedFormModal = forwardRef<
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
-                        {isCoffeeBeanStep ? '搜索或新建' : '下一步'}
+                        {isSearchableStep ? '搜索与新建' : '下一步'}
                       </span>
-                      {isCoffeeBeanStep ? (
+                      {isSearchableStep ? (
                         <Search className="h-4 w-4" strokeWidth="3" />
                       ) : (
                         <ArrowRight className="h-4 w-4" strokeWidth="3" />
                       )}
                     </div>
                   )}
+                </button>
+              )}
+
+              {isValid && isMethodStep && !isSearching && (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  aria-label="下一步"
+                  className={`${buttonBaseClass} flex shrink-0 items-center justify-center p-4`}
+                >
+                  <ArrowRight className="h-4 w-4" strokeWidth="3" />
                 </button>
               )}
 

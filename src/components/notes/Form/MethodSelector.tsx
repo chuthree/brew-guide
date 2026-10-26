@@ -6,6 +6,8 @@ import { Method } from '@/lib/core/config';
 import { isCoffeeOnlyNoteParams } from '@/lib/notes/noteDisplay';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useCustomMethodStore } from '@/lib/stores/customMethodStore';
+import { showToast } from '@/components/common/feedback/LightToast';
 import {
   getEspressoExtractionTime,
   getEspressoLiquidWeight,
@@ -25,6 +27,9 @@ interface MethodSelectorProps {
   preserveMeasuredParams?: boolean;
   /** 是否显示顶部的跳过方案选项，默认 true */
   showSkipOption?: boolean;
+  searchQuery?: string;
+  allowCreate?: boolean;
+  onSearchComplete?: () => void;
 }
 
 interface EditingValues {
@@ -103,7 +108,58 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   initialParams,
   preserveMeasuredParams = false,
   showSkipOption = true,
+  searchQuery = '',
+  allowCreate = false,
+  onSearchComplete,
 }) => {
+  const [isCreating, setIsCreating] = useState(false);
+  const creatingRef = useRef(false);
+  const activeRef = useRef(true);
+  const methodsInitialized = useCustomMethodStore(state => state.initialized);
+  useEffect(() => {
+    activeRef.current = true;
+    return () => {
+      activeRef.current = false;
+    };
+  }, []);
+  const query = searchQuery.trim();
+  const normalizedQuery = query.toLocaleLowerCase();
+  const matchesQuery = (method: Method) =>
+    method.name.toLocaleLowerCase().includes(normalizedQuery);
+  const filteredCustomMethods = customMethods.filter(matchesQuery);
+  const filteredCommonMethods = commonMethods.filter(matchesQuery);
+  const canCreate =
+    allowCreate &&
+    selectedEquipment &&
+    query &&
+    ![...customMethods, ...commonMethods].some(
+      method => method.name.trim().toLocaleLowerCase() === normalizedQuery
+    );
+
+  const handleCreate = async () => {
+    if (!canCreate || !methodsInitialized || creatingRef.current) return;
+    creatingRef.current = true;
+    setIsCreating(true);
+    try {
+      const method = await useCustomMethodStore
+        .getState()
+        .addMethod(selectedEquipment, {
+          name: query,
+          params: measuredMethodParams(),
+        });
+      if (activeRef.current) {
+        onMethodSelect(method.id || method.name);
+        onSearchComplete?.();
+      }
+    } catch (error) {
+      console.error('创建方案失败:', error);
+      showToast({ type: 'error', title: '创建方案失败，请重试' });
+    } finally {
+      creatingRef.current = false;
+      setIsCreating(false);
+    }
+  };
+
   const isEspresso =
     selectedEquipment.toLowerCase().includes('espresso') ||
     selectedEquipment.includes('意式');
@@ -345,20 +401,23 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       });
     };
 
-    const animationFrameId = requestAnimationFrame(scrollSelectedMethodIntoView);
+    const animationFrameId = requestAnimationFrame(
+      scrollSelectedMethodIntoView
+    );
     return () => cancelAnimationFrame(animationFrameId);
-  }, [selectedEquipment, selectedMethod, customMethods, commonMethods]);
+  }, [selectedEquipment, selectedMethod, customMethods, commonMethods, query]);
 
   // 处理方案选择
   const handleMethodClick = useCallback(
     (methodId: string) => {
+      onSearchComplete?.();
       if (methodId === selectedMethod) return;
 
       // 重置初始化标记，允许新方案初始化
       initializedMethodRef.current = null;
       onMethodSelect(methodId);
     },
-    [selectedMethod, onMethodSelect]
+    [selectedMethod, onMethodSelect, onSearchComplete]
   );
 
   const handleSkipMethodClick = useCallback(() => {
@@ -645,8 +704,10 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
     );
   };
 
-  const hasMethods = customMethods.length > 0 || commonMethods.length > 0;
-  const showDivider = customMethods.length > 0 && commonMethods.length > 0;
+  const hasMethods =
+    filteredCustomMethods.length > 0 || filteredCommonMethods.length > 0;
+  const showDivider =
+    filteredCustomMethods.length > 0 && filteredCommonMethods.length > 0;
 
   return (
     <div className="py-3">
@@ -656,12 +717,16 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
         </div>
       ) : !hasMethods ? (
         <div className="border-l border-neutral-200/50 pl-6 text-xs text-neutral-500 dark:border-neutral-800/50 dark:text-neutral-400">
-          没有可用方案，请前往设置中的“器具和方案”添加
+          {query
+            ? '没有找到匹配的方案'
+            : allowCreate
+              ? '暂无方案，点击下方“搜索与新建”添加'
+              : '没有可用方案，请前往设置中的“器具和方案”添加'}
         </div>
       ) : (
         <div className="space-y-5">
-          {showSkipOption && renderSkipMethod()}
-          {customMethods.map(renderMethod)}
+          {showSkipOption && !query && renderSkipMethod()}
+          {filteredCustomMethods.map(renderMethod)}
           {showDivider && (
             <div className="flex items-center py-3">
               <div className="h-px grow bg-neutral-200 dark:bg-neutral-800" />
@@ -671,8 +736,23 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               <div className="h-px grow bg-neutral-200 dark:bg-neutral-800" />
             </div>
           )}
-          {commonMethods.map(renderMethod)}
+          {filteredCommonMethods.map(renderMethod)}
         </div>
+      )}
+      {canCreate && (
+        <button
+          type="button"
+          onClick={handleCreate}
+          disabled={isCreating || !methodsInitialized}
+          className="mt-5 w-full border-l border-neutral-200/50 pl-6 text-left text-xs text-neutral-800 disabled:opacity-40 dark:border-neutral-800/50 dark:text-neutral-100"
+        >
+          <span className="block font-medium break-words">
+            {isCreating ? '正在创建…' : `新建「${query}」`}
+          </span>
+          <span className="mt-1.5 block text-neutral-500 dark:text-neutral-400">
+            无步骤方案，创建后可填写冲煮参数
+          </span>
+        </button>
       )}
     </div>
   );

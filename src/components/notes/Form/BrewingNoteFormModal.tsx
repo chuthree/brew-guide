@@ -579,7 +579,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         params: nextParams,
         totalTime,
       }));
-
     },
     [methodStepEquipmentId, updateDraftNote]
   );
@@ -783,7 +782,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       {
         id: 'method',
         label: '选择方案',
-        content: (
+        content: (searchQuery: string, closeSearch: () => void) => (
           <div>
             <EquipmentCategoryBar
               selectedEquipment={methodStepEquipmentId}
@@ -793,6 +792,10 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
             />
             {methodStepEquipmentId && (
               <MethodSelector
+                key={methodStepEquipmentId}
+                searchQuery={searchQuery}
+                onSearchComplete={closeSearch}
+                allowCreate
                 selectedEquipment={methodStepEquipmentId}
                 selectedMethod={selectedMethodId}
                 customMethods={customMethods}
