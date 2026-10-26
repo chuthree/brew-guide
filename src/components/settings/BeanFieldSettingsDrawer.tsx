@@ -17,6 +17,7 @@ import SettingSelect from './atomic/SettingSelect';
 import SettingRow from './atomic/SettingRow';
 import SettingSection from './atomic/SettingSection';
 import SettingToggle from './atomic/SettingToggle';
+import { SettingPageLayoutProvider } from './atomic/SettingPageLayoutContext';
 import { useScrollToHighlightedSetting } from './atomic/SettingSearchHighlightContext';
 import { makeSettingRowSearchId } from './settingsSearch';
 
@@ -167,91 +168,95 @@ const BeanFieldSettingsDrawer: React.FC<BeanFieldSettingsDrawerProps> = ({
       onClose={onClose}
       historyId="bean-field-settings"
     >
-      <ActionDrawer.Content className="mb-0! space-y-0!">
-        <div className="relative">
-          <div
-            ref={scrollContainerRef}
-            onScroll={updateScrollFade}
-            className="overflow-x-hidden overflow-y-auto overscroll-contain"
-            style={SCROLL_CONTAINER_STYLE}
-          >
-            <SettingSection title="基础" className="-mx-6">
-              <SettingRow
-                label="烘焙商"
-                settingId={ROASTER_SETTING_ID}
-                isLast={!showRoasterSeparator}
-              >
-                <SettingToggle
-                  checked={settings.roasterFieldEnabled !== false}
-                  onChange={handleRoasterFieldToggle}
-                />
-              </SettingRow>
-              {showRoasterSeparator && (
+      <SettingPageLayoutProvider mode="overlay">
+        <ActionDrawer.Content className="mb-0! space-y-0!">
+          <div className="relative">
+            <div
+              ref={scrollContainerRef}
+              onScroll={updateScrollFade}
+              className="overflow-x-hidden overflow-y-auto overscroll-contain"
+              style={SCROLL_CONTAINER_STYLE}
+            >
+              <SettingSection title="基础" className="-mx-6">
                 <SettingRow
-                  label="烘焙商分隔符"
-                  settingId={ROASTER_SEPARATOR_SETTING_ID}
-                  isLast
-                  isSubSetting
+                  label="烘焙商"
+                  settingId={ROASTER_SETTING_ID}
+                  isLast={!showRoasterSeparator}
                 >
-                  <SettingSelect
-                    value={settings.roasterSeparator || ' '}
-                    options={ROASTER_SEPARATOR_OPTIONS}
-                    ariaLabel="烘焙商分隔符"
-                    onChange={handleRoasterSeparatorChange}
+                  <SettingToggle
+                    checked={settings.roasterFieldEnabled !== false}
+                    onChange={handleRoasterFieldToggle}
                   />
                 </SettingRow>
-              )}
-            </SettingSection>
-
-            {(['origin', 'processing', 'variety'] as BeanFieldGroupId[]).map(
-              group => {
-                const fields = BEAN_FIELD_DEFINITIONS.filter(
-                  definition => definition.group === group
-                );
-
-                return (
-                  <SettingSection
-                    key={group}
-                    title={BEAN_FIELD_GROUP_LABELS[group]}
-                    className="-mx-6"
+                {showRoasterSeparator && (
+                  <SettingRow
+                    label="烘焙商分隔符"
+                    settingId={ROASTER_SEPARATOR_SETTING_ID}
+                    isLast
+                    isSubSetting
                   >
-                    {fields.map((definition, index) => {
-                      const isEnabled = enabledBeanFieldIdSet.has(
-                        definition.id
-                      );
-                      const label =
-                        definition.id === 'origin' ? '产地' : definition.label;
-                      const settingId = makeSettingRowSearchId(label);
+                    <SettingSelect
+                      value={settings.roasterSeparator || ' '}
+                      options={ROASTER_SEPARATOR_OPTIONS}
+                      ariaLabel="烘焙商分隔符"
+                      onChange={handleRoasterSeparatorChange}
+                    />
+                  </SettingRow>
+                )}
+              </SettingSection>
 
-                      return (
-                        <BeanFieldSettingsRow
-                          key={definition.id}
-                          fieldId={definition.id}
-                          label={label}
-                          settingId={settingId}
-                          isEnabled={isEnabled}
-                          isLast={index === fields.length - 1}
-                          onToggle={toggleBeanField}
-                        />
-                      );
-                    })}
-                  </SettingSection>
-                );
-              }
-            )}
+              {(['origin', 'processing', 'variety'] as BeanFieldGroupId[]).map(
+                group => {
+                  const fields = BEAN_FIELD_DEFINITIONS.filter(
+                    definition => definition.group === group
+                  );
+
+                  return (
+                    <SettingSection
+                      key={group}
+                      title={BEAN_FIELD_GROUP_LABELS[group]}
+                      className="-mx-6"
+                    >
+                      {fields.map((definition, index) => {
+                        const isEnabled = enabledBeanFieldIdSet.has(
+                          definition.id
+                        );
+                        const label =
+                          definition.id === 'origin'
+                            ? '产地'
+                            : definition.label;
+                        const settingId = makeSettingRowSearchId(label);
+
+                        return (
+                          <BeanFieldSettingsRow
+                            key={definition.id}
+                            fieldId={definition.id}
+                            label={label}
+                            settingId={settingId}
+                            isEnabled={isEnabled}
+                            isLast={index === fields.length - 1}
+                            onToggle={toggleBeanField}
+                          />
+                        );
+                      })}
+                    </SettingSection>
+                  );
+                }
+              )}
+            </div>
+            <div
+              className={`fade-mask-to-b pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-white transition-opacity duration-200 dark:bg-neutral-900 ${
+                scrollFade.top ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+            <div
+              className={`fade-mask-to-t pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-white transition-opacity duration-200 dark:bg-neutral-900 ${
+                scrollFade.bottom ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
           </div>
-          <div
-            className={`fade-mask-to-b pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-white transition-opacity duration-200 dark:bg-neutral-900 ${
-              scrollFade.top ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-          <div
-            className={`fade-mask-to-t pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-white transition-opacity duration-200 dark:bg-neutral-900 ${
-              scrollFade.bottom ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-        </div>
-      </ActionDrawer.Content>
+        </ActionDrawer.Content>
+      </SettingPageLayoutProvider>
     </ActionDrawer>
   );
 };
