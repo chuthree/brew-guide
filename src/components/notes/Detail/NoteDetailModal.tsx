@@ -149,6 +149,10 @@ const getCupPriceDisplay = (
   const unitPrice = price / capacity;
   const coffeeMatch = note?.params?.coffee?.match(/(\d+(?:\.\d+)?)/);
   const coffeeWeight = coffeeMatch ? parseFloat(coffeeMatch[0]) : 0;
+  if (!Number.isFinite(coffeeWeight) || coffeeWeight <= 0) {
+    return `${unitPrice.toFixed(2)}元/克`;
+  }
+
   const cupPrice = coffeeWeight * unitPrice;
 
   return `${cupPrice.toFixed(2)}元（${unitPrice.toFixed(2)}元/克）`;
