@@ -581,7 +581,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="flex size-6 shrink-0 items-center justify-center text-sm leading-none font-normal text-neutral-400 dark:text-neutral-500"
+                        className="flex size-6 shrink-0 items-center justify-center rounded-sm bg-neutral-200/70 text-sm leading-none font-normal text-neutral-500 dark:bg-neutral-700/50 dark:text-neutral-400"
                       >
                         {roaster.charAt(0)}
                       </span>
