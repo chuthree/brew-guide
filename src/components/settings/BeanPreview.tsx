@@ -1,9 +1,26 @@
 'use client';
 
 import React from 'react';
-import { ExtendedCoffeeBean } from '../coffee-bean/List/types';
+import {
+  BEAN_FIELD_FILTER_MODE_BY_FIELD_ID,
+  VIEW_OPTIONS,
+  type BeanFilterMode,
+  type ExtendedCoffeeBean,
+} from '../coffee-bean/List/types';
+import ViewSwitcher from '../coffee-bean/List/components/ViewSwitcher';
 import { SettingsOptions } from './Settings';
 import { getBeanDisplayInitial } from '@/lib/utils/beanVarietyUtils';
+import {
+  calculateBeanSummaryEstimatedCups,
+  formatBeanSummaryEstimatedCups,
+  formatBeanSummaryWeightWithLimit,
+  getBeanSummaryDisplayLimit,
+  getBeanSummaryLimitMode,
+} from '@/lib/utils/beanSummaryDisplay';
+import {
+  getEnabledBeanFieldIds,
+  resolveBeanFieldConfig,
+} from '@/lib/coffee-beans/beanFields';
 
 interface BeanPreviewProps {
   settings: SettingsOptions;
@@ -11,33 +28,6 @@ interface BeanPreviewProps {
 
 // 创建示例咖啡豆数据
 const createSampleBeans = (): ExtendedCoffeeBean[] => [
-  {
-    id: 'preview-bean-1',
-    timestamp: Date.now() - 1000,
-    name: '蓝山一号 精选批次',
-    beanType: 'filter',
-    price: '298',
-    capacity: '225g',
-    remaining: '156g',
-    roastLevel: '中浅烘焙',
-    roastDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split('T')[0],
-    flavor: ['柑橘', '蜂蜜', '花香', '坚果'],
-    notes: '这是一款来自牙买加蓝山的精选咖啡豆，口感层次丰富，酸度明亮。',
-    blendComponents: [
-      {
-        origin: '牙买加蓝山',
-        process: '水洗',
-        variety: '铁皮卡',
-        percentage: 100,
-      },
-    ],
-    startDay: 3,
-    endDay: 21,
-    isFrozen: false,
-    isInTransit: false,
-  },
   {
     id: 'preview-bean-2',
     timestamp: Date.now(),
@@ -96,36 +86,78 @@ const createSampleBeans = (): ExtendedCoffeeBean[] => [
 
 const BeanPreview: React.FC<BeanPreviewProps> = ({ settings }) => {
   const sampleBeans = createSampleBeans();
+  const summaryLimit = getBeanSummaryDisplayLimit(settings);
+  const summaryLimitMode = getBeanSummaryLimitMode(settings);
+  const totalRemaining = sampleBeans.reduce(
+    (total, bean) => total + parseFloat(bean.remaining || '0'),
+    0
+  );
+  const enabledBeanFieldFilterModes = getEnabledBeanFieldIds(
+    resolveBeanFieldConfig(settings)
+  )
+    .map(fieldId => BEAN_FIELD_FILTER_MODE_BY_FIELD_ID[fieldId])
+    .filter((mode): mode is BeanFilterMode => Boolean(mode));
 
   return (
     <>
-      {/* 预览标识 - 位于预览区域上方 */}
-      <div className="pointer-events-none relative mb-8 h-48 overflow-hidden bg-neutral-50 select-none dark:bg-neutral-900">
+      <div
+        inert
+        className="pointer-events-none relative -mt-4 mb-8 overflow-hidden bg-neutral-50 pt-3 select-none [&>div:first-child]:pt-0 dark:bg-neutral-900"
+      >
+        <ViewSwitcher
+          viewMode={VIEW_OPTIONS.INVENTORY}
+          displayMode="list"
+          sortOption="original"
+          onSortChange={() => {}}
+          beansCount={sampleBeans.length}
+          totalBeans={sampleBeans.length}
+          totalWeight={formatBeanSummaryWeightWithLimit(
+            totalRemaining,
+            summaryLimit,
+            summaryLimitMode
+          )}
+          estimatedCupsLabel={formatBeanSummaryEstimatedCups(
+            calculateBeanSummaryEstimatedCups(
+              sampleBeans,
+              summaryLimit,
+              summaryLimitMode,
+              settings.estimatedCupDoseSettings
+            )
+          )}
+          selectedBeanType="all"
+          selectedVariety={null}
+          availableVarieties={sampleBeans.map(
+            bean => bean.blendComponents![0].variety!
+          )}
+          enabledBeanFieldFilterModes={enabledBeanFieldFilterModes}
+          multiFilters={settings.beanFilterStyle === 'multiple' ? {} : undefined}
+          availableBeanGroups={settings.coffeeBeanGroups}
+          enableGreenBeanInventory={settings.enableGreenBeanInventory}
+          espressoCount={1}
+          filterCount={1}
+          totalEspressoCount={1}
+          totalFilterCount={1}
+          espressoRemaining={parseFloat(sampleBeans[1].remaining!)}
+          filterRemaining={parseFloat(sampleBeans[0].remaining!)}
+        />
         {/* 咖啡豆列表容器 */}
-        <div className="absolute inset-0 px-6 py-6">
-          <div className="flex h-full flex-col justify-center space-y-5">
-            {/* 第一个豆子 - 只露出下半部分 */}
+        <div className="relative h-40 overflow-hidden px-6 py-6">
+          <div className="flex flex-col space-y-5">
+            {/* 第一个豆子 */}
             <div className="transform">
               <BeanPreviewItem bean={sampleBeans[0]} settings={settings} />
             </div>
 
-            {/* 第二个豆子 - 完整显示在中间 */}
+            {/* 第二个豆子 */}
             <div className="transform">
               <BeanPreviewItem bean={sampleBeans[1]} settings={settings} />
-            </div>
-
-            {/* 第三个豆子 - 只露出上半部分 */}
-            <div className="transform">
-              <BeanPreviewItem bean={sampleBeans[2]} settings={settings} />
             </div>
           </div>
         </div>
 
-        {/* 上边缘渐变阴影 */}
-        <div className="fade-mask-to-b pointer-events-none absolute top-0 right-0 left-0 z-20 h-12 bg-neutral-50 dark:bg-neutral-900/95" />
-
-        {/* 下边缘渐变阴影 */}
-        <div className="fade-mask-to-t pointer-events-none absolute right-0 bottom-0 left-0 z-20 h-12 bg-neutral-50 dark:bg-neutral-900/95" />
+        {/* 上下边缘渐变阴影 */}
+        <div className="fade-mask-to-b pointer-events-none absolute top-0 right-0 left-0 z-20 h-12 bg-neutral-50 opacity-75 dark:bg-neutral-900/95" />
+        <div className="fade-mask-to-t pointer-events-none absolute right-0 bottom-0 left-0 z-20 h-8 bg-neutral-50 dark:bg-neutral-900/95" />
       </div>
     </>
   );
