@@ -64,24 +64,14 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
   useScrollToHighlightedSetting(commitCount);
 
   React.useEffect(() => {
-    fetch('https://gitee.com/api/v5/repos/chu3/brew-guide/contributors')
-      .then(res => (res.ok ? res.json() : Promise.reject()))
-      .then((data: { contributions: number }[]) => {
-        setCommitCount(data.reduce((sum, c) => sum + c.contributions, 0));
+    fetch('https://api.github.com/repos/chuthree/brew-guide/commits?per_page=1', {
+      method: 'HEAD',
+    })
+      .then(res => {
+        const match = res.headers.get('link')?.match(/page=(\d+)>; rel="last"/);
+        if (match) setCommitCount(parseInt(match[1], 10));
       })
-      .catch(() => {
-        fetch(
-          'https://api.github.com/repos/chuthree/brew-guide/commits?per_page=1',
-          { method: 'HEAD' }
-        )
-          .then(res => {
-            const match = res.headers
-              .get('link')
-              ?.match(/page=(\d+)>; rel="last"/);
-            if (match) setCommitCount(parseInt(match[1], 10));
-          })
-          .catch(() => {});
-      });
+      .catch(() => {});
   }, []);
 
   const handleCloseWithAnimation = React.useCallback(() => {
