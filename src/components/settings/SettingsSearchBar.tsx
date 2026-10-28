@@ -103,6 +103,17 @@ const SettingsSearchBar: React.FC<SettingsSearchBarProps> = ({
   const handleInputFocus = React.useCallback(() => {
     requestAnimationFrame(updateKeyboardOffset);
   }, [updateKeyboardOffset]);
+  const handleInputPointerDown = React.useCallback(
+    (event: React.PointerEvent<HTMLInputElement>) => {
+      if (event.button !== 0 || document.activeElement === event.currentTarget) {
+        return;
+      }
+
+      event.preventDefault();
+      event.currentTarget.focus({ preventScroll: true });
+    },
+    []
+  );
   const handleInputBlur = React.useCallback(() => {
     setKeyboardOffset(0);
   }, []);
@@ -116,7 +127,7 @@ const SettingsSearchBar: React.FC<SettingsSearchBarProps> = ({
   return (
     <div
       aria-hidden={!isVisible}
-      className={`pointer-events-none ${positionClass} z-30 ${paddingClass} pt-8 pb-[calc(env(safe-area-inset-bottom)+0.875rem)] transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]`}
+      className={`pointer-events-none ${positionClass} z-30 ${paddingClass} pt-8 ${keyboardOffset > 0 ? 'pb-3.5' : 'pb-[calc(env(safe-area-inset-bottom)+0.875rem)]'} transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-opacity`}
       style={{
         opacity: isVisible ? 1 : 0,
         transform: `translate3d(0, ${searchBarTranslateY}px, 0)`,
@@ -138,20 +149,23 @@ const SettingsSearchBar: React.FC<SettingsSearchBarProps> = ({
             </span>
             <input
               ref={inputRef}
+              tabIndex={isVisible ? undefined : -1}
               value={query}
               onChange={handleInputChange}
+              onPointerDown={handleInputPointerDown}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
               onKeyDown={handleInputKeyDown}
               data-keyboard-avoidance="manual"
               aria-label="搜索"
               placeholder={placeholder}
-              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-neutral-800 outline-none placeholder:text-neutral-400 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-neutral-800 outline-none placeholder:text-neutral-400 pointer-coarse:text-base dark:text-neutral-100 dark:placeholder:text-neutral-500"
             />
           </div>
           {hasQuery && (
             <button
               type="button"
+              tabIndex={isVisible ? undefined : -1}
               onMouseDown={handleClearMouseDown}
               onClick={handleClearQuery}
               className="flex size-11 shrink-0 items-center justify-center rounded-full border border-black/5 bg-neutral-100/95 text-neutral-800 shadow-lg shadow-black/5 backdrop-blur-xl transition-transform active:scale-95 dark:border-white/5 dark:bg-neutral-800/95 dark:text-neutral-100 dark:shadow-black/20"

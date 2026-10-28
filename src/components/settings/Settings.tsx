@@ -348,6 +348,22 @@ const Settings: React.FC<SettingsProps> = ({
   } = useCloudSyncConnection(settings as SettingsOptions);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
   const [settingsSearchQuery, setSettingsSearchQuery] = useState('');
+  const [isSponsorSectionVisible, setIsSponsorSectionVisible] = useState(false);
+  const observeSponsorSection = useCallback((element: HTMLDivElement | null) => {
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsSponsorSectionVisible(entry.isIntersecting),
+      {
+        root: element.parentElement,
+        rootMargin: '0px 0px -112px 0px',
+        threshold: 0,
+      }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const searchHighlightTimerRef = React.useRef<number | null>(null);
   const clearSearchHighlightTimer = useCallback(() => {
     if (searchHighlightTimerRef.current !== null) {
@@ -982,7 +998,7 @@ const Settings: React.FC<SettingsProps> = ({
                   />
 
                   {/* 感谢名单 */}
-                  <div className="px-8 pt-18 pb-28">
+                  <div ref={observeSponsorSection} className="px-8 pt-18 pb-28">
                     <div className="text-left text-xs select-none">
                       <p className="font-medium text-neutral-800 dark:text-neutral-200">
                         感谢各位一直以来的支持，自 2025 年 2 月 1
@@ -997,6 +1013,7 @@ const Settings: React.FC<SettingsProps> = ({
             )}
           </AnimatePresence>
           <SettingsSearchBar
+            isVisible={shouldShowSearchResults || !isSponsorSectionVisible}
             query={settingsSearchQuery}
             firstResult={settingsSearchResults[0] ?? null}
             onQueryChange={setSettingsSearchQuery}
