@@ -46,8 +46,24 @@
 }
 
 @utility fade-mask-x-edges {
-  -webkit-mask-image: linear-gradient(to right, #000, transparent 50%, #000);
-  mask-image: linear-gradient(to right, #000, transparent 50%, #000);
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    rgb(0 0 0 / 35%) 6%,
+    #000 18%,
+    #000 82%,
+    rgb(0 0 0 / 35%) 94%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    rgb(0 0 0 / 35%) 6%,
+    #000 18%,
+    #000 82%,
+    rgb(0 0 0 / 35%) 94%,
+    transparent
+  );
 }
 
 .brew-image-viewer-pswp {

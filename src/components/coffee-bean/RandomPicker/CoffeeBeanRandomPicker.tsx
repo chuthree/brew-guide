@@ -393,13 +393,10 @@ const RandomPickerSession: React.FC<RandomPickerSessionProps> = ({
               ></div>
             )}
 
-            {/* 创建渐变遮罩效果 - 只在多豆时显示 */}
-            {!isSingleBean && (
-              <div className="fade-mask-x-edges pointer-events-none absolute inset-0 z-10 bg-white/95 dark:bg-neutral-900/95"></div>
-            )}
-
             {/* 横向卡片容器 */}
-            <div className="relative h-[132px] w-full overflow-hidden">
+            <div
+              className={`relative h-[132px] w-full overflow-hidden ${isSingleBean ? '' : 'fade-mask-x-edges'}`}
+            >
               <motion.div
                 className={`flex space-x-3 ${isSingleBean ? 'justify-center' : 'absolute'}`}
                 animate={controls}
