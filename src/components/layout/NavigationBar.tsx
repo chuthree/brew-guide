@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import { useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import NavigationSection from './NavigationSection';
 import { equipmentList, type CustomEquipment } from '@/lib/core/config';
 import hapticsUtils from '@/lib/ui/haptics';
@@ -19,7 +19,6 @@ import {
   getEquipmentName,
 } from '@/lib/brewing/parameters';
 import EquipmentBar from '@/components/equipment/EquipmentBar';
-import TabButton from '@/components/common/ui/TabButton';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import {
@@ -76,6 +75,30 @@ import {
 // 统一类型定义
 type MainTabType = '冲煮' | '咖啡豆' | '笔记';
 type BrewingStep = 'coffeeBean' | 'method' | 'brewing' | 'notes';
+
+const TabButton = ({
+  isActive,
+  dataTab,
+  children,
+  ...props
+}: React.ComponentProps<'button'> & {
+  isActive: boolean;
+  dataTab: string;
+}) => (
+  <button
+    type="button"
+    {...props}
+    aria-current={isActive ? 'page' : undefined}
+    data-tab={dataTab}
+    className={`flex items-center rounded-sm pb-3 text-xs font-medium tracking-widest whitespace-nowrap outline-none transition-colors focus-visible:ring-2 focus-visible:ring-neutral-400/50 focus-visible:ring-offset-4 focus-visible:ring-offset-neutral-50 md:pb-0 dark:focus-visible:ring-neutral-500/60 dark:focus-visible:ring-offset-neutral-900 ${
+      isActive
+        ? 'text-neutral-800 dark:text-neutral-100'
+        : 'cursor-pointer text-neutral-500 dark:text-neutral-400'
+    }`}
+  >
+    <span className="relative inline-block">{children}</span>
+  </button>
+);
 
 interface EditableParams {
   coffee: string;
@@ -1274,27 +1297,35 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                     ariaLabel={canGoBack() && onBackClick ? '返回' : '设置'}
                     onClick={handleTitleClick}
                   >
-                    <React.Fragment>
-                      {showHeaderSyncSpinner ? (
-                        <div
-                          key="spinner"
-                          className="absolute inset-0 flex items-center justify-center"
-                        >
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.div
+                        key={showHeaderSyncSpinner ? 'spinner' : 'icon'}
+                        initial={
+                          animateNavigation
+                            ? { opacity: 0, scale: 0.5, filter: 'blur(4px)' }
+                            : false
+                        }
+                        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                        exit={{
+                          opacity: 0,
+                          scale: animateNavigation ? 0.5 : 1,
+                          filter: animateNavigation ? 'blur(4px)' : 'blur(0px)',
+                        }}
+                        transition={{
+                          duration: animateNavigation ? 0.3 : 0,
+                          ease: [0.23, 1, 0.32, 1],
+                        }}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        {showHeaderSyncSpinner ? (
                           <AppleSpinner className="h-3.5 w-3.5" />
-                        </div>
-                      ) : (
-                        <div
-                          key="icon"
-                          className="absolute inset-0 flex items-center justify-center"
-                        >
-                          {canGoBack() && onBackClick ? (
-                            <ArrowLeft className="h-4 w-4" />
-                          ) : (
-                            <Equal className="h-4 w-4" />
-                          )}
-                        </div>
-                      )}
-                    </React.Fragment>
+                        ) : canGoBack() && onBackClick ? (
+                          <ArrowLeft className="h-4 w-4" />
+                        ) : (
+                          <Equal className="h-4 w-4" />
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                   </NavigationSettingsButton>
 
                   {showSidebarCollapseControl && isSidebarControlVisible && (
@@ -1338,9 +1369,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                           isActive={activeMainTab === '冲煮'}
                           onClick={() => handleMainTabClick('冲煮')}
                           dataTab="冲煮"
-                          aria-current={activeMainTab === '冲煮' ? 'page' : undefined}
-                          aria-pressed={undefined}
-                          className="flex items-center border-b-0 pb-3 tracking-widest md:pb-0"
                         >
                           冲煮
                         </TabButton>
@@ -1411,27 +1439,71 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                             {getCurrentViewLabel()}
                           </span>
 
-                          {/* 下拉图标随当前视图直接切换 */}
-                          <div
+                          {/* 下拉图标出现和收起时平滑调整占位 */}
+                          <motion.div
                             className="flex items-center justify-center overflow-hidden"
+                            initial={false}
+                            animate={{
+                              width:
+                                activeMainTab === '咖啡豆' &&
+                                !isCurrentViewPinned &&
+                                availableViewsCount > 1
+                                  ? 12
+                                  : 0,
+                              marginLeft:
+                                activeMainTab === '咖啡豆' &&
+                                !isCurrentViewPinned &&
+                                availableViewsCount > 1
+                                  ? 4
+                                  : 0,
+                            }}
+                            transition={{
+                              duration: animateNavigation ? 0.35 : 0,
+                              ease: [0.25, 0.46, 0.45, 0.94],
+                            }}
                           >
-                            <React.Fragment>
+                            <AnimatePresence mode="wait">
                               {activeMainTab === '咖啡豆' &&
                                 !isCurrentViewPinned &&
                                 availableViewsCount > 1 && (
-                                  <div
+                                  <motion.div
                                     key="chevron-icon"
-                                    className="ml-1 flex h-3 w-3 shrink-0 items-center justify-center"
+                                    initial={
+                                      animateNavigation
+                                        ? { opacity: 0, scale: 0.8 }
+                                        : false
+                                    }
+                                    animate={{
+                                      opacity: 1,
+                                      scale: 1,
+                                      transition: {
+                                        duration: animateNavigation ? 0.35 : 0,
+                                        ease: [0.25, 0.46, 0.45, 0.94],
+                                        opacity: {
+                                          duration: animateNavigation ? 0.25 : 0,
+                                          delay: animateNavigation ? 0.1 : 0,
+                                        },
+                                      },
+                                    }}
+                                    exit={{
+                                      opacity: 0,
+                                      scale: animateNavigation ? 0.8 : 1,
+                                      transition: {
+                                        duration: animateNavigation ? 0.15 : 0,
+                                        ease: [0.4, 0, 1, 1],
+                                      },
+                                    }}
+                                    className="flex h-3 w-3 shrink-0 items-center justify-center"
                                   >
                                     <ChevronsUpDown
                                       size={12}
                                       className="text-neutral-400 dark:text-neutral-600"
                                       color="currentColor"
                                     />
-                                  </div>
+                                  </motion.div>
                                 )}
-                            </React.Fragment>
-                          </div>
+                            </AnimatePresence>
+                          </motion.div>
                         </button>
                       </div>
                     )}
@@ -1446,13 +1518,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                           }
                           onClick={() => handlePinnedViewClick(view)}
                           dataTab={view}
-                          aria-current={
-                            activeMainTab === '咖啡豆' && currentBeanView === view
-                              ? 'page'
-                              : undefined
-                          }
-                          aria-pressed={undefined}
-                          className="flex items-center border-b-0 pb-3 tracking-widest md:pb-0"
                         >
                           {settings.simplifiedViewLabels
                             ? SIMPLIFIED_VIEW_LABELS[view]
@@ -1467,9 +1532,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                           isActive={activeMainTab === '笔记'}
                           onClick={() => handleMainTabClick('笔记')}
                           dataTab="笔记"
-                          aria-current={activeMainTab === '笔记' ? 'page' : undefined}
-                          aria-pressed={undefined}
-                          className="flex items-center border-b-0 pb-3 tracking-widest md:pb-0"
                         >
                           笔记
                         </TabButton>
