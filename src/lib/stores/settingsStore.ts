@@ -166,6 +166,7 @@ const mergeSettingsWithDefaults = (
   return {
     ...defaultSettings,
     ...supportedSettings,
+    beanCategorySort: settings?.beanCategorySort === 'name' ? 'name' : 'count',
     safeAreaMargins: normalizedSafeAreaMargins,
     layoutSettings: normalizeLayoutSettings(settings?.layoutSettings),
     navigationSettings: normalizeNavigationSettings(

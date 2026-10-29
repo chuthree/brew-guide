@@ -646,6 +646,9 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   const showBeanSummary = useSettingsStore(
     state => state.settings.showBeanSummary
   );
+  const beanCategorySort = useSettingsStore(
+    state => state.settings.beanCategorySort ?? 'count'
+  );
   const showEstimatedCups = useSettingsStore(
     state => state.settings.showEstimatedCups
   );
@@ -966,6 +969,19 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     const fieldId = BEAN_FIELD_ID_BY_FILTER_MODE[mode];
     return fieldId ? (availableBeanFieldValues[fieldId] ?? []) : [];
   };
+  const sortCategoryValuesByName = <T extends string>(
+    mode: MultiFilterCategory,
+    values: T[]
+  ): T[] =>
+    beanCategorySort === 'name'
+      ? [...values].sort((left, right) =>
+          getMultiValueLabel(mode, left).localeCompare(
+            getMultiValueLabel(mode, right),
+            'zh-CN',
+            { numeric: true }
+          )
+        )
+      : values;
   const getVisibleMultiCategoryValues = (mode: MultiFilterCategory) => {
     const selectedValue = multiSelections[mode];
     const values = getMultiCategoryValues(mode);
@@ -986,11 +1002,16 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       ? expandedMultiCategory
       : null;
   const activeMultiCategoryValues = activeMultiCategory
-    ? getVisibleMultiCategoryValues(activeMultiCategory).sort(
-        (left, right) =>
-          (filterOptionCounts?.[activeMultiCategory]?.get(right) ?? 0) -
-          (filterOptionCounts?.[activeMultiCategory]?.get(left) ?? 0)
-      )
+    ? beanCategorySort === 'name'
+      ? sortCategoryValuesByName(
+          activeMultiCategory,
+          getVisibleMultiCategoryValues(activeMultiCategory)
+        )
+      : getVisibleMultiCategoryValues(activeMultiCategory).sort(
+          (left, right) =>
+            (filterOptionCounts?.[activeMultiCategory]?.get(right) ?? 0) -
+            (filterOptionCounts?.[activeMultiCategory]?.get(left) ?? 0)
+        )
     : [];
   // 筛选交互边界：只包含触发按钮和下拉内容，点击其他分类标签会按外部点击处理
   const filterToggleButtonRef = useRef<HTMLButtonElement>(null);
@@ -1549,7 +1570,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                       ) : (
                         <>
                           {currentBeanFieldId &&
-                            availableCurrentBeanFieldValues.map(value => (
+                            sortCategoryValuesByName(
+                              filterMode,
+                              availableCurrentBeanFieldValues
+                            ).map(value => (
                               <TabButton
                                 key={value}
                                 isActive={selectedBeanFieldValue === value}
@@ -1562,25 +1586,29 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             ))}
 
                           {filterMode === 'flavorPeriod' &&
-                            availableFlavorPeriods?.map(
-                              (status: FlavorPeriodStatus) => (
-                                <TabButton
-                                  key={status}
-                                  isActive={selectedFlavorPeriod === status}
-                                  onClick={() =>
-                                    selectedFlavorPeriod !== status &&
-                                    onFlavorPeriodClick?.(status)
-                                  }
-                                  className="mr-3"
-                                  dataTab={status}
-                                >
-                                  {FLAVOR_PERIOD_LABELS[status]}
-                                </TabButton>
-                              )
-                            )}
+                            sortCategoryValuesByName(
+                              'flavorPeriod',
+                              availableFlavorPeriods
+                            ).map((status: FlavorPeriodStatus) => (
+                              <TabButton
+                                key={status}
+                                isActive={selectedFlavorPeriod === status}
+                                onClick={() =>
+                                  selectedFlavorPeriod !== status &&
+                                  onFlavorPeriodClick?.(status)
+                                }
+                                className="mr-3"
+                                dataTab={status}
+                              >
+                                {FLAVOR_PERIOD_LABELS[status]}
+                              </TabButton>
+                            ))}
 
                           {filterMode === 'roaster' &&
-                            availableRoasters?.map((roaster: string) => (
+                            sortCategoryValuesByName(
+                              'roaster',
+                              availableRoasters
+                            ).map((roaster: string) => (
                               <TabButton
                                 key={roaster}
                                 isActive={selectedRoaster === roaster}
@@ -1596,18 +1624,21 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                             ))}
 
                           {filterMode === 'group' &&
-                            availableBeanGroups.map(group => (
+                            sortCategoryValuesByName(
+                              'group',
+                              availableBeanGroups.map(group => group.id)
+                            ).map(groupId => (
                               <TabButton
-                                key={group.id}
-                                isActive={selectedBeanGroupId === group.id}
+                                key={groupId}
+                                isActive={selectedBeanGroupId === groupId}
                                 onClick={() =>
-                                  selectedBeanGroupId !== group.id &&
-                                  onBeanGroupClick?.(group.id)
+                                  selectedBeanGroupId !== groupId &&
+                                  onBeanGroupClick?.(groupId)
                                 }
                                 className="mr-3"
-                                dataTab={group.id}
+                                dataTab={groupId}
                               >
-                                {group.name}
+                                {getMultiValueLabel('group', groupId)}
                               </TabButton>
                             ))}
                         </>

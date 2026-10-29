@@ -145,7 +145,7 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
       />
 
       <SettingSection title="分类">
-        <SettingRow label="筛选模式" isLast>
+        <SettingRow label="筛选模式">
           <SettingSelect
             value={settings.beanFilterStyle ?? 'single'}
             options={[
@@ -155,6 +155,19 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({
             ariaLabel="筛选模式"
             onChange={value =>
               handleChange('beanFilterStyle', value as 'single' | 'multiple')
+            }
+          />
+        </SettingRow>
+        <SettingRow label="分类排序" isLast>
+          <SettingSelect
+            value={settings.beanCategorySort ?? 'count'}
+            options={[
+              { value: 'count', label: '数量' },
+              { value: 'name', label: '名称' },
+            ]}
+            ariaLabel="分类排序"
+            onChange={value =>
+              handleChange('beanCategorySort', value as 'count' | 'name')
             }
           />
         </SettingRow>

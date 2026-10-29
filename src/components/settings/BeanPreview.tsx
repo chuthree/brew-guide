@@ -9,7 +9,10 @@ import {
 } from '../coffee-bean/List/types';
 import ViewSwitcher from '../coffee-bean/List/components/ViewSwitcher';
 import { SettingsOptions } from './Settings';
-import { getBeanDisplayInitial } from '@/lib/utils/beanVarietyUtils';
+import {
+  extractUniqueVarieties,
+  getBeanDisplayInitial,
+} from '@/lib/utils/beanVarietyUtils';
 import {
   calculateBeanSummaryEstimatedCups,
   formatBeanSummaryEstimatedCups,
@@ -26,12 +29,12 @@ interface BeanPreviewProps {
   settings: SettingsOptions;
 }
 
-// 创建示例咖啡豆数据
+// 拼配豆与单品豆共享原生种，让数量排序与名称排序呈现不同顺序。
 const createSampleBeans = (): ExtendedCoffeeBean[] => [
   {
     id: 'preview-bean-2',
     timestamp: Date.now(),
-    name: '耶加雪菲 果丁丁',
+    name: '花香拼配',
     beanType: 'filter',
     price: '168',
     capacity: '200g',
@@ -46,8 +49,14 @@ const createSampleBeans = (): ExtendedCoffeeBean[] => [
       {
         origin: '埃塞俄比亚',
         process: '水洗',
-        variety: '当地原生种',
-        percentage: 100,
+        variety: '原生种',
+        percentage: 50,
+      },
+      {
+        origin: '哥伦比亚',
+        process: '水洗',
+        variety: '卡杜拉',
+        percentage: 50,
       },
     ],
     startDay: 3,
@@ -73,7 +82,7 @@ const createSampleBeans = (): ExtendedCoffeeBean[] => [
       {
         origin: '哥伦比亚',
         process: '水洗',
-        variety: '卡杜拉',
+        variety: '原生种',
         percentage: 100,
       },
     ],
@@ -126,9 +135,7 @@ const BeanPreview: React.FC<BeanPreviewProps> = ({ settings }) => {
           )}
           selectedBeanType="all"
           selectedVariety={null}
-          availableVarieties={sampleBeans.map(
-            bean => bean.blendComponents![0].variety!
-          )}
+          availableVarieties={extractUniqueVarieties(sampleBeans)}
           enabledBeanFieldFilterModes={enabledBeanFieldFilterModes}
           multiFilters={settings.beanFilterStyle === 'multiple' ? {} : undefined}
           availableBeanGroups={settings.coffeeBeanGroups}

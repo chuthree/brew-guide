@@ -246,21 +246,27 @@ export const saveViewModePreference = (v: ViewOption) =>
   saveStringState(MODULE_NAME, 'viewMode', v);
 
 // 排序选项
+// 移除名称排序后，将已保存的旧选项恢复为对应视图的默认排序。
+const getSupportedSortPreference = (key: string, fallback: SortOption) => {
+  const value = getStringState(MODULE_NAME, key, fallback);
+  if (value === 'name_asc' || value === 'name_desc') {
+    saveStringState(MODULE_NAME, key, fallback);
+    return fallback;
+  }
+  return value as SortOption;
+};
+
 export const getSortOptionPreference = () =>
-  getStringState(MODULE_NAME, 'sortOption', 'remaining_days_asc') as SortOption;
+  getSupportedSortPreference('sortOption', 'remaining_days_asc');
 export const saveSortOptionPreference = (v: SortOption) =>
   saveStringState(MODULE_NAME, 'sortOption', v);
 export const getInventorySortOptionPreference = () =>
-  getStringState(
-    MODULE_NAME,
-    'inventorySortOption',
-    'remaining_days_asc'
-  ) as SortOption;
+  getSupportedSortPreference('inventorySortOption', 'remaining_days_asc');
 export const saveInventorySortOptionPreference = (v: SortOption) =>
   saveStringState(MODULE_NAME, 'inventorySortOption', v);
 export const getInventorySortOptionByStatePreference = (s: BeanState) => {
   const def = s === 'green' ? 'last_modified_desc' : 'remaining_days_asc';
-  const v = getStringState(MODULE_NAME, `inventorySortOption_${s}`, def);
+  const v = getSupportedSortPreference(`inventorySortOption_${s}`, def);
   if (s === 'green' && v.includes('remaining_days'))
     return 'last_modified_desc';
   return v as SortOption;
@@ -270,7 +276,7 @@ export const saveInventorySortOptionByStatePreference = (
   v: SortOption
 ) => saveStringState(MODULE_NAME, `inventorySortOption_${s}`, v);
 export const getRankingSortOptionPreference = () =>
-  getStringState(MODULE_NAME, 'rankingSortOption', 'rating_desc') as SortOption;
+  getSupportedSortPreference('rankingSortOption', 'rating_desc');
 export const saveRankingSortOptionPreference = (v: SortOption) =>
   saveStringState(MODULE_NAME, 'rankingSortOption', v);
 export const getRankingBeanTypePreference = () =>

@@ -529,7 +529,6 @@ export const getAvailableSortTypesForView = (
       if (isGreenBean) {
         return [
           SORT_TYPES.LAST_MODIFIED,
-          SORT_TYPES.NAME,
           SORT_TYPES.ROAST_DATE, // 生豆显示为"购买日期"
           SORT_TYPES.REMAINING_AMOUNT,
           SORT_TYPES.PRICE,
@@ -537,14 +536,13 @@ export const getAvailableSortTypesForView = (
       }
       return [
         SORT_TYPES.LAST_MODIFIED,
-        SORT_TYPES.NAME,
         SORT_TYPES.ROAST_DATE,
         SORT_TYPES.REMAINING_DAYS,
         SORT_TYPES.REMAINING_AMOUNT,
         SORT_TYPES.PRICE,
       ];
     case 'ranking':
-      return [SORT_TYPES.RATING, SORT_TYPES.LAST_MODIFIED, SORT_TYPES.NAME];
+      return [SORT_TYPES.RATING, SORT_TYPES.LAST_MODIFIED];
     case 'stats':
       return [
         SORT_TYPES.REMAINING_DAYS,

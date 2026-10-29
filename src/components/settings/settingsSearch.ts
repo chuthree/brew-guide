@@ -412,6 +412,7 @@ export const buildSettingsSearchItems = ({
     items.push(
       ...createRowItems('bean-settings', '咖啡豆', [
         '筛选模式',
+        '分类排序',
         '日期模式',
         '价格',
         '总价',
