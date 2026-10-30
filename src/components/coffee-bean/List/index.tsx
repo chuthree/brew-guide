@@ -2137,7 +2137,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             ? searchFilteredBeans.length + searchFilteredEmptyBeans.length
             : inventoryFilteredBeans.length
         }
-        totalBeans={beans.length}
         totalWeight={calculateTotalWeight(
           isSearching ? searchFilteredBeans : inventoryFilteredBeans
         )}

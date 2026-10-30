@@ -1912,7 +1912,7 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
       selectedDate={selectedDate}
       onDateClick={setSelectedDate}
       availableDates={availableDates}
-      dateRangeLabel={dateRangeLabel}
+      dateRangeLabel={dateRangeLabel || '—'}
       beanStateType={beanStateType}
       onBeanStateTypeChange={onBeanStateTypeChange}
       showBeanStateSwitch={showBeanStateSwitch}
@@ -1998,7 +1998,13 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
         {filterBar}
       </div>
       <div className="scroll-with-bottom-bar min-h-0 flex-1 overflow-y-auto px-6 pt-5">
-        {statsBody}
+        {beans.length === 0 ? (
+          <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
+            [ 有咖啡豆数据后，再来查看吧～ ]
+          </div>
+        ) : (
+          statsBody
+        )}
       </div>
     </div>
   );
@@ -2224,17 +2230,6 @@ const StatsView: React.FC<StatsViewProps> = ({
 
     return beanStateType;
   }, [hasGreenBeans, hasRoastedBeans, beanStateType, enableGreenBeanInventory]);
-
-  // 空状态
-  if (beans.length === 0) {
-    return (
-      <div className="coffee-bean-stats-container bg-neutral-50 dark:bg-neutral-900">
-        <div className="flex h-32 items-center justify-center text-[10px] tracking-widest text-neutral-500 dark:text-neutral-400">
-          [ 有咖啡豆数据后，再来查看吧～ ]
-        </div>
-      </div>
-    );
-  }
 
   // 如果生豆库未启用或只有熟豆，直接显示熟豆统计（独立模式）
   if (!enableGreenBeanInventory || !hasGreenBeans) {

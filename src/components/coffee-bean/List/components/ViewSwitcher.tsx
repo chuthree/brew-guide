@@ -447,7 +447,6 @@ interface ViewSwitcherProps {
   sortOption: SortOption;
   onSortChange: (option: SortOption) => void;
   beansCount: number;
-  totalBeans?: number;
   totalWeight?: string;
   originalTotalWeight?: string;
   rankingBeanType?: BeanType;
@@ -550,7 +549,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   sortOption,
   onSortChange,
   beansCount,
-  totalBeans,
   totalWeight,
   originalTotalWeight,
   rankingBeanType = 'all',
@@ -571,7 +569,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
   setSearchQuery,
   onSearchKeyDown,
   onSearchChange,
-  rankingBeansCount,
+  rankingBeansCount = 0,
   // 榜单各类型豆子数量参数
   rankingEspressoCount = 0,
   rankingFilterCount = 0,
@@ -1124,22 +1122,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     setKeyboardInteraction,
   ]);
 
-  // 统计视图时不显示任何筛选栏
+  // 统计视图使用自身的筛选栏。
   if (viewMode === VIEW_OPTIONS.STATS) {
-    return null;
-  }
-
-  //完全没有数据时不显示筛选栏
-  // 库存视图：开启生豆库时始终显示，否则需要有咖啡豆数据
-  // 榜单视图：没有评分咖啡豆
-  const hasNoData =
-    (viewMode === VIEW_OPTIONS.INVENTORY &&
-      !enableGreenBeanInventory &&
-      (totalBeans === 0 || totalBeans === undefined)) ||
-    (viewMode === VIEW_OPTIONS.RANKING &&
-      (!rankingBeansCount || rankingBeansCount === 0));
-
-  if (hasNoData) {
     return null;
   }
 
@@ -1223,8 +1207,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
                   {showBeanSummary && beanSummaryDetailsText}
                 </span>
               )
-            ) : rankingBeansCount === 0 ? (
-              '' // 当没有评分咖啡豆时不显示任何统计信息
             ) : rankingBeanType === 'all' ? (
               `${rankingBeansCount} 款已评分咖啡豆`
             ) : (
@@ -1237,9 +1219,7 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
       </div>
 
       {/* 榜单标签筛选 - 仅在榜单视图中显示 */}
-      {viewMode === VIEW_OPTIONS.RANKING &&
-        rankingBeansCount &&
-        rankingBeansCount > 0 && (
+      {viewMode === VIEW_OPTIONS.RANKING && (
           <div>
             {/* 整个分类栏容器 - 下边框在这里 */}
             <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">

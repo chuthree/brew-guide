@@ -383,7 +383,11 @@ const CoffeeBeanRanking: React.FC<CoffeeBeanRankingProps> = ({
               </div>
             </div>
           ) : (
-            <div>[ 有咖啡豆数据后，再来查看吧～ ]</div>
+            <div>
+              {ratedBeans.length > 0
+                ? '[ 当前筛选下没有已评分的咖啡豆 ]'
+                : '[ 还没有已评分的咖啡豆 ]'}
+            </div>
           )}
         </div>
       ) : (

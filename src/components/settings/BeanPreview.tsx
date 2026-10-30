@@ -119,7 +119,6 @@ const BeanPreview: React.FC<BeanPreviewProps> = ({ settings }) => {
           sortOption="original"
           onSortChange={() => {}}
           beansCount={sampleBeans.length}
-          totalBeans={sampleBeans.length}
           totalWeight={formatBeanSummaryWeightWithLimit(
             totalRemaining,
             summaryLimit,
