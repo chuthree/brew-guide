@@ -369,6 +369,7 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_http::init())
         .manage(storage::Storage::default())
         .on_page_load(|webview, payload| {
             #[cfg(desktop)]

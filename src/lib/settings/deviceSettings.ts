@@ -1,12 +1,41 @@
 import type { AppSettings } from '@/lib/data/models';
 
-/** 字体大小和安全区域随设备保存，不参与云备份或跨设备同步。 */
+const LOCAL_SYNC_SETTINGS = [
+  's3Sync',
+  'webdavSync',
+  'supabaseSync',
+  'activeSyncType',
+  'supabaseBackupProvider',
+] as const;
+
+/** 连接配置只保存在本机，导出时不携带账号、密码和代理密钥。 */
+export function omitSyncConnectionSettings<T extends Partial<AppSettings>>(
+  settings: T
+): T {
+  const shared = { ...settings };
+  for (const key of LOCAL_SYNC_SETTINGS) delete shared[key];
+  return shared;
+}
+
+export function preserveSyncConnectionSettings<T extends Partial<AppSettings>>(
+  incoming: T,
+  local: Partial<AppSettings>
+): T {
+  const settings = omitSyncConnectionSettings(incoming);
+  for (const key of LOCAL_SYNC_SETTINGS) {
+    if (local[key] !== undefined)
+      Object.assign(settings, { [key]: local[key] });
+  }
+  return settings;
+}
+
+/** 字体大小、安全区域及连接配置随设备保存，不参与跨设备同步。 */
 export function omitDeviceSettings(settings: Partial<AppSettings>) {
   const {
     textZoomLevel: _textZoomLevel,
     safeAreaMargins: _safeAreaMargins,
     ...sharedSettings
-  } = settings;
+  } = omitSyncConnectionSettings(settings);
 
   if (sharedSettings.layoutSettings) {
     const { dataFontSize: _dataFontSize, ...sharedLayout } =
@@ -22,7 +51,10 @@ export function preserveDeviceSettings(
   incoming: Partial<AppSettings>,
   local: Partial<AppSettings>
 ): Partial<AppSettings> {
-  const settings: Partial<AppSettings> = omitDeviceSettings(incoming);
+  const settings: Partial<AppSettings> = preserveSyncConnectionSettings(
+    omitDeviceSettings(incoming),
+    local
+  );
   if (local.textZoomLevel !== undefined) {
     settings.textZoomLevel = local.textZoomLevel;
   }

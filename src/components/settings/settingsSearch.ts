@@ -297,6 +297,7 @@ export const buildSettingsSearchItems = ({
       '提醒频率',
       '下拉同步',
       '同步数据',
+      '自定义代理',
       '引导式配置',
       '数据管理',
       '导入数据',

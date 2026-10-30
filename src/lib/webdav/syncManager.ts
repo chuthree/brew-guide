@@ -11,43 +11,7 @@
 import { WebDAVClient } from './webdavClient';
 import type { WebDAVConfig } from './types';
 import { MetadataManager } from './metadataManager';
-import { BaseSyncManager, IMetadataManager } from '@/lib/sync/BaseSyncManager';
-
-import type { SyncMetadataV2 } from './types';
-
-/**
- * WebDAV 元数据管理器适配器
- * 将 WebDAV 的 MetadataManager 适配到 BaseSyncManager 的接口
- */
-class WebDAVMetadataManagerAdapter implements IMetadataManager {
-  constructor(private manager: MetadataManager) {
-    if (!manager) {
-      throw new Error('MetadataManager 不能为 null');
-    }
-  }
-
-  async getRemoteMetadata(): Promise<SyncMetadataV2 | null> {
-    return await this.manager.getRemoteMetadata();
-  }
-
-  async getLocalMetadata(): Promise<SyncMetadataV2 | null> {
-    return await this.manager.getLocalMetadata();
-  }
-
-  async saveLocalMetadata(metadata: SyncMetadataV2): Promise<void> {
-    if (!metadata) {
-      throw new Error('metadata 不能为 null');
-    }
-    await this.manager.saveLocalMetadata(metadata);
-  }
-
-  async saveRemoteMetadata(metadata: SyncMetadataV2): Promise<void> {
-    if (!metadata) {
-      throw new Error('metadata 不能为 null');
-    }
-    await this.manager.saveRemoteMetadata(metadata);
-  }
-}
+import { BaseSyncManager } from '@/lib/sync/BaseSyncManager';
 
 export class WebDAVSyncManager extends BaseSyncManager {
   private config: WebDAVConfig | null = null;
@@ -111,11 +75,10 @@ export class WebDAVSyncManager extends BaseSyncManager {
 
       console.warn(`📱 [WebDAV] 设备 ID: ${this.deviceId}`);
 
-      const metadataManager = new MetadataManager(
+      this.metadataManager = new MetadataManager(
         this.webdavClient,
         this.deviceId
       );
-      this.metadataManager = new WebDAVMetadataManagerAdapter(metadataManager);
 
       // 仅在需要时测试连接
       if (!skipConnectionTest) {

@@ -4,6 +4,7 @@
  */
 
 import { redactSyncDiagnosticUrl, type SyncDiagnostic } from '@/lib/sync/types';
+import { cloudFetch } from '@/lib/sync/cloudHttp';
 
 export interface S3Config {
   region: string;
@@ -13,6 +14,7 @@ export interface S3Config {
   prefix: string;
   endpoint?: string; // 自定义端点，用于兼容其他S3服务
   forcePathStyle?: boolean; // S3 兼容服务通常需要 Path-Style: /bucket/key
+  proxyUrl?: string;
 }
 
 export interface S3File {
@@ -72,26 +74,14 @@ export class S3Client {
         return await this.testQiniuConnection();
       }
 
-      if (this.isCstCloudEndpoint(this.config.endpoint)) {
-        const writeTestResult = await this.testWriteConnection();
-        this.logSummary('test-connection', {
-          service: 'cstcloud',
-          ok: writeTestResult,
-          method: 'write-test',
-        });
-
-        if (writeTestResult) {
-          return true;
-        }
-      }
-
-      await this.listObjects('', 1);
+      const writeTestResult = await this.testWriteConnection();
       this.logSummary('test-connection', {
         service: 'generic',
-        ok: true,
-        method: 'list-fallback',
+        ok: writeTestResult,
+        method: 'write-test',
+        error: writeTestResult ? undefined : this.lastError,
       });
-      return true;
+      return writeTestResult;
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : String(error);
       console.error('S3连接测试失败:', error);
@@ -167,12 +157,14 @@ export class S3Client {
       const testContent = JSON.stringify({ timestamp: Date.now() });
       const canWrite = await this.uploadFile(testKey, testContent);
 
-      if (!canWrite) {
+      if (canWrite !== true) {
+        this.lastError =
+          typeof canWrite === 'object' ? canWrite.error : '上传连接测试文件失败';
         this.logSummary('test-connection', {
           service: 'qiniu',
           ok: false,
           method: 'write-test',
-          error: '无写入权限，请检查 AccessKey 配置',
+          error: this.lastError,
         });
         return false;
       }
@@ -230,7 +222,7 @@ export class S3Client {
         content
       );
 
-      const response = await fetch(requestUrl, {
+      const response = await this.request(requestUrl, {
         method: 'PUT',
         headers,
         body: content,
@@ -286,7 +278,7 @@ export class S3Client {
 
       const { requestUrl, headers } = await this.prepareRequest('GET', url);
 
-      const response = await fetch(requestUrl, {
+      const response = await this.request(requestUrl, {
         method: 'GET',
         headers,
       });
@@ -349,7 +341,10 @@ export class S3Client {
   ): Promise<{ content: string; etag: string } | null> {
     const url = this.buildObjectUrl(this.getFullKey(key));
     const { requestUrl, headers } = await this.prepareRequest('GET', url);
-    const response = await fetch(requestUrl, { headers, cache: 'no-store' });
+    const response = await this.request(requestUrl, {
+      headers,
+      cache: 'no-store',
+    });
     if (response.status === 404) return null;
     if (!response.ok)
       throw new Error(`读取云端数据失败：HTTP ${response.status}`);
@@ -380,7 +375,7 @@ export class S3Client {
 
       const { requestUrl, headers } = await this.prepareRequest('GET', url);
 
-      const response = await fetch(requestUrl, {
+      const response = await this.request(requestUrl, {
         method: 'GET',
         headers,
       });
@@ -438,8 +433,11 @@ export class S3Client {
   ): Promise<{ key: string; lastModified?: Date }[]> {
     try {
       const files = await this.listObjects(prefix);
+      const configuredPrefix = this.getFullKey('');
       return files.map(f => ({
-        key: f.key,
+        key: f.key.startsWith(configuredPrefix)
+          ? f.key.slice(configuredPrefix.length)
+          : f.key,
         lastModified: f.lastModified,
       }));
     } catch {
@@ -462,7 +460,7 @@ export class S3Client {
         'x-amz-copy-source': copySource,
       });
 
-      const response = await fetch(requestUrl, {
+      const response = await this.request(requestUrl, {
         method: 'PUT',
         headers,
       });
@@ -494,7 +492,7 @@ export class S3Client {
 
       const { requestUrl, headers } = await this.prepareRequest('DELETE', url);
 
-      const response = await fetch(requestUrl, {
+      const response = await this.request(requestUrl, {
         method: 'DELETE',
         headers,
       });
@@ -520,34 +518,6 @@ export class S3Client {
     }
   }
 
-  /**
-   * 检查文件是否存在
-   */
-  async fileExists(key: string): Promise<boolean> {
-    try {
-      const { response, fullKey, baseUrl } = await this.headObject(key);
-      const exists = response.ok;
-
-      this.logSummary('head', {
-        key,
-        fullKey,
-        url: baseUrl,
-        status: response.status,
-        statusText: response.statusText,
-        ok: exists,
-        presigned: response.url !== baseUrl,
-      });
-
-      return exists;
-    } catch (_error) {
-      this.logSummary('head', {
-        key,
-        ok: false,
-      });
-      return false;
-    }
-  }
-
   private async headObject(
     key: string
   ): Promise<{ response: Response; fullKey: string; baseUrl: string }> {
@@ -557,7 +527,7 @@ export class S3Client {
 
     const { requestUrl, headers } = await this.prepareRequest('HEAD', url);
 
-    const response = await fetch(requestUrl, {
+    const response = await this.request(requestUrl, {
       method: 'HEAD',
       headers,
     });
@@ -711,23 +681,13 @@ export class S3Client {
     );
 
     return {
-      requestUrl: this.shouldUseS3Proxy(url) ? this.buildS3ProxyUrl(url) : url,
+      requestUrl: url,
       headers,
     };
   }
 
-  private shouldUseS3Proxy(url: string): boolean {
-    try {
-      return this.isCstCloudEndpoint(new URL(url).hostname);
-    } catch {
-      return false;
-    }
-  }
-
-  private buildS3ProxyUrl(url: string): string {
-    const proxyBase =
-      process.env.NEXT_PUBLIC_S3_PROXY_URL || 'https://cors.chu3.top/s3?url=';
-    return `${proxyBase}${encodeURIComponent(url)}`;
+  private request(url: string, init: RequestInit): Promise<Response> {
+    return cloudFetch(url, init, this.config.proxyUrl);
   }
 
   private isQiniu(): boolean {

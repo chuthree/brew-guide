@@ -60,7 +60,6 @@ function setup() {
     listFilesSimple: vi.fn().mockResolvedValue([]),
     testConnection: vi.fn(),
     downloadFile: vi.fn(),
-    fileExists: vi.fn(),
     copyFile: vi.fn(),
   };
   return { client, manager: new Manager(client) };

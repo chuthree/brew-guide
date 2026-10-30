@@ -33,6 +33,7 @@ export interface IS3Config extends ISyncConfig {
   readonly bucketName: string;
   readonly prefix?: string;
   readonly endpoint?: string;
+  readonly proxyUrl?: string;
 }
 
 /**
@@ -44,6 +45,7 @@ export interface IWebDAVConfig extends ISyncConfig {
   readonly username: string;
   readonly password: string;
   readonly remotePath?: string;
+  readonly proxyUrl?: string;
 }
 
 /**

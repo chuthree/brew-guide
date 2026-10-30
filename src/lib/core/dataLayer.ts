@@ -10,6 +10,10 @@ import {
  */
 
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import {
+  omitSyncConnectionSettings,
+  preserveSyncConnectionSettings,
+} from '@/lib/settings/deviceSettings';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
@@ -198,7 +202,7 @@ export async function exportAllData(): Promise<{
   }
 
   return {
-    settings: useSettingsStore.getState().settings,
+    settings: omitSyncConnectionSettings(useSettingsStore.getState().settings),
     coffeeBeans: await coffeeBeanImageRepository.exportAll(),
     brewingNotes: await brewingNoteImageRepository.exportAll(),
     customEquipments: useCustomEquipmentStore.getState().equipments,
@@ -230,7 +234,10 @@ async function importAllDataInMutation(data: {
     tasks.push(
       callStoreActionInMutation(
         useSettingsStore.getState().importSettings,
-        data.settings
+        preserveSyncConnectionSettings(
+          data.settings,
+          useSettingsStore.getState().settings
+        )
       )
     );
   }

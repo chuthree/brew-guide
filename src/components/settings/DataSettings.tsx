@@ -742,6 +742,8 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
       {/* WebDAV 配置教程 */}
       <WebDAVTutorialModal
+        proxyUrl={webdavSettings.proxyUrl}
+        onProxyChange={value => handleWebDAVSettingChange('proxyUrl', value)}
         isOpen={showWebDAVTutorial}
         onClose={() => setShowWebDAVTutorial(false)}
         onComplete={(config: {

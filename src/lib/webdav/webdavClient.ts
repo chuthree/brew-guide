@@ -5,11 +5,11 @@
 
 import { redactSyncDiagnosticUrl, type SyncDiagnostic } from '@/lib/sync/types';
 import type { WebDAVConfig, WebDAVFile } from './types';
+import { cloudFetch } from '@/lib/sync/cloudHttp';
 
 export class WebDAVClient {
   private config: WebDAVConfig;
   private authHeader: string;
-  private readonly corsProxy: string;
   private verifiedDirs = new Set<string>();
   private lastError: string | null = null;
   private lastDiagnostic: SyncDiagnostic | null = null;
@@ -18,8 +18,6 @@ export class WebDAVClient {
     this.config = config;
     // 创建基础认证头
     this.authHeader = `Basic ${btoa(`${config.username}:${config.password}`)}`;
-    // WebDAV 始终通过统一的 CORS 代理访问，避免端侧再分叉。
-    this.corsProxy = 'https://cors.chu3.top/raw?url=';
   }
 
   getLastError(): string | null {
@@ -127,132 +125,39 @@ export class WebDAVClient {
    * 测试连接
    */
   async testConnection(): Promise<boolean> {
-    // 清空之前的日志
-
+    const key = `.brew-guide-connection-test-${crypto.randomUUID()}.json`;
+    const content = JSON.stringify({ test: key });
+    let uploaded = false;
     try {
       this.lastError = null;
 
-      // 首先检查 WebDAV 服务器根路径是否可访问
-      const baseUrl = this.config.url.endsWith('/')
-        ? this.config.url.slice(0, -1)
-        : this.config.url;
-      const baseProxiedUrl = this.getProxiedUrl(baseUrl);
-
-      console.log(`[WebDAV] 测试连接到: ${baseUrl}`);
-
-      const baseResponse = await fetch(baseProxiedUrl, {
-        method: 'PROPFIND',
-        headers: {
-          Authorization: this.authHeader,
-          Depth: '0',
-        },
-      });
-
-      console.log(`[WebDAV] HTTP 响应状态: ${baseResponse.status}`);
-
-      // 读取响应内容
-      const responseText = await baseResponse.text();
-      console.log(`[WebDAV] 响应内容长度: ${responseText.length} 字节`);
-
-      // 🔧 检查代理是否返回了错误（代理会把错误包装成 JSON）
-      const proxyError = this.checkProxyError(responseText);
-      if (proxyError) {
-        console.log(`[WebDAV] 代理返回错误: ${proxyError}`);
-        this.lastError = `代理错误: ${proxyError}`;
-        return false;
-      }
-
-      // 🔧 优先检查响应内容是否为有效的 WebDAV 成功响应（必须包含 multistatus）
-      // 如果包含 multistatus，说明连接成功，即使响应中包含一些警告或错误信息也应该认为成功
-      const isValidWebDAV = responseText.includes('multistatus');
-
-      // 🔧 坚果云等服务器在根目录返回 OperationNotAllowed 是正常的
-      // 这只是说明根目录不支持某些操作，但认证是成功的
-      const isOperationNotAllowed = responseText.includes(
-        'OperationNotAllowed'
-      );
-
-      if (isValidWebDAV) {
-        console.log('[WebDAV] 服务器连接成功，响应为有效的 WebDAV 格式');
-      } else if (isOperationNotAllowed) {
-        // 坚果云根目录返回 OperationNotAllowed，但这不代表认证失败
-        // HTTP 200 + OperationNotAllowed = 认证成功，但当前位置不允许操作
-        console.log(
-          '[WebDAV] 根目录返回 OperationNotAllowed，认证成功但需要使用子目录'
+      const result = await this.uploadFile(key, content);
+      if (result !== true) {
+        throw new Error(
+          typeof result === 'object' ? result.error : '连接测试写入失败'
         );
-      } else {
-        // 只有在响应不是有效的 WebDAV 格式且不是 OperationNotAllowed 时，才检查错误
-        // 🔧 检查是否为 WebDAV 错误响应（如坚果云的 ObjectNotFound）
-        const webdavError = this.checkWebDAVError(responseText);
-        if (webdavError) {
-          console.log(`[WebDAV] WebDAV 错误: ${webdavError}`);
-          this.lastError = `WebDAV 错误: ${webdavError}`;
-          return false;
-        }
-
-        // 检查是否有认证错误响应
-        const hasAuthError =
-          responseText.includes('401') ||
-          responseText.includes('403') ||
-          responseText.includes('Unauthorized') ||
-          responseText.includes('Forbidden');
-
-        if (hasAuthError) {
-          console.log(`[WebDAV] 错误: 响应包含认证错误`);
-          console.log(
-            `[WebDAV] 响应内容片段: ${responseText.substring(0, 500)}`
-          );
-          this.lastError = '响应包含认证错误，请检查账号、密码和访问权限';
-          return false;
-        }
-
-        console.log(`[WebDAV] 错误: 响应不是有效的 WebDAV 格式`);
-        console.log(`[WebDAV] 响应内容片段: ${responseText.substring(0, 500)}`);
-        this.lastError = '响应不是有效的 WebDAV 格式';
-        return false;
       }
-
-      // 然后检查并创建远程路径
-      if (this.config.remotePath) {
-        const remotePath = this.config.remotePath.endsWith('/')
-          ? this.config.remotePath.slice(0, -1)
-          : this.config.remotePath;
-
-        console.log(`[WebDAV] 检查远程路径: ${remotePath}`);
-        const dirCreated = await this.ensureDirectoryExists(remotePath);
-
-        if (!dirCreated) {
-          console.log(`[WebDAV] 错误: 远程路径检查/创建失败: ${remotePath}`);
-          this.lastError = `无法访问或创建远程目录: ${remotePath}`;
-          this.logSummary('test-connection', {
-            url: baseUrl,
-            remotePath: this.config.remotePath,
-            ok: false,
-            error: '无法访问或创建远程目录',
-          });
-          return false;
-        }
-
-        console.log(`[WebDAV] 远程路径已就绪: ${remotePath}`);
+      uploaded = true;
+      const downloaded = await this.downloadFile(key);
+      if (downloaded === null) {
+        throw new Error(this.lastDiagnostic?.error || '连接测试读取失败');
       }
-
-      console.log('[WebDAV] 连接测试成功');
-      this.logSummary('test-connection', {
-        url: baseUrl,
-        remotePath: this.config.remotePath,
-        ok: true,
-      });
-
+      if (downloaded !== content) {
+        throw new Error('连接测试读取失败，请检查代理是否原样转发数据');
+      }
       return true;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      console.log(`[WebDAV] 错误: 连接测试异常 - ${errorMsg}`);
       this.lastError = errorMsg;
       this.logSummary('test-connection', {
         ok: false,
         error: errorMsg,
       });
       return false;
+    } finally {
+      if (uploaded && !(await this.deleteFile(key))) {
+        console.warn('[WebDAV] 连接测试文件清理失败');
+      }
     }
   }
 
@@ -265,30 +170,8 @@ export class WebDAVClient {
     expectedEtag?: string | null
   ): Promise<boolean | { success: false; error: string }> {
     try {
-      // 🔧 修复：上传前先确保完整的目录路径存在
-      // 需要确保 remotePath 存在
-      if (this.config.remotePath) {
-        const remotePath = this.config.remotePath.endsWith('/')
-          ? this.config.remotePath.slice(0, -1)
-          : this.config.remotePath;
-        await this.ensureDirectoryExists(remotePath);
-      }
-
-      // 如果文件在子目录中，还需要创建子目录
-      const pathParts = filename.split('/');
-      if (pathParts.length > 1) {
-        const dirPath = pathParts.slice(0, -1).join('/');
-        const remotePath = this.config.remotePath
-          .replace(/^\/+/, '')
-          .replace(/\/+$/, '');
-        const fullDirPath = remotePath ? `${remotePath}/${dirPath}` : dirPath;
-        await this.ensureDirectoryExists(fullDirPath);
-      }
-
       const url = this.buildUrl(filename);
-      const proxiedUrl = this.getProxiedUrl(url);
-
-      const response = await fetch(proxiedUrl, {
+      const request: RequestInit = {
         method: 'PUT',
         headers: {
           ...(expectedEtag === null
@@ -302,7 +185,26 @@ export class WebDAVClient {
             : 'application/octet-stream',
         },
         body: content,
-      });
+      };
+      let response = await this.request(url, request);
+      // 已有目录无需探测；仅在服务器报告路径缺失时尝试建目录。
+      if (response.status === 404 || response.status === 409) {
+        const directory = [
+          this.config.remotePath,
+          ...filename.split('/').slice(0, -1),
+        ]
+          .filter(Boolean)
+          .join('/')
+          .replace(/^\/+|\/+$/g, '');
+        if (directory) {
+          if (!(await this.ensureDirectoryExists(directory))) {
+            throw new Error(
+              `无法自动创建目录，请先在云盘创建 ${directory} 后重试`
+            );
+          }
+          response = await this.request(url, request);
+        }
+      }
 
       const success =
         response.ok || response.status === 201 || response.status === 204;
@@ -354,9 +256,8 @@ export class WebDAVClient {
   async downloadFile(filename: string): Promise<string | null> {
     try {
       const url = this.buildUrl(filename);
-      const proxiedUrl = this.getProxiedUrl(url);
 
-      const response = await fetch(proxiedUrl, {
+      const response = await this.request(url, {
         method: 'GET',
         headers: {
           Authorization: this.authHeader,
@@ -403,7 +304,7 @@ export class WebDAVClient {
   async readSyncFile(
     filename: string
   ): Promise<{ content: string; etag: string } | null> {
-    const response = await fetch(this.getProxiedUrl(this.buildUrl(filename)), {
+    const response = await this.request(this.buildUrl(filename), {
       headers: { Authorization: this.authHeader },
       cache: 'no-store',
     });
@@ -423,58 +324,13 @@ export class WebDAVClient {
   }
 
   /**
-   * 服务器端复制文件（不消耗客户端带宽）
+   * 使用普通读写复制，避免要求代理支持 COPY。
    */
   async copyFile(source: string, destination: string): Promise<boolean> {
     try {
-      // 🔧 复制前确保目标目录存在（如 backups/）
-      const pathParts = destination.split('/');
-      if (pathParts.length > 1) {
-        const dirPath = pathParts.slice(0, -1).join('/');
-        const remotePath = this.config.remotePath
-          .replace(/^\/+/, '')
-          .replace(/\/+$/, '');
-        const fullDirPath = remotePath ? `${remotePath}/${dirPath}` : dirPath;
-        await this.ensureDirectoryExists(fullDirPath);
-      }
-
-      const sourceUrl = this.buildUrl(source);
-      const destUrl = this.buildUrl(destination);
-      const proxiedUrl = this.getProxiedUrl(sourceUrl);
-
-      const response = await fetch(proxiedUrl, {
-        method: 'COPY',
-        headers: {
-          Authorization: this.authHeader,
-          Destination: destUrl,
-          Overwrite: 'T',
-        },
-      });
-
-      const ok =
-        response.ok || response.status === 201 || response.status === 204;
-      let responseSnippet: string | undefined;
-      let errorDetail: string | undefined;
-      if (!ok) {
-        try {
-          responseSnippet = (await response.clone().text()).slice(0, 300);
-          errorDetail = this.getResponseErrorDetail(response, responseSnippet);
-        } catch {
-          errorDetail = `HTTP ${response.status} ${response.statusText}`;
-        }
-      }
-
-      this.logSummary('copy', {
-        source,
-        destination,
-        url: sourceUrl,
-        status: response.status,
-        statusText: response.statusText,
-        ok,
-        error: errorDetail,
-        errorSnippet: responseSnippet,
-      });
-      return ok;
+      const content = await this.downloadFile(source);
+      if (content === null) return false;
+      return (await this.uploadFile(destination, content)) === true;
     } catch (error) {
       console.error('复制文件失败:', error);
       return false;
@@ -487,9 +343,8 @@ export class WebDAVClient {
   async listFiles(path: string = ''): Promise<WebDAVFile[]> {
     try {
       const url = this.buildUrl(path);
-      const proxiedUrl = this.getProxiedUrl(url);
 
-      const response = await fetch(proxiedUrl, {
+      const response = await this.request(url, {
         method: 'PROPFIND',
         headers: {
           Authorization: this.authHeader,
@@ -565,9 +420,8 @@ export class WebDAVClient {
   async deleteFile(filename: string): Promise<boolean> {
     try {
       const url = this.buildUrl(filename);
-      const proxiedUrl = this.getProxiedUrl(url);
 
-      const response = await fetch(proxiedUrl, {
+      const response = await this.request(url, {
         method: 'DELETE',
         headers: {
           Authorization: this.authHeader,
@@ -587,101 +441,6 @@ export class WebDAVClient {
       console.error('删除文件失败:', error);
       this.logSummary('delete', {
         filename,
-        ok: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return false;
-    }
-  }
-
-  /**
-   * 检查文件是否存在
-   * 使用 PROPFIND 方法代替 HEAD，因为 CORS 代理可能不支持 HEAD 请求
-   */
-  async fileExists(filename: string): Promise<boolean> {
-    try {
-      const url = this.buildUrl(filename);
-      const proxiedUrl = this.getProxiedUrl(url);
-
-      // 使用 PROPFIND 检查文件是否存在，Depth: 0 只获取目标资源本身
-      const response = await fetch(proxiedUrl, {
-        method: 'PROPFIND',
-        headers: {
-          Authorization: this.authHeader,
-          Depth: '0',
-          'Content-Type': 'application/xml; charset=utf-8',
-        },
-        body: `<?xml version="1.0" encoding="utf-8" ?>
-<D:propfind xmlns:D="DAV:">
-  <D:prop>
-    <D:resourcetype/>
-  </D:prop>
-</D:propfind>`,
-      });
-
-      // WebDAV PROPFIND 成功返回 207 Multi-Status
-      const exists = response.ok || response.status === 207;
-      let responseSnippet: string | undefined;
-      let errorDetail: string | undefined;
-      if (!exists) {
-        try {
-          responseSnippet = (await response.clone().text()).slice(0, 300);
-          errorDetail = this.getResponseErrorDetail(response, responseSnippet);
-        } catch {
-          errorDetail = `HTTP ${response.status} ${response.statusText}`;
-        }
-      }
-
-      this.logSummary('fileExists', {
-        filename,
-        url,
-        status: response.status,
-        statusText: response.statusText,
-        ok: exists,
-        path: url,
-        error: errorDetail,
-        errorSnippet: responseSnippet,
-      });
-
-      return exists;
-    } catch (error) {
-      this.logSummary('fileExists', {
-        filename,
-        ok: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return false;
-    }
-  }
-
-  /**
-   * 创建目录（如果需要）
-   */
-  async createDirectory(path: string): Promise<boolean> {
-    try {
-      const url = this.buildUrl(path);
-      const proxiedUrl = this.getProxiedUrl(url);
-
-      const response = await fetch(proxiedUrl, {
-        method: 'MKCOL',
-        headers: {
-          Authorization: this.authHeader,
-        },
-      });
-
-      this.logSummary('mkcol', {
-        path,
-        url,
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok || response.status === 201 || response.status === 405, // 405 表示目录已存在
-      });
-
-      return response.ok || response.status === 201 || response.status === 405;
-    } catch (error) {
-      console.error('创建目录失败:', error);
-      this.logSummary('mkcol', {
-        path,
         ok: false,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -716,9 +475,8 @@ export class WebDAVClient {
 
     try {
       const url = this.buildDirectoryUrl(path);
-      const proxiedUrl = this.getProxiedUrl(url);
 
-      const checkResponse = await fetch(proxiedUrl, {
+      const checkResponse = await this.request(url, {
         method: 'PROPFIND',
         headers: {
           Authorization: this.authHeader,
@@ -766,9 +524,8 @@ export class WebDAVClient {
           if (this.verifiedDirs.has(currentPath)) continue;
 
           const currentUrl = this.buildDirectoryUrl(currentPath);
-          const currentProxiedUrl = this.getProxiedUrl(currentUrl);
 
-          const mkcolResponse = await fetch(currentProxiedUrl, {
+          const mkcolResponse = await this.request(currentUrl, {
             method: 'MKCOL',
             headers: { Authorization: this.authHeader },
           });
@@ -859,11 +616,8 @@ export class WebDAVClient {
     }
   }
 
-  /**
-   * 获取代理后的 URL
-   */
-  private getProxiedUrl(originalUrl: string): string {
-    return `${this.corsProxy}${encodeURIComponent(originalUrl)}`;
+  private request(url: string, init: RequestInit): Promise<Response> {
+    return cloudFetch(url, init, this.config.proxyUrl);
   }
 
   /**
@@ -1035,16 +789,11 @@ export class WebDAVClient {
         return 'PUT';
       case 'download':
         return 'GET';
-      case 'copy':
-        return 'COPY';
       case 'delete':
         return 'DELETE';
       case 'list':
-      case 'fileExists':
       case 'mkdir-check':
-      case 'test-connection':
         return 'PROPFIND';
-      case 'mkcol':
       case 'mkdir':
         return 'MKCOL';
       default:

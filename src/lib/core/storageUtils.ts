@@ -48,7 +48,10 @@ export const getStorageType = (key: string): StorageType => {
   }
 
   // 处理自定义方案的键模式 (customMethods_[equipmentId])
-  if (key.startsWith('customMethods_')) {
+  if (
+    key.startsWith('customMethods_') ||
+    key.startsWith('cloud-sync-base-v1:')
+  ) {
     return StorageType.INDEXED_DB;
   }
 
@@ -109,6 +112,14 @@ export const StorageUtils = coordinateStoreActions(
 
         // 其他使用IndexedDB的键
         await legacySettingsRepository.set(key, value);
+        // 完整同步基线可能包含图片，成功迁入大容量存储后清除旧偏好副本。
+        if (key.startsWith('cloud-sync-base-v1:')) {
+          if (Capacitor.isNativePlatform()) {
+            await Preferences.remove({ key });
+          } else if (typeof window !== 'undefined') {
+            localStorage.removeItem(key);
+          }
+        }
       } else {
         // 对于小型数据，使用Preferences/localStorage
         if (Capacitor.isNativePlatform()) {
@@ -182,6 +193,15 @@ export const StorageUtils = coordinateStoreActions(
         } else {
           // 其他使用IndexedDB的键
           const data = await legacySettingsRepository.get(key);
+          // 兼容曾保存在 Preferences/localStorage 中的同步基线。
+          if (data == null && key.startsWith('cloud-sync-base-v1:')) {
+            if (Capacitor.isNativePlatform()) {
+              return (await Preferences.get({ key })).value;
+            }
+            return typeof window !== 'undefined'
+              ? localStorage.getItem(key)
+              : null;
+          }
           return data ?? null;
         }
       } else {
@@ -217,6 +237,13 @@ export const StorageUtils = coordinateStoreActions(
         } else {
           // 其他使用IndexedDB的键
           await legacySettingsRepository.delete(key);
+          if (key.startsWith('cloud-sync-base-v1:')) {
+            if (Capacitor.isNativePlatform()) {
+              await Preferences.remove({ key });
+            } else if (typeof window !== 'undefined') {
+              localStorage.removeItem(key);
+            }
+          }
         }
       } else {
         // 对于小型数据，从Preferences/localStorage删除

@@ -34,6 +34,7 @@ export const defaultS3Settings: S3SyncSettings = {
   bucketName: '',
   prefix: 'brew-guide-data/',
   endpoint: '',
+  proxyUrl: '',
   syncMode: 'manual',
   enablePullToSync: true,
 };
@@ -44,6 +45,7 @@ export const defaultWebDAVSettings: WebDAVSyncSettings = {
   username: '',
   password: '',
   remotePath: 'brew-guide-data/',
+  proxyUrl: '',
   syncMode: 'manual',
   enablePullToSync: true,
 };
@@ -76,6 +78,8 @@ export function normalizeS3Settings(
     ...(sanitized as Partial<S3SyncSettings>),
     syncMode: 'manual', // 强制手动模式
     endpoint: (sanitized.endpoint as string) || '',
+    proxyUrl:
+      typeof sanitized.proxyUrl === 'string' ? sanitized.proxyUrl.trim() : '',
   };
 }
 
@@ -94,6 +98,8 @@ export function normalizeWebDAVSettings(
     ...defaultWebDAVSettings,
     ...(sanitized as Partial<WebDAVSyncSettings>),
     url: (sanitized.url as string) || defaultWebDAVSettings.url,
+    proxyUrl:
+      typeof sanitized.proxyUrl === 'string' ? sanitized.proxyUrl.trim() : '',
     syncMode: 'manual', // 强制手动模式
   };
 }

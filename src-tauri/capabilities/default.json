@@ -5,6 +5,10 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://**" }, { "url": "http://**" }]
+    },
     "core:window:allow-start-dragging",
     {
       "identifier": "opener:allow-open-url",

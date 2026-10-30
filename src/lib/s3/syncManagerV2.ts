@@ -5,32 +5,7 @@
 
 import { S3Client, S3Config } from './s3Client';
 import { MetadataManager } from './metadataManager';
-import { BaseSyncManager, IMetadataManager } from '@/lib/sync/BaseSyncManager';
-
-import type { SyncMetadataV2 } from './types';
-
-/**
- * S3 元数据管理器适配器
- */
-class S3MetadataManagerAdapter implements IMetadataManager {
-  constructor(private manager: MetadataManager) {}
-
-  async getRemoteMetadata(): Promise<SyncMetadataV2 | null> {
-    return await this.manager.getRemoteMetadata();
-  }
-
-  async getLocalMetadata(): Promise<SyncMetadataV2 | null> {
-    return await this.manager.getLocalMetadata();
-  }
-
-  async saveLocalMetadata(metadata: SyncMetadataV2): Promise<void> {
-    await this.manager.saveLocalMetadata(metadata);
-  }
-
-  async saveRemoteMetadata(metadata: SyncMetadataV2): Promise<void> {
-    await this.manager.saveRemoteMetadata(metadata);
-  }
-}
+import { BaseSyncManager } from '@/lib/sync/BaseSyncManager';
 
 export class S3SyncManager extends BaseSyncManager {
   private config: S3Config | null = null;
@@ -78,8 +53,7 @@ export class S3SyncManager extends BaseSyncManager {
       ]);
       this.deviceId = await this.getOrCreateDeviceId();
 
-      const metadataManager = new MetadataManager(this.s3Client, this.deviceId);
-      this.metadataManager = new S3MetadataManagerAdapter(metadataManager);
+      this.metadataManager = new MetadataManager(this.s3Client, this.deviceId);
 
       if (!skipConnectionTest) {
         const connected = await this.s3Client.testConnection();

@@ -39,7 +39,7 @@ export class BackupManager {
       }
 
       console.warn(
-        `✅ [${this.serviceName}] 备份创建成功（服务器端复制）: ${backupKey}`
+        `✅ [${this.serviceName}] 备份创建成功: ${backupKey}`
       );
       return { timestamp: Date.now(), key: backupKey, hash };
     } catch (error) {
@@ -100,7 +100,12 @@ export class BackupManager {
 
     for (const backup of toDelete) {
       try {
-        await client.deleteFile(backup.key);
+        if (!(await client.deleteFile(backup.key))) {
+          console.warn(
+            `⚠️ [${this.serviceName}] 删除旧备份失败: ${backup.key}`
+          );
+          continue;
+        }
         console.warn(`🗑️ [${this.serviceName}] 已删除旧备份: ${backup.key}`);
       } catch (error) {
         console.error(

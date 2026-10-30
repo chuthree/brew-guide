@@ -10,6 +10,7 @@ import { SettingInput, SettingRow } from '../atomic';
 import { makeSettingRowSearchId } from '../settingsSearch';
 import React, { useState } from 'react';
 import { S3SyncManager } from '@/lib/s3/syncManagerV2';
+import { CloudProxySetting } from './shared/CloudProxySetting';
 import type {
   SyncResult,
   SyncMetadataV2 as SyncMetadata,
@@ -95,13 +96,25 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
     settings.accessKeyId && settings.secretAccessKey && settings.bucketName
   );
   const effectiveStatus: typeof status =
-    !enabled || !isConfigComplete
+    !enabled ||
+    !isConfigComplete ||
+    (status === 'connected' && !settings.lastConnectionSuccess)
       ? 'disconnected'
       : status === 'disconnected' && settings.lastConnectionSuccess
         ? 'connected'
         : status;
   const effectiveError = enabled ? error : '';
-  const activeSyncManager = enabled && isConfigComplete ? syncManager : null;
+  const activeSyncManager =
+    enabled && isConfigComplete && settings.lastConnectionSuccess
+      ? syncManager
+      : null;
+
+  const handleProxyChange = (value: string) => {
+    onSettingChange('proxyUrl', value);
+    setSyncManager(null);
+    setStatus('disconnected');
+    setError('');
+  };
 
   // ============================================
   // 自动连接
@@ -161,6 +174,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         bucketName: settings.bucketName,
         prefix: settings.prefix,
         endpoint: settings.endpoint || undefined,
+        proxyUrl: settings.proxyUrl,
       });
 
       if (connected) {
@@ -208,6 +222,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
             bucketName: settings.bucketName,
             prefix: settings.prefix,
             endpoint: settings.endpoint || undefined,
+            proxyUrl: settings.proxyUrl,
           },
           skipTest
         );
@@ -327,6 +342,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
             bucketName: settings.bucketName,
             prefix: settings.prefix,
             endpoint: settings.endpoint || undefined,
+            proxyUrl: settings.proxyUrl,
           },
           true
         );
@@ -393,6 +409,11 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
       {/* 配置表单 */}
       {enabled && expanded && (
         <>
+          <CloudProxySetting
+            value={settings.proxyUrl}
+            onChange={handleProxyChange}
+          />
+
           {/* 服务地址 (Endpoint) */}
           <SettingRow
             label="服务地址 (Endpoint)"

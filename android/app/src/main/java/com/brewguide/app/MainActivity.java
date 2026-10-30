@@ -17,6 +17,7 @@ public class MainActivity extends BridgeActivity {
   protected void onCreate(android.os.Bundle savedInstanceState) {
     registerPlugin(BrewGuideGalleryPlugin.class);
     registerPlugin(BrewGuideDocumentPlugin.class);
+    registerPlugin(BrewGuideSyncHttpPlugin.class);
     registerPlugin(com.brewguide.app.provider.BrewGuideDatabasePlugin.class);
     registerPlugin(com.brewguide.app.provider.BrewGuideProviderPlugin.class);
 

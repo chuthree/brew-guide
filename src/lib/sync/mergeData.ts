@@ -1,13 +1,6 @@
 import { omitDeviceSettings } from '@/lib/settings/deviceSettings';
 
 type Data = Record<string, unknown>;
-export const LOCAL_SYNC_SETTINGS = [
-  's3Sync',
-  'webdavSync',
-  'supabaseSync',
-  'activeSyncType',
-  'supabaseBackupProvider',
-] as const;
 export interface SyncDocument {
   data: Data;
   [key: string]: unknown;
@@ -67,7 +60,6 @@ export function parseSyncDocument(content: string): SyncDocument {
   // 连接凭据与设备设置不参与合并，也不能被另一台设备覆盖。
   if (isObject(data.brewGuideSettings)) {
     const settings = omitDeviceSettings(data.brewGuideSettings);
-    for (const key of LOCAL_SYNC_SETTINGS) delete (settings as Data)[key];
     data.brewGuideSettings = settings;
   }
   for (const key of recordCollections) {

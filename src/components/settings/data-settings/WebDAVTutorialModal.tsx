@@ -7,6 +7,7 @@ import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import { WebDAVSyncManager } from '@/lib/webdav/syncManager';
+import { CloudProxySetting } from './shared/CloudProxySetting';
 import { handleExternalUrlClick } from '@/lib/utils/openExternalUrl';
 
 // 图标导入
@@ -20,6 +21,8 @@ import CheerIcon from '@public/images/icons/ui/cheer.svg';
 type TutorialStep = 'intro' | 'download' | 'register' | 'config' | 'complete';
 
 interface WebDAVTutorialModalProps {
+  proxyUrl?: string;
+  onProxyChange: (value: string) => void;
   isOpen: boolean;
   onClose: () => void;
   onComplete: (config: {
@@ -33,6 +36,8 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
   isOpen,
   onClose,
   onComplete,
+  proxyUrl,
+  onProxyChange,
 }) => {
   // 当前步骤
   const [currentStep, setCurrentStep] = useState<TutorialStep>('intro');
@@ -108,6 +113,7 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
         username: formData.username,
         password: formData.password,
         remotePath: '',
+        proxyUrl,
       });
 
       if (connected) {
@@ -119,7 +125,10 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
         });
         goToNextStep();
       } else {
-        showToast({ type: 'error', title: '连接失败，请检查配置信息' });
+        showToast({
+          type: 'error',
+          title: manager.getLastError() || '连接失败，请检查配置信息',
+        });
       }
     } catch (error) {
       console.error('WebDAV 连接测试失败:', error);
@@ -130,7 +139,7 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
     } finally {
       setIsConnecting(false);
     }
-  }, [formData, goToNextStep, onComplete]);
+  }, [formData, proxyUrl, goToNextStep, onComplete]);
 
   // 介绍步骤内容
   const introContent = (
@@ -274,6 +283,8 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
       <div className="flex flex-col gap-2">
         {/* 配置表单 */}
         <div className="mb-2 space-y-3">
+          <CloudProxySetting value={proxyUrl} onChange={onProxyChange} />
+
           {/* 服务器地址 */}
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">

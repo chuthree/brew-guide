@@ -56,14 +56,7 @@ export class MetadataManager {
    */
   async getRemoteMetadata(): Promise<SyncMetadataV2 | null> {
     try {
-      // 检查文件是否存在
-      const exists = await this.client.fileExists(METADATA_REMOTE_KEY);
-      if (!exists) {
-        console.log('远程元数据文件不存在，可能是首次同步');
-        return null;
-      }
-
-      // 下载元数据文件
+      // 直接读取，避免下载前再查询一次文件是否存在。
       const content = await this.client.downloadFile(METADATA_REMOTE_KEY);
       if (!content) {
         console.warn('远程元数据文件为空');

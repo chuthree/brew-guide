@@ -192,6 +192,7 @@ export interface AppSettings {
     bucketName: string;
     prefix: string;
     endpoint?: string;
+    proxyUrl?: string;
     syncMode: 'manual';
     lastConnectionSuccess?: boolean;
     enablePullToSync?: boolean;
@@ -204,6 +205,7 @@ export interface AppSettings {
     username: string;
     password: string;
     remotePath: string;
+    proxyUrl?: string;
     syncMode: 'manual';
     lastConnectionSuccess?: boolean;
     enablePullToSync?: boolean;

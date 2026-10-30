@@ -40,7 +40,6 @@ export interface IStorageClient {
   readSyncFile(key: string): Promise<{ content: string; etag: string } | null>;
   downloadFile(key: string): Promise<string | null>;
   deleteFile(key: string): Promise<boolean>;
-  fileExists(key: string): Promise<boolean>;
   listFilesSimple(
     prefix: string
   ): Promise<{ key: string; lastModified?: Date }[]>;
@@ -210,7 +209,7 @@ export abstract class BaseSyncManager {
     const upload = !remote || canonical(remote.data) !== canonical(merged.data);
     const download = canonical(local.data) !== canonical(merged.data);
 
-    // 保存两侧原始快照，导入中断时仍可通过现有备份历史恢复。
+    // 保存两侧业务数据快照，剔除连接凭据后仍可用于恢复。
     if (upload || download) {
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
       for (const [side, snapshot] of [
@@ -220,7 +219,7 @@ export abstract class BaseSyncManager {
         if (!snapshot) continue;
         const backup = await this.client!.uploadFile(
           `backups/backup-${stamp}-${side}-${crypto.randomUUID()}.json`,
-          snapshot
+          JSON.stringify(parseSyncDocument(snapshot))
         );
         if (backup !== true) throw new Error('同步前备份失败，未覆盖数据');
       }
@@ -324,7 +323,7 @@ export abstract class BaseSyncManager {
     addLog('主文件上传成功');
 
     // 2. 通过服务器端复制创建备份（不消耗客户端带宽）
-    addLog('正在创建备份（服务器端复制）...');
+    addLog('正在创建备份...');
     const lastBackupHash = remoteMetadata?.backupHistory?.slice(-1)[0]?.hash;
     const backupCreated =
       await this.getBackupManager().performBackupAfterUpload(
@@ -384,8 +383,10 @@ export abstract class BaseSyncManager {
           result.errors.push(`下载 ${key} 失败`);
           continue;
         }
+        addLog(`下载完成，正在导入: ${key}`);
         await this.saveFileContent(key, content);
         if (key === 'brew-guide-data.json' || key === 'brew-guide-data') {
+          addLog('导入完成，正在保存同步基线');
           await Storage.set(this.baselineKey, content);
         }
         result.downloadedFiles++;
@@ -394,6 +395,13 @@ export abstract class BaseSyncManager {
         const errorMsg = error instanceof Error ? error.message : String(error);
         result.errors.push(`下载 ${key} 失败: ${errorMsg}`);
       }
+    }
+
+    if (result.errors.length > 0) {
+      result.success = false;
+      result.message = `下载未完成，有 ${result.errors.length} 个错误`;
+      addLog('下载或本地保存失败，未更新同步元数据');
+      return;
     }
 
     // 更新元数据

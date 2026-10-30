@@ -10,6 +10,7 @@ import { SettingInput, SettingRow } from '../atomic';
 import { makeSettingRowSearchId } from '../settingsSearch';
 import React, { useState } from 'react';
 import { WebDAVSyncManager } from '@/lib/webdav/syncManager';
+import { CloudProxySetting } from './shared/CloudProxySetting';
 import type { SyncResult as WebDAVSyncResult } from '@/lib/webdav/types';
 import type { BackupRecord } from '@/lib/s3/types';
 import { useSyncSection } from '@/lib/hooks/useSyncSection';
@@ -94,13 +95,25 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     settings.url && settings.username && settings.password
   );
   const effectiveStatus: typeof status =
-    !enabled || !isConfigComplete
+    !enabled ||
+    !isConfigComplete ||
+    (status === 'connected' && !settings.lastConnectionSuccess)
       ? 'disconnected'
       : status === 'disconnected' && settings.lastConnectionSuccess
         ? 'connected'
         : status;
   const effectiveError = enabled ? error : '';
-  const activeSyncManager = enabled && isConfigComplete ? syncManager : null;
+  const activeSyncManager =
+    enabled && isConfigComplete && settings.lastConnectionSuccess
+      ? syncManager
+      : null;
+
+  const handleProxyChange = (value: string) => {
+    onSettingChange('proxyUrl', value);
+    setSyncManager(null);
+    setStatus('disconnected');
+    setError('');
+  };
 
   // ============================================
   // 状态初始化（不自动连接，连接在用户操作时按需建立）
@@ -156,6 +169,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       username: config.username,
       password: config.password,
       remotePath: settings.remotePath,
+      proxyUrl: settings.proxyUrl,
     });
     setSyncManager(manager);
 
@@ -184,6 +198,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         username: settings.username,
         password: settings.password,
         remotePath: settings.remotePath,
+        proxyUrl: settings.proxyUrl,
       });
 
       if (connected) {
@@ -230,6 +245,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
             username: settings.username,
             password: settings.password,
             remotePath: settings.remotePath,
+            proxyUrl: settings.proxyUrl,
           },
           skipTest
         );
@@ -334,6 +350,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
             username: settings.username,
             password: settings.password,
             remotePath: settings.remotePath,
+            proxyUrl: settings.proxyUrl,
           },
           true
         );
@@ -400,6 +417,11 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       {/* 配置表单 */}
       {enabled && expanded && (
         <>
+          <CloudProxySetting
+            value={settings.proxyUrl}
+            onChange={handleProxyChange}
+          />
+
           {/* URL */}
           <SettingRow
             label="服务器地址"
@@ -530,6 +552,8 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
 
       {/* WebDAV 配置教程 */}
       <WebDAVTutorialModal
+        proxyUrl={settings.proxyUrl}
+        onProxyChange={handleProxyChange}
         isOpen={showTutorial}
         onClose={() => setShowTutorial(false)}
         onComplete={handleTutorialComplete}

@@ -299,19 +299,6 @@ function normalizeSettingsFingerprintData(
   const appSettings = normalized.appSettings as
     | Record<string, unknown>
     | undefined;
-  const supabaseSync = appSettings?.supabaseSync as
-    | Record<string, unknown>
-    | undefined;
-
-  if (appSettings && supabaseSync) {
-    const {
-      lastConnectionSuccess: _lastConnectionSuccess,
-      lastSyncTime: _lastSyncTime,
-      ...stableSupabaseSync
-    } = supabaseSync;
-    appSettings.supabaseSync = stableSupabaseSync;
-  }
-
   if (appSettings) {
     normalized.appSettings = omitDeviceSettings(appSettings);
   }

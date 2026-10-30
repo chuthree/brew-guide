@@ -37,6 +37,7 @@ repositories {
 }
 
 dependencies {
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
     implementation "org.mozilla:rhino:1.8.0"
     implementation "androidx.exifinterface:exifinterface:1.3.7"
     implementation fileTree(include: ['*.jar'], dir: 'libs')

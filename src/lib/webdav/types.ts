@@ -26,6 +26,8 @@ export interface WebDAVConfig {
   password: string;
   /** 远程目录路径 */
   remotePath: string;
+  /** 浏览器自定义代理；原生端忽略此设置 */
+  proxyUrl?: string;
 }
 
 /**

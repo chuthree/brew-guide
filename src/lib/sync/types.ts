@@ -154,6 +154,10 @@ function isSensitiveQueryParam(key: string): boolean {
     normalized.includes('credential') ||
     normalized.includes('token') ||
     normalized.includes('secret') ||
+    normalized === 'key' ||
+    normalized === 'api_key' ||
+    normalized === 'apikey' ||
+    normalized === 'password' ||
     normalized === 'accesskeyid' ||
     normalized === 'access_key' ||
     normalized === 'url'

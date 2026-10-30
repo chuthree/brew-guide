@@ -85,6 +85,7 @@ class UnifiedSyncService {
               bucketName: settings.s3Sync.bucketName,
               prefix: settings.s3Sync.prefix,
               endpoint: settings.s3Sync.endpoint,
+              proxyUrl: settings.s3Sync.proxyUrl,
             }
           : null;
       case 'webdav':
@@ -94,6 +95,7 @@ class UnifiedSyncService {
               username: settings.webdavSync.username,
               password: settings.webdavSync.password,
               remotePath: settings.webdavSync.remotePath,
+              proxyUrl: settings.webdavSync.proxyUrl,
             }
           : null;
       default:

@@ -39,6 +39,8 @@ import { markExpectedCoreDataMutation } from '@/lib/app/dataIntegrity';
 import {
   omitDeviceSettings,
   preserveDeviceSettings,
+  omitSyncConnectionSettings,
+  preserveSyncConnectionSettings,
 } from '@/lib/settings/deviceSettings';
 
 // 检查是否在浏览器环境中
@@ -67,7 +69,7 @@ interface ImportData {
 }
 
 interface ExportAllDataOptions {
-  /** 跨设备备份排除设备设置；本地导出默认保留完整设置。 */
+  /** 跨设备备份排除设备设置；普通导出也不包含同步连接配置。 */
   excludeDeviceSettings?: boolean;
   pretty?: boolean;
   collectDiagnostics?: boolean;
@@ -204,7 +206,7 @@ export const DataManager = {
           const settingsFromStore = getSettingsStore().settings;
           exportData.data[key] = options.excludeDeviceSettings
             ? omitDeviceSettings(settingsFromStore)
-            : settingsFromStore;
+            : omitSyncConnectionSettings(settingsFromStore);
           continue;
         }
 
@@ -439,6 +441,25 @@ export const DataManager = {
           };
         }
 
+        if (Object.hasOwn(importData.data, 'customPresets')) {
+          const customPresets = importData.data.customPresets;
+          if (
+            customPresets === null ||
+            typeof customPresets !== 'object' ||
+            Array.isArray(customPresets)
+          ) {
+            throw new Error('customPresets 格式无效，应为对象');
+          }
+          for (const key of CUSTOM_PRESETS_KEYS) {
+            if (
+              Object.hasOwn(customPresets, key) &&
+              !Array.isArray((customPresets as Record<string, unknown>)[key])
+            ) {
+              throw new Error(`customPresets.${key} 格式无效，应为数组`);
+            }
+          }
+        }
+
         // Native storage needs the complete image-bearing backup payload checked
         // before the first destructive table replacement. Dexie deliberately
         // keeps its existing import behavior through its no-op validator.
@@ -560,16 +581,11 @@ export const DataManager = {
                   valueToSave as Partial<_SettingsOptions>,
                   getSettingsStore().settings
                 );
-                if (options.expectedSyncData) {
-                  const { LOCAL_SYNC_SETTINGS } =
-                    await import('@/lib/sync/mergeData');
-                  const localSettings = getSettingsStore().settings;
-                  for (const key of LOCAL_SYNC_SETTINGS) {
-                    (valueToSave as Record<string, unknown>)[key] =
-                      localSettings[key];
-                  }
-                }
               }
+              valueToSave = preserveSyncConnectionSettings(
+                valueToSave as Partial<_SettingsOptions>,
+                getSettingsStore().settings
+              );
 
               const settingsObj = valueToSave as any;
 
@@ -675,18 +691,16 @@ export const DataManager = {
           typeof importData.data.customMethodsByEquipment === 'object'
         ) {
           // 清除现有方案数据
-          if (options.expectedSyncData) {
-            const existing = await customMethodRepository.list();
-            for (const { equipmentId } of existing) {
-              await callStoreActionInMutation(
-                storage.remove,
-                `customMethods_${equipmentId}`
-              );
-            }
-            for (const key of await storage.keys()) {
-              if (key.startsWith('customMethods_'))
-                await callStoreActionInMutation(storage.remove, key);
-            }
+          const existing = await customMethodRepository.list();
+          for (const { equipmentId } of existing) {
+            await callStoreActionInMutation(
+              storage.remove,
+              `customMethods_${equipmentId}`
+            );
+          }
+          for (const key of await storage.keys()) {
+            if (key.startsWith('customMethods_'))
+              await callStoreActionInMutation(storage.remove, key);
           }
           await customMethodRepository.clear();
 
@@ -725,11 +739,9 @@ export const DataManager = {
             string,
             unknown
           >;
-          if (options.expectedSyncData) {
-            for (const key of CUSTOM_PRESETS_KEYS) {
-              if (!(key in customPresets))
-                localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
-            }
+          for (const key of CUSTOM_PRESETS_KEYS) {
+            if (!(key in customPresets))
+              localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
           }
           for (const presetType of Object.keys(customPresets)) {
             if (CUSTOM_PRESETS_KEYS.includes(presetType)) {
