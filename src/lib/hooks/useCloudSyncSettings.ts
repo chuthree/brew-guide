@@ -5,6 +5,7 @@
  */
 
 import type { SettingsOptions } from '@/lib/data/models';
+import { DEFAULT_CLOUD_PROXY_URL } from '@/lib/sync/settings';
 
 // ============================================
 // 类型定义
@@ -34,7 +35,7 @@ export const defaultS3Settings: S3SyncSettings = {
   bucketName: '',
   prefix: 'brew-guide-data/',
   endpoint: '',
-  proxyUrl: '',
+  proxyUrl: DEFAULT_CLOUD_PROXY_URL,
   syncMode: 'manual',
   enablePullToSync: true,
 };
@@ -45,7 +46,7 @@ export const defaultWebDAVSettings: WebDAVSyncSettings = {
   username: '',
   password: '',
   remotePath: 'brew-guide-data/',
-  proxyUrl: '',
+  proxyUrl: DEFAULT_CLOUD_PROXY_URL,
   syncMode: 'manual',
   enablePullToSync: true,
 };
@@ -79,7 +80,9 @@ export function normalizeS3Settings(
     syncMode: 'manual', // 强制手动模式
     endpoint: (sanitized.endpoint as string) || '',
     proxyUrl:
-      typeof sanitized.proxyUrl === 'string' ? sanitized.proxyUrl.trim() : '',
+      typeof sanitized.proxyUrl === 'string'
+        ? sanitized.proxyUrl.trim()
+        : DEFAULT_CLOUD_PROXY_URL,
   };
 }
 
@@ -99,7 +102,9 @@ export function normalizeWebDAVSettings(
     ...(sanitized as Partial<WebDAVSyncSettings>),
     url: (sanitized.url as string) || defaultWebDAVSettings.url,
     proxyUrl:
-      typeof sanitized.proxyUrl === 'string' ? sanitized.proxyUrl.trim() : '',
+      typeof sanitized.proxyUrl === 'string'
+        ? sanitized.proxyUrl.trim()
+        : DEFAULT_CLOUD_PROXY_URL,
     syncMode: 'manual', // 强制手动模式
   };
 }

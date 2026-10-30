@@ -1,5 +1,6 @@
 import { CapacitorHttp, registerPlugin } from '@capacitor/core';
 import { detectAppRuntime } from '@/lib/app/runtime';
+import { DEFAULT_CLOUD_PROXY_URL } from './settings';
 
 interface NativeHttpResponse {
   status: number;
@@ -102,7 +103,7 @@ export async function cloudFetch(
     );
   }
 
-  const proxy = proxyUrl?.trim();
+  const proxy = (proxyUrl ?? DEFAULT_CLOUD_PROXY_URL).trim();
   if (!proxy) throw new Error('请填写自定义代理');
   requireSecureUrl(proxy);
   const requestUrl = proxy.includes('{url}')

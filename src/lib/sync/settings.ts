@@ -1,6 +1,8 @@
 import type { SettingsOptions } from '@/lib/data/models';
 import type { CloudProvider } from './types';
 
+export const DEFAULT_CLOUD_PROXY_URL = 'https://cors.chu3.top/raw?url=';
+
 export type ManualSyncProvider = Exclude<CloudProvider, 'supabase'>;
 type ConcreteManualSyncProvider = Exclude<ManualSyncProvider, 'none'>;
 

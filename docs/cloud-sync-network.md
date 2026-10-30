@@ -5,7 +5,7 @@ WebDAV 和 S3 共用 `src/lib/sync/cloudHttp.ts`：
 - Android：通过应用内 OkHttp 插件直连，支持 `PROPFIND`、`MKCOL`、`COPY` 等 WebDAV 方法。
 - iOS：通过 CapacitorHttp 直连。
 - Tauri 桌面端：通过 HTTP 插件直连。权限允许用户配置 HTTP/HTTPS 云存储地址。
-- 浏览器及 PWA：由用户填写自己的代理，未填写时不能连接。
+- 浏览器及 PWA：默认预填应用代理，也可自定义；清空后不能连接。
 
 原生端忽略代理设置，不回退到公共代理。原生网络能力需要重新打包安装应用，仅更新网页资源不能为旧壳添加 Android/Tauri 插件。原生请求不自动跟随重定向，服务地址应填写最终地址，避免重定向改变 WebDAV 方法或破坏 S3 签名。
 
@@ -19,9 +19,9 @@ WebDAV、S3 的云存储和代理地址要求 HTTPS，仅本机 localhost/127.0.
 
 ## 浏览器配置
 
-应用不再内置 `cors.chu3.top` 或读取 `NEXT_PUBLIC_S3_PROXY_URL`。旧配置没有 `proxyUrl` 时，需要先设置自定义代理，或改用原生应用。
+浏览器默认预填 `https://cors.chu3.top/raw?url=`，也可修改为其他代理。不再读取 `NEXT_PUBLIC_S3_PROXY_URL`。旧配置缺少 `proxyUrl` 时使用默认地址；主动清空后需重新填写才能连接。原生端仍直接连接云存储。
 
-自定义代理分别保存在 WebDAV / S3 设置的 `proxyUrl` 中，随应用设置持久化和导入导出。支持两种格式：
+自定义代理分别保存在 WebDAV / S3 设置的 `proxyUrl` 中，仅在本机持久化，不参与导入导出。支持两种格式：
 
 ```text
 https://proxy.example/raw?url=
