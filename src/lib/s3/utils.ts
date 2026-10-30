@@ -10,20 +10,20 @@ import type { FileMetadata } from './types';
 export async function calculateHash(
   data: string | ArrayBuffer
 ): Promise<string> {
-  try {
-    const buffer =
-      typeof data === 'string'
-        ? new TextEncoder().encode(data)
-        : new Uint8Array(data);
-
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch (error) {
-    console.error('计算哈希失败:', error);
-    // 返回一个基于内容长度和时间戳的后备值
-    return `fallback-${data.toString().length}-${Date.now()}`;
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) {
+    throw new Error(
+      '云同步需要 Web Crypto，请使用 HTTPS 地址或原生应用；手机通过局域网 HTTP 地址访问时无法同步'
+    );
   }
+  const buffer =
+    typeof data === 'string'
+      ? new TextEncoder().encode(data)
+      : new Uint8Array(data);
+
+  const hashBuffer = await subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**

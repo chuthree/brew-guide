@@ -116,8 +116,11 @@ describe('safe cloud sync', () => {
       etag: '"v1"',
     });
     manager.local = document('local');
-    client.uploadFile.mockImplementation(async (key: string) =>
-      key.startsWith('.brew-guide-sync-check-') ? false : true
+    client.uploadFile.mockImplementation(
+      async (key: string, _content: string, expectedEtag?: string | null) =>
+        key.startsWith('.brew-guide-sync-check-') && expectedEtag !== undefined
+          ? false
+          : true
     );
     expect((await manager.sync()).success).toBe(true);
     expect(client.uploadFile).toHaveBeenCalledWith(

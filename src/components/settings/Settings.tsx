@@ -54,6 +54,7 @@ import {
   ShieldCheck,
   Bell,
   Cloud,
+  RefreshCw,
   Upload,
   Download,
   X,
@@ -605,15 +606,35 @@ const Settings: React.FC<SettingsProps> = ({
           className="absolute right-6 flex items-center gap-2"
           data-sync-menu
         >
+          <button
+            type="button"
+            aria-label="同步数据"
+            title="同步数据"
+            onClick={() => {
+              setShowSyncMenu(false);
+              setTimeout(() => performQuickSync('auto'), 250);
+            }}
+            disabled={isSyncing || !showSyncMenu}
+            className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-[transform,opacity,background-color] ease-out hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+              showSyncMenu && !isSyncing
+                ? 'translate-x-0 opacity-100'
+                : 'pointer-events-none translate-x-4 opacity-0'
+            }`}
+            style={{ transitionDuration: '150ms' }}
+          >
+            <RefreshCw className="size-5" aria-hidden="true" />
+          </button>
           {/* 上传按钮 - 从右侧滑入 */}
           <button
             type="button"
+            aria-label="上传数据"
+            title="上传数据"
             onClick={() => {
               setShowSyncMenu(false);
               // 延迟执行同步，等待菜单收回动画完成
               setTimeout(() => performQuickSync('upload'), 250);
             }}
-            disabled={isSyncing}
+            disabled={isSyncing || !showSyncMenu}
             className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-[transform,opacity,background-color] ease-out hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
               showSyncMenu && !isSyncing
                 ? 'translate-x-0 opacity-100'
@@ -626,12 +647,14 @@ const Settings: React.FC<SettingsProps> = ({
           {/* 下载按钮 - 从右侧滑入 */}
           <button
             type="button"
+            aria-label="下载数据"
+            title="下载数据"
             onClick={() => {
               setShowSyncMenu(false);
               // 延迟执行同步，等待菜单收回动画完成
               setTimeout(() => performQuickSync('download'), 250);
             }}
-            disabled={isSyncing}
+            disabled={isSyncing || !showSyncMenu}
             className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-[transform,opacity,background-color] ease-out hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
               showSyncMenu && !isSyncing
                 ? 'translate-x-0 opacity-100'
@@ -644,6 +667,10 @@ const Settings: React.FC<SettingsProps> = ({
           {/* 云图标/叉号/加载动画切换按钮 */}
           <button
             type="button"
+            aria-label={
+              isSyncing ? '同步中' : showSyncMenu ? '关闭同步菜单' : '云同步'
+            }
+            aria-expanded={showSyncMenu}
             onClick={() => !isSyncing && setShowSyncMenu(!showSyncMenu)}
             disabled={isSyncing}
             className={`flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-[transform,background-color] duration-150 ease-out hover:bg-neutral-200 active:scale-95 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 ${isSyncing ? 'cursor-default' : ''}`}

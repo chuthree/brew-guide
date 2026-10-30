@@ -40,6 +40,7 @@ import { EditableParams } from '@/lib/hooks/useBrewingParameters';
 import { MethodType } from '@/lib/types/method';
 import CustomMethodFormModal from '@/components/method/forms/CustomMethodFormModal';
 import NavigationBar from '@/components/layout/NavigationBar';
+import DesktopGlobalSearch from '@/components/layout/DesktopGlobalSearch';
 import PullToSync from '@/components/layout/PullToSync';
 import NavigationSection from '@/components/layout/NavigationSection';
 import {
@@ -57,7 +58,7 @@ import {
   coffeeBeanImageRepository,
   legacySettingsRepository,
 } from '@/lib/data/repositories';
-import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
+import { selectIsSyncing, useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
 import Onboarding from '@/components/onboarding/Onboarding';
@@ -354,6 +355,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const isSupabaseSyncActive = useSyncStatusStore(
     state => state.supabaseSyncProgress.active
   );
+  const isCloudSyncBusy = useSyncStatusStore(selectIsSyncing);
   const NAVIGATION_COLLAPSED_STORAGE_KEY = 'navigationCollapsed';
   const [isNavigationCollapsed, setIsNavigationCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -4104,6 +4106,31 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   return (
     <>
+      <DesktopGlobalSearch
+        syncDisabled={
+          isCloudSyncBusy || isTimerRunning ||
+          (activeMainTab === '冲煮' &&
+            (activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'))
+        }
+        settings={settings}
+        customEquipments={customEquipments}
+        onSelectBean={(bean, searchQuery) => {
+          handleMainTabClick('咖啡豆');
+          setShowHistory(false);
+          window.dispatchEvent(
+            new CustomEvent('beanDetailOpened', {
+              detail: { bean, searchQuery },
+            })
+          );
+        }}
+        onSelectNote={payload => {
+          handleMainTabClick('笔记');
+          setShowHistory(true);
+          window.dispatchEvent(
+            new CustomEvent('noteDetailOpened', { detail: payload })
+          );
+        }}
+      />
       {/* 主页面内容 - 应用转场动画 */}
       <div
         ref={setPullSyncIndicatorHost}

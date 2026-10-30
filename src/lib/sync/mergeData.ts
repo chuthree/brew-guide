@@ -53,6 +53,8 @@ export function parseSyncDocument(content: string): SyncDocument {
     throw new Error('同步文件格式无效，缺少 data 对象');
   }
   const data = { ...document.data };
+  // 提醒开关和日程随本机保存，忽略旧云端文件中的副本。
+  delete data.backupReminderSettings;
   for (const key of ['customMethodsByEquipment', 'customPresets']) {
     if (data[key] === undefined) data[key] = {};
     if (!isObject(data[key])) throw new Error(`${key} 格式无效`);

@@ -233,7 +233,9 @@ export class S3Client {
       if (!response.ok) {
         const responseText = await response.text();
         errorSnippet = responseText.slice(0, 300);
-        console.error('❌ 上传失败，响应内容:', responseText.substring(0, 500));
+        // 412 是条件写入的正常拒绝，由同步层区分安全探测和真实冲突。
+        if (response.status !== 412)
+          console.error('❌ 上传失败，响应内容:', responseText.substring(0, 500));
         errorDetail = this.formatHttpError(response, responseText);
       }
 

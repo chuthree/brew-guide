@@ -201,6 +201,8 @@ export const DataManager = {
       // 获取数据
       const storage = await getStorage();
       for (const key of APP_DATA_KEYS) {
+        if (options.excludeDeviceSettings && key === 'backupReminderSettings')
+          continue;
         // 特殊处理 brewGuideSettings - 从 settingsStore 获取
         if (key === 'brewGuideSettings') {
           const settingsFromStore = getSettingsStore().settings;
@@ -549,6 +551,8 @@ export const DataManager = {
         };
 
         for (const key of APP_DATA_KEYS) {
+          if (options.preserveDeviceSettings && key === 'backupReminderSettings')
+            continue;
           if (importData.data[key] !== undefined) {
             let valueToSave = importData.data[key];
 

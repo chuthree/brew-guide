@@ -20,46 +20,16 @@ import {
 } from '@/lib/brewing/parameters';
 import EquipmentBar from '@/components/equipment/EquipmentBar';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
-import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
+import { selectIsSyncing, useSyncStatusStore } from '@/lib/stores/syncStatusStore';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import {
   useScrollToSelected,
   useScrollBorder,
 } from '@/lib/equipment/useScrollToSelected';
-import DesktopGlobalSearch from '@/components/layout/DesktopGlobalSearch';
 import { NavigationSettingsButton } from '@/components/layout/NavigationControls';
 
-import { Equal, ArrowLeft, ChevronsUpDown } from 'lucide-react';
+import { Equal, ArrowLeft, ChevronsUpDown, RefreshCw } from 'lucide-react';
 
-// Apple 风格的加载指示器 - 多条线段围成一圈
-const AppleSpinner: React.FC<{ className?: string }> = ({ className = '' }) => {
-  const lines = 8;
-  return (
-    <div className={`relative ${className}`}>
-      {Array.from({ length: lines }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute top-1/2 left-1/2 h-[30%] w-[8%] origin-[center_170%] rounded-full bg-current"
-          style={{
-            transform: `translateX(-50%) translateY(-170%) rotate(${i * (360 / lines)}deg)`,
-            opacity: 1 - (i / lines) * 0.75,
-            animation: `apple-spinner ${lines * 0.1}s linear infinite`,
-            animationDelay: `${-i * 0.1}s`,
-          }}
-        />
-      ))}
-      <style jsx>{`
-        @keyframes apple-spinner {
-          0% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0.25;
-          }
-        }
-      `}</style>
-    </div>
-  );
-};
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import {
   COFFEE_BEAN_VIEW_ORDER,
@@ -423,18 +393,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     settings.showCoffeeBeanSelectionStep
   );
 
-  // 获取同步状态（只在同步时显示转圈）
-  const syncStatus = useSyncStatusStore(state => state.status);
-  const syncProvider = useSyncStatusStore(state => state.provider);
-  const isInitialSyncing = useSyncStatusStore(state => state.isInitialSyncing);
-  const supabaseSyncProgress = useSyncStatusStore(
-    state => state.supabaseSyncProgress
-  );
-
-  // 判断是否正在同步
-  const isSyncing =
-    syncStatus === 'syncing' || isInitialSyncing || supabaseSyncProgress.active;
-  const showHeaderSyncSpinner = syncProvider === 'supabase' && isSyncing;
+  const isSyncing = useSyncStatusStore(selectIsSyncing);
 
   const isDesktopBackLayout = Boolean(canGoBack() && onBackClick);
   const showDesktopTopTabs = !isDesktopBackLayout;
@@ -962,50 +921,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
         width: isDesktopLayout && width ? `${width}px` : '100%',
       }}
     >
-      <React.Fragment>
-        {activeMainTab !== '冲煮' && (
-          <div
-            key="desktop-global-search"
-            className="hidden overflow-hidden md:block"
-          >
-            <DesktopGlobalSearch
-              enabled={true}
-              settings={settings}
-              customEquipments={customEquipments}
-              onSelectBean={(bean, searchQuery) => {
-                handleMainTabClick('咖啡豆');
-                window.dispatchEvent(
-                  new CustomEvent('beanDetailOpened', {
-                    detail: {
-                      bean,
-                      searchQuery,
-                    },
-                  })
-                );
-              }}
-              onSelectNote={({
-                note,
-                equipmentName,
-                beanUnitPrice,
-                beanInfo,
-              }) => {
-                handleMainTabClick('笔记');
-                window.dispatchEvent(
-                  new CustomEvent('noteDetailOpened', {
-                    detail: {
-                      note,
-                      equipmentName,
-                      beanUnitPrice,
-                      beanInfo,
-                    },
-                  })
-                );
-              }}
-            />
-          </div>
-        )}
-      </React.Fragment>
-
       {/* 修改：创建一个固定高度的容器，用于包含默认头部和替代头部 */}
       {/* 移动端固定头部占位，桌面端使用常规流式布局 */}
       <div className="relative min-h-7.5 w-full md:static md:min-h-0">
@@ -1052,13 +967,20 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                   {/* 设置入口按钮图标 - 扩大触碰区域 */}
                   <NavigationSettingsButton
                     placement="sidebar"
-                    title={canGoBack() && onBackClick ? '返回' : '设置'}
+                    title={
+                      canGoBack() && onBackClick
+                        ? '返回'
+                        : isSyncing
+                          ? '正在同步，点击打开设置'
+                          : '设置'
+                    }
                     ariaLabel={canGoBack() && onBackClick ? '返回' : '设置'}
+                    ariaBusy={isSyncing}
                     onClick={handleTitleClick}
                   >
                     <AnimatePresence mode="popLayout" initial={false}>
                       <motion.div
-                        key={showHeaderSyncSpinner ? 'spinner' : 'icon'}
+                        key={isSyncing ? 'spinner' : 'icon'}
                         initial={
                           animateNavigation
                             ? { opacity: 0, scale: 0.5, filter: 'blur(4px)' }
@@ -1076,8 +998,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
                         }}
                         className="absolute inset-0 flex items-center justify-center"
                       >
-                        {showHeaderSyncSpinner ? (
-                          <AppleSpinner className="h-3.5 w-3.5" />
+                        {isSyncing ? (
+                          reduceMotion ? (
+                            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                          ) : (
+                            <LoadingSpinner className="h-3.5 w-3.5" />
+                          )
                         ) : canGoBack() && onBackClick ? (
                           <ArrowLeft className="h-4 w-4" />
                         ) : (

@@ -13,6 +13,7 @@ interface NavigationSettingsButtonProps {
   placement?: ControlPlacement;
   title?: string;
   ariaLabel?: string;
+  ariaBusy?: boolean;
   className?: string;
 }
 
@@ -46,11 +47,13 @@ export const NavigationSettingsButton: React.FC<
   placement = 'sidebar',
   title = '设置',
   ariaLabel = title,
+  ariaBusy,
   className = '',
 }) => (
   <button
     type="button"
     aria-label={ariaLabel}
+    aria-busy={ariaBusy}
     title={title}
     onClick={onClick}
     onPointerEnter={onPointerEnter}

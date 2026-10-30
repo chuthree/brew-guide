@@ -8,6 +8,10 @@ import React, {
   useState,
 } from 'react';
 import { Command } from 'cmdk';
+import { RefreshCw, Upload, Download } from 'lucide-react';
+import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
+import type { SyncDirection } from '@/lib/sync/types';
+import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import type { CustomEquipment, BrewingNote } from '@/lib/core/config';
 import type { SettingsOptions } from '@/components/settings/Settings';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
@@ -41,14 +45,13 @@ interface BeanSearchItem {
 interface NoteSearchItem {
   id: string;
   title: string;
-  subtitle: string;
   dateLabel: string;
   searchText: string;
   payload: NoteDetailPayload;
 }
 
 interface DesktopGlobalSearchProps {
-  enabled: boolean;
+  syncDisabled?: boolean;
   settings: SettingsOptions;
   customEquipments: CustomEquipment[];
   onSelectBean: (bean: CoffeeBean, searchQuery: string) => void;
@@ -102,14 +105,34 @@ const toDesktopDate = (timestamp: number): string => {
   return `${date.getFullYear()}年${month}月${day}日`;
 };
 
-const isDesktopViewport = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia('(min-width: 768px)').matches;
-
 const MAX_IDLE_RESULTS = 36;
 const MAX_SEARCH_RESULTS = 120;
 const MAX_IDLE_EMPTY_RESULTS = 12;
 const MAX_SEARCH_EMPTY_RESULTS = 60;
+
+const SYNC_ACTIONS = [
+  {
+    direction: 'auto',
+    label: '同步数据',
+    description: '双向合并',
+    searchText: '同步数据 云同步 双向合并 sync',
+    icon: RefreshCw,
+  },
+  {
+    direction: 'upload',
+    label: '上传数据',
+    description: '本机覆盖云端',
+    searchText: '上传数据 云同步 本机覆盖云端 upload sync',
+    icon: Upload,
+  },
+  {
+    direction: 'download',
+    label: '下载数据',
+    description: '云端覆盖本机',
+    searchText: '下载数据 云同步 云端覆盖本机 download sync',
+    icon: Download,
+  },
+] as const;
 
 const formatBeanNumber = (value: string | undefined): string =>
   !value
@@ -199,46 +222,23 @@ const isChangeRecordNote = (note: BrewingNote): boolean => {
 };
 
 const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
-  enabled,
+  syncDisabled = false,
   settings,
   customEquipments,
   onSelectBean,
   onSelectNote,
 }) => {
-  const [searchState, setSearchState] = useState(() => ({
-    enabled,
-    open: false,
-    query: '',
-  }));
-  const open =
-    enabled && searchState.enabled === enabled ? searchState.open : false;
-  const query =
-    enabled && searchState.enabled === enabled ? searchState.query : '';
-  const setOpen = useCallback(
-    (value: React.SetStateAction<boolean>) => {
-      setSearchState(current => {
-        const currentOpen = current.enabled === enabled ? current.open : false;
-        const nextOpen =
-          typeof value === 'function' ? value(currentOpen) : value;
-        return {
-          enabled,
-          open: nextOpen,
-          query: current.enabled === enabled ? current.query : '',
-        };
-      });
-    },
-    [enabled]
-  );
-  const setQuery = useCallback(
-    (value: string) => {
-      setSearchState(current => ({
-        enabled,
-        open: current.enabled === enabled ? current.open : false,
-        query: value,
-      }));
-    },
-    [enabled]
-  );
+  const {
+    status: cloudSyncStatus,
+    isSyncing,
+    performSync,
+  } = useCloudSyncConnection(settings);
+  const [syncConfirmation, setSyncConfirmation] = useState<{
+    direction: 'upload' | 'download';
+    open: boolean;
+  }>({ direction: 'upload', open: false });
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
 
   const beans = useCoffeeBeanStore(state => state.beans);
@@ -250,23 +250,20 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!enabled) return;
-      if (!isDesktopViewport()) return;
-      if (!(event.metaKey || event.ctrlKey)) return;
-      if (event.key.toLowerCase() !== 'k') return;
-
-      event.preventDefault();
-      setOpen(prev => !prev);
+      if (syncConfirmation.open) return;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setOpen(prev => !prev);
+      } else if (open && event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+        setQuery('');
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [enabled, setOpen]);
-
-  useEffect(() => {
-    if (enabled) return;
-    setSearchState({ enabled, open: false, query: '' });
-  }, [enabled]);
+  }, [open, syncConfirmation.open]);
 
   useEffect(() => {
     if (!open) return;
@@ -279,29 +276,6 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
       document.body.style.overflow = previousOverflow;
     };
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      setOpen(false);
-      setQuery('');
-    };
-    const onResize = () => {
-      if (isDesktopViewport()) return;
-      setOpen(false);
-      setQuery('');
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [open, setOpen, setQuery]);
 
   const buildBeanItem = useCallback(
     (bean: CoffeeBean, isEmpty: boolean): BeanSearchItem => {
@@ -351,7 +325,7 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
   }, []);
 
   const { activeBeanItems, emptyBeanItems } = useMemo(() => {
-    if (!enabled) return { activeBeanItems: [], emptyBeanItems: [] };
+    if (!open) return { activeBeanItems: [], emptyBeanItems: [] };
 
     // 与 CoffeeBeanList 一致：搜索列表只处理熟豆
     const roastedBeans = beans.filter(bean => bean.beanState !== 'green');
@@ -373,10 +347,10 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
       ),
       emptyBeanItems: sortedEmpty.map(bean => buildBeanItem(bean, true)),
     };
-  }, [beans, buildBeanItem, enabled, hasBeanCapacity]);
+  }, [beans, buildBeanItem, open, hasBeanCapacity]);
 
   const noteItems = useMemo<NoteSearchItem[]>(() => {
-    if (!enabled) return [];
+    if (!open) return [];
     return notes
       .filter(note => !isChangeRecordNote(note))
       .sort((a, b) => {
@@ -437,7 +411,6 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
         return {
           id: note.id,
           title: title || equipmentName,
-          subtitle,
           dateLabel: dateText,
           searchText,
           payload: {
@@ -451,7 +424,7 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
   }, [
     beanMap,
     customEquipments,
-    enabled,
+    open,
     notes,
     settings.roasterFieldEnabled,
     settings.roasterSeparator,
@@ -474,7 +447,16 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
     return filterItems(noteItems, queryTokens);
   }, [noteItems, open, queryTokens]);
 
-  const hasResults = visibleBeanItems.length > 0 || visibleNoteItems.length > 0;
+  const syncActions =
+    cloudSyncStatus === 'connected'
+      ? SYNC_ACTIONS.filter(action =>
+          matchesAllTokens(action.searchText, queryTokens)
+        )
+      : [];
+  const hasResults =
+    syncActions.length > 0 ||
+    visibleBeanItems.length > 0 ||
+    visibleNoteItems.length > 0;
 
   const handleSelectBean = useCallback(
     (bean: CoffeeBean) => {
@@ -499,18 +481,34 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
     setQuery('');
   };
 
+  const handleSync = (direction: SyncDirection) => {
+    if (isSyncing || syncDisabled) return;
+    closePanel();
+    if (direction === 'auto') void performSync(direction);
+    else setSyncConfirmation({ direction, open: true });
+  };
+
+  const closeSyncConfirmation = () => {
+    setSyncConfirmation(current => ({ ...current, open: false }));
+  };
+
+  const confirmSync = () => {
+    closeSyncConfirmation();
+    if (!isSyncing && !syncDisabled) void performSync(syncConfirmation.direction);
+  };
+
   return (
     <>
-      {enabled && open && (
+      {open && (
         <div
-          className="fixed inset-0 z-90 hidden md:flex md:items-center md:justify-center"
+          className="fixed inset-0 z-90 flex items-center justify-center p-4"
           onMouseDown={event => {
             if (event.target !== event.currentTarget) return;
             closePanel();
           }}
         >
           <div
-            className="flex h-[min(76vh,680px)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-neutral-200/50 bg-white shadow-xl dark:border-neutral-800/50 dark:bg-neutral-900"
+            className="flex h-[min(76dvh,680px)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-neutral-200/50 bg-white shadow-xl dark:border-neutral-800/50 dark:bg-neutral-900"
             onClick={event => event.stopPropagation()}
           >
             <Command
@@ -523,16 +521,39 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
                   autoFocus
                   value={query}
                   onValueChange={setQuery}
-                  placeholder="搜索咖啡豆或笔记..."
-                  className="h-6 w-full bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400 dark:text-neutral-100"
+                  placeholder="搜索咖啡豆、笔记或操作..."
+                  className="h-6 w-full bg-transparent text-base text-neutral-800 outline-none placeholder:text-neutral-400 md:text-sm dark:text-neutral-100"
                 />
               </div>
 
-              <Command.List className="min-h-0 flex-1 overflow-y-auto px-4">
+              <Command.List className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4">
                 {!hasResults && (
                   <div className="px-3 py-6 text-center text-xs text-neutral-500 dark:text-neutral-400">
-                    没有找到匹配的咖啡豆或笔记
+                    没有找到匹配的结果
                   </div>
+                )}
+
+                {syncActions.length > 0 && (
+                  <Command.Group
+                    heading={isSyncing ? '云同步 · 进行中' : '云同步'}
+                    className="py-1 text-xs text-neutral-500 dark:text-neutral-400 **:[[cmdk-group-heading]]:mb-1 **:[[cmdk-group-heading]]:px-0 **:[[cmdk-group-heading]]:pt-2 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium"
+                  >
+                    {syncActions.map(action => (
+                      <Command.Item
+                        key={action.direction}
+                        value={`action:${action.direction}`}
+                        onSelect={() => handleSync(action.direction)}
+                        disabled={isSyncing || syncDisabled}
+                        className="-mx-2 flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm text-neutral-700 outline-none data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-40 data-[selected=true]:bg-neutral-100 dark:text-neutral-200 dark:data-[selected=true]:bg-neutral-800"
+                      >
+                        <action.icon className="size-4 shrink-0" aria-hidden="true" />
+                        <span className="flex-1">{action.label}</span>
+                        <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {action.description}
+                        </span>
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
                 )}
 
                 {visibleBeanItems.length > 0 && (
@@ -599,12 +620,33 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
               </Command.List>
 
               <div className="border-t border-neutral-200/50 px-4 py-2 text-[11px] text-neutral-500 dark:border-neutral-800/50 dark:text-neutral-400">
-                Enter 打开 · Esc 关闭 · Command + K 唤出
+                Enter 选择 · Esc 关闭 · Command + K 唤出
               </div>
             </Command>
           </div>
         </div>
       )}
+      <ActionDrawer
+        isOpen={syncConfirmation.open}
+        onClose={closeSyncConfirmation}
+        historyId="command-sync-confirm"
+      >
+        <ActionDrawer.Content>
+          <p className="text-neutral-500 dark:text-neutral-400">
+            {syncConfirmation.direction === 'upload'
+              ? '上传会用本机数据覆盖云端数据，确认继续吗？'
+              : '下载会用云端数据覆盖本机数据，请先备份重要数据。确认继续吗？'}
+          </p>
+        </ActionDrawer.Content>
+        <ActionDrawer.Actions>
+          <ActionDrawer.SecondaryButton onClick={closeSyncConfirmation}>
+            取消
+          </ActionDrawer.SecondaryButton>
+          <ActionDrawer.PrimaryButton onClick={confirmSync}>
+            {syncConfirmation.direction === 'upload' ? '确认上传' : '确认下载'}
+          </ActionDrawer.PrimaryButton>
+        </ActionDrawer.Actions>
+      </ActionDrawer>
     </>
   );
 };

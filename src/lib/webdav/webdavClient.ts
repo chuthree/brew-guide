@@ -233,7 +233,9 @@ export class WebDAVClient {
       });
 
       if (!success) {
-        console.error(`[WebDAV] 上传失败: ${errorDetail}`);
+        // 412 是条件写入的正常拒绝，由同步层区分安全探测和真实冲突。
+        if (response.status !== 412)
+          console.error(`[WebDAV] 上传失败: ${errorDetail}`);
         return { success: false, error: errorDetail || '上传失败' };
       }
 

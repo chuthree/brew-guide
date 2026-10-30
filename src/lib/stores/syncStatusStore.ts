@@ -98,6 +98,8 @@ const STATUS_AUTO_RESET_CONFIG = {
 
 interface SyncStatusState {
   status: SyncStatus;
+  // 手动同步锁由操作的 finally 释放，不随实时同步状态重置。
+  manualSyncInProgress: boolean;
   provider: SyncProvider;
   lastSyncTime: number | null;
   errorMessage: string | null;
@@ -119,6 +121,7 @@ interface SyncStatusState {
   setSyncSuccess: () => void;
   setSyncError: (message: string) => void;
   setSyncing: () => void;
+  setManualSyncInProgress: (syncing: boolean) => void;
   reset: () => void;
 
   // 实时同步方法
@@ -144,9 +147,16 @@ interface SyncStatusState {
   _scheduleReset: (delay: number) => void;
 }
 
+export const selectIsSyncing = (state: SyncStatusState): boolean =>
+  state.manualSyncInProgress ||
+  state.status === 'syncing' ||
+  state.isInitialSyncing ||
+  state.supabaseSyncProgress.active;
+
 export const useSyncStatusStore = create<SyncStatusState>()(
   subscribeWithSelector((set, get) => ({
     status: 'idle',
+    manualSyncInProgress: false,
     provider: 'none',
     lastSyncTime: null,
     errorMessage: null,
@@ -193,6 +203,7 @@ export const useSyncStatusStore = create<SyncStatusState>()(
     },
 
     setProvider: provider => set({ provider }),
+    setManualSyncInProgress: syncing => set({ manualSyncInProgress: syncing }),
 
     setSyncSuccess: () => {
       const { _clearTimers, _scheduleReset } = get();

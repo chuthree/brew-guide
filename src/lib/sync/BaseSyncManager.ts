@@ -22,8 +22,7 @@ import type {
 import { BackupManager } from './BackupManager';
 import { formatSyncDiagnostic, type SyncDiagnostic } from './types';
 import { canonical, mergeSyncData, parseSyncDocument } from './mergeData';
-
-let cloudOperationInProgress = false;
+import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 
 /**
  * 存储客户端接口 - S3 和 WebDAV 客户端都需要实现这个接口
@@ -91,7 +90,7 @@ export abstract class BaseSyncManager {
    * 执行同步或手动覆盖
    */
   async sync(options: SyncOptions = {}): Promise<SyncResult> {
-    if (cloudOperationInProgress) {
+    if (useSyncStatusStore.getState().manualSyncInProgress) {
       return this.createErrorResult('同步正在进行中', [
         '同步正在进行中，请稍后再试',
       ]);
@@ -104,7 +103,7 @@ export abstract class BaseSyncManager {
     }
 
     this.syncInProgress = true;
-    cloudOperationInProgress = true;
+    useSyncStatusStore.getState().setManualSyncInProgress(true);
     const debugLogs: string[] = [];
     const addLog = (msg: string) => {
       debugLogs.push(`[${new Date().toISOString()}] ${msg}`);
@@ -152,7 +151,7 @@ export abstract class BaseSyncManager {
       result.debugLogs = debugLogs;
     } finally {
       this.syncInProgress = false;
-      cloudOperationInProgress = false;
+      useSyncStatusStore.getState().setManualSyncInProgress(false);
     }
 
     return result;
@@ -233,19 +232,32 @@ export abstract class BaseSyncManager {
     }
     if (upload) {
       // 用独立对象确认服务/代理确实执行条件头，不能默默退化为覆盖。
-      const probeKey = `.brew-guide-sync-check-${crypto.randomUUID()}`;
-      const probe = await this.client!.uploadFile(
-        probeKey,
-        '{}',
-        '"missing-version"'
-      );
-      const supportsConditions =
-        probe !== true && this.client!.getLastDiagnostic?.()?.status === 412;
-      if (probe === true) await this.client!.deleteFile(probeKey);
-      if (!supportsConditions)
-        throw new Error(
-          '云存储或代理未确认支持条件写入，已停止同步；可继续使用手动上传、下载'
+      const probeKey = `.brew-guide-sync-check-${crypto.randomUUID()}.json`;
+      const created = await this.client!.uploadFile(probeKey, '{}');
+      if (created !== true)
+        throw new Error('无法创建同步校验临时文件，已停止同步');
+      try {
+        // 只验证本次主文件写入需要的条件：更新校验版本，首次创建防止覆盖。
+        this.client!.clearDiagnostic?.();
+        const probe = await this.client!.uploadFile(
+          probeKey,
+          '{"probe":true}',
+          remoteFile ? '"missing-version"' : null
         );
+        if (
+          probe === true ||
+          this.client!.getLastDiagnostic?.()?.status !== 412
+        ) {
+          throw new Error(
+            remoteFile
+              ? '云存储或代理未确认支持版本校验，已停止同步；可继续使用手动上传、下载'
+              : '云端尚无同步文件，且云存储或代理未确认支持防重复创建；请先手动上传一次，再使用同步'
+          );
+        }
+      } finally {
+        if (!(await this.client!.deleteFile(probeKey)))
+          addLog('同步校验临时文件清理失败');
+      }
       this.client!.clearDiagnostic?.();
       addLog('使用云端版本校验写入合并结果');
       const uploaded = await this.client!.uploadFile(
@@ -596,12 +608,12 @@ export abstract class BaseSyncManager {
    * 从备份恢复数据
    */
   async restoreFromBackup(backupKey: string): Promise<boolean> {
-    if (!this.client || cloudOperationInProgress) {
+    if (!this.client || useSyncStatusStore.getState().manualSyncInProgress) {
       console.error(`❌ [${this.getServiceName()}] 恢复失败：客户端未初始化`);
       return false;
     }
 
-    cloudOperationInProgress = true;
+    useSyncStatusStore.getState().setManualSyncInProgress(true);
     try {
       const content = await this.getBackupManager().restoreBackup(
         this.client,
@@ -617,7 +629,7 @@ export abstract class BaseSyncManager {
       console.error(`❌ [${this.getServiceName()}] 恢复数据失败:`, error);
       return false;
     } finally {
-      cloudOperationInProgress = false;
+      useSyncStatusStore.getState().setManualSyncInProgress(false);
     }
   }
 }
