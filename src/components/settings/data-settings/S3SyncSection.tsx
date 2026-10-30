@@ -184,7 +184,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
     }
   };
 
-  const performSync = async (direction: 'upload' | 'download') => {
+  const performSync = async (direction: 'auto' | 'upload' | 'download') => {
     if (isSyncing) {
       setError('同步正在进行中');
       return;
@@ -242,7 +242,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
           setDebugLogs(result.debugLogs);
           setShowDebugDrawer(true);
         }
-        setError('数据冲突：本地和云端数据都已更改。');
+        setError(result.message);
         return;
       }
 
@@ -257,11 +257,18 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         if (result.uploadedFiles > 0) {
           showToast({
             type: 'success',
-            title: `已上传 ${result.uploadedFiles} 项到云端`,
+            title:
+              direction === 'auto'
+                ? result.message
+                : `已上传 ${result.uploadedFiles} 项到云端`,
             duration: 2500,
           });
         } else {
-          if (result.debugLogs && result.debugLogs.length > 0) {
+          if (
+            direction !== 'auto' &&
+            result.debugLogs &&
+            result.debugLogs.length > 0
+          ) {
             setDebugLogs(result.debugLogs);
             setShowDebugDrawer(true);
             showToast({
@@ -528,6 +535,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         isConnected={effectiveStatus === 'connected'}
         isSyncing={isSyncing}
         onUpload={() => performSync('upload')}
+        onSync={() => performSync('auto')}
         onDownload={() => performSync('download')}
         onShowBackups={handleShowBackups}
         isLoadingBackups={isLoadingBackups}

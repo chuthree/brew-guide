@@ -285,7 +285,7 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
               onChange={e =>
                 setFormData(prev => ({ ...prev, url: e.target.value }))
               }
-              placeholder="https://dav.jianguoyun.com/dav/"
+              placeholder="服务器地址"
               className="w-full rounded-2xl bg-neutral-100 px-4 py-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-600"
             />
           </div>

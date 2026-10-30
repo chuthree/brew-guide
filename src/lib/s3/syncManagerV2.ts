@@ -57,7 +57,10 @@ export class S3SyncManager extends BaseSyncManager {
     config: S3Config,
     skipConnectionTest = false
   ): Promise<boolean> {
-    if (this._initialized && this.config?.bucketName === config.bucketName) {
+    if (
+      this._initialized &&
+      JSON.stringify(this.config) === JSON.stringify(config)
+    ) {
       return true;
     }
 
@@ -66,6 +69,13 @@ export class S3SyncManager extends BaseSyncManager {
       this.config = config;
       this.s3Client = new S3Client(config);
       this.client = this.s3Client;
+      await this.setSyncTarget([
+        's3',
+        config.endpoint || '',
+        config.region,
+        config.bucketName,
+        config.prefix || '',
+      ]);
       this.deviceId = await this.getOrCreateDeviceId();
 
       const metadataManager = new MetadataManager(this.s3Client, this.deviceId);

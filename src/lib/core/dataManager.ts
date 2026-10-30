@@ -71,6 +71,8 @@ interface ExportAllDataOptions {
   excludeDeviceSettings?: boolean;
   pretty?: boolean;
   collectDiagnostics?: boolean;
+  /** 同步时不能把导出失败的数据当作删除。 */
+  strict?: boolean;
   /** Upgrade backup: use frozen core data before repositories are bound. */
   snapshot?: Record<string, unknown>;
 }
@@ -310,12 +312,15 @@ export const DataManager = {
                   >
                 )[equipmentId] = methods;
               } catch {
+                if (options.strict)
+                  throw new Error(`自定义方案数据无效: ${key}`);
                 console.error(`解析自定义方案数据失败: ${key}`);
               }
             }
           }
         }
       } catch (error) {
+        if (options.strict) throw error;
         console.error('导出自定义方案失败:', error);
       }
 
@@ -338,6 +343,8 @@ export const DataManager = {
                   key
                 ] = presets;
               } catch {
+                if (options.strict)
+                  throw new Error(`自定义预设数据无效: ${key}`);
                 // 如果JSON解析失败，跳过
                 console.error(`解析自定义预设数据失败: ${key}`);
               }
@@ -345,6 +352,7 @@ export const DataManager = {
           }
         }
       } catch (error) {
+        if (options.strict) throw error;
         console.error('导出自定义预设失败:', error);
         // 错误处理：即使自定义预设导出失败，也继续导出其他数据
       }
@@ -357,6 +365,7 @@ export const DataManager = {
           exportData.data['roasterConfigs'] = roasterConfigs;
         }
       } catch (error) {
+        if (options.strict) throw error;
         console.error('导出烘焙商配置失败:', error);
       }
 
@@ -394,10 +403,30 @@ export const DataManager = {
    */
   async importAllData(
     jsonString: string,
-    options: { preserveDeviceSettings?: boolean } = {}
+    options: {
+      preserveDeviceSettings?: boolean;
+      expectedSyncData?: Record<string, unknown>;
+    } = {}
   ): Promise<{ success: boolean; message: string }> {
     return withDataMutation(async () => {
       try {
+        if (options.expectedSyncData) {
+          // shortcut: Web 端导入尚非跨标签页事务，同步期间应避免其他标签页写入；统一 Web 写入事务后移除此限制。
+          const { canonical, parseSyncDocument } =
+            await import('@/lib/sync/mergeData');
+          const current = parseSyncDocument(
+            await this.exportAllData({
+              excludeDeviceSettings: true,
+              strict: true,
+            })
+          );
+          if (canonical(current.data) !== canonical(options.expectedSyncData)) {
+            return {
+              success: false,
+              message: '同步期间本地数据发生变化，请重试',
+            };
+          }
+        }
         const importData = JSON.parse(jsonString) as ImportData;
         const usesNativeSqlite =
           resolveStorageBackend(detectAppRuntime()) === 'native-sqlite';
@@ -531,6 +560,15 @@ export const DataManager = {
                   valueToSave as Partial<_SettingsOptions>,
                   getSettingsStore().settings
                 );
+                if (options.expectedSyncData) {
+                  const { LOCAL_SYNC_SETTINGS } =
+                    await import('@/lib/sync/mergeData');
+                  const localSettings = getSettingsStore().settings;
+                  for (const key of LOCAL_SYNC_SETTINGS) {
+                    (valueToSave as Record<string, unknown>)[key] =
+                      localSettings[key];
+                  }
+                }
               }
 
               const settingsObj = valueToSave as any;
@@ -637,6 +675,19 @@ export const DataManager = {
           typeof importData.data.customMethodsByEquipment === 'object'
         ) {
           // 清除现有方案数据
+          if (options.expectedSyncData) {
+            const existing = await customMethodRepository.list();
+            for (const { equipmentId } of existing) {
+              await callStoreActionInMutation(
+                storage.remove,
+                `customMethods_${equipmentId}`
+              );
+            }
+            for (const key of await storage.keys()) {
+              if (key.startsWith('customMethods_'))
+                await callStoreActionInMutation(storage.remove, key);
+            }
+          }
           await customMethodRepository.clear();
 
           // 遍历所有器具的方案
@@ -674,6 +725,12 @@ export const DataManager = {
             string,
             unknown
           >;
+          if (options.expectedSyncData) {
+            for (const key of CUSTOM_PRESETS_KEYS) {
+              if (!(key in customPresets))
+                localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
+            }
+          }
           for (const presetType of Object.keys(customPresets)) {
             if (CUSTOM_PRESETS_KEYS.includes(presetType)) {
               const presets = customPresets[presetType];

@@ -561,11 +561,11 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         </SettingRow>
       )}
       {showPullToSync && (
-        <SettingRow label="下拉上传" isLast>
+        <SettingRow label="下拉同步" isLast>
           <SettingToggle
             checked={isManualPullToSyncEnabled}
             onChange={handlePullToSyncSettingChange}
-            ariaLabel="下拉上传"
+            ariaLabel="下拉同步"
           />
         </SettingRow>
       )}

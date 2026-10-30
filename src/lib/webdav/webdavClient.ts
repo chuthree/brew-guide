@@ -261,7 +261,8 @@ export class WebDAVClient {
    */
   async uploadFile(
     filename: string,
-    content: string
+    content: string,
+    expectedEtag?: string | null
   ): Promise<boolean | { success: false; error: string }> {
     try {
       // 🔧 修复：上传前先确保完整的目录路径存在
@@ -290,6 +291,11 @@ export class WebDAVClient {
       const response = await fetch(proxiedUrl, {
         method: 'PUT',
         headers: {
+          ...(expectedEtag === null
+            ? { 'If-None-Match': '*' }
+            : expectedEtag
+              ? { 'If-Match': expectedEtag }
+              : {}),
           Authorization: this.authHeader,
           'Content-Type': filename.endsWith('.json')
             ? 'application/json; charset=utf-8'
@@ -392,6 +398,28 @@ export class WebDAVClient {
       });
       return null;
     }
+  }
+
+  async readSyncFile(
+    filename: string
+  ): Promise<{ content: string; etag: string } | null> {
+    const response = await fetch(this.getProxiedUrl(this.buildUrl(filename)), {
+      headers: { Authorization: this.authHeader },
+      cache: 'no-store',
+    });
+    if (response.status === 404) return null;
+    const content = await response.text();
+    const error =
+      this.checkProxyError(content) || this.checkWebDAVError(content);
+    if (!response.ok || error)
+      throw new Error(error || `读取云端数据失败：HTTP ${response.status}`);
+    const etag = response.headers.get('etag');
+    if (!etag || etag.startsWith('W/')) {
+      throw new Error(
+        'WebDAV 服务或代理未提供可用于安全同步的 ETag，已停止同步'
+      );
+    }
+    return { content, etag };
   }
 
   /**

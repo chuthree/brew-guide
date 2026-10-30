@@ -75,7 +75,9 @@ export class BackupManager {
    * 格式: backup-2025-12-27T14-45-51-947Z.json
    */
   private parseTimestampFromKey(key: string): number {
-    const match = key.match(/backup-(\d{4}-\d{2}-\d{2}T[\d-]+Z)\.json/);
+    const match = key.match(
+      /backup-(\d{4}-\d{2}-\d{2}T[\d-]+Z)(?:-(?:local|remote)-[\w-]+)?\.json/
+    );
     if (match) {
       const isoString = match[1].replace(
         /-(\d{2})-(\d{2})-(\d{3})Z/,

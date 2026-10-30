@@ -197,8 +197,8 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         setError(
           manager.getLastError() ||
             (settings.remotePath
-              ? '连接失败：请检查服务器地址、账号密码和路径是否正确'
-              : '连接失败：请检查服务器地址、账号或密码')
+              ? '连接失败：请检查服务器地址、账号、应用密码和路径是否正确'
+              : '连接失败：请检查服务器地址、账号或应用密码')
         );
       }
     } catch (err) {
@@ -208,7 +208,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     }
   };
 
-  const performSync = async (direction: 'upload' | 'download') => {
+  const performSync = async (direction: 'auto' | 'upload' | 'download') => {
     if (isSyncing) {
       setError('同步正在进行中');
       return;
@@ -266,11 +266,18 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         if (result.uploadedFiles > 0) {
           showToast({
             type: 'success',
-            title: `已上传 ${result.uploadedFiles} 项到云端`,
+            title:
+              direction === 'auto'
+                ? result.message
+                : `已上传 ${result.uploadedFiles} 项到云端`,
             duration: 2500,
           });
         } else {
-          if (result.debugLogs && result.debugLogs.length > 0) {
+          if (
+            direction !== 'auto' &&
+            result.debugLogs &&
+            result.debugLogs.length > 0
+          ) {
             setDebugLogs(result.debugLogs);
             setShowDebugDrawer(true);
             showToast({
@@ -408,7 +415,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
               type="url"
               value={settings.url}
               onChange={e => onSettingChange('url', e.target.value)}
-              placeholder="https://dav.jianguoyun.com/dav/"
+              placeholder="服务器地址"
             />
           </SettingRow>
 
@@ -427,17 +434,22 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
             />
           </SettingRow>
 
-          {/* 密码 */}
-          <SettingRow label="密码" isSubSetting expandControl isLast={false}>
+          {/* 应用密码 */}
+          <SettingRow
+            label="应用密码"
+            isSubSetting
+            expandControl
+            isLast={false}
+          >
             <SettingInput
-              aria-label="密码"
+              aria-label="应用密码"
               autoCapitalize="none"
               spellCheck={false}
               id="webdav-password"
               type="password"
               value={settings.password}
               onChange={e => onSettingChange('password', e.target.value)}
-              placeholder="password"
+              placeholder="应用密码"
               autoComplete="current-password"
             />
           </SettingRow>
@@ -495,6 +507,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         isConnected={effectiveStatus === 'connected'}
         isSyncing={isSyncing}
         onUpload={() => performSync('upload')}
+        onSync={() => performSync('auto')}
         onDownload={() => performSync('download')}
         onShowBackups={handleShowBackups}
         isLoadingBackups={isLoadingBackups}

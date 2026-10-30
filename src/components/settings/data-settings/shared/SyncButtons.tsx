@@ -10,6 +10,7 @@ interface SyncButtonsProps {
   enabled?: boolean;
   isConnected: boolean;
   isSyncing: boolean;
+  onSync: () => void;
   onUpload: () => void;
   onDownload: () => void;
   onShowBackups?: () => void;
@@ -21,6 +22,7 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
   enabled = true,
   isConnected,
   isSyncing,
+  onSync,
   onUpload,
   onDownload,
   onShowBackups,
@@ -28,13 +30,21 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
   isLast = true,
 }) => {
   const [syncDirection, setSyncDirection] = useState<
-    'upload' | 'download' | null
+    'auto' | 'upload' | 'download' | null
   >(null);
   const { highlightedSettingId } = useSettingSearchHighlight();
   if (!enabled || !isConnected) return null;
 
   const isDisabled = isSyncing || isLoadingBackups;
   const actions = [
+    {
+      settingId: makeSettingRowSearchId('同步数据'),
+      label: isSyncing && syncDirection === 'auto' ? '同步中…' : '同步数据',
+      onClick: () => {
+        setSyncDirection('auto');
+        onSync();
+      },
+    },
     {
       settingId: makeSettingRowSearchId('上传数据'),
       label: isSyncing && syncDirection === 'upload' ? '上传中…' : '上传数据',
@@ -72,7 +82,7 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
       }
     >
       <div
-        className={`grid h-4 ${onShowBackups ? 'grid-cols-3' : 'grid-cols-2'}`}
+        className={`grid h-4 ${onShowBackups ? 'grid-cols-4' : 'grid-cols-3'}`}
       >
         {actions.map(action => (
           <button

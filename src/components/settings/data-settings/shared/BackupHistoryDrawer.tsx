@@ -140,7 +140,13 @@ export const BackupHistoryDrawer: React.FC<BackupHistoryDrawerProps> = ({
                             {formatDate(backup.timestamp)}
                           </div>
                           <div className="text-xs text-neutral-500">
-                            {index === 0 ? '最新' : `${index + 1} 个版本前`}
+                            {backup.key.includes('-local-')
+                              ? '同步前 · 发起设备'
+                              : backup.key.includes('-remote-')
+                                ? '同步前 · 云端'
+                                : index === 0
+                                  ? '最新'
+                                  : `${index + 1} 个版本前`}
                           </div>
                         </div>
                         <button
@@ -158,7 +164,8 @@ export const BackupHistoryDrawer: React.FC<BackupHistoryDrawerProps> = ({
                 </div>
               )}
               <p className="text-xs text-neutral-400">
-                每次上传前自动备份，最多保留 5 个历史版本
+                同步前保留双方快照，手动上传后保留备份，成功后最多保留 5
+                个历史版本
               </p>
             </ActionDrawer.Content>
             <ActionDrawer.Actions>

@@ -2,7 +2,7 @@
  * 统一的同步管理器基类
  * S3 和 WebDAV 都继承此类，确保逻辑完全一致
  *
- * 当前仅支持强制上传/下载模式，不支持增量同步
+ * 支持三方合并同步，并保留手动上传/下载
  */
 
 import { Storage } from '@/lib/core/storage';
@@ -21,6 +21,9 @@ import type {
 } from '@/lib/s3/types';
 import { BackupManager } from './BackupManager';
 import { formatSyncDiagnostic, type SyncDiagnostic } from './types';
+import { canonical, mergeSyncData, parseSyncDocument } from './mergeData';
+
+let cloudOperationInProgress = false;
 
 /**
  * 存储客户端接口 - S3 和 WebDAV 客户端都需要实现这个接口
@@ -31,8 +34,10 @@ export interface IStorageClient {
   clearDiagnostic?(): void;
   uploadFile(
     key: string,
-    content: string
+    content: string,
+    expectedEtag?: string | null
   ): Promise<boolean | { success: false; error: string }>;
+  readSyncFile(key: string): Promise<{ content: string; etag: string } | null>;
   downloadFile(key: string): Promise<string | null>;
   deleteFile(key: string): Promise<boolean>;
   fileExists(key: string): Promise<boolean>;
@@ -60,6 +65,7 @@ export abstract class BaseSyncManager {
   protected metadataManager: IMetadataManager | null = null;
   protected syncInProgress = false;
   protected deviceId: string = '';
+  protected baselineKey = '';
   private backupManager: BackupManager | null = null;
 
   /**
@@ -83,10 +89,10 @@ export abstract class BaseSyncManager {
   }
 
   /**
-   * 执行同步（仅支持强制上传/下载）
+   * 执行同步或手动覆盖
    */
   async sync(options: SyncOptions = {}): Promise<SyncResult> {
-    if (this.syncInProgress) {
+    if (cloudOperationInProgress) {
       return this.createErrorResult('同步正在进行中', [
         '同步正在进行中，请稍后再试',
       ]);
@@ -99,6 +105,7 @@ export abstract class BaseSyncManager {
     }
 
     this.syncInProgress = true;
+    cloudOperationInProgress = true;
     const debugLogs: string[] = [];
     const addLog = (msg: string) => {
       debugLogs.push(`[${new Date().toISOString()}] ${msg}`);
@@ -131,24 +138,150 @@ export abstract class BaseSyncManager {
       } else if (options.preferredDirection === 'download') {
         await this.performDownload(result, remoteMetadata, addLog);
       } else {
-        result.message = '请指定同步方向（上传或下载）';
-        result.errors.push('未指定同步方向');
+        await this.performMerge(result, addLog);
       }
 
       this.appendResultDiagnostics(result, addLogLines);
       result.debugLogs = debugLogs;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '未知错误';
+      result.success = false;
       addLog(`同步异常: ${errorMsg}`);
       result.errors.push(`同步失败: ${errorMsg}`);
-      result.message = '同步失败';
+      result.message = errorMsg;
       this.appendResultDiagnostics(result, addLogLines);
       result.debugLogs = debugLogs;
     } finally {
       this.syncInProgress = false;
+      cloudOperationInProgress = false;
     }
 
     return result;
+  }
+
+  protected async setSyncTarget(target: string[]): Promise<void> {
+    const { calculateHash } = await import('@/lib/s3/utils');
+    this.baselineKey = `cloud-sync-base-v1:${await calculateHash(JSON.stringify(target))}`;
+  }
+
+  private async performMerge(
+    result: SyncResult,
+    addLog: (message: string) => void
+  ): Promise<void> {
+    const key = 'brew-guide-data.json';
+    const localContent = await this.getFileContent(key);
+    if (!localContent) throw new Error('无法读取本地数据');
+    const local = parseSyncDocument(localContent);
+    const baseline = await Storage.get(this.baselineKey);
+    const base = baseline ? parseSyncDocument(baseline) : undefined;
+    const remoteFile = await this.client!.readSyncFile(key);
+    if (!remoteFile && base)
+      throw new Error('云端同步文件已被删除，请先确认云端目录或使用手动上传');
+    const remote = remoteFile
+      ? parseSyncDocument(remoteFile.content)
+      : undefined;
+    const merged = remote
+      ? mergeSyncData(base?.data, local.data, remote.data)
+      : { data: local.data, conflicts: [] };
+    if (merged.conflicts.length) {
+      result.conflict = true;
+      result.message = `发现 ${merged.conflicts.length} 项冲突，未覆盖任何数据。请在设置的同步日志中查看记录并处理后重试`;
+      result.errors = merged.conflicts.map(path => {
+        const match = path.match(/^([^[]+)\[([^\]]+)\]$/);
+        const labels: Record<string, string> = {
+          coffeeBeans: '咖啡豆',
+          brewingNotes: '冲煮记录',
+          customEquipments: '器具',
+          grinders: '磨豆机',
+        };
+        const rows = match ? local.data[match[1]] : undefined;
+        const record = Array.isArray(rows)
+          ? rows.find(row => row.id === match?.[2])
+          : undefined;
+        const label =
+          match && labels[match[1]]
+            ? `${labels[match[1]]}「${record?.name || match[2]}」`
+            : path;
+        return `双方独立修改或删除了：${label}（${path}）`;
+      });
+      return;
+    }
+    const content = JSON.stringify({ ...local, data: merged.data });
+    const upload = !remote || canonical(remote.data) !== canonical(merged.data);
+    const download = canonical(local.data) !== canonical(merged.data);
+
+    // 保存两侧原始快照，导入中断时仍可通过现有备份历史恢复。
+    if (upload || download) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      for (const [side, snapshot] of [
+        ['local', localContent],
+        ['remote', remoteFile?.content],
+      ] as const) {
+        if (!snapshot) continue;
+        const backup = await this.client!.uploadFile(
+          `backups/backup-${stamp}-${side}-${crypto.randomUUID()}.json`,
+          snapshot
+        );
+        if (backup !== true) throw new Error('同步前备份失败，未覆盖数据');
+      }
+      const latest = await this.getFileContent(key);
+      if (
+        !latest ||
+        canonical(parseSyncDocument(latest).data) !== canonical(local.data)
+      ) {
+        throw new Error('同步期间本地数据发生变化，请重试');
+      }
+    }
+    if (upload) {
+      // 用独立对象确认服务/代理确实执行条件头，不能默默退化为覆盖。
+      const probeKey = `.brew-guide-sync-check-${crypto.randomUUID()}`;
+      const probe = await this.client!.uploadFile(
+        probeKey,
+        '{}',
+        '"missing-version"'
+      );
+      const supportsConditions =
+        probe !== true && this.client!.getLastDiagnostic?.()?.status === 412;
+      if (probe === true) await this.client!.deleteFile(probeKey);
+      if (!supportsConditions)
+        throw new Error(
+          '云存储或代理未确认支持条件写入，已停止同步；可继续使用手动上传、下载'
+        );
+      this.client!.clearDiagnostic?.();
+      addLog('使用云端版本校验写入合并结果');
+      const uploaded = await this.client!.uploadFile(
+        key,
+        content,
+        remoteFile?.etag ?? null
+      );
+      if (uploaded !== true) {
+        throw new Error(
+          `合并写入失败，云端可能已被其他设备更新，请重试：${typeof uploaded === 'object' ? uploaded.error : '请求失败'}`
+        );
+      }
+      result.uploadedFiles = 1;
+    }
+    if (download) {
+      const { DataManager } = await import('@/lib/core/dataManager');
+      const imported = await DataManager.importAllData(content, {
+        preserveDeviceSettings: true,
+        expectedSyncData: local.data,
+      });
+      if (!imported.success)
+        throw new Error(`${imported.message}；同步前数据保留在备份历史中`);
+      result.downloadedFiles = 1;
+    }
+    await Storage.set(this.baselineKey, content);
+    const files = await createFilesMetadataFromData({
+      [key]: JSON.parse(content),
+    });
+    if (!(await this.updateMetadataAfterSync(files, addLog))) {
+      throw new Error('数据已同步，但同步状态保存失败，请重试');
+    }
+    result.success = true;
+    result.message = upload || download ? '数据同步完成' : '数据已是最新';
+    if (upload || download)
+      await this.getBackupManager().cleanupOldBackups(this.client!);
   }
 
   /**
@@ -223,6 +356,7 @@ export abstract class BaseSyncManager {
 
     result.success = true;
     result.message = `已上传 ${result.uploadedFiles} 个文件`;
+    await Storage.set(this.baselineKey, content);
   }
 
   /**
@@ -251,6 +385,9 @@ export abstract class BaseSyncManager {
           continue;
         }
         await this.saveFileContent(key, content);
+        if (key === 'brew-guide-data.json' || key === 'brew-guide-data') {
+          await Storage.set(this.baselineKey, content);
+        }
         result.downloadedFiles++;
         addLog(`下载成功: ${key}`);
       } catch (error) {
@@ -312,7 +449,9 @@ export abstract class BaseSyncManager {
     Record<string, FileMetadata>
   > {
     try {
-      const fullExportString = await this.getFileContent('brew-guide-data.json');
+      const fullExportString = await this.getFileContent(
+        'brew-guide-data.json'
+      );
       if (!fullExportString) return {};
       const exportDataObj = safeJsonParse(fullExportString, {});
       const dataMap: Record<string, unknown> = {
@@ -334,6 +473,7 @@ export abstract class BaseSyncManager {
         const { DataManager } = await import('@/lib/core/dataManager');
         return await DataManager.exportAllData({
           excludeDeviceSettings: true,
+          strict: true,
         });
       }
       return await Storage.get(key);
@@ -349,9 +489,10 @@ export abstract class BaseSyncManager {
   protected async saveFileContent(key: string, content: string): Promise<void> {
     if (key === 'brew-guide-data.json' || key === 'brew-guide-data') {
       const { DataManager } = await import('@/lib/core/dataManager');
-      await DataManager.importAllData(content, {
+      const imported = await DataManager.importAllData(content, {
         preserveDeviceSettings: true,
       });
+      if (!imported.success) throw new Error(imported.message);
     } else {
       await Storage.set(key, content);
     }
@@ -447,18 +588,18 @@ export abstract class BaseSyncManager {
    * 从备份恢复数据
    */
   async restoreFromBackup(backupKey: string): Promise<boolean> {
-    if (!this.client) {
+    if (!this.client || cloudOperationInProgress) {
       console.error(`❌ [${this.getServiceName()}] 恢复失败：客户端未初始化`);
       return false;
     }
 
-    const content = await this.getBackupManager().restoreBackup(
-      this.client,
-      backupKey
-    );
-    if (!content) return false;
-
+    cloudOperationInProgress = true;
     try {
+      const content = await this.getBackupManager().restoreBackup(
+        this.client,
+        backupKey
+      );
+      if (!content) return false;
       await this.saveFileContent('brew-guide-data.json', content);
       console.warn(
         `✅ [${this.getServiceName()}] 数据已从备份恢复: ${backupKey}`
@@ -467,6 +608,8 @@ export abstract class BaseSyncManager {
     } catch (error) {
       console.error(`❌ [${this.getServiceName()}] 恢复数据失败:`, error);
       return false;
+    } finally {
+      cloudOperationInProgress = false;
     }
   }
 }

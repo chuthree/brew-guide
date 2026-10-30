@@ -206,7 +206,8 @@ export class S3Client {
    */
   async uploadFile(
     key: string,
-    content: string | ArrayBuffer
+    content: string | ArrayBuffer,
+    expectedEtag?: string | null
   ): Promise<boolean | { success: false; error: string }> {
     try {
       const fullKey = this.getFullKey(key);
@@ -217,6 +218,11 @@ export class S3Client {
         'PUT',
         url,
         {
+          ...(expectedEtag === null
+            ? { 'If-None-Match': '*' }
+            : expectedEtag
+              ? { 'If-Match': expectedEtag }
+              : {}),
           'Content-Type': key.endsWith('.json')
             ? 'application/json'
             : 'application/octet-stream',
@@ -336,6 +342,24 @@ export class S3Client {
       });
       return null;
     }
+  }
+
+  async readSyncFile(
+    key: string
+  ): Promise<{ content: string; etag: string } | null> {
+    const url = this.buildObjectUrl(this.getFullKey(key));
+    const { requestUrl, headers } = await this.prepareRequest('GET', url);
+    const response = await fetch(requestUrl, { headers, cache: 'no-store' });
+    if (response.status === 404) return null;
+    if (!response.ok)
+      throw new Error(`读取云端数据失败：HTTP ${response.status}`);
+    const etag = response.headers.get('etag');
+    if (!etag || etag.startsWith('W/')) {
+      throw new Error(
+        '云端未提供可用于安全同步的 ETag，请检查存储服务及 CORS 的 ExposeHeaders 配置'
+      );
+    }
+    return { content: await response.text(), etag };
   }
 
   /**
@@ -831,8 +855,8 @@ export class S3Client {
     Object.entries(headers).forEach(([key, value]) => {
       const lowerKey = key.toLowerCase();
 
-      // 只签名浏览器安全允许的简单头，避免触发额外的CORS预检
-      if (lowerKey === 'content-type') {
+      // 条件写入头必须参与签名并保留，否则会退化为无保护覆盖。
+      if (['content-type', 'if-match', 'if-none-match'].includes(lowerKey)) {
         signedHeaders[lowerKey] = value.trim();
       }
     });

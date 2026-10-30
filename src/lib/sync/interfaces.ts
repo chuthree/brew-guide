@@ -171,7 +171,7 @@ export class BaseSyncManagerAdapter implements ISyncManager {
     readonly provider: CloudProvider,
     private readonly manager: {
       sync(options: {
-        preferredDirection?: 'upload' | 'download';
+        preferredDirection?: 'auto' | 'upload' | 'download';
         onProgress?: (p: {
           phase: string;
           message: string;

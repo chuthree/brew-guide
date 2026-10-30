@@ -15,6 +15,9 @@ import type { MouseEvent } from 'react';
 // 提示显示时长（毫秒）
 const TOAST_DURATION = 2000;
 
+export const FEEDBACK_PILL_CLASS_NAME =
+  'max-w-[calc(100vw-32px)] rounded-full border border-neutral-200/50 bg-white/95 px-5 py-3 text-sm font-medium whitespace-nowrap text-neutral-900 shadow-lg shadow-neutral-200/50 backdrop-blur-xl sm:max-w-[360px] dark:border-white/10 dark:bg-neutral-900/90 dark:text-white dark:shadow-black/20';
+
 interface ToastOptions {
   type?: 'success' | 'error' | 'info' | 'warning';
   title: string;
@@ -99,7 +102,7 @@ export function LightToast() {
         transition: 'opacity 0.2s ease-out, transform 0.2s ease-out',
       }}
     >
-      <div className="max-w-[calc(100vw-32px)] rounded-full border border-neutral-200/50 bg-white/95 px-5 py-3 text-sm font-medium whitespace-nowrap text-neutral-900 shadow-lg shadow-neutral-200/50 backdrop-blur-xl sm:max-w-[360px] dark:border-white/10 dark:bg-neutral-900/90 dark:text-white dark:shadow-black/20">
+      <div className={FEEDBACK_PILL_CLASS_NAME}>
         <div className="flex items-center justify-center gap-2">
           <div className={`h-2 w-2 shrink-0 rounded-full ${getDotColor()}`} />
           <span className="min-w-0 truncate">{currentToast.title}</span>

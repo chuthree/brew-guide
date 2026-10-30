@@ -41,11 +41,13 @@ export function useCloudSyncConnection(
 
         if (result.success) {
           const n =
-            direction === 'upload'
-              ? result.uploadedCount
-              : result.downloadedCount;
+            direction === 'auto'
+              ? result.uploadedCount + result.downloadedCount
+              : direction === 'upload'
+                ? result.uploadedCount
+                : result.downloadedCount;
           if (n > 0) {
-            if (direction === 'download') {
+            if (result.downloadedCount > 0) {
               if (settings.hapticFeedback) hapticsUtils.medium();
               window.location.reload();
               return;
@@ -53,7 +55,7 @@ export function useCloudSyncConnection(
 
             showToast({
               type: 'success',
-              title: `已上传 ${n} 项`,
+              title: result.message,
               duration: 2500,
             });
           } else {

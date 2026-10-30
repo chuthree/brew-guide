@@ -84,7 +84,10 @@ export class WebDAVSyncManager extends BaseSyncManager {
     skipConnectionTest = false
   ): Promise<boolean> {
     // 如果已初始化且配置相同，直接返回
-    if (this._initialized && this.config?.url === config.url) {
+    if (
+      this._initialized &&
+      JSON.stringify(this.config) === JSON.stringify(config)
+    ) {
       return true;
     }
 
@@ -98,6 +101,12 @@ export class WebDAVSyncManager extends BaseSyncManager {
       this.config = config;
       this.webdavClient = new WebDAVClient(config);
       this.client = this.webdavClient;
+      await this.setSyncTarget([
+        'webdav',
+        config.url,
+        config.username,
+        config.remotePath,
+      ]);
       this.deviceId = await this.getOrCreateDeviceId();
 
       console.warn(`📱 [WebDAV] 设备 ID: ${this.deviceId}`);

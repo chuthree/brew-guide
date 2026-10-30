@@ -40,7 +40,7 @@ export const defaultS3Settings: S3SyncSettings = {
 
 export const defaultWebDAVSettings: WebDAVSyncSettings = {
   enabled: false,
-  url: '',
+  url: 'https://dav.jianguoyun.com/dav/',
   username: '',
   password: '',
   remotePath: 'brew-guide-data/',
@@ -93,6 +93,7 @@ export function normalizeWebDAVSettings(
   return {
     ...defaultWebDAVSettings,
     ...(sanitized as Partial<WebDAVSyncSettings>),
+    url: (sanitized.url as string) || defaultWebDAVSettings.url,
     syncMode: 'manual', // 强制手动模式
   };
 }

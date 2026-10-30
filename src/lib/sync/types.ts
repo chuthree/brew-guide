@@ -15,7 +15,7 @@ export type ConnectionStatus =
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 /** 同步方向 */
-export type SyncDirection = 'upload' | 'download';
+export type SyncDirection = 'auto' | 'upload' | 'download';
 
 /** 同步进度 */
 export interface SyncProgress {
@@ -175,7 +175,8 @@ export function buildSyncErrorLogs(
   message: string,
   errors: string[]
 ): string[] {
-  const directionText = direction === 'upload' ? '上传' : '下载';
+  const directionText =
+    direction === 'auto' ? '同步' : direction === 'upload' ? '上传' : '下载';
   const logs: string[] = [
     `=== ${serviceName} ${directionText}错误日志 ===`,
     '',

@@ -40,6 +40,7 @@ import { EditableParams } from '@/lib/hooks/useBrewingParameters';
 import { MethodType } from '@/lib/types/method';
 import CustomMethodFormModal from '@/components/method/forms/CustomMethodFormModal';
 import NavigationBar from '@/components/layout/NavigationBar';
+import PullToSync from '@/components/layout/PullToSync';
 import NavigationSection from '@/components/layout/NavigationSection';
 import {
   CollapsedNavigationDockOverlay,
@@ -343,6 +344,8 @@ const AppContainer = () => {
 };
 
 const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
+  const [pullSyncIndicatorHost, setPullSyncIndicatorHost] =
+    useState<HTMLDivElement | null>(null);
   // 检测是否为大屏幕（lg 断点）- 用于三栏布局
   const isLargeScreen = useIsLargeScreen();
   // 检测是否启用桌面侧栏布局（md 断点）
@@ -3067,12 +3070,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   };
 
   // ==================== 云同步相关状态和处理 ====================
-  // 检查云同步是否已启用且连接成功，并且开启了下拉上传功能
+  // 检查云同步是否已启用且连接成功，并且开启了下拉同步功能
   const isCloudSyncEnabled = useCallback(() => {
     return isPullToSyncEnabled(settings as SettingsOptions);
   }, [settings]);
 
-  // 下拉上传处理函数
+  // 下拉同步处理函数
   const handlePullToSync = useCallback(async (): Promise<{
     success: boolean;
     message?: string;
@@ -3080,30 +3083,26 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     try {
       const result = await syncService.sync(
         settings as SettingsOptions,
-        'upload'
+        'auto'
       );
 
       if (result.success) {
-        const uploaded = result.uploadedCount ?? 0;
-        if (uploaded > 0) {
-          return { success: true, message: `已上传 ${uploaded} 项` };
-        } else {
-          return { success: true, message: '数据已是最新' };
-        }
+        if (result.downloadedCount > 0) window.location.reload();
+        return { success: true, message: result.message };
       } else {
         return {
           success: false,
           message:
             result.message === '未配置云同步服务'
               ? '云同步未配置'
-              : result.message || '上传失败',
+              : result.message || '同步失败',
         };
       }
     } catch (error) {
-      console.error('下拉上传失败:', error);
+      console.error('下拉同步失败:', error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : '上传失败',
+        message: error instanceof Error ? error.message : '同步失败',
       };
     }
   }, [settings]);
@@ -3968,73 +3967,91 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     sidebarControlVisibility: 'reveal' | 'always' = 'reveal',
     showDesktopBorder = true
   ) => (
-    <NavigationBar
+    <PullToSync
       key={key}
-      activeMainTab={activeMainTab}
-      setActiveMainTab={handleMainTabClick}
-      activeBrewingStep={activeBrewingStep}
-      parameterInfo={parameterInfo}
-      setParameterInfo={setParameterInfo}
-      editableParams={editableParams}
-      setEditableParams={setEditableParams}
-      isTimerRunning={isTimerRunning}
-      showComplete={showComplete}
-      selectedEquipment={selectedEquipment}
-      selectedMethod={
-        currentBrewingMethod
-          ? {
-              name: currentBrewingMethod.name,
-              params: {
-                coffee: currentBrewingMethod.params.coffee,
-                water: currentBrewingMethod.params.water,
-                ratio: currentBrewingMethod.params.ratio,
-                grindSize: currentBrewingMethod.params.grindSize,
-                temp: currentBrewingMethod.params.temp,
-                stages: currentBrewingMethod.params.stages.map(stage => ({
-                  label: stage.label,
-                  duration: stage.duration,
-                  water: stage.water,
-                  detail: stage.detail,
-                  pourType: stage.pourType,
-                })),
-              },
-            }
-          : null
+      enabled={
+        isCloudSyncEnabled() &&
+        !hasAnyModalOpen &&
+        !isContentDetailPending &&
+        !showOnboarding &&
+        !isTimerRunning &&
+        !(
+          isBrewingMainTab &&
+          (activeBrewingStep === 'brewing' || activeBrewingStep === 'notes')
+        )
       }
-      handleParamChange={handleParamChangeWrapper}
-      handleExtractionTimeChange={handleExtractionTimeChange}
-      setShowHistory={setShowHistory}
-      onTitleDoubleClick={() => setIsSettingsOpen(true)}
-      settings={settings}
-      hasCoffeeBeans={hasCoffeeBeans && navigationState.visibleTabs.coffeeBean}
-      alternativeHeader={alternativeHeaderContent}
-      showAlternativeHeader={showAlternativeHeader}
-      currentBeanView={currentBeanView}
-      showViewDropdown={showViewDropdown}
-      onToggleViewDropdown={handleToggleViewDropdown}
-      onBeanViewChange={handleBeanViewChange}
-      customEquipments={customEquipments}
-      onEquipmentSelect={handleEquipmentSelectWithName}
-      onAddEquipment={() => setShowEquipmentForm(true)}
-      onEditEquipment={equipment => {
-        setEditingEquipment(equipment);
-        setShowEquipmentForm(true);
-      }}
-      onDeleteEquipment={handleDeleteEquipment}
-      onShareEquipment={handleShareEquipment}
-      onBackClick={handleBackClick}
-      onToggleEquipmentManagement={() =>
-        setShowEquipmentManagement(!showEquipmentManagement)
-      }
-      cloudSyncEnabled={isCloudSyncEnabled()}
-      onPullToSync={handlePullToSync}
-      sidebarCollapseControl={sidebarControl}
-      sidebarControlVisibility={sidebarControlVisibility}
-      showDesktopBorder={showDesktopBorder}
-      width={isDesktopLayout ? navPanelWidth : undefined}
-      isResizing={isNavResizing}
-      isDesktopLayout={isDesktopLayout}
-    />
+      contextKey={`${activeMainTab}:${activeBrewingStep}`}
+      indicatorHost={pullSyncIndicatorHost}
+      hapticFeedback={settings.hapticFeedback}
+      onSync={handlePullToSync}
+    >
+      <NavigationBar
+        activeMainTab={activeMainTab}
+        setActiveMainTab={handleMainTabClick}
+        activeBrewingStep={activeBrewingStep}
+        parameterInfo={parameterInfo}
+        setParameterInfo={setParameterInfo}
+        editableParams={editableParams}
+        setEditableParams={setEditableParams}
+        isTimerRunning={isTimerRunning}
+        showComplete={showComplete}
+        selectedEquipment={selectedEquipment}
+        selectedMethod={
+          currentBrewingMethod
+            ? {
+                name: currentBrewingMethod.name,
+                params: {
+                  coffee: currentBrewingMethod.params.coffee,
+                  water: currentBrewingMethod.params.water,
+                  ratio: currentBrewingMethod.params.ratio,
+                  grindSize: currentBrewingMethod.params.grindSize,
+                  temp: currentBrewingMethod.params.temp,
+                  stages: currentBrewingMethod.params.stages.map(stage => ({
+                    label: stage.label,
+                    duration: stage.duration,
+                    water: stage.water,
+                    detail: stage.detail,
+                    pourType: stage.pourType,
+                  })),
+                },
+              }
+            : null
+        }
+        handleParamChange={handleParamChangeWrapper}
+        handleExtractionTimeChange={handleExtractionTimeChange}
+        setShowHistory={setShowHistory}
+        onTitleDoubleClick={() => setIsSettingsOpen(true)}
+        settings={settings}
+        hasCoffeeBeans={
+          hasCoffeeBeans && navigationState.visibleTabs.coffeeBean
+        }
+        alternativeHeader={alternativeHeaderContent}
+        showAlternativeHeader={showAlternativeHeader}
+        currentBeanView={currentBeanView}
+        showViewDropdown={showViewDropdown}
+        onToggleViewDropdown={handleToggleViewDropdown}
+        onBeanViewChange={handleBeanViewChange}
+        customEquipments={customEquipments}
+        onEquipmentSelect={handleEquipmentSelectWithName}
+        onAddEquipment={() => setShowEquipmentForm(true)}
+        onEditEquipment={equipment => {
+          setEditingEquipment(equipment);
+          setShowEquipmentForm(true);
+        }}
+        onDeleteEquipment={handleDeleteEquipment}
+        onShareEquipment={handleShareEquipment}
+        onBackClick={handleBackClick}
+        onToggleEquipmentManagement={() =>
+          setShowEquipmentManagement(!showEquipmentManagement)
+        }
+        sidebarCollapseControl={sidebarControl}
+        sidebarControlVisibility={sidebarControlVisibility}
+        showDesktopBorder={showDesktopBorder}
+        width={isDesktopLayout ? navPanelWidth : undefined}
+        isResizing={isNavResizing}
+        isDesktopLayout={isDesktopLayout}
+      />
+    </PullToSync>
   );
 
   const expandedSidebarControl = canCollapseNavigation ? (
@@ -4088,6 +4105,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   return (
     <>
       {/* 主页面内容 - 应用转场动画 */}
+      <div
+        ref={setPullSyncIndicatorHost}
+        className="pointer-events-none fixed inset-x-0 top-0 z-50 h-0"
+      />
       {/* 大屏幕时：只有非详情页模态框（设置等）需要主页动画 */}
       {/* 小屏幕时：所有模态框都需要主页动画 */}
       <div
