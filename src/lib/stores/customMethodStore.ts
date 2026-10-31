@@ -699,21 +699,6 @@ export async function exportEquipmentToFile(
 // ==================== 向后兼容的别名 ====================
 
 /**
- * @deprecated 使用 generateMethodShareText 代替，配合 useCopy hook 使用
- */
-export async function copyMethodToClipboard(
-  method: Method,
-  customEquipment?: CustomEquipment
-): Promise<void> {
-  const { copyToClipboard } = await import('@/lib/utils/exportUtils');
-  const text = await generateMethodShareText(method, customEquipment);
-  const result = await copyToClipboard(text);
-  if (!result.success) {
-    throw new Error('复制失败');
-  }
-}
-
-/**
  * @deprecated 使用 exportEquipmentToFile 代替
  */
 export const copyEquipmentToClipboard = exportEquipmentToFile;

@@ -8,6 +8,7 @@ import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import {
+  DEFAULT_BEAN_RECOGNITION_API_BASE_URL,
   DEFAULT_BEAN_RECOGNITION_MODEL,
   DEFAULT_BEAN_RECOGNITION_PROMPT,
   resolveBeanRecognitionModel,
@@ -26,24 +27,16 @@ import { makeSettingRowSearchId } from './settingsSearch';
 import { handleExternalUrlClick } from '@/lib/utils/openExternalUrl';
 
 interface ExperimentalSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void;
 }
 
 const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
-  settings: _settings,
   onClose,
-  handleChange: _handleChange,
 }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const navigationState = deriveNavigationSettings(settings.navigationSettings);
   const showCoffeeBeanExperiments = navigationState.visibleTabs.coffeeBean;
-  const showNoteExperiments = navigationState.visibleTabs.notes;
   const updateSettings = useSettingsStore(state => state.updateSettings);
 
   // 使用 settingsStore 的 handleChange
@@ -63,7 +56,8 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
   const [isTestingConfig, setIsTestingConfig] = React.useState(false);
 
   const [apiBaseUrl, setApiBaseUrl] = React.useState(
-    settings.experimentalBeanRecognitionApiBaseUrl || ''
+    settings.experimentalBeanRecognitionApiBaseUrl ||
+      DEFAULT_BEAN_RECOGNITION_API_BASE_URL
   );
   const [apiKey, setApiKey] = React.useState(
     settings.experimentalBeanRecognitionApiKey || ''
@@ -72,16 +66,21 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
     resolveBeanRecognitionModel(settings.experimentalBeanRecognitionModel)
   );
   const [prompt, setPrompt] = React.useState(
-    settings.experimentalBeanRecognitionPrompt || ''
+    settings.experimentalBeanRecognitionPrompt || DEFAULT_BEAN_RECOGNITION_PROMPT
   );
 
   React.useEffect(() => {
-    setApiBaseUrl(settings.experimentalBeanRecognitionApiBaseUrl || '');
+    setApiBaseUrl(
+      settings.experimentalBeanRecognitionApiBaseUrl ||
+        DEFAULT_BEAN_RECOGNITION_API_BASE_URL
+    );
     setApiKey(settings.experimentalBeanRecognitionApiKey || '');
     setModel(
       resolveBeanRecognitionModel(settings.experimentalBeanRecognitionModel)
     );
-    setPrompt(settings.experimentalBeanRecognitionPrompt || '');
+    setPrompt(
+      settings.experimentalBeanRecognitionPrompt || DEFAULT_BEAN_RECOGNITION_PROMPT
+    );
   }, [
     settings.experimentalBeanRecognitionApiBaseUrl,
     settings.experimentalBeanRecognitionApiKey,
@@ -260,7 +259,7 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
                   value={apiBaseUrl}
                   onChange={e => setApiBaseUrl(e.target.value)}
                   onBlur={saveApiBaseUrl}
-                  placeholder="https://api.qnaigc.com/v1"
+                  placeholder={DEFAULT_BEAN_RECOGNITION_API_BASE_URL}
                   className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
                 />
               </div>
@@ -352,39 +351,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
         </SettingSection>
       )}
 
-      {showNoteExperiments && (
-        <SettingSection
-          title="笔记"
-          footer="添加笔记和快捷扣除时，使用分类栏选中的日期。"
-        >
-          <SettingRow
-            label="同步筛选日期"
-            isLast={!settings.syncNewNoteDateWithSelectedDate}
-          >
-            <SettingToggle
-              checked={settings.syncNewNoteDateWithSelectedDate || false}
-              onChange={checked =>
-                handleChange('syncNewNoteDateWithSelectedDate', checked)
-              }
-            />
-          </SettingRow>
-          {settings.syncNewNoteDateWithSelectedDate && (
-            <SettingRow label="快捷扣除" isSubSetting isLast>
-              <SettingToggle
-                checked={
-                  settings.syncQuickDecrementDateWithSelectedDate || false
-                }
-                onChange={checked =>
-                  handleChange(
-                    'syncQuickDecrementDateWithSelectedDate',
-                    checked
-                  )
-                }
-              />
-            </SettingRow>
-          )}
-        </SettingSection>
-      )}
     </SettingPage>
   );
 };

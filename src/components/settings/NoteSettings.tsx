@@ -11,19 +11,10 @@ import SettingRow from './atomic/SettingRow';
 import SettingToggle from './atomic/SettingToggle';
 
 interface NoteSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void;
 }
 
-const NoteSettings: React.FC<NoteSettingsProps> = ({
-  settings: _settings,
-  onClose,
-  handleChange: _handleChange,
-}) => {
+const NoteSettings: React.FC<NoteSettingsProps> = ({ onClose }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);
@@ -221,8 +212,11 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
         </SettingSection>
       )}
 
-      <SettingSection title="记录">
-        <SettingRow label="容量调整记录" isLast>
+      <SettingSection
+        title="记录"
+        footer="开启同步筛选日期后，添加笔记和快捷扣除可使用分类栏选中的日期。"
+      >
+        <SettingRow label="容量调整记录">
           <SettingToggle
             checked={settings.showCapacityAdjustmentRecords ?? true}
             onChange={checked =>
@@ -230,6 +224,27 @@ const NoteSettings: React.FC<NoteSettingsProps> = ({
             }
           />
         </SettingRow>
+        <SettingRow
+          label="同步筛选日期"
+          isLast={!settings.syncNewNoteDateWithSelectedDate}
+        >
+          <SettingToggle
+            checked={settings.syncNewNoteDateWithSelectedDate || false}
+            onChange={checked =>
+              handleChange('syncNewNoteDateWithSelectedDate', checked)
+            }
+          />
+        </SettingRow>
+        {settings.syncNewNoteDateWithSelectedDate && (
+          <SettingRow label="快捷扣除" isSubSetting isLast>
+            <SettingToggle
+              checked={settings.syncQuickDecrementDateWithSelectedDate || false}
+              onChange={checked =>
+                handleChange('syncQuickDecrementDateWithSelectedDate', checked)
+              }
+            />
+          </SettingRow>
+        )}
       </SettingSection>
     </SettingPage>
   );

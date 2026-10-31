@@ -18,19 +18,10 @@ import {
 } from './settingsSearch';
 
 interface GreenBeanSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
 }
 
-const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({
-  settings: _settings,
-  onClose,
-  handleChange: _handleChange,
-}) => {
+const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);
@@ -189,10 +180,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({
       {showGreenBeanDetails && (
         <>
           <SettingSection title="快捷烘焙">
-            <SettingRow
-              label="全部烘焙"
-              description="在快捷烘焙中显示“ALL”，一次烘焙剩余库存。"
-            >
+            <SettingRow label="全部烘焙">
               <SettingToggle
                 checked={
                   settings.enableAllGreenBeanRoastOption ??
@@ -203,11 +191,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({
                 }
               />
             </SettingRow>
-            <SettingRow
-              label="自定义烘焙量"
-              description="在快捷烘焙中输入需要烘焙的克数。"
-              isLast
-            >
+            <SettingRow label="自定义烘焙量" isLast>
               <SettingToggle
                 checked={
                   settings.enableCustomGreenBeanRoastInput ??

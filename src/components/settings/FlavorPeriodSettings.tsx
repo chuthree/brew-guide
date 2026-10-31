@@ -24,18 +24,11 @@ import { ChevronDown } from 'lucide-react';
 import SettingsSearchBar from './SettingsSearchBar';
 
 interface FlavorPeriodSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
 }
 
 const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
-  settings: _settings,
   onClose,
-  handleChange: _handleChange,
 }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;

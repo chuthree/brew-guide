@@ -85,7 +85,6 @@ import {
 } from './tableColumns';
 import { useBrewingNoteImageCountsState } from '@/lib/hooks/useBrewingNoteImages';
 import { revertCapacityAdjustmentRecord } from '@/lib/coffee-beans/capacityAdjustment';
-import { createBrewingNoteCopyData } from './brewingNoteCopy';
 import { getValidBeanState } from '@/components/coffee-bean/List/preferences';
 import {
   COFFEE_BEAN_NAVIGATION_EVENTS,
@@ -112,7 +111,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   isOpen,
   onClose: _onClose,
   onAddNote,
-  onCopyRoastingRecord,
   setAlternativeHeaderContent: _setAlternativeHeaderContent, // 不再使用，保留以兼容接口
   setShowAlternativeHeader: _setShowAlternativeHeader, // 不再使用，保留以兼容接口
   settings,
@@ -665,45 +663,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     }
   };
 
-  // 处理复制笔记 - 打开编辑界面让用户修改后保存，不包含图片
-  const handleCopyNote = async (noteId: string) => {
-    try {
-      const noteToCopy = notes.find(note => note.id === noteId);
-
-      if (!noteToCopy) {
-        console.warn('未找到要复制的笔记:', noteId);
-        return;
-      }
-
-      if (noteToCopy.source === 'roasting') {
-        const opened = await onCopyRoastingRecord?.(noteToCopy);
-        if (!opened) return;
-
-        showToastMessage('请修改后保存', 'info');
-        return;
-      }
-
-      // 统一使用 BrewingNoteForm 处理所有类型的笔记复制
-      const noteToEdit = createBrewingNoteCopyData(noteToCopy);
-
-      // 通过事件触发模态框打开
-      window.dispatchEvent(
-        new CustomEvent('brewingNoteEditOpened', {
-          detail: {
-            data: noteToEdit,
-            isCopy: true, // 标记这是复制操作
-          },
-        })
-      );
-
-      // 提示用户
-      showToastMessage('请修改后保存', 'info');
-    } catch (error) {
-      console.error('复制笔记失败:', error);
-      showToastMessage('复制笔记失败', 'error');
-    }
-  };
-
   // 处理笔记点击 - 统一使用 BrewingNoteForm 组件
   const handleNoteClick = async (note: BrewingNote) => {
     let noteForEdit: BrewingNote;
@@ -1152,7 +1111,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
             filterMode={filterMode}
             onNoteClick={handleNoteClick}
             onDeleteNote={handleDelete}
-            onCopyNote={handleCopyNote}
             isShareMode={isShareMode}
             selectedNotes={selectedNotes}
             onToggleSelect={handleToggleSelect}

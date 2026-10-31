@@ -14,18 +14,11 @@ import {
 } from './atomic';
 
 interface RandomCoffeeBeanSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void;
 }
 
 const RandomCoffeeBeanSettings: React.FC<RandomCoffeeBeanSettingsProps> = ({
-  settings: _settings,
   onClose,
-  handleChange: _handleChange,
 }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;

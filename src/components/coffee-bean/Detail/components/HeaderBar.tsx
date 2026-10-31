@@ -45,6 +45,7 @@ interface HeaderBarProps {
   onEdit?: (bean: CoffeeBean) => void;
   onDelete?: (bean: CoffeeBean) => void;
   onShare?: (bean: CoffeeBean) => void;
+  onRepurchase?: (bean: CoffeeBean) => void;
   onRoast?: (greenBean: CoffeeBean) => void;
   onConvertToGreen?: (bean: CoffeeBean) => void;
   onSaveNew?: (
@@ -76,6 +77,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   onEdit,
   onDelete,
   onShare,
+  onRepurchase,
   onRoast,
   onConvertToGreen,
   onSaveNew,
@@ -249,7 +251,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   };
 
   return (
-    <div className="pt-safe-top sticky top-0 flex items-center gap-3 bg-neutral-50 p-4 dark:bg-neutral-900">
+    <div className="pt-safe-top sticky top-0 z-20 flex items-center gap-3 bg-neutral-50 p-4 dark:bg-neutral-900">
       {/* 左侧关闭按钮 */}
       <button
         type="button"
@@ -324,6 +326,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           bean &&
           (onEdit ||
             onShare ||
+            onRepurchase ||
             onDelete ||
             printEnabled ||
             onConvertToGreen) && (
@@ -352,16 +355,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                       },
                     ]
                   : []),
-                ...(printEnabled
-                  ? [
-                      {
-                        id: 'print',
-                        label: '打印',
-                        onClick: onPrint,
-                        color: 'default' as const,
-                      },
-                    ]
-                  : []),
                 ...(onShare
                   ? [
                       {
@@ -377,6 +370,26 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                             );
                           }, 300);
                         },
+                        color: 'default' as const,
+                      },
+                    ]
+                  : []),
+                ...(printEnabled
+                  ? [
+                      {
+                        id: 'print',
+                        label: '打印',
+                        onClick: onPrint,
+                        color: 'default' as const,
+                      },
+                    ]
+                  : []),
+                ...(onRepurchase
+                  ? [
+                      {
+                        id: 'repurchase',
+                        label: '续购',
+                        onClick: () => onRepurchase(bean),
                         color: 'default' as const,
                       },
                     ]

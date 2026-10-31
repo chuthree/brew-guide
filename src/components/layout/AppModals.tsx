@@ -123,14 +123,13 @@ export interface AppModalsProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => Promise<boolean>;
   handleBeanListChange: () => void;
+  handleRepurchaseBean: (bean: CoffeeBean) => Promise<void>;
 
   // 咖啡豆详情（非大屏幕）
   isLargeScreen: boolean;
   beanDetailOpen: boolean;
   setBeanDetailOpen: (open: boolean) => void;
   beanDetailData: ExtendedCoffeeBean | null;
-  setBeanDetailData: (bean: ExtendedCoffeeBean | null) => void;
-  beanDetailSearchQuery: string;
   beanDetailAddMode: boolean;
   setBeanDetailAddMode: (mode: boolean) => void;
   beanDetailEditMode: boolean;
@@ -158,8 +157,6 @@ export interface AppModalsProps {
   setBrewingNoteEditOpen: (open: boolean) => void;
   brewingNoteEditData: BrewingNoteData | null;
   setBrewingNoteEditData: (data: BrewingNoteData | null) => void;
-  isBrewingNoteCopy: boolean;
-  setIsBrewingNoteCopy: (isCopy: boolean) => void;
   handleSaveBrewingNoteEdit: (note: BrewingNoteData) => Promise<void>;
 
   // 笔记详情（非大屏幕）
@@ -313,14 +310,13 @@ const AppModals: React.FC<AppModalsProps> = ({
   setRecognitionImageBeanId,
   handleSaveBean,
   handleBeanListChange,
+  handleRepurchaseBean,
 
   // 咖啡豆详情（非大屏幕）
   isLargeScreen,
   beanDetailOpen,
   setBeanDetailOpen,
   beanDetailData,
-  setBeanDetailData,
-  beanDetailSearchQuery,
   beanDetailAddMode,
   setBeanDetailAddMode,
   beanDetailEditMode,
@@ -340,8 +336,6 @@ const AppModals: React.FC<AppModalsProps> = ({
   setBrewingNoteEditOpen,
   brewingNoteEditData,
   setBrewingNoteEditData,
-  isBrewingNoteCopy,
-  setIsBrewingNoteCopy,
   handleSaveBrewingNoteEdit,
 
   // 笔记详情（非大屏幕）
@@ -588,49 +582,37 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showNavigationSettings && (
         <NavigationSettings
-          settings={settings}
           onClose={() => setShowNavigationSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showStockSettings && (
         <StockSettings
-          settings={settings}
           onClose={() => setShowStockSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showBeanSettings && (
         <BeanSettings
-          settings={settings}
           onClose={() => setShowBeanSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showGreenBeanSettings && (
         <GreenBeanSettings
-          settings={settings}
           onClose={() => setShowGreenBeanSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showCoffeeBeanGroupSettings && (
         <CoffeeBeanGroupSettings
-          settings={settings}
           onClose={() => setShowCoffeeBeanGroupSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showFlavorPeriodSettings && (
         <FlavorPeriodSettings
-          settings={settings}
           onClose={() => setShowFlavorPeriodSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -643,9 +625,7 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showTimerSettings && (
         <TimerSettings
-          settings={settings}
           onClose={() => setShowTimerSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -655,26 +635,20 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showDataSettings && (
         <DataSettings
-          settings={settings}
           onClose={() => setShowDataSettings(false)}
-          handleChange={handleSubSettingChange}
           onDataChange={handleDataChange}
         />
       )}
 
       {showNotificationSettings && (
         <NotificationSettings
-          settings={settings}
           onClose={() => setShowNotificationSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showRandomCoffeeBeanSettings && (
         <RandomCoffeeBeanSettings
-          settings={settings}
           onClose={() => setShowRandomCoffeeBeanSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -692,17 +666,13 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showNoteSettings && (
         <NoteSettings
-          settings={settings}
           onClose={() => setShowNoteSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showFlavorDimensionSettings && (
         <FlavorDimensionSettings
-          settings={settings}
           onClose={() => setShowFlavorDimensionSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -716,17 +686,13 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showGrinderSettings && (
         <GrinderSettings
-          settings={settings}
           onClose={() => setShowGrinderSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showExperimentalSettings && (
         <ExperimentalSettings
-          settings={settings}
           onClose={() => setShowExperimentalSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -852,26 +818,6 @@ const AppModals: React.FC<AppModalsProps> = ({
             ? recognitionImage
             : null
         }
-        onRepurchase={
-          editingBean
-            ? async () => {
-                try {
-                  const { createRepurchaseBean } =
-                    await import('@/lib/utils/beanRepurchaseUtils');
-                  const newBeanData = await createRepurchaseBean(editingBean);
-                  setShowBeanForm(false);
-                  setEditingBean(null);
-                  setBeanDetailOpen(false);
-                  setTimeout(() => {
-                    setEditingBean(newBeanData as ExtendedCoffeeBean);
-                    setShowBeanForm(true);
-                  }, 300);
-                } catch (error) {
-                  console.error('续购失败:', error);
-                }
-              }
-            : undefined
-        }
       />
 
       {/* 咖啡豆详情 - 仅在非大屏幕时渲染 */}
@@ -888,7 +834,6 @@ const AppModals: React.FC<AppModalsProps> = ({
           onOpenRelatedNote={onOpenNoteDetailFromBean}
           onOpenRelatedBean={onOpenBeanDetailFromRelated}
           onEditRelatedNote={onEditRelatedNoteFromBean}
-          searchQuery={beanDetailSearchQuery}
           mode={
             beanDetailAddMode ? 'add' : beanDetailEditMode ? 'edit' : 'view'
           }
@@ -974,29 +919,7 @@ const AppModals: React.FC<AppModalsProps> = ({
               console.error('复制失败:', error);
             }
           }}
-          onRepurchase={async bean => {
-            try {
-              const { createRepurchaseBean } =
-                await import('@/lib/utils/beanRepurchaseUtils');
-              const newBeanData = await createRepurchaseBean(bean);
-
-              if (settings.immersiveAdd) {
-                setShowBeanForm(false);
-                setEditingBean(null);
-                setBeanDetailData(newBeanData as ExtendedCoffeeBean);
-                setBeanDetailAddMode(true);
-                setBeanDetailEditMode(false);
-                setBeanDetailOpen(true);
-                return;
-              }
-
-              setBeanDetailOpen(false);
-              setEditingBean(newBeanData as ExtendedCoffeeBean);
-              setShowBeanForm(true);
-            } catch (error) {
-              console.error('续购失败:', error);
-            }
-          }}
+          onRepurchase={handleRepurchaseBean}
           onRoast={greenBean => {
             window.dispatchEvent(
               new CustomEvent('openRoastingDrawer', {
@@ -1087,10 +1010,8 @@ const AppModals: React.FC<AppModalsProps> = ({
         onClose={() => {
           setBrewingNoteEditOpen(false);
           setBrewingNoteEditData(null);
-          setIsBrewingNoteCopy(false);
         }}
         settings={settings}
-        isCopy={isBrewingNoteCopy}
       />
 
       {/* 笔记详情模态框 - 仅在非大屏幕时渲染 */}
@@ -1164,17 +1085,6 @@ const AppModals: React.FC<AppModalsProps> = ({
               await deleteNote(noteId);
             } catch (error) {
               console.error('删除笔记失败:', error);
-            }
-          }}
-          onCopy={async noteId => {
-            setNoteDetailOpen(false);
-            const { getBrewingNoteById } =
-              await import('@/lib/notes/relatedNotes');
-            const fullNote = await getBrewingNoteById(noteId);
-            if (fullNote) {
-              setBrewingNoteEditData(fullNote as BrewingNoteData);
-              setIsBrewingNoteCopy(true);
-              setBrewingNoteEditOpen(true);
             }
           }}
           onShare={noteId => {

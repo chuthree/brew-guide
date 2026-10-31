@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import {
-  Camera,
-  Image as ImageIcon,
-  X,
-  CornerDownRight,
-  Plus,
-} from 'lucide-react';
+import { Camera, Image as ImageIcon, X, Plus } from 'lucide-react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
@@ -31,8 +25,6 @@ interface BasicInfoProps {
   validateRemaining: () => void;
   handleCapacityBlur?: () => void;
   toggleInTransitState: () => void;
-  isEdit?: boolean;
-  onRepurchase?: () => void;
   /** 识别时使用的原始图片 base64（用于在表单中显示） */
   recognitionImage?: string | null;
   /** 容量变化时的回调，用于触发类型推断 */
@@ -76,8 +68,6 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
   validateRemaining,
   handleCapacityBlur,
   toggleInTransitState,
-  isEdit = false,
-  onRepurchase,
   recognitionImage,
   onCapacityChange,
   roasterLogo,
@@ -580,19 +570,6 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
               />
             </div>
           </div>
-
-          {/* 续购按钮 - 只在编辑模式下显示，且不在烘焙模式下显示 */}
-          {isEdit && onRepurchase && !isInRoastingMode && (
-            <button
-              type="button"
-              onClick={onRepurchase}
-              className="mt-1 flex items-center text-xs font-bold text-neutral-500 transition-colors hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-              title="续购"
-            >
-              <CornerDownRight className="mr-1 h-3 w-3" />
-              续购
-            </button>
-          )}
         </div>
 
         <div className="space-y-2">

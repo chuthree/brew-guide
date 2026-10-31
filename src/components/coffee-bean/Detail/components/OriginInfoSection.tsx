@@ -2,7 +2,6 @@
 
 import React, { useCallback, useState } from 'react';
 import { CoffeeBean } from '@/types/app';
-import HighlightText from '@/components/common/ui/HighlightText';
 import { BEAN_TYPES } from '../types';
 import BlendComponentTagRows from './BlendComponentTagRows';
 import { updateBlendComponentsDelimitedField } from '@/lib/utils/coffeeBeanUtils';
@@ -32,7 +31,6 @@ interface OriginInfoSectionProps {
   bean: CoffeeBean | null;
   tempBean: Partial<CoffeeBean>;
   isAddMode: boolean;
-  searchQuery: string;
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
   handleRoastLevelSelect: (level: string) => void;
 }
@@ -142,7 +140,6 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
   bean,
   tempBean,
   isAddMode,
-  searchQuery,
   handleUpdateField,
   handleRoastLevelSelect,
 }) => {
@@ -246,11 +243,7 @@ const OriginInfoSection: React.FC<OriginInfoSectionProps> = ({
                 className="cursor-text text-xs font-medium text-neutral-800 outline-none dark:text-neutral-100"
                 style={{ minHeight: '1.25em' }}
               >
-                {searchQuery ? (
-                  <HighlightText text={value} highlight={searchQuery} />
-                ) : (
-                  value
-                )}
+                {value}
               </div>
             </div>
           </div>

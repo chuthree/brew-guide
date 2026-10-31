@@ -119,7 +119,6 @@ interface NotesListViewProps {
   filterMode: 'equipment' | 'date';
   onNoteClick: (note: BrewingNote) => void;
   onDeleteNote: (noteId: string) => Promise<void>;
-  onCopyNote?: (noteId: string) => Promise<void>;
   isShareMode?: boolean;
   selectedNotes?: string[];
   onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void;
@@ -148,7 +147,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   filterMode,
   onNoteClick,
   onDeleteNote,
-  onCopyNote,
   isShareMode = false,
   selectedNotes = EMPTY_SELECTED_NOTES,
   onToggleSelect,
@@ -168,6 +166,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   noteImageCounts,
 }) => {
   const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false);
+  const highlightQuery = isSearching ? searchQuery : '';
 
   // 使用评分维度hook - 在父组件中调用一次，然后传递给所有子组件
   const { getValidTasteRatings } = useFlavorDimensions();
@@ -226,9 +225,9 @@ const NotesListView: React.FC<NotesListViewProps> = ({
       <ChangeRecordNoteItem
         key={note.id}
         note={note}
+        searchQuery={highlightQuery}
         onEdit={onNoteClick}
         onDelete={onDeleteNote}
-        onCopy={onCopyNote}
         isShareMode={isShareMode}
         isSelected={selectedNotes.includes(note.id)}
         onToggleSelect={handleToggleSelect}
@@ -236,8 +235,8 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     ),
     [
       handleToggleSelect,
+      highlightQuery,
       isShareMode,
-      onCopyNote,
       onDeleteNote,
       onNoteClick,
       selectedNotes,
@@ -287,10 +286,10 @@ const NotesListView: React.FC<NotesListViewProps> = ({
       <NoteItemComponent
         key={note.id}
         note={note}
+        searchQuery={highlightQuery}
         equipmentNames={equipmentNames}
         onEdit={onNoteClick}
         onDelete={onDeleteNote}
-        onCopy={onCopyNote}
         isShareMode={isShareMode}
         isSelected={selectedNotes.includes(note.id)}
         onToggleSelect={handleToggleSelect}
@@ -304,6 +303,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     ),
     [
       NoteItemComponent,
+      highlightQuery,
       coffeeBeanLookup,
       coffeeBeans,
       equipmentNames,
@@ -311,7 +311,6 @@ const NotesListView: React.FC<NotesListViewProps> = ({
       handleToggleSelect,
       isShareMode,
       noteImageCounts,
-      onCopyNote,
       onDeleteNote,
       onNoteClick,
       regularNotes.length,
@@ -340,6 +339,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     return (
       <TableView
         notes={[...regularNotes, ...changeRecordNotes]}
+        searchQuery={highlightQuery}
         equipmentNames={equipmentNames}
         coffeeBeanLookup={coffeeBeanLookup}
         visibleColumns={tableVisibleColumns}

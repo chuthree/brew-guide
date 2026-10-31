@@ -15,7 +15,6 @@ import StorageInit from '@/providers/StorageProvider';
 import ModalHistoryInit from '@/providers/ModalHistoryProvider';
 import { DataLayerProvider } from '@/providers/DataLayerProvider';
 
-import DevTools from '@/components/common/DevTools';
 import TauriDragRegion from '@/components/layout/TauriDragRegion';
 import PWAUpdatePrompt from '@/components/layout/PWAUpdatePrompt';
 
@@ -270,7 +269,6 @@ export default function RootLayout({
         >
           <DataLayerProvider>
             <TauriDragRegion />
-            <DevTools />
             <div className="app-viewport overflow-hidden bg-neutral-50 dark:bg-neutral-900">
               <Suspense>
                 <CrashDiagnosticsProvider />

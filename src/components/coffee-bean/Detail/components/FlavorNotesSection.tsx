@@ -2,7 +2,6 @@
 
 import React, { useRef, useEffect } from 'react';
 import { CoffeeBean } from '@/types/app';
-import HighlightText from '@/components/common/ui/HighlightText';
 import { normalizeDelimitedTextList } from '@/lib/utils/coffeeBeanUtils';
 import TagAutocompleteInput from './TagAutocompleteInput';
 import { useFlavorSuggestions } from '@/components/coffee-bean/Form/hooks/useCoffeeBeanFieldSuggestions';
@@ -11,7 +10,6 @@ interface FlavorNotesSectionProps {
   bean: CoffeeBean | null;
   tempBean: Partial<CoffeeBean>;
   isAddMode: boolean;
-  searchQuery: string;
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
 }
 
@@ -19,7 +17,6 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
   bean,
   tempBean,
   isAddMode,
-  searchQuery,
   handleUpdateField,
 }) => {
   const notesRef = useRef<HTMLDivElement>(null);
@@ -152,19 +149,7 @@ const FlavorNotesSection: React.FC<FlavorNotesSectionProps> = ({
                 wordBreak: 'break-word',
               }}
             >
-              {(() => {
-                if (!currentNotes) return '';
-                if (searchQuery) {
-                  return (
-                    <HighlightText
-                      text={currentNotes || ''}
-                      highlight={searchQuery}
-                      className="text-neutral-700 dark:text-neutral-300"
-                    />
-                  );
-                }
-                return currentNotes;
-              })()}
+              {currentNotes}
             </div>
           </div>
         </div>

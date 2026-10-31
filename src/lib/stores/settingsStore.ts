@@ -186,8 +186,6 @@ const normalizeLayoutSettings = (
   const defaultLayout = defaultSettings.layoutSettings!;
 
   return {
-    progressBarHeight:
-      layout?.progressBarHeight ?? defaultLayout.progressBarHeight,
     dataFontSize: layout?.dataFontSize ?? defaultLayout.dataFontSize,
     stepDisplayMode: layout?.stepDisplayMode ?? defaultLayout.stepDisplayMode,
   };
@@ -304,10 +302,6 @@ export const useSettingsStore = create<SettingsStore>()(
           // 确保所有字段都有值，使用类型断言来确保类型安全
           const newLayoutSettings: NonNullable<AppSettings['layoutSettings']> =
             {
-              progressBarHeight:
-                layout.progressBarHeight ??
-                currentLayout?.progressBarHeight ??
-                defaultLayout.progressBarHeight,
               dataFontSize:
                 layout.dataFontSize ??
                 currentLayout?.dataFontSize ??
@@ -553,6 +547,16 @@ export const useSettingsStore = create<SettingsStore>()(
           const existingIndex = configs.findIndex(
             c => c.roasterName === roasterName
           );
+          const now = Date.now();
+          if (Object.prototype.hasOwnProperty.call(updates, 'logoData')) {
+            updates = {
+              ...updates,
+              logoUpdatedAt: Math.max(
+                now,
+                (configs[existingIndex]?.logoUpdatedAt ?? 0) + 1
+              ),
+            };
+          }
 
           if (existingIndex >= 0) {
             configs[existingIndex] = {
@@ -575,8 +579,17 @@ export const useSettingsStore = create<SettingsStore>()(
 
         deleteRoasterConfig: async roasterName => {
           const settings = get().settings;
-          const configs = (settings.roasterConfigs || []).filter(
-            c => c.roasterName !== roasterName
+          const configs = (settings.roasterConfigs || []).map(c =>
+            c.roasterName !== roasterName
+              ? c
+              : {
+                  roasterName,
+                  updatedAt: Date.now(),
+                  logoUpdatedAt: Math.max(
+                    Date.now(),
+                    (c.logoUpdatedAt ?? 0) + 1
+                  ),
+                }
           );
           await callStoreActionInMutation(get().updateSettings, {
             roasterConfigs: configs,

@@ -92,7 +92,6 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
   // 设置默认值
   const layoutSettings: LayoutSettings = settings.layoutSettings || {};
   const showFlowRate = settings.showFlowRate ?? false;
-  const progressBarHeight = layoutSettings.progressBarHeight ?? 4;
 
   // 获取字体大小类名 - 使用明确的类名以确保 Tailwind 包含这些样式
   const fontSizeClass =
@@ -214,7 +213,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                     className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
                     style={{
                       left: `${percentage}%`,
-                      height: `${progressBarHeight}px`,
+                      height: 12,
                       opacity: 0.8,
                     }}
                   />
@@ -224,7 +223,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
               <div
                 className="w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
                 style={{
-                  height: `${progressBarHeight}px`,
+                  height: 12,
                 }}
               >
                 {/* 阶段分隔线 */}
@@ -241,7 +240,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                       className="absolute top-0 bottom-0 z-10 w-[1.5px] bg-neutral-100 dark:bg-neutral-900"
                       style={{
                         left: `${percentage}%`,
-                        height: `${progressBarHeight}px`,
+                        height: 12,
                       }}
                     />
                   );
@@ -262,7 +261,7 @@ const TimerPreview: React.FC<TimerPreviewProps> = ({ settings }) => {
                       style={{
                         left: `${startPercentage}%`,
                         width: `${width}%`,
-                        height: `${progressBarHeight}px`,
+                        height: 12,
                         background: `repeating-linear-gradient(
                                                         45deg,
                                                         transparent,

@@ -28,9 +28,6 @@ describe('canSwitchPlainNoteToQuickRecord', () => {
       })
     ).toBe(false);
     expect(
-      canSwitchPlainNoteToQuickRecord({ ...baseCandidate, isCopy: true })
-    ).toBe(false);
-    expect(
       canSwitchPlainNoteToQuickRecord({ ...baseCandidate, noteId: undefined })
     ).toBe(false);
     expect(

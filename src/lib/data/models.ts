@@ -78,6 +78,8 @@ export interface RoasterFlavorPeriod {
 export interface RoasterConfig {
   roasterName: string;
   logoData?: string;
+  /** 图标独立版本；有版本但无 logoData 表示主动删除。 */
+  logoUpdatedAt?: number;
   flavorPeriod?: RoasterFlavorPeriod;
   updatedAt: number;
 }
@@ -109,7 +111,6 @@ export interface AppSettings {
 
   // 布局设置
   layoutSettings?: {
-    progressBarHeight?: number;
     dataFontSize?: '2xl' | '3xl' | '4xl';
     stepDisplayMode?: 'independent' | 'cumulative' | 'time'; // 步骤时间显示模式
   };

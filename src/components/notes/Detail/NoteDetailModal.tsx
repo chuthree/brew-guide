@@ -197,7 +197,6 @@ interface NoteDetailModalProps {
   beanInfo?: CoffeeBean | null; // 完整的咖啡豆信息（包括图片）
   onEdit?: (note: BrewingNote) => void;
   onDelete?: (noteId: string) => void | string | Promise<void | string>;
-  onCopy?: (noteId: string) => void;
   onShare?: (noteId: string) => void;
   onOpenBeanDetail?: (bean: CoffeeBean) => void;
 }
@@ -211,7 +210,6 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   beanInfo: initialBeanInfo = null,
   onEdit,
   onDelete,
-  onCopy,
   onShare,
   onOpenBeanDetail,
 }) => {
@@ -773,18 +771,6 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       });
     }
 
-    if (onCopy) {
-      items.push({
-        id: 'copy',
-        label: '复制',
-        onClick: () => {
-          onCopy(note.id);
-          onClose();
-        },
-        color: 'default' as const,
-      });
-    }
-
     if (onEdit) {
       items.push({
         id: 'edit',
@@ -798,7 +784,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     }
 
     return items;
-  }, [note, onDelete, onShare, onCopy, onEdit, onClose]);
+  }, [note, onDelete, onShare, onEdit, onClose]);
 
   // 只在需要时渲染DOM
   if (!shouldRender) return null;
@@ -847,7 +833,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           </div>
 
           {/* 右侧操作按钮 */}
-          {note && (onEdit || onDelete || onCopy || onShare) && (
+          {note && (onEdit || onDelete || onShare) && (
             <div className="flex shrink-0 items-center gap-3">
               {/* 编辑按钮 */}
               {onEdit && (

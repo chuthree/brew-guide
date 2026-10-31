@@ -3,13 +3,14 @@
  */
 
 import type { SettingsOptions } from '@/lib/data/models';
-import type { CloudProvider, SyncDirection, SyncProgress } from './types';
-import type { ISyncManager, ISyncResult, ISyncOptions } from './interfaces';
+import type { SyncDirection, SyncProgress } from './types';
+import type { ISyncManager, ISyncResult } from './interfaces';
 import { createFailureResult, BaseSyncManagerAdapter } from './interfaces';
 import { getConnectedManualSyncProvider } from './settings';
+import type { ManualSyncProvider } from './settings';
 
 interface ManagerCache {
-  provider: CloudProvider;
+  provider: ManualSyncProvider;
   manager: ISyncManager;
   hash: string;
 }
@@ -21,17 +22,13 @@ function hash(o: object): string {
 class UnifiedSyncService {
   private cache: ManagerCache | null = null;
 
-  getManualProvider(settings: SettingsOptions): CloudProvider {
+  getManualProvider(settings: SettingsOptions): ManualSyncProvider {
     return getConnectedManualSyncProvider(settings);
   }
 
-  getActiveProvider(settings: SettingsOptions): CloudProvider {
-    return this.getManualProvider(settings);
-  }
-
-  async getManager(
+  private async getManager(
     settings: SettingsOptions,
-    provider: CloudProvider,
+    provider: ManualSyncProvider,
     options: { skipConnectionTest?: boolean } = {}
   ): Promise<ISyncManager | null> {
     if (provider === 'none') return null;
@@ -43,13 +40,11 @@ class UnifiedSyncService {
 
     if (
       this.cache?.provider === provider &&
-      this.cache.hash === configHash &&
-      this.cache.manager.isInitialized()
+      this.cache.hash === configHash
     ) {
       return this.cache.manager;
     }
 
-    this.cache?.manager.disconnect();
     this.cache = null;
 
     const manager = await this.createManager(
@@ -65,17 +60,9 @@ class UnifiedSyncService {
 
   private buildConfig(
     settings: SettingsOptions,
-    provider: CloudProvider
+    provider: ManualSyncProvider
   ): object | null {
     switch (provider) {
-      case 'supabase':
-        return settings.supabaseSync
-          ? {
-              provider: 'supabase',
-              url: settings.supabaseSync.url,
-              anonKey: settings.supabaseSync.anonKey,
-            }
-          : null;
       case 's3':
         return settings.s3Sync
           ? {
@@ -104,25 +91,22 @@ class UnifiedSyncService {
   }
 
   private async createManager(
-    provider: CloudProvider,
+    provider: ManualSyncProvider,
     config: object,
     skipConnectionTest: boolean
   ): Promise<ISyncManager | null> {
     switch (provider) {
-      // Supabase 使用 RealtimeSyncService 自动同步，不再需要手动同步管理器
-      case 'supabase':
-        return null;
       case 's3': {
         const { S3SyncManager } = await import('@/lib/s3/syncManagerV2');
         const mgr = new S3SyncManager();
         const ok = await mgr.initialize(config as never, skipConnectionTest);
-        return ok ? new BaseSyncManagerAdapter('s3', mgr) : null;
+        return ok ? new BaseSyncManagerAdapter(mgr) : null;
       }
       case 'webdav': {
         const { WebDAVSyncManager } = await import('@/lib/webdav/syncManager');
         const mgr = new WebDAVSyncManager();
         const ok = await mgr.initialize(config as never, skipConnectionTest);
-        return ok ? new BaseSyncManagerAdapter('webdav', mgr) : null;
+        return ok ? new BaseSyncManagerAdapter(mgr) : null;
       }
       default:
         return null;
@@ -142,21 +126,7 @@ class UnifiedSyncService {
     });
     if (!manager) return createFailureResult('同步服务初始化失败');
 
-    return manager.sync({ direction, onProgress } as ISyncOptions);
-  }
-
-  async testConnection(
-    settings: SettingsOptions,
-    provider: CloudProvider
-  ): Promise<boolean> {
-    if (provider === 'none') return false;
-    const manager = await this.getManager(settings, provider);
-    return manager?.testConnection() ?? false;
-  }
-
-  disconnect(): void {
-    this.cache?.manager.disconnect();
-    this.cache = null;
+    return manager.sync({ direction, onProgress });
   }
 }
 

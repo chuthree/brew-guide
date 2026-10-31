@@ -39,7 +39,7 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
   const actions = [
     {
       settingId: makeSettingRowSearchId('同步数据'),
-      label: isSyncing && syncDirection === 'auto' ? '同步中…' : '同步数据',
+      label: isSyncing && syncDirection === 'auto' ? '同步中…' : '同步',
       onClick: () => {
         setSyncDirection('auto');
         onSync();
@@ -47,7 +47,7 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
     },
     {
       settingId: makeSettingRowSearchId('上传数据'),
-      label: isSyncing && syncDirection === 'upload' ? '上传中…' : '上传数据',
+      label: isSyncing && syncDirection === 'upload' ? '上传中…' : '上传',
       onClick: () => {
         setSyncDirection('upload');
         onUpload();
@@ -55,7 +55,7 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
     },
     {
       settingId: makeSettingRowSearchId('下载数据'),
-      label: isSyncing && syncDirection === 'download' ? '下载中…' : '下载数据',
+      label: isSyncing && syncDirection === 'download' ? '下载中…' : '下载',
       onClick: () => {
         setSyncDirection('download');
         onDownload();
@@ -65,7 +65,7 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
       ? [
           {
             settingId: makeSettingRowSearchId('备份历史'),
-            label: isLoadingBackups ? '加载备份中…' : '备份历史',
+            label: isLoadingBackups ? '加载中…' : '备份',
             onClick: onShowBackups,
           },
         ]

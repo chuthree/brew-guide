@@ -3,6 +3,7 @@
 import React, {
   useRef,
   useEffect,
+  useLayoutEffect,
   useState,
   ReactNode,
   useCallback,
@@ -51,11 +52,79 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
   // 状态管理
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isOpen !== undefined ? isOpen : internalOpen;
+  const [useDropdown, setUseDropdown] = useState(false);
 
   // 引用管理
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const horizontalMenuRef = useRef<HTMLDivElement>(null);
   const isMounted = useRef(true);
+
+  const updateMenuLayout = useCallback(() => {
+    const container = menuRef.current;
+    const content = horizontalMenuRef.current;
+    if (!container || !content) return;
+
+    let left = 8;
+    let right = document.documentElement.clientWidth - 8;
+    let branch: HTMLElement = container;
+    for (
+      let parent = container.parentElement;
+      parent;
+      parent = parent.parentElement
+    ) {
+      const style = getComputedStyle(parent);
+      // 横向展开只能占用弹性标题的空间，不能挤走返回和其他操作按钮。
+      if (style.display === 'flex' && style.flexDirection === 'row') {
+        const flexibleSiblings = Array.from(parent.children).filter(
+          sibling =>
+            sibling !== branch && Number(getComputedStyle(sibling).flexGrow) > 0
+        );
+        if (flexibleSiblings.length > 0) {
+          const flexibleSpace = flexibleSiblings.reduce(
+            (width, sibling) => width + sibling.getBoundingClientRect().width,
+            0
+          );
+          left = Math.max(
+            left,
+            container.getBoundingClientRect().left - flexibleSpace
+          );
+        }
+      }
+      if (style.overflowX !== 'visible') {
+        const bounds = parent.getBoundingClientRect();
+        left = Math.max(left, bounds.left + 8);
+        right = Math.min(right, bounds.right - 8);
+      }
+      branch = parent;
+    }
+    const availableWidth =
+      Math.min(container.getBoundingClientRect().right, right) - left;
+    // 按横排的 px-3 按钮、px-1 容器和 gap-0.5 计算，避免竖排宽度影响判断。
+    const horizontalWidth = Array.from(content.children).reduce(
+      (width, button) =>
+        width +
+        (button.firstElementChild?.getBoundingClientRect().width ?? 0) +
+        24,
+      8 + Math.max(0, content.children.length - 1) * 2
+    );
+    setUseDropdown(horizontalWidth > availableWidth);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!useMorphingAnimation || !open) return;
+    updateMenuLayout();
+    const observer = new ResizeObserver(updateMenuLayout);
+    if (horizontalMenuRef.current) observer.observe(horizontalMenuRef.current);
+    if (menuRef.current?.parentElement) {
+      observer.observe(menuRef.current.parentElement);
+    }
+    window.addEventListener('resize', updateMenuLayout);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateMenuLayout);
+    };
+  }, [useMorphingAnimation, open, updateMenuLayout]);
 
   // 组件挂载状态管理
   useEffect(() => {
@@ -178,19 +247,21 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
   if (useMorphingAnimation) {
     return (
       <div
-        className={cn('action-menu-container relative', className)}
+        className={cn('action-menu-container relative h-8', className)}
         ref={menuRef}
       >
         <motion.div
           onClick={handleStop}
           className={cn(
-            'relative flex h-8 items-center justify-center overflow-hidden',
-            triggerClassName
+            'relative flex items-center justify-center overflow-hidden',
+            triggerClassName,
+            useDropdown && 'z-50'
           )}
           initial={false}
           animate={{
             width: open ? 'auto' : '2rem',
-            borderRadius: '1rem',
+            height: open && useDropdown ? 'auto' : '2rem',
+            borderRadius: open && useDropdown ? '0.75rem' : '1rem',
           }}
           transition={{
             duration: open ? 0.24 : 0.18,
@@ -201,7 +272,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
           <motion.button
             ref={triggerRef}
             onClick={handleTriggerClick}
-            className="absolute inset-0 flex w-8 items-center justify-center"
+            className="absolute top-0 right-0 flex h-8 w-8 items-center justify-center"
             initial={false}
             animate={{
               opacity: open ? 0 : 1,
@@ -219,7 +290,12 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
 
           {/* 展开的菜单 - 收起时淡出 */}
           <motion.div
-            className="flex h-full items-center gap-0.5 px-1"
+            ref={horizontalMenuRef}
+            className={cn(
+              'flex w-max shrink-0 gap-0.5 px-1',
+              useDropdown ? 'flex-col items-stretch py-1' : 'items-center'
+            )}
+            inert={!open}
             initial={false}
             animate={{
               opacity: open ? 1 : 0,
@@ -233,18 +309,21 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
               pointerEvents: open ? 'auto' : 'none',
             }}
           >
-            {items.map(item => (
+            {(useDropdown ? [...items].reverse() : items).map(item => (
               <button
                 type="button"
                 key={item.id}
                 onClick={e => handleItemClick(e, item.onClick)}
                 className={cn(
-                  'h-full rounded-lg px-3 text-xs font-medium whitespace-nowrap',
+                  'h-8 shrink-0 rounded-lg px-3 text-xs font-medium whitespace-nowrap',
+                  useDropdown && 'text-left',
                   'transition-colors hover:bg-neutral-200/50 dark:hover:bg-neutral-700/50',
                   getColorClassName(item.color)
                 )}
               >
-                {item.renderContent || item.label}
+                <span className="inline-block">
+                  {item.renderContent || item.label}
+                </span>
               </button>
             ))}
           </motion.div>

@@ -8,8 +8,6 @@ export {
   createFileMetadata,
   createFilesMetadataFromData,
   normalizeDataForHash,
-  areFilesEqual,
   generateDeviceId,
   safeJsonParse,
-  deepClone,
 } from '@/lib/s3/utils';

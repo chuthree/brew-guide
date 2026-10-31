@@ -149,6 +149,7 @@ class ModalHistoryManager {
 
     // 如果是主动关闭触发的 popstate，跳过处理
     if (this.state.isClosingProgrammatically) {
+      this.state.isClosingProgrammatically = false;
       return;
     }
 
@@ -348,13 +349,17 @@ class ModalHistoryManager {
    * @param skipOnClose 是否跳过 onClose 回调（默认 true，因为调用者通常已经处理了关闭逻辑）
    * @param expectedEntry 仅在该注册实例仍持有历史层时关闭
    */
-  close(id: string, skipOnClose = true, expectedEntry?: ModalEntry): void {
+  close(
+    id: string,
+    skipOnClose = true,
+    expectedEntry?: ModalEntry
+  ): Promise<void> {
     const index = this.state.stack.findIndex(m => m.id === id);
     if (
       index === -1 ||
       (expectedEntry && this.state.stack[index] !== expectedEntry)
     ) {
-      return;
+      return Promise.resolve();
     }
 
     // 计算需要返回的历史记录数量（从该模态框到栈顶的所有条目）
@@ -370,20 +375,22 @@ class ModalHistoryManager {
       );
     }
 
-    // 清理浏览器历史
-    if (closeCount > 0) {
+    // 等浏览器真正完成返回后，调用者才能安全打开下一个模态框。
+    const closed = new Promise<void>(resolve => {
+      const onPopState = () => {
+        window.removeEventListener('popstate', onPopState);
+        resolve();
+      };
+      window.addEventListener('popstate', onPopState);
       this.state.isClosingProgrammatically = true;
       window.history.go(-closeCount);
-      // 在下一个事件循环中重置标志
-      setTimeout(() => {
-        this.state.isClosingProgrammatically = false;
-      }, 50);
-    }
+    });
 
     // 如果不跳过 onClose，调用最底层被关闭模态框的 onClose
     if (!skipOnClose && removed.length > 0) {
       removed[0].onClose({ source: 'app' });
     }
+    return closed;
   }
 
   /**

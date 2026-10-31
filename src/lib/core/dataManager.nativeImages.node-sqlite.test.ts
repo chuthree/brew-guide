@@ -140,6 +140,10 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('@/lib/core/config', () => ({ APP_VERSION: 'test' }));
+// This suite uses a real Node SQLite database without the Android provider bridge.
+vi.mock('@/lib/data/sqlite/providerSqliteDriver', () => ({
+  withAndroidDatabaseMutation: async (work: () => Promise<unknown>) => work(),
+}));
 vi.mock('@/lib/app/runtime', () => ({
   detectAppRuntime: vi.fn(() => ({
     runtime: 'capacitor',

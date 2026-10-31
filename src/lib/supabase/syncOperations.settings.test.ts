@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AppSettings, Grinder } from '@/lib/data/models';
+import type { AppSettings, Grinder, RoasterConfig } from '@/lib/data/models';
 import {
   createSettingsSyncFingerprint,
   downloadSettingsData,
@@ -12,6 +12,11 @@ const repositoryMocks = vi.hoisted(() => ({
   saveAppSettings: vi.fn(),
   listGrinders: vi.fn(),
   replaceAllGrinders: vi.fn(),
+  setState: vi.fn(),
+}));
+
+vi.mock('@/lib/stores/settingsStore', () => ({
+  useSettingsStore: { setState: repositoryMocks.setState },
 }));
 
 vi.mock('@/lib/data/repositories', () => ({
@@ -60,6 +65,11 @@ class FailingFingerprintStorage extends MemoryStorage {
 
 const sharedSettings = {
   username: '',
+};
+
+const localSettings = {
+  ...sharedSettings,
+  textZoomLevel: 1.1,
   supabaseSync: {
     enabled: true,
     url: 'https://example.supabase.co',
@@ -68,8 +78,6 @@ const sharedSettings = {
   },
   activeSyncType: 'supabase',
 };
-
-const localSettings = { ...sharedSettings, textZoomLevel: 1.1 };
 
 const localGrinders = [{ id: 'grinder-1', name: 'C40' }];
 function mockLocalSettings() {
@@ -81,20 +89,31 @@ function mockLocalSettings() {
 
 function createSettingsClient(remoteData?: Record<string, unknown>) {
   const maybeSingle = vi.fn().mockResolvedValue({
-    data: remoteData ? { data: remoteData } : null,
+    data: remoteData
+      ? { data: remoteData, updated_at: '2026-01-01T00:00:00.000Z' }
+      : null,
     error: null,
   });
   const eqId = vi.fn(() => ({ maybeSingle }));
   const eqUser = vi.fn(() => ({ eq: eqId }));
   const select = vi.fn(() => ({ eq: eqUser }));
-  const upsert = vi.fn().mockResolvedValue({ error: null });
-  const from = vi.fn(() => ({ select, upsert }));
+  const written = vi
+    .fn()
+    .mockResolvedValue({ data: { id: 'app_settings' }, error: null });
+  const mutation = {
+    eq: vi.fn((_key: string, _value: unknown) => mutation),
+    select: () => ({ maybeSingle: written }),
+  };
+  const write = vi.fn((_record: unknown) => mutation);
+  const from = vi.fn(() => ({ select, update: write, insert: write }));
 
   return {
     client: { from } as unknown as SupabaseClient,
     maybeSingle,
     select,
-    upsert,
+    upsert: write,
+    written,
+    mutation,
   };
 }
 
@@ -115,6 +134,186 @@ function createDownloadSettingsClient(remoteData?: Record<string, unknown>) {
     single,
   };
 }
+
+describe('roaster logos across devices', () => {
+  const logo: RoasterConfig = {
+    roasterName: 'R',
+    logoData: 'new-image',
+    logoUpdatedAt: 20,
+    updatedAt: 20,
+  };
+  const deleted: RoasterConfig = {
+    roasterName: 'R',
+    logoUpdatedAt: 30,
+    updatedAt: 30,
+  };
+  const snapshot = (configs: RoasterConfig[]) => ({
+    appSettings: { ...localSettings, roasterConfigs: configs },
+    grinders: localGrinders,
+    customPresets: {},
+  });
+  let local: AppSettings;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    const storage = new MemoryStorage();
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: storage,
+      configurable: true,
+    });
+    Object.defineProperty(globalThis, 'window', {
+      value: { localStorage: storage, dispatchEvent: vi.fn() },
+      configurable: true,
+    });
+    local = snapshot([logo]).appSettings as unknown as AppSettings;
+    repositoryMocks.getAppSettings.mockImplementation(async () => local);
+    repositoryMocks.saveAppSettings.mockImplementation(async settings => {
+      local = settings;
+    });
+    repositoryMocks.listGrinders.mockResolvedValue(localGrinders);
+  });
+
+  it.each([
+    { configs: [] },
+    { configs: [{ roasterName: 'R', updatedAt: 999 }] },
+  ])(
+    'download does not erase a pending local logo with $configs',
+    async ({ configs }) => {
+      const { client } = createDownloadSettingsClient(snapshot(configs));
+      expect((await downloadSettingsData(client)).success).toBe(true);
+      expect(local.roasterConfigs![0]).toMatchObject({
+        logoData: 'new-image',
+        logoUpdatedAt: 20,
+      });
+    }
+  );
+
+  it.each([
+    { configs: [] },
+    { configs: [{ roasterName: 'R', logoData: 'old-image', updatedAt: 999 }] },
+  ])(
+    'stale device upload preserves remote logos and repairs its local copy: $configs',
+    async ({ configs }) => {
+      local.roasterConfigs = configs;
+      const { client, upsert } = createSettingsClient(snapshot([logo]));
+      expect((await uploadSettingsData(client)).success).toBe(true);
+      expect(upsert.mock.calls[0][0]).toMatchObject({
+        data: {
+          appSettings: {
+            roasterConfigs: [
+              expect.objectContaining({
+                logoData: 'new-image',
+                logoUpdatedAt: 20,
+              }),
+            ],
+          },
+        },
+      });
+      expect(local.roasterConfigs![0].logoData).toBe('new-image');
+      expect(repositoryMocks.setState).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('downloads and uploads explicit deletions without resurrecting old images', async () => {
+    const download = createDownloadSettingsClient(snapshot([deleted]));
+    expect((await downloadSettingsData(download.client)).success).toBe(true);
+    expect(local.roasterConfigs![0].logoData).toBeUndefined();
+    const upload = createSettingsClient(snapshot([logo]));
+    expect((await uploadSettingsData(upload.client)).success).toBe(true);
+    const payload = JSON.parse(JSON.stringify(upload.upsert.mock.calls[0][0]));
+    expect(payload.data.appSettings.roasterConfigs).toEqual([deleted]);
+  });
+
+  it('applies a remote deletion when a stale device uploads and skips an unchanged write', async () => {
+    local.roasterConfigs = [{ ...logo, updatedAt: deleted.updatedAt }];
+    const { client, upsert } = createSettingsClient(snapshot([deleted]));
+    expect(
+      await uploadSettingsData(client, { skipIfUnchanged: true })
+    ).toMatchObject({ success: true, affectedCount: 0 });
+    expect(upsert).not.toHaveBeenCalled();
+    expect(local.roasterConfigs![0].logoData).toBeUndefined();
+    expect(local.roasterConfigs![0].logoUpdatedAt).toBe(30);
+  });
+
+  it('re-reads and merges a second device deletion after a conditional write conflict', async () => {
+    const remote = createSettingsClient(snapshot([logo]));
+    const secondTimestamp = '2026-01-02T00:00:00.000Z';
+    remote.written.mockImplementationOnce(async () => {
+      // Device B commits after A reads; A's conditional UPDATE affects no rows.
+      remote.maybeSingle.mockResolvedValue({
+        data: { data: snapshot([deleted]), updated_at: secondTimestamp },
+        error: null,
+      });
+      return { data: null, error: null };
+    });
+    expect((await uploadSettingsData(remote.client)).success).toBe(true);
+    expect(remote.maybeSingle).toHaveBeenCalledTimes(2);
+    expect(remote.mutation.eq).toHaveBeenCalledWith(
+      'updated_at',
+      '2026-01-01T00:00:00.000Z'
+    );
+    expect(remote.mutation.eq).toHaveBeenCalledWith(
+      'updated_at',
+      secondTimestamp
+    );
+    expect(remote.upsert.mock.calls[1][0]).toMatchObject({
+      data: {
+        appSettings: {
+          roasterConfigs: [expect.objectContaining({ logoUpdatedAt: 30 })],
+        },
+      },
+    });
+    expect(local.roasterConfigs![0].logoData).toBeUndefined();
+  });
+
+  it('merges both devices logos when they race to create the settings row', async () => {
+    const remote = createSettingsClient();
+    const other = { ...logo, roasterName: 'Other' };
+    remote.written.mockImplementationOnce(async () => {
+      remote.maybeSingle.mockResolvedValue({
+        data: {
+          data: snapshot([other]),
+          updated_at: '2026-01-02T00:00:00.000Z',
+        },
+        error: null,
+      });
+      return { data: null, error: { code: '23505' } };
+    });
+    expect((await uploadSettingsData(remote.client)).success).toBe(true);
+    expect(remote.upsert).toHaveBeenCalledTimes(2);
+    expect(local.roasterConfigs).toEqual([logo, other]);
+  });
+
+  it('keeps an edit made locally while the upload was in flight', async () => {
+    const remote = createSettingsClient(snapshot([logo]));
+    remote.written.mockImplementationOnce(async () => {
+      local = { ...local, roasterConfigs: [deleted] };
+      return { data: { id: 'app_settings' }, error: null };
+    });
+    expect((await uploadSettingsData(remote.client)).success).toBe(true);
+    expect(local.roasterConfigs).toEqual([deleted]);
+  });
+
+  it('fails without overwriting when remote reads fail', async () => {
+    const remote = createSettingsClient();
+    remote.maybeSingle.mockResolvedValue({
+      data: null,
+      error: { message: 'offline' },
+    });
+    expect((await uploadSettingsData(remote.client)).success).toBe(false);
+    expect(remote.upsert).not.toHaveBeenCalled();
+    expect(repositoryMocks.saveAppSettings).not.toHaveBeenCalled();
+  });
+
+  it('stops after repeated concurrent conflicts without applying an uncommitted snapshot', async () => {
+    const remote = createSettingsClient(snapshot([deleted]));
+    remote.written.mockResolvedValue({ data: null, error: null });
+    expect((await uploadSettingsData(remote.client)).success).toBe(false);
+    expect(remote.upsert).toHaveBeenCalledTimes(3);
+    expect(local.roasterConfigs).toEqual([logo]);
+    expect(repositoryMocks.saveAppSettings).not.toHaveBeenCalled();
+  });
+});
 
 describe('settings sync fingerprint', () => {
   beforeEach(() => {
@@ -173,7 +372,7 @@ describe('settings sync fingerprint', () => {
     expect(fingerprint).not.toContain('very-long-name');
   });
 
-  it('skips upload when the local fingerprint was already synced', async () => {
+  it('checks remote settings even when the local fingerprint was already synced', async () => {
     mockLocalSettings();
     const localData = {
       appSettings: localSettings,
@@ -184,14 +383,14 @@ describe('settings sync fingerprint', () => {
       SETTINGS_SYNC_FINGERPRINT_KEY,
       createSettingsSyncFingerprint(localData)
     );
-    const { client, select, upsert } = createSettingsClient();
+    const { client, select, upsert } = createSettingsClient(localData);
 
     const result = await uploadSettingsData(client, {
       skipIfUnchanged: true,
     });
 
     expect(result).toMatchObject({ success: true, affectedCount: 0 });
-    expect(select).not.toHaveBeenCalled();
+    expect(select).toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
   });
 

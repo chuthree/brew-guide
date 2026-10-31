@@ -5,10 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { ExtendedCoffeeBean } from './types';
 import CoffeeBeanForm, { type CoffeeBeanFormHandle } from './index';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
-import {
-  useMultiStepModalHistory,
-  modalHistory,
-} from '@/lib/hooks/useModalHistory';
+import { useMultiStepModalHistory } from '@/lib/hooks/useModalHistory';
 import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 
 interface CoffeeBeanFormModalProps {
@@ -16,7 +13,6 @@ interface CoffeeBeanFormModalProps {
   initialBean?: ExtendedCoffeeBean | null;
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => Promise<boolean>;
   onClose: () => void;
-  onRepurchase?: () => void;
   initialBeanState?: 'green' | 'roasted';
   /** 当前是否处于“生豆转熟豆”烘焙流程（来源生豆ID） */
   roastingSourceBeanId?: string | null;
@@ -29,7 +25,6 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   initialBean,
   onSave,
   onClose,
-  onRepurchase,
   initialBeanState,
   roastingSourceBeanId,
   recognitionImage,
@@ -52,7 +47,6 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   // 添加对模态框的引用
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // 表单引用，用于调用表单的返回方法
   const formRef = useRef<CoffeeBeanFormHandle | null>(null);
 
   // 当前步骤状态 - 用于历史栈管理
@@ -177,9 +171,8 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
             key={`bean-form-${hydratedInitialBean?.id || 'new'}-${hydratedInitialBean?.name || ''}-${initialBeanState || 'roasted'}`}
             ref={formRef}
             onSave={onSave}
-            onCancel={onClose}
+            onClose={onClose}
             initialBean={hydratedInitialBean || undefined}
-            onRepurchase={onRepurchase}
             onStepChange={setCurrentStep}
             initialBeanState={initialBeanState}
             roastingSourceBeanId={roastingSourceBeanId}

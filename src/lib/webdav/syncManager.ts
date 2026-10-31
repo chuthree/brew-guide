@@ -75,10 +75,7 @@ export class WebDAVSyncManager extends BaseSyncManager {
 
       console.warn(`📱 [WebDAV] 设备 ID: ${this.deviceId}`);
 
-      this.metadataManager = new MetadataManager(
-        this.webdavClient,
-        this.deviceId
-      );
+      this.metadataManager = new MetadataManager(this.webdavClient);
 
       // 仅在需要时测试连接
       if (!skipConnectionTest) {

@@ -16,19 +16,10 @@ import {
 import { makeSettingRowSearchId } from './settingsSearch';
 
 interface StockSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
 }
 
-const StockSettings: React.FC<StockSettingsProps> = ({
-  settings: _settings,
-  onClose,
-  handleChange: _handleChange,
-}) => {
+const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);
@@ -150,10 +141,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
   return (
     <SettingPage title="库存扣除" isVisible={isVisible} onClose={handleClose}>
       <SettingSection title="熟豆库存扣除" className="-mt-4">
-        <SettingRow
-          label="全部扣除"
-          description="在快捷扣除中显示“ALL”，一次扣除剩余库存。"
-        >
+        <SettingRow label="全部扣除">
           <SettingToggle
             checked={settings.enableAllDecrementOption}
             onChange={checked =>
@@ -161,11 +149,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({
             }
           />
         </SettingRow>
-        <SettingRow
-          label="自定义扣除量"
-          description="在快捷扣除中输入需要扣除的克数。"
-          isLast
-        >
+        <SettingRow label="自定义扣除量" isLast>
           <SettingToggle
             checked={settings.enableCustomDecrementInput}
             onChange={checked =>

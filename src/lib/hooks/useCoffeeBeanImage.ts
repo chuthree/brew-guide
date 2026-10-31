@@ -15,7 +15,6 @@ type RefreshSubscriber = () => void;
 
 const refreshSubscribers = new Map<string, Set<RefreshSubscriber>>();
 const imageSourceCache = new Map<string, string | undefined>();
-const EMPTY_IMAGE_SOURCES = new Map<string, string>();
 const EMPTY_IMAGE_IDS = new Set<string>();
 let isCoffeeBeanDataChangedListenerAttached = false;
 
@@ -354,65 +353,4 @@ export function useCoffeeBeanImageIdsState(
       state.requestKey === requestKey ? state.imageIds : EMPTY_IMAGE_IDS,
     isLoaded: state.requestKey === requestKey && state.isLoaded,
   };
-}
-
-export function useCoffeeBeanImageSources(
-  beanIds: string[],
-  options: {
-    side?: CoffeeBeanImageSide;
-    mode?: CoffeeBeanImageSourceMode;
-    preferThumbnail?: boolean;
-  } = {}
-): Map<string, string> {
-  const { side = 'front', mode, preferThumbnail = true } = options;
-  const [imageSources, setImageSources] = useState<Map<string, string>>(
-    new Map()
-  );
-  const idsKey = beanIds.join('\u0001');
-  const imageBeanIds = useMemo(
-    () => (idsKey ? idsKey.split('\u0001') : []),
-    [idsKey]
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    const uniqueBeanIds = Array.from(new Set(imageBeanIds.filter(Boolean)));
-
-    if (uniqueBeanIds.length === 0) {
-      return;
-    }
-
-    Promise.all(
-      uniqueBeanIds.map(async beanId => {
-        const source = await coffeeBeanImageRepository.getSource(beanId, {
-          side,
-          mode,
-          preferThumbnail,
-        });
-        return [beanId, source] as const;
-      })
-    )
-      .then(entries => {
-        if (!cancelled) {
-          setImageSources(
-            new Map(
-              entries.filter((entry): entry is readonly [string, string] =>
-                Boolean(entry[1])
-              )
-            )
-          );
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setImageSources(new Map());
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [imageBeanIds, side, mode, preferThumbnail]);
-
-  return imageBeanIds.length > 0 ? imageSources : EMPTY_IMAGE_SOURCES;
 }

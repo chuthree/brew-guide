@@ -160,7 +160,6 @@ Object.assign(safePreferenceSchema, {
   roasterSeparator: { type: 'string', enum: [' ', '/'] },
   layoutSettings: {
     ...obj({
-      progressBarHeight: { type: 'integer', enum: [4, 8, 12, 16, 20] },
       dataFontSize: { type: 'string', enum: ['2xl', '3xl', '4xl'] },
       stepDisplayMode: {
         type: 'string',

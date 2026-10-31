@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
+import HighlightText from '@/components/common/ui/HighlightText';
 import { BrewingNote } from '@/lib/core/config';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
@@ -14,9 +15,9 @@ import {
 
 interface ChangeRecordNoteItemProps {
   note: BrewingNote;
+  searchQuery?: string;
   onEdit?: (note: BrewingNote) => void;
   onDelete?: (noteId: string) => Promise<void>;
-  onCopy?: (noteId: string) => Promise<void>;
   isShareMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void;
@@ -24,9 +25,9 @@ interface ChangeRecordNoteItemProps {
 
 const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
   note,
+  searchQuery = '',
   onEdit,
   onDelete,
-  onCopy,
   isShareMode = false,
   isSelected = false,
   onToggleSelect,
@@ -142,7 +143,7 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
             className="w-20 truncate text-xs font-medium text-neutral-800 dark:text-neutral-100"
             title={beanName}
           >
-            {beanName}
+            <HighlightText text={beanName} highlight={searchQuery} />
           </div>
 
           {/* 变动量标签 - 统一使用 neutral 色调 */}
@@ -158,7 +159,10 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
                 className="truncate text-neutral-600 dark:text-neutral-300"
                 title={roastedBeanDisplayName}
               >
-                {roastedBeanDisplayName}
+                <HighlightText
+                  text={roastedBeanDisplayName}
+                  highlight={searchQuery}
+                />
               </span>
             </div>
           )}
@@ -169,7 +173,7 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
               className="min-w-0 flex-1 truncate text-xs text-neutral-500 dark:text-neutral-400"
               title={note.notes}
             >
-              {note.notes}
+              <HighlightText text={note.notes || ''} highlight={searchQuery} />
             </div>
           )}
 
@@ -204,17 +208,6 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
                   onClick: () => onEdit && onEdit(note),
                 },
                 {
-                  id: 'copy',
-                  label: '复制',
-                  onClick: () => onCopy && onCopy(note.id),
-                },
-                {
-                  id: 'delete',
-                  label: note.source === 'roasting' ? '撤销烘焙' : '删除',
-                  onClick: () => onDelete && onDelete(note.id),
-                  color: 'danger',
-                },
-                {
                   id: 'share',
                   label: '分享',
                   onClick: () => {
@@ -222,6 +215,12 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
                       onToggleSelect(note.id, true);
                     }
                   },
+                },
+                {
+                  id: 'delete',
+                  label: note.source === 'roasting' ? '撤销烘焙' : '删除',
+                  onClick: () => onDelete && onDelete(note.id),
+                  color: 'danger',
                 },
               ]}
             />

@@ -131,22 +131,6 @@ export function normalizeDataForHash(data: unknown): unknown {
 }
 
 /**
- * 比较两个文件元数据是否相同
- */
-export function areFilesEqual(
-  file1: FileMetadata,
-  file2: FileMetadata
-): boolean {
-  // 优先比较哈希值
-  if (file1.hash && file2.hash && file1.hash !== '' && file2.hash !== '') {
-    return file1.hash === file2.hash;
-  }
-
-  // 后备：比较大小和修改时间
-  return file1.size === file2.size && file1.mtimeCli === file2.mtimeCli;
-}
-
-/**
  * 生成设备指纹 ID
  */
 export async function generateDeviceId(): Promise<string> {
@@ -190,38 +174,6 @@ export async function generateDeviceId(): Promise<string> {
 }
 
 /**
- * 格式化文件大小
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-}
-
-/**
- * 格式化时间差
- */
-function formatTimeDiff(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 0) return `${days} 天前`;
-  if (hours > 0) return `${hours} 小时前`;
-  if (minutes > 0) return `${minutes} 分钟前`;
-  if (seconds > 0) return `${seconds} 秒前`;
-  return '刚刚';
-}
-
-/**
  * 安全的 JSON 解析
  */
 export function safeJsonParse<T = unknown>(text: string, fallback: T): T {
@@ -230,68 +182,4 @@ export function safeJsonParse<T = unknown>(text: string, fallback: T): T {
   } catch {
     return fallback;
   }
-}
-
-/**
- * 深度克隆对象
- */
-export function deepClone<T>(obj: T): T {
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map(item => deepClone(item)) as unknown as T;
-  }
-
-  const cloned: Record<string, unknown> = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      cloned[key] = deepClone(obj[key]);
-    }
-  }
-
-  return cloned as T;
-}
-
-/**
- * 防抖函数
- */
-function debounce<T extends (...args: unknown[]) => unknown>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  return function executedFunction(...args: Parameters<T>) {
-    const later = () => {
-      timeout = null;
-      func(...args);
-    };
-
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(later, wait);
-  };
-}
-
-/**
- * 节流函数
- */
-function throttle<T extends (...args: unknown[]) => unknown>(
-  func: T,
-  limit: number
-): (...args: Parameters<T>) => void {
-  let inThrottle: boolean = false;
-
-  return function executedFunction(...args: Parameters<T>) {
-    if (!inThrottle) {
-      func(...args);
-      inThrottle = true;
-      setTimeout(() => {
-        inThrottle = false;
-      }, limit);
-    }
-  };
 }

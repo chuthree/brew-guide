@@ -686,7 +686,6 @@ describe('MCP safe preferences (real SQLite)', () => {
       roasterFieldEnabled: false,
       roasterSeparator: '/',
       layoutSettings: {
-        progressBarHeight: 8,
         dataFontSize: '3xl',
         stepDisplayMode: 'time',
       },
@@ -735,7 +734,6 @@ describe('MCP safe preferences (real SQLite)', () => {
     });
     expect(result.result.value).toMatchObject({
       layoutSettings: {
-        progressBarHeight: 8,
         dataFontSize: '4xl',
         stepDisplayMode: 'time',
       },
@@ -778,7 +776,7 @@ describe('MCP safe preferences (real SQLite)', () => {
         },
       },
       { patch: { safeAreaMargins: { top: 9, bottom: 20 } } },
-      { patch: { layoutSettings: { progressBarHeight: 5 } } },
+      { patch: { layoutSettings: { progressBarHeight: 12 } } },
       { patch: { experimentalBeanRecognitionEnabled: true } },
     ])
       await expect(

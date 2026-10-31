@@ -102,8 +102,17 @@ describe('MCP roaster logos (real SQLite)', () => {
     expect(removed.result.hasLogo).toBe(false);
     const after = (await getAppSettings(db.driver))!;
     expect(after.roasterConfigs![0].logoData).toBeUndefined();
+    expect(after.roasterConfigs![0].logoUpdatedAt).toBeGreaterThan(
+      before.roasterConfigs![0].logoUpdatedAt!
+    );
     expect(after.roasterConfigs![0].flavorPeriod).toEqual(
       before.roasterConfigs![0].flavorPeriod
+    );
+    await mutate({ expectedVersion: removed.result.version, image: png });
+    const readded = (await getAppSettings(db.driver))!.roasterConfigs![0];
+    expect(readded.logoData).toBe(png);
+    expect(readded.logoUpdatedAt).toBeGreaterThan(
+      after.roasterConfigs![0].logoUpdatedAt!
     );
   });
   it('detects logo-only UI changes even when updatedAt is unchanged', async () => {

@@ -276,6 +276,7 @@ export async function mutateRoasterLogoTool(
     ...old,
     roasterName: roaster,
     logoData,
+    logoUpdatedAt: Math.max(Date.now(), (old?.logoUpdatedAt ?? 0) + 1),
     updatedAt: Date.now(),
   };
   await saveAppSettings(tx, {

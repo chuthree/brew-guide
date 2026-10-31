@@ -3,7 +3,6 @@
 import React, { useRef, useEffect } from 'react';
 import { CoffeeBean } from '@/types/app';
 import { DatePicker } from '@/components/common/ui/DatePicker';
-import HighlightText from '@/components/common/ui/HighlightText';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
@@ -28,7 +27,6 @@ interface BasicInfoSectionProps {
   tempBean: Partial<CoffeeBean>;
   isAddMode: boolean;
   isEditMode: boolean;
-  searchQuery: string;
   editingCapacity: boolean;
   editingRemaining: boolean;
   editingPrice: boolean;
@@ -43,7 +41,6 @@ interface BasicInfoSectionProps {
   ) => void;
   handlePriceBlur: (value: string) => Promise<void>;
   handleDateChange: (date: Date, field: 'roastDate' | 'purchaseDate') => void;
-  onRepurchase?: () => void;
 }
 
 const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
@@ -51,7 +48,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   tempBean,
   isAddMode,
   isEditMode,
-  searchQuery,
   editingCapacity,
   editingRemaining,
   editingPrice,
@@ -64,7 +60,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   handleRemainingQuickAction,
   handlePriceBlur,
   handleDateChange,
-  onRepurchase,
 }) => {
   const capacityInputRef = useRef<HTMLDivElement>(null);
   const remainingInputRef = useRef<HTMLDivElement>(null);
@@ -233,11 +228,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             id="bean-detail-title"
             className="text-sm font-medium text-neutral-800 dark:text-neutral-100"
           >
-            {searchQuery ? (
-              <HighlightText text={displayName} highlight={searchQuery} />
-            ) : (
-              displayName
-            )}
+            {displayName}
           </h2>
         )}
       </div>
@@ -346,20 +337,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 </span>
               )}
               <span className="text-neutral-800 dark:text-neutral-100">克</span>
-
-              {isEditMode && onRepurchase && (
-                <>
-                  <div className="mx-1 h-3 w-px bg-neutral-200 dark:bg-neutral-700" />
-                  <button
-                    type="button"
-                    onClick={onRepurchase}
-                    className="cursor-pointer bg-neutral-100/50 px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-neutral-400 transition-colors hover:text-neutral-600 dark:bg-neutral-800/50 dark:text-neutral-500 dark:hover:text-neutral-300"
-                    title="续购"
-                  >
-                    续购
-                  </button>
-                </>
-              )}
             </div>
           </div>
         )}
