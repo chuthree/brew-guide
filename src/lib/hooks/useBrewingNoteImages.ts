@@ -158,13 +158,6 @@ export function useBrewingNoteImageIds(noteIds: string[]): Set<string> {
   return imageIds;
 }
 
-export function useBrewingNoteImageCounts(
-  noteIds: string[],
-  versionKey = ''
-): Map<string, number> {
-  return useBrewingNoteImageCountsState(noteIds, versionKey).imageCounts;
-}
-
 export function useBrewingNoteImageCountsState(
   noteIds: string[],
   versionKey = ''
