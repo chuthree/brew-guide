@@ -202,12 +202,6 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
                   onClick: () => onEdit && onEdit(note),
                 },
                 {
-                  id: 'delete',
-                  label: note.source === 'roasting' ? '撤销烘焙' : '删除',
-                  onClick: () => onDelete && onDelete(note.id),
-                  color: 'danger',
-                },
-                {
                   id: 'share',
                   label: '分享',
                   onClick: () => {
@@ -215,6 +209,12 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
                       onToggleSelect(note.id, true);
                     }
                   },
+                },
+                {
+                  id: 'delete',
+                  label: note.source === 'roasting' ? '撤销烘焙' : '删除',
+                  onClick: () => onDelete && onDelete(note.id),
+                  color: 'danger',
                 },
               ]}
             />
