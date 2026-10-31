@@ -186,8 +186,6 @@ const normalizeLayoutSettings = (
   const defaultLayout = defaultSettings.layoutSettings!;
 
   return {
-    progressBarHeight:
-      layout?.progressBarHeight ?? defaultLayout.progressBarHeight,
     dataFontSize: layout?.dataFontSize ?? defaultLayout.dataFontSize,
     stepDisplayMode: layout?.stepDisplayMode ?? defaultLayout.stepDisplayMode,
   };
@@ -304,10 +302,6 @@ export const useSettingsStore = create<SettingsStore>()(
           // 确保所有字段都有值，使用类型断言来确保类型安全
           const newLayoutSettings: NonNullable<AppSettings['layoutSettings']> =
             {
-              progressBarHeight:
-                layout.progressBarHeight ??
-                currentLayout?.progressBarHeight ??
-                defaultLayout.progressBarHeight,
               dataFontSize:
                 layout.dataFontSize ??
                 currentLayout?.dataFontSize ??

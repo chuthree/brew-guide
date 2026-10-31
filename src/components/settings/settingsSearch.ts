@@ -403,7 +403,6 @@ export const buildSettingsSearchItems = ({
       ...createRowItems('timer-settings', '计时器', [
         '显示流速',
         '可视化冲煮',
-        '进度条高度',
         '数据显示字体大小',
         '步骤时间显示',
       ])

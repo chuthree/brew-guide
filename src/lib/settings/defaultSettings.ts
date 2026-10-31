@@ -14,7 +14,6 @@ export const defaultSettings: AppSettings = {
 
   // 布局设置
   layoutSettings: {
-    progressBarHeight: 12,
     dataFontSize: '2xl',
     stepDisplayMode: 'cumulative',
   },

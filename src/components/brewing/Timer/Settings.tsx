@@ -5,7 +5,6 @@ import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 // 布局设置接口
 export interface LayoutSettings {
-  progressBarHeight?: number; // 进度条高度（像素）
   dataFontSize?: '2xl' | '3xl' | '4xl'; // 数据显示字体大小
   stepDisplayMode?: 'independent' | 'cumulative' | 'time'; // 步骤时间显示模式：独立、累计、时间
 }
@@ -185,27 +184,6 @@ const BrewingTimerSettings: React.FC<BrewingTimerSettingsProps> = ({
                   <div className="peer h-5 w-9 rounded-full bg-neutral-200 peer-checked:bg-neutral-600 after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-500" />
                 </label>
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                  进度条高度：{localLayoutSettings?.progressBarHeight || 4}px
-                </span>
-                <input
-                  type="range"
-                  min="2"
-                  max="12"
-                  step="1"
-                  value={localLayoutSettings?.progressBarHeight || 4}
-                  onChange={e => {
-                    const newSettings = {
-                      ...localLayoutSettings,
-                      progressBarHeight: parseInt(e.target.value),
-                    };
-                    handleLayoutChange(newSettings);
-                  }}
-                  className="h-1 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 dark:bg-neutral-700"
-                />
-              </div>
-
               <div className="flex items-center justify-between">
                 <span className="text-sm text-neutral-700 dark:text-neutral-300">
                   数据显示字体大小

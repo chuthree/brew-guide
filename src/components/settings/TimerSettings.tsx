@@ -10,7 +10,6 @@ import {
   SettingRow,
   SettingSelect,
   SettingToggle,
-  SettingSlider,
 } from './atomic';
 
 import TimerPreview from './TimerPreview';
@@ -101,24 +100,6 @@ const TimerSettings: React.FC<TimerSettingsProps> = ({
           <SettingToggle
             checked={settings.showBrewingVisualizer ?? true}
             onChange={checked => handleChange('showBrewingVisualizer', checked)}
-          />
-        </SettingRow>
-        <SettingRow label="进度条高度" vertical>
-          <SettingSlider
-            min={4}
-            max={20}
-            step={4}
-            value={settings.layoutSettings?.progressBarHeight || 12}
-            onChange={val => {
-              const newLayoutSettings = {
-                ...settings.layoutSettings,
-                progressBarHeight: val,
-              };
-              handleChange('layoutSettings', newLayoutSettings);
-            }}
-            minLabel="细"
-            maxLabel="粗"
-            showTicks
           />
         </SettingRow>
         <SettingRow label="数据显示字体大小" isLast>

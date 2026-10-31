@@ -1423,7 +1423,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                           className="absolute top-0 w-[2px] bg-neutral-50 dark:bg-neutral-900"
                           style={{
                             left: `${percentage}%`,
-                            height: `${localLayoutSettings.progressBarHeight || 4}px`,
+                            height: 12,
                             opacity: 0.8,
                             transform: 'translateZ(0)',
                           }}
@@ -1434,7 +1434,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                     <div
                       className="w-full overflow-hidden bg-neutral-200/50 dark:bg-neutral-800"
                       style={{
-                        height: `${localLayoutSettings.progressBarHeight || 4}px`,
+                        height: 12,
                         contain: 'paint layout',
                         position: 'relative',
                       }}
@@ -1456,7 +1456,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             className="absolute top-0 bottom-0 z-10 w-[1.5px] bg-neutral-100 dark:bg-neutral-900"
                             style={{
                               left: `${percentage}%`,
-                              height: `${localLayoutSettings.progressBarHeight || 4}px`,
+                              height: 12,
                             }}
                           />
                         );
@@ -1480,9 +1480,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
                             style={{
                               left: `${startPercentage}%`,
                               width: `${width}%`,
-                              height: `${
-                                localLayoutSettings.progressBarHeight || 4
-                              }px`,
+                              height: 12,
                               background: `repeating-linear-gradient(
                                 45deg,
                                 transparent,

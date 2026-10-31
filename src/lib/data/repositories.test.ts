@@ -56,12 +56,12 @@ describe('Dexie repository adapters', () => {
     const first = {
       username: 'first',
       optionalFeature: { enabled: true, labels: ['a', 'b'] },
-      layoutSettings: { progressBarHeight: 18, dataFontSize: '3xl' },
+      layoutSettings: { dataFontSize: '3xl' },
     } as unknown as AppSettings;
     const second = {
       username: 'second',
       optionalFeature: { enabled: false, labels: ['nested', 'values'] },
-      layoutSettings: { progressBarHeight: 22, stepDisplayMode: 'time' },
+      layoutSettings: { stepDisplayMode: 'time' },
     } as unknown as AppSettings;
 
     await appSettingsRepository.save(first);
