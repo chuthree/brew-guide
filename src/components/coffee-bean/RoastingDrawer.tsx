@@ -21,7 +21,6 @@ import {
 } from '@/lib/utils/coffeeBeanUtils';
 import { saveRoastingBatch } from '@/lib/managers/roastingBatchManager';
 import {
-  roastingInputs,
   roundGrams,
   RoastingValidationError,
 } from '@/lib/coffee-beans/roastingBatch';
@@ -50,7 +49,6 @@ interface Props {
   sourceIds: string[];
   onClose: () => void;
   onSaved?: (note: BrewingNote) => void;
-  initialNote?: BrewingNote;
   canReselect?: boolean;
 }
 
@@ -75,7 +73,6 @@ export default function RoastingDrawer({
   sourceIds,
   onClose,
   onSaved,
-  initialNote,
   canReselect = false,
 }: Props) {
   const beans = useCoffeeBeanStore(state => state.beans);
@@ -83,12 +80,8 @@ export default function RoastingDrawer({
   const settings = useSettingsStore(state => state.settings);
   const { username, roasterFieldEnabled, roasterSeparator } = settings;
   const namingOptions = { roasterFieldEnabled, separator: roasterSeparator };
-  const record = initialNote?.changeRecord?.roastingRecord;
-  const oldInputs = roastingInputs(record);
-  const output = beans.find(bean => bean.id === record?.roastedBeanId);
   const sources = sourceIds.map(id => beans.find(bean => bean.id === id));
-  const namingSource =
-    output ?? (sources.length === 1 ? sources[0] : undefined);
+  const namingSource = sources.length === 1 ? sources[0] : undefined;
   const nameFields = {
     name: namingSource
       ? prepareCoffeeBeanRoasterFieldsForFormDraft(namingSource, {
@@ -127,21 +120,11 @@ export default function RoastingDrawer({
   const [customName, setName] = useState<string | null>(null);
   const name = customName ?? suggestedName();
   const [date, setDate] = useState(localDate);
-  const [amount, setAmount] = useState(
-    record?.outputAmount ? String(record.outputAmount) : ''
-  );
-  const [manualLevel, setLevel] = useState<string | null>(
-    output?.roastLevel || null
-  );
-  const [notes, setNotes] = useState(output?.notes ?? '');
+  const [amount, setAmount] = useState('');
+  const [manualLevel, setLevel] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
   const [beanType, setBeanType] = useState<CoffeeBean['beanType']>(
-    output
-      ? output.beanType
-      : ((sources.length === 1 ? sources[0]?.beanType : undefined) ??
-          (record?.outputAmount
-            ? inferBeanType(String(record.outputAmount))
-            : undefined) ??
-          undefined)
+    sources.length === 1 ? sources[0]?.beanType : undefined
   );
   const [customFlavors, setFlavors] = useState<string[] | null>(null);
   const flavorInputRef = useRef<HTMLInputElement>(null);
@@ -175,7 +158,7 @@ export default function RoastingDrawer({
   const flavors =
     customFlavors ??
     normalizeFlavorList(
-      output?.flavor ?? sources.flatMap(source => source?.flavor ?? [])
+      sources.flatMap(source => source?.flavor ?? [])
     );
   useEffect(() => {
     if (!isOpen) return;
@@ -194,11 +177,7 @@ export default function RoastingDrawer({
     setFlavors(
       normalizeFlavorList([...flavors, ...normalizeFlavorList(value)])
     );
-  const [inputWeights, setInputWeights] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      oldInputs.map(input => [input.greenBeanId, String(input.amount)])
-    )
-  );
+  const [inputWeights, setInputWeights] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -402,8 +381,7 @@ export default function RoastingDrawer({
                       roasterFieldEnabled,
                       roasterSeparator,
                     })
-                  : (oldInputs.find(input => input.greenBeanId === id)
-                      ?.greenBeanName ?? '来源已删除');
+                  : '来源已删除';
                 return (
                   <SettingRow
                     key={id}
@@ -719,7 +697,6 @@ export function RoastingDrawerHost() {
   const [isOpen, setIsOpen] = useState(false);
   const [request, setRequest] = useState<{
     sourceIds: string[];
-    initialNote?: BrewingNote;
     key: number;
   } | null>(null);
   useEffect(() => {
@@ -738,7 +715,6 @@ export function RoastingDrawerHost() {
     <RoastingDrawer
       key={request.key}
       sourceIds={request.sourceIds}
-      initialNote={request.initialNote}
       isOpen={isOpen}
       onClose={() => setIsOpen(false)}
     />

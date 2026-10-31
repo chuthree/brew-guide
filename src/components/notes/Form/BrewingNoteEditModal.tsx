@@ -20,7 +20,6 @@ interface BrewingNoteEditModalProps {
   onSave: (data: BrewingNoteData) => void | Promise<void>;
   onClose: () => void;
   settings?: SettingsOptions;
-  isCopy?: boolean; // 标记是否是复制操作
 }
 
 const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
@@ -29,18 +28,16 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   onSave,
   onClose,
   settings,
-  isCopy = false, // 默认不是复制操作
 }) => {
   const navigationState = deriveNavigationSettings(
     settings?.navigationSettings
   );
   const canUseNotesModule = navigationState.visibleTabs.notes;
   const canUseCoffeeBeanModule = navigationState.visibleTabs.coffeeBean;
-  const isRoastingRecordEdit = !isCopy && initialData?.source === 'roasting';
+  const isRoastingRecordEdit = initialData?.source === 'roasting';
   const isChangeRecordEdit =
-    !isCopy &&
-    (initialData?.source === 'quick-decrement' ||
-      initialData?.source === 'capacity-adjustment');
+    initialData?.source === 'quick-decrement' ||
+    initialData?.source === 'capacity-adjustment';
   const noteId = initialData?.id;
   const [draftSnapshot, setDraftSnapshot] =
     useState<BrewingNoteDraftData | null>(null);
@@ -58,7 +55,6 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   const currentContent = currentDraft || initialData;
   const canShowQuickRecordConversionButton = canSwitchPlainNoteToQuickRecord({
     noteId,
-    isCopy,
     source: initialData?.source,
     canUseNotesModule,
     canUseCoffeeBeanModule,
@@ -175,7 +171,6 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
                 showSaveButton={false}
                 hideHeader={true}
                 settings={settings}
-                isCopy={isCopy}
                 isQuickMode={isQuickMode}
                 onDraftChange={setDraftSnapshot}
                 onSubmitStateChange={setIsSubmitting}

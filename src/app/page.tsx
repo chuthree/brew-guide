@@ -16,7 +16,6 @@ import React, {
 } from 'react';
 import dynamic from 'next/dynamic';
 import { RoastingDrawerHost } from '@/components/coffee-bean/RoastingDrawer';
-import { roastingInputs } from '@/lib/coffee-beans/roastingBatch';
 import {
   equipmentList,
   APP_VERSION,
@@ -495,7 +494,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [brewingNoteEditOpen, setBrewingNoteEditOpen] = useState(false);
   const [brewingNoteEditData, setBrewingNoteEditData] =
     useState<BrewingNoteData | null>(null);
-  const [isBrewingNoteCopy, setIsBrewingNoteCopy] = useState(false); // 标记是否是复制操作
 
   // 笔记详情状态
   const [noteDetailOpen, setNoteDetailOpen] = useState(false);
@@ -1695,7 +1693,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         };
 
         setBrewingNoteEditData(noteToEdit);
-        setIsBrewingNoteCopy(false);
         setBrewingNoteEditOpen(true);
       } catch (error) {
         console.error('加载完整笔记失败:', error);
@@ -2827,26 +2824,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 注意：从咖啡豆页面切换回冲煮页面的特殊处理已在上面的 useEffect 中统一处理
   // shouldStartFromCoffeeBeanStep 标记会在主 Tab 切换逻辑中被检查和清除
 
-  const handleCopyRoastingRecord = async (
-    note: BrewingNote
-  ): Promise<boolean> => {
-    if (note.changeRecord?.roastingRecord) {
-      window.dispatchEvent(
-        new CustomEvent('openRoastingDrawer', {
-          detail: {
-            sourceIds: roastingInputs(note.changeRecord.roastingRecord).map(
-              input => input.greenBeanId
-            ),
-            initialNote: note,
-          },
-        })
-      );
-      return true;
-    }
-    showToast({ type: 'error', title: '烘焙记录数据不完整，无法复制' });
-    return false;
-  };
-
   const handleSaveBean = async (
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => {
@@ -3427,8 +3404,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         const { useBrewingNoteStore } =
           await import('@/lib/stores/brewingNoteStore');
 
-        // 复制操作应该被视为新笔记，即使它有 id
-        const isNewNote = isBrewingNoteCopy || !note.id;
+        const isNewNote = !note.id;
 
         // 构建保存数据
         let noteToSave = buildPersistedBrewingNote(note, {
@@ -3480,11 +3456,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         setBrewingNoteEditOpen(false);
         setBrewingNoteEditData(null);
-        setIsBrewingNoteCopy(false);
 
         // 显示成功提示（事件触发已在 store 中自动完成）
         showToast({
-          title: isNewNote ? '笔记已复制' : '笔记已更新',
+          title: isNewNote ? '笔记已添加' : '笔记已更新',
           type: 'success',
         });
       } catch (_error) {
@@ -3851,20 +3826,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const handleBrewingNoteEditOpened = (e: Event) => {
       const customEvent = e as CustomEvent<{
         data: BrewingNoteData;
-        isCopy?: boolean;
       }>;
       if (!customEvent.detail || !customEvent.detail.data) {
         console.error('BrewingNoteEditModal: 打开事件缺少必要数据');
         return;
       }
       setBrewingNoteEditData(customEvent.detail.data);
-      setIsBrewingNoteCopy(customEvent.detail.isCopy || false);
       setBrewingNoteEditOpen(true);
     };
 
     const handleBrewingNoteEditClosing = () => {
       setBrewingNoteEditOpen(false);
-      setIsBrewingNoteCopy(false);
     };
 
     window.addEventListener(
@@ -4291,7 +4263,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   setShowHistory(false);
                 }}
                 onAddNote={handleAddNote}
-                onCopyRoastingRecord={handleCopyRoastingRecord}
                 setAlternativeHeaderContent={setAlternativeHeaderContent}
                 setShowAlternativeHeader={setShowAlternativeHeader}
                 settings={settings}
@@ -4699,17 +4670,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         console.error('删除笔记失败:', error);
                       }
                     }}
-                    onCopy={async noteId => {
-                      setNoteDetailOpen(false);
-                      const { getBrewingNoteById } =
-                        await import('@/lib/notes/relatedNotes');
-                      const fullNote = await getBrewingNoteById(noteId);
-                      if (fullNote) {
-                        setBrewingNoteEditData(fullNote as BrewingNoteData);
-                        setIsBrewingNoteCopy(true);
-                        setBrewingNoteEditOpen(true);
-                      }
-                    }}
                     onShare={noteId => {
                       setNoteDetailOpen(false);
                       window.dispatchEvent(
@@ -5014,8 +4974,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setBrewingNoteEditOpen={setBrewingNoteEditOpen}
         brewingNoteEditData={brewingNoteEditData}
         setBrewingNoteEditData={setBrewingNoteEditData}
-        isBrewingNoteCopy={isBrewingNoteCopy}
-        setIsBrewingNoteCopy={setIsBrewingNoteCopy}
         handleSaveBrewingNoteEdit={handleSaveBrewingNoteEdit}
         // 笔记详情（非大屏幕）
         noteDetailOpen={noteDetailOpen}

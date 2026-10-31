@@ -158,8 +158,6 @@ export interface AppModalsProps {
   setBrewingNoteEditOpen: (open: boolean) => void;
   brewingNoteEditData: BrewingNoteData | null;
   setBrewingNoteEditData: (data: BrewingNoteData | null) => void;
-  isBrewingNoteCopy: boolean;
-  setIsBrewingNoteCopy: (isCopy: boolean) => void;
   handleSaveBrewingNoteEdit: (note: BrewingNoteData) => Promise<void>;
 
   // 笔记详情（非大屏幕）
@@ -340,8 +338,6 @@ const AppModals: React.FC<AppModalsProps> = ({
   setBrewingNoteEditOpen,
   brewingNoteEditData,
   setBrewingNoteEditData,
-  isBrewingNoteCopy,
-  setIsBrewingNoteCopy,
   handleSaveBrewingNoteEdit,
 
   // 笔记详情（非大屏幕）
@@ -1087,10 +1083,8 @@ const AppModals: React.FC<AppModalsProps> = ({
         onClose={() => {
           setBrewingNoteEditOpen(false);
           setBrewingNoteEditData(null);
-          setIsBrewingNoteCopy(false);
         }}
         settings={settings}
-        isCopy={isBrewingNoteCopy}
       />
 
       {/* 笔记详情模态框 - 仅在非大屏幕时渲染 */}
@@ -1164,17 +1158,6 @@ const AppModals: React.FC<AppModalsProps> = ({
               await deleteNote(noteId);
             } catch (error) {
               console.error('删除笔记失败:', error);
-            }
-          }}
-          onCopy={async noteId => {
-            setNoteDetailOpen(false);
-            const { getBrewingNoteById } =
-              await import('@/lib/notes/relatedNotes');
-            const fullNote = await getBrewingNoteById(noteId);
-            if (fullNote) {
-              setBrewingNoteEditData(fullNote as BrewingNoteData);
-              setIsBrewingNoteCopy(true);
-              setBrewingNoteEditOpen(true);
             }
           }}
           onShare={noteId => {

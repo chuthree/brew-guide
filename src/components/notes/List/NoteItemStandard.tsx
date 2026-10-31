@@ -26,7 +26,6 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
   equipmentNames,
   onEdit: _onEdit,
   onDelete: _onDelete,
-  onCopy: _onCopy,
   isShareMode = false,
   isSelected = false,
   onToggleSelect,

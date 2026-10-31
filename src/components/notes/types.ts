@@ -35,7 +35,6 @@ export interface BrewingHistoryProps {
   isOpen: boolean;
   onClose: () => void;
   onAddNote?: (draft?: Partial<BrewingNoteData>) => void;
-  onCopyRoastingRecord?: (note: BrewingNote) => boolean | Promise<boolean>;
   setAlternativeHeaderContent?: (content: React.ReactNode | null) => void;
   setShowAlternativeHeader?: (show: boolean) => void;
   settings?: import('@/components/settings/Settings').SettingsOptions; // 添加可选的设置参数
@@ -49,7 +48,6 @@ export interface NoteItemProps {
   equipmentNames: Record<string, string>;
   onEdit: (note: BrewingNote) => void;
   onDelete: (noteId: string) => void;
-  onCopy?: (noteId: string) => void;
   isShareMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (noteId: string, enterShareMode?: boolean) => void;

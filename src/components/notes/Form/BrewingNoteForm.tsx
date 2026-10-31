@@ -131,7 +131,6 @@ interface BrewingNoteFormProps {
   onTimestampChange?: (timestamp: Date) => void;
   settings?: SettingsOptions;
   onSubmitStateChange?: (isSubmitting: boolean) => void;
-  isCopy?: boolean; // 标记是否是复制操作
   // 快捷记录模式相关
   isQuickMode?: boolean;
   onDraftChange?: (draft: BrewingNoteDraftData) => void;
@@ -204,7 +203,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   onSaveSuccess,
   onTimestampChange,
   settings,
-  isCopy = false, // 默认不是复制操作
   isQuickMode: externalIsQuickMode,
   onDraftChange,
   onSubmitStateChange,
@@ -822,7 +820,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   ]);
 
   // 判断是否是添加模式（提前声明，供 updateRating 使用）
-  const isAdding = !id || isCopy;
+  const isAdding = !id;
 
   const shouldShowQuickDecrementButton =
     canUseCoffeeBeanModule && inBrewPage && isAdding && !!selectedCoffeeBean;
@@ -1267,8 +1265,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           // 已有豆子，使用其 ID
           finalBeanId = selectedCoffeeBean.id;
 
-          // 判断是否是新建笔记（没有ID或是复制操作）
-          const isNewNote = !initialData.id || isCopy;
+          const isNewNote = !initialData.id;
 
           if (isNewNote) {
             // 新建笔记：直接扣除咖啡豆剩余量
@@ -1369,7 +1366,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           !selectedCoffeeBean &&
           userSelectedBeanRef.current &&
           initialData.id &&
-          !isCopy &&
           initialData.source !== 'capacity-adjustment' &&
           initialData.source !== 'roasting'
         ) {

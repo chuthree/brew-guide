@@ -4,7 +4,6 @@ export const SHORT_NOTE_QUICK_RECORD_MAX_CHARS = 24;
 
 export interface QuickRecordConversionCandidate {
   noteId?: string | null;
-  isCopy?: boolean;
   source?: BrewingNoteData['source'];
   canUseNotesModule?: boolean;
   canUseCoffeeBeanModule?: boolean;
@@ -16,14 +15,12 @@ const getNormalizedTextLength = (text?: string | null): number =>
 
 export const canSwitchPlainNoteToQuickRecord = ({
   noteId,
-  isCopy,
   source,
   canUseNotesModule,
   canUseCoffeeBeanModule,
   notes,
 }: QuickRecordConversionCandidate): boolean =>
   !!noteId &&
-  isCopy !== true &&
   !source &&
   canUseNotesModule === true &&
   canUseCoffeeBeanModule === true &&
