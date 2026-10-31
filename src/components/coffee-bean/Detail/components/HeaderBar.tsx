@@ -45,6 +45,7 @@ interface HeaderBarProps {
   onEdit?: (bean: CoffeeBean) => void;
   onDelete?: (bean: CoffeeBean) => void;
   onShare?: (bean: CoffeeBean) => void;
+  onRepurchase?: (bean: CoffeeBean) => void;
   onRoast?: (greenBean: CoffeeBean) => void;
   onConvertToGreen?: (bean: CoffeeBean) => void;
   onSaveNew?: (
@@ -76,6 +77,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   onEdit,
   onDelete,
   onShare,
+  onRepurchase,
   onRoast,
   onConvertToGreen,
   onSaveNew,
@@ -324,6 +326,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           bean &&
           (onEdit ||
             onShare ||
+            onRepurchase ||
             onDelete ||
             printEnabled ||
             onConvertToGreen) && (
@@ -377,6 +380,16 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                             );
                           }, 300);
                         },
+                        color: 'default' as const,
+                      },
+                    ]
+                  : []),
+                ...(onRepurchase
+                  ? [
+                      {
+                        id: 'repurchase',
+                        label: '续购',
+                        onClick: () => onRepurchase(bean),
                         color: 'default' as const,
                       },
                     ]

@@ -59,7 +59,6 @@ interface CoffeeBeanFormProps {
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
   onCancel: () => void;
   initialBean?: ExtendedCoffeeBean;
-  onRepurchase?: () => void;
   /** 步骤变化回调，用于同步历史栈 */
   onStepChange?: (step: number) => void;
   /** 初始豆子状态（生豆/熟豆），用于新建时自动设置 */
@@ -72,9 +71,7 @@ interface CoffeeBeanFormProps {
 
 // 暴露给父组件的方法
 export interface CoffeeBeanFormHandle {
-  handleBackStep: () => boolean;
   goToStep: (step: number) => void;
-  getCurrentStep: () => number;
 }
 
 const steps: StepConfig[] = [
@@ -201,7 +198,6 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       onSave,
       onCancel: _onCancel,
       initialBean,
-      onRepurchase,
       onStepChange,
       initialBeanState,
       roastingSourceBeanId,
@@ -366,24 +362,11 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
     // 暴露给父组件的方法
     useImperativeHandle(ref, () => ({
-      // 返回 true 表示处理了返回（返回上一步），false 表示已在第一步
-      handleBackStep: () => {
-        const currentIndex = getCurrentStepIndex();
-        if (currentIndex > 0) {
-          setCurrentStep(steps[currentIndex - 1].id);
-          return true; // 处理了返回
-        }
-        return false; // 已经在第一步，无法再返回
-      },
       // 直接跳转到指定步骤
       goToStep: (step: number) => {
         if (step >= 1 && step <= steps.length) {
           setCurrentStep(steps[step - 1].id);
         }
-      },
-      // 获取当前步骤号（1-based）
-      getCurrentStep: () => {
-        return getCurrentStepIndex() + 1;
       },
     }));
 
@@ -790,8 +773,6 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
               validateRemaining={validateRemaining}
               handleCapacityBlur={handleCapacityBlur}
               toggleInTransitState={toggleInTransitState}
-              isEdit={!!initialBean}
-              onRepurchase={onRepurchase}
               recognitionImage={recognitionImage}
               onCapacityChange={handleCapacityChangeForTypeInference}
               roasterLogo={roasterLogo}

@@ -927,6 +927,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
               onDelete={onDelete}
               onShare={onShare}
               onRoast={onRoast}
+              onRepurchase={onRepurchase}
               onConvertToGreen={onConvertToGreen}
               onSaveNew={onSaveNew}
               onSaveEdit={
@@ -972,11 +973,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     handleRemainingQuickAction={handleRemainingQuickAction}
                     handlePriceBlur={handlePriceBlur}
                     handleDateChange={handleDateChange}
-                    onRepurchase={
-                      isEditMode && persistedBean && onRepurchase
-                        ? () => onRepurchase(persistedBean)
-                        : undefined
-                    }
                   />
 
                   {showBasicInfoDivider && (

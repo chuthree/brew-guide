@@ -2700,6 +2700,31 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     setShowBeanForm(true);
   };
 
+  const handleRepurchaseBean = async (bean: CoffeeBean) => {
+    try {
+      const { createRepurchaseBean } =
+        await import('@/lib/utils/beanRepurchaseUtils');
+      const newBeanData = await createRepurchaseBean(bean);
+
+      if (settings.immersiveAdd) {
+        setShowBeanForm(false);
+        setEditingBean(null);
+        setBeanDetailData(newBeanData as ExtendedCoffeeBean);
+        setBeanDetailAddMode(true);
+        setBeanDetailEditMode(false);
+        setBeanDetailOpen(true);
+        return;
+      }
+
+      await modalHistory.close('bean-detail');
+      setBeanDetailOpen(false);
+      setEditingBean(newBeanData as ExtendedCoffeeBean);
+      setShowBeanForm(true);
+    } catch (error) {
+      console.error('续购失败:', error);
+    }
+  };
+
   // 完全重写checkCoffeeBeans函数，简化逻辑
   const checkCoffeeBeans = useCallback(async () => {
     try {
@@ -4500,29 +4525,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         console.error('复制失败:', error);
                       }
                     }}
-                    onRepurchase={async bean => {
-                      try {
-                        const { createRepurchaseBean } =
-                          await import('@/lib/utils/beanRepurchaseUtils');
-                        const newBeanData = await createRepurchaseBean(bean);
-
-                        if (settings.immersiveAdd) {
-                          setShowBeanForm(false);
-                          setEditingBean(null);
-                          setBeanDetailData(newBeanData as ExtendedCoffeeBean);
-                          setBeanDetailAddMode(true);
-                          setBeanDetailEditMode(false);
-                          setBeanDetailOpen(true);
-                          return;
-                        }
-
-                        setBeanDetailOpen(false);
-                        setEditingBean(newBeanData as ExtendedCoffeeBean);
-                        setShowBeanForm(true);
-                      } catch (error) {
-                        console.error('续购失败:', error);
-                      }
-                    }}
+                    onRepurchase={handleRepurchaseBean}
                     onRoast={greenBean => {
                       window.dispatchEvent(
                         new CustomEvent('openRoastingDrawer', {
@@ -4949,13 +4952,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         recognitionImageBeanId={recognitionImageBeanId}
         setRecognitionImageBeanId={setRecognitionImageBeanId}
         handleSaveBean={handleSaveBean}
+        handleRepurchaseBean={handleRepurchaseBean}
         handleBeanListChange={handleBeanListChange}
         // 咖啡豆详情（非大屏幕）
         isLargeScreen={isLargeScreen}
         beanDetailOpen={beanDetailOpen}
         setBeanDetailOpen={setBeanDetailOpen}
         beanDetailData={beanDetailData}
-        setBeanDetailData={setBeanDetailData}
         beanDetailSearchQuery={beanDetailSearchQuery}
         beanDetailAddMode={beanDetailAddMode}
         setBeanDetailAddMode={setBeanDetailAddMode}

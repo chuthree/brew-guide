@@ -123,13 +123,13 @@ export interface AppModalsProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => Promise<void>;
   handleBeanListChange: () => void;
+  handleRepurchaseBean: (bean: CoffeeBean) => Promise<void>;
 
   // 咖啡豆详情（非大屏幕）
   isLargeScreen: boolean;
   beanDetailOpen: boolean;
   setBeanDetailOpen: (open: boolean) => void;
   beanDetailData: ExtendedCoffeeBean | null;
-  setBeanDetailData: (bean: ExtendedCoffeeBean | null) => void;
   beanDetailSearchQuery: string;
   beanDetailAddMode: boolean;
   setBeanDetailAddMode: (mode: boolean) => void;
@@ -311,13 +311,13 @@ const AppModals: React.FC<AppModalsProps> = ({
   setRecognitionImageBeanId,
   handleSaveBean,
   handleBeanListChange,
+  handleRepurchaseBean,
 
   // 咖啡豆详情（非大屏幕）
   isLargeScreen,
   beanDetailOpen,
   setBeanDetailOpen,
   beanDetailData,
-  setBeanDetailData,
   beanDetailSearchQuery,
   beanDetailAddMode,
   setBeanDetailAddMode,
@@ -848,26 +848,6 @@ const AppModals: React.FC<AppModalsProps> = ({
             ? recognitionImage
             : null
         }
-        onRepurchase={
-          editingBean
-            ? async () => {
-                try {
-                  const { createRepurchaseBean } =
-                    await import('@/lib/utils/beanRepurchaseUtils');
-                  const newBeanData = await createRepurchaseBean(editingBean);
-                  setShowBeanForm(false);
-                  setEditingBean(null);
-                  setBeanDetailOpen(false);
-                  setTimeout(() => {
-                    setEditingBean(newBeanData as ExtendedCoffeeBean);
-                    setShowBeanForm(true);
-                  }, 300);
-                } catch (error) {
-                  console.error('续购失败:', error);
-                }
-              }
-            : undefined
-        }
       />
 
       {/* 咖啡豆详情 - 仅在非大屏幕时渲染 */}
@@ -970,29 +950,7 @@ const AppModals: React.FC<AppModalsProps> = ({
               console.error('复制失败:', error);
             }
           }}
-          onRepurchase={async bean => {
-            try {
-              const { createRepurchaseBean } =
-                await import('@/lib/utils/beanRepurchaseUtils');
-              const newBeanData = await createRepurchaseBean(bean);
-
-              if (settings.immersiveAdd) {
-                setShowBeanForm(false);
-                setEditingBean(null);
-                setBeanDetailData(newBeanData as ExtendedCoffeeBean);
-                setBeanDetailAddMode(true);
-                setBeanDetailEditMode(false);
-                setBeanDetailOpen(true);
-                return;
-              }
-
-              setBeanDetailOpen(false);
-              setEditingBean(newBeanData as ExtendedCoffeeBean);
-              setShowBeanForm(true);
-            } catch (error) {
-              console.error('续购失败:', error);
-            }
-          }}
+          onRepurchase={handleRepurchaseBean}
           onRoast={greenBean => {
             window.dispatchEvent(
               new CustomEvent('openRoastingDrawer', {
