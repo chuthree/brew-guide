@@ -224,13 +224,9 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
 
   // 关闭抽屉
   const handleClose = useCallback(() => {
-    // 清理图片 URL 资源
-    if (recognizingImageUrl) {
-      URL.revokeObjectURL(recognizingImageUrl);
-      setRecognizingImageUrl(null);
-    }
+    resetImportState();
     onClose();
-  }, [onClose, recognizingImageUrl]);
+  }, [onClose, resetImportState]);
 
   // 处理添加数据（通用）
   const handleImportData = useCallback(
@@ -302,14 +298,14 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         };
 
         await onImport(validMethod);
-        onClose();
+        handleClose();
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : '未知错误';
         showToast({ type: 'error', title: `添加失败: ${errorMessage}` });
       }
     },
-    [allowEmptyStages, existingMethods, onImport, onClose]
+    [allowEmptyStages, existingMethods, onImport, handleClose]
   );
 
   // 进入 JSON 输入步骤

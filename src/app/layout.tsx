@@ -284,9 +284,9 @@ export default function RootLayout({
               </div>
               {!isDevelopment && <PWAUpdatePrompt />}
               <ProviderAuthorizationDrawer />
-              <LightToast />
               <ExitToast />
             </div>
+            <LightToast />
           </DataLayerProvider>
           <BrowserChrome />
         </ThemeProvider>
