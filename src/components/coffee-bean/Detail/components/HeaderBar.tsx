@@ -118,7 +118,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   const beanNavigationActions: ActionMenuItem[] = isGreenBean
     ? bean && onRoast
       ? [
-          { id: 'roast', label: '去烘焙', onClick: onGoToRoast },
           {
             id: 'blend',
             label: '去拼配',
@@ -133,6 +132,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
               }, 300);
             },
           },
+          { id: 'roast', label: '去烘焙', onClick: onGoToRoast },
         ]
       : []
     : [
