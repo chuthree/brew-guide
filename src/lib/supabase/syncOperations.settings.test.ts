@@ -60,6 +60,11 @@ class FailingFingerprintStorage extends MemoryStorage {
 
 const sharedSettings = {
   username: '',
+};
+
+const localSettings = {
+  ...sharedSettings,
+  textZoomLevel: 1.1,
   supabaseSync: {
     enabled: true,
     url: 'https://example.supabase.co',
@@ -68,8 +73,6 @@ const sharedSettings = {
   },
   activeSyncType: 'supabase',
 };
-
-const localSettings = { ...sharedSettings, textZoomLevel: 1.1 };
 
 const localGrinders = [{ id: 'grinder-1', name: 'C40' }];
 function mockLocalSettings() {
