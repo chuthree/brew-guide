@@ -23,7 +23,7 @@ import {
   getAnimationTypeFromEquipmentId,
 } from '@/lib/core/config';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 interface CustomMethodFormModalProps {
   showCustomForm: boolean;
@@ -149,7 +149,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
         // 确保有唯一ID
         const methodWithId: Method = {
           ...method,
-          id: method.id || uuidv4(),
+          id: method.id || nanoid(),
         };
 
         // 直接调用父组件的保存方法并传递完整的方法对象
