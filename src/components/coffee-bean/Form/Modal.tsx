@@ -11,7 +11,7 @@ import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 interface CoffeeBeanFormModalProps {
   showForm: boolean;
   initialBean?: ExtendedCoffeeBean | null;
-  onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
+  onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => Promise<boolean>;
   onClose: () => void;
   initialBeanState?: 'green' | 'roasted';
   /** 当前是否处于“生豆转熟豆”烘焙流程（来源生豆ID） */
@@ -102,7 +102,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
       // 同步表单内部步骤
       formRef.current?.goToStep(step);
     },
-    onClose,
+    onClose: () => formRef.current?.requestClose(),
   });
 
   // 检测平台
@@ -171,6 +171,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
             key={`bean-form-${hydratedInitialBean?.id || 'new'}-${hydratedInitialBean?.name || ''}-${initialBeanState || 'roasted'}`}
             ref={formRef}
             onSave={onSave}
+            onClose={onClose}
             initialBean={hydratedInitialBean || undefined}
             onStepChange={setCurrentStep}
             initialBeanState={initialBeanState}
