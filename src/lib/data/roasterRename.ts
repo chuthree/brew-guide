@@ -18,6 +18,13 @@ const mergeRoasterConfig = (
 ): RoasterConfig => ({
   ...base,
   logoData: base.logoData ?? incoming.logoData,
+  logoUpdatedAt:
+    base.logoData != null
+      ? base.logoUpdatedAt
+      : incoming.logoData != null
+        ? incoming.logoUpdatedAt
+        : Math.max(base.logoUpdatedAt ?? 0, incoming.logoUpdatedAt ?? 0) ||
+          undefined,
   flavorPeriod: base.flavorPeriod ?? incoming.flavorPeriod,
   updatedAt: now,
 });

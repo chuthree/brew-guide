@@ -547,6 +547,16 @@ export const useSettingsStore = create<SettingsStore>()(
           const existingIndex = configs.findIndex(
             c => c.roasterName === roasterName
           );
+          const now = Date.now();
+          if (Object.prototype.hasOwnProperty.call(updates, 'logoData')) {
+            updates = {
+              ...updates,
+              logoUpdatedAt: Math.max(
+                now,
+                (configs[existingIndex]?.logoUpdatedAt ?? 0) + 1
+              ),
+            };
+          }
 
           if (existingIndex >= 0) {
             configs[existingIndex] = {
@@ -569,8 +579,17 @@ export const useSettingsStore = create<SettingsStore>()(
 
         deleteRoasterConfig: async roasterName => {
           const settings = get().settings;
-          const configs = (settings.roasterConfigs || []).filter(
-            c => c.roasterName !== roasterName
+          const configs = (settings.roasterConfigs || []).map(c =>
+            c.roasterName !== roasterName
+              ? c
+              : {
+                  roasterName,
+                  updatedAt: Date.now(),
+                  logoUpdatedAt: Math.max(
+                    Date.now(),
+                    (c.logoUpdatedAt ?? 0) + 1
+                  ),
+                }
           );
           await callStoreActionInMutation(get().updateSettings, {
             roasterConfigs: configs,

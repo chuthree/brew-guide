@@ -55,6 +55,7 @@ async function recompressRoasterLogosInMutation(): Promise<RecompressRoasterLogo
       nextConfigs.push({
         ...config,
         logoData: result.image,
+        logoUpdatedAt: Math.max(Date.now(), (config.logoUpdatedAt ?? 0) + 1),
         updatedAt: Date.now(),
       });
       continue;

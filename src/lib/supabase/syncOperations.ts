@@ -23,7 +23,8 @@ import {
   appSettingsRepository,
   grinderRepository,
 } from '@/lib/data/repositories';
-import type { AppSettings } from '@/lib/data/models';
+import type { AppSettings, RoasterConfig } from '@/lib/data/models';
+import { mergeRoasterLogos } from '@/lib/settings/roasterLogoSync';
 import {
   omitDeviceSettings,
   preserveDeviceSettings,
@@ -338,17 +339,6 @@ function hashStableString(value: string): string {
   return `${high}${low}`;
 }
 
-function getStoredSettingsSyncFingerprint(): string | null {
-  const storage = getLocalStorage();
-  if (!storage) return null;
-
-  try {
-    return storage.getItem(SETTINGS_SYNC_FINGERPRINT_KEY);
-  } catch {
-    return null;
-  }
-}
-
 function persistSettingsSyncFingerprint(fingerprint: string): void {
   const storage = getLocalStorage();
   if (!storage) return;
@@ -416,24 +406,22 @@ async function collectLocalSettingsSyncData(): Promise<{
   return { data, dataSections };
 }
 
-async function fetchRemoteSettingsFingerprint(
+async function fetchRemoteSettingsSnapshot(
   client: SupabaseClient
-): Promise<string | null | undefined> {
+): Promise<{ data: Record<string, unknown>; updated_at: string } | null> {
   const { data: row, error } = await client
     .from(SYNC_TABLES.USER_SETTINGS)
-    .select('data')
+    .select('data, updated_at')
     .eq('user_id', DEFAULT_USER_ID)
     .eq('id', 'app_settings')
     .maybeSingle();
 
   if (error) {
     if (getErrorField(error, 'code') === 'PGRST116') return null;
-    console.warn('[SyncOps] 检查远端设置指纹失败，继续执行上传:', error);
-    return undefined;
+    throw error;
   }
 
-  const remoteData = (row as { data?: Record<string, unknown> } | null)?.data;
-  return remoteData ? createSettingsSyncFingerprint(remoteData) : null;
+  return row;
 }
 
 // ============================================
@@ -804,6 +792,24 @@ export async function markRecordsAsDeleted(
 // 设置同步操作
 // ============================================
 
+async function applySyncedRoasterLogos(
+  configs?: RoasterConfig[]
+): Promise<void> {
+  if (!configs) return;
+  await withDataMutation(async () => {
+    const local = await appSettingsRepository.get();
+    if (!local) return;
+    const roasterConfigs = mergeRoasterLogos(local.roasterConfigs, configs);
+    if (JSON.stringify(roasterConfigs) === JSON.stringify(local.roasterConfigs))
+      return;
+    await appSettingsRepository.save({ ...local, roasterConfigs });
+    const { useSettingsStore } = await import('@/lib/stores/settingsStore');
+    useSettingsStore.setState(state => ({
+      settings: { ...state.settings, roasterConfigs },
+    }));
+  });
+}
+
 /**
  * 上传设置数据到云端
  */
@@ -822,44 +828,74 @@ export async function uploadSettingsData(
       return { success: true, data: 0, affectedCount: 0 };
     }
 
-    const fingerprint = createSettingsSyncFingerprint(data);
-
-    if (options.skipIfUnchanged) {
-      const storedFingerprint = getStoredSettingsSyncFingerprint();
-      if (storedFingerprint === fingerprint) {
-        return { success: true, data: 0, affectedCount: 0 };
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const remote = await fetchRemoteSettingsSnapshot(client);
+      const localSettings = data.appSettings as AppSettings | undefined;
+      const remoteSettings = remote?.data?.appSettings as
+        | AppSettings
+        | undefined;
+      const mergedData = { ...data };
+      if (localSettings || remoteSettings) {
+        mergedData.appSettings = {
+          ...(localSettings ?? remoteSettings),
+          ...(localSettings?.roasterConfigs || remoteSettings?.roasterConfigs
+            ? {
+                roasterConfigs: mergeRoasterLogos(
+                  localSettings?.roasterConfigs,
+                  remoteSettings?.roasterConfigs
+                ),
+              }
+            : {}),
+        };
       }
-
-      const remoteFingerprint = await fetchRemoteSettingsFingerprint(client);
-      if (remoteFingerprint === fingerprint) {
+      const fingerprint = createSettingsSyncFingerprint(mergedData);
+      if (
+        options.skipIfUnchanged &&
+        remote &&
+        createSettingsSyncFingerprint(remote.data) === fingerprint
+      ) {
+        await applySyncedRoasterLogos(
+          (mergedData.appSettings as AppSettings | undefined)?.roasterConfigs
+        );
         persistSettingsSyncFingerprint(fingerprint);
         return { success: true, data: 0, affectedCount: 0 };
       }
-    }
-
-    const { error } = await client.from(SYNC_TABLES.USER_SETTINGS).upsert(
-      {
+      const record = {
         id: 'app_settings',
         user_id: DEFAULT_USER_ID,
-        data,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id,user_id' }
-    );
-
-    if (error) {
-      return createFailure(
-        createDiagnostic('upload-settings', SYNC_TABLES.USER_SETTINGS, error, {
-          recordId: 'app_settings',
-          dataSections,
-        }),
-        0
+        data: mergedData,
+        updated_at: new Date(
+          Math.max(Date.now(), remote ? Date.parse(remote.updated_at) + 1 : 0)
+        ).toISOString(),
+      };
+      // 只替换刚读过的版本；并发修改后重新读取，不能盲目 upsert。
+      const result = remote
+        ? await client
+            .from(SYNC_TABLES.USER_SETTINGS)
+            .update(record)
+            .eq('id', 'app_settings')
+            .eq('user_id', DEFAULT_USER_ID)
+            .eq('updated_at', remote.updated_at)
+            .select('id')
+            .maybeSingle()
+        : await client
+            .from(SYNC_TABLES.USER_SETTINGS)
+            .insert(record)
+            .select('id')
+            .maybeSingle();
+      if (result.error) {
+        if (!remote && result.error.code === '23505') continue;
+        throw result.error;
+      }
+      if (!result.data) continue;
+      await applySyncedRoasterLogos(
+        (mergedData.appSettings as AppSettings | undefined)?.roasterConfigs
       );
+      const count = Object.keys(mergedData).length;
+      persistSettingsSyncFingerprint(fingerprint);
+      return { success: true, data: count, affectedCount: count };
     }
-
-    const count = Object.keys(data).length;
-    persistSettingsSyncFingerprint(fingerprint);
-    return { success: true, data: count, affectedCount: count };
+    throw new Error('云端设置正在被其他设备修改，请重试同步');
   } catch (err) {
     return createFailure(
       createDiagnostic('upload-settings', SYNC_TABLES.USER_SETTINGS, err, {
@@ -956,6 +992,13 @@ export async function downloadSettingsData(
           } as AppSettings;
         }
 
+        mergedSettings = {
+          ...mergedSettings,
+          roasterConfigs: mergeRoasterLogos(
+            cloudAppSettings.roasterConfigs,
+            localSettings.roasterConfigs
+          ),
+        };
         await appSettingsRepository.save(
           preserveDeviceSettings(mergedSettings, localSettings) as AppSettings
         );

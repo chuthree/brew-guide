@@ -78,6 +78,8 @@ export interface RoasterFlavorPeriod {
 export interface RoasterConfig {
   roasterName: string;
   logoData?: string;
+  /** 图标独立版本；有版本但无 logoData 表示主动删除。 */
+  logoUpdatedAt?: number;
   flavorPeriod?: RoasterFlavorPeriod;
   updatedAt: number;
 }
