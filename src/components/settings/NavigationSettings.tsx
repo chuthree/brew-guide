@@ -29,19 +29,10 @@ import {
 import { makeDynamicSettingSearchId } from './settingsSearch';
 
 interface NavigationSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
 }
 
-const NavigationSettings: React.FC<NavigationSettingsProps> = ({
-  settings: _settings,
-  onClose,
-  handleChange: _handleChange,
-}) => {
+const NavigationSettings: React.FC<NavigationSettingsProps> = ({ onClose }) => {
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);
   const updateNavigationSettings = useSettingsStore(

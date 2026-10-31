@@ -29,19 +29,10 @@ const EMPTY_SEARCH_REVEAL_STATE: BeanSettingsSearchRevealState = {
 };
 
 interface BeanSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
 }
 
-const BeanSettings: React.FC<BeanSettingsProps> = ({
-  settings: _settings,
-  onClose,
-  handleChange: _handleChange,
-}) => {
+const BeanSettings: React.FC<BeanSettingsProps> = ({ onClose }) => {
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);
 

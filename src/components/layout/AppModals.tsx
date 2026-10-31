@@ -582,49 +582,37 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showNavigationSettings && (
         <NavigationSettings
-          settings={settings}
           onClose={() => setShowNavigationSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showStockSettings && (
         <StockSettings
-          settings={settings}
           onClose={() => setShowStockSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showBeanSettings && (
         <BeanSettings
-          settings={settings}
           onClose={() => setShowBeanSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showGreenBeanSettings && (
         <GreenBeanSettings
-          settings={settings}
           onClose={() => setShowGreenBeanSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showCoffeeBeanGroupSettings && (
         <CoffeeBeanGroupSettings
-          settings={settings}
           onClose={() => setShowCoffeeBeanGroupSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showFlavorPeriodSettings && (
         <FlavorPeriodSettings
-          settings={settings}
           onClose={() => setShowFlavorPeriodSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -637,9 +625,7 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showTimerSettings && (
         <TimerSettings
-          settings={settings}
           onClose={() => setShowTimerSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -649,26 +635,20 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showDataSettings && (
         <DataSettings
-          settings={settings}
           onClose={() => setShowDataSettings(false)}
-          handleChange={handleSubSettingChange}
           onDataChange={handleDataChange}
         />
       )}
 
       {showNotificationSettings && (
         <NotificationSettings
-          settings={settings}
           onClose={() => setShowNotificationSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showRandomCoffeeBeanSettings && (
         <RandomCoffeeBeanSettings
-          settings={settings}
           onClose={() => setShowRandomCoffeeBeanSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -686,17 +666,13 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showNoteSettings && (
         <NoteSettings
-          settings={settings}
           onClose={() => setShowNoteSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showFlavorDimensionSettings && (
         <FlavorDimensionSettings
-          settings={settings}
           onClose={() => setShowFlavorDimensionSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
@@ -710,17 +686,13 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {showGrinderSettings && (
         <GrinderSettings
-          settings={settings}
           onClose={() => setShowGrinderSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 
       {showExperimentalSettings && (
         <ExperimentalSettings
-          settings={settings}
           onClose={() => setShowExperimentalSettings(false)}
-          handleChange={handleSubSettingChange}
         />
       )}
 

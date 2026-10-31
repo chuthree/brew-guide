@@ -24,12 +24,7 @@ import {
 import hapticsUtils from '@/lib/ui/haptics';
 
 interface FlavorDimensionSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
 }
 
 interface DimensionDraft {
@@ -124,9 +119,7 @@ const DimensionEditorDrawer: React.FC<DimensionEditorDrawerProps> = ({
 };
 
 const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
-  settings: _settings,
   onClose,
-  handleChange: _handleChange,
 }) => {
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const [shouldRender] = useState(true);

@@ -16,19 +16,10 @@ import {
 import { makeSettingRowSearchId } from './settingsSearch';
 
 interface StockSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
 }
 
-const StockSettings: React.FC<StockSettingsProps> = ({
-  settings: _settings,
-  onClose,
-  handleChange: _handleChange,
-}) => {
+const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);

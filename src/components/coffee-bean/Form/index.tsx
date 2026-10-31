@@ -57,7 +57,6 @@ import {
 
 interface CoffeeBeanFormProps {
   onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
-  onCancel: () => void;
   initialBean?: ExtendedCoffeeBean;
   /** 步骤变化回调，用于同步历史栈 */
   onStepChange?: (step: number) => void;
@@ -196,7 +195,6 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
   (
     {
       onSave,
-      onCancel: _onCancel,
       initialBean,
       onStepChange,
       initialBeanState,

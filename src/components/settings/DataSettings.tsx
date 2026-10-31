@@ -54,12 +54,7 @@ import {
 import { makeSettingRowSearchId } from './settingsSearch';
 
 interface DataSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
   onDataChange?: () => void;
 }
 
@@ -74,9 +69,7 @@ function canUsePullToSync(): boolean {
 }
 
 const DataSettings: React.FC<DataSettingsProps> = ({
-  settings: _settings,
   onClose,
-  handleChange: _handleChange,
   onDataChange,
 }) => {
   // 使用 settingsStore 获取设置

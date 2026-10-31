@@ -30,10 +30,6 @@ interface StageItemProps {
   onDelete?: () => void;
   onShare?: () => void;
   isPinned?: boolean;
-  actionMenuStates?: Record<string, boolean>;
-  setActionMenuStates?: React.Dispatch<
-    React.SetStateAction<Record<string, boolean>>
-  >;
   showFlowRate?: boolean;
   allSteps?: Step[];
   stepDisplayMode?: 'independent' | 'cumulative' | 'time';
@@ -125,8 +121,6 @@ const StageItem: React.FC<StageItemProps> = React.memo(
     onDelete,
     onShare,
     isPinned: _isPinned,
-    actionMenuStates: _actionMenuStates,
-    setActionMenuStates: _setActionMenuStates,
     showFlowRate = false,
     allSteps = [],
     stepDisplayMode = 'cumulative',

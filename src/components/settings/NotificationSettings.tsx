@@ -17,18 +17,11 @@ import { canUseNativeCalendar } from '@/lib/calendarSync/nativeCalendar';
 import { normalizeCalendarSyncSettings } from '@/lib/calendarSync/settings';
 
 interface NotificationSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
 }
 
 const NotificationSettings: React.FC<NotificationSettingsProps> = ({
-  settings: _settings,
   onClose,
-  handleChange: _handleChange,
 }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;

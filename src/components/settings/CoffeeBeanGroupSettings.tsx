@@ -30,12 +30,7 @@ import hapticsUtils from '@/lib/ui/haptics';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
 
 interface CoffeeBeanGroupSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void | Promise<void>;
 }
 
 type RoasterDisplaySettings = {
@@ -832,9 +827,7 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
 };
 
 const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
-  settings: _settings,
   onClose,
-  handleChange: _handleChange,
 }) => {
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);

@@ -11,19 +11,10 @@ import SettingRow from './atomic/SettingRow';
 import SettingToggle from './atomic/SettingToggle';
 
 interface NoteSettingsProps {
-  settings: SettingsOptions;
   onClose: () => void;
-  handleChange: <K extends keyof SettingsOptions>(
-    key: K,
-    value: SettingsOptions[K]
-  ) => void;
 }
 
-const NoteSettings: React.FC<NoteSettingsProps> = ({
-  settings: _settings,
-  onClose,
-  handleChange: _handleChange,
-}) => {
+const NoteSettings: React.FC<NoteSettingsProps> = ({ onClose }) => {
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);

@@ -163,10 +163,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
   const [editingMethod, setEditingMethod] = useState<Method | undefined>(
     undefined
   );
-  // 添加一个新的状态来跟踪每个卡片的菜单状态
-  const [actionMenuStates, setActionMenuStates] = useState<
-    Record<string, boolean>
-  >({});
   // 添加导入方案表单状态
   const [showImportForm, setShowImportForm] = useState(false);
   // 添加笔记保存状态追踪
@@ -635,8 +631,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     setShowCustomForm,
     editingMethod,
     setEditingMethod,
-    actionMenuStates,
-    setActionMenuStates,
     showImportForm,
     setShowImportForm,
     isNoteSaved,

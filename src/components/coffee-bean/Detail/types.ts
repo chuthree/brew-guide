@@ -13,15 +13,6 @@ export const BEAN_TYPES = [
   { value: 'omni' as const, label: '全能' },
 ];
 
-// 信息项类型定义
-export interface InfoItem {
-  key: string;
-  label: string;
-  value: string | React.ReactNode;
-  type?: 'normal' | 'status';
-  color?: string;
-}
-
 export interface BeanDetailModalProps {
   isOpen: boolean;
   bean: CoffeeBean | null;
@@ -57,26 +48,6 @@ export interface BeanDetailModalProps {
   onExitEdit?: () => void;
   /** 添加模式下的初始豆子状态 */
   initialBeanState?: 'green' | 'roasted';
-}
-
-// 共享的上下文类型
-export interface BeanDetailContextValue {
-  bean: CoffeeBean | null;
-  tempBean: Partial<CoffeeBean>;
-  isAddMode: boolean;
-  isGreenBean: boolean;
-  handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
-  setTempBean: React.Dispatch<React.SetStateAction<Partial<CoffeeBean>>>;
-}
-
-// 相关记录的 props
-export interface RelatedRecordsProps {
-  relatedNotes: BrewingNote[];
-  relatedBeans: CoffeeBean[];
-  equipmentNames: Record<string, string>;
-  isGreenBean: boolean;
-  allBeans: CoffeeBean[];
-  bean: CoffeeBean | null;
 }
 
 // 判断是否为简单的变动记录

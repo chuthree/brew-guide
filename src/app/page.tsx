@@ -734,8 +734,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     setShowCustomForm,
     editingMethod,
     setEditingMethod,
-    actionMenuStates,
-    setActionMenuStates,
     showImportForm,
     setShowImportForm,
 
@@ -4175,8 +4173,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   }
                   countdownTime={countdownTime}
                   customMethods={customMethods}
-                  actionMenuStates={actionMenuStates}
-                  setActionMenuStates={setActionMenuStates}
                   setShowCustomForm={setShowCustomForm}
                   setShowImportForm={setShowImportForm}
                   settings={settings}

@@ -171,7 +171,6 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
             key={`bean-form-${hydratedInitialBean?.id || 'new'}-${hydratedInitialBean?.name || ''}-${initialBeanState || 'roasted'}`}
             ref={formRef}
             onSave={onSave}
-            onCancel={onClose}
             initialBean={hydratedInitialBean || undefined}
             onStepChange={setCurrentStep}
             initialBeanState={initialBeanState}

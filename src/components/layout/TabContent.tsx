@@ -99,10 +99,6 @@ interface TabContentProps {
   selectedCoffeeBeanCreatedFromSearch?: boolean;
   countdownTime: number | null;
   customMethods: Record<string, Method[]>;
-  actionMenuStates: Record<string, boolean>;
-  setActionMenuStates: React.Dispatch<
-    React.SetStateAction<Record<string, boolean>>
-  >;
   setShowCustomForm: (show: boolean) => void;
   setShowImportForm: (show: boolean) => void;
   settings: SettingsOptions;
@@ -152,8 +148,6 @@ const TabContent: React.FC<TabContentProps> = ({
   selectedCoffeeBeanCreatedFromSearch = false,
   countdownTime,
   customMethods,
-  actionMenuStates,
-  setActionMenuStates,
   setShowCustomForm,
   setShowImportForm,
   settings,
@@ -1071,8 +1065,6 @@ const TabContent: React.FC<TabContentProps> = ({
                     onEdit={editHandler}
                     onDelete={deleteHandler}
                     onShare={shareHandler}
-                    actionMenuStates={actionMenuStates}
-                    setActionMenuStates={setActionMenuStates}
                     showFlowRate={localShowFlowRate}
                     allSteps={content[activeTab]?.steps || []}
                     stepDisplayMode={
