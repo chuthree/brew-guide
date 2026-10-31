@@ -15,7 +15,7 @@ export const DROPDOWN_MAX_HEIGHT = 280;
 const DROPDOWN_OVERSCAN = 4;
 export const SUGGESTION_DROPDOWN_AVAILABLE_HEIGHT_VAR =
   '--suggestion-dropdown-available-height';
-export const SUGGESTION_DROPDOWN_Z_INDEX = 80;
+export const SUGGESTION_DROPDOWN_Z_INDEX = 90;
 
 interface SuggestionDropdownProps extends Omit<
   React.HTMLAttributes<HTMLDivElement>,

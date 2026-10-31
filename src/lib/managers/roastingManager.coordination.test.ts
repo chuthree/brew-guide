@@ -5,6 +5,7 @@ const fixture = vi.hoisted(() => ({
   beans: undefined as unknown,
   notes: undefined as unknown,
   leases: 0,
+  save: vi.fn(),
 }));
 vi.mock('@/lib/app/runtime', () => ({
   detectAppRuntime: () => ({
@@ -29,6 +30,7 @@ vi.mock('@/lib/stores/brewingNoteStore', () => ({
 vi.mock('@/lib/data/repositories', () => ({
   coffeeBeanImageRepository: { mergeBean: async (bean: CoffeeBean) => bean },
   brewingNotePersistence: {},
+  roastingPersistence: { save: fixture.save },
 }));
 vi.mock('@/lib/notes/relatedNotes', () => ({
   getBrewingNotes: vi.fn(),
@@ -39,7 +41,6 @@ vi.mock('@/lib/utils/beanRepurchaseUtils', () => ({
   getNextAvailableNumber: () => 2,
 }));
 
-import { coordinateStoreActions } from '@/lib/data/storeMutationBoundary';
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
 import { RoastingManager } from './roastingManager';
 
@@ -52,11 +53,11 @@ function barrier() {
 }
 
 describe('roasting workflow mutation ownership', () => {
-  it('holds one lease through nested simple roast, stock, output bean and note publication', async () => {
+  it('holds one lease through atomic persistence and store publication', async () => {
     const entered = barrier(),
       resume = barrier();
     const events: string[] = [];
-    let green: CoffeeBean = {
+    const green: CoffeeBean = {
       id: 'green',
       timestamp: 1,
       name: 'Green',
@@ -64,50 +65,39 @@ describe('roasting workflow mutation ownership', () => {
       capacity: '100',
       remaining: '100',
     };
-    fixture.beans = coordinateStoreActions(
-      {
-        beans: [green],
-        getBeanById: () => green,
-        updateBean: async (_id: string, patch: Partial<CoffeeBean>) => {
-          events.push('stock:start');
-          entered.release();
-          await resume.wait;
-          green = { ...green, ...patch };
-          events.push('stock:end');
-          return green;
-        },
-        addBean: async (bean: Partial<CoffeeBean>) => {
-          events.push('roasted-bean');
-          return { ...bean, id: 'roasted', timestamp: 2 } as CoffeeBean;
-        },
-      },
-      ['updateBean', 'addBean']
-    );
-    fixture.notes = coordinateStoreActions(
-      {
-        addNote: async () => {
-          events.push('roasting-note');
-        },
-      },
-      ['addNote']
-    );
-
+    fixture.beans = {
+      beans: [green],
+      getBeanById: () => green,
+      setBeans: () => events.push('beans:published'),
+    };
+    fixture.notes = {
+      initialized: true,
+      notes: [],
+      setNotes: () => events.push('notes:published'),
+    };
+    fixture.save.mockImplementation(async () => {
+      events.push('transaction:start');
+      entered.release();
+      await resume.wait;
+      events.push('transaction:committed');
+      return { beans: [{ ...green, remaining: '80' }] };
+    });
     const roasting = RoastingManager.simpleRoast('green', 20);
     await entered.wait;
     const independent = withDataMutation(async () => {
       events.push('independent-write');
     });
     await Promise.resolve();
-    expect(events).toEqual(['stock:start']);
+    expect(events).toEqual(['transaction:start']);
     resume.release();
     const [result] = await Promise.all([roasting, independent]);
     expect(result.success).toBe(true);
-    expect(green.remaining).toBe('80');
+    expect(result.greenBean?.remaining).toBe('80');
     expect(events).toEqual([
-      'stock:start',
-      'stock:end',
-      'roasted-bean',
-      'roasting-note',
+      'transaction:start',
+      'transaction:committed',
+      'beans:published',
+      'notes:published',
       'independent-write',
     ]);
     expect(fixture.leases).toBe(2);

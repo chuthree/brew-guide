@@ -113,6 +113,22 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
       expectedRecord: BrewingNote | undefined
     ) => {
       try {
+        const note = await brewingNoteRepository.get(id);
+        if (note?.source === 'roasting') {
+          const { saveRoastingBatchInMutation } =
+            await import('@/lib/managers/roastingBatchManager');
+          await saveRoastingBatchInMutation({
+            noteId: id,
+            beanId: note.changeRecord?.roastingRecord?.roastedBeanId ?? '',
+            now: Date.now(),
+            expectedUpdatedAt:
+              expectedRecord?.updatedAt ??
+              expectedRecord?.timestamp ??
+              note.updatedAt ??
+              note.timestamp,
+          });
+          return true;
+        }
         await brewingNotePersistence.deleteWithImages(id, { expectedRecord });
         await markExpectedCoreDataDeletionIfEmpty();
         set(state => ({ notes: state.notes.filter(n => n.id !== id) }));

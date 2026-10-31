@@ -199,6 +199,9 @@ interface ChangeRecordDetails {
 
   // 烘焙记录相关
   roastingRecord?: {
+    inputs?: import('@/types/app').RoastingInput[];
+    outputAmount?: number;
+    roastDate?: string;
     greenBeanId: string; // 生豆ID
     greenBeanName: string; // 生豆名称
     roastedAmount: number; // 烘焙的重量(g)

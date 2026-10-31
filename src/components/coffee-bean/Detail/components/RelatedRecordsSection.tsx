@@ -8,7 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import type { CoffeeBean } from '@/types/app';
+import type { CoffeeBean, RoastingInput } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import { isSimpleChangeRecord, isRoastingRecord } from '../types';
@@ -19,6 +19,7 @@ import { RelatedRecordCard, SourceGreenBeanItem } from './RelatedRecordItems';
 interface RelatedRecordsSectionProps {
   relatedNotes: BrewingNote[];
   relatedBeans: CoffeeBean[];
+  sourceInputs: RoastingInput[];
   equipmentNames: Record<string, string>;
   isGreenBean: boolean;
   allBeans: CoffeeBean[];
@@ -28,11 +29,6 @@ interface RelatedRecordsSectionProps {
   relatedNotesLoading?: boolean;
   setShowChangeRecords: (show: boolean) => void;
   setShowGreenBeanRecords: (show: boolean) => void;
-  onImageClick?: (
-    imageUrl: string,
-    backImageUrl?: string,
-    sourceElement?: HTMLElement | null
-  ) => void;
   onOpenNoteDetail?: (detail: {
     note: BrewingNote;
     equipmentName: string;
@@ -40,6 +36,7 @@ interface RelatedRecordsSectionProps {
     beanInfo?: CoffeeBean | null;
   }) => void;
   onEditNote?: (note: BrewingNote) => void;
+  onOpenBeanDetail?: (bean: CoffeeBean) => void;
 }
 
 type RelatedRecordTab = 'primary' | 'change' | 'green';
@@ -65,6 +62,7 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
   ({
     relatedNotes,
     relatedBeans,
+    sourceInputs,
     equipmentNames,
     isGreenBean,
     allBeans,
@@ -76,8 +74,13 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
     setShowGreenBeanRecords,
     onOpenNoteDetail,
     onEditNote,
+    onOpenBeanDetail,
   }) => {
     const sectionId = useId();
+    const totalInputAmount = sourceInputs.reduce(
+      (sum, input) => sum + input.amount,
+      0
+    );
     const { getValidTasteRatings } = useFlavorDimensions();
     const [noteImageErrors, setNoteImageErrors] = useState<
       Record<string, boolean>
@@ -326,17 +329,33 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
                   className="space-y-2"
                 >
                   {tab.key === 'green'
-                    ? relatedBeans.map(relatedBean => (
-                        <div
-                          key={`source-${relatedBean.id}`}
-                          className="rounded bg-neutral-100 p-1.5 dark:bg-neutral-800/40"
-                        >
-                          <SourceGreenBeanItem
-                            bean={relatedBean}
-                            roasterSettings={roasterSettings}
-                          />
-                        </div>
-                      ))
+                    ? relatedBeans.map(relatedBean => {
+                        const input = sourceInputs.find(
+                          input => input.greenBeanId === relatedBean.id
+                        );
+                        return (
+                          <button
+                            key={`source-${relatedBean.id}`}
+                            type="button"
+                            disabled={
+                              !onOpenBeanDetail ||
+                              !allBeans.some(bean => bean.id === relatedBean.id)
+                            }
+                            onClick={() => onOpenBeanDetail?.(relatedBean)}
+                            className="block w-full cursor-pointer rounded bg-neutral-100 p-1.5 text-left disabled:cursor-default dark:bg-neutral-800/40"
+                          >
+                            <SourceGreenBeanItem
+                              bean={relatedBean}
+                              roasterSettings={roasterSettings}
+                              percentage={
+                                totalInputAmount > 0 && input
+                                  ? (input.amount / totalInputAmount) * 100
+                                  : undefined
+                              }
+                            />
+                          </button>
+                        );
+                      })
                     : records.map(note => (
                         <RelatedRecordCard
                           key={note.id}
@@ -351,6 +370,7 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
                           roasterSettings={roasterSettings}
                           onOpenNoteDetail={onOpenNoteDetail}
                           onEditNote={onEditNote}
+                          onOpenBeanDetail={onOpenBeanDetail}
                         />
                       ))}
                 </div>

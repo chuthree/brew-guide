@@ -1,4 +1,8 @@
 import { nanoid } from 'nanoid';
+import {
+  prepareRoastingBatch,
+  roastingInputs,
+} from '@/lib/coffee-beans/roastingBatch';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
 import type { SqliteExecutor } from '@/lib/data/sqlite/driver';
@@ -6,6 +10,7 @@ import {
   getCoffeeBean,
   listCoffeeBeans,
   saveCoffeeBean,
+  deleteCoffeeBean,
 } from '@/lib/data/sqlite/repositories/coffeeBean';
 import {
   getBrewingNote,
@@ -119,13 +124,13 @@ export const roastingDefinitions: Array<{
   {
     name: 'preview_delete_roasting_record',
     description:
-      'Preview removing a roasting record: restore green inventory up to capacity, unlink but KEEP the roasted bean and all later consumption. Present this impact before deletion.',
+      'Preview cancelling a roasting batch: refund each green input and remove untouched roasted output. Reject missing sources or subsequent consumption/adjustments. Present the returned impact before deletion.',
     schema: object(identity, ['id']),
   },
   {
     name: 'delete_roasting_record',
     description:
-      'Delete exactly the previewed roasting record. Restores current green inventory by input delta; preserves produced roasted bean and subsequent records. Requires fresh preview token.',
+      'Cancel exactly the previewed roasting batch atomically, refund green inputs and delete untouched roasted output and the record. Requires fresh preview token.',
     write: true,
     destructive: true,
     schema: object(
@@ -209,16 +214,13 @@ async function impactFingerprint(tx: SqliteExecutor, note: BrewingNote) {
   return recordVersion({
     note,
     ...(await linked(tx, note)),
+    beans: await listCoffeeBeans(tx),
+    notes: await listBrewingNotes(tx),
     images: await tx.query(
       'SELECT * FROM brewing_note_images WHERE note_id = ?',
       [note.id]
     ),
   });
-}
-function restoredAmount(bean: CoffeeBean, delta: number) {
-  const restored = amount(bean.remaining) + delta;
-  const cap = amount(bean.capacity);
-  return cap > 0 ? Math.min(cap, restored) : restored;
 }
 export async function readRoastingTool(
   tx: SqliteExecutor,
@@ -231,7 +233,9 @@ export async function readRoastingTool(
         n =>
           n.source === 'roasting' &&
           (!args.greenBeanId ||
-            n.changeRecord?.roastingRecord?.greenBeanId === args.greenBeanId)
+            roastingInputs(n.changeRecord?.roastingRecord).some(
+              input => input.greenBeanId === args.greenBeanId
+            ))
       )
       .sort((a, b) => b.timestamp - a.timestamp || a.id.localeCompare(b.id));
     const offset = Number(args.offset ?? 0),
@@ -251,11 +255,22 @@ export async function readRoastingTool(
     return {
       note: await noteView(note),
       greenBean: await beanView(green),
+      greenBeans: await Promise.all(
+        roastingInputs(note.changeRecord?.roastingRecord).map(async input => ({
+          ...input,
+          bean: await beanView(await getCoffeeBean(tx, input.greenBeanId)),
+        }))
+      ),
       roastedBean: await beanView(roasted),
     };
   if (name === 'preview_delete_roasting_record') {
     const r = note.changeRecord!.roastingRecord!;
-    assertPositive(r.roastedAmount);
+    const deletion = prepareRoastingBatch(
+      { noteId: note.id, beanId: r.roastedBeanId ?? '', now: Date.now() },
+      await listCoffeeBeans(tx),
+      note,
+      await listBrewingNotes(tx)
+    );
     const token = nanoid(),
       currentVersion = await recordVersion(note);
     for (const [key, preview] of previews)
@@ -275,10 +290,17 @@ export async function readRoastingTool(
       impact: {
         greenBeanId: green?.id ?? null,
         remainingBefore: green ? amount(green.remaining) : null,
-        remainingAfter: green ? restoredAmount(green, r.roastedAmount) : null,
+        remainingAfter: green
+          ? amount(deletion.beans.find(bean => bean.id === green.id)?.remaining)
+          : null,
+        restoredInputs: deletion.beans.map(bean => ({
+          id: bean.id,
+          remaining: bean.remaining,
+        })),
+        restoresInventory: true,
         roastedBeanId: roasted?.id ?? null,
-        keepsRoastedBean: true,
-        unlinksSource: Boolean(roasted?.sourceGreenBeanId),
+        keepsRoastedBean: false,
+        deletedRoastedBeanId: deletion.deletedBeanId ?? null,
         preservesSubsequentNotes: true,
       },
     };
@@ -430,6 +452,7 @@ export async function mutateRoastingTool(
           greenBeanName: formatBeanDisplayName(green),
           roastedAmount: input,
           roastedBeanId: roasted?.id,
+          outputAmount: roasted ? amount(roasted.capacity) : undefined,
           roastedBeanName: roasted ? formatBeanDisplayName(roasted) : undefined,
         },
       },
@@ -453,77 +476,42 @@ export async function mutateRoastingTool(
   await checkVersion(note, args.expectedVersion);
   const r = note.changeRecord!.roastingRecord!;
   assertPositive(r.roastedAmount);
-  const { green, roasted } = await linked(tx, note);
+  const { roasted } = await linked(tx, note);
   if (name === 'update_roasting_record') {
     const greenId = String(args.greenBeanId ?? r.greenBeanId);
     const nextGreen = await requireBean(tx, greenId);
-    assertGreen(nextGreen);
-    if (green) assertGreen(green);
     await checkVersion(nextGreen, args.greenExpectedVersion);
-    const input = Number(args.roastedAmountGrams ?? r.roastedAmount);
-    assertPositive(input);
-    const same = greenId === r.greenBeanId;
-    if (!same && roasted && roasted.sourceGreenBeanId !== r.greenBeanId)
-      throw new McpToolError(
-        'CONFLICT',
-        'Derived bean provenance changed; reconcile its source in the app before switching this roasting record'
-      );
-    const remaining =
-      amount(nextGreen.remaining) + (same ? r.roastedAmount : 0) - input;
-    if (remaining < 0)
-      throw new McpToolError(
-        'INSUFFICIENT_INVENTORY',
-        'Insufficient green inventory'
-      );
-    await writeBean(nextGreen, {
-      ...nextGreen,
-      remaining: fmt(remaining),
-      timestamp: nowAfter(nextGreen.timestamp),
-    });
-    if (!same && green)
-      await writeBean(green, {
-        ...green,
-        remaining: fmt(amount(green.remaining) + r.roastedAmount),
-        timestamp: nowAfter(green.timestamp),
-      });
-    if (!same && roasted)
-      await writeBean(roasted, {
-        ...roasted,
-        sourceGreenBeanId: greenId,
-        timestamp: nowAfter(roasted.timestamp),
-      });
-    const after: BrewingNote = {
-      ...note,
-      timestamp: args.timestamp
-        ? Date.parse(String(args.timestamp))
-        : note.timestamp,
-      updatedAt: nowAfter(note.updatedAt ?? note.timestamp),
-      beanId: greenId,
-      coffeeBeanInfo: {
-        name: nextGreen.name,
-        roastLevel:
-          nextGreen.roastLevel || note.coffeeBeanInfo?.roastLevel || '未知',
-        roastDate: nextGreen.roastDate,
-        roaster: nextGreen.roaster,
-      },
-      notes: `烘焙了 ${Number.isInteger(input) ? input : input.toFixed(1)}g 生豆${r.roastedBeanName ? ` → ${r.roastedBeanName}` : ''}`,
-      changeRecord: {
-        ...note.changeRecord,
-        roastingRecord: {
-          ...r,
+    const inventory = await listCoffeeBeans(tx);
+    const result = prepareRoastingBatch(
+      {
+        noteId: note.id,
+        beanId: r.roastedBeanId ?? '',
+        now: Date.now(),
+        expectedUpdatedAt: note.updatedAt ?? note.timestamp,
+        legacyEdit: {
           greenBeanId: greenId,
-          greenBeanName: nextGreen.name,
-          roastedAmount: input,
+          amount: Number(args.roastedAmountGrams ?? r.roastedAmount),
+          timestamp: args.timestamp
+            ? Date.parse(String(args.timestamp))
+            : note.timestamp,
         },
       },
-    };
-    await writeNote(note, after);
+      inventory,
+      note
+    );
+    for (const bean of result.beans)
+      await writeBean(
+        inventory.find(before => before.id === bean.id) ?? null,
+        bean
+      );
+    await writeNote(note, result.note!);
     return {
-      result: { note: await noteView(after) },
+      result: { note: await noteView(result.note!) },
       changes,
-      summary: after.notes,
+      summary: result.note!.notes,
     };
   }
+
   if (name === 'delete_roasting_record') {
     const preview = previews.get(String(args.confirmationToken));
     if (
@@ -542,18 +530,14 @@ export async function mutateRoastingTool(
         'CONFLICT',
         'Linked inventory changed after preview; preview again'
       );
-    if (green)
-      await writeBean(green, {
-        ...green,
-        remaining: fmt(restoredAmount(green, r.roastedAmount)),
-        timestamp: nowAfter(green.timestamp),
-      });
-    if (roasted?.sourceGreenBeanId)
-      await writeBean(roasted, {
-        ...roasted,
-        sourceGreenBeanId: undefined,
-        timestamp: nowAfter(roasted.timestamp),
-      });
+    const deletion = prepareRoastingBatch(
+      { noteId: note.id, beanId: r.roastedBeanId ?? '', now: Date.now() },
+      await listCoffeeBeans(tx),
+      note,
+      await listBrewingNotes(tx)
+    );
+    for (const bean of deletion.beans)
+      await writeBean((await getCoffeeBean(tx, bean.id)) ?? null, bean);
     const imageRows = await tx.query(
       "SELECT relative_path FROM brewing_note_images WHERE note_id = ? AND source_kind = 'file'",
       [note.id]
@@ -561,6 +545,27 @@ export async function mutateRoastingTool(
     const cleanupPaths = imageRows.flatMap(row =>
       typeof row.relative_path === 'string' ? [row.relative_path] : []
     );
+    if (deletion.deletedBeanId && roasted) {
+      const images = await tx.query(
+        "SELECT relative_path FROM coffee_bean_images WHERE bean_id = ? AND source_kind = 'file'",
+        [roasted.id]
+      );
+      cleanupPaths.push(
+        ...images.flatMap(row =>
+          typeof row.relative_path === 'string' ? [row.relative_path] : []
+        )
+      );
+      await tx.execute('DELETE FROM coffee_bean_images WHERE bean_id = ?', [
+        roasted.id,
+      ]);
+      await deleteCoffeeBean(tx, roasted.id);
+      changes.push({
+        entity: 'bean',
+        id: roasted.id,
+        before: await beanView(roasted),
+        after: null,
+      });
+    }
     await tx.execute('DELETE FROM brewing_note_images WHERE note_id = ?', [
       note.id,
     ]);
@@ -575,10 +580,10 @@ export async function mutateRoastingTool(
       result: {
         deleted: true,
         id: note.id,
-        retainedRoastedBeanId: roasted?.id ?? null,
+        deletedRoastedBeanId: deletion.deletedBeanId ?? null,
       },
       changes,
-      summary: `删除烘焙记录：${r.greenBeanName}`,
+      summary: `撤销烘焙并返还生豆：${r.greenBeanName}`,
       cleanupPaths,
     };
   }

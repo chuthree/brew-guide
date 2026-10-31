@@ -12,6 +12,7 @@ type SettingInputProps = Omit<
 export default function SettingInput({
   type = 'text',
   disabled,
+  onPointerDown,
   ...props
 }: SettingInputProps) {
   const [visible, setVisible] = useState(false);
@@ -21,9 +22,14 @@ export default function SettingInput({
     <div className="flex h-4 w-full min-w-0 items-center gap-1">
       <input
         {...props}
+        data-vaul-no-drag
+        onPointerDown={event => {
+          event.stopPropagation();
+          onPointerDown?.(event);
+        }}
         disabled={disabled}
         type={isPassword && visible ? 'text' : type}
-        className="h-4 min-w-0 flex-1 appearance-none rounded-none border-0 bg-transparent p-0 text-right text-sm leading-none font-normal text-neutral-600 shadow-none placeholder:text-neutral-400 focus:outline-none disabled:opacity-40 dark:text-neutral-300 dark:placeholder:text-neutral-500"
+        className="h-4 min-w-0 flex-1 appearance-none rounded-none border-0 bg-transparent p-0 text-right text-sm leading-none font-normal text-neutral-600 shadow-none select-text placeholder:text-neutral-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-600 disabled:opacity-40 dark:text-neutral-300 dark:placeholder:text-neutral-500 dark:focus-visible:outline-neutral-300"
       />
       {isPassword && (
         <button

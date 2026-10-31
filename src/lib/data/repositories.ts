@@ -19,6 +19,11 @@ import type {
 
 /** Backend-neutral singleton set consumed by stores and business code. */
 export interface DataRepositories {
+  roastingPersistence: {
+    save(
+      command: import('@/lib/coffee-beans/roastingBatch').RoastingCommand
+    ): Promise<import('@/lib/coffee-beans/roastingBatch').RoastingChanges>;
+  };
   appSettingsRepository: AppSettingsRepository;
   grinderRepository: GrinderRepository;
   customEquipmentRepository: CustomEquipmentRepository;
@@ -96,6 +101,7 @@ function createRepositoryProxy<TKey extends keyof DataRepositories>(
 export const appSettingsRepository = createRepositoryProxy(
   'appSettingsRepository'
 );
+export const roastingPersistence = createRepositoryProxy('roastingPersistence');
 export const grinderRepository = createRepositoryProxy('grinderRepository');
 export const customEquipmentRepository = createRepositoryProxy(
   'customEquipmentRepository'

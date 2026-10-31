@@ -86,6 +86,16 @@ const editedNote = (overrides: Partial<BrewingNote> = {}): BrewingNote => ({
 });
 
 describe('RoastingManager.updateRoastingRecord', () => {
+  it('rejects an editor opened before another edit was saved', async () => {
+    const edit = editedNote({ updatedAt: baseNote.timestamp });
+    const first = await RoastingManager.updateRoastingRecord(edit);
+    expect(first.success).toBe(true);
+    const before = await db.coffeeBeans.toArray();
+    const second = await RoastingManager.updateRoastingRecord(edit);
+    expect(second.success).toBe(false);
+    expect(second.error).toContain('已变化');
+    expect(await db.coffeeBeans.toArray()).toEqual(before);
+  });
   beforeEach(async () => {
     bindDexieRepositories();
     vi.stubGlobal('window', new EventTarget());
@@ -216,19 +226,9 @@ describe('RoastingManager.updateRoastingRecord', () => {
     });
   });
 
-  it('restores both bean balances when the second bean write fails after persistence', async () => {
-    const beanStore = useCoffeeBeanStore.getState();
-    const originalUpdateBean = beanStore.updateBean;
-    let updateCount = 0;
-    vi.spyOn(beanStore, 'updateBean').mockImplementation(
-      async (id, updates) => {
-        const updatedBean = await originalUpdateBean(id, updates);
-        updateCount += 1;
-        if (updateCount === 2) {
-          throw new Error('模拟第二次库存写入回调失败');
-        }
-        return updatedBean;
-      }
+  it('keeps both bean balances when the inventory transaction fails', async () => {
+    vi.spyOn(db.coffeeBeans, 'bulkPut').mockRejectedValueOnce(
+      new Error('模拟库存写入失败')
     );
 
     const result = await RoastingManager.updateRoastingRecord(
@@ -246,7 +246,7 @@ describe('RoastingManager.updateRoastingRecord', () => {
 
     expect(result).toMatchObject({
       success: false,
-      error: '模拟第二次库存写入回调失败',
+      error: '模拟库存写入失败',
     });
     expect(
       useCoffeeBeanStore.getState().getBeanById('green-a')?.remaining
@@ -274,7 +274,8 @@ describe('RoastingManager.updateRoastingRecord', () => {
 
     const result = await RoastingManager.updateRoastingRecord(edit);
 
-    expect(result).toMatchObject({ success: false, error: '生豆剩余量不足' });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('库存不足');
     expect(
       useCoffeeBeanStore.getState().getBeanById('green-a')?.remaining
     ).toBe('80');
@@ -283,14 +284,9 @@ describe('RoastingManager.updateRoastingRecord', () => {
     );
   });
 
-  it('restores inventory and the original note when the note write fails after persistence', async () => {
-    const noteStore = useBrewingNoteStore.getState();
-    const originalUpdateNote = noteStore.updateNote;
-    vi.spyOn(noteStore, 'updateNote').mockImplementationOnce(
-      async (id, updates) => {
-        await originalUpdateNote(id, updates);
-        throw new Error('模拟笔记写入后续步骤失败');
-      }
+  it('rolls back inventory when saving the note fails in the transaction', async () => {
+    vi.spyOn(db.brewingNotes, 'put').mockRejectedValueOnce(
+      new Error('模拟笔记写入失败')
     );
 
     const result = await RoastingManager.updateRoastingRecord(
@@ -306,7 +302,7 @@ describe('RoastingManager.updateRoastingRecord', () => {
 
     expect(result).toMatchObject({
       success: false,
-      error: '模拟笔记写入后续步骤失败',
+      error: '模拟笔记写入失败',
     });
     expect(
       useCoffeeBeanStore.getState().getBeanById('green-a')?.remaining
@@ -315,48 +311,6 @@ describe('RoastingManager.updateRoastingRecord', () => {
       baseNote
     );
     expect(await brewingNoteRepository.get('roasting-note')).toEqual(baseNote);
-    expect(useCoffeeBeanStore.getState().getBeanById('roasted')).toEqual(
-      baseBeans[2]
-    );
-  });
-
-  it('reports when inventory rollback fails instead of implying data stayed unchanged', async () => {
-    const beanStore = useCoffeeBeanStore.getState();
-    const originalUpdateBean = beanStore.updateBean;
-    let updateCount = 0;
-    vi.spyOn(beanStore, 'updateBean').mockImplementation(
-      async (id, updates) => {
-        updateCount += 1;
-        if (updateCount === 1) return originalUpdateBean(id, updates);
-        throw new Error('模拟库存回滚失败');
-      }
-    );
-    vi.spyOn(
-      useBrewingNoteStore.getState(),
-      'updateNote'
-    ).mockRejectedValueOnce(new Error('模拟笔记写入失败'));
-
-    const result = await RoastingManager.updateRoastingRecord(
-      editedNote({
-        changeRecord: {
-          roastingRecord: {
-            ...baseNote.changeRecord!.roastingRecord!,
-            roastedAmount: 23,
-          },
-        },
-      })
-    );
-
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('库存回滚失败');
-    expect(result.error).toContain('请检查咖啡豆库存');
-    expect(updateCount).toBe(2);
-    expect(
-      useCoffeeBeanStore.getState().getBeanById('green-a')?.remaining
-    ).toBe('77');
-    expect(useBrewingNoteStore.getState().getNoteById('roasting-note')).toEqual(
-      baseNote
-    );
     expect(useCoffeeBeanStore.getState().getBeanById('roasted')).toEqual(
       baseBeans[2]
     );

@@ -115,8 +115,6 @@ export interface AppModalsProps {
   setEditingBean: (bean: ExtendedCoffeeBean | null) => void;
   editingBeanState: 'green' | 'roasted';
   setEditingBeanState: (state: 'green' | 'roasted') => void;
-  roastingSourceBeanId: string | null;
-  setRoastingSourceBeanId: (id: string | null) => void;
   recognitionImage: string | null;
   setRecognitionImage: (image: string | null) => void;
   recognitionImageBeanId: string | null;
@@ -173,7 +171,7 @@ export interface AppModalsProps {
     beanUnitPrice: number;
     beanInfo?: CoffeeBean | null;
   } | null;
-  onOpenBeanDetailFromNote: (bean: CoffeeBean) => void;
+  onOpenBeanDetailFromRelated: (bean: CoffeeBean) => void;
   setNoteDetailData: (
     data: {
       note: BrewingNote;
@@ -309,8 +307,6 @@ const AppModals: React.FC<AppModalsProps> = ({
   setEditingBean,
   editingBeanState,
   setEditingBeanState,
-  roastingSourceBeanId,
-  setRoastingSourceBeanId,
   recognitionImage,
   setRecognitionImage,
   recognitionImageBeanId,
@@ -352,7 +348,7 @@ const AppModals: React.FC<AppModalsProps> = ({
   noteDetailOpen,
   setNoteDetailOpen,
   noteDetailData,
-  onOpenBeanDetailFromNote,
+  onOpenBeanDetailFromRelated,
   setNoteDetailData,
 
   // 器具相关
@@ -398,7 +394,10 @@ const AppModals: React.FC<AppModalsProps> = ({
 }) => {
   const [showProviderSettings, setShowProviderSettings] = React.useState(false);
 
-  const closeProviderSettings = React.useCallback(() => setShowProviderSettings(false), []);
+  const closeProviderSettings = React.useCallback(
+    () => setShowProviderSettings(false),
+    []
+  );
 
   // 标记未使用的变量
   void setNoteDetailData;
@@ -844,12 +843,10 @@ const AppModals: React.FC<AppModalsProps> = ({
           setShowBeanForm(false);
           setEditingBean(null);
           setEditingBeanState('roasted');
-          setRoastingSourceBeanId(null);
           setRecognitionImage(null);
           setRecognitionImageBeanId(null);
         }}
         initialBeanState={editingBeanState}
-        roastingSourceBeanId={roastingSourceBeanId}
         recognitionImage={
           recognitionImageBeanId && editingBean?.id === recognitionImageBeanId
             ? recognitionImage
@@ -889,6 +886,7 @@ const AppModals: React.FC<AppModalsProps> = ({
           }}
           onCreateNoteFromBean={onCreateNoteFromBean}
           onOpenRelatedNote={onOpenNoteDetailFromBean}
+          onOpenRelatedBean={onOpenBeanDetailFromRelated}
           onEditRelatedNote={onEditRelatedNoteFromBean}
           searchQuery={beanDetailSearchQuery}
           mode={
@@ -999,10 +997,12 @@ const AppModals: React.FC<AppModalsProps> = ({
               console.error('续购失败:', error);
             }
           }}
-          onRoast={(greenBean, roastedBeanTemplate) => {
-            setRoastingSourceBeanId(greenBean.id);
-            setEditingBean(roastedBeanTemplate as ExtendedCoffeeBean);
-            setShowBeanForm(true);
+          onRoast={greenBean => {
+            window.dispatchEvent(
+              new CustomEvent('openRoastingDrawer', {
+                detail: { sourceIds: [greenBean.id] },
+              })
+            );
           }}
           onConvertToGreen={
             settings.enableGreenBeanInventory && settings.enableConvertToGreen
@@ -1102,7 +1102,7 @@ const AppModals: React.FC<AppModalsProps> = ({
           equipmentName={noteDetailData.equipmentName}
           beanUnitPrice={noteDetailData.beanUnitPrice}
           beanInfo={noteDetailData.beanInfo}
-          onOpenBeanDetail={onOpenBeanDetailFromNote}
+          onOpenBeanDetail={onOpenBeanDetailFromRelated}
           onEdit={async note => {
             const { getBrewingNoteById } =
               await import('@/lib/notes/relatedNotes');
@@ -1113,7 +1113,6 @@ const AppModals: React.FC<AppModalsProps> = ({
             }
           }}
           onDelete={async noteId => {
-            setNoteDetailOpen(false);
             try {
               const { getBrewingNoteById } =
                 await import('@/lib/notes/relatedNotes');
@@ -1129,9 +1128,14 @@ const AppModals: React.FC<AppModalsProps> = ({
                     await import('@/lib/managers/roastingManager');
                   const result =
                     await RoastingManager.deleteRoastingRecord(noteId);
-                  if (!result.success) {
-                    console.error('删除烘焙记录失败:', result.error);
-                  }
+                  if (!result.success) return result.error || '无法撤销烘焙';
+                  const { showToast } =
+                    await import('@/components/common/feedback/LightToast');
+                  showToast({
+                    type: 'success',
+                    title: '已撤销，生豆已退回',
+                    duration: 4000,
+                  });
                   return;
                 } else if (noteToDelete.source === 'capacity-adjustment') {
                   await revertCapacityAdjustmentRecord(noteToDelete);

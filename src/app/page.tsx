@@ -15,6 +15,8 @@ import React, {
   ReactNode,
 } from 'react';
 import dynamic from 'next/dynamic';
+import { RoastingDrawerHost } from '@/components/coffee-bean/RoastingDrawer';
+import { roastingInputs } from '@/lib/coffee-beans/roastingBatch';
 import {
   equipmentList,
   APP_VERSION,
@@ -54,11 +56,11 @@ import {
 } from '@/components/layout/NavigationControls';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
+import { legacySettingsRepository } from '@/lib/data/repositories';
 import {
-  coffeeBeanImageRepository,
-  legacySettingsRepository,
-} from '@/lib/data/repositories';
-import { selectIsSyncing, useSyncStatusStore } from '@/lib/stores/syncStatusStore';
+  selectIsSyncing,
+  useSyncStatusStore,
+} from '@/lib/stores/syncStatusStore';
 import TabContent from '@/components/layout/TabContent';
 import MethodTypeSelector from '@/components/method/forms/MethodTypeSelector';
 import Onboarding from '@/components/onboarding/Onboarding';
@@ -147,7 +149,6 @@ import {
   revertCapacityAdjustmentRecord,
   updateBeanWithCapacityAdjustmentRecord,
 } from '@/lib/coffee-beans/capacityAdjustment';
-import { createRoastingCopyTemplate } from '@/lib/coffee-beans/roastingCopy';
 
 // 为Window对象声明类型扩展
 declare global {
@@ -468,10 +469,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(
     null
   );
-  // 烘焙来源生豆ID（当从生豆详情页点击"去烘焙"时设置）
-  const [roastingSourceBeanId, setRoastingSourceBeanId] = useState<
-    string | null
-  >(null);
   const [showImportBeanForm, setShowImportBeanForm] = useState(false);
   const [importingBeanState, setImportingBeanState] = useState<
     'green' | 'roasted'
@@ -510,6 +507,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   } | null>(null);
   const [isContentDetailPending, startContentDetailTransition] =
     useTransition();
+  useEffect(() => {
+    const update = (event: Event) => {
+      const note = (event as CustomEvent<BrewingNote>).detail;
+      setNoteDetailData(current =>
+        current?.note.id === note.id ? { ...current, note } : current
+      );
+    };
+    window.addEventListener('roastingRecordSaved', update);
+    return () => window.removeEventListener('roastingRecordSaved', update);
+  }, []);
 
   // 详情面板宽度拖动状态（大屏幕）
   const DETAIL_PANEL_MIN_WIDTH = 320; // 最小宽度
@@ -996,7 +1003,9 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         showToast({
           type: 'success',
-          title: '转换成功',
+          title: result.newRoastedBean
+            ? '已转为生豆，并为已使用部分生成熟豆记录'
+            : '已转为生豆，原熟豆已移除',
           duration: 2000,
         });
 
@@ -1539,9 +1548,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     [currentBeanView, setActiveMainTab, startContentDetailTransition]
   );
 
-  const handleOpenBeanDetailFromNote = useCallback(
+  const handleOpenBeanDetailFromRelated = useCallback(
     (bean: CoffeeBean) => {
       const navigateToBeanDetail = () => openBeanDetailInInventory(bean);
+
+      if (beanDetailOpen) {
+        if (modalHistory.isTop('bean-detail')) {
+          modalHistory.back();
+        } else {
+          setBeanDetailOpen(false);
+          setBeanDetailAddMode(false);
+          setBeanDetailEditMode(false);
+        }
+        window.setTimeout(navigateToBeanDetail, DETAIL_NAVIGATION_DELAY_MS);
+        return;
+      }
 
       if (noteDetailOpen && modalHistory.isTop('note-detail')) {
         modalHistory.back();
@@ -1557,7 +1578,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
       navigateToBeanDetail();
     },
-    [noteDetailOpen, openBeanDetailInInventory]
+    [beanDetailOpen, noteDetailOpen, openBeanDetailInInventory]
   );
 
   const handleBeanReadyReminderBeanClick = useCallback(
@@ -2809,58 +2830,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handleCopyRoastingRecord = async (
     note: BrewingNote
   ): Promise<boolean> => {
-    const roastingRecord = note.changeRecord?.roastingRecord;
-    if (
-      !roastingRecord ||
-      !Number.isFinite(roastingRecord.roastedAmount) ||
-      roastingRecord.roastedAmount <= 0
-    ) {
-      showToast({
-        type: 'error',
-        title: '烘焙记录数据不完整，无法复制',
-        duration: 2000,
-      });
-      return false;
+    if (note.changeRecord?.roastingRecord) {
+      window.dispatchEvent(
+        new CustomEvent('openRoastingDrawer', {
+          detail: {
+            sourceIds: roastingInputs(note.changeRecord.roastingRecord).map(
+              input => input.greenBeanId
+            ),
+            initialNote: note,
+          },
+        })
+      );
+      return true;
     }
-
-    const store = useCoffeeBeanStore.getState();
-    const greenBean = store.getBeanById(roastingRecord.greenBeanId);
-    if (!greenBean || greenBean.beanState !== 'green') {
-      showToast({
-        type: 'error',
-        title: '找不到关联的生豆记录，无法复制',
-        duration: 2000,
-      });
-      return false;
-    }
-
-    const roastedBean = roastingRecord.roastedBeanId
-      ? store.getBeanById(roastingRecord.roastedBeanId)
-      : undefined;
-    const [frontImage, backImage] = await Promise.all([
-      coffeeBeanImageRepository.getSource(greenBean.id, {
-        side: 'front',
-        mode: 'original',
-      }),
-      coffeeBeanImageRepository.getSource(greenBean.id, {
-        side: 'back',
-        mode: 'original',
-      }),
-    ]);
-    const template = createRoastingCopyTemplate(
-      greenBean,
-      roastedBean,
-      roastingRecord.roastedAmount
-    );
-
-    setRoastingSourceBeanId(greenBean.id);
-    setEditingBean({
-      ...template,
-      image: frontImage || template.image,
-      backImage: backImage || template.backImage,
-    } as ExtendedCoffeeBean);
-    setShowBeanForm(true);
-    return true;
+    showToast({ type: 'error', title: '烘焙记录数据不完整，无法复制' });
+    return false;
   };
 
   const handleSaveBean = async (
@@ -2873,66 +2857,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       const currentBeans = store.beans;
       const isFirstBean = !editingBean?.id && currentBeans.length === 0;
 
-      // 检查是否是烘焙操作（从生豆转换为熟豆）
-      if (roastingSourceBeanId && bean.sourceGreenBeanId) {
-        // 调用 RoastingManager 完成烘焙转熟豆流程
-        const { RoastingManager } =
-          await import('@/lib/managers/roastingManager');
-        const { showToast } =
-          await import('@/components/common/feedback/LightToast');
-
-        // 获取烘焙量（用户填写的容量）
-        const roastedAmount = parseFloat(bean.capacity || '0');
-
-        if (roastedAmount <= 0) {
-          showToast({
-            type: 'error',
-            title: '请填写烘焙后的容量',
-            duration: 2000,
-          });
-          return;
-        }
-
-        // 如果用户没有填写价格，自动根据生豆价格计算
-        const finalBean = { ...bean };
-        if (!bean.price || bean.price.trim() === '') {
-          const greenBean = store.getBeanById(roastingSourceBeanId);
-          if (greenBean?.price && greenBean?.capacity) {
-            const greenPrice = parseFloat(greenBean.price);
-            const greenCapacity = parseFloat(greenBean.capacity);
-            if (greenPrice > 0 && greenCapacity > 0) {
-              // 熟豆价格 = 生豆单价 × 烘焙量
-              const roastedPrice = (greenPrice / greenCapacity) * roastedAmount;
-              finalBean.price = roastedPrice.toFixed(2);
-            }
-          }
-        }
-
-        // 调用烘焙方法，会自动扣除生豆容量并创建烘焙记录
-        const result = await RoastingManager.roastGreenBean(
-          roastingSourceBeanId,
-          roastedAmount,
-          finalBean
-        );
-
-        if (!result.success) {
-          showToast({
-            type: 'error',
-            title: result.error || '烘焙失败',
-            duration: 2000,
-          });
-          return;
-        }
-
-        showToast({
-          type: 'success',
-          title: `烘焙成功，已创建熟豆`,
-          duration: 2000,
-        });
-
-        // 清除烘焙源生豆ID
-        setRoastingSourceBeanId(null);
-      } else if (editingBean?.id) {
+      if (editingBean?.id) {
         // 普通编辑操作
         await updateBeanWithCapacityAdjustmentRecord(editingBean.id, bean);
       } else {
@@ -4108,7 +4033,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     <>
       <DesktopGlobalSearch
         syncDisabled={
-          isCloudSyncBusy || isTimerRunning ||
+          isCloudSyncBusy ||
+          isTimerRunning ||
           (activeMainTab === '冲煮' &&
             (activeBrewingStep === 'brewing' || activeBrewingStep === 'notes'))
         }
@@ -4509,6 +4435,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     }}
                     onCreateNoteFromBean={handleCreateNoteFromBean}
                     onOpenRelatedNote={handleOpenNoteDetailFromBean}
+                    onOpenRelatedBean={handleOpenBeanDetailFromRelated}
                     onEditRelatedNote={handleEditRelatedNoteFromBean}
                     searchQuery={beanDetailSearchQuery}
                     mode={
@@ -4627,10 +4554,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         console.error('续购失败:', error);
                       }
                     }}
-                    onRoast={(greenBean, roastedBeanTemplate) => {
-                      setRoastingSourceBeanId(greenBean.id);
-                      setEditingBean(roastedBeanTemplate as ExtendedCoffeeBean);
-                      setShowBeanForm(true);
+                    onRoast={greenBean => {
+                      window.dispatchEvent(
+                        new CustomEvent('openRoastingDrawer', {
+                          detail: { sourceIds: [greenBean.id] },
+                        })
+                      );
                     }}
                     onConvertToGreen={
                       settings.enableGreenBeanInventory &&
@@ -4704,7 +4633,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     equipmentName={noteDetailData.equipmentName}
                     beanUnitPrice={noteDetailData.beanUnitPrice}
                     beanInfo={noteDetailData.beanInfo}
-                    onOpenBeanDetail={handleOpenBeanDetailFromNote}
+                    onOpenBeanDetail={handleOpenBeanDetailFromRelated}
                     onEdit={async note => {
                       const { getBrewingNoteById } =
                         await import('@/lib/notes/relatedNotes');
@@ -4715,7 +4644,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                       }
                     }}
                     onDelete={async noteId => {
-                      setNoteDetailOpen(false);
                       try {
                         const { getBrewingNoteById } =
                           await import('@/lib/notes/relatedNotes');
@@ -4733,9 +4661,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                               await RoastingManager.deleteRoastingRecord(
                                 noteId
                               );
-                            if (!result.success) {
-                              console.error('删除烘焙记录失败:', result.error);
-                            }
+                            if (!result.success) return result.error || '无法撤销烘焙';
+                            showToast({
+                              type: 'success',
+                              title: '已撤销，生豆已退回',
+                              duration: 4000,
+                            });
                             return;
                           } else if (
                             noteToDelete.source === 'capacity-adjustment'
@@ -4999,6 +4930,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         settings={settings}
       />
 
+      <RoastingDrawerHost />
       <AppModals
         // Settings 相关
         isSettingsOpen={isSettingsOpen}
@@ -5054,8 +4986,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setEditingBean={setEditingBean}
         editingBeanState={editingBeanState}
         setEditingBeanState={setEditingBeanState}
-        roastingSourceBeanId={roastingSourceBeanId}
-        setRoastingSourceBeanId={setRoastingSourceBeanId}
         recognitionImage={recognitionImage}
         setRecognitionImage={setRecognitionImage}
         recognitionImageBeanId={recognitionImageBeanId}
@@ -5093,7 +5023,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         noteDetailOpen={noteDetailOpen}
         setNoteDetailOpen={setNoteDetailOpen}
         noteDetailData={noteDetailData}
-        onOpenBeanDetailFromNote={handleOpenBeanDetailFromNote}
+        onOpenBeanDetailFromRelated={handleOpenBeanDetailFromRelated}
         setNoteDetailData={setNoteDetailData}
         // 器具相关
         showEquipmentForm={showEquipmentForm}

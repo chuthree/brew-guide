@@ -52,7 +52,7 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
   const roastedBean = useMemo(() => {
     if (!roastingRecord?.roastedBeanId) return null;
     return beans.find(b => b.id === roastingRecord.roastedBeanId) || null;
-  }, [roastingRecord?.roastedBeanId, beans]);
+  }, [roastingRecord, beans]);
 
   // 构建用于显示的咖啡豆信息，优先使用笔记中的 roaster，否则从关联咖啡豆获取
   const displayBeanInfo = useMemo(
@@ -64,10 +64,10 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
   const displayRoastedBeanInfo = useMemo(() => {
     if (!roastingRecord?.roastedBeanName) return null;
     return {
-      name: roastingRecord.roastedBeanName,
+      name: roastedBean?.name ?? roastingRecord.roastedBeanName,
       roaster: roastedBean?.roaster,
     };
-  }, [roastingRecord?.roastedBeanName, roastedBean?.roaster]);
+  }, [roastingRecord, roastedBean]);
 
   // 使用格式化函数动态显示咖啡豆名称
   const beanName =
@@ -210,7 +210,7 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
                 },
                 {
                   id: 'delete',
-                  label: '删除',
+                  label: note.source === 'roasting' ? '撤销烘焙' : '删除',
                   onClick: () => onDelete && onDelete(note.id),
                   color: 'danger',
                 },

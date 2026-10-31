@@ -575,7 +575,7 @@ export type BlendPresetKey = Extract<
 
 const normalizePresetValue = (value: string) => value.trim();
 
-const getCustomPresets = (key: CoffeeBeanPresetKey): string[] => {
+export const getCustomPresets = (key: CoffeeBeanPresetKey): string[] => {
   if (!isBrowser) return []; // 服务器端渲染时返回空数组
 
   try {

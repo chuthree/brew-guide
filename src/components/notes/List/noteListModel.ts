@@ -37,6 +37,8 @@ export const filterNotesByBeanState = (
   );
 
   return notes.filter(note => {
+    if (note.source === 'roasting' && note.changeRecord?.roastingRecord?.inputs)
+      return true;
     const beanId =
       note.source === 'roasting'
         ? (note.changeRecord?.roastingRecord?.greenBeanId ?? note.beanId)

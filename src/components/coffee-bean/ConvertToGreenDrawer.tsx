@@ -53,72 +53,20 @@ const ConvertToGreenDrawer: React.FC<ConvertToGreenDrawerProps> = ({
       <ActionDrawer.Content>
         {preview && (
           <p className="text-neutral-500 dark:text-neutral-400">
+            <span className="text-neutral-800 dark:text-neutral-200">
+              「{preview.beanName}」
+            </span>
             {preview.directConvert ? (
-              <>
-                将
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  「{preview.beanName}」
-                </span>
-                转换为生豆，原熟豆
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  {' '}
-                  {preview.originalBean.capacity}g{' '}
-                </span>
-                尚未使用，将直接转为
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  {' '}
-                  {preview.greenBean.capacity}g{' '}
-                </span>
-                生豆。
-              </>
+              <>将转为生豆，重量不变，原熟豆会移除。</>
             ) : (
               <>
-                将
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  「{preview.beanName}」
-                </span>
-                转换为生豆，原熟豆
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  {' '}
-                  {preview.originalBean.capacity}g{' '}
-                </span>
-                总量、
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  {preview.originalBean.remaining}g{' '}
-                </span>
-                剩余，将拆分为
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  {' '}
-                  {preview.greenBean.capacity}g{' '}
-                </span>
-                生豆和
-                <span className="text-neutral-800 dark:text-neutral-200">
-                  {' '}
-                  {preview.newRoastedBean.capacity}g{' '}
-                </span>
-                新熟豆。
-                {preview.brewingNotesCount > 0 && (
-                  <>
-                    届时将迁移
-                    <span className="text-neutral-800 dark:text-neutral-200">
-                      {' '}
-                      {preview.brewingNotesCount}{' '}
-                    </span>
-                    条冲煮记录至新熟豆。
-                  </>
-                )}
-                {preview.recordsToDeleteCount > 0 && (
-                  <>
-                    同时删除
-                    <span className="text-neutral-800 dark:text-neutral-200">
-                      {' '}
-                      {preview.recordsToDeleteCount}{' '}
-                    </span>
-                    条变动记录。
-                  </>
-                )}
+                剩余的 {preview.greenBean.remaining}g 记为生豆，已用的{' '}
+                {preview.roastingAmount}g 记为同名熟豆。原熟豆会被替换。
+                {preview.brewingNotesCount > 0 && '冲煮笔记会保留在新熟豆下。'}
               </>
             )}
+            {preview.recordsToDeleteCount > 0 &&
+              `原有的 ${preview.recordsToDeleteCount} 条用量变动记录会删除。`}
           </p>
         )}
       </ActionDrawer.Content>
@@ -127,7 +75,7 @@ const ConvertToGreenDrawer: React.FC<ConvertToGreenDrawerProps> = ({
           取消
         </ActionDrawer.SecondaryButton>
         <ActionDrawer.PrimaryButton onClick={handleConfirm}>
-          确认转换
+          转为生豆
         </ActionDrawer.PrimaryButton>
       </ActionDrawer.Actions>
     </ActionDrawer>

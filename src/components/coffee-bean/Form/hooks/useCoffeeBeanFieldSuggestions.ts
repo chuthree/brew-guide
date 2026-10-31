@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { ROAST_LEVELS } from '@/lib/utils/roastProfileUtils';
 import { getCoffeeBeanRoasterSuggestions } from '@/lib/utils/coffeeBeanUtils';
-import { FLAVOR_TAGS } from '../constants';
+import { FLAVOR_TAGS, getCustomPresets } from '../constants';
 import { usePresetSuggestions } from './usePresetSuggestions';
 
 const mergeDefaultsWithLearnedValues = (
@@ -45,7 +45,10 @@ export function useRoastLevelSuggestions() {
       .map(bean => bean.roastLevel || '')
       .filter(Boolean);
 
-    return mergeDefaultsWithLearnedValues(ROAST_LEVELS, learnedRoastLevels);
+    return mergeDefaultsWithLearnedValues(ROAST_LEVELS, [
+      ...getCustomPresets('roastLevels'),
+      ...learnedRoastLevels,
+    ]);
   }, [beans]);
 
   return usePresetSuggestions('roastLevels', rawSuggestions);

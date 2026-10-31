@@ -3,6 +3,7 @@ import React from 'react';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { BlendComponent } from '@/types/app';
 import BlendComponentFieldRows from './BlendComponentFieldRows';
+import { formatRoastMetric } from '@/lib/utils/roastProfileUtils';
 
 interface BlendComponentsProps {
   components: BlendComponent[];
@@ -24,10 +25,14 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
   onChange,
 }) => {
   // 计算总百分比
-  const totalPercentage = components.reduce(
-    (sum, component) =>
-      component.percentage ? sum + component.percentage : sum,
-    0
+  const totalPercentage = Number(
+    components
+      .reduce(
+        (sum, component) =>
+          component.percentage ? sum + component.percentage : sum,
+        0
+      )
+      .toFixed(8)
   );
 
   // 计算百分比状态
@@ -45,7 +50,7 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
         i !== index && comp.percentage ? sum + comp.percentage : sum,
       0
     );
-    return 100 - totalOtherPercentage;
+    return Math.max(0, Number((100 - totalOtherPercentage).toFixed(8)));
   };
 
   // 检查是否可以添加更多成分
@@ -110,11 +115,15 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
                   <AutocompleteInput
                     value={
                       component.percentage !== undefined
-                        ? component.percentage.toString()
+                        ? formatRoastMetric(component.percentage)
                         : ''
                     }
                     onChange={value => onChange(index, 'percentage', value)}
-                    placeholder={maxAllowed > 0 ? `0-${maxAllowed}` : '0'}
+                    placeholder={
+                      maxAllowed > 0
+                        ? `0-${formatRoastMetric(maxAllowed)}`
+                        : '0'
+                    }
                     unit="%"
                     inputType="tel"
                     clearable={true}
@@ -141,12 +150,12 @@ const BlendComponents: React.FC<BlendComponentsProps> = ({
         <div
           className={`text-xs ${percentageStatus} mt-1 flex items-center justify-between`}
         >
-          <span>当前总比例：{totalPercentage}%</span>
+          <span>当前总比例：{formatRoastMetric(totalPercentage)}%</span>
           {totalPercentage !== 100 && (
             <span>
               {totalPercentage < 100
-                ? `还差 ${100 - totalPercentage}%`
-                : `超出 ${totalPercentage - 100}%`}
+                ? `还差 ${formatRoastMetric(100 - totalPercentage)}%`
+                : `超出 ${formatRoastMetric(totalPercentage - 100)}%`}
             </span>
           )}
         </div>

@@ -234,6 +234,7 @@ async function beanView(
     version: await recordVersion(bean),
     updatedAt: new Date(bean.timestamp).toISOString(),
     sourceGreenBeanId: bean.sourceGreenBeanId ?? null,
+    sourceGreenBeanIds: bean.sourceGreenBeanIds ?? null,
     capacityGrams: amount(bean.capacity),
     remainingGrams: amount(bean.remaining),
     flavor: Array.isArray(bean.flavor)
@@ -945,8 +946,15 @@ async function assertBeanUnreferenced(
       note =>
         note.beanId === id ||
         note.changeRecord?.roastingRecord?.greenBeanId === id ||
+        note.changeRecord?.roastingRecord?.inputs?.some(
+          input => input.greenBeanId === id
+        ) ||
         note.changeRecord?.roastingRecord?.roastedBeanId === id
-    ) || beans.some(bean => bean.sourceGreenBeanId === id);
+    ) ||
+    beans.some(
+      bean =>
+        bean.sourceGreenBeanId === id || bean.sourceGreenBeanIds?.includes(id)
+    );
   if (referenced)
     throw new McpToolError(
       'BEAN_IN_USE',

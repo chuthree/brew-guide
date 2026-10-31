@@ -33,7 +33,6 @@ const FeatureListItem: React.FC<FeatureListItemProps> = ({
   showArrow = true,
   preview,
   isFirst = false,
-  isLast = false,
   className = '',
 }) => {
   return (
@@ -46,6 +45,7 @@ const FeatureListItem: React.FC<FeatureListItemProps> = ({
       <button
         type="button"
         onClick={onClick}
+        disabled={!onClick}
         className="flex w-full items-center justify-between py-3 text-sm transition-colors"
       >
         {/* 左侧标签 */}

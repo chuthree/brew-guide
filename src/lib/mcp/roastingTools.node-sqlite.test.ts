@@ -79,7 +79,7 @@ describe('MCP roasting canonical lifecycle (real SQLite)', () => {
       confirmationToken: p.confirmationToken,
     });
   }
-  it('atomically creates canonical lineage and preserves later roasted consumption on deletion', async () => {
+  it('rejects cancelling roasting after output consumption without changing inventory', async () => {
     const { note, roastedBean } = await roast();
     expect(await balance('green-a')).toBe(400);
     const output = await getCoffeeBean(db.driver, roastedBean.id);
@@ -97,15 +97,15 @@ describe('MCP roasting canonical lifecycle (real SQLite)', () => {
       },
     });
     await saveCoffeeBean(db.driver, { ...output!, remaining: '65' });
-    await remove(note.id);
-    expect(await balance('green-a')).toBe(500);
+    await expect(remove(note.id)).rejects.toThrow('暂时无法撤销');
+    expect(await balance('green-a')).toBe(400);
     expect(await getCoffeeBean(db.driver, roastedBean.id)).toMatchObject({
       remaining: '65',
     });
     expect(
       (await getCoffeeBean(db.driver, roastedBean.id))?.sourceGreenBeanId
-    ).toBeUndefined();
-    expect(await getBrewingNote(db.driver, note.id)).toBeUndefined();
+    ).toBe('green-a');
+    expect(await getBrewingNote(db.driver, note.id)).toBeDefined();
   });
   it('records initial output use with app prose and does not debit twice', async () => {
     const r = await roast({
@@ -117,7 +117,7 @@ describe('MCP roasting canonical lifecycle (real SQLite)', () => {
       quickDecrementAmount: 20,
       notes: '烘焙时已使用',
     });
-    await remove(r.note.id);
+    await expect(remove(r.note.id)).rejects.toThrow('已有冲煮或用量记录');
     expect(await getBrewingNote(db.driver, r.usedNote!.id)).toBeDefined();
   });
   it('edits amount and switches green source without resetting roasted stock', async () => {
@@ -177,10 +177,13 @@ describe('MCP roasting canonical lifecycle (real SQLite)', () => {
     expect(await balance('green-a')).toBe(500);
     expect(await listBrewingNotes(db.driver)).toHaveLength(0);
   });
-  it('restores by delta, caps at source capacity, and supports source-only roasting', async () => {
+  it('rejects an over-capacity refund and refunds source-only roasting exactly', async () => {
     const r = await roast({ createRoastedBean: false, roastedBean: undefined });
     expect(r.roastedBean).toBeNull();
     await saveCoffeeBean(db.driver, { ...green(), remaining: '470' });
+    await expect(remove(r.note.id)).rejects.toThrow('超过生豆总量');
+    expect(await balance('green-a')).toBe(470);
+    await saveCoffeeBean(db.driver, { ...green(), remaining: '400' });
     await remove(r.note.id);
     expect(await balance('green-a')).toBe(500);
   });
@@ -228,7 +231,7 @@ describe('MCP roasting canonical lifecycle (real SQLite)', () => {
         greenExpectedVersion: await version('green-b'),
         greenBeanId: 'green-b',
       })
-    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    ).rejects.toThrow('来源已变化');
     expect(await balance('green-a')).toBe(400);
     expect(await balance('green-b')).toBe(500);
   });

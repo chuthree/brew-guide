@@ -194,6 +194,7 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
               await coffeeBeanRepository.upsertMany(repairedBeans);
             }
 
+            const imageRecordCount = await getImageRecordCountForDiagnostics();
             // A local write may finish while this read is in flight. Never let
             // that older snapshot overwrite the newer Zustand state.
             if (loadVersion !== beanMutationVersion) {
@@ -204,7 +205,7 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
             recordCrashCheckpoint('coffee-beans:normalized', {
               beanCount: beans.length,
               repairedBeanCount: repairedBeans.length,
-              imageRecordCount: await getImageRecordCountForDiagnostics(),
+              imageRecordCount,
             });
             set({ beans, initialized: true });
             finishLoading();

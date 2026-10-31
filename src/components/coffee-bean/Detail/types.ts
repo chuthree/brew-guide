@@ -27,6 +27,7 @@ export interface BeanDetailModalProps {
   bean: CoffeeBean | null;
   onClose: () => void;
   onCreateNoteFromBean?: (bean: CoffeeBean) => void;
+  onOpenRelatedBean?: (bean: CoffeeBean) => void;
   onOpenRelatedNote?: (detail: {
     note: BrewingNote;
     equipmentName: string;
@@ -41,10 +42,7 @@ export interface BeanDetailModalProps {
   onRate?: (bean: CoffeeBean) => void;
   onRepurchase?: (bean: CoffeeBean) => void;
   /** 去烘焙回调 - 将生豆转换为熟豆 */
-  onRoast?: (
-    greenBean: CoffeeBean,
-    roastedBeanTemplate: Omit<CoffeeBean, 'id' | 'timestamp'>
-  ) => void;
+  onRoast?: (greenBean: CoffeeBean) => void;
   /** 转为生豆回调 - 将熟豆转换为生豆（用于迁移旧数据） */
   onConvertToGreen?: (bean: CoffeeBean) => void;
   /** 模式：view 查看现有豆子，add 添加新豆子，edit 编辑现有豆子 */

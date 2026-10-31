@@ -122,7 +122,8 @@ async function graph(tx: SqliteExecutor, id: string) {
   if (!original) throw new McpToolError('NOT_FOUND', 'Coffee bean not found');
   if (
     (original.beanState ?? 'roasted') !== 'roasted' ||
-    original.sourceGreenBeanId
+    original.sourceGreenBeanId ||
+    original.sourceGreenBeanIds?.length
   )
     invalid(
       'Only historical roasted beans without green provenance can be converted'
@@ -130,7 +131,9 @@ async function graph(tx: SqliteExecutor, id: string) {
   const beans = await listCoffeeBeans(tx);
   const all = await listBrewingNotes(tx);
   if (
-    beans.some(b => b.sourceGreenBeanId === id) ||
+    beans.some(
+      b => b.sourceGreenBeanId === id || b.sourceGreenBeanIds?.includes(id)
+    ) ||
     all.some(
       n =>
         n.changeRecord?.roastingRecord?.greenBeanId === id ||

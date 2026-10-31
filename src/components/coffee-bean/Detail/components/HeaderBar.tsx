@@ -45,10 +45,7 @@ interface HeaderBarProps {
   onEdit?: (bean: CoffeeBean) => void;
   onDelete?: (bean: CoffeeBean) => void;
   onShare?: (bean: CoffeeBean) => void;
-  onRoast?: (
-    greenBean: CoffeeBean,
-    roastedBeanTemplate: Omit<CoffeeBean, 'id' | 'timestamp'>
-  ) => void;
+  onRoast?: (greenBean: CoffeeBean) => void;
   onConvertToGreen?: (bean: CoffeeBean) => void;
   onSaveNew?: (
     bean: Omit<CoffeeBean, 'id' | 'timestamp'>
@@ -108,7 +105,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     components.reduce(
       (sum, component) => sum + (component.percentage || 0),
       0
-    ) <= 100;
+    ) <=
+      100 + 1e-8;
   const canSave =
     !!tempBean.name?.trim() &&
     hasValidBeanType &&
@@ -117,28 +115,48 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     isOptionalCoffeeBeanAmount(tempBean.price) &&
     hasValidRemaining &&
     hasValidBlendPercentages;
-  const beanNavigationActions: ActionMenuItem[] = [
-    ...(canGoToBrewing
+  const beanNavigationActions: ActionMenuItem[] = isGreenBean
+    ? bean && onRoast
       ? [
+          { id: 'roast', label: '去烘焙', onClick: onGoToRoast },
           {
-            id: 'brewing',
-            label: '去冲煮',
-            onClick: onGoToBrewing,
-            color: 'default' as const,
+            id: 'blend',
+            label: '去拼配',
+            onClick: () => {
+              onClose();
+              setTimeout(() => {
+                window.dispatchEvent(
+                  new CustomEvent('beanBlendRoastTriggered', {
+                    detail: { beanId: bean.id },
+                  })
+                );
+              }, 300);
+            },
           },
         ]
-      : []),
-    ...(canGoToNotes
-      ? [
-          {
-            id: 'notes',
-            label: '去记录',
-            onClick: onGoToNotes,
-            color: 'default' as const,
-          },
-        ]
-      : []),
-  ];
+      : []
+    : [
+        ...(canGoToBrewing
+          ? [
+              {
+                id: 'brewing',
+                label: '去冲煮',
+                onClick: onGoToBrewing,
+                color: 'default' as const,
+              },
+            ]
+          : []),
+        ...(canGoToNotes
+          ? [
+              {
+                id: 'notes',
+                label: '去记录',
+                onClick: onGoToNotes,
+                color: 'default' as const,
+              },
+            ]
+          : []),
+      ];
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -280,45 +298,26 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           </button>
         )}
 
-        {/* 查看模式：生豆显示"去烘焙"按钮 */}
-        {!isAddMode && bean && isGreenBean && onRoast && (
+        {/* 查看模式：按豆子状态显示前往操作 */}
+        {!isAddMode && bean && beanNavigationActions.length === 1 && (
           <button
             type="button"
-            onClick={onGoToRoast}
-            className="flex h-8 items-center justify-center rounded-full bg-neutral-100 px-3 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+            onClick={beanNavigationActions[0].onClick}
+            className="flex h-8 items-center justify-center rounded-full bg-neutral-100 px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-100"
           >
-            <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              去烘焙
-            </span>
+            {beanNavigationActions[0].label}
           </button>
         )}
-
-        {/* 查看模式：熟豆按可见模块显示前往操作 */}
-        {!isAddMode &&
-          bean &&
-          !isGreenBean &&
-          beanNavigationActions.length === 1 && (
-            <button
-              type="button"
-              onClick={beanNavigationActions[0].onClick}
-              className="flex h-8 items-center justify-center rounded-full bg-neutral-100 px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-100"
-            >
-              {beanNavigationActions[0].label}
-            </button>
-          )}
-        {!isAddMode &&
-          bean &&
-          !isGreenBean &&
-          beanNavigationActions.length > 1 && (
-            <ActionMenu
-              items={beanNavigationActions}
-              useMorphingAnimation={true}
-              triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-              triggerChildren={
-                <ArrowRight className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-              }
-            />
-          )}
+        {!isAddMode && bean && beanNavigationActions.length > 1 && (
+          <ActionMenu
+            items={beanNavigationActions}
+            useMorphingAnimation={true}
+            triggerClassName="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+            triggerChildren={
+              <ArrowRight className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+            }
+          />
+        )}
 
         {/* 查看模式：原有的操作按钮 */}
         {!isAddMode &&
@@ -340,7 +339,10 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                       },
                     ]
                   : []),
-                ...(!isGreenBean && !bean.sourceGreenBeanId && onConvertToGreen
+                ...(!isGreenBean &&
+                !bean.sourceGreenBeanId &&
+                !bean.sourceGreenBeanIds?.length &&
+                onConvertToGreen
                   ? [
                       {
                         id: 'convertToGreen',

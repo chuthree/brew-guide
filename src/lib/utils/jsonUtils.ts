@@ -4,6 +4,7 @@ import {
   type Stage,
 } from '@/lib/core/config';
 import { type CoffeeBean, type BlendComponent } from '@/types/app';
+import { formatRoastMetric } from './roastProfileUtils';
 import {
   getComponentOriginDisplay,
   getComponentFieldValue,
@@ -747,7 +748,7 @@ export function beanToReadableText(
             .join(' | ');
 
           const percentageText = component.percentage
-            ? `${component.percentage}% `
+            ? `${formatRoastMetric(component.percentage)}% `
             : '';
 
           text += `${index + 1}. ${percentageText}${componentText}\n`;

@@ -404,6 +404,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [roastingAmount, setRoastingAmount] = useState(() =>
     String(initialData.changeRecord?.roastingRecord?.roastedAmount ?? '')
   );
+  const [roastingInputAmounts, setRoastingInputAmounts] = useState<string[]>(
+    []
+  );
   // 容量调整量状态（仅用于容量调整记录编辑）
   const [capacityAdjustmentAmount, setCapacityAdjustmentAmount] =
     useState<string>(() => {
@@ -441,7 +444,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     setRoastingAmount(
       String(initialData.changeRecord?.roastingRecord?.roastedAmount ?? '')
     );
-  }, [id, initialData.changeRecord?.roastingRecord?.roastedAmount]);
+    setRoastingInputAmounts(
+      initialData.changeRecord?.roastingRecord?.inputs?.map(input =>
+        String(input.amount)
+      ) ?? []
+    );
+  }, [id, initialData.changeRecord?.roastingRecord]);
 
   // 监听initialData.totalTime的变化
   useEffect(() => {
@@ -827,6 +835,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const isCapacityAdjustmentEdit =
     !isAdding && initialData.source === 'capacity-adjustment';
   const isRoastingRecordEdit = !isAdding && initialData.source === 'roasting';
+  const blendRoastingInputs =
+    isRoastingRecordEdit &&
+    (initialData.changeRecord?.roastingRecord?.inputs?.length ?? 0) > 1
+      ? initialData.changeRecord!.roastingRecord!.inputs
+      : undefined;
   const isChangeRecordEdit = isQuickDecrementEdit || isCapacityAdjustmentEdit;
 
   // 跟踪当前是否处于快捷记录模式（用于切换按钮）
@@ -1442,6 +1455,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           // 使用当前的时间戳状态
           timestamp: timestamp.getTime(),
           ...noteFormData,
+          ...(isRoastingRecordEdit && {
+            updatedAt: initialData.updatedAt ?? initialData.timestamp,
+          }),
           taste: noteTaste, // 使用处理后的风味评分
           ...selection,
           ...(noteParams && { params: noteParams }),
@@ -1548,7 +1564,34 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           }
         }
 
-        if (isRoastingRecordEdit) {
+        if (blendRoastingInputs) {
+          const inputs = blendRoastingInputs.map((input, index) => ({
+            ...input,
+            amount: Number(roastingInputAmounts[index] ?? input.amount),
+          }));
+          if (
+            inputs.some(
+              input => !Number.isFinite(input.amount) || input.amount <= 0
+            )
+          ) {
+            throw new Error('请输入有效投豆量');
+          }
+          noteData.source = 'roasting';
+          noteData.beanId = initialData.beanId;
+          noteData.coffeeBeanInfo =
+            initialData.coffeeBeanInfo ?? noteData.coffeeBeanInfo;
+          noteData.changeRecord = {
+            ...preservedChangeRecord,
+            roastingRecord: {
+              ...preservedChangeRecord!.roastingRecord!,
+              inputs,
+              roastedAmount: inputs.reduce(
+                (total, input) => total + input.amount,
+                0
+              ),
+            },
+          };
+        } else if (isRoastingRecordEdit) {
           const roastingRecord = preservedChangeRecord?.roastingRecord;
           const amount = Number.parseFloat(roastingAmount);
           if (!roastingRecord || !Number.isFinite(amount) || amount <= 0) {
@@ -1990,7 +2033,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       )}
 
       {/* 下方：图片和功能列表 */}
-      <div className="w-full min-w-0 shrink-0">
+      <div className="row-start-2 w-full min-w-0 shrink-0">
         {/* 图片区域 - 仿朋友圈九宫格 */}
         {!shouldHideImage && (
           <div className="mb-4">
@@ -2074,7 +2117,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           />
 
           {/* 咖啡豆 */}
-          {canUseCoffeeBeanModule && (
+          {canUseCoffeeBeanModule && !isRoastingRecordEdit && (
             <FeatureListItem
               label="咖啡豆"
               value={getCoffeeBeanDisplayName()}
@@ -2110,12 +2153,45 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             </div>
           )}
 
-          {isRoastingRecordEdit && (
-            <div className="flex items-center border-b border-neutral-200/50 py-3 dark:border-neutral-800/50">
-              <span className="shrink-0 text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                烘焙量
+          {blendRoastingInputs?.map((input, index) => (
+            <div
+              key={input.greenBeanId}
+              className="flex items-center gap-3 border-b border-neutral-200/50 py-3 dark:border-neutral-800/50"
+            >
+              <span className="min-w-0 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                {input.greenBeanName}
               </span>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  aria-label={`${input.greenBeanName}投豆量`}
+                  value={roastingInputAmounts[index] ?? String(input.amount)}
+                  onChange={event => {
+                    const value = event.target.value;
+                    if (!validateNumericInput(value)) return;
+                    setRoastingInputAmounts(current =>
+                      blendRoastingInputs.map((item, position) =>
+                        position === index
+                          ? value
+                          : (current[position] ?? String(item.amount))
+                      )
+                    );
+                  }}
+                  className="w-20 bg-transparent py-1 text-right text-sm font-medium text-neutral-800 outline-none dark:text-neutral-300"
+                />
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                  g
+                </span>
+              </div>
+            </div>
+          ))}
+          {isRoastingRecordEdit && !blendRoastingInputs && (
+            <div className="flex items-center gap-3 border-b border-neutral-200/50 py-3 dark:border-neutral-800/50">
+              <span className="min-w-0 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                {getCoffeeBeanDisplayName()}
+              </span>
+              <div className="ml-auto flex shrink-0 items-center gap-2">
                 <input
                   type="tel"
                   inputMode="decimal"

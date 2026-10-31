@@ -70,6 +70,7 @@ export interface CoffeeBean {
 
   // 生豆来源追溯（仅烘焙产生的熟豆使用）
   sourceGreenBeanId?: string; // 来源生豆ID
+  sourceGreenBeanIds?: string[]; // 多来源烘焙；存在时优先于旧字段
 
   // 评分相关字段 (榜单功能使用)
   overallRating?: number; // 总体评分/喜好星值 (1-5)
@@ -100,12 +101,22 @@ export interface ChangeRecordDetails {
   };
   // 烘焙记录相关
   roastingRecord?: {
+    inputs?: RoastingInput[];
+    outputAmount?: number;
+    roastDate?: string;
     greenBeanId: string; // 生豆ID
     greenBeanName: string; // 生豆名称
     roastedAmount: number; // 烘焙的重量(g)
     roastedBeanId?: string; // 烘焙后的熟豆ID（如果有关联）
     roastedBeanName?: string; // 烘焙后的熟豆名称
   };
+}
+
+export interface RoastingInput {
+  greenBeanId: string;
+  greenBeanName: string;
+  amount: number;
+  cost?: number;
 }
 
 // 修改 BrewingNoteData 接口，避免使用 any

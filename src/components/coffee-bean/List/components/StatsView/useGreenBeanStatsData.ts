@@ -254,7 +254,11 @@ export const useGreenBeanStatsData = (
       // 只统计烘焙记录
       if (!note.timestamp || note.source !== 'roasting') continue;
       const { key } = getDateKey(
-        note.timestamp,
+        note.changeRecord?.roastingRecord?.roastDate
+          ? new Date(
+              `${note.changeRecord.roastingRecord.roastDate}T12:00:00`
+            ).getTime()
+          : note.timestamp,
         dateGroupingMode === 'year' ? 'month' : 'day'
       );
 
@@ -309,7 +313,11 @@ export const useGreenBeanStatsData = (
       // 只处理烘焙记录
       if (!note.timestamp || note.source !== 'roasting') continue;
 
-      const ts = note.timestamp;
+      const ts = note.changeRecord?.roastingRecord?.roastDate
+        ? new Date(
+            `${note.changeRecord.roastingRecord.roastDate}T12:00:00`
+          ).getTime()
+        : note.timestamp;
       const roastingRecord = note.changeRecord?.roastingRecord;
       if (!roastingRecord) continue;
 
@@ -323,7 +331,12 @@ export const useGreenBeanStatsData = (
 
       // 计算花费（基于生豆单价）
       let cost = 0;
-      if (greenBean?.price && greenBean?.capacity) {
+      if (roastingRecord.inputs) {
+        cost = roastingRecord.inputs.reduce(
+          (sum, input) => sum + (input.cost ?? 0),
+          0
+        );
+      } else if (greenBean?.price && greenBean?.capacity) {
         const price = parseNum(greenBean.price);
         const capacity = parseNum(greenBean.capacity);
         if (capacity > 0) {
@@ -353,9 +366,18 @@ export const useGreenBeanStatsData = (
         if (ts > lastNoteTime) lastNoteTime = ts;
 
         // 按类型统计
-        const beanType = greenBean?.beanType;
-        if (beanType && beanType in typeRoasted) {
-          typeRoasted[beanType] += roastedAmount;
+        if (roastingRecord.inputs) {
+          for (const input of roastingRecord.inputs) {
+            const beanType = greenBeans.find(
+              bean => bean.id === input.greenBeanId
+            )?.beanType;
+            if (beanType && beanType in typeRoasted)
+              typeRoasted[beanType] += input.amount;
+          }
+        } else {
+          const beanType = greenBean?.beanType;
+          if (beanType && beanType in typeRoasted)
+            typeRoasted[beanType] += roastedAmount;
         }
 
         // 趋势数据

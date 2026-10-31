@@ -9,22 +9,32 @@ import { cn } from '@/lib/utils/classNameUtils';
 
 export interface DatePickerProps {
   date?: Date;
+  ariaLabel?: string;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+  'aria-describedby'?: string;
   onDateChange?: (date: Date) => void;
   placeholder?: string;
   locale?: string;
   className?: string;
   triggerClassName?: string;
+  triggerIcon?: React.ReactNode;
+  contentClassName?: string;
   disabled?: boolean;
   displayFormat?: string;
 }
 
 export function DatePicker({
   date,
+  ariaLabel,
+  'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
   onDateChange,
   placeholder = '选择日期',
   locale = 'zh-CN',
   className = '',
   triggerClassName,
+  triggerIcon,
+  contentClassName,
   disabled = false,
   displayFormat = 'yyyy/MM/dd',
 }: DatePickerProps) {
@@ -54,6 +64,13 @@ export function DatePicker({
       <Popover.Root open={open && !disabled} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
           <button
+            aria-invalid={ariaInvalid}
+            aria-describedby={ariaDescribedBy}
+            aria-label={
+              ariaLabel
+                ? `${ariaLabel}：${date ? format(date, displayFormat, { locale: localeObj }) : placeholder}`
+                : undefined
+            }
             className={cn(
               'flex w-full cursor-pointer items-center justify-between border-b border-neutral-300 bg-transparent py-2 outline-hidden focus-within:border-neutral-800/50 dark:border-neutral-700 dark:focus-within:border-neutral-400',
               triggerClassName
@@ -69,6 +86,7 @@ export function DatePicker({
                 ? format(date, displayFormat, { locale: localeObj })
                 : placeholder}
             </span>
+            {triggerIcon}
           </button>
         </Popover.Trigger>
         <Popover.Portal>
@@ -79,7 +97,8 @@ export function DatePicker({
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
               'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
               'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2',
-              'data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2'
+              'data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+              contentClassName
             )}
             sideOffset={4}
             align="start"

@@ -1,4 +1,5 @@
 'use client';
+import RoastingDrawer from '@/components/coffee-bean/RoastingDrawer';
 
 import React, {
   useState,
@@ -1432,6 +1433,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   // 分享模式状态
   const [isShareMode, setIsShareMode] = useState(false);
+  const [isRoastSelection, setIsRoastSelection] = useState(false);
+  const [showRoastingDrawer, setShowRoastingDrawer] = useState(false);
+  const [roastingStarted, setRoastingStarted] = useState(false);
   const [selectedBeans, setSelectedBeans] = useState<string[]>([]);
   const [isSavingShareImage, setIsSavingShareImage] = useState(false);
   const [isSharingBeanPackage, setIsSharingBeanPackage] = useState(false);
@@ -1443,6 +1447,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       if (customEvent.detail?.beanId) {
         // 进入分享模式并选中该咖啡豆
         setIsShareMode(true);
+        setIsRoastSelection(false);
+        setRoastingStarted(false);
+        setShowRoastingDrawer(false);
         setSelectedBeans([customEvent.detail.beanId]);
       }
     };
@@ -1458,6 +1465,22 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   }, []);
 
   // 加载搜索历史
+  useEffect(() => {
+    const startBlend = (event: Event) => {
+      const { beanId } = (event as CustomEvent<{ beanId: string }>).detail;
+      setSelectedBeanState('green');
+      setViewMode(VIEW_OPTIONS.INVENTORY);
+      setIsRoastSelection(true);
+      setIsShareMode(true);
+      setRoastingStarted(false);
+      setShowRoastingDrawer(false);
+      setSelectedBeans([beanId]);
+    };
+    window.addEventListener('beanBlendRoastTriggered', startBlend);
+    return () =>
+      window.removeEventListener('beanBlendRoastTriggered', startBlend);
+  }, [setViewMode]);
+
   useEffect(() => {
     setSearchHistory(getSearchHistoryPreference());
   }, []);
@@ -1918,6 +1941,17 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   // 分享模式相关处理函数
   const handleToggleSelect = (beanId: string) => {
+    if (isRoastSelection) {
+      const bean = beans.find(bean => bean.id === beanId);
+      if (
+        bean?.beanState !== 'green' ||
+        !(Number(bean.remaining) > 0) ||
+        bean.isInTransit
+      ) {
+        showToast({ type: 'error', title: '请选择有库存且已到货的生豆' });
+        return;
+      }
+    }
     setSelectedBeans(prev => {
       if (prev.includes(beanId)) {
         return prev.filter(id => id !== beanId);
@@ -1929,6 +1963,9 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   const handleCancelShare = () => {
     setIsShareMode(false);
+    setIsRoastSelection(false);
+    setRoastingStarted(false);
+    setShowRoastingDrawer(false);
     setSelectedBeans([]);
     setIsSharingBeanPackage(false);
   };
@@ -2349,6 +2386,19 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       </div>
 
       {/* 添加和导入按钮 - 仅在库存视图且非分享模式下显示 */}
+      {roastingStarted && (
+        <RoastingDrawer
+          isOpen={showRoastingDrawer}
+          sourceIds={selectedBeans}
+          canReselect
+          onClose={() => setShowRoastingDrawer(false)}
+          onSaved={() => {
+            setShowRoastingDrawer(false);
+            setIsShareMode(false);
+            setIsRoastSelection(false);
+          }}
+        />
+      )}
       {viewMode === VIEW_OPTIONS.INVENTORY && !isShareMode && (
         <BottomActionBar
           buttons={[
@@ -2384,38 +2434,42 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       {/* 分享模式下的底部操作栏 */}
       {viewMode === VIEW_OPTIONS.INVENTORY && isShareMode && (
         <BottomActionBar
-          buttons={[
-            {
-              text: '取消',
-              onClick: handleCancelShare,
-            },
-            {
-              text: isSavingShareImage
-                ? '生成中...'
-                : `保存为图片 (${selectedBeans.length})`,
-              onClick: handleSaveBeansAsImage,
-              className:
-                selectedBeans.length === 0 ||
-                isSavingShareImage ||
-                isSharingBeanPackage
-                  ? 'cursor-not-allowed opacity-50'
-                  : '',
-            },
-            {
-              text: '分享文本',
-              onClick: handleShareText,
-              className:
-                selectedBeans.length === 0 ||
-                isSharingBeanPackage ||
-                isSavingShareImage
-                  ? 'cursor-not-allowed opacity-50'
-                  : '',
-            },
-            ...(settings?.experimentalBeanSharePackageEnabled
+          buttons={
+            isRoastSelection
               ? [
+                  { text: '取消', onClick: handleCancelShare },
                   {
-                    text: isSharingBeanPackage ? '生成中...' : '分享压缩包',
-                    onClick: handleSharePackage,
+                    text: `下一步（已选 ${selectedBeans.length} 款）`,
+                    onClick: () => {
+                      if (!selectedBeans.length) {
+                        showToast({ type: 'error', title: '请先选择生豆' });
+                        return;
+                      }
+                      setRoastingStarted(true);
+                      setShowRoastingDrawer(true);
+                    },
+                  },
+                ]
+              : [
+                  {
+                    text: '取消',
+                    onClick: handleCancelShare,
+                  },
+                  {
+                    text: isSavingShareImage
+                      ? '生成中...'
+                      : `保存为图片 (${selectedBeans.length})`,
+                    onClick: handleSaveBeansAsImage,
+                    className:
+                      selectedBeans.length === 0 ||
+                      isSavingShareImage ||
+                      isSharingBeanPackage
+                        ? 'cursor-not-allowed opacity-50'
+                        : '',
+                  },
+                  {
+                    text: '分享文本',
+                    onClick: handleShareText,
                     className:
                       selectedBeans.length === 0 ||
                       isSharingBeanPackage ||
@@ -2423,9 +2477,24 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
                         ? 'cursor-not-allowed opacity-50'
                         : '',
                   },
+                  ...(settings?.experimentalBeanSharePackageEnabled
+                    ? [
+                        {
+                          text: isSharingBeanPackage
+                            ? '生成中...'
+                            : '分享压缩包',
+                          onClick: handleSharePackage,
+                          className:
+                            selectedBeans.length === 0 ||
+                            isSharingBeanPackage ||
+                            isSavingShareImage
+                              ? 'cursor-not-allowed opacity-50'
+                              : '',
+                        },
+                      ]
+                    : []),
                 ]
-              : []),
-          ]}
+          }
         />
       )}
 
@@ -2443,6 +2512,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }}
       >
         {isShareMode &&
+          !isRoastSelection &&
           selectedBeans.length > 0 &&
           beans
             .filter(bean => selectedBeans.includes(bean.id))
@@ -2472,6 +2542,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         }}
         itemName={deletingBean?.name || ''}
         itemType="咖啡豆"
+        extraWarning="冲煮和烘焙记录会保留，用掉的生豆不会退回。"
         onExitComplete={() => setDeletingBean(null)}
       />
 

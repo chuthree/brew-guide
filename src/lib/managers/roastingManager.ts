@@ -4,12 +4,15 @@ import {
 } from '@/lib/data/storeMutationBoundary';
 import { CoffeeBean, BrewingNoteData } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
-import {
-  getCoffeeBeanStore,
-  increaseBeanRemaining,
-} from '@/lib/stores/coffeeBeanStore';
+import { getCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { getBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { nanoid } from 'nanoid';
+import {
+  sourceBeanIds,
+  roastingInputs,
+  RoastingValidationError,
+} from '@/lib/coffee-beans/roastingBatch';
+import { saveRoastingBatchInMutation } from './roastingBatchManager';
 import {
   parseBeanName,
   getNextAvailableNumber,
@@ -29,11 +32,6 @@ function formatNumber(value: number): string {
   return Number.isInteger(value) ? value.toString() : value.toFixed(1);
 }
 
-const notifyBrewingNotesUpdated = (): void => {
-  if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
-};
-
 const getAllBrewingNotes = async (): Promise<BrewingNoteData[]> =>
   (await getBrewingNotes()) as BrewingNoteData[];
 
@@ -41,17 +39,6 @@ const getBrewingNoteById = async (
   noteId: string
 ): Promise<BrewingNoteData | undefined> =>
   (await getStoredBrewingNoteById(noteId)) as BrewingNoteData | undefined;
-
-const addBrewingNote = async (note: BrewingNoteData): Promise<void> => {
-  await callStoreActionInMutation(
-    getBrewingNoteStore().addNote,
-    note as BrewingNote
-  );
-};
-
-const deleteBrewingNote = async (noteId: string): Promise<void> => {
-  await callStoreActionInMutation(getBrewingNoteStore().deleteNote, noteId);
-};
 
 const replaceBrewingNotes = async (
   notes: BrewingNoteData[],
@@ -111,7 +98,7 @@ const roastingManager = {
    * 烘焙生豆并生成烘焙记录
    * @param greenBeanId 生豆ID
    * @param roastedAmount 烘焙的重量(g)
-   * @param roastedBeanData 烘焙后的熟豆数据（可选，如果不提供则不创建熟豆记录）
+   * @param roastedBeanData 烘焙后的熟豆数据（省略时自动创建熟豆）
    * @returns 操作结果
    */
   async roastGreenBean(
@@ -126,162 +113,44 @@ const roastingManager = {
     error?: string;
   }> {
     try {
-      // 1. 获取生豆信息
-      const storedGreenBean =
-        await getCoffeeBeanStore().getBeanById(greenBeanId);
-      if (!storedGreenBean) {
-        return { success: false, error: '找不到生豆记录' };
-      }
-      const greenBean =
-        await coffeeBeanImageRepository.mergeBean(storedGreenBean);
-
-      // 确认是生豆
-      const beanState = greenBean.beanState || 'roasted';
-      if (beanState !== 'green') {
-        return { success: false, error: '只能烘焙生豆' };
-      }
-
-      // 2. 检查剩余量是否足够
-      const currentRemaining = parseFloat(greenBean.remaining || '0');
-      if (currentRemaining < roastedAmount) {
-        return { success: false, error: '生豆剩余量不足' };
-      }
-
-      // 2.1 检查剩余量是否为0（边界情况）
-      if (currentRemaining <= 0) {
-        return { success: false, error: '生豆已用完，无法继续烘焙' };
-      }
-
-      // 3. 扣除生豆容量
-      const newRemaining = currentRemaining - roastedAmount;
-      const updatedGreenBean = await callStoreActionInMutation(
-        getCoffeeBeanStore().updateBean,
-        greenBeanId,
-        {
-          remaining: formatNumber(newRemaining),
-        }
-      );
-
-      if (!updatedGreenBean) {
-        return { success: false, error: '更新生豆容量失败' };
-      }
-
-      // 4. 如果提供了熟豆数据，创建或更新熟豆记录
-      let roastedBean: CoffeeBean | undefined;
-      if (roastedBeanData) {
-        // 获取所有豆子用于生成名称
-        const allBeans = getCoffeeBeanStore().beans;
-
-        // 使用续购逻辑生成熟豆名称（如果用户没有修改名称）
-        const userProvidedName = roastedBeanData.name;
-        const shouldAutoRename =
-          !userProvidedName || userProvidedName === greenBean.name;
-        const roastedBeanName = shouldAutoRename
-          ? this.generateRoastedBeanName(greenBean.name, allBeans)
-          : userProvidedName;
-
-        // 解析用户填写的容量和剩余量
-        const userCapacity = parseFloat(
-          roastedBeanData.capacity || String(roastedAmount)
-        );
-        const userRemaining = parseFloat(
-          roastedBeanData.remaining || String(userCapacity)
-        );
-
-        // 基于生豆信息创建熟豆，但使用提供的数据覆盖
-        const newRoastedBean: Omit<CoffeeBean, 'id' | 'timestamp'> = {
-          name: roastedBeanName,
-          roaster: roastedBeanData.roaster || greenBean.roaster,
-          beanState: 'roasted',
-          beanType: roastedBeanData.beanType || greenBean.beanType,
-          capacity: formatNumber(userCapacity),
-          remaining: formatNumber(userRemaining),
-          // 继承生豆的其他属性
-          image: roastedBeanData.image || greenBean.image,
-          backImage: roastedBeanData.backImage || greenBean.backImage,
-          roastLevel: roastedBeanData.roastLevel ?? greenBean.roastLevel,
-          roastDate: roastedBeanData.roastDate,
-          flavor: roastedBeanData.flavor || greenBean.flavor,
-          notes: roastedBeanData.notes || greenBean.notes,
-          brand: roastedBeanData.brand || greenBean.brand,
-          price: roastedBeanData.price,
-          blendComponents:
-            roastedBeanData.blendComponents || greenBean.blendComponents,
-          // 添加生豆来源追溯
-          sourceGreenBeanId: greenBeanId,
-        };
-
-        roastedBean = await callStoreActionInMutation(
-          getCoffeeBeanStore().addBean,
-          newRoastedBean
-        );
-
-        // 4.1 如果容量和剩余量不同，为熟豆创建一个变动记录
-        if (roastedBean && userCapacity !== userRemaining) {
-          const decrementAmount = userCapacity - userRemaining;
-          const decrementNote: BrewingNoteData = {
-            id: nanoid(),
-            timestamp: Date.now() + 1, // +1ms 确保在烘焙记录之后
-            coffeeBeanInfo: {
-              name: roastedBean.name,
-              roastLevel: roastedBean.roastLevel || '未知',
-              roastDate: roastedBean.roastDate,
-              roaster: roastedBean.roaster,
-            },
-            rating: 0,
-            taste: {},
-            notes: '烘焙时已使用',
-            source: 'quick-decrement',
-            beanId: roastedBean.id,
-            quickDecrementAmount: decrementAmount,
-          };
-
-          await addBrewingNote(decrementNote);
-        }
-      }
-
-      // 5. 生成烘焙记录笔记
-      const roastingNote: BrewingNoteData = {
-        id: nanoid(),
-        timestamp: Date.now(),
-        coffeeBeanInfo: {
-          name: greenBean.name,
-          roastLevel: greenBean.roastLevel || '未知',
-          roastDate: greenBean.roastDate,
-          roaster: greenBean.roaster,
+      const greenBean = getCoffeeBeanStore().getBeanById(greenBeanId);
+      if (!greenBean) return { success: false, error: '找不到生豆记录' };
+      const outputAmount = Number(roastedBeanData?.capacity ?? roastedAmount);
+      if (
+        roastedBeanData?.remaining !== undefined &&
+        Number(roastedBeanData.remaining) !== outputAmount
+      )
+        return { success: false, error: '请先完成烘焙，再记录熟豆用量' };
+      const beanId = nanoid();
+      const changes = await saveRoastingBatchInMutation({
+        noteId: nanoid(),
+        beanId,
+        now: Date.now(),
+        draft: {
+          inputs: [{ greenBeanId, amount: roastedAmount }],
+          name:
+            roastedBeanData?.name ||
+            this.generateRoastedBeanName(
+              greenBean.name,
+              getCoffeeBeanStore().beans
+            ),
+          outputAmount,
+          roastDate:
+            roastedBeanData?.roastDate || new Date().toISOString().slice(0, 10),
+          roastLevel: roastedBeanData?.roastLevel ?? greenBean.roastLevel ?? '',
+          beanType: roastedBeanData?.beanType,
+          roaster: roastedBeanData?.roaster,
+          flavor: roastedBeanData?.flavor,
+          notes: roastedBeanData?.notes ?? '',
         },
-        rating: 0,
-        taste: {},
-        notes: `烘焙了 ${roastedAmount}g 生豆${roastedBean ? ` → ${formatBeanDisplayName(roastedBean)}` : ''}`,
-        source: 'roasting',
-        beanId: greenBeanId,
-        changeRecord: {
-          roastingRecord: {
-            greenBeanId,
-            greenBeanName: formatBeanDisplayName(greenBean),
-            roastedAmount,
-            roastedBeanId: roastedBean?.id,
-            roastedBeanName: roastedBean
-              ? formatBeanDisplayName(roastedBean)
-              : undefined,
-          },
-        },
-      };
-
-      // 6. 保存烘焙记录
-      await addBrewingNote(roastingNote);
-
-      // 7. 触发更新事件
-      notifyBrewingNotesUpdated();
-
+      });
       return {
         success: true,
-        greenBean: updatedGreenBean,
-        roastedBean,
-        note: roastingNote,
+        greenBean: changes.beans.find(bean => bean.id === greenBeanId),
+        roastedBean: changes.beans.find(bean => bean.id === beanId),
+        note: changes.note as BrewingNoteData,
       };
     } catch (error) {
-      console.error('烘焙生豆失败:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : '烘焙失败',
@@ -371,7 +240,7 @@ const roastingManager = {
    */
   async getDerivedRoastedBeans(greenBeanId: string): Promise<CoffeeBean[]> {
     const allBeans = getCoffeeBeanStore().beans;
-    return allBeans.filter(bean => bean.sourceGreenBeanId === greenBeanId);
+    return allBeans.filter(bean => sourceBeanIds(bean).includes(greenBeanId));
   },
 
   /**
@@ -384,7 +253,9 @@ const roastingManager = {
     return notes.filter(
       note =>
         note.source === 'roasting' &&
-        note.changeRecord?.roastingRecord?.greenBeanId === greenBeanId
+        roastingInputs(note.changeRecord?.roastingRecord).some(
+          input => input.greenBeanId === greenBeanId
+        )
     );
   },
 
@@ -393,211 +264,36 @@ const roastingManager = {
     note?: BrewingNote;
     error?: string;
   }> {
-    const note = await getBrewingNoteById(updatedData.id);
-    if (!note || note.source !== 'roasting') {
-      return { success: false, error: '找不到烘焙记录' };
-    }
-
-    const roastingRecord = note.changeRecord?.roastingRecord;
-    const updatedRecord = updatedData.changeRecord?.roastingRecord;
-    if (!roastingRecord || !updatedRecord) {
-      return { success: false, error: '烘焙记录数据不完整' };
-    }
-
-    const greenBeanId = updatedData.beanId || updatedRecord.greenBeanId;
-    const roastedAmount = Number(updatedRecord.roastedAmount);
-    const previousAmount = Number(roastingRecord.roastedAmount);
-    if (!greenBeanId || !Number.isFinite(roastedAmount) || roastedAmount <= 0) {
-      return { success: false, error: '请选择生豆并填写有效烘焙量' };
-    }
-    if (!Number.isFinite(previousAmount) || previousAmount <= 0) {
-      return { success: false, error: '原烘焙量无效，无法调整库存' };
-    }
-    if (!Number.isFinite(updatedData.timestamp)) {
-      return { success: false, error: '烘焙日期无效' };
-    }
-
-    const beanStore = getCoffeeBeanStore();
-    const newGreenBean = beanStore.getBeanById(greenBeanId);
-    if (!newGreenBean) {
-      return { success: false, error: '找不到所选生豆' };
-    }
-    if ((newGreenBean.beanState || 'roasted') !== 'green') {
-      return { success: false, error: '只能选择生豆' };
-    }
-
-    const previousGreenBeanId =
-      roastingRecord.greenBeanId || note.beanId || undefined;
-    const oldGreenBean = previousGreenBeanId
-      ? beanStore.getBeanById(previousGreenBeanId)
-      : undefined;
-    if (oldGreenBean && (oldGreenBean.beanState || 'roasted') !== 'green') {
-      return { success: false, error: '原关联咖啡豆不是生豆' };
-    }
-
-    const parseRemaining = (bean: CoffeeBean): number => {
-      const amount = Number.parseFloat(bean.remaining || '0');
-      return Number.isFinite(amount) ? amount : 0;
-    };
-    const patchesToRollback: Array<{
-      id: string;
-      updates: Partial<CoffeeBean>;
-    }> = [];
-    const updateBean = async (
-      bean: CoffeeBean,
-      updates: Partial<CoffeeBean>
-    ) => {
-      const previousValues: Partial<CoffeeBean> = {};
-      if ('remaining' in updates) previousValues.remaining = bean.remaining;
-      if ('sourceGreenBeanId' in updates) {
-        previousValues.sourceGreenBeanId = bean.sourceGreenBeanId;
-      }
-
-      patchesToRollback.push({ id: bean.id, updates: previousValues });
-      const updatedBean = await callStoreActionInMutation(
-        beanStore.updateBean,
-        bean.id,
-        updates
-      );
-      if (!updatedBean) throw new Error('更新咖啡豆失败');
-    };
-
-    let noteWriteAttempted = false;
     try {
-      if (previousGreenBeanId === greenBeanId) {
-        const newRemaining =
-          parseRemaining(newGreenBean) + previousAmount - roastedAmount;
-        if (newRemaining < 0) {
-          return { success: false, error: '生豆剩余量不足' };
-        }
-        if (newRemaining !== parseRemaining(newGreenBean)) {
-          await updateBean(newGreenBean, {
-            remaining: formatNumber(newRemaining),
-          });
-        }
-      } else {
-        const newRemaining = parseRemaining(newGreenBean) - roastedAmount;
-        if (newRemaining < 0) {
-          return { success: false, error: '生豆剩余量不足' };
-        }
-
-        await updateBean(newGreenBean, {
-          remaining: formatNumber(newRemaining),
-        });
-
-        if (oldGreenBean) {
-          await updateBean(oldGreenBean, {
-            remaining: formatNumber(
-              parseRemaining(oldGreenBean) + previousAmount
-            ),
-          });
-        }
-
-        const roastedBeanId = roastingRecord.roastedBeanId;
-        const roastedBean = roastedBeanId
-          ? beanStore.getBeanById(roastedBeanId)
-          : undefined;
-        if (roastedBean) {
-          await updateBean(roastedBean, {
-            sourceGreenBeanId: greenBeanId,
-          });
-        }
-      }
-
-      const updatedRoastingRecord = {
-        ...roastingRecord,
-        greenBeanId,
-        greenBeanName: newGreenBean.name,
-        roastedAmount,
-      };
-      const roastedBeanLabel = roastingRecord.roastedBeanName
-        ? ` → ${roastingRecord.roastedBeanName}`
-        : '';
-      noteWriteAttempted = true;
-      const updatedNote = await callStoreActionInMutation(
-        getBrewingNoteStore().updateNote,
-        note.id,
-        {
+      const note = await getBrewingNoteById(updatedData.id);
+      const record = updatedData.changeRecord?.roastingRecord;
+      if (!note || !record) return { success: false, error: '找不到烘焙记录' };
+      const changes = await saveRoastingBatchInMutation({
+        noteId: note.id,
+        beanId: note.changeRecord?.roastingRecord?.roastedBeanId ?? '',
+        now: Date.now(),
+        expectedUpdatedAt:
+          updatedData.updatedAt ?? note.updatedAt ?? note.timestamp,
+        legacyEdit: {
+          greenBeanId: updatedData.beanId || record.greenBeanId,
+          amount: Number(record.roastedAmount),
           timestamp: updatedData.timestamp,
-          source: 'roasting',
-          beanId: greenBeanId,
-          coffeeBeanInfo: {
-            name: newGreenBean.name,
-            roastLevel:
-              newGreenBean.roastLevel ||
-              note.coffeeBeanInfo?.roastLevel ||
-              '未知',
-            roastDate: newGreenBean.roastDate,
-            roaster: newGreenBean.roaster,
-          },
-          notes: `烘焙了 ${formatNumber(roastedAmount)}g 生豆${roastedBeanLabel}`,
-          changeRecord: {
-            ...note.changeRecord,
-            roastingRecord: updatedRoastingRecord,
-          },
-        }
-      );
-      if (!updatedNote) throw new Error('更新烘焙记录失败');
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
-        window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
-      }
-      return { success: true, note: updatedNote as BrewingNote };
+          inputs: record.inputs,
+        },
+      });
+      return { success: true, note: changes.note };
     } catch (error) {
-      let rollbackFailed = false;
-      for (const patch of patchesToRollback.reverse()) {
-        try {
-          const restoredBean = await callStoreActionInMutation(
-            beanStore.updateBean,
-            patch.id,
-            patch.updates
-          );
-          if (!restoredBean) rollbackFailed = true;
-        } catch {
-          rollbackFailed = true;
-        }
-      }
-      let noteRollbackFailed = false;
-      if (noteWriteAttempted) {
-        try {
-          const restoredNote = await brewingNotePersistence.saveWithImages(
-            note as BrewingNote
-          );
-          const noteStore = getBrewingNoteStore();
-          const currentNotes = noteStore.notes;
-          noteStore.setNotes(
-            currentNotes.some(currentNote => currentNote.id === note.id)
-              ? currentNotes.map(currentNote =>
-                  currentNote.id === note.id ? restoredNote : currentNote
-                )
-              : [restoredNote, ...currentNotes]
-          );
-        } catch {
-          noteRollbackFailed = true;
-        }
-      }
-      const originalError =
-        error instanceof Error ? error.message : '更新烘焙记录失败';
-      const rollbackWarnings = [
-        rollbackFailed && '库存回滚失败，请检查咖啡豆库存',
-        noteRollbackFailed && '记录回滚失败，数据可能不完整',
-      ].filter(Boolean);
       return {
         success: false,
-        error: rollbackWarnings.length
-          ? `${originalError}；${rollbackWarnings.join('；')}`
-          : originalError,
+        error: error instanceof Error ? error.message : '更新烘焙失败',
       };
     }
   },
 
   /**
-   * 删除烘焙记录
+   * 撤销烘焙并删除记录
    * 策略：
-   * 1. 恢复生豆容量
-   * 2. 清除关联熟豆的 sourceGreenBeanId（不删除熟豆）
-   * 3. 删除烘焙记录本身
+   * 原子返还生豆投入、删除未使用的熟豆产出和记录；无法安全撤销则保留全部数据。
    *
    * @param noteId 烘焙记录ID
    * @returns 操作结果
@@ -625,151 +321,23 @@ const roastingManager = {
         return { success: false, error: '烘焙记录数据不完整' };
       }
 
-      let restoredGreenBean: CoffeeBean | undefined;
-      let updatedRoastedBean: CoffeeBean | undefined;
-
-      // 2. 恢复生豆容量
-      const { greenBeanId, roastedAmount, roastedBeanId } = roastingRecord;
-
-      if (greenBeanId && roastedAmount > 0) {
-        const greenBean = await getCoffeeBeanStore().getBeanById(greenBeanId);
-        if (greenBean) {
-          // 使用 increaseBeanRemaining 恢复容量
-          const restored = await callStoreActionInMutation(
-            increaseBeanRemaining,
-            greenBeanId,
-            roastedAmount
-          );
-          if (restored) {
-            restoredGreenBean = restored;
-          }
-        }
-        // 如果生豆已被删除，静默跳过（符合宽松策略）
-      }
-
-      // 3. 清除关联熟豆的 sourceGreenBeanId
-      if (roastedBeanId) {
-        const roastedBean =
-          await getCoffeeBeanStore().getBeanById(roastedBeanId);
-        if (roastedBean && roastedBean.sourceGreenBeanId) {
-          const updated = await callStoreActionInMutation(
-            getCoffeeBeanStore().updateBean,
-            roastedBeanId,
-            {
-              sourceGreenBeanId: undefined,
-            }
-          );
-          if (updated) {
-            updatedRoastedBean = updated;
-          }
-        }
-        // 如果熟豆已被删除，静默跳过
-      }
-
-      // 4. 删除烘焙记录
-      await deleteBrewingNote(noteId);
-
-      // 5. 触发更新事件
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
-        window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
-      }
-
+      const changes = await saveRoastingBatchInMutation({
+        noteId,
+        beanId: roastingRecord.roastedBeanId ?? '',
+        now: Date.now(),
+        expectedUpdatedAt: note.updatedAt ?? note.timestamp,
+      });
       return {
         success: true,
-        restoredGreenBean,
-        updatedRoastedBean,
+        restoredGreenBean: changes.beans[0],
       };
     } catch (error) {
-      console.error('删除烘焙记录失败:', error);
+      if (!(error instanceof RoastingValidationError))
+        console.error('删除烘焙记录失败:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : '删除失败',
       };
-    }
-  },
-
-  /**
-   * 处理熟豆被删除时的关联清理
-   * 策略：清除烘焙记录中的 roastedBeanId（保留记录本身）
-   *
-   * @param roastedBeanId 被删除的熟豆ID
-   */
-  async onRoastedBeanDeleted(roastedBeanId: string): Promise<void> {
-    try {
-      const notes = await getAllBrewingNotes();
-      let updated = false;
-
-      // 查找并清理关联的烘焙记录
-      for (const note of notes) {
-        if (
-          note.source === 'roasting' &&
-          note.changeRecord?.roastingRecord?.roastedBeanId === roastedBeanId
-        ) {
-          // 清除 roastedBeanId，但保留其他信息（如 roastedBeanName）
-          note.changeRecord.roastingRecord.roastedBeanId = undefined;
-          updated = true;
-        }
-      }
-
-      if (updated) {
-        await replaceBrewingNotes(notes);
-        notifyBrewingNotesUpdated();
-      }
-    } catch (error) {
-      console.error('清理熟豆关联的烘焙记录失败:', error);
-    }
-  },
-
-  /**
-   * 处理生豆被删除时的关联清理
-   * 策略：
-   * 1. 清除派生熟豆的 sourceGreenBeanId
-   * 2. 清除烘焙记录中的 greenBeanId（保留记录本身和快照数据）
-   *
-   * @param greenBeanId 被删除的生豆ID
-   */
-  async onGreenBeanDeleted(greenBeanId: string): Promise<void> {
-    try {
-      // 1. 清除派生熟豆的 sourceGreenBeanId
-      const derivedBeans = await this.getDerivedRoastedBeans(greenBeanId);
-      for (const bean of derivedBeans) {
-        await callStoreActionInMutation(
-          getCoffeeBeanStore().updateBean,
-          bean.id,
-          {
-            sourceGreenBeanId: undefined,
-          }
-        );
-      }
-
-      // 2. 清除烘焙记录中的 greenBeanId
-      const notes = await getAllBrewingNotes();
-      let updated = false;
-
-      for (const note of notes) {
-        if (
-          note.source === 'roasting' &&
-          note.changeRecord?.roastingRecord?.greenBeanId === greenBeanId
-        ) {
-          // 清除 greenBeanId，但保留 greenBeanName 等快照数据
-          note.changeRecord.roastingRecord.greenBeanId =
-            undefined as unknown as string;
-          // 同时清除 beanId
-          note.beanId = undefined;
-          updated = true;
-        }
-      }
-
-      if (updated) {
-        await replaceBrewingNotes(notes);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
-          window.dispatchEvent(new CustomEvent('coffeeBeansUpdated'));
-        }
-      }
-    } catch (error) {
-      console.error('清理生豆关联数据失败:', error);
     }
   },
 
@@ -814,7 +382,7 @@ const roastingManager = {
       }
 
       // 确认没有来源生豆（避免转换已经是烘焙产生的熟豆）
-      if (originalBean.sourceGreenBeanId) {
+      if (sourceBeanIds(originalBean).length) {
         return {
           success: false,
           error: '该熟豆已关联生豆来源，无法转换',
@@ -904,10 +472,15 @@ const roastingManager = {
         }
 
         // 删除原熟豆 - 使用 store 的 deleteBean 方法确保触发同步事件
-        await callStoreActionInMutation(
+        const deleted = await callStoreActionInMutation(
           getCoffeeBeanStore().deleteBean,
           roastedBeanId
         );
+        if (!deleted) {
+          throw new Error(
+            '生豆已创建，但原熟豆删除失败。请先核对库存，勿重复转换'
+          );
+        }
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('brewingNotesUpdated'));
@@ -1046,10 +619,15 @@ const roastingManager = {
       });
 
       // 9. 删除原熟豆 - 使用 store 的 deleteBean 方法确保触发同步事件
-      await callStoreActionInMutation(
+      const deleted = await callStoreActionInMutation(
         getCoffeeBeanStore().deleteBean,
         roastedBeanId
       );
+      if (!deleted) {
+        throw new Error(
+          '新豆和记录已保存，但原熟豆删除失败。请先核对库存，勿重复转换'
+        );
+      }
 
       // 10. 触发笔记更新事件（咖啡豆事件已由 deleteBean 触发）
       if (typeof window !== 'undefined') {
@@ -1116,7 +694,7 @@ const roastingManager = {
         return { success: false, error: '只能将熟豆转换为生豆' };
       }
 
-      if (originalBean.sourceGreenBeanId) {
+      if (sourceBeanIds(originalBean).length) {
         return {
           success: false,
           error: '该熟豆已关联生豆来源，无法转换',
@@ -1229,10 +807,6 @@ export const RoastingManager = coordinateStoreActions(
       roastingManager.updateRoastingRecord.bind(roastingManager),
     deleteRoastingRecord:
       roastingManager.deleteRoastingRecord.bind(roastingManager),
-    onRoastedBeanDeleted:
-      roastingManager.onRoastedBeanDeleted.bind(roastingManager),
-    onGreenBeanDeleted:
-      roastingManager.onGreenBeanDeleted.bind(roastingManager),
     convertRoastedToGreen:
       roastingManager.convertRoastedToGreen.bind(roastingManager),
   },
@@ -1241,8 +815,6 @@ export const RoastingManager = coordinateStoreActions(
     'simpleRoast',
     'updateRoastingRecord',
     'deleteRoastingRecord',
-    'onRoastedBeanDeleted',
-    'onGreenBeanDeleted',
     'convertRoastedToGreen',
   ]
 );

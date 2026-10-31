@@ -622,22 +622,18 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
 
   // 执行删除笔记
   const executeDeleteNote = async (noteId: string) => {
+    const noteToDelete = notes.find(note => note.id === noteId);
+    if (!noteToDelete) return;
+
+    if (noteToDelete.source === 'roasting') {
+      const { RoastingManager } =
+        await import('@/lib/managers/roastingManager');
+      const result = await RoastingManager.deleteRoastingRecord(noteId);
+      if (!result.success) return result.error || '无法撤销烘焙';
+      showToastMessage('已撤销，生豆已退回', 'success');
+      return;
+    }
     try {
-      const noteToDelete = notes.find(note => note.id === noteId);
-      if (!noteToDelete) return;
-
-      if (noteToDelete.source === 'roasting') {
-        const { RoastingManager } =
-          await import('@/lib/managers/roastingManager');
-        const result = await RoastingManager.deleteRoastingRecord(noteId);
-        if (!result.success) {
-          throw new Error(result.error || '删除烘焙记录失败');
-        }
-
-        showToastMessage('烘焙记录已删除', 'success');
-        return;
-      }
-
       // 恢复咖啡豆容量（根据笔记类型采用不同的恢复策略）
       try {
         if (noteToDelete.source === 'capacity-adjustment') {
@@ -1236,13 +1232,31 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={() => {
           if (deleteConfirmData) {
-            executeDeleteNote(deleteConfirmData.noteId);
+            return executeDeleteNote(deleteConfirmData.noteId);
           }
         }}
         itemName={deleteConfirmData?.noteName || ''}
+        itemId={deleteConfirmData?.noteId}
+        actionLabel={
+          notes.find(note => note.id === deleteConfirmData?.noteId)?.source ===
+          'roasting'
+            ? '撤销烘焙'
+            : '删除'
+        }
         itemType="笔记"
+        renderConfirmation={
+          notes.find(note => note.id === deleteConfirmData?.noteId)?.source ===
+          'roasting'
+            ? name => <>要撤销{name}的这次烘焙吗？</>
+            : undefined
+        }
         itemSuffix={deleteConfirmData?.noteSuffix}
-        extraWarning="删除后咖啡豆库存将恢复。"
+        extraWarning={
+          notes.find(note => note.id === deleteConfirmData?.noteId)?.source ===
+          'roasting'
+            ? '用掉的生豆会退回，这批熟豆和烘焙记录会一起删除。'
+            : '删除后咖啡豆库存将恢复。'
+        }
         onExitComplete={() => setDeleteConfirmData(null)}
       />
     </div>

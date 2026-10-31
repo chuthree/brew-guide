@@ -1,4 +1,9 @@
 'use client';
+import {
+  sourceBeanIds,
+  noteUsesBean,
+  roastingInputs,
+} from '@/lib/coffee-beans/roastingBatch';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
@@ -35,7 +40,6 @@ import {
   buildEquipmentNameMap,
   EMPTY_EQUIPMENT_NAME_OVERRIDES,
 } from '@/lib/notes/noteDisplay';
-import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 import {
   getComponentConfiguredValues,
   getVisibleBeanFieldIds,
@@ -84,6 +88,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onClose,
   onCreateNoteFromBean,
   onOpenRelatedNote,
+  onOpenRelatedBean,
   onEditRelatedNote,
   searchQuery = '',
   onEdit,
@@ -150,17 +155,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   );
   const loadEquipments = useCustomEquipmentStore(state => state.loadEquipments);
 
-  // 关联豆子
-  const relatedBeans = React.useMemo(() => {
-    if (!bean) return [];
-    if (bean.beanState !== 'green' && bean.sourceGreenBeanId) {
-      const sourceBean = allBeans.find(b => b.id === bean.sourceGreenBeanId);
-      return sourceBean ? [sourceBean] : [];
-    }
-    return [];
-  }, [bean, allBeans]);
-
-  // 状态
   const [lazyRelatedNotesState, setLazyRelatedNotesState] = useState<{
     beanId: string;
     notes: BrewingNote[];
@@ -172,6 +166,36 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
 
     return lazyRelatedNotesState.notes;
   }, [currentBeanId, lazyRelatedNotesState]);
+
+  // 关联豆子
+  const sourceRoastingRecord = React.useMemo(
+    () =>
+      bean?.id && bean.beanState !== 'green'
+        ? (notesInitialized ? allNotes : lazyRelatedNotes).find(
+            note =>
+              note.source === 'roasting' &&
+              note.changeRecord?.roastingRecord?.roastedBeanId === bean?.id
+          )?.changeRecord?.roastingRecord
+        : undefined,
+    [bean, allNotes, notesInitialized, lazyRelatedNotes]
+  );
+  const relatedBeans = React.useMemo(() => {
+    if (!bean) return [];
+    if (bean.beanState !== 'green') {
+      return sourceBeanIds(bean).map(
+        id =>
+          allBeans.find(source => source.id === id) ?? {
+            id,
+            timestamp: 0,
+            beanState: 'green' as const,
+            name: `${roastingInputs(sourceRoastingRecord).find(input => input.greenBeanId === id)?.greenBeanName ?? '来源生豆'}（已删除）`,
+          }
+      );
+    }
+    return [];
+  }, [bean, allBeans, sourceRoastingRecord]);
+
+  // 状态
   const relatedNotesLoading =
     !!currentBeanId &&
     !notesInitialized &&
@@ -180,10 +204,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     if (!currentBeanId) return [];
 
     if (!notesInitialized) {
-      return lazyRelatedNotes.filter(note => note.beanId === currentBeanId);
+      return lazyRelatedNotes.filter(note => noteUsesBean(note, currentBeanId));
     }
 
-    return [...allNotes.filter(note => note.beanId === currentBeanId)].sort(
+    return [...allNotes.filter(note => noteUsesBean(note, currentBeanId))].sort(
       (a, b) => b.timestamp - a.timestamp
     );
   }, [allNotes, currentBeanId, lazyRelatedNotes, notesInitialized]);
@@ -849,40 +873,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     }, 360);
   };
 
-  const handleGoToRoast = async () => {
+  const handleGoToRoast = () => {
     if (!bean || !onRoast) return;
-
-    const [frontImage, backImage] = await Promise.all([
-      coffeeBeanImageRepository.getSource(bean.id, {
-        side: 'front',
-        mode: 'original',
-      }),
-      coffeeBeanImageRepository.getSource(bean.id, {
-        side: 'back',
-        mode: 'original',
-      }),
-    ]);
-    const today = new Date().toISOString().split('T')[0];
-    const roastedBeanTemplate: Omit<CoffeeBean, 'id' | 'timestamp'> = {
-      name: bean.name,
-      roaster: bean.roaster,
-      beanState: 'roasted',
-      beanType: bean.beanType,
-      capacity: '',
-      remaining: '',
-      image: frontImage || bean.image,
-      backImage: backImage || bean.backImage,
-      roastLevel: '',
-      roastDate: today,
-      flavor: bean.flavor,
-      notes: bean.notes,
-      brand: bean.brand,
-      price: '',
-      blendComponents: bean.blendComponents,
-      sourceGreenBeanId: bean.id,
-    };
-
-    onRoast(bean, roastedBeanTemplate);
+    onRoast(bean);
   };
 
   // 图片查看
@@ -1037,6 +1030,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     <RelatedRecordsSection
                       relatedNotes={relatedNotes}
                       relatedBeans={relatedBeans}
+                      sourceInputs={roastingInputs(sourceRoastingRecord)}
                       equipmentNames={equipmentNames}
                       isGreenBean={isGreenBean}
                       allBeans={allBeans}
@@ -1046,13 +1040,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       relatedNotesLoading={relatedNotesLoading}
                       setShowChangeRecords={setShowChangeRecords}
                       setShowGreenBeanRecords={setShowGreenBeanRecords}
-                      onImageClick={handleImageClick}
                       onOpenNoteDetail={
                         navigationState.visibleTabs.notes
                           ? onOpenRelatedNote
                           : undefined
                       }
                       onEditNote={onEditRelatedNote}
+                      onOpenBeanDetail={onOpenRelatedBean}
                     />
                   )}
                 </div>
@@ -1111,6 +1105,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         }}
         itemName={bean?.name || ''}
         itemType="咖啡豆"
+        extraWarning="冲煮和烘焙记录会保留，用掉的生豆不会退回。"
       />
 
       <ActionDrawer

@@ -4,7 +4,11 @@ import { useSettingSearchHighlight } from './SettingSearchHighlightContext';
 
 interface SettingRowProps {
   label?: string; // 改为可选
+  labelSuffix?: React.ReactNode;
+  required?: boolean;
   description?: string;
+  error?: string;
+  errorId?: string;
   children: React.ReactNode;
   isLast?: boolean;
   className?: string;
@@ -23,7 +27,11 @@ interface SettingRowProps {
  */
 const SettingRow: React.FC<SettingRowProps> = ({
   label,
+  labelSuffix,
+  required = false,
   description,
+  error,
+  errorId,
   children,
   isLast = false,
   className = '',
@@ -70,6 +78,14 @@ const SettingRow: React.FC<SettingRowProps> = ({
             <div className="mb-3">
               <span className="text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
                 {label}
+                {required && (
+                  <sup
+                    aria-hidden="true"
+                    className="ml-0.5 text-xs text-red-500"
+                  >
+                    *
+                  </sup>
+                )}
               </span>
               {description && (
                 <span className="mt-1.5 block text-xs font-normal text-neutral-500 dark:text-neutral-400">
@@ -79,6 +95,15 @@ const SettingRow: React.FC<SettingRowProps> = ({
             </div>
           )}
           <div className="w-full leading-none">{children}</div>
+          {error && (
+            <p
+              id={errorId}
+              role="alert"
+              className="mt-2 text-xs text-red-600 dark:text-red-400"
+            >
+              {error}
+            </p>
+          )}
         </div>
       </div>
     );
@@ -90,7 +115,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
     <div
       ref={rowRef}
       data-settings-search-id={resolvedSettingId || undefined}
-      className={`flex w-full items-stretch px-3.5 transition-colors duration-200 ${
+      className={`flex w-full ${error ? 'flex-col' : 'items-stretch'} px-3.5 transition-colors duration-200 ${
         isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
       } ${className}`}
     >
@@ -98,23 +123,32 @@ const SettingRow: React.FC<SettingRowProps> = ({
         type={onClick ? 'button' : undefined}
         onClick={onClick}
         disabled={onClick ? disabled : undefined}
-        className={`flex min-w-0 flex-1 items-center justify-between py-3.5 text-left ${
+        className={`flex min-w-0 flex-1 items-center justify-between ${error ? 'pt-3.5 pb-1.5' : 'py-3.5'} text-left ${
           onClick
             ? 'cursor-pointer transition-opacity active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40'
             : ''
-        } ${!isLast ? 'border-b border-black/5 dark:border-white/5' : ''}`}
+        } ${!isLast && !error ? 'border-b border-black/5 dark:border-white/5' : ''}`}
       >
         {label && (
           <div
             className={`mr-4 flex min-w-0 flex-col ${expandControl ? 'max-w-[50%] shrink-0' : 'flex-1'}`}
           >
-            <span className="truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+            <span className="flex min-w-0 items-center text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
               {isSubSetting && (
                 <span className="mr-1.5 inline-block text-neutral-500 opacity-50 dark:text-neutral-400">
                   —
                 </span>
               )}
-              {label}
+              <span className="truncate">{label}</span>
+              {required && (
+                <sup
+                  aria-hidden="true"
+                  className="relative -top-0.5 ml-0.5 shrink-0 text-xs text-red-500"
+                >
+                  *
+                </sup>
+              )}
+              {labelSuffix && <span className="shrink-0">{labelSuffix}</span>}
             </span>
             {description && (
               <span className="mt-1.5 text-xs font-normal text-neutral-500 dark:text-neutral-400">
@@ -129,6 +163,15 @@ const SettingRow: React.FC<SettingRowProps> = ({
           {children}
         </div>
       </RowContent>
+      {error && (
+        <p
+          id={errorId}
+          role="alert"
+          className={`pb-3.5 text-xs text-red-600 dark:text-red-400 ${!isLast ? 'border-b border-black/5 dark:border-white/5' : ''}`}
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 };

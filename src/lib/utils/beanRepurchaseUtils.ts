@@ -46,6 +46,8 @@ export async function createRepurchaseBean(
     timestamp: _timestamp,
     overallRating: _overallRating,
     ratingNotes: _ratingNotes,
+    sourceGreenBeanId: _sourceGreenBeanId,
+    sourceGreenBeanIds: _sourceGreenBeanIds,
     ...repurchaseSourceBean
   } = sourceBean;
 

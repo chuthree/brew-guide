@@ -22,8 +22,10 @@ import { legacySettingsRepository as dexieLegacySettingsRepository } from '@/lib
 import { roasterRenamePersistence as dexieRoasterRenamePersistence } from '@/lib/data/adapters/dexie/roasterRenamePersistence';
 import { dexieImageSourcePayloadValidator } from '@/lib/data/adapters/dexie/imageSourcePayloadValidator';
 import { configureRepositories } from '@/lib/data/repositories';
+import { roastingPersistence } from './adapters/dexie/roastingPersistence';
 
 const dexieRepositories = {
+  roastingPersistence,
   appSettingsRepository: dexieAppSettingsRepository,
   grinderRepository: dexieGrinderRepository,
   customEquipmentRepository: dexieCustomEquipmentRepository,

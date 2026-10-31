@@ -1,4 +1,5 @@
 import type { BrewingNote } from '@/lib/core/config';
+import { noteUsesBean } from '@/lib/coffee-beans/roastingBatch';
 import {
   brewingNoteImageRepository,
   brewingNoteRepository,
@@ -7,7 +8,14 @@ import {
 export async function getRelatedNotesForBean(
   beanId: string
 ): Promise<BrewingNote[]> {
-  return brewingNoteRepository.listByBeanId(beanId);
+  return (await brewingNoteRepository.list())
+    .filter(
+      note =>
+        noteUsesBean(note, beanId) ||
+        (note.source === 'roasting' &&
+          note.changeRecord?.roastingRecord?.roastedBeanId === beanId)
+    )
+    .sort((a, b) => b.timestamp - a.timestamp);
 }
 
 export async function getBrewingNoteById(

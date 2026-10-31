@@ -196,7 +196,7 @@ interface NoteDetailModalProps {
   beanUnitPrice?: number;
   beanInfo?: CoffeeBean | null; // 完整的咖啡豆信息（包括图片）
   onEdit?: (note: BrewingNote) => void;
-  onDelete?: (noteId: string) => void;
+  onDelete?: (noteId: string) => void | string | Promise<void | string>;
   onCopy?: (noteId: string) => void;
   onShare?: (noteId: string) => void;
   onOpenBeanDetail?: (bean: CoffeeBean) => void;
@@ -753,7 +753,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     if (onDelete) {
       items.push({
         id: 'delete',
-        label: '删除',
+        label: note?.source === 'roasting' ? '撤销烘焙' : '删除',
         onClick: () => {
           setShowDeleteConfirm(true);
         },
@@ -1314,16 +1314,28 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       <DeleteConfirmDrawer
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (note && onDelete) {
-            onDelete(note.id);
+            const reason = await onDelete(note.id);
+            if (reason) return reason;
             onClose();
           }
         }}
         itemName={deleteDisplay.itemName}
+        itemId={note?.id}
+        actionLabel={note?.source === 'roasting' ? '撤销烘焙' : '删除'}
+        renderConfirmation={
+          note?.source === 'roasting'
+            ? name => <>要撤销{name}的这次烘焙吗？</>
+            : undefined
+        }
         itemType="笔记"
         itemSuffix={deleteDisplay.itemSuffix}
-        extraWarning="删除后咖啡豆库存将恢复。"
+        extraWarning={
+          note?.source === 'roasting'
+            ? '用掉的生豆会退回，这批熟豆和烘焙记录会一起删除。'
+            : '删除后咖啡豆库存将恢复。'
+        }
       />
 
       {/* 评分雷达图抽屉 */}

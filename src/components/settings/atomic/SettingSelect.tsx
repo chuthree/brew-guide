@@ -29,11 +29,11 @@ function SettingSelect<T extends string>({
     >
       <Select.Trigger
         aria-label={ariaLabel}
-        className="-my-1 flex h-6 cursor-pointer items-center gap-2 rounded-sm text-sm leading-none font-normal whitespace-nowrap text-neutral-600 outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/60 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
+        className="flex h-4 cursor-pointer items-center justify-end gap-2 rounded-sm p-0 text-sm leading-none font-normal whitespace-nowrap text-neutral-600 outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/60 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
       >
         <Select.Value />
         <Select.Icon asChild>
-          <ChevronsUpDown className="size-4 text-neutral-400 dark:text-neutral-500" />
+          <ChevronsUpDown className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
         </Select.Icon>
       </Select.Trigger>
       <Select.Portal>
@@ -42,7 +42,7 @@ function SettingSelect<T extends string>({
           align="end"
           sideOffset={4}
           collisionPadding={12}
-          className="relative z-80 w-max max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-black/5 bg-neutral-100 text-neutral-800 dark:border-white/5 dark:bg-neutral-900 dark:text-neutral-200"
+          className="relative z-90 w-max max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-black/5 bg-neutral-100 text-neutral-800 dark:border-white/5 dark:bg-neutral-900 dark:text-neutral-200"
         >
           <Select.ScrollUpButton className="flex h-6 items-center justify-center text-neutral-400 dark:bg-neutral-800/40">
             <ChevronUp className="size-4" />

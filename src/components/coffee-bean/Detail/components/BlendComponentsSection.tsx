@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { formatRoastMetric } from '@/lib/utils/roastProfileUtils';
 import { updateBlendComponentsDelimitedField } from '@/lib/utils/coffeeBeanUtils';
 import { BlendComponent, CoffeeBean } from '@/types/app';
 import {
@@ -64,7 +65,12 @@ export const buildBlendComponentDisplayRows = (
 
   const percentageEntries = components.flatMap((component, componentIndex) =>
     component.percentage !== undefined && component.percentage !== null
-      ? [{ componentIndex, value: `${component.percentage}%` }]
+      ? [
+          {
+            componentIndex,
+            value: `${formatRoastMetric(component.percentage)}%`,
+          },
+        ]
       : []
   );
 

@@ -26,6 +26,7 @@ import { useBrewingNoteImagesWhenVisible } from '@/lib/hooks/useBrewingNoteImage
 import { getDataUrlImageDimensions } from '@/lib/images/dimensions';
 import { isSimpleChangeRecord, isRoastingRecord } from '../types';
 import { openImageViewer } from '@/lib/ui/imageViewer';
+import { formatRoastMetric } from '@/lib/utils/roastProfileUtils';
 
 const SINGLE_NOTE_IMAGE_MAX_WIDTH = 140;
 const SINGLE_NOTE_IMAGE_MAX_HEIGHT = 180;
@@ -49,7 +50,8 @@ type OpenRelatedNoteDetailHandler = (detail: {
 export const SourceGreenBeanItem: React.FC<{
   bean: CoffeeBean;
   roasterSettings: RoasterSettings;
-}> = React.memo(({ bean, roasterSettings }) => (
+  percentage?: number;
+}> = React.memo(({ bean, roasterSettings, percentage }) => (
   <div className="flex items-center gap-3">
     <BeanImageSmall bean={bean} />
     <div className="min-w-0 flex-1">
@@ -57,10 +59,16 @@ export const SourceGreenBeanItem: React.FC<{
         {formatBeanDisplayName(bean, roasterSettings)}
       </div>
       <div className="mt-0.5 flex items-center gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-        <span>{bean.purchaseDate || '-'}</span>
+        {bean.purchaseDate && <span>{bean.purchaseDate}</span>}
+        {percentage !== undefined && (
+          <span className="shrink-0">
+            {bean.purchaseDate && '· '}
+            {formatRoastMetric(percentage)}%
+          </span>
+        )}
         {(bean.remaining || bean.capacity) && (
           <>
-            <span>·</span>
+            {(bean.purchaseDate || percentage !== undefined) && <span>·</span>}
             <span>
               {formatNumber(bean.remaining)}/{formatNumber(bean.capacity)}g
             </span>
@@ -121,9 +129,15 @@ ChangeRecordItem.displayName = 'ChangeRecordItem';
 
 export const RoastingRecordItem: React.FC<{
   note: BrewingNote;
+  sourceBeanId?: string;
   allBeans: CoffeeBean[];
   roasterSettings: RoasterSettings;
-}> = React.memo(({ note, allBeans, roasterSettings }) => {
+}> = React.memo(({ note, sourceBeanId, allBeans, roasterSettings }) => {
+  const record = note.changeRecord?.roastingRecord;
+  const sourceInput = record?.inputs?.find(
+    input => input.greenBeanId === sourceBeanId
+  );
+  const inputAmount = sourceInput?.amount ?? record?.roastedAmount;
   const roastedBeanId = note.changeRecord?.roastingRecord?.roastedBeanId;
   const roastedBean = roastedBeanId
     ? allBeans.find(bean => bean.id === roastedBeanId)
@@ -138,10 +152,10 @@ export const RoastingRecordItem: React.FC<{
             {formatBeanDisplayName(roastedBean, roasterSettings)}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            <span>{roastedBean.roastDate || '-'}</span>
+            {roastedBean.roastDate && <span>{roastedBean.roastDate}</span>}
             {(roastedBean.remaining || roastedBean.capacity) && (
               <>
-                <span>·</span>
+                {roastedBean.roastDate && <span>·</span>}
                 <span>
                   {formatNumber(roastedBean.remaining)}/
                   {formatNumber(roastedBean.capacity)}g
@@ -157,7 +171,7 @@ export const RoastingRecordItem: React.FC<{
   return (
     <div className="flex items-center gap-2 opacity-80">
       <div className="w-12 overflow-hidden rounded-xs bg-neutral-200/50 px-1 py-px text-center text-xs font-medium whitespace-nowrap text-neutral-600 dark:bg-neutral-700/50 dark:text-neutral-300">
-        -{note.changeRecord?.roastingRecord?.roastedAmount || 0}g
+        -{inputAmount || 0}g
       </div>
       {note.changeRecord?.roastingRecord?.roastedBeanName && (
         <div className="flex min-w-0 flex-1 items-center gap-1 text-xs text-neutral-600 dark:text-neutral-300">
@@ -733,6 +747,7 @@ export const RelatedRecordCard: React.FC<{
   roasterSettings: RoasterSettings;
   onOpenNoteDetail?: OpenRelatedNoteDetailHandler;
   onEditNote?: (note: BrewingNote) => void;
+  onOpenBeanDetail?: (bean: CoffeeBean) => void;
 }> = React.memo(
   ({
     note,
@@ -746,25 +761,34 @@ export const RelatedRecordCard: React.FC<{
     roasterSettings,
     onOpenNoteDetail,
     onEditNote,
+    onOpenBeanDetail,
   }) => {
     const isChangeRecord = isSimpleChangeRecord(note);
     const isRoasting = isRoastingRecord(note);
+    const roastedBean = isRoasting
+      ? allBeans.find(
+          bean => bean.id === note.changeRecord?.roastingRecord?.roastedBeanId
+        )
+      : undefined;
     const canEditRecord = !!onEditNote && !isRoasting;
     const shouldOpenNoteDetail =
       !isChangeRecord && !isRoasting && !!onOpenNoteDetail;
     const shouldEditRecord =
       canEditRecord && (isChangeRecord || !shouldOpenNoteDetail);
-    const isClickableBrewingRecord = shouldOpenNoteDetail || shouldEditRecord;
 
-    const handleEditRecord = React.useCallback(() => {
-      onEditNote?.(note);
-    }, [note, onEditNote]);
+    const handleRecordClick =
+      roastedBean && onOpenBeanDetail
+        ? () => onOpenBeanDetail(roastedBean)
+        : shouldEditRecord
+          ? () => onEditNote?.(note)
+          : undefined;
 
     const content = isChangeRecord ? (
       <ChangeRecordItem note={note} />
     ) : isRoasting ? (
       <RoastingRecordItem
         note={note}
+        sourceBeanId={bean?.id}
         allBeans={allBeans}
         roasterSettings={roasterSettings}
       />
@@ -782,11 +806,11 @@ export const RelatedRecordCard: React.FC<{
       />
     );
 
-    if (shouldEditRecord) {
+    if (handleRecordClick) {
       return (
         <button
           type="button"
-          onClick={handleEditRecord}
+          onClick={handleRecordClick}
           className="block w-full cursor-pointer rounded bg-neutral-100 p-1.5 text-left dark:bg-neutral-800/40"
         >
           {content}
@@ -797,7 +821,7 @@ export const RelatedRecordCard: React.FC<{
     return (
       <div
         className={`rounded bg-neutral-100 p-1.5 dark:bg-neutral-800/40 ${
-          isClickableBrewingRecord ? 'cursor-pointer' : 'cursor-default'
+          shouldOpenNoteDetail ? 'cursor-pointer' : 'cursor-default'
         }`}
       >
         {content}

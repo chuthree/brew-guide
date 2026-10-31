@@ -497,7 +497,7 @@ function createCleanupReporter(
   };
 }
 
-async function cleanupUnreferencedPaths(
+export async function cleanupUnreferencedPaths(
   driver: SqliteExecutor,
   fileStore: NativeImageFileStore,
   relativePaths: readonly string[],
