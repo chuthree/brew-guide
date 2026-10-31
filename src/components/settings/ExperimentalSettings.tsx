@@ -43,7 +43,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const navigationState = deriveNavigationSettings(settings.navigationSettings);
   const showCoffeeBeanExperiments = navigationState.visibleTabs.coffeeBean;
-  const showNoteExperiments = navigationState.visibleTabs.notes;
   const updateSettings = useSettingsStore(state => state.updateSettings);
 
   // 使用 settingsStore 的 handleChange
@@ -352,39 +351,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
         </SettingSection>
       )}
 
-      {showNoteExperiments && (
-        <SettingSection
-          title="笔记"
-          footer="添加笔记和快捷扣除时，使用分类栏选中的日期。"
-        >
-          <SettingRow
-            label="同步筛选日期"
-            isLast={!settings.syncNewNoteDateWithSelectedDate}
-          >
-            <SettingToggle
-              checked={settings.syncNewNoteDateWithSelectedDate || false}
-              onChange={checked =>
-                handleChange('syncNewNoteDateWithSelectedDate', checked)
-              }
-            />
-          </SettingRow>
-          {settings.syncNewNoteDateWithSelectedDate && (
-            <SettingRow label="快捷扣除" isSubSetting isLast>
-              <SettingToggle
-                checked={
-                  settings.syncQuickDecrementDateWithSelectedDate || false
-                }
-                onChange={checked =>
-                  handleChange(
-                    'syncQuickDecrementDateWithSelectedDate',
-                    checked
-                  )
-                }
-              />
-            </SettingRow>
-          )}
-        </SettingSection>
-      )}
     </SettingPage>
   );
 };

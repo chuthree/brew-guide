@@ -540,6 +540,8 @@ export const buildSettingsSearchItems = ({
         '十分位制',
         '初始值跟随总评',
         '容量调整记录',
+        '同步筛选日期',
+        '快捷扣除',
       ])
     );
 
@@ -695,15 +697,6 @@ export const buildSettingsSearchItems = ({
         ])
       );
     }
-  }
-
-  if (isModuleVisible(visibleModules, 'notes')) {
-    items.push(
-      ...createRowItems('experimental-settings', '实验性功能', [
-        '同步筛选日期',
-        '快捷扣除',
-      ])
-    );
   }
 
   return items;
