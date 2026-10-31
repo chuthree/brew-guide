@@ -253,7 +253,8 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   // 当 disableHistory 为 true 时，传入空 id 和 false 来禁用
   useModalHistory({
     id: disableHistory ? '' : modalId,
-    isOpen: disableHistory || !dismissible ? false : presented,
+    isOpen: disableHistory ? false : presented,
+    dismissible,
     onClose,
   });
 

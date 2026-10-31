@@ -19,6 +19,7 @@ public final class BrewGuideDatabasePlugin extends Plugin {
   // Waiting new owners must never starve the current owner's commit/release.
   private final ExecutorService sessionRequests = Executors.newSingleThreadExecutor();
   private volatile boolean destroyed;
+  private volatile long pageGeneration;
   private final Map<String, Session> sessions = new HashMap<>();
   private Runnable revisionListener;
 
@@ -44,6 +45,20 @@ public final class BrewGuideDatabasePlugin extends Plugin {
     ProviderDatabase.get(getContext()).addListener(revisionListener);
   }
 
+  /** A WebView reload keeps this plugin alive but abandons its JavaScript owners. */
+  public void clearPageSessions() {
+    synchronized (sessions) {
+      pageGeneration++;
+      for (Session session : sessions.values()) session.lease.close();
+      sessions.clear();
+    }
+  }
+
+  private void requireCurrentPage(long generation) {
+    if (destroyed || generation != pageGeneration)
+      throw new IllegalStateException("DATABASE_SESSION_EXPIRED");
+  }
+
   @PluginMethod
   public void command(PluginCall call) {
     if (destroyed) {
@@ -51,11 +66,12 @@ public final class BrewGuideDatabasePlugin extends Plugin {
       return;
     }
     ExecutorService lane = call.getString("session") == null ? requests : sessionRequests;
+    long generation = pageGeneration;
     try {
       lane.execute(
           () -> {
             try {
-              call.resolve(execute(call));
+              call.resolve(execute(call, generation));
             } catch (Exception error) {
               if ("DATABASE_SESSION_EXPIRED".equals(error.getMessage())) {
                 Session expired;
@@ -74,8 +90,8 @@ public final class BrewGuideDatabasePlugin extends Plugin {
     }
   }
 
-  private JSObject execute(PluginCall call) throws Exception {
-    if (destroyed) throw new IllegalStateException("Database bridge has closed");
+  private JSObject execute(PluginCall call, long generation) throws Exception {
+    requireCurrentPage(generation);
     String operation = call.getString("operation", "");
     String databaseName = call.getString("database", ProviderDatabase.MAIN_DATABASE);
     ProviderDatabase db = ProviderDatabase.get(getContext(), databaseName);
@@ -102,7 +118,7 @@ public final class BrewGuideDatabasePlugin extends Plugin {
       try {
         if ("begin".equals(operation)) db.begin(owner);
         synchronized (sessions) {
-          if (destroyed) throw new IllegalStateException("Database bridge has closed");
+          requireCurrentPage(generation);
           if (sessions.size() >= 32) throw new IllegalStateException("Too many database sessions");
           sessions.put(owner, new Session(db, lease, "acquireMutation".equals(operation)));
         }
@@ -125,7 +141,7 @@ public final class BrewGuideDatabasePlugin extends Plugin {
     String owner = sessionId != null ? sessionId : "uiop:" + UUID.randomUUID();
     ProviderDatabase.Lease operationLease = session == null ? db.acquire(owner, 30_000) : null;
     try {
-      if (destroyed) throw new IllegalStateException("Database bridge has closed");
+      requireCurrentPage(generation);
       switch (operation) {
         case "open":
           return new JSObject().put("revision", db.revision());
@@ -192,13 +208,7 @@ public final class BrewGuideDatabasePlugin extends Plugin {
     destroyed = true;
     if (revisionListener != null)
       ProviderDatabase.get(getContext()).removeListener(revisionListener);
-    sessionRequests.execute(
-        () -> {
-          synchronized (sessions) {
-            for (Session session : sessions.values()) session.lease.close();
-            sessions.clear();
-          }
-        });
+    sessionRequests.execute(this::clearPageSessions);
     requests.shutdown();
     sessionRequests.shutdown();
   }

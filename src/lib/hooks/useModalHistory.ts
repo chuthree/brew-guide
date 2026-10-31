@@ -7,6 +7,7 @@ import {
 import { skipNextPageExitTransition } from '@/lib/navigation/pageTransition';
 
 export interface UseModalHistoryOptions {
+  dismissible?: boolean;
   /**
    * 模态框唯一标识
    * 建议使用有意义的名称，如 'bean-detail', 'settings'
@@ -74,6 +75,7 @@ export interface UseModalHistoryOptions {
  */
 export function useModalHistory(options: UseModalHistoryOptions): void {
   const {
+    dismissible = true,
     id,
     isOpen,
     onClose,
@@ -110,6 +112,7 @@ export function useModalHistory(options: UseModalHistoryOptions): void {
 
       entry = {
         id,
+        dismissible,
         onClose: event => {
           closedByPopstateRef.current = true;
           if (skipPageExitTransitionOnHistory && event.source === 'history') {
@@ -142,7 +145,7 @@ export function useModalHistory(options: UseModalHistoryOptions): void {
         }, 0);
       }
     };
-  }, [id, isOpen, replace, skipPageExitTransitionOnHistory]);
+  }, [id, isOpen, replace, dismissible, skipPageExitTransitionOnHistory]);
 }
 
 /**

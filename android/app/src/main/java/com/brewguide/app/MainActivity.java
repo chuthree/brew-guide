@@ -24,6 +24,16 @@ public class MainActivity extends BridgeActivity {
     bridgeBuilder.addWebViewListener(
         new WebViewListener() {
           @Override
+          public void onPageStarted(WebView webView) {
+            if (bridge == null) return;
+            com.getcapacitor.PluginHandle plugin = bridge.getPlugin("BrewGuideDatabase");
+            if (plugin != null) {
+              ((com.brewguide.app.provider.BrewGuideDatabasePlugin) plugin.getInstance())
+                  .clearPageSessions();
+            }
+          }
+
+          @Override
           public boolean onRenderProcessGone(WebView webView, RenderProcessGoneDetail detail) {
             persistWebViewCrash(detail);
 

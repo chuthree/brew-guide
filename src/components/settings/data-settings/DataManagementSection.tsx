@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import ArrowUpIcon from '@public/images/icons/ui/arrow-up.svg';
 import { reloadApp } from '@/lib/app/reload';
 import { DataManager as DataManagerUtil } from '@/lib/core/dataManager';
 import { BackupReminderUtils } from '@/lib/utils/backupReminderUtils';
@@ -25,6 +27,14 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
   onDataChange,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importingRef = useRef(false);
+  const [importStatus, setImportStatus] = useState<{
+    phase: 'importing' | 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const closeImportDrawer = () => {
+    if (importStatus?.phase === 'error') setImportStatus(null);
+  };
   const [status, setStatus] = useState<{
     type: 'success' | 'error' | 'info' | null;
     message: string;
@@ -123,6 +133,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
 
   // 数据导入
   const handleImportClick = () => {
+    if (importingRef.current || importStatus) return;
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -130,43 +141,29 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || importingRef.current || importStatus) return;
 
+    importingRef.current = true;
+    setImportStatus({
+      phase: 'importing',
+      message: '正在导入数据，请保持应用打开，暂时不要离开或关闭应用。',
+    });
     try {
-      const reader = new FileReader();
-      reader.onload = async event => {
-        try {
-          const jsonString = event.target?.result as string;
-
-          const result = await DataManagerUtil.importAllData(jsonString);
-
-          if (result.success) {
-            reloadApp();
-          } else {
-            setStatus({ type: 'error', message: result.message });
-          }
-        } catch (_error) {
-          setStatus({
-            type: 'error',
-            message: `导入失败: ${(_error as Error).message}`,
-          });
-        } finally {
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        }
-      };
-
-      reader.onerror = () => {
-        setStatus({ type: 'error', message: '读取文件失败' });
-      };
-
-      reader.readAsText(file);
-    } catch (_error) {
-      setStatus({
-        type: 'error',
-        message: `导入失败: ${(_error as Error).message}`,
+      const result = await DataManagerUtil.importAllData(await file.text());
+      setImportStatus({
+        phase: result.success ? 'success' : 'error',
+        message: result.success
+          ? '数据已导入。请刷新应用，加载最新数据。'
+          : result.message,
       });
+    } catch (error) {
+      setImportStatus({
+        phase: 'error',
+        message: `导入失败：${error instanceof Error ? error.message : '请重新选择文件后重试'}`,
+      });
+    } finally {
+      importingRef.current = false;
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -270,6 +267,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
           <SettingRow
             label="导入数据"
             onClick={handleImportClick}
+            disabled={importStatus !== null}
             className="min-h-11"
           >
             {null}
@@ -311,6 +309,37 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         onChange={handleFileChange}
         className="hidden"
       />
+      <ActionDrawer
+        title="导入数据"
+        isOpen={importStatus !== null}
+        onClose={closeImportDrawer}
+        dismissible={importStatus?.phase === 'error'}
+      >
+        <ActionDrawer.Icon icon={ArrowUpIcon} />
+        <ActionDrawer.Content>
+          <p
+            role={importStatus?.phase === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
+            className="text-neutral-500 dark:text-neutral-400"
+          >
+            {importStatus?.message}
+          </p>
+        </ActionDrawer.Content>
+        <ActionDrawer.Actions>
+          <ActionDrawer.PrimaryButton
+            disabled={importStatus?.phase === 'importing'}
+            onClick={
+              importStatus?.phase === 'success' ? reloadApp : closeImportDrawer
+            }
+          >
+            {importStatus?.phase === 'importing'
+              ? '正在导入…'
+              : importStatus?.phase === 'success'
+                ? '刷新应用'
+                : '关闭'}
+          </ActionDrawer.PrimaryButton>
+        </ActionDrawer.Actions>
+      </ActionDrawer>
       {showImageOperations && (
         <SettingSection
           title="数据操作"

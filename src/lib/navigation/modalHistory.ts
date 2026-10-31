@@ -22,6 +22,7 @@ export interface ModalCloseEvent {
 
 export interface ModalEntry {
   id: string;
+  dismissible?: boolean;
   onClose: (event: ModalCloseEvent) => void;
   /**
    * 可选的步骤标识，用于多步骤表单
@@ -177,6 +178,10 @@ class ModalHistoryManager {
     if (!top) {
       return;
     }
+    if (top.dismissible === false) {
+      window.history.pushState({ [HISTORY_STATE_KEY]: top.id }, '');
+      return;
+    }
 
     // 检查是否是多步骤表单的中间步骤
     if (top.step !== undefined && top.step > 1) {
@@ -225,6 +230,8 @@ class ModalHistoryManager {
    * 这是组件应该调用的方法
    */
   back(): void {
+    if (this.state.stack[this.state.stack.length - 1]?.dismissible === false)
+      return;
     if (this.state.stack.length === 0) {
       return;
     }
