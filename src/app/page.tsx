@@ -2893,9 +2893,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       setTimeout(() => {
         checkCoffeeBeans();
       }, 50);
+      return true;
     } catch (_error) {
       // 保存咖啡豆失败
       alert('保存失败，请重试');
+      return false;
     }
   };
 

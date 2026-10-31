@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { ExtendedCoffeeBean } from './types';
-import CoffeeBeanForm from './index';
+import CoffeeBeanForm, { type CoffeeBeanFormHandle } from './index';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 import {
   useMultiStepModalHistory,
@@ -14,7 +14,7 @@ import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 interface CoffeeBeanFormModalProps {
   showForm: boolean;
   initialBean?: ExtendedCoffeeBean | null;
-  onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
+  onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => Promise<boolean>;
   onClose: () => void;
   onRepurchase?: () => void;
   initialBeanState?: 'green' | 'roasted';
@@ -53,11 +53,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
 
   // 表单引用，用于调用表单的返回方法
-  const formRef = useRef<{
-    handleBackStep: () => boolean;
-    goToStep: (step: number) => void;
-    getCurrentStep: () => number;
-  } | null>(null);
+  const formRef = useRef<CoffeeBeanFormHandle | null>(null);
 
   // 当前步骤状态 - 用于历史栈管理
   const [currentStep, setCurrentStep] = useState(1);
@@ -112,7 +108,7 @@ const CoffeeBeanFormModal: React.FC<CoffeeBeanFormModalProps> = ({
       // 同步表单内部步骤
       formRef.current?.goToStep(step);
     },
-    onClose,
+    onClose: () => formRef.current?.requestClose(),
   });
 
   // 检测平台

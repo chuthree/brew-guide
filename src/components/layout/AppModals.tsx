@@ -121,7 +121,7 @@ export interface AppModalsProps {
   setRecognitionImageBeanId: (id: string | null) => void;
   handleSaveBean: (
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   handleBeanListChange: () => void;
 
   // 咖啡豆详情（非大屏幕）

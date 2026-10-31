@@ -1100,6 +1100,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       if (result.success) {
         setShowAddForm(false);
         setEditingBean(null);
+        return true;
       } else {
         alert('保存失败，请重试');
       }
@@ -1107,6 +1108,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       console.error('保存咖啡豆失败:', error);
       alert('保存失败，请重试');
     }
+    return false;
   };
 
   // 用于打开评分表单的处理函数

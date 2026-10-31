@@ -10,6 +10,13 @@ import React, {
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import {
+  clearCoffeeBeanFormDraftSession,
+  hasCoffeeBeanFormDraftContent,
+  loadCoffeeBeanFormDraftSession,
+  saveCoffeeBeanFormDraftSession,
+} from '../Detail/coffeeBeanFormDraft';
 import { ExtendedCoffeeBean, BlendComponent, Step, StepConfig } from './types';
 import BasicInfo from './components/BasicInfo';
 import DetailInfo from './components/DetailInfo';
@@ -56,7 +63,7 @@ import {
 } from '@/lib/coffee-beans/beanFields';
 
 interface CoffeeBeanFormProps {
-  onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => void;
+  onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => Promise<boolean>;
   onCancel: () => void;
   initialBean?: ExtendedCoffeeBean;
   onRepurchase?: () => void;
@@ -75,6 +82,7 @@ export interface CoffeeBeanFormHandle {
   handleBackStep: () => boolean;
   goToStep: (step: number) => void;
   getCurrentStep: () => number;
+  requestClose: () => void;
 }
 
 const steps: StepConfig[] = [
@@ -199,7 +207,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
   (
     {
       onSave,
-      onCancel: _onCancel,
+      onCancel: onClose,
       initialBean,
       onRepurchase,
       onStepChange,
@@ -212,6 +220,13 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     // 当前步骤状态
     const [currentStep, setCurrentStep] = useState<Step>('basic');
     const inputRef = useRef<HTMLInputElement>(null);
+    const canSaveDraft = !initialBean && !roastingSourceBeanId;
+    const [isDraftExitOpen, setIsDraftExitOpen] = useState(false);
+    const draftFinishedRef = useRef(false);
+    const [emptyDraft] = useState(() => createEmptyBeanDraft(initialBeanState));
+    const [restoredDraft] = useState(() =>
+      canSaveDraft ? loadCoffeeBeanFormDraftSession()?.bean : undefined
+    );
 
     // 添加一个状态来跟踪正在编辑的剩余容量输入
     const [editingRemaining, setEditingRemaining] = useState<string | null>(
@@ -221,12 +236,9 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     // 添加拼配成分状态
     const [blendComponents, setBlendComponents] = useState<BlendComponent[]>(
       () => {
-        if (
-          initialBean &&
-          initialBean.blendComponents &&
-          initialBean.blendComponents.length > 0
-        ) {
-          return initialBean.blendComponents;
+        const components = (initialBean || restoredDraft)?.blendComponents;
+        if (components?.length) {
+          return components;
         }
 
         // 如果没有拼配成分，创建一个空的成分用于单品豆
@@ -265,6 +277,13 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         roasterFieldEnabled: !!currentSettings.roasterFieldEnabled,
       });
 
+      if (restoredDraft) {
+        return prepareCoffeeBeanRoasterFieldsForFormDraft(
+          { ...draft, ...restoredDraft, name: restoredDraft.name || '' },
+          { roasterFieldEnabled: !!currentSettings.roasterFieldEnabled }
+        );
+      }
+
       if (
         recognitionImage &&
         currentSettings.autoFillRecognitionImage &&
@@ -275,6 +294,62 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
 
       return draft;
     });
+
+    const hasDraftContent =
+      canSaveDraft &&
+      hasCoffeeBeanFormDraftContent({ ...bean, blendComponents }, emptyDraft);
+
+    // 持续保存快照，切后台或刷新时也能恢复；明确离开或保存成功后清除。
+    useEffect(() => {
+      if (!canSaveDraft || draftFinishedRef.current) return;
+      if (hasDraftContent) {
+        saveCoffeeBeanFormDraftSession({
+          version: 1,
+          bean: { ...bean, blendComponents },
+          updatedAt: Date.now(),
+        });
+      } else {
+        clearCoffeeBeanFormDraftSession();
+      }
+    }, [bean, blendComponents, canSaveDraft, hasDraftContent]);
+
+    const completeClose = useCallback(
+      (preserveDraft = false) => {
+        draftFinishedRef.current = true;
+        if (canSaveDraft && !preserveDraft) clearCoffeeBeanFormDraftSession();
+        setIsDraftExitOpen(false);
+        modalHistory.closeAllByPrefix('bean-form');
+        onClose();
+      },
+      [canSaveDraft, onClose]
+    );
+
+    const requestClose = () => {
+      if (hasDraftContent && !draftFinishedRef.current) {
+        // 系统返回已弹出首步历史，补回后取消退出仍能正常返回。
+        if (!modalHistory.isOpen('bean-form')) {
+          modalHistory.pushStep(
+            'bean-form',
+            1,
+            step => {
+              setCurrentStep(steps[step - 1].id);
+              onStepChange?.(step);
+            },
+            requestClose
+          );
+        }
+        setIsDraftExitOpen(true);
+      } else {
+        completeClose();
+      }
+    };
+
+    const cancelDraftExit = useCallback(() => setIsDraftExitOpen(false), []);
+    const discardDraft = useCallback(() => completeClose(), [completeClose]);
+    const saveDraftAndClose = useCallback(
+      () => completeClose(true),
+      [completeClose]
+    );
 
     // 定义额外的状态来跟踪风味标签输入
     const [flavorInput, setFlavorInput] = useState('');
@@ -375,6 +450,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         }
         return false; // 已经在第一步，无法再返回
       },
+      requestClose,
       // 直接跳转到指定步骤
       goToStep: (step: number) => {
         if (step >= 1 && step <= steps.length) {
@@ -405,6 +481,10 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
     // 上一步/返回 - 通过历史栈管理
     const handleBack = () => {
       validateRemaining();
+      if (currentStep === 'basic') {
+        requestClose();
+        return;
+      }
       // 使用历史栈的 back()，这会触发 onStepChange 或 onClose
       modalHistory.back();
     };
@@ -677,9 +757,6 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         addCustomPreset('flavors', flavor);
       });
 
-      // 先清理历史栈（关闭所有 bean-form 相关的历史记录）
-      modalHistory.closeAllByPrefix('bean-form');
-
       // 准备保存的数据
       const finalBean = prepareCoffeeBeanRoasterFieldsForSave(
         { ...bean, blendComponents },
@@ -687,7 +764,11 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       );
 
       // 调用保存回调
-      onSave(finalBean);
+      if (await onSave(finalBean)) {
+        draftFinishedRef.current = true;
+        if (canSaveDraft) clearCoffeeBeanFormDraftSession();
+        modalHistory.closeAllByPrefix('bean-form');
+      }
     };
 
     // 切换冷冻状态
@@ -920,6 +1001,25 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         </div>
 
         <div className="shrink-0">{renderNextButton()}</div>
+        <ActionDrawer
+          isOpen={isDraftExitOpen}
+          onClose={cancelDraftExit}
+          historyId="bean-form-draft-exit"
+        >
+          <ActionDrawer.Content>
+            <p className="text-neutral-500 dark:text-neutral-400">
+              当前内容尚未完成，你可以先保存为草稿，稍后继续；也可以直接离开。
+            </p>
+          </ActionDrawer.Content>
+          <ActionDrawer.Actions>
+            <ActionDrawer.SecondaryButton onClick={discardDraft}>
+              离开
+            </ActionDrawer.SecondaryButton>
+            <ActionDrawer.PrimaryButton onClick={saveDraftAndClose}>
+              保存草稿
+            </ActionDrawer.PrimaryButton>
+          </ActionDrawer.Actions>
+        </ActionDrawer>
       </div>
     );
   }
