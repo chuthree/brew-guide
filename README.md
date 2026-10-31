@@ -73,6 +73,10 @@ Android 版提供 ContentProvider 接口，供其他应用经用户授权后查�
 
 问题和建议请提交到 [Issues](https://github.com/chuthree/brew-guide/issues)。报告问题时，请附上应用版本、使用平台和复现步骤。
 
+## 维护状态
+
+自 v1.7.2 长期稳定版起，项目转入维护阶段，后续仅提供必要的问题修复与兼容性更新。
+
 ## 相关项目
 
 [brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli)：社区维护的命令行工具，用于管理 Brew Guide 的 Supabase 同步数据。
