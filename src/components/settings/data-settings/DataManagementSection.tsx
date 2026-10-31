@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { reloadApp } from '@/lib/app/reload';
 import { DataManager as DataManagerUtil } from '@/lib/core/dataManager';
 import { BackupReminderUtils } from '@/lib/utils/backupReminderUtils';
 import { exportDataAsJsonFile } from '@/lib/utils/dataExportUtils';
@@ -140,8 +141,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
           const result = await DataManagerUtil.importAllData(jsonString);
 
           if (result.success) {
-            onDataChange?.();
-            window.location.reload();
+            reloadApp();
           } else {
             setStatus({ type: 'error', message: result.message });
           }

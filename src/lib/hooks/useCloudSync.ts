@@ -3,6 +3,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { reloadApp } from '@/lib/app/reload';
 import type { SettingsOptions } from '@/lib/data/models';
 import type { CloudProvider, SyncDirection } from '@/lib/sync/types';
 import { syncService } from '@/lib/sync/UnifiedSyncService';
@@ -48,8 +49,8 @@ export function useCloudSyncConnection(
                 : result.downloadedCount;
           if (n > 0) {
             if (result.downloadedCount > 0) {
+              reloadApp();
               if (settings.hapticFeedback) hapticsUtils.medium();
-              window.location.reload();
               return;
             }
 

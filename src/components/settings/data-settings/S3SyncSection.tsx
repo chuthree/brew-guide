@@ -7,6 +7,7 @@
  */
 
 import { SettingInput, SettingRow } from '../atomic';
+import { reloadApp } from '@/lib/app/reload';
 import { makeSettingRowSearchId } from '../settingsSearch';
 import React, { useState } from 'react';
 import { S3SyncManager } from '@/lib/s3/syncManagerV2';
@@ -263,9 +264,8 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
 
       if (result.success) {
         if (result.downloadedFiles > 0) {
+          reloadApp();
           triggerHaptic('medium');
-          onSyncComplete?.();
-          window.location.reload();
           return;
         }
 
@@ -372,7 +372,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
           title: '恢复成功，即将重启...',
           duration: 2000,
         });
-        setTimeout(() => window.location.reload(), 2000);
+        setTimeout(reloadApp, 2000);
         return true;
       } else {
         showToast({ type: 'error', title: '恢复失败', duration: 2000 });

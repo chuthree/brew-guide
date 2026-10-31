@@ -1,4 +1,5 @@
 'use client';
+import { isAppReloadRequested, reloadApp } from '@/lib/app/reload';
 import { useCoordinatedAction } from '@/lib/hooks/useCoordinatedAction';
 
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
@@ -366,6 +367,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     if (!isSupabaseSyncActive) return;
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isAppReloadRequested()) return;
       event.preventDefault();
       event.returnValue = '';
       return '';
@@ -3013,7 +3015,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       );
 
       if (result.success) {
-        if (result.downloadedCount > 0) window.location.reload();
+        if (result.downloadedCount > 0) reloadApp();
         return { success: true, message: result.message };
       } else {
         return {
