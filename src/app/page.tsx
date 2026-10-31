@@ -4345,9 +4345,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               editingMethod={editingMethod}
               selectedEquipment={selectedEquipment}
               customMethods={customMethods}
-              onSaveCustomMethod={method => {
-                handleSaveCustomMethod(method);
-              }}
+              onSaveCustomMethod={handleSaveCustomMethod}
               onCloseCustomForm={() => {
                 setShowCustomForm(false);
                 setEditingMethod(undefined);

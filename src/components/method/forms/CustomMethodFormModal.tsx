@@ -31,7 +31,7 @@ interface CustomMethodFormModalProps {
   editingMethod?: Method;
   selectedEquipment: string | null;
   customMethods: Record<string, Method[]>;
-  onSaveCustomMethod: (method: Method) => void;
+  onSaveCustomMethod: (method: Method) => Promise<void>;
   onCloseCustomForm: () => void;
   onCloseImportForm: () => void;
 }
@@ -153,7 +153,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
         };
 
         // 直接调用父组件的保存方法并传递完整的方法对象
-        onSaveCustomMethod(methodWithId);
+        await onSaveCustomMethod(methodWithId);
 
         // 清除错误
         setValidationError(null);
@@ -167,6 +167,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
       } catch (error) {
         console.error('保存方案失败:', error);
         setValidationError('保存失败，请重试');
+        alert('保存方案失败，请重试');
         return null;
       }
     },
@@ -258,11 +259,7 @@ const CustomMethodFormModal: React.FC<CustomMethodFormModalProps> = ({
       {/* 导入方案组件 - 使用新的MethodImportModal */}
       <MethodImportModal
         showForm={showImportForm}
-        onImport={method => {
-          onSaveCustomMethod(method);
-          // 不在这里关闭，让MethodImportModal内部的handleImport来处理关闭
-          // handleCloseImportForm();
-        }}
+        onImport={onSaveCustomMethod}
         onClose={handleCloseImportForm}
         existingMethods={
           selectedEquipment && customMethods[selectedEquipment]

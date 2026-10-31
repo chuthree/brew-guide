@@ -509,7 +509,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         }
       } catch (error) {
         console.error('保存方案失败:', error);
-        alert('保存方案失败，请重试');
+        throw error;
       }
     },
     [selectedEquipment, customMethods, editingMethod]
