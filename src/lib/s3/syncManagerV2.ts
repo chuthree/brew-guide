@@ -53,7 +53,7 @@ export class S3SyncManager extends BaseSyncManager {
       ]);
       this.deviceId = await this.getOrCreateDeviceId();
 
-      this.metadataManager = new MetadataManager(this.s3Client, this.deviceId);
+      this.metadataManager = new MetadataManager(this.s3Client);
 
       if (!skipConnectionTest) {
         const connected = await this.s3Client.testConnection();

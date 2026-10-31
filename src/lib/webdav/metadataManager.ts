@@ -14,11 +14,9 @@ const METADATA_REMOTE_KEY = 'sync-metadata.json';
 
 export class MetadataManager {
   private client: WebDAVClient;
-  private deviceId: string;
 
-  constructor(client: WebDAVClient, deviceId: string) {
+  constructor(client: WebDAVClient) {
     this.client = client;
-    this.deviceId = deviceId;
   }
 
   /**
@@ -119,30 +117,6 @@ export class MetadataManager {
     } catch (error) {
       console.error('保存远程元数据失败:', error);
       throw error;
-    }
-  }
-
-  /**
-   * 创建新的元数据对象
-   */
-  createMetadata(files: SyncMetadataV2['files']): SyncMetadataV2 {
-    return {
-      version: '2.0.0',
-      lastSyncTime: Date.now(),
-      deviceId: this.deviceId,
-      files,
-      deletedFiles: [],
-    };
-  }
-
-  /**
-   * 清除本地元数据
-   */
-  async clearLocalMetadata(): Promise<void> {
-    try {
-      await Storage.remove(METADATA_KEY);
-    } catch (error) {
-      console.error('清除本地元数据失败:', error);
     }
   }
 }
