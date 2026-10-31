@@ -8,6 +8,7 @@ import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import {
+  DEFAULT_BEAN_RECOGNITION_API_BASE_URL,
   DEFAULT_BEAN_RECOGNITION_MODEL,
   DEFAULT_BEAN_RECOGNITION_PROMPT,
   resolveBeanRecognitionModel,
@@ -62,7 +63,8 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
   const [isTestingConfig, setIsTestingConfig] = React.useState(false);
 
   const [apiBaseUrl, setApiBaseUrl] = React.useState(
-    settings.experimentalBeanRecognitionApiBaseUrl || ''
+    settings.experimentalBeanRecognitionApiBaseUrl ||
+      DEFAULT_BEAN_RECOGNITION_API_BASE_URL
   );
   const [apiKey, setApiKey] = React.useState(
     settings.experimentalBeanRecognitionApiKey || ''
@@ -71,16 +73,21 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
     resolveBeanRecognitionModel(settings.experimentalBeanRecognitionModel)
   );
   const [prompt, setPrompt] = React.useState(
-    settings.experimentalBeanRecognitionPrompt || ''
+    settings.experimentalBeanRecognitionPrompt || DEFAULT_BEAN_RECOGNITION_PROMPT
   );
 
   React.useEffect(() => {
-    setApiBaseUrl(settings.experimentalBeanRecognitionApiBaseUrl || '');
+    setApiBaseUrl(
+      settings.experimentalBeanRecognitionApiBaseUrl ||
+        DEFAULT_BEAN_RECOGNITION_API_BASE_URL
+    );
     setApiKey(settings.experimentalBeanRecognitionApiKey || '');
     setModel(
       resolveBeanRecognitionModel(settings.experimentalBeanRecognitionModel)
     );
-    setPrompt(settings.experimentalBeanRecognitionPrompt || '');
+    setPrompt(
+      settings.experimentalBeanRecognitionPrompt || DEFAULT_BEAN_RECOGNITION_PROMPT
+    );
   }, [
     settings.experimentalBeanRecognitionApiBaseUrl,
     settings.experimentalBeanRecognitionApiKey,
@@ -259,7 +266,7 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
                   value={apiBaseUrl}
                   onChange={e => setApiBaseUrl(e.target.value)}
                   onBlur={saveApiBaseUrl}
-                  placeholder="https://api.qnaigc.com/v1"
+                  placeholder={DEFAULT_BEAN_RECOGNITION_API_BASE_URL}
                   className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
                 />
               </div>

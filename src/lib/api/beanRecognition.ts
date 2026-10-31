@@ -14,6 +14,7 @@ import {
 } from '@/lib/coffee-beans/beanFields';
 import type { AppSettings } from '@/lib/data/models';
 
+export const DEFAULT_BEAN_RECOGNITION_API_BASE_URL = 'https://api.qnaigc.com/v1';
 export const DEFAULT_BEAN_RECOGNITION_MODEL = 'doubao-seed-2.0-mini';
 const DEPRECATED_BEAN_RECOGNITION_MODELS = new Set(['qwen-vl-max-2025-01-25']);
 const BEAN_RECOGNITION_MAX_TOKENS = 1200;

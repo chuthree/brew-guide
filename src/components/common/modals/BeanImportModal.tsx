@@ -19,6 +19,7 @@ import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
 import { SettingsOptions } from '@/components/settings/Settings';
 import {
   buildBeanRecognitionPrompt,
+  DEFAULT_BEAN_RECOGNITION_API_BASE_URL,
   DEFAULT_BEAN_RECOGNITION_PROMPT,
   type CustomBeanRecognitionConfig,
 } from '@/lib/api/beanRecognition';
@@ -322,7 +323,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         settings?.experimentalBeanRecognitionEnabled
           ? {
               enabled: true,
-              apiBaseUrl: settings.experimentalBeanRecognitionApiBaseUrl || '',
+              apiBaseUrl:
+                settings.experimentalBeanRecognitionApiBaseUrl ||
+                DEFAULT_BEAN_RECOGNITION_API_BASE_URL,
               apiKey: settings.experimentalBeanRecognitionApiKey || '',
               model: settings.experimentalBeanRecognitionModel || '',
               prompt: baseRecognitionPrompt,
