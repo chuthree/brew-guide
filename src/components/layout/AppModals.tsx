@@ -130,7 +130,6 @@ export interface AppModalsProps {
   beanDetailOpen: boolean;
   setBeanDetailOpen: (open: boolean) => void;
   beanDetailData: ExtendedCoffeeBean | null;
-  beanDetailSearchQuery: string;
   beanDetailAddMode: boolean;
   setBeanDetailAddMode: (mode: boolean) => void;
   beanDetailEditMode: boolean;
@@ -318,7 +317,6 @@ const AppModals: React.FC<AppModalsProps> = ({
   beanDetailOpen,
   setBeanDetailOpen,
   beanDetailData,
-  beanDetailSearchQuery,
   beanDetailAddMode,
   setBeanDetailAddMode,
   beanDetailEditMode,
@@ -864,7 +862,6 @@ const AppModals: React.FC<AppModalsProps> = ({
           onOpenRelatedNote={onOpenNoteDetailFromBean}
           onOpenRelatedBean={onOpenBeanDetailFromRelated}
           onEditRelatedNote={onEditRelatedNoteFromBean}
-          searchQuery={beanDetailSearchQuery}
           mode={
             beanDetailAddMode ? 'add' : beanDetailEditMode ? 'edit' : 'view'
           }

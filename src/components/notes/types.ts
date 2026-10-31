@@ -45,6 +45,7 @@ export interface BrewingHistoryProps {
 // 单个笔记项属性
 export interface NoteItemProps {
   note: BrewingNote;
+  searchQuery?: string;
   equipmentNames: Record<string, string>;
   onEdit: (note: BrewingNote) => void;
   onDelete: (noteId: string) => void;

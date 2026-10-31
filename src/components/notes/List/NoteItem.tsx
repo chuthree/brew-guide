@@ -5,6 +5,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { ChevronRight } from 'lucide-react';
 import { NoteItemProps } from '../types';
+import HighlightText from '@/components/common/ui/HighlightText';
 import { formatDate } from '../utils';
 import {
   getBeanDisplayInitial,
@@ -166,6 +167,7 @@ const NoteImageGallery = React.memo(function NoteImageGallery({
 // 优化笔记项组件以避免不必要的重渲染
 const NoteItem: React.FC<NoteItemProps> = ({
   note,
+  searchQuery = '',
   equipmentNames,
   isShareMode = false,
   isSelected = false,
@@ -498,7 +500,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
               <div className="flex items-start justify-between gap-3">
                 {beanName && (
                   <div className="min-w-0 flex-1 truncate text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
-                    {beanName}
+                    <HighlightText text={beanName} highlight={searchQuery} />
                   </div>
                 )}
                 {isShareMode && (
@@ -518,7 +520,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
             {/* 备注信息 */}
             {hasNotes && (
               <div className="text-xs font-medium tracking-wide whitespace-pre-line text-neutral-600 dark:text-neutral-400">
-                {note.notes}
+                <HighlightText text={note.notes || ''} highlight={searchQuery} />
               </div>
             )}
 

@@ -3,7 +3,6 @@
 import React, { useRef, useEffect } from 'react';
 import { CoffeeBean } from '@/types/app';
 import { DatePicker } from '@/components/common/ui/DatePicker';
-import HighlightText from '@/components/common/ui/HighlightText';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
@@ -28,7 +27,6 @@ interface BasicInfoSectionProps {
   tempBean: Partial<CoffeeBean>;
   isAddMode: boolean;
   isEditMode: boolean;
-  searchQuery: string;
   editingCapacity: boolean;
   editingRemaining: boolean;
   editingPrice: boolean;
@@ -50,7 +48,6 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   tempBean,
   isAddMode,
   isEditMode,
-  searchQuery,
   editingCapacity,
   editingRemaining,
   editingPrice,
@@ -231,11 +228,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             id="bean-detail-title"
             className="text-sm font-medium text-neutral-800 dark:text-neutral-100"
           >
-            {searchQuery ? (
-              <HighlightText text={displayName} highlight={searchQuery} />
-            ) : (
-              displayName
-            )}
+            {displayName}
           </h2>
         )}
       </div>

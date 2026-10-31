@@ -36,7 +36,7 @@ export default function StorageInit() {
         // 触发咖啡豆详情打开事件
         window.dispatchEvent(
           new CustomEvent('beanDetailOpened', {
-            detail: { bean, searchQuery: '' },
+            detail: { bean },
           })
         );
       } else {

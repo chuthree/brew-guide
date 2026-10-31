@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { NoteItemProps } from '../types';
+import HighlightText from '@/components/common/ui/HighlightText';
 import { formatDateAbsolute, formatRating } from '../utils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { openImageViewer } from '@/lib/ui/imageViewer';
@@ -23,6 +24,7 @@ const formatTasteRatingValue = (value: number): string =>
 // 标准列表样式的笔记项组件
 const NoteItemStandard: React.FC<NoteItemProps> = ({
   note,
+  searchQuery = '',
   equipmentNames,
   onEdit: _onEdit,
   onDelete: _onDelete,
@@ -206,7 +208,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1 overflow-visible">
                 <div className="text-xs font-medium wrap-break-word text-neutral-800 dark:text-neutral-100">
-                  {titleText}
+                  <HighlightText text={titleText} highlight={searchQuery} />
                 </div>
 
                 {/* 参数信息 - 只要有参数就显示，不依赖于是否有方案 */}
@@ -217,7 +219,10 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
                       equipmentName &&
                       resolveNoteMethodName(note) && (
                         <>
-                          <span>{equipmentName}</span>
+                          <HighlightText
+                            text={equipmentName}
+                            highlight={searchQuery}
+                          />
                           <span>·</span>
                         </>
                       )}
@@ -305,7 +310,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
         {/* 备注信息 */}
         {hasNotes && (
           <div className="rounded bg-neutral-100 px-1.5 py-1 text-xs font-medium tracking-wide whitespace-pre-line text-neutral-800/70 dark:bg-neutral-800/40 dark:text-neutral-400/85">
-            {note.notes}
+            <HighlightText text={note.notes || ''} highlight={searchQuery} />
           </div>
         )}
       </div>

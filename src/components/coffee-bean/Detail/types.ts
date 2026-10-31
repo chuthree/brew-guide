@@ -35,7 +35,6 @@ export interface BeanDetailModalProps {
     beanInfo?: CoffeeBean | null;
   }) => void;
   onEditRelatedNote?: (note: BrewingNote) => void;
-  searchQuery?: string;
   onEdit?: (bean: CoffeeBean) => void;
   onDelete?: (bean: CoffeeBean) => void;
   onShare?: (bean: CoffeeBean) => void;
@@ -66,7 +65,6 @@ export interface BeanDetailContextValue {
   tempBean: Partial<CoffeeBean>;
   isAddMode: boolean;
   isGreenBean: boolean;
-  searchQuery: string;
   handleUpdateField: (updates: Partial<CoffeeBean>) => Promise<void>;
   setTempBean: React.Dispatch<React.SetStateAction<Partial<CoffeeBean>>>;
 }

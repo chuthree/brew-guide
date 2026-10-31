@@ -54,7 +54,7 @@ interface DesktopGlobalSearchProps {
   syncDisabled?: boolean;
   settings: SettingsOptions;
   customEquipments: CustomEquipment[];
-  onSelectBean: (bean: CoffeeBean, searchQuery: string) => void;
+  onSelectBean: (bean: CoffeeBean) => void;
   onSelectNote: (payload: NoteDetailPayload) => void;
 }
 
@@ -460,11 +460,11 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
 
   const handleSelectBean = useCallback(
     (bean: CoffeeBean) => {
-      onSelectBean(bean, query.trim());
+      onSelectBean(bean);
       setOpen(false);
       setQuery('');
     },
-    [onSelectBean, query]
+    [onSelectBean]
   );
 
   const handleSelectNote = useCallback(

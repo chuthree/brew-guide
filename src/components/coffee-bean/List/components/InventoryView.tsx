@@ -201,7 +201,6 @@ const InventoryView: React.FC<InventoryViewProps> = ({
       new CustomEvent('beanDetailOpened', {
         detail: {
           bean,
-          searchQuery: isSearching ? searchQuery : '',
         },
       })
     );

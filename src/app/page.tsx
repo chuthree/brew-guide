@@ -482,7 +482,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [beanDetailOpen, setBeanDetailOpen] = useState(false);
   const [beanDetailData, setBeanDetailData] =
     useState<ExtendedCoffeeBean | null>(null);
-  const [beanDetailSearchQuery, setBeanDetailSearchQuery] = useState('');
   // 沉浸式添加模式状态
   const [beanDetailAddMode, setBeanDetailAddMode] = useState(false);
   const [beanDetailEditMode, setBeanDetailEditMode] = useState(false);
@@ -1538,7 +1537,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       startContentDetailTransition(() => {
         setBeanDetailAddMode(false);
         setBeanDetailEditMode(false);
-        setBeanDetailSearchQuery('');
         setBeanDetailData(bean as ExtendedCoffeeBean);
         setBeanDetailOpen(true);
       });
@@ -2676,7 +2674,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       setShowBeanForm(false);
       setEditingBean(null);
       setEditingBeanState(beanState || bean?.beanState || 'roasted');
-      setBeanDetailSearchQuery('');
 
       if (bean) {
         setBeanDetailData(bean);
@@ -3708,7 +3705,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const handleBeanDetailOpened = (e: Event) => {
       const customEvent = e as CustomEvent<{
         bean: ExtendedCoffeeBean;
-        searchQuery?: string;
       }>;
       // 安全检查
       if (!customEvent.detail || !customEvent.detail.bean) {
@@ -3719,7 +3715,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setBeanDetailAddMode(false);
         setBeanDetailEditMode(false);
         setBeanDetailData(customEvent.detail.bean);
-        setBeanDetailSearchQuery(customEvent.detail.searchQuery || '');
         setBeanDetailOpen(true);
       });
     };
@@ -3741,7 +3736,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setBeanDetailEditMode(false);
         setBeanDetailAddBeanState(customEvent.detail?.beanState || 'roasted');
         setBeanDetailData(null);
-        setBeanDetailSearchQuery('');
         setBeanDetailOpen(true);
       });
     };
@@ -4037,12 +4031,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
         settings={settings}
         customEquipments={customEquipments}
-        onSelectBean={(bean, searchQuery) => {
+        onSelectBean={bean => {
           handleMainTabClick('咖啡豆');
           setShowHistory(false);
           window.dispatchEvent(
             new CustomEvent('beanDetailOpened', {
-              detail: { bean, searchQuery },
+              detail: { bean },
             })
           );
         }}
@@ -4431,7 +4425,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     onOpenRelatedNote={handleOpenNoteDetailFromBean}
                     onOpenRelatedBean={handleOpenBeanDetailFromRelated}
                     onEditRelatedNote={handleEditRelatedNoteFromBean}
-                    searchQuery={beanDetailSearchQuery}
                     mode={
                       beanDetailAddMode
                         ? 'add'
@@ -4959,7 +4952,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         beanDetailOpen={beanDetailOpen}
         setBeanDetailOpen={setBeanDetailOpen}
         beanDetailData={beanDetailData}
-        beanDetailSearchQuery={beanDetailSearchQuery}
         beanDetailAddMode={beanDetailAddMode}
         setBeanDetailAddMode={setBeanDetailAddMode}
         beanDetailEditMode={beanDetailEditMode}

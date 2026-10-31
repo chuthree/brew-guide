@@ -166,6 +166,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
   noteImageCounts,
 }) => {
   const [showQuickDecrementNotes, setShowQuickDecrementNotes] = useState(false);
+  const highlightQuery = isSearching ? searchQuery : '';
 
   // 使用评分维度hook - 在父组件中调用一次，然后传递给所有子组件
   const { getValidTasteRatings } = useFlavorDimensions();
@@ -224,6 +225,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
       <ChangeRecordNoteItem
         key={note.id}
         note={note}
+        searchQuery={highlightQuery}
         onEdit={onNoteClick}
         onDelete={onDeleteNote}
         isShareMode={isShareMode}
@@ -233,6 +235,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     ),
     [
       handleToggleSelect,
+      highlightQuery,
       isShareMode,
       onDeleteNote,
       onNoteClick,
@@ -283,6 +286,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
       <NoteItemComponent
         key={note.id}
         note={note}
+        searchQuery={highlightQuery}
         equipmentNames={equipmentNames}
         onEdit={onNoteClick}
         onDelete={onDeleteNote}
@@ -299,6 +303,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     ),
     [
       NoteItemComponent,
+      highlightQuery,
       coffeeBeanLookup,
       coffeeBeans,
       equipmentNames,
@@ -334,6 +339,7 @@ const NotesListView: React.FC<NotesListViewProps> = ({
     return (
       <TableView
         notes={[...regularNotes, ...changeRecordNotes]}
+        searchQuery={highlightQuery}
         equipmentNames={equipmentNames}
         coffeeBeanLookup={coffeeBeanLookup}
         visibleColumns={tableVisibleColumns}

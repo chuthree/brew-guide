@@ -21,6 +21,7 @@ import {
 } from '@tanstack/react-table';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import type { BrewingNote } from '@/lib/core/config';
+import HighlightText from '@/components/common/ui/HighlightText';
 import type { CoffeeBeanLookup } from '@/lib/notes/noteDisplay';
 import {
   getBeanUnitPrice,
@@ -42,6 +43,7 @@ import {
 
 interface NotesTableViewProps {
   notes: BrewingNote[];
+  searchQuery?: string;
   equipmentNames: Record<string, string>;
   coffeeBeanLookup?: CoffeeBeanLookup;
   visibleColumns: NotesTableColumnKey[];
@@ -222,6 +224,7 @@ const getParamsDisplay = (note: BrewingNote): string => {
 
 const NotesTableView: React.FC<NotesTableViewProps> = ({
   notes,
+  searchQuery = '',
   equipmentNames,
   coffeeBeanLookup,
   visibleColumns,
@@ -331,7 +334,12 @@ const NotesTableView: React.FC<NotesTableViewProps> = ({
         {
           id: 'bean',
           header: '咖啡豆',
-          cell: info => info.getValue() || <EmptyCell />,
+          cell: info =>
+            info.getValue() ? (
+              <HighlightText text={info.getValue()} highlight={searchQuery} />
+            ) : (
+              <EmptyCell />
+            ),
           sortingFn: alphanumericSortingFn,
           ...getColumnSizing('bean'),
         }
@@ -361,7 +369,12 @@ const NotesTableView: React.FC<NotesTableViewProps> = ({
         {
           id: 'scheme',
           header: '方案',
-          cell: info => info.getValue() || <EmptyCell />,
+          cell: info =>
+            info.getValue() ? (
+              <HighlightText text={info.getValue()} highlight={searchQuery} />
+            ) : (
+              <EmptyCell />
+            ),
           sortingFn: alphanumericSortingFn,
           ...getColumnSizing('scheme'),
         }
@@ -395,7 +408,12 @@ const NotesTableView: React.FC<NotesTableViewProps> = ({
       notes: columnHelper.accessor(row => row.notes || '', {
         id: 'notes',
         header: '备注',
-        cell: info => info.getValue() || <EmptyCell />,
+        cell: info =>
+          info.getValue() ? (
+            <HighlightText text={info.getValue()} highlight={searchQuery} />
+          ) : (
+            <EmptyCell />
+          ),
         sortingFn: alphanumericSortingFn,
         ...getColumnSizing('notes'),
       }),
@@ -470,6 +488,7 @@ const NotesTableView: React.FC<NotesTableViewProps> = ({
     ];
   }, [
     columnConfig,
+    searchQuery,
     coffeeBeanLookup,
     equipmentNames,
     getValidTasteRatings,

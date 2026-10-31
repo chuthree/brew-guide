@@ -90,7 +90,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   onOpenRelatedNote,
   onOpenRelatedBean,
   onEditRelatedNote,
-  searchQuery = '',
   onEdit,
   onDelete,
   onShare,
@@ -960,7 +959,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     tempBean={tempBean}
                     isAddMode={isFormMode}
                     isEditMode={isEditMode}
-                    searchQuery={searchQuery}
                     editingCapacity={editingCapacity}
                     editingRemaining={editingRemaining}
                     editingPrice={editingPrice}
@@ -994,7 +992,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     bean={bean}
                     tempBean={tempBean}
                     isAddMode={isFormMode}
-                    searchQuery={searchQuery}
                     handleUpdateField={handleUpdateField}
                     handleRoastLevelSelect={handleRoastLevelSelect}
                   />
@@ -1003,7 +1000,6 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                     bean={bean}
                     tempBean={tempBean}
                     isAddMode={isFormMode}
-                    searchQuery={searchQuery}
                     handleUpdateField={handleUpdateField}
                   />
 
