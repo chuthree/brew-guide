@@ -155,7 +155,16 @@ const equipmentFields = {
   note: text(2000),
   animationType: {
     type: 'string',
-    enum: ['v60', 'kalita', 'origami', 'orea', 'clever', 'custom', 'espresso'],
+    enum: [
+      'v60',
+      'kalita',
+      'origami',
+      'orea',
+      'sinloy',
+      'clever',
+      'custom',
+      'espresso',
+    ],
   } as Schema,
   hasValve: { type: 'boolean' } as Schema,
   defaultEnabled: { type: 'boolean' } as Schema,

@@ -178,6 +178,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
         'Kalita',
         'Origami',
         'Orea',
+        'Sinloy',
         'CleverDripper',
       ];
       const isStandardEquipment = standardEquipmentIds.includes(equipmentId);
@@ -254,6 +255,7 @@ const PourVisualizer: React.FC<PourVisualizerProps> = ({
       '/images/icons/ui/kalita-base.svg',
       '/images/icons/ui/origami-base.svg',
       '/images/icons/ui/orea-base.svg',
+      '/images/icons/ui/sinloy-base.svg',
     ];
 
     // 聪明杯相关图片（阀门控制）
