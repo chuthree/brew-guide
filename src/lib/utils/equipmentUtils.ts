@@ -219,6 +219,7 @@ export const getDefaultPourType = (
     case 'v60':
     case 'origami':
     case 'orea':
+    case 'sinloy':
     case 'kalita':
     case 'clever':
       return 'circle'; // 手冲器具默认使用绕圈注水

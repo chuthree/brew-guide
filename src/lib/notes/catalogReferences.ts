@@ -64,6 +64,7 @@ const PRESET_KEYS: Record<string, Record<string, string>> = {
     十六克五段式: 'sixteen-five',
     夏季八冲: 'summer-eight',
   },
+  Sinloy: { 冠军萃取方案: 'champion' },
   Espresso: { 浓缩: 'espresso', 美式: 'americano', 拿铁: 'latte' },
 };
 export function builtinNoteMethodId(

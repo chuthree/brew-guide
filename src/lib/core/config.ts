@@ -96,6 +96,7 @@ export type EquipmentAnimationType =
   | 'kalita'
   | 'origami'
   | 'orea'
+  | 'sinloy'
   | 'clever'
   | 'custom'
   | 'espresso';
@@ -108,6 +109,7 @@ export const EQUIPMENT_ANIMATION_TYPE_TO_ID: Record<
   kalita: 'Kalita',
   origami: 'Origami',
   orea: 'Orea',
+  sinloy: 'Sinloy',
   clever: 'CleverDripper',
   espresso: 'Espresso',
 };
@@ -139,6 +141,8 @@ export const getAnimationTypeFromEquipmentId = (
       return 'origami';
     case 'Orea':
       return 'orea';
+    case 'Sinloy':
+      return 'sinloy';
     case 'CleverDripper':
       return 'clever';
     case 'Espresso':
@@ -270,6 +274,11 @@ export const equipmentList: Equipment[] = [
   {
     id: 'Orea',
     name: 'OREA',
+    defaultEnabled: false,
+  },
+  {
+    id: 'Sinloy',
+    name: 'Sinloy',
     defaultEnabled: false,
   },
   {
@@ -1478,6 +1487,59 @@ export const brewingMethods: BrewingMethods = {
       },
     },
   ],
+  Sinloy: [
+    {
+      name: '冠军萃取方案',
+      params: {
+        coffee: '15g',
+        water: '240g',
+        ratio: '1:16',
+        grindSize: '中细',
+        temp: '92°C',
+        stages: [
+          {
+            pourType: 'circle',
+            label: '焖蒸(绕圈注水)',
+            water: '45',
+            duration: 10,
+            detail: '',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 20,
+            detail: '',
+          },
+          {
+            pourType: 'circle',
+            label: '绕圈注水',
+            water: '75',
+            duration: 15,
+            detail: '此处也可使用中心定点注水',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 10,
+            detail: '',
+          },
+          {
+            pourType: 'center',
+            label: '中心注水',
+            water: '120',
+            duration: 15,
+            detail: '',
+          },
+          {
+            pourType: 'wait',
+            label: '等待',
+            duration: 20,
+            detail: '整体滴滤时间约为1分45秒至2分10秒',
+          },
+        ],
+      },
+    },
+  ],
 };
 
 // 将现有的通用方案重命名为 commonMethods
@@ -1487,6 +1549,7 @@ export const commonMethods: BrewingMethods = {
   Kalita: brewingMethods.Kalita,
   Origami: brewingMethods.Origami,
   Orea: brewingMethods.Orea,
+  Sinloy: brewingMethods.Sinloy,
   Espresso: brewingMethods.Espresso,
 };
 

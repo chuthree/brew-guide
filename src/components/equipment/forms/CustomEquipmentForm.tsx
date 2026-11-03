@@ -140,6 +140,13 @@ const PRESET_OPTIONS = [
     defaultShapeIcon: '/images/icons/ui/orea-base.svg',
   },
   {
+    value: 'sinloy',
+    label: 'Sinloy',
+    animationType: 'sinloy',
+    hasValve: false,
+    defaultShapeIcon: '/images/icons/ui/sinloy-base.svg',
+  },
+  {
     value: 'clever',
     label: '聪明杯',
     animationType: 'clever',

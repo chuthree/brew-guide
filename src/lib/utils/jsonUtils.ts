@@ -301,6 +301,7 @@ export function extractJsonFromText(
           'kalita',
           'origami',
           'orea',
+          'sinloy',
           'clever',
           'custom',
           'espresso',
