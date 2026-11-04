@@ -70,13 +70,13 @@ export class RemoteChangeHandler {
    *
    * @param table - 表名
    * @param payload - Realtime payload
-   * @param pendingLocalChanges - 正在处理的本地变更（用于跳过自己触发的事件）
+   * @param _pendingLocalChanges - 旧调用方兼容参数；回流通过记录版本判断
    * @returns 是否成功处理
    */
   async handleChange(
     table: RealtimeSyncTable,
     payload: PostgresPayload,
-    pendingLocalChanges: Map<string, number>
+    _pendingLocalChanges?: Map<string, number>
   ): Promise<boolean> {
     const newRecord = payload.new as Record<string, unknown> | null;
     const oldRecord = payload.old as Record<string, unknown> | null;
@@ -86,15 +86,6 @@ export class RemoteChangeHandler {
       console.warn(`[RemoteHandler] 收到无效的远程变更，缺少 id`);
       return false;
     }
-
-    // 检查是否是自己触发的变更
-    const changeKey = `${table}:${recordId}`;
-    const expireTime = pendingLocalChanges.get(changeKey);
-    if (expireTime && Date.now() < expireTime) {
-      return false; // 跳过自己触发的变更
-    }
-    // 清理过期的标记
-    pendingLocalChanges.delete(changeKey);
 
     try {
       const isDelete =

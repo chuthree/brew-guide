@@ -5,6 +5,7 @@ import {
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Method, equipmentList, CustomEquipment } from '@/lib/core/config';
 import { BrewingNoteData, CoffeeBean } from '@/types/app';
+import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 import {
   loadCustomMethods,
   saveCustomMethod as apiSaveCustomMethod,
@@ -361,13 +362,11 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
   // 简化的保存笔记函数 - 统一数据流避免竞态条件
   const handleSaveNoteRaw = useCallback(
-    async (data: BrewingNoteData) => {
+    async (data: BrewingNoteData, options?: BrewingNoteSaveOptions) => {
       try {
         const stages = selectedMethod?.params.stages || [];
         const newNote: any = {
           ...data,
-          id: Date.now().toString(),
-          timestamp: Date.now(),
           equipment: data.equipment || '',
           method: data.method || '',
           params: data.params || {
@@ -378,6 +377,7 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
             temp: '',
           },
           stages,
+          beanId: data.beanId ?? selectedCoffeeBean ?? undefined,
         };
 
         {
@@ -385,36 +385,17 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
           const { useBrewingNoteStore } =
             await import('@/lib/stores/brewingNoteStore');
           await callStoreActionInMutation(
-            useBrewingNoteStore.getState().addNote,
-            newNote
-          );
-
-          // 🎯 扣减咖啡豆用量 - 使用笔记中保存的参数值,而不是冲煮步骤的原始值
-          // 这样才能正确处理用户在笔记步骤中修改参数的情况
-          if (selectedCoffeeBean && newNote.params?.coffee) {
-            const match = newNote.params.coffee.match(/(\d+\.?\d*)/);
-            if (match) {
-              const coffeeAmount = parseFloat(match[1]);
-              if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-                const { initializeBeanFromBrewUsage, updateBeanRemaining } =
-                  await import('@/lib/stores/coffeeBeanStore');
-
-                if (selectedCoffeeBeanCreatedFromSearch) {
-                  await callStoreActionInMutation(
-                    initializeBeanFromBrewUsage,
-                    selectedCoffeeBean,
-                    newNote.params.coffee
-                  );
-                } else {
-                  await callStoreActionInMutation(
-                    updateBeanRemaining,
-                    selectedCoffeeBean,
-                    coffeeAmount
-                  );
-                }
-              }
+            useBrewingNoteStore.getState().saveNoteWithInventory,
+            newNote,
+            {
+              ...options,
+              initializeBeanId:
+                options?.initializeBeanId ??
+                (selectedCoffeeBeanCreatedFromSearch
+                  ? (selectedCoffeeBean ?? undefined)
+                  : undefined),
             }
-          }
+          );
         }
 
         // 跳转到笔记页面前，清空历史栈并清理浏览器历史

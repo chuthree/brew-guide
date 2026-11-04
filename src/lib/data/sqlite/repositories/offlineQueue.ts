@@ -80,7 +80,7 @@ async function listStoredOperations(
   return rows.map(decodePendingRow);
 }
 
-async function insertOperation(
+export async function insertOperation(
   executor: SqliteExecutor,
   operation: PendingOperation
 ): Promise<void> {
@@ -143,10 +143,16 @@ function applyPendingOperationUpdate(
 async function updateStoredOperation(
   executor: SqliteExecutor,
   id: string,
-  changes: PendingOperationUpdate
+  changes: PendingOperationUpdate,
+  expectedTimestamp?: number
 ): Promise<void> {
   const current = await getStoredOperation(executor, id);
   if (!current) return;
+  if (
+    expectedTimestamp !== undefined &&
+    current.timestamp !== expectedTimestamp
+  )
+    return;
 
   const updated = applyPendingOperationUpdate(current, changes);
   const row = encodePendingOperation(updated);
@@ -180,9 +186,13 @@ async function updateStoredOperation(
 
 async function deleteStoredOperation(
   executor: SqliteExecutor,
-  id: string
+  id: string,
+  expectedTimestamp?: number
 ): Promise<void> {
-  await executor.execute('DELETE FROM pending_operations WHERE id = ?', [id]);
+  await executor.execute(
+    `DELETE FROM pending_operations WHERE id = ?${expectedTimestamp === undefined ? '' : ' AND timestamp_ms = ?'}`,
+    expectedTimestamp === undefined ? [id] : [id, expectedTimestamp]
+  );
 }
 
 async function clearStoredOperations(executor: SqliteExecutor): Promise<void> {
@@ -196,16 +206,19 @@ export function createSqliteOfflineQueueRepository(
     findByTarget: (table, recordId) =>
       findPendingOperationsByTarget(driver, table, recordId),
     add: operation => insertOperation(driver, operation),
-    async update(id, changes) {
+    async update(id, changes, expectedTimestamp) {
       assertValidPendingOperationUpdate(changes);
       if (Reflect.ownKeys(changes).length === 0) return;
 
-      await driver.transaction(tx => updateStoredOperation(tx, id, changes));
+      await driver.transaction(tx =>
+        updateStoredOperation(tx, id, changes, expectedTimestamp)
+      );
     },
     get: id => getStoredOperation(driver, id),
     listOrdered: () => listStoredOperations(driver),
     count: () => countTable(driver, 'pending_operations'),
-    delete: id => deleteStoredOperation(driver, id),
+    delete: (id, expectedTimestamp) =>
+      deleteStoredOperation(driver, id, expectedTimestamp),
     clear: () => clearStoredOperations(driver),
   };
 }

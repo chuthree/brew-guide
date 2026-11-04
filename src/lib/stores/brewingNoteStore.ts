@@ -25,6 +25,29 @@ import {
 } from '@/lib/app/dataIntegrity';
 import { stripBrewingNoteImages } from '@/lib/notes/imageRecords';
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
+import { getCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
+import type {
+  BrewingNoteInventoryChanges,
+  BrewingNoteSaveOptions,
+} from '@/lib/notes/inventory';
+
+function publishInventoryChanges(changes: BrewingNoteInventoryChanges) {
+  if (!changes.beans.length) return;
+  const store = getCoffeeBeanStore();
+  const updatedIds = new Set(changes.beans.map(bean => bean.id));
+  store.setBeans([
+    ...store.beans.filter(bean => !updatedIds.has(bean.id)),
+    ...changes.beans,
+  ]);
+  if (typeof window !== 'undefined') {
+    for (const bean of changes.beans)
+      window.dispatchEvent(
+        new CustomEvent('coffeeBeanDataChanged', {
+          detail: { action: 'update', beanId: bean.id, bean },
+        })
+      );
+  }
+}
 
 interface BrewingNoteStore {
   notes: BrewingNote[];
@@ -35,6 +58,10 @@ interface BrewingNoteStore {
   loadNotes: () => Promise<void>;
   addNote: (
     note: BrewingNote | Omit<BrewingNote, 'id'>
+  ) => Promise<BrewingNote>;
+  saveNoteWithInventory: (
+    note: BrewingNote,
+    options?: BrewingNoteSaveOptions
   ) => Promise<BrewingNote>;
   updateNote: (
     id: string,
@@ -114,6 +141,7 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
     ) => {
       try {
         const note = await brewingNoteRepository.get(id);
+        if (!note) return true;
         if (note?.source === 'roasting') {
           const { saveRoastingBatchInMutation } =
             await import('@/lib/managers/roastingBatchManager');
@@ -129,7 +157,10 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
           });
           return true;
         }
-        await brewingNotePersistence.deleteWithImages(id, { expectedRecord });
+        const changes = await brewingNotePersistence.deleteWithInventory(id, {
+          expectedRecord,
+        });
+        publishInventoryChanges(changes);
         await markExpectedCoreDataDeletionIfEmpty();
         set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
 
@@ -203,6 +234,36 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
           return newNote;
         },
 
+        saveNoteWithInventory: async (note, options) => {
+          const changes = await brewingNotePersistence.saveWithInventory(
+            normalizeBrewingNote(note).note,
+            options
+          );
+          const savedNote = changes.note!;
+          const eventNote =
+            await brewingNoteImageRepository.mergeNote(savedNote);
+          publishInventoryChanges(changes);
+          set(state => ({
+            notes: [
+              savedNote,
+              ...state.notes.filter(current => current.id !== savedNote.id),
+            ],
+          }));
+          await clearExpectedCoreDataDeletion();
+          if (typeof window !== 'undefined' && !changes.unchanged) {
+            window.dispatchEvent(
+              new CustomEvent('brewingNoteDataChanged', {
+                detail: {
+                  action: changes.created ? 'create' : 'update',
+                  noteId: savedNote.id,
+                  note: eventNote,
+                },
+              })
+            );
+          }
+          return eventNote;
+        },
+
         updateNote: registerCoordinatedAction(
           (id: string, updates: Partial<BrewingNote>) => {
             const snapshot = get().notes.find(record => record.id === id);
@@ -268,7 +329,7 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
           await get().loadNotes();
         },
       },
-      ['addNote', 'upsertNote', 'removeNote']
+      ['addNote', 'saveNoteWithInventory', 'upsertNote', 'removeNote']
     );
   })
 );

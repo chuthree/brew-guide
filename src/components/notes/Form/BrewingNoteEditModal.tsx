@@ -13,11 +13,15 @@ import AdaptiveModal from '@/components/common/ui/AdaptiveModal';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import type { BrewingNoteDraftData } from './brewingNoteDraft';
 import { canSwitchPlainNoteToQuickRecord } from './quickRecordConversion';
+import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 
 interface BrewingNoteEditModalProps {
   showModal: boolean;
   initialData: BrewingNoteData | null;
-  onSave: (data: BrewingNoteData) => void | Promise<void>;
+  onSave: (
+    data: BrewingNoteData,
+    options?: BrewingNoteSaveOptions
+  ) => void | Promise<void>;
   onClose: () => void;
   settings?: SettingsOptions;
 }
@@ -97,10 +101,10 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   }, [isChangeRecordEdit, noteId, setQuickModeOverride]);
   // 处理保存
   const handleSaveRaw = useCallback(
-    async (updatedData: BrewingNoteData) => {
+    async (updatedData: BrewingNoteData, options?: BrewingNoteSaveOptions) => {
+      await callStoreActionInMutation(onSave, updatedData, options);
       setQuickModeOverride(null);
       setDraftSnapshot(null);
-      await callStoreActionInMutation(onSave, updatedData);
     },
     [onSave, setDraftSnapshot, setQuickModeOverride]
   );

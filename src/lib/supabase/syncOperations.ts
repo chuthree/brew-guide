@@ -626,11 +626,63 @@ export async function fetchRemoteRecordsByIds<T>(
   }
 }
 
-/**
- * 批量更新/插入记录到云端
- *
- * @description 使用 upsert 确保幂等性，同时重置 deleted_at 为 null
- */
+/** Use the existing timestamp as a compare-and-set token; no server migration. */
+async function upsertVersionedRecord(
+  client: SupabaseClient,
+  table: SyncTableName,
+  record: Record<string, unknown>
+) {
+  const incomingTime =
+    typeof record.updated_at === 'string' ? Date.parse(record.updated_at) : NaN;
+  if (!Number.isFinite(incomingTime))
+    throw new Error('上传记录缺少有效的更新时间');
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const current = await client
+      .from(table)
+      .select('updated_at, deleted_at')
+      .eq('id', record.id)
+      .eq('user_id', DEFAULT_USER_ID)
+      .maybeSingle();
+    if (current.error) return current;
+    const remote = current.data;
+    if (
+      remote &&
+      Math.max(
+        remote.updated_at ? Date.parse(remote.updated_at) : 0,
+        remote.deleted_at ? Date.parse(remote.deleted_at) : 0
+      ) >= incomingTime
+    )
+      return current;
+
+    let result;
+    if (remote) {
+      const update = client
+        .from(table)
+        .update(record)
+        .eq('id', record.id)
+        .eq('user_id', DEFAULT_USER_ID);
+      result = await (
+        remote.updated_at == null
+          ? update.is('updated_at', null)
+          : update.eq('updated_at', remote.updated_at)
+      )
+        .select('id')
+        .maybeSingle();
+    } else {
+      result = await client
+        .from(table)
+        .insert(record)
+        .select('id')
+        .maybeSingle();
+    }
+    if (!remote && result.error?.code === '23505') continue;
+    if (result.error || result.data) return result;
+  }
+  throw new Error('云端记录正在被其他设备修改，请重试同步');
+}
+
+/** Upload snapshots by unique key; inventory records also guard their version. */
 export async function upsertRecords<T extends { id: string }>(
   client: SupabaseClient,
   table: SyncTableName,
@@ -675,9 +727,13 @@ export async function upsertRecords<T extends { id: string }>(
       currentContext.payloadShape = describeSyncPayload(mappedRecord);
       currentContext.attempts = 1;
       const startedAt = Date.now();
-      let response = await client
-        .from(table)
-        .upsert(mappedRecord, { onConflict: 'id,user_id' });
+      let response =
+        table === SYNC_TABLES.COFFEE_BEANS ||
+        table === SYNC_TABLES.BREWING_NOTES
+          ? await upsertVersionedRecord(client, table, mappedRecord)
+          : await client
+              .from(table)
+              .upsert(mappedRecord, { onConflict: 'id,user_id' });
 
       // Some existing clouds require a legacy equipment_id column. New tables do
       // not have it, so only send it after the server explicitly requests it.
@@ -750,20 +806,22 @@ export async function upsertRecords<T extends { id: string }>(
 export async function markRecordsAsDeleted(
   client: SupabaseClient,
   table: SyncTableName,
-  ids: string[]
+  ids: string[],
+  deletedAt = Date.now()
 ): Promise<SyncOperationResult> {
   if (ids.length === 0) {
     return { success: true, affectedCount: 0 };
   }
 
   try {
-    const now = new Date().toISOString();
+    const now = new Date(deletedAt).toISOString();
 
     const { error } = await client
       .from(table)
       .update({ deleted_at: now, updated_at: now })
       .eq('user_id', DEFAULT_USER_ID)
-      .in('id', ids);
+      .in('id', ids)
+      .or(`updated_at.is.null,updated_at.lt.${now}`);
 
     if (error) {
       console.error(`[SyncOps] ${table} 软删除失败:`, error.message);

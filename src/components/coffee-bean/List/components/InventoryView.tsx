@@ -358,6 +358,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
           onOpenChange={open => !open && setEditingRemaining(null)}
           onCancel={() => setEditingRemaining(null)}
           onQuickDecrement={handleQuickDecrement}
+          onBeanReducedToZero={onBeanReducedToZero}
           coffeeBean={editingRemaining?.bean}
         />
       </>
@@ -426,6 +427,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         onOpenChange={open => !open && setEditingRemaining(null)}
         onCancel={() => setEditingRemaining(null)}
         onQuickDecrement={handleQuickDecrement}
+        onBeanReducedToZero={onBeanReducedToZero}
         coffeeBean={editingRemaining?.bean}
       />
     </div>

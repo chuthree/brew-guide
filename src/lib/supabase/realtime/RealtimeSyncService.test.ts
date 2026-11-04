@@ -1,15 +1,51 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PendingOperation, RealtimeSyncTable } from './types';
 
 const {
   createClientMock,
   handleRemoteChangeMock,
   mergeBeanImagesMock,
   mergeNoteImagesMock,
+  getBeanMock,
+  getNoteMock,
+  queuedOperations,
 } = vi.hoisted(() => ({
   createClientMock: vi.fn(),
   handleRemoteChangeMock: vi.fn(),
   mergeBeanImagesMock: vi.fn(),
   mergeNoteImagesMock: vi.fn(),
+  getBeanMock: vi.fn(),
+  getNoteMock: vi.fn(),
+  queuedOperations: [] as PendingOperation[],
+}));
+
+vi.mock('./offlineQueue', () => ({
+  offlineQueue: {
+    enqueue: async (
+      table: RealtimeSyncTable,
+      type: 'upsert' | 'delete',
+      recordId: string
+    ) => {
+      queuedOperations.push({
+        id: `${table}:${recordId}`,
+        table,
+        type,
+        recordId,
+        timestamp: Date.now(),
+        retryCount: 0,
+      });
+    },
+    getPendingCount: async () => queuedOperations.length,
+    processQueue: async (
+      processor: (operation: PendingOperation) => Promise<boolean>
+    ) => {
+      let processed = 0;
+      for (const operation of queuedOperations.splice(0)) {
+        if (await processor(operation)) processed++;
+      }
+      return { processed, failed: 0, blocked: 0 };
+    },
+  },
 }));
 
 vi.mock('@supabase/supabase-js', () => ({
@@ -33,6 +69,11 @@ vi.mock('@/lib/data/repositories', async importOriginal => {
     ...actual,
     coffeeBeanImageRepository: { mergeBean: mergeBeanImagesMock },
     brewingNoteImageRepository: { mergeNote: mergeNoteImagesMock },
+    coffeeBeanRepository: { ...actual.coffeeBeanRepository, get: getBeanMock },
+    brewingNoteRepository: {
+      ...actual.brewingNoteRepository,
+      get: getNoteMock,
+    },
   };
 });
 
@@ -46,6 +87,32 @@ type RealtimeSyncServiceTestAccess = {
   performBackgroundSync: (...args: unknown[]) => Promise<void>;
   handleRemoteChange: (table: string, payload: never) => Promise<void>;
 };
+
+function createUploadClient(
+  write: (
+    table: string
+  ) => (row: Record<string, unknown>) => Promise<{ error: unknown }>
+) {
+  return {
+    from: vi.fn((table: string) => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: null, error: null }),
+          }),
+        }),
+      }),
+      insert: (row: Record<string, unknown>) => ({
+        select: () => ({
+          maybeSingle: async () => {
+            const result = await write(table)(row);
+            return { ...result, data: result.error ? null : { id: row.id } };
+          },
+        }),
+      }),
+    })),
+  };
+}
 
 describe('RealtimeSyncService.connect', () => {
   let service: RealtimeSyncService;
@@ -157,6 +224,9 @@ describe('RealtimeSyncService local image uploads', () => {
     await service.disconnect();
     serviceTestAccess = service as unknown as RealtimeSyncServiceTestAccess;
     serviceTestAccess.isOnline = true;
+    getBeanMock.mockReset();
+    getNoteMock.mockReset();
+    queuedOperations.length = 0;
   });
 
   afterEach(async () => {
@@ -172,7 +242,12 @@ describe('RealtimeSyncService local image uploads', () => {
     const upsert = vi.fn(async (_row: Record<string, unknown>) => ({
       error: null,
     }));
-    serviceTestAccess.client = { from: vi.fn(() => ({ upsert })) };
+    serviceTestAccess.client = createUploadClient(() => upsert);
+    getBeanMock.mockResolvedValue({
+      id: 'bean-1',
+      name: 'Renamed bean',
+      timestamp: 200,
+    });
 
     await service.syncLocalChange('coffee_beans', 'update', 'bean-1', {
       name: 'Renamed bean',
@@ -200,7 +275,12 @@ describe('RealtimeSyncService local image uploads', () => {
     const upsert = vi.fn(async (_row: Record<string, unknown>) => ({
       error: null,
     }));
-    serviceTestAccess.client = { from: vi.fn(() => ({ upsert })) };
+    serviceTestAccess.client = createUploadClient(() => upsert);
+    getNoteMock.mockResolvedValue({
+      id: 'note-1',
+      notes: 'Updated tasting note',
+      updatedAt: 200,
+    });
 
     await service.syncLocalChange('brewing_notes', 'update', 'note-1', {
       notes: 'Updated tasting note',
@@ -237,11 +317,22 @@ describe('RealtimeSyncService local image uploads', () => {
     const noteUpsert = vi.fn(async (_row: Record<string, unknown>) => ({
       error: null,
     }));
-    serviceTestAccess.client = {
-      from: vi.fn((table: string) => ({
-        upsert: table === 'coffee_beans' ? beanUpsert : noteUpsert,
-      })),
-    };
+    serviceTestAccess.client = createUploadClient(table =>
+      table === 'coffee_beans' ? beanUpsert : noteUpsert
+    );
+    getBeanMock.mockResolvedValue({
+      id: 'bean-3',
+      name: 'Inline image remains available',
+      image: beanImage,
+      timestamp: 400,
+    });
+    getNoteMock.mockResolvedValue({
+      id: 'note-3',
+      notes: 'Inline image remains available',
+      image: noteImages[0],
+      images: noteImages,
+      updatedAt: 400,
+    });
 
     await service.syncLocalChange('coffee_beans', 'update', 'bean-3', {
       name: 'Inline image remains available',
@@ -272,11 +363,19 @@ describe('RealtimeSyncService local image uploads', () => {
     const noteUpsert = vi.fn(async (_row: Record<string, unknown>) => ({
       error: null,
     }));
-    serviceTestAccess.client = {
-      from: vi.fn((table: string) => ({
-        upsert: table === 'coffee_beans' ? beanUpsert : noteUpsert,
-      })),
-    };
+    serviceTestAccess.client = createUploadClient(table =>
+      table === 'coffee_beans' ? beanUpsert : noteUpsert
+    );
+    getBeanMock.mockResolvedValue({
+      id: 'bean-2',
+      name: 'Image removed',
+      timestamp: 300,
+    });
+    getNoteMock.mockResolvedValue({
+      id: 'note-2',
+      notes: 'Images removed',
+      updatedAt: 300,
+    });
 
     await service.syncLocalChange('coffee_beans', 'update', 'bean-2', {
       name: 'Image removed',

@@ -156,14 +156,18 @@ describe('OfflineQueueManager repository behavior', () => {
     });
 
     expect(mocks.repository.update).toHaveBeenCalledOnce();
-    expect(mocks.repository.update).toHaveBeenCalledWith('first', {
-      type: 'delete',
-      data: { reason: 'removed' },
-      timestamp: 2000,
-      retryCount: 0,
-      lastError: undefined,
-      failedAt: undefined,
-    });
+    expect(mocks.repository.update).toHaveBeenCalledWith(
+      'first',
+      {
+        type: 'delete',
+        data: { reason: 'removed' },
+        timestamp: 2000,
+        retryCount: 0,
+        lastError: undefined,
+        failedAt: undefined,
+      },
+      first.timestamp
+    );
     expect(mocks.repository.add).not.toHaveBeenCalled();
     expect(mocks.repository.delete).not.toHaveBeenCalled();
   });
@@ -195,9 +199,9 @@ describe('OfflineQueueManager repository behavior', () => {
 
     expect(processed).toEqual(['op-1', 'op-2', 'op-3']);
     expect(mocks.repository.delete.mock.calls).toEqual([
-      ['op-1'],
-      ['op-2'],
-      ['op-3'],
+      ['op-1', 1],
+      ['op-2', 2],
+      ['op-3', 3],
     ]);
     expect(result).toEqual({ processed: 3, failed: 0, blocked: 0 });
   });
@@ -218,7 +222,7 @@ describe('OfflineQueueManager repository behavior', () => {
 
     expect(processed).toEqual(['valid-op']);
     expect(mocks.repository.delete).toHaveBeenCalledOnce();
-    expect(mocks.repository.delete).toHaveBeenCalledWith('valid-op');
+    expect(mocks.repository.delete).toHaveBeenCalledWith('valid-op', 1);
     expect(mocks.repository.update).not.toHaveBeenCalled();
     expect(diagnostic).toHaveBeenCalledWith(
       '[OfflineQueue] 存在当前版本无法执行的队列项，已保留:',
@@ -236,20 +240,30 @@ describe('OfflineQueueManager repository behavior', () => {
     await expect(
       offlineQueue.markFailed('op-1', 'temporary error')
     ).resolves.toBe(true);
-    expect(mocks.repository.update).toHaveBeenNthCalledWith(1, 'op-1', {
-      retryCount: 1,
-      lastError: 'temporary error',
-      failedAt: undefined,
-    });
+    expect(mocks.repository.update).toHaveBeenNthCalledWith(
+      1,
+      'op-1',
+      {
+        retryCount: 1,
+        lastError: 'temporary error',
+        failedAt: undefined,
+      },
+      1
+    );
 
     await expect(
       offlineQueue.markFailed('op-1', 'still failing')
     ).resolves.toBe(false);
-    expect(mocks.repository.update).toHaveBeenNthCalledWith(2, 'op-1', {
-      retryCount: 3,
-      lastError: 'still failing',
-      failedAt: 4000,
-    });
+    expect(mocks.repository.update).toHaveBeenNthCalledWith(
+      2,
+      'op-1',
+      {
+        retryCount: 3,
+        lastError: 'still failing',
+        failedAt: 4000,
+      },
+      1
+    );
   });
 
   it('retains already blocked operations without invoking the processor', async () => {
@@ -272,11 +286,15 @@ describe('OfflineQueueManager repository behavior', () => {
       { processed: 0, failed: 0, blocked: 0 }
     );
 
-    expect(mocks.repository.update).toHaveBeenCalledWith('op-1', {
-      retryCount: 1,
-      lastError: '同步失败，等待下次重试',
-      failedAt: undefined,
-    });
+    expect(mocks.repository.update).toHaveBeenCalledWith(
+      'op-1',
+      {
+        retryCount: 1,
+        lastError: '同步失败，等待下次重试',
+        failedAt: undefined,
+      },
+      1
+    );
   });
 
   it('records processing failures and blocks an operation at its retry limit', async () => {
@@ -289,11 +307,15 @@ describe('OfflineQueueManager repository behavior', () => {
       })
     ).resolves.toEqual({ processed: 0, failed: 1, blocked: 1 });
 
-    expect(mocks.repository.update).toHaveBeenCalledWith('op-1', {
-      retryCount: 3,
-      lastError: 'upload failed',
-      failedAt: expect.any(Number),
-    });
+    expect(mocks.repository.update).toHaveBeenCalledWith(
+      'op-1',
+      {
+        retryCount: 3,
+        lastError: 'upload failed',
+        failedAt: expect.any(Number),
+      },
+      1
+    );
   });
 
   it('clears queued records through the repository', async () => {

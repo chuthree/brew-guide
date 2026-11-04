@@ -84,7 +84,6 @@ import {
   type NotesTableColumnKey,
 } from './tableColumns';
 import { useBrewingNoteImageCountsState } from '@/lib/hooks/useBrewingNoteImages';
-import { revertCapacityAdjustmentRecord } from '@/lib/coffee-beans/capacityAdjustment';
 import { getValidBeanState } from '@/components/coffee-bean/List/preferences';
 import {
   COFFEE_BEAN_NAVIGATION_EVENTS,
@@ -632,29 +631,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       return;
     }
     try {
-      // 恢复咖啡豆容量（根据笔记类型采用不同的恢复策略）
-      try {
-        if (noteToDelete.source === 'capacity-adjustment') {
-          await revertCapacityAdjustmentRecord(noteToDelete);
-        } else {
-          // 处理快捷扣除记录和普通笔记的恢复
-          const { extractCoffeeAmountFromNote, getNoteAssociatedBeanId } =
-            await import('../utils');
-          const coffeeAmount = extractCoffeeAmountFromNote(noteToDelete);
-          const beanId = getNoteAssociatedBeanId(noteToDelete);
-
-          if (beanId && coffeeAmount > 0) {
-            const { increaseBeanRemaining } =
-              await import('@/lib/stores/coffeeBeanStore');
-            await increaseBeanRemaining(beanId, coffeeAmount);
-          }
-        }
-      } catch (error) {
-        console.error('恢复咖啡豆容量失败:', error);
-      }
-
-      // 删除笔记 - 使用 Zustand store
-      deleteNote(noteId);
+      if (!(await deleteNote(noteId))) throw new Error('删除笔记失败，请重试');
 
       showToastMessage('笔记已删除', 'success');
     } catch (error) {

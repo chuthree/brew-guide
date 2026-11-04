@@ -6,6 +6,14 @@ import {
 import { shouldSkipDestructiveReplace } from '@/lib/core/safeReplace';
 import type { BrewingNotePersistence } from '@/lib/data/contracts';
 import {
+  prepareBrewingNoteInventory,
+  inventorySyncOperations,
+  type BrewingNoteInventoryChanges,
+} from '@/lib/notes/inventory';
+import { getCoffeeBean, saveCoffeeBean } from '../repositories/coffeeBean';
+import { getAppSettings } from '../repositories/appSettings';
+import { insertOperation } from '../repositories/offlineQueue';
+import {
   createImageObjectKey,
   parseImageRelativePath,
   toImageRelativePath,
@@ -848,12 +856,103 @@ export function createSqliteBrewingNotePersistence(
   const now = options.now ?? Date.now;
   const reportCleanupError = createCleanupReporter(options.onCleanupError);
   const coordinator = coordinatorFor(driver);
+  const queueChanges = async (
+    tx: SqliteExecutor,
+    changes: BrewingNoteInventoryChanges,
+    id: string
+  ) => {
+    for (const operation of inventorySyncOperations(
+      changes,
+      id,
+      await getAppSettings(tx)
+    )) {
+      await tx.execute(
+        "DELETE FROM pending_operations WHERE table_name = ? AND record_id = ? AND operation_type IN ('upsert', 'delete')",
+        [operation.table, operation.recordId]
+      );
+      await insertOperation(tx, operation);
+    }
+  };
 
   function makeIdentity(existing: readonly BrewingNoteImageMetadata[]) {
     return createIdentityAllocator(imageIdFactory, objectKeyFactory, existing);
   }
 
   return {
+    async saveWithInventory(note, saveOptions) {
+      validateNote(note);
+      return coordinator.withOwners([note.id], async () => {
+        const prepared = hasImageFieldUpdate(note)
+          ? await prepareBrewingNoteImageWrite(driver, fileStore, note, options)
+          : undefined;
+        try {
+          const changes = await driver.transaction(async tx => {
+            const changes = await prepareBrewingNoteInventory(
+              note,
+              await getBrewingNote(tx, note.id),
+              id => getCoffeeBean(tx, id),
+              saveOptions
+            );
+            if (!changes.unchanged) {
+              await prepared?.apply(tx);
+              await saveBrewingNote(tx, stripBrewingNoteImages(changes.note!));
+              for (const bean of changes.beans) await saveCoffeeBean(tx, bean);
+              await queueChanges(tx, changes, note.id);
+            }
+            return changes;
+          });
+          if (prepared)
+            await cleanupPreparedBrewingNoteImageFiles(driver, fileStore, [
+              ...prepared.created.map(file => file.relativePath),
+              ...prepared.supersededPaths,
+            ]);
+          return { ...changes, note: stripBrewingNoteImages(changes.note!) };
+        } catch (error) {
+          if (prepared)
+            await cleanupPreparedBrewingNoteImageFiles(
+              driver,
+              fileStore,
+              prepared.created.map(file => file.relativePath),
+              error
+            );
+          throw error;
+        }
+      });
+    },
+
+    async deleteWithInventory(id, deleteOptions) {
+      return coordinator.withOwners([id], async () => {
+        const existing = await listBrewingNoteImageMetadata(driver, id);
+        validateStoredPaths(existing);
+        const changes = await driver.transaction(async tx => {
+          const previous = await getBrewingNote(tx, id);
+          if (previous)
+            assertRecordUnchanged(
+              brewingNoteSnapshot(previous),
+              brewingNoteSnapshot(deleteOptions?.expectedRecord)
+            );
+          const changes = await prepareBrewingNoteInventory(
+            undefined,
+            previous,
+            beanId => getCoffeeBean(tx, beanId)
+          );
+          for (const bean of changes.beans) await saveCoffeeBean(tx, bean);
+          await deleteBrewingNote(tx, id);
+          await replaceBrewingNoteImageMetadata(tx, id, []);
+          if (previous) {
+            await queueChanges(tx, changes, id);
+          }
+          return changes;
+        });
+        await cleanupPreparedBrewingNoteImageFiles(
+          driver,
+          fileStore,
+          filePaths(existing)
+        );
+        return changes;
+      });
+    },
+
     async saveWithImages(note, saveOptions) {
       const expectedSnapshot = brewingNoteSnapshot(saveOptions?.expectedRecord);
       const cleanNote = stripBrewingNoteImages(note);

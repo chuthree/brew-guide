@@ -1,4 +1,5 @@
 'use client';
+import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 import {
   callStoreActionInMutation,
   coordinateStoreActions,
@@ -587,64 +588,53 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
   }, [countdownTime, onCountdownChange]);
 
   // 修改保存笔记函数，统一数据流避免竞态条件
-  const handleSaveNoteRaw = useCallback(async (note: BrewingNoteData) => {
-    try {
-      // 🔥 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } =
-        await import('@/lib/stores/brewingNoteStore');
+  const handleSaveNoteRaw = useCallback(
+    async (note: BrewingNoteData, options?: BrewingNoteSaveOptions) => {
+      try {
+        // 🔥 使用 Zustand store 保存笔记
+        const { useBrewingNoteStore } =
+          await import('@/lib/stores/brewingNoteStore');
 
-      // 创建笔记数据 - 确保不保存完整的coffeeBean对象
-      const noteData: any = {
-        ...note,
-        id: note.id || Date.now().toString(),
-        timestamp: note.timestamp || Date.now(),
-        equipment: note.equipment || '',
-        method: note.method || '',
-        params: note.params || {
-          coffee: '',
-          water: '',
-          ratio: '',
-          grindSize: '',
-          temp: '',
-        },
-      };
+        // 创建笔记数据 - 确保不保存完整的coffeeBean对象
+        const noteData: any = {
+          ...note,
+          id: note.id || Date.now().toString(),
+          timestamp: note.timestamp || Date.now(),
+          equipment: note.equipment || '',
+          method: note.method || '',
+          params: note.params || {
+            coffee: '',
+            water: '',
+            ratio: '',
+            grindSize: '',
+            temp: '',
+          },
+        };
 
-      // 如果存在coffeeBean字段，移除它
-      if ('coffeeBean' in noteData) {
-        delete noteData.coffeeBean;
-      }
+        // 如果存在coffeeBean字段，移除它
+        if ('coffeeBean' in noteData) {
+          delete noteData.coffeeBean;
+        }
 
-      // 判断是新笔记还是更新
-      const currentNotes = useBrewingNoteStore.getState().notes;
-      const isExistingNote =
-        !!noteData.id && currentNotes.some(n => n.id === noteData.id);
-
-      if (isExistingNote) {
-        // 更新现有笔记
         await callStoreActionInMutation(
-          useBrewingNoteStore.getState().updateNote,
-          noteData.id,
-          noteData
+          useBrewingNoteStore.getState().saveNoteWithInventory,
+          noteData,
+          options
         );
-      } else {
-        // 添加新笔记
-        await callStoreActionInMutation(
-          useBrewingNoteStore.getState().addNote,
-          noteData
-        );
+
+        // 设置笔记已保存标记
+        localStorage.setItem('brewingNoteInProgress', 'false');
+        // 清空表单初始数据，表示已完全保存
+        setNoteFormInitialData(null);
+
+        // 关闭笔记表单
+        setShowNoteForm(false);
+      } catch (error) {
+        throw error;
       }
-
-      // 设置笔记已保存标记
-      localStorage.setItem('brewingNoteInProgress', 'false');
-      // 清空表单初始数据，表示已完全保存
-      setNoteFormInitialData(null);
-
-      // 关闭笔记表单
-      setShowNoteForm(false);
-    } catch (error) {
-      throw error;
-    }
-  }, []);
+    },
+    []
+  );
   const handleSaveNote = useMemo(
     () => coordinateStoreActions({ save: handleSaveNoteRaw }, ['save']).save,
     [handleSaveNoteRaw]
@@ -1789,7 +1779,6 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
           }}
         >
           <BrewingNoteForm
-            id="brewingNoteForm"
             onClose={() => {
               setShowNoteForm(false);
               // 注意：这里不清除brewingNoteInProgress，保留未完成状态

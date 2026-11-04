@@ -1,6 +1,8 @@
 'use client';
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
 import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
+import { nanoid } from 'nanoid';
+import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 
 import React, {
   useState,
@@ -117,9 +119,13 @@ const BREWING_NOTE_FORM_INTENTS = {
 } as const;
 
 interface BrewingNoteFormProps {
+  /** Existing record identity, never a DOM-only form identifier. */
   id?: string;
   onClose: () => void;
-  onSave: (data: BrewingNoteData) => void | Promise<void>;
+  onSave: (
+    data: BrewingNoteData,
+    options?: BrewingNoteSaveOptions
+  ) => void | Promise<void>;
   initialData: Partial<BrewingNoteData> & {
     coffeeBean?: SelectableCoffeeBean | null;
   };
@@ -186,12 +192,6 @@ const validateNumericInput = (value: string): boolean => {
   return /^$|^[0-9]*\.?[0-9]*$/.test(value);
 };
 
-const getBeanRemainingAmount = (bean: SelectableCoffeeBean): number => {
-  if (isPendingCoffeeBean(bean)) return 0;
-  const remaining = parseFloat((bean as CoffeeBean).remaining || '0');
-  return Number.isFinite(remaining) ? Math.max(0, remaining) : 0;
-};
-
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   id,
   onClose: _onClose,
@@ -242,7 +242,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     );
   const [showCoffeeBeanPickerDrawer, setShowCoffeeBeanPickerDrawer] =
     useState(false);
-  const [originalBeanId] = useState<string | undefined>(initialData.beanId); // 记录原始的beanId用于容量同步
   const [showImagePreview, setShowImagePreview] = useState(false); // 控制图片预览
   const [previewImageIndex, setPreviewImageIndex] = useState(0); // 当前预览图片的索引
   // 🔥 标记用户是否主动选择了咖啡豆（用于防止 initialData 变化覆盖用户选择）
@@ -457,17 +456,28 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   }, [initialData.totalTime]);
 
   const formRef = useRef<HTMLFormElement>(null);
-  const [generatedNoteId] = useState(
-    () => id || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-  );
+  const [generatedNoteId] = useState(() => initialData.id || nanoid());
   const generatedNoteIdRef = useRef(generatedNoteId);
+  const initialNoteVersionRef = useRef({
+    id,
+    updatedAt: initialData.updatedAt ?? initialData.timestamp,
+  });
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
-    if (id) {
-      generatedNoteIdRef.current = id;
+    if (initialNoteVersionRef.current.id !== id) {
+      initialNoteVersionRef.current = {
+        id,
+        updatedAt: initialData.updatedAt ?? initialData.timestamp,
+      };
     }
-  }, [id]);
+  }, [id, initialData.updatedAt, initialData.timestamp]);
+
+  useEffect(() => {
+    if (initialData.id) {
+      generatedNoteIdRef.current = initialData.id;
+    }
+  }, [initialData.id]);
 
   // 创建显示维度（包含历史维度）
   const createDisplayDimensions = (
@@ -1183,7 +1193,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     try {
       const selection = selectionChanged
         ? await resolveFormNoteSelection(selectedReferenceRef.current)
-        : initialData.id ||
+        : id ||
             initialData.equipmentId !== undefined ||
             initialData.methodId !== undefined
           ? pickNoteSelection(initialData)
@@ -1195,31 +1205,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       const finalMethod = selection.method;
 
       // 提取当前咖啡用量（用于容量计算和新建豆子）
-      const {
-        CapacitySyncManager,
-        createBeanFromBrewUsage,
-        initializeBeanFromBrewUsage,
-        useCoffeeBeanStore,
-        updateBeanRemaining,
-        increaseBeanRemaining,
-      } = await import('@/lib/stores/coffeeBeanStore');
+      const { CapacitySyncManager } =
+        await import('@/lib/stores/coffeeBeanStore');
       const quickRecordCoffeeParam = `${parseFloat(quickDecrementAmount) || 0}g`;
       const currentCoffeeAmount = CapacitySyncManager.extractCoffeeAmount(
         isQuickRecordMode ? quickRecordCoffeeParam : methodParams.coffee
       );
-      const getInitialCoffeeAmount = () => {
-        const quickAmount = Number(initialData.quickDecrementAmount);
-        if (
-          initialData.source === 'quick-decrement' &&
-          Number.isFinite(quickAmount)
-        ) {
-          return quickAmount;
-        }
-
-        return CapacitySyncManager.extractCoffeeAmount(
-          initialData.params?.coffee || '0g'
-        );
-      };
 
       if (isSavingQuickRecord) {
         if (!selectedCoffeeBean) {
@@ -1232,156 +1223,28 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       }
 
       await withDataMutation(async () => {
-        // 处理待创建的咖啡豆
-        // 如果选中的是 PendingCoffeeBean，在保存笔记时创建它
         let finalBeanId: string | undefined;
-        let deductedCoffeeAmount = currentCoffeeAmount;
+        let newBean: CoffeeBean | undefined;
 
         if (
           canUseCoffeeBeanModule &&
           selectedCoffeeBean &&
           isPendingCoffeeBean(selectedCoffeeBean)
         ) {
-          try {
-            const newBean = await callStoreActionInMutation(
-              createBeanFromBrewUsage,
-              selectedCoffeeBean.name,
-              isQuickRecordMode ? quickRecordCoffeeParam : methodParams.coffee
-            );
-
-            finalBeanId = newBean.id;
-
-            // 更新 selectedCoffeeBean 为真实的豆子（用于后续逻辑）
-            setSelectedCoffeeBean(newBean);
-          } catch (error) {
-            console.error('创建咖啡豆失败:', error);
-            throw new Error('创建咖啡豆失败，请重试');
-          }
+          finalBeanId = nanoid();
+          newBean = {
+            id: finalBeanId,
+            name: selectedCoffeeBean.name,
+            capacity: currentCoffeeAmount > 0 ? `${currentCoffeeAmount}g` : '',
+            remaining: String(currentCoffeeAmount),
+            timestamp: Date.now(),
+          };
         } else if (
           canUseCoffeeBeanModule &&
           selectedCoffeeBean &&
           !isPendingCoffeeBean(selectedCoffeeBean)
         ) {
-          // 已有豆子，使用其 ID
           finalBeanId = selectedCoffeeBean.id;
-
-          const isNewNote = !initialData.id;
-
-          if (isNewNote) {
-            // 新建笔记：直接扣除咖啡豆剩余量
-            if (currentCoffeeAmount > 0) {
-              try {
-                if (initialCoffeeBeanCreatedFromSearch) {
-                  await callStoreActionInMutation(
-                    initializeBeanFromBrewUsage,
-                    selectedCoffeeBean.id,
-                    isQuickRecordMode
-                      ? quickRecordCoffeeParam
-                      : methodParams.coffee
-                  );
-                } else {
-                  const latestBean =
-                    useCoffeeBeanStore
-                      .getState()
-                      .getBeanById(selectedCoffeeBean.id) || selectedCoffeeBean;
-                  const decrementAmount = isSavingQuickRecord
-                    ? Math.min(
-                        currentCoffeeAmount,
-                        getBeanRemainingAmount(latestBean)
-                      )
-                    : currentCoffeeAmount;
-                  deductedCoffeeAmount = decrementAmount;
-
-                  if (isSavingQuickRecord && decrementAmount <= 0) {
-                    throw new Error('当前咖啡豆剩余量不足，无法扣除');
-                  }
-
-                  await callStoreActionInMutation(
-                    updateBeanRemaining,
-                    selectedCoffeeBean.id,
-                    decrementAmount
-                  );
-                }
-              } catch (error) {
-                console.error('扣除咖啡豆剩余量失败:', error);
-              }
-            }
-          } else if (
-            initialData.source !== 'capacity-adjustment' &&
-            initialData.source !== 'roasting'
-          ) {
-            // 编辑模式且非容量调整记录：处理容量同步
-            try {
-              const currentBeanId = selectedCoffeeBean.id;
-              const beanChanged = originalBeanId !== currentBeanId;
-
-              if (beanChanged) {
-                // 咖啡豆发生变化，需要处理双向容量同步
-                const originalCoffeeAmount = getInitialCoffeeAmount();
-
-                // 恢复原咖啡豆的剩余量（如果原来有关联的咖啡豆）
-                if (originalBeanId && originalCoffeeAmount > 0) {
-                  await callStoreActionInMutation(
-                    increaseBeanRemaining,
-                    originalBeanId,
-                    originalCoffeeAmount
-                  );
-                }
-
-                // 扣除新咖啡豆的剩余量（如果选择了新的咖啡豆）
-                if (currentBeanId && currentCoffeeAmount > 0) {
-                  await callStoreActionInMutation(
-                    updateBeanRemaining,
-                    currentBeanId,
-                    currentCoffeeAmount
-                  );
-                }
-              } else if (originalBeanId) {
-                // 咖啡豆没有变化，但可能咖啡用量发生了变化
-                const oldCoffeeAmount = getInitialCoffeeAmount();
-                const amountDiff = currentCoffeeAmount - oldCoffeeAmount;
-
-                if (Math.abs(amountDiff) > 0.01) {
-                  if (amountDiff > 0) {
-                    await callStoreActionInMutation(
-                      updateBeanRemaining,
-                      originalBeanId,
-                      amountDiff
-                    );
-                  } else {
-                    await callStoreActionInMutation(
-                      increaseBeanRemaining,
-                      originalBeanId,
-                      Math.abs(amountDiff)
-                    );
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('同步咖啡豆容量失败:', error);
-            }
-          }
-        } else if (
-          canUseCoffeeBeanModule &&
-          !selectedCoffeeBean &&
-          userSelectedBeanRef.current &&
-          initialData.id &&
-          initialData.source !== 'capacity-adjustment' &&
-          initialData.source !== 'roasting'
-        ) {
-          try {
-            const originalCoffeeAmount = getInitialCoffeeAmount();
-
-            if (originalBeanId && originalCoffeeAmount > 0) {
-              await callStoreActionInMutation(
-                increaseBeanRemaining,
-                originalBeanId,
-                originalCoffeeAmount
-              );
-            }
-          } catch (error) {
-            console.error('同步咖啡豆容量失败:', error);
-          }
         }
 
         const finalParams = normalizeBrewingNoteParams(methodParams);
@@ -1391,10 +1254,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           (canUseCoffeeBeanModule && userSelectedBeanRef.current
             ? undefined
             : initialData.beanId);
-
-        if (isSavingQuickRecord && deductedCoffeeAmount <= 0) {
-          throw new Error('扣除失败，请重试');
-        }
 
         // 处理风味评分数据
         // 如果满足以下任一条件，不保存风味评分：
@@ -1423,7 +1282,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           ? undefined
           : initialData.changeRecord;
         const quickDecrementAmountValue = isSavingQuickRecord
-          ? deductedCoffeeAmount
+          ? currentCoffeeAmount
           : preservedSource === 'quick-decrement'
             ? parseFloat(quickDecrementAmount) || 0
             : undefined;
@@ -1431,7 +1290,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           ? {
               ...finalParams,
               coffee:
-                CapacitySyncManager.formatCoffeeParam(deductedCoffeeAmount),
+                CapacitySyncManager.formatCoffeeParam(currentCoffeeAmount),
             }
           : finalParams;
         const noteFormData = isSavingQuickRecord
@@ -1447,7 +1306,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         // 创建完整的笔记数据
         const noteData: BrewingNoteData = {
-          id: id || generatedNoteIdRef.current,
+          id: initialData.id || generatedNoteIdRef.current,
           // 使用当前的时间戳状态
           timestamp: timestamp.getTime(),
           ...noteFormData,
@@ -1507,57 +1366,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             },
           };
           noteData.params.coffee = `${amount}g`;
-
-          const previousChange =
-            preservedChangeRecord.capacityAdjustment.changeAmount;
-          if (Number.isFinite(previousChange)) {
-            const { applyCapacityAdjustmentDelta } =
-              await import('@/lib/coffee-beans/capacityAdjustment');
-
-            if (initialData.beanId !== noteBeanId) {
-              await callStoreActionInMutation(
-                applyCapacityAdjustmentDelta,
-                initialData.beanId,
-                -previousChange
-              );
-              await callStoreActionInMutation(
-                applyCapacityAdjustmentDelta,
-                noteBeanId,
-                signedChange
-              );
-            } else {
-              await callStoreActionInMutation(
-                applyCapacityAdjustmentDelta,
-                noteBeanId,
-                signedChange - previousChange
-              );
-            }
-          }
-        }
-
-        if (isCapacityAdjustmentEdit && isConvertingToNormal) {
-          const previousChange =
-            initialData.changeRecord?.capacityAdjustment?.changeAmount;
-          if (
-            typeof previousChange === 'number' &&
-            Number.isFinite(previousChange)
-          ) {
-            const { applyCapacityAdjustmentDelta } =
-              await import('@/lib/coffee-beans/capacityAdjustment');
-            await callStoreActionInMutation(
-              applyCapacityAdjustmentDelta,
-              initialData.beanId,
-              -previousChange
-            );
-          }
-
-          if (noteBeanId && currentCoffeeAmount > 0) {
-            await callStoreActionInMutation(
-              updateBeanRemaining,
-              noteBeanId,
-              currentCoffeeAmount
-            );
-          }
         }
 
         if (blendRoastingInputs) {
@@ -1685,7 +1493,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           }
 
           // 保存笔记
-          await callStoreActionInMutation(onSave, noteData);
+          await callStoreActionInMutation(onSave, noteData, {
+            expectedUpdatedAt: id
+              ? initialNoteVersionRef.current.updatedAt
+              : undefined,
+            newBean,
+            initializeBeanId: initialCoffeeBeanCreatedFromSearch
+              ? noteBeanId
+              : undefined,
+          });
         } catch (error) {
           // Log error in development only
           if (process.env.NODE_ENV === 'development') {
@@ -1948,7 +1764,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         };
 
     const nextDraft = {
-      id,
+      id: generatedNoteIdRef.current,
       timestamp: timestamp.getTime(),
       coffeeBean: canUseCoffeeBeanModule ? selectedCoffeeBean : null,
       beanId,

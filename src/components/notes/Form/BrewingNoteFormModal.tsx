@@ -1,6 +1,7 @@
 'use client';
 import { useCoordinatedAction } from '@/lib/hooks/useCoordinatedAction';
 import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
+import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 
 import React, {
   useCallback,
@@ -51,11 +52,9 @@ import {
   type BrewingNoteDraftData,
   type BrewingNoteDraftSession,
 } from './brewingNoteDraft';
-import { createBeanFromBrewUsage } from '@/lib/stores/coffeeBeanStore';
 import {
   createPendingBean,
   findCoffeeBeanByIdentity,
-  isPendingCoffeeBean,
 } from '@/lib/utils/coffeeBeanUtils';
 
 interface BrewingNoteFormModalProps {
@@ -65,7 +64,10 @@ interface BrewingNoteFormModalProps {
     coffeeBean?: CoffeeBean | null;
     id?: string;
   };
-  onSave: (note: BrewingNoteData) => void;
+  onSave: (
+    note: BrewingNoteData,
+    options?: BrewingNoteSaveOptions
+  ) => void | Promise<void>;
   onClose: () => void;
   onSaveSuccess?: () => void;
   settings?: SettingsOptions;
@@ -598,9 +600,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   }, []);
 
   const handleSaveNoteRaw = useCallback(
-    async (note: BrewingNoteData) => {
-      shouldAutoPersistRef.current = false;
-
+    async (note: BrewingNoteData, options?: BrewingNoteSaveOptions) => {
       const selection =
         note.equipmentId !== undefined || note.methodId !== undefined
           ? pickNoteSelection(note)
@@ -616,56 +616,15 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         params: normalizeBrewingNoteParams(note.params),
       };
 
-      if (
-        canUseCoffeeBeanModule &&
-        selectedCoffeeBean &&
-        isPendingCoffeeBean(selectedCoffeeBean) &&
-        !completeNote.beanId
-      ) {
-        try {
-          const newBean = await callStoreActionInMutation(
-            createBeanFromBrewUsage,
-            selectedCoffeeBean.name,
-            completeNote.params?.coffee
-          );
-
-          completeNote.beanId = newBean.id;
-          completeNote.coffeeBeanInfo = buildCoffeeBeanInfo(
-            newBean,
-            completeNote.coffeeBeanInfo
-          );
-        } catch (error) {
-          console.error('创建咖啡豆失败:', error);
-          throw error;
-        }
-      } else if (
-        canUseCoffeeBeanModule &&
-        selectedCoffeeBean &&
-        'id' in selectedCoffeeBean &&
-        selectedCoffeeBean.id
-      ) {
-        completeNote.beanId = selectedCoffeeBean.id;
-        completeNote.coffeeBeanInfo = buildCoffeeBeanInfo(
-          selectedCoffeeBean,
-          completeNote.coffeeBeanInfo
-        );
-      }
-
+      await callStoreActionInMutation(onSave, completeNote, options);
+      shouldAutoPersistRef.current = false;
       clearBrewingNoteDraftSession();
-      await callStoreActionInMutation(onSave, completeNote);
       if (selectedEquipment) {
         useEquipmentStore.getState().setSelectedEquipment(selectedEquipment);
       }
       onClose();
     },
-    [
-      canUseCoffeeBeanModule,
-      onClose,
-      onSave,
-      selectedCoffeeBean,
-      selectedEquipment,
-      selectedMethodId,
-    ]
+    [onClose, onSave, selectedEquipment, selectedMethodId]
   );
 
   const handleSaveNote = useCoordinatedAction(handleSaveNoteRaw);

@@ -15,6 +15,15 @@ import {
   stripBrewingNoteImages,
 } from '@/lib/notes/imageRecords';
 import { shouldSkipDestructiveReplace } from '@/lib/core/safeReplace';
+import {
+  prepareBrewingNoteInventory,
+  inventorySyncOperations,
+  type BrewingNoteInventoryChanges,
+} from '@/lib/notes/inventory';
+import {
+  assertRecordUnchanged,
+  brewingNoteSnapshot,
+} from '@/lib/data/recordConflict';
 
 const hasImageFieldUpdate = (note: BrewingNote): boolean =>
   Object.prototype.hasOwnProperty.call(note, 'image') ||
@@ -237,7 +246,91 @@ async function replaceBrewingNotesWithSplitImagesInDatabase(
 export function createDexieBrewingNotePersistence(
   database: BrewGuideDB = db
 ): BrewingNotePersistence {
+  const queueChanges = async (
+    changes: BrewingNoteInventoryChanges,
+    id: string
+  ) => {
+    const operations = inventorySyncOperations(
+      changes,
+      id,
+      (await database.appSettings.get('main'))?.data
+    );
+    for (const operation of operations) {
+      await database.pendingOperations
+        .where({ table: operation.table, recordId: operation.recordId })
+        .and(current => current.type === 'upsert' || current.type === 'delete')
+        .delete();
+      await database.pendingOperations.add({ ...operation });
+    }
+  };
   return {
+    saveWithInventory(note, options) {
+      return database.transaction(
+        'rw',
+        [
+          database.coffeeBeans,
+          database.brewingNotes,
+          database.brewingNoteImages,
+          database.brewingNoteImageThumbnails,
+          database.appSettings,
+          database.pendingOperations,
+        ],
+        async () => {
+          const changes = await prepareBrewingNoteInventory(
+            note,
+            await database.brewingNotes.get(note.id),
+            id => database.coffeeBeans.get(id),
+            options
+          );
+          if (changes.unchanged) return changes;
+          const savedNote = await saveBrewingNoteWithImagesInDatabase(
+            changes.note!,
+            database
+          );
+          if (changes.beans.length)
+            await database.coffeeBeans.bulkPut(changes.beans);
+          await queueChanges(changes, note.id);
+          return { ...changes, note: savedNote };
+        }
+      );
+    },
+
+    deleteWithInventory(id, options) {
+      return database.transaction(
+        'rw',
+        [
+          database.coffeeBeans,
+          database.brewingNotes,
+          database.brewingNoteImages,
+          database.brewingNoteImageThumbnails,
+          database.appSettings,
+          database.pendingOperations,
+        ],
+        async () => {
+          const previous = await database.brewingNotes.get(id);
+          if (previous)
+            assertRecordUnchanged(
+              brewingNoteSnapshot(previous),
+              brewingNoteSnapshot(options?.expectedRecord)
+            );
+          const changes = await prepareBrewingNoteInventory(
+            undefined,
+            previous,
+            beanId => database.coffeeBeans.get(beanId)
+          );
+          if (changes.beans.length)
+            await database.coffeeBeans.bulkPut(changes.beans);
+          await database.brewingNotes.delete(id);
+          await database.brewingNoteImages.delete(id);
+          await database.brewingNoteImageThumbnails.delete(id);
+          if (previous) {
+            await queueChanges(changes, id);
+          }
+          return changes;
+        }
+      );
+    },
+
     saveWithImages(note) {
       return saveBrewingNoteWithImagesInDatabase(note, database);
     },

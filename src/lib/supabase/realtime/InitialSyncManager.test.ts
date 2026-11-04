@@ -359,7 +359,23 @@ describe('InitialSyncManager settings sync', () => {
     } as never);
 
     const manager = new InitialSyncManager({
-      from: vi.fn(() => ({ upsert })),
+      from: vi.fn(() => ({
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: null, error: null }),
+            }),
+          }),
+        }),
+        insert: (record: Record<string, unknown>) => ({
+          select: () => ({
+            maybeSingle: async () => ({
+              ...(await upsert(record)),
+              data: { id: record.id },
+            }),
+          }),
+        }),
+      })),
     } as unknown as SupabaseClient);
 
     await expect(

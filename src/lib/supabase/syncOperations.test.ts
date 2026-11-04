@@ -13,10 +13,23 @@ function createMockClient(options: {
   return {
     from: vi.fn(() => ({
       upsert: options.upsert,
+      insert: (record: Record<string, unknown>) => ({
+        select: () => ({
+          maybeSingle: async () => {
+            const response = await options.upsert!(record);
+            return {
+              ...response,
+              data: response.error ? null : { id: record.id },
+            };
+          },
+        }),
+      }),
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
           eq: vi.fn(() => ({
-            maybeSingle: options.maybeSingle,
+            maybeSingle:
+              options.maybeSingle ??
+              vi.fn().mockResolvedValue({ data: null, error: null }),
           })),
         })),
       })),

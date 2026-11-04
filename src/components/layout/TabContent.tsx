@@ -21,6 +21,7 @@ import {
 } from '@/lib/hooks/useBrewingState';
 import { CoffeeBean } from '@/types/app';
 import type { BrewingNoteData } from '@/types/app';
+import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { getEquipmentName } from '@/lib/brewing/parameters';
@@ -270,69 +271,54 @@ const TabContent: React.FC<TabContentProps> = ({
   }, [storeInitialized, loadBeansFromStore]);
 
   // 简化的保存笔记处理 - 统一数据流避免竞态条件
-  const handleSaveNote = useCoordinatedAction(async (note: BrewingNoteData) => {
-    try {
-      // 🔥 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } =
-        await import('@/lib/stores/brewingNoteStore');
+  const handleSaveNote = useCoordinatedAction(
+    async (note: BrewingNoteData, options?: BrewingNoteSaveOptions) => {
+      try {
+        // 🔥 使用 Zustand store 保存笔记
+        const { useBrewingNoteStore } =
+          await import('@/lib/stores/brewingNoteStore');
 
-      const noteData: any = {
-        ...note,
-        id: note.id || Date.now().toString(),
-        timestamp: note.timestamp || Date.now(),
-        equipment: note.equipment || '',
-        method: note.method || '',
-        params: note.params || {
-          coffee: '',
-          water: '',
-          ratio: '',
-          grindSize: '',
-          temp: '',
-        },
-      };
+        const noteData: any = {
+          ...note,
+          id: note.id || Date.now().toString(),
+          timestamp: note.timestamp || Date.now(),
+          equipment: note.equipment || '',
+          method: note.method || '',
+          params: note.params || {
+            coffee: '',
+            water: '',
+            ratio: '',
+            grindSize: '',
+            temp: '',
+          },
+        };
 
-      // 判断是新笔记还是更新
-      const currentNotes = useBrewingNoteStore.getState().notes;
-      const isExistingNote =
-        !!noteData.id && currentNotes.some((n: any) => n.id === noteData.id);
-
-      if (isExistingNote) {
-        // 更新现有笔记
         await callStoreActionInMutation(
-          useBrewingNoteStore.getState().updateNote,
-          noteData.id,
-          noteData
+          useBrewingNoteStore.getState().saveNoteWithInventory,
+          noteData,
+          options
         );
-      } else {
-        // 添加新笔记
-        await callStoreActionInMutation(
-          useBrewingNoteStore.getState().addNote,
-          noteData
-        );
+
+        setNoteSaved(true);
+        setIsNoteSaved?.(true);
+
+        // 清理状态
+        localStorage.removeItem('brewingNoteInProgress');
+
+        if (setActiveMainTab) {
+          saveMainTabPreference('笔记');
+          setActiveMainTab('笔记');
+        }
+
+        if (resetBrewingState) {
+          resetBrewingState(false);
+          localStorage.setItem('shouldStartFromCoffeeBeanStep', 'true');
+        }
+      } catch (error) {
+        throw error;
       }
-
-      setNoteSaved(true);
-      setIsNoteSaved?.(true);
-
-      // 注意：咖啡豆剩余量的扣除已在 BrewingNoteForm.handleSubmit 中处理
-      // 这里不再重复扣除，避免重复减少剩余量
-
-      // 清理状态
-      localStorage.removeItem('brewingNoteInProgress');
-
-      if (setActiveMainTab) {
-        saveMainTabPreference('笔记');
-        setActiveMainTab('笔记');
-      }
-
-      if (resetBrewingState) {
-        resetBrewingState(false);
-        localStorage.setItem('shouldStartFromCoffeeBeanStep', 'true');
-      }
-    } catch (error) {
-      throw error;
     }
-  });
+  );
 
   // 处理关闭笔记表单
   const handleCloseNoteForm = () => {

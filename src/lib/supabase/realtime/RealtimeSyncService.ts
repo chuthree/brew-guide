@@ -57,8 +57,13 @@ import {
 } from './handlers';
 import {
   brewingNoteImageRepository,
+  brewingNoteRepository,
   coffeeBeanImageRepository,
+  coffeeBeanRepository,
+  customEquipmentRepository,
+  customMethodRepository,
 } from '@/lib/data/repositories';
+import { withDataMutation } from '@/lib/data/mutationCoordinator';
 import {
   useSyncStatusStore,
   type SupabaseSyncPhase,
@@ -77,7 +82,6 @@ import type { CoffeeBean } from '@/types/app';
 // ============================================================================
 
 const SYNC_TIMING = {
-  IGNORE_OWN_CHANGE_DURATION: 5000,
   SETTINGS_DEBOUNCE: 500,
   SETTINGS_UPLOAD_TIMEOUT: 60000,
   SUBSCRIPTION_TIMEOUT: 10000,
@@ -199,7 +203,7 @@ export class RealtimeSyncService {
 
   private stateListeners = new Set<(state: RealtimeSyncState) => void>();
   private isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-  private pendingLocalChanges = new Map<string, number>();
+  private uploadQueue: Promise<void> = Promise.resolve();
   private settingsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
@@ -241,15 +245,12 @@ export class RealtimeSyncService {
     this.setupLocalChangeListeners();
     this.isInitialized = true;
     void this.updatePendingCount();
-    console.log('[RealtimeSync] 服务已初始化，本地监听器已启动');
   }
 
   /**
    * 处理应用回到前台
    */
   private handleVisibilityChange = async () => {
-    console.log('[RealtimeSync] 应用回到前台，检查连接状态...');
-
     // 如果配置了 Supabase 且当前未连接，尝试重连
     if (
       this.config?.url &&
@@ -257,17 +258,14 @@ export class RealtimeSyncService {
       this.state.connectionStatus !== 'connected' &&
       this.state.connectionStatus !== 'connecting'
     ) {
-      console.log('[RealtimeSync] 连接已断开，尝试重连...');
       await this.connect(this.config);
     }
     // 如果已连接，触发一次增量同步检查
     else if (this.state.connectionStatus === 'connected') {
-      console.log('[RealtimeSync] 连接正常，执行前台同步检查...');
       // 强制检查连接有效性
       if (this.client && this.channel) {
         const state = this.channel.state;
         if (state === 'closed' || state === 'errored') {
-          console.log('[RealtimeSync] 检测到 Channel 异常，重新连接...');
           await this.disconnect();
           await this.connect(this.config!);
           return;
@@ -377,7 +375,6 @@ export class RealtimeSyncService {
       await this.updatePendingCount();
 
       // 后台执行初始同步
-      console.log('[RealtimeSync] 连接成功，开始后台初始同步...');
       const lastSyncTime = await hydrateLastSyncTime();
       void this.performBackgroundSync(
         config.enableOfflineQueue !== false,
@@ -419,7 +416,6 @@ export class RealtimeSyncService {
       this.config = null;
       this.isInitialized = false;
       this.reconnectAttempts = 0;
-      this.pendingLocalChanges.clear();
       this.setState({ connectionStatus: 'disconnected', error: null });
 
       const syncStore = useSyncStatusStore.getState();
@@ -446,99 +442,28 @@ export class RealtimeSyncService {
     table: RealtimeSyncTable,
     action: 'create' | 'update' | 'delete',
     recordId: string,
-    data?: Record<string, unknown>
+    _data?: Record<string, unknown>
   ): Promise<void> {
     if (!recordId) {
       console.error(`[RealtimeSync] syncLocalChange: recordId 不能为空`);
       return;
     }
 
-    this.cleanupExpiredLocalChanges();
-
-    // 离线时加入队列
-    if (!this.isOnline || !this.client) {
+    try {
+      // Online and offline writes share one durable, ordered upload path.
       await offlineQueue.enqueue(
         table,
         action === 'delete' ? 'delete' : 'upsert',
-        recordId,
-        data
+        recordId
       );
       await this.updatePendingCount();
-      return;
-    }
-
-    // 标记本地变更（防止 Realtime 回环）
-    const changeKey = `${table}:${recordId}`;
-    this.pendingLocalChanges.set(
-      changeKey,
-      Date.now() + SYNC_TIMING.IGNORE_OWN_CHANGE_DURATION
-    );
-
-    const syncStore = useSyncStatusStore.getState();
-    const ownsProgress = !syncStore.supabaseSyncProgress.active;
-    if (ownsProgress) {
-      syncStore.setSyncing();
-      syncStore.startSupabaseSyncProgress('local-change', '正在上传本地变更', [
-        {
-          id: changeKey,
-          label: TASK_LABELS[table] || table,
-          status: 'uploading',
-          detail: action === 'delete' ? '同步删除' : '上传变更',
-          total: 1,
-          completed: 0,
-        },
-      ]);
-    }
-
-    try {
-      if (action === 'delete') {
-        const result = await markRecordsAsDeleted(this.client, table, [
-          recordId,
-        ]);
-        assertSyncSuccess(result, `删除 ${table}/${recordId} 失败`);
-      } else {
-        const record = await this.prepareRecordForUpload(table, recordId, data);
-        const result = await upsertRecords(
-          this.client,
-          table,
-          [record],
-          this.createMapFn(table)
-        );
-        assertSyncSuccess(result, `上传 ${table}/${recordId} 失败`);
-      }
-
-      const now = Date.now();
-      setLastSyncTime(now);
-      this.setState({ lastSyncTime: now });
-
-      if (ownsProgress) {
-        syncStore.updateSupabaseSyncTask(changeKey, {
-          status: 'success',
-          detail: '已上传',
-          completed: 1,
-        });
-        syncStore.finishSupabaseSyncProgress('上传完成');
-        syncStore.setSyncSuccess();
+      if (this.isOnline && this.client) {
+        await this.syncRunPromise;
+        await this.processOfflineQueue();
       }
     } catch (error) {
-      const message = getErrorMessage(error);
       console.error(`[RealtimeSync] 同步失败 ${table}/${recordId}:`, error);
-      await offlineQueue.enqueue(
-        table,
-        action === 'delete' ? 'delete' : 'upsert',
-        recordId,
-        data
-      );
-      await this.updatePendingCount();
-      if (ownsProgress) {
-        syncStore.updateSupabaseSyncTask(changeKey, {
-          status: 'queued',
-          detail: '上传失败，已保留到离线队列',
-          error: message,
-        });
-        syncStore.failSupabaseSyncProgress('上传失败，已保留到离线队列');
-        syncStore.setSyncError(message);
-      }
+      useSyncStatusStore.getState().setSyncError(getErrorMessage(error));
     }
   }
 
@@ -669,7 +594,7 @@ export class RealtimeSyncService {
     );
 
     this.reconnectAttempts = attempt;
-    console.log(
+    recordSupabaseDiagnosticEvent(
       `[RealtimeSync] ${reason}，${delay}ms 后执行第 ${attempt} 次重连`
     );
 
@@ -689,11 +614,7 @@ export class RealtimeSyncService {
     payload: PostgresPayload
   ): Promise<void> {
     const nextChange = this.remoteChangeQueue.then(async () => {
-      const success = await remoteChangeHandler.handleChange(
-        table,
-        payload,
-        this.pendingLocalChanges
-      );
+      const success = await remoteChangeHandler.handleChange(table, payload);
 
       if (success) {
         const now = Date.now();
@@ -927,7 +848,13 @@ export class RealtimeSyncService {
     }
   }
 
-  private async processOfflineQueue(): Promise<void> {
+  private processOfflineQueue(): Promise<void> {
+    const run = this.uploadQueue.then(() => this.processOfflineQueueNow());
+    this.uploadQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async processOfflineQueueNow(): Promise<void> {
     if (!this.client) return;
 
     const pendingCount = await offlineQueue.getPendingCount();
@@ -967,19 +894,21 @@ export class RealtimeSyncService {
     }
 
     const processor = async (op: PendingOperation): Promise<boolean> => {
-      if (op.type === 'delete') {
-        const result = await markRecordsAsDeleted(this.client!, op.table, [
-          op.recordId,
-        ]);
+      const record = await withDataMutation(() =>
+        this.prepareRecordForUpload(op.table, op.recordId)
+      );
+      if (!record) {
+        if (op.type !== 'delete') return true;
+        const result = await markRecordsAsDeleted(
+          this.client!,
+          op.table,
+          [op.recordId],
+          op.timestamp
+        );
         assertSyncSuccess(result, `补传删除失败: ${op.table}/${op.recordId}`);
         return true;
       }
 
-      const record = await this.prepareRecordForUpload(
-        op.table,
-        op.recordId,
-        op.data as Record<string, unknown>
-      );
       const result = await upsertRecords(
         this.client!,
         op.table,
@@ -991,9 +920,6 @@ export class RealtimeSyncService {
     };
 
     const result = await offlineQueue.processQueue(processor);
-    console.log(
-      `[RealtimeSync] 离线队列: ${result.processed} 成功, ${result.failed} 失败, ${result.blocked} 保留`
-    );
     await this.updatePendingCount();
 
     const remainingCount = await offlineQueue.getPendingCount();
@@ -1021,6 +947,11 @@ export class RealtimeSyncService {
     if (ownsProgress) {
       syncStore.finishSupabaseSyncProgress('离线变更已补传');
       syncStore.setSyncSuccess();
+    }
+    if (result.processed > 0) {
+      const now = Date.now();
+      setLastSyncTime(now);
+      this.setState({ lastSyncTime: now });
     }
   }
 
@@ -1052,28 +983,26 @@ export class RealtimeSyncService {
     this.setState({ pendingChangesCount: count });
   }
 
-  private cleanupExpiredLocalChanges(): void {
-    const now = Date.now();
-    this.pendingLocalChanges.forEach((expireAt, key) => {
-      if (expireAt <= now) {
-        this.pendingLocalChanges.delete(key);
-      }
-    });
-  }
-
   private async prepareRecordForUpload(
     table: RealtimeSyncTable,
-    recordId: string,
-    data?: Record<string, unknown>
-  ): Promise<{ id: string } & Record<string, unknown>> {
+    recordId: string
+  ): Promise<({ id: string } & Record<string, unknown>) | null> {
     if (table === SYNC_TABLES.CUSTOM_METHODS) {
+      const current = await customMethodRepository.get(recordId);
+      if (!current) return null;
       return {
         id: recordId,
         equipmentId: recordId,
-        methods: (data?.methods as Method[]) || [],
+        methods: current.methods,
       };
     }
-    const record = { ...(data || {}), id: recordId };
+    const record =
+      table === SYNC_TABLES.COFFEE_BEANS
+        ? await coffeeBeanRepository.get(recordId)
+        : table === SYNC_TABLES.BREWING_NOTES
+          ? await brewingNoteRepository.get(recordId)
+          : await customEquipmentRepository.get(recordId);
+    if (!record) return null;
 
     if (table === SYNC_TABLES.COFFEE_BEANS) {
       const hydrated = await coffeeBeanImageRepository.mergeBean(
@@ -1082,8 +1011,10 @@ export class RealtimeSyncService {
       return completeHydratedImageSnapshot(
         table,
         hydrated,
-        data as CoffeeBean | undefined
-      ) as unknown as { id: string } & Record<string, unknown>;
+        record as CoffeeBean
+      ) as unknown as {
+        id: string;
+      } & Record<string, unknown>;
     }
 
     if (table === SYNC_TABLES.BREWING_NOTES) {
@@ -1093,11 +1024,13 @@ export class RealtimeSyncService {
       return completeHydratedImageSnapshot(
         table,
         hydrated,
-        data as BrewingNote | undefined
-      ) as unknown as { id: string } & Record<string, unknown>;
+        record as BrewingNote
+      ) as unknown as {
+        id: string;
+      } & Record<string, unknown>;
     }
 
-    return record;
+    return record as unknown as { id: string } & Record<string, unknown>;
   }
 
   private createMapFn(
@@ -1131,23 +1064,19 @@ export class RealtimeSyncService {
   // ============================================================================
 
   private handleOnline = async (): Promise<void> => {
-    console.log('[RealtimeSync] 网络恢复');
     this.isOnline = true;
 
     // 延迟一小段时间，确保网络完全稳定
     setTimeout(async () => {
       if (this.config && this.state.connectionStatus !== 'connected') {
-        console.log('[RealtimeSync] 网络恢复，尝试重连...');
         await this.connect(this.config);
       } else if (this.state.connectionStatus === 'connected') {
-        console.log('[RealtimeSync] 网络恢复，执行同步检查...');
         await this.performBackgroundSync(true);
       }
     }, 1000);
   };
 
   private handleOffline = (): void => {
-    console.log('[RealtimeSync] 网络断开');
     this.isOnline = false;
     this.clearReconnectTimer();
     this.setState({ connectionStatus: 'disconnected' });

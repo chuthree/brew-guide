@@ -6,6 +6,7 @@ import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote, CustomEquipment, Method } from '@/lib/core/config';
 import type { SettingsOptions } from '@/components/settings/Settings';
 import type { BrewingNoteData } from '@/types/app';
+import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 import type { ConvertToGreenPreview } from '@/components/coffee-bean/ConvertToGreenDrawer';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 
@@ -52,7 +53,6 @@ import ImageViewer from '@/components/common/ui/ImageViewer';
 import type { ImageViewerPayload } from '@/lib/ui/imageViewer';
 import {
   addBeanWithInitialCapacityAdjustmentRecord,
-  revertCapacityAdjustmentRecord,
   updateBeanWithCapacityAdjustmentRecord,
 } from '@/lib/coffee-beans/capacityAdjustment';
 
@@ -157,7 +157,10 @@ export interface AppModalsProps {
   setBrewingNoteEditOpen: (open: boolean) => void;
   brewingNoteEditData: BrewingNoteData | null;
   setBrewingNoteEditData: (data: BrewingNoteData | null) => void;
-  handleSaveBrewingNoteEdit: (note: BrewingNoteData) => Promise<void>;
+  handleSaveBrewingNoteEdit: (
+    note: BrewingNoteData,
+    options?: BrewingNoteSaveOptions
+  ) => Promise<void>;
 
   // 笔记详情（非大屏幕）
   noteDetailOpen: boolean;
@@ -1058,22 +1061,6 @@ const AppModals: React.FC<AppModalsProps> = ({
                     duration: 4000,
                   });
                   return;
-                } else if (noteToDelete.source === 'capacity-adjustment') {
-                  await revertCapacityAdjustmentRecord(noteToDelete);
-                } else {
-                  const {
-                    extractCoffeeAmountFromNote,
-                    getNoteAssociatedBeanId,
-                  } = await import('@/components/notes/utils');
-                  const coffeeAmount =
-                    extractCoffeeAmountFromNote(noteToDelete);
-                  const beanId = getNoteAssociatedBeanId(noteToDelete);
-
-                  if (beanId && coffeeAmount > 0) {
-                    const { increaseBeanRemaining } =
-                      await import('@/lib/stores/coffeeBeanStore');
-                    await increaseBeanRemaining(beanId, coffeeAmount);
-                  }
                 }
               } catch (error) {
                 console.error('恢复咖啡豆容量失败:', error);
@@ -1082,7 +1069,7 @@ const AppModals: React.FC<AppModalsProps> = ({
               const { useBrewingNoteStore } =
                 await import('@/lib/stores/brewingNoteStore');
               const deleteNote = useBrewingNoteStore.getState().deleteNote;
-              await deleteNote(noteId);
+              if (!(await deleteNote(noteId))) return '删除笔记失败，请重试';
             } catch (error) {
               console.error('删除笔记失败:', error);
             }

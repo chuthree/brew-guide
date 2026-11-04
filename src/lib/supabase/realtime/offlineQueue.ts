@@ -123,22 +123,25 @@ export class OfflineQueueManager {
       const existing = await this.findExistingOperation(table, recordId);
       if (existing) {
         // 更新现有操作
-        await offlineQueueRepository.update(existing.id, {
-          type,
-          data,
-          timestamp: Date.now(),
-          retryCount: 0,
-          lastError: undefined,
-          failedAt: undefined,
-        });
-        console.log(`[OfflineQueue] 更新队列操作: ${table}/${recordId}`);
+        await offlineQueueRepository.update(
+          existing.id,
+          {
+            type,
+            data,
+            timestamp: Math.max(Date.now(), existing.timestamp + 1),
+            retryCount: 0,
+            lastError: undefined,
+            failedAt: undefined,
+          },
+          existing.timestamp
+        );
       } else {
         // 添加新操作
         await offlineQueueRepository.add(operation);
-        console.log(`[OfflineQueue] 添加到队列: ${table}/${recordId}`);
       }
     } catch (error) {
       console.error('[OfflineQueue] 添加失败:', error);
+      throw error;
     }
   }
 
@@ -149,48 +152,39 @@ export class OfflineQueueManager {
     table: RealtimeSyncTable,
     recordId: string
   ): Promise<StoredPendingOperation | undefined> {
-    try {
-      const operations = await offlineQueueRepository.findByTarget(
-        table,
-        recordId
-      );
-      return operations[0];
-    } catch {
-      return undefined;
-    }
+    const operations = await offlineQueueRepository.findByTarget(
+      table,
+      recordId
+    );
+    return operations[0];
   }
 
   /**
    * 获取所有待处理的操作
    */
   async getPendingOperations(): Promise<StoredPendingOperation[]> {
-    try {
-      return await offlineQueueRepository.listOrdered();
-    } catch {
-      return [];
-    }
+    return offlineQueueRepository.listOrdered();
   }
 
   /**
    * 获取待处理操作数量
    */
   async getPendingCount(): Promise<number> {
-    try {
-      return await offlineQueueRepository.count();
-    } catch {
-      return 0;
-    }
+    return offlineQueueRepository.count();
   }
 
   /**
    * 移除已完成的操作
    */
-  async dequeue(operationId: string): Promise<void> {
+  async dequeue(
+    operationId: string,
+    expectedTimestamp?: number
+  ): Promise<void> {
     try {
-      await offlineQueueRepository.delete(operationId);
-      console.log(`[OfflineQueue] 移除操作: ${operationId}`);
+      await offlineQueueRepository.delete(operationId, expectedTimestamp);
     } catch (error) {
       console.error('[OfflineQueue] 移除失败:', error);
+      throw error;
     }
   }
 
@@ -199,21 +193,31 @@ export class OfflineQueueManager {
    */
   async markFailed(
     operationId: string,
-    errorMessage?: string
+    errorMessage?: string,
+    expectedTimestamp?: number
   ): Promise<boolean> {
     try {
       const operation = await offlineQueueRepository.get(operationId);
 
-      if (!operation) return false;
+      if (!operation) return expectedTimestamp !== undefined;
+      if (
+        expectedTimestamp !== undefined &&
+        operation.timestamp !== expectedTimestamp
+      )
+        return true;
 
       const retryCount = operation.retryCount + 1;
       const reachedLimit = retryCount >= this.maxRetries;
 
-      await offlineQueueRepository.update(operationId, {
-        retryCount,
-        lastError: errorMessage,
-        failedAt: reachedLimit ? Date.now() : undefined,
-      });
+      await offlineQueueRepository.update(
+        operationId,
+        {
+          retryCount,
+          lastError: errorMessage,
+          failedAt: reachedLimit ? Date.now() : undefined,
+        },
+        operation.timestamp
+      );
 
       if (reachedLimit) {
         console.warn(
@@ -239,7 +243,6 @@ export class OfflineQueueManager {
     processor: (operation: PendingOperation) => Promise<boolean>
   ): Promise<{ processed: number; failed: number; blocked: number }> {
     if (this.isProcessing) {
-      console.log('[OfflineQueue] 队列正在处理中，跳过');
       return { processed: 0, failed: 0, blocked: 0 };
     }
 
@@ -250,7 +253,6 @@ export class OfflineQueueManager {
 
     try {
       const operations = await this.getPendingOperations();
-      console.log(`[OfflineQueue] 开始处理 ${operations.length} 个待处理操作`);
 
       for (const operation of operations) {
         if (!isExecutablePendingOperation(operation)) {
@@ -270,12 +272,13 @@ export class OfflineQueueManager {
         try {
           const success = await processor(operation);
           if (success) {
-            await this.dequeue(operation.id);
+            await this.dequeue(operation.id, operation.timestamp);
             processed++;
           } else {
             const canRetry = await this.markFailed(
               operation.id,
-              '同步失败，等待下次重试'
+              '同步失败，等待下次重试',
+              operation.timestamp
             );
             if (!canRetry) {
               failed++;
@@ -286,7 +289,8 @@ export class OfflineQueueManager {
           console.error(`[OfflineQueue] 处理操作 ${operation.id} 失败:`, error);
           const canRetry = await this.markFailed(
             operation.id,
-            error instanceof Error ? error.message : String(error)
+            error instanceof Error ? error.message : String(error),
+            operation.timestamp
           );
           if (!canRetry) {
             blocked++;
@@ -294,10 +298,6 @@ export class OfflineQueueManager {
           failed++;
         }
       }
-
-      console.log(
-        `[OfflineQueue] 处理完成 - 成功: ${processed}, 失败: ${failed}, 保留: ${blocked}`
-      );
     } finally {
       this.isProcessing = false;
     }
@@ -311,7 +311,6 @@ export class OfflineQueueManager {
   async clear(): Promise<void> {
     try {
       await offlineQueueRepository.clear();
-      console.log('[OfflineQueue] 队列已清空');
     } catch (error) {
       console.error('[OfflineQueue] 清空队列失败:', error);
     }

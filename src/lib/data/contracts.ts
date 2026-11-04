@@ -9,6 +9,10 @@ import type { CoffeeBeanImageRecord } from '@/lib/coffee-beans/imageRecords';
 import type { BrewingNoteImageRecord } from '@/lib/notes/imageRecords';
 import type { PendingOperation } from '@/lib/supabase/realtime/types';
 import type { ImageRecompressionStats } from '@/lib/images/imageRecompression';
+import type {
+  BrewingNoteInventoryChanges,
+  BrewingNoteSaveOptions,
+} from '@/lib/notes/inventory';
 
 export interface LegacySettingEntry {
   key: string;
@@ -118,6 +122,14 @@ export interface BrewingNoteImageRepository {
 }
 
 export interface BrewingNotePersistence {
+  saveWithInventory(
+    note: BrewingNote,
+    options?: BrewingNoteSaveOptions
+  ): Promise<BrewingNoteInventoryChanges>;
+  deleteWithInventory(
+    id: string,
+    options?: { expectedRecord?: BrewingNote }
+  ): Promise<BrewingNoteInventoryChanges>;
   /** expectedRecord adds an optimistic guard on native SQLite backends. */
   saveWithImages(
     note: BrewingNote,
@@ -249,12 +261,16 @@ export interface OfflineQueueRepository {
     recordId: string
   ): Promise<StoredPendingOperation[]>;
   add(operation: PendingOperation): Promise<void>;
-  update(id: string, changes: PendingOperationUpdate): Promise<void>;
+  update(
+    id: string,
+    changes: PendingOperationUpdate,
+    expectedTimestamp?: number
+  ): Promise<void>;
   get(id: string): Promise<StoredPendingOperation | undefined>;
   /** Returns operations in ascending timestamp order. */
   listOrdered(): Promise<StoredPendingOperation[]>;
   count(): Promise<number>;
-  delete(id: string): Promise<void>;
+  delete(id: string, expectedTimestamp?: number): Promise<void>;
   clear(): Promise<void>;
 }
 

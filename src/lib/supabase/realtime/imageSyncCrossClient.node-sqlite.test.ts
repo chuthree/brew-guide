@@ -108,7 +108,25 @@ describeNodeSqlite('Supabase image sync between native clients', () => {
       return { error: null };
     });
     const result = await upsertRecords(
-      { from: () => ({ upsert }) } as never,
+      {
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({ data: null, error: null }),
+              }),
+            }),
+          }),
+          insert: (row: Record<string, unknown>) => ({
+            select: () => ({
+              maybeSingle: async () => ({
+                ...(await upsert(row)),
+                data: { id: row.id },
+              }),
+            }),
+          }),
+        }),
+      } as never,
       table,
       [snapshot],
       item => ({

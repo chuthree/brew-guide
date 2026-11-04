@@ -14,10 +14,12 @@ import {
 } from '@/components/settings/Settings';
 import { cn } from '@/lib/utils/classNameUtils';
 import { CoffeeBean } from '@/types/app';
-import { BrewingNoteData } from '@/types/app';
+import { nanoid } from 'nanoid';
+import { showToast } from '@/components/common/feedback/LightToast';
 import { buildQuickDecrementRecord } from '@/lib/coffee-beans/inventoryRecords';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { getCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { resolveSelectedDateTimestamp } from '@/lib/utils/dateUtils';
 import {
   getDateGroupingModePreference,
@@ -43,6 +45,7 @@ interface RemainingEditorProps {
   onQuickDecrement: (
     amount: number
   ) => boolean | void | Promise<boolean | void>;
+  onBeanReducedToZero?: () => void;
   onCancel: () => void;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -54,6 +57,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
   position,
   targetElement,
   onQuickDecrement,
+  onBeanReducedToZero,
   onCancel,
   isOpen,
   onOpenChange,
@@ -69,6 +73,7 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
   // 引用管理
   const popoverRef = useRef<HTMLDivElement>(null);
   const isMounted = useRef(false);
+  const isSavingRef = useRef(false);
   const safeTargetRef = useRef<HTMLElement | null>(null);
   const _isExiting = useRef(false);
 
@@ -311,47 +316,38 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
     );
   };
 
-  // 创建自动笔记 - 根据实际扣除量创建变动记录
-  const createAutoNote = async (actualAmount: number) => {
-    if (!coffeeBean || !isMounted.current) return;
-
-    const processingTimestamp = Date.now();
-    const noteTimestamp = getAutoNoteTimestamp(processingTimestamp);
-
-    try {
-      // 创建一个默认的笔记数据
-      const newNote: BrewingNoteData = {
-        id: processingTimestamp.toString(),
-        ...buildQuickDecrementRecord(coffeeBean, actualAmount, noteTimestamp),
-      };
-
-      if (!isMounted.current) return;
-
-      // 🔥 使用 Zustand store 保存笔记
-      const { useBrewingNoteStore } =
-        await import('@/lib/stores/brewingNoteStore');
-      await useBrewingNoteStore.getState().addNote(newNote as any);
-    } catch (error) {
-      console.error('创建快捷扣除笔记失败:', error);
-    }
-  };
-
   // 执行快捷扣除（统一逻辑）
   const performQuickDecrement = async (value: number) => {
-    if (!isMounted.current || !coffeeBean) return;
+    if (!isMounted.current || !coffeeBean || isSavingRef.current) return;
+    isSavingRef.current = true;
     try {
       const currentRemaining = remainingAmount ?? 0;
       if (currentRemaining <= 0) return;
 
-      setOpen(false);
       const actualDecrementAmount = Math.min(value, currentRemaining);
-      const succeeded = await onQuickDecrement(actualDecrementAmount);
-      if (succeeded === false) return;
-
-      // Green bean roasting already creates a dedicated roasting record.
-      if (!isGreenBean) {
-        await createAutoNote(actualDecrementAmount);
+      if (isGreenBean) {
+        const succeeded = await onQuickDecrement(actualDecrementAmount);
+        if (succeeded === false) return;
+      } else {
+        const { useBrewingNoteStore } =
+          await import('@/lib/stores/brewingNoteStore');
+        await useBrewingNoteStore.getState().saveNoteWithInventory({
+          id: nanoid(),
+          ...buildQuickDecrementRecord(
+            coffeeBean,
+            actualDecrementAmount,
+            getAutoNoteTimestamp(Date.now())
+          ),
+        });
+        if (
+          parseFloat(
+            getCoffeeBeanStore().getBeanById(coffeeBean.id)?.remaining || '0'
+          ) === 0
+        ) {
+          onBeanReducedToZero?.();
+        }
       }
+      setOpen(false);
       if (hapticEnabled) {
         hapticsUtils.light().catch(() => {
           // 静默处理触觉反馈错误
@@ -359,6 +355,12 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
       }
     } catch (error) {
       console.error('快捷扣除操作失败:', error);
+      showToast({
+        type: 'error',
+        title: error instanceof Error ? error.message : '扣除失败，请重试',
+      });
+    } finally {
+      isSavingRef.current = false;
     }
   };
 

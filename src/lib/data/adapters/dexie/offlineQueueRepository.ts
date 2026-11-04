@@ -16,9 +16,17 @@ export function createDexieOfflineQueueRepository(
       await table.add({ ...operation });
     },
 
-    async update(id, changes) {
+    async update(id, changes, expectedTimestamp) {
       assertValidPendingOperationUpdate(changes);
-      await table.update(id, changes);
+      await table.db.transaction('rw', table, async () => {
+        const current = await table.get(id);
+        if (
+          expectedTimestamp !== undefined &&
+          current?.timestamp !== expectedTimestamp
+        )
+          return;
+        await table.update(id, changes);
+      });
     },
 
     get(id) {
@@ -33,8 +41,16 @@ export function createDexieOfflineQueueRepository(
       return table.count();
     },
 
-    async delete(id) {
-      await table.delete(id);
+    async delete(id, expectedTimestamp) {
+      await table.db.transaction('rw', table, async () => {
+        const current = await table.get(id);
+        if (
+          expectedTimestamp !== undefined &&
+          current?.timestamp !== expectedTimestamp
+        )
+          return;
+        await table.delete(id);
+      });
     },
 
     async clear() {

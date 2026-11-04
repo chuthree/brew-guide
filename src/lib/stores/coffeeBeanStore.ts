@@ -26,6 +26,11 @@ import {
 } from '@/lib/app/dataIntegrity';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
+import {
+  formatCoffeeBeanAmount,
+  parseCoffeeBeanAmount,
+} from '@/lib/coffee-beans/amount';
+export { formatCoffeeBeanAmount } from '@/lib/coffee-beans/amount';
 
 interface CoffeeBeanStore {
   beans: CoffeeBean[];
@@ -348,17 +353,6 @@ export const getCoffeeBeanStore = () => useCoffeeBeanStore.getState();
 // ==================== 便捷工具函数 ====================
 
 /**
- * 格式化数值，对于整数不显示小数部分，非整数保留一位小数
- */
-export function formatCoffeeBeanAmount(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  if (Number.isInteger(rounded)) {
-    return rounded.toString();
-  }
-  return rounded.toFixed(1);
-}
-
-/**
  * 容量同步管理器 - 处理笔记与咖啡豆之间的双向数据同步
  */
 export const CapacitySyncManager = {
@@ -368,9 +362,7 @@ export const CapacitySyncManager = {
    * @returns 纯数字值
    */
   extractCoffeeAmount(coffeeParam: string): number {
-    if (!coffeeParam) return 0;
-    const match = coffeeParam.match(/(\d+(\.\d+)?)/);
-    return match ? parseFloat(match[0]) : 0;
+    return parseCoffeeBeanAmount(coffeeParam) ?? 0;
   },
 
   /**
