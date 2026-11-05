@@ -10,15 +10,24 @@ function isObject(value: unknown): value is Data {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (isObject(value)) {
-    return `{${Object.keys(value)
-      .sort()
-      .map(key => `${JSON.stringify(key)}:${canonical(value[key])}`)
-      .join(',')}}`;
+/** Compare parsed sync data without serializing inline images again. */
+export function syncDataEqual(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (Array.isArray(left)) {
+    return (
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => syncDataEqual(value, right[index]))
+    );
   }
-  return JSON.stringify(value) ?? 'undefined';
+  if (!isObject(left) || !isObject(right)) return false;
+  const keys = Object.keys(left);
+  return (
+    keys.length === Object.keys(right).length &&
+    keys.every(
+      key => Object.hasOwn(right, key) && syncDataEqual(left[key], right[key])
+    )
+  );
 }
 
 const recordCollections = new Set([
@@ -99,9 +108,9 @@ export function mergeSyncData(
     right: unknown,
     path: string
   ): unknown => {
-    if (canonical(left) === canonical(right)) return left;
-    if (base && canonical(left) === canonical(before)) return right;
-    if (base && canonical(right) === canonical(before)) return left;
+    if (syncDataEqual(left, right)) return left;
+    if (base && syncDataEqual(left, before)) return right;
+    if (base && syncDataEqual(right, before)) return left;
 
     const collection =
       recordCollections.has(path) ||

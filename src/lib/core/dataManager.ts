@@ -416,7 +416,7 @@ export const DataManager = {
       try {
         if (options.expectedSyncData) {
           // shortcut: Web 端导入尚非跨标签页事务，同步期间应避免其他标签页写入；统一 Web 写入事务后移除此限制。
-          const { canonical, parseSyncDocument } =
+          const { syncDataEqual, parseSyncDocument } =
             await import('@/lib/sync/mergeData');
           const current = parseSyncDocument(
             await this.exportAllData({
@@ -424,7 +424,7 @@ export const DataManager = {
               strict: true,
             })
           );
-          if (canonical(current.data) !== canonical(options.expectedSyncData)) {
+          if (!syncDataEqual(current.data, options.expectedSyncData)) {
             return {
               success: false,
               message: '同步期间本地数据发生变化，请重试',

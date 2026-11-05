@@ -21,7 +21,7 @@ import type {
 } from '@/lib/s3/types';
 import { BackupManager } from './BackupManager';
 import { formatSyncDiagnostic, type SyncDiagnostic } from './types';
-import { canonical, mergeSyncData, parseSyncDocument } from './mergeData';
+import { syncDataEqual, mergeSyncData, parseSyncDocument } from './mergeData';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 
 /**
@@ -170,8 +170,10 @@ export abstract class BaseSyncManager {
     const localContent = await this.getFileContent(key);
     if (!localContent) throw new Error('无法读取本地数据');
     const local = parseSyncDocument(localContent);
-    const baseline = await Storage.get(this.baselineKey);
-    const base = baseline ? parseSyncDocument(baseline) : undefined;
+    // Release image-heavy baseline copies before the remaining async work.
+    let baseline = await Storage.get(this.baselineKey);
+    let base = baseline ? parseSyncDocument(baseline) : undefined;
+    baseline = null;
     const remoteFile = await this.client!.readSyncFile(key);
     if (!remoteFile && base)
       throw new Error('云端同步文件已被删除，请先确认云端目录或使用手动上传');
@@ -181,6 +183,7 @@ export abstract class BaseSyncManager {
     const merged = remote
       ? mergeSyncData(base?.data, local.data, remote.data)
       : { data: local.data, conflicts: [] };
+    base = undefined;
     if (merged.conflicts.length) {
       result.conflict = true;
       result.message = `发现 ${merged.conflicts.length} 项冲突，未覆盖任何数据。请在设置的同步日志中查看记录并处理后重试`;
@@ -205,8 +208,8 @@ export abstract class BaseSyncManager {
       return;
     }
     const content = JSON.stringify({ ...local, data: merged.data });
-    const upload = !remote || canonical(remote.data) !== canonical(merged.data);
-    const download = canonical(local.data) !== canonical(merged.data);
+    const upload = !remote || !syncDataEqual(remote.data, merged.data);
+    const download = !syncDataEqual(local.data, merged.data);
 
     // 保存两侧业务数据快照，剔除连接凭据后仍可用于恢复。
     if (upload || download) {
@@ -225,7 +228,7 @@ export abstract class BaseSyncManager {
       const latest = await this.getFileContent(key);
       if (
         !latest ||
-        canonical(parseSyncDocument(latest).data) !== canonical(local.data)
+        !syncDataEqual(parseSyncDocument(latest).data, local.data)
       ) {
         throw new Error('同步期间本地数据发生变化，请重试');
       }

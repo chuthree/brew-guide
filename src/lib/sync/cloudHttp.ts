@@ -1,21 +1,88 @@
 import { CapacitorHttp, registerPlugin } from '@capacitor/core';
 import { detectAppRuntime } from '@/lib/app/runtime';
 import { DEFAULT_CLOUD_PROXY_URL } from './settings';
+import { encodeRawBase64 } from '@/lib/data/images/imageBinary';
 
 interface NativeHttpResponse {
   status: number;
   headers: Record<string, string>;
-  data: string;
 }
 
 const AndroidSyncHttp = registerPlugin<{
-  request(options: {
+  requestFile(options: {
     url: string;
     method: string;
     headers: Record<string, string>;
-    body?: string;
+    bodyFile?: string;
+    responseFile: string;
   }): Promise<NativeHttpResponse>;
 }>('BrewGuideSyncHttp');
+
+async function androidCloudFetch(
+  url: string,
+  method: string,
+  headers: Record<string, string>,
+  bytes?: Uint8Array
+): Promise<Response> {
+  const { Filesystem, Directory } = await import('@capacitor/filesystem');
+  const prefix = `brew-guide-sync-${crypto.randomUUID()}`;
+  const bodyFile = bytes ? `${prefix}-request` : undefined;
+  const responseFile = `${prefix}-response`;
+  const directory = Directory.Cache;
+  const chunkSize = 256 * 1024;
+  try {
+    if (bodyFile && bytes) {
+      await Filesystem.writeFile({ path: bodyFile, directory, data: '' });
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        await Filesystem.appendFile({
+          path: bodyFile,
+          directory,
+          data: encodeRawBase64(bytes.subarray(offset, offset + chunkSize)),
+        });
+      }
+    }
+    const result = await AndroidSyncHttp.requestFile({
+      url,
+      method,
+      headers,
+      bodyFile,
+      responseFile,
+    });
+    const empty = method === 'HEAD' || [204, 205, 304].includes(result.status);
+    const chunks: BlobPart[] = [];
+    if (!empty) {
+      await new Promise<void>((resolve, reject) => {
+        void Filesystem.readFileInChunks(
+          { path: responseFile, directory, chunkSize },
+          (chunk, error) => {
+            if (error) return reject(error);
+            if (typeof chunk?.data !== 'string') {
+              return reject(new Error('原生同步响应分块无效'));
+            }
+            if (!chunk.data) return resolve();
+            try {
+              chunks.push(
+                Uint8Array.from(atob(chunk.data), char => char.charCodeAt(0))
+              );
+            } catch (error) {
+              reject(error);
+            }
+          }
+        ).catch(reject);
+      });
+    }
+    return new Response(empty ? null : new Blob(chunks), {
+      status: result.status,
+      headers: result.headers,
+    });
+  } finally {
+    await Promise.allSettled(
+      [bodyFile, responseFile]
+        .filter((path): path is string => !!path)
+        .map(path => Filesystem.deleteFile({ path, directory }))
+    );
+  }
+}
 
 function requireSecureUrl(value: string): void {
   const parsed = new URL(value);
@@ -49,6 +116,9 @@ export async function cloudFetch(
       init.body == null
         ? undefined
         : new Uint8Array(await new Response(init.body).arrayBuffer());
+    if (capacitorPlatform === 'android') {
+      return androidCloudFetch(url, method, headers, bytes);
+    }
     let body: string | undefined;
     if (bytes) {
       const chunks: string[] = [];
@@ -58,24 +128,6 @@ export async function cloudFetch(
         );
       }
       body = btoa(chunks.join(''));
-    }
-
-    if (capacitorPlatform === 'android') {
-      const result = await AndroidSyncHttp.request({
-        url,
-        method,
-        headers,
-        body,
-      });
-      const data = Uint8Array.from(atob(result.data), char =>
-        char.charCodeAt(0)
-      );
-      return new Response(
-        method === 'HEAD' || [204, 205, 304].includes(result.status)
-          ? null
-          : data,
-        { status: result.status, headers: result.headers }
-      );
     }
 
     const result = await CapacitorHttp.request({

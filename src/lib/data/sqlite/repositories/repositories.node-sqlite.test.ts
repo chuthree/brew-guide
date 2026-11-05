@@ -5,6 +5,7 @@ import type {
 } from '@/lib/data/contracts';
 import type { CustomEquipment, Method } from '@/lib/core/config';
 import type { AppSettings, Grinder } from '@/lib/data/models';
+import type { SqliteExecutor } from '../driver';
 import { createSqliteAppSettingsRepository } from './appSettings';
 import { createSqliteCustomEquipmentRepository } from './customEquipment';
 import { createSqliteCustomMethodRepository } from './customMethod';
@@ -164,6 +165,99 @@ describeNodeSqlite(`${nodeSqliteLabel} repository integration`, () => {
       expect(
         await createSqliteAppSettingsRepository(getDatabase().driver).count()
       ).toBe(1);
+    });
+
+    it('reads existing large sync baselines without returning an oversized row', async () => {
+      const driver = getDatabase().driver;
+      const key = 'cloud-sync-base-v1:large';
+      const value = JSON.stringify({
+        data: {
+          image: 'a'.repeat(262125) + '🌱咖啡'.repeat(200000),
+          tail: '末尾\u0000保留',
+        },
+      });
+      // Seed the existing single-row format; no rewrite or migration is needed.
+      await driver.execute('INSERT INTO legacy_settings VALUES (?, ?)', [
+        key,
+        value,
+      ]);
+      const boundedExecutor = (executor: SqliteExecutor): SqliteExecutor => ({
+        ...executor,
+        async execute(sql, params) {
+          expect(Buffer.byteLength(JSON.stringify(params ?? []))).toBeLessThan(
+            2 * 1024 * 1024
+          );
+          return executor.execute(sql, params);
+        },
+        async query(sql, params) {
+          const rows = await executor.query(sql, params);
+          expect(Buffer.byteLength(JSON.stringify(rows))).toBeLessThan(
+            2 * 1024 * 1024
+          );
+          return rows;
+        },
+      });
+      const repository = createSqliteLegacySettingsRepository({
+        ...driver,
+        ...boundedExecutor(driver),
+        transaction: work =>
+          driver.transaction(tx => work(boundedExecutor(tx))),
+      });
+
+      expect(await repository.get(key)).toBe(value);
+      await repository.set(key, value);
+      expect(await repository.get(key)).toBe(value);
+      expect(await repository.count()).toBe(1);
+      await repository.set(key, '');
+      expect(await repository.get(key)).toBe('');
+      expect(
+        await repository.get('cloud-sync-base-v1:missing')
+      ).toBeUndefined();
+    });
+
+    it('rolls back a failed large baseline write and removes its temporary chunks', async () => {
+      const driver = getDatabase().driver;
+      const key = 'cloud-sync-base-v1:rollback';
+      const repository = createSqliteLegacySettingsRepository(driver);
+      await repository.set(key, 'previous');
+      const failing = createSqliteLegacySettingsRepository({
+        ...driver,
+        transaction: work =>
+          driver.transaction(tx =>
+            work({
+              ...tx,
+              execute: (sql, params) => {
+                if (
+                  sql.startsWith('INSERT INTO sync_baseline_chunks') &&
+                  params?.[0] !== 0
+                ) {
+                  throw new Error('disk full');
+                }
+                return tx.execute(sql, params);
+              },
+            })
+          ),
+      });
+      await expect(failing.set(key, 'a'.repeat(300000))).rejects.toThrow(
+        'disk full'
+      );
+      expect(await repository.get(key)).toBe('previous');
+      expect(
+        await driver.query(
+          "SELECT name FROM sqlite_temp_master WHERE name = 'sync_baseline_chunks'"
+        )
+      ).toEqual([]);
+      await repository.set(key, 'a'.repeat(300000));
+      expect(await repository.get(key)).toBe('a'.repeat(300000));
+    });
+
+    it('rejects embedded NULs instead of silently truncating a baseline to valid JSON', async () => {
+      const repository = createSqliteLegacySettingsRepository(
+        getDatabase().driver
+      );
+      const key = 'cloud-sync-base-v1:corrupt';
+      await repository.set(key, '{"data":{}}\u0000corrupt');
+      await expect(repository.get(key)).rejects.toThrow('baseline');
     });
   });
 

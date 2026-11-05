@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { canonical, mergeSyncData, parseSyncDocument } from './mergeData';
+import { describe, expect, it, vi } from 'vitest';
+import { syncDataEqual, mergeSyncData, parseSyncDocument } from './mergeData';
 
 const bean = (id: string, name = id) => ({ id, name });
 const data = (coffeeBeans: ReturnType<typeof bean>[]) => ({ coffeeBeans });
@@ -48,8 +48,8 @@ describe('cloud three-way merge', () => {
   });
 
   it('accepts identical edits and ignores object property order', () => {
-    expect(canonical({ id: 'a', name: 'b' })).toBe(
-      canonical({ name: 'b', id: 'a' })
+    expect(syncDataEqual({ id: 'a', name: 'b' }, { name: 'b', id: 'a' })).toBe(
+      true
     );
     expect(
       mergeSyncData(
@@ -58,6 +58,43 @@ describe('cloud three-way merge', () => {
         data([bean('a', 'same')])
       ).conflicts
     ).toEqual([]);
+  });
+
+  it.each([
+    [null, undefined],
+    [0, false],
+    [1, '1'],
+    [{ value: undefined }, {}],
+    [
+      [1, 2],
+      [2, 1],
+    ],
+    [[], {}],
+    [{ value: null }, { value: false }],
+  ])(
+    'keeps distinct JSON values and missing fields distinct',
+    (left, right) => {
+      expect(syncDataEqual(left, right)).toBe(false);
+      expect(syncDataEqual(right, left)).toBe(false);
+    }
+  );
+
+  it('compares image-heavy records without allocating serialized copies', () => {
+    const image = 'data:image/jpeg;base64,' + 'a'.repeat(3 * 1024 * 1024);
+    const base = { coffeeBeans: [{ ...bean('a'), image }] };
+    const local = { coffeeBeans: [{ image, ...bean('a') }] };
+    const remote = { coffeeBeans: [{ ...bean('a'), image }] };
+    const stringify = vi.spyOn(JSON, 'stringify').mockImplementation(() => {
+      throw new Error('Sync comparisons must not serialize image payloads');
+    });
+    let result;
+    try {
+      result = mergeSyncData(base, local, remote);
+    } finally {
+      stringify.mockRestore();
+    }
+    expect(result.conflicts).toEqual([]);
+    expect(result.data).toBe(local);
   });
 
   it('merges methods by ID within each equipment', () => {
