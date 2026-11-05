@@ -328,8 +328,7 @@ export async function exportSelectedNotes({
     // 删除临时容器
     document.body.removeChild(tempContainer);
 
-    // 使用统一的临时文件管理器分享图片
-    const shareOutcome = await TempFileManager.shareImageFile(
+    const saveOutcome = await TempFileManager.saveImageFile(
       imageData,
       'brew-notes',
       {
@@ -339,22 +338,24 @@ export async function exportSelectedNotes({
       }
     );
 
-    if (shareOutcome === 'activation-required') {
+    if (saveOutcome === 'activation-required') {
       onSuccess('笔记图片已生成，请再次点击分享');
       return;
     }
 
-    if (shareOutcome === 'cancelled') {
+    if (saveOutcome === 'cancelled') {
       onSuccess('已取消分享');
       return;
     }
 
-    onSuccess('笔记已保存为图片');
+    onSuccess(
+      saveOutcome === 'saved' ? '笔记图片已保存到相册' : '笔记已保存为图片'
+    );
   } catch (error) {
     console.error('生成笔记图片失败:', error);
 
     // 提供更详细的错误信息
-    let errorMessage = '生成图片失败';
+    let errorMessage = '保存图片失败，请重试';
     if (error instanceof Error) {
       if (error.message.includes('canvas')) {
         errorMessage = '图片渲染失败，请检查图片是否正常显示';

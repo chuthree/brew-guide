@@ -241,29 +241,29 @@ export class TempFileManager {
   /**
    * 保存图片到相册
    * @param imageData base64格式的图片数据（支持带 data:image/png;base64, 前缀或纯 base64）
+   * @param fileName 文件名（不包含扩展名）
    * @returns 可用于区分直接保存、下载、分享和用户取消的结果
    */
   static async saveImageToGallery(
-    imageData: string
+    imageData: string,
+    fileName = 'brew-guide'
   ): Promise<ImageSaveOutcome> {
+    const timestamp = Date.now();
+    const fullFileName = `${fileName}-${timestamp}.png`;
+
     if (!Capacitor.isNativePlatform()) {
-      const fileName = `brew-guide-${Date.now()}.png`;
       if (getIsIOS() && getIsStandalone()) {
-        return this.shareImageInIOSPWA(imageData, fileName);
+        return this.shareImageInIOSPWA(imageData, fullFileName);
       }
-      this.downloadImage(imageData, fileName);
+      this.downloadImage(imageData, fullFileName);
       return 'downloaded';
     }
 
     if (Capacitor.getPlatform() === 'android') {
-      await saveImageToAndroidGallery(
-        imageData,
-        `brew-guide-${new Date().getTime()}`
-      );
+      await saveImageToAndroidGallery(imageData, fullFileName);
       return 'saved';
     }
 
-    const timestamp = new Date().getTime();
     const tempFileName = `${this.TEMP_FILE_PREFIX}save-${timestamp}.png`;
 
     try {
@@ -288,56 +288,18 @@ export class TempFileManager {
 
       // 步骤3: 使用 Media 插件保存到相册
       const { Media } = await import('@capacitor-community/media');
-      const platform = Capacitor.getPlatform();
 
-      if (platform === 'android') {
-        // Android: 先获取相册列表，找到可用的相册 identifier
-        try {
-          const albums = await Media.getAlbums();
-
-          // 查找是否已有 BrewGuide 相册
-          let albumId = albums.albums?.find(
-            (a: any) => a.name === 'BrewGuide'
-          )?.identifier;
-
-          if (!albumId) {
-            // 创建新相册
-            const result: any = await Media.createAlbum({ name: 'BrewGuide' });
-            albumId = result?.identifier;
-          }
-
-          // 如果还是没有 albumId，使用第一个可用相册
-          if (!albumId && albums.albums && albums.albums.length > 0) {
-            albumId = albums.albums[0].identifier;
-          }
-
-          // 保存照片
-          if (albumId) {
-            await Media.savePhoto({
-              path: fileUri.uri,
-              albumIdentifier: albumId,
-            });
-          } else {
-            // 最后尝试：不指定相册直接保存（可能保存到默认位置）
-            throw new Error('无法找到或创建相册，尝试其他方式');
-          }
-        } catch (error) {
-          console.error('Android 相册保存失败:', error);
-          throw error; // 抛出错误让外层处理
-        }
-      } else {
-        // iOS: 尝试保存到自定义相册，如果失败则保存到系统相册
-        try {
-          await Media.savePhoto({
-            path: fileUri.uri,
-            albumIdentifier: 'BrewGuide',
-          });
-        } catch (_albumError) {
-          // 相册不存在，保存到系统相册
-          await Media.savePhoto({
-            path: fileUri.uri,
-          });
-        }
+      // iOS: 尝试保存到自定义相册，如果失败则保存到系统相册
+      try {
+        await Media.savePhoto({
+          path: fileUri.uri,
+          albumIdentifier: 'BrewGuide',
+        });
+      } catch (_albumError) {
+        // 相册不存在，保存到系统相册
+        await Media.savePhoto({
+          path: fileUri.uri,
+        });
       }
 
       // 步骤4: 清理临时文件
@@ -353,6 +315,19 @@ export class TempFileManager {
       console.error('保存到相册失败:', error);
       throw error;
     }
+  }
+
+  /** Android 直接保存导出的图片到相册，其他平台沿用分享或下载。 */
+  static async saveImageFile(
+    imageData: string,
+    fileName: string,
+    shareOptions: ShareOptions
+  ): Promise<ImageSaveOutcome> {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      return this.saveImageToGallery(imageData, fileName);
+    }
+
+    return this.shareImageFile(imageData, fileName, shareOptions);
   }
 
   /**

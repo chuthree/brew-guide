@@ -1,5 +1,6 @@
 package com.brewguide.app;
 
+import android.Manifest;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.media.MediaScannerConnection;
@@ -9,15 +10,21 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 import java.io.File;
 import java.io.OutputStream;
 import java.util.Locale;
 
-@CapacitorPlugin(name = "BrewGuideGallery")
+@CapacitorPlugin(
+    name = "BrewGuideGallery",
+    permissions = @Permission(alias = "storage", strings = { Manifest.permission.WRITE_EXTERNAL_STORAGE })
+)
 public class BrewGuideGalleryPlugin extends Plugin {
 
     private static final String DEFAULT_ALBUM_NAME = "BrewGuide";
@@ -28,6 +35,14 @@ public class BrewGuideGalleryPlugin extends Plugin {
         String dataUrl = call.getString("dataUrl");
         if (dataUrl == null || dataUrl.trim().isEmpty()) {
             call.reject("Image data is required");
+            return;
+        }
+
+        if (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            getPermissionState("storage") != PermissionState.GRANTED
+        ) {
+            requestPermissionForAlias("storage", call, "storagePermissionCallback");
             return;
         }
 
@@ -68,12 +83,14 @@ public class BrewGuideGalleryPlugin extends Plugin {
             }
 
             publishImage(resolver, imageUri);
-            MediaScannerConnection.scanFile(
-                getContext(),
-                new String[] { scanPath },
-                new String[] { MIME_TYPE_PNG },
-                null
-            );
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                MediaScannerConnection.scanFile(
+                    getContext(),
+                    new String[] { scanPath },
+                    new String[] { MIME_TYPE_PNG },
+                    null
+                );
+            }
 
             JSObject result = new JSObject();
             result.put("uri", imageUri.toString());
@@ -83,6 +100,15 @@ public class BrewGuideGalleryPlugin extends Plugin {
                 resolver.delete(imageUri, null, null);
             }
             call.reject("Unable to save image to gallery", exception);
+        }
+    }
+
+    @PermissionCallback
+    private void storagePermissionCallback(PluginCall call) {
+        if (getPermissionState("storage") == PermissionState.GRANTED) {
+            savePngDataUrl(call);
+        } else {
+            call.reject("保存图片需要存储权限，请授权后重试");
         }
     }
 

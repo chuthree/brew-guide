@@ -213,8 +213,7 @@ export const exportListPreview = async (
     // 清理React根节点
     root.unmount();
 
-    // 直接分享图片，使用简洁的分享选项
-    const shareOutcome = await TempFileManager.shareImageFile(
+    const saveOutcome = await TempFileManager.saveImageFile(
       imageData,
       'coffee-list-preview',
       {
@@ -227,11 +226,13 @@ export const exportListPreview = async (
     return {
       success: true,
       message:
-        shareOutcome === 'activation-required'
+        saveOutcome === 'activation-required'
           ? '列表预览图已生成，请再次点击分享'
-          : shareOutcome === 'cancelled'
+          : saveOutcome === 'cancelled'
             ? '已取消分享'
-            : '列表预览图已生成',
+            : saveOutcome === 'saved'
+              ? '列表预览图已保存到相册'
+              : '列表预览图已生成',
     };
   } catch (error) {
     console.error('生成咖啡豆列表图片失败:', error);
