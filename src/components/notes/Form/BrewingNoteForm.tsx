@@ -77,7 +77,7 @@ import {
 
 import CoffeeBeanPickerDrawer from './CoffeeBeanPickerDrawer';
 import { useCoffeeBeanData } from './hooks/useCoffeeBeanData';
-import ImagePreview from '@/components/common/ImagePreview';
+import ImageViewer from '@/components/common/ui/ImageViewer';
 import FeatureListItem from './FeatureListItem';
 import DatePickerDrawer from './DatePickerDrawer';
 import EquipmentMethodPickerDrawer, {
@@ -244,6 +244,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false); // 控制图片预览
   const [previewImageIndex, setPreviewImageIndex] = useState(0); // 当前预览图片的索引
+  const [previewImageSource, setPreviewImageSource] =
+    useState<HTMLElement | null>(null);
   // 🔥 标记用户是否主动选择了咖啡豆（用于防止 initialData 变化覆盖用户选择）
   const userSelectedBeanRef = useRef(false);
   const [expandedFlavorBeanId, setExpandedFlavorBeanId] = useState<
@@ -268,6 +270,22 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     notes: initialData?.notes || '',
   });
   const initialTasteSeed = syncInitialDataChanges ? initialData.taste : null;
+  const previewImageAction = useMemo(
+    () => ({
+      label: '移除',
+      ariaLabel: '移除笔记图片',
+      onClick: () => {
+        setFormData(prev => {
+          const images = prev.images.filter(
+            (_, index) => index !== previewImageIndex
+          );
+          return { ...prev, images, image: images[0] || '' };
+        });
+        setShowImagePreview(false);
+      },
+    }),
+    [previewImageIndex]
+  );
 
   // 添加时间戳状态管理
   const [timestamp, setTimestamp] = useState<Date>(
@@ -1879,9 +1897,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 {formData.images.map((img, index) => (
                   <motion.div
                     key={index}
-                    layoutId={`note-image-${index}`}
                     className="relative aspect-square cursor-pointer overflow-hidden rounded bg-neutral-200/40 dark:bg-neutral-800/60"
-                    onClick={() => {
+                    onClick={event => {
+                      setPreviewImageSource(event.currentTarget);
                       setPreviewImageIndex(index);
                       setShowImagePreview(true);
                     }}
@@ -2121,22 +2139,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
       {/* 图片预览 */}
       {formData.images[previewImageIndex] && (
-        <ImagePreview
-          src={formData.images[previewImageIndex]}
+        <ImageViewer
+          id="note-form-image-preview"
+          imageUrl={formData.images[previewImageIndex]}
           alt="笔记图片"
           isOpen={showImagePreview}
           onClose={() => setShowImagePreview(false)}
-          layoutId={`note-image-${previewImageIndex}`}
-          onDelete={() => {
-            const newImages = [...formData.images];
-            newImages.splice(previewImageIndex, 1);
-            setFormData(prev => ({
-              ...prev,
-              images: newImages,
-              image: newImages[0] || '',
-            }));
-            setShowImagePreview(false);
-          }}
+          sourceElement={previewImageSource}
+          action={previewImageAction}
         />
       )}
 

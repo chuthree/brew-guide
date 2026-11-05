@@ -60,6 +60,12 @@ export interface ActionDrawerProps {
   onPresent?: () => void | (() => void);
   /** Opt into the shared queue; higher priorities display first. */
   priority?: number;
+  /** Keep nested drawers inside their parent dialog's stacking and focus scope. */
+  portalContainer?: HTMLElement | null;
+  /** Move keyboard focus into the drawer when it opens. */
+  autoFocus?: boolean;
+  /** Override the drawer surface's styles. */
+  style?: React.CSSProperties;
 }
 
 export interface ActionDrawerIconProps {
@@ -228,6 +234,9 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   dismissible = true,
   onPresent,
   priority,
+  portalContainer,
+  autoFocus,
+  style,
 }) => {
   const queued = useActionDrawerQueue(isOpen && priority !== undefined, priority);
   const presented = priority === undefined ? isOpen : queued;
@@ -285,8 +294,9 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
       onAnimationEnd={handleAnimationEnd}
       repositionInputs={repositionInputs}
       dismissible={dismissible}
+      autoFocus={autoFocus}
     >
-      <Drawer.Portal>
+      <Drawer.Portal container={portalContainer}>
         {/* 背景遮罩 - 强制 fixed 定位确保覆盖安全区 */}
         <Drawer.Overlay
           ref={themeColorOverlayRef}
@@ -297,7 +307,11 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
         {/* 抽屉内容 */}
         <Drawer.Content
           className="fixed inset-x-0 bottom-0 z-80 mx-auto flex max-w-md flex-col rounded-t-3xl bg-white outline-none dark:bg-neutral-900"
-          style={{ zIndex: 81, paddingBottom: 'env(safe-area-inset-bottom)' }}
+          style={{
+            zIndex: 81,
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            ...style,
+          }}
           aria-describedby={undefined}
         >
           {/* 无障碍标题 - 视觉隐藏 */}

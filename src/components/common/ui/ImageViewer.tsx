@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import PhotoSwipe, { type EventCallback, type SlideData } from 'photoswipe';
 import gsap from 'gsap';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import type { ImageViewerAction, ImageViewerItem } from '@/lib/ui/imageViewer';
+import ImageSaveDrawer from './ImageSaveDrawer';
 
 interface ImageViewerProps {
   id?: string;
@@ -563,7 +564,17 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
   const pswpRef = useRef<PhotoSwipe | null>(null);
   const latestOnCloseRef = useRef(onClose);
   const latestOnExitCompleteRef = useRef(onExitComplete);
+  const saveDrawerOpenRef = useRef(false);
+  const [saveTarget, setSaveTarget] = useState<{
+    url: string | null;
+    container: HTMLElement;
+  } | null>(null);
   const isDualSideViewer = Boolean(backImageUrl && !hasGalleryItems(items));
+
+  const closeSaveDrawer = useCallback(() => {
+    saveDrawerOpenRef.current = false;
+    setSaveTarget(target => (target ? { ...target, url: null } : null));
+  }, []);
 
   useEffect(() => {
     latestOnCloseRef.current = onClose;
@@ -678,12 +689,121 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
         side: 'front',
         isFlipping: false,
       };
+      let pressTimer: ReturnType<typeof setTimeout> | undefined;
+      let pressStart: { x: number; y: number } | null = null;
+      let suppressImageAction = false;
+
+      const clearPressTimer = () => {
+        clearTimeout(pressTimer);
+        pressTimer = undefined;
+        pressStart = null;
+      };
+
+      const openSaveDrawer = () => {
+        const element = instance?.currSlide?.content.element;
+        if (
+          !instance?.opener.isOpen ||
+          !instance.element ||
+          instance.gestures.isDragging ||
+          instance.gestures.isZooming ||
+          dualSideState.isFlipping ||
+          saveDrawerOpenRef.current ||
+          !(element instanceof HTMLImageElement) ||
+          !element.naturalWidth
+        ) {
+          return;
+        }
+
+        suppressImageAction = true;
+        saveDrawerOpenRef.current = true;
+        setSaveTarget({
+          url: element.currentSrc || element.src,
+          container: instance.element,
+        });
+      };
+
+      const handlePointerDown: EventCallback<'pointerDown'> = event => {
+        clearPressTimer();
+        suppressImageAction = false;
+        const pointer = event.originalEvent;
+        if (
+          pointer.isPrimary === false ||
+          pointer.button !== 0 ||
+          !isImageActionTarget(pointer.target) ||
+          dualSideState.isFlipping ||
+          saveDrawerOpenRef.current
+        ) {
+          return;
+        }
+
+        // Block native image dragging without cancelling PhotoSwipe's gestures.
+        pointer.preventDefault();
+        pressStart = { x: pointer.clientX, y: pointer.clientY };
+        pressTimer = setTimeout(openSaveDrawer, 500);
+      };
+
+      const handlePointerMove: EventCallback<'pointerMove'> = event => {
+        if (!pressStart) return;
+        const pointer = event.originalEvent;
+        if (
+          Math.hypot(
+            pointer.clientX - pressStart.x,
+            pointer.clientY - pressStart.y
+          ) > 8
+        ) {
+          clearPressTimer();
+        }
+      };
+
+      const handlePointerUp: EventCallback<'pointerUp'> = event => {
+        clearPressTimer();
+        // PhotoSwipe has released the pointer; skip the tap that closes or flips it.
+        if (suppressImageAction || saveDrawerOpenRef.current) {
+          event.preventDefault();
+        }
+      };
+
+      const handleContextMenu = (event: Event) => {
+        if (!isImageActionTarget(event.target)) return;
+        event.preventDefault();
+        clearPressTimer();
+        openSaveDrawer();
+      };
+
+      const handleDragStart = (event: Event) => {
+        if (isImageActionTarget(event.target)) event.preventDefault();
+      };
+
+      const handleKeyDown: EventCallback<'keydown'> = event => {
+        if (saveDrawerOpenRef.current) {
+          event.preventDefault();
+          return;
+        }
+        const key = event.originalEvent;
+        if (key.key === 'ContextMenu' || (key.shiftKey && key.key === 'F10')) {
+          key.preventDefault();
+          openSaveDrawer();
+        }
+      };
+
+      const handleBindSaveEvents = () => {
+        instance?.events.add(instance.element, 'contextmenu', handleContextMenu);
+        instance?.events.add(instance.element, 'dragstart', handleDragStart);
+        instance?.events.add(window, 'blur', clearPressTimer);
+      };
+
+      const handleSlideChange = () => {
+        clearPressTimer();
+        closeSaveDrawer();
+      };
 
       if (action) {
         registerViewerAction(instance, action);
       }
 
       const handleClose = () => {
+        clearPressTimer();
+        closeSaveDrawer();
         if (shouldNotifyClose) {
           latestOnCloseRef.current();
         }
@@ -700,6 +820,10 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
       const handleImageClickAction: EventCallback<
         'imageClickAction'
       > = event => {
+        if (suppressImageAction || saveDrawerOpenRef.current) {
+          event.preventDefault();
+          return;
+        }
         if (
           !dualSideImages ||
           !isImageActionTarget(event.originalEvent.target)
@@ -712,6 +836,10 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
       };
 
       const handleTapAction: EventCallback<'tapAction'> = event => {
+        if (suppressImageAction || saveDrawerOpenRef.current) {
+          event.preventDefault();
+          return;
+        }
         if (
           !dualSideImages ||
           !isImageActionTarget(event.originalEvent.target)
@@ -724,13 +852,10 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
       };
 
       const handleAfterSetContent: EventCallback<'afterSetContent'> = event => {
-        if (!dualSideImages) {
-          return;
-        }
-
         const element = event.slide.content.element;
         if (element instanceof HTMLImageElement) {
-          element.style.cursor = 'pointer';
+          element.draggable = false;
+          if (dualSideImages) element.style.cursor = 'pointer';
         }
       };
 
@@ -739,13 +864,26 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
       instance.on('imageClickAction', handleImageClickAction);
       instance.on('tapAction', handleTapAction);
       instance.on('afterSetContent', handleAfterSetContent);
+      instance.on('pointerDown', handlePointerDown);
+      instance.on('pointerMove', handlePointerMove);
+      instance.on('pointerUp', handlePointerUp);
+      instance.on('keydown', handleKeyDown);
+      instance.on('bindEvents', handleBindSaveEvents);
+      instance.on('change', handleSlideChange);
 
       detachInstanceListeners = () => {
+        clearPressTimer();
         instance?.off('close', handleClose);
         instance?.off('destroy', handleDestroy);
         instance?.off('imageClickAction', handleImageClickAction);
         instance?.off('tapAction', handleTapAction);
         instance?.off('afterSetContent', handleAfterSetContent);
+        instance?.off('pointerDown', handlePointerDown);
+        instance?.off('pointerMove', handlePointerMove);
+        instance?.off('pointerUp', handlePointerUp);
+        instance?.off('keydown', handleKeyDown);
+        instance?.off('bindEvents', handleBindSaveEvents);
+        instance?.off('change', handleSlideChange);
       };
 
       pswpRef.current = instance;
@@ -768,6 +906,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
     action,
     alt,
     backImageUrl,
+    closeSaveDrawer,
     imageUrl,
     initialIndex,
     isDualSideViewer,
@@ -777,7 +916,14 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
     sourceElements,
   ]);
 
-  return null;
+  return (
+    <ImageSaveDrawer
+      imageUrl={isOpen ? (saveTarget?.url ?? null) : null}
+      historyId={`${id}-save-image`}
+      portalContainer={saveTarget?.container}
+      onClose={closeSaveDrawer}
+    />
+  );
 };
 
 export default ImageViewer;

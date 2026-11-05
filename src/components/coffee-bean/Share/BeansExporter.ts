@@ -420,7 +420,11 @@ export async function exportSelectedBeans({
     }
 
     onSuccess(
-      saveOutcome === 'saved' ? '咖啡豆图片已保存到相册' : '咖啡豆已保存为图片'
+      saveOutcome === 'saved'
+        ? '已保存到系统相册'
+        : saveOutcome === 'downloaded'
+          ? '已开始下载图片'
+          : '已打开系统分享'
     );
   } catch (error) {
     console.error('生成咖啡豆图片失败:', error);

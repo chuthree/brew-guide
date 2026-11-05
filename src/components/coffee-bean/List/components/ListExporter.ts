@@ -231,8 +231,10 @@ export const exportListPreview = async (
           : saveOutcome === 'cancelled'
             ? '已取消分享'
             : saveOutcome === 'saved'
-              ? '列表预览图已保存到相册'
-              : '列表预览图已生成',
+              ? '已保存到系统相册'
+              : saveOutcome === 'downloaded'
+                ? '已开始下载图片'
+                : '已打开系统分享',
     };
   } catch (error) {
     console.error('生成咖啡豆列表图片失败:', error);

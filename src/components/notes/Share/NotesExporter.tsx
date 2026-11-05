@@ -349,7 +349,11 @@ export async function exportSelectedNotes({
     }
 
     onSuccess(
-      saveOutcome === 'saved' ? '笔记图片已保存到相册' : '笔记已保存为图片'
+      saveOutcome === 'saved'
+        ? '已保存到系统相册'
+        : saveOutcome === 'downloaded'
+          ? '已开始下载图片'
+          : '已打开系统分享'
     );
   } catch (error) {
     console.error('生成笔记图片失败:', error);

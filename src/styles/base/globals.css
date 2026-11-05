@@ -89,6 +89,13 @@
   background: var(--pswp-bg);
 }
 
+.brew-image-viewer-pswp .pswp__img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .brew-image-viewer-pswp .pswp__top-bar {
   height: 52px;
   padding-top: env(safe-area-inset-top);

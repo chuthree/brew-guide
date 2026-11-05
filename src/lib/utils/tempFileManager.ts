@@ -240,7 +240,7 @@ export class TempFileManager {
 
   /**
    * 保存图片到相册
-   * @param imageData base64格式的图片数据（支持带 data:image/png;base64, 前缀或纯 base64）
+   * @param imageData PNG、JPEG、WebP、GIF 的 Data URL，或 PNG 的纯 base64
    * @param fileName 文件名（不包含扩展名）
    * @returns 可用于区分直接保存、下载、分享和用户取消的结果
    */
@@ -248,23 +248,41 @@ export class TempFileManager {
     imageData: string,
     fileName = 'brew-guide'
   ): Promise<ImageSaveOutcome> {
+    const dataUrl = imageData.startsWith('data:')
+      ? imageData
+      : `data:image/png;base64,${imageData}`;
+    const mimeType = /^data:(image\/(?:png|jpeg|webp|gif));base64,/.exec(
+      dataUrl
+    )?.[1];
+    if (!mimeType) throw new Error('不支持保存此图片格式');
+
     const timestamp = Date.now();
-    const fullFileName = `${fileName}-${timestamp}.png`;
+    const extension = mimeType.slice('image/'.length);
+    const fullFileName = `${fileName}-${timestamp}.${extension}`;
+
+    if (typeof window !== 'undefined' && '__TAURI__' in window) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const saved = await invoke<boolean>('save_image', {
+        dataUrl,
+        fileName: fullFileName,
+      });
+      return saved ? 'saved' : 'cancelled';
+    }
 
     if (!Capacitor.isNativePlatform()) {
       if (getIsIOS() && getIsStandalone()) {
-        return this.shareImageInIOSPWA(imageData, fullFileName);
+        return this.shareImageInIOSPWA(dataUrl, fullFileName);
       }
-      this.downloadImage(imageData, fullFileName);
+      this.downloadImage(dataUrl, fullFileName);
       return 'downloaded';
     }
 
     if (Capacitor.getPlatform() === 'android') {
-      await saveImageToAndroidGallery(imageData, fullFileName);
+      await saveImageToAndroidGallery(dataUrl, fullFileName);
       return 'saved';
     }
 
-    const tempFileName = `${this.TEMP_FILE_PREFIX}save-${timestamp}.png`;
+    const tempFileName = `${this.TEMP_FILE_PREFIX}save-${timestamp}.${extension}`;
 
     try {
       // 确保正确处理base64数据（去掉 data:image/png;base64, 前缀）

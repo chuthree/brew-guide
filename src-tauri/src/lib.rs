@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 
 mod storage;
 mod migration;
+mod image_export;
 #[cfg(desktop)]
 mod mcp;
 
@@ -536,6 +537,7 @@ pub fn run() {
             storage::storage_image,
             migration::migration_save_backup,
             migration::migration_cleanup_approval,
+            image_export::save_image,
             #[cfg(desktop)]
             mcp::mcp_status,
             #[cfg(desktop)]

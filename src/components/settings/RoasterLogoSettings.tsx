@@ -28,8 +28,6 @@ import RoasterLogoImportExport from './RoasterLogoImportExport';
 import { renameRoasters } from '@/lib/utils/roasterRename';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
 import { compressBase64Image } from '@/lib/utils/imageCapture';
-import { TempFileManager } from '@/lib/utils/tempFileManager';
-import { showToast } from '@/components/common/feedback/LightToast';
 import { makeDynamicSettingSearchId } from './settingsSearch';
 import SettingsSearchBar from './SettingsSearchBar';
 
@@ -271,35 +269,9 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
         url: logoData,
         alt: `${roasterName} 图标`,
         sourceElement,
-        action: {
-          label: '保存到相册',
-          loadingLabel: '保存中...',
-          ariaLabel: `保存 ${roasterName} 图标到相册`,
-          onClick: async () => {
-            try {
-              const outcome =
-                await TempFileManager.saveImageToGallery(logoData);
-              if (outcome === 'saved' || outcome === 'downloaded') {
-                showToast({
-                  type: 'success',
-                  title: outcome === 'saved' ? '已保存到相册' : '图片已保存',
-                });
-                if (hapticFeedback) {
-                  hapticsUtils.success();
-                }
-              }
-            } catch (error) {
-              console.error('Save roaster logo error:', error);
-              showToast({ type: 'error', title: '保存失败' });
-              if (hapticFeedback) {
-                hapticsUtils.error();
-              }
-            }
-          },
-        },
       });
     },
-    [hapticFeedback]
+    []
   );
 
   // 打开导出抽屉

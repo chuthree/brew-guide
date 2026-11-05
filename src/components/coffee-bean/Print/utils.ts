@@ -448,7 +448,7 @@ export async function savePreviewAsImage(
         const outcome = await TempFileManager.saveImageToGallery(imageData);
         const { showToast } =
           await import('@/components/common/feedback/LightToast');
-        showToast({ type: 'success', title: '已保存到相册' });
+        showToast({ type: 'success', title: '已保存到系统相册' });
         return { outcome, imageData };
       } catch (error) {
         console.error('保存到相册失败:', error);
@@ -466,7 +466,7 @@ export async function savePreviewAsImage(
     if (outcome === 'downloaded') {
       const { showToast } =
         await import('@/components/common/feedback/LightToast');
-      showToast({ type: 'success', title: '图片已保存' });
+      showToast({ type: 'success', title: '已开始下载图片' });
     }
     return { outcome, imageData };
   } catch (error) {

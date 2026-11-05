@@ -1,7 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
 interface BrewGuideGalleryPlugin {
-  savePngDataUrl(options: {
+  saveImageDataUrl(options: {
     dataUrl: string;
     fileName: string;
     albumName: string;
@@ -11,7 +11,7 @@ interface BrewGuideGalleryPlugin {
 const BrewGuideGallery =
   registerPlugin<BrewGuideGalleryPlugin>('BrewGuideGallery');
 
-const ensurePngDataUrl = (imageData: string): string =>
+const ensureImageDataUrl = (imageData: string): string =>
   imageData.startsWith('data:')
     ? imageData
     : `data:image/png;base64,${imageData}`;
@@ -29,8 +29,8 @@ export async function saveImageToAndroidGallery(
     );
   }
 
-  await BrewGuideGallery.savePngDataUrl({
-    dataUrl: ensurePngDataUrl(imageData),
+  await BrewGuideGallery.saveImageDataUrl({
+    dataUrl: ensureImageDataUrl(imageData),
     fileName: sanitizeFileName(fileName),
     albumName: 'BrewGuide',
   });

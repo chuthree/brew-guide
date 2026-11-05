@@ -31,7 +31,7 @@ public class BrewGuideGalleryPlugin extends Plugin {
     private static final String MIME_TYPE_PNG = "image/png";
 
     @PluginMethod
-    public void savePngDataUrl(PluginCall call) {
+    public void saveImageDataUrl(PluginCall call) {
         String dataUrl = call.getString("dataUrl");
         if (dataUrl == null || dataUrl.trim().isEmpty()) {
             call.reject("Image data is required");
@@ -47,10 +47,15 @@ public class BrewGuideGalleryPlugin extends Plugin {
         }
 
         byte[] imageBytes;
+        String mimeType;
         try {
+            mimeType = getImageMimeType(dataUrl);
             imageBytes = decodeDataUrl(dataUrl);
+            if (imageBytes.length == 0) {
+                throw new IllegalArgumentException("Image data is empty");
+            }
         } catch (IllegalArgumentException exception) {
-            call.reject("Invalid PNG data URL", exception);
+            call.reject("Invalid image data URL", exception);
             return;
         }
 
@@ -60,14 +65,14 @@ public class BrewGuideGalleryPlugin extends Plugin {
         String albumName = sanitizePathSegment(
             call.getString("albumName", DEFAULT_ALBUM_NAME)
         );
-        String displayName = ensurePngExtension(fileName);
+        String displayName = ensureImageExtension(fileName, mimeType);
 
         ContentResolver resolver = getContext().getContentResolver();
         Uri imageUri = null;
         String scanPath = getPublicImagePath(albumName, displayName);
 
         try {
-            ContentValues values = createImageValues(albumName, displayName, scanPath);
+            ContentValues values = createImageValues(albumName, displayName, scanPath, mimeType);
             imageUri = resolver.insert(getImageCollectionUri(), values);
             if (imageUri == null) {
                 call.reject("Unable to create MediaStore image entry");
@@ -87,7 +92,7 @@ public class BrewGuideGalleryPlugin extends Plugin {
                 MediaScannerConnection.scanFile(
                     getContext(),
                     new String[] { scanPath },
-                    new String[] { MIME_TYPE_PNG },
+                    new String[] { mimeType },
                     null
                 );
             }
@@ -106,9 +111,22 @@ public class BrewGuideGalleryPlugin extends Plugin {
     @PermissionCallback
     private void storagePermissionCallback(PluginCall call) {
         if (getPermissionState("storage") == PermissionState.GRANTED) {
-            savePngDataUrl(call);
+            saveImageDataUrl(call);
         } else {
             call.reject("保存图片需要存储权限，请授权后重试");
+        }
+    }
+
+    private String getImageMimeType(String dataUrl) {
+        if (!dataUrl.startsWith("data:")) return MIME_TYPE_PNG;
+        int commaIndex = dataUrl.indexOf(',');
+        String header = commaIndex >= 0 ? dataUrl.substring(0, commaIndex) : dataUrl;
+        switch (header) {
+            case "data:image/png;base64": return MIME_TYPE_PNG;
+            case "data:image/jpeg;base64": return "image/jpeg";
+            case "data:image/webp;base64": return "image/webp";
+            case "data:image/gif;base64": return "image/gif";
+            default: throw new IllegalArgumentException("Unsupported image format");
         }
     }
 
@@ -121,11 +139,12 @@ public class BrewGuideGalleryPlugin extends Plugin {
     private ContentValues createImageValues(
         String albumName,
         String displayName,
-        String scanPath
+        String scanPath,
+        String mimeType
     ) {
         ContentValues values = new ContentValues();
         values.put(MediaStore.Images.Media.DISPLAY_NAME, displayName);
-        values.put(MediaStore.Images.Media.MIME_TYPE, MIME_TYPE_PNG);
+        values.put(MediaStore.Images.Media.MIME_TYPE, mimeType);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             values.put(
@@ -174,10 +193,11 @@ public class BrewGuideGalleryPlugin extends Plugin {
         ).getAbsolutePath();
     }
 
-    private String ensurePngExtension(String fileName) {
-        return fileName.toLowerCase(Locale.US).endsWith(".png")
+    private String ensureImageExtension(String fileName, String mimeType) {
+        String extension = "." + mimeType.substring("image/".length());
+        return fileName.toLowerCase(Locale.US).endsWith(extension)
             ? fileName
-            : fileName + ".png";
+            : fileName + extension;
     }
 
     private String sanitizeFileName(String fileName) {

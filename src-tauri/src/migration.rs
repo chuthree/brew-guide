@@ -3,7 +3,7 @@ use std::{fs, io::Write, path::Path};
 use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
 
-fn write_verified(path: &Path, data: &[u8]) -> Result<(), String> {
+pub(crate) fn write_verified(path: &Path, data: &[u8]) -> Result<(), String> {
     let parent = path.parent().ok_or("Invalid backup path")?;
     let temp = parent.join(format!(
         ".brew-guide-save-{}-{}",
