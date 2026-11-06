@@ -30,7 +30,9 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-src 'none'",
+      "devCsp": "",
+      "dangerousDisableAssetCspModification": ["style-src"]
     }
   },
   "bundle": {
