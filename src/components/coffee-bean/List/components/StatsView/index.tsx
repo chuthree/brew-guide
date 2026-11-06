@@ -46,6 +46,7 @@ import {
 import { ExtendedCoffeeBean } from '../../types';
 import GreenBeanStatsView from './GreenBeanStatsView';
 import CoffeeOriginMap from './CoffeeOriginMap';
+import { findRegionsByNames } from './CoffeeOriginMap/coffeeRegions';
 import StatsSectionEditorDrawer, {
   StatsSectionOption,
 } from './StatsSectionEditorDrawer';
@@ -1184,14 +1185,20 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
     return Array.from(flavorCount.entries()).sort((a, b) => b[1] - a[1]);
   }, [filteredBeans]);
 
-  // 计算地图标记数量：优先用结构化产区，其次产国，最后旧产地。
-  const originCountMap = useMemo(() => {
-    const regionCount = new Map(regionStats);
-    if (regionCount.size > 0) return regionCount;
-
-    const countryCount = new Map(countryStats);
-    return countryCount.size > 0 ? countryCount : new Map(originStats);
-  }, [countryStats, originStats, regionStats]);
+  // 合并产地来源；同一颗豆子的同一地图标记只计一次。
+  const originCountMap = useMemo(
+    () =>
+      new Map(
+        countBeanAttributeValues(filteredBeans, bean =>
+          findRegionsByNames([
+            ...getBeanRegions(bean),
+            ...getBeanCountries(bean),
+            ...getBeanOriginSummaries(bean),
+          ]).map(region => region.name)
+        )
+      ),
+    [filteredBeans]
+  );
 
   // 获取地图标记名称
   const originNames = useMemo(() => {
