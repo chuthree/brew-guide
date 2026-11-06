@@ -657,6 +657,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const noteToEdit = {
       id: noteForEdit.id,
       timestamp: noteForEdit.timestamp,
+      updatedAt: noteForEdit.updatedAt,
       equipment: noteForEdit.equipment,
       method: noteForEdit.method,
       equipmentId: noteForEdit.equipmentId,

@@ -1667,6 +1667,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         const noteToEdit: BrewingNoteData = {
           id: noteForEdit.id,
           timestamp: noteForEdit.timestamp,
+          updatedAt: noteForEdit.updatedAt,
           equipment: noteForEdit.equipment,
           method: noteForEdit.method,
           equipmentId: noteForEdit.equipmentId,
