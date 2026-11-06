@@ -327,13 +327,13 @@ const BeanPreviewItem: React.FC<{
         )}
       </div>
 
-      <div className="flex w-full flex-col gap-y-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-y-2">
         <div className={`flex flex-col justify-center gap-y-1.5`}>
           <div className="line-clamp-2 pr-2 text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
             {displayTitle}
           </div>
 
-          <div className="text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+          <div className="max-h-[1lh] overflow-hidden text-xs leading-relaxed font-medium tracking-wide break-all text-neutral-600 dark:text-neutral-400">
             {bean.roastDate && (
               <span className="inline">
                 {dateDisplayMode === 'flavorPeriod'

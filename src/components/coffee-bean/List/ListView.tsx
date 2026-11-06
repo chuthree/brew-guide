@@ -474,7 +474,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     {displayTitle}
                   </div>
 
-                  <div className="overflow-hidden text-xs leading-relaxed font-medium text-neutral-600 dark:text-neutral-400">
+                  <div className="max-h-[1lh] overflow-hidden text-xs leading-relaxed font-medium break-all text-neutral-600 dark:text-neutral-400">
                     {/* 生豆显示购买日期，熟豆显示烘焙日期 */}
                     {(() => {
                       const isGreenBean = bean.beanState === 'green';
@@ -482,7 +482,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                         ? bean.purchaseDate
                         : bean.roastDate;
                       return displayDate || bean.isInTransit ? (
-                        <span className="inline whitespace-nowrap">
+                        <span className="inline">
                           {bean.isInTransit
                             ? '在途'
                             : bean.isFrozen
@@ -510,7 +510,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     })()}
 
                     {bean.capacity && bean.remaining && (
-                      <span className="inline whitespace-nowrap">
+                      <span className="inline">
                         {formatNumber(bean.remaining)}/
                         {formatNumber(bean.capacity)}克
                         {showPrice && bean.price && bean.capacity && (
@@ -522,7 +522,7 @@ const CoffeeBeanList: React.FC<CoffeeBeanListProps> = ({
                     )}
 
                     {showPrice && bean.price && bean.capacity && (
-                      <span className="inline whitespace-nowrap">
+                      <span className="inline">
                         {formatPrice(bean.price, bean.capacity)}
                       </span>
                     )}

@@ -777,7 +777,7 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
                           {formatBeanDisplayName(bean, displaySettings)}
                         </div>
                         {metaParts.length > 0 && (
-                          <div className="mt-1 overflow-hidden text-xs leading-relaxed font-medium text-neutral-500 dark:text-neutral-400">
+                          <div className="mt-1 max-h-[1lh] overflow-hidden text-xs leading-relaxed font-medium break-all text-neutral-500 dark:text-neutral-400">
                             {metaParts.map((part, index) => (
                               <React.Fragment
                                 key={`${bean.id}-${part}-${index}`}
@@ -787,7 +787,7 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
                                     ·
                                   </span>
                                 )}
-                                <span className="inline whitespace-nowrap">
+                                <span className="inline">
                                   {part}
                                 </span>
                               </React.Fragment>

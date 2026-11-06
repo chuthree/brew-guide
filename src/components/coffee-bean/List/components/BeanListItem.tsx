@@ -540,8 +540,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
               )}
             </div>
 
+            {/* 按字符换行并仅保留首行，避免边缘裁出半个字。 */}
             <div
-              className={`overflow-hidden text-xs leading-relaxed font-medium ${
+              className={`max-h-[1lh] overflow-hidden text-xs leading-relaxed font-medium break-all ${
                 isEmpty
                   ? 'text-neutral-400 dark:text-neutral-600'
                   : 'text-neutral-600 dark:text-neutral-400'
@@ -555,7 +556,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
                   ? bean.purchaseDate
                   : bean.roastDate;
                 return displayDate || bean.isInTransit ? (
-                  <span className="inline whitespace-nowrap">
+                  <span className="inline">
                     {isEmpty
                       ? // 用完的豆子固定显示日期
                         displayDate
@@ -588,7 +589,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
               })()}
 
               {bean.capacity && bean.remaining && (
-                <span className="inline whitespace-nowrap">
+                <span className="inline">
                   <span
                     onClick={e => onRemainingClick(bean, e)}
                     className="cursor-pointer"
@@ -614,7 +615,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
               )}
 
               {showPrice && bean.price && bean.capacity && (
-                <span className="inline whitespace-nowrap">
+                <span className="inline">
                   {formatPrice(bean.price, bean.capacity)}
                 </span>
               )}
