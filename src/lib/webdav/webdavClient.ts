@@ -65,6 +65,8 @@ export class WebDAVClient {
    * 注意：OperationNotAllowed 不算真正的错误，只是表示当前位置不支持某些操作
    */
   private checkWebDAVError(responseText: string): string | null {
+    // JSON 中的笔记内容可能包含 XML 标签或错误名称，不能当作服务端错误。
+    if (!responseText.trimStart().startsWith('<')) return null;
     // 🔧 OperationNotAllowed 不是真正的错误，忽略它
     if (responseText.includes('OperationNotAllowed')) {
       return null;
@@ -308,7 +310,6 @@ export class WebDAVClient {
   ): Promise<{ content: string; etag: string } | null> {
     const response = await this.request(this.buildUrl(filename), {
       headers: { Authorization: this.authHeader },
-      cache: 'no-store',
     });
     if (response.status === 404) return null;
     const content = await response.text();
@@ -323,6 +324,154 @@ export class WebDAVClient {
       );
     }
     return { content, etag };
+  }
+
+  /** 条件头不可用时，先验证完整代理链路的锁语义，再在锁内重新校验版本。 */
+  async uploadFileWithLock(
+    filename: string,
+    content: string,
+    expectedEtag: string | null,
+    probeKey: string
+  ): Promise<boolean | { success: false; error: string }> {
+    const put = (key: string, body: string, token?: string) =>
+      this.request(this.buildUrl(key), {
+        method: 'PUT',
+        headers: {
+          Authorization: this.authHeader,
+          'Content-Type': 'application/json; charset=utf-8',
+          ...(token ? { If: `(${token})` } : {}),
+        },
+        body,
+      });
+    try {
+      let expiredToken = '';
+      await this.withWriteLock(probeKey, async token => {
+        expiredToken = token;
+        const unlocked = await put(probeKey, '{}');
+        const invalid = await put(
+          probeKey,
+          '{}',
+          `<urn:uuid:${crypto.randomUUID()}>`
+        );
+        if (unlocked.status !== 423 || invalid.status !== 412) {
+          throw new Error('WebDAV 服务或代理未执行独占锁校验，已停止同步');
+        }
+        const valid = await put(probeKey, '{}', token);
+        if (!valid.ok) {
+          throw new Error(`WebDAV 锁令牌写入失败：HTTP ${valid.status}`);
+        }
+      });
+      // 必须拒绝已释放的令牌，防止锁过期或服务器重启后继续覆盖。
+      if ((await put(probeKey, '{}', expiredToken)).status !== 412) {
+        throw new Error('WebDAV 服务或代理未拒绝失效锁令牌，已停止同步');
+      }
+      this.clearDiagnostic();
+      await this.withWriteLock(filename, async (token, created) => {
+        if (created !== (expectedEtag === null)) {
+          throw new Error('云端文件已被创建或删除，请重试');
+        }
+        const current = await this.readSyncFile(filename);
+        if (
+          !current ||
+          (created ? current.content !== '' : current.etag !== expectedEtag)
+        ) {
+          throw new Error('云端已被其他设备更新，请重试');
+        }
+        // 读取可能耗时；只刷新仍有效的锁，绝不重新获取锁后继续旧操作。
+        const refreshed = await this.request(this.buildUrl(filename), {
+          method: 'LOCK',
+          headers: {
+            Authorization: this.authHeader,
+            If: `(${token})`,
+            Timeout: 'Second-60',
+          },
+        });
+        if (refreshed.status !== 200) {
+          throw new Error(
+            `WebDAV 锁已失效或无法续期：HTTP ${refreshed.status}，请重试`
+          );
+        }
+        const response = await put(filename, content, token);
+        this.logSummary('upload', {
+          filename,
+          status: response.status,
+          ok: response.ok,
+        });
+        if (!response.ok) {
+          throw new Error(`WebDAV 锁内写入失败：HTTP ${response.status}`);
+        }
+      });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logSummary('locked-upload', { filename, ok: false, error: message });
+      return { success: false, error: message };
+    }
+  }
+
+  private async withWriteLock(
+    filename: string,
+    write: (token: string, created: boolean) => Promise<void>
+  ): Promise<void> {
+    const url = this.buildUrl(filename);
+    const response = await this.request(url, {
+      method: 'LOCK',
+      headers: {
+        Authorization: this.authHeader,
+        'Content-Type': 'application/xml; charset=utf-8',
+        Depth: '0',
+        Timeout: 'Second-60',
+      },
+      body: '<D:lockinfo xmlns:D="DAV:"><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockinfo>',
+    });
+    const token = response.headers.get('Lock-Token');
+    if (
+      ![200, 201].includes(response.status) ||
+      !token ||
+      !/^<[^<>\s]+>$/.test(token)
+    ) {
+      throw new Error(
+        `无法获取 WebDAV 独占锁（HTTP ${response.status}），请检查服务和代理的 LOCK、UNLOCK、If 及 Lock-Token 支持`
+      );
+    }
+    let removed = false;
+    try {
+      await write(token, response.status === 201);
+    } catch (error) {
+      // 只删除本次 LOCK 创建且仍为空的占位文件，保留可能已成功写入的数据。
+      if (response.status === 201) {
+        try {
+          const current = await this.readSyncFile(filename);
+          if (current?.content === '') {
+            const deleted = await this.request(url, {
+              method: 'DELETE',
+              headers: { Authorization: this.authHeader, If: `(${token})` },
+            });
+            removed = deleted.ok;
+          }
+        } catch {
+          console.warn('[WebDAV] 空占位文件清理失败，请检查云端数据');
+        }
+      }
+      throw error;
+    } finally {
+      // 删除锁根已释放锁；解锁异常不能覆盖写入结果或原始错误。
+      if (!removed) {
+        try {
+          const unlocked = await this.request(url, {
+            method: 'UNLOCK',
+            headers: { Authorization: this.authHeader, 'Lock-Token': token },
+          });
+          if (!unlocked.ok) throw new Error(`HTTP ${unlocked.status}`);
+        } catch (error) {
+          this.logSummary('unlock', {
+            filename,
+            ok: false,
+            error: `WebDAV 解锁未确认，请等待锁过期后重试：${String(error)}`,
+          });
+        }
+      }
+    }
   }
 
   /**
@@ -619,7 +768,14 @@ export class WebDAVClient {
   }
 
   private request(url: string, init: RequestInit): Promise<Response> {
-    return cloudFetch(url, init, this.config.proxyUrl);
+    // RFC 4918 §10.4.5：代理不能用缓存响应绕过 If 条件；版本读取也必须新鲜。
+    const headers = new Headers(init.headers);
+    headers.set('Cache-Control', 'no-cache');
+    return cloudFetch(
+      url,
+      { ...init, headers, cache: 'no-store' },
+      this.config.proxyUrl
+    );
   }
 
   /**
@@ -733,21 +889,11 @@ export class WebDAVClient {
       this.lastDiagnostic = diagnostic;
     }
 
-    if (typeof console !== 'undefined' && typeof console.log === 'function') {
-      // eslint-disable-next-line no-console
-      console.log(`[WebDAV:${event}]`, {
-        ...detail,
-        url: redactSyncDiagnosticUrl(this.asString(detail.url)),
-        // 只保留关键信息
-        filename: detail.filename,
-        path: detail.path,
-        status: detail.status,
-        statusText: detail.statusText,
-        ok: detail.ok,
-        error: detail.error,
-        errorSnippet: detail.errorSnippet,
-      });
-    }
+    // eslint-disable-next-line no-console
+    console.log(`[WebDAV:${event}]`, {
+      ...detail,
+      url: redactSyncDiagnosticUrl(this.asString(detail.url)),
+    });
   }
 
   private buildDiagnostic(

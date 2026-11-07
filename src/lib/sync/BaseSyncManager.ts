@@ -37,6 +37,12 @@ export interface IStorageClient {
     expectedEtag?: string | null
   ): Promise<boolean | { success: false; error: string }>;
   readSyncFile(key: string): Promise<{ content: string; etag: string } | null>;
+  uploadFileWithLock?(
+    key: string,
+    content: string,
+    expectedEtag: string | null,
+    probeKey: string
+  ): Promise<boolean | { success: false; error: string }>;
   downloadFile(key: string): Promise<string | null>;
   deleteFile(key: string): Promise<boolean>;
   listFilesSimple(
@@ -128,13 +134,18 @@ export abstract class BaseSyncManager {
       this.client.clearDiagnostic?.();
       addLog(`开始同步，方向: ${options.preferredDirection || 'auto'}`);
 
-      // 获取远程元数据（用于备份历史）
-      const remoteMetadata = await this.metadataManager.getRemoteMetadata();
-
       if (options.preferredDirection === 'upload') {
-        await this.performUpload(result, options, remoteMetadata, addLog);
+        await this.performUpload(
+          result,
+          await this.metadataManager.getRemoteMetadata(),
+          addLog
+        );
       } else if (options.preferredDirection === 'download') {
-        await this.performDownload(result, remoteMetadata, addLog);
+        await this.performDownload(
+          result,
+          await this.metadataManager.getRemoteMetadata(),
+          addLog
+        );
       } else {
         await this.performMerge(result, addLog);
       }
@@ -239,6 +250,7 @@ export abstract class BaseSyncManager {
       const created = await this.client!.uploadFile(probeKey, '{}');
       if (created !== true)
         throw new Error('无法创建同步校验临时文件，已停止同步');
+      let uploaded: boolean | { success: false; error: string };
       try {
         // 只验证本次主文件写入需要的条件：更新校验版本，首次创建防止覆盖。
         this.client!.clearDiagnostic?.();
@@ -248,9 +260,33 @@ export abstract class BaseSyncManager {
           remoteFile ? '"missing-version"' : null
         );
         if (
-          probe === true ||
-          this.client!.getLastDiagnostic?.()?.status !== 412
+          probe !== true &&
+          this.client!.getLastDiagnostic?.()?.status === 412
         ) {
+          this.client!.clearDiagnostic?.();
+          addLog('使用云端版本校验写入合并结果');
+          uploaded = await this.client!.uploadFile(
+            key,
+            content,
+            remoteFile?.etag ?? null
+          );
+        } else if (probe === true && this.client!.uploadFileWithLock) {
+          addLog('版本条件头不可用，验证 WebDAV 独占锁后写入合并结果');
+          uploaded = await this.client!.uploadFileWithLock(
+            key,
+            content,
+            remoteFile?.etag ?? null,
+            probeKey
+          );
+          const diagnostic = this.client!.getLastDiagnostic?.();
+          if (
+            uploaded === true &&
+            diagnostic?.operation === 'unlock' &&
+            diagnostic.error
+          ) {
+            result.warnings = [...(result.warnings ?? []), diagnostic.error];
+          }
+        } else {
           throw new Error(
             remoteFile
               ? '云存储或代理未确认支持版本校验，已停止同步；可继续使用手动上传、下载'
@@ -261,13 +297,6 @@ export abstract class BaseSyncManager {
         if (!(await this.client!.deleteFile(probeKey)))
           addLog('同步校验临时文件清理失败');
       }
-      this.client!.clearDiagnostic?.();
-      addLog('使用云端版本校验写入合并结果');
-      const uploaded = await this.client!.uploadFile(
-        key,
-        content,
-        remoteFile?.etag ?? null
-      );
       if (uploaded !== true) {
         throw new Error(
           `合并写入失败，云端可能已被其他设备更新，请重试：${typeof uploaded === 'object' ? uploaded.error : '请求失败'}`
@@ -303,7 +332,6 @@ export abstract class BaseSyncManager {
    */
   private async performUpload(
     result: SyncResult,
-    _options: SyncOptions,
     remoteMetadata: SyncMetadataV2 | null,
     addLog: (msg: string) => void
   ): Promise<void> {

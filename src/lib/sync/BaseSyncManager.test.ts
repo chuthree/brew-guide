@@ -146,4 +146,75 @@ describe('safe cloud sync', () => {
     ).toBe(false);
     expect(mocks.set).not.toHaveBeenCalled();
   });
+
+  it.each([true, false])(
+    'uses the verified lock fallback and only advances on success (%s)',
+    async success => {
+      const { client } = setup();
+      const uploadFileWithLock = vi.fn().mockResolvedValue(success);
+      const manager = new Manager({ ...client, uploadFileWithLock });
+      client.readSyncFile.mockResolvedValue({
+        content: document('base'),
+        etag: '"v1"',
+      });
+      manager.local = document('local');
+      expect((await manager.sync()).success).toBe(success);
+      expect(uploadFileWithLock).toHaveBeenCalledWith(
+        'brew-guide-data.json',
+        expect.any(String),
+        '"v1"',
+        expect.stringContaining('.brew-guide-sync-check-')
+      );
+      expect(
+        client.uploadFile.mock.calls.some(
+          ([key]) => key === 'brew-guide-data.json'
+        )
+      ).toBe(false);
+      expect(mocks.set).toHaveBeenCalledTimes(success ? 1 : 0);
+    }
+  );
+
+  it('routes first creation through locks and preserves unlock warnings after a successful commit', async () => {
+    const { client } = setup();
+    mocks.get.mockResolvedValue(null);
+    client.readSyncFile.mockResolvedValue(null);
+    client.deleteFile.mockResolvedValue(true);
+    const uploadFileWithLock = vi.fn().mockImplementation(async () => {
+      client.getLastDiagnostic.mockReturnValue({
+        operation: 'unlock',
+        error: '等待锁过期',
+        status: 500,
+      });
+      return true;
+    });
+    const manager = new Manager({ ...client, uploadFileWithLock });
+    const result = await manager.sync();
+    expect(result.success).toBe(true);
+    expect(result.warnings).toContain('等待锁过期');
+    expect(uploadFileWithLock).toHaveBeenCalledWith(
+      'brew-guide-data.json',
+      expect.any(String),
+      null,
+      expect.any(String)
+    );
+    expect(mocks.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fall back to locks on authentication or transport failures', async () => {
+    const { client } = setup();
+    client.readSyncFile.mockResolvedValue({
+      content: document('base'),
+      etag: '"v1"',
+    });
+    client.uploadFile.mockImplementation(
+      async (_key, _content, etag) => etag === undefined
+    );
+    client.getLastDiagnostic.mockReturnValue({ status: 403 });
+    const uploadFileWithLock = vi.fn();
+    const manager = new Manager({ ...client, uploadFileWithLock });
+    manager.local = document('local');
+    expect((await manager.sync()).success).toBe(false);
+    expect(uploadFileWithLock).not.toHaveBeenCalled();
+    expect(mocks.set).not.toHaveBeenCalled();
+  });
 });
