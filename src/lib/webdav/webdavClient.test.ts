@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloudFetch } from '@/lib/sync/cloudHttp';
 import { WebDAVClient } from './webdavClient';
+import { detectAppRuntime } from '@/lib/app/runtime';
 
 vi.mock('@/lib/sync/cloudHttp', () => ({ cloudFetch: vi.fn() }));
+vi.mock('@/lib/app/runtime', () => ({ detectAppRuntime: vi.fn() }));
 
 const fetch = vi.mocked(cloudFetch);
 const key = 'brew-guide-data.json';
@@ -31,6 +33,10 @@ function verifiedProbe() {
 describe('WebDAV locked sync upload', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(detectAppRuntime).mockReturnValue({
+      runtime: 'web',
+      capacitorPlatform: null,
+    });
   });
 
   it('does not mistake note text for a WebDAV error response', async () => {
@@ -39,11 +45,26 @@ describe('WebDAV locked sync upload', () => {
     });
     respond(200, { ETag: '"v1"' }, content);
     expect(await client().readSyncFile(key)).toEqual({ content, etag: '"v1"' });
-    expect(
-      new Headers(fetch.mock.calls[0][1]?.headers).get('Cache-Control')
-    ).toBe('no-cache');
-    expect(fetch.mock.calls[0][1]?.cache).toBe('no-store');
   });
+
+  it.each(['web', 'tauri', 'capacitor'] as const)(
+    'prevents cached reads without adding browser preflight headers (%s)',
+    async runtime => {
+      vi.mocked(detectAppRuntime).mockReturnValue({
+        runtime,
+        capacitorPlatform: runtime === 'capacitor' ? 'android' : null,
+      });
+      respond(200, { ETag: '"v1"' }, '{}');
+      await client().readSyncFile(key);
+      const request = fetch.mock.calls[0][1];
+      const headers = new Headers(request?.headers);
+      expect(headers.get('Cache-Control')).toBe(
+        runtime === 'web' ? null : 'no-cache'
+      );
+      expect(headers.has('Authorization')).toBe(true);
+      expect(request?.cache).toBe('no-store');
+    }
+  );
 
   it('still rejects an XML error returned with a successful HTTP status', async () => {
     respond(

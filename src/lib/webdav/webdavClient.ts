@@ -6,6 +6,7 @@
 import { redactSyncDiagnosticUrl, type SyncDiagnostic } from '@/lib/sync/types';
 import type { WebDAVConfig, WebDAVFile } from './types';
 import { cloudFetch } from '@/lib/sync/cloudHttp';
+import { detectAppRuntime } from '@/lib/app/runtime';
 
 export class WebDAVClient {
   private config: WebDAVConfig;
@@ -768,9 +769,11 @@ export class WebDAVClient {
   }
 
   private request(url: string, init: RequestInit): Promise<Response> {
-    // RFC 4918 §10.4.5：代理不能用缓存响应绕过 If 条件；版本读取也必须新鲜。
+    // 浏览器由 cache 模式添加防缓存头，显式添加会要求代理额外放行 CORS。
     const headers = new Headers(init.headers);
-    headers.set('Cache-Control', 'no-cache');
+    if (detectAppRuntime().runtime !== 'web') {
+      headers.set('Cache-Control', 'no-cache');
+    }
     return cloudFetch(
       url,
       { ...init, headers, cache: 'no-store' },
