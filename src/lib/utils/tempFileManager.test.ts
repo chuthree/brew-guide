@@ -350,6 +350,57 @@ describe('TempFileManager binary sharing', () => {
 });
 
 describe('TempFileManager JSON saving', () => {
+  it.each(['missing', 'unsupported'])(
+    'downloads the intact backup when Web Share is %s',
+    async capability => {
+      vi.useFakeTimers();
+      try {
+        const share = vi.fn();
+        const link = {
+          click: vi.fn(),
+          remove: vi.fn(),
+          style: {},
+          href: '',
+          download: '',
+        };
+        const createObjectURL = vi
+          .spyOn(URL, 'createObjectURL')
+          .mockReturnValue('blob:backup');
+        const revokeObjectURL = vi
+          .spyOn(URL, 'revokeObjectURL')
+          .mockImplementation(() => {});
+        vi.stubGlobal('navigator', {
+          userAgent: 'iPhone',
+          standalone: true,
+          ...(capability === 'unsupported'
+            ? { share, canShare: () => false }
+            : {}),
+        });
+        vi.stubGlobal('window', { matchMedia: () => ({ matches: true }) });
+        vi.stubGlobal('document', {
+          createElement: () => link,
+          body: { appendChild: vi.fn() },
+        });
+        const jsonData = '{"beans":[{"name":"咖啡豆 ☕"}]}';
+        const result = await exportJsonFile({ jsonData, fileName: 'backup' });
+        expect(result).toEqual({
+          mode: 'web-download',
+          fileName: 'backup.json',
+        });
+        expect(await (createObjectURL.mock.calls[0][0] as Blob).text()).toBe(
+          jsonData
+        );
+        expect(link.download).toBe('backup.json');
+        expect(link.click).toHaveBeenCalledOnce();
+        expect(share).not.toHaveBeenCalled();
+        expect(revokeObjectURL).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(60_000);
+        expect(revokeObjectURL).toHaveBeenCalledWith('blob:backup');
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
   it('returns Android document picker cancellation as an incomplete export', async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(Capacitor.getPlatform).mockReturnValue('android');

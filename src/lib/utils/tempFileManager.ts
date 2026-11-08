@@ -47,7 +47,6 @@ export class TempFileManager {
     | {
         file: File;
         shareOptions: Pick<ShareOptions, 'title' | 'text'>;
-        unsupportedMessage: string;
       }
     | undefined;
   private static pendingIOSPWAShareAbort: AbortController | undefined;
@@ -114,17 +113,20 @@ export class TempFileManager {
     const link = document.createElement('a');
     link.download = fileName;
     link.href = url;
+    link.style.display = 'none';
+    document.body.appendChild(link);
     link.click();
+    link.remove();
 
-    URL.revokeObjectURL(url);
+    // Mobile browsers may consume the URL after the click handler returns.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   private static async shareFileInIOSPWA(
     file: File,
     shareOptions: Pick<ShareOptions, 'title' | 'text'>,
-    unsupportedMessage: string,
     retryOnNextClick = false
-  ): Promise<Exclude<FileShareOutcome, 'downloaded'>> {
+  ): Promise<FileShareOutcome> {
     const shareData: ShareData = {
       files: [file],
       title: shareOptions.title,
@@ -139,12 +141,13 @@ export class TempFileManager {
       (typeof navigator.canShare === 'function' &&
         !navigator.canShare(shareData))
     ) {
-      throw new Error(unsupportedMessage);
+      this.downloadBlob(file, file.name);
+      return 'downloaded';
     }
 
     if (this.isUserActivationExpired()) {
       if (retryOnNextClick) {
-        this.scheduleIOSPWAShareRetry(file, shareOptions, unsupportedMessage);
+        this.scheduleIOSPWAShareRetry(file, shareOptions);
       }
       return 'activation-required';
     }
@@ -162,7 +165,7 @@ export class TempFileManager {
         this.isUserActivationExpired()
       ) {
         if (retryOnNextClick) {
-          this.scheduleIOSPWAShareRetry(file, shareOptions, unsupportedMessage);
+          this.scheduleIOSPWAShareRetry(file, shareOptions);
         }
         return 'activation-required';
       }
@@ -172,14 +175,13 @@ export class TempFileManager {
 
   private static scheduleIOSPWAShareRetry(
     file: File,
-    shareOptions: Pick<ShareOptions, 'title' | 'text'>,
-    unsupportedMessage: string
+    shareOptions: Pick<ShareOptions, 'title' | 'text'>
   ): void {
     if (typeof document === 'undefined') return;
     if (typeof document.addEventListener !== 'function') return;
 
     this.pendingIOSPWAShareAbort?.abort();
-    this.pendingIOSPWAShare = { file, shareOptions, unsupportedMessage };
+    this.pendingIOSPWAShare = { file, shareOptions };
 
     const controller = new AbortController();
     this.pendingIOSPWAShareAbort = controller;
@@ -200,8 +202,7 @@ export class TempFileManager {
 
         void this.shareFileInIOSPWA(
           pendingShare.file,
-          pendingShare.shareOptions,
-          pendingShare.unsupportedMessage
+          pendingShare.shareOptions
         ).catch(error => {
           console.error('分享文件失败:', error);
         });
@@ -214,14 +215,10 @@ export class TempFileManager {
     imageData: string,
     fileName: string
   ): Promise<ImageSaveOutcome> {
-    return this.shareFileInIOSPWA(
-      this.createImageFile(imageData, fileName),
-      {
-        title: 'Brew Guide 图片',
-        text: '',
-      },
-      '当前设备不支持分享图片文件'
-    );
+    return this.shareFileInIOSPWA(this.createImageFile(imageData, fileName), {
+      title: 'Brew Guide 图片',
+      text: '',
+    });
   }
 
   private static async shareJsonInIOSPWA(
@@ -231,11 +228,14 @@ export class TempFileManager {
   ): Promise<JsonFileSaveMode> {
     const outcome = await this.shareFileInIOSPWA(
       this.createJsonFile(jsonData, fileName),
-      shareOptions,
-      '当前设备不支持分享数据文件'
+      shareOptions
     );
 
-    return outcome === 'shared' ? 'native-share' : outcome;
+    return outcome === 'shared'
+      ? 'native-share'
+      : outcome === 'downloaded'
+        ? 'web-download'
+        : outcome;
   }
 
   /**
@@ -432,7 +432,6 @@ export class TempFileManager {
       return this.shareFileInIOSPWA(
         this.createImageFile(imageData, downloadFileName),
         shareOptions,
-        '当前设备不支持分享图片文件',
         true
       );
     }
@@ -504,12 +503,7 @@ export class TempFileManager {
       const file = new File([data], fileName, {
         type: data.type || 'application/octet-stream',
       });
-      return this.shareFileInIOSPWA(
-        file,
-        shareOptions,
-        '当前设备不支持分享文件',
-        true
-      );
+      return this.shareFileInIOSPWA(file, shareOptions, true);
     }
 
     this.downloadBlob(data, fileName);
