@@ -18,6 +18,7 @@ import {
   SettingPage,
   SettingSection,
   SettingRow,
+  SettingInput,
   SettingToggle,
   useScrollToHighlightedSetting,
 } from './atomic';
@@ -52,7 +53,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
 
   // 控制动画状态
   const [isVisible, setIsVisible] = React.useState(false);
-  const [showApiKey, setShowApiKey] = React.useState(false);
   const [isTestingConfig, setIsTestingConfig] = React.useState(false);
 
   const [apiBaseUrl, setApiBaseUrl] = React.useState(
@@ -186,15 +186,8 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
     }
   };
 
-  const highlightedSettingId = useScrollToHighlightedSetting(
+  useScrollToHighlightedSetting(
     `${settings.experimentalBeanRecognitionEnabled}:${settings.experimentalBeanSharePackageEnabled}:${isTestingConfig}`
-  );
-  const getSearchHighlightClass = React.useCallback(
-    (label: string) =>
-      highlightedSettingId === makeSettingRowSearchId(label)
-        ? 'bg-neutral-200/70 dark:bg-neutral-700/45'
-        : '',
-    [highlightedSettingId]
   );
 
   return (
@@ -238,115 +231,108 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
             </p>
           }
         >
-          <SettingRow label="自定义识别咖啡豆 API">
+          <SettingRow
+            label="自定义识别咖啡豆 API"
+            isLast={!settings.experimentalBeanRecognitionEnabled}
+          >
             <SettingToggle
               checked={settings.experimentalBeanRecognitionEnabled || false}
               onChange={checked =>
                 handleChange('experimentalBeanRecognitionEnabled', checked)
               }
+              ariaLabel="自定义识别咖啡豆 API"
             />
           </SettingRow>
           {settings.experimentalBeanRecognitionEnabled && (
-            <div className="space-y-2 px-3 py-3">
-              <div
-                data-settings-search-id={makeSettingRowSearchId('API URL')}
-                className={`rounded-xl bg-white/80 px-3 py-2 transition-colors dark:bg-neutral-900/60 ${getSearchHighlightClass('API URL')}`}
-              >
-                <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
-                  API URL
-                </p>
-                <input
+            <>
+              <SettingRow label="API URL" isSubSetting expandControl>
+                <SettingInput
+                  aria-label="API URL"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  type="url"
                   value={apiBaseUrl}
                   onChange={e => setApiBaseUrl(e.target.value)}
                   onBlur={saveApiBaseUrl}
                   placeholder={DEFAULT_BEAN_RECOGNITION_API_BASE_URL}
-                  className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
                 />
-              </div>
+              </SettingRow>
 
-              <div
-                data-settings-search-id={makeSettingRowSearchId('API Key')}
-                className={`rounded-xl bg-white/80 px-3 py-2 transition-colors dark:bg-neutral-900/60 ${getSearchHighlightClass('API Key')}`}
-              >
-                <div className="mb-1 flex items-center justify-between">
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    API Key
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(v => !v)}
-                    className="text-xs text-neutral-500 dark:text-neutral-400"
-                  >
-                    {showApiKey ? '隐藏' : '显示'}
-                  </button>
-                </div>
-                <input
+              <SettingRow label="API Key" isSubSetting expandControl>
+                <SettingInput
+                  aria-label="API Key"
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  spellCheck={false}
+                  type="password"
                   value={apiKey}
-                  type={showApiKey ? 'text' : 'password'}
                   onChange={e => setApiKey(e.target.value)}
                   onBlur={saveApiKey}
                   placeholder="sk-..."
-                  className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
                 />
-              </div>
+              </SettingRow>
 
-              <div
-                data-settings-search-id={makeSettingRowSearchId('Model')}
-                className={`rounded-xl bg-white/80 px-3 py-2 transition-colors dark:bg-neutral-900/60 ${getSearchHighlightClass('Model')}`}
-              >
-                <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">
-                  Model
-                </p>
-                <input
+              <SettingRow label="Model" isSubSetting expandControl>
+                <SettingInput
+                  aria-label="Model"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   value={model}
                   onChange={e => setModel(e.target.value)}
                   onBlur={saveModel}
                   placeholder={DEFAULT_BEAN_RECOGNITION_MODEL}
-                  className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
                 />
-              </div>
+              </SettingRow>
 
-              <div
-                data-settings-search-id={makeSettingRowSearchId(
-                  'System Prompt'
-                )}
-                className={`rounded-xl bg-white/80 px-3 py-2 transition-colors dark:bg-neutral-900/60 ${getSearchHighlightClass('System Prompt')}`}
+              <SettingRow
+                settingId={makeSettingRowSearchId('System Prompt')}
+                vertical
               >
-                <div className="mb-1 flex items-center justify-between">
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="bean-recognition-prompt"
+                    className="flex items-center text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="mr-1.5 inline-block text-neutral-500 opacity-50 dark:text-neutral-400"
+                    >
+                      —
+                    </span>
                     System Prompt
-                  </p>
+                  </label>
                   <button
                     type="button"
                     onClick={restoreDefaultPrompt}
-                    className="text-xs text-neutral-500 dark:text-neutral-400"
+                    className="min-h-6 px-1 text-sm text-neutral-500 active:opacity-70 dark:text-neutral-400"
                   >
                     重置
                   </button>
                 </div>
                 <textarea
+                  id="bean-recognition-prompt"
+                  data-vaul-no-drag
+                  onPointerDown={event => event.stopPropagation()}
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
                   onBlur={savePrompt}
                   placeholder={DEFAULT_BEAN_RECOGNITION_PROMPT}
-                  className="h-28 w-full resize-none bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                  className="h-28 w-full resize-none rounded-md border-0 bg-neutral-50 p-3 text-sm leading-relaxed text-neutral-700 select-text placeholder:text-neutral-400 focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:bg-neutral-800 dark:text-neutral-300 dark:placeholder:text-neutral-500"
                 />
-              </div>
+              </SettingRow>
 
-              <button
-                type="button"
-                data-settings-search-id={makeSettingRowSearchId('测试连接')}
+              <SettingRow
+                label={isTestingConfig ? '测试中...' : '测试连接'}
+                settingId={makeSettingRowSearchId('测试连接')}
+                isSubSetting
+                className="min-h-11"
                 onClick={testConfig}
                 disabled={isTestingConfig}
-                className={`w-full rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                  isTestingConfig
-                    ? 'bg-neutral-200 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
-                    : 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                } ${getSearchHighlightClass('测试连接')}`}
+                isLast
               >
-                {isTestingConfig ? '测试中...' : '测试连接'}
-              </button>
-            </div>
+                {null}
+              </SettingRow>
+            </>
           )}
         </SettingSection>
       )}
