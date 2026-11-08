@@ -94,6 +94,7 @@ function SegmentedControl<T extends string | number | null = string>({
         return (
           <button
             type="button"
+            aria-pressed={isSelected}
             key={String(option.value)}
             className={`relative z-10 flex ${innerHeightClass} ${
               equalWidth ? 'flex-1' : 'min-w-14 shrink-0'

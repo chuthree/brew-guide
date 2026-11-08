@@ -30,6 +30,8 @@ interface BeanListItemProps {
   imageSourceHint?: 'coffeeBeanFront';
   /** Read-only embeds keep the application's row without stock/image actions. */
   readOnly?: boolean;
+  /** Read-only rows backed by an in-memory record use its images directly. */
+  useEmbeddedImages?: boolean;
   trailingAccessory?: React.ReactNode;
   // 外部控制的备注展开状态
   isNotesExpanded?: boolean;
@@ -60,6 +62,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   searchQuery = '',
   imageSourceHint,
   readOnly = false,
+  useEmbeddedImages = false,
   trailingAccessory,
   isNotesExpanded: externalNotesExpanded,
   onNotesExpandToggle,
@@ -100,14 +103,20 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     () => getRoasterName(bean, roasterSettings),
     [bean, roasterSettings]
   );
-  const configuredRoasterLogo = useRoasterLogo(roasterName);
+  const embeddedImages = readOnly && useEmbeddedImages;
+  const imageBeanId = embeddedImages ? undefined : bean.id;
+  const configuredRoasterLogo = useRoasterLogo(
+    embeddedImages ? null : roasterName
+  );
 
-  const frontBeanImage = useCoffeeBeanImage(bean.id, {
+  const frontBeanImage = useCoffeeBeanImage(imageBeanId, {
     preferThumbnail: true,
+    fallback: embeddedImages ? bean.image : undefined,
   });
-  const backBeanImage = useCoffeeBeanImage(bean.id, {
+  const backBeanImage = useCoffeeBeanImage(imageBeanId, {
     side: 'back',
     preferThumbnail: true,
+    fallback: embeddedImages ? bean.backImage : undefined,
   });
   const hasStoredFrontImage = imageSourceHint === 'coffeeBeanFront';
 
