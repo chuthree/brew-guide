@@ -47,7 +47,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
   const pendingMethods = pendingImportData?.methods;
   const formContextKey = `${showForm ? 'open' : 'closed'}-${
     currentEquipment?.id || 'new'
-  }-${pendingImportData ? 'imported' : 'manual'}`;
+  }-${currentEquipment?.timestamp ?? 0}-${pendingImportData ? 'imported' : 'manual'}`;
   const [drawerChromeState, setDrawerChromeState] = useState(() => ({
     key: formContextKey,
     chrome: defaultDrawerChrome,
@@ -143,7 +143,7 @@ const CustomEquipmentFormModal: React.FC<CustomEquipmentFormModalProps> = ({
       {showForm && (
         <CustomEquipmentForm
           ref={formRef}
-          key={`equipment-form-${currentEquipment?.id || 'new'}-${pendingImportData ? 'imported' : 'manual'}`}
+          key={`equipment-form-${currentEquipment?.id || 'new'}-${currentEquipment?.timestamp ?? 0}-${pendingImportData ? 'imported' : 'manual'}`}
           activeDrawerPage={pageStack.currentPage}
           onOpenEquipmentPicker={() => pageStack.push('equipment-picker')}
           onChromeChange={handleChromeChange}

@@ -28,6 +28,9 @@ interface BeanListItemProps {
   onDetailClick?: (bean: ExtendedCoffeeBean) => void;
   searchQuery?: string;
   imageSourceHint?: 'coffeeBeanFront';
+  /** Read-only embeds keep the application's row without stock/image actions. */
+  readOnly?: boolean;
+  trailingAccessory?: React.ReactNode;
   // 外部控制的备注展开状态
   isNotesExpanded?: boolean;
   onNotesExpandToggle?: (beanId: string, expanded: boolean) => void;
@@ -56,6 +59,8 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
   onDetailClick,
   searchQuery = '',
   imageSourceHint,
+  readOnly = false,
+  trailingAccessory,
   isNotesExpanded: externalNotesExpanded,
   onNotesExpandToggle,
   isShareMode = false,
@@ -383,9 +388,10 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
     }
     const target = e.target as HTMLElement;
     if (
-      target.closest('[data-click-area="image"]') ||
-      target.closest('[data-click-area="remaining-edit"]') ||
-      target.closest('[data-click-area="notes"]')
+      !readOnly &&
+      (target.closest('[data-click-area="image"]') ||
+        target.closest('[data-click-area="remaining-edit"]') ||
+        target.closest('[data-click-area="notes"]'))
     ) {
       return;
     }
@@ -449,6 +455,23 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
       className={`group ${isEmpty ? 'opacity-50' : ''} ${onDetailClick || isShareMode ? 'cursor-pointer transition-colors' : ''}`}
       onClick={handleCardClick}
       data-bean-item={bean.id}
+      role={
+        readOnly && !trailingAccessory && onDetailClick ? 'button' : undefined
+      }
+      tabIndex={readOnly && !trailingAccessory && onDetailClick ? 0 : undefined}
+      onKeyDown={
+        readOnly && !trailingAccessory && onDetailClick
+          ? event => {
+              if (
+                event.target === event.currentTarget &&
+                (event.key === 'Enter' || event.key === ' ')
+              ) {
+                event.preventDefault();
+                onDetailClick(bean);
+              }
+            }
+          : undefined
+      }
     >
       <div className="flex gap-3">
         {/* 分享模式下显示选择框 */}
@@ -469,7 +492,7 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
         <div className="relative self-start">
           <div
             className="relative size-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
-            onClick={handleImageViewerOpen}
+            onClick={readOnly ? undefined : handleImageViewerOpen}
             data-click-area="image"
           >
             {beanImage && !hasImageError ? (
@@ -591,13 +614,15 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
               {bean.capacity && bean.remaining && (
                 <span className="inline">
                   <span
-                    onClick={e => onRemainingClick(bean, e)}
+                    onClick={
+                      readOnly ? undefined : e => onRemainingClick(bean, e)
+                    }
                     className="cursor-pointer"
                     data-click-area="remaining-edit"
                   >
                     <span
                       className={
-                        settings?.isExportMode || isEmpty
+                        readOnly || settings?.isExportMode || isEmpty
                           ? ''
                           : 'border-b border-dashed border-neutral-400 transition-colors dark:border-neutral-600'
                       }
@@ -652,6 +677,9 @@ const BeanListItem: React.FC<BeanListItemProps> = ({
             </div>
           )}
         </div>
+        {trailingAccessory && (
+          <div className="flex shrink-0 items-center">{trailingAccessory}</div>
+        )}
       </div>
     </div>
   );
