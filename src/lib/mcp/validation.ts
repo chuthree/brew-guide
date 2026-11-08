@@ -1,3 +1,4 @@
+import { hash as sha256 } from '@stablelib/sha256';
 import type { Schema } from './toolDefinitions';
 
 export class McpToolError extends Error {
@@ -162,11 +163,12 @@ export function canonicalJson(value: unknown): string {
 }
 
 export async function recordVersion(record: unknown): Promise<string> {
-  const hash = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(canonicalJson(record))
-  );
-  return Array.from(new Uint8Array(hash), byte =>
+  const bytes = new TextEncoder().encode(canonicalJson(record));
+  const subtle = globalThis.crypto?.subtle;
+  const hash = subtle
+    ? new Uint8Array(await subtle.digest('SHA-256', bytes))
+    : sha256(bytes);
+  return Array.from(hash, byte =>
     byte.toString(16).padStart(2, '0')
   ).join('');
 }

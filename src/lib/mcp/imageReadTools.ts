@@ -1,6 +1,6 @@
 import type { SqliteExecutor } from '@/lib/data/sqlite/driver';
 import type { NativeImageFileStore } from '@/lib/data/images/nativeImageFileStore';
-import { createTauriImageFileStore } from '@/lib/data/images/tauriImageFileStore';
+import { createBusinessImageFileStore } from '@/lib/mcp/platform';
 import { readStoredImageSource } from '@/lib/data/images/storedImageSourceReader';
 import {
   listCoffeeBeanImageMetadata,
@@ -86,7 +86,7 @@ export async function readImageTool(
   try {
     const dataUrl = await readStoredImageSource(
       row,
-      fileStore ?? (await createTauriImageFileStore())
+      fileStore ?? (await createBusinessImageFileStore())
     );
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(row.mimeType)) {
       return {

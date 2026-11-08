@@ -136,7 +136,7 @@ const blendComponent = object({
   batch: componentText('Batch.'),
   variety: componentText('Variety.'),
 });
-const beanFields: Record<string, Schema> = {
+export const beanFields: Record<string, Schema> = {
   name: { ...text('Coffee bean name.'), minLength: 1 },
   roaster: text('Roaster name.'),
   roastLevel: text('Roast level, preferably the app’s Chinese display label.'),

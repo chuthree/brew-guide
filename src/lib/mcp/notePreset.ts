@@ -1,4 +1,20 @@
-import type { BrewingNote, MethodParams } from '@/lib/core/config';
+import type {
+  BrewingNote,
+  MethodParams,
+  CustomEquipment,
+  Method,
+} from '@/lib/core/config';
+import type { CustomMethodRecord } from '@/lib/data/contracts';
+import type { AppSettings } from '@/lib/data/models';
+import { builtinNoteMethodId } from '@/lib/notes/catalogReferences';
+import {
+  getCommonMethodBaseEquipmentId,
+  getCommonMethodsForEquipment,
+} from '@/lib/brewing/methodAvailability';
+import {
+  autoMigrateStages,
+  isLegacyFormat,
+} from '@/lib/brewing/stageMigration';
 import { invalid } from './validation';
 
 const positive = (value: unknown): number | undefined => {
@@ -23,7 +39,13 @@ export function applyNoteMethodPreset(
   isEspresso: boolean
 ): void {
   const params = { ...note.params };
-  for (const key of ['coffee', 'water', 'ratio', 'grindSize', 'temp'] as const) {
+  for (const key of [
+    'coffee',
+    'water',
+    'ratio',
+    'grindSize',
+    'temp',
+  ] as const) {
     const field = {
       coffee: 'coffeeGrams',
       water: 'waterGrams',
@@ -50,7 +72,11 @@ export function applyNoteMethodPreset(
   const liquidField = isEspresso ? 'liquidWeightGrams' : 'waterGrams';
   const hadWater = Boolean(note.params?.[liquidKey]?.trim());
   const ratio = ratioValue(params.ratio);
-  if (isEspresso && fields.liquidWeightGrams === undefined && !params.liquidWeight)
+  if (
+    isEspresso &&
+    fields.liquidWeightGrams === undefined &&
+    !params.liquidWeight
+  )
     params.liquidWeight = preset.liquidWeight || preset.water;
   if (
     coffee &&
@@ -96,4 +122,44 @@ export function applyNoteMethodPreset(
     scaled = next;
     return result;
   });
+}
+
+/** Resolve the same stable recipe identity and effective overrides used by native MCP. */
+export function resolveNoteMethodPreset(
+  equipmentId: string,
+  methodId: string,
+  equipment: CustomEquipment[],
+  methods: CustomMethodRecord[],
+  settings: AppSettings | undefined
+): { params: MethodParams; isEspresso: boolean } {
+  const base = getCommonMethodBaseEquipmentId(equipmentId, equipment);
+  const candidates: Array<{ method: Method; builtin: boolean }> = [
+    ...getCommonMethodsForEquipment(equipmentId, equipment)
+      .filter(method => builtinNoteMethodId(base, method.name) === methodId)
+      .map(method => ({ method, builtin: true })),
+    ...methods
+      .filter(row => row.equipmentId === equipmentId)
+      .flatMap(row => row.methods)
+      .filter(
+        method => method.id === methodId && !methodId.startsWith('legacy:')
+      )
+      .map(method => ({ method, builtin: false })),
+  ];
+  if (candidates.length !== 1)
+    invalid(
+      'Select a unique recipe for this equipment before applying its preset.'
+    );
+  const { method, builtin } = candidates[0];
+  const stages = isLegacyFormat(method.params.stages)
+    ? autoMigrateStages(method.params.stages)
+    : method.params.stages;
+  const key = `${equipmentId}:${builtin ? method.name : method.id}`;
+  const overrides = settings?.methodParamOverrides?.[key];
+  const values = Object.fromEntries(
+    Object.entries(overrides ?? {}).filter(([name]) => name !== 'modifiedAt')
+  );
+  return {
+    params: { ...method.params, stages, ...values },
+    isEspresso: base === 'Espresso',
+  };
 }

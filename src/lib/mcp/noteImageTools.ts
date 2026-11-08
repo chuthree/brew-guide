@@ -1,7 +1,7 @@
 import type { BrewingNote } from '@/lib/core/config';
 import type { SqliteExecutor } from '@/lib/data/sqlite/driver';
 import type { NativeImageFileStore } from '@/lib/data/images/nativeImageFileStore';
-import { createTauriImageFileStore } from '@/lib/data/images/tauriImageFileStore';
+import { createBusinessImageFileStore } from '@/lib/mcp/platform';
 import { listBrewingNoteImageMetadata } from '@/lib/data/sqlite/imageMetadataExecutor';
 import {
   prepareBrewingNoteImageWrite,
@@ -105,7 +105,7 @@ export async function prepareMcpNoteImageMutation(
   try {
     return await prepareBrewingNoteImageWrite(
       tx,
-      dependencies.fileStore ?? (await createTauriImageFileStore()),
+      dependencies.fileStore ?? (await createBusinessImageFileStore()),
       note,
       dependencies.persistence,
       selection

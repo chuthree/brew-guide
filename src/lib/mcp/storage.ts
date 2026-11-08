@@ -1,7 +1,7 @@
 import { DATA_DOMAINS, type DataDomain } from '@/lib/permissions/access';
 import { mutationChangeDomain, requiredMcpDomains } from './permissions';
 import type { SqliteDriver, SqliteExecutor } from '@/lib/data/sqlite/driver';
-import { openTauriSqliteDriver } from '@/lib/data/sqlite/tauriSqliteDriver';
+import { openBusinessSqliteDriver } from '@/lib/mcp/platform';
 import { canonicalJson, McpToolError, recordVersion } from './validation';
 import { authorizeMutationChanges } from './runtimeHost';
 
@@ -9,7 +9,7 @@ const initialized = new WeakMap<SqliteDriver, Promise<void>>();
 export let localHistoryGeneration = 0;
 
 export async function getMcpDriver(): Promise<SqliteDriver> {
-  const driver = await openTauriSqliteDriver();
+  const driver = await openBusinessSqliteDriver();
   let initialization = initialized.get(driver);
   if (!initialization) {
     initialization = driver.transaction(async tx => {
@@ -179,7 +179,7 @@ export async function commitMcpMutation<T extends Record<string, unknown>>(
 export async function clearMcpLocalHistory(
   driver?: SqliteDriver
 ): Promise<void> {
-  const activeDriver = driver ?? (await openTauriSqliteDriver());
+  const activeDriver = driver ?? (await openBusinessSqliteDriver());
   await activeDriver.transaction(async tx => {
     const tables = await tx.query(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('mcp_operations', 'mcp_activity', 'mcp_publications')"

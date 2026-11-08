@@ -1,13 +1,10 @@
+import { buildBusinessStatistics } from './businessAnalytics';
 import {
   BEAN_FIELD_DEFINITIONS,
   normalizeBeanFieldConfig,
 } from '@/lib/coffee-beans/beanFields';
 import { mergeNavigationSettings } from '@/lib/navigation/navigationSettings';
-import {
-  normalizeEstimatedCupDoseSettings,
-  calculateEstimatedCupsFromWeights,
-} from '@/lib/settings/estimatedCupDose';
-import { buildRecordStatistics } from '@/lib/statistics/recordMetrics';
+import { normalizeEstimatedCupDoseSettings } from '@/lib/settings/estimatedCupDose';
 import { transformRoasterRenameRecords } from '@/lib/data/roasterRename';
 import {
   listGrinders,
@@ -32,7 +29,6 @@ import {
 import { listCoffeeBeans } from '@/lib/data/sqlite/repositories/coffeeBean';
 import { listBrewingNotes } from '@/lib/data/sqlite/repositories/brewingNote';
 import { normalizeCoffeeBeanGroups } from '@/lib/utils/coffeeBeanGroupUtils';
-import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/amount';
 import type { Schema } from './toolDefinitions';
 import type { MutationChange, MutationWork } from './storage';
 import { getMcpDriver, localHistoryGeneration } from './storage';
@@ -446,7 +442,7 @@ function safeProjection(value: unknown, schema: Schema): unknown {
     return value;
   return null; // Malformed imported scalars must not expose arbitrary nested data.
 }
-function safeView(settings: AppSettings): Args {
+export function safePreferenceView(settings: AppSettings): Args {
   return Object.fromEntries(
     Object.keys(safePreferenceSchema)
       .filter(k => settings[k as keyof AppSettings] !== undefined)
@@ -459,6 +455,74 @@ function safeView(settings: AppSettings): Args {
       ])
   );
 }
+/** Shared pure preference command: never accepts or returns credential fields. */
+export function applySafePreferencePatch(
+  before: AppSettings,
+  args: Args
+): AppSettings {
+  validate(
+    args,
+    preferencesDefinitions.find(
+      definition => definition.name === 'update_preferences'
+    )!.schema
+  );
+  const next = structuredClone(before);
+  const patch = (args.patch ?? {}) as Partial<AppSettings>;
+  const clearFields = (args.clearFields ?? []) as Array<keyof AppSettings>;
+  if (!Object.keys(patch).length && !clearFields.length)
+    invalid('Supply patch or clearFields');
+  if (clearFields.some(key => Object.prototype.hasOwnProperty.call(patch, key)))
+    invalid('Cannot patch and clear the same preference');
+  for (const key of clearFields) delete next[key];
+  if (
+    patch.customFlavorPeriod &&
+    Object.values(patch.customFlavorPeriod).some(p => p.startDay > p.endDay)
+  )
+    invalid('Taste-window startDay must not exceed endDay');
+  if (
+    patch.flavorRatingHalfStep === true &&
+    patch.flavorRatingTenthStep === true
+  )
+    invalid('Half-step and tenth-step ratings are mutually exclusive');
+  Object.assign(next, patch);
+  if (patch.beanFieldConfig) {
+    if (
+      new Set(patch.beanFieldConfig.fields.map(f => f.id)).size !==
+      patch.beanFieldConfig.fields.length
+    )
+      invalid('Duplicate bean field IDs');
+    next.beanFieldConfig = normalizeBeanFieldConfig(patch.beanFieldConfig);
+  }
+  if (patch.layoutSettings)
+    next.layoutSettings = {
+      ...before.layoutSettings,
+      ...patch.layoutSettings,
+    };
+  if (patch.navigationSettings) {
+    next.navigationSettings = mergeNavigationSettings(
+      before.navigationSettings,
+      patch.navigationSettings
+    );
+    if (!Object.values(next.navigationSettings.visibleTabs).some(Boolean))
+      invalid('At least one main navigation tab must remain visible');
+  }
+  if (patch.flavorRatingHalfStep === true) next.flavorRatingTenthStep = false;
+  if (patch.flavorRatingTenthStep === true) next.flavorRatingHalfStep = false;
+  for (const key of ['decrementPresets', 'greenBeanRoastPresets'] as const) {
+    if (patch[key]) {
+      const normalized = patch[key].map(value => Number(value.toFixed(1)));
+      if (normalized.some(value => value <= 0))
+        invalid('Preset must remain positive after rounding to one decimal');
+      next[key] = [...new Set(normalized)].sort((a, b) => a - b);
+    }
+  }
+  if (patch.estimatedCupDoseSettings)
+    next.estimatedCupDoseSettings = normalizeEstimatedCupDoseSettings(
+      patch.estimatedCupDoseSettings
+    );
+  return next;
+}
+
 function groupView(settings: AppSettings): CoffeeBeanGroup[] {
   return normalizeCoffeeBeanGroups(
     (settings.coffeeBeanGroups ?? []).map(group => ({
@@ -482,7 +546,7 @@ function roasters(settings: AppSettings) {
     })
   );
 }
-function domainView(settings: AppSettings, name: string): unknown {
+export function domainView(settings: AppSettings, name: string): unknown {
   if (name.includes('group')) return groupView(settings);
   if (name.includes('flavor_dimension'))
     return {
@@ -490,7 +554,7 @@ function domainView(settings: AppSettings, name: string): unknown {
       historicalLabels: settings.flavorDimensionHistoricalLabels ?? {},
     };
   if (name.includes('roaster')) return roasters(settings);
-  return safeView(settings);
+  return safePreferenceView(settings);
 }
 async function settingsAt(tx: SqliteExecutor): Promise<AppSettings> {
   const stored = await getAppSettings(tx);
@@ -537,7 +601,11 @@ const kindTool = (kind: string) =>
     : kind === 'flavor_dimension'
       ? 'flavor_dimensions'
       : 'roaster_configs';
-function findItem(settings: AppSettings, kind: string, id: string): unknown {
+export function findItem(
+  settings: AppSettings,
+  kind: string,
+  id: string
+): unknown {
   const value =
     kind === 'group'
       ? groupView(settings).find(g => g.id === id)
@@ -598,64 +666,14 @@ export async function readPreferencesTool(
       expiresInSeconds: 300,
     };
   }
-  if (name === 'get_statistics') {
-    const beans = await listCoffeeBeans(tx);
-    const notes = await listBrewingNotes(tx);
-    const from = args.from ? Date.parse(String(args.from)) : -Infinity;
-    const to = args.to ? Date.parse(String(args.to)) : Infinity;
-    if (from > to) invalid('from must not exceed to');
-    const selected = notes.filter(n => n.timestamp >= from && n.timestamp < to);
-    const counts = {
-      brewing: 0,
-      quickConsumption: 0,
-      capacityAdjustment: 0,
-      roasting: 0,
-    };
-    for (const note of selected) {
-      if (note.source === 'capacity-adjustment') counts.capacityAdjustment++;
-      else if (note.source === 'quick-decrement') counts.quickConsumption++;
-      else if (String(note.source).includes('roast')) counts.roasting++;
-      else counts.brewing++;
-    }
-    const inventory = ['green', 'roasted'].map(state => {
-      const matching = beans.filter(b => (b.beanState ?? 'roasted') === state);
-      return {
-        state,
-        beanCount: matching.length,
-        capacityGrams: matching.reduce(
-          (sum, b) => sum + (parseCoffeeBeanAmount(b.capacity) ?? 0),
-          0
-        ),
-        remainingGrams: matching.reduce(
-          (sum, b) => sum + (parseCoffeeBeanAmount(b.remaining) ?? 0),
-          0
-        ),
-      };
-    });
-    return {
-      inventory,
-      estimatedCups: calculateEstimatedCupsFromWeights(
-        beans
-          .filter(b => b.beanState !== 'green')
-          .map(b => ({
-            beanType: b.beanType,
-            remainingWeight: parseCoffeeBeanAmount(b.remaining) ?? 0,
-          })),
-        settings.estimatedCupDoseSettings
-      ),
-      records: counts,
-      totalRecords: selected.length,
-      metrics: buildRecordStatistics(beans, notes, {
-        from: args.from ? from : undefined,
-        to: args.to ? to : undefined,
-        groupBy: args.groupBy as 'day' | 'month' | undefined,
-      }),
-      scope:
-        'Current inventory plus original-app record consumption/cost rules; quick consumption is included in usage but not ordinary brewing count.',
-      from: args.from ?? null,
-      to: args.to ?? null,
-    };
-  }
+  if (name === 'get_statistics')
+    return buildBusinessStatistics(
+      await listCoffeeBeans(tx),
+      await listBrewingNotes(tx),
+      settings,
+      args
+    );
+
   const value = domainView(settings, name);
   return {
     ...(name === 'get_preferences'
@@ -666,20 +684,13 @@ export async function readPreferencesTool(
     version: await recordVersion(value),
   };
 }
-export async function mutatePreferencesTool(
-  tx: SqliteExecutor,
+export function applyPreferenceCollectionMutation(
+  before: AppSettings,
   name: string,
-  args: Args
-): Promise<MutationWork<Args>> {
-  validate(
-    args,
-    preferencesDefinitions.find(d => d.name === name)?.schema ?? obj({})
-  );
-  const before = await settingsAt(tx);
-  if (name === 'rename_roaster') return applyRename(tx, before, args);
-  const next = structuredClone(before);
-  const view = domainView(before, name);
-  await checkVersion(view, args.expectedVersion);
+  args: Args,
+  validBeanIds: string[] = []
+): AppSettings {
+  let next = structuredClone(before);
   if (name.startsWith('delete_')) {
     const kind =
       name === 'delete_bean_group'
@@ -687,19 +698,6 @@ export async function mutatePreferencesTool(
         : name === 'delete_flavor_dimension'
           ? 'flavor_dimension'
           : 'roaster_config';
-    const preview = previewTokens.get(String(args.confirmationToken));
-    if (
-      !preview ||
-      preview.kind !== kind ||
-      preview.id !== args.id ||
-      preview.version !== args.expectedVersion ||
-      preview.generation !== localHistoryGeneration ||
-      preview.expires < Date.now()
-    )
-      throw new McpToolError(
-        'CONFIRMATION_REQUIRED',
-        'Get a fresh matching deletion preview.'
-      );
     findItem(before, kind, String(args.id));
     if (kind === 'group')
       next.coffeeBeanGroups = groupView(before).filter(g => g.id !== args.id);
@@ -714,61 +712,7 @@ export async function mutatePreferencesTool(
         r => r.roasterName !== args.id
       );
   } else if (name === 'update_preferences') {
-    const patch = (args.patch ?? {}) as Partial<AppSettings>;
-    const clearFields = (args.clearFields ?? []) as Array<keyof AppSettings>;
-    if (!Object.keys(patch).length && !clearFields.length)
-      invalid('Supply patch or clearFields');
-    if (
-      clearFields.some(key => Object.prototype.hasOwnProperty.call(patch, key))
-    )
-      invalid('Cannot patch and clear the same preference');
-    for (const key of clearFields) delete next[key];
-    if (
-      patch.customFlavorPeriod &&
-      Object.values(patch.customFlavorPeriod).some(p => p.startDay > p.endDay)
-    )
-      invalid('Taste-window startDay must not exceed endDay');
-    if (
-      patch.flavorRatingHalfStep === true &&
-      patch.flavorRatingTenthStep === true
-    )
-      invalid('Half-step and tenth-step ratings are mutually exclusive');
-    Object.assign(next, patch);
-    if (patch.beanFieldConfig) {
-      if (
-        new Set(patch.beanFieldConfig.fields.map(f => f.id)).size !==
-        patch.beanFieldConfig.fields.length
-      )
-        invalid('Duplicate bean field IDs');
-      next.beanFieldConfig = normalizeBeanFieldConfig(patch.beanFieldConfig);
-    }
-    if (patch.layoutSettings)
-      next.layoutSettings = {
-        ...before.layoutSettings,
-        ...patch.layoutSettings,
-      };
-    if (patch.navigationSettings) {
-      next.navigationSettings = mergeNavigationSettings(
-        before.navigationSettings,
-        patch.navigationSettings
-      );
-      if (!Object.values(next.navigationSettings.visibleTabs).some(Boolean))
-        invalid('At least one main navigation tab must remain visible');
-    }
-    if (patch.flavorRatingHalfStep === true) next.flavorRatingTenthStep = false;
-    if (patch.flavorRatingTenthStep === true) next.flavorRatingHalfStep = false;
-    for (const key of ['decrementPresets', 'greenBeanRoastPresets'] as const) {
-      if (patch[key]) {
-        const normalized = patch[key].map(value => Number(value.toFixed(1)));
-        if (normalized.some(value => value <= 0))
-          invalid('Preset must remain positive after rounding to one decimal');
-        next[key] = [...new Set(normalized)].sort((a, b) => a - b);
-      }
-    }
-    if (patch.estimatedCupDoseSettings)
-      next.estimatedCupDoseSettings = normalizeEstimatedCupDoseSettings(
-        patch.estimatedCupDoseSettings
-      );
+    next = applySafePreferencePatch(before, args);
   } else if (name === 'create_bean_group' || name === 'update_bean_group') {
     const groups = groupView(before);
     const old = groups.find(g => g.id === args.id);
@@ -777,7 +721,7 @@ export async function mutatePreferencesTool(
     const beanIds = Array.from(
       new Set((args.beanIds ?? old?.beanIds ?? []) as string[])
     );
-    const valid = new Set((await listCoffeeBeans(tx)).map(b => b.id));
+    const valid = new Set(validBeanIds);
     if (beanIds.some(id => !valid.has(id)))
       invalid('beanIds contains an unknown bean');
     const now = Date.now();
@@ -834,6 +778,52 @@ export async function mutatePreferencesTool(
       ? list.map(r => (r === old ? config : r))
       : [...list, config];
   } else throw new McpToolError('UNKNOWN_TOOL', 'Unknown preferences mutation');
+  return next;
+}
+
+export async function mutatePreferencesTool(
+  tx: SqliteExecutor,
+  name: string,
+  args: Args
+): Promise<MutationWork<Args>> {
+  validate(
+    args,
+    preferencesDefinitions.find(d => d.name === name)?.schema ?? obj({})
+  );
+  const before = await settingsAt(tx);
+  if (name === 'rename_roaster') return applyRename(tx, before, args);
+  let next = structuredClone(before);
+  const view = domainView(before, name);
+  await checkVersion(view, args.expectedVersion);
+  if (name.startsWith('delete_')) {
+    const kind =
+      name === 'delete_bean_group'
+        ? 'group'
+        : name === 'delete_flavor_dimension'
+          ? 'flavor_dimension'
+          : 'roaster_config';
+    const preview = previewTokens.get(String(args.confirmationToken));
+    if (
+      !preview ||
+      preview.kind !== kind ||
+      preview.id !== args.id ||
+      preview.version !== args.expectedVersion ||
+      preview.generation !== localHistoryGeneration ||
+      preview.expires < Date.now()
+    )
+      throw new McpToolError(
+        'CONFIRMATION_REQUIRED',
+        'Get a fresh matching deletion preview.'
+      );
+  }
+  next = applyPreferenceCollectionMutation(
+    before,
+    name,
+    args,
+    name === 'create_bean_group' || name === 'update_bean_group'
+      ? (await listCoffeeBeans(tx)).map(bean => bean.id)
+      : []
+  );
   await saveAppSettings(tx, next);
   const afterView = domainView(next, name);
   return {

@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 const root = process.cwd();
 const headless = resolve(root, 'src/lib/provider/headless');
 const aliases = {
+  '@/lib/mcp/platform': `${headless}/platform.ts`,
   '@/lib/data/sqlite/tauriSqliteDriver': `${headless}/sqlite.ts`,
   '@/lib/data/images/tauriImageFileStore': `${headless}/images.ts`,
   '@/lib/images/imageProcessing': `${headless}/imageProcessing.ts`,

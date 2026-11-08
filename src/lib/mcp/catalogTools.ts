@@ -1,7 +1,7 @@
-import {
-  getPourTypeOptions,
-  isPourTypeAvailable,
-} from '@/lib/utils/equipmentUtils';
+import { projectCatalogPreferences as catalogPreferences } from './catalogPreferences';
+import { validateCatalogMethod as validateMethod } from './methodValidation';
+import { resolveNoteMethodPreset } from './notePreset';
+import { getPourTypeOptions } from '@/lib/utils/equipmentUtils';
 import { MCP_SVG_MAX_BYTES, normalizeEquipmentSvgFields } from './svgAssets';
 import {
   buildNoteReferenceCatalog,
@@ -516,37 +516,7 @@ async function saveGrinder(tx: SqliteExecutor, record: Grinder) {
     [row.id, row.record_json]
   );
 }
-function validateMethod(method: Method, equipment: CustomEquipment) {
-  const amount = (value: string) => Number(value.replace(/\s*g$/i, '').trim());
-  if (
-    !Number.isFinite(amount(method.params.coffee)) ||
-    amount(method.params.coffee) <= 0
-  )
-    invalid('Coffee amount must be positive grams.');
-  if (
-    !Number.isFinite(amount(method.params.water)) ||
-    amount(method.params.water) < 0
-  )
-    invalid('Water amount must be nonnegative grams.');
-  for (const stage of method.params.stages) {
-    if (!isPourTypeAvailable(equipment, stage.pourType))
-      invalid(
-        `Unavailable pourType ${JSON.stringify(stage.pourType)}. Read get_equipment.availablePourTypes; define custom pour animations before using their IDs.`
-      );
-    if (stage.valveStatus !== undefined && !equipment.hasValve)
-      invalid('Valve status is only supported by equipment with a valve.');
-    if (
-      stage.water !== undefined &&
-      (!Number.isFinite(amount(stage.water)) || amount(stage.water) < 0)
-    )
-      invalid('Stage water must be nonnegative grams.');
-    if (
-      !['bypass', 'beverage'].includes(stage.pourType || '') &&
-      stage.duration === undefined
-    )
-      invalid('Stage duration is required except for bypass/beverage.');
-  }
-}
+
 const previews = new Map<
   string,
   { key: string; fingerprint: string; expiresAt: number; generation: number }
@@ -575,14 +545,7 @@ async function impact(tx: SqliteExecutor, kind: Kind, args: Args) {
     fingerprint: await recordVersion({ record: row.record, child, references }),
   };
 }
-function catalogPreferences(settings?: AppSettings) {
-  return {
-    hiddenEquipments: settings?.hiddenEquipments || [],
-    hiddenCommonMethods: settings?.hiddenCommonMethods || {},
-    equipmentOrder: settings?.equipmentOrder || [],
-    equipmentNameOverrides: settings?.equipmentNameOverrides || {},
-  };
-}
+
 async function updateCatalogPreferences(
   tx: SqliteExecutor,
   args: Args
@@ -717,23 +680,13 @@ export async function loadNoteMethodPreset(
   equipmentId: string,
   methodId: string
 ): Promise<{ params: MethodParams; isEspresso: boolean }> {
-  const candidates: MethodParams[] = [];
-  for (const row of await catalogRows(tx, 'method')) {
-    if (row.equipmentId !== equipmentId) continue;
-    const result = await displayView(tx, row);
-    if (result.referenceId === methodId || row.record.id === methodId)
-      candidates.push(result.effectiveParams as MethodParams);
-  }
-  if (candidates.length !== 1)
-    invalid(
-      'Select a unique recipe for this equipment before applying its preset.'
-    );
-  return {
-    params: candidates[0],
-    isEspresso:
-      getCommonMethodBaseEquipmentId(equipmentId, await equipments(tx)) ===
-      'Espresso',
-  };
+  return resolveNoteMethodPreset(
+    equipmentId,
+    methodId,
+    await equipments(tx),
+    await methods(tx),
+    await getAppSettings(tx)
+  );
 }
 
 function equipmentForTransfer(

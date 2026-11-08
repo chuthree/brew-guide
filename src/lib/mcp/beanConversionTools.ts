@@ -19,8 +19,13 @@ import {
 } from '@/lib/data/sqlite/repositories/brewingNote';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 import { stripBrewingNoteImages } from '@/lib/notes/imageRecords';
-import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
-import type { Schema } from './toolDefinitions';
+import {
+  analyzeHistoricalConversion,
+  buildHistoricalConversionRecords,
+  conversionAmount,
+  conversionGrams,
+} from '@/lib/coffee-beans/historicalConversion';
+export { beanConversionDefinitions } from './beanConversionDefinitions';
 import { invalid, McpToolError, recordVersion } from './validation';
 import {
   localHistoryGeneration,
@@ -28,64 +33,6 @@ import {
   type MutationWork,
 } from './storage';
 type Args = Record<string, unknown>;
-const groupMigration: Schema = {
-  type: 'string',
-  enum: ['green', 'roasted', 'remove'],
-};
-const text = (maxLength = 128): Schema => ({
-  type: 'string',
-  minLength: 1,
-  maxLength,
-});
-const object = (
-  properties: Record<string, Schema>,
-  required: string[]
-): Schema => ({
-  type: 'object',
-  properties,
-  required,
-  additionalProperties: false,
-});
-export const beanConversionDefinitions: Array<{
-  name: string;
-  description: string;
-  schema: Schema;
-  write?: boolean;
-  destructive?: boolean;
-  access?: 'delete';
-}> = [
-  {
-    name: 'preview_convert_roasted_to_green',
-    description:
-      'Preview migration of a historical roasted bean that actually represents green inventory. Replaces original bean; deletes its adjustment/quick records; migrates ordinary brew notes to newly produced roasted stock and creates canonical roasting lineage. Present exact impact before confirming. Rejects existing provenance/dependent lineage or contradictory stock history.',
-    schema: object({ id: text(), groupMigration }, ['id']),
-  },
-  {
-    name: 'convert_roasted_to_green',
-    access: 'delete',
-    write: true,
-    destructive: true,
-    description:
-      'Perform only explicitly confirmed historical roasted-to-green migration from a fresh preview. Deletes original bean and its change records, keeps ordinary notes and photos, creates new green and optional roasted beans. Requires delete permission; irreversible graph replacement, not a stock field edit.',
-    schema: object(
-      {
-        requestId: { ...text(), minLength: 8 },
-        id: text(),
-        expectedVersion: { ...text(64), minLength: 64 },
-        confirmationToken: text(),
-        groupMigration,
-        confirmAction: { type: 'string', enum: ['convert_roasted_to_green'] },
-      },
-      [
-        'requestId',
-        'id',
-        'expectedVersion',
-        'confirmationToken',
-        'confirmAction',
-      ]
-    ),
-  },
-];
 const previews = new Map<
   string,
   {
@@ -97,78 +44,26 @@ const previews = new Map<
     groupMigration?: unknown;
   }
 >();
-const fmt = (n: number) => String(Math.round(n * 1000) / 1000);
-function grams(value: unknown, label: string) {
-  const n =
-    typeof value === 'number'
-      ? value
-      : typeof value === 'string' &&
-          /^\d+(?:\.\d+)?(?:\s*g)?$/.test(value.trim())
-        ? parseFloat(value)
-        : NaN;
-  if (
-    !Number.isFinite(n) ||
-    n < 0 ||
-    n > 1_000_000 ||
-    Math.abs(Number(fmt(n)) - n) > 1e-9
-  )
-    invalid(
-      `${label} must be a valid nonnegative gram amount with at most three decimals`
-    );
-  return n;
-}
+const fmt = conversionAmount;
+const grams = conversionGrams;
 async function graph(tx: SqliteExecutor, id: string) {
   const original = await getCoffeeBean(tx, id);
   if (!original) throw new McpToolError('NOT_FOUND', 'Coffee bean not found');
-  if (
-    (original.beanState ?? 'roasted') !== 'roasted' ||
-    original.sourceGreenBeanId ||
-    original.sourceGreenBeanIds?.length
-  )
-    invalid(
-      'Only historical roasted beans without green provenance can be converted'
-    );
-  const beans = await listCoffeeBeans(tx);
-  const all = await listBrewingNotes(tx);
-  if (
-    beans.some(
-      b => b.sourceGreenBeanId === id || b.sourceGreenBeanIds?.includes(id)
-    ) ||
-    all.some(
-      n =>
-        n.changeRecord?.roastingRecord?.greenBeanId === id ||
-        n.changeRecord?.roastingRecord?.roastedBeanId === id ||
-        (n.beanId === id && n.source === 'roasting')
-    )
-  )
-    invalid(
-      'Existing roasting relationships must be resolved before this historical conversion'
-    );
-  const related = all
-    .filter(n => n.beanId === id)
-    .sort((a, b) => a.id.localeCompare(b.id));
-  const records = related.filter(
-    n => n.source === 'quick-decrement' || n.source === 'capacity-adjustment'
+  const analyzed = analyzeHistoricalConversion(
+    original,
+    await listCoffeeBeans(tx),
+    await listBrewingNotes(tx)
   );
-  const brews = related.filter(n => !records.includes(n));
-  const capacity = grams(original.capacity, 'Capacity'),
-    remaining = grams(original.remaining, 'Remaining');
-  if (remaining > capacity) invalid('Remaining inventory exceeds capacity');
-  const input = Number(fmt(capacity - remaining));
-  const usage = Number(
-    fmt(
-      brews.reduce(
-        (sum, n) =>
-          sum +
-          (n.params?.coffee ? grams(n.params.coffee, 'Linked brew dose') : 0),
-        0
-      )
-    )
-  );
-  if (usage > input || (input === 0 && brews.length > 0))
-    invalid(
-      'Existing brew usage contradicts the historical conversion; reconcile records first'
-    );
+  const {
+    related,
+    records,
+    brews,
+    capacity,
+    remaining,
+    input,
+    usage,
+    discardedMetadataFields,
+  } = analyzed;
   const settings = await getAppSettings(tx);
   const affectedGroups = (settings?.coffeeBeanGroups ?? []).filter(group =>
     group.beanIds.includes(id)
@@ -185,34 +80,6 @@ async function graph(tx: SqliteExecutor, id: string) {
         [note.id]
       ))
     );
-  const copiedFields = new Set([
-    'id',
-    'timestamp',
-    'beanState',
-    'name',
-    'roaster',
-    'beanType',
-    'roastLevel',
-    'flavor',
-    'notes',
-    'brand',
-    'blendComponents',
-    'capacity',
-    'remaining',
-    'price',
-    'roastDate',
-    'sourceGreenBeanId',
-  ]);
-  const discardedMetadataFields = Object.entries(original)
-    .filter(
-      ([key, value]) =>
-        !copiedFields.has(key) &&
-        value !== undefined &&
-        value !== null &&
-        value !== ''
-    )
-    .map(([key]) => key)
-    .sort();
   const fingerprint = await recordVersion({
     original,
     related,
@@ -368,72 +235,8 @@ export async function mutateBeanConversionTool(
       'Unused direct conversion has no roasted output to receive group membership'
     );
   const o = g.original;
-  const timestamp = Math.max(Date.now(), o.timestamp + 1);
-  // Exact canonical migration field selection; derived inventory must not inherit
-  // arbitrary old provenance, repurchase identifiers or stock history snapshots.
-  const inherited = {
-    name: o.name,
-    roaster: o.roaster,
-    beanType: o.beanType,
-    roastLevel: o.roastLevel,
-    flavor: o.flavor,
-    notes: o.notes,
-    brand: o.brand,
-    blendComponents: o.blendComponents,
-  };
-  const green: CoffeeBean = {
-    ...inherited,
-    id: nanoid(),
-    timestamp,
-    beanState: 'green',
-    capacity: o.capacity,
-    remaining: o.remaining,
-    price: o.price,
-    purchaseDate: o.roastDate,
-  };
-  let roasted: CoffeeBean | undefined;
-  let roastNote: BrewingNote | undefined;
-  if (g.input > 0) {
-    const price = parseFloat(o.price || '0');
-    roasted = {
-      ...inherited,
-      id: nanoid(),
-      timestamp,
-      beanState: 'roasted',
-      capacity: fmt(g.input),
-      remaining: fmt(g.input - g.usage),
-      roastDate: o.roastDate,
-      price:
-        Number.isFinite(price) && price > 0 && g.capacity > 0
-          ? ((price / g.capacity) * g.input).toFixed(2)
-          : undefined,
-      sourceGreenBeanId: green.id,
-    };
-    roastNote = {
-      id: nanoid(),
-      timestamp,
-      coffeeBeanInfo: {
-        name: green.name,
-        roastLevel: green.roastLevel || '未知',
-        roastDate: green.purchaseDate,
-        roaster: green.roaster,
-      },
-      rating: 0,
-      taste: {},
-      notes: `从熟豆转换：烘焙了 ${fmt(g.input)}g 生豆 → ${formatBeanDisplayName(roasted)}`,
-      source: 'roasting',
-      beanId: green.id,
-      changeRecord: {
-        roastingRecord: {
-          greenBeanId: green.id,
-          greenBeanName: formatBeanDisplayName(green),
-          roastedAmount: g.input,
-          roastedBeanId: roasted.id,
-          roastedBeanName: formatBeanDisplayName(roasted),
-        },
-      },
-    };
-  }
+  const { green, roasted, roastNote, migratedNotes, timestamp } =
+    buildHistoricalConversionRecords(g, Date.now(), nanoid);
   const changes: MutationChange[] = [];
   for (const bean of [green, ...(roasted ? [roasted] : [])]) {
     await saveCoffeeBean(tx, bean);
@@ -460,16 +263,7 @@ export async function mutateBeanConversionTool(
     });
   }
   for (const note of g.brews) {
-    const after: BrewingNote = {
-      ...note,
-      beanId: roasted!.id,
-      coffeeBeanInfo: {
-        roastLevel: roasted!.roastLevel || '未知',
-        ...note.coffeeBeanInfo,
-        name: roasted!.name,
-      },
-      updatedAt: Math.max(timestamp, (note.updatedAt ?? note.timestamp) + 1),
-    };
+    const after = migratedNotes.find(item => item.id === note.id)!;
     await saveBrewingNote(tx, after);
     changes.push({
       entity: 'brew_note',
