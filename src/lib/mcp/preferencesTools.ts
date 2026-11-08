@@ -95,8 +95,19 @@ export const safePreferenceSchema: Record<string, Schema> = {
 const write = { requestId, expectedVersion: version };
 const period = obj(
   {
-    startDay: { type: 'integer', minimum: 0, maximum: 3650 },
-    endDay: { type: 'integer', minimum: 0, maximum: 3650 },
+    startDay: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 3650,
+      description: 'Days after roasting; 0 inherits the default start day.',
+    },
+    endDay: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 3650,
+      description:
+        'Days after roasting; 0 inherits the default end day, not a zero-day deadline.',
+    },
   },
   ['startDay', 'endDay']
 );
@@ -383,13 +394,13 @@ export const preferencesDefinitions: Array<{
   {
     name: 'preview_roaster_rename',
     description:
-      'Preview canonical roaster rename across beans, note snapshots, grinder history and taste-window configurations.',
+      'Only for an explicitly requested GLOBAL roaster rename across all beans and related records. For editing/translating one bean, use update_bean.changes.roaster instead. Preview required before rename_roaster. impact counts affected beans, saved bean details in notes, grinders with matching history (not settings), and roaster configurations (not changed taste-window values). Zero means unaffected.',
     schema: obj({ fromName: text, toName: text }, ['fromName', 'toName']),
   },
   {
     name: 'rename_roaster',
     description:
-      'Apply previewed roaster rename atomically across every original-app reference. May merge target configuration according to original application rules.',
+      'Apply an explicitly requested GLOBAL roaster rename after preview_roaster_rename, atomically across beans, notes, grind history and roaster configuration. Not for editing/translating one bean: use update_bean.changes.roaster. Existing target taste windows/logo take precedence; otherwise migrate source values. Does not change grinder settings or invent taste-window values.',
     write: true,
     destructive: true,
     schema: obj(
@@ -476,7 +487,9 @@ export function applySafePreferencePatch(
   for (const key of clearFields) delete next[key];
   if (
     patch.customFlavorPeriod &&
-    Object.values(patch.customFlavorPeriod).some(p => p.startDay > p.endDay)
+    Object.values(patch.customFlavorPeriod).some(
+      p => p.endDay > 0 && p.startDay > p.endDay
+    )
   )
     invalid('Taste-window startDay must not exceed endDay');
   if (
@@ -762,7 +775,11 @@ export function applyPreferenceCollectionMutation(
     const flavorPeriod = args.flavorPeriod as NonNullable<
       RoasterConfig['flavorPeriod']
     >;
-    if (Object.values(flavorPeriod).some(p => p.startDay > p.endDay))
+    if (
+      Object.values(flavorPeriod).some(
+        p => p.endDay > 0 && p.startDay > p.endDay
+      )
+    )
       invalid('Taste-window startDay must not exceed endDay');
     const list = before.roasterConfigs ?? [];
     const old = list.find(

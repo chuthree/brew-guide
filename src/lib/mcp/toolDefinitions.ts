@@ -138,7 +138,9 @@ const blendComponent = object({
 });
 export const beanFields: Record<string, Schema> = {
   name: { ...text('Coffee bean name.'), minLength: 1 },
-  roaster: text('Roaster name.'),
+  roaster: text(
+    'Roaster name on this bean; editable alongside name without renaming other beans or global settings.'
+  ),
   roastLevel: text('Roast level, preferably the app’s Chinese display label.'),
   roastDate: date('Roast date in the user’s local calendar, YYYY-MM-DD.'),
   purchaseDate: date('Purchase date, YYYY-MM-DD.'),
@@ -416,7 +418,7 @@ const definitions: Array<{
     write: true,
     destructive: true,
     description:
-      'Patch specified coffee bean fields using the latest version. Inventory has a dedicated tool. Omitted fields remain unchanged; empty text clears optional text. Capacity cannot be reduced below current inventory. Bean state cannot change while notes reference it.',
+      'Patch one coffee bean using the latest version; name and roaster can be edited or translated together in changes without global rename tools. Inventory has a dedicated tool. Omitted fields remain unchanged; empty text clears optional text. Capacity cannot be reduced below current inventory. Bean state cannot change while notes reference it.',
     schema: object(
       {
         requestId,

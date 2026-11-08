@@ -33,6 +33,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
   // 使用 settingsStore 获取设置
   const settings = useSettingsStore(state => state.settings) as SettingsOptions;
   const updateSettings = useSettingsStore(state => state.updateSettings);
+  const beans = useCoffeeBeanStore(state => state.beans);
 
   // 使用 settingsStore 的 handleChange
   const handleChange = React.useCallback(
@@ -101,18 +102,20 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
 
   const loadRoasters = useCallback(async () => {
     try {
-      const beans = useCoffeeBeanStore.getState().beans as ExtendedCoffeeBean[];
       const settingsData = getSettingsStore().settings;
       const roasterSettings: RoasterSettings = {
         roasterFieldEnabled: settingsData.roasterFieldEnabled,
         roasterSeparator: settingsData.roasterSeparator,
       };
-      const uniqueRoasters = extractUniqueRoasters(beans, roasterSettings);
+      const uniqueRoasters = extractUniqueRoasters(
+        beans as ExtendedCoffeeBean[],
+        roasterSettings
+      );
       setRoasters(uniqueRoasters);
     } catch (error) {
       console.error('Failed to load roasters:', error);
     }
-  }, []);
+  }, [beans]);
 
   const loadConfigs = useCallback(() => {
     try {
@@ -131,7 +134,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
   useEffect(() => {
     loadRoasters();
     loadConfigs();
-  }, [loadConfigs, loadRoasters]);
+  }, [loadConfigs, loadRoasters, settings.roasterConfigs]);
 
   const toggleExpand = (roasterName: string) => {
     setExpandedRoaster(expandedRoaster === roasterName ? null : roasterName);

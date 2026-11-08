@@ -588,9 +588,24 @@ export function normalizeCoffeeBeanFieldUpdate<T extends Partial<CoffeeBean>>(
           );
         })
         .join(' / ');
+  const config = resolveBeanFieldConfig(settings);
   return normalizeCoffeeBeanForFieldConfig(
     { ...previous, ...patch, notes },
-    settings
+    {
+      ...settings,
+      // Editing existing structured fields must not move them into labeled notes.
+      beanFieldConfig: {
+        ...config,
+        fields: config.fields.map(field => ({
+          ...field,
+          enabled:
+            field.enabled ||
+            previousComponents.some(
+              component => !!stringifyFieldValue(component[field.id])
+            ),
+        })),
+      },
+    }
   );
 }
 
