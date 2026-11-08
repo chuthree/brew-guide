@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NativeImageFileStore } from '@/lib/data/images/nativeImageFileStore';
@@ -200,6 +201,7 @@ vi.mock('@/lib/supabase/realtime', () => ({
 }));
 
 import { DataManager } from './dataManager';
+import * as businessHistoryMaintenance from '@/lib/data/business/maintenance';
 
 class FakeNativeImageFileStore implements NativeImageFileStore {
   readonly objects = new Map<string, Uint8Array>();
@@ -262,8 +264,15 @@ function note(id: string, overrides: Partial<BrewingNote> = {}): BrewingNote {
 describeNodeSqlite(
   `DataManager Native image integration (node:sqlite, Node ${process.versions.node})`,
   () => {
+    let storageChanges: unknown[];
+    const onStorageChange = (event: Event) => {
+      storageChanges.push((event as CustomEvent).detail);
+    };
+
     beforeEach(async () => {
       vi.clearAllMocks();
+      storageChanges = [];
+      window.addEventListener('storage:changed', onStorageChange);
       database = await createNodeSqliteTestDatabase();
       fileStore = new FakeNativeImageFileStore();
       services = createSqliteImageDataServices(database.driver, fileStore);
@@ -271,6 +280,8 @@ describeNodeSqlite(
     });
 
     afterEach(async () => {
+      window.removeEventListener('storage:changed', onStorageChange);
+      vi.restoreAllMocks();
       await database?.close();
       database = undefined;
       await db.delete();
@@ -397,6 +408,7 @@ describeNodeSqlite(
       );
 
       expect(result.success).toBe(true);
+      expect(storageChanges).toEqual([{ key: 'allData', action: 'import' }]);
       expect(
         await createSqliteCoffeeBeanRepository(database!.driver).count()
       ).toBe(1);
@@ -558,6 +570,13 @@ describeNodeSqlite(
       );
 
       expect(result.success).toBe(false);
+      expect(storageChanges).toEqual([]);
+      expect(
+        mocks.repositoryServices.coffeeBeanPersistence.replaceAllWithImages
+      ).not.toHaveBeenCalled();
+      expect(
+        mocks.repositoryServices.brewingNotePersistence.replaceAllWithImages
+      ).not.toHaveBeenCalled();
       expect(result.message).toMatch(/Invalid external image URL/);
       expect(
         await createSqliteCoffeeBeanRepository(database!.driver).list()
@@ -573,6 +592,58 @@ describeNodeSqlite(
         (await services.brewingNoteImageRepository.exportAll())[0].image
       ).toBe(oldNote.image);
     });
+
+    it.each([false, true])(
+      'invalidates actual Native sources after a partial import (cleanup failure: %s)',
+      async cleanupFails => {
+        await services.coffeeBeanPersistence.saveWithImages(bean('old-bean'), {
+          generateThumbnails: false,
+        });
+        await services.brewingNotePersistence.saveWithImages(note('old-note'));
+        mocks.repositoryServices.coffeeBeanPersistence.replaceAllWithImages.mockRejectedValueOnce(
+          new Error('Native bean replacement failed')
+        );
+        if (cleanupFails) {
+          vi.spyOn(
+            businessHistoryMaintenance,
+            'invalidateWebBusinessHistoryInMutation'
+          )
+            .mockResolvedValueOnce(undefined)
+            .mockRejectedValueOnce(new Error('History cleanup failed'));
+        }
+
+        // APP_DATA_KEYS replaces notes before beans. The first real SQLite
+        // transaction commits, then the later table replacement fails.
+        const imported = DataManager.importAllData(
+          JSON.stringify({
+            data: {
+              brewingNotes: [note('replacement-note')],
+              coffeeBeans: [bean('replacement-bean')],
+            },
+          })
+        );
+        if (cleanupFails) {
+          // Keep the existing cleanup failure outcome, but never lose the
+          // source notification when that cleanup itself fails.
+          await expect(imported).rejects.toThrow('History cleanup failed');
+        } else {
+          await expect(imported).resolves.toEqual({
+            success: false,
+            message: '导入数据失败: Native bean replacement failed',
+          });
+        }
+
+        expect(storageChanges).toEqual([
+          { key: 'allData', action: 'invalidate' },
+        ]);
+        expect(
+          await createSqliteBrewingNoteRepository(database!.driver).list()
+        ).toEqual([expect.objectContaining({ id: 'replacement-note' })]);
+        expect(
+          await createSqliteCoffeeBeanRepository(database!.driver).list()
+        ).toEqual([expect.objectContaining({ id: 'old-bean' })]);
+      }
+    );
 
     it('keeps exported local image bytes and MIME exact after backup round-trip', async () => {
       const source = image('image/HEIF', [0, 255, 18, 33]);
