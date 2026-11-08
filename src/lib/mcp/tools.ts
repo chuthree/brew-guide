@@ -1,5 +1,9 @@
 import { buildBusinessInventorySummary } from './businessAnalytics';
 import { validateBean } from './beanValidation';
+import {
+  assertBeanCapacityHistory,
+  getBeanCapacityUpdate,
+} from '@/lib/coffee-beans/beanCapacity';
 import { buildNoteInput as buildNote, noteDose } from './noteInput';
 import {
   DATA_DOMAINS,
@@ -230,6 +234,8 @@ async function beanView(
     sourceGreenBeanIds: bean.sourceGreenBeanIds ?? null,
     capacityGrams: amount(bean.capacity),
     remainingGrams: amount(bean.remaining),
+    capacity: bean.capacity ?? null,
+    remaining: bean.remaining ?? null,
     flavor: Array.isArray(bean.flavor)
       ? bean.flavor.filter(value => typeof value === 'string')
       : [],
@@ -421,10 +427,17 @@ function buildBean(fields: Arguments, previous?: CoffeeBean): CoffeeBean {
       fields.blendComponents as CoffeeBean['blendComponents'];
   if (fields.capacityGrams !== undefined)
     bean.capacity = gramText(fields.capacityGrams as number);
+  if (previous && fields.capacityGrams !== undefined)
+    bean.remaining = getBeanCapacityUpdate(
+      previous,
+      fields.capacityGrams
+    )!.remaining;
   if (!previous) {
-    bean.remaining = gramText(
-      (fields.remainingGrams ?? fields.capacityGrams ?? 0) as number
-    );
+    const initialRemaining = fields.remainingGrams ?? fields.capacityGrams;
+    bean.remaining =
+      initialRemaining === undefined
+        ? ''
+        : gramText(initialRemaining as number);
     const period = getDefaultFlavorPeriodByRoastLevelSync(
       bean.roastLevel,
       undefined,
@@ -970,6 +983,16 @@ async function performMutation(
   if (name === 'update_bean') {
     const before = await requireBean(tx, id);
     await checkVersion(before, args.expectedVersion);
+    const capacityUpdate = getBeanCapacityUpdate(
+      before,
+      (args.changes as Arguments).capacityGrams
+    );
+    if (capacityUpdate?.inventoryInitialized)
+      assertBeanCapacityHistory(
+        before,
+        await listCoffeeBeans(tx),
+        await listBrewingNotes(tx)
+      );
     const built = buildBean(args.changes as Arguments, before);
     const patch: Partial<CoffeeBean> = { ...built };
     if (!Object.hasOwn(args.changes as Arguments, 'notes')) delete patch.notes;
@@ -997,9 +1020,34 @@ async function performMutation(
     )
       invalid('Cannot change bean state while brewing records reference it');
     await saveCoffeeBean(tx, after);
+    const recordChanges = [await recordChange('bean', before, after)];
+    let adjustmentNote: BrewingNote | undefined;
+    if (
+      capacityUpdate?.remainingChanged &&
+      !capacityUpdate.inventoryInitialized
+    ) {
+      adjustmentNote = {
+        id: nanoid(),
+        ...buildCapacityAdjustmentRecord(
+          after,
+          capacityUpdate.previousRemaining!,
+          Number(capacityUpdate.remaining)
+        ),
+      };
+      await saveBrewingNote(tx, adjustmentNote);
+      recordChanges.push(await recordChange('brew_note', null, adjustmentNote));
+    }
     return {
-      result: { bean: await beanView(after) },
-      changes: [await recordChange('bean', before, after)],
+      result: {
+        bean: await beanView(after),
+        ...(capacityUpdate?.inventoryInitialized
+          ? { inventoryInitialized: true }
+          : {}),
+        ...(adjustmentNote
+          ? { adjustmentNote: await noteView(adjustmentNote) }
+          : {}),
+      },
+      changes: recordChanges,
       summary: `修改咖啡豆：${after.name}`,
     };
   }

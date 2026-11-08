@@ -418,7 +418,7 @@ const definitions: Array<{
     write: true,
     destructive: true,
     description:
-      'Patch one coffee bean using the latest version; name and roaster can be edited or translated together in changes without global rename tools. Inventory has a dedicated tool. Omitted fields remain unchanged; empty text clears optional text. Capacity cannot be reduced below current inventory. Bean state cannot change while notes reference it.',
+      'Patch one coffee bean using its latest version; name and roaster can change together without global rename tools. Capacity and remaining follow the form in one atomic update: missing remaining is filled from capacity; untouched full stock follows capacity changes; used stock stays unchanged. Missing stock with linked history or roasting relationships is rejected, never guessed. Known-stock corrections create a capacity-adjustment record, not consumption. Do not split this into adjust_bean_inventory. Capacity cannot fall below preserved stock. Other omitted fields stay unchanged; empty text clears optional text. Linked notes prevent bean-state changes.',
     schema: object(
       {
         requestId,
