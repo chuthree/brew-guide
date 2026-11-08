@@ -57,10 +57,12 @@ describe('dbUtils.clearAllData before the database is opened', () => {
 
     expect(await Dexie.exists('BrewGuideDB')).toBe(true);
     expect(db.isOpen()).toBe(true);
-    expect(db.verno).toBe(11);
+    expect(db.verno).toBe(12);
     expect(db.tables.map(table => table.name).sort()).toEqual(
       [
         'appSettings',
+        'businessOperations',
+        'businessPublications',
         'brewingNoteImageThumbnails',
         'brewingNoteImages',
         'brewingNotes',

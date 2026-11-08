@@ -1,3 +1,4 @@
+import { isKnownLocalBusinessJournal } from '@/lib/data/business/journalSchema';
 import type { BrewingNote } from '@/lib/core/config';
 import type {
   LegacyDatabaseInfo,
@@ -518,9 +519,16 @@ function actualTableNames(source: LegacyMigrationSource): Set<string> {
   }
   const allowed = new Set<string>([...TABLES, 'yearlyReports']);
   const names = new Set(source.info.tables.map(table => table.name));
-  for (const name of names) {
-    if (!allowed.has(name)) {
-      fail(name, undefined, 'source table has no SQLite v1 migration mapping');
+  for (const table of source.info.tables) {
+    if (
+      !allowed.has(table.name) &&
+      !isKnownLocalBusinessJournal(source.info.version, table)
+    ) {
+      fail(
+        table.name,
+        undefined,
+        'source table has no SQLite v1 migration mapping'
+      );
     }
   }
   return names;

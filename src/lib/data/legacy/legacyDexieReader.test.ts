@@ -745,6 +745,40 @@ describe('Legacy Dexie reader', () => {
     }
   });
 
+  it('keeps v12 journals inspectable but never reads them into migration data', async () => {
+    const journalStore = {
+      keyPath: 'requestId',
+      indexes: [{ name: 'createdAt', keyPath: 'createdAt' }],
+      records: [
+        {
+          requestId: 'local-receipt',
+          createdAt: 1,
+          result: { privateHistory: 'must stay local' },
+        },
+      ],
+    };
+    await createFixture(12, {
+      ...currentVersion11Stores,
+      businessOperations: journalStore,
+      businessPublications: journalStore,
+    });
+    const before = await snapshotDatabase();
+    const opened = await openLegacyDexieReader();
+    if (!opened.exists) throw new Error('Expected fixture');
+    try {
+      const data = await opened.reader.readMigrationData();
+      expect(opened.reader.inspect().tables.map(table => table.name)).toContain(
+        'businessOperations'
+      );
+      expect(data).not.toHaveProperty('businessOperations');
+      expect(data).not.toHaveProperty('businessPublications');
+      expect(JSON.stringify(data)).not.toContain('must stay local');
+      expect(await snapshotDatabase()).toEqual(before);
+    } finally {
+      opened.reader.close();
+    }
+  });
+
   it('reports yearlyReports absent in v11 without creating the historical table (Case J)', async () => {
     await createFixture(11, currentVersion11Stores);
     const before = await snapshotDatabase();

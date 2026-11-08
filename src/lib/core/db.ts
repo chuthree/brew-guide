@@ -1,4 +1,12 @@
 import Dexie from 'dexie';
+import {
+  BUSINESS_JOURNAL_SCHEMA,
+  BUSINESS_JOURNAL_SCHEMA_VERSION,
+} from '@/lib/data/business/journalSchema';
+import type {
+  BusinessReceipt,
+  BusinessPublication,
+} from '@/lib/data/business/types';
 import { BrewingNote, Method, CustomEquipment } from './config';
 import { CoffeeBean } from '@/types/app';
 import type {
@@ -40,6 +48,7 @@ const getUsableCoffeeBeanThumbnail = (
  * - v9: 移除年度报告表
  * - v10: 冲煮记录图片拆到独立表，避免列表加载反序列化原图
  * - v11: 冲煮记录缩略图拆到独立表，避免图片流判断读取原图
+ * - v12: 本机业务事务回执与可恢复发布日志（不参与同步）
  */
 export class BrewGuideDB extends Dexie {
   // 核心数据表
@@ -74,6 +83,10 @@ export class BrewGuideDB extends Dexie {
 
   // 实时同步离线队列表
   pendingOperations!: Dexie.Table<StoredPendingOperation, string>;
+
+  // Device-local command journals. Never include these in sync/export payloads.
+  businessOperations!: Dexie.Table<BusinessReceipt, string>;
+  businessPublications!: Dexie.Table<BusinessPublication, string>;
 
   constructor() {
     super('BrewGuideDB');
@@ -225,6 +238,11 @@ export class BrewGuideDB extends Dexie {
       appSettings: 'id',
       pendingOperations: 'id, table, recordId, timestamp',
     });
+
+    // v12: atomic local business receipts and crash-recoverable publication intents.
+    this.version(BUSINESS_JOURNAL_SCHEMA_VERSION).stores(
+      BUSINESS_JOURNAL_SCHEMA
+    );
   }
 }
 
@@ -611,6 +629,9 @@ export const dbUtils = {
    */
   async clearAllData(): Promise<void> {
     try {
+      // Invalidate old command replays even if a later destructive clear fails.
+      await db.businessOperations.clear();
+      await db.businessPublications.clear();
       await db.brewingNotes.clear();
       await db.brewingNoteImages.clear();
       await db.brewingNoteImageThumbnails.clear();

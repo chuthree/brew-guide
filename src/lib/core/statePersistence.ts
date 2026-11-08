@@ -30,7 +30,7 @@ const isLocalStorageAvailable = (): boolean => {
  * @param key 状态键名
  * @returns 格式化的完整键名
  */
-const getStorageKey = (module: string, key: string): string => {
+export const getStorageKey = (module: string, key: string): string => {
   return `${APP_PREFIX}:${module}:${key}`;
 };
 

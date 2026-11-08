@@ -130,6 +130,8 @@ class DexieLegacyReader implements LegacyDexieReaderHandle {
   async readMigrationData(): Promise<LegacyMigrationData> {
     this.assertOpen();
 
+    // Read only user-data sources. v12 device-local business journals deliberately
+    // remain inspectable for schema validation but never enter migration payloads.
     const availableTables = this.database.tables.filter(({ name }) =>
       LEGACY_SOURCE_TABLES.includes(name as LegacySourceTableName)
     );

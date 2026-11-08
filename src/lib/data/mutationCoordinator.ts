@@ -1,4 +1,6 @@
 import { detectAppRuntime } from '@/lib/app/runtime';
+import { resolveStorageBackend } from '@/lib/data/runtime';
+import { withOriginMutationLock } from '@/lib/data/business/originMutationLock';
 
 let mutationTail: Promise<void> = Promise.resolve();
 
@@ -18,6 +20,8 @@ export function withDataMutation<T>(work: () => Promise<T>): Promise<T> {
     runtime.capacitorPlatform === 'android' &&
     runtime.capacitorBundled !== false;
   const operation = mutationTail.then(async () => {
+    if (resolveStorageBackend(runtime) === 'dexie')
+      return withOriginMutationLock(work);
     if (!coordinatedAndroid) return work();
     const { withAndroidDatabaseMutation } =
       await import('./sqlite/providerSqliteDriver');

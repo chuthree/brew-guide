@@ -579,6 +579,63 @@ describe('legacy SQLite migration planning', () => {
     ).rejects.toThrow(/settings record customEquipments.*invalid JSON/);
   });
 
+  it('excludes only recognized v12 local journals without weakening unknown-table preflight', async () => {
+    const source = createSource({
+      version: 12,
+      tables: {
+        coffeeBeans: [{ id: 'bean-journal', name: 'Preserved', timestamp: 1 }],
+      },
+    });
+    const journal = (name: string) => ({
+      name,
+      primaryKey: {
+        name: null,
+        keyPath: 'requestId',
+        source: 'requestId',
+        autoIncrement: false,
+        unique: true,
+        multiEntry: false,
+      },
+      indexes: [
+        {
+          name: 'createdAt',
+          keyPath: 'createdAt',
+          source: 'createdAt',
+          autoIncrement: false,
+          unique: false,
+          multiEntry: false,
+        },
+      ],
+    });
+    source.info!.tables.push(
+      journal('businessOperations'),
+      journal('businessPublications')
+    );
+    const plan = await planLegacySqliteMigration(source);
+    expect(plan.rows.coffeeBeans).toHaveLength(1);
+    expect(plan.rows).not.toHaveProperty('businessOperations');
+    expect(plan.rows).not.toHaveProperty('businessPublications');
+    expect(plan.sourcePresence).not.toHaveProperty('businessOperations');
+    source.info!.tables.push(journal('futureUserData'));
+    await expect(planLegacySqliteMigration(source)).rejects.toThrow(
+      /futureUserData.*no SQLite v1 migration mapping/
+    );
+    source.info!.tables.pop();
+    source.info!.tables.find(
+      table => table.name === 'businessOperations'
+    )!.primaryKey.keyPath = 'id';
+    await expect(planLegacySqliteMigration(source)).rejects.toThrow(
+      /businessOperations.*no SQLite v1 migration mapping/
+    );
+    source.info!.tables.find(
+      table => table.name === 'businessOperations'
+    )!.primaryKey.keyPath = 'requestId';
+    source.info!.version = 11;
+    await expect(planLegacySqliteMigration(source)).rejects.toThrow(
+      /businessOperations.*no SQLite v1 migration mapping/
+    );
+  });
+
   it('rejects unknown tables and unsupported or conflicting image sources before any write plan is returned', async () => {
     await expect(
       planLegacySqliteMigration(createSource({ extraTable: 'futureUserData' }))

@@ -1,3 +1,8 @@
+import {
+  hasDirtySettings,
+  markSettingsDirty,
+  clearSettingsDirty,
+} from './settingsDirty';
 /**
  * Supabase 实时同步服务
  *
@@ -90,8 +95,6 @@ const SYNC_TIMING = {
   RECONNECT_MAX_DELAY: 30000,
 } as const;
 
-const SETTINGS_DIRTY_KEY = 'brew-guide:realtime-sync:settingsDirty';
-
 type PostgresPayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
 const TASK_LABELS: Record<string, string> = {
@@ -141,21 +144,6 @@ function assertSyncSuccess<T>(
         : result.error || fallbackMessage
     );
   }
-}
-
-function hasDirtySettings(): boolean {
-  if (typeof localStorage === 'undefined') return false;
-  return localStorage.getItem(SETTINGS_DIRTY_KEY) === '1';
-}
-
-function markSettingsDirty(): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(SETTINGS_DIRTY_KEY, '1');
-}
-
-function clearSettingsDirty(): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.removeItem(SETTINGS_DIRTY_KEY);
 }
 
 function withTimeout<T>(
