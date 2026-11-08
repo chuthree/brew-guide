@@ -1,5 +1,6 @@
 import { buildBusinessInventorySummary } from './businessAnalytics';
 import { validateBean } from './beanValidation';
+import { getAssignedBeanRemaining } from '@/lib/coffee-beans/beanInventoryInitialization';
 import {
   assertBeanCapacityHistory,
   getBeanCapacityUpdate,
@@ -54,11 +55,10 @@ import {
 } from './noteImageTools';
 import { getAppSettings } from '@/lib/data/sqlite/repositories/appSettings';
 import {
-  normalizeCoffeeBeanForFieldConfig,
-  normalizeCoffeeBeanFieldUpdate,
-  resolveBeanFieldConfig,
-  BEAN_FIELD_DEFINITIONS,
-} from '@/lib/coffee-beans/beanFields';
+  normalizeImportedCoffeeBeanCreate,
+  normalizeImportedCoffeeBeanPatch,
+} from '@/lib/coffee-beans/beanImport';
+import { getBeanImportContract } from '@/lib/coffee-beans/beanImportContract';
 import {
   prepareMcpBeanImageMutation,
   getMcpBeanImageInfo,
@@ -410,7 +410,7 @@ function buildBean(fields: Arguments, previous?: CoffeeBean): CoffeeBean {
       };
   const bean = { ...base };
   for (const key of beanTextFields) {
-    if (Object.prototype.hasOwnProperty.call(fields, key))
+    if (typeof fields[key] === 'string')
       bean[key] = (fields[key] as string).trim();
   }
   // Each field was checked against the matching schema before this copy.
@@ -932,10 +932,12 @@ async function performMutation(
     };
   }
   if (name === 'create_bean') {
-    let bean = normalizeCoffeeBeanForFieldConfig(
-      buildBean(args.bean as Arguments),
+    // Normalize before computing the app's roast-dependent default taste window.
+    const fields = normalizeImportedCoffeeBeanCreate(
+      args.bean as Partial<CoffeeBean>,
       await getAppSettings(tx)
     );
+    let bean = buildBean(fields as Arguments);
     let cleanupPaths: string[] = [];
     if (args.image) {
       const image = args.image as { side: 'front' | 'back'; dataUrl: string };
@@ -983,24 +985,26 @@ async function performMutation(
   if (name === 'update_bean') {
     const before = await requireBean(tx, id);
     await checkVersion(before, args.expectedVersion);
-    const capacityUpdate = getBeanCapacityUpdate(
-      before,
-      (args.changes as Arguments).capacityGrams
-    );
+    const changes = args.changes as Arguments;
+    const capacityUpdate = getBeanCapacityUpdate(before, changes.capacityGrams);
     if (capacityUpdate?.inventoryInitialized)
       assertBeanCapacityHistory(
         before,
         await listCoffeeBeans(tx),
         await listBrewingNotes(tx)
       );
-    const built = buildBean(args.changes as Arguments, before);
-    const patch: Partial<CoffeeBean> = { ...built };
-    if (!Object.hasOwn(args.changes as Arguments, 'notes')) delete patch.notes;
-    if (!Object.hasOwn(args.changes as Arguments, 'blendComponents'))
-      delete patch.blendComponents;
+    const built = buildBean(changes, before);
+    // Only normalize fields explicitly supplied by this edit, never history.
+    const patch = Object.fromEntries(
+      Object.keys(changes).map(key => {
+        const field = key === 'capacityGrams' ? 'capacity' : key;
+        return [field, built[field as keyof CoffeeBean]];
+      })
+    ) as Partial<CoffeeBean>;
+    if (capacityUpdate) patch.remaining = capacityUpdate.remaining;
     let after: CoffeeBean;
     try {
-      after = normalizeCoffeeBeanFieldUpdate(
+      after = normalizeImportedCoffeeBeanPatch(
         before,
         patch,
         await getAppSettings(tx)
@@ -1014,6 +1018,8 @@ async function performMutation(
         invalid(error.message);
       throw error;
     }
+    after.timestamp = built.timestamp;
+    validateBean(after);
     if (
       before.beanState !== after.beanState &&
       (await listBrewingNotesByBeanId(tx, id)).length
@@ -1057,10 +1063,33 @@ async function performMutation(
     const before = await requireBean(tx, id);
     await checkVersion(before, args.expectedVersion);
     const current = amount(before.remaining);
-    if (current === null)
-      invalid(
-        'Existing inventory is invalid; correct the bean in the app first'
+    if (current === null) {
+      const remaining = getAssignedBeanRemaining(
+        before,
+        args,
+        args.remainingGrams === undefined
+          ? ''
+          : gramText(args.remainingGrams as number),
+        await listCoffeeBeans(tx),
+        await listBrewingNotes(tx)
       );
+      const after = {
+        ...stripCoffeeBeanImages(before),
+        remaining,
+        timestamp: timestampAfter(before.timestamp),
+      };
+      validateBean(after);
+      await saveCoffeeBean(tx, after);
+      return {
+        result: {
+          bean: await beanView(after, tx),
+          inventoryInitialized: true,
+          adjustmentNote: null,
+        },
+        changes: [await recordChange('bean', before, after)],
+        summary: `设置初始库存：${after.name}，${remaining}g`,
+      };
+    }
     const next = (args.remainingGrams ??
       current + (args.deltaGrams as number)) as number;
     if (next < 0 || next > 1_000_000)
@@ -1889,10 +1918,9 @@ export async function executeMcpTool(
         ...(grants.includes('beans')
           ? {
               beanInput: {
-                fieldConfig: resolveBeanFieldConfig(
+                ...getBeanImportContract(
                   await getAppSettings(await getMcpDriver())
                 ),
-                fields: BEAN_FIELD_DEFINITIONS,
                 multipleValues:
                   'Use an array of separate values; never split a slash inside a value such as SL28/34.',
                 disabledFields:

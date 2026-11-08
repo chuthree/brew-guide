@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  DEFAULT_BEAN_RECOGNITION_PROMPT,
   buildBeanRecognitionPrompt,
   normalizeRecognizedBeanPayload,
   recognizeBeanImage,
 } from './beanRecognition';
+import { BEAN_RECOGNITION_PROMPT } from '@/lib/constants/beanImportRules.js';
 import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
 
 const fieldSettings = (...ids: BeanFieldId[]) => ({
@@ -33,7 +35,7 @@ describe('normalizeRecognizedBeanPayload', () => {
     });
   });
 
-  it('prefers a named variety over a short batch number', () => {
+  it('does not overwrite an explicit numeric variety from the title', () => {
     const payload = normalizeRecognizedBeanPayload({
       name: '2026 瑰夏村 金标 Oma 157',
       blendComponents: [{ origin: '瑰夏村', process: '水洗', variety: '1931' }],
@@ -41,10 +43,90 @@ describe('normalizeRecognizedBeanPayload', () => {
 
     expect(payload).toEqual({
       name: '2026 瑰夏村 金标 Oma 157',
+      blendComponents: [{ origin: '瑰夏村', process: '水洗', variety: '1931' }],
+    });
+  });
+
+  it('preserves blend ratios, list values, duplicate rows and order', () => {
+    const bean = {
+      name: '拼配',
       blendComponents: [
-        { origin: '瑰夏村', process: '水洗', variety: 'Oma 157' },
+        { origin: '肯尼亚', percentage: 60, variety: ['SL28/34', 'Ruiru 11'] },
+        { origin: '肯尼亚', percentage: 40, variety: ['SL28/34', 'Ruiru 11'] },
+        { percentage: 0 },
+      ],
+    };
+    expect(normalizeRecognizedBeanPayload(bean)).toEqual(bean);
+    const duplicateRows = {
+      name: '两批同产地',
+      blendComponents: [{ origin: '埃塞俄比亚' }, { origin: '埃塞俄比亚' }],
+    };
+    expect(normalizeRecognizedBeanPayload(duplicateRows)).toEqual(
+      duplicateRows
+    );
+  });
+
+  it('preserves ambiguous variety-only rows instead of assuming OCR duplication', () => {
+    for (const complete of [
+      { origin: '肯尼亚', variety: 'SL28/34' },
+      { origin: '肯尼亚' },
+    ]) {
+      const bean = {
+        name: '拼配',
+        blendComponents: [complete, { variety: 'SL28/34' }],
+      };
+      expect(normalizeRecognizedBeanPayload(bean)).toEqual(bean);
+    }
+  });
+
+  it('does not collapse variety-only rows with scoped component notes', () => {
+    expect(
+      normalizeRecognizedBeanPayload({
+        name: '拼配',
+        blendComponents: [
+          { origin: '肯尼亚', variety: 'SL28/34' },
+          { variety: 'SL28/34' },
+        ],
+        notes: '成分2 产地：埃塞俄比亚',
+      })
+    ).toEqual({
+      name: '拼配',
+      blendComponents: [
+        { origin: '肯尼亚', variety: 'SL28/34' },
+        { origin: '埃塞俄比亚', variety: 'SL28/34' },
       ],
     });
+  });
+
+  it('shares import normalization without guessing unknown facts', () => {
+    expect(
+      normalizeRecognizedBeanPayload({
+        name: '测试豆',
+        roastLevel: 'medium light',
+        notes: '产国：哥伦比亚 / 产区：Nariño / 风味：橙花、红糖 / 系列：春日',
+      })
+    ).toEqual({
+      name: '测试豆',
+      roastLevel: '中浅烘焙',
+      flavor: ['橙花', '红糖'],
+      blendComponents: [{ origin: '哥伦比亚 · Nariño' }],
+      notes: '系列：春日',
+    });
+    expect(
+      normalizeRecognizedBeanPayload({
+        name: '未知豆',
+        beanType: 'unknown',
+        roastDate: '2026-02-30',
+      })
+    ).toEqual({ name: '未知豆' });
+  });
+
+  it('uses the shared recognition contract while preserving custom base text', () => {
+    expect(DEFAULT_BEAN_RECOGNITION_PROMPT).toBe(BEAN_RECOGNITION_PROMPT);
+    expect(buildBeanRecognitionPrompt()).toContain(BEAN_RECOGNITION_PROMPT);
+    const custom = buildBeanRecognitionPrompt('  我的自定义识别提示词  ');
+    expect(custom.startsWith('我的自定义识别提示词\n\n')).toBe(true);
+    expect(custom).not.toContain('任务：从咖啡豆包装图片');
   });
 
   it('applies field settings after recognition normalization', () => {

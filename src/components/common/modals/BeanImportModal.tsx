@@ -24,6 +24,7 @@ import {
   type CustomBeanRecognitionConfig,
 } from '@/lib/api/beanRecognition';
 import { normalizeCoffeeBeanPayloadForFieldConfig } from '@/lib/coffee-beans/beanFields';
+import { prepareRecognizedBeanImages } from '@/lib/coffee-beans/beanImportImage';
 import { isSupportedSourceImageFile } from '@/lib/images/imageFormat';
 import {
   isImageSelectionCancelled,
@@ -89,6 +90,42 @@ const IMAGE_FILE_ACCEPT =
   'image/jpeg,image/png,image/webp,image/heic,image/heif';
 const BEAN_PACKAGE_FILE_ACCEPT =
   '.brewbeans.zip,.zip,application/zip,application/x-zip-compressed';
+
+async function compressImageToBase64(file: File): Promise<string | null> {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      if (!base64) {
+        resolve(null);
+        return;
+      }
+      try {
+        const { compressBase64Image } =
+          await import('@/lib/utils/imageCapture');
+        resolve(
+          await compressBase64Image(base64, {
+            maxSizeMB: 0.1,
+            maxWidthOrHeight: 1200,
+            initialQuality: 0.8,
+          })
+        );
+      } catch {
+        resolve(null);
+      }
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+function showUnmatchedRecognitionImageNotice() {
+  showToast({
+    type: 'info',
+    title: '一图多豆，未自动加图，请手动选择',
+    duration: 4000,
+  });
+}
 
 // 单张图片的识别状态
 interface ImageRecognitionState {
@@ -653,45 +690,27 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       try {
         const { data: beanData } = await recognizeSingleImage(file);
 
-        // 识别成功后，检查是否为单个豆子，如果是则传递识别图片（无论设置如何，都传递给表单，由表单决定是否自动填充）
+        // Keep the source available for an explicit choice even with autofill off.
         const isSingleBean =
           !Array.isArray(beanData) ||
           (Array.isArray(beanData) && beanData.length === 1);
-
-        let recognitionImage: string | undefined;
-
-        if (isSingleBean) {
-          await new Promise<void>(resolve => {
-            const reader = new FileReader();
-            reader.onload = async () => {
-              const base64 = reader.result as string;
-              if (base64) {
-                try {
-                  const { compressBase64Image } =
-                    await import('@/lib/utils/imageCapture');
-                  const compressedBase64 = await compressBase64Image(base64, {
-                    maxSizeMB: 0.1,
-                    maxWidthOrHeight: 1200,
-                    initialQuality: 0.8,
-                  });
-                  recognitionImage = compressedBase64;
-                } catch (_error) {
-                  recognitionImage = undefined;
-                }
-              }
-              resolve();
-            };
-            reader.onerror = () => resolve();
-            reader.readAsDataURL(file);
-          });
-        }
+        const sourceImage = await compressImageToBase64(file);
+        const prepared = prepareRecognizedBeanImages(beanData, {
+          autoFillRecognitionImage: settings?.autoFillRecognitionImage,
+          recognitionImage: sourceImage,
+        });
 
         setIsRecognizing(false);
         URL.revokeObjectURL(imageUrl);
         setRecognizingImageUrl(null);
         setCurrentStep('main');
 
-        await handleImportData(beanData, { recognitionImage });
+        if (prepared.needsImageSelection) showUnmatchedRecognitionImageNotice();
+        await handleImportData(prepared.data, {
+          recognitionImage: isSingleBean
+            ? (sourceImage ?? undefined)
+            : undefined,
+        });
       } catch (error) {
         showToast({
           type: 'error',
@@ -703,7 +722,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         setCurrentStep('main');
       }
     },
-    [handleImportData, recognizeSingleImage]
+    [handleImportData, recognizeSingleImage, settings?.autoFillRecognitionImage]
   );
 
   // 处理图片文件识别（支持单张和多张）
@@ -828,37 +847,6 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     [currentStep]
   );
 
-  // 压缩图片为 base64
-  const compressImageToBase64 = useCallback(
-    async (file: File): Promise<string | null> => {
-      return new Promise(resolve => {
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const base64 = reader.result as string;
-          if (base64) {
-            try {
-              const { compressBase64Image } =
-                await import('@/lib/utils/imageCapture');
-              const compressedBase64 = await compressBase64Image(base64, {
-                maxSizeMB: 0.1,
-                maxWidthOrHeight: 1200,
-                initialQuality: 0.8,
-              });
-              resolve(compressedBase64);
-            } catch (_error) {
-              resolve(null);
-            }
-          } else {
-            resolve(null);
-          }
-        };
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(file);
-      });
-    },
-    []
-  );
-
   // 并行识别多张图片（带限流）
   const handleMultiRecognition = useCallback(async () => {
     if (selectedImages.length === 0) return;
@@ -870,6 +858,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       id: string;
       data: unknown;
       imageBase64: string | null;
+      needsImageSelection: boolean;
       success: boolean;
     }> = [];
     const queue = [...selectedImages];
@@ -887,13 +876,24 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           recognizeSingleImage(img.file),
           compressImageToBase64(img.file),
         ]);
+        // A source-preparation failure belongs to this item, before success or save.
+        const prepared = prepareRecognizedBeanImages(data, {
+          autoFillRecognitionImage: settings?.autoFillRecognitionImage,
+          recognitionImage: imageBase64,
+        });
         // 更新状态为成功
         setSelectedImages(prev =>
           prev.map(i =>
             i.id === img.id ? { ...i, status: 'success', result: data } : i
           )
         );
-        results.push({ id: img.id, data, imageBase64, success: true });
+        results.push({
+          id: img.id,
+          data: prepared.data,
+          imageBase64,
+          needsImageSelection: prepared.needsImageSelection,
+          success: true,
+        });
       } catch (error) {
         // 更新状态为失败
         setSelectedImages(prev =>
@@ -911,6 +911,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           id: img.id,
           data: null,
           imageBase64: null,
+          needsImageSelection: false,
           success: false,
         });
       }
@@ -942,28 +943,17 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     const failedCount = results.filter(r => !r.success).length;
 
     if (successResults.length === 0) {
-      showToast({ type: 'error', title: '所有图片识别失败' });
+      showToast({ type: 'error', title: '图片处理失败，未添加咖啡豆' });
       return;
     }
 
-    // 合并所有识别结果，并将图片添加到每个豆子数据中
+    // Resolve each source before merging; completion order is not a photo match.
     const allBeanData: unknown[] = [];
+    let needsImageSelection = false;
     for (const r of successResults) {
-      const addImageToBean = (bean: unknown) => {
-        if (bean && typeof bean === 'object' && r.imageBase64) {
-          return { ...bean, image: r.imageBase64 };
-        }
-        return bean;
-      };
-
-      if (Array.isArray(r.data)) {
-        // 如果一张图识别出多个豆子，只给第一个豆子添加图片
-        r.data.forEach((bean, index) => {
-          allBeanData.push(index === 0 ? addImageToBean(bean) : bean);
-        });
-      } else if (r.data) {
-        allBeanData.push(addImageToBean(r.data));
-      }
+      needsImageSelection ||= r.needsImageSelection;
+      if (Array.isArray(r.data)) allBeanData.push(...r.data);
+      else if (r.data) allBeanData.push(r.data);
     }
 
     if (allBeanData.length === 0) {
@@ -977,20 +967,28 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     setCurrentStep('main');
 
     // 导入数据
-    await handleImportData(allBeanData);
+    if (needsImageSelection) showUnmatchedRecognitionImageNotice();
+    await handleImportData(allBeanData, {
+      recognitionImage:
+        allBeanData.length === 1 && successResults.length === 1
+          ? (successResults[0].imageBase64 ?? undefined)
+          : undefined,
+    });
 
     // 提示结果
     if (failedCount > 0) {
       showToast({
         type: 'info',
-        title: `成功识别 ${successResults.length} 张，${failedCount} 张失败`,
+        title: needsImageSelection
+          ? `${failedCount} 张失败，一图多豆的图片未自动添加`
+          : `成功识别 ${successResults.length} 张，${failedCount} 张失败`,
       });
     }
   }, [
     selectedImages,
     recognizeSingleImage,
     handleImportData,
-    compressImageToBase64,
+    settings?.autoFillRecognitionImage,
   ]);
 
   // 触发图片选择

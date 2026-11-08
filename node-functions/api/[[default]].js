@@ -1,4 +1,8 @@
 import { METHOD_RECOGNITION_PROMPT } from '../../src/lib/constants/methodRecognitionPrompt.js';
+import {
+  BEAN_RECOGNITION_PROMPT,
+  buildBeanImportFieldRules,
+} from '../../src/lib/constants/beanImportRules.js';
 import { normalizeRecognitionErrorMessage } from '../../src/lib/api/shared/recognitionErrors.js';
 
 export { normalizeRecognitionErrorMessage };
@@ -44,34 +48,6 @@ const QINIU_CHAT_COMPLETIONS = 'https://api.qnaigc.com/v1/chat/completions';
 const MODEL_REQUEST_TIMEOUT_MS = 105000;
 const DEFAULT_VISION_RECOGNITION_MODEL = 'doubao-seed-2.0-mini';
 const BEAN_RECOGNITION_MAX_TOKENS = 1200;
-
-const BEAN_RECOGNITION_PROMPT = `任务：从咖啡豆包装图片提取可见文字信息，返回可导入JSON。
-输出：单豆返回object，多豆返回array。只输出JSON，不输出解释、markdown或代码块。
-
-允许字段：
-name 必填；roaster；capacity；remaining；price；roastDate；roastLevel；beanType；flavor；startDay；endDay；blendComponents；notes。
-
-字段规则：
-- 未明确可见或无法可靠推断的字段直接省略，不要输出空字符串/null。
-- 图片里同一信息同时存在中文和英文时，优先输出中文；只有没有中文时才保留英文。
-- name 优先按包装的视觉层级保留醒目的商品名、批次名或主标题；主标题同时出现英文名和中文名时都保留，例如 "OBRAJE 哥伦比亚奥博拉赫庄园"。name 允许与产国、产区、庄园、处理法、品种等结构化字段合理重叠，不要因为某段文字也能写入字段就从主标题机械删除。不要把正文中的产地、处理法或风味词额外拼接进 name；只有包装没有明确主标题时，才用最醒目的可见专名生成保守的备用名称。
-- roaster 输出品牌短名；中文品牌明显时优先短中文名，例如 "柯林"、"辛鹿"。
-- 生豆商、进口商、供应商不是 roaster；应写入 notes，例如 "生豆商：裂豆师"。
-- capacity/remaining/price/startDay/endDay 只输出数字，不带单位；capacity 从净含量、规格、克数提取，startDay/endDay 从赏味期、养豆天数提取。
-- roastDate 仅在图片明确出现烘焙日期/生产日期且能读出月日时填写 YYYY-MM-DD；缺年份补2026；看不清、默认01-01、非法日期都不要填。
-- roastLevel 只用：极浅烘焙/浅度烘焙/中浅烘焙/中度烘焙/中深烘焙/深度烘焙。
-- beanType 只用 filter/espresso/omni；拼配、深烘或大包装通常为 espresso；标注全能为 omni；否则默认 filter。
-- flavor 为字符串数组。
-- blendComponents 必须是“对象数组”，严禁输出字符串数组；每个对象只能使用最终字段约束允许的键。estate 只写咖啡庄园/农场，processingStation 只写处理站/水洗站（Station/Washing Station），两者不得混用。咖啡品种编号如 74158 可以放入 variety。严禁写 blenderComponents、components、blend_components。
-- 只有明确拼配或多个产地/处理法时才输出多个 blendComponents；单品包装中品种单独成行时，合入同一个 component，不要为了品种另起 component。同一个品种不要重复成多个对象，也不要在 variety 中重复书写，例如 Oma 157 不要写成 "Oma 157 Oma 157"。Oma 157 这类字母+数字是品种；1931/批次1931 是批次，写入 notes。
-- 产地与处理法按图片表格或文本顺序一一配对；产地/处理法不要放入 notes。
-- notes 只放规范补充信息，例如批次、海拔、生豆商、系列；多条内容用 / 分隔；不要写物流、促销、包装技术、锁鲜技术、人物背书等广告信息。
-- 不编造，不输出上述字段以外的键。
-
-blendComponents 形状示例：
-{"blendComponents":[{"origin":"埃塞俄比亚","estate":"某庄园","processingStation":"博纳","process":"水洗","variety":"74158"}]}
-不要这样输出：
-{"blendComponents":["埃塞俄比亚","博纳","水洗","74158"]}`;
 
 const BEAN_COMPONENT_FIELD_DEFINITIONS = [
   ['origin', '产地'],
@@ -122,28 +98,10 @@ function buildBeanRecognitionPrompt(fieldConfig) {
   const enabledFields = config.fields
     .filter(field => field.enabled)
     .map(field => field.id);
-  const enabledSet = new Set(enabledFields);
-  const fieldLabels = BEAN_COMPONENT_FIELD_DEFINITIONS.filter(([id]) =>
-    enabledSet.has(id)
-  )
-    .map(([id, label]) => `${id}=${label}`)
-    .join('；');
-  const disabledLabels = BEAN_COMPONENT_FIELD_DEFINITIONS.filter(
-    ([id]) => !enabledSet.has(id)
-  )
-    .map(([, label]) => label)
-    .join('、');
-
-  return `${BEAN_RECOGNITION_PROMPT}
-
-最终咖啡豆字段约束（必须优先于上文）：
-- blendComponents 每个对象只允许输出这些成分字段：${enabledFields.join('/') || '无'}；字段含义：${fieldLabels || '无'}。
-- 不在允许列表里的成分信息不要写入 blendComponents；如果图片中明确可见，写入 notes，例如 ${disabledLabels ? `${disabledLabels} 写入 notes` : '未启用字段写入 notes'}。
-- origin 是未结构化的“产地概括”，只有允许 origin 时才输出；不要把 origin 当成产国。
-- estate 仅表示庄园/农场，processingStation 仅表示处理站/水洗站；名称含“站”、“Station”或“Washing Station”时优先判定为处理站，不要写入 estate。
-- batch 是批次，altitude 是海拔；只有对应字段启用时才写入 blendComponents，否则写入 notes。
-- 已启用字段优先写入 blendComponents，不要同时重复写入 notes；name 是包装展示标题，与结构化字段合理重叠不算重复。
-- 严禁输出未允许的 blendComponents 键。`;
+  return `${BEAN_RECOGNITION_PROMPT}\n\n${buildBeanImportFieldRules(
+    BEAN_COMPONENT_FIELD_DEFINITIONS.map(([id, label]) => ({ id, label })),
+    enabledFields
+  )}`;
 }
 
 const runtimeConfigCache = {
@@ -355,7 +313,12 @@ function timeoutSignal(timeoutMs) {
   return { signal: controller.signal, clear: () => clearTimeout(timer) };
 }
 
-async function callModelJSON({ url, apiKey, payload, timeoutMs = MODEL_REQUEST_TIMEOUT_MS }) {
+async function callModelJSON({
+  url,
+  apiKey,
+  payload,
+  timeoutMs = MODEL_REQUEST_TIMEOUT_MS,
+}) {
   const { signal, clear } = timeoutSignal(timeoutMs);
   try {
     const response = await fetch(url, {
@@ -458,7 +421,10 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
       'components',
       'notes',
     ]);
-    const allowedComponentKeys = new Set(BEAN_COMPONENT_FIELD_IDS);
+    const allowedComponentKeys = new Set([
+      ...BEAN_COMPONENT_FIELD_IDS,
+      'percentage',
+    ]);
     const processPattern = /水洗|日晒|蜜处理|厌氧|发酵|湿刨|半水洗|自然/;
 
     const cleanValue = (value, allowedKeys = null) => {
@@ -468,7 +434,9 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
         return trimmed || undefined;
       }
       if (Array.isArray(value)) {
-        const items = value.map(item => cleanValue(item)).filter(Boolean);
+        const items = value
+          .map(item => cleanValue(item))
+          .filter(item => item !== undefined);
         return items.length > 0 ? items : undefined;
       }
       if (!value || typeof value !== 'object') return value;
@@ -492,37 +460,9 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
         return note
           .map(item => String(item).trim())
           .filter(Boolean)
-          .join('/');
+          .join(' / ');
       }
       return note;
-    };
-
-    const extractVarietyFromNotes = target => {
-      if (!target.notes || !Array.isArray(target.blendComponents)) return;
-      const noteText = Array.isArray(target.notes)
-        ? target.notes.join('；')
-        : String(target.notes);
-      const varietyMatch = Array.from(noteText.matchAll(/\b\d{4,6}\b/g))
-        .map(match => match[0])
-        .filter(match => !new RegExp(`${match}\\s*M`, 'i').test(noteText))
-        .filter(
-          match => !new RegExp(`批次\\s*[:：]?\\s*${match}`).test(noteText)
-        )
-        .pop();
-      if (
-        enabledComponentKeys.has('variety') &&
-        varietyMatch &&
-        !target.blendComponents[0]?.variety
-      ) {
-        target.blendComponents[0] = {
-          ...target.blendComponents[0],
-          variety: varietyMatch,
-        };
-        target.notes = noteText
-          .replace(varietyMatch, '')
-          .replace(/[；/、,，\s]+/g, ' ')
-          .trim();
-      }
     };
 
     const normalizeAltitudeNote = note => {
@@ -535,7 +475,6 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
           (_match, lower, upper) => `海拔 ${lower}${upper ? `-${upper}` : ''}m`
         )
         .replace(/海拔\s*海拔\s*/g, '海拔 ')
-        .replace(/\s*[；/、]\s*/g, '/')
         .trim();
     };
 
@@ -636,50 +575,56 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
           ? first
           : normalized;
       };
-      const extractNamedVarietyFromName = name => {
-        if (typeof name !== 'string') return '';
-        const match = name.match(/\b((?:Oma|SL)\s*-?\s*\d{2,4})\b/i);
-        return match
-          ? match[1]
-              .replace(/\s*-\s*/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim()
-          : '';
-      };
-      const namedVariety = extractNamedVarietyFromName(target.name);
-
       const getComponentKeys = component =>
         componentFields.filter(key => {
           const value = component?.[key];
-          return typeof value === 'string' && value.trim();
+          return Array.isArray(value)
+            ? value.some(item => typeof item === 'string' && item.trim())
+            : typeof value === 'string' && value.trim();
         });
 
+      const repeatedVarietyRows = new Set();
       const components = target.blendComponents
         .map(component =>
           component && typeof component === 'object'
             ? cleanValue(component, allowedComponentKeys)
             : component
         )
-        .filter(component => component && typeof component === 'object')
-        .map(component => {
+        .filter(
+          component =>
+            component &&
+            typeof component === 'object' &&
+            !Array.isArray(component)
+        )
+        .map((component, index) => {
           const next = { ...component };
           if (typeof next.variety === 'string') {
             next.variety = collapseRepeatedText(next.variety);
-          }
-          if (
-            namedVariety &&
-            /^\d{4,6}$/.test(normalizeComponentText(next.variety))
-          ) {
-            next.variety = namedVariety;
+            if (
+              normalizeComponentText(next.variety) !==
+              normalizeComponentText(component.variety)
+            ) {
+              repeatedVarietyRows.add(index);
+            }
           }
           return next;
         });
 
       const removedIndexes = new Set();
+      const canMergeVarietyRow =
+        components.length === 2 &&
+        components.every(component => component.percentage === undefined) &&
+        !/成分\s*\d+/.test(String(target.notes ?? ''));
 
       components.forEach((component, index) => {
         const componentKeys = getComponentKeys(component);
-        if (componentKeys.length !== 1 || componentKeys[0] !== 'variety') {
+        if (
+          !canMergeVarietyRow ||
+          !repeatedVarietyRows.has(index) ||
+          componentKeys.length !== 1 ||
+          componentKeys[0] !== 'variety' ||
+          typeof component.variety !== 'string'
+        ) {
           return;
         }
 
@@ -714,20 +659,13 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
         }
       });
 
-      const seenSignatures = new Set();
       const normalizedComponents = components.filter((component, index) => {
         if (removedIndexes.has(index)) return false;
-
-        const componentKeys = getComponentKeys(component);
-        if (componentKeys.length === 0) return false;
-
-        const signature = componentKeys
-          .map(key => `${key}:${normalizeComponentText(component[key])}`)
-          .join('|');
-        if (seenSignatures.has(signature)) return false;
-
-        seenSignatures.add(signature);
-        return true;
+        return (
+          getComponentKeys(component).length > 0 ||
+          component.percentage !== undefined ||
+          /成分\s*\d+/.test(String(target.notes ?? ''))
+        );
       });
 
       if (normalizedComponents.length > 0) {
@@ -737,54 +675,14 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
       }
     };
 
-    const moveRegionalNotesToOrigin = target => {
-      if (
-        !enabledComponentKeys.has('origin') ||
-        enabledComponentKeys.has('region') ||
-        typeof target.notes !== 'string' ||
-        !Array.isArray(target.blendComponents) ||
-        !target.blendComponents[0] ||
-        /[:：/]/.test(target.notes) ||
-        !/西达摩|班莎|古吉|罕贝拉/.test(target.notes)
-      ) {
-        return;
-      }
-      const component = target.blendComponents[0];
-      component.origin = [component.origin, target.notes]
-        .filter(Boolean)
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      delete target.notes;
-    };
-
-    const copyRegionFromNameToOrigin = target => {
-      if (
-        !enabledComponentKeys.has('origin') ||
-        enabledComponentKeys.has('region') ||
-        typeof target.name !== 'string' ||
-        !Array.isArray(target.blendComponents) ||
-        !target.blendComponents[0]
-      ) {
-        return;
-      }
-      const regionMatch = target.name.match(/(西达摩\s*班莎|古吉\s*罕贝拉)/);
-      if (!regionMatch) return;
-      const region = regionMatch[1].replace(/\s+/g, ' ');
-      const component = target.blendComponents[0];
-      if (!String(component.origin || '').includes(region)) {
-        component.origin = [component.origin, region]
-          .filter(Boolean)
-          .join(' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-      }
-    };
-
     const dropAdvertisingNote = target => {
+      if (typeof target.notes !== 'string') return;
+      // Remove only a wholly advertising note. Mixed factual/free text and its
+      // original line boundaries must remain untouched.
       if (
-        typeof target.notes === 'string' &&
-        /锁鲜|包邮|促销|618|冠军|包装技术|技术/.test(target.notes)
+        /^(?:(?:\d+天)?锁鲜(?:装|包装|技术)?|(?:全国)?包邮|免运费|(?:618|双11)?促销(?:活动)?)$/.test(
+          target.notes.trim()
+        )
       ) {
         delete target.notes;
       }
@@ -798,7 +696,7 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
         return;
       }
       const note = '生豆商：裂豆师';
-      target.notes = target.notes ? `${target.notes}/${note}` : note;
+      target.notes = target.notes ? `${target.notes} / ${note}` : note;
       delete target.roaster;
     };
 
@@ -806,10 +704,7 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
       if (!Array.isArray(target.blendComponents)) return;
       const noteParts =
         typeof target.notes === 'string' && target.notes.trim()
-          ? target.notes
-              .split(/\s*\/\s*/)
-              .map(part => part.trim())
-              .filter(Boolean)
+          ? [target.notes.trim()]
           : [];
       const appendNote = note => {
         if (note && !noteParts.includes(note)) noteParts.push(note);
@@ -823,9 +718,14 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
             next.percentage = component.percentage;
           }
           BEAN_COMPONENT_FIELD_DEFINITIONS.forEach(([id, label]) => {
-            const value =
-              typeof component[id] === 'string' ? component[id].trim() : '';
-            if (!value) return;
+            const value = Array.isArray(component[id])
+              ? component[id]
+                  .filter(item => typeof item === 'string' && item.trim())
+                  .map(item => item.trim())
+              : typeof component[id] === 'string'
+                ? component[id].trim()
+                : '';
+            if (!value || (Array.isArray(value) && value.length === 0)) return;
             if (enabledComponentKeys.has(id)) {
               next[id] = value;
               return;
@@ -834,21 +734,24 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
               target.blendComponents.length > 1
                 ? `成分${componentIndex + 1} `
                 : '';
-            appendNote(`${prefix}${label}：${value}`);
+            appendNote(
+              `${prefix}${label}：${Array.isArray(value) ? JSON.stringify(value) : value}`
+            );
           });
           return next;
         })
-        .filter(component =>
-          BEAN_COMPONENT_FIELD_IDS.some(
-            field => typeof component?.[field] === 'string' && component[field]
-          )
+        // Keep empty slots in blends so scoped note indexes remain stable.
+        .filter(
+          component =>
+            target.blendComponents.length > 1 ||
+            Object.keys(component).length > 0
         );
 
       if (target.blendComponents.length === 0) {
         delete target.blendComponents;
       }
       if (noteParts.length > 0) {
-        target.notes = noteParts.join('/');
+        target.notes = noteParts.join(' / ');
       } else {
         delete target.notes;
       }
@@ -873,19 +776,17 @@ function parseBeanResponse(aiText, fieldConfig = DEFAULT_BEAN_FIELD_CONFIG) {
     }
     normalizeComponentLocations(bean);
     normalizeBlendComponentDuplicates(bean);
-    extractVarietyFromNotes(bean);
     if (bean.notes) {
       bean.notes = normalizeAltitudeNote(normalizeNote(bean.notes));
       if (!bean.notes) delete bean.notes;
     }
-    moveRegionalNotesToOrigin(bean);
-    copyRegionFromNameToOrigin(bean);
     applyBeanFieldConfig(bean);
     dropAdvertisingNote(bean);
     moveGreenBeanMerchantOutOfRoaster(bean);
-    if (!bean.beanType) {
-      bean.beanType = 'filter';
-    }
+    // The form supplies its own compatibility default. Extraction should not
+    // turn an unreadable or missing usage into a claimed packaging fact.
+    if (!['filter', 'espresso', 'omni'].includes(bean.beanType))
+      delete bean.beanType;
     if (bean.roastDate && !isValidDate(bean.roastDate)) {
       delete bean.roastDate;
     }

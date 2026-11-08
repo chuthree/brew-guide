@@ -159,15 +159,24 @@ const decodeNoteFieldValue = (value: string): StoredFieldValue => {
   return value;
 };
 
-const startsLabeledField = (value: string): boolean =>
-  BEAN_FIELD_DEFINITIONS.some(({ noteLabel }) =>
+const startsLabeledField = (
+  value: string,
+  additionalLabels: readonly string[] = []
+): boolean =>
+  [
+    ...BEAN_FIELD_DEFINITIONS.map(({ noteLabel }) => noteLabel),
+    ...additionalLabels,
+  ].some(noteLabel =>
     new RegExp(`^(?:成分\\s*\\d+\\s*)?${noteLabel}\\s*[:：]`).test(
       value.trimStart()
     )
   );
 
 /** Split canonical field separators, not slashes inside a value or JSON array. */
-const normalizeNoteParts = (notes: unknown): string[] => {
+export const splitBeanFieldNotes = (
+  notes: unknown,
+  additionalLabels: readonly string[] = []
+): string[] => {
   const values = Array.isArray(notes) ? notes : [notes];
   return values.flatMap(value => {
     if (typeof value !== 'string') return [];
@@ -204,8 +213,9 @@ const normalizeNoteParts = (notes: unknown): string[] => {
         /\s/.test(value[index - 1] || '') &&
         /\s/.test(value[index + 1] || '');
       if (
-        startsLabeledField(tail) ||
-        ((char === '；' || spacedSlash) && startsLabeledField(current))
+        startsLabeledField(tail, additionalLabels) ||
+        ((char === '；' || spacedSlash) &&
+          startsLabeledField(current, additionalLabels))
       ) {
         if (current) parts.push(current);
         start = index + 1;
@@ -216,27 +226,45 @@ const normalizeNoteParts = (notes: unknown): string[] => {
     return parts;
   });
 };
+const normalizeNoteParts = splitBeanFieldNotes;
 
-const normalizeFieldValue = (fieldId: BeanFieldId, value: unknown): string => {
+export interface BeanFieldNormalizationOptions {
+  /** AI imports only: prose without an explicit label separator is not a field. */
+  strictFieldNotes?: boolean;
+}
+
+const normalizeFieldValue = (
+  fieldId: BeanFieldId,
+  value: unknown,
+  strict = false
+): string => {
   const normalized = formatFieldValue(fieldId, value);
   const key = (text: string) =>
-    text
-      .normalize('NFKD')
-      .replace(/\p{M}/gu, '')
-      .toLowerCase()
-      .replace(
-        fieldId === 'variety'
-          ? /[\s._·•:：;,，。\\()[\]{}]+/g
-          : /[\s._·•:：;,，。/\\()[\]{}]+/g,
-        ''
-      );
+    strict
+      ? text
+          .normalize('NFKD')
+          .replace(/\p{M}/gu, '')
+          .toLowerCase()
+          .replace(/\s+/g, ' ')
+          .trim()
+      : text
+          .normalize('NFKD')
+          .replace(/\p{M}/gu, '')
+          .toLowerCase()
+          .replace(
+            fieldId === 'variety'
+              ? /[\s._·•:：;,，。\\()[\]{}]+/g
+              : /[\s._·•:：;,，。/\\()[\]{}]+/g,
+            ''
+          );
   return Array.isArray(normalized)
     ? JSON.stringify(normalized.map(key))
     : key(normalized);
 };
 
 const parseFieldNote = (
-  note: string
+  note: string,
+  strict = false
 ): {
   fieldId: BeanFieldId;
   value: StoredFieldValue;
@@ -245,7 +273,7 @@ const parseFieldNote = (
   for (const definition of BEAN_FIELD_DEFINITIONS) {
     const match = note.match(
       new RegExp(
-        `^(?:成分\\s*(\\d+)\\s*)?${definition.noteLabel}\\s*(?:[:：]|\\s)\\s*(.+)$`
+        `^(?:成分\\s*(\\d+)\\s*)?${definition.noteLabel}\\s*${strict ? '[:：]' : '(?:[:：]|\\s)'}\\s*(.+)$`
       )
     );
     if (match) {
@@ -424,7 +452,8 @@ export function normalizeCoffeeBeanForFieldConfig<
   T extends Partial<CoffeeBean>,
 >(
   bean: T,
-  settings?: Pick<AppSettings, 'beanFieldConfig' | 'showEstateField'> | null
+  settings?: Pick<AppSettings, 'beanFieldConfig' | 'showEstateField'> | null,
+  options: BeanFieldNormalizationOptions = {}
 ): T {
   const config = resolveBeanFieldConfig(settings);
   const enabledFieldIds = new Set(getEnabledBeanFieldIds(config));
@@ -436,13 +465,13 @@ export function normalizeCoffeeBeanForFieldConfig<
   const noteKeys = new Set<string>();
 
   const appendNote = (note: string) => {
-    const parsed = parseFieldNote(note);
+    const parsed = parseFieldNote(note, options.strictFieldNotes);
     const scope = parsed
       ? (parsed.componentIndex ??
         (originalComponentCount <= 1 ? 0 : 'unscoped'))
       : '';
     const key = parsed
-      ? `${scope}|${parsed.fieldId}|${normalizeFieldValue(parsed.fieldId, parsed.value)}`
+      ? `${scope}|${parsed.fieldId}|${normalizeFieldValue(parsed.fieldId, parsed.value, options.strictFieldNotes)}`
       : `note|${note.toLowerCase()}`;
     if (!noteKeys.has(key)) {
       noteKeys.add(key);
@@ -451,7 +480,7 @@ export function normalizeCoffeeBeanForFieldConfig<
   };
 
   normalizeNoteParts(bean.notes).forEach(note => {
-    const parsed = parseFieldNote(note);
+    const parsed = parseFieldNote(note, options.strictFieldNotes);
     if (!parsed || !enabledFieldIds.has(parsed.fieldId)) {
       appendNote(note);
       return;
@@ -475,8 +504,16 @@ export function normalizeCoffeeBeanForFieldConfig<
         parsed.value
       );
     } else if (
-      normalizeFieldValue(parsed.fieldId, currentValue) !==
-      normalizeFieldValue(parsed.fieldId, parsed.value)
+      normalizeFieldValue(
+        parsed.fieldId,
+        currentValue,
+        options.strictFieldNotes
+      ) !==
+      normalizeFieldValue(
+        parsed.fieldId,
+        parsed.value,
+        options.strictFieldNotes
+      )
     ) {
       appendNote(note);
     }
@@ -526,7 +563,8 @@ export function normalizeCoffeeBeanForFieldConfig<
 export function normalizeCoffeeBeanFieldUpdate<T extends Partial<CoffeeBean>>(
   previous: T,
   patch: Partial<CoffeeBean>,
-  settings?: Pick<AppSettings, 'beanFieldConfig' | 'showEstateField'> | null
+  settings?: Pick<AppSettings, 'beanFieldConfig' | 'showEstateField'> | null,
+  options: BeanFieldNormalizationOptions = {}
 ): T {
   if (!Object.prototype.hasOwnProperty.call(patch, 'blendComponents')) {
     return { ...previous, ...patch };
@@ -573,7 +611,7 @@ export function normalizeCoffeeBeanFieldUpdate<T extends Partial<CoffeeBean>>(
     ? patch.notes
     : normalizeNoteParts(previous.notes)
         .filter(note => {
-          const parsed = parseFieldNote(note);
+          const parsed = parseFieldNote(note, options.strictFieldNotes);
           if (!parsed) return true;
           const index =
             parsed.componentIndex ??
@@ -605,7 +643,8 @@ export function normalizeCoffeeBeanFieldUpdate<T extends Partial<CoffeeBean>>(
             ),
         })),
       },
-    }
+    },
+    options
   );
 }
 

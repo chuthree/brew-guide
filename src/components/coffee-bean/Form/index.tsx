@@ -63,7 +63,9 @@ import {
 } from '@/lib/coffee-beans/beanFields';
 
 interface CoffeeBeanFormProps {
-  onSave: (bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>) => Promise<boolean>;
+  onSave: (
+    bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
+  ) => Promise<boolean>;
   onClose: () => void;
   initialBean?: ExtendedCoffeeBean;
   /** 步骤变化回调，用于同步历史栈 */
@@ -280,14 +282,8 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         );
       }
 
-      if (
-        recognitionImage &&
-        currentSettings.autoFillRecognitionImage &&
-        !draft.image
-      ) {
-        return { ...draft, image: recognitionImage };
-      }
-
+      // Recognition applies the image setting before the first save. Keep that
+      // decision here; recognitionImage remains available for manual selection.
       return draft;
     });
 
