@@ -41,7 +41,11 @@ export function useMethodSelector({
 }: UseMethodSelectorProps) {
   // 简化方法选择处理
   const processSelectedMethod = useCallback(
-    async (method: Method | null) => {
+    async (
+      method: Method | null,
+      equipmentId = selectedEquipment,
+      equipmentCatalog = customEquipments
+    ) => {
       if (!method) return false;
       if (!hasBrewingStages(method)) {
         showToast({
@@ -68,8 +72,8 @@ export function useMethodSelector({
       updateBrewingSteps(method.params.stages);
 
       // 更新参数栏信息
-      const equipmentName = selectedEquipment
-        ? getEquipmentNameById(selectedEquipment, [])
+      const equipmentName = equipmentId
+        ? getEquipmentNameById(equipmentId, equipmentCatalog)
         : null;
 
       setParameterInfo({
@@ -92,6 +96,7 @@ export function useMethodSelector({
     },
     [
       selectedEquipment,
+      customEquipments,
       setSelectedMethod,
       setCurrentBrewingMethod,
       setEditableParams,
@@ -143,7 +148,7 @@ export function useMethodSelector({
           };
         }
 
-        await processSelectedMethod(method);
+        await processSelectedMethod(method, selectedEquipment);
       }
 
       return method;

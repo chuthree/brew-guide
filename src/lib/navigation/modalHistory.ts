@@ -57,6 +57,19 @@ class ModalHistoryManager {
 
   private popstateHandler: ((event: PopStateEvent) => void) | null = null;
   private isInitialized = false;
+  private pendingClose: Promise<void> | null = null;
+  private queuedCloses = 0;
+
+  /** Wait before opening another destination while browser Back is settling. */
+  async whenIdle(): Promise<void> {
+    while (this.pendingClose || this.queuedCloses > 0) {
+      await (this.pendingClose ?? Promise.resolve());
+    }
+  }
+
+  isClosing(): boolean {
+    return this.pendingClose !== null;
+  }
 
   /**
    * 初始化管理器
@@ -93,6 +106,7 @@ class ModalHistoryManager {
       nextPopStateSource: 'history',
     };
     this.isInitialized = false;
+    this.pendingClose = null;
   }
 
   /**
@@ -361,6 +375,14 @@ class ModalHistoryManager {
     skipOnClose = true,
     expectedEntry?: ModalEntry
   ): Promise<void> {
+    if (this.pendingClose) {
+      this.queuedCloses += 1;
+      return this.pendingClose
+        .then(() => this.close(id, skipOnClose, expectedEntry))
+        .finally(() => {
+          this.queuedCloses -= 1;
+        });
+    }
     const index = this.state.stack.findIndex(m => m.id === id);
     if (
       index === -1 ||
@@ -386,12 +408,14 @@ class ModalHistoryManager {
     const closed = new Promise<void>(resolve => {
       const onPopState = () => {
         window.removeEventListener('popstate', onPopState);
+        this.pendingClose = null;
         resolve();
       };
       window.addEventListener('popstate', onPopState);
       this.state.isClosingProgrammatically = true;
       window.history.go(-closeCount);
     });
+    this.pendingClose = closed;
 
     // 如果不跳过 onClose，调用最底层被关闭模态框的 onClose
     if (!skipOnClose && removed.length > 0) {
@@ -417,32 +441,8 @@ class ModalHistoryManager {
       return;
     }
 
-    // 计算需要关闭的数量（从第一个匹配到栈顶）
-    const closeCount = this.state.stack.length - firstIndex;
-
-    // 从栈中移除
-    const removed = this.state.stack.splice(firstIndex, closeCount);
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log(
-        `[ModalHistory] 关闭前缀 "${prefix}": ${removed.map(e => e.id).join(', ')}`,
-        this.getStackIds()
-      );
-    }
-
-    // 清理浏览器历史
-    if (closeCount > 0) {
-      this.state.isClosingProgrammatically = true;
-      window.history.go(-closeCount);
-      setTimeout(() => {
-        this.state.isClosingProgrammatically = false;
-      }, 50);
-    }
-
-    // 如果不跳过 onClose，调用第一个被关闭模态框的 onClose
-    if (!skipOnClose && removed.length > 0) {
-      removed[0].onClose({ source: 'app' });
-    }
+    // 与单层关闭共用真实 popstate 完成信号，供后续导航等待。
+    void this.close(this.state.stack[firstIndex].id, skipOnClose);
   }
 
   /**
@@ -450,25 +450,8 @@ class ModalHistoryManager {
    * 用于页面跳转等需要完全清理历史栈的场景
    */
   clearAndNavigate(): void {
-    const closeCount = this.state.stack.length;
-
-    if (closeCount === 0) {
-      return;
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[ModalHistory] 清空并导航，关闭 ${closeCount} 个模态框`);
-    }
-
-    // 清空内部栈
-    this.state.stack = [];
-
-    // 清理浏览器历史
-    this.state.isClosingProgrammatically = true;
-    window.history.go(-closeCount);
-    setTimeout(() => {
-      this.state.isClosingProgrammatically = false;
-    }, 50);
+    const first = this.state.stack[0];
+    if (first) void this.close(first.id);
   }
 
   /**

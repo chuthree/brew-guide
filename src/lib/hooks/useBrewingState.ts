@@ -199,15 +199,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     (step: BrewingStep, options?: NavigationOptions) => {
       const { force = false } = options || {};
 
-      // 切换到冲煮标签
-      if (activeMainTab !== '冲煮') {
-        saveMainTabPreference('冲煮');
-        setActiveMainTab('冲煮');
-        setShowHistory(false);
-        setTimeout(() => navigateToStep(step, options), 0);
-        return false;
-      }
-
       // 检查计时器状态
       if (isTimerRunning && !showComplete && !force) {
         return false;
@@ -223,6 +214,13 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
             if (!showComplete) return false;
             break;
         }
+      }
+
+      // 同一次导航完成主标签和步骤切换，不递归调用捕获旧标签的回调。
+      if (activeMainTab !== '冲煮') {
+        saveMainTabPreference('冲煮');
+        setActiveMainTab('冲煮');
+        setShowHistory(false);
       }
 
       // 设置步骤和标签
@@ -286,8 +284,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
         saveMainTabPreference('冲煮');
         setActiveMainTab('冲煮');
         setShowHistory(false);
-        setTimeout(() => handleEquipmentSelect(equipmentName), 0);
-        return equipmentName;
       }
 
       // 如果冲煮已完成，重置状态
