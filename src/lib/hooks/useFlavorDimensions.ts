@@ -15,7 +15,6 @@ export const useFlavorDimensions = () => {
   const [historicalLabels, setHistoricalLabels] = useState<
     Record<string, string>
   >(() => getHistoricalLabelsSync());
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // 初始化加载
@@ -55,15 +54,15 @@ export const useFlavorDimensions = () => {
 
     // 如果当前维度中没有，从历史标签中查找
     if (historicalLabels[id]) {
-      return historicalLabels[id];
+      return `${historicalLabels[id]}（历史）`;
     }
 
     // 如果历史标签中也没有，返回人性化的默认标签
     if (id.startsWith('custom_')) {
-      return '已删除的评分维度';
+      return '未命名评分（历史）';
     }
 
-    return id;
+    return `${id}（历史）`;
   };
 
   /**
@@ -113,7 +112,7 @@ export const useFlavorDimensions = () => {
 
   return {
     dimensions,
-    loading,
+    loading: false,
     getDimensionLabel,
     getValidTasteRatings,
     historicalLabels,

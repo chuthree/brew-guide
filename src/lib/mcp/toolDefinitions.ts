@@ -10,6 +10,7 @@ import { catalogDefinitions, mcpStageSchema } from './catalogTools';
 import { roastingDefinitions } from './roastingTools';
 import type { McpToolDefinition } from './types';
 import { ROAST_LEVELS } from '@/lib/utils/roastProfileUtils';
+import { tastePatchSchema } from './tasteInput';
 
 export interface Schema {
   type?:
@@ -204,12 +205,6 @@ export const beanFields: Record<string, Schema> = {
       'One object per actual component; keep country/process/percentage pairing and order. Read get_capabilities.beanInput for current field rules. Never make a new component just for its variety.',
   },
 };
-const tasteFields = Object.fromEntries(
-  ['acidity', 'sweetness', 'bitterness', 'body'].map(key => [
-    key,
-    number(`${key} rating, 0–5.`, 0, 5),
-  ])
-);
 const noteFields: Record<string, Schema> = {
   applyMethodPreset: {
     type: 'boolean',
@@ -294,17 +289,7 @@ const noteFields: Record<string, Schema> = {
     description:
       'Actual or historical stages. With applyMethodPreset true, omitted stages inherit the effective recipe and scale water to the resulting brew water; supplied stages take precedence. Otherwise no defaults are copied.',
   },
-  taste: {
-    ...object(tasteFields),
-    description:
-      'Scores for configured flavor dimensions, 0–5; 0 means unrated. Preserve explicit user scores. When the user permits estimates, infer reasonable scores from meaningful tasting descriptions, retain their wording in notes and identify estimates in the reply. Unmentioned dimensions stay unchanged; do not confuse acidity quality with intensity.',
-    additionalProperties: number(
-      'A currently configured flavor dimension score.',
-      0,
-      5
-    ),
-    maxProperties: 100,
-  },
+  taste: tastePatchSchema,
   beanSnapshot: {
     anyOf: [
       object(

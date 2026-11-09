@@ -1179,19 +1179,8 @@ async function performMutation(
         'CONFLICT',
         'Read the current note and supply its imageVersion before modifying photos.'
       );
-    if (fields.taste !== undefined) {
-      const settings = await getAppSettings(tx);
-      const known = new Set(
-        (settings?.flavorDimensions ?? DEFAULT_FLAVOR_DIMENSIONS).map(
-          dimension => dimension.id
-        )
-      );
-      for (const key of Object.keys(fields.taste as Record<string, unknown>))
-        if (!known.has(key))
-          invalid(
-            'taste keys must identify currently configured flavor dimensions; historical scores are preserved when omitted.'
-          );
-    }
+    const settings =
+      fields.taste !== undefined ? await getAppSettings(tx) : undefined;
     const after =
       before && !Object.keys(fields).length
         ? {
@@ -1201,7 +1190,13 @@ async function performMutation(
               (before.updatedAt ?? before.timestamp) + 1
             ),
           }
-        : buildNote(fields, before ?? undefined);
+        : buildNote(
+            fields,
+            before ?? undefined,
+            (settings?.flavorDimensions ?? DEFAULT_FLAVOR_DIMENSIONS).map(
+              item => item.id
+            )
+          );
     if (after.beanId && fields.beanSnapshot !== undefined)
       invalid(
         'beanSnapshot is only writable for unlinked notes; a linked bean supplies its canonical snapshot.'
@@ -1303,7 +1298,10 @@ async function performMutation(
       await prepared.apply(tx);
       saved = await requireNote(tx, after.id);
       cleanupPaths = prepared.supersededPaths;
-    } else await saveBrewingNote(tx, after);
+    } else {
+      await saveBrewingNote(tx, after);
+      saved = await requireNote(tx, after.id);
+    }
     changes.push(await recordChange('brew_note', before, saved));
     if (
       grants.includes('settings') &&

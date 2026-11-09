@@ -49,6 +49,7 @@ interface RatingDrawerProps {
   taste: Record<string, number>;
   onTasteChange: (taste: Record<string, number>) => void;
   displayDimensions: FlavorDimension[];
+  currentDimensionIds: string[];
   /** 风味评分是否开启半星精度 */
   halfStep?: boolean;
   /** 风味评分是否开启十分位精度 */
@@ -79,6 +80,7 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
   taste,
   onTasteChange,
   displayDimensions,
+  currentDimensionIds,
   halfStep = false,
   tenthStep = false,
   beanName,
@@ -159,6 +161,14 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
   const overallStep = tenthStep ? 0.1 : 0.5;
   const tasteStep = tenthStep ? 0.1 : halfStep ? 0.5 : 1;
   const shouldUseSlider = overallUseSlider || tenthStep;
+  const historicalDimensions = displayDimensions.filter(
+    dimension => !currentDimensionIds.includes(dimension.id)
+  );
+  const visibleDimensions = displayDimensions.filter(
+    dimension =>
+      currentDimensionIds.includes(dimension.id) ||
+      Object.hasOwn(tempTaste, dimension.id)
+  );
   const formatOverallValue = useCallback((value: number) => {
     return value.toFixed(1);
   }, []);
@@ -259,17 +269,13 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
             <div className="flex flex-col gap-3">
               {shouldUseSlider ? (
                 <div className="mb-3 grid grid-cols-2 gap-3">
-                  {displayDimensions.map(dimension => {
+                  {visibleDimensions.map(dimension => {
                     const value = tempTaste[dimension.id] || 0;
 
                     return (
                       <div key={dimension.id} data-vaul-no-drag>
                         <ElasticSlider
-                          label={
-                            dimension.order === 999
-                              ? `${dimension.label} (已删除)`
-                              : dimension.label
-                          }
+                          label={dimension.label}
                           min={0}
                           max={5}
                           step={tasteStep}
@@ -286,7 +292,7 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-[auto_auto] items-center justify-start gap-x-3 gap-y-3">
-                  {displayDimensions.map(dimension => {
+                  {visibleDimensions.map(dimension => {
                     const value = tempTaste[dimension.id] || 0;
 
                     return (
@@ -296,9 +302,6 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
                           title={dimension.label}
                         >
                           {dimension.label}
-                          {dimension.order === 999 && (
-                            <span className="ml-1">(已删除)</span>
-                          )}
                         </span>
                         <div className="flex gap-0.5" data-vaul-no-drag>
                           {[1, 2, 3, 4, 5].map(star => {
@@ -354,6 +357,33 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
                   })}
                 </div>
               )}
+            </div>
+          )}
+          {historicalDimensions.length > 0 && (
+            <div className="space-y-2 text-sm text-neutral-500">
+              <p>移除仅影响本篇笔记的历史评分，保存笔记后生效。</p>
+              {historicalDimensions.map(dimension => {
+                const removed = !Object.hasOwn(tempTaste, dimension.id);
+                return (
+                  <button
+                    key={dimension.id}
+                    type="button"
+                    className="block min-h-11 text-left underline underline-offset-4"
+                    onClick={() => {
+                      setUserModifiedFlavor(true);
+                      setTempTaste(previous => {
+                        const next = { ...previous };
+                        if (removed) next[dimension.id] = taste[dimension.id];
+                        else delete next[dimension.id];
+                        return next;
+                      });
+                    }}
+                  >
+                    {removed ? '恢复' : '移除'} {dimension.label}（
+                    {taste[dimension.id]} 分）
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

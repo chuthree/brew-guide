@@ -997,21 +997,8 @@ export function migrateTasteRatings(
   oldRatings: Record<string, number>,
   dimensions: FlavorDimension[]
 ): Record<string, number> {
-  const newRatings: Record<string, number> = {};
-
-  // 先设置所有维度的默认值
-  dimensions.forEach(dimension => {
-    newRatings[dimension.id] = 0;
-  });
-
-  // 然后用旧数据覆盖存在的维度
-  Object.entries(oldRatings).forEach(([key, value]) => {
-    if (dimensions.some(d => d.id === key)) {
-      newRatings[key] = value;
-    }
-  });
-
-  return newRatings;
+  // 配置变化只补齐当前维度，历史评分只能由用户明确移除。
+  return { ...createEmptyTasteRatings(dimensions), ...oldRatings };
 }
 
 // ==================== 方案参数覆盖工具函数 ====================

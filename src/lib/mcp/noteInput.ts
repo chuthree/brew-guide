@@ -5,6 +5,7 @@ import { normalizeBrewingNote } from '@/lib/notes/cleanup';
 import { parseCoffeeBeanAmount } from '@/lib/coffee-beans/amount';
 import { stripBrewingNoteImages } from '@/lib/notes/imageRecords';
 import { invalid } from './validation';
+import { applyTastePatch, type TastePatch } from './tasteInput';
 
 type Arguments = Record<string, unknown>;
 const noteTextFields = ['equipment', 'method', 'notes'] as const;
@@ -49,7 +50,8 @@ function hasBrewDetails(fields: Arguments): boolean {
 
 export function buildNoteInput(
   fields: Arguments,
-  previous?: BrewingNote
+  previous: BrewingNote | undefined,
+  currentTasteIds: string[]
 ): BrewingNote {
   const now = Date.now();
   const note: BrewingNote = previous
@@ -86,7 +88,11 @@ export function buildNoteInput(
     note.stages = fields.stages as BrewingNote['stages'];
   if (fields.rating !== undefined) note.rating = fields.rating as number;
   if (fields.taste !== undefined)
-    note.taste = { ...note.taste, ...(fields.taste as Record<string, number>) };
+    note.taste = applyTastePatch(
+      note.taste,
+      fields.taste as TastePatch,
+      currentTasteIds
+    );
   if (fields.totalTimeSeconds !== undefined)
     note.totalTime = fields.totalTimeSeconds as number;
   const params = note.params ?? {};

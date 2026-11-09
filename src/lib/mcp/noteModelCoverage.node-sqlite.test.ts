@@ -135,11 +135,12 @@ describe('MCP full note model and grinder integration (real SQLite)', () => {
     await dimensions(null);
     result = await update(result.note, { rating: 3 });
     expect(result.note.taste).toEqual({ berry: 4.5 });
-    const before = await stored(result);
-    await expect(
-      update(result.note, { taste: { berry: 2 } })
-    ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
-    expect(await stored(result)).toEqual(before);
+    result = await update(result.note, { taste: { berry: 2 } });
+    expect(result.note.taste).toEqual({ berry: 2 });
+    result = await update(result.note, { taste: { berry: null } });
+    expect(result.note.taste).toEqual({});
+    expect((await stored(result)).taste).toEqual({});
+    expect((await stored(result)).rating).toBe(3);
     expect(await balance()).toBe(90);
   });
   it('rejects unknown/prototype flavor IDs and malformed stages before stock, note or grinder writes', async () => {
