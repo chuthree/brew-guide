@@ -80,7 +80,7 @@ const SettingSection: React.FC<SettingSectionProps> = ({
       {title && (
         <div className="mb-3">
           {typeof title === 'string' ? (
-            <h3 className="pl-3.5 text-sm font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+            <h3 className="pl-3.5 text-sm font-semibold tracking-wider text-neutral-500  dark:text-neutral-400">
               {title}
             </h3>
           ) : (
