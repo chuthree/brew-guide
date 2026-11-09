@@ -147,7 +147,7 @@ jobs:
 
       # Rename and upload artifacts with standardized names
       - name: Rename and upload macOS artifacts
-        if: always() && matrix.platform == 'macos-latest'
+        if: success() && matrix.platform == 'macos-latest'
         shell: bash
         run: |
           VERSION="${{ steps.app_version.outputs.version }}"
@@ -160,7 +160,7 @@ jobs:
           fi
 
       - name: Rename and upload Windows artifacts
-        if: always() && matrix.platform == 'windows-latest'
+        if: success() && matrix.platform == 'windows-latest'
         shell: bash
         run: |
           VERSION="${{ steps.app_version.outputs.version }}"
@@ -173,7 +173,7 @@ jobs:
           fi
 
       - name: Rename and upload Linux artifacts
-        if: always() && matrix.platform == 'ubuntu-22.04'
+        if: success() && matrix.platform == 'ubuntu-22.04'
         shell: bash
         run: |
           VERSION="${{ steps.app_version.outputs.version }}"
