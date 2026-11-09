@@ -510,7 +510,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         // 创建一个历史维度项
         const historicalDimension: FlavorDimension = {
           id: tasteId,
-          label: `${historicalLabels[tasteId] || '未命名评分'}（历史）`,
+          label: historicalLabels[tasteId] || '未命名评分',
           order: 999, // 放在最后
           isDefault: false,
         };

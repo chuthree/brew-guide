@@ -54,15 +54,15 @@ export const useFlavorDimensions = () => {
 
     // 如果当前维度中没有，从历史标签中查找
     if (historicalLabels[id]) {
-      return `${historicalLabels[id]}（历史）`;
+      return historicalLabels[id];
     }
 
     // 如果历史标签中也没有，返回人性化的默认标签
     if (id.startsWith('custom_')) {
-      return '未命名评分（历史）';
+      return '未命名评分';
     }
 
-    return `${id}（历史）`;
+    return id;
   };
 
   /**

@@ -1229,7 +1229,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                                     key={rating.id}
                                     className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
                                   >
-                                    {rating.label}
+                                    {rating.label}{' '}
                                     {rating.value}
                                   </span>
                                 ))}
@@ -1241,7 +1241,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                                     key={rating.id}
                                     className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
                                   >
-                                    {rating.label}
+                                    {rating.label}{' '}
                                     {rating.value}
                                   </span>
                                 ))}
