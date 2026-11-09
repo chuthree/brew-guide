@@ -34,7 +34,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 transition-[right,left] duration-350 ease-in-out ${className}`}
+      className={`fixed bottom-0 left-0 transition-[right,left] duration-350 ease-in-out md:transition-none ${className}`}
       style={{
         left: isDesktopLayout ? 'var(--nav-panel-width, 144px)' : 0,
         right:

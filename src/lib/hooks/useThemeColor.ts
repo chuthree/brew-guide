@@ -2,6 +2,9 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { animate, type AnimationPlaybackControls } from 'framer-motion';
 import { useTheme } from 'next-themes';
+import { APP_LAYOUT_BREAKPOINT } from '@/lib/navigation/pageTransition';
+
+export const BROWSER_CHROME_MEDIA = `(width < ${APP_LAYOUT_BREAKPOINT}px)`;
 
 export const THEME_COLORS = {
   light: { base: '#fafafa' },
@@ -34,7 +37,7 @@ export const updateThemeColorMeta = (color: string) => {
     meta.name = 'theme-color';
     document.head.appendChild(meta);
   }
-  meta.removeAttribute('media');
+  if (meta.media !== BROWSER_CHROME_MEDIA) meta.media = BROWSER_CHROME_MEDIA;
   if (meta.content !== color) meta.content = color;
 };
 

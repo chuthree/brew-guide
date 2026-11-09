@@ -429,7 +429,7 @@ select:focus,
 }
 
 html {
-  background: var(--edge-top-background, var(--background));
+  background: var(--background);
   /* 动态字体大小：基础大小 × 缩放比例 */
   font-size: calc(var(--base-font-size) * var(--font-scale));
   /* 高度 100% 确保覆盖视口 */
@@ -439,7 +439,7 @@ html {
 
 body {
   color: var(--foreground);
-  background: var(--edge-top-background, var(--background));
+  background: var(--background);
   min-height: 100%;
   touch-action: manipulation;
   -webkit-text-size-adjust: 100%;
@@ -447,6 +447,13 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media (width < 768px) {
+  html,
+  body {
+    background: var(--edge-top-background, var(--background));
+  }
 }
 
 /* 滚动条 */
