@@ -3,6 +3,11 @@
 import React from 'react';
 import * as Select from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
+import {
+  settingMenuSurface,
+  settingMenuViewport,
+  settingMenuItem,
+} from './settingMenuStyles';
 
 interface SettingSelectProps<T extends string> {
   value: T;
@@ -42,19 +47,21 @@ function SettingSelect<T extends string>({
           align="end"
           sideOffset={4}
           collisionPadding={12}
-          className="relative z-90 w-max max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-black/5 bg-neutral-100 text-neutral-800 dark:border-white/5 dark:bg-neutral-900 dark:text-neutral-200"
+          className={settingMenuSurface}
         >
           <Select.ScrollUpButton className="flex h-6 items-center justify-center text-neutral-400 dark:bg-neutral-800/40">
             <ChevronUp className="size-4" />
           </Select.ScrollUpButton>
-          <Select.Viewport className="max-h-(--radix-select-content-available-height) p-1 dark:bg-neutral-800/40">
+          <Select.Viewport
+            className={`max-h-(--radix-select-content-available-height) ${settingMenuViewport}`}
+          >
             {/* 右侧距离：行留白 14 + 图标 16 + 间距 8 - 菜单留白 4 - 边框 1。 */}
             {options.map(option => (
               <Select.Item
                 key={option.value}
                 value={option.value}
                 disabled={option.disabled}
-                className="relative flex h-9 cursor-pointer items-center justify-end rounded-lg pr-[calc(2.125rem-1px)] pl-2.5 text-sm leading-none font-normal whitespace-nowrap outline-none select-none focus-visible:outline-1 focus-visible:-outline-offset-2 focus-visible:outline-neutral-400/60 data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-neutral-200/60 dark:data-[highlighted]:bg-neutral-700/60"
+                className={settingMenuItem}
               >
                 <Select.ItemText>{option.label}</Select.ItemText>
                 <Select.ItemIndicator className="absolute right-2 flex items-center text-neutral-600 dark:text-neutral-300">
