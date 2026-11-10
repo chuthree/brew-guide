@@ -896,6 +896,10 @@ export const DataManager = {
           console.error('重置 Store 状态失败:', error);
         }
 
+        const { clearLastSyncTime } =
+          await import('@/lib/supabase/realtime/conflictResolver');
+        await clearLastSyncTime();
+
         // 触发数据变更事件，通知应用中的组件重新加载数据
         if (isBrowser) {
           // 触发器具排序更新事件

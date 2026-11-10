@@ -15,6 +15,7 @@ import type { SyncableRecord, ConflictResolution, CloudRecord } from './types';
 
 // 本地同步时间戳存储键
 const LAST_SYNC_TIME_KEY = 'brew-guide:realtime-sync:lastSyncTime';
+let syncTimePersistence: Promise<void> = Promise.resolve();
 
 function parseStoredSyncTime(value: string | null): number {
   if (!value) return 0;
@@ -75,7 +76,22 @@ export function setLastSyncTime(time: number): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem(LAST_SYNC_TIME_KEY, value);
   }
-  void persistLastSyncTimeBackup(value);
+  syncTimePersistence = syncTimePersistence.then(() =>
+    persistLastSyncTimeBackup(value)
+  );
+}
+
+/** Remove both copies after any backup writes already queued for this key. */
+export async function clearLastSyncTime(): Promise<void> {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(LAST_SYNC_TIME_KEY);
+  }
+  const cleared = syncTimePersistence.then(async () => {
+    const { Preferences } = await import('@capacitor/preferences');
+    await Preferences.remove({ key: LAST_SYNC_TIME_KEY });
+  });
+  syncTimePersistence = cleared.catch(() => undefined);
+  await cleared;
 }
 
 /**

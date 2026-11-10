@@ -103,6 +103,10 @@ vi.mock('@/lib/supabase/realtime', () => ({
   }),
 }));
 
+vi.mock('@/lib/supabase/realtime/conflictResolver', () => ({
+  clearLastSyncTime: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('@/lib/utils/coffeeBeanUtils', async importOriginal => ({
   ...(await importOriginal<typeof import('@/lib/utils/coffeeBeanUtils')>()),
   normalizeCoffeeBeans: mocks.normalizeCoffeeBeans,
