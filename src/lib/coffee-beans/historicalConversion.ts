@@ -1,7 +1,25 @@
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
-import { invalid } from '@/lib/mcp/validation';
+import { invalid, McpToolError } from '@/lib/mcp/validation';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+
+/** Local, structured diagnostics. Never relax inventory checks to make a preview succeed. */
+export class HistoricalConversionConflict extends McpToolError {
+  constructor(
+    public readonly inventory: {
+      capacityGrams: number;
+      remainingGrams: number;
+      convertedGrams: number;
+      brewUsageGrams: number;
+      brewCount: number;
+    }
+  ) {
+    super(
+      'INVALID_ARGUMENT',
+      `Existing brew usage contradicts the historical conversion; reconcile records first. 总量 ${inventory.capacityGrams}g，剩余 ${inventory.remainingGrams}g，可迁移的已用量 ${inventory.convertedGrams}g，但 ${inventory.brewCount} 条冲煮笔记合计 ${inventory.brewUsageGrams}g。请先核对库存与笔记，不要自动修改或截断用量。`
+    );
+  }
+}
 
 /** Shared native/Web historical migration rules. No storage or UI side effects. */
 export const conversionAmount = (n: number) =>
@@ -80,9 +98,13 @@ export function analyzeHistoricalConversion(
     )
   );
   if (usage > input || (input === 0 && brews.length > 0))
-    invalid(
-      'Existing brew usage contradicts the historical conversion; reconcile records first'
-    );
+    throw new HistoricalConversionConflict({
+      capacityGrams: capacity,
+      remainingGrams: remaining,
+      convertedGrams: input,
+      brewUsageGrams: usage,
+      brewCount: brews.length,
+    });
   const copiedFields = new Set([
     'id',
     'timestamp',

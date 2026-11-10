@@ -86,6 +86,48 @@ const editedNote = (overrides: Partial<BrewingNote> = {}): BrewingNote => ({
 });
 
 describe('RoastingManager.updateRoastingRecord', () => {
+  it('blocks historical conversion preview and writes when brew usage exceeds used inventory', async () => {
+    const bean: CoffeeBean = {
+      id: 'historical',
+      timestamp: 1,
+      name: 'Synthetic historical',
+      beanState: 'roasted',
+      capacity: '100',
+      remaining: '60',
+    };
+    const note: BrewingNote = {
+      id: 'historical-brew',
+      beanId: bean.id,
+      timestamp: 2,
+      rating: 0,
+      taste: {},
+      notes: '',
+      params: { coffee: '80g' },
+    };
+    await coffeeBeanRepository.upsertMany([bean]);
+    await brewingNoteRepository.upsertMany([note]);
+    useCoffeeBeanStore.getState().setBeans([bean]);
+    useBrewingNoteStore.getState().setNotes([note]);
+    const before = await Promise.all([
+      db.coffeeBeans.toArray(),
+      db.brewingNotes.toArray(),
+    ]);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const preview = await RoastingManager.previewConvertRoastedToGreen(bean.id);
+    expect(preview.success).toBe(false);
+    expect(preview.preview).toBeUndefined();
+    expect(preview.error).toContain('contradicts');
+    const result = await RoastingManager.convertRoastedToGreen(bean.id);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('总量 100g，剩余 60g');
+    expect(result.error).toContain('1 条冲煮笔记合计 80g');
+    expect(
+      await Promise.all([db.coffeeBeans.toArray(), db.brewingNotes.toArray()])
+    ).toEqual(before);
+    expect(useCoffeeBeanStore.getState().beans).toEqual([bean]);
+    expect(useBrewingNoteStore.getState().notes).toEqual([note]);
+  });
+
   it('rejects an editor opened before another edit was saved', async () => {
     const edit = editedNote({ updatedAt: baseNote.timestamp });
     const first = await RoastingManager.updateRoastingRecord(edit);
