@@ -37,10 +37,9 @@ assert.ok(
   ),
   'Desktop windows must not load a remote app'
 );
-assert.ok(
-  config.version === pkg.version ||
-    (process.platform === 'win32' &&
-      config.version === pkg.version.split('-')[0]),
+assert.equal(
+  config.version,
+  pkg.version,
   'Native and frontend release versions must match'
 );
 assert.equal(

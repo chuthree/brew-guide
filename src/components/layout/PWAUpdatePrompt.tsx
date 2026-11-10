@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { detectAppRuntime } from '@/lib/app/runtime';
 import { PWA_MANUAL_UPDATE_CHECK_EVENT } from '@/lib/utils/pwaUpdateCheck';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import UpdateDrawer from '@/components/settings/UpdateDrawer';
@@ -21,7 +21,7 @@ export default function PWAUpdatePrompt() {
   const cleanupRegistrationRef = useRef<(() => void) | null>(null);
   const reloadTriggeredRef = useRef(false);
   const reloadTimerRef = useRef<number | null>(null);
-  const isNative = useMemo(() => Capacitor.isNativePlatform?.() === true, []);
+  const isNative = useMemo(() => detectAppRuntime().runtime !== 'web', []);
 
   useEffect(() => {
     if (isNative) return;
