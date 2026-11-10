@@ -307,41 +307,22 @@ export class TempFileManager {
       // 步骤3: 使用 Media 插件保存到相册
       const { Media } = await import('@capacitor-community/media');
 
-      // iOS: 尝试保存到自定义相册，如果失败则保存到系统相册
-      try {
-        await Media.savePhoto({
-          path: fileUri.uri,
-          albumIdentifier: 'BrewGuide',
-        });
-      } catch (_albumError) {
-        // 相册不存在，保存到系统相册
-        await Media.savePhoto({
-          path: fileUri.uri,
-        });
-      }
-
-      // 步骤4: 清理临时文件
-      await this.cleanupTempFile(tempFileName);
+      // iOS 直接写入系统相册，仅需添加照片权限。
+      // albumIdentifier 必须是系统相册 ID，不能使用相册名称。
+      await Media.savePhoto({ path: fileUri.uri });
       return 'saved';
-    } catch (error) {
-      // 即使失败也要尝试清理临时文件
-      try {
-        await this.cleanupTempFile(tempFileName);
-      } catch (cleanupError) {
-        console.warn('清理临时文件失败:', cleanupError);
-      }
-      console.error('保存到相册失败:', error);
-      throw error;
+    } finally {
+      await this.cleanupTempFile(tempFileName);
     }
   }
 
-  /** Android 直接保存导出的图片到相册，其他平台沿用分享或下载。 */
+  /** Android 和 iOS 原生端直接保存到相册，Web 端沿用分享或下载。 */
   static async saveImageFile(
     imageData: string,
     fileName: string,
     shareOptions: ShareOptions
   ): Promise<ImageSaveOutcome> {
-    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    if (Capacitor.isNativePlatform()) {
       return this.saveImageToGallery(imageData, fileName);
     }
 

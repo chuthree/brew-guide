@@ -363,10 +363,28 @@ export async function savePreviewAsImage(
   const el = document.getElementById(elementId);
   if (!el) throw new Error('预览元素未找到');
 
-  if (preparedImageData) {
-    const outcome = await TempFileManager.saveImageToGallery(preparedImageData);
-    return { outcome, imageData: preparedImageData };
-  }
+  const saveImage = async (imageData: string) => {
+    const outcome = await TempFileManager.saveImageToGallery(
+      imageData,
+      bean?.name || '咖啡豆标签'
+    );
+    if (outcome === 'saved' || outcome === 'downloaded') {
+      const { showToast } =
+        await import('@/components/common/feedback/LightToast');
+      showToast({
+        type: 'success',
+        title:
+          outcome === 'downloaded'
+            ? '已开始下载图片'
+            : Capacitor.isNativePlatform()
+              ? '已保存到系统相册'
+              : '图片已保存',
+      });
+    }
+    return { outcome, imageData };
+  };
+
+  if (preparedImageData) return saveImage(preparedImageData);
 
   // 1. 等待字体加载完成
   await waitForFonts();
@@ -443,32 +461,7 @@ export async function savePreviewAsImage(
     // 清理离屏容器
     document.body.removeChild(offscreenContainer);
 
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const outcome = await TempFileManager.saveImageToGallery(imageData);
-        const { showToast } =
-          await import('@/components/common/feedback/LightToast');
-        showToast({ type: 'success', title: '已保存到系统相册' });
-        return { outcome, imageData };
-      } catch (error) {
-        console.error('保存到相册失败:', error);
-        const fileName = `${bean?.name || '咖啡豆标签'}-${new Date().toISOString().split('T')[0]}`;
-        await TempFileManager.shareImageFile(imageData, fileName, {
-          title: '咖啡豆标签',
-          text: `${bean?.name || '咖啡豆'}标签图片`,
-          dialogTitle: '保存标签图片',
-        });
-        return { outcome: 'shared', imageData };
-      }
-    }
-
-    const outcome = await TempFileManager.saveImageToGallery(imageData);
-    if (outcome === 'downloaded') {
-      const { showToast } =
-        await import('@/components/common/feedback/LightToast');
-      showToast({ type: 'success', title: '已开始下载图片' });
-    }
-    return { outcome, imageData };
+    return await saveImage(imageData);
   } catch (error) {
     // 确保清理离屏容器
     if (document.body.contains(offscreenContainer)) {
