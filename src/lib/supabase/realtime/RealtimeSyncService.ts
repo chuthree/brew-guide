@@ -196,6 +196,7 @@ export class RealtimeSyncService {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
   private isDisconnecting = false;
+  private connectionRevision = 0;
   private isProcessingRemoteSettings = false;
   private remoteSettingsApplyPromise: Promise<void> | null = null;
   private isInitialized = false;
@@ -254,8 +255,12 @@ export class RealtimeSyncService {
       if (this.client && this.channel) {
         const state = this.channel.state;
         if (state === 'closed' || state === 'errored') {
+          // A newer connection or disconnect takes precedence over this retry.
+          const config = this.config;
+          const revision = this.connectionRevision + 1;
           await this.disconnect();
-          await this.connect(this.config!);
+          if (config && this.connectionRevision === revision)
+            await this.connect(config);
           return;
         }
       }
@@ -295,6 +300,7 @@ export class RealtimeSyncService {
     if (this.state.connectionStatus === 'connected' && sameConfig) {
       return true;
     }
+    this.connectionRevision++;
 
     const pendingAttempt = this.connectionAttempt;
     if (pendingAttempt) {
@@ -381,6 +387,7 @@ export class RealtimeSyncService {
   }
 
   async disconnect(): Promise<void> {
+    this.connectionRevision++;
     this.isDisconnecting = true;
     this.clearReconnectTimer();
 
