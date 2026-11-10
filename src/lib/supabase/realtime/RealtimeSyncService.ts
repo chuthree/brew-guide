@@ -53,7 +53,7 @@ import {
   recordSupabaseDiagnosticEvent,
 } from '../syncDiagnostics';
 import { offlineQueue } from './offlineQueue';
-import { hydrateLastSyncTime, setLastSyncTime } from './conflictResolver';
+import { hydrateLastSyncTime } from './conflictResolver';
 import { InitialSyncManager } from './InitialSyncManager';
 import {
   localChangeListener,
@@ -613,9 +613,7 @@ export class RealtimeSyncService {
       const success = await remoteChangeHandler.handleChange(table, payload);
 
       if (success) {
-        const now = Date.now();
-        setLastSyncTime(now);
-        this.setState({ lastSyncTime: now });
+        this.setState({ lastSyncTime: Date.now() });
       }
     });
 
@@ -639,9 +637,7 @@ export class RealtimeSyncService {
       const result = await downloadSettingsData(this.client);
       assertSyncSuccess(result, '下载远端设置失败');
       await refreshSettingsStores();
-      const now = Date.now();
-      setLastSyncTime(now);
-      this.setState({ lastSyncTime: now });
+      this.setState({ lastSyncTime: Date.now() });
     })();
     this.remoteSettingsApplyPromise = remoteApply;
 
@@ -949,9 +945,7 @@ export class RealtimeSyncService {
       syncStore.setSyncSuccess();
     }
     if (result.processed > 0) {
-      const now = Date.now();
-      setLastSyncTime(now);
-      this.setState({ lastSyncTime: now });
+      this.setState({ lastSyncTime: Date.now() });
     }
   }
 

@@ -642,10 +642,9 @@ export class InitialSyncManager {
       return stats;
     }
 
-    // 只有整轮同步全部成功才更新时间戳，避免失败表在下次同步中被跳过
+    // Only a complete scan advances the cursor; changes during it remain eligible.
     if (errorCount === 0 && !settingsDeferred) {
-      const now = Date.now();
-      setLastSyncTime(now);
+      setLastSyncTime(startTime);
     }
 
     console.log(
