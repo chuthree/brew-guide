@@ -1,4 +1,10 @@
-import { applyDataImport, type DataImportPersistence } from '../importData';
+import {
+  applyDataImport,
+  applyStreamedDataImport,
+  type DataImportPersistence,
+} from '../importData';
+import { createSqliteCoffeeBeanRepository } from './repositories/coffeeBean';
+import { createSqliteBrewingNoteRepository } from './repositories/brewingNote';
 import type { SqliteDriver } from './driver';
 import type { NativeImageFileStore } from '../images/nativeImageFileStore';
 import { toImageRelativePath } from '../images/nativeImageFileStore';
@@ -49,9 +55,13 @@ export function createSqliteDataImportPersistence(
               throw new Error('Cannot close an import transaction');
             },
           };
+          const imageServices = createSqliteImageDataServices(
+            scoped,
+            stagedFiles
+          );
           await applyDataImport(
             {
-              ...createSqliteImageDataServices(scoped, stagedFiles),
+              ...imageServices,
               customEquipmentRepository:
                 createSqliteCustomEquipmentRepository(scoped),
               customMethodRepository:
@@ -63,6 +73,16 @@ export function createSqliteDataImportPersistence(
             },
             plan
           );
+          if (plan.streamed)
+            await applyStreamedDataImport(
+              {
+                ...imageServices,
+                coffeeBeanRepository: createSqliteCoffeeBeanRepository(scoped),
+                brewingNoteRepository:
+                  createSqliteBrewingNoteRepository(scoped),
+              },
+              plan.streamed
+            );
           await clearOptionalMcpTables(tx);
         });
       } catch (error) {

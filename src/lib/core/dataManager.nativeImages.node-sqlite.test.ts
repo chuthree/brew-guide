@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
+import { Blob as NodeBlob } from 'node:buffer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NativeImageFileStore } from '@/lib/data/images/nativeImageFileStore';
 import {
@@ -392,14 +393,15 @@ describeNodeSqlite(
       });
     });
 
-    it('restores valid backup image strings through Native aggregates', async () => {
-      const localImage = image('image/png', [7, 8, 9]);
-      const remoteImage = 'https://Example.COM/restored%2Fback.png?q=%2F';
-      const noteLocal = image('image/webp', [10, 11]);
-      const noteExternal = 'https://example.com/restored-note.gif?z=1';
+    it.each(['string', 'file'] as const)(
+      'restores valid backup image strings through Native aggregates (%s)',
+      async input => {
+        const localImage = image('image/png', [7, 8, 9]);
+        const remoteImage = 'https://Example.COM/restored%2Fback.png?q=%2F';
+        const noteLocal = image('image/webp', [10, 11]);
+        const noteExternal = 'https://example.com/restored-note.gif?z=1';
 
-      const result = await DataManager.importAllData(
-        JSON.stringify({
+        const json = JSON.stringify({
           data: {
             coffeeBeans: [
               bean('restored-bean', {
@@ -411,32 +413,38 @@ describeNodeSqlite(
               note('restored-note', { images: [noteLocal, noteExternal] }),
             ],
           },
-        })
-      );
+        });
+        const result = await DataManager.importAllData(
+          input === 'file' ? (new NodeBlob([json]) as unknown as Blob) : json
+        );
 
-      expect(result.success).toBe(true);
-      expect(storageChanges).toEqual([{ key: 'allData', action: 'import' }]);
-      expect(
-        await createSqliteCoffeeBeanRepository(database!.driver).count()
-      ).toBe(1);
-      expect(
-        await createSqliteBrewingNoteRepository(database!.driver).count()
-      ).toBe(1);
-      expect(
-        (await services.coffeeBeanImageRepository.exportAll())[0]
-      ).toMatchObject({ image: localImage, backImage: remoteImage });
-      expect(
-        (await services.brewingNoteImageRepository.exportAll())[0]
-      ).toMatchObject({ image: noteLocal, images: [noteLocal, noteExternal] });
-      const fileEntries = Array.from(fileStore.objects.values());
-      expect(fileEntries).toHaveLength(2);
-      expect(fileEntries.map(bytes => Array.from(bytes))).toContainEqual([
-        7, 8, 9,
-      ]);
-      expect(fileEntries.map(bytes => Array.from(bytes))).toContainEqual([
-        10, 11,
-      ]);
-    });
+        expect(result.success).toBe(true);
+        expect(storageChanges).toEqual([{ key: 'allData', action: 'import' }]);
+        expect(
+          await createSqliteCoffeeBeanRepository(database!.driver).count()
+        ).toBe(1);
+        expect(
+          await createSqliteBrewingNoteRepository(database!.driver).count()
+        ).toBe(1);
+        expect(
+          (await services.coffeeBeanImageRepository.exportAll())[0]
+        ).toMatchObject({ image: localImage, backImage: remoteImage });
+        expect(
+          (await services.brewingNoteImageRepository.exportAll())[0]
+        ).toMatchObject({
+          image: noteLocal,
+          images: [noteLocal, noteExternal],
+        });
+        const fileEntries = Array.from(fileStore.objects.values());
+        expect(fileEntries).toHaveLength(2);
+        expect(fileEntries.map(bytes => Array.from(bytes))).toContainEqual([
+          7, 8, 9,
+        ]);
+        expect(fileEntries.map(bytes => Array.from(bytes))).toContainEqual([
+          10, 11,
+        ]);
+      }
+    );
 
     it('restores an upgrade backup of legal legacy null images through Native validation and persistence', async () => {
       await db.open();

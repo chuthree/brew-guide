@@ -65,9 +65,11 @@ function operationError(
   platformName: string
 ): Error {
   const target = objectKey ? ` for object key ${objectKey}` : '';
-  return new Error(`${platformName} image file ${operation} failed${target}`, {
-    cause,
-  });
+  const hint = operation === 'write' ? '图片保存失败，请检查存储空间或文件权限。' : '';
+  return new Error(
+    `${hint}${platformName} image file ${operation} failed${target}`,
+    { cause }
+  );
 }
 
 function unexpectedEntryError(
@@ -89,6 +91,7 @@ function createFileStore(
   platformName: string
 ): NativeImageFileStore {
   const inFlightWrites = new Set<ImageObjectKey>();
+  let readTail: Promise<void> = Promise.resolve();
 
   async function statOrMissing(
     path: string
@@ -166,17 +169,21 @@ function createFileStore(
     async read(objectKey) {
       validateImageObjectKey(objectKey);
       const path = toImageRelativePath(objectKey);
-      try {
-        const result = await filesystem.readFile({ path, directory });
-        if (typeof result.data !== 'string') {
-          throw new TypeError(
-            `${platformName} image filesystem returned a non-string binary result`
-          );
+      const read = readTail.then(async () => {
+        try {
+          const result = await filesystem.readFile({ path, directory });
+          if (typeof result.data !== 'string') {
+            throw new TypeError(
+              `${platformName} image filesystem returned a non-string binary result`
+            );
+          }
+          return decodeRawBase64(result.data);
+        } catch (error) {
+          throw operationError('read', objectKey, error, platformName);
         }
-        return decodeRawBase64(result.data);
-      } catch (error) {
-        throw operationError('read', objectKey, error, platformName);
-      }
+      });
+      readTail = read.then(() => undefined, () => undefined);
+      return read;
     },
 
     async delete(objectKey) {

@@ -144,12 +144,30 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
     if (!file || importingRef.current || importStatus) return;
 
     importingRef.current = true;
+    const operationId = recordCrashOperationStart('settings:data-import', {
+      fileBytes: file.size,
+    });
     setImportStatus({
       phase: 'importing',
       message: '正在导入数据，请保持应用打开，暂时不要离开或关闭应用。',
     });
     try {
-      const result = await DataManagerUtil.importAllData(await file.text());
+      let lastProgress = '';
+      const result = await DataManagerUtil.importAllData(file, {
+        onProgress: (phase, fraction) => {
+          const message = `${phase === 'checking' ? '正在检查备份' : '正在导入数据'} ${Math.floor(fraction * 100)}%。请保持应用打开。`;
+          if (message === lastProgress) return;
+          lastProgress = message;
+          setImportStatus({ phase: 'importing', message });
+        },
+      });
+      recordCrashOperationComplete(
+        {
+          status: result.success ? 'success' : 'error',
+          message: result.message,
+        },
+        operationId
+      );
       setImportStatus({
         phase: result.success ? 'success' : 'error',
         message: result.success
@@ -157,6 +175,13 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
           : result.message,
       });
     } catch (error) {
+      recordCrashOperationComplete(
+        {
+          status: 'error',
+          message: error instanceof Error ? error.message : '导入失败',
+        },
+        operationId
+      );
       setImportStatus({
         phase: 'error',
         message: `导入失败：${error instanceof Error ? error.message : '请重新选择文件后重试'}`,

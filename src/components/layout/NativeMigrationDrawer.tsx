@@ -17,7 +17,15 @@ function retryUpgrade() {
   window.location.reload();
 }
 
-export default function NativeMigrationDrawer() {
+export default function NativeMigrationDrawer({
+  onExportDiagnostics,
+  exportingDiagnostics,
+  diagnosticStatus,
+}: {
+  onExportDiagnostics: () => void;
+  exportingDiagnostics: boolean;
+  diagnosticStatus: string;
+}) {
   const { phase, error } = useStore(nativeMigrationGate);
   const busy = ['saving', 'migrating', 'cleaning'].includes(phase);
   const message = error
@@ -52,13 +60,22 @@ export default function NativeMigrationDrawer() {
         >
           {message}
         </p>
+        {diagnosticStatus && <p role="status">{diagnosticStatus}</p>}
       </ActionDrawer.Content>
       <ActionDrawer.Actions>
         <ActionDrawer.SecondaryButton
-          onClick={saveNativeMigrationBackup}
-          disabled={busy || phase === 'failed'}
+          onClick={
+            phase === 'failed' ? onExportDiagnostics : saveNativeMigrationBackup
+          }
+          disabled={busy || exportingDiagnostics}
         >
-          {phase === 'ready' ? '再次备份' : '备份数据'}
+          {phase === 'failed'
+            ? exportingDiagnostics
+              ? '正在导出…'
+              : '导出诊断'
+            : phase === 'ready'
+              ? '再次备份'
+              : '备份数据'}
         </ActionDrawer.SecondaryButton>
         <ActionDrawer.PrimaryButton
           onClick={phase === 'failed' ? retryUpgrade : confirmNativeMigration}

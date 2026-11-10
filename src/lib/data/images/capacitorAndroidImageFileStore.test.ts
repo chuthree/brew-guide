@@ -298,7 +298,7 @@ describe('Capacitor Android NativeImageFileStore', () => {
 
     await expect(
       store.write('stage3g2_preflight_error', new Uint8Array([0x01]))
-    ).rejects.toThrow('Android image file write failed');
+    ).rejects.toThrow('图片保存失败，请检查存储空间或文件权限。Android image file write failed');
     expect(mocks.filesystem.writeFile).not.toHaveBeenCalled();
     expect(mocks.filesystem.deleteFile).not.toHaveBeenCalled();
   });

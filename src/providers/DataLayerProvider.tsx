@@ -9,6 +9,7 @@
 
 import {
   useEffect,
+  useCallback,
   useState,
   createContext,
   useContext,
@@ -22,6 +23,9 @@ import {
   markCrashDiagnosticsReady,
   recordCrashCheckpoint,
   recordCrashError,
+  installCrashDiagnostics,
+  getCurrentCrashDiagnosticSession,
+  getCrashDiagnosticReport,
 } from '@/lib/app/crashDiagnostics';
 import { detectAppRuntime } from '@/lib/app/runtime';
 import { resolveStorageBackend } from '@/lib/data/runtime';
@@ -64,11 +68,40 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
     state => state.phase !== 'idle'
   );
   const [nativeApp, setNativeApp] = useState<boolean | null>(null);
+  const [diagnosticStatus, setDiagnosticStatus] = useState('');
+  const [exportingDiagnostics, setExportingDiagnostics] = useState(false);
   const [state, setState] = useState<DataLayerContextValue>({
     isInitialized: false,
     isInitializing: true,
     error: null,
   });
+
+  const exportDiagnostics = useCallback(async () => {
+    if (exportingDiagnostics) return;
+    setExportingDiagnostics(true);
+    setDiagnosticStatus('');
+    try {
+      const { exportJsonFile } = await import('@/lib/utils/jsonExport');
+      const [session, previousReport] = await Promise.all([
+        getCurrentCrashDiagnosticSession().catch(() => null),
+        getCrashDiagnosticReport().catch(() => null),
+      ]);
+      await exportJsonFile({
+        jsonData: JSON.stringify(
+          { error: state.error, session, previousReport },
+          null,
+          2
+        ),
+        fileName: 'brew-guide-startup-diagnostics.json',
+        title: '导出启动诊断',
+        dialogTitle: '导出启动诊断',
+      });
+    } catch {
+      setDiagnosticStatus('诊断导出未完成，请重试。');
+    } finally {
+      setExportingDiagnostics(false);
+    }
+  }, [exportingDiagnostics, state.error]);
 
   useEffect(() => {
     let mounted = true;
@@ -77,6 +110,9 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
       try {
         const runtime = detectAppRuntime();
         setNativeApp(resolveStorageBackend(runtime) === 'native-sqlite');
+        await installCrashDiagnostics().catch(error =>
+          console.warn('启动诊断初始化失败:', error)
+        );
         recordCrashCheckpoint('data-layer-provider:init:start');
         await initializeDataLayer();
 
@@ -123,13 +159,31 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
               <button type="button" onClick={retryInitialization}>
                 重试
               </button>
+              <button
+                type="button"
+                className="ml-6"
+                disabled={exportingDiagnostics}
+                onClick={exportDiagnostics}
+              >
+                {exportingDiagnostics ? '正在导出…' : '导出诊断'}
+              </button>
+              <p className="text-xs">
+                重试仍失败时，请导出诊断并联系支持。请勿清除应用数据。
+              </p>
+              {diagnosticStatus && <p role="status">{diagnosticStatus}</p>}
             </div>
           </div>
         ) : null
       ) : (
         children
       )}
-      {nativeApp && <NativeMigrationDrawer />}
+      {nativeApp && (
+        <NativeMigrationDrawer
+          onExportDiagnostics={exportDiagnostics}
+          exportingDiagnostics={exportingDiagnostics}
+          diagnosticStatus={diagnosticStatus}
+        />
+      )}
     </DataLayerContext.Provider>
   );
 }

@@ -395,14 +395,15 @@ export const DataManager = {
 
   /**
    * 导入数据
-   * @param jsonString 包含数据的JSON字符串
+   * @param jsonString 备份文件（流式读取），或同步调用方已读取的 JSON 字符串
    * @returns 导入结果
    */
   async importAllData(
-    jsonString: string,
+    jsonString: string | Blob,
     options: {
       preserveDeviceSettings?: boolean;
       expectedSyncData?: Record<string, unknown>;
+      onProgress?: (phase: 'checking' | 'importing', fraction: number) => void;
     } = {}
   ): Promise<{ success: boolean; message: string }> {
     let committed = false;
@@ -421,7 +422,28 @@ export const DataManager = {
             throw new Error('同步期间本地数据发生变化，请重试');
           }
         }
-        const document = JSON.parse(jsonString) as ImportData;
+        let document: ImportData;
+        const file = typeof jsonString === 'string' ? undefined : jsonString;
+        const streamedSections = new Set<'coffeeBeans' | 'brewingNotes'>();
+        if (file) {
+          const { readBackupStream } = await import('@/lib/data/backupStream');
+          let parsed: ImportData | undefined;
+          for await (const event of readBackupStream(file, fraction =>
+            options.onProgress?.('checking', fraction)
+          )) {
+            if (event.section === 'document') parsed = event.value;
+          }
+          if (!parsed?.data) throw new Error('备份文件不完整');
+          document = parsed;
+          for (const section of ['coffeeBeans', 'brewingNotes'] as const) {
+            if (Object.hasOwn(parsed.data, section)) {
+              streamedSections.add(section);
+              delete parsed.data[section];
+            }
+          }
+        } else {
+          document = JSON.parse(jsonString as string) as ImportData;
+        }
         const data = document?.data;
         if (!data || typeof data !== 'object' || Array.isArray(data)) {
           throw new Error('导入的数据格式不正确，缺少有效的 data 字段');
@@ -640,6 +662,58 @@ export const DataManager = {
                 }
               : bean;
           });
+        }
+        if (file) {
+          const { readBackupStream } = await import('@/lib/data/backupStream');
+          const { extractRoasterFromName, removeRoasterFromName } =
+            await import('@/lib/utils/beanVarietyUtils');
+          const separator =
+            (plan.settings ?? currentSettings).roasterSeparator || ' ';
+          plan.streamed = {
+            sections: streamedSections,
+            records: (async function* () {
+              for await (const event of readBackupStream(file, fraction =>
+                options.onProgress?.('importing', fraction)
+              )) {
+                if (event.section === 'coffeeBeans') {
+                  let [bean] = normalizeCoffeeBeans(
+                    [event.value as unknown as _CoffeeBean],
+                    { ensureFlavorArray: true }
+                  );
+                  if (native)
+                    bean = {
+                      ...bean,
+                      ...(bean.image === null ? { image: undefined } : {}),
+                      ...(bean.backImage === null
+                        ? { backImage: undefined }
+                        : {}),
+                    };
+                  if (!bean.roaster) {
+                    const roaster = extractRoasterFromName(
+                      bean.name,
+                      separator
+                    );
+                    if (roaster)
+                      bean = {
+                        ...bean,
+                        roaster,
+                        name: removeRoasterFromName(bean.name, separator),
+                      };
+                  }
+                  await imageSourcePayloadValidator.validateCoffeeBeans([bean]);
+                  yield { section: 'coffeeBeans' as const, value: bean };
+                } else if (event.section === 'brewingNotes') {
+                  let note = event.value as unknown as _BrewingNote;
+                  if (native && note.rating == null)
+                    note = { ...note, rating: 0 };
+                  await imageSourcePayloadValidator.validateBrewingNotes([
+                    note,
+                  ]);
+                  yield { section: 'brewingNotes' as const, value: note };
+                }
+              }
+            })(),
+          };
         }
         await dataImportPersistence.importData(plan);
         committed = true;

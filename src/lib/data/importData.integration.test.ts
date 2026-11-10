@@ -53,6 +53,26 @@ const backup = (value: string): DataImportPlan => ({
   legacy: { onboardingCompleted: value, brewingNotesVersion: value },
 });
 
+function streamedBackup(fail = false): DataImportPlan {
+  const plan = backup('new');
+  const beans = plan.coffeeBeans!;
+  const notes = plan.brewingNotes!;
+  delete plan.coffeeBeans;
+  delete plan.brewingNotes;
+  plan.streamed = {
+    sections: new Set(['coffeeBeans', 'brewingNotes']),
+    records: (async function* () {
+      // Exercise asynchronous file reads while a transaction is open.
+      await new Promise(resolve => setTimeout(resolve, 10));
+      yield { section: 'coffeeBeans' as const, value: beans[0] };
+      await new Promise(resolve => setTimeout(resolve, 10));
+      if (fail) throw new Error('file read failed');
+      yield { section: 'brewingNotes' as const, value: notes[0] };
+    })(),
+  };
+  return plan;
+}
+
 describe('atomic SQLite backup import', () => {
   let database: NodeSqliteTestDatabase;
   let files: Map<string, Uint8Array>;
@@ -116,15 +136,78 @@ describe('atomic SQLite backup import', () => {
     expect(files).toEqual(oldFiles);
   });
 
-  it('keeps original records and files when writing a new image fails', async () => {
+  it('rolls back a streamed backup when a later file read fails', async () => {
     const before = await snapshot();
     const oldFiles = new Map(files);
-    vi.spyOn(fileStore, 'write').mockRejectedValueOnce(new Error('disk full'));
     await expect(
-      repositories.dataImportPersistence.importData(backup('new'))
-    ).rejects.toThrow('disk full');
+      repositories.dataImportPersistence.importData(streamedBackup(true))
+    ).rejects.toThrow('file read failed');
     expect(await snapshot()).toEqual(before);
     expect(files).toEqual(oldFiles);
+  });
+
+  it('commits streamed images and removes stale records without adjusting inventory', async () => {
+    await repositories.dataImportPersistence.importData(streamedBackup());
+    expect(
+      (await repositories.coffeeBeanImageRepository.exportAll())[0].image
+    ).toBe(backup('new').coffeeBeans![0].image);
+    expect((await repositories.brewingNoteRepository.list())[0].notes).toBe(
+      'new'
+    );
+    expect(files.size).toBe(1);
+    await repositories.dataImportPersistence.importData({
+      legacy: {},
+      streamed: {
+        sections: new Set(['coffeeBeans']),
+        records: (async function* () {})(),
+      },
+    });
+    expect(await repositories.coffeeBeanRepository.list()).toEqual([]);
+    expect(await repositories.brewingNoteRepository.count()).toBe(1);
+    expect(files.size).toBe(0);
+  });
+
+  it.each([false, true])(
+    'keeps original records and files when writing a new image fails (streamed: %s)',
+    async streamed => {
+      const before = await snapshot();
+      const oldFiles = new Map(files);
+      vi.spyOn(fileStore, 'write').mockRejectedValueOnce(
+        new Error('disk full')
+      );
+      await expect(
+        repositories.dataImportPersistence.importData(
+          streamed ? streamedBackup() : backup('new')
+        )
+      ).rejects.toThrow('disk full');
+      expect(await snapshot()).toEqual(before);
+      expect(files).toEqual(oldFiles);
+    }
+  );
+
+  it('preserves omitted images and clears explicitly empty image fields in a streamed backup', async () => {
+    const run = (bean: NonNullable<DataImportPlan['coffeeBeans']>[number]) =>
+      repositories.dataImportPersistence.importData({
+        legacy: {},
+        streamed: {
+          sections: new Set(['coffeeBeans']),
+          records: (async function* () {
+            yield { section: 'coffeeBeans' as const, value: bean };
+          })(),
+        },
+      });
+    const bean = { id: 'bean', name: 'metadata only', timestamp: 1 };
+    const oldFiles = new Map(files);
+    await run(bean);
+    expect(files).toEqual(oldFiles);
+    expect(
+      (await repositories.coffeeBeanImageRepository.exportAll())[0].image
+    ).toBe(backup('old').coffeeBeans![0].image);
+    await run({ ...bean, image: '' });
+    expect(files.size).toBe(0);
+    expect(
+      (await repositories.coffeeBeanImageRepository.exportAll())[0].image
+    ).toBeUndefined();
   });
 
   it('keeps old files until commit and removes only unreferenced files afterwards', async () => {
@@ -196,6 +279,21 @@ describe('atomic IndexedDB backup import', () => {
   });
   const snapshot = () =>
     Promise.all(database.tables.map(table => table.toArray()));
+
+  it('keeps the transaction alive across streamed reads and rolls back a later failure', async () => {
+    const importer = createDexieDataImportPersistence(database);
+    await importer.importData(backup('old'));
+    const before = await snapshot();
+    await expect(importer.importData(streamedBackup(true))).rejects.toThrow(
+      'file read failed'
+    );
+    expect(await snapshot()).toEqual(before);
+    await importer.importData(streamedBackup());
+    expect((await database.coffeeBeans.get('bean'))?.name).toBe('new');
+    expect((await database.coffeeBeanImages.get('bean'))?.image).toBe(
+      backup('new').coffeeBeans![0].image
+    );
+  });
 
   it('rolls back every table when a late settings write fails, including after reopening', async () => {
     const importer = createDexieDataImportPersistence(database);

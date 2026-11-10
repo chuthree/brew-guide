@@ -22,6 +22,25 @@ afterEach(() => {
   vi.resetModules();
 });
 
+it('serializes native image reads and continues after a failure', async () => {
+  let finishFirst!: (value: { data: string }) => void;
+  mocks.filesystem.readFile
+    .mockImplementationOnce(() => new Promise(resolve => { finishFirst = resolve; }))
+    .mockRejectedValueOnce(new Error('read failed'))
+    .mockResolvedValueOnce({ data: 'Aw==' });
+  const { createCapacitorImageFileStore } =
+    await import('./capacitorImageFileStore');
+  const store = await createCapacitorImageFileStore();
+  const first = store.read('first');
+  const second = store.read('second');
+  const third = store.read('third');
+  await vi.waitFor(() => expect(mocks.filesystem.readFile).toHaveBeenCalledTimes(1));
+  finishFirst({ data: 'AQ==' });
+  await expect(first).resolves.toEqual(new Uint8Array([1]));
+  await expect(second).rejects.toThrow('image file read failed');
+  await expect(third).resolves.toEqual(new Uint8Array([3]));
+});
+
 it('uses the shared private Library image store on iOS', async () => {
   mocks.platform = 'ios';
   const bytes = new Uint8Array([0, 255, 128]);

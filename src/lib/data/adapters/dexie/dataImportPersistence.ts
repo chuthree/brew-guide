@@ -1,5 +1,12 @@
 import { db, type BrewGuideDB } from '@/lib/core/db';
-import { applyDataImport, type DataImportPersistence } from '../../importData';
+import Dexie from 'dexie';
+import {
+  applyDataImport,
+  applyStreamedDataImport,
+  type DataImportPersistence,
+} from '../../importData';
+import { createDexieCoffeeBeanRepository } from './coffeeBeanRepository';
+import { createDexieBrewingNoteRepository } from './brewingNoteRepository';
 import { createDexieCoffeeBeanPersistence } from './coffeeBeanImageRepository';
 import { createDexieBrewingNotePersistence } from './brewingNoteImageRepository';
 import { createDexieCustomEquipmentRepository } from './customEquipmentRepository';
@@ -37,6 +44,20 @@ export function createDexieDataImportPersistence(
             .startsWith('customMethods_')
             .delete();
         await applyDataImport(repositories, plan);
+        if (plan.streamed)
+          await applyStreamedDataImport(
+            {
+              ...repositories,
+              coffeeBeanRepository: createDexieCoffeeBeanRepository(
+                database.coffeeBeans
+              ),
+              brewingNoteRepository: createDexieBrewingNoteRepository(
+                database.brewingNotes
+              ),
+            },
+            plan.streamed,
+            promise => Dexie.waitFor(promise)
+          );
         await database.businessOperations.clear();
         await database.businessPublications.clear();
       });
