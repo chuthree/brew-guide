@@ -10,7 +10,14 @@ export interface StatsViewProps {
 }
 
 // 时间分组模式
-export type DateGroupingMode = 'year' | 'month' | 'day';
+export const DATE_GROUPING_MODES = ['year', 'month', 'week', 'day'] as const;
+export type DateGroupingMode = (typeof DATE_GROUPING_MODES)[number];
+
+export interface TrendDataPoint {
+  label: string;
+  date: string;
+  value: number;
+}
 
 // 豆子类型
 export type BeanType = 'espresso' | 'filter' | 'omni';
@@ -100,9 +107,9 @@ export interface UnifiedStatsData {
   inventory: InventoryStats | null;
   // 按类型分类的库存预测（仅实时视图有效）
   inventoryByType: TypeInventoryStats[] | null;
-  // 全部/年/月视图下的评分最高和最低咖啡豆
+  // 全部和多日视图下的评分最高和最低咖啡豆
   ratingHighlights: BeanRatingHighlights | null;
   roasterRatings: RoasterRatingStatsItem[];
-  // 全部/年/月视图下常用的器具 + 方案组合
+  // 全部和多日视图下常用的器具 + 方案组合
   commonMethods: CommonMethodStatsItem[];
 }

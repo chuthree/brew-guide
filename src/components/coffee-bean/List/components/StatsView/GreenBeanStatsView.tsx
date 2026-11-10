@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DateGroupingMode, TypeInventoryStats } from './types';
 import type { NavigationSwipeControl } from '@/lib/navigation/navigationSwipe';
-import { formatNumber } from './utils';
+import { formatNumber, getTimeRange } from './utils';
 import {
   globalCache,
   saveDateGroupingModePreference,
@@ -585,22 +585,7 @@ const GreenBeanAttributeStats: React.FC<GreenBeanAttributeStatsProps> = ({
   const filteredBeans = useMemo(() => {
     if (!selectedDate) return greenBeans;
 
-    let startTime: number;
-    let endTime: number;
-
-    if (dateGroupingMode === 'year') {
-      const year = parseInt(selectedDate);
-      startTime = new Date(year, 0, 1).getTime();
-      endTime = new Date(year + 1, 0, 1).getTime();
-    } else if (dateGroupingMode === 'month') {
-      const [year, month] = selectedDate.split('-').map(Number);
-      startTime = new Date(year, month - 1, 1).getTime();
-      endTime = new Date(year, month, 1).getTime();
-    } else {
-      const [year, month, day] = selectedDate.split('-').map(Number);
-      startTime = new Date(year, month - 1, day).getTime();
-      endTime = new Date(year, month - 1, day + 1).getTime();
-    }
+    const { startTime, endTime } = getTimeRange(selectedDate, dateGroupingMode);
 
     return greenBeans.filter(bean => {
       if (!bean.timestamp) return false;
@@ -1166,7 +1151,7 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
       selectedDate={selectedDate}
       onDateClick={setSelectedDate}
       availableDates={availableDates}
-      dateRangeLabel={dateRangeLabel}
+      dateRangeLabel={dateRangeLabel || '—'}
       beanStateType={beanStateType}
       onBeanStateTypeChange={onBeanStateTypeChange}
       showBeanStateSwitch={showBeanStateSwitch}
@@ -1183,7 +1168,11 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
             title="概览"
             chart={
               showTrendChart ? (
-                <ConsumptionTrendChart data={trendData} />
+                <ConsumptionTrendChart
+                  key={selectedDate}
+                  data={trendData}
+                  title="烘焙趋势"
+                />
               ) : undefined
             }
             stats={overviewStats}

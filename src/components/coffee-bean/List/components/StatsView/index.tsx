@@ -11,7 +11,7 @@ import {
   RoasterRatingStatsItem,
   CommonMethodStatsItem,
 } from './types';
-import { formatNumber } from './utils';
+import { formatNumber, getTimeRange } from './utils';
 import {
   globalCache,
   saveDateGroupingModePreference,
@@ -370,7 +370,7 @@ const createExplanation = (
             : undefined
           : useFallbackStats
             ? '暂无有效冲煮记录，基于咖啡豆容量变化估算'
-            : '基于全部冲煮记录累计，和月/日统计口径一致',
+            : '基于全部冲煮记录累计',
       };
 
     case 'totalCost':
@@ -407,7 +407,7 @@ const createExplanation = (
               ? undefined
               : useFallbackStats
                 ? '暂无有效冲煮记录，基于咖啡豆容量变化估算'
-                : '基于全部冲煮记录累计，和月/日统计口径一致',
+                : '基于全部冲煮记录累计',
       };
 
     case 'dailyConsumption':
@@ -1081,24 +1081,7 @@ const BeanAttributeStats: React.FC<BeanAttributeStatsProps> = ({
       return roastedBeans;
     }
 
-    // 计算时间范围
-    let startTime: number;
-    let endTime: number;
-
-    if (dateGroupingMode === 'year') {
-      const year = parseInt(selectedDate);
-      startTime = new Date(year, 0, 1).getTime();
-      endTime = new Date(year + 1, 0, 1).getTime();
-    } else if (dateGroupingMode === 'month') {
-      const [year, month] = selectedDate.split('-').map(Number);
-      startTime = new Date(year, month - 1, 1).getTime();
-      endTime = new Date(year, month, 1).getTime();
-    } else {
-      // day
-      const [year, month, day] = selectedDate.split('-').map(Number);
-      startTime = new Date(year, month - 1, day).getTime();
-      endTime = new Date(year, month - 1, day + 1).getTime();
-    }
+    const { startTime, endTime } = getTimeRange(selectedDate, dateGroupingMode);
 
     // 过滤咖啡豆（基于 timestamp 添加时间）
     return roastedBeans.filter(bean => {
@@ -1936,7 +1919,7 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
             title="概览"
             chart={
               showTrendChart ? (
-                <ConsumptionTrendChart data={trendData} />
+                <ConsumptionTrendChart key={selectedDate} data={trendData} />
               ) : undefined
             }
             stats={overviewStats}
@@ -2163,7 +2146,7 @@ const CombinedStatsView: React.FC<CombinedStatsViewProps> = ({
           selectedDate={selectedDate}
           onDateClick={handleSelectedDateChange}
           availableDates={availableDates}
-          dateRangeLabel={dateRangeLabel}
+          dateRangeLabel={dateRangeLabel || '—'}
           beanStateType={beanStateType}
           onBeanStateTypeChange={onBeanStateTypeChange}
           showBeanStateSwitch

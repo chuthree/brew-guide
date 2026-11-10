@@ -1,26 +1,24 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { format } from 'date-fns/format';
+import { startOfISOWeek } from 'date-fns/startOfISOWeek';
 import { AlignLeft } from 'lucide-react';
 import TabButton from '@/components/common/ui/TabButton';
 import TabBar from '@/components/common/ui/TabBar';
 import { AnimatePresence, motion } from 'framer-motion';
-import { DateGroupingMode } from './types';
+import { DATE_GROUPING_MODES, type DateGroupingMode } from './types';
+import { getTimeRange } from './utils';
 import {
   useNavigationSwipe,
   type NavigationSwipeControl,
 } from '@/lib/navigation/navigationSwipe';
 
-export const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
-  year: '按年统计',
-  month: '按月统计',
-  day: '按日统计',
-};
-
-// 短标签用于筛选按钮
-const DATE_GROUPING_SHORT_LABELS: Record<DateGroupingMode, string> = {
+const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
   year: '按年',
   month: '按月',
+  week: '按周',
   day: '按日',
 };
 
@@ -49,26 +47,22 @@ const FILTER_ANIMATION = {
   },
 };
 
-// 时间分组模式循环顺序
-const DATE_GROUPING_ORDER: DateGroupingMode[] = ['month', 'day', 'year'];
-
 export const getNextDateGroupingMode = (
   currentMode: DateGroupingMode
 ): DateGroupingMode => {
-  const currentIndex = DATE_GROUPING_ORDER.indexOf(currentMode);
-  const nextIndex = (currentIndex + 1) % DATE_GROUPING_ORDER.length;
-  return DATE_GROUPING_ORDER[nextIndex];
+  const currentIndex = DATE_GROUPING_MODES.indexOf(currentMode);
+  const nextIndex = (currentIndex + 1) % DATE_GROUPING_MODES.length;
+  return DATE_GROUPING_MODES[nextIndex];
 };
 
 // 日期格式化函数
 const formatDateLabel = (
   dateStr: string,
-  groupingMode: DateGroupingMode
+  groupingMode: DateGroupingMode,
+  now: Date
 ): string => {
-  const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
-  const currentDay = now.getDate();
 
   if (groupingMode === 'year') {
     const year = parseInt(dateStr, 10);
@@ -88,6 +82,19 @@ const formatDateLabel = (
       return `${monthNum}月`;
     }
     return `${year}年${monthNum}月`;
+  } else if (groupingMode === 'week') {
+    const { startTime, endTime } = getTimeRange(dateStr, groupingMode);
+    const currentWeekStart = startOfISOWeek(now).getTime();
+    if (startTime === currentWeekStart) return '本周';
+    if (endTime === currentWeekStart) return '上周';
+
+    const start = new Date(startTime);
+    const end = new Date(endTime - 1);
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const startFormat =
+      sameYear && start.getFullYear() === currentYear ? 'M/d' : 'yyyy/M/d';
+    const endFormat = sameYear ? 'M/d' : 'yyyy/M/d';
+    return `${format(start, startFormat)}–${format(end, endFormat)}`;
   } else {
     const [year, month, day] = dateStr.split('-');
     const yearNum = parseInt(year, 10);
@@ -96,9 +103,7 @@ const formatDateLabel = (
 
     // 计算日期差
     const targetDate = new Date(yearNum, monthNum - 1, dayNum);
-    const todayDate = new Date(currentYear, currentMonth - 1, currentDay);
-    const diffTime = todayDate.getTime() - targetDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = differenceInCalendarDays(now, targetDate);
 
     if (diffDays === 0) return '今天';
     if (diffDays === 1) return '昨天';
@@ -128,6 +133,7 @@ const FilterButton: React.FC<FilterButtonProps> = ({
 }) => (
   <button
     type="button"
+    aria-pressed={isActive}
     onClick={onClick}
     className={`px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
       isActive
@@ -171,6 +177,7 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const filterExpandRef = useRef<HTMLDivElement>(null);
   const navigationSwipeHandlers = useNavigationSwipe(navigationSwipeControl);
+  const now = new Date();
 
   // 处理筛选展开栏
   const handleFilterToggle = () => {
@@ -227,7 +234,7 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
               }
               className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
             >
-              {DATE_GROUPING_LABELS[dateGroupingMode]}
+              {DATE_GROUPING_LABELS[dateGroupingMode]}统计
             </button>
             {showBeanStateSwitch && onBeanStateTypeChange && (
               <>
@@ -290,10 +297,7 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                 className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
               />
 
-              <div
-                data-category-scroll
-                className="flex overflow-x-auto"
-              >
+              <div data-category-scroll className="flex overflow-x-auto">
                 {/* 日期选项 */}
                 {availableDates.map(date => (
                   <TabButton
@@ -303,7 +307,7 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                     className="mr-3"
                     dataTab={date}
                   >
-                    {formatDateLabel(date, dateGroupingMode)}
+                    {formatDateLabel(date, dateGroupingMode, now)}
                   </TabButton>
                 ))}
               </div>
@@ -361,25 +365,20 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
                     <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
                       时间分组
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <FilterButton
-                        isActive={dateGroupingMode === 'year'}
-                        onClick={() => onDateGroupingModeChange('year')}
-                      >
-                        {DATE_GROUPING_SHORT_LABELS.year}
-                      </FilterButton>
-                      <FilterButton
-                        isActive={dateGroupingMode === 'month'}
-                        onClick={() => onDateGroupingModeChange('month')}
-                      >
-                        {DATE_GROUPING_SHORT_LABELS.month}
-                      </FilterButton>
-                      <FilterButton
-                        isActive={dateGroupingMode === 'day'}
-                        onClick={() => onDateGroupingModeChange('day')}
-                      >
-                        {DATE_GROUPING_SHORT_LABELS.day}
-                      </FilterButton>
+                    <div
+                      role="group"
+                      aria-label="时间分组"
+                      className="flex flex-wrap items-center gap-2"
+                    >
+                      {DATE_GROUPING_MODES.map(mode => (
+                        <FilterButton
+                          key={mode}
+                          isActive={dateGroupingMode === mode}
+                          onClick={() => onDateGroupingModeChange(mode)}
+                        >
+                          {DATE_GROUPING_LABELS[mode]}
+                        </FilterButton>
+                      ))}
                     </div>
                   </div>
                 </div>

@@ -12,12 +12,19 @@ import {
   BeanRatingHighlight,
   BeanRatingHighlights,
   CommonMethodStatsItem,
+  TrendDataPoint,
 } from './types';
 import {
   formatBeanDisplayName,
   getRoasterName,
 } from '@/lib/utils/beanVarietyUtils';
-import { buildRoasterRatingStats } from './utils';
+import {
+  buildRoasterRatingStats,
+  buildTrendData,
+  calculateDaysBetween,
+  getDateKey,
+  getTimeRange,
+} from './utils';
 import {
   parseNum,
   parseNoteConsumption,
@@ -33,12 +40,6 @@ import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
 // ============================================================================
 // 类型定义
 // ============================================================================
-
-export interface TrendDataPoint {
-  label: string;
-  date: string;
-  value: number;
-}
 
 // 统计数据的元信息（用于解释数据来源）
 export interface StatsMetadata {
@@ -225,28 +226,6 @@ const buildCommonMethodStats = (
     })
     .slice(0, COMMON_METHOD_STATS_MAX_COUNT);
 
-/** 获取日期键（用于趋势图分组） */
-const getDateKey = (
-  timestamp: number,
-  groupBy: 'day' | 'month'
-): { key: string; label: string } => {
-  const date = new Date(timestamp);
-  const y = date.getFullYear();
-  const m = date.getMonth() + 1;
-  const d = date.getDate();
-
-  if (groupBy === 'day') {
-    return {
-      key: `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`,
-      label: `${m}/${d}`,
-    };
-  }
-  return {
-    key: `${y}-${m.toString().padStart(2, '0')}`,
-    label: `${m}月`,
-  };
-};
-
 /** 判断时间戳是否在今天 */
 const isToday = (timestamp: number): boolean => {
   const now = new Date();
@@ -256,17 +235,6 @@ const isToday = (timestamp: number): boolean => {
     date.getMonth() === now.getMonth() &&
     date.getDate() === now.getDate()
   );
-};
-
-/** 计算日历天数（包含首尾） */
-const calculateDaysBetween = (startMs: number, endMs: number): number => {
-  const startDay = new Date(startMs);
-  startDay.setHours(0, 0, 0, 0);
-  const endDay = new Date(endMs);
-  endDay.setHours(0, 0, 0, 0);
-  const days =
-    Math.floor((endDay.getTime() - startDay.getTime()) / 86400000) + 1;
-  return Math.max(1, days);
 };
 
 /** 计算日历月份数（包含首尾月份） */
@@ -279,46 +247,6 @@ const calculateMonthsBetween = (startMs: number, endMs: number): number => {
     startDate.getMonth() +
     1;
   return Math.max(1, months);
-};
-
-// ============================================================================
-// 时间范围计算
-// ============================================================================
-
-export interface TimeRange {
-  startTime: number;
-  endTime: number;
-}
-
-/** 根据日期字符串和模式计算时间范围 */
-export const getTimeRange = (
-  dateStr: string | null,
-  mode: DateGroupingMode
-): TimeRange => {
-  if (!dateStr) return { startTime: 0, endTime: Infinity };
-
-  if (mode === 'year') {
-    const year = parseInt(dateStr);
-    return {
-      startTime: new Date(year, 0, 1).getTime(),
-      endTime: new Date(year + 1, 0, 1).getTime(),
-    };
-  }
-
-  if (mode === 'month') {
-    const [year, month] = dateStr.split('-').map(Number);
-    return {
-      startTime: new Date(year, month - 1, 1).getTime(),
-      endTime: new Date(year, month, 1).getTime(),
-    };
-  }
-
-  // day
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return {
-    startTime: new Date(year, month - 1, day).getTime(),
-    endTime: new Date(year, month - 1, day + 1).getTime(),
-  };
 };
 
 // ============================================================================
@@ -465,18 +393,8 @@ export const useStatsData = (
 
     for (const note of notes) {
       if (!note.timestamp || note.source === 'capacity-adjustment') continue;
-      const { key } = getDateKey(
-        note.timestamp,
-        dateGroupingMode === 'year' ? 'month' : 'day'
-      );
-
-      if (dateGroupingMode === 'year') {
-        dates.add(key.substring(0, 4)); // 只取年份
-      } else if (dateGroupingMode === 'month') {
-        dates.add(key.substring(0, 7)); // 年-月
-      } else {
-        dates.add(key); // 完整日期
-      }
+      const key = getDateKey(new Date(note.timestamp), dateGroupingMode);
+      if (key) dates.add(key);
     }
 
     return Array.from(dates).sort((a, b) => b.localeCompare(a));
@@ -486,12 +404,13 @@ export const useStatsData = (
   // Layer 3: 核心计算（一次遍历）
   // ─────────────────────────────────────────────────────────────────────────
   const computedData = useMemo(() => {
-    const { startTime, endTime } = getTimeRange(selectedDate, dateGroupingMode);
+    const timeRange = getTimeRange(selectedDate, dateGroupingMode);
+    const { startTime, endTime } = timeRange;
     const now = Date.now();
 
     // ═══════════════════════════════════════════════════════════════════════
     // 总消耗计算策略：
-    // - 优先使用冲煮记录累计，保证全部/年/月/日视图口径一致
+    // - 优先使用冲煮记录累计，保证各视图的统计口径一致
     // - 仅在完全没有有效记录时，回退到 "总量 - 剩余量" 估算
     // ═══════════════════════════════════════════════════════════════════════
     let beanBasedConsumption = 0;
@@ -600,12 +519,12 @@ export const useStatsData = (
     // 今日冲煮明细（全部视图需要）
     const todayBrewingDetails: BrewingDetailItem[] = [];
 
-    // 趋势数据（仅年/月视图）
+    // 趋势数据（仅多日视图）
     const needTrend = selectedDate !== null && dateGroupingMode !== 'day';
     const trendMap = new Map<string, number>();
     const groupBy = dateGroupingMode === 'year' ? 'month' : 'day';
 
-    // 评分亮点（全部/年/月视图）
+    // 评分亮点（全部和多日视图）
     const needBeanRatingHighlights = !isSingleDayView;
     const beanRatingCandidates = new Map<string, BeanRatingCandidate>();
     const commonMethodStats = new Map<string, CommonMethodStatsAccumulator>();
@@ -704,8 +623,8 @@ export const useStatsData = (
 
         // 趋势数据
         if (needTrend) {
-          const { key } = getDateKey(ts, groupBy);
-          trendMap.set(key, (trendMap.get(key) || 0) + amount);
+          const key = getDateKey(new Date(ts), groupBy);
+          if (key) trendMap.set(key, (trendMap.get(key) ?? 0) + amount);
         }
       }
 
@@ -781,7 +700,7 @@ export const useStatsData = (
         );
       }
     } else if (validNotesCount > 0) {
-      // 全部视图：优先使用笔记累计，保证与月/日统计口径一致
+      // 全部视图：优先使用笔记累计，与历史视图口径一致
       totalConsumption = noteBasedConsumption;
       totalCost = noteBasedCost;
       pricedConsumption = noteBasedPricedConsumption;
@@ -808,28 +727,9 @@ export const useStatsData = (
       }
     }
 
-    // 生成趋势数据数组
-    const trendData: TrendDataPoint[] = [];
-    if (needTrend && selectedDate) {
-      // 生成完整的日期序列
-      const { startTime: tStart, endTime: tEnd } = getTimeRange(
-        selectedDate,
-        dateGroupingMode
-      );
-      const current = new Date(tStart);
-      const endDate = new Date(tEnd - 1);
-
-      while (current <= endDate) {
-        const { key, label } = getDateKey(current.getTime(), groupBy);
-        trendData.push({ date: key, label, value: trendMap.get(key) || 0 });
-
-        if (groupBy === 'day') {
-          current.setDate(current.getDate() + 1);
-        } else {
-          current.setMonth(current.getMonth() + 1);
-        }
-      }
-    }
+    const trendData = needTrend
+      ? buildTrendData(timeRange, groupBy, trendMap)
+      : [];
 
     // 按时间倒序排列冲煮明细
     brewingDetails.sort((a, b) => b.timestamp - a.timestamp);

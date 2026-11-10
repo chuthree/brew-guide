@@ -7,8 +7,14 @@ import {
   BeanType,
   InventoryStats,
   TypeInventoryStats,
+  TrendDataPoint,
 } from './types';
-import { getTimeRange, TrendDataPoint } from './useStatsData';
+import {
+  buildTrendData,
+  calculateDaysBetween,
+  getDateKey,
+  getTimeRange,
+} from './utils';
 import { getBrewingNotes } from '@/lib/notes/relatedNotes';
 
 // ============================================================================
@@ -83,37 +89,11 @@ const isToday = (timestamp: number): boolean => {
   );
 };
 
-/** 计算日历天数（包含首尾） */
-const calculateDaysBetween = (startMs: number, endMs: number): number => {
-  const startDay = new Date(startMs);
-  startDay.setHours(0, 0, 0, 0);
-  const endDay = new Date(endMs);
-  endDay.setHours(0, 0, 0, 0);
-  const days =
-    Math.floor((endDay.getTime() - startDay.getTime()) / 86400000) + 1;
-  return Math.max(1, days);
-};
-
-/** 获取日期键（用于趋势图分组） */
-const getDateKey = (
-  timestamp: number,
-  groupBy: 'day' | 'month'
-): { key: string; label: string } => {
-  const date = new Date(timestamp);
-  const y = date.getFullYear();
-  const m = date.getMonth() + 1;
-  const d = date.getDate();
-
-  if (groupBy === 'day') {
-    return {
-      key: `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`,
-      label: `${m}/${d}`,
-    };
-  }
-  return {
-    key: `${y}-${m.toString().padStart(2, '0')}`,
-    label: `${m}月`,
-  };
+const getRoastingTimestamp = (note: BrewingNote): number => {
+  const roastDate = note.changeRecord?.roastingRecord?.roastDate;
+  return roastDate
+    ? new Date(`${roastDate}T12:00:00`).getTime()
+    : note.timestamp;
 };
 
 const BEAN_TYPE_LABELS: Record<BeanType, string> = {
@@ -253,22 +233,11 @@ export const useGreenBeanStatsData = (
     for (const note of notes) {
       // 只统计烘焙记录
       if (!note.timestamp || note.source !== 'roasting') continue;
-      const { key } = getDateKey(
-        note.changeRecord?.roastingRecord?.roastDate
-          ? new Date(
-              `${note.changeRecord.roastingRecord.roastDate}T12:00:00`
-            ).getTime()
-          : note.timestamp,
-        dateGroupingMode === 'year' ? 'month' : 'day'
+      const key = getDateKey(
+        new Date(getRoastingTimestamp(note)),
+        dateGroupingMode
       );
-
-      if (dateGroupingMode === 'year') {
-        dates.add(key.substring(0, 4));
-      } else if (dateGroupingMode === 'month') {
-        dates.add(key.substring(0, 7));
-      } else {
-        dates.add(key);
-      }
+      if (key) dates.add(key);
     }
 
     return Array.from(dates).sort((a, b) => b.localeCompare(a));
@@ -278,7 +247,8 @@ export const useGreenBeanStatsData = (
   // Layer 3: 核心计算
   // ─────────────────────────────────────────────────────────────────────────
   const computedData = useMemo(() => {
-    const { startTime, endTime } = getTimeRange(selectedDate, dateGroupingMode);
+    const timeRange = getTimeRange(selectedDate, dateGroupingMode);
+    const { startTime, endTime } = timeRange;
     const now = Date.now();
 
     // 结果容器
@@ -313,11 +283,7 @@ export const useGreenBeanStatsData = (
       // 只处理烘焙记录
       if (!note.timestamp || note.source !== 'roasting') continue;
 
-      const ts = note.changeRecord?.roastingRecord?.roastDate
-        ? new Date(
-            `${note.changeRecord.roastingRecord.roastDate}T12:00:00`
-          ).getTime()
-        : note.timestamp;
+      const ts = getRoastingTimestamp(note);
       const roastingRecord = note.changeRecord?.roastingRecord;
       if (!roastingRecord) continue;
 
@@ -382,8 +348,8 @@ export const useGreenBeanStatsData = (
 
         // 趋势数据
         if (needTrend) {
-          const { key } = getDateKey(ts, groupBy);
-          trendMap.set(key, (trendMap.get(key) || 0) + roastedAmount);
+          const key = getDateKey(new Date(ts), groupBy);
+          if (key) trendMap.set(key, (trendMap.get(key) ?? 0) + roastedAmount);
         }
       }
 
@@ -427,27 +393,9 @@ export const useGreenBeanStatsData = (
       ? calculateDaysBetween(effectiveDateRange.start, effectiveDateRange.end)
       : 1;
 
-    // 生成趋势数据数组
-    const trendData: TrendDataPoint[] = [];
-    if (needTrend && selectedDate) {
-      const { startTime: tStart, endTime: tEnd } = getTimeRange(
-        selectedDate,
-        dateGroupingMode
-      );
-      const current = new Date(tStart);
-      const endDate = new Date(tEnd - 1);
-
-      while (current <= endDate) {
-        const { key, label } = getDateKey(current.getTime(), groupBy);
-        trendData.push({ date: key, label, value: trendMap.get(key) || 0 });
-
-        if (groupBy === 'day') {
-          current.setDate(current.getDate() + 1);
-        } else {
-          current.setMonth(current.getMonth() + 1);
-        }
-      }
-    }
+    const trendData = needTrend
+      ? buildTrendData(timeRange, groupBy, trendMap)
+      : [];
 
     // 按时间倒序排列明细
     roastingDetails.sort((a, b) => b.timestamp - a.timestamp);

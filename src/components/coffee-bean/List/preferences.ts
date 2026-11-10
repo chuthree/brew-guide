@@ -16,7 +16,10 @@ import {
 } from '@/lib/core/statePersistence';
 import { SortOption } from './SortSelector';
 import { FlavorPeriodStatus } from '@/lib/utils/beanVarietyUtils';
-import { DateGroupingMode } from './components/StatsView/types';
+import {
+  DATE_GROUPING_MODES,
+  type DateGroupingMode,
+} from './components/StatsView/types';
 import type {
   RankingDateGroupingMode,
   RankingFilterMode,
@@ -106,11 +109,7 @@ export const globalCache: {
   // 统计视图
   dateGroupingMode: DateGroupingMode;
   selectedDate: string | null;
-  selectedDates: {
-    year: string | null;
-    month: string | null;
-    day: string | null;
-  };
+  selectedDates: Record<DateGroupingMode, string | null>;
   statsBeanState: 'roasted' | 'green';
 
   // 临时数据（用于 UI 计算，不持久化）
@@ -163,7 +162,7 @@ export const globalCache: {
   rankingSelectedRoaster: null,
   dateGroupingMode: 'month',
   selectedDate: null,
-  selectedDates: { year: null, month: null, day: null },
+  selectedDates: { year: null, month: null, week: null, day: null },
   statsBeanState: 'roasted',
   filteredBeans: [],
   ratedBeans: [],
@@ -442,8 +441,10 @@ export const saveImageFlowModeByStatePreference = (s: BeanState, v: boolean) =>
   saveDisplayModeByStatePreference(s, v ? 'imageFlow' : 'list');
 
 // 统计视图
-export const getDateGroupingModePreference = () =>
-  getStringState(MODULE_NAME, 'dateGroupingMode', 'month') as DateGroupingMode;
+export const getDateGroupingModePreference = (): DateGroupingMode => {
+  const saved = getStringState(MODULE_NAME, 'dateGroupingMode', 'month');
+  return DATE_GROUPING_MODES.find(mode => mode === saved) ?? 'month';
+};
 export const saveDateGroupingModePreference = (v: DateGroupingMode) =>
   saveStringState(MODULE_NAME, 'dateGroupingMode', v);
 export const getSelectedDatePreference = () =>
@@ -652,6 +653,7 @@ const initGlobalCache = () => {
   globalCache.selectedDates = {
     year: getSelectedDateByModePreference('year'),
     month: getSelectedDateByModePreference('month'),
+    week: getSelectedDateByModePreference('week'),
     day: getSelectedDateByModePreference('day'),
   };
   globalCache.statsBeanState = getStatsBeanStatePreference();
