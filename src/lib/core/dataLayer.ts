@@ -44,6 +44,7 @@ let initState: InitializationState = {
   isInitializing: false,
   error: null,
 };
+let initializationPromise: Promise<void> | null = null;
 
 /**
  * 初始化所有数据 Store
@@ -55,12 +56,17 @@ let initState: InitializationState = {
  * 4. 器具相关 Store
  * 5. 其他 Store
  */
-export async function initializeDataLayer(): Promise<void> {
-  // 防止重复初始化
-  if (initState.isInitialized || initState.isInitializing) {
-    return;
-  }
+export function initializeDataLayer(): Promise<void> {
+  if (initializationPromise) return initializationPromise;
+  if (initState.isInitialized) return Promise.resolve();
 
+  initializationPromise = initializeStores().finally(() => {
+    initializationPromise = null;
+  });
+  return initializationPromise;
+}
+
+async function initializeStores(): Promise<void> {
   initState.isInitializing = true;
   console.log('📦 开始初始化数据层...');
 
